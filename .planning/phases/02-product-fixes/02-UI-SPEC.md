@@ -25,7 +25,7 @@ created: 2026-03-30
 | Preset | not applicable |
 | Component library | none — custom components in Jinja2 + Vanilla JS |
 | Icon library | Unicode emoji (inline in HTML) — no icon library |
-| Font (primary) | DM Sans, 400 / 500 / 700 / 900 — from Google Fonts |
+| Font (primary) | DM Sans, 400 / 700 — from Google Fonts |
 | Font (display/logo) | Playfair Display, 700 / 900 — from Google Fonts, used ONLY in logo mark |
 
 Stack constraint from CLAUDE.md: no React migration, no framework switch. All new UI follows the existing Flask + Vanilla JS + inline CSS pattern.
@@ -42,7 +42,7 @@ Declared values (multiples of 4):
 | sm | 8px | Button padding (vertical), nav item gap, compact element spacing |
 | md | 16px | Default form group margin, card internal padding columns, button horizontal padding |
 | lg | 24px | Page wrap horizontal padding, wizard nav-btns top padding, section bottom margin |
-| xl | 32px | Page wrap padding (`padding: 28px 32px`), layout horizontal breathing room |
+| xl | 32px | Page wrap padding (`padding: 24px 32px`), layout horizontal breathing room |
 | 2xl | 48px | Major section breaks, wizard bottom padding |
 | 3xl | 64px | Page-level vertical spacing (full-screen views only) |
 
@@ -59,18 +59,16 @@ Exceptions:
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Body | 13px | 400 | 1.55 | Default paragraph text, table cells, card body copy, chat messages |
-| Label | 11px | 700 | 1.0 | ALL-CAPS form labels, section headers, badge text (letter-spacing: .07em) |
-| Heading | 22px | 700 | 1.2 | Page titles (`.page-title`), wizard step h1 at 26px on standalone pages |
-| Display | 19px | 800 | 1.0 | Logo wordmark only — not for content headings |
+| Label | 11px | 700 | 1.0 | ALL-CAPS form labels, section headers, badge text, micro-labels (letter-spacing: .07em). Folds 10px. |
+| Body | 13px | 400 | 1.55 | Default paragraph text, table cells, card body copy, chat messages. Folds 12px. |
+| Card Heading | 14px | 700 | 1.5 | Card headings, secondary metadata, onboarding step body copy, CTA button text. Folds 15px. |
+| Page Heading | 22px | 700 | 1.2 | Page titles (`.page-title`), wizard step h1. Folds 19px. |
 
-Additional sizes in use (do not introduce new sizes beyond these):
-- 10px / weight 700: badge labels, micro-labels (letter-spacing: .08em)
-- 12px / weight 600: secondary metadata, timestamps, hint text
-- 14px / weight 400: onboarding step body copy, card descriptions (line-height: 1.5)
-- 15px / weight 800: primary CTA button text (training start button)
+DM Sans weights in use: 400 (body, card heading body copy) and 700 (labels, headings). No other DM Sans weights are used.
 
-Rule: body text for all new UI components uses 13px / 400 / line-height 1.55. Headings inside cards use 14px / 700. Do not introduce sizes outside the existing set.
+Playfair Display is isolated to the logo wordmark role only (weight 700/900 within that role). It is not used for content headings or body text.
+
+Rule: body text for all new UI components uses 13px / 400 / line-height 1.55. Headings inside cards use 14px / 700. Do not introduce sizes outside the four declared sizes above.
 
 ---
 
@@ -120,6 +118,7 @@ Pattern basis: `templates/onboarding.html`
 - Step 3 — Einwände: checklist of 8–10 predefined DACH B2B objections (`.level-card` grid pattern, multi-select allowed) + optional free-text `.form-textarea`
 - Navigation: `.btn-back` / `.btn-next` pattern from onboarding
 - Completion redirect: dashboard
+- Primary focal point: step heading (22px/700) centered above progress dots.
 
 ### 2. Beispiel-Boxen (3 preview cards in onboarding step 1 area)
 
@@ -136,7 +135,7 @@ color: #8888a8
 line-height: 1.65
 ```
 
-Label row: `font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #E8B040; margin-bottom: 4px`
+Label row: `font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #E8B040; margin-bottom: 4px`
 
 Cards layout: stacked vertically (single column) on mobile, 3-column grid at >= 580px. Gap: 12px.
 
@@ -291,6 +290,9 @@ No shadcn, no third-party component registries. All components are hand-written 
 | Dashboard style selector | CONTEXT.md D-10 |
 | Profile wizard 3-step flow | CONTEXT.md D-12, D-13 |
 | Einwand template list | CONTEXT.md D-12 (Claude's Discretion) |
+| Typography consolidated to 4 sizes / 2 DM Sans weights | checker revision 2026-03-30 |
+| xl spacing usage example corrected to 24px 32px | checker revision 2026-03-30 |
+| Profile wizard focal point declared | checker revision 2026-03-30 |
 
 ---
 
