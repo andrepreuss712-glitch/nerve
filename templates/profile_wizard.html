@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+{% block title %} — Profil erstellen{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --color-amber-subtle: color-mix(in srgb, var(--color-amber) 8%, transparent);
+  --color-amber-hover:  color-mix(in srgb, var(--color-amber) 15%, transparent);
+}
+
+.wizard-container {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: var(--space-lg) var(--space-md) 48px;
+}
+
+/* Progress dots */
+.progress-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+.progress-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-border);
+  border: 2px solid var(--color-border);
+  transition: all .3s;
+  flex-shrink: 0;
+}
+.progress-dot.active {
+  background: var(--color-amber);
+  border-color: var(--color-amber);
+}
+.progress-dot.completed {
+  background: var(--color-amber);
+  border-color: var(--color-amber);
+  opacity: .6;
+}
+.progress-line {
+  width: 40px;
+  height: 2px;
+  background: var(--color-border);
+  transition: background .3s;
+  flex-shrink: 0;
+}
+.progress-line.completed {
+  background: var(--color-amber);
+  opacity: .6;
+}
+
+/* Wizard step */
+.wizard-step {
+  animation: fadeInUp .25s ease;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Headings */
+.wizard-step h2 {
+  font-family: var(--font-headline);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+.wizard-step p.step-sub {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: var(--space-md);
+  line-height: 1.55;
+}
+
+/* Industry grid */
+.branche-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+@media (min-width: 420px) {
+  .branche-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.branche-card {
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  user-select: none;
+}
+.branche-card:hover {
+  border-color: var(--color-amber);
+  background: var(--color-amber-hover);
+}
+.branche-card.selected {
+  border-color: var(--color-amber);
+  background: var(--color-amber-subtle);
+}
+.branche-card-icon {
+  font-size: 20px;
+  margin-bottom: 6px;
+  display: block;
+}
+.branche-card-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: block;
+}
+.branche-card-desc {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  display: block;
+}
+
+/* Form inputs */
+.form-input {
+  width: 100%;
+  padding: 10px var(--space-md);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  margin-bottom: var(--space-md);
+  outline: none;
+  transition: border-color .15s;
+}
+.form-input:focus {
+  border-color: var(--color-amber);
+}
+.form-textarea {
+  width: 100%;
+  padding: 10px var(--space-md);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+  transition: border-color .15s;
+}
+.form-textarea:focus {
+  border-color: var(--color-amber);
+}
+.form-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+/* Objection chips */
+.einwand-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+.einwand-chip {
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  font-family: var(--font-body);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all .2s;
+  user-select: none;
+  line-height: 1.4;
+}
+.einwand-chip:hover {
+  border-color: var(--color-amber);
+  color: var(--color-text-primary);
+  background: var(--color-amber-hover);
+}
+.einwand-chip.selected {
+  border-color: var(--color-amber);
+  background: var(--color-amber-subtle);
+  color: var(--color-text-primary);
+}
+
+/* Navigation */
+.wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+.btn-primary {
+  background: var(--color-amber);
+  color: var(--color-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 24px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: opacity .15s;
+  letter-spacing: .03em;
+}
+.btn-primary:hover {
+  opacity: .85;
+}
+.btn-secondary {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  padding: 10px 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.btn-secondary:hover {
+  border-color: var(--color-amber);
+  color: var(--color-text-primary);
+}
+</style>
+
+<div class="wizard-container">
+
+  <h1 style="font-family:var(--font-headline);font-size:1.25rem;font-weight:600;text-align:center;margin-bottom:var(--space-lg);color:var(--color-text-primary);">Dein Verkaufsprofil</h1>
+
+  <!-- Progress dots (3 steps) -->
+  <div class="progress-dots">
+    <div class="progress-dot active" id="dot-1"></div>
+    <div class="progress-line" id="line-1"></div>
+    <div class="progress-dot" id="dot-2"></div>
+    <div class="progress-line" id="line-2"></div>
+    <div class="progress-dot" id="dot-3"></div>
+  </div>
+
+  <form method="POST" action="{{ url_for('profiles.wizard_create') }}" id="wizardForm" onsubmit="return validateSubmit()">
+
+    <!-- STEP 1: Branche & Rolle -->
+    <div class="wizard-step" id="step-1">
+      <h2>Deine Branche &amp; Rolle</h2>
+      <p class="step-sub">Waehle deine Branche — wir erstellen dir ein passendes Profil.</p>
+
+      <div class="branche-grid">
+        <div class="branche-card" onclick="selectBranche(event, 'Software/IT')">
+          <span class="branche-card-icon">💻</span>
+          <span class="branche-card-name">Software/IT</span>
+          <span class="branche-card-desc">SaaS &amp; Tech</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Maschinenbau')">
+          <span class="branche-card-icon">⚙️</span>
+          <span class="branche-card-name">Maschinenbau</span>
+          <span class="branche-card-desc">Produktion &amp; B2B</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Beratung')">
+          <span class="branche-card-icon">📊</span>
+          <span class="branche-card-name">Beratung</span>
+          <span class="branche-card-desc">Consulting &amp; Strategie</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Finanzen/Versicherung')">
+          <span class="branche-card-icon">🛡️</span>
+          <span class="branche-card-name">Finanzen</span>
+          <span class="branche-card-desc">Versicherung &amp; Finance</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Medizintechnik')">
+          <span class="branche-card-icon">🏥</span>
+          <span class="branche-card-name">Medizintechnik</span>
+          <span class="branche-card-desc">HealthTech &amp; MedTech</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Logistik')">
+          <span class="branche-card-icon">🚚</span>
+          <span class="branche-card-name">Logistik</span>
+          <span class="branche-card-desc">Transport &amp; Supply Chain</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Energie')">
+          <span class="branche-card-icon">⚡</span>
+          <span class="branche-card-name">Energie</span>
+          <span class="branche-card-desc">Renewables &amp; Utilities</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Telekommunikation')">
+          <span class="branche-card-icon">📡</span>
+          <span class="branche-card-name">Telekommunikation</span>
+          <span class="branche-card-desc">Netzwerk &amp; Infrastruktur</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Handel')">
+          <span class="branche-card-icon">🛒</span>
+          <span class="branche-card-name">Handel</span>
+          <span class="branche-card-desc">Retail &amp; E-Commerce</span>
+        </div>
+        <div class="branche-card" onclick="selectBranche(event, 'Immobilien')">
+          <span class="branche-card-icon">🏠</span>
+          <span class="branche-card-name">Immobilien</span>
+          <span class="branche-card-desc">Makler &amp; Bewertung</span>
+        </div>
+      </div>
+      <input type="hidden" name="branche" id="brancheInput">
+
+      <div style="margin-top:var(--space-sm);">
+        <label class="form-label">Deine Rolle</label>
+        <input type="text" name="rolle" class="form-input" placeholder="Ihre Rolle im Vertrieb">
+      </div>
+    </div>
+
+    <!-- STEP 2: Produkt & Firma -->
+    <div class="wizard-step" id="step-2" style="display:none;">
+      <h2>Dein Produkt &amp; Unternehmen</h2>
+      <p class="step-sub">Damit NERVE weiss, was du verkaufst.</p>
+
+      <label class="form-label">Unternehmen</label>
+      <input type="text" name="firma" class="form-input" placeholder="Ihr Unternehmen">
+
+      <label class="form-label">Produkt oder Service</label>
+      <input type="text" name="produkt" class="form-input" placeholder="Ihr Produkt oder Service">
+
+      <label class="form-label">Zielkunden</label>
+      <input type="text" name="zielkunden" class="form-input" placeholder="Ihre Zielkunden (z. B. Mittelstand, IT-Leiter)">
+    </div>
+
+    <!-- STEP 3: Haeufige Einwaende -->
+    <div class="wizard-step" id="step-3" style="display:none;">
+      <h2>Haeufige Einwaende</h2>
+      <p class="step-sub">Waehle die Einwaende, die du am haeufigsten hoerst. Du kannst das spaeter anpassen.</p>
+
+      <div class="einwand-grid">
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Kein Budget gerade')">Kein Budget gerade</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Zu teuer fuer uns')">Zu teuer fuer uns</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Kein Interesse / kein Bedarf')">Kein Interesse / kein Bedarf</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Wir haben bereits eine Loesung')">Wir haben bereits eine Loesung</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Schick mir erstmal Infos zu')">Schick mir erstmal Infos zu</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Ich muss das mit meinem Vorgesetzten besprechen')">Ich muss das mit meinem Vorgesetzten besprechen</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Jetzt gerade keine Zeit')">Jetzt gerade keine Zeit</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Wir kaufen nichts bei Kaltakquise')">Wir kaufen nichts bei Kaltakquise</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Das haben wir schon mal versucht, hat nicht funktioniert')">Das haben wir schon mal versucht, hat nicht funktioniert</div>
+        <div class="einwand-chip" onclick="toggleEinwand(this, 'Ruf in 3 Monaten nochmal an')">Ruf in 3 Monaten nochmal an</div>
+      </div>
+      <input type="hidden" name="einwaende" id="einwaendeInput">
+
+      <label class="form-label">Eigener Einwand (optional)</label>
+      <textarea name="eigener_einwand" class="form-textarea" placeholder="Eigener Einwand..."></textarea>
+    </div>
+
+    <!-- Navigation -->
+    <div class="wizard-nav">
+      <button type="button" class="btn-secondary" id="btnBack" onclick="prevStep()" style="display:none;">Zurueck</button>
+      <button type="button" class="btn-primary" id="btnNext" onclick="nextStep()">Weiter</button>
+      <button type="submit" class="btn-primary" id="btnSubmit" style="display:none;">Profil erstellen</button>
+    </div>
+  </form>
+
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 3;
+
+function nextStep() {
+  if (currentStep === 1 && !document.getElementById('brancheInput').value) {
+    alert('Waehle eine Branche um fortzufahren.');
+    return;
+  }
+  if (currentStep === totalSteps) return;
+  document.getElementById('step-' + currentStep).style.display = 'none';
+  currentStep++;
+  document.getElementById('step-' + currentStep).style.display = 'block';
+  updateNav();
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function prevStep() {
+  if (currentStep === 1) return;
+  document.getElementById('step-' + currentStep).style.display = 'none';
+  currentStep--;
+  document.getElementById('step-' + currentStep).style.display = 'block';
+  updateNav();
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function updateNav() {
+  document.getElementById('btnBack').style.display = currentStep > 1 ? '' : 'none';
+  document.getElementById('btnNext').style.display = currentStep < totalSteps ? '' : 'none';
+  document.getElementById('btnSubmit').style.display = currentStep === totalSteps ? '' : 'none';
+}
+
+function updateProgress() {
+  for (let i = 1; i <= totalSteps; i++) {
+    const dot = document.getElementById('dot-' + i);
+    dot.classList.remove('active', 'completed');
+    if (i === currentStep) dot.classList.add('active');
+    else if (i < currentStep) dot.classList.add('completed');
+  }
+  for (let i = 1; i < totalSteps; i++) {
+    const line = document.getElementById('line-' + i);
+    if (line) line.classList.toggle('completed', i < currentStep);
+  }
+}
+
+function selectBranche(event, branche) {
+  document.querySelectorAll('.branche-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('brancheInput').value = branche;
+}
+
+const selectedEinwaende = new Set();
+function toggleEinwand(el, text) {
+  el.classList.toggle('selected');
+  if (selectedEinwaende.has(text)) {
+    selectedEinwaende.delete(text);
+  } else {
+    selectedEinwaende.add(text);
+  }
+  document.getElementById('einwaendeInput').value = JSON.stringify([...selectedEinwaende]);
+}
+
+function validateSubmit() {
+  const einwaendeVal = document.getElementById('einwaendeInput').value;
+  const eigenerEinwand = document.querySelector('[name="eigener_einwand"]').value.trim();
+  let einwaende = [];
+  try { einwaende = JSON.parse(einwaendeVal); } catch(e) {}
+  if (einwaende.length === 0 && !eigenerEinwand) {
+    alert('Waehle mindestens einen Einwand oder gib einen eigenen ein.');
+    return false;
+  }
+  return true;
+}
+</script>
+{% endblock %}
