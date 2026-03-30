@@ -129,7 +129,7 @@ Each card:
 background: rgba(232,176,64,.05)
 border: 1px solid rgba(232,176,64,.33)
 border-radius: 8px
-padding: 10px 14px
+padding: 8px 16px
 font-size: 12px
 color: #8888a8
 line-height: 1.65
@@ -293,6 +293,7 @@ No shadcn, no third-party component registries. All components are hand-written 
 | Typography consolidated to 4 sizes / 2 DM Sans weights | checker revision 2026-03-30 |
 | xl spacing usage example corrected to 24px 32px | checker revision 2026-03-30 |
 | Profile wizard focal point declared | checker revision 2026-03-30 |
+| Beispiel-Boxen padding corrected to 8px 16px (multiples of 4) | checker revision 2026-03-30 |
 
 ---
 
