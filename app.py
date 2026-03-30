@@ -72,6 +72,8 @@ def _migrate():
             ('notif_coach', 'BOOLEAN DEFAULT 1'),
             ('notif_nudges', 'BOOLEAN DEFAULT 1'),
             ('dashboard_stil', 'TEXT'),
+            # Block 8: Dashboard Layout Preference
+            ('dashboard_style', "VARCHAR(20) DEFAULT 'vollstaendig'"),
             # Block 6: Changelog
             ('last_seen_changelog', 'VARCHAR(20)'),
         ]:

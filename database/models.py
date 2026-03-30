@@ -87,6 +87,8 @@ class User(Base):
     dashboard_stil      = Column(Text)
     # Block 6: Changelog
     last_seen_changelog = Column(String(20))
+    # Block 8: Dashboard Layout Preference
+    dashboard_style     = Column(String(20), default='vollstaendig')
     # Block 7: Flat-Rate Usage Tracking
     minuten_used          = Column(Integer, default=0)    # Diesen Monat verbrauchte Minuten
     trainings_voice_used  = Column(Integer, default=0)    # TTS-Trainings diesen Monat
