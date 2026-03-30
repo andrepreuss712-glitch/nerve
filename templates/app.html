@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,900&display=swap" rel="stylesheet">
+<title>NERVE – Live-Gespräch</title>
+<link rel="icon" type="image/x-icon" href="#">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0c0c18;color:#f0ebe0;font-family:'DM Sans',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  /* ── Header ── */
+  .header{padding:0 20px;height:52px;border-bottom:1px solid #1a1a2e;display:flex;align-items:center;
+    justify-content:space-between;background:#0c0c18;flex-shrink:0;gap:8px}
+  .logo{font-size:19px;font-weight:800;white-space:nowrap}.logo span{color:#E8B040}
+  .nav-mark{display:flex;align-items:center;gap:10px}
+  .nav-n{width:32px;height:32px;border:1.5px solid #E8B040;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:18px;font-weight:900;color:#E8B040}
+  .nav-word{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:900;letter-spacing:3px;color:#f0ebe0}
+  .nav-word small{display:block;font-size:7px;letter-spacing:.2em;color:#E8B040;font-weight:600;margin-top:-2px}
+  .header-nav{display:flex;align-items:center;gap:10px}
+  .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .back-link{font-size:12px;font-weight:600;color:#6b6b80;background:transparent;
+    border:1px solid #2e2e48;border-radius:7px;padding:5px 10px;cursor:pointer;
+    letter-spacing:.03em;transition:border-color .15s,color .15s;white-space:nowrap}
+  .back-link:hover{border-color:#6868a8;color:#c0c0d0}
+  .status{display:flex;align-items:center;gap:6px;font-size:12px;color:#6b6b80}
+  .dot{width:8px;height:8px;border-radius:50%;background:#E8B040;animation:blink 1s infinite}
+  .dot.paused{background:#e05c5c;animation:none}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+  .btn{border:none;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:700;
+    cursor:pointer;letter-spacing:.04em;transition:opacity .15s;font-family:inherit;white-space:nowrap}
+  .btn:hover{opacity:.8}
+  .btn-pause{background:#E8B040;color:#0c0c18}
+  .btn-pause.paused{background:#e05c5c;color:#fff}
+  .btn-log{background:#1a1a2e;border:1px solid #E8B040;color:#E8B040}
+  .btn-beenden{background:#1a0a0a;border:1px solid #c04040;color:#e05050}
+  .btn-beenden:hover{background:#2a0e0e;border-color:#e05c5c}
+  .btn-frage{background:#1a1a2e;border:1px solid #8866cc;color:#aa88ee}
+  .btn-frage:hover{background:#221a3a;border-color:#aa88ee}
+
+  /* ── Kaufbereitschaft ── */
+  .kb-display{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;
+    background:#0c0c18;border:1px solid #2e2e48;white-space:nowrap}
+  .kb-label{font-size:10px;font-weight:700;letter-spacing:.06em;color:#444466;text-transform:uppercase}
+  .kb-value{font-size:16px;font-weight:900;transition:color .5s}
+  .kb-value.red{color:#e05c5c}
+  .kb-value.amber{color:#f0a500}
+  .kb-value.green{color:#E8B040}
+  .kb-bar-wrap{width:60px;height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden}
+  .kb-bar{height:100%;border-radius:3px;transition:width .6s,background .5s}
+
+  /* ── Toast ── */
+  .toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
+    background:#0d1408;border:1px solid #E8B040;color:#E8B040;padding:10px 24px;
+    border-radius:8px;font-size:13px;font-weight:600;opacity:0;
+    transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
+  .toast.visible{opacity:1}
+
+  /* ── Profile bar ── */
+  .profile-bar{padding:7px 20px;background:#0d0d14;border-bottom:1px solid #1a1a2e;
+    display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative}
+  .profile-label{font-size:10px;color:#444466;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-right:8px}
+  .profile-name{font-size:13px;color:#E8B040;font-weight:600}
+  .profile-name.none{color:#444466;font-style:italic}
+  .btn-profile-switch{background:#1a1a2e;border:1px solid #2e2e48;color:#8888aa;
+    border-radius:6px;padding:4px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-profile-switch:hover{border-color:#6868a8;color:#d0d0f0}
+  .profile-menu{position:absolute;top:calc(100% + 4px);right:20px;background:#0c0c18;
+    border:1px solid #2e2e48;border-radius:8px;min-width:200px;z-index:200;
+    box-shadow:0 4px 20px rgba(0,0,0,.6);overflow:hidden;display:none}
+  .profile-menu.open{display:block}
+  .profile-menu-item{display:block;width:100%;text-align:left;background:none;
+    border:none;padding:10px 16px;font-size:13px;color:#c0c0d5;cursor:pointer;
+    border-bottom:1px solid #1a1a2e;font-family:inherit}
+  .profile-menu-item:last-child{border-bottom:none}
+  .profile-menu-item:hover{background:#1a1a2e;color:#f0ebe0}
+  .profile-menu-item.cur{color:#E8B040}
+
+  /* ── Phasen-Bar ── */
+  .phasen-bar{padding:6px 20px;background:#0a0a12;border-bottom:1px solid #1a1a2e;
+    display:flex;align-items:center;gap:0;overflow-x:auto;flex-shrink:0}
+  .phasen-bar::-webkit-scrollbar{height:3px}
+  .phasen-bar::-webkit-scrollbar-thumb{background:#1a1a2e}
+  .phase-step{display:flex;align-items:center;gap:0;flex-shrink:0}
+  .phase-btn{background:none;border:1px solid #1a1a2e;border-radius:6px;
+    padding:4px 12px;font-size:11px;font-weight:600;color:#444466;
+    cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+  .phase-btn:hover{border-color:#6868a8;color:#a0a0c0}
+  .phase-btn.active{background:#0d1008;border-color:#E8B040;color:#E8B040}
+  .phase-arrow{color:#222240;font-size:12px;padding:0 4px;flex-shrink:0}
+
+  /* ── Compact Mode toggle btn — positioned below 52px header ── */
+  .btn-view-toggle{position:fixed;top:calc(52px + var(--space-sm, 8px));right:16px;z-index:60;
+    background:#0c0c18;border:1px solid #2e2e48;border-radius:20px;
+    padding:3px 12px;font-size:11px;font-weight:700;color:#6b6b80;cursor:pointer;
+    font-family:inherit;letter-spacing:.04em;transition:all .15s;white-space:nowrap}
+  .btn-view-toggle:hover{border-color:#6868a8;color:#c0c0d0}
+
+  /* Kompakt: Normal-Layout ausblenden */
+  body.kompakt .header,
+  body.kompakt .profile-bar,
+  body.kompakt .phasen-bar,
+  body.kompakt .main,
+  body.kompakt .footer{display:none!important}
+
+  /* ── Kompakt-Panel ── */
+  .kompakt-panel{display:none;flex-direction:column;position:fixed;inset:0;background:#0c0c18;z-index:500;overflow:hidden}
+  body.kompakt .kompakt-panel{display:flex!important}
+
+  .kp-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1a1a2e;flex-shrink:0}
+  .kp-logo{display:flex;align-items:center;gap:8px}
+  .kp-n{width:26px;height:26px;border:1.5px solid #E8B040;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:14px;font-weight:900;color:#E8B040;flex-shrink:0}
+  .kp-word{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:900;letter-spacing:3px;color:#f0ebe0}
+  .kp-status{display:flex;align-items:center;gap:6px;font-size:12px;color:#6b6b80}
+  .kp-timer{color:#E8B040;font-weight:700;font-size:12px;margin-left:4px}
+
+  .kp-controls{display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid #1a1a2e;flex-shrink:0;flex-wrap:wrap}
+  .kp-btn{border:none;border-radius:6px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em;font-family:inherit;transition:opacity .15s;white-space:nowrap}
+  .kp-btn:hover{opacity:.8}
+  .kp-btn-end{background:#1a0a0a;border:1px solid #c04040;color:#e05050}
+  .kp-btn-pause{background:#E8B040;color:#0c0c18}
+  .kp-btn-pause.paused{background:#e05c5c;color:#fff}
+  .kp-btn-expand{background:#1a1a2e;border:1px solid #2e2e48;color:#8888aa}
+  .kp-profile{font-size:11px;color:#E8B040;font-weight:600;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+
+  .kp-section{padding:8px 14px;border-bottom:1px solid #1a1a2e;flex-shrink:0}
+  .kp-section-label{font-size:9px;font-weight:700;letter-spacing:.08em;color:#444466;text-transform:uppercase;margin-bottom:4px}
+  .kp-einwand-content{font-size:13px;color:#f0ebe0;line-height:1.5}
+  .kp-coaching-content{font-size:13px;color:#c8922a;line-height:1.5}
+  .kp-painpoint-content{font-size:12px;color:#e07030;line-height:1.5;font-style:italic}
+
+  .kp-qa-row{display:flex;gap:5px;padding:8px 14px;border-bottom:1px solid #1a1a2e;flex-shrink:0;flex-wrap:wrap}
+  .kp-qa{background:#0c0c18;border:1px solid #2e2e48;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;color:#8888aa;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s;white-space:nowrap}
+  .kp-qa:hover{border-color:#8866cc;color:#c0a8ff}
+
+  .kp-metrics{display:flex;align-items:center;gap:12px;padding:8px 14px;flex-wrap:wrap;flex-shrink:0}
+  .kp-mc-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .kp-mc{width:36px;height:36px;border-radius:50%;border:2.5px solid #E8B040;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:800;color:#E8B040;transition:border-color .5s,color .5s}
+  .kp-mc-label{font-size:8px;font-weight:700;letter-spacing:.06em;color:#444466;text-transform:uppercase}
+  .kp-kb-col{display:flex;flex-direction:column;gap:4px;margin-left:4px}
+  .kp-kb-row{display:flex;align-items:center;gap:5px}
+  .kp-kb-col-label{font-size:9px;font-weight:700;letter-spacing:.06em;color:#444466;text-transform:uppercase}
+  .kp-kb-col-val{font-size:13px;font-weight:900;transition:color .5s}
+  .kp-kb-bar-wrap2{width:72px;height:5px;background:#1a1a2e;border-radius:3px;overflow:hidden}
+  .kp-kb-bar2{height:100%;border-radius:3px;transition:width .6s,background .5s}
+
+  /* ── Quick-actions bar (always visible in fullscreen) ── */
+  .quick-actions-bar{display:flex;gap:5px;flex-wrap:wrap;padding:5px 16px;
+    background:#0c0c18;border-top:1px solid #1a1a2e;flex-shrink:0}
+
+  /* ── Main layout ── */
+  .main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;min-height:0}
+  .panel{display:flex;flex-direction:column;overflow:hidden}
+  .panel-left{border-right:1px solid #1a1a2e}
+  .panel-header{padding:9px 16px;background:#0c0c18;border-bottom:1px solid #1a1a2e;
+    font-size:11px;font-weight:700;letter-spacing:.08em;color:#6b6b80;text-transform:uppercase;
+    flex-shrink:0;display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .scroll{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-height:0}
+  .scroll::-webkit-scrollbar{width:4px}
+  .scroll::-webkit-scrollbar-thumb{background:#1a1a2e;border-radius:2px}
+
+  /* ── Transcript ── */
+  .msg{padding:8px 13px;border-radius:8px;font-size:14px;line-height:1.65;animation:fi .15s ease}
+  @keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+  .final{background:#14141e;border-left:3px solid #E8B040;color:#f0ebe0}
+  .final.sp0{background:#0d1208;border-left:3px solid #E8B040;color:#e8f5f3}
+  .final.sp1{background:#161625;border-left:3px solid #8888cc;color:#cccce8}
+  .interim{color:#444466;font-style:italic;font-size:13px;border-left:3px solid #1a1a2e;padding-left:12px}
+  .row-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+  .speaker-tag{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+  .sp0 .speaker-tag{color:#E8B040}.sp1 .speaker-tag{color:#9898d8}
+  .row-swap-btn{background:#1e1e30;border:1px solid #2e2e48;border-radius:5px;cursor:pointer;
+    font-size:13px;color:#8080a8;padding:3px 9px;line-height:1.4;font-weight:600;
+    transition:background .15s,color .15s,border-color .15s;white-space:nowrap;flex-shrink:0}
+  .row-swap-btn:hover{background:#2a2a48;border-color:#6868a8;color:#d0d0f0}
+  .row-swap-btn:disabled{opacity:.4;cursor:default}
+
+  /* ── Right column ── */
+  .panel-right-col{display:flex;flex-direction:column;overflow:hidden}
+  .panel-einwand{flex:3;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .panel-coaching{flex:2;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    border-top:2px solid #2a1e00;background:#0a0900}
+  .panel-coaching .panel-header{background:#0e0c00;border-bottom:1px solid #2a1e00;color:#f0a500}
+  .panel-sprachanalyse{flex:0 0 auto;display:flex;flex-direction:column;overflow:hidden;
+    border-top:2px solid #1a0a2a;background:#09080f;max-height:110px}
+  .panel-sprachanalyse .panel-header{background:#0c0a18;border-bottom:1px solid #1a0a2a;color:#9966cc}
+
+  /* ── Sprachanalyse: Kreismetriken ── */
+  .metric-circles{padding:8px 16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .metric-circle-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .metric-circle{width:44px;height:44px;border-radius:50%;border:3px solid #E8B040;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:800;color:#E8B040;transition:border-color .5s,color .5s}
+  .mc-label{font-size:9px;font-weight:700;letter-spacing:.06em;color:#444466;text-transform:uppercase;text-align:center}
+
+  /* ── Compact mode circle override — prevents clipping in flex context ── */
+  .kompakt-panel .metric-circle{width:36px;height:36px;flex-shrink:0}
+  .kompakt-panel .kp-mc{flex-shrink:0}
+
+  /* ── Quick Actions (Frage Modal) ── */
+  .quick-actions{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px}
+  .qa-btn{background:#0c0c18;border:1px solid #2e2e48;border-radius:7px;
+    padding:5px 10px;font-size:11px;font-weight:700;color:#8888aa;cursor:pointer;
+    font-family:inherit;transition:border-color .15s,color .15s;white-space:nowrap}
+  .qa-btn:hover{border-color:#8866cc;color:#c0a8ff}
+
+  /* ── AI Cards ── */
+  .ai-card{background:#0c0c18;border-radius:10px;border:1px solid #1a1a2e;
+    padding:13px 15px;animation:fi .2s ease;display:flex;flex-direction:column;gap:10px}
+  .ai-card.kein-einwand{opacity:.55}
+  .ai-card.einwand{border-left:3px solid #f0a05a}
+  .ai-card.einwand-hoch{border-left:3px solid #e05c5c}
+  .ai-card.versteckt{border-left:3px solid #d4842a;background:#130e00}
+  .ai-card.withdrawn{opacity:.3}
+  .ai-card.withdrawn .einwand-typ::before{content:'↩ '}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .einwand-typ{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:3px 9px;border-radius:20px}
+  .typ-kein{background:#1a1a2e;color:#6b6b80}
+  .typ-mittel{background:#2a1e0e;color:#f0a05a}
+  .typ-hoch{background:#2a0e0e;color:#e05c5c}
+  .typ-versteckt{background:#2a1a00;color:#d4842a}
+  .typ-vorwand{background:#2a2000;color:#d4aa00}
+  .badge-vorwand{background:#1a1600;border:1px solid #d4aa00;color:#d4aa00;font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:10px;text-transform:uppercase}
+  .badge-einwand{background:#1a0a0a;border:1px solid #c04040;color:#e05c5c;font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:10px;text-transform:uppercase}
+  .intensitaet{font-size:11px;color:#444466}
+  .card-label{font-size:10px;font-weight:700;letter-spacing:.08em;color:#6b6b80;text-transform:uppercase;margin-bottom:3px}
+  .einwand-text{font-size:13px;color:#c0c0d5;font-style:italic;line-height:1.5}
+  .argument-text{font-size:14px;color:#f0ebe0;line-height:1.65}
+  .argument-text-alt{font-size:13px;color:#c8c8e0;line-height:1.6;border-left:2px solid #2e2e48;padding-left:8px}
+  .card-time{font-size:10px;color:#333350;align-self:flex-end}
+  .spinner{display:flex;align-items:center;gap:8px;padding:10px 14px;color:#444466;font-size:13px;font-style:italic}
+  .spin{width:14px;height:14px;border:2px solid #1a1a2e;border-top-color:#E8B040;
+    border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── Gegenargument "Genutzt" Button ── */
+  .ga-nutzen-btn{background:#1a1a2e;border:1px solid #2e2e48;color:#6b6b80;
+    border-radius:5px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;
+    font-family:inherit;transition:background .12s,border-color .12s,color .12s;
+    flex-shrink:0;align-self:flex-start;margin-top:18px;white-space:nowrap}
+  .ga-nutzen-btn:hover:not(:disabled){border-color:#E8B040;color:#E8B040}
+  .ga-nutzen-btn:disabled{cursor:default}
+
+  /* ── Coaching Cards ── */
+  .coaching-card{border-radius:8px;padding:9px 13px;animation:fi .2s ease;display:flex;flex-direction:column;gap:5px}
+  .coaching-card.tip{background:#0e0c00;border-left:3px solid #f0a500;
+    transition:opacity .35s,max-height .35s,padding .35s,margin .35s}
+  .coaching-card.tip.removing{opacity:0;max-height:0;padding:0;margin:0;overflow:hidden}
+  .coaching-card.painpoint{background:#100800;border-left:3px solid #ff6820}
+  .coaching-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .coaching-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:2px 8px;border-radius:20px;flex-shrink:0}
+  .badge-frage{background:#1e1600;color:#f0a500}.badge-signal{background:#0d1008;color:#E8B040}
+  .badge-redeanteil{background:#1a1200;color:#c8902a}.badge-uebergang{background:#0d1a08;color:#78c840}
+  .badge-lob{background:#0d1a08;color:#78c840}.badge-pain{background:#200800;color:#ff8040}
+  .coaching-time{font-size:10px;color:#2a2500;flex-shrink:0}
+  .coaching-text{font-size:13px;line-height:1.55}
+  .coaching-card.tip .coaching-text{color:#c8922a}
+  .coaching-card.painpoint .coaching-text{color:#e07030;font-style:italic}
+
+  /* ── Frage-Modal ── */
+  .frage-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:none;
+    align-items:center;justify-content:center}
+  .frage-overlay.open{display:flex}
+  .frage-box{background:#0c0c18;border:1px solid #8866cc;border-radius:12px;padding:20px;
+    width:460px;max-width:90vw;display:flex;flex-direction:column;gap:12px}
+  .frage-title{font-size:13px;font-weight:700;color:#aa88ee;letter-spacing:.05em}
+  .frage-input{background:#0c0c18;border:1px solid #2e2e48;border-radius:8px;padding:10px 14px;
+    color:#f0ebe0;font-size:14px;font-family:inherit;outline:none;width:100%;resize:none;height:64px}
+  .frage-input:focus{border-color:#8866cc}
+  .frage-actions{display:flex;gap:8px;justify-content:flex-end}
+  .btn-cancel{background:#1a1a2e;border:1px solid #2e2e48;color:#8888aa;border-radius:8px;
+    padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn-senden{background:#8866cc;color:#fff;border:none;border-radius:8px;
+    padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .frage-antwort-card{background:#1a1030;border:1px solid #8866cc;border-radius:8px;
+    padding:12px 14px;font-size:13px;color:#d0b0ff;line-height:1.6;animation:fi .2s ease;
+    position:relative}
+  .frage-antwort-timer{position:absolute;top:6px;right:10px;font-size:10px;color:#6644aa}
+
+  /* ── Post-Call Modal ── */
+  .postcall-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:none;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px}
+  .postcall-overlay.open{display:flex}
+  .postcall-box{background:#0c0c18;border:1px solid #2e2e48;border-radius:14px;
+    width:700px;max-width:95vw;padding:28px;display:flex;flex-direction:column;gap:20px;
+    margin:auto}
+  .postcall-title{font-size:18px;font-weight:800;color:#f0ebe0}
+  .postcall-title span{color:#E8B040}
+  .postcall-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .postcall-section{background:#0c0c18;border:1px solid #1a1a2e;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px}
+  .postcall-section-full{grid-column:1/-1}
+  .ps-title{font-size:10px;font-weight:700;letter-spacing:.08em;color:#444466;text-transform:uppercase;margin-bottom:4px}
+  .ps-value{font-size:22px;font-weight:900;color:#E8B040}
+  .ps-sub{font-size:12px;color:#6b6b80}
+  .einwand-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #1a1a2e}
+  .einwand-row:last-child{border-bottom:none}
+  .einwand-badge-small{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
+  .redeanteil-bar{display:flex;height:20px;border-radius:4px;overflow:hidden;gap:2px}
+  .rb-berater{background:#E8B040;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#0c0c18;transition:width .5s}
+  .rb-kunde{background:#8888cc;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;transition:width .5s}
+  .kb-verlauf-wrap{display:flex;align-items:flex-end;gap:3px;height:40px}
+  .kb-bar-item{background:#E8B040;border-radius:2px 2px 0 0;min-width:8px;transition:height .3s}
+
+  /* ── Sterne-Bewertung ── */
+  .sterne-row{display:flex;align-items:center;gap:6px}
+  .stern{font-size:24px;cursor:pointer;color:#333350;transition:color .15s}
+  .stern.active{color:#f0a500}
+  .stern:hover,.stern.hover{color:#f0a500}
+  .sterne-kommentar{background:#0c0c18;border:1px solid #2e2e48;border-radius:8px;
+    padding:8px 12px;color:#f0ebe0;font-size:13px;font-family:inherit;
+    width:100%;resize:none;height:60px;outline:none}
+  .sterne-kommentar:focus{border-color:#E8B040}
+
+  /* Bullets ── */
+  .bullet-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .bullet-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#c0c0d5;line-height:1.5}
+  .bullet-dot{color:#E8B040;font-weight:900;flex-shrink:0;margin-top:2px}
+
+  /* ── Postcall buttons ── */
+  .postcall-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
+  .btn-postcall-close{background:#1a1a2e;border:1px solid #2e2e48;color:#8888aa;border-radius:8px;
+    padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn-postcall-pdf{background:#0d1008;border:1px solid #E8B040;color:#E8B040;border-radius:8px;
+    padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn-postcall-save{background:#E8B040;color:#0c0c18;border:none;border-radius:8px;
+    padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+
+  /* ── Footer ── */
+  .pause-overlay{display:none;position:fixed;top:50%;left:25%;transform:translate(-50%,-50%);
+    background:#1a0a0a;border:1px solid #e05c5c;border-radius:12px;padding:16px 28px;
+    color:#e05c5c;font-size:14px;font-weight:600;letter-spacing:.05em;z-index:99}
+  .pause-overlay.visible{display:block}
+  .footer{padding:8px 20px;border-top:1px solid #1a1a2e;background:#0c0c18;display:flex;
+    align-items:center;justify-content:space-between;font-size:11px;color:#3a3a4e;flex-shrink:0}
+  .footer-stats{display:flex;gap:16px}
+  .stat-val{color:#E8B040;font-weight:600}
+
+  /* ── Auto-logout warning ── */
+  #al-warning{position:fixed;bottom:20px;right:20px;background:#1a0e00;
+    border:1px solid #f0a500;border-radius:10px;padding:14px 18px;z-index:9999;
+    max-width:280px;display:none}
+  #al-warning.visible{display:block}
+  #al-warning p{font-size:13px;color:#c8922a;margin-bottom:10px;line-height:1.4}
+  #al-warning button{background:#f0a500;color:#0a0800;border:none;border-radius:6px;
+    padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+
+  /* ── Skript Panel ── */
+  .skript-panel{position:fixed;top:0;right:0;width:300px;height:100vh;
+    background:#0c0c18;border-left:1px solid #1a1a2e;z-index:400;
+    display:flex;flex-direction:column;transform:translateX(100%);transition:transform .2s ease}
+  .skript-panel.open{transform:translateX(0)}
+  .sp-header{padding:12px 14px;border-bottom:1px solid #1a1a2e;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .sp-title{font-size:13px;font-weight:700}
+  .sp-counter{font-size:11px;color:#6b6b80;margin-top:2px}
+  .sp-close{background:none;border:none;color:#6b6b80;font-size:16px;cursor:pointer;padding:2px 6px}
+  .sp-close:hover{color:#f0ebe0}
+  .sp-phase-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444466;padding:8px 14px 4px;flex-shrink:0}
+  .sp-items{flex:1;overflow-y:auto;padding:4px 0}
+  .sp-items::-webkit-scrollbar{width:3px}
+  .sp-items::-webkit-scrollbar-thumb{background:#1a1a2e}
+  .sp-item{display:flex;align-items:flex-start;gap:8px;padding:7px 14px;cursor:pointer;
+    transition:background .1s;font-size:12px;line-height:1.5;color:#c0c0d5;border-bottom:1px solid #0e0e14}
+  .sp-item:hover{background:#0e0e18}
+  .sp-item.done{color:#444466;text-decoration:line-through}
+  .sp-item.done .sp-dot{color:#1a3a28}
+  .sp-dot{font-size:13px;color:#E8B040;flex-shrink:0;margin-top:1px;width:14px;text-align:center}
+  .sp-next-preview{padding:8px 14px;border-top:1px solid #1a1a2e;font-size:10px;color:#444466;flex-shrink:0}
+  .sp-toggle-btn{background:#1a1a2e;border:1px solid #2e2e48;color:#8888aa;
+    border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;
+    transition:border-color .15s,color .15s;font-family:inherit}
+  .sp-toggle-btn:hover:not(.disabled){border-color:#E8B040;color:#E8B040}
+  .sp-toggle-btn.active{border-color:#E8B040;color:#E8B040;background:#1a1400}
+  .sp-toggle-btn.disabled{opacity:.3;cursor:default}
+
+  /* Kompakt skript line */
+  .kp-skript{padding:6px 14px;border-bottom:1px solid #1a1a2e;flex-shrink:0;display:none}
+  .kp-skript.has-items{display:block}
+  .kp-skript-text{font-size:11px;color:#c8922a;font-weight:600;line-height:1.4}
+
+  /* ── CRM Export Sections ── */
+  .crm-section{background:#080d08;border:1px solid #1a3a28;border-radius:8px;padding:14px;
+    display:flex;flex-direction:column;gap:8px;margin-top:4px}
+  .crm-section-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:#4a7a5a}
+  .crm-text{font-size:12px;color:#b0d0b8;white-space:pre-wrap;line-height:1.7;max-height:180px;
+    overflow-y:auto}
+  .crm-text::-webkit-scrollbar{width:3px}
+  .crm-text::-webkit-scrollbar-thumb{background:#1a3a28}
+  .crm-copy-btn{align-self:flex-end;background:#0c1c10;border:1px solid #2a5a38;color:#6ab880;
+    border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;
+    font-family:inherit;transition:background .15s}
+  .crm-copy-btn:hover{background:#1a3a20;color:#90e0a0}
+  .crm-copy-btn.copied{color:#E8B040;border-color:#E8B040}
+  .crm-mailto-btn{align-self:flex-end;background:#1a1a30;border:1px solid #3a3a58;color:#8888cc;
+    border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;
+    font-family:inherit;text-decoration:none;display:inline-block}
+  .crm-mailto-btn:hover{background:#22223a;color:#b0b0f0}
+  .naechste-schritte-list{display:flex;flex-direction:column;gap:6px}
+  .ns-item{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#c0c0d5}
+  .ns-check{width:16px;height:16px;border:1.5px solid #4a4a6a;border-radius:3px;flex-shrink:0;
+    cursor:pointer;margin-top:1px;display:flex;align-items:center;justify-content:center;
+    font-size:10px;color:transparent;transition:all .15s}
+  .ns-check.checked{background:#E8B040;border-color:#E8B040;color:#0c0c18}
+  .ns-text{line-height:1.5}
+
+  /* ── DSGVO Banner ── */
+  .dsgvo-banner{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);
+    background:#0a0d1a;border:1px solid #3a3a5a;border-radius:8px;padding:8px 16px;
+    font-size:11px;color:#7070a0;z-index:300;display:none;align-items:center;gap:8px;
+    max-width:500px;text-align:center}
+  .dsgvo-banner.visible{display:flex}
+  .dsgvo-banner strong{color:#9090c0}
+  .dsgvo-banner-close{background:none;border:none;color:#4a4a6a;cursor:pointer;
+    font-size:14px;line-height:1;padding:0 0 0 6px}
+  .dsgvo-banner-close:hover{color:#7070a0}
+
+  /* ── Print Styles ── */
+  @media print{
+    body > *:not(.postcall-overlay){display:none!important}
+    .postcall-overlay{position:static!important;background:white!important;color:black!important;padding:0!important;display:block!important}
+    .postcall-box{border:none!important;color:black!important;background:white!important;width:100%!important;max-width:none!important}
+    .postcall-actions,.sterne-row,.sterne-kommentar{display:none!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-nav">
+    <a href="/dashboard" class="back-link">← Dashboard</a>
+    <div class="nav-mark">
+      <div class="nav-n">N</div>
+      <div class="nav-word">NERVE<small>SALES INTELLIGENCE</small></div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="kb-display">
+      <span class="kb-label">Kaufbereitschaft</span>
+      <span class="kb-value red" id="kbValue">30%</span>
+      <div class="kb-bar-wrap"><div class="kb-bar" id="kbBar" style="width:30%;background:#e05c5c"></div></div>
+    </div>
+    <button class="sp-toggle-btn disabled" id="skriptToggleBtn" onclick="if(!this.classList.contains('disabled'))toggleSkriptPanel()" title="Kein Skript im Profil">📋 Skript</button>
+    <button class="btn btn-frage" onclick="openFrageModal()">💬 Frage stellen</button>
+    <span style="color:#444466;font-size:11px">{{ user.email }}</span>
+    <button class="btn btn-log" onclick="downloadLog()">⬇ Log</button>
+    <button class="btn btn-beenden" onclick="beenden()">■ Beenden</button>
+    <button class="btn btn-pause" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="st">Verbinde...</span>
+      <span id="session-timer" style="color:#E8B040;font-weight:700;font-size:12px;margin-left:6px">00:00</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Profile Bar ─────────────────────────────────────────────────────────── -->
+<div class="profile-bar">
+  <div style="display:flex;align-items:center">
+    <span class="profile-label">Profil:</span>
+    <span class="profile-name {% if not active_profile %}none{% endif %}" id="activeProfileName">
+      {{ active_profile.name if active_profile else 'Kein Profil aktiv' }}
+    </span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;position:relative">
+    <button class="btn-view-toggle" id="viewToggleBtn" onclick="toggleKompakt()">◀ Vollbild</button>
+    <button class="btn-profile-switch" id="profileSwitchBtn" onclick="toggleProfileMenu()">Wechseln ▾</button>
+    <div class="profile-menu" id="profileMenu">
+      {% for p in profiles %}
+      <button class="profile-menu-item {% if active_profile and p.id == active_profile.id %}cur{% endif %}"
+              onclick="setProfile({{ p.id }}, {{ p.name | tojson }})">
+        {{ p.name }}{% if active_profile and p.id == active_profile.id %} ✓{% endif %}
+      </button>
+      {% endfor %}
+      {% if not profiles %}
+      <div style="padding:10px 16px;font-size:12px;color:#444466">Keine Profile vorhanden</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Phasen-Bar ──────────────────────────────────────────────────────────── -->
+{% if active_phasen %}
+<div class="phasen-bar" id="phasenBar">
+  {% for phase in active_phasen %}
+  <div class="phase-step">
+    {% if not loop.first %}<span class="phase-arrow">›</span>{% endif %}
+    <button class="phase-btn {% if loop.first %}active{% endif %}"
+            data-idx="{{ loop.index0 }}"
+            onclick="setPhase({{ loop.index0 }}, this)">
+      {{ phase.name }}
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="toast" id="toast"></div>
+<div class="pause-overlay" id="pauseOverlay">⏸ PAUSIERT – keine Analyse</div>
+<!-- ── DSGVO Banner ─────────────────────────────────────────────────────── -->
+<div class="dsgvo-banner" id="dsgvoBanner">
+  <strong>🔒 DSGVO-Modus aktiv</strong> — Keine wörtlichen Zitate im CRM-Export. Nur zusammengefasste Notizen.
+  <button class="dsgvo-banner-close" onclick="document.getElementById('dsgvoBanner').classList.remove('visible')" title="Ausblenden">✕</button>
+</div>
+
+<!-- ── Main ───────────────────────────────────────────────────────────────── -->
+<div class="main">
+  <div class="panel panel-left">
+    <div class="panel-header"><span>🎙</span> Live-Transkript</div>
+    <div class="scroll" id="tr">
+      <div class="msg final" style="border-color:#1a1a2e;color:#333350">Spreche ins Mikrofon …</div>
+    </div>
+  </div>
+  <div class="panel-right-col">
+    <div class="panel panel-einwand">
+      <div class="panel-header"><span>⚡</span> KI-Einwandbehandlung</div>
+      <div class="scroll" id="ai">
+        <div class="msg final" style="border-color:#1a1a2e;color:#333350">Warte auf Gesprächsinhalt …</div>
+      </div>
+    </div>
+    <div class="quick-actions-bar">
+      <button class="qa-btn" onclick="quickAction('frage')">❓ Frage</button>
+      <button class="qa-btn" onclick="quickAction('einwand')">🛡️ Einwand</button>
+      <button class="qa-btn" onclick="quickAction('uebergang')">🔄 Übergang</button>
+      <button class="qa-btn" onclick="quickAction('abschluss')">🏁 Abschluss</button>
+    </div>
+    <div class="panel panel-coaching">
+      <div class="panel-header"><span>💡</span> Berater-Hinweise &amp; Painpoints</div>
+      <div class="scroll" id="coaching-scroll">
+        <div style="font-size:12px;color:#2a2500;padding:4px 0">Wartet auf Gesprächsinhalt …</div>
+      </div>
+    </div>
+    <div class="panel panel-sprachanalyse">
+      <div class="panel-header"><span>📊</span> Sprachanalyse Live</div>
+      <div class="metric-circles" id="metricCircles">
+        <div class="metric-circle-wrap">
+          <div class="metric-circle" id="mc-redeanteil"><span id="mc-v-redeanteil">–</span></div>
+          <div class="mc-label">Rede %</div>
+        </div>
+        <div class="metric-circle-wrap">
+          <div class="metric-circle" id="mc-tempo"><span id="mc-v-tempo">–</span></div>
+          <div class="mc-label">WPM</div>
+        </div>
+        <div class="metric-circle-wrap">
+          <div class="metric-circle" id="mc-monolog"><span id="mc-v-monolog">–</span></div>
+          <div class="mc-label">Mono s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+<div class="footer">
+  <span>NERVE · Sales Intelligence</span>
+  <div class="footer-stats">
+    <span>Wörter: <span class="stat-val" id="wc">0</span></span>
+    <span>Einwände: <span class="stat-val" id="ec">0</span></span>
+    <span>Analysen: <span class="stat-val" id="ac">0</span></span>
+  </div>
+</div>
+
+<!-- ── Auto-logout warning ────────────────────────────────────────────────── -->
+<div id="al-warning">
+  <p>Du wirst in <strong id="al-countdown">2:00</strong> automatisch ausgeloggt.</p>
+  <button onclick="liveKeepAlive()">Angemeldet bleiben</button>
+</div>
+
+<!-- ── Skript Panel ───────────────────────────────────────────────────────── -->
+<div class="skript-panel" id="skriptPanel">
+  <div class="sp-header">
+    <div>
+      <div class="sp-title">📋 Gesprächs-Skript</div>
+      <div class="sp-counter" id="sp-counter">–</div>
+    </div>
+    <button class="sp-close" onclick="toggleSkriptPanel()">✕</button>
+  </div>
+  <div class="sp-phase-title" id="sp-phase-title">Phase –</div>
+  <div class="sp-items" id="sp-items"></div>
+  <div class="sp-next-preview" id="sp-next-preview"></div>
+</div>
+
+<!-- ── Kompakt Panel ──────────────────────────────────────────────────────── -->
+<div class="kompakt-panel" id="kompaktPanel">
+  <div class="kp-topbar">
+    <div class="kp-logo">
+      <div class="kp-n">N</div>
+      <span class="kp-word">NERVE</span>
+    </div>
+    <div class="kp-status">
+      <div class="dot" id="kp-dot"></div>
+      <span id="kp-st">Verbinde...</span>
+      <span class="kp-timer" id="kp-timer">00:00</span>
+    </div>
+  </div>
+  <div class="kp-controls">
+    <button class="kp-btn kp-btn-end" onclick="beenden()">■ Beenden</button>
+    <button class="kp-btn kp-btn-pause" id="kp-pauseBtn" onclick="togglePause()">⏸ Pause</button>
+    <button class="kp-btn kp-btn-expand" onclick="toggleKompakt()">▶ Vollbild</button>
+    <span class="kp-profile" id="kp-profileName">{{ active_profile.name if active_profile else '–' }}</span>
+  </div>
+  <div class="kp-skript" id="kp-skript">
+    <div class="kp-section-label" style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#444466;text-transform:uppercase;margin-bottom:3px">📋 Nächster Punkt</div>
+    <div class="kp-skript-text" id="kp-skript-text">–</div>
+  </div>
+  <div class="kp-section">
+    <div class="kp-section-label">⚡ Einwand</div>
+    <div class="kp-einwand-content" id="kp-einwand">Kein Einwand erkannt</div>
+  </div>
+  <div class="kp-section">
+    <div class="kp-section-label">💡 Coaching</div>
+    <div class="kp-coaching-content" id="kp-coaching">Wartet auf Gesprächsinhalt…</div>
+  </div>
+  <div class="kp-section" id="kp-painpointSec" style="display:none">
+    <div class="kp-section-label">📍 Painpoint</div>
+    <div class="kp-painpoint-content" id="kp-painpoint"></div>
+  </div>
+  <div class="kp-qa-row">
+    <button class="kp-qa" onclick="kpQuickAction('frage')">❓ Frage</button>
+    <button class="kp-qa" onclick="kpQuickAction('einwand')">🛡️ Einwand</button>
+    <button class="kp-qa" onclick="kpQuickAction('uebergang')">🔄 Übergang</button>
+    <button class="kp-qa" onclick="kpQuickAction('abschluss')">🏁 Abschluss</button>
+  </div>
+  <div class="kp-metrics" id="kp-metrics">
+    <div class="kp-mc-wrap">
+      <div class="kp-mc" id="kp-mc-ra"><span id="kp-m-ra">–</span></div>
+      <div class="kp-mc-label">RA%</div>
+    </div>
+    <div class="kp-mc-wrap">
+      <div class="kp-mc" id="kp-mc-wpm"><span id="kp-m-wpm">–</span></div>
+      <div class="kp-mc-label">WPM</div>
+    </div>
+    <div class="kp-mc-wrap">
+      <div class="kp-mc" id="kp-mc-mono"><span id="kp-m-mono">–</span></div>
+      <div class="kp-mc-label">MON</div>
+    </div>
+    <div class="kp-kb-col">
+      <div class="kp-kb-row">
+        <span class="kp-kb-col-label">KB</span>
+        <span class="kp-kb-col-val" id="kp-m-kb" style="color:#e05c5c">30%</span>
+      </div>
+      <div class="kp-kb-bar-wrap2"><div class="kp-kb-bar2" id="kp-kb-bar2" style="width:30%;background:#e05c5c"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Frage Modal ────────────────────────────────────────────────────────── -->
+<div class="frage-overlay" id="frageOverlay" onclick="closeFrageOnOverlay(event)">
+  <div class="frage-box">
+    <div class="frage-title">💬 Frage an die KI stellen</div>
+    <div class="quick-actions">
+      <button class="qa-btn" onclick="quickAction('frage')">❓ Frage</button>
+      <button class="qa-btn" onclick="quickAction('einwand')">🛡️ Einwand</button>
+      <button class="qa-btn" onclick="quickAction('uebergang')">🔄 Übergang</button>
+      <button class="qa-btn" onclick="quickAction('abschluss')">🏁 Abschluss</button>
+    </div>
+    <textarea class="frage-input" id="frageInput" placeholder='z.B. "Was soll ich jetzt fragen?" oder "Wie reagiere ich auf diesen Einwand?"'></textarea>
+    <div class="frage-actions">
+      <button class="btn-cancel" onclick="closeFrageModal()">Abbrechen</button>
+      <button class="btn-senden" onclick="sendeFrageAnKI()">→ Antwort anfordern</button>
+    </div>
+    <div id="frageAntwort"></div>
+  </div>
+</div>
+
+<!-- ── Post-Call Modal ────────────────────────────────────────────────────── -->
+<div class="postcall-overlay" id="postcallOverlay">
+  <div class="postcall-box" id="postcallBox">
+    <div class="postcall-title">Post-Call <span>Analyse</span></div>
+    <div class="postcall-grid">
+
+      <!-- Redeanteil -->
+      <div class="postcall-section">
+        <div class="ps-title">Gesprächsdynamik (Redeanteil)</div>
+        <div class="redeanteil-bar" id="pc-rBar">
+          <div class="rb-berater" id="pc-rBerater" style="width:50%">B</div>
+          <div class="rb-kunde" id="pc-rKunde" style="width:50%">K</div>
+        </div>
+        <div class="ps-sub" id="pc-rText">Berater: 50% / Kunde: 50%</div>
+      </div>
+
+      <!-- Kaufbereitschaft -->
+      <div class="postcall-section">
+        <div class="ps-title">Kaufbereitschaft</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div>
+            <div class="ps-sub">Start</div>
+            <div class="ps-value" id="pc-kbStart" style="font-size:18px">30%</div>
+          </div>
+          <div style="color:#444466;font-size:20px">→</div>
+          <div>
+            <div class="ps-sub">Ende</div>
+            <div class="ps-value" id="pc-kbEnd" style="font-size:18px">30%</div>
+          </div>
+        </div>
+        <div class="kb-verlauf-wrap" id="pc-kbVerlauf"></div>
+      </div>
+
+      <!-- Einwände -->
+      <div class="postcall-section">
+        <div class="ps-title">Erkannte Einwände (<span id="pc-einCount">0</span>)</div>
+        <div id="pc-einList" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+
+      <!-- Kaufsignale + Painpoints -->
+      <div class="postcall-section">
+        <div class="ps-title">Kaufsignale (<span id="pc-sigCount">0</span>) &amp; Painpoints (<span id="pc-ppCount">0</span>)</div>
+        <div id="pc-sigList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px"></div>
+        <div id="pc-ppList" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+
+      <!-- Skript-Abdeckung -->
+      <div class="postcall-section postcall-section-full" id="pc-scriptSection" style="display:none">
+        <div class="ps-title">Skript-Abdeckung <span style="color:#E8B040;font-size:14px;font-weight:900" id="pc-scriptPct">0</span>%</div>
+        <div id="pc-scriptPhasen" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+      </div>
+
+      <!-- Wichtigste Erkenntnisse -->
+      <div class="postcall-section postcall-section-full">
+        <div class="ps-title">Wichtigste Erkenntnisse (KI)</div>
+        <ul class="bullet-list" id="pc-bullets">
+          <li class="bullet-item"><span class="bullet-dot">·</span><span style="color:#444466;font-style:italic">Lädt…</span></li>
+        </ul>
+      </div>
+
+      <!-- CRM-Notiz -->
+      <div class="postcall-section postcall-section-full" id="pc-crmSection" style="display:none">
+        <div class="ps-title">CRM-Notiz</div>
+        <div class="crm-section">
+          <div class="crm-section-label">Vertriebsnotiz (DSGVO-konform)</div>
+          <div class="crm-text" id="pc-crmNotiz"></div>
+          <button class="crm-copy-btn" onclick="copyCrm('pc-crmNotiz', this)">📋 Notiz kopieren</button>
+        </div>
+      </div>
+
+      <!-- Follow-up Email -->
+      <div class="postcall-section postcall-section-full" id="pc-emailSection" style="display:none">
+        <div class="ps-title">Follow-up E-Mail</div>
+        <div class="crm-section">
+          <div class="crm-section-label">Entwurf (anpassen vor dem Senden)</div>
+          <div class="crm-text" id="pc-followupEmail"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="crm-copy-btn" onclick="copyCrm('pc-followupEmail', this)">📋 Kopieren</button>
+            <a class="crm-mailto-btn" id="pc-mailtoBtn" href="#">✉ In E-Mail öffnen</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nächste Schritte -->
+      <div class="postcall-section postcall-section-full" id="pc-stepsSection" style="display:none">
+        <div class="ps-title">Nächste Schritte</div>
+        <div class="naechste-schritte-list" id="pc-stepsList"></div>
+      </div>
+
+      <!-- Bewertung -->
+      <div class="postcall-section postcall-section-full">
+        <div class="ps-title">Dieses Gespräch bewerten</div>
+        <div class="sterne-row" id="sterneRow">
+          <span class="stern" data-s="1" onclick="setStern(1)">★</span>
+          <span class="stern" data-s="2" onclick="setStern(2)">★</span>
+          <span class="stern" data-s="3" onclick="setStern(3)">★</span>
+          <span class="stern" data-s="4" onclick="setStern(4)">★</span>
+          <span class="stern" data-s="5" onclick="setStern(5)">★</span>
+          <span style="font-size:12px;color:#444466;margin-left:8px" id="sterneHint">Klicke zum Bewerten</span>
+        </div>
+        <textarea class="sterne-kommentar" id="sterneKommentar" placeholder="Was war gut? Was fehlte? (optional)"></textarea>
+      </div>
+
+    </div>
+    <div class="postcall-actions">
+      <button class="btn-postcall-close" onclick="closePostcall()">✕ Schließen</button>
+      <button class="btn-postcall-pdf" onclick="window.print()">⬇ PDF Download</button>
+      <button class="btn-postcall-save" id="pc-saveBtn" onclick="saveFeedback()">★ Bewertung speichern</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+// ── Kompakt-Modus ─────────────────────────────────────────────────────────────
+function toggleKompakt(){
+  const isKompakt = document.body.classList.toggle('kompakt');
+  updateViewToggleBtn(isKompakt);
+  try { localStorage.setItem('sn_kompakt', isKompakt ? '1' : '0'); } catch(e){}
+}
+function updateViewToggleBtn(isKompakt){
+  const btn = document.getElementById('viewToggleBtn');
+  if (!btn) return;
+  btn.textContent = isKompakt ? '▶ Vollbild' : '◀ Kompakt';
+  btn.title = isKompakt ? 'Zum Vollbild wechseln' : 'Kompakt-Modus (Popup)';
+}
+// Quick-Actions im Kompakt-Panel öffnen Frage-Modal mit Preset
+function kpQuickAction(typ){
+  openFrageModal();
+  quickAction(typ);
+}
+// Initialisierung: URL-Param oder localStorage
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const urlKompakt = params.get('kompakt') === '1';
+  let storedKompakt = false;
+  try { storedKompakt = localStorage.getItem('sn_kompakt') === '1'; } catch(e){}
+  // Popup-Erkennung: wenn window.opener gesetzt → Kompakt erzwingen
+  const isPopup = !!window.opener;
+  if (urlKompakt || storedKompakt || isPopup) {
+    document.body.classList.add('kompakt');
+    updateViewToggleBtn(true);
+  } else {
+    updateViewToggleBtn(false);
+  }
+})();
+
+// ── Profile switcher ──────────────────────────────────────────────────────────
+function toggleProfileMenu(){
+  document.getElementById('profileMenu').classList.toggle('open');
+}
+function setProfile(id, name){
+  fetch('/api/set_profile',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({profile_id:id})
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      document.getElementById('activeProfileName').textContent=name;
+      document.getElementById('activeProfileName').classList.remove('none');
+      const kpPN=document.getElementById('kp-profileName');
+      if(kpPN) kpPN.textContent=name;
+      document.getElementById('profileMenu').classList.remove('open');
+      showToast('Profil: '+name);
+      if(d.phasen) initSkript(d.phasen);
+    }
+  });
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#profileMenu')&&!e.target.closest('#profileSwitchBtn'))
+    document.getElementById('profileMenu').classList.remove('open');
+});
+
+// ── Phasen ────────────────────────────────────────────────────────────────────
+function setPhase(idx, btn){
+  document.querySelectorAll('.phase-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const phaseName = btn.textContent.trim();
+  fetch('/api/set_phase',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({phase_index:idx, phase_name: phaseName})});
+  renderSkriptPhase(idx);
+}
+
+// ── Skript-Teleprompter ───────────────────────────────────────────────────────
+let skriptData     = [];   // [{name, skript:[...]}, ...]
+let skriptChecked  = {};   // {"phaseIdx_itemIdx": true}
+let skriptPhaseIdx = 0;
+
+function initSkript(phasen){
+  skriptData    = (phasen||[]).map(p=>({name:p.name||'', items:Array.isArray(p.skript)?p.skript:[]}));
+  skriptChecked = {};
+  skriptPhaseIdx = 0;
+  const hasAny  = skriptData.some(p=>p.items.length>0);
+  const toggleBtn = document.getElementById('skriptToggleBtn');
+  if(toggleBtn){
+    toggleBtn.classList.toggle('disabled', !hasAny);
+    toggleBtn.title = hasAny ? '' : 'Kein Skript im Profil';
+  }
+  renderSkriptPhase(0);
+  updateKompaktSkript();
+}
+
+function toggleSkriptPanel(){
+  const panel = document.getElementById('skriptPanel');
+  const btn   = document.getElementById('skriptToggleBtn');
+  panel.classList.toggle('open');
+  if(btn) btn.classList.toggle('active', panel.classList.contains('open'));
+}
+
+function renderSkriptPhase(idx){
+  skriptPhaseIdx = idx;
+  const phase = skriptData[idx];
+  if(!phase || !phase.items.length) return;
+
+  document.getElementById('sp-phase-title').textContent = phase.name || `Phase ${idx+1}`;
+
+  const container = document.getElementById('sp-items');
+  container.innerHTML = '';
+  phase.items.forEach((text, i) => {
+    const key  = `${idx}_${i}`;
+    const done = !!skriptChecked[key];
+    const div  = document.createElement('div');
+    div.className = 'sp-item' + (done ? ' done' : '');
+    div.onclick   = () => toggleSkriptItem(idx, i);
+    div.innerHTML = `<span class="sp-dot">${done ? '✓' : '●'}</span><span>${text}</span>`;
+    container.appendChild(div);
+  });
+
+  updateSkriptStats(idx);
+
+  // Next phase preview
+  const nextPhase = skriptData[idx+1];
+  const preview   = document.getElementById('sp-next-preview');
+  if(nextPhase && nextPhase.items.length){
+    preview.textContent = `Nächste Phase: ${nextPhase.name}`;
+  } else {
+    preview.textContent = '';
+  }
+  updateKompaktSkript();
+}
+
+function toggleSkriptItem(phaseIdx, itemIdx){
+  const key = `${phaseIdx}_${itemIdx}`;
+  skriptChecked[key] = !skriptChecked[key];
+  renderSkriptPhase(phaseIdx);
+}
+
+function updateSkriptStats(idx){
+  const phase = skriptData[idx];
+  if(!phase) return;
+  const total   = phase.items.length;
+  const done    = phase.items.filter((_,i)=>skriptChecked[`${idx}_${i}`]).length;
+  const pct     = total ? Math.round(done/total*100) : 0;
+  const counter = document.getElementById('sp-counter');
+  if(counter) counter.textContent = `${done}/${total} Punkte besprochen (${pct}%)`;
+}
+
+function getSkriptAbdeckung(){
+  if(!skriptData.length) return null;
+  const phasen = skriptData.map((phase, pi) => {
+    const total = phase.items.length;
+    if(!total) return null;
+    const items = phase.items.map((text, ii) => ({
+      text, checked: !!skriptChecked[`${pi}_${ii}`]
+    }));
+    const done = items.filter(x=>x.checked).length;
+    return {phase: phase.name, items, done, total, pct: Math.round(done/total*100)};
+  }).filter(Boolean);
+  if(!phasen.length) return null;
+  const totalAll = phasen.reduce((s,p)=>s+p.total,0);
+  const doneAll  = phasen.reduce((s,p)=>s+p.done,0);
+  return {phasen, gesamt_prozent: totalAll ? Math.round(doneAll/totalAll*100) : 0};
+}
+
+function updateKompaktSkript(){
+  const sec  = document.getElementById('kp-skript');
+  const text = document.getElementById('kp-skript-text');
+  if(!sec || !text) return;
+  const phase = skriptData[skriptPhaseIdx];
+  if(!phase || !phase.items.length){sec.classList.remove('has-items');return;}
+  // Find first unchecked item
+  const next = phase.items.find((_,i)=>!skriptChecked[`${skriptPhaseIdx}_${i}`]);
+  if(next){
+    sec.classList.add('has-items');
+    text.textContent = next;
+  } else {
+    sec.classList.remove('has-items');
+  }
+}
+
+// Init from server-injected phasen
+initSkript({{ active_phasen | tojson }});
+
+// ── Auto-logout ───────────────────────────────────────────────────────────────
+(function(){
+  const IDLE=15*60*1000,WARN=13*60*1000;
+  let iT=null,wT=null,cT=null,rem=120;
+  function reset(){
+    clearTimeout(iT);clearTimeout(wT);clearInterval(cT);
+    document.getElementById('al-warning').classList.remove('visible');
+    rem=120;
+    wT=setTimeout(warn,WARN);
+    iT=setTimeout(()=>{window.location='/logout?auto=1';},IDLE);
+  }
+  function warn(){
+    rem=120;document.getElementById('al-warning').classList.add('visible');
+    clearInterval(cT);
+    cT=setInterval(()=>{
+      rem--;
+      const el=document.getElementById('al-countdown');
+      if(el)el.textContent=Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0');
+      if(rem<=0)clearInterval(cT);
+    },1000);
+  }
+  window.liveKeepAlive=function(){
+    fetch('/api/keepalive',{method:'POST'}).then(()=>reset()).catch(()=>reset());
+  };
+  ['mousemove','keydown','click','scroll','touchstart'].forEach(e=>
+    document.addEventListener(e,reset,{passive:true}));
+  reset();
+})();
+</script>
+</body>
+</html>
