@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-03-30T16:51:02.126Z"
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-03-30T16:56:40.696Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 9
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 02 (product-fixes) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-03-30
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-product-fixes P01 | 15 | 2 tasks | 6 files |
 | Phase 02-product-fixes P03 | 6 | 2 tasks | 0 files |
 | Phase 02-product-fixes P04 | 18 | 2 tasks | 9 files |
+| Phase 02-product-fixes P06 | 18 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 02-product-fixes]: No code changes needed — training modes, scoring, preview, and scenario selector verified correct as-is (PROD-03 through PROD-06)
 - [Phase 02-product-fixes]: PLANS dict has exactly 3 flat-rate plans: starter/pro/business at 49/59/69 EUR — all legacy keys removed
 - [Phase 02-product-fixes]: Org-level fair-use counters (live_minutes_used, training_sessions_used) added alongside user-level counters; soft-warn at 80%, never hard-block
+- [Phase 02-product-fixes]: POST wizard_create replaced JSON-API handler with form-data handler — matches HTML form submission pattern in rest of codebase
+- [Phase 02-product-fixes]: Wizard redirect placed before expensive stats queries in dashboard route to minimize overhead for new users
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T16:51:02.123Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-03-30T16:56:40.693Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None
