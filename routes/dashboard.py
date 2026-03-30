@@ -280,7 +280,7 @@ def _calculate_roi(user, logs, org):
     erfolgsquote   = behandelt / total_einwaende
     zusatz_deals   = round(behandelt * 0.10, 1)
     geschaetzter_mehrwert = round(zusatz_deals * avg_deal)
-    plan_kosten    = int(getattr(org, 'plan_preis', None) or 39)
+    plan_kosten    = int(getattr(org, 'plan_preis', None) or 49)
     roi_faktor     = round(geschaetzter_mehrwert / max(plan_kosten, 1), 1)
     return {
         'einwaende_behandelt':     behandelt,

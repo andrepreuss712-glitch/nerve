@@ -107,6 +107,10 @@ def _migrate():
             ('minuten_limit', 'INTEGER DEFAULT 1000'),
             ('training_voice_limit', 'INTEGER DEFAULT 50'),
             ('plan_preis', 'INTEGER DEFAULT 49'),
+            # Fair-Use Tracking (org-level)
+            ('live_minutes_used',      'INTEGER DEFAULT 0'),
+            ('training_sessions_used', 'INTEGER DEFAULT 0'),
+            ('fair_use_reset_month',   'VARCHAR(7)'),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE organisations ADD COLUMN {col} {typedef}'))

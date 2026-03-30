@@ -41,6 +41,10 @@ class Organisation(Base):
     minuten_limit        = Column(Integer, default=1000)   # Fair-Use pro User/Monat
     training_voice_limit = Column(Integer, default=50)     # TTS-Trainings pro User/Monat
     plan_preis           = Column(Integer, default=49)     # Euro/Monat Flat-Rate
+    # Fair-Use Tracking (org-level, resets monthly)
+    live_minutes_used      = Column(Integer, default=0)    # Live-Minuten verbraucht diesen Monat
+    training_sessions_used = Column(Integer, default=0)    # Trainings gestartet diesen Monat
+    fair_use_reset_month   = Column(String(7))             # e.g. '2026-04'
 
 
 class User(Base):

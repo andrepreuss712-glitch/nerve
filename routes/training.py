@@ -63,6 +63,30 @@ def training_start():
     finally:
         _db_vu.close()
 
+    # Org-level fair-use: reset monthly and increment training_sessions_used
+    try:
+        from database.models import Organisation as _OrgModel
+        from datetime import datetime as _dt
+        _db_org = get_session()
+        try:
+            _org = _db_org.get(_OrgModel, g.org.id)
+            if _org:
+                today_month = _dt.now().strftime('%Y-%m')
+                if _org.fair_use_reset_month != today_month:
+                    _org.live_minutes_used = 0
+                    _org.training_sessions_used = 0
+                    _org.fair_use_reset_month = today_month
+                _org.training_sessions_used = (_org.training_sessions_used or 0) + 1
+                _db_org.commit()
+                # Soft-warn at 80% of training limit (50 sessions)
+                training_limit = _org.training_voice_limit or 50
+                if _org.training_sessions_used >= int(training_limit * 0.8):
+                    print(f'[FairUse] Org {_org.id} at {_org.training_sessions_used}/{training_limit} training sessions (80%+ warning)')
+        finally:
+            _db_org.close()
+    except Exception as _te:
+        print(f'[FairUse] Training org counter error: {_te}')
+
     data          = request.get_json(force=True)
     profile_id    = data.get('profile_id')
     schwierigkeit = data.get('schwierigkeit', 'mittel')
