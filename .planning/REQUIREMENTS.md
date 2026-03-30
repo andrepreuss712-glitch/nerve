@@ -16,9 +16,9 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [x] **PROD-05**: User sieht nach einem Training eine Preview "Was NERVE im echten Call gezeigt hätte" (Cross-Sell Live-Modus)
 - [x] **PROD-06**: User kann aus 11 vordefinierten Standard-Trainingsszenarien (DACH Mittelstand) für alle Schwierigkeitsstufen wählen
 - [x] **PROD-07**: Live-Modus zeigt korrekten Skript-Button, DSGVO-Banner vor Mikrofon-Zugriff, Kompakt-Modus Kreise und Toggle in richtiger Position
-- [ ] **PROD-08**: Onboarding nutzt generische Placeholder-Texte, bietet Dashboard-Stil Auswahl und zeigt Beispiel-Boxen
+- [x] **PROD-08**: Onboarding nutzt generische Placeholder-Texte, bietet Dashboard-Stil Auswahl und zeigt Beispiel-Boxen
 - [x] **PROD-09**: Neuer User durchläuft 3-Schritte Profil-Wizard statt leerem Formular beim ersten Login
-- [ ] **PROD-10**: Profil-Editor zeigt generische Placeholder ("Ihr Produkt", "Ihr Unternehmen") statt Demo-Inhalt
+- [x] **PROD-10**: Profil-Editor zeigt generische Placeholder ("Ihr Produkt", "Ihr Unternehmen") statt Demo-Inhalt
 - [x] **PROD-11**: Alle SalesNerve-Referenzen im Code und UI sind durch NERVE ersetzt
 
 ### Infrastructure & Deployment
@@ -107,9 +107,9 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | PROD-05 | Phase 2 | Complete |
 | PROD-06 | Phase 2 | Complete |
 | PROD-07 | Phase 2 | Complete |
-| PROD-08 | Phase 2 | Pending |
+| PROD-08 | Phase 2 | Complete |
 | PROD-09 | Phase 2 | Complete |
-| PROD-10 | Phase 2 | Pending |
+| PROD-10 | Phase 2 | Complete |
 | PROD-11 | Phase 2 | Complete |
 | INFRA-01 | Phase 3 | Pending |
 | INFRA-02 | Phase 3 | Pending |
