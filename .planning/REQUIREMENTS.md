@@ -9,8 +9,8 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 
 ### Product Fixes
 
-- [ ] **PROD-01**: User kann das neue Pricing-System (69/59/49€ Flat-Rate) in der App sehen und einen Tarif auswählen
-- [ ] **PROD-02**: User sieht im Dashboard einen ROI-Tracker mit persönlichen Nutzungsmetriken
+- [x] **PROD-01**: User kann das neue Pricing-System (69/59/49€ Flat-Rate) in der App sehen und einen Tarif auswählen
+- [x] **PROD-02**: User sieht im Dashboard einen ROI-Tracker mit persönlichen Nutzungsmetriken
 - [x] **PROD-03**: User kann Trainings-Modus "Frei" wählen (maximale Punkte, keine Hilfe-Hints)
 - [x] **PROD-04**: User kann Trainings-Modus "Geführt" wählen (Hilfe verfügbar mit Punktabzug)
 - [x] **PROD-05**: User sieht nach einem Training eine Preview "Was NERVE im echten Call gezeigt hätte" (Cross-Sell Live-Modus)
@@ -100,8 +100,8 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | BIZ-02 | Phase 1 | Pending |
 | BIZ-03 | Phase 1 | Pending |
 | BIZ-04 | Phase 1 | Pending |
-| PROD-01 | Phase 2 | Pending |
-| PROD-02 | Phase 2 | Pending |
+| PROD-01 | Phase 2 | Complete |
+| PROD-02 | Phase 2 | Complete |
 | PROD-03 | Phase 2 | Complete |
 | PROD-04 | Phase 2 | Complete |
 | PROD-05 | Phase 2 | Complete |

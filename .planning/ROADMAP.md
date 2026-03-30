@@ -53,7 +53,7 @@ Plans:
 - [x] 02-01-PLAN.md — SalesNerve to NERVE rename across codebase and DB migration (PROD-11)
 - [x] 02-02-PLAN.md — Live-mode bug fixes: DSGVO banner, script button, compact circles, toggle (PROD-07)
 - [x] 02-03-PLAN.md — Training modes and scenarios verification (PROD-03, PROD-04, PROD-05, PROD-06)
-- [ ] 02-04-PLAN.md — Pricing model rewrite to flat-rate + fair-use tracking + ROI fix (PROD-01, PROD-02)
+- [x] 02-04-PLAN.md — Pricing model rewrite to flat-rate + fair-use tracking + ROI fix (PROD-01, PROD-02)
 - [ ] 02-05-PLAN.md — Onboarding improvements + profile editor placeholders (PROD-08, PROD-10)
 - [ ] 02-06-PLAN.md — Profile wizard: 3-step guided profile creation for new users (PROD-09)
 
