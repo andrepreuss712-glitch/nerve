@@ -1,0 +1,996 @@
+{% extends 'base.html' %}
+{% block title %} – {{ 'Profil bearbeiten' if profile else 'Neues Profil' }}{% endblock %}
+
+{% block extra_style %}
+.g-content { overflow: hidden; display: flex; flex-direction: column; }
+
+/* ── Topbar ───────────────────────────────────────────────────────── */
+.editor-topbar {
+  padding: 10px 24px; background: #0c0c18; border-bottom: 1px solid #1a1a2e;
+  display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+}
+.editor-topbar .back-link {
+  font-size: 12px; color: #444466; background: transparent;
+  border: 1px solid #2e2e48; border-radius: 6px; padding: 5px 11px;
+  cursor: pointer; white-space: nowrap; transition: border-color .15s, color .15s;
+  font-family: inherit;
+}
+.editor-topbar .back-link:hover { border-color: #6868a8; color: #b0b0c8; }
+.topbar-name {
+  flex: 1; max-width: 320px; background: #0c0c18; border: 1px solid #2e2e48;
+  border-radius: 7px; color: #f0ebe0; font-size: 15px; font-weight: 700;
+  padding: 7px 12px; outline: none; font-family: inherit;
+}
+.topbar-name:focus { border-color: #E8B040; }
+.topbar-branche {
+  max-width: 200px; background: #0c0c18; border: 1px solid #1a1a2e;
+  border-radius: 7px; color: #b0b0c8; font-size: 13px; padding: 7px 12px;
+  outline: none; font-family: inherit;
+}
+.topbar-branche:focus { border-color: #E8B040; }
+.save-btn {
+  background: #E8B040; color: #0c0c18; border: none; border-radius: 8px;
+  padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit; white-space: nowrap; margin-left: auto;
+}
+.save-btn:hover { opacity: .85; }
+
+/* ── Layout ───────────────────────────────────────────────────────── */
+.editor-layout { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+/* ── Sidebar ──────────────────────────────────────────────────────── */
+.editor-sidebar {
+  width: 192px; flex-shrink: 0; background: #0d0d14;
+  border-right: 1px solid #1a1a2e; overflow-y: auto; padding: 10px 0;
+}
+.editor-sidebar::-webkit-scrollbar { width: 3px; }
+.editor-sidebar::-webkit-scrollbar-thumb { background: #1a1a2e; }
+.sec-link {
+  display: flex; align-items: center; gap: 7px; padding: 7px 14px;
+  font-size: 12px; color: #6b6b80; cursor: pointer; user-select: none;
+  border-left: 3px solid transparent; transition: color .12s, background .12s;
+  white-space: nowrap;
+}
+.sec-link:hover { color: #b0b0c8; background: #0c0c18; }
+.sec-link.active { color: #E8B040; border-left-color: #E8B040; background: #0d1208; }
+.sec-num { font-size: 10px; font-weight: 700; color: #333350; flex-shrink: 0; width: 16px; }
+.sec-link.active .sec-num { color: #1a8a78; }
+
+/* ── Main scroll area ─────────────────────────────────────────────── */
+.editor-main { flex: 1; overflow-y: auto; padding: 24px 28px; }
+.editor-main::-webkit-scrollbar { width: 4px; }
+.editor-main::-webkit-scrollbar-thumb { background: #1a1a2e; border-radius: 2px; }
+
+/* ── Sections ─────────────────────────────────────────────────────── */
+.sec { margin-bottom: 44px; scroll-margin-top: 16px; }
+.sec-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: #E8B040; margin-bottom: 18px; padding-bottom: 8px;
+  border-bottom: 1px solid #1a1a2e; display: flex; align-items: center; gap: 8px;
+}
+.sec-title-num {
+  background: #0d2a24; color: #E8B040; border-radius: 4px; padding: 1px 6px; font-size: 10px;
+}
+
+/* ── Form ─────────────────────────────────────────────────────────── */
+.fg { margin-bottom: 14px; }
+.fg:last-child { margin-bottom: 0; }
+.fl {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: .07em;
+  color: #6b6b80; text-transform: uppercase; margin-bottom: 5px;
+}
+.fi, .fs, .fta {
+  width: 100%; background: #0c0c18; border: 1px solid #1a1a2e;
+  border-radius: 6px; color: #f0ebe0; font-size: 13px; padding: 8px 11px;
+  outline: none; font-family: inherit; transition: border-color .15s;
+}
+.fi:focus, .fs:focus, .fta:focus { border-color: #E8B040; }
+.fta { resize: vertical; min-height: 72px; line-height: 1.5; }
+.fs { cursor: pointer; }
+.frow { display: grid; gap: 12px; }
+.frow-2 { grid-template-columns: 1fr 1fr; }
+
+/* ── Tooltip icon ─────────────────────────────────────────────────── */
+.tip-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; min-width: 14px; background: #1a1a2e;
+  border: 1px solid #2e2e48; color: #555575; border-radius: 50%;
+  font-size: 9px; font-weight: 700; cursor: help; vertical-align: middle;
+  transition: border-color .12s, color .12s; font-style: normal;
+  text-transform: none; letter-spacing: 0;
+}
+.tip-icon:hover { border-color: #E8B040; color: #E8B040; }
+
+/* Global tooltip bubble */
+#g-tip {
+  position: fixed; z-index: 9999; pointer-events: none;
+  display: none; max-width: 240px; width: 240px;
+}
+#g-tip-inner {
+  background: #1a1a2e; border: 1px solid #E8B040;
+  color: #c0c0d5; font-size: 12px; font-weight: 400;
+  padding: 9px 12px; border-radius: 8px; line-height: 1.55;
+  box-shadow: 0 4px 20px rgba(0,0,0,.55);
+  text-transform: none; letter-spacing: 0; white-space: normal;
+}
+
+/* ── Tags ─────────────────────────────────────────────────────────── */
+.tag-container {
+  background: #0c0c18; border: 1px solid #1a1a2e; border-radius: 6px;
+  padding: 5px 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  min-height: 38px; transition: border-color .15s; cursor: text;
+}
+.tag-container:focus-within { border-color: #E8B040; }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 4px; background: #0d2a24;
+  border: 1px solid #1a4a40; color: #E8B040; border-radius: 5px;
+  padding: 2px 8px; font-size: 12px;
+}
+.tag-chip.danger { background: #2a0e0e; border-color: #5a2020; color: #e05c5c; }
+.tag-rm {
+  background: none; border: none; color: currentColor; opacity: .6;
+  cursor: pointer; font-size: 13px; padding: 0; line-height: 1;
+  font-family: inherit; transition: opacity .1s;
+}
+.tag-rm:hover { opacity: 1; }
+.tag-input {
+  background: none; border: none; outline: none; color: #b0b0c8;
+  font-size: 13px; min-width: 80px; flex: 1; padding: 2px 4px; font-family: inherit;
+}
+
+/* ── Radios ───────────────────────────────────────────────────────── */
+.radio-row { display: flex; gap: 20px; align-items: center; padding-top: 4px; }
+.radio-row label {
+  display: flex; align-items: center; gap: 6px; font-size: 13px;
+  color: #b0b0c8; cursor: pointer;
+}
+.radio-row input[type="radio"] { accent-color: #E8B040; }
+
+/* ── Sliders ──────────────────────────────────────────────────────── */
+.trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; }
+.trigger-row { display: flex; align-items: center; gap: 10px; }
+.trigger-lbl {
+  font-size: 12px; color: #8888a8; min-width: 170px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 4px;
+}
+.t-slider { flex: 1; accent-color: #E8B040; cursor: pointer; height: 4px; }
+.slider-val { font-size: 13px; font-weight: 700; color: #E8B040; min-width: 22px; text-align: right; }
+
+/* ── Dynamic rows ─────────────────────────────────────────────────── */
+.btn-add {
+  background: #0d1a28; border: 1px solid #1a3a58; color: #4899c8;
+  border-radius: 6px; padding: 6px 14px; font-size: 11px; font-weight: 700;
+  cursor: pointer; font-family: inherit; margin-top: 8px;
+  transition: border-color .15s;
+}
+.btn-add:hover { border-color: #4899c8; }
+.btn-rm {
+  background: #1a0808; border: 1px solid #3a1414; color: #e05c5c;
+  border-radius: 5px; padding: 5px 8px; font-size: 12px; cursor: pointer;
+  flex-shrink: 0; font-family: inherit; transition: border-color .15s; line-height: 1;
+}
+.btn-rm:hover { border-color: #e05c5c; }
+.btn-ord {
+  background: #1a1a2e; border: 1px solid #2e2e48; color: #6b6b80;
+  border-radius: 5px; padding: 5px 7px; font-size: 11px; cursor: pointer;
+  font-family: inherit; line-height: 1; transition: border-color .15s, color .15s;
+}
+.btn-ord:hover { border-color: #6868a8; color: #d0d0f0; }
+
+/* ── Block cards ──────────────────────────────────────────────────── */
+.block {
+  background: #0d0d14; border: 1px solid #1a1a2e; border-radius: 9px;
+  padding: 14px; margin-bottom: 10px;
+}
+.block-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; gap: 8px;
+}
+.block-lbl { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #444466; }
+.block-hd-right { display: flex; align-items: center; gap: 6px; }
+.einwand-preview { font-size: 12px; font-weight: 600; color: #f0a05a; flex: 1; }
+.einwand-body { display: grid; gap: 10px; }
+.einwand-body.collapsed { display: none; }
+
+/* Column header rows */
+.col-header {
+  display: flex; gap: 8px; padding: 0 0 6px;
+  border-bottom: 1px solid #1a1a2e; margin-bottom: 8px;
+}
+.col-header span { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #444466; display: flex; align-items: center; gap: 4px; }
+
+/* Inline grids */
+.drow { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+.drow .fi { flex: 1; }
+.wrow { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+.urow { display: grid; grid-template-columns: 1fr auto 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.u-arrow { color: #444466; font-size: 15px; flex-shrink: 0; }
+{% endblock %}
+
+{% block content %}
+<form id="editorForm" method="post" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+  <input type="hidden" name="daten_json" id="daten_json">
+  <input type="hidden" name="name" id="f_name">
+  <input type="hidden" name="branche" id="f_branche">
+
+  <!-- From-wizard success banner -->
+  <div id="wizard-banner" style="display:none;background:rgba(34,197,94,.08);border-bottom:1px solid rgba(34,197,94,.2);
+    padding:10px 24px;font-size:13px;color:#22c55e;flex-shrink:0">
+    ✓ Profil erstellt! Verfeinere jetzt die Details oder lege direkt los.
+    <button onclick="document.getElementById('wizard-banner').style.display='none'"
+      style="background:none;border:none;color:#22c55e;cursor:pointer;margin-left:12px;font-size:14px;opacity:.7">✕</button>
+  </div>
+
+  <div class="editor-topbar">
+    <button type="button" class="back-link" onclick="window.location='/profiles'">← Profile</button>
+    <input id="vi_name" class="topbar-name" placeholder="Profilname *" required
+      value="{{ profile.name if profile else '' }}">
+    <input id="vi_branche" class="topbar-branche" placeholder="Branche"
+      value="{{ profile.branche if profile else '' }}">
+    <button type="button" class="save-btn" onclick="buildAndSubmit()">💾 Speichern</button>
+  </div>
+
+  <div class="editor-layout">
+    <div class="editor-sidebar" id="editorSidebar">
+      <a class="sec-link active" data-target="sec-basis" onclick="goSec('sec-basis')">
+        <span class="sec-num">1</span>Basis & Produkt</a>
+      <a class="sec-link" data-target="sec-zielgruppe" onclick="goSec('sec-zielgruppe')">
+        <span class="sec-num">2</span>Zielgruppe</a>
+      <a class="sec-link" data-target="sec-schmerzen" onclick="goSec('sec-schmerzen')">
+        <span class="sec-num">3</span>Schmerzpunkte</a>
+      <a class="sec-link" data-target="sec-phasen" onclick="goSec('sec-phasen')">
+        <span class="sec-num">4</span>Gesprächsphasen</a>
+      <a class="sec-link" data-target="sec-einwaende" onclick="goSec('sec-einwaende')">
+        <span class="sec-num">5</span>Einwände</a>
+      <a class="sec-link" data-target="sec-fragen" onclick="goSec('sec-fragen')">
+        <span class="sec-num">6</span>Häufige Fragen</a>
+      <a class="sec-link" data-target="sec-kaufsignale" onclick="goSec('sec-kaufsignale')">
+        <span class="sec-num">7</span>Kaufsignale</a>
+      <a class="sec-link" data-target="sec-nogos" onclick="goSec('sec-nogos')">
+        <span class="sec-num">8</span>No-Go Situationen</a>
+      <a class="sec-link" data-target="sec-wettbewerb" onclick="goSec('sec-wettbewerb')">
+        <span class="sec-num">9</span>Wettbewerber</a>
+      <a class="sec-link" data-target="sec-techniken" onclick="goSec('sec-techniken')">
+        <span class="sec-num">10</span>Verkaufstechniken</a>
+      <a class="sec-link" data-target="sec-uebergaenge" onclick="goSec('sec-uebergaenge')">
+        <span class="sec-num">11</span>Übergang-Ziele</a>
+      <a class="sec-link" data-target="sec-ki" onclick="goSec('sec-ki')">
+        <span class="sec-num">12</span>KI-Anweisungen</a>
+    </div>
+
+    <div class="editor-main" id="editorMain">
+
+      <!-- ① Basis & Produkt -->
+      <div class="sec" id="sec-basis">
+        <div class="sec-title"><span class="sec-title-num">1</span>Basis & Produkt</div>
+        <div class="fg">
+          <label class="fl">Unternehmen</label>
+          <input class="fta" id="vi_unternehmen" placeholder="Ihr Unternehmen"
+            value="">
+        </div>
+        <div class="fg">
+          <label class="fl">Produktbeschreibung <i class="tip-icon" data-tip="Was genau bietest du an? Beschreibe es so wie du es einem Fremden in 30 Sekunden erklären würdest.">?</i></label>
+          <textarea class="fta" id="vi_produkt" placeholder="Ihr Produkt oder Service"></textarea>
+        </div>
+        <div class="fg">
+          <label class="fl">Preismodell & Konditionen <i class="tip-icon" data-tip="Wie viel kostet es und unter welchen Bedingungen?">?</i></label>
+          <textarea class="fta" id="vi_preis" style="min-height:56px" placeholder="z.B. Ab 49€/Monat, auf Anfrage, erfolgsbasiert…"></textarea>
+        </div>
+        <div class="fg">
+          <label class="fl">USPs <i class="tip-icon" data-tip="Was macht dein Angebot einzigartig? Drücke Enter nach jedem Punkt.">?</i></label>
+          <div class="tag-container" id="usps-tags" onclick="focusTagInput('usps-tags')">
+            <input class="tag-input" placeholder="z.B. Keine Vorabkosten, 24h Support, Made in Germany… + Enter" onkeydown="tagKeydown(event,'usps-tags')">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Konsequenz wenn Kunde nicht kauft <i class="tip-icon" data-tip="Was verliert der Kunde konkret wenn er heute Nein sagt? Das ist dein stärkstes Argument.">?</i></label>
+          <textarea class="fta" id="vi_konsequenz" style="min-height:56px" placeholder="Was passiert wenn der Kunde NICHT kauft? z.B. Problem bleibt bestehen, Kosten steigen weiter…"></textarea>
+        </div>
+      </div>
+
+      <!-- ② Zielgruppe -->
+      <div class="sec" id="sec-zielgruppe">
+        <div class="sec-title"><span class="sec-title-num">2</span>Zielgruppe</div>
+        <div class="frow frow-2">
+          <div class="fg">
+            <label class="fl">Alter <i class="tip-icon" data-tip="Typisches Alter deiner besten Kunden.">?</i></label>
+            <input class="fi" id="vi_alter" placeholder="z.B. 30–55">
+          </div>
+          <div class="fg">
+            <label class="fl">Berufsstatus <i class="tip-icon" data-tip="Angestellt, selbstständig, Führungskraft?">?</i></label>
+            <input class="fi" id="vi_berufsstatus" placeholder="z.B. Geschäftsführer, Teamleiter, Selbstständig">
+          </div>
+        </div>
+        <div class="frow frow-2">
+          <div class="fg">
+            <label class="fl">Einkommensniveau <i class="tip-icon" data-tip="Netto-Monatseinkommen deiner Zielgruppe.">?</i></label>
+            <input class="fi" id="vi_einkommen" placeholder="z.B. ab 50.000€/Jahr">
+          </div>
+          <div class="fg">
+            <label class="fl">Lebenssituation <i class="tip-icon" data-tip="Familie, Eigenheim geplant, Berufseinsteiger?">?</i></label>
+            <input class="fi" id="vi_lebenssituation" placeholder="z.B. Wachstumsphase, Umstrukturierung">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Beruflicher Hintergrund <i class="tip-icon" data-tip="Welche Berufsgruppen kaufen am häufigsten?">?</i></label>
+          <div class="tag-container" id="hintergrund-tags" onclick="focusTagInput('hintergrund-tags')">
+            <input class="tag-input" placeholder="Berufsgruppe + Enter …" onkeydown="tagKeydown(event,'hintergrund-tags')">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Vorwissen <i class="tip-icon" data-tip="Wie gut kennt deine Zielgruppe das Thema bereits?">?</i></label>
+          <div class="radio-row">
+            <label><input type="radio" name="vorwissen" value="gering"> Gering</label>
+            <label><input type="radio" name="vorwissen" value="mittel" checked> Mittel</label>
+            <label><input type="radio" name="vorwissen" value="hoch"> Hoch</label>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Entscheidungsverhalten <i class="tip-icon" data-tip="Entscheidet der Kunde schnell oder braucht er Zeit? Allein oder mit Partner?">?</i></label>
+          <div class="tag-container" id="entscheidung-tags" onclick="focusTagInput('entscheidung-tags')">
+            <input class="tag-input" placeholder="z.B. braucht Zahlen, entscheidet schnell …" onkeydown="tagKeydown(event,'entscheidung-tags')">
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ Schmerzpunkte & Trigger -->
+      <div class="sec" id="sec-schmerzen">
+        <div class="sec-title"><span class="sec-title-num">3</span>Schmerzpunkte & Trigger</div>
+        <div id="schmerz-list"></div>
+        <button type="button" class="btn-add" onclick="addSchmerz()">+ Schmerzpunkt hinzufügen</button>
+
+        <div style="margin-top:24px;margin-bottom:12px">
+          <label class="fl" style="margin-bottom:0">Emotionale Trigger – Gewichtung (1–10)</label>
+        </div>
+        <div class="trigger-grid">
+          <div class="trigger-row">
+            <span class="trigger-lbl">Verlust-Aversion <i class="tip-icon" data-tip="Wie stark reagiert deine Zielgruppe auf drohende Verluste?">?</i></span>
+            <input type="range" class="t-slider" id="tr_verlust" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
+            <span class="slider-val">5</span>
+          </div>
+          <div class="trigger-row">
+            <span class="trigger-lbl">Familie / Verantwortung <i class="tip-icon" data-tip="Wie wichtig ist das Thema Familie als Kaufmotiv?">?</i></span>
+            <input type="range" class="t-slider" id="tr_familie" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
+            <span class="slider-val">5</span>
+          </div>
+          <div class="trigger-row">
+            <span class="trigger-lbl">Status / Anerkennung <i class="tip-icon" data-tip="Wie wichtig ist Status und soziale Anerkennung als Kaufmotiv?">?</i></span>
+            <input type="range" class="t-slider" id="tr_status" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
+            <span class="slider-val">5</span>
+          </div>
+          <div class="trigger-row">
+            <span class="trigger-lbl">Zahlen / Fakten <i class="tip-icon" data-tip="Wie stark überzeugt deine Zielgruppe mit konkreten Zahlen und Fakten?">?</i></span>
+            <input type="range" class="t-slider" id="tr_zahlen" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
+            <span class="slider-val">5</span>
+          </div>
+          <div class="trigger-row">
+            <span class="trigger-lbl">Dringlichkeit <i class="tip-icon" data-tip="Wie stark wirkt Zeitdruck auf deine Zielgruppe?">?</i></span>
+            <input type="range" class="t-slider" id="tr_dringlichkeit" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
+            <span class="slider-val">5</span>
+          </div>
+          <div class="trigger-row">
+            <span class="trigger-lbl">Micro-Commitments <i class="tip-icon" data-tip="Hilft es, den Kunden mit kleinen Zusagen schrittweise zu führen?">?</i></span>
+            <input type="range" class="t-slider" id="tr_micro" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
+            <span class="slider-val">5</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ Gesprächsphasen -->
+      <div class="sec" id="sec-phasen">
+        <div class="sec-title"><span class="sec-title-num">4</span>Gesprächsphasen</div>
+        <div class="col-header" style="grid-template-columns:36px 1fr 1fr auto auto;display:grid;gap:8px">
+          <span></span>
+          <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Kurzer Name der Phase, z.B. Smalltalk oder Closing.">?</i></span>
+          <span class="fl" style="margin:0">Ziel / Beschreibung <i class="tip-icon" data-tip="Was soll am Ende dieser Phase erreicht sein?">?</i></span>
+          <span></span><span></span>
+        </div>
+        <div style="font-size:11px;color:#444466;margin:2px 0 6px 44px">↳ Skript-Bullets (optional) — eine Zeile = ein Teleprompter-Punkt</div>
+        <div id="phasen-list"></div>
+        <button type="button" class="btn-add" onclick="addPhase()">+ Phase hinzufügen</button>
+      </div>
+
+      <!-- ⑤ Einwände -->
+      <div class="sec" id="sec-einwaende">
+        <div class="sec-title"><span class="sec-title-num">5</span>Einwände</div>
+        <div id="einwaende-list"></div>
+        <button type="button" class="btn-add" onclick="addEinwand()">+ Einwand hinzufügen</button>
+      </div>
+
+      <!-- ⑥ Häufige Fragen -->
+      <div class="sec" id="sec-fragen">
+        <div class="sec-title"><span class="sec-title-num">6</span>Häufige Fragen</div>
+        <div id="fragen-list"></div>
+        <button type="button" class="btn-add" onclick="addFrage()">+ Frage hinzufügen</button>
+      </div>
+
+      <!-- ⑦ Kaufsignale -->
+      <div class="sec" id="sec-kaufsignale">
+        <div class="sec-title"><span class="sec-title-num">7</span>Kaufsignale</div>
+        <div class="col-header" style="display:flex;gap:8px">
+          <span class="fl" style="margin:0;flex:1">Signal <i class="tip-icon" data-tip="Woran erkennst du dass der Kunde kaufbereit ist?">?</i></span>
+          <span class="fl" style="margin:0;flex:1">Wie reagieren <i class="tip-icon" data-tip="Was solltest du in diesem Moment tun oder sagen?">?</i></span>
+          <span style="width:32px"></span>
+        </div>
+        <div id="kaufsignale-list"></div>
+        <button type="button" class="btn-add" onclick="addKaufsignal()">+ Kaufsignal hinzufügen</button>
+      </div>
+
+      <!-- ⑧ No-Go Situationen -->
+      <div class="sec" id="sec-nogos">
+        <div class="sec-title"><span class="sec-title-num">8</span>No-Go Situationen</div>
+        <div class="col-header" style="display:flex;gap:8px">
+          <span class="fl" style="margin:0;flex:1">Kriterium <i class="tip-icon" data-tip="Wann ist jemand definitiv kein passender Kunde?">?</i></span>
+          <span class="fl" style="margin:0;flex:1">Beschreibung <i class="tip-icon" data-tip="Warum disqualifiziert das den Kontakt?">?</i></span>
+          <span style="width:32px"></span>
+        </div>
+        <div id="nogos-list"></div>
+        <button type="button" class="btn-add" onclick="addNogo()">+ No-Go hinzufügen</button>
+      </div>
+
+      <!-- ⑨ Wettbewerber -->
+      <div class="sec" id="sec-wettbewerb">
+        <div class="sec-title"><span class="sec-title-num">9</span>Wettbewerber</div>
+        <div class="col-header" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px">
+          <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Wer ist der Hauptkonkurrent den Kunden oft nennen?">?</i></span>
+          <span class="fl" style="margin:0">Schwäche <i class="tip-icon" data-tip="Was kann der Wettbewerber nicht oder schlechter?">?</i></span>
+          <span class="fl" style="margin:0">Unser Vorteil <i class="tip-icon" data-tip="Was kannst nur du bieten?">?</i></span>
+          <span></span>
+        </div>
+        <div id="wettbewerb-list"></div>
+        <button type="button" class="btn-add" onclick="addWettbewerber()">+ Wettbewerber hinzufügen</button>
+      </div>
+
+      <!-- ⑩ Verkaufstechniken -->
+      <div class="sec" id="sec-techniken">
+        <div class="sec-title"><span class="sec-title-num">10</span>Verkaufstechniken</div>
+        <div class="fg">
+          <label class="fl">Aktive Techniken <i class="tip-icon" data-tip="Welche Techniken soll NERVE bevorzugt einsetzen?">?</i></label>
+          <div class="tag-container" id="techniken-aktiv-tags" onclick="focusTagInput('techniken-aktiv-tags')">
+            <input class="tag-input" placeholder="Technik + Enter …" onkeydown="tagKeydown(event,'techniken-aktiv-tags')">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Verbotene Phrasen <i class="tip-icon" data-tip="Was sollst du nie sagen? NERVE warnt dich wenn du es tust.">?</i></label>
+          <div class="tag-container" id="techniken-verboten-tags" onclick="focusTagInput('techniken-verboten-tags')">
+            <input class="tag-input" placeholder="Verbotene Phrase + Enter …" onkeydown="tagKeydown(event,'techniken-verboten-tags','danger')">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Offene Fragen Pflicht <i class="tip-icon" data-tip="Welche Fragewörter sollen immer genutzt werden?">?</i></label>
+          <textarea class="fta" id="vi_offene_fragen"
+            placeholder="z.B. Jede Antwort endet mit einer offenen Gegenfrage. Fragewörter: Was, Wie, Wozu … niemals Warum."></textarea>
+        </div>
+      </div>
+
+      <!-- ⑪ Übergang-Ziele -->
+      <div class="sec" id="sec-uebergaenge">
+        <div class="sec-title"><span class="sec-title-num">11</span>Übergang-Ziele</div>
+        <div class="col-header" style="display:grid;grid-template-columns:1fr auto 1fr 1fr auto;gap:8px">
+          <span class="fl" style="margin:0">Von-Thema <i class="tip-icon" data-tip="Von welchem Gesprächsthema kommst du?">?</i></span>
+          <span></span>
+          <span class="fl" style="margin:0">Nach-Thema <i class="tip-icon" data-tip="Wohin willst du das Gespräch lenken?">?</i></span>
+          <span class="fl" style="margin:0">Brücken-Formulierung <i class="tip-icon" data-tip="Welchen Satz nutzt du für den Übergang?">?</i></span>
+          <span></span>
+        </div>
+        <div id="uebergaenge-list"></div>
+        <button type="button" class="btn-add" onclick="addUebergang()">+ Übergang hinzufügen</button>
+      </div>
+
+      <!-- ⑫ KI-Anweisungen -->
+      <div class="sec" id="sec-ki">
+        <div class="sec-title"><span class="sec-title-num">12</span>KI-Anweisungen</div>
+        <div class="frow frow-2">
+          <div class="fg">
+            <label class="fl">Ton <i class="tip-icon" data-tip="Wie soll NERVE klingen? z.B. Direkt, menschlich, auf Augenhöhe.">?</i></label>
+            <input class="fi" id="vi_ton" placeholder="z.B. direkt und bodenständig / empathisch und ruhig / professionell und sachlich">
+          </div>
+          <div class="fg">
+            <label class="fl">Ansprache <i class="tip-icon" data-tip="Duzt oder siezt du deine Kunden?">?</i></label>
+            <div class="radio-row">
+              <label><input type="radio" name="ki_ansprache" value="Du" id="ki_du"> Du</label>
+              <label><input type="radio" name="ki_ansprache" value="Sie" id="ki_sie"> Sie</label>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Antwortlänge <i class="tip-icon" data-tip="Wie lang sollen die Gegenargumente sein?">?</i></label>
+            <select class="fs" id="vi_antwortlaenge">
+              <option value="1 Satz">1 Satz</option>
+              <option value="2-3 Sätze" selected>2-3 Sätze</option>
+              <option value="3-4 Sätze">3-4 Sätze</option>
+              <option value="4-5 Sätze">4-5 Sätze</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Sensitivität <i class="tip-icon" data-tip="Wie empfindlich soll NERVE auf mögliche Einwände reagieren?">?</i></label>
+            <select class="fs" id="vi_sensitivitaet">
+              <option value="niedrig">Niedrig</option>
+              <option value="mittel" selected>Mittel</option>
+              <option value="hoch">Hoch</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Zusätzliche Anweisungen <i class="tip-icon" data-tip="Alles was NERVE noch wissen soll — Besonderheiten, Einschränkungen, Kontext.">?</i></label>
+          <textarea class="fta" id="vi_zusatz" placeholder="Spezielle Anweisungen für NERVE, z.B. Nie über Wettbewerber lästern / Immer konkrete Zahlen nennen / Duze den Kunden"></textarea>
+        </div>
+      </div>
+
+      <div style="height:40px"></div>
+    </div><!-- editor-main -->
+  </div><!-- editor-layout -->
+</form>
+
+<!-- Global tooltip -->
+<div id="g-tip"><div id="g-tip-inner"></div></div>
+
+<script>
+const DATEN = {{ daten | tojson }};
+const EW_KATEGORIEN = ['Kosten/Preis','Zeit/Aufschub','Vertrauen','Komplexität',
+  'Kein Bedarf','Angst/Risiko','Vergleich','Entscheidungsträger','Abbruch'];
+const ALL_SECS = ['sec-basis','sec-zielgruppe','sec-schmerzen','sec-phasen',
+  'sec-einwaende','sec-fragen','sec-kaufsignale','sec-nogos',
+  'sec-wettbewerb','sec-techniken','sec-uebergaenge','sec-ki'];
+
+/* ── Utilities ─────────────────────────────────────────────────────── */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function setVal(id,v){ const el=document.getElementById(id); if(el) el.value=v||''; }
+function setSlider(id,v){
+  const el=document.getElementById(id); if(!el) return;
+  el.value=v; el.nextElementSibling.textContent=v;
+}
+function setSelect(id,v){
+  const el=document.getElementById(id); if(!el) return;
+  [...el.options].forEach(o=>{if(o.value===v) o.selected=true;});
+}
+function ti(text){
+  return `<i class="tip-icon" data-tip="${esc(text)}">?</i>`;
+}
+
+/* ── Tooltip ───────────────────────────────────────────────────────── */
+(function(){
+  const tip=document.getElementById('g-tip');
+  const inner=document.getElementById('g-tip-inner');
+  document.addEventListener('mouseover', e=>{
+    const icon=e.target.closest('.tip-icon');
+    if(!icon){ tip.style.display='none'; return; }
+    inner.textContent=icon.dataset.tip||'';
+    // Position off-screen first to measure height
+    tip.style.display='block';
+    tip.style.visibility='hidden';
+    tip.style.left='-9999px'; tip.style.top='-9999px';
+    requestAnimationFrame(()=>{
+      const r=icon.getBoundingClientRect();
+      const tw=tip.offsetWidth, th=tip.offsetHeight;
+      let left=r.left+r.width/2-tw/2;
+      let top=r.top-th-8;
+      if(left<8) left=8;
+      if(left+tw>window.innerWidth-8) left=window.innerWidth-tw-8;
+      if(top<8) top=r.bottom+8;
+      tip.style.left=left+'px'; tip.style.top=top+'px';
+      tip.style.visibility='visible';
+    });
+  });
+  document.addEventListener('mouseout', e=>{
+    if(!e.relatedTarget||!e.relatedTarget.closest('.tip-icon'))
+      tip.style.display='none';
+  });
+})();
+
+/* ── Scroll navigation & spy ──────────────────────────────────────── */
+function goSec(id){
+  const main=document.getElementById('editorMain');
+  const el=document.getElementById(id);
+  if(!el||!main) return;
+  // Use getBoundingClientRect for correct offset in any nesting
+  const elRect=el.getBoundingClientRect();
+  const mainRect=main.getBoundingClientRect();
+  main.scrollBy({top: elRect.top - mainRect.top - 16, behavior:'smooth'});
+}
+
+function setupScrollSpy(){
+  const main=document.getElementById('editorMain');
+  const links=[...document.querySelectorAll('.sec-link')];
+  function setActive(id){
+    links.forEach(l=>l.classList.toggle('active', l.dataset.target===id));
+  }
+  function update(){
+    const mainRect=main.getBoundingClientRect();
+    // If near bottom, activate last visible section
+    if(main.scrollTop+main.clientHeight>=main.scrollHeight-20){
+      // Find last section that's at least partially visible
+      for(let i=ALL_SECS.length-1;i>=0;i--){
+        const el=document.getElementById(ALL_SECS[i]);
+        if(el){ setActive(ALL_SECS[i]); return; }
+      }
+    }
+    let active=ALL_SECS[0];
+    for(const id of ALL_SECS){
+      const el=document.getElementById(id);
+      if(!el) continue;
+      const elRect=el.getBoundingClientRect();
+      if(elRect.top - mainRect.top <= 40) active=id;
+    }
+    setActive(active);
+  }
+  main.addEventListener('scroll', update, {passive:true});
+  update();
+}
+
+/* ── Tags ──────────────────────────────────────────────────────────── */
+function focusTagInput(cid){ document.querySelector(`#${cid} .tag-input`).focus(); }
+function tagKeydown(e,cid,cls=''){
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const val=e.target.value.trim();
+    if(val){ addTag(cid,val,cls); e.target.value=''; }
+  }
+}
+function addTag(cid,val,cls=''){
+  const c=document.getElementById(cid);
+  const input=c.querySelector('.tag-input');
+  const chip=document.createElement('span');
+  chip.className='tag-chip'+(cls?' '+cls:'');
+  chip.innerHTML=`<span class="tag-text">${esc(val)}</span><button type="button" class="tag-rm" onclick="this.parentElement.remove()">×</button>`;
+  c.insertBefore(chip,input);
+}
+function getTags(cid){
+  return [...document.querySelectorAll(`#${cid} .tag-text`)].map(s=>s.textContent.trim()).filter(Boolean);
+}
+
+/* ── Schmerzpunkte ────────────────────────────────────────────────── */
+function addSchmerz(d={}){
+  const c=document.getElementById('schmerz-list');
+  const idx=c.children.length+1;
+  const b=document.createElement('div');
+  b.className='block';
+  b.innerHTML=`
+<div class="block-hd">
+  <span class="block-lbl">Schmerzpunkt ${idx}</span>
+  <button type="button" class="btn-rm" onclick="this.closest('.block').remove();renumBlocks('schmerz-list','Schmerzpunkt')">✕</button>
+</div>
+<div class="fg"><label class="fl">Situation ${ti('In welcher konkreten Situation befindet sich der Kunde?')}</label>
+  <textarea class="fta" data-sp="situation" style="min-height:52px" placeholder="Konkrete Situation des Kunden …">${esc(d.situation)}</textarea></div>
+<div class="fg"><label class="fl">Emotionaler Kern ${ti('Was ist die eigentliche Angst dahinter?')}</label>
+  <input class="fi" data-sp="kern" placeholder="Die eigentliche Angst …" value="${esc(d.kern)}"></div>
+<div class="fg" style="margin:0"><label class="fl">Wie verstärken ${ti('Welche Frage oder welches Argument macht diesen Schmerz spürbar?')}</label>
+  <textarea class="fta" data-sp="verstaerken" style="min-height:52px" placeholder="Frage oder Argument das den Schmerz spürbar macht …">${esc(d.verstaerken)}</textarea></div>`;
+  c.appendChild(b);
+}
+function getSchmerzen(){
+  return [...document.querySelectorAll('#schmerz-list .block')].map(b=>({
+    situation:b.querySelector('[data-sp="situation"]').value.trim(),
+    kern:b.querySelector('[data-sp="kern"]').value.trim(),
+    verstaerken:b.querySelector('[data-sp="verstaerken"]').value.trim(),
+  })).filter(s=>s.situation||s.kern);
+}
+
+/* ── Phasen ────────────────────────────────────────────────────────── */
+function addPhase(d={}){
+  const c=document.getElementById('phasen-list');
+  const idx=c.children.length+1;
+  const row=document.createElement('div');
+  row.className='block';
+  row.style.cssText='padding:8px 12px';
+  const skriptVal=Array.isArray(d.skript)?d.skript.join('\n'):(d.skript||'');
+  row.innerHTML=`
+<div style="display:grid;grid-template-columns:36px 1fr 1fr auto auto;gap:8px;align-items:center">
+<span class="block-lbl" style="font-size:12px;color:#E8B040;text-align:center">${idx}</span>
+<input class="fi" data-ph="name" placeholder="z.B. Einstieg, Bedarfsanalyse, Closing" value="${esc(d.name)}">
+<input class="fi" data-ph="ziel" placeholder="Was ist das Ziel dieser Phase?" value="${esc(d.ziel||d.beschreibung)}">
+<button type="button" class="btn-ord" onclick="moveBlock(this.closest('.block'),-1)" title="Nach oben">▲</button>
+<button type="button" class="btn-rm" onclick="this.closest('.block').remove();renumPhases()">✕</button>
+</div>
+<textarea class="fi" data-ph="skript" rows="2" placeholder="Skript-Bullets — eine Zeile = ein Punkt (optional)" style="margin-top:6px;margin-left:44px;width:calc(100% - 44px);resize:vertical;font-size:11px;line-height:1.5">${esc(skriptVal)}</textarea>`;
+  c.appendChild(row);
+}
+function renumPhases(){
+  [...document.querySelectorAll('#phasen-list .block')].forEach((b,i)=>{
+    const n=b.querySelector('.block-lbl'); if(n) n.textContent=i+1;
+  });
+}
+function getPhasen(){
+  return [...document.querySelectorAll('#phasen-list .block')].map(b=>{
+    const skriptRaw=b.querySelector('[data-ph="skript"]');
+    const skript=skriptRaw?skriptRaw.value.split('\n').filter(l=>l.trim()):[];
+    return {
+      name:b.querySelector('[data-ph="name"]').value.trim(),
+      ziel:b.querySelector('[data-ph="ziel"]').value.trim(),
+      skript,
+    };
+  }).filter(p=>p.name);
+}
+function moveBlock(block,dir){
+  const c=block.parentElement, rows=[...c.children];
+  const i=rows.indexOf(block), t=i+dir;
+  if(t<0||t>=rows.length) return;
+  if(dir<0) c.insertBefore(block,rows[t]); else rows[t].after(block);
+  renumPhases();
+}
+
+/* ── Einwände ──────────────────────────────────────────────────────── */
+function addEinwand(d={}){
+  const c=document.getElementById('einwaende-list');
+  const idx=c.children.length+1;
+  const typen=EW_KATEGORIEN.map(t=>`<option value="${t}" ${(d.kategorie||d.typ)===t?'selected':''}>${t}</option>`).join('');
+  const b=document.createElement('div');
+  b.className='block';
+  b.innerHTML=`
+<div class="block-hd" onclick="toggleEW(this.parentElement)" style="cursor:pointer">
+  <span class="block-lbl">Einwand ${idx}</span>
+  <span class="einwand-preview">${esc(d.kategorie||d.typ||'Kategorie wählen')}</span>
+  <button type="button" class="btn-rm" onclick="event.stopPropagation();this.closest('.block').remove();renumEW()">✕</button>
+</div>
+<div class="einwand-body">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="fg" style="margin:0"><label class="fl">Kategorie</label>
+      <select class="fs" data-ew="kat" onchange="this.closest('.block').querySelector('.einwand-preview').textContent=this.value">${typen}</select></div>
+    <div class="fg" style="margin:0"><label class="fl">Intensität</label>
+      <select class="fs" data-ew="int">
+        <option value="mittel" ${(d.intensitaet||'mittel')==='mittel'?'selected':''}>Mittel</option>
+        <option value="hoch" ${d.intensitaet==='hoch'?'selected':''}>Hoch</option>
+      </select></div>
+  </div>
+  <div class="fg"><label class="fl">Einwand-Text ${ti('Wie sagt der Kunde es wörtlich? z.B. Das ist mir zu teuer.')}</label>
+    <input class="fi" data-ew="einwand" placeholder="Was sagt der Kunde? z.B. Das ist zu teuer" value="${esc(d.einwand)}"></div>
+  <div class="fg"><label class="fl">Varianten ${ti('Andere Formulierungen desselben Einwands — eine pro Zeile.')}</label>
+    <textarea class="fta" data-ew="varianten" style="min-height:52px" placeholder="z.B. Das liegt über unserem Budget&#10;Können wir das günstiger haben?">${esc(Array.isArray(d.varianten)?d.varianten.join('\n'):d.varianten||'')}</textarea></div>
+  <div class="fg"><label class="fl">Gegenargument ${ti('Deine beste Antwort — 2-3 Sätze, endet mit offener Frage.')}</label>
+    <textarea class="fta" data-ew="gegen" style="min-height:72px" placeholder="Deine beste Antwort darauf — endet idealerweise mit einer offenen Gegenfrage.">${esc(d.gegenargument||d.gegen)}</textarea></div>
+  <div class="fg" style="margin:0"><label class="fl">Empfohlene Technik ${ti('Welche Verkaufstechnik passt hier? z.B. Brückentechnik.')}</label>
+    <input class="fi" data-ew="technik" placeholder="z.B. Reframing, Brückentechnik …" value="${esc(d.technik)}"></div>
+</div>`;
+  c.appendChild(b);
+}
+function toggleEW(block){ block.querySelector('.einwand-body').classList.toggle('collapsed'); }
+function renumEW(){
+  [...document.querySelectorAll('#einwaende-list .block')].forEach((b,i)=>{
+    b.querySelector('.block-lbl').textContent='Einwand '+(i+1);
+  });
+}
+function getEinwaende(){
+  return [...document.querySelectorAll('#einwaende-list .block')].map(b=>({
+    kategorie:b.querySelector('[data-ew="kat"]').value,
+    intensitaet:b.querySelector('[data-ew="int"]').value,
+    einwand:b.querySelector('[data-ew="einwand"]').value.trim(),
+    varianten:b.querySelector('[data-ew="varianten"]').value.trim().split('\n').map(s=>s.trim()).filter(Boolean),
+    gegenargument:b.querySelector('[data-ew="gegen"]').value.trim(),
+    technik:b.querySelector('[data-ew="technik"]').value.trim(),
+  })).filter(e=>e.einwand||e.gegenargument);
+}
+
+/* ── Häufige Fragen ────────────────────────────────────────────────── */
+function addFrage(d={}){
+  const c=document.getElementById('fragen-list');
+  const b=document.createElement('div');
+  b.className='block';
+  b.innerHTML=`
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="fg" style="margin:0"><label class="fl">Frage ${ti('Was fragen Kunden oft — auch wenn es kein Einwand ist.')}</label>
+    <textarea class="fta" data-fq="frage" style="min-height:52px" placeholder="Häufige Kundenfrage …">${esc(d.frage)}</textarea></div>
+  <div class="fg" style="margin:0"><label class="fl">Ideale Antwort ${ti('Wie antwortest du am besten darauf?')}</label>
+    <textarea class="fta" data-fq="antwort" style="min-height:52px" placeholder="Mustergültige Antwort …">${esc(d.antwort)}</textarea></div>
+</div>
+<div style="display:flex;justify-content:flex-end;margin-top:8px">
+  <button type="button" class="btn-rm" onclick="this.closest('.block').remove()">✕ Entfernen</button>
+</div>`;
+  c.appendChild(b);
+}
+function getFragen(){
+  return [...document.querySelectorAll('#fragen-list .block')].map(b=>({
+    frage:b.querySelector('[data-fq="frage"]').value.trim(),
+    antwort:b.querySelector('[data-fq="antwort"]').value.trim(),
+  })).filter(f=>f.frage);
+}
+
+/* ── Kaufsignale ───────────────────────────────────────────────────── */
+function addKaufsignal(d={}){
+  const c=document.getElementById('kaufsignale-list');
+  const row=document.createElement('div');
+  row.className='drow';
+  row.innerHTML=`<input class="fi" data-ks="signal" placeholder="Signal …" value="${esc(d.signal)}">
+<input class="fi" data-ks="beschr" placeholder="Reaktion / wie damit umgehen …" value="${esc(d.beschreibung||d.beschr)}">
+<button type="button" class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(row);
+}
+function getKaufsignale(){
+  return [...document.querySelectorAll('#kaufsignale-list .drow')].map(r=>({
+    signal:r.querySelector('[data-ks="signal"]').value.trim(),
+    beschreibung:r.querySelector('[data-ks="beschr"]').value.trim(),
+  })).filter(k=>k.signal);
+}
+
+/* ── No-Gos ────────────────────────────────────────────────────────── */
+function addNogo(d={}){
+  const c=document.getElementById('nogos-list');
+  const row=document.createElement('div');
+  row.className='drow';
+  row.innerHTML=`<input class="fi" data-ng="krit" placeholder="Kriterium …" value="${esc(d.kriterium||d.krit)}">
+<input class="fi" data-ng="beschr" placeholder="Warum disqualifiziert das?" value="${esc(d.beschreibung||d.beschr)}">
+<button type="button" class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(row);
+}
+function getNogos(){
+  return [...document.querySelectorAll('#nogos-list .drow')].map(r=>({
+    kriterium:r.querySelector('[data-ng="krit"]').value.trim(),
+    beschreibung:r.querySelector('[data-ng="beschr"]').value.trim(),
+  })).filter(n=>n.kriterium);
+}
+
+/* ── Wettbewerber ──────────────────────────────────────────────────── */
+function addWettbewerber(d={}){
+  const c=document.getElementById('wettbewerb-list');
+  const row=document.createElement('div');
+  row.className='wrow';
+  row.innerHTML=`<input class="fi" data-wb="name" placeholder="Name …" value="${esc(d.name)}">
+<input class="fi" data-wb="schw" placeholder="Seine Schwäche …" value="${esc(d.schwaeche||d.schw)}">
+<input class="fi" data-wb="vort" placeholder="Unser Vorteil …" value="${esc(d.vorteil||d.vort)}">
+<button type="button" class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(row);
+}
+function getWettbewerber(){
+  return [...document.querySelectorAll('#wettbewerb-list .wrow')].map(r=>({
+    name:r.querySelector('[data-wb="name"]').value.trim(),
+    schwaeche:r.querySelector('[data-wb="schw"]').value.trim(),
+    vorteil:r.querySelector('[data-wb="vort"]').value.trim(),
+  })).filter(w=>w.name);
+}
+
+/* ── Übergänge ─────────────────────────────────────────────────────── */
+function addUebergang(d={}){
+  const c=document.getElementById('uebergaenge-list');
+  const row=document.createElement('div');
+  row.className='urow';
+  row.innerHTML=`<input class="fi" data-ue="von" placeholder="Von-Thema …" value="${esc(d.von)}">
+<span class="u-arrow">→</span>
+<input class="fi" data-ue="nach" placeholder="Nach-Thema …" value="${esc(d.nach)}">
+<input class="fi" data-ue="bruecke" placeholder="Brücken-Formulierung …" value="${esc(d.bruecke||d.beschreibung)}">
+<button type="button" class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(row);
+}
+function getUebergaenge(){
+  return [...document.querySelectorAll('#uebergaenge-list .urow')].map(r=>({
+    von:r.querySelector('[data-ue="von"]').value.trim(),
+    nach:r.querySelector('[data-ue="nach"]').value.trim(),
+    bruecke:r.querySelector('[data-ue="bruecke"]').value.trim(),
+  })).filter(u=>u.von||u.nach);
+}
+
+/* ── Renumber ──────────────────────────────────────────────────────── */
+function renumBlocks(listId,label){
+  [...document.querySelectorAll(`#${listId} .block`)].forEach((b,i)=>{
+    const l=b.querySelector('.block-lbl'); if(l) l.textContent=label+' '+(i+1);
+  });
+}
+
+/* ── Build & Submit ────────────────────────────────────────────────── */
+function buildAndSubmit(){
+  const name=document.getElementById('vi_name').value.trim();
+  if(!name){ alert('Profilname ist Pflichtfeld.'); document.getElementById('vi_name').focus(); return; }
+  document.getElementById('f_name').value=name;
+  document.getElementById('f_branche').value=document.getElementById('vi_branche').value.trim();
+  const daten={
+    basis:{
+      produktbeschreibung:document.getElementById('vi_produkt').value.trim(),
+      preismodell:document.getElementById('vi_preis').value.trim(),
+      usps:getTags('usps-tags'),
+      konsequenz:document.getElementById('vi_konsequenz').value.trim(),
+    },
+    zielgruppe:{
+      alter:document.getElementById('vi_alter').value.trim(),
+      berufsstatus:document.getElementById('vi_berufsstatus').value.trim(),
+      einkommensniveau:document.getElementById('vi_einkommen').value.trim(),
+      lebenssituation:document.getElementById('vi_lebenssituation').value.trim(),
+      beruflicher_hintergrund:getTags('hintergrund-tags'),
+      vorwissen:document.querySelector('input[name="vorwissen"]:checked')?.value||'mittel',
+      entscheidungsverhalten:getTags('entscheidung-tags'),
+    },
+    schmerzen:{
+      schmerzpunkte:getSchmerzen(),
+      trigger:{
+        verlust:+document.getElementById('tr_verlust').value,
+        familie:+document.getElementById('tr_familie').value,
+        status:+document.getElementById('tr_status').value,
+        zahlen:+document.getElementById('tr_zahlen').value,
+        dringlichkeit:+document.getElementById('tr_dringlichkeit').value,
+        micro:+document.getElementById('tr_micro').value,
+      }
+    },
+    phasen:getPhasen(),
+    einwaende:getEinwaende(),
+    fragen:getFragen(),
+    kaufsignale:getKaufsignale(),
+    nogos:getNogos(),
+    wettbewerber:getWettbewerber(),
+    techniken:{
+      aktiv:getTags('techniken-aktiv-tags'),
+      verboten:getTags('techniken-verboten-tags'),
+      offene_fragen:document.getElementById('vi_offene_fragen').value.trim(),
+    },
+    uebergaenge:getUebergaenge(),
+    ki:{
+      ton:document.getElementById('vi_ton').value.trim(),
+      ansprache:document.querySelector('input[name="ki_ansprache"]:checked')?.value||'Du',
+      antwortlaenge:document.getElementById('vi_antwortlaenge').value,
+      sensitivitaet:document.getElementById('vi_sensitivitaet').value,
+      zusatz:document.getElementById('vi_zusatz').value.trim(),
+    }
+  };
+  document.getElementById('daten_json').value=JSON.stringify(daten);
+  document.getElementById('editorForm').submit();
+}
+
+/* ── Init ──────────────────────────────────────────────────────────── */
+function init(){
+  const isNew=DATEN.basis!==undefined;
+  if(isNew){
+    const b=DATEN.basis||{};
+    setVal('vi_produkt',b.produktbeschreibung);
+    setVal('vi_preis',b.preismodell);
+    setVal('vi_konsequenz',b.konsequenz);
+    (b.usps||[]).forEach(t=>addTag('usps-tags',t));
+    const zg=DATEN.zielgruppe||{};
+    setVal('vi_alter',zg.alter);
+    setVal('vi_berufsstatus',zg.berufsstatus);
+    setVal('vi_einkommen',zg.einkommensniveau);
+    setVal('vi_lebenssituation',zg.lebenssituation);
+    (zg.beruflicher_hintergrund||[]).forEach(t=>addTag('hintergrund-tags',t));
+    const vw=document.querySelector(`input[name="vorwissen"][value="${zg.vorwissen||'mittel'}"]`);
+    if(vw) vw.checked=true;
+    (zg.entscheidungsverhalten||[]).forEach(t=>addTag('entscheidung-tags',t));
+    const sch=DATEN.schmerzen||{};
+    (sch.schmerzpunkte||[]).forEach(s=>addSchmerz(s));
+    const tr=sch.trigger||{};
+    setSlider('tr_verlust',tr.verlust||5); setSlider('tr_familie',tr.familie||5);
+    setSlider('tr_status',tr.status||5);  setSlider('tr_zahlen',tr.zahlen||5);
+    setSlider('tr_dringlichkeit',tr.dringlichkeit||5); setSlider('tr_micro',tr.micro||5);
+    (DATEN.phasen||[]).forEach(p=>addPhase(p));
+    (DATEN.einwaende||[]).forEach(e=>addEinwand(e));
+    (DATEN.fragen||[]).forEach(f=>addFrage(f));
+    (DATEN.kaufsignale||[]).forEach(k=>addKaufsignal(k));
+    (DATEN.nogos||[]).forEach(n=>addNogo(n));
+    (DATEN.wettbewerber||[]).forEach(w=>addWettbewerber(w));
+    const tech=DATEN.techniken||{};
+    (tech.aktiv||[]).forEach(t=>addTag('techniken-aktiv-tags',t));
+    (tech.verboten||[]).forEach(t=>addTag('techniken-verboten-tags',t,'danger'));
+    setVal('vi_offene_fragen',tech.offene_fragen);
+    (DATEN.uebergaenge||[]).forEach(u=>addUebergang(u));
+  } else {
+    // Old format migration
+    setVal('vi_produkt',[DATEN.beschreibung||'',DATEN.produkt||''].filter(Boolean).join('\n'));
+    (DATEN.usps||[]).forEach(t=>addTag('usps-tags',t));
+    const ozg=DATEN.zielgruppe||{};
+    setVal('vi_alter',ozg.alter); setVal('vi_berufsstatus',ozg.beruf);
+    (ozg.schmerzpunkte||[]).forEach(s=>addSchmerz({situation:s,kern:'',verstaerken:''}));
+    (DATEN.phasen||[]).forEach(p=>addPhase({name:p.name||'',ziel:p.beschreibung||''}));
+    (DATEN.einwaende||[]).forEach(e=>addEinwand({
+      einwand:e.einwand||'',
+      varianten:Array.isArray(e.varianten)?e.varianten.join('\n'):e.varianten||'',
+      kategorie:e.typ||'Kosten/Preis', gegenargument:e.gegenargument||'',
+      technik:e.technik||'', intensitaet:'mittel',
+    }));
+    const tOld=DATEN.techniken||[];
+    (Array.isArray(tOld)?tOld:[]).forEach(t=>addTag('techniken-aktiv-tags',t.name||t||''));
+    (DATEN.uebergaenge||[]).forEach(u=>addUebergang({
+      von:u.von||'',nach:u.nach||'',bruecke:u.beschreibung||u.bruecke||'',
+    }));
+  }
+  const ki=DATEN.ki||{};
+  setVal('vi_ton',ki.ton);
+  if(ki.ansprache==='Sie') document.getElementById('ki_sie').checked=true;
+  else document.getElementById('ki_du').checked=true;
+  setSelect('vi_antwortlaenge',ki.antwortlaenge||'2-3 Sätze');
+  setSelect('vi_sensitivitaet',ki.sensitivitaet||'mittel');
+  setVal('vi_zusatz',ki.zusatz);
+}
+
+init();
+setupScrollSpy();
+
+// Show banner when arriving from wizard
+if (new URLSearchParams(window.location.search).get('from') === 'wizard') {
+  document.getElementById('wizard-banner').style.display = '';
+}
+</script>
+{% endblock %}

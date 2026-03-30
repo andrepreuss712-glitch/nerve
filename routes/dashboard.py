@@ -452,6 +452,8 @@ def index():
 
         db.commit()
 
+        dashboard_style = getattr(user, 'dashboard_style', 'vollstaendig') or 'vollstaendig'
+
         return render_template('dashboard.html',
                                stats=stats,
                                activity_map=json.dumps(activity_map),
@@ -467,7 +469,8 @@ def index():
                                profiles=profiles,
                                welcome_trial=welcome_trial,
                                usage=usage,
-                               roi=roi)
+                               roi=roi,
+                               dashboard_style=dashboard_style)
     finally:
         db.close()
 
