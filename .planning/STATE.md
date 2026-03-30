@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-30T14:11:33.786Z"
-last_activity: 2026-03-30 — Roadmap created, 31/31 requirements mapped
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-30T16:39:58.994Z"
+last_activity: 2026-03-30
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 3
-  completed_plans: 0
+  total_plans: 9
+  completed_plans: 3
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 1 — Business Setup (start now, parallel to Phase 2)
+**Current focus:** Phase 02 — product-fixes
 
 ## Current Position
 
-Phase: 1 of 5 (Business Setup)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-30 — Roadmap created, 31/31 requirements mapped
+Phase: 02 (product-fixes) — EXECUTING
+Plan: 3 of 6
+Status: Ready to execute
+Last activity: 2026-03-30
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,8 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 02-product-fixes P02 | 15 | 2 tasks | 2 files |
+| Phase 02-product-fixes P01 | 15 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -63,6 +65,9 @@ Recent decisions affecting current work:
 - Roadmap: LEGAL-04 placed in Phase 3 (infrastructure config, not legal document)
 - Roadmap: Phase 1 (BIZ) and Phase 2 (PROD) run in parallel — both are independent tracks
 - Roadmap: LEGAL-01 through LEGAL-03 grouped with PAY in Phase 4 (both are hard launch blockers, activated together)
+- [Phase 02-product-fixes]: DSGVO banner triggered on socket connect event (not transcript) — earliest JS hook before server-side PyAudio capture
+- [Phase 02-product-fixes]: SalesNerve Alpha retained in migration SQL WHERE clause — it is the search predicate for legacy record rename, not a branding artifact
+- [Phase 02-product-fixes]: database/db.py had its own hardcoded salesnerve.db default — fixed alongside config.py as Rule 1 bug (inconsistent defaults)
 
 ### Pending Todos
 
@@ -76,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T14:11:33.784Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-product-fixes/02-CONTEXT.md
+Last session: 2026-03-30T16:39:58.991Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None

@@ -50,9 +50,9 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 02-01-PLAN.md — SalesNerve to NERVE rename across codebase and DB migration (PROD-11)
-- [ ] 02-02-PLAN.md — Live-mode bug fixes: DSGVO banner, script button, compact circles, toggle (PROD-07)
-- [ ] 02-03-PLAN.md — Training modes and scenarios verification (PROD-03, PROD-04, PROD-05, PROD-06)
+- [x] 02-01-PLAN.md — SalesNerve to NERVE rename across codebase and DB migration (PROD-11)
+- [x] 02-02-PLAN.md — Live-mode bug fixes: DSGVO banner, script button, compact circles, toggle (PROD-07)
+- [x] 02-03-PLAN.md — Training modes and scenarios verification (PROD-03, PROD-04, PROD-05, PROD-06)
 - [ ] 02-04-PLAN.md — Pricing model rewrite to flat-rate + fair-use tracking + ROI fix (PROD-01, PROD-02)
 - [ ] 02-05-PLAN.md — Onboarding improvements + profile editor placeholders (PROD-08, PROD-10)
 - [ ] 02-06-PLAN.md — Profile wizard: 3-step guided profile creation for new users (PROD-09)
@@ -99,7 +99,7 @@ Phases execute in numeric order. Phase 1 and Phase 2 can run in parallel (Phase 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Business Setup | 0/3 | Not started | - |
-| 2. Product Fixes | 0/6 | Planned | - |
+| 2. Product Fixes | 3/6 | In Progress|  |
 | 3. Infrastructure & Deployment | 0/? | Not started | - |
 | 4. Payments & Legal | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
