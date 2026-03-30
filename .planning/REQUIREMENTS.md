@@ -94,47 +94,45 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 
 ## Traceability
 
-Wird durch Roadmapper ausgefüllt.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROD-01 | — | Pending |
-| PROD-02 | — | Pending |
-| PROD-03 | — | Pending |
-| PROD-04 | — | Pending |
-| PROD-05 | — | Pending |
-| PROD-06 | — | Pending |
-| PROD-07 | — | Pending |
-| PROD-08 | — | Pending |
-| PROD-09 | — | Pending |
-| PROD-10 | — | Pending |
-| PROD-11 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| PAY-01 | — | Pending |
-| PAY-02 | — | Pending |
-| PAY-03 | — | Pending |
-| PAY-04 | — | Pending |
-| PAY-05 | — | Pending |
-| PAY-06 | — | Pending |
-| LEGAL-01 | — | Pending |
-| LEGAL-02 | — | Pending |
-| LEGAL-03 | — | Pending |
-| LEGAL-04 | — | Pending |
-| BIZ-01 | — | Pending |
-| BIZ-02 | — | Pending |
-| BIZ-03 | — | Pending |
-| BIZ-04 | — | Pending |
-| LAUNCH-01 | — | Pending |
+| BIZ-01 | Phase 1 | Pending |
+| BIZ-02 | Phase 1 | Pending |
+| BIZ-03 | Phase 1 | Pending |
+| BIZ-04 | Phase 1 | Pending |
+| PROD-01 | Phase 2 | Pending |
+| PROD-02 | Phase 2 | Pending |
+| PROD-03 | Phase 2 | Pending |
+| PROD-04 | Phase 2 | Pending |
+| PROD-05 | Phase 2 | Pending |
+| PROD-06 | Phase 2 | Pending |
+| PROD-07 | Phase 2 | Pending |
+| PROD-08 | Phase 2 | Pending |
+| PROD-09 | Phase 2 | Pending |
+| PROD-10 | Phase 2 | Pending |
+| PROD-11 | Phase 2 | Pending |
+| INFRA-01 | Phase 3 | Pending |
+| INFRA-02 | Phase 3 | Pending |
+| INFRA-03 | Phase 3 | Pending |
+| INFRA-04 | Phase 3 | Pending |
+| INFRA-05 | Phase 3 | Pending |
+| LEGAL-04 | Phase 3 | Pending |
+| PAY-01 | Phase 4 | Pending |
+| PAY-02 | Phase 4 | Pending |
+| PAY-03 | Phase 4 | Pending |
+| PAY-04 | Phase 4 | Pending |
+| PAY-05 | Phase 4 | Pending |
+| PAY-06 | Phase 4 | Pending |
+| LEGAL-01 | Phase 4 | Pending |
+| LEGAL-02 | Phase 4 | Pending |
+| LEGAL-03 | Phase 4 | Pending |
+| LAUNCH-01 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 31 ⚠️
+- Mapped to phases: 31/31 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-30*
-*Last updated: 2026-03-30 after initialization*
+*Last updated: 2026-03-30 — traceability filled by roadmapper*

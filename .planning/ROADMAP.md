@@ -1,0 +1,96 @@
+# Roadmap: NERVE — Milestone 1 (Launch)
+
+## Overview
+
+NERVE is at v0.9.4 with the core product fully built. Milestone 1 closes the gap from working prototype to first 50 paying customers. The path runs through five sequential phases: start the German business registration immediately (it takes 3-5 weeks regardless of technical progress), fix the product gaps that affect first-impression quality, deploy to production, wire up payments with legal compliance, and flip the Early Access switch. Business setup runs in parallel to technical work — both tracks must converge before the first customer can pay.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 1: Business Setup** - Register the business and open a bank account (parallel to all technical work, start now)
+- [ ] **Phase 2: Product Fixes** - Complete all product gaps and polish before wiring payments
+- [ ] **Phase 3: Infrastructure & Deployment** - Deploy to Hetzner VPS with HTTPS — prerequisite for Stripe webhooks
+- [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
+- [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
+
+## Phase Details
+
+### Phase 1: Business Setup
+**Goal**: Legal entity is registered and capable of accepting payments
+**Depends on**: Nothing (start immediately, runs in parallel with Phase 2)
+**Requirements**: BIZ-01, BIZ-02, BIZ-03, BIZ-04
+**Success Criteria** (what must be TRUE):
+  1. Gewerbeanmeldung is submitted at Gewerbeamt Iserlohn
+  2. Business bank account (Kontist or Finom) is open and accessible
+  3. USt-IdNr application is filed with Bundeszentralamt
+  4. First meeting with count.tax is scheduled (tax advice is in place for invoicing)
+**Plans**: TBD
+
+### Phase 2: Product Fixes
+**Goal**: The product is polished and complete — ready for a paying customer's first impression
+**Depends on**: Nothing (runs in parallel with Phase 1)
+**Requirements**: PROD-01, PROD-02, PROD-03, PROD-04, PROD-05, PROD-06, PROD-07, PROD-08, PROD-09, PROD-10, PROD-11
+**Success Criteria** (what must be TRUE):
+  1. A new user completes the 3-step profile wizard on first login and gets a profile with generic, non-demo content
+  2. The Live-Modus shows the DSGVO banner before microphone access, the correct script button, working compact-mode circles, and the toggle in the right position
+  3. A user can choose between "Frei" (max points, no hints) and "Geführt" (hints with point deduction) training modes and select from 11 standard DACH scenarios
+  4. After completing a training session, the user sees a preview of what NERVE would have shown in a real call
+  5. All "SalesNerve" references in code and UI are replaced with "NERVE"
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 3: Infrastructure & Deployment
+**Goal**: The app is running on the production domain over HTTPS with WebSockets confirmed working
+**Depends on**: Phase 2
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, LEGAL-04
+**Success Criteria** (what must be TRUE):
+  1. The app is accessible at the production domain over HTTPS with a valid Let's Encrypt certificate
+  2. A live Socket.IO connection shows `101 Switching Protocols` in the browser network tab — no polling fallback
+  3. The app starts cleanly on the VPS without PyAudio or missing SECRET_KEY (fail-fast assertion triggers on bad config)
+  4. SQLite WAL mode is confirmed active; CORS is locked to the production domain only (no wildcard)
+**Plans**: TBD
+
+### Phase 4: Payments & Legal
+**Goal**: Users can pay for a subscription and the product is legally compliant for DACH B2B launch
+**Depends on**: Phase 3 (needs HTTPS for Stripe webhooks), Phase 1 (needs verified Stripe account)
+**Requirements**: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06, LEGAL-01, LEGAL-02, LEGAL-03
+**Success Criteria** (what must be TRUE):
+  1. A user can select a plan on the pricing page and complete payment via Stripe Checkout; subscription activates via webhook only (not redirect)
+  2. A user can manage or cancel their subscription via the Stripe Customer Portal linked from account settings
+  3. The dashboard ROI tracker and fair-use counter update correctly; at ~80% limit a soft warning appears; no hard block occurs
+  4. Impressum, AGB, and Datenschutzerklärung are live at the production domain, listing Deepgram, Anthropic, ElevenLabs, and Stripe as Auftragsverarbeiter
+  5. Signed AVVs with Deepgram, Anthropic, ElevenLabs, and Stripe are on file; Deepgram EU endpoint is in use
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 5: Launch
+**Goal**: 50 Early Access slots are live and waitlist members can become paying customers
+**Depends on**: Phase 4
+**Requirements**: LAUNCH-01
+**Success Criteria** (what must be TRUE):
+  1. Early Access page is live with 50 slots at 50% Gruender-Rabatt and a clear CTA
+  2. Waitlist members receive a notification (email or in-app) that Early Access is open
+  3. At least one user completes the full flow: pricing page → Stripe Checkout → subscription active → dashboard visible
+**Plans**: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order. Phase 1 and Phase 2 can run in parallel (Phase 1 is admin, Phase 2 is code).
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Business Setup | 0/? | Not started | - |
+| 2. Product Fixes | 0/? | Not started | - |
+| 3. Infrastructure & Deployment | 0/? | Not started | - |
+| 4. Payments & Legal | 0/? | Not started | - |
+| 5. Launch | 0/? | Not started | - |
+
+---
+*Roadmap created: 2026-03-30*
+*Milestone: NERVE Launch — v0.9.4 to first 50 paying customers*
