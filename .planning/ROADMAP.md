@@ -29,7 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Business bank account (Kontist or Finom) is open and accessible
   3. USt-IdNr application is filed with Bundeszentralamt
   4. First meeting with count.tax is scheduled (tax advice is in place for invoicing)
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Legal registration: Gewerbeanmeldung (BIZ-01) + USt-IdNr application (BIZ-03)
+- [ ] 01-02-PLAN.md — Financial setup: Kontist Geschaeftskonto (BIZ-02) + Stripe account creation
+- [ ] 01-03-PLAN.md — Tax advisor: count.tax first call scheduled and completed (BIZ-04)
 
 ### Phase 2: Product Fixes
 **Goal**: The product is polished and complete — ready for a paying customer's first impression
@@ -41,8 +46,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A user can choose between "Frei" (max points, no hints) and "Geführt" (hints with point deduction) training modes and select from 11 standard DACH scenarios
   4. After completing a training session, the user sees a preview of what NERVE would have shown in a real call
   5. All "SalesNerve" references in code and UI are replaced with "NERVE"
-**Plans**: TBD
+**Plans**: 6 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 02-01-PLAN.md — SalesNerve to NERVE rename across codebase and DB migration (PROD-11)
+- [ ] 02-02-PLAN.md — Live-mode bug fixes: DSGVO banner, script button, compact circles, toggle (PROD-07)
+- [ ] 02-03-PLAN.md — Training modes and scenarios verification (PROD-03, PROD-04, PROD-05, PROD-06)
+- [ ] 02-04-PLAN.md — Pricing model rewrite to flat-rate + fair-use tracking + ROI fix (PROD-01, PROD-02)
+- [ ] 02-05-PLAN.md — Onboarding improvements + profile editor placeholders (PROD-08, PROD-10)
+- [ ] 02-06-PLAN.md — Profile wizard: 3-step guided profile creation for new users (PROD-09)
 
 ### Phase 3: Infrastructure & Deployment
 **Goal**: The app is running on the production domain over HTTPS with WebSockets confirmed working
@@ -85,8 +98,8 @@ Phases execute in numeric order. Phase 1 and Phase 2 can run in parallel (Phase 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Business Setup | 0/? | Not started | - |
-| 2. Product Fixes | 0/? | Not started | - |
+| 1. Business Setup | 0/3 | Not started | - |
+| 2. Product Fixes | 0/6 | Planned | - |
 | 3. Infrastructure & Deployment | 0/? | Not started | - |
 | 4. Payments & Legal | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
