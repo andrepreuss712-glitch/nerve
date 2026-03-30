@@ -106,7 +106,7 @@ def _migrate():
             # Block 6: Flat-Rate Pricing
             ('minuten_limit', 'INTEGER DEFAULT 1000'),
             ('training_voice_limit', 'INTEGER DEFAULT 50'),
-            ('plan_preis', 'INTEGER DEFAULT 39'),
+            ('plan_preis', 'INTEGER DEFAULT 49'),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE organisations ADD COLUMN {col} {typedef}'))
@@ -126,39 +126,12 @@ _migrate()
 
 # ── Plan definitions ──────────────────────────────────────────────────────────
 PLANS = {
-    'trial': {
-        'name': '14 Tage kostenlos', 'preis': 0, 'max_users': 5,
-        'minuten_limit': 500, 'training_voice_limit': 20, 'dauer_tage': 14,
-    },
-    'solo': {
-        'name': 'Solo', 'preis': 39, 'max_users': 1,
-        'minuten_limit': 1000, 'training_voice_limit': 50,
-    },
-    'team': {
-        'name': 'Team', 'preis': 34, 'max_users': 10,
-        'minuten_limit': 1000, 'training_voice_limit': 50,
-    },
-    'business': {
-        'name': 'Business', 'preis': 29, 'max_users': 50,
-        'minuten_limit': 1000, 'training_voice_limit': 50,
-    },
-    'enterprise': {
-        'name': 'Enterprise', 'preis': 0, 'max_users': 9999,
-        'minuten_limit': 99999, 'training_voice_limit': 9999,
-    },
-    'coach': {
-        'name': 'Coach', 'preis': 99, 'max_users': 1,
-        'minuten_limit': 1000, 'training_voice_limit': 50,
-    },
-    # Legacy plan names mapped to new pricing
-    'starter': {
-        'name': 'Starter', 'preis': 39, 'max_users': 5,
-        'minuten_limit': 1000, 'training_voice_limit': 50,
-    },
-    'bundle':  {
-        'name': 'Bundle', 'preis': 49, 'max_users': 5,
-        'minuten_limit': 1000, 'training_voice_limit': 50,
-    },
+    'starter':  {'name': 'Starter',  'preis': 49, 'max_users': 1,
+                 'minuten_limit': 1000, 'training_voice_limit': 50},
+    'pro':      {'name': 'Pro',      'preis': 59, 'max_users': 1,
+                 'minuten_limit': 1000, 'training_voice_limit': 50},
+    'business': {'name': 'Business', 'preis': 69, 'max_users': 1,
+                 'minuten_limit': 1000, 'training_voice_limit': 50},
 }
 
 # ── Data migrations (rename legacy records) ───────────────────────────────────
@@ -302,9 +275,10 @@ def _seed():
         if db.query(User).count() == 0:
             org = Organisation(
                 name='NERVE Alpha',
-                plan='enterprise',
-                max_users=None,
+                plan='starter',
+                max_users=1,
                 billing_email='admin@nerve.local',
+                plan_preis=49,
             )
             db.add(org)
             db.flush()

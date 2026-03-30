@@ -17,10 +17,12 @@ MERGE_WINDOW_S    = 1.0
 SPEAKER_DEBOUNCE_S = 3.0
 
 PLANS = {
-    'starter':    {'max_users': 5,   'price_per_user': 49},
-    'team':       {'max_users': 15,  'price_per_user': 44},
-    'business':   {'max_users': 30,  'price_per_user': 39},
-    'enterprise': {'max_users': None,'price_per_user': None},
+    'starter':  {'name': 'Starter',  'preis': 49, 'max_users': 1,
+                 'minuten_limit': 1000, 'training_voice_limit': 50},
+    'pro':      {'name': 'Pro',      'preis': 59, 'max_users': 1,
+                 'minuten_limit': 1000, 'training_voice_limit': 50},
+    'business': {'name': 'Business', 'preis': 69, 'max_users': 1,
+                 'minuten_limit': 1000, 'training_voice_limit': 50},
 }
 
 KATEGORIE_LABEL = {

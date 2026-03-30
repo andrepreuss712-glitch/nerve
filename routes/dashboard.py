@@ -425,9 +425,9 @@ def index():
         minuten_used    = user.minuten_used or 0
         voice_limit     = g.org.training_voice_limit or 50
         voice_used      = user.trainings_voice_used or 0
-        plan_key        = getattr(g.org, 'plan', None) or getattr(g.org, 'plan_typ', 'solo') or 'solo'
+        plan_key        = getattr(g.org, 'plan', None) or getattr(g.org, 'plan_typ', 'starter') or 'starter'
         from app import PLANS
-        plan_def        = PLANS.get(plan_key, PLANS.get('solo', {}))
+        plan_def        = PLANS.get(plan_key, PLANS.get('starter', {}))
         usage = {
             'minuten_used':    minuten_used,
             'minuten_limit':   minuten_limit,
@@ -436,8 +436,8 @@ def index():
             'voice_limit':     voice_limit,
             'voice_prozent':   min(100, round(voice_used / max(voice_limit, 1) * 100)),
             'plan':            plan_key,
-            'plan_name':       plan_def.get('name', 'Solo'),
-            'plan_preis':      int(getattr(g.org, 'plan_preis', None) or plan_def.get('preis', 39)),
+            'plan_name':       plan_def.get('name', 'Starter'),
+            'plan_preis':      int(getattr(g.org, 'plan_preis', None) or plan_def.get('preis', 49)),
             'reset_date':      user.usage_reset_date,
         }
 
