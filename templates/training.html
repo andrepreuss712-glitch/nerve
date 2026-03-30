@@ -1,0 +1,1178 @@
+{% extends 'base.html' %}
+{% block title %} – Training{% endblock %}
+
+{% block extra_style %}
+/* ── Shared ── */
+.t-hidden{display:none!important}
+.t-overlay{position:fixed;inset:0;z-index:600;display:flex;flex-direction:column;background:#0c0c18;overflow:hidden}
+
+/* ── Phase 1: Setup ── */
+.t-setup-wrap{max-width:580px}
+.t-section{margin-bottom:28px}
+.t-section-label{font-size:11px;font-weight:700;letter-spacing:.08em;color:#6b6b80;text-transform:uppercase;margin-bottom:10px}
+.t-profile-select{max-width:360px}
+.t-diff-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:680px){.t-diff-grid{grid-template-columns:repeat(2,1fr)}}
+.t-diff-card{background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:12px;
+  padding:16px 14px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
+.t-diff-card:hover{border-color:#2e2e48;background:#0d0d14}
+.t-diff-card.t-diff-active{border-color:#E8B040;background:#0e0c00}
+.t-diff-icon{font-size:22px;margin-bottom:8px}
+.t-diff-label{font-size:13px;font-weight:700;margin-bottom:4px}
+.t-diff-desc{font-size:11px;color:#6b6b80;line-height:1.45}
+.t-call-btn{margin-top:8px;width:220px;padding:13px 0;background:#E8B040;color:#0c0c18;
+  border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;
+  letter-spacing:.04em;font-family:inherit;transition:opacity .15s}
+.t-call-btn:disabled{opacity:.3;cursor:default}
+.t-call-btn:not(:disabled):hover{opacity:.88}
+
+/* ── Phase 2: Einwahl ── */
+.t-call-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;gap:10px;background:#000;padding:40px 20px}
+.t-call-firm{font-size:26px;font-weight:800;color:#f0ebe0;letter-spacing:-.01em;text-align:center}
+.t-call-pos{font-size:13px;color:#6b6b80;margin-top:-4px}
+.t-phone-ring{font-size:72px;margin:28px 0;animation:pulse-ring 1.5s ease-in-out infinite}
+@keyframes pulse-ring{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.18);opacity:.65}}
+.t-call-status{font-size:14px;color:#6b6b80}
+.t-dots::after{content:'';animation:t-dots-anim 1.5s steps(4,end) infinite}
+@keyframes t-dots-anim{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}100%{content:''}}
+
+/* ── Phase 3: Chat ── */
+.t-chat-header{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:10px 16px;border-bottom:1px solid #1a1a2e;background:#0c0c18;flex-shrink:0}
+.t-chat-left{display:flex;align-items:center;gap:8px;font-size:12px;color:#6b6b80;min-width:130px}
+.t-live-dot{width:8px;height:8px;border-radius:50%;background:#44bb44;flex-shrink:0;
+  animation:blink-g 1.2s infinite}
+@keyframes blink-g{0%,100%{opacity:1}50%{opacity:.3}}
+.t-timer{color:#E8B040;font-weight:700}
+.t-chat-mid{flex:1;text-align:center}
+.t-chat-who{font-size:13px;font-weight:700;color:#f0ebe0}
+.t-chat-sub{font-size:11px;color:#6b6b80;margin-top:1px}
+
+.t-chat-messages{flex:1;overflow-y:auto;padding:14px 16px;
+  display:flex;flex-direction:column;gap:10px;min-height:0}
+.t-chat-messages::-webkit-scrollbar{width:4px}
+.t-chat-messages::-webkit-scrollbar-thumb{background:#1a1a2e;border-radius:2px}
+
+.t-msg-in{display:flex;align-items:flex-start;gap:10px;animation:msg-in .18s ease}
+@keyframes msg-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.t-avatar{width:34px;height:34px;border-radius:50%;background:#1a1a2e;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#E8B040}
+.t-bubble-in{background:#1a1a2e;border-radius:0 10px 10px 10px;
+  padding:10px 13px;max-width:75%;display:flex;flex-direction:column;gap:5px}
+.t-msg-name{font-size:10px;font-weight:700;color:#E8B040;letter-spacing:.05em}
+.t-msg-text{font-size:13px;line-height:1.55;color:#f0ebe0}
+.t-play-btn{align-self:flex-start;background:none;border:1px solid #2e2e48;color:#E8B040;
+  cursor:pointer;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;
+  font-family:inherit;transition:background .15s,border-color .15s;margin-top:2px}
+.t-play-btn:hover{background:#1a1200;border-color:#E8B040}
+
+.t-msg-out{display:flex;justify-content:flex-end;animation:msg-in .18s ease}
+.t-bubble-out{background:rgba(232,176,64,.05);border-left:3px solid #E8B040;
+  border-radius:10px 0 10px 10px;padding:10px 13px;max-width:75%}
+.t-msg-out-label{font-size:10px;font-weight:700;color:#4a4a28;letter-spacing:.05em;margin-bottom:3px;text-align:right}
+
+.t-msg-sys{text-align:center;font-size:12px;color:#E8B040;font-style:italic;
+  padding:4px 0;opacity:.8;animation:msg-in .18s ease}
+
+.t-chat-input{flex-shrink:0;border-top:1px solid #1a1a2e;background:#0c0c18;
+  padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.t-help-row{display:flex;flex-direction:column;gap:6px}
+.t-help-btn{background:none;border:1px solid #2a2000;border-radius:7px;color:#c8922a;
+  font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;font-family:inherit;
+  transition:border-color .15s;align-self:flex-start}
+.t-help-btn:hover{border-color:#c8922a}
+.t-help-suggestion{background:#1a1200;border:1px solid #3a2800;border-radius:8px;
+  padding:10px 13px;font-size:13px;color:#c8922a;line-height:1.55;cursor:pointer}
+.t-help-suggestion:hover{background:#201600}
+.t-help-adopt{font-size:10px;color:#6b6b80;margin-top:5px}
+
+.t-input-row{display:flex;align-items:center;gap:8px}
+.t-ptt-btn{width:48px;height:48px;border-radius:50%;background:#E8B040;border:none;
+  font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-family:inherit;user-select:none;-webkit-user-select:none;
+  transition:background .15s,transform .1s}
+.t-ptt-btn:disabled{opacity:.35;cursor:default}
+.t-ptt-btn.t-recording{background:#e05c5c;animation:pulse-rec .6s ease-in-out infinite}
+@keyframes pulse-rec{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.t-text-input{flex:1;background:#0c0c18;border:1px solid #1a1a2e;border-radius:8px;
+  color:#f0ebe0;font-size:13px;padding:10px 12px;outline:none;font-family:inherit;
+  transition:border-color .15s}
+.t-text-input:focus{border-color:#E8B040}
+.t-text-input:disabled{opacity:.4}
+.t-send-btn{background:#1a1a2e;border:1px solid #2e2e48;color:#E8B040;border-radius:8px;
+  padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:background .15s;white-space:nowrap}
+.t-send-btn:hover{background:#252535}
+.t-send-btn:disabled{opacity:.35;cursor:default}
+.t-status-bar{font-size:11px;color:#6b6b80;min-height:15px;font-style:italic}
+
+/* ── Phase 4: Scoring ── */
+.t-scoring-scroll{flex:1;overflow-y:auto;min-height:0}
+.t-scoring-scroll::-webkit-scrollbar{width:4px}
+.t-scoring-scroll::-webkit-scrollbar-thumb{background:#1a1a2e;border-radius:2px}
+.t-scoring-inner{padding:24px 20px;display:flex;flex-direction:column;gap:18px;
+  max-width:680px;margin:0 auto}
+.t-score-header{display:flex;align-items:center;gap:20px;padding-bottom:16px;
+  border-bottom:1px solid #1a1a2e}
+.t-score-circle text{font-family:'DM Sans',sans-serif}
+.t-score-meta{display:flex;flex-direction:column;gap:5px}
+.t-score-title{font-size:22px;font-weight:800}
+.t-score-profile{font-size:13px;color:#6b6b80}
+.t-score-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.t-score-tag{font-size:11px;color:#6b6b80;background:#0c0c18;border:1px solid #1a1a2e;
+  border-radius:20px;padding:2px 9px}
+.t-score-tag.gold{color:#E8B040;border-color:#3a2800;background:#100e00}
+
+.t-cats{display:flex;flex-direction:column;gap:8px}
+.t-cat{background:#0c0c18;border:1px solid #1a1a2e;border-radius:10px;padding:12px 14px}
+.t-cat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.t-cat-name{font-size:12px;font-weight:700}
+.t-cat-score{font-size:13px;font-weight:800;color:#E8B040}
+.t-cat-bar-wrap{height:5px;background:#1a1a2e;border-radius:3px;overflow:hidden;margin-bottom:5px}
+.t-cat-bar{height:100%;border-radius:3px;transition:width .6s}
+.t-cat-fb{font-size:12px;color:#6b6b80;line-height:1.4}
+
+.t-score-box{background:#0c0c18;border:1px solid #1a1a2e;border-radius:10px;padding:14px 16px}
+.t-score-box-title{font-size:10px;font-weight:700;letter-spacing:.08em;color:#6b6b80;
+  text-transform:uppercase;margin-bottom:10px}
+.t-bullet{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.5;margin-bottom:5px}
+.t-bullet:last-child{margin-bottom:0}
+.t-summary{background:#0e0c00;border:1px solid #3a2800;border-radius:8px;
+  padding:13px 15px;font-size:13px;color:#c8922a;line-height:1.6;font-style:italic}
+.t-scoring-actions{display:flex;gap:10px;justify-content:center;padding-bottom:4px}
+
+/* ── Training-Modus selector ── */
+.t-modus-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px}
+.t-modus-card{background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:12px;
+  padding:16px 14px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
+.t-modus-card:hover{border-color:#2e2e48;background:#0d0d14}
+.t-modus-card.t-modus-active{border-color:#E8B040;background:#0e0c00}
+.t-modus-icon{font-size:22px;margin-bottom:8px}
+.t-modus-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.t-modus-desc{font-size:11px;color:#6b6b80;line-height:1.45;margin-bottom:6px}
+.t-modus-badge{font-size:10px;color:#444466;font-weight:600;letter-spacing:.04em;
+  background:#0c0c18;border:1px solid #1a1a2e;border-radius:20px;padding:2px 8px;
+  display:inline-block}
+.t-modus-active .t-modus-badge{border-color:#3a2800;color:#c8922a;background:#100e00}
+
+/* ── Hilfe-Counter ── */
+.t-hilfe-counter{font-size:10px;color:#6b6b80;font-weight:600;margin-left:6px}
+
+/* ── Modus-Result (Scoring) ── */
+.t-modus-result{background:#0e0c00;border:1px solid #3a2800;border-radius:10px;
+  padding:14px 16px;display:flex;flex-direction:column;gap:5px}
+.t-modus-result-title{font-size:14px;font-weight:800;color:#E8B040}
+.t-modus-result-msg{font-size:13px;color:#c8922a;line-height:1.5}
+.t-modus-result-pts{font-size:12px;color:#6b6b80;font-weight:600;margin-top:3px}
+
+/* ── Live-Preview (Scoring) ── */
+.t-live-preview{background:#080c18;border:1px solid #1a2a4a;border-radius:12px;
+  padding:18px;display:flex;flex-direction:column;gap:14px}
+.t-lp-header{font-size:13px;font-weight:800;color:#f0ebe0}
+.t-lp-header span{color:#E8B040}
+.t-lp-moment{background:#0c0c18;border-left:3px solid #E8B040;border-radius:0 8px 8px 0;
+  padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.t-lp-trigger{font-size:11px;color:#444466;font-weight:600;margin-bottom:2px}
+.t-lp-badge{display:inline-block;background:#1a1200;border:1px solid #3a2800;
+  color:#E8B040;font-size:10px;font-weight:800;letter-spacing:.06em;
+  padding:2px 9px;border-radius:20px;text-transform:uppercase}
+.t-lp-arg{font-size:13px;color:#f0ebe0;line-height:1.6;font-style:italic}
+.t-lp-tip{font-size:12px;color:#8888aa;line-height:1.5}
+.t-lp-pain{font-size:12px;color:#e07030;line-height:1.5;font-style:italic}
+.t-lp-summary{font-size:13px;color:#9090b0;line-height:1.6;border-top:1px solid #1a2a4a;
+  padding-top:12px}
+.t-lp-cta{background:#0a0d1a;border:1px solid #2a3a5a;border-radius:8px;
+  padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.t-lp-cta-text{font-size:13px;color:#7070a0;font-weight:600}
+.t-lp-cta-btn{background:#E8B040;color:#0c0c18;border:none;border-radius:7px;
+  padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;
+  white-space:nowrap;letter-spacing:.03em;text-decoration:none}
+
+/* ── Language selector ── */
+.t-lang-btns{display:flex;flex-wrap:wrap;gap:6px}
+.t-lang-btn{background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:8px;
+  color:#9b9baa;font-size:12px;font-weight:600;padding:5px 11px;cursor:pointer;
+  font-family:inherit;transition:border-color .15s,color .15s;white-space:nowrap}
+.t-lang-btn:hover{border-color:#2e2e48;color:#d0c9b8}
+.t-lang-btn.t-lang-active{border-color:#E8B040;color:#E8B040;background:#0e0c00}
+
+/* ── Scenario modal ── */
+.t-modal-bg{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.75);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.t-modal{background:#0f0f1a;border:1px solid #2e2e48;border-radius:16px;
+  padding:24px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto}
+.t-modal-title{font-size:16px;font-weight:800;margin-bottom:18px}
+.t-modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.t-modal .form-group{margin-bottom:14px}
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Phase 1: Setup ─────────────────────────────────────────────────────── -->
+<div id="t-setup">
+  <div class="page-wrap">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🎯 Trainingsmodus</div>
+        <div class="page-sub">Übe Cold Calls gegen einen KI-Kunden — mit Stimme und Auswertung</div>
+      </div>
+    </div>
+
+    <div class="t-setup-wrap">
+
+      <div class="t-section">
+        <div class="t-section-label">Sprache</div>
+        <div class="t-lang-btns" id="t-langBtns">
+          {% for code, lang in training_languages.items() %}
+          <button class="t-lang-btn {% if code == 'de' %}t-lang-active{% endif %}"
+                  data-code="{{ code }}" onclick="selectLanguage('{{ code }}')">
+            {{ lang.flag }} {{ lang.label }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="t-section">
+        <div class="t-section-label">Verkaufsprofil</div>
+        <select id="t-profileSelect" class="form-select t-profile-select" onchange="checkReady()">
+          <option value="">— Profil wählen —</option>
+          {% for p in profiles %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+        {% if not profiles %}
+        <div class="form-hint" style="margin-top:8px">Bitte erst ein Profil unter &quot;Profile&quot; anlegen.</div>
+        {% endif %}
+      </div>
+
+      <div class="t-section">
+        <div class="t-section-label">Schwierigkeit</div>
+        <div class="t-diff-grid">
+          {% for key, diff in schwierigkeiten.items() %}
+          <div class="t-diff-card {% if key == 'mittel' %}t-diff-active{% endif %}"
+               data-key="{{ key }}" onclick="selectDiff('{{ key }}')">
+            <div class="t-diff-icon">
+              {%- if key == 'leicht' %}🟢
+              {%- elif key == 'mittel' %}🟡
+              {%- elif key == 'schwer' %}🔴
+              {%- else %}🟣{%- endif %}
+            </div>
+            <div class="t-diff-label">{{ diff.label }}</div>
+            <div class="t-diff-desc">{{ diff.beschreibung }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="t-section">
+        <div class="t-section-label">Trainings-Modus</div>
+        <div class="t-modus-grid">
+          <div class="t-modus-card" id="t-modus-free" onclick="selectModus('free')">
+            <div class="t-modus-icon">🎯</div>
+            <div class="t-modus-name">Frei</div>
+            <div class="t-modus-desc">Nur du und der Kunde. Kein Netz. Maximale Punkte.</div>
+            <div class="t-modus-badge">Für Fortgeschrittene · +50% Punkte</div>
+          </div>
+          <div class="t-modus-card t-modus-active" id="t-modus-guided" onclick="selectModus('guided')">
+            <div class="t-modus-icon">💡</div>
+            <div class="t-modus-name">Geführt</div>
+            <div class="t-modus-desc">Hilfe-Button verfügbar. Nutzung wird gezählt.</div>
+            <div class="t-modus-badge">Für Einsteiger</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="t-section">
+        <div class="t-section-label">Trainings-Szenario <span style="font-weight:400;color:#4a4a60">(optional)</span></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="t-scenarioSelect" class="form-select t-profile-select" style="flex:1"
+                  onchange="onScenarioChange()">
+            <option value="">— Kein Szenario —</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="openScenarioModal()" style="white-space:nowrap">+ Neu</button>
+          <button class="btn btn-danger btn-sm" id="t-deleteScenBtn" style="display:none"
+                  onclick="deleteSelectedScenario()" title="Szenario löschen">🗑</button>
+        </div>
+      </div>
+
+      <button class="t-call-btn" id="t-callBtn" onclick="startTraining()" disabled>
+        📞&nbsp; Anrufen
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── Phase 2: Einwahl ───────────────────────────────────────────────────── -->
+<div id="t-einwahl" class="t-overlay t-hidden">
+  <div class="t-call-screen">
+    <div class="t-call-firm" id="t-callFirm">—</div>
+    <div class="t-call-pos" id="t-callPos">Klingelt…</div>
+    <div class="t-phone-ring">📞</div>
+    <div class="t-call-status">Verbindung wird hergestellt<span class="t-dots"></span></div>
+  </div>
+</div>
+
+<!-- ── Phase 3: Chat ──────────────────────────────────────────────────────── -->
+<div id="t-chat" class="t-overlay t-hidden">
+  <div class="t-chat-header">
+    <div class="t-chat-left">
+      <div class="t-live-dot"></div>
+      <span style="font-weight:700;font-size:11px;letter-spacing:.05em">TRAINING</span>
+      <span class="t-timer" id="t-timer">00:00</span>
+    </div>
+    <div class="t-chat-mid">
+      <div class="t-chat-who" id="t-chatWho">—</div>
+      <div class="t-chat-sub" id="t-chatSub"></div>
+    </div>
+    <div>
+      <button class="btn btn-danger btn-sm" onclick="endTraining()">■ Beenden</button>
+    </div>
+  </div>
+
+  <div class="t-chat-messages" id="t-messages"></div>
+
+  <div class="t-chat-input">
+    <div class="t-help-row" id="t-helpRow">
+      <div style="display:flex;align-items:center;gap:4px">
+        <button class="t-help-btn" id="t-helpBtn" onclick="getHelp()">💡 Was soll ich sagen?</button>
+        <span class="t-hilfe-counter" id="hilfe-counter" style="display:none"></span>
+      </div>
+      <div id="t-helpSugg" style="display:none"></div>
+    </div>
+    <div class="t-input-row">
+      <button class="t-ptt-btn" id="t-pttBtn" title="Gedrückt halten zum Sprechen">🎙</button>
+      <input type="text" class="t-text-input" id="t-textInput"
+             placeholder="Oder Nachricht eintippen…"
+             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendText();}">
+      <button class="t-send-btn" id="t-sendBtn" onclick="sendText()">Senden →</button>
+    </div>
+    <div class="t-status-bar" id="t-statusBar"></div>
+  </div>
+</div>
+
+<!-- ── Phase 4: Scoring ───────────────────────────────────────────────────── -->
+<div id="t-scoring" class="t-overlay t-hidden">
+  <div class="t-scoring-scroll">
+    <div class="t-scoring-inner" id="t-scoringInner">
+      <div style="text-align:center;color:#6b6b80;font-style:italic;padding:40px 0">
+        Auswertung wird erstellt…
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Szenario-Modal ─────────────────────────────────────────────────────── -->
+<div id="t-scenarioModal" class="t-modal-bg t-hidden">
+  <div class="t-modal">
+    <div class="t-modal-title">Szenario erstellen</div>
+    <div class="form-group">
+      <label class="form-label">Name *</label>
+      <input type="text" id="sc-name" class="form-input" placeholder="z.B. Software-Verkauf an CFO">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Beschreibung</label>
+      <input type="text" id="sc-beschreibung" class="form-input" placeholder="Kurzbeschreibung des Szenarios">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kunden-Situation</label>
+      <textarea id="sc-situation" class="form-input" rows="2"
+        placeholder="Was weiß der Kunde bereits, in welcher Lage ist er?"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kunden-Verhalten</label>
+      <textarea id="sc-verhalten" class="form-input" rows="2"
+        placeholder="Wie soll sich der Kunde verhalten?"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Spezial-Einwände (einer pro Zeile)</label>
+      <textarea id="sc-einwaende" class="form-input" rows="3"
+        placeholder="Wir haben bereits einen Anbieter&#10;Budget ist eingefroren&#10;Kein Interesse"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Schwierigkeit</label>
+      <select id="sc-schwierigkeit" class="form-select">
+        {% for key, d in schwierigkeiten.items() %}
+        <option value="{{ key }}">{{ d.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="t-modal-footer">
+      <button class="btn btn-secondary" onclick="closeScenarioModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveScenario()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+const TRAINING_LANGUAGES = {{ training_languages | tojson }};
+const PLAN_TYP = {{ (g.org.plan_typ or '') | tojson }};
+let currentLanguage = 'de';
+let tUI             = TRAINING_LANGUAGES['de'].ui;
+let selectedScenario= null;
+let selectedDiff    = 'mittel';
+let trainingModus   = 'guided';   // 'free' | 'guided'
+let hilfeCount      = 0;
+let voiceAvailable  = true;       // set on training start; false = text-only mode
+let sessionMeta     = null;   // {firma, chefName, chefPosition, sekName, hatSek}
+let apiPhase        = 'kunde';
+let isWaiting       = false;
+let isRecording     = false;
+let trainingTimer   = null;
+let trainingSecs    = 0;
+let mediaRecorder   = null;
+let audioChunks     = [];
+let freizCtx = null, freizOsc = null;
+let currentAudio    = null;
+const audioStore    = {};   // id → {b64, el}
+let msgCnt          = 0;
+
+// ── Setup ──────────────────────────────────────────────────────────────────────
+function selectModus(modus) {
+  trainingModus = modus;
+  document.querySelectorAll('.t-modus-card').forEach(c => c.classList.remove('t-modus-active'));
+  const card = document.getElementById('t-modus-' + modus);
+  if (card) card.classList.add('t-modus-active');
+}
+
+function selectDiff(key) {
+  document.querySelectorAll('.t-diff-card').forEach(c => c.classList.remove('t-diff-active'));
+  const card = document.querySelector('.t-diff-card[data-key="' + key + '"]');
+  if (card) card.classList.add('t-diff-active');
+  selectedDiff = key;
+}
+
+function selectLanguage(code) {
+  currentLanguage = code;
+  tUI = (TRAINING_LANGUAGES[code] || TRAINING_LANGUAGES['de']).ui;
+  document.querySelectorAll('.t-lang-btn').forEach(b => {
+    b.classList.toggle('t-lang-active', b.dataset.code === code);
+  });
+  const sendBtn = document.getElementById('t-sendBtn');
+  if (sendBtn) sendBtn.textContent = tUI.senden || 'Senden →';
+  const helpBtn = document.getElementById('t-helpBtn');
+  if (helpBtn) helpBtn.textContent = tUI.hilfe_btn || '💡 Was soll ich sagen?';
+}
+
+function checkReady() {
+  const ok = document.getElementById('t-profileSelect').value !== '';
+  document.getElementById('t-callBtn').disabled = !ok;
+}
+
+// ── Start Training ─────────────────────────────────────────────────────────────
+async function startTraining() {
+  const pid = document.getElementById('t-profileSelect').value;
+  if (!pid) return;
+
+  showPhase('einwahl');
+  startFreizeichen();
+
+  try {
+    const res  = await fetch('/training/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        profile_id:   parseInt(pid),
+        schwierigkeit: selectedDiff,
+        sprache:      currentLanguage,
+        scenario_id:  selectedScenario,
+        modus:        trainingModus,
+      })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      alert('Fehler: ' + (data.error || '?'));
+      showPhase('setup');
+      stopFreizeichen();
+      return;
+    }
+
+    if (data.ui) tUI = data.ui;
+    voiceAvailable = data.voice_available !== false;
+    if (!voiceAvailable && data.voice_message) {
+      // Show non-blocking info strip at top of chat
+      const ms = document.getElementById('t-messages');
+      const strip = document.createElement('div');
+      strip.style.cssText = 'background:#1a1200;border:1px solid #3a2800;border-radius:7px;padding:8px 12px;font-size:11px;color:#c8922a;margin-bottom:6px';
+      strip.textContent = '🔇 ' + data.voice_message;
+      ms.appendChild(strip);
+    }
+    sessionMeta = {
+      firma:         data.persona.firma,
+      chefName:      data.persona.chef_name,
+      chefPosition:  data.persona.chef_position,
+      sekName:       data.persona.sek_name,
+      hatSek:        data.hat_sekretaerin,
+    };
+    apiPhase = data.phase;
+
+    document.getElementById('t-callFirm').textContent = sessionMeta.firma;
+    document.getElementById('t-callPos').textContent  =
+      sessionMeta.hatSek ? 'Sekretariat' : sessionMeta.chefPosition;
+
+    // Min. 2 Freizeichen-Töne abwarten
+    await sleep(2300);
+    stopFreizeichen();
+    playAbhebenSound();
+    await sleep(350);
+
+    initChat(data);
+  } catch(e) {
+    console.error('[Training] Start:', e);
+    alert('Verbindungsfehler beim Starten');
+    showPhase('setup');
+    stopFreizeichen();
+  }
+}
+
+function initChat(data) {
+  document.getElementById('t-messages').innerHTML = '';
+  document.getElementById('t-helpSugg').style.display = 'none';
+  document.getElementById('t-statusBar').textContent  = '';
+  hilfeCount = 0;
+  const hilfeRow = document.getElementById('t-helpRow');
+  if (hilfeRow) hilfeRow.style.display = trainingModus === 'free' ? 'none' : '';
+  const counterEl = document.getElementById('hilfe-counter');
+  if (counterEl) { counterEl.style.display = 'none'; counterEl.textContent = ''; }
+  updateChatHeader();
+  startTimer();
+
+  const role = data.hat_sekretaerin ? (tUI.phase_sek || 'Sekretärin') : (tUI.phase_kunde || 'Kunde');
+  const name = data.hat_sekretaerin ? sessionMeta.sekName : sessionMeta.chefName;
+  addInMsg(data.kunde_text, data.kunde_audio, role, name);
+
+  showPhase('chat');
+}
+
+function updateChatHeader() {
+  const who = document.getElementById('t-chatWho');
+  const sub = document.getElementById('t-chatSub');
+  if (!who) return;
+  if (apiPhase === 'sekretaerin') {
+    who.textContent = sessionMeta.sekName  || (tUI.phase_sek || 'Sekretärin');
+    sub.textContent = (tUI.phase_sek || 'Sekretariat') + ' · ' + sessionMeta.firma;
+  } else {
+    who.textContent = sessionMeta.chefName || '—';
+    sub.textContent = sessionMeta.chefPosition + ' · ' + sessionMeta.firma;
+  }
+}
+
+// ── Messages ───────────────────────────────────────────────────────────────────
+function addInMsg(text, audioB64, role, name) {
+  const ms   = document.getElementById('t-messages');
+  const init = (name || 'K').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const id   = audioB64 ? ('ta' + (++msgCnt)) : null;
+  if (id) audioStore[id] = {b64: audioB64};
+
+  const div = document.createElement('div');
+  div.className = 't-msg-in';
+  div.innerHTML =
+    '<div class="t-avatar">' + escH(init) + '</div>' +
+    '<div class="t-bubble-in">' +
+      '<div class="t-msg-name">' + escH(name || 'Kunde') + ' · ' + escH(role || 'Kunde') + '</div>' +
+      '<div class="t-msg-text">' + escH(text) + '</div>' +
+      (id ? '<button class="t-play-btn" id="' + id + '" onclick="togglePlay(\'' + id + '\')">▶ Abspielen</button>' : '') +
+    '</div>';
+  ms.appendChild(div);
+  ms.scrollTop = ms.scrollHeight;
+
+  if (audioB64 && voiceAvailable) autoPlay(audioB64, id);
+}
+
+function addOutMsg(text) {
+  const ms  = document.getElementById('t-messages');
+  const div = document.createElement('div');
+  div.className = 't-msg-out';
+  div.innerHTML =
+    '<div class="t-bubble-out">' +
+      '<div class="t-msg-out-label">Berater</div>' +
+      '<div class="t-msg-text">' + escH(text) + '</div>' +
+    '</div>';
+  ms.appendChild(div);
+  ms.scrollTop = ms.scrollHeight;
+}
+
+function addSysMsg(text) {
+  const ms  = document.getElementById('t-messages');
+  const div = document.createElement('div');
+  div.className = 't-msg-sys';
+  div.textContent = text;
+  ms.appendChild(div);
+  ms.scrollTop = ms.scrollHeight;
+}
+
+// ── Audio ───────────────────────────────────────────────────────────────────────
+function autoPlay(b64, btnId) {
+  if (!b64) return;
+  if (currentAudio) { try { currentAudio.pause(); currentAudio.currentTime = 0; } catch(e){} }
+  const a = new Audio('data:audio/mpeg;base64,' + b64);
+  currentAudio = a;
+  if (btnId) {
+    audioStore[btnId] = audioStore[btnId] || {};
+    audioStore[btnId].audio = a;
+    setBtnState(btnId, 'playing');
+    a.onended = () => setBtnState(btnId, 'idle');
+  }
+  a.play().catch(() => {});
+}
+
+function togglePlay(id) {
+  const inst = audioStore[id];
+  if (!inst) return;
+  if (inst.audio && !inst.audio.paused) {
+    inst.audio.pause(); inst.audio.currentTime = 0;
+    setBtnState(id, 'idle');
+  } else {
+    autoPlay(inst.b64, id);
+  }
+}
+
+function setBtnState(id, state) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.textContent = state === 'playing' ? '■ Stopp' : '▶ Abspielen';
+}
+
+// ── Respond ─────────────────────────────────────────────────────────────────────
+function sendText() {
+  const inp  = document.getElementById('t-textInput');
+  const text = inp.value.trim();
+  if (!text || isWaiting) return;
+  inp.value = '';
+  document.getElementById('t-helpSugg').style.display = 'none';
+  addOutMsg(text);
+  sendToKI(text);
+}
+
+async function sendToKI(text) {
+  if (isWaiting) return;
+  setWaiting(true);
+  try {
+    const res  = await fetch('/training/respond', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text})
+    });
+    const data = await res.json();
+    if (!data.ok) { showStatus('Fehler: ' + (data.error || '?')); return; }
+
+    if (data.durchgestellt) {
+      // Sekretärin's transfer message
+      addInMsg(data.kunde_text, data.kunde_audio, tUI.phase_sek || 'Sekretärin', sessionMeta.sekName);
+      await sleep(600);
+      addSysMsg((tUI.verbindet || 'Verbinde mit') + ' ' + sessionMeta.chefName + '…');
+      await sleep(2000);
+      apiPhase = 'kunde';
+      updateChatHeader();
+      addSysMsg((tUI.durchgestellt || '✓ Durchgestellt zu') + ' ' + sessionMeta.chefName);
+      addInMsg(data.chef_text, data.chef_audio, tUI.phase_kunde || 'Kunde', sessionMeta.chefName);
+    } else {
+      const role = (apiPhase === 'sekretaerin') ? (tUI.phase_sek || 'Sekretärin') : (tUI.phase_kunde || 'Kunde');
+      const name = (apiPhase === 'sekretaerin') ? sessionMeta.sekName : sessionMeta.chefName;
+      addInMsg(data.kunde_text, data.kunde_audio, role, name);
+    }
+    showStatus('');
+  } catch(e) {
+    console.error('[Training] Respond:', e);
+    showStatus('Verbindungsfehler');
+  } finally {
+    setWaiting(false);
+  }
+}
+
+function setWaiting(w) {
+  isWaiting = w;
+  const ptt  = document.getElementById('t-pttBtn');
+  const send = document.getElementById('t-sendBtn');
+  const inp  = document.getElementById('t-textInput');
+  if (ptt)  ptt.disabled  = w;
+  if (send) send.disabled = w;
+  if (inp)  inp.disabled  = w;
+  if (w) showStatus(tUI.warte || 'Kunde antwortet…');
+}
+
+// ── Push-to-Talk ────────────────────────────────────────────────────────────────
+function initPTT() {
+  const btn = document.getElementById('t-pttBtn');
+  if (!btn) return;
+  function onStart(e) { if (!isWaiting && !isRecording) { e.preventDefault(); startRec(); } }
+  function onStop(e)  { if (isRecording) { e.preventDefault(); stopRec(); } }
+  btn.addEventListener('mousedown', onStart);
+  btn.addEventListener('mouseup',   onStop);
+  btn.addEventListener('mouseleave',onStop);
+  btn.addEventListener('touchstart', onStart, {passive: false});
+  btn.addEventListener('touchend',   onStop,  {passive: false});
+}
+
+function startRec() {
+  if (!navigator.mediaDevices) { showStatus('Mikrofon nicht verfügbar'); return; }
+  navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
+    isRecording = true;
+    audioChunks = [];
+    const btn = document.getElementById('t-pttBtn');
+    if (btn) { btn.classList.add('t-recording'); btn.textContent = '🔴'; }
+    showStatus(tUI.aufnehmen || 'Aufnahme… loslassen zum Senden');
+    const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    mediaRecorder = new MediaRecorder(stream, {mimeType: mime});
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      transcribeAudio(new Blob(audioChunks, {type: mime}));
+    };
+    mediaRecorder.start();
+  }).catch(e => { showStatus('Mikrofon-Zugriff verweigert'); console.error('[PTT]', e); });
+}
+
+function stopRec() {
+  isRecording = false;
+  const btn = document.getElementById('t-pttBtn');
+  if (btn) { btn.classList.remove('t-recording'); btn.textContent = '🎙'; }
+  if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+}
+
+async function transcribeAudio(blob) {
+  if (blob.size < 800) { showStatus(tUI.aufnehmen ? 'Aufnahme zu kurz' : 'Audio too short'); return; }
+  showStatus(tUI.transkribiere || 'Transkribiere…');
+  const fd = new FormData();
+  fd.append('audio', blob, 'rec.webm');
+  fd.append('language', currentLanguage);
+  try {
+    const res  = await fetch('/training/transcribe', {method: 'POST', body: fd});
+    const data = await res.json();
+    if (data.ok && data.text && data.text.trim()) {
+      addOutMsg(data.text);
+      sendToKI(data.text);
+    } else {
+      showStatus(tUI.transkription_fehler || 'Transkription fehlgeschlagen — bitte nochmal');
+    }
+  } catch(e) {
+    showStatus('Transkriptions-Fehler');
+    console.error('[Transcribe]', e);
+  }
+}
+
+// ── Hilfe ───────────────────────────────────────────────────────────────────────
+async function getHelp() {
+  const btn  = document.getElementById('t-helpBtn');
+  const sugg = document.getElementById('t-helpSugg');
+  if (!btn || !sugg) return;
+  hilfeCount++;
+  const counterEl = document.getElementById('hilfe-counter');
+  if (counterEl) { counterEl.style.display = ''; counterEl.textContent = hilfeCount + 'x genutzt'; }
+  btn.textContent = tUI.hilfe_laedt || '💡 Lädt…';
+  btn.disabled    = true;
+  sugg.style.display = 'none';
+  try {
+    const res  = await fetch('/training/help', {method: 'POST'});
+    const data = await res.json();
+    if (data.ok && data.vorschlag) {
+      sugg.innerHTML =
+        '<div class="t-help-suggestion" onclick="adoptSugg(this)">' +
+          '<div class="t-help-text">' + escH(data.vorschlag) + '</div>' +
+          '<div class="t-help-adopt">→ Klicken zum Übernehmen</div>' +
+        '</div>';
+      sugg.style.display = 'block';
+    }
+  } catch(e) { console.error('[Help]', e); }
+  finally {
+    btn.textContent = tUI.hilfe_btn || '💡 Was soll ich sagen?';
+    btn.disabled    = false;
+  }
+}
+
+function adoptSugg(el) {
+  const txt = (el.querySelector('.t-help-text') || el).textContent.trim();
+  const inp = document.getElementById('t-textInput');
+  if (inp) { inp.value = txt; inp.focus(); }
+  document.getElementById('t-helpSugg').style.display = 'none';
+}
+
+// ── End / Scoring ───────────────────────────────────────────────────────────────
+async function endTraining() {
+  if (!confirm('Training beenden und Auswertung anzeigen?')) return;
+  stopTimer();
+  if (currentAudio) { try { currentAudio.pause(); } catch(e){} }
+  setWaiting(true);
+  showStatus('Auswertung wird erstellt…');
+  try {
+    const res  = await fetch('/training/end', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({hilfe_count: hilfeCount}),
+    });
+    const data = await res.json();
+    if (!data.ok) { alert('Fehler bei der Auswertung'); setWaiting(false); return; }
+    buildScoring(data);
+    showPhase('scoring');
+  } catch(e) {
+    alert('Verbindungsfehler bei der Auswertung');
+    setWaiting(false);
+    console.error('[End]', e);
+  }
+}
+
+function buildScoring(data) {
+  const s    = data.scoring || {};
+  const score= s.gesamt_score || 0;
+  const r    = 44;
+  const circ = +(2 * Math.PI * r).toFixed(2);
+  const offs = +(circ * (1 - score / 100)).toFixed(2);
+  const col  = score >= 70 ? '#E8B040' : score >= 50 ? '#f0a500' : '#e05c5c';
+
+  const catsHtml = (s.kategorien || []).map(c => {
+    const bc = c.score >= 7 ? '#E8B040' : c.score >= 5 ? '#f0a500' : '#e05c5c';
+    return '<div class="t-cat">' +
+      '<div class="t-cat-top">' +
+        '<span class="t-cat-name">' + escH(c.name) + '</span>' +
+        '<span class="t-cat-score">' + c.score + '/10</span>' +
+      '</div>' +
+      '<div class="t-cat-bar-wrap"><div class="t-cat-bar" style="width:' + (c.score * 10) + '%;background:' + bc + '"></div></div>' +
+      '<div class="t-cat-fb">' + escH(c.feedback || '') + '</div>' +
+    '</div>';
+  }).join('');
+
+  const staerkenHtml = (s.staerken || []).map(x =>
+    '<div class="t-bullet"><span>✅</span><span>' + escH(x) + '</span></div>').join('');
+  const verbHtml = (s.verbesserungen || []).map(x =>
+    '<div class="t-bullet"><span>⚠️</span><span>' + escH(x) + '</span></div>').join('');
+
+  const sekTag = data.sekretaerin_ueberwunden
+    ? '<span class="t-score-tag gold">✓ Sekretärin</span>' : '';
+
+  // ── Modus motivation block ─────────────────────────────────────────────────
+  const modus      = data.modus || 'guided';
+  const hCount     = data.hilfe_count || 0;
+  const ptsEarned  = data.punkte_verdient || 0;
+  const penalty    = Math.min(hCount * 5, 30);
+  let modusHtml;
+  if (modus === 'free') {
+    modusHtml = '<div class="t-modus-result">' +
+      '<div class="t-modus-result-title">🏆 Freies Training — ohne Hilfe</div>' +
+      '<div class="t-modus-result-msg">Du hast das komplett allein geschafft. Respekt.</div>' +
+      '<div class="t-modus-result-pts">+50% Bonuspunkte: ' + ptsEarned + ' Punkte verdient</div>' +
+    '</div>';
+  } else if (hCount === 0) {
+    modusHtml = '<div class="t-modus-result">' +
+      '<div class="t-modus-result-title">💪 Keine Hilfe genutzt!</div>' +
+      '<div class="t-modus-result-msg">Du hast den Hilfe-Button kein einziges Mal gebraucht. Bereit für das freie Training?</div>' +
+      '<div class="t-modus-result-pts">' + ptsEarned + ' Punkte verdient</div>' +
+    '</div>';
+  } else if (hCount <= 2) {
+    modusHtml = '<div class="t-modus-result">' +
+      '<div class="t-modus-result-title">💡 Fast ohne Hilfe — nur ' + hCount + 'x genutzt</div>' +
+      '<div class="t-modus-result-msg">Du brauchst kaum noch Unterstützung. Nächstes Mal: Probier den freien Modus.</div>' +
+      '<div class="t-modus-result-pts">' + ptsEarned + ' Punkte verdient (−' + penalty + ' für Hilfe)</div>' +
+    '</div>';
+  } else {
+    modusHtml = '<div class="t-modus-result">' +
+      '<div class="t-modus-result-title">💡 ' + hCount + 'x Hilfe genutzt</div>' +
+      '<div class="t-modus-result-msg">Kein Problem — dafür ist sie da. Versuch beim nächsten Mal mit weniger auszukommen.</div>' +
+      '<div class="t-modus-result-pts">' + ptsEarned + ' Punkte verdient (−' + penalty + ' für Hilfe)</div>' +
+    '</div>';
+  }
+
+  // ── Live preview block ──────────────────────────────────────────────────────
+  let livePreviewHtml = '';
+  const lp = data.live_preview;
+  if (lp && lp.momente && lp.momente.length) {
+    const momente = lp.momente.slice(0, 4).map(m => {
+      const ppHtml = m.painpoint
+        ? '<div class="t-lp-pain">📌 PAINPOINT: ' + escH(m.painpoint) + '</div>'
+        : '';
+      return '<div class="t-lp-moment">' +
+        '<div class="t-lp-trigger">Kunde: <em>"' + escH(m.kunde_sagte || '') + '"</em></div>' +
+        '<div><span class="t-lp-badge">⚡ ' + escH(m.einwand_typ || 'Einwand') + '</span></div>' +
+        '<div class="t-lp-arg">"' + escH(m.gegenargument || '') + '"</div>' +
+        (m.coaching_tipp ? '<div class="t-lp-tip">💡 ' + escH(m.coaching_tipp) + '</div>' : '') +
+        ppHtml +
+      '</div>';
+    }).join('');
+
+    const freeIntro = modus === 'free'
+      ? '<div style="font-size:12px;color:#6b6b80;margin-bottom:2px">Du hast das ohne Hilfe gemeistert. Aber schau was NERVE zusätzlich erkannt hätte:</div>'
+      : '';
+
+    const ctaHtml = (PLAN_TYP === 'training')
+      ? '<div class="t-lp-cta">' +
+          '<span class="t-lp-cta-text">Willst du das im echten Gespräch?</span>' +
+          '<a class="t-lp-cta-btn" href="/live">⚡ Live-Modus testen →</a>' +
+        '</div>'
+      : '';
+
+    livePreviewHtml =
+      '<div class="t-live-preview">' +
+        '<div class="t-lp-header">⚡ Was <span>NERVE</span> dir im echten Gespräch gezeigt hätte</div>' +
+        freeIntro +
+        momente +
+        (lp.zusammenfassung ? '<div class="t-lp-summary">' + escH(lp.zusammenfassung) + '</div>' : '') +
+        ctaHtml +
+      '</div>';
+  }
+
+  document.getElementById('t-scoringInner').innerHTML =
+    '<div class="t-score-header">' +
+      '<svg class="t-score-circle" width="110" height="110" viewBox="0 0 110 110">' +
+        '<circle cx="55" cy="55" r="' + r + '" stroke="#1a1a2e" stroke-width="8" fill="none"/>' +
+        '<circle cx="55" cy="55" r="' + r + '" stroke="' + col + '" stroke-width="8" fill="none"' +
+          ' stroke-linecap="round"' +
+          ' stroke-dasharray="' + circ + '"' +
+          ' stroke-dashoffset="' + offs + '"' +
+          ' transform="rotate(-90 55 55)"/>' +
+        '<text x="55" y="51" text-anchor="middle" fill="#f0ebe0" font-size="22" font-weight="900">' + score + '</text>' +
+        '<text x="55" y="67" text-anchor="middle" fill="#6b6b80" font-size="11">/100</text>' +
+      '</svg>' +
+      '<div class="t-score-meta">' +
+        '<div class="t-score-title">📊 Auswertung</div>' +
+        '<div class="t-score-profile">' + escH(data.profile_name || '') + ' · ' + escH(data.schwierigkeit || '') + '</div>' +
+        '<div class="t-score-tags">' +
+          '<span class="t-score-tag">' + data.dauer_min + ' Min</span>' +
+          '<span class="t-score-tag">' + data.turns + ' Runden</span>' +
+          sekTag +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    modusHtml +
+    (catsHtml ? '<div class="t-cats">' + catsHtml + '</div>' : '') +
+    (staerkenHtml ? '<div class="t-score-box"><div class="t-score-box-title">Stärken</div>' + staerkenHtml + '</div>' : '') +
+    (verbHtml ? '<div class="t-score-box"><div class="t-score-box-title">Verbesserungspotenzial</div>' + verbHtml + '</div>' : '') +
+    (s.zusammenfassung ? '<div class="t-summary">' + escH(s.zusammenfassung) + '</div>' : '') +
+    livePreviewHtml +
+    '<div class="t-scoring-actions">' +
+      '<button class="btn btn-secondary" onclick="resetTraining()">🔄 Nochmal trainieren</button>' +
+      '<button class="btn btn-primary" onclick="showPhase(\'setup\')">✕ Schließen</button>' +
+    '</div>';
+}
+
+function resetTraining() {
+  document.getElementById('t-messages').innerHTML   = '';
+  document.getElementById('t-helpSugg').style.display = 'none';
+  document.getElementById('t-statusBar').textContent  = '';
+  stopTimer();
+  trainingSecs = 0;
+  hilfeCount   = 0;
+  isWaiting    = false;
+  isRecording  = false;
+  sessionMeta  = null;
+  showPhase('setup');
+}
+
+// ── Phase Navigation ────────────────────────────────────────────────────────────
+function showPhase(phase) {
+  ['t-setup','t-einwahl','t-chat','t-scoring'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('t-hidden', id !== 't-' + phase);
+  });
+}
+
+// ── Timer ───────────────────────────────────────────────────────────────────────
+function startTimer() {
+  if (trainingTimer) return;
+  trainingSecs  = 0;
+  trainingTimer = setInterval(() => {
+    trainingSecs++;
+    const el = document.getElementById('t-timer');
+    if (el) el.textContent =
+      String(Math.floor(trainingSecs / 60)).padStart(2, '0') + ':' +
+      String(trainingSecs % 60).padStart(2, '0');
+  }, 1000);
+}
+
+function stopTimer() {
+  if (trainingTimer) { clearInterval(trainingTimer); trainingTimer = null; }
+}
+
+// ── Freizeichen (language-specific ring tone) ───────────────────────────────
+function startFreizeichen() {
+  try {
+    const fz  = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES['de']).freizeichen;
+    const hz  = fz.hz  || 425;
+    const on  = fz.on  || 1.0;
+    const off = fz.off || 4.0;
+    const period = on + off;
+    freizCtx = new (window.AudioContext || window.webkitAudioContext)();
+    freizOsc = freizCtx.createOscillator();
+    const g  = freizCtx.createGain();
+    freizOsc.type = 'sine';
+    freizOsc.frequency.value = hz;
+    freizOsc.connect(g);
+    g.connect(freizCtx.destination);
+    g.gain.setValueAtTime(0, freizCtx.currentTime);
+    for (let i = 0; i < 8; i++) {
+      const t = freizCtx.currentTime + i * period;
+      g.gain.setValueAtTime(0.15, t);
+      g.gain.setValueAtTime(0, t + on);
+    }
+    freizOsc.start();
+  } catch(e) { console.warn('[Freiz]', e); }
+}
+
+function stopFreizeichen() {
+  if (freizOsc) { try { freizOsc.stop(); } catch(e){} freizOsc = null; }
+  if (freizCtx) { try { freizCtx.close(); } catch(e){} freizCtx = null; }
+}
+
+function playAbhebenSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = ctx.createBuffer(1, Math.round(ctx.sampleRate * 0.045), ctx.sampleRate);
+    const d   = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
+    const src = ctx.createBufferSource();
+    const g   = ctx.createGain(); g.gain.value = 0.1;
+    src.buffer = buf; src.connect(g); g.connect(ctx.destination); src.start();
+    setTimeout(() => ctx.close(), 200);
+  } catch(e) {}
+}
+
+// ── Utilities ───────────────────────────────────────────────────────────────────
+function escH(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function showStatus(t) {
+  const el = document.getElementById('t-statusBar');
+  if (el) el.textContent = t;
+}
+
+// ── Szenarien ────────────────────────────────────────────────────────────────
+async function loadScenarios() {
+  try {
+    const res  = await fetch('/training/scenarios');
+    const data = await res.json();
+    if (data.ok) renderScenarioDropdown(data.scenarios || []);
+  } catch(e) { console.warn('[Scenarios]', e); }
+}
+
+// Map scenario id → is_system for delete button logic
+const _scenarioMeta = {};
+
+function renderScenarioDropdown(list) {
+  const sel = document.getElementById('t-scenarioSelect');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Kein Szenario —</option>';
+
+  // Store meta
+  list.forEach(s => { _scenarioMeta[s.id] = s; });
+
+  // Group by difficulty in display order
+  const GROUPS = [
+    { key: 'leicht',      label: 'Leicht' },
+    { key: 'mittel',      label: 'Mittel' },
+    { key: 'schwer',      label: 'Schwer' },
+    { key: 'sekretaerin', label: 'Sekretärin + Chef' },
+  ];
+  const byDiff = {};
+  list.forEach(s => {
+    const d = s.schwierigkeit || 'mittel';
+    if (!byDiff[d]) byDiff[d] = [];
+    byDiff[d].push(s);
+  });
+  // Append any unknown difficulties after the known groups
+  const knownKeys = new Set(GROUPS.map(g => g.key));
+  Object.keys(byDiff).filter(k => !knownKeys.has(k))
+    .forEach(k => GROUPS.push({ key: k, label: k }));
+
+  GROUPS.forEach(group => {
+    const items = byDiff[group.key];
+    if (!items || items.length === 0) return;
+    const og = document.createElement('optgroup');
+    og.label = '── ' + group.label + ' ──';
+    items.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.name;
+      if (String(s.id) === prev) o.selected = true;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+}
+
+function onScenarioChange() {
+  const val    = document.getElementById('t-scenarioSelect').value;
+  selectedScenario = val ? parseInt(val) : null;
+  const delBtn = document.getElementById('t-deleteScenBtn');
+  if (delBtn) {
+    const meta = val ? _scenarioMeta[parseInt(val)] : null;
+    // Hide delete button for system scenarios (erstellt_von=null → is_system=true)
+    delBtn.style.display = (val && meta && !meta.is_system) ? 'inline-block' : 'none';
+  }
+}
+
+function openScenarioModal() {
+  ['sc-name','sc-beschreibung','sc-situation','sc-verhalten','sc-einwaende'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const sw = document.getElementById('sc-schwierigkeit');
+  if (sw) sw.value = selectedDiff || 'mittel';
+  document.getElementById('t-scenarioModal').classList.remove('t-hidden');
+}
+
+function closeScenarioModal() {
+  document.getElementById('t-scenarioModal').classList.add('t-hidden');
+}
+
+async function saveScenario() {
+  const name = (document.getElementById('sc-name').value || '').trim();
+  if (!name) { alert('Bitte einen Namen eingeben.'); return; }
+  const einwTxt  = (document.getElementById('sc-einwaende').value || '').trim();
+  const einwaende = einwTxt ? einwTxt.split('\n').map(l => l.trim()).filter(Boolean) : [];
+  const payload = {
+    name,
+    beschreibung:    document.getElementById('sc-beschreibung').value || '',
+    kunde_situation: document.getElementById('sc-situation').value    || '',
+    kunde_verhalten: document.getElementById('sc-verhalten').value    || '',
+    spezial_einwaende: einwaende,
+    schwierigkeit:   document.getElementById('sc-schwierigkeit').value || 'mittel',
+  };
+  try {
+    const res  = await fetch('/training/scenarios', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      closeScenarioModal();
+      await loadScenarios();
+      // Auto-select the new scenario
+      const sel = document.getElementById('t-scenarioSelect');
+      if (sel && data.id) { sel.value = data.id; onScenarioChange(); }
+    } else {
+      alert('Fehler: ' + (data.error || '?'));
+    }
+  } catch(e) { alert('Verbindungsfehler'); }
+}
+
+async function deleteScenario(id) {
+  if (!confirm('Szenario löschen?')) return;
+  try {
+    const res  = await fetch('/training/scenarios/' + id, {method: 'DELETE'});
+    const data = await res.json();
+    if (data.ok) {
+      selectedScenario = null;
+      await loadScenarios();
+      const delBtn = document.getElementById('t-deleteScenBtn');
+      if (delBtn) delBtn.style.display = 'none';
+    }
+  } catch(e) { alert('Fehler beim Löschen'); }
+}
+
+function deleteSelectedScenario() {
+  if (selectedScenario) deleteScenario(selectedScenario);
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────────
+initPTT();
+loadScenarios();
+</script>
+{% endblock %}

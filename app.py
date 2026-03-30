@@ -114,6 +114,13 @@ def _migrate():
                 print(f"[DB] Migration: added organisations.{col}")
             except Exception:
                 pass
+        # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
+        import os as _os
+        old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
+        new_db = _os.path.join(_os.path.dirname(__file__), 'database', 'nerve.db')
+        if _os.path.exists(old_db) and not _os.path.exists(new_db):
+            _os.rename(old_db, new_db)
+            print('[DB] Renamed salesnerve.db -> nerve.db')
 
 _migrate()
 
@@ -161,6 +168,12 @@ def _data_migrate():
         try:
             conn.execute(text("UPDATE organisations SET name='NERVE Alpha' WHERE name='SalesNerve Alpha'"))
             conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(text("UPDATE organisations SET billing_email='admin@nerve.local' WHERE billing_email='andre@salesnerve.de'"))
+            conn.commit()
+            print('[DB] Migration: updated billing_email to admin@nerve.local')
         except Exception:
             pass
 
