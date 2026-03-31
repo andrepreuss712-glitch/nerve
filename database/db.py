@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 # Resolve relative SQLite paths relative to project root
@@ -14,6 +14,15 @@ if _DATABASE_URL.startswith('sqlite:///') and not _DATABASE_URL.startswith('sqli
 
 _connect_args = {'check_same_thread': False} if 'sqlite' in _DATABASE_URL else {}
 engine = create_engine(_DATABASE_URL, connect_args=_connect_args)
+
+# ── Enable WAL mode for SQLite (concurrent reads + writes under threading) ─────
+if 'sqlite' in _DATABASE_URL:
+    @event.listens_for(engine, 'connect')
+    def set_wal_mode(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute('PRAGMA journal_mode=WAL')
+        cursor.close()
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
