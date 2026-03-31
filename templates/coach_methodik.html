@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %} · Meine Methodik{% endblock %}
+
+{% block extra_style %}
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:8px}
+.m-card{background:#0c0c18;border:1px solid #1a1a2e;border-radius:12px;padding:18px 20px;
+  display:flex;flex-direction:column;gap:10px}
+.m-card-name{font-size:14px;font-weight:700}
+.m-card-branch{font-size:12px;color:#6b6b80}
+.m-card-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.co-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
+  display:none;align-items:center;justify-content:center}
+.co-modal-bg.open{display:flex}
+.co-modal{background:#0c0c18;border:1px solid #2e2e48;border-radius:14px;
+  padding:28px;width:min(500px,92vw);max-height:90vh;overflow-y:auto}
+.co-modal-title{font-size:17px;font-weight:700;margin-bottom:20px}
+.co-modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">📘 Meine Methodik</div>
+      <div class="page-sub">Deine eigenen Verkaufs-Profile, die du in Kunden-Orgs übertragen kannst</div>
+    </div>
+  </div>
+
+  {% if profiles %}
+  <div class="profile-grid">
+    {% for p in profiles %}
+    <div class="m-card">
+      <div class="m-card-name">{{ p.name }}</div>
+      <div class="m-card-branch">{{ p.branche or '–' }}</div>
+      <div class="m-card-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openUebertragen({{ p.id }}, '{{ p.name | e }}')">
+          → Übertragen
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="color:#444466;text-align:center;padding:60px">
+    <div style="font-size:32px;margin-bottom:12px">📘</div>
+    Keine eigenen Profile vorhanden.<br>
+    <a href="/profiles" style="color:#E8B040;text-decoration:underline;font-size:13px">Profile erstellen</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal: Methodik übertragen -->
+<div class="co-modal-bg" id="uebertragenModal">
+  <div class="co-modal">
+    <div class="co-modal-title">→ Methodik übertragen</div>
+    <div style="font-size:13px;color:#6b6b80;margin-bottom:16px">
+      Profil: <strong id="ut-profile-name" style="color:#f0ebe0"></strong>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ziel-Organisation *</label>
+      <select class="form-select" id="ut-org-select">
+        <option value="">— Organisation wählen —</option>
+        {% for org in orgs %}
+        <option value="{{ org.id }}">{{ org.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="ut-msg" style="font-size:12px;display:none;margin-bottom:8px"></div>
+    <div class="co-modal-footer">
+      <button class="btn btn-secondary" onclick="closeUebertragen()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="doUebertragen()">Übertragen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentProfileId = null;
+function openUebertragen(pid, name){
+  currentProfileId = pid;
+  document.getElementById('ut-profile-name').textContent = name;
+  document.getElementById('ut-org-select').value = '';
+  document.getElementById('ut-msg').style.display = 'none';
+  document.getElementById('uebertragenModal').classList.add('open');
+}
+function closeUebertragen(){
+  document.getElementById('uebertragenModal').classList.remove('open');
+}
+async function doUebertragen(){
+  const orgId = document.getElementById('ut-org-select').value;
+  const msg   = document.getElementById('ut-msg');
+  if(!orgId){msg.style.color='#e05c5c';msg.textContent='Bitte Organisation wählen.';msg.style.display='';return;}
+  try{
+    const r = await fetch('/coach/methodik/uebertragen',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profile_id:currentProfileId,ziel_org_id:parseInt(orgId)})
+    });
+    const d = await r.json();
+    if(d.ok){msg.style.color='#E8B040';msg.textContent='✓ Profil erfolgreich übertragen!';}
+    else{msg.style.color='#e05c5c';msg.textContent=d.error||'Fehler';}
+    msg.style.display='';
+  }catch(e){msg.style.color='#e05c5c';msg.textContent='Netzwerkfehler';msg.style.display='';}
+}
+document.getElementById('uebertragenModal').addEventListener('click',function(e){
+  if(e.target===this) closeUebertragen();
+});
+</script>
+{% endblock %}

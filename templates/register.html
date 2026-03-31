@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>NERVE – Registrierung</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0c0c18;color:#f0ebe0;font-family:'Segoe UI',sans-serif;
+    display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .card{background:#0c0c18;border:1px solid #1a1a2e;border-radius:12px;
+    padding:36px 40px;width:100%;max-width:380px}
+  .logo{font-size:22px;font-weight:800;margin-bottom:8px;text-align:center}
+  .logo span{color:#E8B040}
+  .org-badge{text-align:center;font-size:12px;color:#6b6b80;margin-bottom:24px}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;
+    color:#6b6b80;text-transform:uppercase;margin-bottom:6px;margin-top:16px}
+  input{width:100%;background:#0c0c18;border:1px solid #1a1a2e;border-radius:6px;
+    color:#f0ebe0;font-size:14px;padding:10px 12px;outline:none}
+  input:focus{border-color:#E8B040}
+  input[readonly]{color:#444466}
+  .btn{width:100%;background:#E8B040;color:#0c0c18;border:none;border-radius:8px;
+    padding:11px;font-size:14px;font-weight:700;cursor:pointer;margin-top:24px}
+  .btn:hover{opacity:.85}
+  .flash{background:#1a0a0a;border:1px solid #e05c5c;color:#e05c5c;
+    border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Sales<span>Nerve</span></div>
+  <div class="org-badge">Einladung von {{ org.name }}</div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  <form method="post">
+    <input type="hidden" name="token" value="{{ token }}">
+    <label>E-Mail</label>
+    <input type="email" name="email" value="{{ inv.email }}" readonly>
+    <label>Passwort (min. 8 Zeichen)</label>
+    <input type="password" name="passwort" required autofocus minlength="8">
+    <button type="submit" class="btn">Account erstellen</button>
+  </form>
+</div>
+</body>
+</html>

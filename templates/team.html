@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block title %} – Team{% endblock %}
+
+{% block extra_style %}
+.plan-bar{background:#0c0c18;border:1px solid #1a1a2e;border-radius:10px;
+  padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;
+  justify-content:space-between;gap:16px}
+.plan-info{font-size:13px;color:#6b6b80}
+.plan-info strong{color:#f0ebe0}
+.plan-badge{font-size:11px;font-weight:700;background:#1a1428;color:#9898d8;
+  border:1px solid #303058;padding:3px 10px;border-radius:20px;text-transform:uppercase}
+.user-role-owner{color:#E8B040;font-weight:700}
+.user-role-admin{color:#f0a500;font-weight:700}
+.user-role-member{color:#6b6b80}
+.user-inactive{opacity:.45}
+
+/* Invite modal */
+.invite-section{background:#0d0d14;border:1px solid #1a1a2e;border-radius:10px;
+  padding:16px 20px;margin-top:20px}
+.invite-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:#6b6b80;margin-bottom:12px}
+.invite-form{display:flex;gap:8px;align-items:flex-end}
+.invite-form .form-input{max-width:280px}
+
+.invite-link-box{background:#0a1810;border:1px solid #1a5a38;border-radius:8px;
+  padding:10px 14px;margin-top:10px;font-size:12px;color:#E8B040;word-break:break-all;
+  font-family:monospace}
+
+.pending-section{margin-top:20px}
+.pending-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:#6b6b80;margin-bottom:10px}
+.pending-row{display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:#0c0c18;border:1px solid #1a1a2e;border-radius:8px;margin-bottom:6px}
+.pending-email{font-size:13px;color:#b0b0c8;flex:1}
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Team</div>
+      <div class="page-sub">{{ org.name }}</div>
+    </div>
+  </div>
+
+  <!-- Plan Bar -->
+  <div class="plan-bar">
+    <div class="plan-info">
+      <strong>{{ users|selectattr('aktiv')|list|length }}</strong>
+      {% if plan_info.get('max_users') %}
+        von <strong>{{ plan_info.max_users }}</strong> Usern aktiv
+      {% else %}
+        aktive User (unbegrenzt)
+      {% endif %}
+    </div>
+    <span class="plan-badge">{{ org.plan }}</span>
+  </div>
+
+  <!-- User Table -->
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>E-Mail</th>
+          <th>Rolle</th>
+          <th>Status</th>
+          <th>Dabei seit</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="{{ 'user-inactive' if not u.aktiv else '' }}">
+          <td>{{ u.email }}</td>
+          <td>
+            <span class="user-role-{{ u.rolle }}">{{ u.rolle|capitalize }}</span>
+          </td>
+          <td>
+            {% if u.aktiv %}
+            <span class="badge badge-teal">Aktiv</span>
+            {% else %}
+            <span class="badge badge-gray">Inaktiv</span>
+            {% endif %}
+          </td>
+          <td style="color:#6b6b80;font-size:12px">
+            {{ u.erstellt_am.strftime('%d.%m.%Y') if u.erstellt_am else '–' }}
+          </td>
+          <td>
+            {% if u.rolle != 'owner' and u.id != session.get('user_id') %}
+              {% if u.aktiv %}
+              <form method="post" action="/org/user/{{ u.id }}/deactivate" style="margin:0;display:inline">
+                <button class="btn btn-danger btn-xs" type="submit"
+                        onclick="return confirm('User deaktivieren?')">Deaktivieren</button>
+              </form>
+              {% else %}
+              <form method="post" action="/org/user/{{ u.id }}/reactivate" style="margin:0;display:inline">
+                <button class="btn btn-secondary btn-xs" type="submit">Reaktivieren</button>
+              </form>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pending Invitations -->
+  {% if invitations %}
+  <div class="pending-section">
+    <div class="pending-title">Ausstehende Einladungen</div>
+    {% for inv in invitations %}
+    <div class="pending-row">
+      <div class="pending-email">{{ inv.email }}</div>
+      <span style="font-size:11px;color:#444466">
+        {{ inv.erstellt_am.strftime('%d.%m.%Y') if inv.erstellt_am else '' }}
+      </span>
+      <form method="post" action="/org/invite/{{ inv.id }}/revoke" style="margin:0">
+        <button class="btn btn-danger btn-xs" type="submit">Widerrufen</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Datenschutz-Einstellungen -->
+  <div class="invite-section" style="margin-top:20px">
+    <div class="invite-title">Datenschutz-Einstellungen</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+      <div>
+        <div style="font-size:13px;color:#c0c0d5;font-weight:600;margin-bottom:4px">DSGVO-Modus für CRM-Export</div>
+        <div style="font-size:12px;color:#6b6b80;line-height:1.5">
+          Wenn aktiv: Keine wörtlichen Kundenzitate im CRM-Export — nur zusammengefasste Notizen.
+          Empfohlen für DSGVO-Konformität.
+        </div>
+      </div>
+      <button id="dsgvoToggleBtn" class="btn {% if org.dsgvo_modus %}btn-primary{% else %}btn-secondary{% endif %}"
+              onclick="toggleDsgvo()"
+              style="flex-shrink:0;min-width:90px">
+        {% if org.dsgvo_modus %}✓ Aktiv{% else %}Inaktiv{% endif %}
+      </button>
+    </div>
+  </div>
+
+  <script>
+  async function toggleDsgvo(){
+    const btn = document.getElementById('dsgvoToggleBtn');
+    const isActive = btn.textContent.trim().startsWith('✓');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/org/settings/dsgvo', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({dsgvo_modus: !isActive})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        if (data.dsgvo_modus) {
+          btn.textContent = '✓ Aktiv';
+          btn.className = 'btn btn-primary';
+        } else {
+          btn.textContent = 'Inaktiv';
+          btn.className = 'btn btn-secondary';
+        }
+      }
+    } catch(e) { alert('Fehler beim Speichern'); }
+    btn.disabled = false;
+  }
+  </script>
+
+  <!-- Invite Section -->
+  <div class="invite-section">
+    <div class="invite-title">Mitarbeiter einladen</div>
+    <form method="post" action="/org/invite">
+      <div class="invite-form">
+        <input type="email" name="email" class="form-input" placeholder="E-Mail-Adresse" required>
+        <button type="submit" class="btn btn-primary">Einladung senden</button>
+      </div>
+    </form>
+    <div style="font-size:11px;color:#444466;margin-top:8px">
+      Der Einladungslink wird als Flash-Meldung angezeigt.
+      {% if plan_info.get('max_users') %}
+      Limit: {{ plan_info.max_users }} User ({{ org.plan }}-Plan).
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

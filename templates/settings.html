@@ -1,0 +1,668 @@
+{% extends 'base.html' %}
+{% block title %} — Einstellungen{% endblock %}
+
+{% block extra_style %}
+.settings-wrap{padding:28px 32px;max-width:720px}
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid #1a1a2e;margin-bottom:28px}
+.tab-btn{background:none;border:none;color:#6b6b80;padding:10px 18px;font-size:14px;
+  font-weight:600;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:all .2s}
+.tab-btn:hover{color:#b0b0c8}
+.tab-btn.active{color:#E8B040;border-bottom-color:#E8B040}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+/* Cards */
+.settings-card{background:#1a1a2e;border-radius:12px;padding:22px;margin-bottom:20px}
+.settings-card-title{font-size:14px;font-weight:700;margin-bottom:16px}
+/* Form */
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;
+  color:#6b6b80;text-transform:uppercase;margin-bottom:6px}
+.form-input,.form-select,.form-textarea{width:100%;background:#0c0c18;
+  border:1px solid #1a1a2e;border-radius:8px;color:#f0ebe0;font-size:13px;
+  padding:9px 12px;outline:none;font-family:inherit;transition:border-color .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#E8B040}
+.form-textarea{resize:vertical;min-height:80px;line-height:1.5}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-hint{font-size:11px;color:#444466;margin-top:4px}
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.04)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info{}
+.toggle-label{font-size:13px;font-weight:600;color:#f0ebe0}
+.toggle-desc{font-size:12px;color:#6b6b80;margin-top:2px}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:#0c0c18;border:1px solid #2e2e48;
+  border-radius:20px;cursor:pointer;transition:all .2s}
+.toggle input:checked + .toggle-track{background:#E8B040;border-color:#E8B040}
+.toggle-knob{position:absolute;top:3px;left:3px;width:12px;height:12px;background:#6b6b80;
+  border-radius:50%;transition:all .2s;pointer-events:none}
+.toggle input:checked ~ .toggle-knob{left:19px;background:#0c0c18}
+/* Usage bars */
+.s-usage-row{margin-bottom:12px}
+.s-usage-lbl{display:flex;justify-content:space-between;font-size:12px;color:#b8b0a0;margin-bottom:5px}
+.s-usage-bar-wrap{background:#0c0c18;border-radius:4px;height:8px;overflow:hidden}
+.s-usage-bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
+/* Billing plan cards */
+.plan-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+@media(max-width:600px){.plan-cards{grid-template-columns:1fr 1fr}}
+.plan-card{background:#0c0c18;border:2px solid #1a1a2e;border-radius:10px;padding:16px;
+  position:relative;text-align:center}
+.plan-card.active{border-color:#E8B040}
+.plan-card.recommended::before{content:'Empfohlen';position:absolute;top:-10px;left:50%;
+  transform:translateX(-50%);background:#E8B040;color:#0c0c18;font-size:9px;font-weight:800;
+  padding:2px 10px;border-radius:20px;letter-spacing:.06em}
+.plan-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.plan-price{font-size:22px;font-weight:800;color:#E8B040}
+.plan-price small{font-size:11px;font-weight:400;color:#6b6b80}
+.plan-features{text-align:left;margin:12px 0;font-size:12px;color:#b8b0a0}
+.plan-feature{padding:3px 0;display:flex;gap:6px}
+.plan-feature::before{content:'✓';color:#E8B040}
+.plan-feature.no::before{content:'○';color:#444466}
+.plan-feature.no{color:#444466}
+/* Billing table */
+.bill-row{display:flex;align-items:center;gap:12px;padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.bill-row:last-child{border-bottom:none}
+.bill-icon{font-size:16px;flex-shrink:0}
+.bill-date{color:#6b6b80;flex-shrink:0;min-width:100px}
+.bill-desc{color:#b8b0a0;flex:1}
+.bill-amount{font-weight:700;color:#f0ebe0;flex-shrink:0}
+.bill-pdf{font-size:11px;color:#444466;flex-shrink:0}
+/* Cancel button */
+.btn-cancel{background:#1a0808;border:1px solid #5a2020;color:#e05c5c;border-radius:8px;
+  padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:all .2s}
+.btn-cancel:hover{border-color:#e05c5c}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;
+  display:flex;align-items:center;justify-content:center;opacity:0;
+  pointer-events:none;transition:opacity .3s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{background:#0c0c18;border:1px solid #2e2e48;border-top:3px solid #E8B040;
+  border-radius:12px;padding:28px;max-width:460px;width:90%;position:relative}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:12px}
+.modal-text{font-size:14px;color:#b8b0a0;line-height:1.6;margin-bottom:18px}
+.modal-actions{display:flex;justify-content:space-between;align-items:center;margin-top:20px}
+.btn-stay{background:none;border:none;color:#444466;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-stay:hover{color:#6b6b80}
+.btn-confirm-cancel{background:#c0392b;color:#fff;border:none;border-radius:8px;
+  padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+/* Success / info boxes */
+.info-box{background:rgba(232,176,64,.06);border:1px solid #E8B04033;border-radius:8px;
+  padding:12px 16px;font-size:13px;color:#b8b0a0;line-height:1.5;margin-top:12px}
+.info-box strong{color:#E8B040}
+{% endblock %}
+
+{% block content %}
+<div class="settings-wrap page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Einstellungen</div>
+      <div class="page-sub">Profil, Abrechnung, Datenschutz und Benachrichtigungen</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn {% if active_tab == 'profile' or not active_tab %}active{% endif %}"
+            onclick="showTab('profile')">Profil</button>
+    {% if session.get('rolle') in ('owner', 'admin') %}
+    <button class="tab-btn {% if active_tab == 'billing' %}active{% endif %}"
+            onclick="showTab('billing')">Abrechnung</button>
+    <button class="tab-btn {% if active_tab == 'privacy' %}active{% endif %}"
+            onclick="showTab('privacy')">Datenschutz</button>
+    {% endif %}
+    <button class="tab-btn {% if active_tab == 'notifications' %}active{% endif %}"
+            onclick="showTab('notifications')">Benachrichtigungen</button>
+  </div>
+
+  <!-- TAB: PROFIL -->
+  <div class="tab-pane {% if active_tab == 'profile' or not active_tab %}active{% endif %}" id="tab-profile">
+    <div class="settings-card">
+      <div class="settings-card-title">Dein Profil</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Vorname</label>
+          <input class="form-input" id="prof-vorname" type="text"
+                 value="{{ g.user.vorname or '' }}" placeholder="André">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nachname</label>
+          <input class="form-input" id="prof-nachname" type="text"
+                 value="{{ g.user.nachname or '' }}" placeholder="Preuß">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="text" value="{{ g.user.email }}" disabled
+               style="opacity:.5;cursor:not-allowed">
+        <div class="form-hint">Email kann nicht geändert werden.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Erfahrung im Vertrieb</label>
+        <select class="form-select" id="prof-erfahrung">
+          <option value="" {% if not g.user.erfahrungslevel %}selected{% endif %}>Bitte wählen…</option>
+          <option value="einsteiger" {% if g.user.erfahrungslevel == 'einsteiger' %}selected{% endif %}>Einsteiger (&lt; 1 Jahr)</option>
+          <option value="fortgeschritten" {% if g.user.erfahrungslevel == 'fortgeschritten' %}selected{% endif %}>Fortgeschritten (1–5 Jahre)</option>
+          <option value="profi" {% if g.user.erfahrungslevel == 'profi' %}selected{% endif %}>Profi (5+ Jahre)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Über mich (für Dashboard-Begrüßung)</label>
+        <textarea class="form-textarea" id="prof-persoenlich"
+          placeholder="Ich bin André, 35, komme aus dem Handwerk und bin jetzt im Vertrieb.">{{ g.user.persoenlich or '' }}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Größter Schmerzpunkt im Vertrieb</label>
+        <input class="form-input" id="prof-schmerz" type="text"
+               value="{{ g.user.schmerzpunkt or '' }}"
+               placeholder="z.B. Preiseinwände, Kalt-Akquise, Closing…">
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-title">Dashboard-Persönlichkeit</div>
+      <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px;line-height:1.5">
+        Erzähl NERVE was dich begeistert — Hobbys, Lieblingsspiele, Sportarten, Serien.
+        NERVE nutzt das um deine Ergebnisse in <em>deinem</em> Stil zu formulieren.
+      </p>
+      <div class="form-group">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="btn btn-secondary btn-sm" onclick="toggleStil(false)" id="btn-stil-standard">
+            Standard (professionell)
+          </button>
+          <button class="btn btn-sm" id="btn-stil-custom"
+            style="background:{% if g.user.dashboard_stil %}#E8B040;color:#0c0c18{% else %}#1a1a2e;color:#6b6b80;border:1px solid #2e2e48{% endif %}">
+            Mein Stil
+          </button>
+        </div>
+        <textarea class="form-textarea" id="prof-stil" rows="3"
+          placeholder="Ich zocke gerne World of Warcraft und bin Horde-Fan&#10;Oder: Ich boxe seit 10 Jahren und liebe Muhammad Ali&#10;Oder: Ich bin BVB-Fan und stehe auf klare Ansagen">{{ g.user.dashboard_stil or '' }}</textarea>
+        <div class="form-hint">Beispiele: „Ich zocke WoW" · „Ich boxe" · „Ich bin BVB-Fan"</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="previewStil()">Vorschau generieren</button>
+      <div id="stil-preview" style="display:none;margin-top:12px"></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveProfile()">Änderungen speichern</button>
+    <div id="profile-msg" style="display:none;margin-top:10px;font-size:13px;color:#22c55e"></div>
+  </div>
+
+  <!-- TAB: ABRECHNUNG -->
+  {% if session.get('rolle') in ('owner', 'admin') %}
+  <div class="tab-pane {% if active_tab == 'billing' %}active{% endif %}" id="tab-billing">
+    <div class="settings-card">
+      <div class="settings-card-title">Aktueller Plan</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:16px;font-weight:700">
+          {% if usage %}{{ usage.plan_name }}{% else %}{{ (g.org.plan_typ or 'Solo') | title }}{% endif %}
+        </span>
+        {% if g.org.is_early_access %}
+        <span style="background:rgba(232,176,64,.1);border:1px solid #E8B04033;
+          color:#E8B040;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700">EARLY ACCESS</span>
+        {% endif %}
+      </div>
+      {% if g.org.is_early_access %}
+      <div style="font-size:13px;color:#b8b0a0;margin-bottom:10px">
+        <span style="text-decoration:line-through;color:#444466">{% if usage %}{{ usage.plan_preis * 2 }}{% else %}49{% endif %}€</span>
+        <strong style="color:#E8B040"> {% if usage %}{{ (usage.plan_preis / 2) | int }}{% else %}24{% endif %}€</strong>/Monat
+        <span style="font-size:11px;color:#6b6b80"> (50% Early Access Rabatt — für immer)</span>
+      </div>
+      {% elif usage %}
+      <div style="font-size:13px;color:#b8b0a0;margin-bottom:10px">
+        <strong style="color:#E8B040">{{ usage.plan_preis }}€</strong>/Monat
+      </div>
+      {% endif %}
+      {% if g.org.cancelled_at %}
+      <div class="info-box" style="margin-top:8px">
+        ⚠ Dein Abo wurde gekündigt. Dein Zugang bleibt bis zum Ende des Abrechnungszeitraums aktiv.
+        <button class="btn btn-secondary btn-sm" onclick="reactivate()" style="margin-left:12px">Abo reaktivieren</button>
+      </div>
+      {% endif %}
+
+      {% if usage %}
+      <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#6b6b80;text-transform:uppercase;margin:14px 0 10px">
+        Verbrauch diesen Monat
+      </div>
+      <div class="s-usage-row">
+        <div class="s-usage-lbl">
+          <span>Live-Analyse</span>
+          <span style="color:{% if usage.minuten_prozent >= 100 %}#e05c5c{% elif usage.minuten_prozent >= 90 %}#f0a500{% else %}#E8B040{% endif %}">
+            {{ usage.minuten_used }} / {{ usage.minuten_limit }} Min ({{ usage.minuten_prozent }}%)
+          </span>
+        </div>
+        <div class="s-usage-bar-wrap">
+          <div class="s-usage-bar-fill" style="width:{{ usage.minuten_prozent }}%;background:{% if usage.minuten_prozent >= 100 %}#e05c5c{% elif usage.minuten_prozent >= 90 %}#f0a500{% else %}#E8B040{% endif %}"></div>
+        </div>
+      </div>
+      <div class="s-usage-row" style="margin-bottom:0">
+        <div class="s-usage-lbl">
+          <span>Training mit Stimme</span>
+          <span style="color:{% if usage.voice_prozent >= 100 %}#e05c5c{% elif usage.voice_prozent >= 90 %}#f0a500{% else %}#22c55e{% endif %}">
+            {{ usage.voice_used }} / {{ usage.voice_limit }} Sessions ({{ usage.voice_prozent }}%)
+          </span>
+        </div>
+        <div class="s-usage-bar-wrap">
+          <div class="s-usage-bar-fill" style="width:{{ usage.voice_prozent }}%;background:{% if usage.voice_prozent >= 100 %}#e05c5c{% elif usage.voice_prozent >= 90 %}#f0a500{% else %}#22c55e{% endif %}"></div>
+        </div>
+      </div>
+      {% if usage.reset_date %}
+      <div style="font-size:11px;color:#444466;margin-top:8px">
+        Nächster Reset: {{ usage.reset_date.strftime('%d.%m.%Y') if usage.reset_date else '–' }}
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-title">Plan wechseln</div>
+      <div class="plan-cards">
+        <div class="plan-card {% if usage and usage.plan == 'solo' %}active{% endif %}">
+          <div class="plan-name">Solo</div>
+          <div class="plan-price">39€<small>/Mo</small></div>
+          <div class="plan-features">
+            <div class="plan-feature">1 Nutzer</div>
+            <div class="plan-feature">1.000 Min/Monat</div>
+            <div class="plan-feature">50 Voice-Trainings</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" style="width:100%"
+            onclick="alert('Plan-Wechsel: support@nerve.sale')">
+            {% if usage and usage.plan == 'solo' %}Aktiv ✓{% else %}Wählen{% endif %}
+          </button>
+        </div>
+        <div class="plan-card recommended {% if usage and usage.plan == 'team' %}active{% endif %}">
+          <div class="plan-name">Team</div>
+          <div class="plan-price">99€<small>/Mo</small></div>
+          <div class="plan-features">
+            <div class="plan-feature">Bis 5 Nutzer</div>
+            <div class="plan-feature">3.000 Min/Monat</div>
+            <div class="plan-feature">200 Voice-Trainings</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" style="width:100%"
+            onclick="alert('Plan-Wechsel: support@nerve.sale')">
+            {% if usage and usage.plan == 'team' %}Aktiv ✓{% else %}Wählen{% endif %}
+          </button>
+        </div>
+        <div class="plan-card {% if usage and usage.plan == 'business' %}active{% endif %}">
+          <div class="plan-name">Business</div>
+          <div class="plan-price">249€<small>/Mo</small></div>
+          <div class="plan-features">
+            <div class="plan-feature">Bis 15 Nutzer</div>
+            <div class="plan-feature">10.000 Min/Monat</div>
+            <div class="plan-feature">Unbegrenzt Training</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" style="width:100%"
+            onclick="alert('Plan-Wechsel: support@nerve.sale')">
+            {% if usage and usage.plan == 'business' %}Aktiv ✓{% else %}Wählen{% endif %}
+          </button>
+        </div>
+        <div class="plan-card {% if usage and usage.plan == 'enterprise' %}active{% endif %}">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-price" style="font-size:16px">Anfrage</div>
+          <div class="plan-features">
+            <div class="plan-feature">Unbegrenzt</div>
+            <div class="plan-feature">API-Zugang</div>
+            <div class="plan-feature">SLA</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" style="width:100%"
+            onclick="window.location='mailto:andre@nerve.sale?subject=Enterprise'">Kontakt</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#6b6b80">
+        Alle Pläne inkl. Fair-Use — wir blockieren nie. Plan-Wechsel: support@nerve.sale
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-title">Rechnungshistorie</div>
+      <div style="font-size:13px;color:#444466;font-style:italic">
+        Rechnungen sind nach Stripe-Integration verfügbar.
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-title">Rechnungsadresse</div>
+      <div class="form-group">
+        <label class="form-label">Name / Firma</label>
+        <input class="form-input" id="bill-name" type="text"
+               value="{{ g.org.billing_name or '' }}" placeholder="André Preuß / Muster GmbH">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Straße</label>
+        <input class="form-input" id="bill-street" type="text"
+               value="{{ g.org.billing_street or '' }}" placeholder="Musterstraße 1">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">PLZ</label>
+          <input class="form-input" id="bill-zip" type="text"
+                 value="{{ g.org.billing_zip or '' }}" placeholder="58636">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stadt</label>
+          <input class="form-input" id="bill-city" type="text"
+                 value="{{ g.org.billing_city or '' }}" placeholder="Iserlohn">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">USt-IdNr (optional)</label>
+        <input class="form-input" id="bill-vat" type="text"
+               value="{{ g.org.billing_vat_id or '' }}" placeholder="DE123456789">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveBilling()">Adresse speichern</button>
+      <span id="billing-msg" style="display:none;margin-left:10px;font-size:13px;color:#22c55e"></span>
+    </div>
+
+    <div class="settings-card" style="border-color:#3a1414">
+      <div class="settings-card-title" style="color:#e05c5c">Abo kündigen</div>
+      <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px;line-height:1.5">
+        Du kannst jederzeit kündigen. Dein Zugang bleibt bis zum Ende des bezahlten Zeitraums aktiv.
+        Keine Kündigungsfrist.
+      </p>
+      <button class="btn-cancel" onclick="openCancelModal()">Abo kündigen →</button>
+    </div>
+  </div>
+
+  <!-- TAB: DATENSCHUTZ -->
+  <div class="tab-pane {% if active_tab == 'privacy' %}active{% endif %}" id="tab-privacy">
+    <div class="settings-card">
+      <div class="settings-card-title">Datenschutz</div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">DSGVO-Modus</div>
+          <div class="toggle-desc">Keine wörtlichen Kundenzitate in CRM-Notizen und Follow-up Emails.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="tog-dsgvo" {% if g.org.dsgvo_modus %}checked{% endif %}
+                 onchange="savePrivacy()">
+          <div class="toggle-track"></div>
+          <div class="toggle-knob"></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-title">Datenexport</div>
+      <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px">
+        Lade alle deine Daten als ZIP herunter.
+      </p>
+      <button class="btn btn-secondary btn-sm"
+              onclick="alert('Datenexport ist nach Stripe-Integration verfügbar.')">
+        Daten exportieren
+      </button>
+    </div>
+
+    <div class="settings-card" style="border-color:#3a1414">
+      <div class="settings-card-title" style="color:#e05c5c">Account löschen</div>
+      <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px;line-height:1.5">
+        Alle Daten werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+      </p>
+      <button class="btn-cancel" onclick="openDeleteModal()">Account löschen</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- TAB: BENACHRICHTIGUNGEN -->
+  <div class="tab-pane {% if active_tab == 'notifications' %}active{% endif %}" id="tab-notifications">
+    <div class="settings-card">
+      <div class="settings-card-title">In-App Benachrichtigungen</div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">Training-Erinnerung</div>
+          <div class="toggle-desc">„Du hast diese Woche noch nicht trainiert"</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="tog-training" {% if g.user.notif_training_reminder %}checked{% endif %}
+                 onchange="saveNotifs()">
+          <div class="toggle-track"></div>
+          <div class="toggle-knob"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">Streak-Warnung</div>
+          <div class="toggle-desc">„Dein Streak ist in Gefahr!"</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="tog-streak" {% if g.user.notif_streak_warning %}checked{% endif %}
+                 onchange="saveNotifs()">
+          <div class="toggle-track"></div>
+          <div class="toggle-knob"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">Achievement-Alerts</div>
+          <div class="toggle-desc">„Neues Achievement freigeschaltet!"</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="tog-ach" {% if g.user.notif_achievements %}checked{% endif %}
+                 onchange="saveNotifs()">
+          <div class="toggle-track"></div>
+          <div class="toggle-knob"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">Coach-Nachrichten</div>
+          <div class="toggle-desc">Wenn dein Coach ein neues Profil hinterlegt</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="tog-coach" {% if g.user.notif_coach %}checked{% endif %}
+                 onchange="saveNotifs()">
+          <div class="toggle-track"></div>
+          <div class="toggle-knob"></div>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">Smart Nudges</div>
+          <div class="toggle-desc">Empfehlungen für Training oder Live-Modus</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="tog-nudge" {% if g.user.notif_nudges %}checked{% endif %}
+                 onchange="saveNotifs()">
+          <div class="toggle-track"></div>
+          <div class="toggle-knob"></div>
+        </label>
+      </div>
+    </div>
+    <div style="font-size:12px;color:#444466;font-style:italic">
+      Email-Benachrichtigungen kommen bald.
+    </div>
+  </div>
+
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal-overlay" id="cancel-modal">
+  <div class="modal-box">
+    <div class="modal-title">Schade, dass du gehst</div>
+    <div class="modal-text">
+      Dein Zugang bleibt bis zum Ende des bezahlten Zeitraums aktiv.
+      Danach werden alle Daten nach 30 Tagen gelöscht, es sei denn du reaktivierst vorher.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Dürfen wir fragen warum? (optional)</label>
+      <select class="form-select" id="cancel-reason">
+        <option value="">Bitte wählen…</option>
+        <option value="Zu teuer">Zu teuer</option>
+        <option value="Nutze ich nicht genug">Nutze ich nicht genug</option>
+        <option value="Funktioniert nicht wie erwartet">Funktioniert nicht wie erwartet</option>
+        <option value="Wechsle zu einem anderen Tool">Wechsle zu einem anderen Tool</option>
+        <option value="Unternehmen hat sich verändert">Unternehmen hat sich verändert</option>
+        <option value="Sonstiges">Sonstiges</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Feedback (optional)</label>
+      <textarea class="form-textarea" id="cancel-feedback"
+                placeholder="Was können wir besser machen?"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-stay" onclick="closeCancelModal()">Doch bleiben</button>
+      <button class="btn-confirm-cancel" onclick="confirmCancel()">Endgültig kündigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal-box">
+    <div class="modal-title" style="color:#e05c5c">Account löschen</div>
+    <div class="modal-text">
+      Alle Daten werden unwiderruflich gelöscht. Tippe <strong>LÖSCHEN</strong> zur Bestätigung.
+    </div>
+    <div class="form-group">
+      <input class="form-input" id="delete-confirm" type="text"
+             placeholder="LÖSCHEN eingeben">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-stay" onclick="document.getElementById('delete-modal').classList.remove('open')">Abbrechen</button>
+      <button class="btn-confirm-cancel" onclick="confirmDelete()">Account löschen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  const btn = document.querySelector(`[onclick="showTab('${name}')"]`);
+  if (btn) btn.classList.add('active');
+  const pane = document.getElementById('tab-' + name);
+  if (pane) pane.classList.add('active');
+}
+
+// Check URL hash
+const hash = window.location.hash.replace('#','');
+if (hash) showTab(hash);
+
+async function saveProfile() {
+  const payload = {
+    vorname: document.getElementById('prof-vorname').value.trim(),
+    nachname: document.getElementById('prof-nachname').value.trim(),
+    erfahrungslevel: document.getElementById('prof-erfahrung').value,
+    persoenlich: document.getElementById('prof-persoenlich').value.trim(),
+    schmerzpunkt: document.getElementById('prof-schmerz').value.trim(),
+    dashboard_stil: document.getElementById('prof-stil').value.trim(),
+  };
+  const res = await fetch('/settings/profile', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const d = await res.json();
+  const msg = document.getElementById('profile-msg');
+  msg.style.display = 'inline';
+  msg.textContent = d.ok ? '✓ Gespeichert' : ('Fehler: ' + d.error);
+  msg.style.color = d.ok ? '#22c55e' : '#e05c5c';
+  setTimeout(() => { msg.style.display = 'none'; }, 3000);
+}
+
+async function saveBilling() {
+  const payload = {
+    billing_name: document.getElementById('bill-name').value.trim(),
+    billing_street: document.getElementById('bill-street').value.trim(),
+    billing_zip: document.getElementById('bill-zip').value.trim(),
+    billing_city: document.getElementById('bill-city').value.trim(),
+    billing_vat_id: document.getElementById('bill-vat').value.trim(),
+  };
+  const res = await fetch('/settings/billing', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const d = await res.json();
+  const msg = document.getElementById('billing-msg');
+  msg.style.display = 'inline';
+  msg.textContent = d.ok ? '✓ Gespeichert' : 'Fehler';
+  msg.style.color = d.ok ? '#22c55e' : '#e05c5c';
+  setTimeout(() => { msg.style.display = 'none'; }, 3000);
+}
+
+async function savePrivacy() {
+  await fetch('/settings/privacy', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({dsgvo_modus: document.getElementById('tog-dsgvo').checked})
+  });
+}
+
+async function saveNotifs() {
+  const payload = {
+    notif_training_reminder: document.getElementById('tog-training').checked,
+    notif_streak_warning: document.getElementById('tog-streak').checked,
+    notif_achievements: document.getElementById('tog-ach').checked,
+    notif_coach: document.getElementById('tog-coach').checked,
+    notif_nudges: document.getElementById('tog-nudge').checked,
+  };
+  await fetch('/settings/notifications', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+}
+
+function openCancelModal() {
+  document.getElementById('cancel-modal').classList.add('open');
+}
+function closeCancelModal() {
+  document.getElementById('cancel-modal').classList.remove('open');
+}
+async function confirmCancel() {
+  const reason = document.getElementById('cancel-reason').value;
+  const feedback = document.getElementById('cancel-feedback').value;
+  const res = await fetch('/settings/cancel', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({reason, feedback})
+  });
+  const d = await res.json();
+  if (d.ok) {
+    closeCancelModal();
+    location.reload();
+  }
+}
+
+async function reactivate() {
+  const res = await fetch('/settings/reactivate', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: '{}'
+  });
+  const d = await res.json();
+  if (d.ok) location.reload();
+}
+
+function openDeleteModal() {
+  document.getElementById('delete-modal').classList.add('open');
+}
+async function confirmDelete() {
+  const conf = document.getElementById('delete-confirm').value;
+  const res = await fetch('/settings/delete_account', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({confirmation: conf})
+  });
+  const d = await res.json();
+  if (d.ok && d.redirect) window.location.href = d.redirect;
+  else alert(d.error || 'Fehler');
+}
+
+function toggleStil(useCustom) {
+  const ta = document.getElementById('prof-stil');
+  if (!useCustom) ta.value = '';
+}
+
+async function previewStil() {
+  const stil = document.getElementById('prof-stil').value.trim();
+  const prev = document.getElementById('stil-preview');
+  if (!stil) { prev.style.display = 'none'; return; }
+  prev.style.display = 'block';
+  prev.innerHTML = '<div style="font-size:13px;color:#6b6b80">Generiere Vorschau…</div>';
+  // Simple local preview
+  prev.innerHTML = `<div style="background:#1a1a2e;border-left:3px solid #E8B040;
+    border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:#b8b0a0">
+    Vorschau: NERVE wird deinen persönlichen Stil nutzen sobald du genug Gespräche hast.
+    Dein Stil: <em>${stil}</em>
+  </div>`;
+}
+</script>
+{% endblock %}

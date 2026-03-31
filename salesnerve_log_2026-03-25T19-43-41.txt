@@ -1,0 +1,24 @@
+=================================================================
+  SalesNerve – Gesprächsprotokoll
+  Erstellt: 25.03.2026 20:43:41
+=================================================================
+
+[20:42:52] [Unbekannt]  Hallo hallo kannst Du mich hören
+[20:42:53] [KEIN EINWAND]  Gesprächseröffnung, Verbindungsprüfung - keine Einwände vorhanden
+
+[20:43:07] [Berater]  Ich habe eigentlich schon einen sehr guten Finanzberater, mit dem ich zufrieden bin.
+[20:43:19] [KORREKTUR] Rolle geändert: Berater → Kunde
+[20:43:20] [EINWAND – Vergleich / mittel]
+           Zitat:         "Ich habe eigentlich schon einen sehr guten Finanzberater"
+           Gegenargument: Das freut mich für dich. Oft lohnt sich trotzdem ein zweiter Blick, weil verschiedene Berater unterschiedliche Schwerpunkte haben. Wobei liegt der Fokus bei deinem jetzigen Berater?
+
+
+=================================================================
+  ZUSAMMENFASSUNG
+=================================================================
+  Gesprächssegmente gesamt:    2
+  Erkannte Einwände:           1
+  Zurückgezogene Einwände:     0
+  Verbleibende Einwände:       1
+  Häufigster Einwand-Typ:      Vergleich (1×)
+=================================================================

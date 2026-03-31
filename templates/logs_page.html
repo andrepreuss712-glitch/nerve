@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %} – Logs{% endblock %}
+
+{% block extra_style %}
+.empty-state{text-align:center;padding:60px 20px;color:#444466}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-text{font-size:14px}
+.log-stats{display:flex;gap:16px;align-items:center}
+.log-stat-chip{font-size:11px;color:#6b6b80;display:flex;align-items:center;gap:4px}
+.log-stat-chip strong{color:#a0a0c0}
+.log-profil-tag{font-size:11px;background:#1a1a2e;border:1px solid #2e2e40;
+  color:#8888aa;padding:1px 7px;border-radius:20px;white-space:nowrap}
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Logs</div>
+      <div class="page-sub">Gespeicherte Gespräche{% if session.get('rolle') not in ('owner','admin') %} (nur deine){% endif %}</div>
+    </div>
+  </div>
+
+  {% if logs %}
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Uhrzeit</th>
+          <th>Profil</th>
+          <th>Dauer</th>
+          <th>Segmente</th>
+          <th>Einwände</th>
+          <th>Painpoints</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.datum }}</td>
+          <td style="color:#6b6b80">{{ log.uhrzeit }}</td>
+          <td>
+            {% if log.profil != '–' %}
+            <span class="log-profil-tag">{{ log.profil }}</span>
+            {% else %}
+            <span style="color:#444466">–</span>
+            {% endif %}
+          </td>
+          <td style="color:#6b6b80;font-variant-numeric:tabular-nums">{{ log.dauer }}</td>
+          <td style="color:#6b6b80;text-align:center">{{ log.segmente }}</td>
+          <td>
+            {% if log.einwaende > 0 %}
+            <span style="color:#f0a05a;font-weight:700">{{ log.einwaende }}</span>
+            {% else %}
+            <span style="color:#444466">0</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if log.painpoints > 0 %}
+            <span style="color:#ff8040;font-weight:700">{{ log.painpoints }}</span>
+            {% else %}
+            <span style="color:#444466">0</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="/logs/download/{{ log.filename }}" class="btn btn-secondary btn-xs">
+              ⬇ Download
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-text">Noch keine Logs vorhanden.<br>
+      <a href="/live" style="color:#E8B040">Gespräch starten →</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

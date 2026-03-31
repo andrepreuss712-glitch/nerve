@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,900&display=swap" rel="stylesheet">
+<title>NERVE — Sales Intelligence{% block title %}{% endblock %}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0c0c18;color:#f0ebe0;font-family:'DM Sans',system-ui,sans-serif;
+    height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  a{color:inherit;text-decoration:none}
+
+  /* ── Header ──────────────────────────────────────────────────────────── */
+  .g-header{padding:0 24px;height:52px;border-bottom:1px solid #1a1a2e;
+    display:flex;align-items:center;justify-content:space-between;
+    background:#0c0c18;flex-shrink:0;z-index:10}
+  .g-logo{font-size:19px;font-weight:800;letter-spacing:-.01em}
+  .g-logo span{color:#E8B040}
+  .g-org{font-size:11px;color:#444466;margin-left:10px;font-weight:500}
+  .g-hright{display:flex;align-items:center;gap:12px;font-size:12px}
+  .g-user{color:#6b6b80}
+  .g-logout{background:#1a1a2e;border:1px solid #2e2e48;color:#8888aa;
+    border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;
+    transition:border-color .15s,color .15s;display:inline-block}
+  .g-logout:hover{border-color:#6868a8;color:#d0d0f0}
+
+  /* ── Layout ──────────────────────────────────────────────────────────── */
+  .g-body{display:flex;flex:1;overflow:hidden}
+
+  /* ── Sidebar ──────────────────────────────────────────────────────────── */
+  .g-sidebar{width:204px;background:#0d0d14;border-right:1px solid #1a1a2e;
+    display:flex;flex-direction:column;flex-shrink:0;padding:8px 0;overflow-y:auto}
+  .g-sidebar::-webkit-scrollbar{width:3px}
+  .g-sidebar::-webkit-scrollbar-thumb{background:#1a1a2e}
+  .nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;
+    font-size:13px;color:#6b6b80;cursor:pointer;transition:background .12s,color .12s;
+    border-left:3px solid transparent;user-select:none;white-space:nowrap}
+  .nav-item:hover{background:#0c0c18;color:#b0b0c8}
+  .nav-item.active{background:#0d1208;color:#E8B040;border-left-color:#E8B040}
+  .nav-icon{font-size:15px;flex-shrink:0;width:18px;text-align:center;line-height:1}
+  .nav-badge{font-size:9px;font-weight:700;background:#1a1428;color:#9898d8;
+    padding:1px 6px;border-radius:20px;margin-left:auto;border:1px solid #30305080}
+  .nav-sep{height:1px;background:#1a1a2e;margin:8px 0}
+
+  /* ── Content ──────────────────────────────────────────────────────────── */
+  .g-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+  .g-content::-webkit-scrollbar{width:4px}
+  .g-content::-webkit-scrollbar-thumb{background:#1a1a2e;border-radius:2px}
+  .page-wrap{padding:28px 32px;flex:1}
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;
+    margin-bottom:24px;gap:16px}
+  .page-title{font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .page-sub{font-size:13px;color:#6b6b80;margin-top:4px}
+  .page-actions{display:flex;gap:8px;flex-shrink:0;align-items:flex-start}
+
+  /* ── Buttons ──────────────────────────────────────────────────────────── */
+  .btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;
+    cursor:pointer;letter-spacing:.03em;transition:opacity .15s,border-color .15s,background .15s;
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn:hover{opacity:.82}
+  .btn-primary{background:#E8B040;color:#0c0c18}
+  .btn-secondary{background:#1a1a2e;border:1px solid #2e2e48;color:#a0a0c0}
+  .btn-secondary:hover{border-color:#6868a8;opacity:1;color:#d0d0f0}
+  .btn-danger{background:#1a0808;border:1px solid #5a2020;color:#e05c5c}
+  .btn-danger:hover{border-color:#e05c5c;opacity:1}
+  .btn-sm{padding:5px 11px;font-size:11px;border-radius:6px}
+  .btn-xs{padding:3px 8px;font-size:10px;border-radius:5px;font-weight:700}
+
+  /* ── Cards ──────────────────────────────────────────────────────────── */
+  .card{background:#0c0c18;border:1px solid #1a1a2e;border-radius:12px;padding:20px 22px}
+  .card-grid{display:grid;gap:16px}
+  .card-grid-2{grid-template-columns:repeat(2,1fr)}
+  .card-grid-3{grid-template-columns:repeat(3,1fr)}
+  .card-header{display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:14px;gap:8px}
+  .card-title{font-size:14px;font-weight:700}
+  .card-sub{font-size:12px;color:#6b6b80;margin-top:3px}
+
+  /* ── Flash ──────────────────────────────────────────────────────────── */
+  .flash-wrap{padding:12px 32px 0}
+  .flash{border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:8px;
+    display:flex;align-items:center;gap:8px}
+  .flash-error{background:#1a0808;border:1px solid #5a2020;color:#e05c5c}
+  .flash-success{background:#0a1810;border:1px solid #1a5a38;color:#E8B040}
+  .flash-info{background:#0e0e1a;border:1px solid #2e2e58;color:#9898d8}
+
+  /* ── Table ──────────────────────────────────────────────────────────── */
+  .tbl{width:100%;border-collapse:collapse}
+  .tbl th{font-size:10px;font-weight:700;letter-spacing:.08em;color:#6b6b80;
+    text-transform:uppercase;padding:8px 12px;border-bottom:1px solid #1a1a2e;text-align:left}
+  .tbl td{padding:10px 12px;border-bottom:1px solid #0c0c18;font-size:13px;vertical-align:middle}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:#0e0e18}
+  .tbl-wrap{background:#0c0c18;border:1px solid #1a1a2e;border-radius:12px;overflow:hidden}
+
+  /* ── Badges ──────────────────────────────────────────────────────────── */
+  .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;
+    padding:2px 8px;border-radius:20px}
+  .badge-teal{background:#0d2a24;color:#E8B040;border:1px solid #1a4a40}
+  .badge-gray{background:#1a1a2e;color:#6b6b80;border:1px solid #2e2e40}
+  .badge-amber{background:#1e1400;color:#f0a500;border:1px solid #3a2800}
+  .badge-red{background:#1a0808;color:#e05c5c;border:1px solid #3a1414}
+  .badge-purple{background:#1a1428;color:#9898d8;border:1px solid #303058}
+
+  /* ── Form ──────────────────────────────────────────────────────────── */
+  .form-group{margin-bottom:16px}
+  .form-label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;
+    color:#6b6b80;text-transform:uppercase;margin-bottom:6px}
+  .form-input,.form-select,.form-textarea{width:100%;background:#0c0c18;
+    border:1px solid #1a1a2e;border-radius:6px;color:#f0ebe0;font-size:13px;
+    padding:9px 12px;outline:none;font-family:inherit;transition:border-color .15s}
+  .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#E8B040}
+  .form-textarea{resize:vertical;min-height:80px;line-height:1.5}
+  .form-select{cursor:pointer}
+  .form-hint{font-size:11px;color:#444466;margin-top:4px}
+  .form-row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+
+  /* ── Cancel Banner ──────────────────────────────────────────────────── */
+  .cancel-banner{background:#1a0808;border-bottom:1px solid #5a202060;
+    padding:9px 24px;font-size:12px;color:#e05c5c;display:flex;align-items:center;
+    gap:10px;flex-shrink:0}
+  .cancel-banner a{color:#E8B040;font-weight:600}
+
+  /* ── Early Access Badge ──────────────────────────────────────────────── */
+  .ea-badge{background:rgba(232,176,64,.1);border:1px solid rgba(232,176,64,.3);
+    color:#E8B040;font-size:9px;font-weight:800;letter-spacing:.1em;
+    padding:2px 8px;border-radius:4px;text-transform:uppercase;margin-left:8px;vertical-align:middle}
+
+  /* ── Help FAB ────────────────────────────────────────────────────────── */
+  .help-fab{position:fixed;bottom:20px;right:20px;width:44px;height:44px;
+    border-radius:50%;background:#1a1a2e;border:1px solid rgba(232,176,64,.2);
+    color:#E8B040;font-size:20px;font-weight:700;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;z-index:100;transition:all .2s;text-decoration:none}
+  .help-fab:hover{background:rgba(232,176,64,.1);border-color:#E8B040;transform:scale(1.1)}
+  body.kompakt .help-fab,body.live-active .help-fab{display:none}
+
+  /* ── Changelog Badge ─────────────────────────────────────────────────── */
+  .new-badge{background:rgba(232,176,64,.15);color:#E8B040;font-size:9px;font-weight:800;
+    padding:1px 6px;border-radius:10px;margin-left:6px;letter-spacing:.05em}
+
+  /* ── Changelog Popup ─────────────────────────────────────────────────── */
+  .changelog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .3s;pointer-events:none}
+  .changelog-overlay.open{opacity:1;pointer-events:all}
+  .changelog-popup{background:#0c0c18;border:1px solid rgba(232,176,64,.2);
+    border-top:3px solid #E8B040;border-radius:12px;padding:24px;
+    max-width:500px;width:90%;max-height:70vh;overflow-y:auto;position:relative}
+  .changelog-close{position:absolute;top:12px;right:16px;background:none;border:none;
+    color:#b8b0a0;font-size:24px;cursor:pointer;line-height:1}
+  .changelog-close:hover{color:#f0ebe0}
+  .changelog-popup h2{color:#f0ebe0;font-size:18px;margin-bottom:16px;font-family:inherit}
+  .cl-entry{border-bottom:1px solid rgba(255,255,255,.05);padding-bottom:12px;margin-bottom:12px}
+  .cl-entry:last-of-type{border-bottom:none}
+  .cl-version{color:#E8B040;font-size:12px;font-weight:600}
+  .cl-title{color:#f0ebe0;font-size:15px;font-weight:700;margin:4px 0 8px}
+  .cl-body{color:#b8b0a0;font-size:13px;line-height:1.6;white-space:pre-line}
+  .cl-bugs{background:rgba(232,176,64,.06);border-left:3px solid #E8B040;
+    border-radius:0 6px 6px 0;padding:8px 12px;margin-top:8px}
+  .cl-bug{color:#b8b0a0;font-size:12px;margin-bottom:4px}
+  .cl-workaround{color:#E8B040;font-size:11px}
+  .cl-actions{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+  .cl-link{color:#b8b0a0;font-size:13px;text-decoration:none}
+  .cl-link:hover{color:#E8B040}
+  .cl-btn{background:#E8B040;color:#0c0c18;border:none;padding:8px 20px;border-radius:6px;
+    font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+
+  /* ── Auto-logout warning ─────────────────────────────────────────────── */
+  #al-warning{position:fixed;bottom:20px;right:20px;background:#1a0e00;
+    border:1px solid #f0a500;border-radius:10px;padding:14px 18px;z-index:9999;
+    max-width:280px;display:none}
+  #al-warning.visible{display:block}
+  #al-warning p{font-size:13px;color:#c8922a;margin-bottom:10px;line-height:1.4}
+  #al-warning button{background:#f0a500;color:#0a0800;border:none;border-radius:6px;
+    padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+  #al-warning button:hover{opacity:.85}
+
+  /* ── Nav Logo ──────────────────────────────────────────────────────────── */
+  .nav-mark{display:flex;align-items:center;gap:10px}
+  .nav-n{width:32px;height:32px;border:1.5px solid #E8B040;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:18px;font-weight:900;color:#E8B040}
+  .nav-word{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:900;letter-spacing:3px;color:#f0ebe0}
+  .nav-word small{display:block;font-size:7px;letter-spacing:.2em;color:#E8B040;font-weight:600;margin-top:-2px}
+
+  {% block extra_style %}{% endblock %}
+</style>
+</head>
+<body>
+
+<div class="g-header">
+  <div style="display:flex;align-items:center">
+    <a href="/dashboard">
+      <div class="nav-mark">
+        <div class="nav-n">N</div>
+        <div class="nav-word">NERVE<small>SALES INTELLIGENCE</small></div>
+      </div>
+    </a>
+    {% if g.org and g.org.is_early_access %}
+    <span class="ea-badge">Early Access</span>
+    {% endif %}
+  </div>
+  <div class="g-hright">
+    <span class="g-user">{{ g.user.email if g.user else '' }}</span>
+    <a href="/logout" class="g-logout">Abmelden</a>
+  </div>
+</div>
+
+{% if g.org and g.org.cancelled_at %}
+<div class="cancel-banner">
+  ⚠ Dein Abo endet bald. Du kannst NERVE bis dahin normal nutzen.
+  <a href="/settings#billing">Abo reaktivieren</a>
+</div>
+{% endif %}
+
+<div class="g-body">
+
+<nav class="g-sidebar">
+  <a class="nav-item {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+    <span class="nav-icon">⊞</span> Dashboard
+  </a>
+  <a class="nav-item {% if request.path.startswith('/profiles') %}active{% endif %}" href="/profiles">
+    <span class="nav-icon">◎</span> Profile
+  </a>
+  <a class="nav-item {% if request.path == '/training' %}active{% endif %}" href="/training">
+    <span class="nav-icon">⚡</span> Training
+    <span class="nav-badge">Beta</span>
+  </a>
+  <a class="nav-item {% if request.path == '/live' %}active{% endif %}" href="/live">
+    <span class="nav-icon">🎙</span> Live-Gespräch
+  </a>
+  <a class="nav-item {% if request.path == '/logs' %}active{% endif %}" href="/logs">
+    <span class="nav-icon">📋</span> Logs
+  </a>
+  {% if session.get('rolle') in ('owner', 'admin') %}
+  <div class="nav-sep"></div>
+  <a class="nav-item {% if request.path == '/org/team' %}active{% endif %}" href="/org/team">
+    <span class="nav-icon">👥</span> Team
+  </a>
+  {% endif %}
+  {% if session.get('is_coach') %}
+  <div class="nav-sep"></div>
+  <a class="nav-item {% if request.path.startswith('/coach') and not request.path.startswith('/coach/methodik') %}active{% endif %}" href="/coach/">
+    <span class="nav-icon">🏆</span> Coach-Dashboard
+  </a>
+  <a class="nav-item {% if request.path.startswith('/coach/methodik') %}active{% endif %}" href="/coach/methodik">
+    <span class="nav-icon">📘</span> Meine Methodik
+  </a>
+  {% endif %}
+  <div class="nav-sep"></div>
+  <a class="nav-item {% if request.path.startswith('/settings') %}active{% endif %}" href="/settings">
+    <span class="nav-icon">⚙️</span> Einstellungen
+  </a>
+  <a class="nav-item {% if request.path == '/changelog' %}active{% endif %}" href="/changelog">
+    <span class="nav-icon">📋</span> Changelog
+    <span id="cl-new-badge" style="display:none" class="new-badge">NEU</span>
+  </a>
+</nav>
+
+<div class="g-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-wrap">
+    {% for cat, msg in messages %}
+    <div class="flash flash-{{ cat if cat in ('success','error','info') else 'info' }}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+
+</div>
+
+<!-- Help FAB -->
+<a href="/settings/help" class="help-fab" title="Hilfe">?</a>
+
+<!-- Changelog Popup -->
+<div class="changelog-overlay" id="cl-overlay">
+  <div class="changelog-popup">
+    <button class="changelog-close" id="cl-close-btn">&times;</button>
+    <h2>🎉 Was ist neu in NERVE?</h2>
+    <div id="cl-entries"></div>
+    <div class="cl-actions">
+      <a href="/changelog" class="cl-link">Alle Änderungen ansehen</a>
+      <button class="cl-btn" id="cl-ok-btn">Verstanden ✓</button>
+    </div>
+  </div>
+</div>
+
+<div id="al-warning">
+  <p>Du wirst in <strong id="al-countdown">2:00</strong> automatisch ausgeloggt.</p>
+  <button onclick="keepAlive()">Angemeldet bleiben</button>
+</div>
+
+<script>
+(function(){
+  const IDLE=15*60*1000, WARN=13*60*1000;
+  let iT=null,wT=null,cT=null,rem=120;
+  function reset(){
+    clearTimeout(iT);clearTimeout(wT);clearInterval(cT);
+    document.getElementById('al-warning').classList.remove('visible');
+    rem=120;
+    wT=setTimeout(warn,WARN);
+    iT=setTimeout(()=>{window.location='/logout?auto=1';},IDLE);
+  }
+  function warn(){
+    rem=120;
+    document.getElementById('al-warning').classList.add('visible');
+    clearInterval(cT);
+    cT=setInterval(()=>{
+      rem--;
+      const el=document.getElementById('al-countdown');
+      if(el) el.textContent=Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0');
+      if(rem<=0) clearInterval(cT);
+    },1000);
+  }
+  window.keepAlive=function(){
+    fetch('/api/keepalive',{method:'POST'}).then(()=>reset()).catch(()=>reset());
+  };
+  ['mousemove','keydown','click','scroll','touchstart'].forEach(e=>
+    document.addEventListener(e,reset,{passive:true}));
+  reset();
+})();
+</script>
+<script>
+// ── Changelog sidebar badge + popup ────────────────────────────────────────
+(function(){
+  if (document.body.classList.contains('kompakt') ||
+      document.body.classList.contains('live-active')) return;
+
+  fetch('/changelog/latest').then(r => r.json()).then(data => {
+    if (!data.has_new || !data.entries.length) return;
+
+    // Badge in sidebar
+    const badge = document.getElementById('cl-new-badge');
+    if (badge) badge.style.display = '';
+
+    // Build popup
+    const entriesEl = document.getElementById('cl-entries');
+    if (!entriesEl) return;
+    let html = '';
+    data.entries.slice(0, 2).forEach(e => {
+      html += `<div class="cl-entry">
+        <div class="cl-version">v${e.version} — ${e.datum}</div>
+        <div class="cl-title">${e.titel}</div>
+        <div class="cl-body">${e.inhalt}</div>`;
+      if (e.bugs && e.bugs.length) {
+        html += '<div class="cl-bugs">';
+        e.bugs.forEach(b => {
+          html += `<div class="cl-bug">⚠ ${b.bug}<div class="cl-workaround">→ ${b.workaround}</div></div>`;
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    entriesEl.innerHTML = html;
+
+    const overlay = document.getElementById('cl-overlay');
+    const closePopup = () => {
+      overlay.classList.remove('open');
+      fetch('/changelog/seen', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({version: data.latest_version})
+      }).catch(()=>{});
+      if (badge) badge.style.display = 'none';
+    };
+    document.getElementById('cl-close-btn').onclick = closePopup;
+    document.getElementById('cl-ok-btn').onclick = closePopup;
+    overlay.onclick = (e) => { if (e.target === overlay) closePopup(); };
+
+    setTimeout(() => overlay.classList.add('open'), 600);
+  }).catch(() => {});
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

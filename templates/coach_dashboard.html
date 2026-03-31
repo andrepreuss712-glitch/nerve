@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %} · Coach-Dashboard{% endblock %}
+
+{% block extra_style %}
+.firma-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:8px}
+.firma-card{background:#0c0c18;border:1px solid #1a1a2e;border-radius:12px;padding:20px;
+  cursor:pointer;transition:border-color .15s,transform .1s;display:flex;flex-direction:column;gap:10px}
+.firma-card:hover{border-color:#E8B040;transform:translateY(-2px)}
+.firma-card-name{font-size:15px;font-weight:700;color:#f0ebe0}
+.firma-card-meta{font-size:12px;color:#6b6b80;display:flex;gap:14px}
+.firma-card-meta span{display:flex;align-items:center;gap:5px}
+.firma-card-plan{font-size:10px;font-weight:700;letter-spacing:.06em;
+  padding:2px 8px;border-radius:20px;background:#1a1428;color:#9898d8;border:1px solid #303058;
+  align-self:flex-start}
+.neue-firma-btn{display:flex;align-items:center;justify-content:center;gap:8px;
+  background:#0c0c18;border:2px dashed #2e2e48;border-radius:12px;padding:20px;
+  color:#444466;font-size:13px;font-weight:600;cursor:pointer;
+  transition:border-color .15s,color .15s;min-height:110px}
+.neue-firma-btn:hover{border-color:#E8B040;color:#E8B040}
+
+/* Modal */
+.co-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
+  display:flex;align-items:center;justify-content:center;display:none}
+.co-modal-bg.open{display:flex}
+.co-modal{background:#0c0c18;border:1px solid #2e2e48;border-radius:14px;
+  padding:28px;width:min(480px,90vw);max-height:90vh;overflow-y:auto}
+.co-modal-title{font-size:17px;font-weight:700;margin-bottom:20px}
+.co-modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+
+/* Invite link box */
+.invite-box{background:#0e0e1a;border:1px solid #2e2e48;border-radius:8px;
+  padding:10px 14px;font-size:12px;color:#9898d8;word-break:break-all;
+  cursor:pointer;transition:border-color .15s;margin-top:12px}
+.invite-box:hover{border-color:#E8B040}
+.invite-copied{color:#E8B040!important;border-color:#E8B040!important}
+
+.empty-state{padding:48px 0;text-align:center;color:#444466}
+.empty-state .es-icon{font-size:36px;margin-bottom:12px}
+.empty-state .es-text{font-size:14px}
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🏆 Coach-Dashboard</div>
+      <div class="page-sub">Deine betreuten Unternehmen auf einen Blick</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary" onclick="openNeueFiremModal()">+ Neue Firma einladen</button>
+    </div>
+  </div>
+
+  {% if firmen %}
+  <div class="firma-grid">
+    {% for f in firmen %}
+    <div class="firma-card" onclick="window.location='/coach/firma/{{ f.org.id }}'">
+      <div class="firma-card-plan">{{ f.org.plan | upper }}</div>
+      <div class="firma-card-name">{{ f.org.name }}</div>
+      <div class="firma-card-meta">
+        <span>👥 {{ f.user_count }} Nutzer</span>
+        <span>◎ {{ f.profile_count }} Profile</span>
+      </div>
+    </div>
+    {% endfor %}
+    <div class="neue-firma-btn" onclick="openNeueFiremModal()">
+      + Neue Firma einladen
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="es-icon">🏢</div>
+    <div class="es-text">Noch keine Firmen betreut.<br>Lade dein erstes Unternehmen ein.</div>
+    <button class="btn btn-primary" style="margin-top:20px" onclick="openNeueFiremModal()">+ Firma einladen</button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal: Neue Firma einladen -->
+<div class="co-modal-bg" id="neueFirmaModal">
+  <div class="co-modal">
+    <div class="co-modal-title">🏢 Neue Firma einladen</div>
+
+    <div id="einladenForm">
+      <div class="form-group">
+        <label class="form-label">Firmenname *</label>
+        <input class="form-input" id="nf-name" placeholder="z.B. Mustermann GmbH">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-Mail des Geschäftsführers / Inhabers *</label>
+        <input class="form-input" id="nf-email" type="email" placeholder="chef@firma.de">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Plan</label>
+        <select class="form-select" id="nf-plan">
+          <option value="starter">Starter (bis 5 User) — 49€/User/Monat</option>
+          <option value="team">Team (bis 15 User) — 44€/User/Monat</option>
+          <option value="business">Business (bis 30 User) — 39€/User/Monat</option>
+          <option value="enterprise">Enterprise (individuell)</option>
+        </select>
+      </div>
+      <div id="nf-err" style="color:#e05c5c;font-size:12px;display:none;margin-bottom:10px"></div>
+      <div class="co-modal-footer">
+        <button class="btn btn-secondary" onclick="closeNeueFirmaModal()">Abbrechen</button>
+        <button class="btn btn-primary" id="nf-senden-btn" onclick="sendeEinladung()">Einladungslink generieren</button>
+      </div>
+    </div>
+
+    <div id="einladenErgebnis" style="display:none">
+      <div style="color:#6b6b80;font-size:13px;margin-bottom:8px">
+        Firma wurde angelegt. Sende diesen Link an den Inhaber:
+      </div>
+      <div class="invite-box" id="inviteLink" onclick="copyInviteLink(this)">–</div>
+      <div style="font-size:11px;color:#444466;margin-top:6px">Klicken zum Kopieren</div>
+      <div class="co-modal-footer">
+        <button class="btn btn-primary" onclick="closeNeueFirmaModal()">Fertig</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openNeueFiremModal(){
+  document.getElementById('einladenForm').style.display='';
+  document.getElementById('einladenErgebnis').style.display='none';
+  document.getElementById('nf-name').value='';
+  document.getElementById('nf-email').value='';
+  document.getElementById('nf-err').style.display='none';
+  document.getElementById('neueFirmaModal').classList.add('open');
+}
+function closeNeueFirmaModal(){
+  document.getElementById('neueFirmaModal').classList.remove('open');
+  if(document.getElementById('inviteLink').textContent !== '–'){
+    location.reload();
+  }
+}
+async function sendeEinladung(){
+  const name  = document.getElementById('nf-name').value.trim();
+  const email = document.getElementById('nf-email').value.trim();
+  const plan  = document.getElementById('nf-plan').value;
+  const errEl = document.getElementById('nf-err');
+  errEl.style.display='none';
+  if(!name||!email){errEl.textContent='Bitte alle Pflichtfelder ausfüllen.';errEl.style.display='';return;}
+  const btn=document.getElementById('nf-senden-btn');
+  btn.disabled=true; btn.textContent='Wird erstellt…';
+  try{
+    const r=await fetch('/coach/firma/einladen',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({firmenname:name,email,plan})
+    });
+    const d=await r.json();
+    if(!d.ok){errEl.textContent=d.error||'Fehler';errEl.style.display='';return;}
+    document.getElementById('inviteLink').textContent=d.invite_url;
+    document.getElementById('einladenForm').style.display='none';
+    document.getElementById('einladenErgebnis').style.display='';
+  }catch(e){
+    errEl.textContent='Netzwerkfehler';errEl.style.display='';
+  }finally{
+    btn.disabled=false; btn.textContent='Einladungslink generieren';
+  }
+}
+function copyInviteLink(el){
+  navigator.clipboard.writeText(el.textContent).then(()=>{
+    el.classList.add('invite-copied');
+    el.textContent='✓ Kopiert!';
+    setTimeout(()=>{
+      el.classList.remove('invite-copied');
+      el.textContent=document.getElementById('inviteLink').dataset.url||el.textContent;
+    },2000);
+  });
+}
+document.getElementById('neueFirmaModal').addEventListener('click',function(e){
+  if(e.target===this) closeNeueFirmaModal();
+});
+</script>
+{% endblock %}

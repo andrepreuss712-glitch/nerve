@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %} · {{ org.name }}{% endblock %}
+
+{% block extra_style %}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #1a1a2e;margin-bottom:24px;flex-wrap:wrap}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:#6b6b80;cursor:pointer;
+  border-bottom:2px solid transparent;transition:color .15s,border-color .15s;
+  background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.tab-btn:hover{color:#b0b0c8}
+.tab-btn.active{color:#E8B040;border-bottom-color:#E8B040}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.stat-box{background:#0c0c18;border:1px solid #1a1a2e;border-radius:10px;padding:16px}
+.stat-num{font-size:24px;font-weight:800;color:#E8B040}
+.stat-lbl{font-size:11px;color:#6b6b80;margin-top:4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+
+.profile-card{background:#0c0c18;border:1px solid #1a1a2e;border-radius:10px;
+  padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.profile-card-info{}
+.profile-card-name{font-size:14px;font-weight:700}
+.profile-card-branch{font-size:12px;color:#6b6b80;margin-top:3px}
+
+/* Neues Profil Modal */
+.co-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
+  display:none;align-items:center;justify-content:center}
+.co-modal-bg.open{display:flex}
+.co-modal{background:#0c0c18;border:1px solid #2e2e48;border-radius:14px;
+  padding:28px;width:min(500px,92vw);max-height:90vh;overflow-y:auto}
+.co-modal-title{font-size:17px;font-weight:700;margin-bottom:20px}
+.co-modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+
+.uebertragen-section{background:#0e0e1a;border:1px solid #2e2e48;border-radius:10px;padding:18px;margin-top:20px}
+.uebertragen-title{font-size:13px;font-weight:700;margin-bottom:12px;color:#9898d8}
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <div style="font-size:12px;color:#444466;margin-bottom:4px">
+        <a href="/coach/" style="color:#6b6b80;hover:color:#E8B040">Coach-Dashboard</a>
+        &nbsp;/&nbsp; {{ org.name }}
+      </div>
+      <div class="page-title">{{ org.name }}</div>
+      <div class="page-sub">{{ org.plan | capitalize }}-Plan &nbsp;·&nbsp; {{ users | length }} aktive Nutzer</div>
+    </div>
+  </div>
+
+  <!-- Stat Row -->
+  <div class="stat-row">
+    <div class="stat-box">
+      <div class="stat-num">{{ users | length }}</div>
+      <div class="stat-lbl">Nutzer</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ profiles | length }}</div>
+      <div class="stat-lbl">Profile</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ scenarios | length }}</div>
+      <div class="stat-lbl">Szenarien</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="font-size:16px;padding-top:4px">{{ org.plan | upper }}</div>
+      <div class="stat-lbl">Plan</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-uebersicht')">Übersicht</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-mitarbeiter')">Mitarbeiter</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-profile')">Profile</button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-szenarien')">Trainings</button>
+  </div>
+
+  <!-- Tab: Übersicht -->
+  <div class="tab-panel active" id="tab-uebersicht">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Organisations-Info</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+        <div><span style="color:#6b6b80">Plan:</span> {{ org.plan | capitalize }}</div>
+        <div><span style="color:#6b6b80">Max. Nutzer:</span> {{ org.max_users or '–' }}</div>
+        <div><span style="color:#6b6b80">Billing E-Mail:</span> {{ org.billing_email or '–' }}</div>
+        <div><span style="color:#6b6b80">Erstellt:</span> {{ org.erstellt_am.strftime('%d.%m.%Y') if org.erstellt_am else '–' }}</div>
+      </div>
+    </div>
+
+    <div class="uebertragen-section">
+      <div class="uebertragen-title">📘 Methodik übertragen</div>
+      <div style="font-size:12px;color:#6b6b80;margin-bottom:12px">
+        Kopiere eines deiner eigenen Profile direkt in diese Organisation.
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div style="flex:1">
+          <select class="form-select" id="uebertragen-profile-select">
+            <option value="">— Profil wählen —</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="methodik_uebertragen()">Übertragen</button>
+      </div>
+      <div id="uebertragen-msg" style="font-size:12px;margin-top:8px;display:none"></div>
+    </div>
+  </div>
+
+  <!-- Tab: Mitarbeiter -->
+  <div class="tab-panel" id="tab-mitarbeiter">
+    {% if users %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>E-Mail</th>
+            <th>Rolle</th>
+            <th>Erstellt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.email }}</td>
+            <td><span class="badge badge-{{ 'amber' if u.rolle == 'owner' else 'gray' }}">{{ u.rolle }}</span></td>
+            <td style="color:#6b6b80;font-size:12px">{{ u.erstellt_am.strftime('%d.%m.%Y') if u.erstellt_am else '–' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="color:#444466;text-align:center;padding:40px">Noch keine Nutzer in dieser Organisation.</div>
+    {% endif %}
+  </div>
+
+  <!-- Tab: Profile -->
+  <div class="tab-panel" id="tab-profile">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+      <button class="btn btn-primary btn-sm" onclick="openNeuesProfilModal()">+ Neues Profil</button>
+    </div>
+    {% if profiles %}
+      {% for p in profiles %}
+      <div class="profile-card">
+        <div class="profile-card-info">
+          <div class="profile-card-name">{{ p.name }}</div>
+          <div class="profile-card-branch">{{ p.branche or 'Keine Branche angegeben' }}</div>
+        </div>
+        <div style="font-size:12px;color:#444466">
+          {{ p.erstellt_am.strftime('%d.%m.%Y') if p.erstellt_am else '' }}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div style="color:#444466;text-align:center;padding:40px">Noch keine Profile vorhanden.</div>
+    {% endif %}
+  </div>
+
+  <!-- Tab: Trainings/Szenarien -->
+  <div class="tab-panel" id="tab-szenarien">
+    {% if scenarios %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Schwierigkeit</th>
+            <th>Erstellt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in scenarios %}
+          <tr>
+            <td>{{ s.name }}</td>
+            <td><span class="badge badge-{{ 'red' if s.schwierigkeit == 'schwer' else ('amber' if s.schwierigkeit == 'mittel' else 'gray') }}">{{ s.schwierigkeit }}</span></td>
+            <td style="color:#6b6b80;font-size:12px">{{ s.erstellt_am.strftime('%d.%m.%Y') if s.erstellt_am else '–' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="color:#444466;text-align:center;padding:40px">Noch keine Trainingsszenarien.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal: Neues Profil -->
+<div class="co-modal-bg" id="neuesProfilModal">
+  <div class="co-modal">
+    <div class="co-modal-title">+ Neues Profil für {{ org.name }}</div>
+    <div class="form-group">
+      <label class="form-label">Profilname *</label>
+      <input class="form-input" id="np-name" placeholder="z.B. Finanzberater Einwand-Handling">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Branche</label>
+      <input class="form-input" id="np-branche" placeholder="z.B. Finanzberatung">
+    </div>
+    <div id="np-err" style="color:#e05c5c;font-size:12px;display:none;margin-bottom:8px"></div>
+    <div class="co-modal-footer">
+      <button class="btn btn-secondary" onclick="closeNeuesProfilModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="speichereNeuesProfil()">Profil anlegen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ORG_ID = {{ org.id }};
+
+function switchTab(btn, panelId){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ── Methodik übertragen ──────────────────────────────────────────────────────
+async function loadCoachProfile(){
+  try{
+    const r = await fetch('/coach/api/my_profiles');
+    const d = await r.json();
+    if(d.profiles){
+      const sel = document.getElementById('uebertragen-profile-select');
+      d.profiles.forEach(p=>{
+        const o = document.createElement('option');
+        o.value = p.id; o.textContent = p.name;
+        sel.appendChild(o);
+      });
+    }
+  }catch(e){}
+}
+loadCoachProfile();
+
+async function methodik_uebertragen(){
+  const pid = document.getElementById('uebertragen-profile-select').value;
+  const msg = document.getElementById('uebertragen-msg');
+  if(!pid){msg.style.display='';msg.style.color='#e05c5c';msg.textContent='Bitte Profil wählen.';return;}
+  try{
+    const r = await fetch('/coach/methodik/uebertragen',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({profile_id:parseInt(pid),ziel_org_id:ORG_ID})
+    });
+    const d = await r.json();
+    if(d.ok){msg.style.color='#E8B040';msg.textContent='✓ Profil übertragen!';}
+    else{msg.style.color='#e05c5c';msg.textContent=d.error||'Fehler';}
+    msg.style.display='';
+  }catch(e){msg.style.color='#e05c5c';msg.textContent='Netzwerkfehler';msg.style.display='';}
+}
+
+// ── Neues Profil ──────────────────────────────────────────────────────────────
+function openNeuesProfilModal(){
+  document.getElementById('np-name').value='';
+  document.getElementById('np-branche').value='';
+  document.getElementById('np-err').style.display='none';
+  document.getElementById('neuesProfilModal').classList.add('open');
+}
+function closeNeuesProfilModal(){
+  document.getElementById('neuesProfilModal').classList.remove('open');
+}
+async function speichereNeuesProfil(){
+  const name    = document.getElementById('np-name').value.trim();
+  const branche = document.getElementById('np-branche').value.trim();
+  const errEl   = document.getElementById('np-err');
+  if(!name){errEl.textContent='Name erforderlich.';errEl.style.display='';return;}
+  try{
+    const r = await fetch(`/coach/firma/${ORG_ID}/profile/neu`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,branche,daten:{}})
+    });
+    const d = await r.json();
+    if(d.ok){closeNeuesProfilModal();location.reload();}
+    else{errEl.textContent=d.error||'Fehler';errEl.style.display='';}
+  }catch(e){errEl.textContent='Netzwerkfehler';errEl.style.display='';}
+}
+document.getElementById('neuesProfilModal').addEventListener('click',function(e){
+  if(e.target===this) closeNeuesProfilModal();
+});
+</script>
+{% endblock %}

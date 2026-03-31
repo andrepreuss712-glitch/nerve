@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(python:*)",
+      "Bash(cd:*)",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(sed -i 's/SalesNerve/NERVE/g' \"$f\")",
+      "Bash(done)",
+      "Bash(pip install:*)",
+      "Skill(gsd:autonomous)",
+      "Skill(gsd:execute-phase)",
+      "Bash(node:*)",
+      "Skill(gsd:plan-phase)",
+      "Skill(gsd:update)",
+      "Skill(gsd:discuss-phase)"
+    ]
+  }
+}

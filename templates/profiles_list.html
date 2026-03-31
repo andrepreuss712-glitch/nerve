@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% block title %} – Profile{% endblock %}
+
+{% block extra_style %}
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.profile-card{background:#0c0c18;border:1px solid #1a1a2e;border-radius:12px;
+  padding:20px;display:flex;flex-direction:column;gap:14px;transition:border-color .15s}
+.profile-card:hover{border-color:#2e2e48}
+.profile-card.active-card{border-color:#E8B040;background:linear-gradient(135deg,#0d1208 0%,#0c0c18 70%)}
+.profile-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.profile-name{font-size:15px;font-weight:700;line-height:1.3}
+.profile-branche{font-size:11px;color:#6b6b80;margin-top:3px}
+.profile-card-actions{display:flex;gap:6px;flex-wrap:wrap}
+.profile-dashed{background:transparent;border:2px dashed #2e2e48;border-radius:12px;
+  padding:28px 20px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;cursor:pointer;text-decoration:none;
+  transition:border-color .15s,background .15s;text-align:center;border:none;width:100%}
+.profile-dashed:hover{border-color:#E8B040;background:#0d120810}
+.profile-dashed-icon{font-size:28px;color:#444466}
+.profile-dashed-text{font-size:13px;color:#6b6b80;font-weight:500}
+
+/* ── Wizard Modal ─────────────────────────────────────────────────────── */
+.wiz-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;
+  display:none;align-items:center;justify-content:center;padding:16px}
+.wiz-overlay.open{display:flex}
+.wiz-modal{background:#0d0d14;border:1px solid #2e2e48;border-radius:16px;
+  width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.wiz-header{padding:20px 24px 16px;border-bottom:1px solid #1a1a2e;flex-shrink:0}
+.wiz-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.wiz-title{font-size:16px;font-weight:700}
+.wiz-close{background:none;border:none;color:#444466;font-size:18px;cursor:pointer;
+  padding:0 4px;font-family:inherit;transition:color .15s}
+.wiz-close:hover{color:#b0b0c8}
+.wiz-progress{display:flex;align-items:center;gap:0}
+.wiz-dot{width:28px;height:28px;border-radius:50%;background:#1a1a2e;border:2px solid #2e2e48;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+  color:#444466;flex-shrink:0;transition:all .25s}
+.wiz-dot.active{background:rgba(232,176,64,.15);border-color:#E8B040;color:#E8B040}
+.wiz-dot.done{background:#E8B040;border-color:#E8B040;color:#0c0c18}
+.wiz-pline{flex:1;height:2px;background:#1a1a2e;transition:background .25s}
+.wiz-pline.done{background:#E8B04066}
+.wiz-step-label{font-size:11px;color:#6b6b80;margin-top:8px}
+.wiz-body{flex:1;overflow-y:auto;padding:20px 24px;display:none}
+.wiz-body.active{display:block}
+.wiz-body::-webkit-scrollbar{width:3px}
+.wiz-body::-webkit-scrollbar-thumb{background:#1a1a2e}
+.wiz-footer{padding:16px 24px;border-top:1px solid #1a1a2e;display:flex;
+  align-items:center;justify-content:space-between;flex-shrink:0}
+.wiz-sub{font-size:13px;color:#6b6b80;margin-bottom:20px;line-height:1.5}
+
+/* Wizard form elements */
+.wfg{margin-bottom:16px}
+.wfg:last-child{margin-bottom:0}
+.wfl{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;
+  color:#6b6b80;text-transform:uppercase;margin-bottom:5px}
+.wfi,.wfs,.wfta{width:100%;background:#0c0c18;border:1px solid #1a1a2e;
+  border-radius:7px;color:#f0ebe0;font-size:13px;padding:9px 12px;
+  outline:none;font-family:inherit;transition:border-color .15s}
+.wfi:focus,.wfs:focus,.wfta:focus{border-color:#E8B040}
+.wfta{resize:vertical;min-height:60px;line-height:1.5}
+.wfs{cursor:pointer}
+option{background:#0c0c18}
+.whint{font-size:11px;color:#444466;margin-top:4px}
+.whint strong{color:#E8B04099;font-weight:600}
+
+/* Objection inputs */
+.obj-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.obj-row{display:flex;gap:6px;align-items:center}
+.obj-row .wfi{flex:1}
+.btn-obj-rm{background:#1a0808;border:1px solid #3a1414;color:#e05c5c;border-radius:5px;
+  padding:5px 8px;font-size:12px;cursor:pointer;flex-shrink:0;font-family:inherit;
+  transition:border-color .15s;line-height:1}
+.btn-obj-rm:hover{border-color:#e05c5c}
+.btn-add-obj{background:#0d1a28;border:1px solid #1a3a58;color:#4899c8;border-radius:6px;
+  padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:border-color .15s;margin-right:8px}
+.btn-add-obj:hover{border-color:#4899c8}
+.btn-load-tmpl{background:#1a1a2e;border:1px solid #2e2e48;color:#8888a8;border-radius:6px;
+  padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:all .15s}
+.btn-load-tmpl:hover{border-color:#E8B04066;color:#E8B040}
+
+/* Phase inputs */
+.phase-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.phase-row{display:flex;gap:6px;align-items:center}
+.phase-row .wfi{flex:1}
+.phase-num{width:22px;font-size:12px;font-weight:700;color:#E8B040;flex-shrink:0;text-align:center}
+.wiz-vorlage-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.wiz-vorlage-lbl{font-size:11px;color:#6b6b80;font-weight:600;flex-shrink:0}
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Profile</div>
+      <div class="page-sub">Gesprächsprofile deiner Organisation</div>
+    </div>
+    {% if session.get('rolle') in ('owner', 'admin') %}
+    <div class="page-actions">
+      <button class="btn btn-primary" onclick="openWizard()">+ Neues Profil</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="profile-grid">
+    {% for p in profiles %}
+    <div class="profile-card {% if active_id and p.id == active_id %}active-card{% endif %}">
+      <div class="profile-card-header">
+        <div>
+          <div class="profile-name">{{ p.name }}</div>
+          <div class="profile-branche">
+            {% if p.branche %}<span class="badge badge-gray">{{ p.branche }}</span>{% endif %}
+          </div>
+        </div>
+        {% if active_id and p.id == active_id %}
+        <span class="badge badge-teal">✓ Aktiv</span>
+        {% endif %}
+      </div>
+
+      {% set daten = {} %}
+      {% if p.daten %}
+        {% set daten = p.daten | fromjson if p.daten is string else {} %}
+      {% endif %}
+      {% if daten.get('beschreibung') %}
+      <div style="font-size:12px;color:#6b6b80;line-height:1.5">
+        {{ daten['beschreibung'][:120] }}{% if daten['beschreibung']|length > 120 %}…{% endif %}
+      </div>
+      {% endif %}
+
+      <div class="profile-card-actions">
+        {% if not (active_id and p.id == active_id) %}
+        <form method="post" action="/profiles/{{ p.id }}/activate" style="margin:0">
+          <button class="btn btn-primary btn-sm" type="submit">Aktivieren</button>
+        </form>
+        {% endif %}
+        {% if session.get('rolle') in ('owner', 'admin') %}
+        <a href="/profiles/{{ p.id }}/edit" class="btn btn-secondary btn-sm">Bearbeiten</a>
+        <form method="post" action="/profiles/{{ p.id }}/delete" style="margin:0"
+              onsubmit="return confirm('Profil löschen?')">
+          <button class="btn btn-danger btn-sm" type="submit">Löschen</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if session.get('rolle') in ('owner', 'admin') %}
+    <div class="profile-card" style="border:2px dashed #2e2e48;align-items:center;justify-content:center;cursor:pointer;min-height:120px"
+         onclick="openWizard()" onmouseover="this.style.borderColor='#E8B04066'" onmouseout="this.style.borderColor='#2e2e48'">
+      <div style="font-size:28px;color:#444466">+</div>
+      <div style="font-size:13px;color:#6b6b80;font-weight:500">Neues Profil erstellen</div>
+    </div>
+    {% endif %}
+
+    {% if not profiles %}
+    <div style="grid-column:1/-1;color:#444466;font-size:14px;padding:20px 0">
+      Noch keine Profile erstellt.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Wizard Modal ──────────────────────────────────────────────────────── -->
+<div class="wiz-overlay" id="wiz-overlay" onclick="if(event.target===this)closeWizard()">
+  <div class="wiz-modal">
+
+    <div class="wiz-header">
+      <div class="wiz-header-top">
+        <div class="wiz-title">Neues Profil erstellen</div>
+        <button class="wiz-close" onclick="closeWizard()">✕</button>
+      </div>
+      <div class="wiz-progress">
+        <div class="wiz-dot active" id="wdot-1">1</div>
+        <div class="wiz-pline" id="wline-1"></div>
+        <div class="wiz-dot" id="wdot-2">2</div>
+        <div class="wiz-pline" id="wline-2"></div>
+        <div class="wiz-dot" id="wdot-3">3</div>
+      </div>
+      <div class="wiz-step-label" id="wiz-step-label">Schritt 1 von 3 — Grundlagen</div>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="wiz-body active" id="wstep-1">
+      <div class="wiz-sub">Gib deinem Profil einen Namen und beschreibe was du verkaufst.</div>
+      <div class="wfg">
+        <label class="wfl">Profilname *</label>
+        <input class="wfi" id="w-name" type="text" placeholder="z.B. Erstgespräch IT-Kunden oder Kaltakquise Versicherung" autocomplete="off">
+      </div>
+      <div class="wfg">
+        <label class="wfl">Branche</label>
+        <select class="wfs" id="w-branche">
+          <option value="">Branche wählen…</option>
+          <option>SaaS</option>
+          <option>Versicherung</option>
+          <option>Consulting</option>
+          <option>Recruiting</option>
+          <option>Immobilien</option>
+          <option>Agentur</option>
+          <option>Industrie</option>
+          <option>IT-Dienstleistung</option>
+          <option>Sonstiges</option>
+        </select>
+      </div>
+      <div class="wfg">
+        <label class="wfl">Was verkaufst du?</label>
+        <textarea class="wfta" id="w-produkt" placeholder="z.B. Cloud-basierte Projektmanagement-Software für Teams ab 10 Personen. Monatliches Abo, kein Setup-Aufwand."></textarea>
+      </div>
+      <div class="wfg">
+        <label class="wfl">Preis / Konditionen</label>
+        <input class="wfi" id="w-preis" type="text" placeholder="z.B. Ab 29€/User/Monat, 14 Tage kostenlos testen">
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="wiz-body" id="wstep-2">
+      <div class="wiz-sub">Welche Einwände hörst du am häufigsten? NERVE generiert die Gegenargumente automatisch — du kannst sie später verfeinern.</div>
+      <div class="obj-list" id="obj-list"></div>
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:16px">
+        <button type="button" class="btn-add-obj" onclick="addObjRow()">+ Einwand hinzufügen</button>
+        <button type="button" class="btn-load-tmpl" onclick="loadBrancheEinwaende()">Branchenübliche laden</button>
+      </div>
+      <div class="whint">💡 Schreibe pro Zeile einen Einwand so wie er dir im Gespräch begegnet. <strong>Gegenargumente</strong> trägst du danach im Profil-Editor ein.</div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="wiz-body" id="wstep-3">
+      <div class="wiz-sub">Wie läuft dein typisches Gespräch ab? Du kannst die Phasen jederzeit ändern.</div>
+      <div class="wiz-vorlage-row">
+        <span class="wiz-vorlage-lbl">Vorlage laden:</span>
+        <select class="wfs" id="w-vorlage" onchange="loadPhaseVorlage(this.value)" style="flex:1;max-width:240px">
+          <option value="">— Vorlage wählen —</option>
+          <option value="Standard">Standard (5 Phasen)</option>
+          <option value="Kaltakquise">Kaltakquise</option>
+          <option value="Beratung">Beratungsgespräch</option>
+          <option value="Followup">Follow-up</option>
+        </select>
+      </div>
+      <div class="phase-list" id="phase-list"></div>
+      <button type="button" class="btn-add-obj" onclick="addPhaseRow()">+ Phase hinzufügen</button>
+    </div>
+
+    <div class="wiz-footer">
+      <button type="button" class="btn btn-secondary" id="wiz-back-btn" onclick="wizBack()" style="display:none">← Zurück</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button type="button" class="btn btn-secondary" onclick="closeWizard()">Abbrechen</button>
+        <button type="button" class="btn btn-primary" id="wiz-next-btn" onclick="wizNext()">Weiter →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Branche templates (from onboarding) ────────────────────────────────────
+const BRANCHE_EW = {
+  'SaaS':          ['Das ist zu teuer','Wir haben gerade andere Prioritäten','Wir nutzen schon ein anderes Tool','Das brauchen wir nicht'],
+  'Versicherung':  ['Die Beiträge sind mir zu hoch','Ich bin schon abgesichert','Versicherungen zahlen eh nie'],
+  'Consulting':    ['Das Honorar ist zu hoch','Wir starten nächstes Quartal','Das muss der Vorstand entscheiden'],
+  'Recruiting':    ['Die Provision ist zu hoch','Wir machen das intern'],
+  'Immobilien':    ['Die Maklerprovision ist zu hoch','Makler bringen nichts'],
+  'Agentur':       ['Das Monatsbudget ist zu hoch','Wir haben schon eine Agentur'],
+  'Industrie':     ['Das übersteigt unser Budget','Wir haben kein Zeitfenster für eine Umstellung'],
+  'IT-Dienstleistung': ['499€ im Monat ist zu viel','Wir haben schon einen IT-Dienstleister','Unser interner ITler macht das','Wir sind gerade mitten in einem Projekt'],
+  'Sonstiges':     ['Das ist zu teuer','Jetzt ist kein guter Zeitpunkt'],
+};
+const PHASE_VORLAGEN = {
+  'Standard':   ['Einstieg & Rapport','Bedarfsanalyse','Lösung vorstellen','Einwandbehandlung','Abschluss'],
+  'Kaltakquise':['Gesprächsöffner','Qualifizierung','Neugier wecken','Einwand abfangen','Termin vereinbaren'],
+  'Beratung':   ['Begrüßung','Situationsanalyse','Problemvertiefung','Lösungsempfehlung','Nächste Schritte'],
+  'Followup':   ['Bezug herstellen','Status erfragen','Offene Fragen klären','Entscheidung herbeiführen'],
+};
+
+let wizStep = 1;
+
+function openWizard() {
+  wizStep = 1;
+  document.getElementById('wiz-overlay').classList.add('open');
+  wizUpdateUI();
+  // Init step 2 with 3 empty rows if first open
+  if (document.getElementById('obj-list').children.length === 0) {
+    addObjRow(); addObjRow(); addObjRow();
+  }
+  // Init step 3 with standard phases if first open
+  if (document.getElementById('phase-list').children.length === 0) {
+    loadPhaseVorlage('Standard');
+  }
+}
+function closeWizard() {
+  document.getElementById('wiz-overlay').classList.remove('open');
+}
+
+function wizUpdateUI() {
+  // Steps
+  [1,2,3].forEach(i => {
+    document.getElementById('wstep-'+i).classList.toggle('active', i === wizStep);
+    const dot = document.getElementById('wdot-'+i);
+    dot.classList.remove('active','done');
+    if (i < wizStep) dot.classList.add('done');
+    else if (i === wizStep) dot.classList.add('active');
+    if (i < 3) document.getElementById('wline-'+i).classList.toggle('done', i < wizStep);
+  });
+  const labels = ['Schritt 1 von 3 — Grundlagen','Schritt 2 von 3 — Einwände','Schritt 3 von 3 — Gesprächsablauf'];
+  document.getElementById('wiz-step-label').textContent = labels[wizStep-1];
+  document.getElementById('wiz-back-btn').style.display = wizStep > 1 ? '' : 'none';
+  const nextBtn = document.getElementById('wiz-next-btn');
+  nextBtn.textContent = wizStep === 3 ? 'Profil erstellen ✓' : 'Weiter →';
+}
+
+function wizNext() {
+  if (wizStep === 1) {
+    const name = document.getElementById('w-name').value.trim();
+    if (!name) { document.getElementById('w-name').focus(); document.getElementById('w-name').style.borderColor='#e05c5c'; return; }
+    document.getElementById('w-name').style.borderColor='';
+    wizStep = 2; wizUpdateUI();
+  } else if (wizStep === 2) {
+    wizStep = 3; wizUpdateUI();
+  } else {
+    submitWizard();
+  }
+}
+function wizBack() {
+  if (wizStep > 1) { wizStep--; wizUpdateUI(); }
+}
+
+// ── Objection rows ──────────────────────────────────────────────────────────
+function addObjRow(val) {
+  const list = document.getElementById('obj-list');
+  const row = document.createElement('div');
+  row.className = 'obj-row';
+  row.innerHTML = `<input class="wfi obj-inp" type="text" placeholder="z.B. Das ist uns zu teuer" value="${val ? val.replace(/"/g,'&quot;') : ''}">
+    <button type="button" class="btn-obj-rm" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(row);
+  if (val === undefined) row.querySelector('input').focus();
+}
+function loadBrancheEinwaende() {
+  const br = document.getElementById('w-branche').value || 'Sonstiges';
+  const ews = BRANCHE_EW[br] || BRANCHE_EW['Sonstiges'];
+  document.getElementById('obj-list').innerHTML = '';
+  ews.forEach(e => addObjRow(e));
+}
+function getObjRows() {
+  return [...document.querySelectorAll('.obj-inp')].map(i => i.value.trim()).filter(Boolean);
+}
+
+// ── Phase rows ──────────────────────────────────────────────────────────────
+function addPhaseRow(val) {
+  const list = document.getElementById('phase-list');
+  const idx = list.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'phase-row';
+  row.innerHTML = `<span class="phase-num">${idx}</span>
+    <input class="wfi phase-inp" type="text" placeholder="Phasen-Name" value="${val ? val.replace(/"/g,'&quot;') : ''}">
+    <button type="button" class="btn-obj-rm" onclick="this.parentElement.remove();renumPhaseRows()">✕</button>`;
+  list.appendChild(row);
+}
+function renumPhaseRows() {
+  [...document.querySelectorAll('.phase-num')].forEach((n,i) => n.textContent = i+1);
+}
+function loadPhaseVorlage(key) {
+  if (!key) return;
+  const phases = PHASE_VORLAGEN[key] || PHASE_VORLAGEN['Standard'];
+  document.getElementById('phase-list').innerHTML = '';
+  phases.forEach(p => addPhaseRow(p));
+}
+function getPhaseRows() {
+  return [...document.querySelectorAll('.phase-inp')].map(i => i.value.trim()).filter(Boolean);
+}
+
+// ── Submit ──────────────────────────────────────────────────────────────────
+async function submitWizard() {
+  const nextBtn = document.getElementById('wiz-next-btn');
+  nextBtn.textContent = 'Erstelle…';
+  nextBtn.disabled = true;
+
+  const payload = {
+    name:      document.getElementById('w-name').value.trim(),
+    branche:   document.getElementById('w-branche').value.trim(),
+    produkt:   document.getElementById('w-produkt').value.trim(),
+    preismodell: document.getElementById('w-preis').value.trim(),
+    einwaende: getObjRows(),
+    phasen:    getPhaseRows(),
+  };
+
+  try {
+    const res = await fetch('/profiles/wizard', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      window.location.href = d.redirect;
+    } else {
+      alert(d.error || 'Fehler beim Erstellen');
+      nextBtn.textContent = 'Profil erstellen ✓';
+      nextBtn.disabled = false;
+    }
+  } catch(e) {
+    alert('Netzwerkfehler');
+    nextBtn.textContent = 'Profil erstellen ✓';
+    nextBtn.disabled = false;
+  }
+}
+</script>
+{% endblock %}

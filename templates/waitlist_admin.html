@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %} — Warteliste{% endblock %}
+
+{% block extra_style %}
+.waitlist-wrap{padding:28px 32px;max-width:900px}
+.wl-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.wl-stat{background:#1a1a2e;border-radius:10px;padding:14px 16px;text-align:center}
+.wl-stat-value{font-size:24px;font-weight:800;color:#E8B040}
+.wl-stat-label{font-size:11px;color:#6b6b80;margin-top:2px}
+.wl-table-wrap{background:#1a1a2e;border-radius:12px;overflow:hidden}
+.wl-row{display:grid;grid-template-columns:40px 1fr 180px 100px 80px 100px;
+  gap:12px;padding:12px 16px;align-items:center;border-bottom:1px solid rgba(255,255,255,.04)}
+.wl-row:last-child{border-bottom:none}
+.wl-row.header{background:rgba(0,0,0,.2);font-size:10px;font-weight:700;
+  letter-spacing:.07em;color:#6b6b80;text-transform:uppercase;padding:10px 16px}
+.wl-pos{color:#E8B040;font-weight:700;font-size:14px}
+.wl-name{font-size:13px;font-weight:600}
+.wl-firma{font-size:11px;color:#6b6b80}
+.wl-email{font-size:12px;color:#b8b0a0}
+.wl-branche{font-size:11px}
+.wl-status{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+.status-waiting{background:rgba(232,176,64,.1);color:#E8B040}
+.status-invited{background:rgba(34,197,94,.1);color:#22c55e}
+.status-registered{background:rgba(99,102,241,.1);color:#818cf8}
+.status-declined{background:#1a1a2e;color:#444466}
+.btn-invite{background:#E8B040;color:#0c0c18;border:none;border-radius:6px;
+  padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;
+  white-space:nowrap}
+.btn-invite:hover{opacity:.85}
+.invite-result{background:#1a1a2e;border:1px solid #E8B04033;border-radius:8px;
+  padding:12px 16px;font-size:13px;color:#b8b0a0;margin-bottom:16px;display:none}
+.invite-result.visible{display:block}
+.invite-link{font-family:monospace;font-size:12px;color:#E8B040;word-break:break-all}
+{% endblock %}
+
+{% block content %}
+<div class="waitlist-wrap page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Warteliste verwalten</div>
+      <div class="page-sub">Early Access — limitiert auf 50 Plätze</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="wl-stats">
+    <div class="wl-stat">
+      <div class="wl-stat-value">{{ stats.total }}</div>
+      <div class="wl-stat-label">Gesamt</div>
+    </div>
+    <div class="wl-stat">
+      <div class="wl-stat-value">{{ stats.waiting }}</div>
+      <div class="wl-stat-label">Wartend</div>
+    </div>
+    <div class="wl-stat">
+      <div class="wl-stat-value">{{ stats.invited }}</div>
+      <div class="wl-stat-label">Eingeladen</div>
+    </div>
+    <div class="wl-stat">
+      <div class="wl-stat-value">{{ 50 - stats.registered }}</div>
+      <div class="wl-stat-label">Plätze frei</div>
+    </div>
+  </div>
+
+  <!-- Invite Result -->
+  <div class="invite-result" id="invite-result">
+    <div id="invite-result-content"></div>
+  </div>
+
+  <!-- Table -->
+  <div class="wl-table-wrap">
+    <div class="wl-row header">
+      <div>#</div>
+      <div>Name / Firma</div>
+      <div>Email</div>
+      <div>Branche</div>
+      <div>Status</div>
+      <div>Aktion</div>
+    </div>
+    {% for e in entries %}
+    <div class="wl-row" id="row-{{ e.id }}">
+      <div class="wl-pos">{{ e.position }}</div>
+      <div>
+        <div class="wl-name">{{ e.name or '–' }}</div>
+        <div class="wl-firma">{{ e.firma or '' }}</div>
+      </div>
+      <div class="wl-email">{{ e.email }}</div>
+      <div class="wl-branche">{{ e.branche or '–' }}</div>
+      <div>
+        <span class="wl-status status-{{ e.status }}">{{ e.status }}</span>
+      </div>
+      <div>
+        {% if e.status == 'waiting' %}
+        <button class="btn-invite" onclick="invite({{ e.id }})">Einladen</button>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div style="padding:24px;text-align:center;color:#444466;font-size:13px">
+      Noch niemand auf der Warteliste.
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+async function invite(wid) {
+  const res = await fetch('/waitlist/invite/' + wid, {method:'POST'});
+  const d = await res.json();
+  const result = document.getElementById('invite-result');
+  const content = document.getElementById('invite-result-content');
+  result.classList.add('visible');
+  if (d.ok) {
+    content.innerHTML = `✓ Eingeladen: <strong>${d.email}</strong><br>
+      Registrierungslink: <span class="invite-link">${window.location.origin}${d.register_link}</span>
+      <button onclick="navigator.clipboard.writeText('${window.location.origin}${d.register_link}');this.textContent='✓ Kopiert'"
+        class="btn btn-secondary btn-xs" style="margin-left:8px">Kopieren</button>`;
+    // Update row status
+    const row = document.getElementById('row-' + wid);
+    if (row) {
+      const statusEl = row.querySelector('.wl-status');
+      if (statusEl) { statusEl.className = 'wl-status status-invited'; statusEl.textContent = 'invited'; }
+      const actionEl = row.querySelector('.btn-invite');
+      if (actionEl) actionEl.remove();
+    }
+  } else {
+    content.innerHTML = '⚠ Fehler: ' + (d.error || 'Unbekannter Fehler');
+  }
+  window.scrollTo(0, 0);
+}
+</script>
+{% endblock %}

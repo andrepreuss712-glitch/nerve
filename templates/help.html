@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block title %} — Hilfe{% endblock %}
+
+{% block extra_style %}
+.help-wrap{padding:28px 32px;max-width:720px}
+.help-search-wrap{margin-bottom:24px}
+.help-search{width:100%;background:#1a1a2e;border:1px solid #2e2e48;border-radius:8px;
+  color:#f0ebe0;font-size:14px;padding:10px 14px 10px 38px;outline:none;font-family:inherit;
+  transition:border-color .15s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6b80' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:12px center}
+.help-search:focus{border-color:#E8B040}
+.help-section-title{font-size:13px;font-weight:700;letter-spacing:.06em;color:#E8B040;
+  text-transform:uppercase;margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid #1a1a2e}
+.faq-item{border-bottom:1px solid #1a1a2e}
+.faq-title{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 4px;cursor:pointer;font-size:14px;color:#f0ebe0;font-weight:500;
+  transition:color .15s;gap:12px}
+.faq-title:hover{color:#E8B040}
+.faq-arrow{color:#6b6b80;font-size:12px;flex-shrink:0;transition:transform .2s}
+.faq-item.open .faq-arrow{transform:rotate(90deg);color:#E8B040}
+.faq-body{display:none;padding:4px 4px 14px;font-size:13px;color:#b8b0a0;
+  line-height:1.7;animation:fadeIn .2s ease}
+.faq-item.open .faq-body{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.help-contact{background:#1a1a2e;border-radius:10px;padding:18px 20px;margin-top:28px;
+  font-size:13px;color:#b8b0a0;text-align:center}
+.help-contact a{color:#E8B040}
+{% endblock %}
+
+{% block content %}
+<div class="help-wrap page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Hilfe-Center</div>
+      <div class="page-sub">Antworten auf häufige Fragen</div>
+    </div>
+  </div>
+
+  <div class="help-search-wrap">
+    <input class="help-search" id="help-search" type="text" placeholder="Suche…" oninput="filterFaqs(this.value)">
+  </div>
+
+  <!-- Erste Schritte -->
+  <div class="help-section-title">Erste Schritte</div>
+  <div class="faq-item" data-search="erstes profil erstellen branche">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wie erstelle ich mein erstes Profil?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Geh auf „Profile" in der Seitenleiste. Klick auf „+ Neues Profil".
+      Wähle deine Branche — NERVE füllt automatisch typische Einwände und Gesprächsphasen für dich aus.
+      Du kannst alles danach anpassen.
+    </div>
+  </div>
+  <div class="faq-item" data-search="live gespräch starten mikrofon">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wie starte ich ein Live-Gespräch?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Klick auf „Live-Gespräch" in der Seitenleiste. Wähle dein aktives Profil.
+      Klick auf „Starten" und erlaube dem Browser den Mikrofon-Zugriff.
+      NERVE hört jetzt im Hintergrund zu und zeigt dir Einwände und Gegenargumente in Echtzeit.
+    </div>
+  </div>
+  <div class="faq-item" data-search="training trainingsmodus ki-kunde üben">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wie funktioniert der Trainingsmodus?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Im Training sprichst du mit einem KI-Kunden der echte Einwände macht.
+      Wähle eine Branche, Schwierigkeitsstufe und starte. Nach dem Gespräch bekommst du ein Scoring
+      in 5 Kategorien. Nutze es um gezielt an deinen Schwachstellen zu arbeiten.
+    </div>
+  </div>
+  <div class="faq-item" data-search="sprachanalyse redeanteil tempo kaufbereitschaft bedeutung">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Was bedeuten die Sprachanalyse-Werte?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      <strong>Redeanteil:</strong> Wie viel Prozent der Zeit hast du gesprochen? Ziel: unter 40%.<br>
+      <strong>Kaufbereitschaft:</strong> NERVE schätzt wie kaufbereit dein Gesprächspartner gerade ist (0–100%).<br>
+      <strong>Sprechtempo:</strong> Wörter pro Minute — 100–160 WPM ist ideal.<br>
+      <strong>Monolog:</strong> Längste ununterbrochene Rede — über 60 Sekunden ist oft zu viel.
+    </div>
+  </div>
+
+  <!-- Profil & Einstellungen -->
+  <div class="help-section-title">Profil &amp; Einstellungen</div>
+  <div class="faq-item" data-search="profil bearbeiten einwände phasen anpassen">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wie bearbeite ich mein Verkaufsprofil?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Geh auf „Profile" → klick auf ein Profil → „Bearbeiten".
+      Du kannst Einwände, Gegenargumente, Gesprächsphasen und alle anderen Einstellungen frei anpassen.
+      Das Profil wird sofort beim nächsten Gespräch genutzt.
+    </div>
+  </div>
+  <div class="faq-item" data-search="gesprächsphasen was sind phasen">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Was sind Gesprächsphasen?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Gesprächsphasen sind die Schritte deines typischen Verkaufsgesprächs —
+      z.B. Einstieg, Bedarfsanalyse, Demo, Einwandbehandlung, Closing.
+      NERVE zeigt dir welche Phase gerade aktiv ist und hilft dir gezielt durch jeden Schritt.
+    </div>
+  </div>
+  <div class="faq-item" data-search="teammitglieder einladen team hinzufügen">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wie lade ich Teammitglieder ein?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Geh auf „Team" in der Seitenleiste (nur für Owner und Admin sichtbar).
+      Trag die Email-Adresse ein und klick auf „Einladen".
+      Dein Teammitglied bekommt einen Registrierungslink.
+    </div>
+  </div>
+  <div class="faq-item" data-search="plan ändern upgrade wechseln">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wie ändere ich meinen Plan?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Plan-Wechsel derzeit über support@nerve.sale.
+      Schreib uns kurz welchen Plan du möchtest — wir ändern es sofort.
+      Automatischer Plan-Wechsel kommt mit der Stripe-Integration.
+    </div>
+  </div>
+
+  <!-- Abrechnung -->
+  <div class="help-section-title">Abrechnung</div>
+  <div class="faq-item" data-search="rechnungen rechnungshistorie wo finde">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wo finde ich meine Rechnungen?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Einstellungen → Abrechnung → Rechnungshistorie.
+      Rechnungs-PDFs sind nach der Stripe-Integration verfügbar.
+      Bei Fragen: rechnungen@nerve.sale
+    </div>
+  </div>
+  <div class="faq-item" data-search="kündigen kündigung abo beenden">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wie kann ich kündigen?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Einstellungen → Abrechnung → „Abo kündigen". Ein Klick, fertig.
+      Keine Kündigungsfrist, kein Anruf nötig.
+      Dein Zugang bleibt bis zum Ende des bezahlten Zeitraums aktiv.
+    </div>
+  </div>
+  <div class="faq-item" data-search="nach kündigung was passiert daten">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Was passiert nach der Kündigung?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Dein Zugang bleibt aktiv bis zum Ende des bezahlten Zeitraums.
+      Danach werden deine Daten nach 30 Tagen gelöscht — außer du reaktivierst vorher.
+      Du kannst jederzeit mit einem Klick reaktivieren.
+    </div>
+  </div>
+
+  <!-- Technik -->
+  <div class="help-section-title">Technik</div>
+  <div class="faq-item" data-search="mikrofon funktioniert nicht erlaubnis browser">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Mein Mikrofon funktioniert nicht
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Prüfe ob: 1) Der Browser Mikrofon-Zugriff erlaubt hat (oben in der Adressleiste).
+      2) Das Mikrofon eingesteckt und als Standard-Gerät gesetzt ist.
+      3) Kein anderes Programm das Mikrofon gerade nutzt.
+      Falls es immer noch nicht klappt: Seite neu laden und Zugriff erneut erlauben.
+    </div>
+  </div>
+  <div class="faq-item" data-search="analyse langsam reaktion verzögerung">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Die Analyse reagiert zu langsam
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      NERVE analysiert alle 2–3 Sekunden. Eine kleine Verzögerung ist normal.
+      Bei deutlich längeren Pausen: Prüfe deine Internetverbindung.
+      Auf sehr schwachen Verbindungen kann die KI-Antwort bis zu 5 Sekunden dauern.
+    </div>
+  </div>
+  <div class="faq-item" data-search="browser unterstützt welche chrome firefox safari">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Welche Browser werden unterstützt?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Chrome und Edge werden vollständig unterstützt.
+      Firefox funktioniert für Live-Gespräche. Safari auf iOS hat Einschränkungen
+      beim Audio-Autoplay — tippe einmal auf den Play-Button falls kein Ton kommt.
+    </div>
+  </div>
+
+  <!-- Datenschutz -->
+  <div class="help-section-title">Datenschutz</div>
+  <div class="faq-item" data-search="aufgezeichnet aufnahme audio gespeichert gespräche">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Werden meine Gespräche aufgezeichnet?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      Nein. NERVE speichert keine Audio-Aufnahmen. Dein Gespräch wird live in Text umgewandelt,
+      analysiert, und sofort verworfen. Es gibt kein Audiofile das irgendwo gespeichert wird.
+    </div>
+  </div>
+  <div class="faq-item" data-search="daten was passiert datenschutz dsgvo">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Was passiert mit meinen Daten?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      NERVE speichert Gesprächsstatistiken (Einwände, Redeanteil, Kaufbereitschaft)
+      aber keine wörtlichen Gesprächsinhalte wenn DSGVO-Modus aktiv ist.
+      Deine Daten werden niemals an Dritte weitergegeben.
+    </div>
+  </div>
+  <div class="faq-item" data-search="server standort wo deutschland dsgvo konform">
+    <div class="faq-title" onclick="toggleFaq(this)">
+      Wo stehen die Server?
+      <span class="faq-arrow">▶</span>
+    </div>
+    <div class="faq-body">
+      NERVE läuft auf Hetzner-Servern in Deutschland (Nürnberg / Falkenstein).
+      Alle Daten bleiben in der EU.
+    </div>
+  </div>
+
+  <div class="help-contact">
+    Nichts gefunden? Schreib uns:
+    <a href="mailto:support@nerve.sale">support@nerve.sale</a><br>
+    <span style="font-size:12px;color:#444466">Antwort innerhalb von 24 Stunden.</span>
+  </div>
+</div>
+
+<script>
+function toggleFaq(titleEl) {
+  const item = titleEl.closest('.faq-item');
+  item.classList.toggle('open');
+}
+
+function filterFaqs(q) {
+  const query = q.toLowerCase().trim();
+  document.querySelectorAll('.faq-item').forEach(item => {
+    const title = item.querySelector('.faq-title').textContent.toLowerCase();
+    const body = item.querySelector('.faq-body').textContent.toLowerCase();
+    const extra = (item.dataset.search || '').toLowerCase();
+    item.style.display = (!query || title.includes(query) || body.includes(query) || extra.includes(query)) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}
