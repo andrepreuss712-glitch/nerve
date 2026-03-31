@@ -1,0 +1,8 @@
+flask>=3.0.0
+flask-socketio>=5.3.6
+anthropic>=0.40.0
+deepgram-sdk>=3.7.0
+python-dotenv>=1.0.0
+sqlalchemy>=2.0.0
+werkzeug>=3.0.0
+requests>=2.31.0
