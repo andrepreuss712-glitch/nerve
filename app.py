@@ -1,10 +1,11 @@
 import json
 import logging
+import os
 import threading
 from datetime import datetime
 from flask import Flask
 from flask_socketio import SocketIO
-from config import SECRET_KEY
+from config import SECRET_KEY, CORS_ORIGIN
 from database.db import engine, get_session
 from database.models import init_db, Organisation, User, Profile, Changelog
 from werkzeug.security import generate_password_hash
@@ -22,7 +23,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY']       = SECRET_KEY
 app.config['SESSION_PERMANENT'] = True
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+if SECRET_KEY == 'dev-secret-change-me' and not os.environ.get('FLASK_DEBUG'):
+    raise RuntimeError('[NERVE] SECRET_KEY is insecure — set SECRET_KEY env var before starting in production')
+
+socketio = SocketIO(app, cors_allowed_origins=CORS_ORIGIN, async_mode='threading')
 
 @app.template_filter('fromjson')
 def _fromjson(s):
