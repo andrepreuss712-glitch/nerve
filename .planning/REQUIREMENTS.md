@@ -23,9 +23,9 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 
 ### Infrastructure & Deployment
 
-- [ ] **INFRA-01**: App läuft stabil auf Hetzner CX22 VPS mit nginx + gunicorn (gthread, 1 Worker)
-- [ ] **INFRA-02**: Domain ist gesichert und SSL-Zertifikat via Let's Encrypt ist aktiv
-- [ ] **INFRA-03**: nginx WebSocket-Proxying ist korrekt konfiguriert (Socket.IO zeigt `101 Switching Protocols`, kein Fallback auf Polling)
+- [x] **INFRA-01**: App läuft stabil auf Hetzner CX22 VPS mit nginx + gunicorn (gthread, 1 Worker)
+- [x] **INFRA-02**: Domain ist gesichert und SSL-Zertifikat via Let's Encrypt ist aktiv
+- [x] **INFRA-03**: nginx WebSocket-Proxying ist korrekt konfiguriert (Socket.IO zeigt `101 Switching Protocols`, kein Fallback auf Polling)
 - [ ] **INFRA-04**: SQLite WAL-Modus ist aktiv; SECRET_KEY-Fail-Fast-Assertion blockiert Start ohne sicheren Key
 - [ ] **INFRA-05**: PyAudio ist nicht in Server-Requirements; App startet auf VPS ohne Audio-Hardware
 
@@ -111,9 +111,9 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | PROD-09 | Phase 2 | Complete |
 | PROD-10 | Phase 2 | Complete |
 | PROD-11 | Phase 2 | Complete |
-| INFRA-01 | Phase 3 | Pending |
-| INFRA-02 | Phase 3 | Pending |
-| INFRA-03 | Phase 3 | Pending |
+| INFRA-01 | Phase 3 | Complete |
+| INFRA-02 | Phase 3 | Complete |
+| INFRA-03 | Phase 3 | Complete |
 | INFRA-04 | Phase 3 | Pending |
 | INFRA-05 | Phase 3 | Pending |
 | LEGAL-04 | Phase 3 | Pending |

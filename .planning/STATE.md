@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-03-30T17:10:48.141Z"
-last_activity: 2026-03-30
+status: executing
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-03-31T08:40:08.887Z"
+last_activity: 2026-03-31
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 9
-  completed_plans: 6
+  total_plans: 12
+  completed_plans: 7
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 02 — product-fixes
+**Current focus:** Phase 03 — infrastructure-deployment
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-03-30
+Phase: 03 (infrastructure-deployment) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-product-fixes P04 | 18 | 2 tasks | 9 files |
 | Phase 02-product-fixes P06 | 18 | 2 tasks | 3 files |
 | Phase 02-product-fixes P05 | 12 | 2 tasks | 7 files |
+| Phase 03 P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Recent decisions affecting current work:
 - [Phase 02-product-fixes]: Org-level fair-use counters (live_minutes_used, training_sessions_used) added alongside user-level counters; soft-warn at 80%, never hard-block
 - [Phase 02-product-fixes]: POST wizard_create replaced JSON-API handler with form-data handler — matches HTML form submission pattern in rest of codebase
 - [Phase 02-product-fixes]: Wizard redirect placed before expensive stats queries in dashboard route to minimize overhead for new users
+- [Phase 03]: gthread 1+4 worker config: matches D-03 for CX22 with Flask-SocketIO threading mode
+- [Phase 03]: WebSocket proxy timeouts set to 3600s in nginx — Socket.IO connections are long-lived during full sales calls
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T17:05:18.807Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-03-31T08:40:08.885Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None

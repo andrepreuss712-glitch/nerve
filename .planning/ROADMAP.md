@@ -70,7 +70,7 @@ Plans:
 
 Plans:
 - [ ] 03-01-PLAN.md — Code hardening: requirements split, SECRET_KEY fail-fast, SQLite WAL, CORS lock (INFRA-04, INFRA-05, LEGAL-04)
-- [ ] 03-02-PLAN.md — Deployment artifacts: deploy.sh, nginx.conf, nerve.service (INFRA-01, INFRA-02, INFRA-03)
+- [x] 03-02-PLAN.md — Deployment artifacts: deploy.sh, nginx.conf, nerve.service (INFRA-01, INFRA-02, INFRA-03)
 - [ ] 03-03-PLAN.md — VPS deployment runbook: provision, SSL, systemd, end-to-end verification (INFRA-01, INFRA-02, INFRA-03)
 
 ### Phase 4: Payments & Legal
@@ -105,7 +105,7 @@ Phases execute in numeric order. Phase 1 and Phase 2 can run in parallel (Phase 
 |-------|----------------|--------|-----------|
 | 1. Business Setup | 0/3 | Not started | - |
 | 2. Product Fixes | 3/6 | In Progress|  |
-| 3. Infrastructure & Deployment | 0/3 | Not started | - |
+| 3. Infrastructure & Deployment | 1/3 | In Progress|  |
 | 4. Payments & Legal | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
