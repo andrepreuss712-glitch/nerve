@@ -66,7 +66,12 @@ Plans:
   2. A live Socket.IO connection shows `101 Switching Protocols` in the browser network tab — no polling fallback
   3. The app starts cleanly on the VPS without PyAudio or missing SECRET_KEY (fail-fast assertion triggers on bad config)
   4. SQLite WAL mode is confirmed active; CORS is locked to the production domain only (no wildcard)
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Code hardening: requirements split, SECRET_KEY fail-fast, SQLite WAL, CORS lock (INFRA-04, INFRA-05, LEGAL-04)
+- [ ] 03-02-PLAN.md — Deployment artifacts: deploy.sh, nginx.conf, nerve.service (INFRA-01, INFRA-02, INFRA-03)
+- [ ] 03-03-PLAN.md — VPS deployment runbook: provision, SSL, systemd, end-to-end verification (INFRA-01, INFRA-02, INFRA-03)
 
 ### Phase 4: Payments & Legal
 **Goal**: Users can pay for a subscription and the product is legally compliant for DACH B2B launch
@@ -100,7 +105,7 @@ Phases execute in numeric order. Phase 1 and Phase 2 can run in parallel (Phase 
 |-------|----------------|--------|-----------|
 | 1. Business Setup | 0/3 | Not started | - |
 | 2. Product Fixes | 3/6 | In Progress|  |
-| 3. Infrastructure & Deployment | 0/? | Not started | - |
+| 3. Infrastructure & Deployment | 0/3 | Not started | - |
 | 4. Payments & Legal | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
