@@ -1,0 +1,41 @@
+# ── NERVE systemd Service Unit ───────────────────────────────────────────────
+# Copy to: /etc/systemd/system/nerve.service
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable nerve
+# Start:   sudo systemctl start nerve
+# Logs:    sudo journalctl -u nerve -f
+
+[Unit]
+Description=NERVE Sales Assistant (gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/nerve/app
+
+# Environment — secrets live in /etc/nerve/.env (not in repo)
+EnvironmentFile=/etc/nerve/.env
+
+# gunicorn with gthread worker class (required for Flask-SocketIO threading mode)
+# 1 worker + 4 threads: optimal for CX22 (2 vCPU, 4 GB RAM) with Socket.IO
+ExecStart=/opt/nerve/venv/bin/gunicorn \
+    --worker-class gthread \
+    --workers 1 \
+    --threads 4 \
+    --bind 127.0.0.1:8000 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    app:app
+
+# Restart policy
+Restart=always
+RestartSec=5s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
