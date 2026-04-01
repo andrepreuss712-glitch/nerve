@@ -46,6 +46,7 @@
 <div class="g-body">
 
 <nav class="g-sidebar">
+  <div class="g-sidebar-inner">
   <a class="n-nav-item {% if request.path == '/dashboard' %}n-nav-item-active{% endif %}" href="/dashboard">
     <span class="nav-icon">⊞</span> Dashboard
   </a>
@@ -82,6 +83,7 @@
     <span class="nav-icon">📋</span> Changelog
     <span id="cl-new-badge" style="display:none" class="new-badge">NEU</span>
   </a>
+  </div>
   <!-- Sidebar User Menu (ARCH-16) -->
   <div class="sidebar-user-block" onclick="toggleSidebarUserMenu(event)">
     <div class="sidebar-avatar">{{ (g.user.email or 'U')[0] | upper }}</div>
