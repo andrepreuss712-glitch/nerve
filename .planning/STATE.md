@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03.2-03-PLAN.md
-last_updated: "2026-04-01T15:02:59.502Z"
+stopped_at: Completed 03.2-05-PLAN.md
+last_updated: "2026-04-01T15:07:04.066Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 25
-  completed_plans: 17
+  completed_plans: 18
   percent: 65
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 03.2 (uat-bug-fixes) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-04-01
 
@@ -68,6 +68,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 03.2-uat-bug-fixes P01 | 25 | 1 tasks | 2 files |
 | Phase 03.2-uat-bug-fixes P02 | 20 | 2 tasks | 2 files |
 | Phase 03.2-uat-bug-fixes P03 | 8 | 1 tasks | 2 files |
+| Phase 03.2-uat-bug-fixes P05 | 15 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,9 @@ Recent decisions affecting current work:
 - [Phase 03.2-uat-bug-fixes]: No-conversation guard checks trainingSecs<10||userMsgCount===0 for training, sessionSeconds<10||words<20 for live
 - [Phase 03.2-uat-bug-fixes]: Standalone Einstellungen sidebar link removed — now lives exclusively in the sidebar user dropdown (ARCH-16)
 - [Phase 03.2-uat-bug-fixes]: Sidebar user dropdown opens upward (bottom: calc(100% + 4px)) to avoid viewport clipping at sidebar bottom edge
+- [Phase 03.2-uat-bug-fixes]: preferred_language column defaults to 'de' — backward-compatible, existing users automatically get German as preference
+- [Phase 03.2-uat-bug-fixes]: DOMContentLoaded calls selectLanguage() for non-default saved language to sync tUI and button states in training.html
+- [Phase 03.2-uat-bug-fixes]: profile_wizard.html already uses neutral placeholders — no personal names found, no changes required (UAT-10)
 
 ### Roadmap Evolution
 
@@ -140,6 +144,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-01T15:02:59.499Z
-Stopped at: Completed 03.2-03-PLAN.md
+Last session: 2026-04-01T15:07:04.062Z
+Stopped at: Completed 03.2-05-PLAN.md
 Resume: `/gsd:plan-phase 03.1 --gaps` — then migrate landing.html + login.html — then Phase 4
