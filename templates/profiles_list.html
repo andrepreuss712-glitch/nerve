@@ -3,91 +3,91 @@
 
 {% block extra_style %}
 .profile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.profile-card{background:#0c0c18;border:1px solid #1a1a2e;border-radius:12px;
+.profile-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;
   padding:20px;display:flex;flex-direction:column;gap:14px;transition:border-color .15s}
-.profile-card:hover{border-color:#2e2e48}
-.profile-card.active-card{border-color:#E8B040;background:linear-gradient(135deg,#0d1208 0%,#0c0c18 70%)}
+.profile-card:hover{border-color:var(--glass-border-hover)}
+.profile-card.active-card{border-color:#2dd4a8;background:linear-gradient(135deg,rgba(45,212,168,0.06) 0%,rgba(255,255,255,0.02) 70%)}
 .profile-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .profile-name{font-size:15px;font-weight:700;line-height:1.3}
-.profile-branche{font-size:11px;color:#6b6b80;margin-top:3px}
+.profile-branche{font-size:11px;color:var(--page-text-muted);margin-top:3px}
 .profile-card-actions{display:flex;gap:6px;flex-wrap:wrap}
-.profile-dashed{background:transparent;border:2px dashed #2e2e48;border-radius:12px;
+.profile-dashed{background:transparent;border:2px dashed rgba(255,255,255,0.08);border-radius:12px;
   padding:28px 20px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:10px;cursor:pointer;text-decoration:none;
   transition:border-color .15s,background .15s;text-align:center;border:none;width:100%}
-.profile-dashed:hover{border-color:#E8B040;background:#0d120810}
-.profile-dashed-icon{font-size:28px;color:#444466}
-.profile-dashed-text{font-size:13px;color:#6b6b80;font-weight:500}
+.profile-dashed:hover{border-color:#2dd4a8;background:rgba(45,212,168,0.04)}
+.profile-dashed-icon{font-size:28px;color:var(--page-text-muted)}
+.profile-dashed-text{font-size:13px;color:var(--page-text-muted);font-weight:500}
 
 /* ── Wizard Modal ─────────────────────────────────────────────────────── */
 .wiz-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;
   display:none;align-items:center;justify-content:center;padding:16px}
 .wiz-overlay.open{display:flex}
-.wiz-modal{background:#0d0d14;border:1px solid #2e2e48;border-radius:16px;
+.wiz-modal{background:var(--page-bg);border:1px solid rgba(255,255,255,0.08);border-radius:16px;
   width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;
   box-shadow:0 20px 60px rgba(0,0,0,.6)}
-.wiz-header{padding:20px 24px 16px;border-bottom:1px solid #1a1a2e;flex-shrink:0}
+.wiz-header{padding:20px 24px 16px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0}
 .wiz-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .wiz-title{font-size:16px;font-weight:700}
-.wiz-close{background:none;border:none;color:#444466;font-size:18px;cursor:pointer;
+.wiz-close{background:none;border:none;color:var(--page-text-muted);font-size:18px;cursor:pointer;
   padding:0 4px;font-family:inherit;transition:color .15s}
-.wiz-close:hover{color:#b0b0c8}
+.wiz-close:hover{color:var(--page-text-secondary)}
 .wiz-progress{display:flex;align-items:center;gap:0}
-.wiz-dot{width:28px;height:28px;border-radius:50%;background:#1a1a2e;border:2px solid #2e2e48;
+.wiz-dot{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.08);
   display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
-  color:#444466;flex-shrink:0;transition:all .25s}
-.wiz-dot.active{background:rgba(232,176,64,.15);border-color:#E8B040;color:#E8B040}
-.wiz-dot.done{background:#E8B040;border-color:#E8B040;color:#0c0c18}
-.wiz-pline{flex:1;height:2px;background:#1a1a2e;transition:background .25s}
-.wiz-pline.done{background:#E8B04066}
-.wiz-step-label{font-size:11px;color:#6b6b80;margin-top:8px}
+  color:var(--page-text-muted);flex-shrink:0;transition:all .25s}
+.wiz-dot.active{background:rgba(45,212,168,0.15);border-color:#2dd4a8;color:#2dd4a8}
+.wiz-dot.done{background:#2dd4a8;border-color:#2dd4a8;color:var(--page-bg)}
+.wiz-pline{flex:1;height:2px;background:rgba(255,255,255,0.06);transition:background .25s}
+.wiz-pline.done{background:rgba(45,212,168,0.4)}
+.wiz-step-label{font-size:11px;color:var(--page-text-muted);margin-top:8px}
 .wiz-body{flex:1;overflow-y:auto;padding:20px 24px;display:none}
 .wiz-body.active{display:block}
 .wiz-body::-webkit-scrollbar{width:3px}
-.wiz-body::-webkit-scrollbar-thumb{background:#1a1a2e}
-.wiz-footer{padding:16px 24px;border-top:1px solid #1a1a2e;display:flex;
+.wiz-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06)}
+.wiz-footer{padding:16px 24px;border-top:1px solid rgba(255,255,255,0.06);display:flex;
   align-items:center;justify-content:space-between;flex-shrink:0}
-.wiz-sub{font-size:13px;color:#6b6b80;margin-bottom:20px;line-height:1.5}
+.wiz-sub{font-size:13px;color:var(--page-text-muted);margin-bottom:20px;line-height:1.5}
 
 /* Wizard form elements */
 .wfg{margin-bottom:16px}
 .wfg:last-child{margin-bottom:0}
 .wfl{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;
-  color:#6b6b80;text-transform:uppercase;margin-bottom:5px}
-.wfi,.wfs,.wfta{width:100%;background:#0c0c18;border:1px solid #1a1a2e;
-  border-radius:7px;color:#f0ebe0;font-size:13px;padding:9px 12px;
-  outline:none;font-family:inherit;transition:border-color .15s}
-.wfi:focus,.wfs:focus,.wfta:focus{border-color:#E8B040}
+  color:var(--label-color);text-transform:uppercase;margin-bottom:5px}
+.wfi,.wfs,.wfta{width:100%;background:var(--input-bg);border:1px solid var(--input-border);
+  border-radius:var(--input-radius);color:var(--input-text);font-size:13px;padding:9px 12px;
+  outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+.wfi:focus,.wfs:focus,.wfta:focus{border-color:var(--input-border-focus);box-shadow:var(--input-focus-glow)}
 .wfta{resize:vertical;min-height:60px;line-height:1.5}
 .wfs{cursor:pointer}
-option{background:#0c0c18}
-.whint{font-size:11px;color:#444466;margin-top:4px}
-.whint strong{color:#E8B04099;font-weight:600}
+option{background:var(--page-bg)}
+.whint{font-size:11px;color:var(--page-text-muted);margin-top:4px}
+.whint strong{color:rgba(45,212,168,0.7);font-weight:600}
 
 /* Objection inputs */
 .obj-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
 .obj-row{display:flex;gap:6px;align-items:center}
 .obj-row .wfi{flex:1}
-.btn-obj-rm{background:#1a0808;border:1px solid #3a1414;color:#e05c5c;border-radius:5px;
+.btn-obj-rm{background:rgba(240,92,92,0.08);border:1px solid rgba(240,92,92,0.2);color:#e05c5c;border-radius:5px;
   padding:5px 8px;font-size:12px;cursor:pointer;flex-shrink:0;font-family:inherit;
   transition:border-color .15s;line-height:1}
 .btn-obj-rm:hover{border-color:#e05c5c}
-.btn-add-obj{background:#0d1a28;border:1px solid #1a3a58;color:#4899c8;border-radius:6px;
+.btn-add-obj{background:rgba(72,153,200,0.08);border:1px solid rgba(72,153,200,0.2);color:#4899c8;border-radius:6px;
   padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;
   transition:border-color .15s;margin-right:8px}
 .btn-add-obj:hover{border-color:#4899c8}
-.btn-load-tmpl{background:#1a1a2e;border:1px solid #2e2e48;color:#8888a8;border-radius:6px;
+.btn-load-tmpl{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--page-text-secondary);border-radius:6px;
   padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;
   transition:all .15s}
-.btn-load-tmpl:hover{border-color:#E8B04066;color:#E8B040}
+.btn-load-tmpl:hover{border-color:rgba(45,212,168,0.4);color:#2dd4a8}
 
 /* Phase inputs */
 .phase-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
 .phase-row{display:flex;gap:6px;align-items:center}
 .phase-row .wfi{flex:1}
-.phase-num{width:22px;font-size:12px;font-weight:700;color:#E8B040;flex-shrink:0;text-align:center}
+.phase-num{width:22px;font-size:12px;font-weight:700;color:#2dd4a8;flex-shrink:0;text-align:center}
 .wiz-vorlage-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
-.wiz-vorlage-lbl{font-size:11px;color:#6b6b80;font-weight:600;flex-shrink:0}
+.wiz-vorlage-lbl{font-size:11px;color:var(--page-text-muted);font-weight:600;flex-shrink:0}
 {% endblock %}
 
 {% block content %}
@@ -99,23 +99,23 @@ option{background:#0c0c18}
     </div>
     {% if session.get('rolle') in ('owner', 'admin') %}
     <div class="page-actions">
-      <button class="btn btn-primary" onclick="openWizard()">+ Neues Profil</button>
+      <button class="n-btn n-btn-primary" onclick="openWizard()">+ Neues Profil</button>
     </div>
     {% endif %}
   </div>
 
   <div class="profile-grid">
     {% for p in profiles %}
-    <div class="profile-card {% if active_id and p.id == active_id %}active-card{% endif %}">
+    <div class="profile-card n-glass {% if active_id and p.id == active_id %}active-card{% endif %}">
       <div class="profile-card-header">
         <div>
           <div class="profile-name">{{ p.name }}</div>
           <div class="profile-branche">
-            {% if p.branche %}<span class="badge badge-gray">{{ p.branche }}</span>{% endif %}
+            {% if p.branche %}<span class="n-badge n-badge-neutral">{{ p.branche }}</span>{% endif %}
           </div>
         </div>
         {% if active_id and p.id == active_id %}
-        <span class="badge badge-teal">✓ Aktiv</span>
+        <span class="n-badge n-badge-primary">✓ Aktiv</span>
         {% endif %}
       </div>
 
@@ -124,7 +124,7 @@ option{background:#0c0c18}
         {% set daten = p.daten | fromjson if p.daten is string else {} %}
       {% endif %}
       {% if daten.get('beschreibung') %}
-      <div style="font-size:12px;color:#6b6b80;line-height:1.5">
+      <div style="font-size:12px;color:var(--page-text-muted);line-height:1.5">
         {{ daten['beschreibung'][:120] }}{% if daten['beschreibung']|length > 120 %}…{% endif %}
       </div>
       {% endif %}
@@ -132,14 +132,14 @@ option{background:#0c0c18}
       <div class="profile-card-actions">
         {% if not (active_id and p.id == active_id) %}
         <form method="post" action="/profiles/{{ p.id }}/activate" style="margin:0">
-          <button class="btn btn-primary btn-sm" type="submit">Aktivieren</button>
+          <button class="n-btn n-btn-primary n-btn-sm" type="submit">Aktivieren</button>
         </form>
         {% endif %}
         {% if session.get('rolle') in ('owner', 'admin') %}
-        <a href="/profiles/{{ p.id }}/edit" class="btn btn-secondary btn-sm">Bearbeiten</a>
+        <a href="/profiles/{{ p.id }}/edit" class="n-btn n-btn-ghost n-btn-sm">Bearbeiten</a>
         <form method="post" action="/profiles/{{ p.id }}/delete" style="margin:0"
               onsubmit="return confirm('Profil löschen?')">
-          <button class="btn btn-danger btn-sm" type="submit">Löschen</button>
+          <button class="n-btn n-btn-danger n-btn-sm" type="submit">Löschen</button>
         </form>
         {% endif %}
       </div>
@@ -147,15 +147,15 @@ option{background:#0c0c18}
     {% endfor %}
 
     {% if session.get('rolle') in ('owner', 'admin') %}
-    <div class="profile-card" style="border:2px dashed #2e2e48;align-items:center;justify-content:center;cursor:pointer;min-height:120px"
-         onclick="openWizard()" onmouseover="this.style.borderColor='#E8B04066'" onmouseout="this.style.borderColor='#2e2e48'">
-      <div style="font-size:28px;color:#444466">+</div>
-      <div style="font-size:13px;color:#6b6b80;font-weight:500">Neues Profil erstellen</div>
+    <div class="profile-card n-glass" style="border:2px dashed rgba(255,255,255,0.08);align-items:center;justify-content:center;cursor:pointer;min-height:120px"
+         onclick="openWizard()" onmouseover="this.style.borderColor='rgba(45,212,168,0.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+      <div style="font-size:28px;color:var(--page-text-muted)">+</div>
+      <div style="font-size:13px;color:var(--page-text-muted);font-weight:500">Neues Profil erstellen</div>
     </div>
     {% endif %}
 
     {% if not profiles %}
-    <div style="grid-column:1/-1;color:#444466;font-size:14px;padding:20px 0">
+    <div style="grid-column:1/-1;color:var(--page-text-muted);font-size:14px;padding:20px 0">
       Noch keine Profile erstellt.
     </div>
     {% endif %}
@@ -186,11 +186,11 @@ option{background:#0c0c18}
       <div class="wiz-sub">Gib deinem Profil einen Namen und beschreibe was du verkaufst.</div>
       <div class="wfg">
         <label class="wfl">Profilname *</label>
-        <input class="wfi" id="w-name" type="text" placeholder="z.B. Erstgespräch IT-Kunden oder Kaltakquise Versicherung" autocomplete="off">
+        <input class="wfi n-input" id="w-name" type="text" placeholder="z.B. Erstgespräch IT-Kunden oder Kaltakquise Versicherung" autocomplete="off">
       </div>
       <div class="wfg">
         <label class="wfl">Branche</label>
-        <select class="wfs" id="w-branche">
+        <select class="wfs n-input" id="w-branche">
           <option value="">Branche wählen…</option>
           <option>SaaS</option>
           <option>Versicherung</option>
@@ -205,11 +205,11 @@ option{background:#0c0c18}
       </div>
       <div class="wfg">
         <label class="wfl">Was verkaufst du?</label>
-        <textarea class="wfta" id="w-produkt" placeholder="z.B. Cloud-basierte Projektmanagement-Software für Teams ab 10 Personen. Monatliches Abo, kein Setup-Aufwand."></textarea>
+        <textarea class="wfta n-input" id="w-produkt" placeholder="z.B. Cloud-basierte Projektmanagement-Software für Teams ab 10 Personen. Monatliches Abo, kein Setup-Aufwand."></textarea>
       </div>
       <div class="wfg">
         <label class="wfl">Preis / Konditionen</label>
-        <input class="wfi" id="w-preis" type="text" placeholder="z.B. Ab 29€/User/Monat, 14 Tage kostenlos testen">
+        <input class="wfi n-input" id="w-preis" type="text" placeholder="z.B. Ab 29€/User/Monat, 14 Tage kostenlos testen">
       </div>
     </div>
 
@@ -229,7 +229,7 @@ option{background:#0c0c18}
       <div class="wiz-sub">Wie läuft dein typisches Gespräch ab? Du kannst die Phasen jederzeit ändern.</div>
       <div class="wiz-vorlage-row">
         <span class="wiz-vorlage-lbl">Vorlage laden:</span>
-        <select class="wfs" id="w-vorlage" onchange="loadPhaseVorlage(this.value)" style="flex:1;max-width:240px">
+        <select class="wfs n-input" id="w-vorlage" onchange="loadPhaseVorlage(this.value)" style="flex:1;max-width:240px">
           <option value="">— Vorlage wählen —</option>
           <option value="Standard">Standard (5 Phasen)</option>
           <option value="Kaltakquise">Kaltakquise</option>
@@ -242,10 +242,10 @@ option{background:#0c0c18}
     </div>
 
     <div class="wiz-footer">
-      <button type="button" class="btn btn-secondary" id="wiz-back-btn" onclick="wizBack()" style="display:none">← Zurück</button>
+      <button type="button" class="n-btn n-btn-ghost" id="wiz-back-btn" onclick="wizBack()" style="display:none">← Zurück</button>
       <div style="display:flex;gap:8px;margin-left:auto">
-        <button type="button" class="btn btn-secondary" onclick="closeWizard()">Abbrechen</button>
-        <button type="button" class="btn btn-primary" id="wiz-next-btn" onclick="wizNext()">Weiter →</button>
+        <button type="button" class="n-btn n-btn-ghost" onclick="closeWizard()">Abbrechen</button>
+        <button type="button" class="n-btn n-btn-primary" id="wiz-next-btn" onclick="wizNext()">Weiter →</button>
       </div>
     </div>
   </div>
@@ -328,7 +328,7 @@ function addObjRow(val) {
   const list = document.getElementById('obj-list');
   const row = document.createElement('div');
   row.className = 'obj-row';
-  row.innerHTML = `<input class="wfi obj-inp" type="text" placeholder="z.B. Das ist uns zu teuer" value="${val ? val.replace(/"/g,'&quot;') : ''}">
+  row.innerHTML = `<input class="wfi n-input obj-inp" type="text" placeholder="z.B. Das ist uns zu teuer" value="${val ? val.replace(/"/g,'&quot;') : ''}">
     <button type="button" class="btn-obj-rm" onclick="this.parentElement.remove()">✕</button>`;
   list.appendChild(row);
   if (val === undefined) row.querySelector('input').focus();
@@ -350,7 +350,7 @@ function addPhaseRow(val) {
   const row = document.createElement('div');
   row.className = 'phase-row';
   row.innerHTML = `<span class="phase-num">${idx}</span>
-    <input class="wfi phase-inp" type="text" placeholder="Phasen-Name" value="${val ? val.replace(/"/g,'&quot;') : ''}">
+    <input class="wfi n-input phase-inp" type="text" placeholder="Phasen-Name" value="${val ? val.replace(/"/g,'&quot;') : ''}">
     <button type="button" class="btn-obj-rm" onclick="this.parentElement.remove();renumPhaseRows()">✕</button>`;
   list.appendChild(row);
 }
