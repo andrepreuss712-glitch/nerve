@@ -232,6 +232,23 @@
   color:var(--page-text-secondary);
   font-size:13px;
 }
+/* ── Custom Scenario Dropdown ── */
+.n-custom-select{position:relative;max-width:100%;flex:1}
+.n-select-trigger{background:var(--input-bg,rgba(255,255,255,0.04));border:1px solid var(--input-border,rgba(255,255,255,0.12));
+  border-radius:6px;padding:8px 12px;color:var(--page-text-color);font-size:13px;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;transition:border-color .15s;font-family:inherit}
+.n-select-trigger:hover{border-color:var(--input-border-focus,rgba(255,255,255,0.25))}
+.n-select-arrow{color:var(--page-text-secondary);font-size:11px;flex-shrink:0;margin-left:6px}
+.n-select-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:var(--glass-bg,rgba(20,20,40,0.97));backdrop-filter:blur(20px);
+  border:1px solid var(--input-border,rgba(255,255,255,0.12));border-radius:6px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:100;max-height:220px;overflow-y:auto;padding:4px 0}
+.n-select-dropdown.open{display:block}
+.n-select-option{padding:8px 12px;color:var(--page-text-color);font-size:13px;cursor:pointer;transition:background .1s}
+.n-select-option:hover{background:rgba(255,255,255,0.06)}
+.n-select-option.selected{color:#2dd4a8}
+.n-select-group-label{padding:4px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.07em;
+  color:var(--page-text-muted);text-transform:uppercase;cursor:default}
 {% endblock %}
 
 {% block content %}
@@ -313,10 +330,14 @@
       <div class="t-section">
         <div class="t-section-label">Trainings-Szenario <span style="font-weight:400;color:#4a4a60">(optional)</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <select id="t-scenarioSelect" class="form-select t-profile-select" style="flex:1"
-                  onchange="onScenarioChange()">
-            <option value="">— Kein Szenario —</option>
-          </select>
+          <div class="n-custom-select" id="t-scenarioSelectWrap">
+            <div class="n-select-trigger" onclick="toggleScenarioDropdown()">
+              <span id="n-select-display">— Kein Szenario —</span>
+              <span class="n-select-arrow">▾</span>
+            </div>
+            <div class="n-select-dropdown" id="n-select-dropdown"></div>
+          </div>
+          <input type="hidden" id="t-scenarioSelect" value="">
           <button class="btn btn-secondary btn-sm" onclick="openScenarioModal()" style="white-space:nowrap">+ Neu</button>
           <button class="btn btn-danger btn-sm" id="t-deleteScenBtn" style="display:none"
                   onclick="deleteSelectedScenario()" title="Szenario löschen">🗑</button>
@@ -386,6 +407,34 @@
       <div style="text-align:center;color:#6b6b80;font-style:italic;padding:40px 0">
         Auswertung wird erstellt…
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirm End Training Modal ─────────────────────────────────────────── -->
+<div id="t-confirmEndModal" class="t-modal-bg t-hidden">
+  <div class="t-modal" style="max-width:380px">
+    <div class="t-modal-title">Training beenden?</div>
+    <p style="font-size:13px;color:var(--page-text-secondary);margin-bottom:12px">
+      Soll das Training jetzt beendet und die Auswertung angezeigt werden?
+    </p>
+    <div class="t-modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('t-confirmEndModal').classList.add('t-hidden')">Weiter trainieren</button>
+      <button class="btn btn-primary" onclick="confirmEndTraining()">Auswertung anzeigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirm Delete Scenario Modal ──────────────────────────────────────── -->
+<div id="t-confirmDeleteModal" class="t-modal-bg t-hidden">
+  <div class="t-modal" style="max-width:380px">
+    <div class="t-modal-title">Szenario löschen?</div>
+    <p style="font-size:13px;color:var(--page-text-secondary);margin-bottom:12px">
+      Dieses Szenario wird unwiderruflich gelöscht.
+    </p>
+    <div class="t-modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('t-confirmDeleteModal').classList.add('t-hidden')">Abbrechen</button>
+      <button class="btn btn-danger" onclick="confirmDeleteScenario()">Löschen</button>
     </div>
   </div>
 </div>
@@ -852,7 +901,12 @@ async function endTraining() {
       '</div>';
     return;
   }
-  if (!confirm('Training beenden und Auswertung anzeigen?')) return;
+  document.getElementById('t-confirmEndModal').classList.remove('t-hidden');
+  return;  // actual end logic moved to confirmEndTraining()
+}
+
+async function confirmEndTraining() {
+  document.getElementById('t-confirmEndModal').classList.add('t-hidden');
   stopTimer();
   if (currentAudio) { try { currentAudio.pause(); } catch(e){} }
   setWaiting(true);
@@ -1128,13 +1182,22 @@ async function loadScenarios() {
 const _scenarioMeta = {};
 
 function renderScenarioDropdown(list) {
-  const sel = document.getElementById('t-scenarioSelect');
-  if (!sel) return;
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">— Kein Szenario —</option>';
+  const hiddenInput = document.getElementById('t-scenarioSelect');
+  const dd = document.getElementById('n-select-dropdown');
+  const display = document.getElementById('n-select-display');
+  if (!hiddenInput || !dd) return;
+  const prev = hiddenInput.value;
+  dd.innerHTML = '';
 
   // Store meta
   list.forEach(s => { _scenarioMeta[s.id] = s; });
+
+  // "Kein Szenario" default option
+  const defOpt = document.createElement('div');
+  defOpt.className = 'n-select-option' + (prev === '' ? ' selected' : '');
+  defOpt.textContent = '— Kein Szenario —';
+  defOpt.onclick = function() { selectScenarioOption('', '— Kein Szenario —'); };
+  dd.appendChild(defOpt);
 
   // Group by difficulty in display order
   const GROUPS = [
@@ -1154,21 +1217,52 @@ function renderScenarioDropdown(list) {
   Object.keys(byDiff).filter(k => !knownKeys.has(k))
     .forEach(k => GROUPS.push({ key: k, label: k }));
 
+  let restoredLabel = '— Kein Szenario —';
   GROUPS.forEach(group => {
     const items = byDiff[group.key];
     if (!items || items.length === 0) return;
-    const og = document.createElement('optgroup');
-    og.label = '── ' + group.label + ' ──';
+    const gl = document.createElement('div');
+    gl.className = 'n-select-group-label';
+    gl.textContent = '── ' + group.label + ' ──';
+    dd.appendChild(gl);
     items.forEach(s => {
-      const o = document.createElement('option');
-      o.value = s.id;
-      o.textContent = s.name;
-      if (String(s.id) === prev) o.selected = true;
-      og.appendChild(o);
+      const opt = document.createElement('div');
+      opt.className = 'n-select-option' + (String(s.id) === String(prev) ? ' selected' : '');
+      opt.textContent = s.name;
+      opt.onclick = (function(sid, sname) {
+        return function() { selectScenarioOption(String(sid), sname); };
+      })(s.id, s.name);
+      dd.appendChild(opt);
+      if (String(s.id) === String(prev)) restoredLabel = s.name;
     });
-    sel.appendChild(og);
   });
+
+  // Restore display label for previously selected scenario
+  if (display) display.textContent = restoredLabel;
 }
+
+function toggleScenarioDropdown() {
+  document.getElementById('n-select-dropdown').classList.toggle('open');
+}
+
+function selectScenarioOption(value, label) {
+  document.getElementById('t-scenarioSelect').value = value;
+  document.getElementById('n-select-display').textContent = label;
+  document.getElementById('n-select-dropdown').classList.remove('open');
+  // Update selected class
+  document.querySelectorAll('#n-select-dropdown .n-select-option').forEach(function(el) {
+    el.classList.toggle('selected', el.textContent === label && (value === '' ? el.textContent === '— Kein Szenario —' : true));
+  });
+  onScenarioChange();
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.n-custom-select')) {
+    var dd = document.getElementById('n-select-dropdown');
+    if (dd) dd.classList.remove('open');
+  }
+});
 
 function onScenarioChange() {
   const val    = document.getElementById('t-scenarioSelect').value;
@@ -1218,9 +1312,12 @@ async function saveScenario() {
     if (data.ok) {
       closeScenarioModal();
       await loadScenarios();
-      // Auto-select the new scenario
-      const sel = document.getElementById('t-scenarioSelect');
-      if (sel && data.id) { sel.value = data.id; onScenarioChange(); }
+      // Auto-select the new scenario in custom dropdown
+      if (data.id) {
+        const meta = _scenarioMeta[data.id];
+        const label = meta ? meta.name : String(data.id);
+        selectScenarioOption(String(data.id), label);
+      }
     } else {
       alert('Fehler: ' + (data.error || '?'));
     }
@@ -1228,12 +1325,20 @@ async function saveScenario() {
 }
 
 async function deleteScenario(id) {
-  if (!confirm('Szenario löschen?')) return;
+  window._pendingDeleteId = id;
+  document.getElementById('t-confirmDeleteModal').classList.remove('t-hidden');
+}
+
+async function confirmDeleteScenario() {
+  document.getElementById('t-confirmDeleteModal').classList.add('t-hidden');
+  const id = window._pendingDeleteId;
+  if (!id) return;
   try {
     const res  = await fetch('/training/scenarios/' + id, {method: 'DELETE'});
     const data = await res.json();
     if (data.ok) {
       selectedScenario = null;
+      selectScenarioOption('', '— Kein Szenario —');
       await loadScenarios();
       const delBtn = document.getElementById('t-deleteScenBtn');
       if (delBtn) delBtn.style.display = 'none';
