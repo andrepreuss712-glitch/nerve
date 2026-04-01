@@ -205,6 +205,33 @@
 .t-modal-title{font-size:16px;font-weight:800;margin-bottom:18px}
 .t-modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 .t-modal .form-group{margin-bottom:14px}
+
+/* ── Loading overlay (Auswertung) ── */
+.t-loading-overlay{
+  position:fixed;inset:0;z-index:800;
+  background:var(--page-bg);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;
+}
+.t-loading-bar-wrap{
+  width:280px;height:4px;
+  background:var(--glass-bg);
+  border-radius:2px;overflow:hidden;
+}
+.t-loading-bar{
+  height:100%;width:50%;
+  background:#2dd4a8;
+  border-radius:2px;
+  animation:t-indeterminate 1.4s ease infinite;
+}
+@keyframes t-indeterminate{
+  0%{transform:translateX(-100%);}
+  100%{transform:translateX(560%);}
+}
+.t-loading-text{
+  color:var(--page-text-secondary);
+  font-size:13px;
+}
 {% endblock %}
 
 {% block content %}
@@ -830,6 +857,16 @@ async function endTraining() {
   if (currentAudio) { try { currentAudio.pause(); } catch(e){} }
   setWaiting(true);
   showStatus('Auswertung wird erstellt…');
+  // Show loading overlay
+  const loadOverlay = document.getElementById('t-loading-overlay');
+  if (loadOverlay) loadOverlay.style.display = 'flex';
+  var loadTexts = ['Einwände analysieren...', 'Coaching-Punkte berechnen...', 'Zusammenfassung erstellen...'];
+  var loadIdx = 0;
+  var loadInterval = setInterval(function() {
+    loadIdx = (loadIdx + 1) % loadTexts.length;
+    const subtext = document.getElementById('t-loading-subtext');
+    if (subtext) subtext.textContent = loadTexts[loadIdx];
+  }, 2000);
   try {
     const res  = await fetch('/training/end', {
       method: 'POST',
@@ -837,10 +874,14 @@ async function endTraining() {
       body: JSON.stringify({hilfe_count: hilfeCount}),
     });
     const data = await res.json();
+    clearInterval(loadInterval);
+    if (loadOverlay) loadOverlay.style.display = 'none';
     if (!data.ok) { alert('Fehler bei der Auswertung'); setWaiting(false); return; }
     buildScoring(data);
     showPhase('scoring');
   } catch(e) {
+    clearInterval(loadInterval);
+    if (loadOverlay) loadOverlay.style.display = 'none';
     alert('Verbindungsfehler bei der Auswertung');
     setWaiting(false);
     console.error('[End]', e);
@@ -1208,4 +1249,12 @@ function deleteSelectedScenario() {
 initPTT();
 loadScenarios();
 </script>
+
+<div id="t-loading-overlay" class="t-loading-overlay" style="display:none">
+  <div class="n-glass" style="padding:32px;text-align:center;border-radius:12px">
+    <h3 style="color:var(--page-text-color);margin-bottom:16px">Gespräch wird ausgewertet...</h3>
+    <div class="t-loading-bar-wrap"><div class="t-loading-bar"></div></div>
+    <p class="t-loading-text" id="t-loading-subtext">Einwände analysieren...</p>
+  </div>
+</div>
 {% endblock %}

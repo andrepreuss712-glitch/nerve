@@ -282,9 +282,12 @@ async function beenden(){
     return;
   }
   if(!confirm('Gespräch beenden?\nLog wird gespeichert und State zurückgesetzt.')) return;
+  const pcLoading=document.getElementById('postcall-loading');
+  if(pcLoading){pcLoading.style.display='flex';}
   try{
     const res=await fetch('/api/beenden',{method:'POST'});
     const data=await res.json();
+    if(pcLoading){pcLoading.style.display='none';}
     if(!data.ok){alert('Fehler: '+(data.error||'?'));return;}
     stopSessionTimer();
     // UI leeren
@@ -314,7 +317,7 @@ async function beenden(){
       zeigePostcall(data.postcall, data.filename||'');
     }
     showToast('✓ Gespräch gespeichert — '+(data.filename||''));
-  }catch(e){console.error('[BEENDEN]',e);alert('Fehler: '+e.message);}
+  }catch(e){if(pcLoading){pcLoading.style.display='none';}console.error('[BEENDEN]',e);alert('Fehler: '+e.message);}
 }
 
 // ── Log Download ──────────────────────────────────────────────────────────────

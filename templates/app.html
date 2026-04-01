@@ -426,6 +426,10 @@
     .postcall-box{border:none!important;color:black!important;background:white!important;width:100%!important;max-width:none!important}
     .postcall-actions,.sterne-row,.sterne-kommentar{display:none!important}
   }
+  @keyframes indeterminate-bar{
+    0%{transform:translateX(-100%);}
+    100%{transform:translateX(560%);}
+  }
 </style>
 </head>
 <body>
@@ -780,6 +784,14 @@
   </div>
 </div>
 
+<div id="postcall-loading" style="display:none;position:fixed;inset:0;z-index:800;background:var(--page-bg);align-items:center;justify-content:center">
+  <div class="n-glass" style="padding:32px;text-align:center;border-radius:12px">
+    <h3 style="color:var(--page-text-color);margin-bottom:16px">Gespräch wird ausgewertet...</h3>
+    <div style="width:280px;height:4px;background:var(--glass-bg,rgba(255,255,255,0.05));border-radius:2px;overflow:hidden;margin:0 auto">
+      <div style="height:100%;width:50%;background:#2dd4a8;border-radius:2px;animation:indeterminate-bar 1.4s ease infinite"></div>
+    </div>
+  </div>
+</div>
 <script src="/static/app.js"></script>
 <script>
 // ── Kompakt-Modus ─────────────────────────────────────────────────────────────
