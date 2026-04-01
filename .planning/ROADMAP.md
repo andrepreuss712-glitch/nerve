@@ -12,9 +12,10 @@ NERVE is at v0.9.4 with the core product fully built. Milestone 1 closes the gap
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Business Setup** - Register the business and open a bank account (parallel to all technical work, start now)
-- [ ] **Phase 2: Product Fixes** - Complete all product gaps and polish before wiring payments
-- [ ] **Phase 3: Infrastructure & Deployment** - Deploy to Hetzner VPS with HTTPS — prerequisite for Stripe webhooks
+- ~~**Phase 1: Business Setup**~~ - *Skipped from GSD — user handles manually (Gewerbeanmeldung, Geschäftskonto, USt-IdNr, Steuerberater)*
+- [x] **Phase 2: Product Fixes** - Complete all product gaps and polish before wiring payments
+- [x] **Phase 3: Infrastructure & Deployment** - Deploy to Hetzner VPS with HTTPS — VPS live on getnerve.app ✓
+- [ ] **Phase 03.1: Frontend Redesign** - App-page redesign using NERVE Design System (INSERTED)
 - [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
@@ -71,7 +72,23 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — Code hardening: requirements split, SECRET_KEY fail-fast, SQLite WAL, CORS lock (INFRA-04, INFRA-05, LEGAL-04)
 - [x] 03-02-PLAN.md — Deployment artifacts: deploy.sh, nginx.conf, nerve.service (INFRA-01, INFRA-02, INFRA-03)
-- [ ] 03-03-PLAN.md — VPS deployment runbook: provision, SSL, systemd, end-to-end verification (INFRA-01, INFRA-02, INFRA-03)
+- [x] 03-03-PLAN.md — VPS deployment runbook: provision, SSL, systemd, end-to-end verification — DONE (getnerve.app live)
+
+### Phase 03.1: Frontend Redesign (INSERTED)
+
+**Goal**: All app pages use the NERVE Design System — consistent glass panels, typography, color tokens, and component language across Dashboard, Live-Session, Training, Profil, Wizard, Analysis, and Sessions. Landing page excluded.
+**Requirements**: UI-01 through UI-07 (one per page)
+**Depends on**: Phase 3
+**Stack constraint**: No framework change — pure CSS with Custom Properties. Design system reference: `NERVE-Design-System.html`
+**Plans**: 6 plans
+
+Plans:
+- [ ] 03.1-01-PLAN.md — CSS foundation: create static/nerve.css + update base.html (UI-01)
+- [ ] 03.1-02-PLAN.md — Dashboard redesign: glass panels, KPI cards, feed items (UI-02)
+- [ ] 03.1-03-PLAN.md — Live-Session redesign: NERVE tokens, AI panel, live badge (UI-03)
+- [ ] 03.1-04-PLAN.md — Training redesign: glass cards, pill tabs, teal accents (UI-04)
+- [ ] 03.1-05-PLAN.md — Profile pages: editor + list with glass panels, NERVE inputs (UI-05, UI-06)
+- [ ] 03.1-06-PLAN.md — Wizard + Onboarding: teal tokens, NERVE inputs (UI-07)
 
 ### Phase 4: Payments & Legal
 **Goal**: Users can pay for a subscription and the product is legally compliant for DACH B2B launch
@@ -99,13 +116,14 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order. Phase 1 and Phase 2 can run in parallel (Phase 1 is admin, Phase 2 is code).
+Phases execute in numeric order.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Business Setup | 0/3 | Not started | - |
-| 2. Product Fixes | 3/6 | In Progress|  |
-| 3. Infrastructure & Deployment | 1/3 | In Progress|  |
+| 1. Business Setup | — | Skipped (manual) | — |
+| 2. Product Fixes | 6/6 ✓ | Complete | 2026-04-01 |
+| 3. Infrastructure & Deployment | 3/3 ✓ | Complete | 2026-04-01 |
+| 3.1 Frontend Redesign | 0/6 | Ready | — |
 | 4. Payments & Legal | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
