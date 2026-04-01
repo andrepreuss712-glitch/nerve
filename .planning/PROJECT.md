@@ -27,7 +27,10 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - ✓ CRM-Export: Automatische Gesprächsnotiz + Follow-up Email — existing
 - ✓ DSGVO-Modus (Default AN) — existing
 - ✓ Skript-Teleprompter mit Abdeckungs-Tracking — existing
-- ✓ Kompakt-Modus (380px floating Panel) — existing
+- ✓ Kompakt-Modus (320px floating overlay, bottom-right) — validated Phase 03.2
+- ✓ Light/Dark Mode Toggle mit System-Detection und DB-Persistenz — validated Phase 03.2
+- ✓ Sidebar User Menu (Avatar + Dropdown) — validated Phase 03.2
+- ✓ Globale Sprachpräferenz (DB-persistent, Training pre-selected) — validated Phase 03.2
 - ✓ Trainingsmodus: KI-Kunde mit ElevenLabs-Stimme, 4 Schwierigkeitsstufen, 9 Sprachen, Scoring — existing
 - ✓ Profil-System (12 Sektionen, 3 Demo-Profile) — existing
 - ✓ Dashboard mit Gamification (Level, Achievements, Heatmap) — existing
@@ -126,7 +129,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 03.1 (frontend-redesign) completion*
+*Last updated: 2026-04-01 after Phase 03.2 (uat-bug-fixes) completion — 17 UAT issues resolved*
 
 ## Phase Completion Notes
 
