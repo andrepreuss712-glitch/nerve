@@ -327,7 +327,7 @@
       <div class="t-chat-sub" id="t-chatSub"></div>
     </div>
     <div>
-      <button class="btn btn-danger btn-sm" onclick="endTraining()">■ Beenden</button>
+      <button class="btn btn-danger btn-sm" id="t-endBtn" onclick="endTraining()">■ Beenden</button>
     </div>
   </div>
 
@@ -457,6 +457,9 @@ function selectLanguage(code) {
   if (sendBtn) sendBtn.textContent = tUI.senden || 'Senden →';
   const helpBtn = document.getElementById('t-helpBtn');
   if (helpBtn) helpBtn.textContent = tUI.hilfe_btn || '💡 Was soll ich sagen?';
+  // Update Beenden button in chat header
+  const endBtn = document.getElementById('t-endBtn');
+  if (endBtn) endBtn.textContent = tUI.beenden || '■ Beenden';
 }
 
 function checkReady() {
@@ -541,6 +544,14 @@ function initChat(data) {
   if (counterEl) { counterEl.style.display = 'none'; counterEl.textContent = ''; }
   updateChatHeader();
   startTimer();
+
+  // Apply current language texts to all translatable elements
+  const sendBtn2 = document.getElementById('t-sendBtn');
+  if (sendBtn2) sendBtn2.textContent = tUI.senden || 'Senden →';
+  const endBtn2 = document.getElementById('t-endBtn');
+  if (endBtn2) endBtn2.textContent = tUI.beenden || '■ Beenden';
+  const helpBtn2 = document.getElementById('t-helpBtn');
+  if (helpBtn2) helpBtn2.textContent = tUI.hilfe_btn || '💡 Was soll ich sagen?';
 
   const role = data.hat_sekretaerin ? (tUI.phase_sek || 'Sekretärin') : (tUI.phase_kunde || 'Kunde');
   const name = data.hat_sekretaerin ? sessionMeta.sekName : sessionMeta.chefName;
@@ -795,6 +806,18 @@ function adoptSugg(el) {
 
 // ── End / Scoring ───────────────────────────────────────────────────────────────
 async function endTraining() {
+  // Guard: no real conversation detected
+  const userMsgCount = document.querySelectorAll('#t-messages .t-msg-out').length;
+  if (trainingSecs < 10 || userMsgCount === 0) {
+    showPhase('scoring');
+    document.getElementById('t-scoring').innerHTML =
+      '<div class="n-glass" style="padding:32px;text-align:center;margin:40px auto;max-width:500px">' +
+        '<h3 style="color:var(--page-text-color);margin-bottom:12px">Kein Gespräch erkannt</h3>' +
+        '<p style="color:var(--page-text-secondary)">Starte ein neues Training, um eine Auswertung zu erhalten.</p>' +
+        '<button class="btn btn-primary" onclick="showPhase(\'setup\')" style="margin-top:16px">Neues Training</button>' +
+      '</div>';
+    return;
+  }
   if (!confirm('Training beenden und Auswertung anzeigen?')) return;
   stopTimer();
   if (currentAudio) { try { currentAudio.pause(); } catch(e){} }
