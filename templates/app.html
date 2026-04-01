@@ -418,7 +418,7 @@
   /* ── DSGVO Banner ── */
   .dsgvo-banner{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);
     background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 16px;
-    font-size:11px;color:var(--page-text-secondary);z-index:300;display:none;align-items:center;gap:8px;
+    font-size:11px;color:var(--page-text-secondary);z-index:400;display:none;align-items:center;gap:8px;
     max-width:500px;text-align:center}
   .dsgvo-banner.visible{display:flex}
   .dsgvo-banner strong{color:var(--page-text-color)}
@@ -516,7 +516,7 @@
 <!-- ── DSGVO Banner ─────────────────────────────────────────────────────── -->
 <div class="dsgvo-banner" id="dsgvoBanner">
   <strong>🔒 DSGVO-Modus aktiv</strong> — Keine wörtlichen Zitate im CRM-Export. Nur zusammengefasste Notizen.
-  <button class="dsgvo-banner-close" onclick="document.getElementById('dsgvoBanner').classList.remove('visible')" title="Ausblenden">✕</button>
+  <button class="dsgvo-banner-close" onclick="document.getElementById('dsgvoBanner').classList.remove('visible');var sp=document.querySelector('.panel-sprachanalyse');if(sp)sp.style.paddingBottom='';" title="Ausblenden">✕</button>
 </div>
 
 <!-- ── Main ───────────────────────────────────────────────────────────────── -->

@@ -131,7 +131,13 @@ socket.on('connect',()=>{
   if (dsgvoBanner && !dsgvoBanner._shown) {
     dsgvoBanner._shown = true;
     dsgvoBanner.classList.add('visible');
-    setTimeout(() => dsgvoBanner.classList.remove('visible'), 6000);
+    // Add bottom padding to metrics panel so emotion circles are not hidden behind the banner
+    var sprachPanel = document.querySelector('.panel-sprachanalyse');
+    if (sprachPanel) sprachPanel.style.paddingBottom = '48px';
+    setTimeout(() => {
+      dsgvoBanner.classList.remove('visible');
+      if (sprachPanel) sprachPanel.style.paddingBottom = '';
+    }, 6000);
   }
   // Start session timer on connect — not on first transcript
   startSessionTimer();
