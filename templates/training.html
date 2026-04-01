@@ -618,7 +618,7 @@ function autoPlay(b64, btnId) {
     setBtnState(btnId, 'playing');
     a.onended = () => setBtnState(btnId, 'idle');
   }
-  a.play().catch(() => {});
+  a.play().catch(e => console.warn('[TTS] Autoplay blocked:', e));
 }
 
 function togglePlay(id) {
@@ -711,6 +711,7 @@ function initPTT() {
 
 function startRec() {
   if (!navigator.mediaDevices) { showStatus('Mikrofon nicht verfügbar'); return; }
+  console.log('[MIC] Requesting getUserMedia...');
   navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
     isRecording = true;
     audioChunks = [];
@@ -725,7 +726,7 @@ function startRec() {
       transcribeAudio(new Blob(audioChunks, {type: mime}));
     };
     mediaRecorder.start();
-  }).catch(e => { showStatus('Mikrofon-Zugriff verweigert'); console.error('[PTT]', e); });
+  }).catch(err => { showStatus('Mikrofon-Zugriff verweigert'); addSysMsg('Mikrofon-Zugriff fehlgeschlagen: ' + err.message); console.error('[PTT]', err); });
 }
 
 function stopRec() {
@@ -987,7 +988,7 @@ function stopTimer() {
 }
 
 // ── Freizeichen (language-specific ring tone) ───────────────────────────────
-function startFreizeichen() {
+async function startFreizeichen() {
   try {
     const fz  = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES['de']).freizeichen;
     const hz  = fz.hz  || 425;
@@ -995,6 +996,8 @@ function startFreizeichen() {
     const off = fz.off || 4.0;
     const period = on + off;
     freizCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Resume AudioContext — browsers auto-suspend it until a user gesture
+    if (freizCtx.state === 'suspended') { await freizCtx.resume(); }
     freizOsc = freizCtx.createOscillator();
     const g  = freizCtx.createGain();
     freizOsc.type = 'sine';

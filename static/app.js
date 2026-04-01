@@ -1,3 +1,6 @@
+// NOTE: Live mic is server-side PyAudio. On VPS without audio hardware,
+// mic capture is non-functional. Browser-based WebRTC mic is Phase N+1 scope.
+
 // ── Socket & DOM ──────────────────────────────────────────────────────────────
 const socket = io();
 const tr     = document.getElementById('tr');
