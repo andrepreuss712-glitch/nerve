@@ -83,7 +83,7 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 03.1-01-PLAN.md — CSS foundation: create static/nerve.css + update base.html (UI-01)
+- [x] 03.1-01-PLAN.md — CSS foundation: create static/nerve.css + update base.html (UI-01)
 - [ ] 03.1-02-PLAN.md — Dashboard redesign: glass panels, KPI cards, feed items (UI-02)
 - [ ] 03.1-03-PLAN.md — Live-Session redesign: NERVE tokens, AI panel, live badge (UI-03)
 - [ ] 03.1-04-PLAN.md — Training redesign: glass cards, pill tabs, teal accents (UI-04)

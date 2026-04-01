@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: planning
-stopped_at: Phase 03 complete — VPS live on getnerve.app. Phase 03.1 (Frontend Redesign) inserted, planning next.
-last_updated: "2026-04-01"
+status: executing
+stopped_at: Phase 03.1 Plan 01 complete — nerve.css + base.html foundation done
+last_updated: "2026-04-01T10:24:20.202Z"
 last_activity: 2026-04-01
 progress:
-  total_phases: 5
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
-  percent: 40
+  total_phases: 6
+  completed_phases: 1
+  total_plans: 18
+  completed_plans: 9
+  percent: 55
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 03 — infrastructure-deployment (Wave 2 pending)
+**Current focus:** Phase 03.1 — frontend-redesign
 
 ## Current Position
 
-Phase: 03.1 (frontend-redesign) — PLANNING
-Plan: 0 of TBD (not yet planned)
-Status: Phase 3 complete. Phase 3.1 inserted. Ready to plan.
+Phase: 03.1 (frontend-redesign) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
 Last activity: 2026-04-01
 
 **Next:** `/gsd:plan-phase 03.1` — design system integration + app page redesign
@@ -62,6 +62,7 @@ Progress: [████████░░] ~55% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 02-product-fixes P05 | 12 | 2 tasks | 7 files |
 | Phase 03 P02 | 3 | 2 tasks | 3 files |
 | Phase 03-infrastructure-deployment P01 | 2 | 3 tasks | 5 files |
+| Phase 03.1 P01 | 251 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,8 @@ Recent decisions affecting current work:
 - [Phase 03-infrastructure-deployment]: SECRET_KEY check uses os.environ.get('FLASK_DEBUG') not app.debug — app.debug is always False at module-load under gunicorn
 - [Phase 03-infrastructure-deployment]: WAL mode listener guarded by sqlite detection — safe for future PostgreSQL upgrade path
 - [Phase 03-infrastructure-deployment]: CORS_ORIGIN defaults to nerve.app in production, wildcard only when FLASK_DEBUG env var is set
+- [Phase 03.1]: Nav logo updated to NERVE teal (#2dd4a8) — aligns with new design system primary color, replacing old gold #E8B040
+- [Phase 03.1]: Legacy CSS classes preserved in nerve.css alongside new .n-* classes — prevents visual regression on unmigrated child pages during phased rollout
 
 ### Roadmap Evolution
 
@@ -112,12 +115,13 @@ Recent decisions affecting current work:
 | Phase 1: Business Setup | — | Skipped from GSD — user handles manually |
 
 **Phase 3 verification (manual):**
+
 - App accessible at getnerve.app over HTTPS ✓
 - VPS: Hetzner CX22, IP 178.104.82.166 ✓
 - Remaining checks (Socket.IO 101, WAL mode, CORS lock): user to confirm on VPS
 
 ## Session Continuity
 
-Last session: 2026-04-01
-Stopped at: Phase 3 done (VPS live). Phase 3.1 Frontend Redesign inserted. Ready to plan.
+Last session: 2026-04-01T10:24:20.200Z
+Stopped at: Phase 03.1 Plan 01 complete — nerve.css + base.html foundation done
 Resume: `/gsd:plan-phase 03.1`
