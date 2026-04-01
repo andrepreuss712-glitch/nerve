@@ -5,7 +5,7 @@ milestone_name: milestone
 status: verifying
 stopped_at: Completed 03.2-07-PLAN.md
 last_updated: "2026-04-01T15:26:35.283Z"
-last_activity: 2026-04-01
+last_activity: 2026-04-01 - Completed quick task 260401-qr4: Fix sidebar user avatar visibility and light/dark mode toggle
 progress:
   total_phases: 7
   completed_phases: 3
@@ -138,6 +138,12 @@ Recent decisions affecting current work:
 
 - **Phase 4 dependency**: Phase 4 (Stripe) needs verified Stripe account → requires Gewerbeanmeldung + Geschäftskonto (Phase 1 manual, ~3-5 weeks) — user is handling this in parallel
 - Research flags: AVV signing portal locations for Deepgram/Anthropic/ElevenLabs should be verified directly. Stripe Tax / VAT invoice configuration for Germany needs explicit research during Phase 4 planning.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260401-qr4 | Fix sidebar user avatar visibility and light/dark mode toggle | 2026-04-01 | 972cd94 | [260401-qr4-fix-sidebar-user-avatar-visibility-and-l](./quick/260401-qr4-fix-sidebar-user-avatar-visibility-and-l/) |
 
 ## What's Done
 
