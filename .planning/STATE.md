@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03.2-05-PLAN.md
-last_updated: "2026-04-01T15:07:04.066Z"
+stopped_at: Completed 03.2-04-PLAN.md
+last_updated: "2026-04-01T15:12:27.244Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 25
-  completed_plans: 18
+  completed_plans: 19
   percent: 65
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 03.2 (uat-bug-fixes) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-04-01
 
@@ -69,6 +69,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 03.2-uat-bug-fixes P02 | 20 | 2 tasks | 2 files |
 | Phase 03.2-uat-bug-fixes P03 | 8 | 1 tasks | 2 files |
 | Phase 03.2-uat-bug-fixes P05 | 15 | 2 tasks | 6 files |
+| Phase 03.2-uat-bug-fixes P04 | 2 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,9 @@ Recent decisions affecting current work:
 - [Phase 03.2-uat-bug-fixes]: preferred_language column defaults to 'de' — backward-compatible, existing users automatically get German as preference
 - [Phase 03.2-uat-bug-fixes]: DOMContentLoaded calls selectLanguage() for non-default saved language to sync tUI and button states in training.html
 - [Phase 03.2-uat-bug-fixes]: profile_wizard.html already uses neutral placeholders — no personal names found, no changes required (UAT-10)
+- [Phase 03.2-uat-bug-fixes]: No-FOUC script placed before CSS link — runs synchronously, prevents flash of wrong theme
+- [Phase 03.2-uat-bug-fixes]: Server-hint via data-server-theme on <html> tag from g.user.preferred_theme — DB value takes precedence over localStorage on authenticated pages
+- [Phase 03.2-uat-bug-fixes]: preferred_theme defaults to 'dark' — backward-compatible, existing users stay on dark theme
 
 ### Roadmap Evolution
 
@@ -144,6 +148,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-01T15:07:04.062Z
-Stopped at: Completed 03.2-05-PLAN.md
+Last session: 2026-04-01T15:12:27.241Z
+Stopped at: Completed 03.2-04-PLAN.md
 Resume: `/gsd:plan-phase 03.1 --gaps` — then migrate landing.html + login.html — then Phase 4

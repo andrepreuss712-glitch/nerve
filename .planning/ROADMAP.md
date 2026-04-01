@@ -119,7 +119,7 @@ Plans:
 - [x] 03.2-01-PLAN.md — Critical bugs: training flow — Anruf-Button, PTT mic, TTS audio (UAT-01, UAT-02)
 - [x] 03.2-02-PLAN.md — Critical bugs: language switch, live timer, no-conversation guard (UAT-03, UAT-04, UAT-05)
 - [x] 03.2-03-PLAN.md — Architecture: sidebar user menu with avatar + dropdown (UAT-15)
-- [ ] 03.2-04-PLAN.md — Architecture: Light/Dark Mode toggle with system preference (UAT-16)
+- [x] 03.2-04-PLAN.md — Architecture: Light/Dark Mode toggle with system preference (UAT-16)
 - [x] 03.2-05-PLAN.md — UX: global language preference + profile wizard placeholders (UAT-06, UAT-10)
 - [ ] 03.2-06-PLAN.md — UX: loading state, compact overlay, Dashboard back button (UAT-07, UAT-08, UAT-09)
 - [ ] 03.2-07-PLAN.md — Design: landing colors, custom dropdown, DSGVO overlap, NERVE modals (UAT-11, UAT-12, UAT-13, UAT-14)
@@ -158,7 +158,7 @@ Phases execute in numeric order.
 | 2. Product Fixes | 6/6 ✓ | Complete | 2026-04-01 |
 | 3. Infrastructure & Deployment | 3/3 ✓ | Complete | 2026-04-01 |
 | 3.1 Frontend Redesign | 6/6 ✓ | Complete | 2026-04-01 |
-| 3.2 UAT Bug Fixes | 4/7 | In Progress|  |
+| 3.2 UAT Bug Fixes | 5/7 | In Progress|  |
 | 4. Payments & Legal | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
