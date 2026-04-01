@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: uat_in_progress
-stopped_at: Phase 03.1 complete — all 6 plans done, deployed to getnerve.app. Visual UAT done, 15 issues found.
-last_updated: "2026-04-01T11:15:00.000Z"
+status: executing
+stopped_at: Completed 03.2-01-PLAN.md
+last_updated: "2026-04-01T14:55:33.692Z"
 last_activity: 2026-04-01
 progress:
-  total_phases: 6
-  completed_phases: 3
-  total_plans: 18
-  completed_plans: 14
+  total_phases: 7
+  completed_phases: 2
+  total_plans: 25
+  completed_plans: 15
   percent: 65
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 03.1 — frontend-redesign
+**Current focus:** Phase 03.2 — uat-bug-fixes
 
 ## Current Position
 
-Phase: 03.1 — complete
-Plan: All 6/6 done
-Status: UAT in progress — 15 visual issues found, gap closure pending
+Phase: 03.2 (uat-bug-fixes) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
 Last activity: 2026-04-01
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
@@ -65,6 +65,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 03.1 P01 | 251 | 2 tasks | 2 files |
 | Phase 03.1-frontend-redesign P02 | 12 | 1 tasks | 1 files |
 | Phase 03.1 P03 | 12 | 1 tasks | 1 files |
+| Phase 03.2-uat-bug-fixes P01 | 25 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase 03.1-frontend-redesign]: Quick action buttons use n-btn-ghost with border-radius:8px inline override — preserves rectangular list appearance while using NERVE component
 - [Phase 03.1]: app.html kept as standalone page (not extending base.html) — live-session fullscreen UX requires own document structure
 - [Phase 03.1]: n-ai-panel added to scroll#ai scroll container with border overrides — preserves JS scroll behavior while applying gold AI panel styling
+- [Phase 03.2-uat-bug-fixes]: startFreizeichen made async to allow await freizCtx.resume() — browser autoplay policy requires explicit resume after AudioContext creation
+- [Phase 03.2-uat-bug-fixes]: TTS autoplay errors surfaced to console.warn (not silenced) — silent catch hid critical failure mode in training TTS playback
 
 ### Roadmap Evolution
 
@@ -130,6 +133,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-01T11:15:00.000Z
-Stopped at: Phase 03.1 complete and deployed. Visual UAT in browser — 15 issues found.
+Last session: 2026-04-01T14:55:33.689Z
+Stopped at: Completed 03.2-01-PLAN.md
 Resume: `/gsd:plan-phase 03.1 --gaps` — then migrate landing.html + login.html — then Phase 4
