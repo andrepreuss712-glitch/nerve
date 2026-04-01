@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Product Fixes** - Complete all product gaps and polish before wiring payments
 - [x] **Phase 3: Infrastructure & Deployment** - Deploy to Hetzner VPS with HTTPS — VPS live on getnerve.app ✓
 - [x] **Phase 03.1: Frontend Redesign** - App-page redesign using NERVE Design System (INSERTED) (completed 2026-04-01)
-- [ ] **Phase 03.2: UAT Bug Fixes** - Fix 17 issues from Visual UAT: 6 critical bugs, 5 UX improvements, 4 design corrections, 2 architecture changes (Sidebar + Light/Dark) (INSERTED)
+- [x] **Phase 03.2: UAT Bug Fixes** - Fix 17 issues from Visual UAT: 6 critical bugs, 5 UX improvements, 4 design corrections, 2 architecture changes (Sidebar + Light/Dark) (INSERTED) (completed 2026-04-01)
 - [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
