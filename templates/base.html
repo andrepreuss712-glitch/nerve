@@ -1,9 +1,17 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-server-theme="{{ g.user.preferred_theme if g.user and g.user.preferred_theme else '' }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NERVE — Sales Intelligence{% block title %}{% endblock %}</title>
+<script>
+(function(){
+  var t = document.documentElement.getAttribute('data-server-theme');
+  if (!t) t = localStorage.getItem('nerve-theme');
+  if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}">
 <script src="https://unpkg.com/lucide@latest"></script>
 <style>{% block extra_style %}{% endblock %}</style>
@@ -86,6 +94,9 @@
       <a href="/settings">Einstellungen</a>
       <a href="/settings">Abrechnung &amp; Plan</a>
       <a href="/organisations">Team verwalten</a>
+      <a href="javascript:void(0)" onclick="toggleTheme();event.stopPropagation()">
+        <span class="theme-icon">&#x2600;</span> Theme wechseln
+      </a>
       <div class="dropdown-divider"></div>
       <a href="/logout">Abmelden</a>
     </div>
@@ -221,6 +232,31 @@ function toggleSidebarUserMenu(e) {
 document.addEventListener('click', function() {
   var menu = document.getElementById('sidebarUserMenu');
   if (menu) menu.classList.remove('open');
+});
+// ── Theme Toggle (ARCH-17) ─────────────────────────────────────────────────
+function toggleTheme() {
+  var current = document.documentElement.getAttribute('data-theme') || 'dark';
+  var next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('nerve-theme', next);
+  fetch('/settings/theme', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({theme: next})
+  }).catch(function(){});
+  document.querySelectorAll('.theme-icon').forEach(function(el) {
+    el.textContent = next === 'dark' ? '\u2600' : '\u263e';
+  });
+  var label = document.getElementById('settingsThemeLabel');
+  if (label) label.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var t = document.documentElement.getAttribute('data-theme') || 'dark';
+  document.querySelectorAll('.theme-icon').forEach(function(el) {
+    el.textContent = t === 'dark' ? '\u2600' : '\u263e';
+  });
+  var label = document.getElementById('settingsThemeLabel');
+  if (label) label.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
 });
 </script>
 {% block scripts %}{% endblock %}

@@ -133,6 +133,23 @@ def update_privacy():
         db.close()
 
 
+@settings_bp.route('/theme', methods=['POST'])
+@login_required
+def settings_theme():
+    data = request.get_json(silent=True) or {}
+    theme = data.get('theme', 'dark')
+    if theme not in ('light', 'dark'):
+        theme = 'dark'
+    db = get_session()
+    try:
+        user = db.query(User).get(g.user.id)
+        user.preferred_theme = theme
+        db.commit()
+        return jsonify({'ok': True, 'theme': theme})
+    finally:
+        db.close()
+
+
 @settings_bp.route('/language', methods=['POST'])
 @login_required
 def settings_language():
