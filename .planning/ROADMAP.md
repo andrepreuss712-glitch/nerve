@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - ~~**Phase 1: Business Setup**~~ - *Skipped from GSD — user handles manually (Gewerbeanmeldung, Geschäftskonto, USt-IdNr, Steuerberater)*
 - [x] **Phase 2: Product Fixes** - Complete all product gaps and polish before wiring payments
 - [x] **Phase 3: Infrastructure & Deployment** - Deploy to Hetzner VPS with HTTPS — VPS live on getnerve.app ✓
-- [ ] **Phase 03.1: Frontend Redesign** - App-page redesign using NERVE Design System (INSERTED)
+- [x] **Phase 03.1: Frontend Redesign** - App-page redesign using NERVE Design System (INSERTED) (completed 2026-04-01)
 - [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
@@ -85,10 +85,10 @@ Plans:
 Plans:
 - [x] 03.1-01-PLAN.md — CSS foundation: create static/nerve.css + update base.html (UI-01)
 - [x] 03.1-02-PLAN.md — Dashboard redesign: glass panels, KPI cards, feed items (UI-02)
-- [ ] 03.1-03-PLAN.md — Live-Session redesign: NERVE tokens, AI panel, live badge (UI-03)
-- [ ] 03.1-04-PLAN.md — Training redesign: glass cards, pill tabs, teal accents (UI-04)
-- [ ] 03.1-05-PLAN.md — Profile pages: editor + list with glass panels, NERVE inputs (UI-05, UI-06)
-- [ ] 03.1-06-PLAN.md — Wizard + Onboarding: teal tokens, NERVE inputs (UI-07)
+- [x] 03.1-03-PLAN.md — Live-Session redesign: NERVE tokens, AI panel, live badge (UI-03)
+- [x] 03.1-04-PLAN.md — Training redesign: glass cards, pill tabs, teal accents (UI-04)
+- [x] 03.1-05-PLAN.md — Profile pages: editor + list with glass panels, NERVE inputs (UI-05, UI-06)
+- [x] 03.1-06-PLAN.md — Wizard + Onboarding: teal tokens, NERVE inputs (UI-07)
 
 ### Phase 4: Payments & Legal
 **Goal**: Users can pay for a subscription and the product is legally compliant for DACH B2B launch
