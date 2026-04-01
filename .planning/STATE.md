@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03.1-03-PLAN.md — live-session page redesigned with NERVE tokens
-last_updated: "2026-04-01T10:39:40.253Z"
+status: uat_in_progress
+stopped_at: Phase 03.1 complete — all 6 plans done, deployed to getnerve.app. Visual UAT done, 15 issues found.
+last_updated: "2026-04-01T11:15:00.000Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 18
   completed_plans: 14
-  percent: 55
+  percent: 65
 ---
 
 # Project State
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Ready to execute
+Phase: 03.1 — complete
+Plan: All 6/6 done
+Status: UAT in progress — 15 visual issues found, gap closure pending
 Last activity: 2026-04-01
 
-**Next:** `/gsd:plan-phase 03.1` — design system integration + app page redesign
+**Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
 
-Progress: [████████░░] ~55% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 pending)
+Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓ deployed)
 
 ## Performance Metrics
 
@@ -103,9 +103,10 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- [ ] **Phase 3.1**: Plan and execute Frontend Redesign (Dashboard, Live, Training, Profile, Wizard, Analysis, Sessions)
+- [ ] **Phase 3.1 gap closure**: 15 visual UAT issues from browser testing — run `/gsd:plan-phase 03.1 --gaps` to plan fixes
+- [ ] **landing.html + login.html**: Not yet migrated to nerve.css — agreed to do after UAT
 - [ ] **Phase 1 (manual)**: Gewerbeanmeldung, Geschäftskonto, USt-IdNr, Steuerberater — user handles independently, not tracked here
-- [ ] After Phase 3.1: plan Phase 4 (Payments & Legal)
+- [ ] After gap closure: plan Phase 4 (Payments & Legal)
 
 ### Blockers/Concerns
 
@@ -118,6 +119,7 @@ Recent decisions affecting current work:
 |-------|-------|--------|
 | Phase 2: Product Fixes | 6/6 ✓ | Complete — all PROD requirements done |
 | Phase 3: Infrastructure & Deployment | 3/3 ✓ | Complete — VPS live on getnerve.app (178.104.82.166), HTTPS, WAL, CORS locked |
+| Phase 3.1: Frontend Redesign | 6/6 ✓ | Complete — nerve.css deployed, all app pages migrated. Visual UAT: 15 issues found. |
 | Phase 1: Business Setup | — | Skipped from GSD — user handles manually |
 
 **Phase 3 verification (manual):**
@@ -128,6 +130,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-01T10:32:25.054Z
-Stopped at: Completed 03.1-03-PLAN.md — live-session page redesigned with NERVE tokens
-Resume: `/gsd:plan-phase 03.1`
+Last session: 2026-04-01T11:15:00.000Z
+Stopped at: Phase 03.1 complete and deployed. Visual UAT in browser — 15 issues found.
+Resume: `/gsd:plan-phase 03.1 --gaps` — then migrate landing.html + login.html — then Phase 4
