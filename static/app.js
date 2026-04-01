@@ -133,6 +133,8 @@ socket.on('connect',()=>{
     dsgvoBanner.classList.add('visible');
     setTimeout(() => dsgvoBanner.classList.remove('visible'), 6000);
   }
+  // Start session timer on connect — not on first transcript
+  startSessionTimer();
 });
 
 socket.on('transcript', d => {
@@ -140,7 +142,7 @@ socket.on('transcript', d => {
     if(!interim){interim=document.createElement('div');interim.className='msg interim';tr.appendChild(interim);}
     interim.textContent=d.text;
   } else if (d.type==='final' && d.text.trim()) {
-    startSessionTimer();
+    if (!sessionTimer) startSessionTimer(); // fallback if connect fired before timer init
     if(interim){interim.remove();interim=null;}
     const el=document.createElement('div');
     const sp=(d.speaker===0||d.speaker===1)?d.speaker:null;
@@ -218,7 +220,14 @@ async function togglePause(){
   try{
     const res=await fetch('/api/pause',{method:'POST'});
     const data=await res.json();
-    paused=data.paused;updatePauseUI();
+    paused=data.paused;
+    // Pause/resume session timer alongside microphone state
+    if(paused){
+      if(sessionTimer){ clearInterval(sessionTimer); sessionTimer=null; }
+    } else {
+      startSessionTimer();
+    }
+    updatePauseUI();
   }catch(e){console.error('[PAUSE]',e);}
 }
 function updatePauseUI(){
@@ -258,6 +267,20 @@ function escHtml(t){
 
 // ── Gespräch beenden ──────────────────────────────────────────────────────────
 async function beenden(){
+  // Guard: no real conversation detected — show placeholder instead of fake postcall
+  if(sessionSeconds < 10 || words < 20){
+    const overlay=document.getElementById('postcall-overlay');
+    if(overlay){
+      overlay.style.display='flex';
+      overlay.innerHTML=
+        '<div class="n-glass" style="padding:32px;text-align:center;max-width:500px;margin:auto">' +
+          '<h3 style="color:var(--page-text-color);margin-bottom:12px">Kein Gespräch erkannt</h3>' +
+          '<p style="color:var(--page-text-secondary)">Es wurde kein ausreichendes Gespräch für eine Analyse erkannt.</p>' +
+          '<a href="/dashboard" class="btn btn-primary" style="margin-top:16px">← Zurück zum Dashboard</a>' +
+        '</div>';
+    }
+    return;
+  }
   if(!confirm('Gespräch beenden?\nLog wird gespeichert und State zurückgesetzt.')) return;
   try{
     const res=await fetch('/api/beenden',{method:'POST'});
