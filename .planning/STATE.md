@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03.2-06-PLAN.md
-last_updated: "2026-04-01T15:18:33.076Z"
+status: verifying
+stopped_at: Completed 03.2-07-PLAN.md
+last_updated: "2026-04-01T15:26:35.283Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 25
-  completed_plans: 20
+  completed_plans: 21
   percent: 65
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 Phase: 03.2 (uat-bug-fixes) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-01
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
@@ -71,6 +71,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 03.2-uat-bug-fixes P05 | 15 | 2 tasks | 6 files |
 | Phase 03.2-uat-bug-fixes P04 | 2 | 2 tasks | 6 files |
 | Phase 03.2-uat-bug-fixes P06 | 3min | 2 tasks | 3 files |
+| Phase 03.2-uat-bug-fixes P07 | 25min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,10 @@ Recent decisions affecting current work:
 - [Phase 03.2-uat-bug-fixes]: preferred_theme defaults to 'dark' — backward-compatible, existing users stay on dark theme
 - [Phase 03.2-uat-bug-fixes]: Loading overlay uses display:flex for centering; pcLoading declared before try block for cleanup in catch
 - [Phase 03.2-uat-bug-fixes]: Kompakt mode changed to floating overlay — all body.kompakt hide rules removed, panel floats at bottom:16px right:16px without hiding main content
+- [Phase 03.2-uat-bug-fixes]: All #E8B040 (gold) replaced with #2dd4a8 (teal) in landing.html including rgba() values
+- [Phase 03.2-uat-bug-fixes]: DSGVO banner overlap fix via JS paddingBottom on .panel-sprachanalyse — CSS sibling selectors cannot reach across the DOM tree
+- [Phase 03.2-uat-bug-fixes]: Custom scenario dropdown uses hidden <input id='t-scenarioSelect'> — all existing callers reading .value continue working unchanged
+- [Phase 03.2-uat-bug-fixes]: window._pendingDeleteId bridges deleteScenario() modal show and confirmDeleteScenario() async execution
 
 ### Roadmap Evolution
 
@@ -151,6 +156,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-01T15:18:33.073Z
-Stopped at: Completed 03.2-06-PLAN.md
+Last session: 2026-04-01T15:26:35.280Z
+Stopped at: Completed 03.2-07-PLAN.md
 Resume: `/gsd:plan-phase 03.1 --gaps` — then migrate landing.html + login.html — then Phase 4

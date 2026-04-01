@@ -156,7 +156,7 @@ Phases execute in numeric order.
 |-------|----------------|--------|-----------|
 | 1. Business Setup | — | Skipped (manual) | — |
 | 2. Product Fixes | 6/6 ✓ | Complete | 2026-04-01 |
-| 3. Infrastructure & Deployment | 3/3 ✓ | Complete | 2026-04-01 |
+| 3. Infrastructure & Deployment | 2/3 | In Progress|  |
 | 3.1 Frontend Redesign | 6/6 ✓ | Complete | 2026-04-01 |
 | 3.2 UAT Bug Fixes | 5/7 | In Progress|  |
 | 4. Payments & Legal | 0/? | Not started | - |
