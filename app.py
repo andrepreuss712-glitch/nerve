@@ -82,6 +82,8 @@ def _migrate():
             ('last_seen_changelog', 'VARCHAR(20)'),
             # Block 9: Language Preference
             ('preferred_language', "VARCHAR(10) DEFAULT 'de'"),
+            # Block 10: Theme Preference
+            ('preferred_theme', "VARCHAR(10) DEFAULT 'dark'"),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE users ADD COLUMN {col} {typedef}'))

@@ -95,6 +95,8 @@ class User(Base):
     usage_reset_date      = Column(Date)
     # Block 9: Language Preference
     preferred_language    = Column(String(10), default='de')
+    # Block 10: Theme Preference
+    preferred_theme       = Column(String(10), default='dark')
 
 
 class Profile(Base):

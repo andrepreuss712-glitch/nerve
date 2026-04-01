@@ -356,6 +356,31 @@
   --promo-title-size:     14px;
   --promo-text-color:     #4a5068;
   --promo-text-size:      12px;
+
+  /* ═══════════════════════════════════════
+     SIDEBAR
+     ═══════════════════════════════════════ */
+  --sidebar-bg:           rgba(6,6,10,0.95);
+  --sidebar-hover:        rgba(255,255,255,0.06);
+  --badge-bg:             rgba(255,255,255,0.04);
+  --card-hover:           rgba(255,255,255,0.02);
+}
+
+/* ── Light Theme ─────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --page-bg:              #f5f5f7;
+  --page-text-color:      #1a1a2e;
+  --page-text-secondary:  #5a5a7a;
+  --glass-bg:             rgba(255, 255, 255, 0.75);
+  --glass-border:         rgba(0, 0, 0, 0.08);
+  --glass-shadow:         0 2px 12px rgba(0, 0, 0, 0.06);
+  --input-bg:             rgba(0, 0, 0, 0.03);
+  --input-border:         rgba(0, 0, 0, 0.12);
+  --input-border-focus:   #2dd4a8;
+  --card-hover:           rgba(0, 0, 0, 0.02);
+  --sidebar-bg:           rgba(255, 255, 255, 0.9);
+  --sidebar-hover:        rgba(0, 0, 0, 0.04);
+  --badge-bg:             rgba(0, 0, 0, 0.06);
 }
 
 
