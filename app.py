@@ -80,6 +80,8 @@ def _migrate():
             ('dashboard_style', "VARCHAR(20) DEFAULT 'vollstaendig'"),
             # Block 6: Changelog
             ('last_seen_changelog', 'VARCHAR(20)'),
+            # Block 9: Language Preference
+            ('preferred_language', "VARCHAR(10) DEFAULT 'de'"),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE users ADD COLUMN {col} {typedef}'))

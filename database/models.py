@@ -93,6 +93,8 @@ class User(Base):
     minuten_used          = Column(Integer, default=0)    # Diesen Monat verbrauchte Minuten
     trainings_voice_used  = Column(Integer, default=0)    # TTS-Trainings diesen Monat
     usage_reset_date      = Column(Date)
+    # Block 9: Language Preference
+    preferred_language    = Column(String(10), default='de')
 
 
 class Profile(Base):

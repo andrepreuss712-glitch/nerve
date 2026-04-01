@@ -133,6 +133,24 @@ def update_privacy():
         db.close()
 
 
+@settings_bp.route('/language', methods=['POST'])
+@login_required
+def settings_language():
+    data = request.get_json(silent=True) or {}
+    lang = data.get('language', 'de')
+    allowed = ['de', 'en', 'fr', 'es', 'it', 'pt', 'nl', 'pl', 'cs', 'tr']
+    if lang not in allowed:
+        lang = 'de'
+    db = get_session()
+    try:
+        user = db.query(User).get(g.user.id)
+        user.preferred_language = lang
+        db.commit()
+        return jsonify({'ok': True, 'language': lang})
+    finally:
+        db.close()
+
+
 @settings_bp.route('/notifications', methods=['POST'])
 @login_required
 def update_notifications():
