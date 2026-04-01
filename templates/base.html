@@ -70,13 +70,26 @@
   </a>
   {% endif %}
   <div class="nav-sep"></div>
-  <a class="n-nav-item {% if request.path.startswith('/settings') %}n-nav-item-active{% endif %}" href="/settings">
-    <span class="nav-icon">⚙️</span> Einstellungen
-  </a>
   <a class="n-nav-item {% if request.path == '/changelog' %}n-nav-item-active{% endif %}" href="/changelog">
     <span class="nav-icon">📋</span> Changelog
     <span id="cl-new-badge" style="display:none" class="new-badge">NEU</span>
   </a>
+  <!-- Sidebar User Menu (ARCH-16) -->
+  <div class="sidebar-user-block" onclick="toggleSidebarUserMenu(event)">
+    <div class="sidebar-avatar">{{ (g.user.email or 'U')[0] | upper }}</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name">{{ g.user.vorname or g.user.email.split('@')[0] }}</div>
+      <div class="sidebar-user-email">{{ g.user.email }}</div>
+    </div>
+    <div class="sidebar-user-dropdown" id="sidebarUserMenu">
+      <a href="/profiles">Mein Profil</a>
+      <a href="/settings">Einstellungen</a>
+      <a href="/settings">Abrechnung &amp; Plan</a>
+      <a href="/organisations">Team verwalten</a>
+      <div class="dropdown-divider"></div>
+      <a href="/logout">Abmelden</a>
+    </div>
+  </div>
 </nav>
 
 <div class="g-content">
@@ -198,6 +211,18 @@
 })();
 </script>
 <script>lucide.createIcons();</script>
+<script>
+// ── Sidebar User Menu toggle (ARCH-16) ─────────────────────────────────────
+function toggleSidebarUserMenu(e) {
+  e.stopPropagation();
+  var menu = document.getElementById('sidebarUserMenu');
+  menu.classList.toggle('open');
+}
+document.addEventListener('click', function() {
+  var menu = document.getElementById('sidebarUserMenu');
+  if (menu) menu.classList.remove('open');
+});
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
