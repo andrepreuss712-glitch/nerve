@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-03-31T08:40:51.921Z"
-last_activity: 2026-03-31
+status: waiting
+stopped_at: Phase 03 Wave 1 complete — Wave 2 (VPS ops) pending user action
+last_updated: "2026-04-01"
+last_activity: 2026-04-01
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 10
   percent: 0
 ---
 
@@ -21,16 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 03 — infrastructure-deployment
+**Current focus:** Phase 03 — infrastructure-deployment (Wave 2 pending)
 
 ## Current Position
 
-Phase: 03 (infrastructure-deployment) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-03-31
+Phase: 03 (infrastructure-deployment) — WAITING ON MANUAL OPS
+Plan: 3 of 3 (03-03 = VPS runbook, not yet done)
+Status: Wave 1 code changes done. Wave 2 VPS provisioning pending user action.
+Last activity: 2026-04-01
 
-Progress: [░░░░░░░░░░] 0%
+**Resume trigger:** User says "VPS ist live" → run Phase 3 verification → start Phase 4 planning.
+
+Progress: [██████░░░░] ~40% (Phase 2 complete, Phase 3 Wave 1 complete)
 
 ## Performance Metrics
 
@@ -87,16 +89,28 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- [ ] **Phase 3 Wave 2**: Provision Hetzner CX22 VPS, configure nginx + SSL, deploy systemd service (03-03-PLAN.md — manual)
+- [ ] **Phase 1**: Gewerbeanmeldung, Geschäftskonto, USt-IdNr, Steuerberater — all manual, user handles independently
+- [ ] After VPS live: run Phase 3 verification, then start Phase 4 (Payments & Legal) planning
 
 ### Blockers/Concerns
 
-- Business setup (BIZ-01 through BIZ-04) is on the critical path for payments — takes 3-5 weeks. Start Gewerbeanmeldung this week.
-- Stripe account cannot be verified until Gewerbeanmeldung and Geschaeftskonto are complete (Phase 1 gates Phase 4).
-- Research flags: AVV signing portal locations for Deepgram/Anthropic/ElevenLabs should be verified directly (training data from Aug 2025 may be stale). Stripe Tax / VAT invoice configuration for Germany needs explicit research during Phase 4 planning.
+- **Critical path**: Phase 4 (Stripe) cannot start until Phase 3 VPS is live (needs HTTPS for webhooks)
+- **Critical path**: Phase 4 Stripe account verification needs Gewerbeanmeldung + Geschäftskonto (Phase 1 — takes 3-5 weeks)
+- Research flags: AVV signing portal locations for Deepgram/Anthropic/ElevenLabs should be verified directly. Stripe Tax / VAT invoice configuration for Germany needs explicit research during Phase 4 planning.
+
+## What's Done
+
+| Phase | Plans | Status |
+|-------|-------|--------|
+| Phase 2: Product Fixes | 6/6 ✓ | Complete — all PROD requirements done |
+| Phase 3: Wave 1 (code hardening) | 03-01 ✓ | pyaudio split, SECRET_KEY, WAL, CORS locked |
+| Phase 3: Wave 1 (deploy artifacts) | 03-02 ✓ | deploy.sh, nginx.conf, nerve.service in repo |
+| Phase 3: Wave 2 (VPS ops) | 03-03 ⏳ | Waiting on user — manual provisioning |
+| Phase 1: Business Setup | 0/3 | User handles manually, not tracked here |
 
 ## Session Continuity
 
-Last session: 2026-03-31T08:40:51.918Z
-Stopped at: Completed 03-01-PLAN.md
-Resume file: None
+Last session: 2026-04-01
+Stopped at: Phase 3 Wave 1 complete. Waiting for VPS provisioning.
+Resume: User will say "VPS ist live" → verify Phase 3 → plan + execute Phase 4
