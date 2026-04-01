@@ -134,8 +134,13 @@ Plans:
   3. The dashboard ROI tracker and fair-use counter update correctly; at ~80% limit a soft warning appears; no hard block occurs
   4. Impressum, AGB, and Datenschutzerklärung are live at the production domain, listing Deepgram, Anthropic, ElevenLabs, and Stripe as Auftragsverarbeiter
   5. Signed AVVs with Deepgram, Anthropic, ElevenLabs, and Stripe are on file; Deepgram EU endpoint is in use
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 04-01-PLAN.md — Stripe foundation: DB migration, config, payments blueprint (Checkout, Webhook, Portal) (PAY-01, PAY-02, PAY-03, PAY-04)
+- [ ] 04-02-PLAN.md — Pricing page + fair-use metering with soft warnings (PAY-05, PAY-06)
+- [ ] 04-03-PLAN.md — Legal pages (Impressum, AGB, Datenschutz) + Deepgram EU + AVV checklist (LEGAL-01, LEGAL-02, LEGAL-03)
 
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
@@ -159,7 +164,7 @@ Phases execute in numeric order.
 | 3. Infrastructure & Deployment | 2/3 | In Progress|  |
 | 3.1 Frontend Redesign | 6/6 ✓ | Complete | 2026-04-01 |
 | 3.2 UAT Bug Fixes | 5/7 | In Progress|  |
-| 4. Payments & Legal | 0/? | Not started | - |
+| 4. Payments & Legal | 0/3 | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
 ---
