@@ -121,7 +121,7 @@ Plans:
 - [x] 03.2-03-PLAN.md — Architecture: sidebar user menu with avatar + dropdown (UAT-15)
 - [x] 03.2-04-PLAN.md — Architecture: Light/Dark Mode toggle with system preference (UAT-16)
 - [x] 03.2-05-PLAN.md — UX: global language preference + profile wizard placeholders (UAT-06, UAT-10)
-- [ ] 03.2-06-PLAN.md — UX: loading state, compact overlay, Dashboard back button (UAT-07, UAT-08, UAT-09)
+- [x] 03.2-06-PLAN.md — UX: loading state, compact overlay, Dashboard back button (UAT-07, UAT-08, UAT-09)
 - [ ] 03.2-07-PLAN.md — Design: landing colors, custom dropdown, DSGVO overlap, NERVE modals (UAT-11, UAT-12, UAT-13, UAT-14)
 
 ### Phase 4: Payments & Legal

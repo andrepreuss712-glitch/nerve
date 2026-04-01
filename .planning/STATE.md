@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03.2-04-PLAN.md
-last_updated: "2026-04-01T15:12:27.244Z"
+stopped_at: Completed 03.2-06-PLAN.md
+last_updated: "2026-04-01T15:18:33.076Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 25
-  completed_plans: 19
+  completed_plans: 20
   percent: 65
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 03.2 (uat-bug-fixes) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-04-01
 
@@ -70,6 +70,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 03.2-uat-bug-fixes P03 | 8 | 1 tasks | 2 files |
 | Phase 03.2-uat-bug-fixes P05 | 15 | 2 tasks | 6 files |
 | Phase 03.2-uat-bug-fixes P04 | 2 | 2 tasks | 6 files |
+| Phase 03.2-uat-bug-fixes P06 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,8 @@ Recent decisions affecting current work:
 - [Phase 03.2-uat-bug-fixes]: No-FOUC script placed before CSS link — runs synchronously, prevents flash of wrong theme
 - [Phase 03.2-uat-bug-fixes]: Server-hint via data-server-theme on <html> tag from g.user.preferred_theme — DB value takes precedence over localStorage on authenticated pages
 - [Phase 03.2-uat-bug-fixes]: preferred_theme defaults to 'dark' — backward-compatible, existing users stay on dark theme
+- [Phase 03.2-uat-bug-fixes]: Loading overlay uses display:flex for centering; pcLoading declared before try block for cleanup in catch
+- [Phase 03.2-uat-bug-fixes]: Kompakt mode changed to floating overlay — all body.kompakt hide rules removed, panel floats at bottom:16px right:16px without hiding main content
 
 ### Roadmap Evolution
 
@@ -148,6 +151,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-01T15:12:27.241Z
-Stopped at: Completed 03.2-04-PLAN.md
+Last session: 2026-04-01T15:18:33.073Z
+Stopped at: Completed 03.2-06-PLAN.md
 Resume: `/gsd:plan-phase 03.1 --gaps` — then migrate landing.html + login.html — then Phase 4
