@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Product Fixes** - Complete all product gaps and polish before wiring payments
 - [x] **Phase 3: Infrastructure & Deployment** - Deploy to Hetzner VPS with HTTPS — VPS live on getnerve.app ✓
 - [x] **Phase 03.1: Frontend Redesign** - App-page redesign using NERVE Design System (INSERTED) (completed 2026-04-01)
+- [ ] **Phase 03.2: UAT Bug Fixes** - Fix 17 issues from Visual UAT: 6 critical bugs, 5 UX improvements, 4 design corrections, 2 architecture changes (Sidebar + Light/Dark) (INSERTED)
 - [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
@@ -90,6 +91,39 @@ Plans:
 - [x] 03.1-05-PLAN.md — Profile pages: editor + list with glass panels, NERVE inputs (UI-05, UI-06)
 - [x] 03.1-06-PLAN.md — Wizard + Onboarding: teal tokens, NERVE inputs (UI-07)
 
+### Phase 03.2: UAT Bug Fixes (INSERTED)
+
+**Goal**: All 17 UAT issues from Visual UAT after Phase 3.1 are resolved — 6 critical bugs fixed, 5 UX improvements implemented, 4 design corrections applied, 2 architecture changes shipped (Sidebar user menu + Light/Dark Mode). App is fully functional and polished on getnerve.app.
+**Depends on**: Phase 03.1
+**Requirements**: UAT-01 through UAT-16
+**Success Criteria** (what must be TRUE):
+  1. Training sessions can be started and run end-to-end (Anruf-Button works, AI responds, TTS plays)
+  2. Microphone works in both /training and /live — browser requests permission, Deepgram receives audio
+  3. Language selection in /training applies consistently to all UI text
+  4. Live session timer counts up from session start; mic button is functional
+  5. Auswertung shows placeholder message (not fake coaching) when no real conversation occurred
+  6. Language preference is saved globally in /settings and applied across all pages
+  7. Auswertung loading state shows animated progress bar
+  8. Kompaktmodus in /live opens as floating popup overlay
+  9. "Zurück zum Dashboard" button visible at end of live Auswertung
+  10. Profile fields show neutral placeholder examples
+  11. All yellow/purple accent colors replaced with Teal (#2dd4a8) except Gold (#d4a853) for AI elements
+  12. Scenario dropdown in /training uses dark theme styling
+  13. DSGVO banner does not overlap emotion analysis circles in /live
+  14. Training end dialog is a styled NERVE modal, not browser window.confirm
+  15. User avatar + name visible bottom-left in sidebar; click opens dropdown with Profile, Settings, Billing, Team, Logout
+  16. Light/Dark Mode toggle works in Settings and sidebar dropdown; system preference applied on first visit
+**Plans**: 7 plans
+
+Plans:
+- [ ] 03.2-01-PLAN.md — Critical bugs: training flow — Anruf-Button, PTT mic, TTS audio (UAT-01, UAT-02)
+- [ ] 03.2-02-PLAN.md — Critical bugs: language switch, live timer, no-conversation guard (UAT-03, UAT-04, UAT-05)
+- [ ] 03.2-03-PLAN.md — Architecture: sidebar user menu with avatar + dropdown (UAT-15)
+- [ ] 03.2-04-PLAN.md — Architecture: Light/Dark Mode toggle with system preference (UAT-16)
+- [ ] 03.2-05-PLAN.md — UX: global language preference + profile wizard placeholders (UAT-06, UAT-10)
+- [ ] 03.2-06-PLAN.md — UX: loading state, compact overlay, Dashboard back button (UAT-07, UAT-08, UAT-09)
+- [ ] 03.2-07-PLAN.md — Design: landing colors, custom dropdown, DSGVO overlap, NERVE modals (UAT-11, UAT-12, UAT-13, UAT-14)
+
 ### Phase 4: Payments & Legal
 **Goal**: Users can pay for a subscription and the product is legally compliant for DACH B2B launch
 **Depends on**: Phase 3 (needs HTTPS for Stripe webhooks), Phase 1 (needs verified Stripe account)
@@ -123,7 +157,8 @@ Phases execute in numeric order.
 | 1. Business Setup | — | Skipped (manual) | — |
 | 2. Product Fixes | 6/6 ✓ | Complete | 2026-04-01 |
 | 3. Infrastructure & Deployment | 3/3 ✓ | Complete | 2026-04-01 |
-| 3.1 Frontend Redesign | 0/6 | Ready | — |
+| 3.1 Frontend Redesign | 6/6 ✓ | Complete | 2026-04-01 |
+| 3.2 UAT Bug Fixes | 0/7 | Not started | - |
 | 4. Payments & Legal | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
