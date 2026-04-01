@@ -98,16 +98,23 @@
     font-family:inherit;letter-spacing:.04em;transition:all .15s;white-space:nowrap}
   .btn-view-toggle:hover{border-color:rgba(255,255,255,0.2);color:var(--page-text-secondary)}
 
-  /* Kompakt: Normal-Layout ausblenden */
-  body.kompakt .header,
-  body.kompakt .profile-bar,
-  body.kompakt .phasen-bar,
-  body.kompakt .main,
-  body.kompakt .footer{display:none!important}
-
-  /* ── Kompakt-Panel ── */
-  .kompakt-panel{display:none;flex-direction:column;position:fixed;inset:0;background:var(--page-bg);z-index:500;overflow:hidden}
-  body.kompakt .kompakt-panel{display:flex!important}
+  /* ── Kompakt-Panel (floating overlay, bottom-right) ── */
+  .kompakt-panel{
+    position:fixed;
+    bottom:16px;
+    right:16px;
+    width:320px;
+    max-height:90vh;
+    border-radius:12px;
+    border:1px solid var(--glass-border);
+    box-shadow:0 8px 40px rgba(0,0,0,0.7);
+    z-index:500;
+    display:none;
+    flex-direction:column;
+    overflow-y:auto;
+    background:var(--page-bg);
+  }
+  body.kompakt .kompakt-panel{display:flex!important;}
 
   .kp-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--glass-border);flex-shrink:0}
   .kp-logo{display:flex;align-items:center;gap:8px}
@@ -777,6 +784,7 @@
 
     </div>
     <div class="postcall-actions">
+      <a class="btn-postcall-close" href="/dashboard" style="text-decoration:none">← Dashboard</a>
       <button class="btn-postcall-close" onclick="closePostcall()">✕ Schließen</button>
       <button class="btn-postcall-pdf" onclick="window.print()">⬇ PDF Download</button>
       <button class="btn-postcall-save" id="pc-saveBtn" onclick="saveFeedback()">★ Bewertung speichern</button>
