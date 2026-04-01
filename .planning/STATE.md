@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: waiting
-stopped_at: Phase 03 Wave 1 complete — Wave 2 (VPS ops) pending user action
+status: planning
+stopped_at: Phase 03 complete — VPS live on getnerve.app. Phase 03.1 (Frontend Redesign) inserted, planning next.
 last_updated: "2026-04-01"
 last_activity: 2026-04-01
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 10
-  percent: 0
+  completed_plans: 12
+  percent: 40
 ---
 
 # Project State
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 ## Current Position
 
-Phase: 03 (infrastructure-deployment) — WAITING ON MANUAL OPS
-Plan: 3 of 3 (03-03 = VPS runbook, not yet done)
-Status: Wave 1 code changes done. Wave 2 VPS provisioning pending user action.
+Phase: 03.1 (frontend-redesign) — PLANNING
+Plan: 0 of TBD (not yet planned)
+Status: Phase 3 complete. Phase 3.1 inserted. Ready to plan.
 Last activity: 2026-04-01
 
-**Resume trigger:** User says "VPS ist live" → run Phase 3 verification → start Phase 4 planning.
+**Next:** `/gsd:plan-phase 03.1` — design system integration + app page redesign
 
-Progress: [██████░░░░] ~40% (Phase 2 complete, Phase 3 Wave 1 complete)
+Progress: [████████░░] ~55% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 pending)
 
 ## Performance Metrics
 
@@ -87,16 +87,20 @@ Recent decisions affecting current work:
 - [Phase 03-infrastructure-deployment]: WAL mode listener guarded by sqlite detection — safe for future PostgreSQL upgrade path
 - [Phase 03-infrastructure-deployment]: CORS_ORIGIN defaults to nerve.app in production, wildcard only when FLASK_DEBUG env var is set
 
+### Roadmap Evolution
+
+- Phase 03.1 inserted after Phase 03: Frontend Redesign (INSERTED) — app-page redesign before payments
+- Phase 1 (Business Setup) removed from GSD tracking — user handles manually (Gewerbeanmeldung, Geschäftskonto, etc.)
+
 ### Pending Todos
 
-- [ ] **Phase 3 Wave 2**: Provision Hetzner CX22 VPS, configure nginx + SSL, deploy systemd service (03-03-PLAN.md — manual)
-- [ ] **Phase 1**: Gewerbeanmeldung, Geschäftskonto, USt-IdNr, Steuerberater — all manual, user handles independently
-- [ ] After VPS live: run Phase 3 verification, then start Phase 4 (Payments & Legal) planning
+- [ ] **Phase 3.1**: Plan and execute Frontend Redesign (Dashboard, Live, Training, Profile, Wizard, Analysis, Sessions)
+- [ ] **Phase 1 (manual)**: Gewerbeanmeldung, Geschäftskonto, USt-IdNr, Steuerberater — user handles independently, not tracked here
+- [ ] After Phase 3.1: plan Phase 4 (Payments & Legal)
 
 ### Blockers/Concerns
 
-- **Critical path**: Phase 4 (Stripe) cannot start until Phase 3 VPS is live (needs HTTPS for webhooks)
-- **Critical path**: Phase 4 Stripe account verification needs Gewerbeanmeldung + Geschäftskonto (Phase 1 — takes 3-5 weeks)
+- **Phase 4 dependency**: Phase 4 (Stripe) needs verified Stripe account → requires Gewerbeanmeldung + Geschäftskonto (Phase 1 manual, ~3-5 weeks) — user is handling this in parallel
 - Research flags: AVV signing portal locations for Deepgram/Anthropic/ElevenLabs should be verified directly. Stripe Tax / VAT invoice configuration for Germany needs explicit research during Phase 4 planning.
 
 ## What's Done
@@ -104,13 +108,16 @@ Recent decisions affecting current work:
 | Phase | Plans | Status |
 |-------|-------|--------|
 | Phase 2: Product Fixes | 6/6 ✓ | Complete — all PROD requirements done |
-| Phase 3: Wave 1 (code hardening) | 03-01 ✓ | pyaudio split, SECRET_KEY, WAL, CORS locked |
-| Phase 3: Wave 1 (deploy artifacts) | 03-02 ✓ | deploy.sh, nginx.conf, nerve.service in repo |
-| Phase 3: Wave 2 (VPS ops) | 03-03 ⏳ | Waiting on user — manual provisioning |
-| Phase 1: Business Setup | 0/3 | User handles manually, not tracked here |
+| Phase 3: Infrastructure & Deployment | 3/3 ✓ | Complete — VPS live on getnerve.app (178.104.82.166), HTTPS, WAL, CORS locked |
+| Phase 1: Business Setup | — | Skipped from GSD — user handles manually |
+
+**Phase 3 verification (manual):**
+- App accessible at getnerve.app over HTTPS ✓
+- VPS: Hetzner CX22, IP 178.104.82.166 ✓
+- Remaining checks (Socket.IO 101, WAL mode, CORS lock): user to confirm on VPS
 
 ## Session Continuity
 
 Last session: 2026-04-01
-Stopped at: Phase 3 Wave 1 complete. Waiting for VPS provisioning.
-Resume: User will say "VPS ist live" → verify Phase 3 → plan + execute Phase 4
+Stopped at: Phase 3 done (VPS live). Phase 3.1 Frontend Redesign inserted. Ready to plan.
+Resume: `/gsd:plan-phase 03.1`
