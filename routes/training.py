@@ -26,10 +26,12 @@ def training_page():
     db = get_session()
     try:
         profiles = db.query(Profile).filter_by(org_id=g.org.id).order_by(Profile.name).all()
+        preferred_language = getattr(g.user, 'preferred_language', 'de') or 'de'
         return render_template('training.html',
                                profiles=profiles,
                                schwierigkeiten=SCHWIERIGKEITEN,
-                               training_languages=TRAINING_LANGUAGES)
+                               training_languages=TRAINING_LANGUAGES,
+                               preferred_language=preferred_language)
     finally:
         db.close()
 

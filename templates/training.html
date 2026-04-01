@@ -225,7 +225,7 @@
         <div class="t-section-label">Sprache</div>
         <div class="t-lang-btns" id="t-langBtns">
           {% for code, lang in training_languages.items() %}
-          <button class="t-lang-btn {% if code == 'de' %}t-lang-active{% endif %}"
+          <button class="t-lang-btn {% if code == preferred_language %}t-lang-active{% endif %}"
                   data-code="{{ code }}" onclick="selectLanguage('{{ code }}')">
             {{ lang.flag }} {{ lang.label }}
           </button>
@@ -412,8 +412,8 @@
 // ── State ──────────────────────────────────────────────────────────────────────
 const TRAINING_LANGUAGES = {{ training_languages | tojson }};
 const PLAN_TYP = {{ (g.org.plan_typ or '') | tojson }};
-let currentLanguage = 'de';
-let tUI             = TRAINING_LANGUAGES['de'].ui;
+let currentLanguage = {{ preferred_language | default('de') | tojson }};
+let tUI             = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES['de']).ui;
 let selectedScenario= null;
 let selectedDiff    = 'mittel';
 let trainingModus   = 'guided';   // 'free' | 'guided'
@@ -431,6 +431,13 @@ let freizCtx = null, freizOsc = null;
 let currentAudio    = null;
 const audioStore    = {};   // id → {b64, el}
 let msgCnt          = 0;
+
+// Pre-activate saved language on load
+document.addEventListener('DOMContentLoaded', function() {
+  if (currentLanguage !== 'de') {
+    selectLanguage(currentLanguage);
+  }
+});
 
 // ── Setup ──────────────────────────────────────────────────────────────────────
 function selectModus(modus) {
