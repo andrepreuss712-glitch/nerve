@@ -1,5 +1,4 @@
-// NOTE: Live mic is server-side PyAudio. On VPS without audio hardware,
-// mic capture is non-functional. Browser-based WebRTC mic is Phase N+1 scope.
+// Browser mic: getUserMedia → AudioWorklet (PCM16) → Socket.IO → Server → Deepgram
 
 // ── Socket & DOM ──────────────────────────────────────────────────────────────
 const socket = io();
@@ -8,6 +7,49 @@ const ai     = document.getElementById('ai');
 let words = 0, einwaende = 0, analysen = 0;
 let interim = null;
 let paused  = false;
+
+// ── Browser Mic State ─────────────────────────────────────────────────────────
+let micStream  = null;   // MediaStream from getUserMedia
+let audioCtx   = null;   // AudioContext at 16kHz
+let workletNode= null;   // AudioWorkletNode
+let micStarted = false;  // true while streaming
+
+async function startMicStream() {
+  if (micStarted) return;
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioCtx  = new AudioContext({ sampleRate: 16000 });
+    await audioCtx.audioWorklet.addModule('/static/audio-processor.js');
+    const source  = audioCtx.createMediaStreamSource(micStream);
+    workletNode   = new AudioWorkletNode(audioCtx, 'audio-processor');
+    workletNode.port.onmessage = (e) => {
+      if (!paused && micStarted) {
+        socket.emit('audio_chunk', e.data);
+      }
+    };
+    source.connect(workletNode);
+    workletNode.connect(audioCtx.destination);
+    micStarted = true;
+    socket.emit('start_live_session');
+    console.log('[Mic] Browser-Mikrofon gestartet');
+  } catch (err) {
+    console.error('[Mic] getUserMedia Fehler:', err);
+    const st = document.getElementById('st');
+    if (st) st.textContent = 'Mikrofon-Zugriff verweigert';
+    const kpSt = document.getElementById('kp-st');
+    if (kpSt) kpSt.textContent = 'Mikrofon-Zugriff verweigert';
+  }
+}
+
+function stopMicStream() {
+  if (!micStarted) return;
+  micStarted = false;
+  socket.emit('stop_live_session');
+  if (workletNode) { workletNode.disconnect(); workletNode = null; }
+  if (audioCtx)    { audioCtx.close(); audioCtx = null; }
+  if (micStream)   { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  console.log('[Mic] Browser-Mikrofon gestoppt');
+}
 
 // ── Session-Timer ─────────────────────────────────────────────────────────────
 let sessionTimer   = null;
@@ -141,6 +183,7 @@ socket.on('connect',()=>{
   }
   // Start session timer on connect — not on first transcript
   startSessionTimer();
+  startMicStream();
 });
 
 socket.on('transcript', d => {
@@ -221,6 +264,14 @@ socket.on('coaching',d=>{
   }
 });
 
+socket.on('disconnect', () => {
+  stopMicStream();
+});
+
+socket.on('dg_error', (d) => {
+  console.error('[DG] Server-Fehler:', d.error);
+});
+
 // ── Pause / Resume ────────────────────────────────────────────────────────────
 async function togglePause(){
   try{
@@ -288,6 +339,7 @@ async function beenden(){
     return;
   }
   if(!confirm('Gespräch beenden?\nLog wird gespeichert und State zurückgesetzt.')) return;
+  stopMicStream();  // stop mic before ending session
   const pcLoading=document.getElementById('postcall-loading');
   if(pcLoading){pcLoading.style.display='flex';}
   try{
