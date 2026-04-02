@@ -680,10 +680,10 @@ import extensions as _ext
 _ext.socketio = socketio
 
 # ── Start background threads ──────────────────────────────────────────────────
-from services.deepgram_service import deepgram_starten
+from services.deepgram_service import register_audio_handlers
 from services.claude_service   import analyse_loop, coaching_loop
 
-threading.Thread(target=deepgram_starten, daemon=True).start()
+register_audio_handlers(socketio)
 threading.Thread(target=analyse_loop,     daemon=True).start()
 threading.Thread(target=coaching_loop,    daemon=True).start()
 
