@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: "Completed 04.1-02-PLAN.md (checkpoint:human-verify Task 3 pending)"
-last_updated: "2026-04-02T18:22:31.662Z"
+status: executing
+stopped_at: Completed 04.1-03-PLAN.md
+last_updated: "2026-04-02T19:02:56.450Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 30
-  completed_plans: 24
+  total_plans: 31
+  completed_plans: 25
   percent: 65
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.1 (live-mikrofon-fix-pyaudio-browser-getusermedia) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-02
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
@@ -75,6 +75,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04-payments-legal P01 | 10 | 2 tasks | 6 files |
 | Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P01 | 2 | 2 tasks | 2 files |
 | Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P02 | 5 | 2 tasks | 2 files |
+| Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P03 | 5 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,9 @@ Recent decisions affecting current work:
 - [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: register_audio_handlers(sio) replaces background thread — events are client-driven via start_live_session/stop_live_session/audio_chunk/disconnect
 - [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: workletNode.connect(audioCtx.destination) required to prevent garbage collection of AudioWorklet node mid-session
 - [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: stopMicStream() called before fetch('/api/beenden') — ensures stop_live_session emitted before server resets session state
+- [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: audioCtx.resume() called conditionally (state==='suspended') in startMicStream() — bypasses Chrome autoplay suspension without errors on other browsers
+- [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: window.location.pathname guard added to socket.on('connect') as defensive measure — app.js only loads on /live but guard prevents future regression
+- [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: _first_chunk_logged scoped as closure in register_audio_handlers() — first-chunk diagnostics without module-level global pollution
 
 ### Roadmap Evolution
 
@@ -179,6 +183,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-02T18:22:27.187Z
-Stopped at: Completed 04.1-02-PLAN.md (checkpoint:human-verify Task 3 pending)
+Last session: 2026-04-02T19:02:56.447Z
+Stopped at: Completed 04.1-03-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)

@@ -158,7 +158,7 @@ Plans:
 Plans:
 - [x] 04.1-01-PLAN.md — Server: per-session Deepgram connections + remove global PyAudio startup (MIC-01, MIC-02)
 - [x] 04.1-02-PLAN.md — Client: AudioWorklet processor + getUserMedia + Socket.IO streaming lifecycle (MIC-03, MIC-04)
-- [ ] 04.1-03-PLAN.md — Gap closure: fix AudioContext suspension + diagnostic logging (MIC-04)
+- [x] 04.1-03-PLAN.md — Gap closure: fix AudioContext suspension + diagnostic logging (MIC-04)
 
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
@@ -183,7 +183,7 @@ Phases execute in numeric order.
 | 3.1 Frontend Redesign | 6/6 ✓ | Complete | 2026-04-01 |
 | 3.2 UAT Bug Fixes | 5/7 | In Progress|  |
 | 4. Payments & Legal | 1/3 | In Progress|  |
-| 4.1 Live-Mikrofon Fix | 2/3 | In Progress (gap closure) | - |
+| 4.1 Live-Mikrofon Fix | 3/3 | Complete   | 2026-04-02 |
 | 5. Launch | 0/? | Not started | - |
 
 ---
