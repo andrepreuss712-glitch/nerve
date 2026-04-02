@@ -47,8 +47,8 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 
 ### Live-Mikrofon Fix (INSERTED — Phase 04.1)
 
-- [ ] **MIC-01**: Server startet ohne PyAudio — kein `import pyaudio` im Produktionscode; deepgram_service.py verwaltet per-Socket.IO-Session Deepgram-Verbindungen
-- [ ] **MIC-02**: Jede Socket.IO-Session bekommt eine eigene Deepgram-WebSocket-Verbindung; Lifecycle: open bei `start_live_session`, close bei `stop_live_session` oder disconnect
+- [x] **MIC-01**: Server startet ohne PyAudio — kein `import pyaudio` im Produktionscode; deepgram_service.py verwaltet per-Socket.IO-Session Deepgram-Verbindungen
+- [x] **MIC-02**: Jede Socket.IO-Session bekommt eine eigene Deepgram-WebSocket-Verbindung; Lifecycle: open bei `start_live_session`, close bei `stop_live_session` oder disconnect
 - [ ] **MIC-03**: Browser erfasst Mikrofon-Audio via `getUserMedia` + AudioWorklet (16kHz, Int16 PCM) und streamt via Socket.IO `audio_chunk` Events an den Server
 - [ ] **MIC-04**: Live-Transkription funktioniert end-to-end auf getnerve.app: Browser-Mikrofon → Server → Deepgram → Transkript im UI
 
@@ -133,8 +133,8 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | LEGAL-01 | Phase 4 | Pending |
 | LEGAL-02 | Phase 4 | Pending |
 | LEGAL-03 | Phase 4 | Pending |
-| MIC-01 | Phase 4.1 | Pending |
-| MIC-02 | Phase 4.1 | Pending |
+| MIC-01 | Phase 4.1 | Complete |
+| MIC-02 | Phase 4.1 | Complete |
 | MIC-03 | Phase 4.1 | Pending |
 | MIC-04 | Phase 4.1 | Pending |
 | LAUNCH-01 | Phase 5 | Pending |

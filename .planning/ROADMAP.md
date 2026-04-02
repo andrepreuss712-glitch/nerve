@@ -153,10 +153,10 @@ Plans:
   2. Each Socket.IO session gets its own Deepgram WebSocket connection (per-session, not global)
   3. Browser captures mic audio via getUserMedia + AudioWorklet at 16kHz, streams Int16 PCM via Socket.IO
   4. Live transcription works end-to-end on getnerve.app: speak into browser mic, see transcripts in UI
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 04.1-01-PLAN.md — Server: per-session Deepgram connections + remove global PyAudio startup (MIC-01, MIC-02)
+- [x] 04.1-01-PLAN.md — Server: per-session Deepgram connections + remove global PyAudio startup (MIC-01, MIC-02)
 - [ ] 04.1-02-PLAN.md — Client: AudioWorklet processor + getUserMedia + Socket.IO streaming lifecycle (MIC-03, MIC-04)
 
 ### Phase 5: Launch
