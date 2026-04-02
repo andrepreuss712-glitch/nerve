@@ -1,0 +1,88 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-02T17:36:29.807Z",
+  "phase": "04",
+  "phase_name": "payments-legal",
+  "phase_dir": ".planning/phases/04-payments-legal",
+  "plan": 3,
+  "task": 3,
+  "total_tasks": 7,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "04-01 T1", "name": "Stripe dependency + DB schema + config", "status": "done", "commit": "7727fe0"},
+    {"id": "04-01 T2", "name": "Payments blueprint — Checkout, Webhook, Portal, Success", "status": "done", "commit": "0c5e1e9"},
+    {"id": "04-03 T1", "name": "Legal page templates + routes + footer links", "status": "done", "commit": "ff0515e"},
+    {"id": "04-03 T2", "name": "Deepgram EU endpoint + nginx webhook config + LEGAL-01 verified", "status": "done", "commit": "934c329"}
+  ],
+  "remaining_tasks": [
+    {"id": "04-03 T3", "name": "AVV signing checklist (manual — LEGAL-03)", "status": "checkpoint_human_action"},
+    {"id": "04-02 T1", "name": "Pricing page (pricing.html) — 3 NERVE plans with Gründerrabatt badge", "status": "not_started"},
+    {"id": "04-02 T2", "name": "Fair-use metering — soft warnings on Dashboard + /live session start", "status": "not_started"}
+  ],
+  "blockers": [
+    {
+      "description": "AVV signing required with Stripe, Deepgram, Anthropic, ElevenLabs",
+      "type": "human_action",
+      "workaround": "Can be done in parallel — Wave 2 (pricing page) can execute once user says done"
+    },
+    {
+      "description": "Impressum placeholders need real address + USt-IdNr",
+      "type": "human_action",
+      "workaround": "placeholders [STRASSE HAUSNUMMER, PLZ STADT] in templates/impressum.html"
+    },
+    {
+      "description": "Stripe Dashboard setup needed before payment flows can be tested",
+      "type": "human_action",
+      "workaround": "Code complete — just needs Stripe products/prices/webhook configured"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Sign Stripe DPA: Dashboard → Settings → Compliance → Data Processing Agreement",
+      "context": "LEGAL-03 AVV requirement",
+      "blocking": false
+    },
+    {
+      "action": "Sign Deepgram DPA: Dashboard → Settings → Privacy/Legal or privacy@deepgram.com",
+      "context": "LEGAL-03 AVV requirement",
+      "blocking": false
+    },
+    {
+      "action": "Sign Anthropic DPA: console.anthropic.com → Account Settings → Legal/Privacy or privacy@anthropic.com",
+      "context": "LEGAL-03 AVV requirement",
+      "blocking": false
+    },
+    {
+      "action": "Sign ElevenLabs DPA: Dashboard → Account → Legal/Privacy or legal@elevenlabs.io",
+      "context": "LEGAL-03 AVV requirement",
+      "blocking": false
+    },
+    {
+      "action": "Fill impressum.html placeholders: street address and USt-IdNr (once from Finanzamt)",
+      "context": "templates/impressum.html has [STRASSE HAUSNUMMER, PLZ STADT] and [DE123456789]",
+      "blocking": false
+    },
+    {
+      "action": "Stripe Dashboard setup: 3 products (Starter 49/Pro 59/Business 69 EUR/mo), webhook endpoint, Customer Portal config, SEPA/Kreditkarte/PayPal payment methods",
+      "context": "Required before payment flows can be tested end-to-end",
+      "blocking": true
+    },
+    {
+      "action": "Set VPS .env: DEEPGRAM_HOST=api.eu.deepgram.com + all STRIPE_* vars",
+      "context": "Required for production Stripe and EU Deepgram endpoint",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {"decision": "Webhook uses raw request.data for Stripe signature verification", "rationale": "Required by Stripe SDK", "phase": "04"},
+    {"decision": "Idempotency via stripe_event_id UNIQUE index — silent skip on duplicate", "rationale": "Prevents double-activation on webhook retries", "phase": "04"},
+    {"decision": "checkout_success only flashes, subscription activation in webhook only", "rationale": "D-12 — webhook is authoritative source of truth", "phase": "04"},
+    {"decision": "All services on EU servers (Deepgram api.eu.deepgram.com, Claude Bedrock Frankfurt, ElevenLabs EU Residency, Stripe Frankfurt)", "rationale": "DSGVO compliance — no SCCs needed for EU-to-EU transfers", "phase": "04"}
+  ],
+  "uncommitted_files": [
+    ".claude/settings.local.json",
+    ".planning/phases/04-payments-legal/04-CONTEXT.md"
+  ],
+  "next_action": "User replies 'done' to checkpoint → spawn 04-03 continuation agent to mark plan complete, then execute Wave 2 (04-02 pricing page + fair-use metering)",
+  "context_notes": "Wave 1 is 75% done. 04-01 fully complete (Stripe backend). 04-03 code is complete (legal pages, routes, footer, EU endpoint, deploy.sh) — just waiting for human AVV signing. Wave 2 (04-02) cannot start until user confirms checkpoint. After Wave 2, run verifier then mark phase complete."
+}
