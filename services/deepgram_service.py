@@ -2,9 +2,12 @@ import threading
 import time
 from datetime import datetime
 from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
-import pyaudio
-from config import DEEPGRAM_API_KEY, SAMPLE_RATE, CHUNK_SIZE, MERGE_WINDOW_S
+from config import DEEPGRAM_API_KEY, SAMPLE_RATE, MERGE_WINDOW_S
 import services.live_session as ls
+
+# ── Per-session Deepgram connections ──────────────────────────────────────────
+_deepgram_sessions = {}   # {sid: connection}
+_sessions_lock = threading.Lock()
 
 
 def _get_speaker(result):
@@ -22,95 +25,104 @@ def _get_speaker(result):
         return None
 
 
-def on_message(self, result, **kwargs):
-    from extensions import socketio as sio
-    try:
-        text = result.channel.alternatives[0].transcript
-        if not text:
-            return
-        with ls.pause_lock:
-            if ls.is_paused:
+def _make_on_message(sid):
+    def on_message(self, result, **kwargs):
+        from extensions import socketio as sio
+        try:
+            text = result.channel.alternatives[0].transcript
+            if not text:
                 return
+            with ls.pause_lock:
+                if ls.is_paused:
+                    return
 
-        if result.is_final:
-            speaker = ls.stabilize_speaker(_get_speaker(result))
-            line_id = ls.next_line_id()
-            ts      = datetime.now().strftime('%H:%M:%S')
+            if result.is_final:
+                speaker = ls.stabilize_speaker(_get_speaker(result))
+                line_id = ls.next_line_id()
+                ts      = datetime.now().strftime('%H:%M:%S')
 
-            # Zweiter Sprecher gesehen?
-            with ls._sp2_lock:
-                if speaker == 1:
-                    ls._second_sp_seen = True
-                roles_confirmed = ls._second_sp_seen
+                # Zweiter Sprecher gesehen?
+                with ls._sp2_lock:
+                    if speaker == 1:
+                        ls._second_sp_seen = True
+                    roles_confirmed = ls._second_sp_seen
 
-            # Sprecher-Fallback für Log
-            with ls._log_sp_lock:
-                if speaker is not None:
-                    ls._log_last_sp = speaker
-                log_sp = speaker if speaker is not None else ls._log_last_sp
+                # Sprecher-Fallback für Log
+                with ls._log_sp_lock:
+                    if speaker is not None:
+                        ls._log_last_sp = speaker
+                    log_sp = speaker if speaker is not None else ls._log_last_sp
 
-            if roles_confirmed:
-                sp_label     = 'Berater' if log_sp == 0 else ('Kunde' if log_sp == 1 else 'Unbekannt')
-                emit_speaker = speaker
-            else:
-                sp_label     = 'Unbekannt'
-                emit_speaker = None
-
-            print(f"[DG] [{sp_label}] {text}")
-            sio.emit('transcript', {'type': 'final', 'text': text,
-                                    'speaker': emit_speaker, 'line_id': line_id})
-            with ls.log_lock:
-                ls.conversation_log.append({
-                    'ts': ts, 'type': 'transcript',
-                    'speaker': log_sp if roles_confirmed else None,
-                    'text': text, 'data': None,
-                })
-
-            if roles_confirmed:
-                sp_name = 'Berater' if speaker == 0 else ('Kunde' if speaker == 1 else 'Sprecher')
-            else:
-                sp_name = 'Sprecher'
-
-            key = str(speaker) if speaker is not None else 'unknown'
-            with ls._merge_lock:
-                if key in ls._merge_pending:
-                    ls._merge_pending[key]['timer'].cancel()
-                    ls._merge_pending[key]['texts'].append(text)
-                    ls._merge_pending[key]['line_id'] = line_id
+                if roles_confirmed:
+                    sp_label     = 'Berater' if log_sp == 0 else ('Kunde' if log_sp == 1 else 'Unbekannt')
+                    emit_speaker = speaker
                 else:
-                    ls._merge_pending[key] = {
-                        'texts':           [text],
-                        'line_id':         line_id,
-                        'speaker':         speaker,
-                        'roles_confirmed': roles_confirmed,
-                        'sp_name':         sp_name,
-                        't_start':         time.monotonic(),
-                    }
-                t = threading.Timer(MERGE_WINDOW_S, ls._flush_segment, args=[key])
-                t.daemon = True
-                t.start()
-                ls._merge_pending[key]['timer'] = t
-        else:
-            from extensions import socketio as sio2
-            sio2.emit('transcript', {'type': 'interim', 'text': text})
-    except Exception as e:
-        print(f"[DG] Fehler: {e}")
+                    sp_label     = 'Unbekannt'
+                    emit_speaker = None
+
+                print(f"[DG] [{sp_label}] {text}")
+                sio.emit('transcript', {'type': 'final', 'text': text,
+                                        'speaker': emit_speaker, 'line_id': line_id},
+                         room=sid)
+                with ls.log_lock:
+                    ls.conversation_log.append({
+                        'ts': ts, 'type': 'transcript',
+                        'speaker': log_sp if roles_confirmed else None,
+                        'text': text, 'data': None,
+                    })
+
+                if roles_confirmed:
+                    sp_name = 'Berater' if speaker == 0 else ('Kunde' if speaker == 1 else 'Sprecher')
+                else:
+                    sp_name = 'Sprecher'
+
+                key = str(speaker) if speaker is not None else 'unknown'
+                with ls._merge_lock:
+                    if key in ls._merge_pending:
+                        ls._merge_pending[key]['timer'].cancel()
+                        ls._merge_pending[key]['texts'].append(text)
+                        ls._merge_pending[key]['line_id'] = line_id
+                    else:
+                        ls._merge_pending[key] = {
+                            'texts':           [text],
+                            'line_id':         line_id,
+                            'speaker':         speaker,
+                            'roles_confirmed': roles_confirmed,
+                            'sp_name':         sp_name,
+                            't_start':         time.monotonic(),
+                        }
+                    t = threading.Timer(MERGE_WINDOW_S, ls._flush_segment, args=[key])
+                    t.daemon = True
+                    t.start()
+                    ls._merge_pending[key]['timer'] = t
+            else:
+                sio.emit('transcript', {'type': 'interim', 'text': text},
+                         room=sid)
+        except Exception as e:
+            print(f"[DG] Fehler: {e}")
+    return on_message
 
 
-def on_open(self, open, **kwargs):
-    print("[DG] Verbunden")
+def _make_on_open(sid):
+    def on_open(self, open, **kwargs):
+        print(f"[DG] Verbunden (sid={sid})")
+    return on_open
 
 
-def on_error(self, error, **kwargs):
-    print(f"[DG] Error: {error}")
+def _make_on_error(sid):
+    def on_error(self, error, **kwargs):
+        from extensions import socketio as sio
+        print(f"[DG] Error (sid={sid}): {error}")
+        sio.emit('dg_error', {'error': str(error)}, room=sid)
+    return on_error
 
 
-def deepgram_starten():
-    client     = DeepgramClient(DEEPGRAM_API_KEY)
+def _open_deepgram_connection(sid):
+    client = DeepgramClient(DEEPGRAM_API_KEY)
     connection = client.listen.websocket.v("1")
-    connection.on(LiveTranscriptionEvents.Transcript, on_message)
-    connection.on(LiveTranscriptionEvents.Open,       on_open)
-    connection.on(LiveTranscriptionEvents.Error,      on_error)
+    connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid))
+    connection.on(LiveTranscriptionEvents.Open, _make_on_open(sid))
+    connection.on(LiveTranscriptionEvents.Error, _make_on_error(sid))
     options = LiveOptions(
         model="nova-2",
         language="de",
@@ -123,20 +135,52 @@ def deepgram_starten():
         sample_rate=SAMPLE_RATE,
     )
     connection.start(options)
-    pa     = pyaudio.PyAudio()
-    stream = pa.open(
-        format=pyaudio.paInt16, channels=1, rate=SAMPLE_RATE,
-        input=True, frames_per_buffer=CHUNK_SIZE
-    )
-    print("[Audio] Mikrofon gestartet – sprechen!")
-    try:
-        while True:
-            daten = stream.read(CHUNK_SIZE, exception_on_overflow=False)
-            connection.send(daten)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        stream.stop_stream()
-        stream.close()
-        pa.terminate()
-        connection.finish()
+    with _sessions_lock:
+        _deepgram_sessions[sid] = connection
+    print(f"[DG] Session gestartet (sid={sid})")
+
+
+def _close_deepgram_connection(sid):
+    with _sessions_lock:
+        connection = _deepgram_sessions.pop(sid, None)
+    if connection:
+        try:
+            connection.finish()
+        except Exception as e:
+            print(f"[DG] Fehler beim Schliessen (sid={sid}): {e}")
+        print(f"[DG] Session beendet (sid={sid})")
+
+
+def register_audio_handlers(sio):
+    @sio.on('start_live_session')
+    def handle_start_live_session(sid=None):
+        from flask_socketio import request
+        _sid = request.sid if sid is None else sid
+        _open_deepgram_connection(_sid)
+
+    @sio.on('stop_live_session')
+    def handle_stop_live_session(sid=None):
+        from flask_socketio import request
+        _sid = request.sid if sid is None else sid
+        _close_deepgram_connection(_sid)
+
+    @sio.on('audio_chunk')
+    def handle_audio_chunk(data, sid=None):
+        from flask_socketio import request
+        _sid = request.sid if sid is None else sid
+        with ls.pause_lock:
+            if ls.is_paused:
+                return
+        with _sessions_lock:
+            connection = _deepgram_sessions.get(_sid)
+        if connection:
+            try:
+                connection.send(data)
+            except Exception as e:
+                print(f"[DG] Send error (sid={_sid}): {e}")
+
+    @sio.on('disconnect')
+    def handle_disconnect(sid=None):
+        from flask_socketio import request
+        _sid = request.sid if sid is None else sid
+        _close_deepgram_connection(_sid)
