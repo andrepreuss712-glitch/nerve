@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %} — Datenschutzerklärung{% endblock %}
+{% block content %}
+<div style="max-width:720px;margin:40px auto;padding:0 20px;">
+  <h1 style="color:var(--n-text-primary);margin-bottom:8px;">Datenschutzerklärung</h1>
+  <p style="color:var(--n-text-muted);font-size:13px;margin-bottom:32px;">Stand: April 2026</p>
+
+  <!-- 1. Verantwortlicher -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">1. Verantwortlicher</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Verantwortlicher im Sinne der DSGVO ist:<br><br>
+    André Preuß<br>
+    [Straße und Hausnummer]<br>
+    58636 Iserlohn<br>
+    Deutschland<br>
+    E-Mail: <a href="mailto:kontakt@getnerve.app" style="color:var(--n-primary);">kontakt@getnerve.app</a>
+  </p>
+
+  <!-- 2. Erhobene Daten -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">2. Erhobene Daten</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Wir erheben und verarbeiten folgende Kategorien personenbezogener Daten:
+  </p>
+  <ul style="margin:12px 0 12px 20px;color:var(--n-text-secondary);line-height:1.8;">
+    <li><strong>Stammdaten:</strong> Name, E-Mail-Adresse, Unternehmen, Branche, Teamgröße (bei Registrierung)</li>
+    <li><strong>Nutzungsdaten:</strong> Login-Zeitpunkte, genutzte Funktionen, Trainingsergebnisse, Gesprächsanzahl</li>
+    <li><strong>Audiodaten:</strong> Sprachaudio wird ausschließlich in Echtzeit zur Transkription und Analyse an
+      Drittdienste übermittelt. Eine dauerhafte Speicherung der Rohaudiodaten findet standardmäßig nicht statt
+      (DSGVO-Modus ist standardmäßig aktiv).</li>
+    <li><strong>Zahlungsdaten:</strong> Werden direkt durch Stripe verarbeitet — wir erhalten nur anonymisierte
+      Zahlungsbestätigungen (Kundennummer, Planstatus).</li>
+  </ul>
+
+  <!-- 3. Rechtsgrundlagen -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">3. Rechtsgrundlagen</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Die Verarbeitung Ihrer personenbezogenen Daten erfolgt auf folgenden Rechtsgrundlagen:
+  </p>
+  <ul style="margin:12px 0 12px 20px;color:var(--n-text-secondary);line-height:1.8;">
+    <li><strong>Art. 6 Abs. 1 lit. b DSGVO</strong> — Vertragserfüllung: Verarbeitung zur Erbringung der
+      gebuchten SaaS-Leistungen (Nutzerregistrierung, Live-Analyse, Trainingsmodus)</li>
+    <li><strong>Art. 6 Abs. 1 lit. c DSGVO</strong> — Rechtliche Verpflichtung: Rechnungsstellung,
+      steuerrechtliche Aufbewahrungspflichten</li>
+    <li><strong>Art. 6 Abs. 1 lit. f DSGVO</strong> — Berechtigtes Interesse: Cold-Call-Modus (ausschließlich
+      Verarbeitung des Nutzer-Audios, kein Kundentransskript); IT-Sicherheit und Betrieb der Plattform</li>
+    <li><strong>Art. 6 Abs. 1 lit. a DSGVO</strong> — Einwilligung: DSGVO-Consent-Banner vor erster
+      Mikrofonnutzung im Meeting-Modus</li>
+  </ul>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Auftragsverarbeitungsverträge gemäß <strong>Art. 28 DSGVO</strong> bestehen mit allen nachfolgend
+    genannten Auftragsverarbeitern.
+  </p>
+
+  <!-- 4. Auftragsverarbeiter -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">4. Auftragsverarbeiter (Art. 28 DSGVO)</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);margin-bottom:16px;">
+    Zur Erbringung unserer Leistungen setzen wir folgende Auftragsverarbeiter ein, mit denen
+    Auftragsverarbeitungsverträge (AVV) gemäß Art. 28 DSGVO abgeschlossen wurden:
+  </p>
+
+  <div style="border:1px solid var(--n-border);border-radius:8px;padding:16px 20px;margin-bottom:16px;background:var(--n-surface);">
+    <h3 style="margin-bottom:8px;font-size:1rem;color:var(--n-text-primary);">Deepgram, Inc.</h3>
+    <p style="line-height:1.7;color:var(--n-text-secondary);font-size:14px;">
+      535 Mission St, San Francisco, CA 94105, USA<br>
+      <strong>Zweck:</strong> Echtzeit-Sprachtranskription (Live-Modus und Trainingsmodus)<br>
+      <strong>Datenübertragung:</strong> EU-Standardvertragsklauseln (SCC) gemäß Art. 46 Abs. 2 lit. c DSGVO<br>
+      <strong>Datenverarbeitung:</strong> Auf EU-Servern via <code style="background:var(--n-border);padding:1px 5px;border-radius:3px;">api.eu.deepgram.com</code><br>
+      <strong>Datenschutzrichtlinie:</strong> <a href="https://deepgram.com/privacy" target="_blank" rel="noopener" style="color:var(--n-primary);">deepgram.com/privacy</a>
+    </p>
+  </div>
+
+  <div style="border:1px solid var(--n-border);border-radius:8px;padding:16px 20px;margin-bottom:16px;background:var(--n-surface);">
+    <h3 style="margin-bottom:8px;font-size:1rem;color:var(--n-text-primary);">Anthropic, PBC</h3>
+    <p style="line-height:1.7;color:var(--n-text-secondary);font-size:14px;">
+      548 Market St PMB 90375, San Francisco, CA 94104, USA<br>
+      <strong>Zweck:</strong> KI-gestützte Gesprächsanalyse, Einwanderkennung, Coaching-Empfehlungen<br>
+      <strong>Datenübertragung:</strong> EU-Standardvertragsklauseln (SCC) gemäß Art. 46 Abs. 2 lit. c DSGVO<br>
+      <strong>Hinweis:</strong> API-Daten werden nicht für das Training von KI-Modellen verwendet<br>
+      <strong>Datenschutzrichtlinie:</strong> <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener" style="color:var(--n-primary);">anthropic.com/privacy</a>
+    </p>
+  </div>
+
+  <div style="border:1px solid var(--n-border);border-radius:8px;padding:16px 20px;margin-bottom:16px;background:var(--n-surface);">
+    <h3 style="margin-bottom:8px;font-size:1rem;color:var(--n-text-primary);">ElevenLabs, Inc.</h3>
+    <p style="line-height:1.7;color:var(--n-text-secondary);font-size:14px;">
+      New York, USA<br>
+      <strong>Zweck:</strong> Text-zu-Sprache-Synthese für KI-Trainingsszenarien (KI-Kundenstimme)<br>
+      <strong>Datenübertragung:</strong> EU-Standardvertragsklauseln (SCC) gemäß Art. 46 Abs. 2 lit. c DSGVO<br>
+      <strong>Datenschutzrichtlinie:</strong> <a href="https://elevenlabs.io/privacy" target="_blank" rel="noopener" style="color:var(--n-primary);">elevenlabs.io/privacy</a>
+    </p>
+  </div>
+
+  <div style="border:1px solid var(--n-border);border-radius:8px;padding:16px 20px;margin-bottom:16px;background:var(--n-surface);">
+    <h3 style="margin-bottom:8px;font-size:1rem;color:var(--n-text-primary);">Stripe Payments Europe, Ltd.</h3>
+    <p style="line-height:1.7;color:var(--n-text-secondary);font-size:14px;">
+      1 Grand Canal Street Lower, Dublin 2, Irland<br>
+      <strong>Zweck:</strong> Zahlungsabwicklung für Abonnements<br>
+      <strong>Datenübertragung:</strong> Verarbeitung innerhalb der EU (Irland) — keine SCC erforderlich<br>
+      <strong>Datenschutzrichtlinie:</strong> <a href="https://stripe.com/de/privacy" target="_blank" rel="noopener" style="color:var(--n-primary);">stripe.com/de/privacy</a>
+    </p>
+  </div>
+
+  <!-- 5. Speicherdauer -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">5. Speicherdauer</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Personenbezogene Daten werden gelöscht, sobald sie für den Zweck ihrer Erhebung nicht mehr
+    erforderlich sind. Kontodaten werden nach Kündigung und Ablauf der gesetzlichen Aufbewahrungsfristen
+    (in der Regel 10 Jahre für steuerrelevante Daten) gelöscht. Audiodaten werden im DSGVO-Modus nicht
+    dauerhaft gespeichert. Nutzungsstatistiken werden in anonymisierter Form aufbewahrt.
+  </p>
+
+  <!-- 6. Betroffenenrechte -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">6. Betroffenenrechte</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Sie haben folgende Rechte in Bezug auf Ihre personenbezogenen Daten:
+  </p>
+  <ul style="margin:12px 0 12px 20px;color:var(--n-text-secondary);line-height:1.8;">
+    <li><strong>Auskunft</strong> (Art. 15 DSGVO): Recht auf Information über verarbeitete Daten</li>
+    <li><strong>Berichtigung</strong> (Art. 16 DSGVO): Recht auf Korrektur unrichtiger Daten</li>
+    <li><strong>Löschung</strong> (Art. 17 DSGVO): Recht auf Löschung Ihrer Daten</li>
+    <li><strong>Einschränkung</strong> (Art. 18 DSGVO): Recht auf Einschränkung der Verarbeitung</li>
+    <li><strong>Datenportabilität</strong> (Art. 20 DSGVO): Recht auf Übertragbarkeit Ihrer Daten</li>
+    <li><strong>Widerspruch</strong> (Art. 21 DSGVO): Recht auf Widerspruch gegen die Verarbeitung</li>
+    <li><strong>Widerruf</strong> (Art. 7 Abs. 3 DSGVO): Recht auf Widerruf erteilter Einwilligungen</li>
+  </ul>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Zur Ausübung Ihrer Rechte wenden Sie sich bitte an: <a href="mailto:kontakt@getnerve.app" style="color:var(--n-primary);">kontakt@getnerve.app</a>
+  </p>
+
+  <!-- 7. Aufsichtsbehörde -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">7. Beschwerderecht bei der Aufsichtsbehörde</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Sie haben das Recht, sich bei einer Datenschutzaufsichtsbehörde zu beschweren. Die zuständige
+    Aufsichtsbehörde für Nordrhein-Westfalen ist:<br><br>
+    <strong>Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LDI NRW)</strong><br>
+    Kavalleriestraße 2–4<br>
+    40213 Düsseldorf<br>
+    <a href="https://www.ldi.nrw.de" target="_blank" rel="noopener" style="color:var(--n-primary);">www.ldi.nrw.de</a>
+  </p>
+
+  <!-- 8. Cookies -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">8. Cookies und Sitzungsdaten</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    NERVE verwendet technisch notwendige Session-Cookies zur Authentifizierung. Diese Cookies sind für
+    den Betrieb der Plattform unbedingt erforderlich und werden nicht für Werbezwecke genutzt. Es werden
+    keine Tracking-Cookies oder Analyse-Cookies von Drittanbietern gesetzt.
+  </p>
+
+  <p style="margin-top:32px;color:var(--n-text-muted);font-size:13px;">
+    André Preuß · Iserlohn · kontakt@getnerve.app
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %} — AGB{% endblock %}
+{% block content %}
+<div style="max-width:720px;margin:40px auto;padding:0 20px;">
+  <h1 style="color:var(--n-text-primary);margin-bottom:8px;">Allgemeine Geschäftsbedingungen (AGB)</h1>
+  <p style="color:var(--n-text-muted);font-size:13px;margin-bottom:32px;">Stand: April 2026</p>
+
+  <!-- § 1 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 1 Geltungsbereich</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Diese Allgemeinen Geschäftsbedingungen gelten für alle Verträge zwischen André Preuß (nachfolgend
+    „Anbieter") und Unternehmern im Sinne von § 14 BGB (nachfolgend „Nutzer") über die Nutzung der
+    SaaS-Plattform NERVE (nachfolgend „Dienst"). Verbraucher im Sinne von § 13 BGB sind von der Nutzung
+    ausgeschlossen. Entgegenstehende oder abweichende Bedingungen des Nutzers werden nicht anerkannt,
+    es sei denn, der Anbieter stimmt ihrer Geltung ausdrücklich schriftlich zu.
+  </p>
+
+  <!-- § 2 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 2 Leistungsbeschreibung</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent für B2B-Vertriebler. Der Dienst bietet:
+  </p>
+  <ul style="margin:12px 0 12px 20px;color:var(--n-text-secondary);line-height:1.8;">
+    <li>Echtzeit-Analyse von Verkaufsgesprächen (Live-Modus)</li>
+    <li>KI-gestützte Einwanderkennung und Gegenargument-Vorschläge</li>
+    <li>Kaufbereitschafts-Tracking und Sprachanalyse</li>
+    <li>KI-Trainingsmodus mit simulierten Kundengesprächen (ElevenLabs Text-zu-Sprache)</li>
+    <li>Post-Call-Analyse und CRM-Export</li>
+    <li>Coach-Plattform für Teams (abhängig vom gewählten Plan)</li>
+  </ul>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Der Anbieter erbringt die Leistungen unter Einsatz von KI-Drittdiensten (Deepgram, Anthropic,
+    ElevenLabs) und behält sich technische Änderungen und Weiterentwicklungen vor.
+  </p>
+
+  <!-- § 3 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 3 Vertragsschluss und Laufzeit</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Der Vertrag kommt durch Registrierung auf der Plattform und Auswahl eines kostenpflichtigen Plans
+    zustande. Die Mindestlaufzeit beträgt einen Monat. Der Vertrag verlängert sich automatisch um jeweils
+    einen weiteren Monat, wenn er nicht mit einer Frist von 14 Tagen zum Ende des jeweiligen
+    Abrechnungszeitraums gekündigt wird. Die Kündigung erfolgt über die Einstellungsseite im Nutzerkonto
+    oder per E-Mail an kontakt@getnerve.app.
+  </p>
+
+  <!-- § 4 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 4 Preise und Zahlung</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    NERVE wird als Flat-Rate-Abonnement angeboten. Die aktuellen Preise sind auf der Webseite unter
+    „Preise" einsehbar. Die Abrechnung erfolgt monatlich im Voraus über Stripe Payments Europe, Ltd.
+    Alle Preise verstehen sich netto zzgl. der gesetzlichen Umsatzsteuer. Bei Zahlungsverzug behält sich
+    der Anbieter das Recht vor, den Zugang zum Dienst vorübergehend zu sperren.
+  </p>
+
+  <!-- § 5 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 5 Fair-Use-Richtlinie</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Die Nutzung des Dienstes ist auf 1.000 Live-Minuten und 50 Trainingseinheiten pro Monat und Nutzer
+    ausgelegt (Fair-Use-Grenze). Bei Überschreitung dieser Grenze informiert der Anbieter den Nutzer mit
+    einer Soft-Warning. Es erfolgt kein automatischer harter Block — der Dienst bleibt bis zum Ende des
+    Abrechnungszeitraums nutzbar. Bei dauerhafter erheblicher Überschreitung behält sich der Anbieter
+    das Recht vor, das Nutzungsverhalten zu evaluieren und ggf. einen angepassten Plan anzubieten.
+  </p>
+
+  <!-- § 6 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 6 Datenschutz und Verarbeitung von Drittdaten</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Der Anbieter verarbeitet personenbezogene Daten des Nutzers gemäß der Datenschutzerklärung.
+  </p>
+  <p style="line-height:1.7;color:var(--n-text-secondary);margin-top:12px;">
+    <strong>Drittdaten-Verarbeitungs-Klausel:</strong> Der Nutzer ist verpflichtet, seine Gesprächspartner
+    über die Nutzung von NERVE zu informieren und, sofern erforderlich, deren Einwilligung einzuholen.
+    NERVE verarbeitet Audiodaten ausschließlich in Echtzeit zur Analyse; eine dauerhafte Speicherung der
+    Rohaudiodaten findet nicht statt, sofern der Nutzer den DSGVO-Modus nicht deaktiviert hat. Der Nutzer
+    trägt die alleinige Verantwortung dafür, dass die Verarbeitung von Gesprächsdaten Dritter
+    (Gesprächspartner) mit den anwendbaren datenschutzrechtlichen Vorschriften im Einklang steht.
+    Im Cold-Call-Modus wird ausschließlich das Audio des Nutzers verarbeitet (keine Aufnahme des
+    Gesprächspartners). Im Meeting-Modus ist vor Gesprächsbeginn die ausdrückliche Einwilligung aller
+    Gesprächspartner erforderlich.
+  </p>
+
+  <!-- § 7 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 7 Haftungsbeschränkung</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Der Anbieter haftet nur bei Vorsatz und grober Fahrlässigkeit. Bei leichter Fahrlässigkeit haftet
+    der Anbieter nur bei Verletzung wesentlicher Vertragspflichten (Kardinalpflichten) und nur in Höhe
+    des vorhersehbaren, typischerweise eintretenden Schadens. Die Haftung für indirekte Schäden,
+    entgangenen Gewinn oder Datenverlust ist ausgeschlossen, soweit gesetzlich zulässig. NERVE ist
+    ein Assistenzsystem — die Verantwortung für Gesprächsentscheidungen verbleibt beim Nutzer.
+  </p>
+
+  <!-- § 8 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 8 Kündigung</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Beide Parteien können den Vertrag mit einer Frist von 14 Tagen zum Ende des laufenden
+    Abrechnungszeitraums ordentlich kündigen. Das Recht zur außerordentlichen Kündigung aus wichtigem
+    Grund bleibt unberührt. Der Anbieter ist berechtigt, den Vertrag außerordentlich zu kündigen, wenn
+    der Nutzer gegen diese AGB oder anwendbares Recht verstößt (insbesondere gegen die
+    Drittdaten-Klausel in § 6).
+  </p>
+
+  <!-- § 9 -->
+  <h2 style="margin-top:28px;margin-bottom:12px;font-size:1.1rem;">§ 9 Schlussbestimmungen</h2>
+  <p style="line-height:1.7;color:var(--n-text-secondary);">
+    Es gilt deutsches Recht unter Ausschluss des UN-Kaufrechts (CISG). Gerichtsstand für alle
+    Streitigkeiten aus diesem Vertrag ist Iserlohn, soweit der Nutzer Kaufmann, juristische Person des
+    öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen ist. Sollten einzelne Bestimmungen
+    dieser AGB unwirksam sein oder werden, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.
+  </p>
+
+  <p style="margin-top:32px;color:var(--n-text-muted);font-size:13px;">
+    André Preuß · Iserlohn · kontakt@getnerve.app
+  </p>
+</div>
+{% endblock %}
