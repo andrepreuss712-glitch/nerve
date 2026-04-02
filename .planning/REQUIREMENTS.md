@@ -45,6 +45,13 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [ ] **LEGAL-03**: Signierte AVVs mit Deepgram, Anthropic, ElevenLabs und Stripe liegen vor; Deepgram EU-Endpunkt (`api.eu.deepgram.com`) wird verwendet
 - [x] **LEGAL-04**: `cors_allowed_origins` in SocketIO-Init ist auf die produktive Domain gesetzt (kein `"*"`)
 
+### Live-Mikrofon Fix (INSERTED — Phase 04.1)
+
+- [ ] **MIC-01**: Server startet ohne PyAudio — kein `import pyaudio` im Produktionscode; deepgram_service.py verwaltet per-Socket.IO-Session Deepgram-Verbindungen
+- [ ] **MIC-02**: Jede Socket.IO-Session bekommt eine eigene Deepgram-WebSocket-Verbindung; Lifecycle: open bei `start_live_session`, close bei `stop_live_session` oder disconnect
+- [ ] **MIC-03**: Browser erfasst Mikrofon-Audio via `getUserMedia` + AudioWorklet (16kHz, Int16 PCM) und streamt via Socket.IO `audio_chunk` Events an den Server
+- [ ] **MIC-04**: Live-Transkription funktioniert end-to-end auf getnerve.app: Browser-Mikrofon → Server → Deepgram → Transkript im UI
+
 ### Business Setup
 
 - [ ] **BIZ-01**: Gewerbeanmeldung beim Gewerbeamt Iserlohn ist eingereicht
@@ -126,13 +133,17 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | LEGAL-01 | Phase 4 | Pending |
 | LEGAL-02 | Phase 4 | Pending |
 | LEGAL-03 | Phase 4 | Pending |
+| MIC-01 | Phase 4.1 | Pending |
+| MIC-02 | Phase 4.1 | Pending |
+| MIC-03 | Phase 4.1 | Pending |
+| MIC-04 | Phase 4.1 | Pending |
 | LAUNCH-01 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 31 total
-- Mapped to phases: 31/31 ✓
+- v1 requirements: 35 total
+- Mapped to phases: 35/35 ✓
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-30*
-*Last updated: 2026-03-30 — traceability filled by roadmapper*
+*Last updated: 2026-04-02 — MIC-01 through MIC-04 added for Phase 4.1*
