@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 4 context gathered
-last_updated: "2026-04-01T18:12:56.431Z"
-last_activity: 2026-04-01
+status: executing
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-04-02T08:53:43.536Z"
+last_activity: 2026-04-02
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 25
-  completed_plans: 21
+  total_plans: 28
+  completed_plans: 22
   percent: 65
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 03.2 — uat-bug-fixes
+**Current focus:** Phase 04 — payments-legal
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-01
+Phase: 04 (payments-legal) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-04-02
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
 
@@ -72,6 +72,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 03.2-uat-bug-fixes P04 | 2 | 2 tasks | 6 files |
 | Phase 03.2-uat-bug-fixes P06 | 3min | 2 tasks | 3 files |
 | Phase 03.2-uat-bug-fixes P07 | 25min | 2 tasks | 4 files |
+| Phase 04-payments-legal P01 | 10 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,14 @@ Recent decisions affecting current work:
 - [Phase 03.2-uat-bug-fixes]: DSGVO banner overlap fix via JS paddingBottom on .panel-sprachanalyse — CSS sibling selectors cannot reach across the DOM tree
 - [Phase 03.2-uat-bug-fixes]: Custom scenario dropdown uses hidden <input id='t-scenarioSelect'> — all existing callers reading .value continue working unchanged
 - [Phase 03.2-uat-bug-fixes]: window._pendingDeleteId bridges deleteScenario() modal show and confirmDeleteScenario() async execution
+- [Phase 04-payments-legal]: Kein Audio wird jemals gespeichert — ephemeral processing only (Kernargument für Datenschutzerklärung)
+- [Phase 04-payments-legal]: Live-Assistent Cold-Call-Modus = nur Berater-Audio, kein Kundentranksript, berechtigtes Interesse Art. 6 lit. f
+- [Phase 04-payments-legal]: Live-Assistent Meeting-Modus = Consent-Pop-up vor Call, Ablehnung → Auto-Wechsel in Cold-Call
+- [Phase 04-payments-legal]: KI-Trainingsdaten-Checkbox muss ENTKOPPELT von Training-Nutzung sein (Art. 7 Abs. 4 DSGVO Koppelungsverbot)
+- [Phase 04-payments-legal]: Alle Dienste EU-Server: Deepgram api.eu.deepgram.com, Claude Bedrock Frankfurt, ElevenLabs EU Residency, Stripe Frankfurt
+- [Phase 04-payments-legal]: Webhook uses raw request.data for Stripe signature verification — idempotent by stripe_event_id UNIQUE index
+- [Phase 04-payments-legal]: checkout_success only flashes and redirects — subscription activation handled exclusively in webhook (D-12)
+- [Phase 04-payments-legal]: stripe_customer_id stored on Organisation at checkout for reuse on subsequent Checkout Sessions (D-06)
 
 ### Roadmap Evolution
 
@@ -162,6 +171,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-01T18:12:56.428Z
-Stopped at: Phase 4 context gathered
-Resume: `/gsd:plan-phase 03.1 --gaps` — then migrate landing.html + login.html — then Phase 4
+Last session: 2026-04-02T08:53:43.533Z
+Stopped at: Completed 04-01-PLAN.md
+Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
