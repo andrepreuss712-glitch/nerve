@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 03.1: Frontend Redesign** - App-page redesign using NERVE Design System (INSERTED) (completed 2026-04-01)
 - [x] **Phase 03.2: UAT Bug Fixes** - Fix 17 issues from Visual UAT: 6 critical bugs, 5 UX improvements, 4 design corrections, 2 architecture changes (Sidebar + Light/Dark) (INSERTED) (completed 2026-04-01)
 - [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
-- [ ] **Phase 04.1: Live-Mikrofon Fix** - Replace server-side PyAudio with browser getUserMedia + Socket.IO streaming (INSERTED)
+- [x] **Phase 04.1: Live-Mikrofon Fix** - Replace server-side PyAudio with browser getUserMedia + Socket.IO streaming (INSERTED) (completed 2026-04-02)
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
 ## Phase Details
@@ -153,11 +153,11 @@ Plans:
   2. Each Socket.IO session gets its own Deepgram WebSocket connection (per-session, not global)
   3. Browser captures mic audio via getUserMedia + AudioWorklet at 16kHz, streams Int16 PCM via Socket.IO
   4. Live transcription works end-to-end on getnerve.app: speak into browser mic, see transcripts in UI
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 04.1-01-PLAN.md — Server: per-session Deepgram connections + remove global PyAudio startup (MIC-01, MIC-02)
-- [ ] 04.1-02-PLAN.md — Client: AudioWorklet processor + getUserMedia + Socket.IO streaming lifecycle (MIC-03, MIC-04)
+- [x] 04.1-02-PLAN.md — Client: AudioWorklet processor + getUserMedia + Socket.IO streaming lifecycle (MIC-03, MIC-04)
 
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
