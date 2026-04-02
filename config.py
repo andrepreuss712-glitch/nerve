@@ -8,6 +8,15 @@ ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
 SECRET_KEY        = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
 CORS_ORIGIN       = os.environ.get('CORS_ORIGIN', '*' if os.environ.get('FLASK_DEBUG') else 'https://nerve.app')
+
+# Stripe
+STRIPE_SECRET_KEY      = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET  = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_IDS = {
+    'starter':  os.environ.get('STRIPE_PRICE_ID_STARTER', ''),
+    'pro':      os.environ.get('STRIPE_PRICE_ID_PRO', ''),
+    'business': os.environ.get('STRIPE_PRICE_ID_BUSINESS', ''),
+}
 DATABASE_URL      = os.environ.get('DATABASE_URL', 'sqlite:///database/nerve.db')
 MAX_SESSION_HOURS = int(os.environ.get('MAX_SESSION_HOURS', 8))
 

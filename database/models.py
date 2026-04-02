@@ -45,6 +45,11 @@ class Organisation(Base):
     live_minutes_used      = Column(Integer, default=0)    # Live-Minuten verbraucht diesen Monat
     training_sessions_used = Column(Integer, default=0)    # Trainings gestartet diesen Monat
     fair_use_reset_month   = Column(String(7))             # e.g. '2026-04'
+    # Block 7: Stripe Integration
+    stripe_customer_id     = Column(String(100))
+    stripe_subscription_id = Column(String(100))
+    stripe_price_id        = Column(String(100))
+    subscription_status    = Column(String(50), default='inactive')
 
 
 class User(Base):
@@ -138,6 +143,7 @@ class BillingEvent(Base):
     betrag       = Column(Float)
     beschreibung = Column(Text)
     timestamp    = Column(DateTime, default=utcnow)
+    stripe_event_id  = Column(String(200), unique=True, nullable=True)
 
 
 class FeedbackEvent(Base):

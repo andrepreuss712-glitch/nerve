@@ -121,6 +121,11 @@ def _migrate():
             ('live_minutes_used',      'INTEGER DEFAULT 0'),
             ('training_sessions_used', 'INTEGER DEFAULT 0'),
             ('fair_use_reset_month',   'VARCHAR(7)'),
+            # Block 7: Stripe Integration
+            ('stripe_customer_id',      'VARCHAR(100)'),
+            ('stripe_subscription_id',  'VARCHAR(100)'),
+            ('stripe_price_id',         'VARCHAR(100)'),
+            ('subscription_status',     "VARCHAR(50) DEFAULT 'inactive'"),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE organisations ADD COLUMN {col} {typedef}'))
@@ -128,6 +133,23 @@ def _migrate():
                 print(f"[DB] Migration: added organisations.{col}")
             except Exception:
                 pass
+        # ── billing_events ────────────────────────────────────────────────
+        for col, typedef in [
+            ('stripe_event_id', 'VARCHAR(200)'),
+        ]:
+            try:
+                conn.execute(text(f'ALTER TABLE billing_events ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added billing_events.{col}")
+            except Exception:
+                pass
+        # Create unique index for dedup (SQLite ALTER TABLE cannot add UNIQUE constraint)
+        try:
+            conn.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_billing_events_stripe_event_id ON billing_events(stripe_event_id)'))
+            conn.commit()
+            print("[DB] Migration: created unique index on billing_events.stripe_event_id")
+        except Exception:
+            pass
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
