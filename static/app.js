@@ -19,19 +19,30 @@ async function startMicStream() {
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioCtx  = new AudioContext({ sampleRate: 16000 });
+    console.log('[Mic] AudioContext state after creation:', audioCtx.state);
+    // Resume AudioContext — Chrome suspends it when created without user gesture
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+      console.log('[Mic] AudioContext resumed, state:', audioCtx.state);
+    }
     await audioCtx.audioWorklet.addModule('/static/audio-processor.js');
     const source  = audioCtx.createMediaStreamSource(micStream);
     workletNode   = new AudioWorkletNode(audioCtx, 'audio-processor');
+    let chunkCount = 0;
     workletNode.port.onmessage = (e) => {
       if (!paused && micStarted) {
         socket.emit('audio_chunk', e.data);
+        chunkCount++;
+        if (chunkCount === 1) {
+          console.log('[Mic] Erster audio_chunk gesendet, bytes:', e.data.byteLength);
+        }
       }
     };
     source.connect(workletNode);
     workletNode.connect(audioCtx.destination);
     micStarted = true;
     socket.emit('start_live_session');
-    console.log('[Mic] Browser-Mikrofon gestartet');
+    console.log('[Mic] Browser-Mikrofon gestartet, AudioContext state:', audioCtx.state);
   } catch (err) {
     console.error('[Mic] getUserMedia Fehler:', err);
     const st = document.getElementById('st');
@@ -183,7 +194,10 @@ socket.on('connect',()=>{
   }
   // Start session timer on connect — not on first transcript
   startSessionTimer();
-  startMicStream();
+  // Only start mic on /live page — prevent unwanted mic access on other pages
+  if (window.location.pathname === '/live') {
+    startMicStream();
+  }
 });
 
 socket.on('transcript', d => {
