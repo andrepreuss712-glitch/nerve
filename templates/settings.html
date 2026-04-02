@@ -404,6 +404,18 @@
       <span id="billing-msg" style="display:none;margin-left:10px;font-size:13px;color:#22c55e"></span>
     </div>
 
+    {% if g.org.stripe_customer_id %}
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-card-title">Abo verwalten</div>
+      <p style="color:var(--n-text-muted);font-size:13px;margin-bottom:12px">
+        Tarif wechseln, Zahlungsmethode ändern oder Rechnungen einsehen — alles über das Stripe Kundenportal.
+      </p>
+      <form action="/payments/portal" method="POST" style="display:inline">
+        <button type="submit" class="n-btn n-btn-primary">Abo verwalten</button>
+      </form>
+    </div>
+    {% endif %}
+
     <div class="settings-card" style="border-color:#3a1414">
       <div class="settings-card-title" style="color:#e05c5c">Abo kündigen</div>
       <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px;line-height:1.5">
