@@ -408,6 +408,7 @@ socket.on('coaching',d=>{
   if(added){
     coachingScroll.scrollTop=coachingScroll.scrollHeight;
     updateKompaktCoaching(d);
+    updatePipFromCoaching(d);
   }
 });
 
@@ -613,6 +614,7 @@ function zeigeKarte(d, lineId){
   }
   ai.appendChild(card);ai.scrollTop=ai.scrollHeight;
   updateKompaktEinwand(d);
+  updatePipFromErgebnis(d);
 }
 
 setInterval(async()=>{
@@ -1005,5 +1007,283 @@ function updateKompaktMetrics(stats, kb){
     const col = kb>=60 ? '#E8B040' : (kb>=30 ? '#f0a500' : '#e05c5c');
     if(el){ el.textContent=kb+'%'; el.style.color=col; }
     if(bar){ bar.style.width=Math.min(kb,100)+'%'; bar.style.background=col; }
+  }
+}
+
+// ── Document Picture-in-Picture (PiP) ─────────────────────────────────────────
+
+// Helper: find element in PiP window first, fallback to main document
+function getPipElement(id) {
+  if (window._pipWindow && !window._pipWindow.closed) {
+    return window._pipWindow.document.getElementById(id) || document.getElementById(id);
+  }
+  return document.getElementById(id);
+}
+
+// Open the Document PiP window (or fallback to fixed overlay)
+async function openPipWindow() {
+  // Guard: already open
+  if (window._pipWindow && !window._pipWindow.closed) {
+    window._pipWindow.focus();
+    return;
+  }
+
+  if (!window.documentPictureInPicture) {
+    // Fallback: show existing kompakt-panel + warning
+    var fallback = document.getElementById('kompakt-fallback');
+    if (fallback) fallback.style.display = 'flex';
+    var warn = document.getElementById('pip-fallback-warning');
+    if (warn) warn.style.display = 'flex';
+    try { localStorage.setItem('sn_kompakt', '1'); } catch(e) {}
+    return;
+  }
+
+  var pipWindow = await window.documentPictureInPicture.requestWindow({
+    width: 380,
+    height: 280,
+  });
+
+  // Set title
+  pipWindow.document.title = 'NERVE -- Live';
+
+  // Copy stylesheets
+  Array.from(document.styleSheets).forEach(function(styleSheet) {
+    try {
+      var cssRules = Array.from(styleSheet.cssRules).map(function(rule) { return rule.cssText; }).join('');
+      var style = pipWindow.document.createElement('style');
+      style.textContent = cssRules;
+      pipWindow.document.head.appendChild(style);
+    } catch(e) {
+      // CORS error on cross-origin sheets (Google Fonts, Lucide CDN) -- copy as <link>
+      if (styleSheet.href) {
+        var link = pipWindow.document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = styleSheet.href;
+        pipWindow.document.head.appendChild(link);
+      }
+    }
+  });
+
+  // Set PiP body styles
+  pipWindow.document.body.style.margin = '0';
+  pipWindow.document.body.style.background = 'var(--page-bg, #06060a)';
+  pipWindow.document.body.style.color = 'var(--page-text-color, #e8ecf4)';
+  pipWindow.document.body.style.fontFamily = "'Inter', sans-serif";
+  pipWindow.document.body.style.display = 'flex';
+  pipWindow.document.body.style.flexDirection = 'column';
+  pipWindow.document.body.style.height = '100vh';
+  pipWindow.document.body.style.overflow = 'hidden';
+
+  // Move PiP content into PiP window
+  var pipContent = document.getElementById('pip-window');
+  pipContent.style.display = 'flex';
+  pipContent.style.flexDirection = 'column';
+  pipContent.style.height = '100%';
+  pipWindow.document.body.appendChild(pipContent);
+
+  // Load Lucide in PiP window
+  var lucideScript = pipWindow.document.createElement('script');
+  lucideScript.src = 'https://unpkg.com/lucide@latest';
+  lucideScript.onload = function() { pipWindow.lucide.createIcons(); };
+  pipWindow.document.head.appendChild(lucideScript);
+
+  // Handle PiP close: move content back to main document
+  pipWindow.addEventListener('pagehide', function() {
+    var pipEl = pipWindow.document.getElementById('pip-window');
+    if (pipEl) {
+      pipEl.style.display = 'none';
+      document.body.appendChild(pipEl);
+    }
+    window._pipWindow = null;
+    window._pipTabLocked = null;
+    try { localStorage.setItem('sn_kompakt', '0'); } catch(e) {}
+  });
+
+  window._pipWindow = pipWindow;
+  try { localStorage.setItem('sn_kompakt', '1'); } catch(e) {}
+
+  // Initialize PiP content
+  initPipContent();
+}
+
+// Close PiP and return to Vollbild
+function closePipToVollbild() {
+  if (window._pipWindow && !window._pipWindow.closed) {
+    window._pipWindow.close();
+  }
+}
+
+// ── PiP Tab State Machine ──────────────────────────────────────────────────────
+window._pipWindow = null;
+window._pipTabLocked = null;
+var _lastKiResultTime = 0;
+
+function handlePipTabClick(tabName) {
+  if (window._pipTabLocked === tabName) {
+    // Click on locked tab = unlock
+    window._pipTabLocked = null;
+  } else {
+    window._pipTabLocked = tabName;
+  }
+  activatePipTab(tabName);
+}
+
+function setPipTabFromKI(tabName) {
+  if (window._pipTabLocked) {
+    // Check if 30s have elapsed since last KI result -- if so, unlock
+    if (Date.now() - _lastKiResultTime > 30000) {
+      window._pipTabLocked = null;
+    } else {
+      _lastKiResultTime = Date.now();
+      return; // Don't switch, user has locked a tab
+    }
+  }
+  _lastKiResultTime = Date.now();
+  activatePipTab(tabName);
+}
+
+function activatePipTab(tabName) {
+  // Update tab buttons
+  var tabs = (window._pipWindow && !window._pipWindow.closed)
+    ? window._pipWindow.document.querySelectorAll('.pip-tab')
+    : document.querySelectorAll('.pip-tab');
+
+  if (tabs) tabs.forEach(function(tab) {
+    var isActive = tab.getAttribute('data-tab') === tabName;
+    tab.classList.toggle('pip-tab-active', isActive);
+    tab.classList.toggle('pip-tab-locked', isActive && window._pipTabLocked === tabName);
+  });
+
+  // Show/hide panels
+  ['opener', 'einwand', 'coaching', 'ewb'].forEach(function(name) {
+    var panel = getPipElement('pip-panel-' + name);
+    if (panel) panel.style.display = (name === tabName) ? 'block' : 'none';
+  });
+}
+
+// ── PiP Content Initialization ────────────────────────────────────────────────
+function initPipContent() {
+  // Set mode badge
+  var badge = getPipElement('pip-mode-badge');
+  if (badge && window.sessionMode) {
+    badge.textContent = window.sessionMode === 'cold_call' ? 'Cold Call' : 'Meeting';
+  }
+
+  // Set opener text from active profile
+  var openerEl = getPipElement('pip-opener-text');
+  if (openerEl && window._profileData) {
+    var phasen = window._profileData.phasen;
+    var opener = (phasen && phasen.length > 0) ? phasen[0].text || phasen[0].inhalt || '' : '';
+    if (opener) {
+      openerEl.textContent = opener;
+    } else {
+      openerEl.innerHTML = 'Kein Opener im Profil hinterlegt -- <a href="/profiles" style="color:#2dd4a8">Profil bearbeiten</a>';
+    }
+  }
+
+  // Render initial EWB buttons (first 2 from profile + "Alle")
+  renderPipEwbButtons();
+
+  // Start PiP timer sync
+  syncPipTimer();
+
+  // Set Opener as default active tab
+  activatePipTab('opener');
+}
+
+// ── PiP EWB Rendering ─────────────────────────────────────────────────────────
+var _pipEwbExpanded = false;
+
+function renderPipEwbButtons(aiTop2) {
+  var row = getPipElement('pip-ewb-row');
+  if (!row) return;
+
+  var einwaende = [];
+  if (window._profileEinwaende && window._profileEinwaende.einwaende) {
+    einwaende = window._profileEinwaende.einwaende.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
+  }
+  if (!einwaende.length) {
+    einwaende = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
+  }
+
+  var top2 = aiTop2 || einwaende.slice(0, 2);
+  var html = top2.map(function(typ) {
+    return '<button class="pip-ewb-btn" onclick="triggerEwb(\'' + typ.replace(/'/g, "\\'") + '\')">' + escHtml(typ) + '</button>';
+  }).join('');
+  html += '<button class="pip-ewb-all" onclick="togglePipEwbExpand()">Alle &#9662;</button>';
+  row.innerHTML = html;
+  _pipEwbExpanded = false;
+
+  // Remove any expanded section
+  var existingExpanded = row.parentElement ? row.parentElement.querySelector('.pip-ewb-expanded') : null;
+  if (existingExpanded) existingExpanded.remove();
+}
+
+function togglePipEwbExpand() {
+  _pipEwbExpanded = !_pipEwbExpanded;
+  var row = getPipElement('pip-ewb-row');
+  if (!row || !row.parentElement) return;
+
+  var existingExpanded = row.parentElement.querySelector('.pip-ewb-expanded');
+  if (existingExpanded) {
+    existingExpanded.remove();
+    _pipEwbExpanded = false;
+    return;
+  }
+
+  var einwaende = [];
+  if (window._profileEinwaende && window._profileEinwaende.einwaende) {
+    einwaende = window._profileEinwaende.einwaende.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
+  }
+  if (!einwaende.length) {
+    einwaende = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
+  }
+
+  var expandDiv = (window._pipWindow && !window._pipWindow.closed)
+    ? window._pipWindow.document.createElement('div')
+    : document.createElement('div');
+  expandDiv.className = 'pip-ewb-expanded';
+  einwaende.forEach(function(typ) {
+    var btn = expandDiv.ownerDocument.createElement('button');
+    btn.className = 'pip-ewb-btn';
+    btn.textContent = typ;
+    btn.onclick = function() { triggerEwb(typ); togglePipEwbExpand(); };
+    expandDiv.appendChild(btn);
+  });
+  row.parentElement.insertBefore(expandDiv, row.nextSibling);
+}
+
+// ── PiP Timer Sync ────────────────────────────────────────────────────────────
+function syncPipTimer() {
+  setInterval(function() {
+    var mainTimer = document.getElementById('timer');
+    var pipTimer = getPipElement('pip-timer');
+    if (mainTimer && pipTimer && pipTimer !== mainTimer) {
+      pipTimer.textContent = mainTimer.textContent;
+    }
+  }, 1000);
+}
+
+// ── PiP Updates from AI Results ───────────────────────────────────────────────
+function updatePipFromErgebnis(d) {
+  var el = getPipElement('pip-einwand-text');
+  if (!el) return;
+  if (!d || !d.einwand) {
+    el.textContent = d && d.notiz ? d.notiz : 'Kein Einwand erkannt';
+  } else {
+    var ga1 = d.gegenargument_1 || d.gegenargument || '';
+    el.innerHTML = '<strong>' + escHtml(d.typ || '?') + '</strong><br>' +
+      escHtml(d.einwand_zitat || '') + (ga1 ? '<br><em>' + escHtml(ga1) + '</em>' : '');
+    setPipTabFromKI('einwand');
+  }
+}
+
+function updatePipFromCoaching(d) {
+  var el = getPipElement('pip-coaching-text');
+  if (!el) return;
+  var text = d.tipp || d.painpoint || '';
+  if (text) {
+    el.textContent = text;
+    setPipTabFromKI('coaching');
   }
 }
