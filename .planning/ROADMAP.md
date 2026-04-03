@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 03.2: UAT Bug Fixes** - Fix 17 issues from Visual UAT: 6 critical bugs, 5 UX improvements, 4 design corrections, 2 architecture changes (Sidebar + Light/Dark) (INSERTED) (completed 2026-04-01)
 - [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
 - [x] **Phase 04.1: Live-Mikrofon Fix** - Replace server-side PyAudio with browser getUserMedia + Socket.IO streaming (INSERTED)  (completed 2026-04-03)
+- [ ] **Phase 04.2: Cold Call und Meeting Modi** - Two distinct live session modes with DSGVO-compliant consent flow and EWB buttons (INSERTED)
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
 ## Phase Details
@@ -143,7 +144,7 @@ Plans:
 - [ ] 04-02-PLAN.md — Pricing page + fair-use metering with soft warnings (PAY-05, PAY-06)
 - [ ] 04-03-PLAN.md — Legal pages (Impressum, AGB, Datenschutz) + Deepgram EU + AVV checklist (LEGAL-01, LEGAL-02, LEGAL-03)
 
-### Phase 04.1: Live-Mikrofon Fix: PyAudio → Browser getUserMedia (INSERTED)
+### Phase 04.1: Live-Mikrofon Fix: PyAudio -> Browser getUserMedia (INSERTED)
 
 **Goal:** Replace server-side PyAudio mic capture with browser-side getUserMedia + Socket.IO streaming so live transcription works on the VPS (no audio hardware)
 **Requirements**: MIC-01, MIC-02, MIC-03, MIC-04
@@ -160,6 +161,23 @@ Plans:
 - [x] 04.1-02-PLAN.md — Client: AudioWorklet processor + getUserMedia + Socket.IO streaming lifecycle (MIC-03, MIC-04)
 - [x] 04.1-03-PLAN.md — Gap closure: fix AudioContext suspension + diagnostic logging (MIC-04)
 
+### Phase 04.2: Cold Call und Meeting Modi (INSERTED)
+
+**Goal:** Two distinct live session modes on /live — Cold Call (consultant audio only, single-speaker Deepgram, EWB buttons) and Meeting (full diarization with consent pop-up, auto-fallback to Cold Call on rejection). Mode selected before session start, persisted in ConversationLog for post-call analytics.
+**Requirements**: MODE-01, MODE-02, MODE-03, MODE-04, MODE-05, MODE-06
+**Depends on:** Phase 04.1
+**Success Criteria** (what must be TRUE):
+  1. User selects Cold Call or Meeting mode via pre-session overlay on /live before any Deepgram connection opens
+  2. Cold Call uses Deepgram single-speaker (diarize=false) — no customer audio processed or stored
+  3. Meeting shows consent pop-up with Vorleseskript; accepted starts full diarization, rejected silently falls back to Cold Call
+  4. EWB buttons (from profile or DACH fallback list) trigger instant Claude Haiku responses with objection-specific context
+  5. Active mode displayed as badge in /live header; session_mode persisted in ConversationLog
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04.2-01-PLAN.md — Backend: DB migration (session_mode), mode-aware Deepgram, EWB trigger endpoint (MODE-02, MODE-04, MODE-05, MODE-06)
+- [ ] 04.2-02-PLAN.md — Frontend: mode overlay, consent modal, EWB buttons, mode badge, JS wiring (MODE-01, MODE-03, MODE-04, MODE-05)
+
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
 **Depends on**: Phase 4
@@ -167,7 +185,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Early Access page is live with 50 slots at 50% Gruender-Rabatt and a clear CTA
   2. Waitlist members receive a notification (email or in-app) that Early Access is open
-  3. At least one user completes the full flow: pricing page → Stripe Checkout → subscription active → dashboard visible
+  3. At least one user completes the full flow: pricing page -> Stripe Checkout -> subscription active -> dashboard visible
 **Plans**: TBD
 
 ## Progress
@@ -183,7 +201,8 @@ Phases execute in numeric order.
 | 3.1 Frontend Redesign | 6/6 ✓ | Complete | 2026-04-01 |
 | 3.2 UAT Bug Fixes | 5/7 | In Progress|  |
 | 4. Payments & Legal | 1/3 | In Progress|  |
-| 4.1 Live-Mikrofon Fix | 3/3 | Complete   | 2026-04-02 |
+| 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
+| 4.2 Cold Call und Meeting Modi | 0/2 | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
 ---

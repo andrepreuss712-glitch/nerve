@@ -52,6 +52,15 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [x] **MIC-03**: Browser erfasst Mikrofon-Audio via `getUserMedia` + AudioWorklet (16kHz, Int16 PCM) und streamt via Socket.IO `audio_chunk` Events an den Server
 - [x] **MIC-04**: Live-Transkription funktioniert end-to-end auf getnerve.app: Browser-Mikrofon → Server → Deepgram → Transkript im UI
 
+### Cold Call und Meeting Modi (INSERTED — Phase 04.2)
+
+- [ ] **MODE-01**: User wählt vor Session-Start auf `/live` zwischen Cold Call und Meeting Modus (Pre-Session Overlay, kein Wechsel mid-call)
+- [ ] **MODE-02**: Cold Call nutzt Deepgram Single-Speaker-Modus (`diarize=false`); nur Berater-Audio wird verarbeitet, kein Kunden-Audio an Deepgram gesendet
+- [ ] **MODE-03**: Meeting zeigt Consent-Pop-up mit Vorleseskript; Stattgegeben startet volle Diarization, Abgelehnt fällt nahtlos auf Cold Call zurück
+- [ ] **MODE-04**: EWB-Buttons (aus aktivem Profil `einwaende` oder DACH-Standard-Fallback) triggern sofortige Claude-Haiku-Anfrage mit Einwand-Kontext und Profil-Gegenargumenten
+- [ ] **MODE-05**: `session_mode` ('cold_call'/'meeting') wird in `ConversationLog` gespeichert; aktiver Modus als Badge im `/live` Header sichtbar
+- [ ] **MODE-06**: EWB-Button-Presses werden in `quick_action_log` mit `typ='ewb'` geloggt und über bestehenden `qa_count`-Mechanismus in `api_beenden` persistiert
+
 ### Business Setup
 
 - [ ] **BIZ-01**: Gewerbeanmeldung beim Gewerbeamt Iserlohn ist eingereicht
@@ -137,13 +146,19 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | MIC-02 | Phase 4.1 | Complete |
 | MIC-03 | Phase 4.1 | Complete |
 | MIC-04 | Phase 4.1 | Complete |
+| MODE-01 | Phase 4.2 | Pending |
+| MODE-02 | Phase 4.2 | Pending |
+| MODE-03 | Phase 4.2 | Pending |
+| MODE-04 | Phase 4.2 | Pending |
+| MODE-05 | Phase 4.2 | Pending |
+| MODE-06 | Phase 4.2 | Pending |
 | LAUNCH-01 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 35/35 ✓
+- v1 requirements: 41 total
+- Mapped to phases: 41/41
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-30*
-*Last updated: 2026-04-02 — MIC-01 through MIC-04 added for Phase 4.1*
+*Last updated: 2026-04-03 — MODE-01 through MODE-06 added for Phase 4.2*
