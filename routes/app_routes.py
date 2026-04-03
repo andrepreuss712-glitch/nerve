@@ -109,6 +109,7 @@ def api_ergebnis():
             'ergebnis':         ls.state['ergebnis'],
             'line_id':          ls.state['line_id'],
             'kaufbereitschaft': ls.state.get('kaufbereitschaft', 30),
+            'ewb_top2':         ls.state.get('ewb_top2'),  # AI-ranked top 2 EWBs, or None
         }
     payload['speech_stats'] = ls.get_speech_stats()
     if payload['version'] > _letzte_gemeldete_version:

@@ -198,6 +198,45 @@ def _parse_json(raw: str) -> dict:
     return json.loads(raw[start:end])
 
 
+# ── EWB-Ranking (throttled, Option B) ────────────────────────────────────────
+_ewb_rank_counter = 0
+
+
+def rank_ewb(transcript_segments: list, einwaende_list: list) -> list:
+    """Rank top 2 most likely upcoming objections based on recent transcript."""
+    if not transcript_segments or not einwaende_list:
+        return einwaende_list[:2]
+    if len(einwaende_list) <= 2:
+        return einwaende_list[:2]
+    try:
+        prompt = (
+            'Basierend auf diesen letzten Gesprächssegmenten:\n'
+            + '\n'.join(transcript_segments[-5:])
+            + '\n\nWelche 2 dieser Einwände kommen am wahrscheinlichsten als nächstes?\n'
+            + 'Einwände: ' + ', '.join(einwaende_list)
+            + '\n\nAntworte NUR mit einem JSON-Array der 2 wahrscheinlichsten: ["typ1", "typ2"]'
+        )
+        msg = claude_client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=100,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        import re as _re
+        raw = msg.content[0].text.strip()
+        # Extract JSON array from response
+        match = _re.search(r'\[.*?\]', raw, _re.DOTALL)
+        if match:
+            result = json.loads(match.group(0))
+            if isinstance(result, list) and len(result) >= 2:
+                # Validate: only accept types that exist in the profile list
+                valid = [t for t in result if t in einwaende_list]
+                if len(valid) >= 2:
+                    return valid[:2]
+    except Exception as e:
+        print(f'[EWB-Rank] Fehler: {e}')
+    return einwaende_list[:2]
+
+
 def analysiere_mit_claude(neuer_text: str, kontext: str) -> dict:
     user_msg = f"""Bisheriger Gesprächskontext (zur Orientierung, letzte Aussagen):
 {kontext if kontext else "(Kein vorheriger Kontext)"}
@@ -233,6 +272,7 @@ def analyse_loop():
     """Call 1 — Einwand-Analyse (Haiku, schnell)."""
     import services.live_session as ls
     from extensions import socketio as sio
+    global _ewb_rank_counter
     while True:
         ls.analyse_trigger.wait(timeout=ANALYSE_INTERVALL)
         ls.analyse_trigger.clear()
@@ -300,6 +340,23 @@ def analyse_loop():
                 ls.state['aktiv']           = False
                 ls.state['version']        += 1
                 ls.state['kaufbereitschaft'] = kb_aktuell
+            # ── EWB-Ranking (throttled: every 3rd cycle) ──────────────────────
+            _ewb_rank_counter += 1
+            if _ewb_rank_counter % 3 == 0:
+                _, pdata = ls.get_active_profile()
+                ewb_list = []
+                if pdata and pdata.get('einwaende'):
+                    ewb_list = [e.get('typ') or e.get('name') or str(e)
+                                for e in pdata['einwaende'] if e]
+                    ewb_list = [t for t in ewb_list if isinstance(t, str) and t]
+                # Only rank when profile has EWBs; fallback (empty profile) handled client-side
+                if ewb_list:
+                    with ls.buffer_lock:
+                        recent_segs = list(ls.analysiert_bisher[-5:])
+                    top2 = rank_ewb(recent_segs, ewb_list)
+                    with ls.state_lock:
+                        ls.state['ewb_top2'] = top2
+                    print(f'[EWB-Rank] Top2: {top2}')
         except Exception as e:
             print(f"[Claude-1] Fehler: {e}")
             with ls.kb_lock:

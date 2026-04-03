@@ -633,6 +633,10 @@ setInterval(async()=>{
     }
     if(data.speech_stats) updateSpeechCircles(data.speech_stats);
     updateKompaktMetrics(data.speech_stats||null, data.kaufbereitschaft||null);
+    // Update PiP EWB buttons if AI selection provided
+    if(data.ewb_top2 && Array.isArray(data.ewb_top2) && data.ewb_top2.length >= 2){
+      renderPipEwbButtons(data.ewb_top2);
+    }
   }catch(e){console.error('[POLL] Fehler:',e);}
 },500);
 
@@ -1210,8 +1214,9 @@ function renderPipEwbButtons(aiTop2) {
   }
 
   var top2 = aiTop2 || einwaende.slice(0, 2);
+  var btnClass = aiTop2 ? 'pip-ewb-btn pip-ewb-ai-selected' : 'pip-ewb-btn';
   var html = top2.map(function(typ) {
-    return '<button class="pip-ewb-btn" onclick="triggerEwb(\'' + typ.replace(/'/g, "\\'") + '\')">' + escHtml(typ) + '</button>';
+    return '<button class="' + btnClass + '" onclick="triggerEwb(\'' + typ.replace(/'/g, "\\'") + '\')">' + escHtml(typ) + '</button>';
   }).join('');
   html += '<button class="pip-ewb-all" onclick="togglePipEwbExpand()">Alle &#9662;</button>';
   row.innerHTML = html;

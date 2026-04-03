@@ -87,6 +87,7 @@ state = {
     'ergebnis':         None,
     'line_id':          None,
     'kaufbereitschaft': 30,
+    'ewb_top2':         None,  # List of 2 EWB type strings, AI-ranked
 }
 
 # ── Conversation Log ──────────────────────────────────────────────────────────
@@ -268,6 +269,7 @@ def reset_session():
         state['ergebnis']         = None
         state['line_id']          = None
         state['kaufbereitschaft'] = 30
+        state['ewb_top2']         = None
     with _line_id_lock:
         _line_id_counter = 0
     with _log_sp_lock:
