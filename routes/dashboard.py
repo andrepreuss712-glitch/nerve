@@ -59,6 +59,49 @@ def _parse_log_meta(fname, fpath):
     return meta
 
 
+def _relative_date(dt):
+    """Return human-readable relative date label in German."""
+    if not dt:
+        return '-'
+    today = date.today()
+    d = dt.date() if hasattr(dt, 'date') else dt
+    diff = (today - d).days
+    if diff == 0:
+        return 'heute'
+    if diff == 1:
+        return 'gestern'
+    if diff < 7:
+        return f'vor {diff} Tagen'
+    return dt.strftime('%d.%m.')
+
+
+def get_recent_calls_db(user_id, db, limit=5):
+    """DB-based recent calls for dashboard -- includes session_mode and score."""
+    from database.models import ConversationLog as CL
+    calls = (db.query(CL)
+             .filter(CL.user_id == user_id)
+             .order_by(CL.created_at.desc())
+             .limit(limit)
+             .all())
+    result = []
+    for c in calls:
+        dauer_sec = 0
+        if c.session_start and c.session_end:
+            dauer_sec = int((c.session_end - c.session_start).total_seconds())
+        elif c.dauer_sekunden:
+            dauer_sec = c.dauer_sekunden or 0
+        result.append({
+            'datum': c.created_at.strftime('%d.%m.%Y') if c.created_at else '-',
+            'uhrzeit': c.created_at.strftime('%H:%M') if c.created_at else '-',
+            'session_mode': getattr(c, 'session_mode', None) or 'meeting',
+            'score': c.kb_end or 0,
+            'dauer': f"{dauer_sec // 60}:{dauer_sec % 60:02d}" if dauer_sec else '-',
+            'profil': c.profil_name or '-',
+            'relative': _relative_date(c.created_at) if c.created_at else '-',
+        })
+    return result
+
+
 def get_recent_logs(user_id, org_id, rolle, limit=5):
     is_admin = rolle in ('owner', 'admin')
     result = []
@@ -424,6 +467,7 @@ def index():
 
         profiles = db.query(Profile).filter_by(org_id=g.org.id).order_by(Profile.name).all()
         recent_logs = get_recent_logs(g.user.id, g.org.id, flask_session.get('rolle', 'member'))
+        recent_calls = get_recent_calls_db(g.user.id, db, limit=5)
         welcome_trial = flask_session.pop('welcome_trial', False)
 
         # ── Usage + Fair-Use ───────────────────────────────────────────────────
@@ -465,6 +509,7 @@ def index():
                                user=user,
                                streak=user.streak_count or 0,
                                recent_logs=recent_logs,
+                               recent_calls=recent_calls,
                                active_profile=active_profile,
                                profiles=profiles,
                                welcome_trial=welcome_trial,
