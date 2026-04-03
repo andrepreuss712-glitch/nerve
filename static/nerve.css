@@ -555,6 +555,42 @@ a{color:inherit;text-decoration:none}
 .g-content::-webkit-scrollbar{width:4px}
 .g-content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px}
 
+/* ---- Sidebar collapse ---- */
+.g-sidebar { transition: width 0.2s ease; overflow: hidden; }
+.g-sidebar.collapsed { width: 52px; }
+.g-sidebar.collapsed .n-nav-label,
+.g-sidebar.collapsed .sidebar-user-info,
+.g-sidebar.collapsed .sidebar-plan-badge { display: none; }
+.g-sidebar.collapsed .n-nav-item {
+  justify-content: center;
+  padding: 12px;
+}
+.g-sidebar.collapsed .n-nav-item .nav-icon-lucide { margin-right: 0; }
+.g-sidebar.collapsed .sidebar-user-block { justify-content: center; padding: 12px; }
+.g-sidebar.collapsed .sidebar-avatar { margin-right: 0; }
+.g-sidebar.collapsed .sidebar-user-dropdown { display: none; }
+
+/* Lucide nav icons */
+.nav-icon-lucide { width: 18px; height: 18px; flex-shrink: 0; margin-right: 10px; }
+
+/* Collapse toggle button */
+.sidebar-collapse-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--page-text-muted); padding: 8px 12px;
+  display: flex; align-items: center; justify-content: flex-end;
+  width: 100%;
+}
+.sidebar-collapse-btn:hover { color: var(--page-text-secondary); }
+.sidebar-collapse-icon { width: 18px; height: 18px; }
+
+/* Plan badge */
+.sidebar-plan-badge {
+  background: var(--badge-primary-bg, rgba(45,212,168,0.12));
+  color: var(--badge-primary-text, #2dd4a8);
+  border-radius: 9999px; padding: 2px 8px;
+  font-size: 12px; font-weight: 600;
+}
+
 
 /* ── Legacy classes — preserved for backward compatibility ──────── */
 /* These are used by base.html elements not yet migrated to NERVE     */

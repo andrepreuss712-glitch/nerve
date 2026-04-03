@@ -47,48 +47,58 @@
 
 <nav class="g-sidebar">
   <div class="g-sidebar-inner">
-  <a class="n-nav-item {% if request.path == '/dashboard' %}n-nav-item-active{% endif %}" href="/dashboard">
-    <span class="nav-icon">⊞</span> Dashboard
+  <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Sidebar einklappen">
+    <i data-lucide="chevrons-left" class="sidebar-collapse-icon"></i>
+  </button>
+  <a class="n-nav-item {% if request.path == '/dashboard' %}n-nav-item-active{% endif %}" href="/dashboard" title="Dashboard">
+    <i data-lucide="layout-dashboard" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">Dashboard</span>
   </a>
-  <a class="n-nav-item {% if request.path.startswith('/profiles') %}n-nav-item-active{% endif %}" href="/profiles">
-    <span class="nav-icon">◎</span> Profile
+  <a class="n-nav-item {% if request.path == '/live' %}n-nav-item-active{% endif %}" href="/live" title="Live-Assistent">
+    <i data-lucide="mic" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">Live-Assistent</span>
   </a>
-  <a class="n-nav-item {% if request.path == '/training' %}n-nav-item-active{% endif %}" href="/training">
-    <span class="nav-icon">⚡</span> Training
-    <span class="nav-badge">Beta</span>
+  <a class="n-nav-item {% if request.path == '/training' %}n-nav-item-active{% endif %}" href="/training" title="Training">
+    <i data-lucide="dumbbell" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">Training</span>
   </a>
-  <a class="n-nav-item {% if request.path == '/live' %}n-nav-item-active{% endif %}" href="/live">
-    <span class="nav-icon">🎙</span> Live-Gespräch
+  <a class="n-nav-item {% if request.path == '/logs' %}n-nav-item-active{% endif %}" href="/logs" title="Analytics">
+    <i data-lucide="bar-chart-3" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">Analytics</span>
   </a>
-  <a class="n-nav-item {% if request.path == '/logs' %}n-nav-item-active{% endif %}" href="/logs">
-    <span class="nav-icon">📋</span> Logs
+  <a class="n-nav-item {% if request.path.startswith('/profiles') %}n-nav-item-active{% endif %}" href="/profiles" title="Profil">
+    <i data-lucide="user" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">Profil</span>
   </a>
-  {% if session.get('rolle') in ('owner', 'admin') %}
-  <div class="nav-sep"></div>
-  <a class="n-nav-item {% if request.path == '/org/team' %}n-nav-item-active{% endif %}" href="/org/team">
-    <span class="nav-icon">👥</span> Team
+  <a class="n-nav-item {% if request.path == '/settings' %}n-nav-item-active{% endif %}" href="/settings" title="Einstellungen">
+    <i data-lucide="settings" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">Einstellungen</span>
   </a>
-  {% endif %}
-  {% if session.get('is_coach') %}
-  <div class="nav-sep"></div>
-  <a class="n-nav-item {% if request.path.startswith('/coach') and not request.path.startswith('/coach/methodik') %}n-nav-item-active{% endif %}" href="/coach/">
-    <span class="nav-icon">🏆</span> Coach-Dashboard
-  </a>
-  <a class="n-nav-item {% if request.path.startswith('/coach/methodik') %}n-nav-item-active{% endif %}" href="/coach/methodik">
-    <span class="nav-icon">📘</span> Meine Methodik
-  </a>
-  {% endif %}
-  <div class="nav-sep"></div>
-  <a class="n-nav-item {% if request.path == '/changelog' %}n-nav-item-active{% endif %}" href="/changelog">
-    <span class="nav-icon">📋</span> Changelog
-    <span id="cl-new-badge" style="display:none" class="new-badge">NEU</span>
-  </a>
+  <!-- Hidden legacy nav items (D-31: kept in DOM, not deleted) -->
+  <div style="display:none">
+    {% if session.get('rolle') in ('owner', 'admin') %}
+    <a class="n-nav-item" href="/org/team">Team</a>
+    {% endif %}
+    {% if session.get('is_coach') %}
+    <a class="n-nav-item" href="/coach/">Coach-Dashboard</a>
+    <a class="n-nav-item" href="/coach/methodik">Meine Methodik</a>
+    {% endif %}
+    <a class="n-nav-item {% if request.path == '/changelog' %}n-nav-item-active{% endif %}" href="/changelog">
+      Changelog
+      <span id="cl-new-badge" style="display:none" class="new-badge">NEU</span>
+    </a>
+  </div>
   </div>
   <!-- Sidebar User Menu (ARCH-16) -->
   <div class="sidebar-user-block" onclick="toggleSidebarUserMenu(event)">
     <div class="sidebar-avatar">{{ (g.user.email or 'U')[0] | upper }}</div>
     <div class="sidebar-user-info">
-      <div class="sidebar-user-name">{{ g.user.vorname or g.user.email.split('@')[0] }}</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="sidebar-user-name">{{ g.user.vorname or g.user.email.split('@')[0] }}</div>
+        {% if g.org and g.org.plan %}
+        <span class="sidebar-plan-badge">{{ g.org.plan | capitalize }}</span>
+        {% endif %}
+      </div>
       <div class="sidebar-user-email">{{ g.user.email }}</div>
     </div>
     <div class="sidebar-user-dropdown" id="sidebarUserMenu">
@@ -227,6 +237,32 @@
 
     setTimeout(() => overlay.classList.add('open'), 600);
   }).catch(() => {});
+})();
+</script>
+<script>
+// ── Sidebar collapse toggle ────────────────────────────────────────
+function toggleSidebar() {
+  var sb = document.querySelector('.g-sidebar');
+  var collapsed = sb.classList.toggle('collapsed');
+  try { localStorage.setItem('sn_sidebar_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+  var icon = sb.querySelector('.sidebar-collapse-icon');
+  if (icon) icon.setAttribute('data-lucide', collapsed ? 'chevrons-right' : 'chevrons-left');
+  lucide.createIcons();
+  var btn = sb.querySelector('.sidebar-collapse-btn');
+  if (btn) btn.title = collapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen';
+}
+// Restore collapsed state on load
+(function() {
+  try {
+    if (localStorage.getItem('sn_sidebar_collapsed') === '1') {
+      var sb = document.querySelector('.g-sidebar');
+      if (sb) {
+        sb.classList.add('collapsed');
+        var icon = sb.querySelector('.sidebar-collapse-icon');
+        if (icon) icon.setAttribute('data-lucide', 'chevrons-right');
+      }
+    }
+  } catch(e) {}
 })();
 </script>
 <script>lucide.createIcons();</script>
