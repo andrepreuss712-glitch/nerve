@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04.2.1-04-PLAN.md
-last_updated: "2026-04-03T13:09:38.811Z"
+status: verifying
+stopped_at: Completed 04.2.1-05-PLAN.md
+last_updated: "2026-04-03T13:14:26.867Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 10
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 40
-  completed_plans: 33
+  completed_plans: 34
   percent: 65
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 Phase: 04.2.1 (ui-ux-overhaul) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
@@ -84,6 +84,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.2.1 P03 | 15 | 3 tasks | 2 files |
 | Phase 04.2.1 P02 | 15 | 2 tasks | 2 files |
 | Phase 04.2.1 P04 | 8 | 5 tasks | 2 files |
+| Phase 04.2.1 P05 | 12 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,8 @@ Recent decisions affecting current work:
 - [Phase 04.2.1]: confirmBeenden() in plan HTML does not exist — used beenden() (existing function) for Beenden button in new single header
 - [Phase 04.2.1]: id=st status text span kept display:none in header — app.js writes mic error text to it; removing would silence mic error feedback
 - [Phase 04.2.1]: Profile-bar and phasen-bar hidden (display:none, not deleted) — ~72px vertical space reclaimed, 3-bar chrome reduced to single 52px header
+- [Phase 04.2.1]: rank_ewb() uses Option B (separate Haiku call) to avoid modifying existing Einwand-detection prompt — validates returned EWB types against profile list
+- [Phase 04.2.1]: EWB ranking throttled to every 3rd analyse_loop cycle — ewb_top2 stored in live_session.state and exposed via /api/ergebnis polling endpoint
 
 ### Roadmap Evolution
 
@@ -213,6 +216,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-03T13:09:38.808Z
-Stopped at: Completed 04.2.1-04-PLAN.md
+Last session: 2026-04-03T13:14:26.864Z
+Stopped at: Completed 04.2.1-05-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
