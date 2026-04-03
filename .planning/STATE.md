@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.2-03-PLAN.md
-last_updated: "2026-04-03T10:20:08.250Z"
+stopped_at: Completed 04.2-04-PLAN.md
+last_updated: "2026-04-03T10:20:56.773Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 9
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 35
-  completed_plans: 28
+  completed_plans: 29
   percent: 65
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.2 (cold-call-und-meeting-modi) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -79,6 +79,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.2-cold-call-und-meeting-modi P01 | 10min | 2 tasks | 4 files |
 | Phase 04.2-cold-call-und-meeting-modi P02 | 15min | 2 tasks | 2 files |
 | Phase 04.2-cold-call-und-meeting-modi P03 | 1min | 1 tasks | 1 files |
+| Phase 04.2-cold-call-und-meeting-modi P04 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,8 @@ Recent decisions affecting current work:
 - [Phase 04.2-cold-call-und-meeting-modi]: Socket connect handler guards mic auto-start behind sessionMode check — prevents mic start before mode overlay dismissed, handles reconnect correctly
 - [Phase 04.2-cold-call-und-meeting-modi]: smart_format=False in meeting mode — smart_format strips word-level speaker attributes required for diarization; disabled to preserve raw word objects
 - [Phase 04.2-cold-call-und-meeting-modi]: utterance_end_ms=1000 added for meeting mode via conditional dict — avoids passing None to SDK, improves speaker segmentation on single-channel audio
+- [Phase 04.2-cold-call-und-meeting-modi]: renderEwbButtons uses shared html string assigned to both bar and kpBar — avoids duplication and keeps both bars in sync
+- [Phase 04.2-cold-call-und-meeting-modi]: triggerEwb() left unchanged — queries .ewb-btn by text content which works for both full-mode and compact-mode bars
 
 ### Roadmap Evolution
 
@@ -194,6 +197,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-03T10:20:08.247Z
-Stopped at: Completed 04.2-03-PLAN.md
+Last session: 2026-04-03T10:20:56.770Z
+Stopped at: Completed 04.2-04-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)

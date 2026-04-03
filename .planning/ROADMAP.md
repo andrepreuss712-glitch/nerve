@@ -202,7 +202,7 @@ Phases execute in numeric order.
 | 3.2 UAT Bug Fixes | 5/7 | In Progress|  |
 | 4. Payments & Legal | 1/3 | In Progress|  |
 | 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
-| 4.2 Cold Call und Meeting Modi | 3/4 | In Progress|  |
+| 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
 | 5. Launch | 0/? | Not started | - |
 
 ---
