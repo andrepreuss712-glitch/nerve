@@ -1,18 +1,19 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-02T17:36:29.807Z",
+  "timestamp": "2026-04-03T08:27:46Z",
   "phase": "04",
   "phase_name": "payments-legal",
   "phase_dir": ".planning/phases/04-payments-legal",
-  "plan": 3,
-  "task": 3,
-  "total_tasks": 7,
+  "plan": 2,
+  "task": 1,
+  "total_tasks": 5,
   "status": "paused",
   "completed_tasks": [
     {"id": "04-01 T1", "name": "Stripe dependency + DB schema + config", "status": "done", "commit": "7727fe0"},
     {"id": "04-01 T2", "name": "Payments blueprint — Checkout, Webhook, Portal, Success", "status": "done", "commit": "0c5e1e9"},
     {"id": "04-03 T1", "name": "Legal page templates + routes + footer links", "status": "done", "commit": "ff0515e"},
-    {"id": "04-03 T2", "name": "Deepgram EU endpoint + nginx webhook config + LEGAL-01 verified", "status": "done", "commit": "934c329"}
+    {"id": "04-03 T2", "name": "Deepgram EU endpoint + nginx webhook config + LEGAL-01 verified", "status": "done", "commit": "934c329"},
+    {"id": "04.1 complete", "name": "Phase 4.1 live mic fix — all 3 plans done, approved on getnerve.app", "status": "done", "commit": "368838f"}
   ],
   "remaining_tasks": [
     {"id": "04-03 T3", "name": "AVV signing checklist (manual — LEGAL-03)", "status": "checkpoint_human_action"},
@@ -74,6 +75,8 @@
     }
   ],
   "decisions": [
+    {"decision": "flask.request not flask_socketio.request for SID in Socket.IO handlers", "rationale": "flask_socketio does not export request — Flask patches the standard request object with .sid", "phase": "04.1"},
+    {"decision": "Deploy via scp (no git on VPS, no rsync on Windows)", "rationale": "VPS /opt/nerve/app has no .git; rsync unavailable in Windows git bash; deploy.sh updated to scp", "phase": "04.1"},
     {"decision": "Webhook uses raw request.data for Stripe signature verification", "rationale": "Required by Stripe SDK", "phase": "04"},
     {"decision": "Idempotency via stripe_event_id UNIQUE index — silent skip on duplicate", "rationale": "Prevents double-activation on webhook retries", "phase": "04"},
     {"decision": "checkout_success only flashes, subscription activation in webhook only", "rationale": "D-12 — webhook is authoritative source of truth", "phase": "04"},
@@ -83,6 +86,6 @@
     ".claude/settings.local.json",
     ".planning/phases/04-payments-legal/04-CONTEXT.md"
   ],
-  "next_action": "User replies 'done' to checkpoint → spawn 04-03 continuation agent to mark plan complete, then execute Wave 2 (04-02 pricing page + fair-use metering)",
-  "context_notes": "Wave 1 is 75% done. 04-01 fully complete (Stripe backend). 04-03 code is complete (legal pages, routes, footer, EU endpoint, deploy.sh) — just waiting for human AVV signing. Wave 2 (04-02) cannot start until user confirms checkpoint. After Wave 2, run verifier then mark phase complete."
+  "next_action": "Resume Phase 4: reply 'done' to 04-03 AVV checkpoint OR skip to Wave 2 (04-02 pricing page). Run: /gsd:execute-phase 4",
+  "context_notes": "Phase 4.1 (live mic) fully complete and verified on getnerve.app 2026-04-03. Root bug was flask_socketio.request import. Phase 4 Wave 1 is 75% done — 04-01 complete, 04-03 code done but waiting on human AVV signing checkpoint. Wave 2 (04-02 pricing + fair-use) not started."
 }
