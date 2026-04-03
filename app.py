@@ -150,6 +150,16 @@ def _migrate():
             print("[DB] Migration: created unique index on billing_events.stripe_event_id")
         except Exception:
             pass
+        # ── conversation_logs ────────────────────────────────────────────────
+        for col, typedef in [
+            ('session_mode', "VARCHAR(20) DEFAULT 'meeting'"),
+        ]:
+            try:
+                conn.execute(text(f'ALTER TABLE conversation_logs ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added conversation_logs.{col}")
+            except Exception:
+                pass
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')

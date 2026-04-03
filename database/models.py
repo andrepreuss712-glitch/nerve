@@ -219,6 +219,7 @@ class ConversationLog(Base):
     phasen_details           = Column(Text)   # JSON
 
     typ                      = Column(String(20), default='live')
+    session_mode             = Column(String(20), default='meeting')  # 'cold_call' or 'meeting'
     created_at               = Column(DateTime, default=utcnow)
 
 

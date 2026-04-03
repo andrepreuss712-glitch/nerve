@@ -7,6 +7,7 @@ import services.live_session as ls
 
 # ── Per-session Deepgram connections ──────────────────────────────────────────
 _deepgram_sessions = {}   # {sid: connection}
+_session_modes = {}       # {sid: 'cold_call'|'meeting'}
 _sessions_lock = threading.Lock()
 
 
@@ -117,7 +118,7 @@ def _make_on_error(sid):
     return on_error
 
 
-def _open_deepgram_connection(sid):
+def _open_deepgram_connection(sid, mode='meeting'):
     client = DeepgramClient(DEEPGRAM_API_KEY)
     connection = client.listen.websocket.v("1")
     connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid))
@@ -130,19 +131,21 @@ def _open_deepgram_connection(sid):
         interim_results=True,
         endpointing=900,
         punctuate=True,
-        diarize=True,
+        diarize=(mode == 'meeting'),
         encoding="linear16",
         sample_rate=SAMPLE_RATE,
     )
     connection.start(options)
     with _sessions_lock:
         _deepgram_sessions[sid] = connection
-    print(f"[DG] Session gestartet (sid={sid})")
+        _session_modes[sid] = mode
+    print(f"[DG] Session gestartet (sid={sid}, mode={mode})")
 
 
 def _close_deepgram_connection(sid):
     with _sessions_lock:
         connection = _deepgram_sessions.pop(sid, None)
+        _session_modes.pop(sid, None)
     if connection:
         try:
             connection.finish()
@@ -153,11 +156,14 @@ def _close_deepgram_connection(sid):
 
 def register_audio_handlers(sio):
     @sio.on('start_live_session')
-    def handle_start_live_session(sid=None):
+    def handle_start_live_session(data=None, sid=None):
         from flask import request
         _sid = request.sid if sid is None else sid
-        print(f"[DG] start_live_session received (sid={_sid})")
-        _open_deepgram_connection(_sid)
+        mode = 'meeting'  # default for backward compatibility
+        if isinstance(data, dict):
+            mode = data.get('mode', 'meeting')
+        print(f"[DG] start_live_session received (sid={_sid}, mode={mode})")
+        _open_deepgram_connection(_sid, mode=mode)
 
     @sio.on('stop_live_session')
     def handle_stop_live_session(sid=None):
