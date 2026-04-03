@@ -12,17 +12,12 @@ VENV_DIR="/opt/nerve/venv"
 
 echo "[deploy] Connecting to $VPS_HOST..."
 
-echo "[deploy] Syncing files via rsync..."
-rsync -avz --checksum \
-  --exclude='.git' \
-  --exclude='.planning' \
-  --exclude='__pycache__' \
-  --exclude='*.pyc' \
-  --exclude='.env' \
-  --exclude='database/salesnerve.db' \
-  --exclude='*.log' \
-  -e "ssh -i ~/.ssh/nerve_vps" \
-  . "$VPS_HOST:$APP_DIR/"
+echo "[deploy] Uploading app files via scp..."
+# Upload entire project tree directory by directory (no rsync needed)
+scp -i ~/.ssh/nerve_vps -r \
+  app.py config.py requirements.txt extensions.py \
+  routes services templates static \
+  "$VPS_HOST:$APP_DIR/"
 
 ssh -i ~/.ssh/nerve_vps "$VPS_HOST" bash -s << 'EOF'
   set -e
