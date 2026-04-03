@@ -4,7 +4,7 @@
 
 NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertriebler im DACH-Markt. Er hört Verkaufsgesprächen live zu, erkennt Einwände in Echtzeit und liefert Gegenargumente sowie Coaching-Tipps direkt auf den Bildschirm — unsichtbar für den Kunden. Ergänzend bietet NERVE einen KI-Trainingsmodus, eine Coach-Plattform für Teams und automatisierte Post-Call-Analysen.
 
-**Status:** v0.9.4, Pre-Launch — Early Access vorbereitet
+**Status:** v0.9.5, Pre-Launch — Phase 4.2 complete (Cold Call/Meeting Modi live)
 **Founder:** André Preuß, Iserlohn (Solo-Founder, Einzelunternehmer)
 
 ## Core Value
