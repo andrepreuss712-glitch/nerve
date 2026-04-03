@@ -81,10 +81,19 @@ def live():
             ad = _json2.loads(active_profile.daten) if active_profile and active_profile.daten else {}
         except Exception:
             ad = {}
+        # active_profile_daten: parsed JSON of active profile for Opener section (D-19)
+        import json as _json3
+        active_profile_daten = {}
+        if active_profile and active_profile.daten:
+            try:
+                active_profile_daten = _json3.loads(active_profile.daten) if isinstance(active_profile.daten, str) else active_profile.daten
+            except Exception:
+                active_profile_daten = {}
         ls.set_active_profile(active_profile.name if active_profile else '', ad)
         return render_template('app.html', user=g.user, org=g.org,
                                active_profile=active_profile, profiles=profiles,
-                               active_phasen=active_phasen)
+                               active_phasen=active_phasen,
+                               active_profile_daten=active_profile_daten)
     finally:
         db.close()
 

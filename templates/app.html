@@ -67,7 +67,7 @@
   .btn-profile-switch{background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--page-text-secondary);
     border-radius:6px;padding:4px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
   .btn-profile-switch:hover{border-color:var(--glass-border-hover);color:var(--page-text-color)}
-  .profile-menu{position:absolute;top:calc(100% + 4px);right:20px;background:var(--page-bg);
+  .profile-menu{position:absolute;top:calc(100% + 4px);right:0;background:var(--page-bg);
     border:1px solid var(--glass-border);border-radius:8px;min-width:200px;z-index:200;
     box-shadow:0 4px 20px rgba(0,0,0,.6);overflow:hidden;display:none}
   .profile-menu.open{display:block}
@@ -479,6 +479,12 @@
   /* ── Utility ── */
   .hidden{display:none!important}
 
+  /* ── Kompakt Button (header) ── */
+  .btn-kompakt { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--page-text-secondary);
+    border-radius: 8px; padding: 6px 13px; font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: inherit; display: flex; align-items: center; gap: 4px; }
+  .btn-kompakt:hover { border-color: #2dd4a8; color: #2dd4a8; }
+
   /* ── Print Styles ── */
   @media print{
     body > *:not(.postcall-overlay){display:none!important}
@@ -566,36 +572,59 @@
 
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <div class="header">
-  <div class="header-nav">
-    <a href="/dashboard" class="back-link n-btn n-btn-ghost n-btn-sm">← Dashboard</a>
+  <!-- Left: Logo + Mode Badge + Timer -->
+  <div style="display:flex;align-items:center;gap:12px">
     <div class="nav-mark">
       <div class="nav-n">N</div>
       <div class="nav-word">NERVE<small>SALES INTELLIGENCE</small></div>
     </div>
+    <span class="mode-badge" id="modeBadge">{{ session_mode_label or 'Meeting' }}</span>
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="st" style="display:none">Verbinde...</span>
+      <span id="session-timer">00:00</span>
+    </div>
   </div>
+
+  <!-- Center: Profile switcher -->
+  <div style="position:relative">
+    <button class="btn-profile-switch" id="profileToggle" onclick="toggleProfileMenu()">
+      <span id="profileNameLabel">{{ active_profile.name if active_profile else 'Kein Profil' }}</span> &#9662;
+    </button>
+    <div class="profile-menu" id="profileMenu">
+      {% for p in profiles %}
+      <button class="profile-menu-item {% if active_profile and p.id == active_profile.id %}cur{% endif %}"
+        onclick="setProfile({{ p.id }}, {{ p.name | tojson }})">{{ p.name }}</button>
+      {% endfor %}
+      {% if not profiles %}
+      <div style="padding:10px 16px;font-size:12px;color:var(--page-text-muted)">Keine Profile vorhanden</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right: Controls -->
   <div class="header-right">
-    <span class="mode-badge cold-call hidden" id="modeBadge"></span>
-    <div class="kb-display">
-      <span class="kb-label">Kaufbereitschaft</span>
-      <span class="kb-value red" id="kbValue">30%</span>
-      <div class="kb-bar-wrap"><div class="kb-bar" id="kbBar" style="width:30%;background:#f87171"></div></div>
-    </div>
-    <button class="sp-toggle-btn disabled" id="skriptToggleBtn" onclick="if(!this.classList.contains('disabled'))toggleSkriptPanel()" title="Kein Skript im Profil">📋 Skript</button>
-    <button class="btn btn-frage" onclick="openFrageModal()">💬 Frage stellen</button>
-    <span style="color:var(--page-text-muted);font-size:11px">{{ user.email }}</span>
-    <button class="btn btn-log" onclick="downloadLog()">⬇ Log</button>
-    <button class="btn btn-beenden n-btn n-btn-danger" onclick="beenden()">■ Beenden</button>
     <button class="btn btn-pause" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
-    <div class="n-live-badge status">
-      <div class="dot n-live-dot" id="dot"></div>
-      <span class="n-live-text" id="st">Verbinde...</span>
-      <span id="session-timer" style="color:#2dd4a8;font-weight:700;font-size:12px;margin-left:6px">00:00</span>
-    </div>
+    <button class="btn btn-beenden" id="t-endBtn" onclick="beenden()">■ Beenden</button>
+    <button class="btn btn-kompakt" onclick="openPipWindow()" title="Kompakt-Modus">
+      <i data-lucide="picture-in-picture-2" style="width:14px;height:14px;vertical-align:middle"></i> Kompakt
+    </button>
   </div>
+
+  <!-- Hidden elements kept for JS compatibility -->
+  <div class="kb-display" style="display:none">
+    <span class="kb-label">Kaufbereitschaft</span>
+    <span class="kb-value red" id="kbValue">30%</span>
+    <div class="kb-bar-wrap"><div class="kb-bar" id="kbBar" style="width:30%;background:#f87171"></div></div>
+  </div>
+  <button class="sp-toggle-btn disabled" id="skriptToggleBtn" style="display:none" onclick="if(!this.classList.contains('disabled'))toggleSkriptPanel()" title="Kein Skript im Profil">📋 Skript</button>
+  <button class="btn btn-frage" style="display:none" onclick="openFrageModal()">💬 Frage stellen</button>
+  <span style="display:none" id="g-user-email">{{ user.email }}</span>
+  <button class="btn btn-log" style="display:none" onclick="downloadLog()">⬇ Log</button>
 </div>
 
-<!-- ── Profile Bar ─────────────────────────────────────────────────────────── -->
-<div class="profile-bar">
+<!-- ── Profile Bar (hidden — profile switcher moved to header) ─────────────── -->
+<div class="profile-bar" style="display:none">
   <div style="display:flex;align-items:center">
     <span class="profile-label">Profil:</span>
     <span class="profile-name {% if not active_profile %}none{% endif %}" id="activeProfileName">
@@ -619,9 +648,9 @@
   </div>
 </div>
 
-<!-- ── Phasen-Bar ──────────────────────────────────────────────────────────── -->
+<!-- ── Phasen-Bar (hidden — per D-15) ─────────────────────────────────────── -->
 {% if active_phasen %}
-<div class="phasen-bar" id="phasenBar">
+<div class="phasen-bar" id="phasenBar" style="display:none">
   {% for phase in active_phasen %}
   <div class="phase-step">
     {% if not loop.first %}<span class="phase-arrow">›</span>{% endif %}
@@ -655,6 +684,20 @@
     <div class="panel panel-einwand">
       <div class="panel-header"><span>⚡</span> KI-Einwandbehandlung</div>
       <div class="scroll n-ai-panel" id="ai" style="border-radius:0;border:none;border-top:none;padding:14px 16px">
+        <!-- Opener Section (D-19) -->
+        <div class="opener-section n-glass" id="opener-section" style="padding:16px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--page-text-muted)">Opener</span>
+            <button onclick="document.getElementById('opener-section').style.display='none'" style="background:none;border:none;color:var(--page-text-muted);cursor:pointer;font-size:14px">&times;</button>
+          </div>
+          <div id="opener-fullscreen-text" style="font-size:14px;line-height:1.5;color:var(--page-text-color)">
+            {% if active_profile_daten and active_profile_daten.phasen and active_profile_daten.phasen|length > 0 %}
+              {{ active_profile_daten.phasen[0].text or active_profile_daten.phasen[0].inhalt or 'Kein Opener definiert' }}
+            {% else %}
+              Kein Opener im Profil hinterlegt — <a href="/profiles" style="color:#2dd4a8">Profil bearbeiten</a>
+            {% endif %}
+          </div>
+        </div>
         <div class="msg final" style="border-color:var(--glass-border);color:var(--page-text-muted)">Warte auf Gesprächsinhalt …</div>
       </div>
     </div>
@@ -1011,8 +1054,12 @@ function setProfile(id, name){
     body:JSON.stringify({profile_id:id})
   }).then(r=>r.json()).then(d=>{
     if(d.ok){
-      document.getElementById('activeProfileName').textContent=name;
-      document.getElementById('activeProfileName').classList.remove('none');
+      // Update header profile label
+      const pnl = document.getElementById('profileNameLabel');
+      if(pnl){ pnl.textContent = name; }
+      // Update hidden profile-bar label (legacy, kept for compatibility)
+      const apn = document.getElementById('activeProfileName');
+      if(apn){ apn.textContent=name; apn.classList.remove('none'); }
       const kpPN=document.getElementById('kp-profileName');
       if(kpPN) kpPN.textContent=name;
       document.getElementById('profileMenu').classList.remove('open');
@@ -1022,7 +1069,7 @@ function setProfile(id, name){
   });
 }
 document.addEventListener('click',function(e){
-  if(!e.target.closest('#profileMenu')&&!e.target.closest('#profileSwitchBtn'))
+  if(!e.target.closest('#profileMenu')&&!e.target.closest('#profileToggle')&&!e.target.closest('#profileSwitchBtn'))
     document.getElementById('profileMenu').classList.remove('open');
 });
 
