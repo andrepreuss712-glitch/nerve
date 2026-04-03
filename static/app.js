@@ -138,8 +138,9 @@ const DACH_FALLBACK_EINWAENDE = [
 ];
 
 function renderEwbButtons() {
-  const bar = document.getElementById('ewbBar');
-  if (!bar) return;
+  const bar    = document.getElementById('ewbBar');
+  const kpBar  = document.getElementById('kp-ewbBar');
+  if (!bar && !kpBar) return;
 
   // Get einwaende from profile or fallback
   let einwaende = DACH_FALLBACK_EINWAENDE;
@@ -151,9 +152,12 @@ function renderEwbButtons() {
   } catch(e) {}
   if (!einwaende.length) einwaende = DACH_FALLBACK_EINWAENDE;
 
-  bar.innerHTML = einwaende.map(typ =>
+  const html = einwaende.map(typ =>
     `<button class="ewb-btn" onclick="triggerEwb('${escHtml(typ)}')" title="Einwand: ${escHtml(typ)}">\uD83D\uDEE1\uFE0F ${escHtml(typ)}</button>`
   ).join('');
+
+  if (bar)   bar.innerHTML   = html;
+  if (kpBar) kpBar.innerHTML = html;
 }
 
 async function triggerEwb(einwandTyp) {
