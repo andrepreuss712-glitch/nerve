@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04.2-02-PLAN.md
-last_updated: "2026-04-03T09:28:50.268Z"
+status: executing
+stopped_at: Completed 04.2-03-PLAN.md
+last_updated: "2026-04-03T10:20:08.250Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 9
-  completed_phases: 5
-  total_plans: 33
-  completed_plans: 27
+  completed_phases: 4
+  total_plans: 35
+  completed_plans: 28
   percent: 65
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 04.2 (cold-call-und-meeting-modi) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-04-03
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
@@ -78,6 +78,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P03 | 5 | 1 tasks | 2 files |
 | Phase 04.2-cold-call-und-meeting-modi P01 | 10min | 2 tasks | 4 files |
 | Phase 04.2-cold-call-und-meeting-modi P02 | 15min | 2 tasks | 2 files |
+| Phase 04.2-cold-call-und-meeting-modi P03 | 1min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,8 @@ Recent decisions affecting current work:
 - [Phase 04.2-cold-call-und-meeting-modi]: DSGVO banner deferred from socket.on('connect') to activateSession() — mode overlay must appear first, banner only relevant after session mode confirmed
 - [Phase 04.2-cold-call-und-meeting-modi]: activateSession() centralizes all post-mode-selection setup: overlay hide, badge update, DSGVO banner, timer start, EWB render, mic start
 - [Phase 04.2-cold-call-und-meeting-modi]: Socket connect handler guards mic auto-start behind sessionMode check — prevents mic start before mode overlay dismissed, handles reconnect correctly
+- [Phase 04.2-cold-call-und-meeting-modi]: smart_format=False in meeting mode — smart_format strips word-level speaker attributes required for diarization; disabled to preserve raw word objects
+- [Phase 04.2-cold-call-und-meeting-modi]: utterance_end_ms=1000 added for meeting mode via conditional dict — avoids passing None to SDK, improves speaker segmentation on single-channel audio
 
 ### Roadmap Evolution
 
@@ -191,6 +194,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-03T09:24:48.079Z
-Stopped at: Completed 04.2-02-PLAN.md
+Last session: 2026-04-03T10:20:08.247Z
+Stopped at: Completed 04.2-03-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
