@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.2.1-02-PLAN.md
-last_updated: "2026-04-03T13:04:51.248Z"
+stopped_at: Completed 04.2.1-04-PLAN.md
+last_updated: "2026-04-03T13:09:38.811Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 40
-  completed_plans: 32
+  completed_plans: 33
   percent: 65
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.2.1 (ui-ux-overhaul) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -83,6 +83,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.2.1 P01 | 10 | 3 tasks | 2 files |
 | Phase 04.2.1 P03 | 15 | 3 tasks | 2 files |
 | Phase 04.2.1 P02 | 15 | 2 tasks | 2 files |
+| Phase 04.2.1 P04 | 8 | 5 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,9 @@ Recent decisions affecting current work:
 - [Phase 04.2.1]: get_recent_calls_db replaces file-based log parsing for dashboard -- DB query gives session_mode and kb_end score unavailable from log files
 - [Phase 04.2.1]: NBA card dismiss uses week-keyed localStorage (sn_nba_dismissed_YYYY-WNN) -- resets weekly without server state
 - [Phase 04.2.1]: Old dashboard Python helpers kept (qotd, achievements, ROI, weekly_summary) -- only HTML rendering removed per D-26/D-27/D-28/D-29
+- [Phase 04.2.1]: confirmBeenden() in plan HTML does not exist — used beenden() (existing function) for Beenden button in new single header
+- [Phase 04.2.1]: id=st status text span kept display:none in header — app.js writes mic error text to it; removing would silence mic error feedback
+- [Phase 04.2.1]: Profile-bar and phasen-bar hidden (display:none, not deleted) — ~72px vertical space reclaimed, 3-bar chrome reduced to single 52px header
 
 ### Roadmap Evolution
 
@@ -209,6 +213,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-03T13:04:51.245Z
-Stopped at: Completed 04.2.1-02-PLAN.md
+Last session: 2026-04-03T13:09:38.808Z
+Stopped at: Completed 04.2.1-04-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
