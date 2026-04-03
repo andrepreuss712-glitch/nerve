@@ -172,7 +172,7 @@ Plans:
   3. Meeting shows consent pop-up with Vorleseskript; accepted starts full diarization, rejected silently falls back to Cold Call
   4. EWB buttons (from profile or DACH fallback list) trigger instant Claude Haiku responses with objection-specific context
   5. Active mode displayed as badge in /live header; session_mode persisted in ConversationLog
-**Plans:** 2/2 plans complete
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 04.2-01-PLAN.md — Backend: DB migration (session_mode), mode-aware Deepgram, EWB trigger endpoint (MODE-02, MODE-04, MODE-05, MODE-06)
