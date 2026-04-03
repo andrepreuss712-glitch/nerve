@@ -8,6 +8,9 @@ let words = 0, einwaende = 0, analysen = 0;
 let interim = null;
 let paused  = false;
 
+// ── Session Mode State ───────────────────────────────────────────────────────
+let sessionMode = null;  // 'cold_call' or 'meeting', set by mode overlay
+
 // ── Browser Mic State ─────────────────────────────────────────────────────────
 let micStream  = null;   // MediaStream from getUserMedia
 let audioCtx   = null;   // AudioContext at 16kHz
@@ -41,7 +44,7 @@ async function startMicStream() {
     source.connect(workletNode);
     workletNode.connect(audioCtx.destination);
     micStarted = true;
-    socket.emit('start_live_session');
+    socket.emit('start_live_session', { mode: sessionMode || 'meeting' });
     console.log('[Mic] Browser-Mikrofon gestartet, AudioContext state:', audioCtx.state);
   } catch (err) {
     console.error('[Mic] getUserMedia Fehler:', err);
@@ -60,6 +63,129 @@ function stopMicStream() {
   if (audioCtx)    { audioCtx.close(); audioCtx = null; }
   if (micStream)   { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
   console.log('[Mic] Browser-Mikrofon gestoppt');
+}
+
+// ── Mode Selection (per D-01) ────────────────────────────────────────────────
+function selectMode(mode) {
+  if (mode === 'meeting') {
+    // Show consent modal (per D-04)
+    document.getElementById('consentOverlay').classList.add('open');
+  } else {
+    // Cold Call — start directly
+    sessionMode = 'cold_call';
+    activateSession();
+  }
+}
+
+function acceptConsent() {
+  // Consent given — Meeting mode (per D-06)
+  sessionMode = 'meeting';
+  document.getElementById('consentOverlay').classList.remove('open');
+  activateSession();
+}
+
+function rejectConsent() {
+  // Consent rejected — silent fallback to Cold Call (per D-07)
+  sessionMode = 'cold_call';
+  document.getElementById('consentOverlay').classList.remove('open');
+  activateSession();
+}
+
+function activateSession() {
+  // Hide mode overlay
+  document.getElementById('modeOverlay').classList.add('hidden');
+
+  // Show and update mode badge (per D-03)
+  const badge = document.getElementById('modeBadge');
+  badge.classList.remove('hidden', 'cold-call', 'meeting');
+  if (sessionMode === 'cold_call') {
+    badge.classList.add('cold-call');
+    badge.textContent = '\uD83D\uDD12 Cold Call';
+  } else {
+    badge.classList.add('meeting');
+    badge.textContent = '\uD83E\uDD1D Meeting';
+  }
+
+  // Show DSGVO banner now that mode is selected (socket may already be connected)
+  const dsgvoBanner = document.getElementById('dsgvoBanner');
+  if (dsgvoBanner && !dsgvoBanner._shown) {
+    dsgvoBanner._shown = true;
+    dsgvoBanner.classList.add('visible');
+    var sprachPanel = document.querySelector('.panel-sprachanalyse');
+    if (sprachPanel) sprachPanel.style.paddingBottom = '48px';
+    setTimeout(() => {
+      dsgvoBanner.classList.remove('visible');
+      if (sprachPanel) sprachPanel.style.paddingBottom = '';
+    }, 6000);
+  }
+
+  // Start session timer
+  startSessionTimer();
+
+  // Render EWB buttons
+  renderEwbButtons();
+
+  // Start mic stream (which triggers Deepgram connection with mode)
+  if (window.location.pathname === '/live') {
+    startMicStream();
+  }
+}
+
+// ── EWB Buttons (per D-11, D-12, D-13) ──────────────────────────────────────
+const DACH_FALLBACK_EINWAENDE = [
+  'Keine Zeit', 'Zu teuer', 'Kein Bedarf', 'Falscher Zeitpunkt',
+  'Lieferant zufrieden', 'Kein Budget', 'Muss Chef fragen'
+];
+
+function renderEwbButtons() {
+  const bar = document.getElementById('ewbBar');
+  if (!bar) return;
+
+  // Get einwaende from profile or fallback
+  let einwaende = DACH_FALLBACK_EINWAENDE;
+  try {
+    const pd = window._profileEinwaende || {};
+    if (pd.einwaende && pd.einwaende.length > 0) {
+      einwaende = pd.einwaende.map(e => e.typ || e.name || e).filter(Boolean);
+    }
+  } catch(e) {}
+  if (!einwaende.length) einwaende = DACH_FALLBACK_EINWAENDE;
+
+  bar.innerHTML = einwaende.map(typ =>
+    `<button class="ewb-btn" onclick="triggerEwb('${escHtml(typ)}')" title="Einwand: ${escHtml(typ)}">\uD83D\uDEE1\uFE0F ${escHtml(typ)}</button>`
+  ).join('');
+}
+
+async function triggerEwb(einwandTyp) {
+  // Find the clicked button and show loading state
+  const buttons = document.querySelectorAll('.ewb-btn');
+  const clickedBtn = Array.from(buttons).find(b => b.textContent.includes(einwandTyp));
+  if (clickedBtn) clickedBtn.classList.add('loading');
+
+  try {
+    const res = await fetch('/api/ewb_trigger', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({einwand_typ: einwandTyp})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      // Render response in AI panel
+      const aiPanel = document.getElementById('ai');
+      if (aiPanel) {
+        const card = document.createElement('div');
+        card.className = 'msg final';
+        card.style.borderColor = '#3b82f6';
+        card.innerHTML = `<span style="font-size:10px;color:#3b82f6;font-weight:700">\uD83D\uDEE1\uFE0F EWB: ${escHtml(einwandTyp)}</span><br>${escHtml(data.antwort)}`;
+        aiPanel.appendChild(card);
+        aiPanel.scrollTop = aiPanel.scrollHeight;
+      }
+    }
+  } catch(e) {
+    console.error('[EWB] Fehler:', e);
+  } finally {
+    if (clickedBtn) clickedBtn.classList.remove('loading');
+  }
 }
 
 // ── Session-Timer ─────────────────────────────────────────────────────────────
@@ -179,25 +305,28 @@ socket.on('connect',()=>{
   if(kpSt) kpSt.textContent='Mikrofon aktiv';
   const kpDot=document.getElementById('kp-dot');
   if(kpDot){kpDot.classList.remove('paused');}
-  // DSGVO-Banner beim Verbindungsaufbau einblenden (vor Mikrofon-Zugriff) — DSGVO-konform
-  const dsgvoBanner = document.getElementById('dsgvoBanner');
-  if (dsgvoBanner && !dsgvoBanner._shown) {
-    dsgvoBanner._shown = true;
-    dsgvoBanner.classList.add('visible');
-    // Add bottom padding to metrics panel so emotion circles are not hidden behind the banner
-    var sprachPanel = document.querySelector('.panel-sprachanalyse');
-    if (sprachPanel) sprachPanel.style.paddingBottom = '48px';
-    setTimeout(() => {
-      dsgvoBanner.classList.remove('visible');
-      if (sprachPanel) sprachPanel.style.paddingBottom = '';
-    }, 6000);
+  // DSGVO-Banner nur nach Mode-Auswahl einblenden (per D-01: Mode-Overlay zuerst)
+  if (sessionMode) {
+    const dsgvoBanner = document.getElementById('dsgvoBanner');
+    if (dsgvoBanner && !dsgvoBanner._shown) {
+      dsgvoBanner._shown = true;
+      dsgvoBanner.classList.add('visible');
+      // Add bottom padding to metrics panel so emotion circles are not hidden behind the banner
+      var sprachPanel = document.querySelector('.panel-sprachanalyse');
+      if (sprachPanel) sprachPanel.style.paddingBottom = '48px';
+      setTimeout(() => {
+        dsgvoBanner.classList.remove('visible');
+        if (sprachPanel) sprachPanel.style.paddingBottom = '';
+      }, 6000);
+    }
+    // Start session timer on connect — not on first transcript
+    startSessionTimer();
+    // Only start mic on /live page — prevent unwanted mic access on other pages
+    if (window.location.pathname === '/live') {
+      startMicStream();
+    }
   }
-  // Start session timer on connect — not on first transcript
-  startSessionTimer();
-  // Only start mic on /live page — prevent unwanted mic access on other pages
-  if (window.location.pathname === '/live') {
-    startMicStream();
-  }
+  // Note: if sessionMode is null, the mode overlay is shown — user must select before session starts
 });
 
 socket.on('transcript', d => {
@@ -357,7 +486,11 @@ async function beenden(){
   const pcLoading=document.getElementById('postcall-loading');
   if(pcLoading){pcLoading.style.display='flex';}
   try{
-    const res=await fetch('/api/beenden',{method:'POST'});
+    const res=await fetch('/api/beenden',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({session_mode: sessionMode || 'meeting'})
+    });
     const data=await res.json();
     if(pcLoading){pcLoading.style.display='none';}
     if(!data.ok){alert('Fehler: '+(data.error||'?'));return;}

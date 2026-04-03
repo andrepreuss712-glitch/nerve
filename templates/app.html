@@ -426,6 +426,55 @@
     font-size:14px;line-height:1;padding:0 0 0 6px}
   .dsgvo-banner-close:hover{color:var(--page-text-secondary)}
 
+  /* ── Mode Selector Overlay ── */
+  .mode-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:flex;
+    align-items:center;justify-content:center;flex-direction:column;gap:20px}
+  .mode-overlay.hidden{display:none}
+  .mode-overlay-title{font-size:22px;font-weight:800;color:var(--page-text-color);letter-spacing:.02em}
+  .mode-overlay-subtitle{font-size:13px;color:var(--page-text-muted);margin-top:-12px;max-width:400px;text-align:center}
+  .mode-cards{display:flex;gap:16px}
+  .mode-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;padding:24px 28px;
+    cursor:pointer;transition:border-color .2s,transform .15s;min-width:200px;text-align:center}
+  .mode-card:hover{border-color:#2dd4a8;transform:translateY(-2px)}
+  .mode-card.selected{border-color:#2dd4a8;box-shadow:0 0 20px rgba(45,212,168,0.15)}
+  .mode-card-icon{font-size:32px;margin-bottom:8px}
+  .mode-card-title{font-size:16px;font-weight:700;color:var(--page-text-color);margin-bottom:4px}
+  .mode-card-desc{font-size:12px;color:var(--page-text-muted);line-height:1.5}
+
+  /* ── Consent Modal ── */
+  .consent-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:950;display:none;
+    align-items:center;justify-content:center}
+  .consent-overlay.open{display:flex}
+  .consent-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:12px;padding:24px;
+    max-width:480px;width:90%}
+  .consent-title{font-size:15px;font-weight:700;color:var(--page-text-color);margin-bottom:12px}
+  .consent-script{background:rgba(45,212,168,0.06);border:1px solid rgba(45,212,168,0.2);border-radius:8px;
+    padding:16px;font-size:14px;color:var(--page-text-secondary);line-height:1.6;margin-bottom:16px;font-style:italic}
+  .consent-hint{font-size:11px;color:var(--page-text-muted);margin-bottom:16px}
+  .consent-actions{display:flex;gap:10px;justify-content:flex-end}
+  .consent-btn{border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;
+    font-family:inherit;transition:opacity .15s}
+  .consent-btn:hover{opacity:.8}
+  .consent-btn-accept{background:#2dd4a8;color:var(--page-bg)}
+  .consent-btn-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171}
+
+  /* ── Mode Badge ── */
+  .mode-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;
+    font-size:11px;font-weight:700;letter-spacing:.04em}
+  .mode-badge.cold-call{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#3b82f6}
+  .mode-badge.meeting{background:rgba(45,212,168,0.1);border:1px solid rgba(45,212,168,0.3);color:#2dd4a8}
+
+  /* ── EWB Buttons ── */
+  .ewb-bar{display:flex;gap:5px;flex-wrap:wrap;padding:5px 16px;border-top:1px solid var(--glass-border)}
+  .ewb-btn{background:var(--glass-bg);border:1px solid rgba(59,130,246,0.25);color:#93c5fd;
+    border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;
+    font-family:inherit;transition:border-color .15s,background .15s;white-space:nowrap}
+  .ewb-btn:hover{border-color:#3b82f6;background:rgba(59,130,246,0.08)}
+  .ewb-btn.loading{opacity:.5;pointer-events:none}
+
+  /* ── Utility ── */
+  .hidden{display:none!important}
+
   /* ── Print Styles ── */
   @media print{
     body > *:not(.postcall-overlay){display:none!important}
@@ -441,6 +490,39 @@
 </head>
 <body>
 
+<!-- ── Mode Selector Overlay ──────────────────────────────────────────────── -->
+<div class="mode-overlay" id="modeOverlay">
+  <div class="mode-overlay-title">Gesprächsmodus wählen</div>
+  <div class="mode-overlay-subtitle">Wähle den passenden Modus für dein Gespräch. Der Modus kann während des Calls nicht gewechselt werden.</div>
+  <div class="mode-cards">
+    <div class="mode-card" onclick="selectMode('cold_call')">
+      <div class="mode-card-icon">🔒</div>
+      <div class="mode-card-title">Cold Call</div>
+      <div class="mode-card-desc">Nur deine Stimme wird analysiert.<br>Kein Kunden-Audio verarbeitet.<br>EWB-Buttons für manuelle Einwand-Trigger.</div>
+    </div>
+    <div class="mode-card" onclick="selectMode('meeting')">
+      <div class="mode-card-icon">🤝</div>
+      <div class="mode-card-title">Meeting</div>
+      <div class="mode-card-desc">Volle Analyse beider Sprecher.<br>Einwilligung des Gesprächspartners erforderlich.<br>Automatische Einwanderkennung + EWB.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Consent Modal (Meeting Mode) ───────────────────────────────────────── -->
+<div class="consent-overlay" id="consentOverlay" onclick="if(event.target===this)rejectConsent()">
+  <div class="consent-box">
+    <div class="consent-title">Einwilligung des Gesprächspartners</div>
+    <div class="consent-script">
+      „Ich nutze eine KI-gestützte Assistenz, die unser Gespräch in Echtzeit analysiert, um mich besser beraten zu können. Es wird kein Audio gespeichert. Sind Sie damit einverstanden?"
+    </div>
+    <div class="consent-hint">Bitte lesen Sie diesen Satz Ihrem Gesprächspartner vor, bevor Sie die Sitzung starten.</div>
+    <div class="consent-actions">
+      <button class="consent-btn consent-btn-reject" onclick="rejectConsent()">Abgelehnt</button>
+      <button class="consent-btn consent-btn-accept" onclick="acceptConsent()">Stattgegeben</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <div class="header">
   <div class="header-nav">
@@ -451,6 +533,7 @@
     </div>
   </div>
   <div class="header-right">
+    <span class="mode-badge cold-call hidden" id="modeBadge"></span>
     <div class="kb-display">
       <span class="kb-label">Kaufbereitschaft</span>
       <span class="kb-value red" id="kbValue">30%</span>
@@ -539,6 +622,9 @@
       <button class="qa-btn" onclick="quickAction('einwand')">🛡️ Einwand</button>
       <button class="qa-btn" onclick="quickAction('uebergang')">🔄 Übergang</button>
       <button class="qa-btn" onclick="quickAction('abschluss')">🏁 Abschluss</button>
+    </div>
+    <div class="ewb-bar" id="ewbBar">
+      <!-- Populated by JS from profile einwaende or DACH fallback -->
     </div>
     <div class="panel panel-coaching">
       <div class="panel-header"><span>💡</span> Berater-Hinweise &amp; Painpoints</div>
@@ -800,6 +886,9 @@
     </div>
   </div>
 </div>
+<script>
+  try { window._profileEinwaende = JSON.parse({{ (active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"' }}); } catch(e) { window._profileEinwaende = {}; }
+</script>
 <script src="/static/app.js"></script>
 <script>
 // ── Kompakt-Modus ─────────────────────────────────────────────────────────────
