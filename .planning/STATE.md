@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.1-03-PLAN.md
-last_updated: "2026-04-02T19:02:56.450Z"
-last_activity: 2026-04-02
+stopped_at: Completed 04.2-01-PLAN.md
+last_updated: "2026-04-03T09:19:45.696Z"
+last_activity: 2026-04-03
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 4
-  total_plans: 31
-  completed_plans: 25
+  total_plans: 33
+  completed_plans: 26
   percent: 65
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.1 — live-mikrofon-fix-pyaudio-browser-getusermedia
+**Current focus:** Phase 04.2 — cold-call-und-meeting-modi
 
 ## Current Position
 
-Phase: 04.1 (live-mikrofon-fix-pyaudio-browser-getusermedia) — EXECUTING
-Plan: 2 of 3
+Phase: 04.2 (cold-call-und-meeting-modi) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-02
+Last activity: 2026-04-03
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
 
@@ -76,6 +76,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P01 | 2 | 2 tasks | 2 files |
 | Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P02 | 5 | 2 tasks | 2 files |
 | Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P03 | 5 | 1 tasks | 2 files |
+| Phase 04.2-cold-call-und-meeting-modi P01 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -141,11 +142,14 @@ Recent decisions affecting current work:
 - [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: audioCtx.resume() called conditionally (state==='suspended') in startMicStream() — bypasses Chrome autoplay suspension without errors on other browsers
 - [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: window.location.pathname guard added to socket.on('connect') as defensive measure — app.js only loads on /live but guard prevents future regression
 - [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: _first_chunk_logged scoped as closure in register_audio_handlers() — first-chunk diagnostics without module-level global pollution
+- [Phase 04.2-cold-call-und-meeting-modi]: session_mode defaults to 'meeting' for backward compatibility — existing frontend calls without the field treated as meeting mode
+- [Phase 04.2-cold-call-und-meeting-modi]: EWB trigger endpoint mirrors api_frage pattern (same Haiku model, same logging) with objection-specific prompt ending in open question
 
 ### Roadmap Evolution
 
 - Phase 03.1 inserted after Phase 03: Frontend Redesign (INSERTED) — app-page redesign before payments
 - Phase 04.1 inserted after Phase 04: Live-Mikrofon Fix: PyAudio → Browser getUserMedia (URGENT) — Phase 4 paused (Gewerbeschein blocker), mic fix inserted as 4.1
+- Phase 04.2 inserted after Phase 04: Cold Call und Meeting Modi (URGENT) — dedicated modes for cold call (only consultant audio) and meeting (consent popup) before Phase 5
 - Phase 1 (Business Setup) removed from GSD tracking — user handles manually (Gewerbeanmeldung, Geschäftskonto, etc.)
 
 ### Pending Todos
@@ -183,6 +187,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-02T19:02:56.447Z
-Stopped at: Completed 04.1-03-PLAN.md
+Last session: 2026-04-03T09:19:45.692Z
+Stopped at: Completed 04.2-01-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)

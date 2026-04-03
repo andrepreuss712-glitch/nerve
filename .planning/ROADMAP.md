@@ -175,7 +175,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04.2-01-PLAN.md — Backend: DB migration (session_mode), mode-aware Deepgram, EWB trigger endpoint (MODE-02, MODE-04, MODE-05, MODE-06)
+- [x] 04.2-01-PLAN.md — Backend: DB migration (session_mode), mode-aware Deepgram, EWB trigger endpoint (MODE-02, MODE-04, MODE-05, MODE-06)
 - [ ] 04.2-02-PLAN.md — Frontend: mode overlay, consent modal, EWB buttons, mode badge, JS wiring (MODE-01, MODE-03, MODE-04, MODE-05)
 
 ### Phase 5: Launch
@@ -202,7 +202,7 @@ Phases execute in numeric order.
 | 3.2 UAT Bug Fixes | 5/7 | In Progress|  |
 | 4. Payments & Legal | 1/3 | In Progress|  |
 | 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
-| 4.2 Cold Call und Meeting Modi | 0/2 | Not started | - |
+| 4.2 Cold Call und Meeting Modi | 1/2 | In Progress|  |
 | 5. Launch | 0/? | Not started | - |
 
 ---
