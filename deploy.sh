@@ -12,14 +12,22 @@ VENV_DIR="/opt/nerve/venv"
 
 echo "[deploy] Connecting to $VPS_HOST..."
 
+echo "[deploy] Syncing files via rsync..."
+rsync -avz --checksum \
+  --exclude='.git' \
+  --exclude='.planning' \
+  --exclude='__pycache__' \
+  --exclude='*.pyc' \
+  --exclude='.env' \
+  --exclude='database/salesnerve.db' \
+  --exclude='*.log' \
+  -e "ssh -i ~/.ssh/nerve_vps" \
+  . "$VPS_HOST:$APP_DIR/"
+
 ssh -i ~/.ssh/nerve_vps "$VPS_HOST" bash -s << 'EOF'
   set -e
-  echo "[deploy] Pulling latest code..."
-  cd /opt/nerve/app
-  git pull origin main
-
   echo "[deploy] Installing dependencies..."
-  /opt/nerve/venv/bin/pip install -r requirements.txt --quiet
+  /opt/nerve/venv/bin/pip install -r /opt/nerve/app/requirements.txt --quiet
 
   echo "[deploy] Writing nginx config..."
   sudo tee /etc/nginx/sites-available/nerve > /dev/null << 'NGINX'
