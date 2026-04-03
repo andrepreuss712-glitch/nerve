@@ -92,6 +92,9 @@ function rejectConsent() {
 }
 
 function activateSession() {
+  // Sync window.sessionMode for PiP badge access
+  window.sessionMode = sessionMode;
+
   // Hide mode overlay
   document.getElementById('modeOverlay').classList.add('hidden');
 
