@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04.2-01-PLAN.md
-last_updated: "2026-04-03T09:19:45.696Z"
+status: verifying
+stopped_at: Completed 04.2-02-PLAN.md
+last_updated: "2026-04-03T09:24:48.082Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 9
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 33
-  completed_plans: 26
+  completed_plans: 27
   percent: 65
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 Phase: 04.2 (cold-call-und-meeting-modi) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
@@ -77,6 +77,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P02 | 5 | 2 tasks | 2 files |
 | Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia P03 | 5 | 1 tasks | 2 files |
 | Phase 04.2-cold-call-und-meeting-modi P01 | 10min | 2 tasks | 4 files |
+| Phase 04.2-cold-call-und-meeting-modi P02 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -144,6 +145,9 @@ Recent decisions affecting current work:
 - [Phase 04.1-live-mikrofon-fix-pyaudio-browser-getusermedia]: _first_chunk_logged scoped as closure in register_audio_handlers() — first-chunk diagnostics without module-level global pollution
 - [Phase 04.2-cold-call-und-meeting-modi]: session_mode defaults to 'meeting' for backward compatibility — existing frontend calls without the field treated as meeting mode
 - [Phase 04.2-cold-call-und-meeting-modi]: EWB trigger endpoint mirrors api_frage pattern (same Haiku model, same logging) with objection-specific prompt ending in open question
+- [Phase 04.2-cold-call-und-meeting-modi]: DSGVO banner deferred from socket.on('connect') to activateSession() — mode overlay must appear first, banner only relevant after session mode confirmed
+- [Phase 04.2-cold-call-und-meeting-modi]: activateSession() centralizes all post-mode-selection setup: overlay hide, badge update, DSGVO banner, timer start, EWB render, mic start
+- [Phase 04.2-cold-call-und-meeting-modi]: Socket connect handler guards mic auto-start behind sessionMode check — prevents mic start before mode overlay dismissed, handles reconnect correctly
 
 ### Roadmap Evolution
 
@@ -187,6 +191,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-03T09:19:45.692Z
-Stopped at: Completed 04.2-01-PLAN.md
+Last session: 2026-04-03T09:24:48.079Z
+Stopped at: Completed 04.2-02-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)

@@ -54,9 +54,9 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 
 ### Cold Call und Meeting Modi (INSERTED — Phase 04.2)
 
-- [ ] **MODE-01**: User wählt vor Session-Start auf `/live` zwischen Cold Call und Meeting Modus (Pre-Session Overlay, kein Wechsel mid-call)
+- [x] **MODE-01**: User wählt vor Session-Start auf `/live` zwischen Cold Call und Meeting Modus (Pre-Session Overlay, kein Wechsel mid-call)
 - [x] **MODE-02**: Cold Call nutzt Deepgram Single-Speaker-Modus (`diarize=false`); nur Berater-Audio wird verarbeitet, kein Kunden-Audio an Deepgram gesendet
-- [ ] **MODE-03**: Meeting zeigt Consent-Pop-up mit Vorleseskript; Stattgegeben startet volle Diarization, Abgelehnt fällt nahtlos auf Cold Call zurück
+- [x] **MODE-03**: Meeting zeigt Consent-Pop-up mit Vorleseskript; Stattgegeben startet volle Diarization, Abgelehnt fällt nahtlos auf Cold Call zurück
 - [x] **MODE-04**: EWB-Buttons (aus aktivem Profil `einwaende` oder DACH-Standard-Fallback) triggern sofortige Claude-Haiku-Anfrage mit Einwand-Kontext und Profil-Gegenargumenten
 - [x] **MODE-05**: `session_mode` ('cold_call'/'meeting') wird in `ConversationLog` gespeichert; aktiver Modus als Badge im `/live` Header sichtbar
 - [x] **MODE-06**: EWB-Button-Presses werden in `quick_action_log` mit `typ='ewb'` geloggt und über bestehenden `qa_count`-Mechanismus in `api_beenden` persistiert
@@ -146,9 +146,9 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | MIC-02 | Phase 4.1 | Complete |
 | MIC-03 | Phase 4.1 | Complete |
 | MIC-04 | Phase 4.1 | Complete |
-| MODE-01 | Phase 4.2 | Pending |
+| MODE-01 | Phase 4.2 | Complete |
 | MODE-02 | Phase 4.2 | Complete |
-| MODE-03 | Phase 4.2 | Pending |
+| MODE-03 | Phase 4.2 | Complete |
 | MODE-04 | Phase 4.2 | Complete |
 | MODE-05 | Phase 4.2 | Complete |
 | MODE-06 | Phase 4.2 | Complete |
