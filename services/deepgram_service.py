@@ -124,22 +124,27 @@ def _open_deepgram_connection(sid, mode='meeting'):
     connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid))
     connection.on(LiveTranscriptionEvents.Open, _make_on_open(sid))
     connection.on(LiveTranscriptionEvents.Error, _make_on_error(sid))
-    options = LiveOptions(
+    is_meeting = (mode == 'meeting')
+    options_kwargs = dict(
         model="nova-2",
         language="de",
-        smart_format=True,
+        smart_format=not is_meeting,   # disable smart_format in meeting mode — preserves word-level speaker attributes
         interim_results=True,
         endpointing=900,
         punctuate=True,
-        diarize=(mode == 'meeting'),
+        diarize=is_meeting,
         encoding="linear16",
         sample_rate=SAMPLE_RATE,
     )
+    if is_meeting:
+        options_kwargs['utterance_end_ms'] = "1000"
+    options = LiveOptions(**options_kwargs)
+    print(f"[DG] LiveOptions: model=nova-2, diarize={is_meeting}, smart_format={not is_meeting}")
     connection.start(options)
     with _sessions_lock:
         _deepgram_sessions[sid] = connection
         _session_modes[sid] = mode
-    print(f"[DG] Session gestartet (sid={sid}, mode={mode})")
+    print(f"[DG] Session gestartet (sid={sid}, mode={mode}, diarize={is_meeting})")
 
 
 def _close_deepgram_connection(sid):
