@@ -178,6 +178,16 @@ Plans:
 - [x] 04.2-01-PLAN.md — Backend: DB migration (session_mode), mode-aware Deepgram, EWB trigger endpoint (MODE-02, MODE-04, MODE-05, MODE-06)
 - [x] 04.2-02-PLAN.md — Frontend: mode overlay, consent modal, EWB buttons, mode badge, JS wiring (MODE-01, MODE-03, MODE-04, MODE-05)
 
+### Phase 04.2.1: UI/UX Overhaul — Dashboard, Live-Assistent, Kompaktmodus. Komplettes Layout überarbeiten, Getclose.ai als Design-Referenz, Picture-in-Picture Overlay, intuitive Anordnung aller Elemente. (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 4.2
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 04.2.1 to break down)
+
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
 **Depends on**: Phase 4

@@ -160,6 +160,7 @@ Recent decisions affecting current work:
 - Phase 03.1 inserted after Phase 03: Frontend Redesign (INSERTED) — app-page redesign before payments
 - Phase 04.1 inserted after Phase 04: Live-Mikrofon Fix: PyAudio → Browser getUserMedia (URGENT) — Phase 4 paused (Gewerbeschein blocker), mic fix inserted as 4.1
 - Phase 04.2 inserted after Phase 04: Cold Call und Meeting Modi (URGENT) — dedicated modes for cold call (only consultant audio) and meeting (consent popup) before Phase 5
+- Phase 04.2.1 inserted after Phase 04.2: UI/UX Overhaul — Dashboard, Live-Assistent, Kompaktmodus (URGENT) — complete layout overhaul, Getclose.ai design reference, PiP overlay
 - Phase 1 (Business Setup) removed from GSD tracking — user handles manually (Gewerbeanmeldung, Geschäftskonto, etc.)
 
 ### Pending Todos
