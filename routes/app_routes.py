@@ -203,6 +203,8 @@ def api_log():
 @app_routes_bp.route('/api/beenden', methods=['POST'])
 @login_required
 def api_beenden():
+    req_data = request.get_json(silent=True) or {}
+    session_mode = req_data.get('session_mode', 'meeting')
     profile_name = ''
     apid = flask_session.get('active_profile_id')
     if apid:
@@ -349,6 +351,7 @@ def api_beenden():
             painpoints_details=_json.dumps([{'text': p['text'], 'ts': p['ts']} for p in pp_snapshot], ensure_ascii=False),
             phasen_details=_json.dumps(ph_details, ensure_ascii=False),
             typ='live',
+            session_mode=session_mode,
         )
         db_conv.add(conv)
         db_conv.commit()
@@ -517,6 +520,67 @@ Antworte direkt, konkret, max 2-3 Sätze. Kein Fettdruck, kein Markdown. Immer m
                 'antwort': antwort,
             })
         return jsonify({'ok': True, 'antwort': antwort})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app_routes_bp.route('/api/ewb_trigger', methods=['POST'])
+@login_required
+def api_ewb_trigger():
+    import anthropic as _ant
+    from config import ANTHROPIC_API_KEY
+    data = request.get_json(force=True)
+    einwand_typ = data.get('einwand_typ', '').strip()
+    if not einwand_typ:
+        return jsonify({'error': 'no einwand_typ'}), 400
+
+    # Last 3 transcript segments as context
+    with ls.log_lock:
+        recent = [e for e in ls.conversation_log if e['type'] == 'transcript'][-3:]
+    ctx_text = '\n'.join(f"[{e.get('speaker','?')}] {e.get('text','')}" for e in recent)
+
+    # Profile context
+    pname, pdata = ls.get_active_profile()
+    profile_ctx = ''
+    if pdata:
+        profile_ctx = f'\nProdukt: {pdata.get("produkt","")}\n'
+        # Check for matching Gegenargument in profile
+        matching_ga = ''
+        for ew in pdata.get('einwaende', []):
+            if ew.get('typ', '').lower() == einwand_typ.lower():
+                matching_ga = ew.get('gegenargument', '')
+                break
+        if matching_ga:
+            profile_ctx += f'Vorbereitetes Gegenargument: {matching_ga}\n'
+        ki = pdata.get('ki', {})
+        if ki.get('zusatz'):
+            profile_ctx += f'KI-Anweisung: {ki["zusatz"]}\n'
+
+    prompt = f"""Du bist ein Echtzeit-Vertriebsassistent. Der Kunde hat gerade einen Einwand geäußert.
+{profile_ctx}
+Einwand-Typ: {einwand_typ}
+
+Letzter Gesprächskontext:
+{ctx_text if ctx_text else '(kein Kontext)'}
+
+Liefere ein konkretes Gegenargument für den Einwand "{einwand_typ}". Max 2-3 Sätze. Kein Fettdruck, kein Markdown. Ende mit einer offenen Gegenfrage."""
+
+    try:
+        client = _ant.Anthropic(api_key=ANTHROPIC_API_KEY)
+        msg = client.messages.create(
+            model='claude-haiku-4-5-20251001', max_tokens=200,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        antwort = msg.content[0].text.strip()
+        # Log as quick action with typ='ewb' (per D-18)
+        with ls.quick_action_log_lock:
+            ls.quick_action_log.append({
+                'ts': datetime.now().strftime('%H:%M:%S'),
+                'typ': 'ewb',
+                'frage': einwand_typ,
+                'antwort': antwort,
+            })
+        return jsonify({'ok': True, 'antwort': antwort, 'einwand_typ': einwand_typ})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
