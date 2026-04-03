@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.2.1-01-PLAN.md
-last_updated: "2026-04-03T12:55:20.194Z"
+stopped_at: Completed 04.2.1-03-PLAN.md
+last_updated: "2026-04-03T13:01:02.566Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 40
-  completed_plans: 30
+  completed_plans: 31
   percent: 65
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.2.1 (ui-ux-overhaul) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -81,6 +81,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.2-cold-call-und-meeting-modi P03 | 1min | 1 tasks | 1 files |
 | Phase 04.2-cold-call-und-meeting-modi P04 | 5min | 2 tasks | 2 files |
 | Phase 04.2.1 P01 | 10 | 3 tasks | 2 files |
+| Phase 04.2.1 P03 | 15 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,8 @@ Recent decisions affecting current work:
 - [Phase 04.2.1]: g-content auto-expands on sidebar collapse via flexbox flex:1 — no margin-left CSS needed
 - [Phase 04.2.1]: Legacy nav items (Team, Coach, Methodik, Changelog) kept in DOM in display:none wrapper per D-31
 - [Phase 04.2.1]: sidebar-plan-badge uses existing --badge-primary-bg / --badge-primary-text tokens per D-03 (no new colors)
+- [Phase 04.2.1]: Document PiP replaces kompakt-panel toggle — fallback overlay kept for non-Chrome browsers (display:none by default)
+- [Phase 04.2.1]: window.sessionMode synced from activateSession() local var for PiP badge access across JS module boundary
 
 ### Roadmap Evolution
 
@@ -202,6 +205,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-03T12:55:20.191Z
-Stopped at: Completed 04.2.1-01-PLAN.md
+Last session: 2026-04-03T13:01:02.562Z
+Stopped at: Completed 04.2.1-03-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
