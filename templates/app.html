@@ -490,6 +490,43 @@
     0%{transform:translateX(-100%);}
     100%{transform:translateX(560%);}
   }
+
+  /* ---- PiP Window ---- */
+  .pip-header { height: 36px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.06));
+    background: var(--page-bg, #06060a); }
+  .pip-mode-badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px;
+    border: 1px solid #2dd4a8; color: #2dd4a8; }
+  .pip-timer { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #2dd4a8; }
+  .pip-to-fullscreen { display: flex; align-items: center; gap: 4px; color: var(--page-text-muted, #8b92a5);
+    font-size: 12px; text-decoration: none; cursor: pointer; }
+  .pip-to-fullscreen:hover { color: var(--page-text-secondary, #c5c9d4); }
+
+  .pip-tabs { height: 36px; display: flex; align-items: center; gap: 4px; padding: 0 16px;
+    border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.06)); }
+  .pip-tab { background: none; border: none; font-size: 12px; font-weight: 600; padding: 6px 8px;
+    border-radius: 6px; color: var(--page-text-muted, #8b92a5); cursor: pointer; font-family: inherit;
+    min-height: 28px; position: relative; }
+  .pip-tab:hover { color: var(--page-text-secondary, #c5c9d4); }
+  .pip-tab-active { background: #2dd4a8; color: #06060a; }
+  .pip-tab-locked::after { content: ''; display: inline-block; width: 10px; height: 10px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2306060a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='11' x='3' y='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") no-repeat center;
+    margin-left: 4px; vertical-align: middle; }
+
+  .pip-content { flex: 1; min-height: 120px; padding: 16px; overflow-y: auto; }
+  .pip-panel { }
+  .pip-tip-text { font-size: 14px; font-weight: 400; line-height: 1.5; color: var(--page-text-color, #e8ecf4); }
+
+  .pip-ewb-row { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 16px 8px;
+    flex-wrap: wrap; }
+  .pip-ewb-btn { background: none; border: 1px solid var(--glass-border, rgba(255,255,255,0.06));
+    color: var(--page-text-secondary, #c5c9d4); border-radius: 9999px; padding: 6px 12px;
+    font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .pip-ewb-btn:hover { border-color: #2dd4a8; color: #2dd4a8; }
+  .pip-ewb-all { background: none; border: none; color: var(--page-text-muted, #8b92a5);
+    font-size: 12px; cursor: pointer; font-family: inherit; }
+  .pip-ewb-all:hover { color: var(--page-text-secondary, #c5c9d4); }
+  .pip-ewb-expanded { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 16px 8px; }
 </style>
 </head>
 <body>
@@ -566,7 +603,7 @@
     </span>
   </div>
   <div style="display:flex;align-items:center;gap:8px;position:relative">
-    <button class="btn-view-toggle" id="viewToggleBtn" onclick="toggleKompakt()">◀ Vollbild</button>
+    <button class="btn-view-toggle" id="viewToggleBtn" onclick="openPipWindow()">◀ Kompakt</button>
     <button class="btn-profile-switch" id="profileSwitchBtn" onclick="toggleProfileMenu()">Wechseln ▾</button>
     <div class="profile-menu" id="profileMenu">
       {% for p in profiles %}
@@ -686,8 +723,8 @@
   <div class="sp-next-preview" id="sp-next-preview"></div>
 </div>
 
-<!-- ── Kompakt Panel ──────────────────────────────────────────────────────── -->
-<div class="kompakt-panel" id="kompaktPanel">
+<!-- ── Kompakt Panel (fallback when Document PiP not supported) ──────────── -->
+<div class="kompakt-panel" id="kompakt-fallback" style="display:none">
   <div class="kp-topbar">
     <div class="kp-logo">
       <div class="kp-n">N</div>
@@ -702,7 +739,7 @@
   <div class="kp-controls">
     <button class="kp-btn kp-btn-end" onclick="beenden()">■ Beenden</button>
     <button class="kp-btn kp-btn-pause" id="kp-pauseBtn" onclick="togglePause()">⏸ Pause</button>
-    <button class="kp-btn kp-btn-expand" onclick="toggleKompakt()">▶ Vollbild</button>
+    <button class="kp-btn kp-btn-expand" onclick="closePipToVollbild()">▶ Vollbild</button>
     <span class="kp-profile" id="kp-profileName">{{ active_profile.name if active_profile else '–' }}</span>
   </div>
   <div class="kp-skript" id="kp-skript">
@@ -749,6 +786,53 @@
       </div>
       <div class="kp-kb-bar-wrap2"><div class="kp-kb-bar2" id="kp-kb-bar2" style="width:30%;background:#f87171"></div></div>
     </div>
+  </div>
+</div>
+
+<!-- ── PiP Window Content (moved into PiP document when opened) ──────────── -->
+<div id="pip-window" style="display:none">
+  <!-- Mini Header -->
+  <div class="pip-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="pip-mode-badge" id="pip-mode-badge">Cold Call</span>
+      <span class="pip-timer" id="pip-timer">00:00</span>
+    </div>
+    <a href="javascript:void(0)" onclick="closePipToVollbild()" class="pip-to-fullscreen">
+      <i data-lucide="maximize-2" style="width:16px;height:16px"></i>
+      <span>Vollbild</span>
+    </a>
+  </div>
+
+  <!-- Tabs -->
+  <div class="pip-tabs">
+    <button class="pip-tab pip-tab-active" data-tab="opener" onclick="handlePipTabClick('opener')">Opener</button>
+    <button class="pip-tab" data-tab="einwand" onclick="handlePipTabClick('einwand')">Einwand</button>
+    <button class="pip-tab" data-tab="coaching" onclick="handlePipTabClick('coaching')">Coaching</button>
+    <button class="pip-tab" data-tab="ewb" onclick="handlePipTabClick('ewb')">EWB</button>
+  </div>
+
+  <!-- Content area (one panel per tab, toggled via JS) -->
+  <div class="pip-content">
+    <div class="pip-panel" id="pip-panel-opener">
+      <div class="pip-tip-text" id="pip-opener-text">Kein Opener im Profil hinterlegt -- Profil bearbeiten</div>
+    </div>
+    <div class="pip-panel" id="pip-panel-einwand" style="display:none">
+      <div class="pip-tip-text" id="pip-einwand-text">Warte auf Einwand-Erkennung...</div>
+    </div>
+    <div class="pip-panel" id="pip-panel-coaching" style="display:none">
+      <div class="pip-tip-text" id="pip-coaching-text">Warte auf Coaching-Tipp...</div>
+    </div>
+    <div class="pip-panel" id="pip-panel-ewb" style="display:none">
+      <div class="pip-tip-text" id="pip-ewb-text">EWB-Vorschlaege werden geladen...</div>
+    </div>
+  </div>
+
+  <!-- EWB row (always visible at bottom) -->
+  <div class="pip-ewb-row" id="pip-ewb-row"></div>
+
+  <!-- PiP fallback warning (hidden by default, shown if no Document PiP support) -->
+  <div id="pip-fallback-warning" style="display:none;padding:8px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:6px;font-size:12px;color:#f87171;text-align:center;margin:8px">
+    PiP nicht unterstuetzt. Chrome 116+ erforderlich.
   </div>
 </div>
 
@@ -894,39 +978,26 @@
 </div>
 <script>
   try { window._profileEinwaende = JSON.parse({{ (active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"' }}); } catch(e) { window._profileEinwaende = {}; }
+  try { window._profileData = JSON.parse({{ (active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"' }}); } catch(e) { window._profileData = {}; }
+  window.sessionMode = null; // set by mode overlay via selectMode()
 </script>
 <script src="/static/app.js"></script>
 <script>
-// ── Kompakt-Modus ─────────────────────────────────────────────────────────────
-function toggleKompakt(){
-  const isKompakt = document.body.classList.toggle('kompakt');
-  updateViewToggleBtn(isKompakt);
-  try { localStorage.setItem('sn_kompakt', isKompakt ? '1' : '0'); } catch(e){}
-}
-function updateViewToggleBtn(isKompakt){
-  const btn = document.getElementById('viewToggleBtn');
-  if (!btn) return;
-  btn.textContent = isKompakt ? '▶ Vollbild' : '◀ Kompakt';
-  btn.title = isKompakt ? 'Zum Vollbild wechseln' : 'Kompakt-Modus (Popup)';
-}
+// ── Kompakt-Modus → Document PiP ──────────────────────────────────────────────
 // Quick-Actions im Kompakt-Panel öffnen Frage-Modal mit Preset
 function kpQuickAction(typ){
   openFrageModal();
   quickAction(typ);
 }
-// Initialisierung: URL-Param oder localStorage
+// Initialisierung: URL-Param oder localStorage → auto-open PiP
 (function(){
   const params = new URLSearchParams(window.location.search);
   const urlKompakt = params.get('kompakt') === '1';
   let storedKompakt = false;
   try { storedKompakt = localStorage.getItem('sn_kompakt') === '1'; } catch(e){}
-  // Popup-Erkennung: wenn window.opener gesetzt → Kompakt erzwingen
-  const isPopup = !!window.opener;
-  if (urlKompakt || storedKompakt || isPopup) {
-    document.body.classList.add('kompakt');
-    updateViewToggleBtn(true);
-  } else {
-    updateViewToggleBtn(false);
+  if (urlKompakt || storedKompakt) {
+    // Auto-open PiP after session starts (delay to ensure DOM ready)
+    setTimeout(function() { openPipWindow(); }, 500);
   }
 })();
 
