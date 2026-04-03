@@ -443,7 +443,7 @@
 
   /* ── Consent Modal ── */
   .consent-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:950;display:none;
-    align-items:center;justify-content:center}
+    align-items:flex-start;justify-content:center;padding-top:15vh}
   .consent-overlay.open{display:flex}
   .consent-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:12px;padding:24px;
     max-width:480px;width:90%}
@@ -471,6 +471,10 @@
     font-family:inherit;transition:border-color .15s,background .15s;white-space:nowrap}
   .ewb-btn:hover{border-color:#3b82f6;background:rgba(59,130,246,0.08)}
   .ewb-btn.loading{opacity:.5;pointer-events:none}
+
+  /* ── Compact EWB row ── */
+  .kp-ewb-bar{display:flex;gap:4px;flex-wrap:wrap;padding:5px 10px;border-top:1px solid var(--glass-border)}
+  .kp-ewb-bar .ewb-btn{font-size:10px;padding:3px 8px}
 
   /* ── Utility ── */
   .hidden{display:none!important}
@@ -513,9 +517,9 @@
   <div class="consent-box">
     <div class="consent-title">Einwilligung des Gesprächspartners</div>
     <div class="consent-script">
-      „Ich nutze eine KI-gestützte Assistenz, die unser Gespräch in Echtzeit analysiert, um mich besser beraten zu können. Es wird kein Audio gespeichert. Sind Sie damit einverstanden?"
+      „Ich nutze eine KI-Assistenz, die unser Gespräch live analysiert. Einverstanden?"
     </div>
-    <div class="consent-hint">Bitte lesen Sie diesen Satz Ihrem Gesprächspartner vor, bevor Sie die Sitzung starten.</div>
+    <div class="consent-hint">Diesen Satz laut vorlesen, dann bestätigen oder ablehnen.</div>
     <div class="consent-actions">
       <button class="consent-btn consent-btn-reject" onclick="rejectConsent()">Abgelehnt</button>
       <button class="consent-btn consent-btn-accept" onclick="acceptConsent()">Stattgegeben</button>
@@ -723,6 +727,8 @@
     <button class="kp-qa" onclick="kpQuickAction('uebergang')">🔄 Übergang</button>
     <button class="kp-qa" onclick="kpQuickAction('abschluss')">🏁 Abschluss</button>
   </div>
+  <!-- EWB buttons in compact mode (populated by JS renderEwbButtons) -->
+  <div class="kp-ewb-bar" id="kp-ewbBar"></div>
   <div class="kp-metrics" id="kp-metrics">
     <div class="kp-mc-wrap">
       <div class="kp-mc" id="kp-mc-ra"><span id="kp-m-ra">–</span></div>
