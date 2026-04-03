@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.2-04-PLAN.md
-last_updated: "2026-04-03T10:24:31.373Z"
+stopped_at: Completed 04.2.1-01-PLAN.md
+last_updated: "2026-04-03T12:55:20.194Z"
 last_activity: 2026-04-03
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 5
-  total_plans: 35
-  completed_plans: 29
+  total_plans: 40
+  completed_plans: 30
   percent: 65
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.2 — cold-call-und-meeting-modi
+**Current focus:** Phase 04.2.1 — ui-ux-overhaul
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 04.2.1 (ui-ux-overhaul) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -80,6 +80,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.2-cold-call-und-meeting-modi P02 | 15min | 2 tasks | 2 files |
 | Phase 04.2-cold-call-und-meeting-modi P03 | 1min | 1 tasks | 1 files |
 | Phase 04.2-cold-call-und-meeting-modi P04 | 5min | 2 tasks | 2 files |
+| Phase 04.2.1 P01 | 10 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -154,6 +155,9 @@ Recent decisions affecting current work:
 - [Phase 04.2-cold-call-und-meeting-modi]: utterance_end_ms=1000 added for meeting mode via conditional dict — avoids passing None to SDK, improves speaker segmentation on single-channel audio
 - [Phase 04.2-cold-call-und-meeting-modi]: renderEwbButtons uses shared html string assigned to both bar and kpBar — avoids duplication and keeps both bars in sync
 - [Phase 04.2-cold-call-und-meeting-modi]: triggerEwb() left unchanged — queries .ewb-btn by text content which works for both full-mode and compact-mode bars
+- [Phase 04.2.1]: g-content auto-expands on sidebar collapse via flexbox flex:1 — no margin-left CSS needed
+- [Phase 04.2.1]: Legacy nav items (Team, Coach, Methodik, Changelog) kept in DOM in display:none wrapper per D-31
+- [Phase 04.2.1]: sidebar-plan-badge uses existing --badge-primary-bg / --badge-primary-text tokens per D-03 (no new colors)
 
 ### Roadmap Evolution
 
@@ -198,6 +202,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-03T10:20:56.770Z
-Stopped at: Completed 04.2-04-PLAN.md
+Last session: 2026-04-03T12:55:20.191Z
+Stopped at: Completed 04.2.1-01-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
