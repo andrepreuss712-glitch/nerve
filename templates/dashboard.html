@@ -2,101 +2,62 @@
 {% block title %} — Dashboard{% endblock %}
 
 {% block extra_style %}
-.dash-wrap{padding:24px 28px;max-width:1200px}
+.dash-wrap { padding: 24px; max-width: 1200px; }
 
-/* Greeting */
-.greeting-block{margin-bottom:24px}
-.greeting-title{font-size:22px;font-weight:700;margin-bottom:8px}
-.greeting-streak{display:inline-flex;align-items:center;gap:6px;background:rgba(45,212,168,.08);
-  border:1px solid rgba(45,212,168,0.2);border-radius:20px;padding:4px 12px;font-size:13px;
-  color:#2dd4a8;font-weight:600;margin-bottom:10px}
-.greeting-text{font-size:14px;color:var(--page-text-secondary);line-height:1.6;margin-bottom:14px}
-.qotd{border-left:3px solid #2dd4a8;background:var(--glass-bg);border-radius:0 8px 8px 0;
-  padding:12px 16px;font-size:13px;font-style:italic;color:var(--page-text-secondary);line-height:1.5}
-.qotd-author{font-size:11px;color:var(--page-text-muted);font-style:normal;margin-top:4px}
+/* Top row: North Star + Quick Actions */
+.dash-top { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+@media (max-width: 768px) { .dash-top { grid-template-columns: 1fr; } }
 
-/* Nudge */
-.nudge-card{border-left:3px solid #2dd4a8;background:var(--glass-bg);border-radius:0 10px 10px 0;
-  padding:14px 18px;margin-bottom:20px;display:none;border:1px solid var(--glass-border);
-  border-left:3px solid #2dd4a8}
-.nudge-card.visible{display:block}
-.nudge-title{font-size:14px;font-weight:700;margin-bottom:4px}
-.nudge-text{font-size:13px;color:var(--page-text-secondary);line-height:1.5;margin-bottom:10px}
-.nudge-actions{display:flex;align-items:center;gap:12px}
-.nudge-dismiss{background:none;border:none;color:var(--page-text-muted);font-size:11px;cursor:pointer;
-  font-family:inherit}
-.nudge-dismiss:hover{color:var(--page-text-secondary)}
+/* North Star */
+.ns-score { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); font-size: 28px; font-weight: 600; }
+.ns-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--page-text-muted); margin-bottom: 8px; }
+.ns-trend { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 14px; }
 
-/* Stats circles */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
-@media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr)}}
-.stat-circle{position:relative;width:80px;height:80px;margin:0 auto 10px}
-.stat-circle svg{transform:rotate(-90deg)}
-.stat-circle-bg{fill:none;stroke:rgba(255,255,255,0.04);stroke-width:6}
-.stat-circle-fg{fill:none;stroke:#2dd4a8;stroke-width:6;stroke-linecap:round;
-  stroke-dasharray:0 251;transition:stroke-dasharray 1.2s ease}
-.stat-value{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  flex-direction:column;font-size:18px;font-weight:800;color:var(--page-text-color)}
-.stat-value small{font-size:10px;font-weight:400;color:var(--page-text-muted)}
-.stat-trend{font-size:11px;font-weight:600;margin-top:4px}
-.trend-up{color:#22c55e}
-.trend-down{color:#e05c5c}
-.trend-neutral{color:var(--page-text-muted)}
+/* Quick Actions */
+.qa-panel { display: flex; flex-direction: column; gap: 12px; }
+.qa-panel .n-btn-primary,
+.qa-panel .n-btn-ghost { width: 100%; text-align: center; padding: 12px 16px; font-size: 14px; font-weight: 600; }
 
-/* 2-col grid */
-.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
-@media(max-width:768px){.dash-grid{grid-template-columns:1fr}}
+/* Usage row */
+.usage-panel { margin-bottom: 24px; }
+.usage-section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--page-text-muted); margin-bottom: 16px; }
+.usage-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.usage-row-lbl { display: flex; justify-content: space-between; width: 100%; font-size: 14px; margin-bottom: 4px; }
+.usage-row-lbl span:last-child { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); color: var(--page-text-muted); }
+.usage-bar-wrap { background: rgba(255,255,255,0.04); border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 16px; }
+.usage-bar-fill { height: 100%; border-radius: 4px; }
 
-/* Level card internals */
-.level-icon{font-size:20px;margin-right:8px}
-.level-name{font-size:15px;font-weight:700}
-.level-bar-wrap{background:rgba(255,255,255,0.04);border-radius:4px;height:6px;margin:10px 0 6px;overflow:hidden}
-.level-bar-fill{height:100%;background:#2dd4a8;border-radius:4px;transition:width 1s ease}
-.level-pts{font-size:11px;color:var(--page-text-muted)}
-.level-next{font-size:11px;color:var(--page-text-muted);margin-top:2px}
-.achievement-list{display:flex;flex-direction:column;gap:6px}
-.achievement-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;padding:4px 0}
-.achievement-item.earned{color:var(--page-text-color)}
-.achievement-item.locked{color:var(--page-text-muted)}
-.ach-icon{font-size:15px;flex-shrink:0;width:20px;text-align:center;margin-top:1px}
-.ach-name{font-weight:600;font-size:12px}
-.ach-desc{font-size:11px;color:var(--page-text-muted);margin-top:1px}
-.achievement-item.earned .ach-desc{color:var(--page-text-secondary)}
+/* Recent calls */
+.calls-panel { margin-bottom: 24px; }
+.call-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--glass-border); font-size: 14px; }
+.call-row:last-child { border-bottom: none; }
+.call-date { color: var(--page-text-muted); min-width: 70px; font-size: 12px; font-weight: 600; }
+.call-mode { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; }
+.call-mode-cold { background: rgba(45,212,168,0.1); color: #2dd4a8; }
+.call-mode-meeting { background: rgba(212,168,83,0.1); color: #d4a853; }
+.call-score { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); font-weight: 600; min-width: 36px; }
+.call-score-high { color: #2dd4a8; }
+.call-score-mid { color: #fbbf24; }
+.call-score-low { color: #f87171; }
+.call-dauer { color: var(--page-text-muted); margin-left: auto; font-size: 12px; }
 
-/* Heatmap */
-.heat-0{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04)}
-.heat-1{background:rgba(45,212,168,.2)}
-.heat-2{background:rgba(45,212,168,.5)}
-.heat-3{background:#2dd4a8}
-.heatmap-stats{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
-.heatmap-stat{font-size:12px;color:var(--page-text-muted)}
-.heatmap-stat strong{color:var(--page-text-color)}
+/* Next Best Action */
+.nba-card { border-left: 3px solid #2dd4a8; background: var(--glass-bg); border-radius: 0 10px 10px 0;
+  padding: 16px 18px; margin-bottom: 16px; border: 1px solid var(--glass-border); border-left: 3px solid #2dd4a8; }
+.nba-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.nba-heading { font-size: 16px; font-weight: 600; }
+.nba-dismiss { margin-left: auto; background: none; border: none; color: var(--page-text-muted); cursor: pointer; font-size: 14px; }
+.nba-body { font-size: 14px; color: var(--page-text-secondary); line-height: 1.5; }
+.nba-body a { color: #2dd4a8; text-decoration: none; }
+.nba-body a:hover { text-decoration: underline; }
 
-/* Recent + Quick */
-.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
-@media(max-width:768px){.bottom-grid{grid-template-columns:1fr}}
+/* Footer chips */
+.dash-footer { display: flex; align-items: center; gap: 8px; }
+.dash-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 600; color: var(--page-text-muted); }
 
-/* Usage Widget internals */
-.usage-bar-wrap{background:rgba(255,255,255,0.04);border-radius:4px;height:6px;overflow:hidden;margin-top:5px}
-.usage-bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
-.usage-row{margin-bottom:10px}
-.usage-row-lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--page-text-secondary)}
-.usage-footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;
-  padding-top:12px;border-top:1px solid rgba(255,255,255,.04)}
-.usage-plan-info{font-size:12px;color:var(--page-text-muted)}
-.usage-plan-info strong{color:#2dd4a8}
-.usage-upgrade-link{font-size:11px;color:#2dd4a8;text-decoration:none;font-weight:600}
-.usage-upgrade-link:hover{text-decoration:underline}
-
-/* ROI Tracker internals */
-.roi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0}
-@media(max-width:600px){.roi-grid{grid-template-columns:1fr 1fr}}
-.roi-cell{text-align:center}
-.roi-val{font-size:22px;font-weight:800;color:#2dd4a8}
-.roi-lbl{font-size:11px;color:var(--page-text-muted);margin-top:2px}
-.roi-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.08);
-  border:1px solid #22c55e33;border-radius:20px;padding:3px 10px;font-size:11px;
-  color:#22c55e;font-weight:600}
+/* Empty state */
+.empty-state { font-size: 14px; color: var(--page-text-muted); padding: 24px 0; text-align: center; }
 
 /* Toasts */
 .toast-wrap{position:fixed;top:16px;right:16px;z-index:1000;
@@ -117,236 +78,121 @@
   <!-- Early Access Banner -->
   {% if g.org and g.org.is_early_access %}
   <div class="n-glass" style="border:1px solid rgba(45,212,168,0.15);padding:12px 16px;font-size:13px;color:var(--page-text-secondary);margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    ⭐ Du bist <strong style="color:#2dd4a8">Early Access User</strong> —
+    &#11088; Du bist <strong style="color:#2dd4a8">Early Access User</strong> &mdash;
     <strong style="color:#2dd4a8">50% Gründerrabatt für immer.</strong>
     Feedback? Schreib direkt an <strong style="color:#2dd4a8">andre@nerve.sale</strong>
   </div>
   {% endif %}
 
-  <!-- Greeting -->
-  <div class="greeting-block">
-    {% if streak > 0 %}
-    <div><span class="greeting-streak">🔥 {{ streak }}-Tage-Streak</span></div>
-    {% endif %}
-    <div class="greeting-title">
-      <span id="greeting-time">Hallo</span>, {{ user.vorname or g.user.email.split('@')[0] }} 👋
+  <!-- Top row: North Star + Quick Actions -->
+  <div class="dash-top">
+    <!-- North Star -->
+    <div class="n-glass" style="padding:24px">
+      <div class="ns-label">Score diese Woche</div>
+      <div class="ns-score" style="color:{% if stats.trend_score == 'down' %}#f87171{% else %}#2dd4a8{% endif %}">
+        {{ stats.avg_kb }} <span style="font-size:14px;font-weight:400;color:var(--page-text-muted)">/ 100</span>
+      </div>
+      <div class="ns-trend">
+        {% if stats.trend_score == 'up' %}
+          <i data-lucide="arrow-up" style="width:16px;height:16px;color:#2dd4a8"></i>
+          <span style="color:#2dd4a8">Trend steigend</span>
+        {% elif stats.trend_score == 'down' %}
+          <i data-lucide="arrow-down" style="width:16px;height:16px;color:#f87171"></i>
+          <span style="color:#f87171">Trend fallend</span>
+        {% else %}
+          <span style="color:var(--page-text-muted)">Stabil</span>
+        {% endif %}
+      </div>
     </div>
-    <div class="greeting-text">
-      {% if weekly_summary %}
-        {{ weekly_summary }}
-      {% else %}
-        {{ improvement_tip.text }}
-      {% endif %}
-    </div>
-    <div class="qotd">
-      „{{ qotd.text }}"
-      {% if qotd.author %}<div class="qotd-author">— {{ qotd.author }}</div>{% endif %}
+    <!-- Quick Actions -->
+    <div class="n-glass qa-panel" style="padding:24px">
+      <a href="/live" class="n-btn n-btn-primary" style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <i data-lucide="phone" style="width:16px;height:16px"></i> Call starten
+      </a>
+      <a href="/training" class="n-btn n-btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <i data-lucide="book-open" style="width:16px;height:16px"></i> Training starten
+      </a>
     </div>
   </div>
 
-  <!-- Nudge -->
-  <div class="nudge-card" id="nudge-card">
-    <div class="nudge-title" id="nudge-title"></div>
-    <div class="nudge-text" id="nudge-text"></div>
-    <div class="nudge-actions">
-      <button class="n-btn n-btn-primary n-btn-sm" id="nudge-cta"></button>
-      <button class="nudge-dismiss" onclick="dismissNudge()">Nicht mehr zeigen</button>
-    </div>
-  </div>
-
-  <!-- Usage Widget -->
-  {% if usage %}
-  <div class="n-glass" style="padding:18px;margin-bottom:20px">
-    <div class="n-kpi-label" style="margin-top:0;margin-bottom:12px">📊 Dein Verbrauch diesen Monat</div>
-    <div class="usage-row">
+  <!-- Usage progress bars -->
+  <div class="n-glass usage-panel" style="padding:24px">
+    <div class="usage-section-label">Deine Nutzung</div>
+    <div>
       <div class="usage-row-lbl">
         <span>Live-Analyse</span>
-        <span>{{ usage.minuten_used }} / {{ usage.minuten_limit }} Min ({{ usage.minuten_prozent }}%)</span>
+        <span>{{ usage.minuten_used }} / {{ usage.minuten_limit }} Min</span>
       </div>
       <div class="usage-bar-wrap">
-        <div class="usage-bar-fill" style="width:{{ usage.minuten_prozent }}%;background:{% if usage.minuten_prozent >= 100 %}#e05c5c{% elif usage.minuten_prozent >= 90 %}#f0a500{% else %}#2dd4a8{% endif %}"></div>
+        <div class="usage-bar-fill" style="width:{{ usage.minuten_prozent }}%;background:{% if usage.minuten_prozent >= 80 %}var(--metric-fill-warning-to, #fbbf24){% else %}#2dd4a8{% endif %}"></div>
       </div>
     </div>
-    <div class="usage-row" style="margin-bottom:0">
+    <div>
       <div class="usage-row-lbl">
-        <span>Training mit Stimme</span>
-        <span>{{ usage.voice_used }} / {{ usage.voice_limit }} Sessions ({{ usage.voice_prozent }}%)</span>
+        <span>Training</span>
+        <span>{{ usage.voice_used }} / {{ usage.voice_limit }} Sessions</span>
       </div>
       <div class="usage-bar-wrap">
-        <div class="usage-bar-fill" style="width:{{ usage.voice_prozent }}%;background:{% if usage.voice_prozent >= 100 %}#e05c5c{% elif usage.voice_prozent >= 90 %}#f0a500{% else %}#22c55e{% endif %}"></div>
+        <div class="usage-bar-fill" style="width:{{ usage.voice_prozent }}%;background:{% if usage.voice_prozent >= 80 %}var(--metric-fill-warning-to, #fbbf24){% else %}#2dd4a8{% endif %}"></div>
       </div>
     </div>
-    <div class="usage-footer">
-      <span class="usage-plan-info">Plan: <strong>{{ usage.plan_name }}</strong> ({{ usage.plan_preis }}€/Monat)</span>
-      <a class="usage-upgrade-link" href="/settings#billing">Plan ändern →</a>
+  </div>
+
+  <!-- Recent Calls -->
+  <div class="n-glass calls-panel" style="padding:24px">
+    <div class="usage-section-label">Letzte Calls</div>
+    {% if recent_calls %}
+      {% for call in recent_calls %}
+      <div class="call-row">
+        <span class="call-date">{{ call.relative }}</span>
+        <span class="call-mode {% if call.session_mode == 'cold_call' %}call-mode-cold{% else %}call-mode-meeting{% endif %}">
+          {{ 'Cold Call' if call.session_mode == 'cold_call' else 'Meeting' }}
+        </span>
+        <span class="call-score {% if call.score >= 70 %}call-score-high{% elif call.score >= 40 %}call-score-mid{% else %}call-score-low{% endif %}">
+          {{ call.score }}
+        </span>
+        <span class="call-dauer">{{ call.dauer }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">Noch keine Calls &mdash; starte deinen ersten Call</div>
+    {% endif %}
+  </div>
+
+  <!-- Next Best Action -->
+  {% if improvement_tip %}
+  <div class="nba-card" id="nba-card">
+    <div class="nba-head">
+      <i data-lucide="lightbulb" style="width:16px;height:16px;color:#d4a853"></i>
+      <span class="nba-heading">
+        {% if improvement_tip.type == 'redeanteil' %}Redeanteil zu hoch
+        {% elif improvement_tip.type == 'einwaende' %}Einwand-Training empfohlen
+        {% elif improvement_tip.type == 'kb' %}Kaufbereitschaft verbessern
+        {% elif improvement_tip.type == 'positiv' %}Starke Woche!
+        {% else %}Tipp{% endif %}
+      </span>
+      <button class="nba-dismiss" onclick="dismissNba()" title="Ausblenden">&times;</button>
+    </div>
+    <div class="nba-body">
+      {{ improvement_tip.text }}
+      {% if improvement_tip.type in ('redeanteil', 'einwaende', 'kb') %}
+        <br><a href="/training">Training starten &rarr;</a>
+      {% elif improvement_tip.type == 'start' %}
+        <br><a href="/live">Ersten Call starten &rarr;</a>
+      {% endif %}
     </div>
   </div>
   {% endif %}
 
-  <!-- Stats Circles -->
-  <div class="stats-row">
-    <div class="n-glass" style="padding:18px;text-align:center">
-      <div class="n-kpi-label">Ø Kaufbereitschaft</div>
-      <div class="stat-circle">
-        <svg viewBox="0 0 84 84" width="80" height="80">
-          <circle class="stat-circle-bg" cx="42" cy="42" r="36"/>
-          <circle class="stat-circle-fg" id="circle-kb" cx="42" cy="42" r="36"/>
-        </svg>
-        <div class="stat-value">{{ stats.avg_kb }}<small>%</small></div>
-      </div>
-      <div class="stat-trend {% if stats.trend_score == 'up' %}trend-up{% elif stats.trend_score == 'down' %}trend-down{% else %}trend-neutral{% endif %}">
-        {% if stats.trend_score == 'up' %}↑ Trend{% elif stats.trend_score == 'down' %}↓ Trend{% else %}→ Stabil{% endif %}
-      </div>
-    </div>
-    <div class="n-glass" style="padding:18px;text-align:center">
-      <div class="n-kpi-label">Einwand-Erfolg</div>
-      <div class="stat-circle">
-        <svg viewBox="0 0 84 84" width="80" height="80">
-          <circle class="stat-circle-bg" cx="42" cy="42" r="36"/>
-          <circle class="stat-circle-fg" id="circle-einwand" cx="42" cy="42" r="36"/>
-        </svg>
-        <div class="stat-value">{{ stats.einwand_erfolg }}<small>%</small></div>
-      </div>
-      <div class="n-kpi-label" style="font-size:10px;margin-top:2px;margin-bottom:0">Behandlungsquote</div>
-    </div>
-    <div class="n-glass" style="padding:18px;text-align:center">
-      <div class="n-kpi-label">Redeanteil</div>
-      <div class="stat-circle">
-        <svg viewBox="0 0 84 84" width="80" height="80">
-          <circle class="stat-circle-bg" cx="42" cy="42" r="36"/>
-          <circle class="stat-circle-fg" id="circle-rede" cx="42" cy="42" r="36"
-            style="stroke:{% if stats.avg_redeanteil > 60 %}#e05c5c{% elif stats.avg_redeanteil < 40 %}#22c55e{% else %}#2dd4a8{% endif %}"/>
-        </svg>
-        <div class="stat-value">{{ stats.avg_redeanteil }}<small>%</small></div>
-      </div>
-      <div class="n-kpi-label" style="font-size:10px;margin-top:2px;margin-bottom:0">
-        {% if stats.avg_redeanteil > 60 %}Zu viel — Ziel &lt;40%{% elif stats.avg_redeanteil < 30 and stats.gespraeche > 0 %}Sehr gut!{% else %}Ziel: unter 40%{% endif %}
-      </div>
-    </div>
-    <div class="n-glass" style="padding:18px;text-align:center">
-      <div class="n-kpi-label">Gespräche (30 Tage)</div>
-      <div class="stat-circle">
-        <svg viewBox="0 0 84 84" width="80" height="80">
-          <circle class="stat-circle-bg" cx="42" cy="42" r="36"/>
-          <circle class="stat-circle-fg" id="circle-calls" cx="42" cy="42" r="36"/>
-        </svg>
-        <div class="stat-value">{{ stats.gespraeche }}</div>
-      </div>
-      <div class="n-kpi-label" style="font-size:10px;margin-top:2px;margin-bottom:0">Sessions</div>
-    </div>
+  <!-- Footer: Streak + Level chip -->
+  <div class="dash-footer">
+    {% if streak and streak > 0 %}
+    <div class="dash-chip">&#128293; Streak {{ streak }}</div>
+    {% endif %}
+    {% if level_info %}
+    <div class="dash-chip">{{ level_info.current.icon }} {{ level_info.current.name }}</div>
+    {% endif %}
   </div>
-
-  <!-- Level + Heatmap -->
-  {% if dashboard_style != 'fokus' %}
-  <div class="dash-grid">
-    <!-- Level & Achievements -->
-    <div class="n-glass" style="padding:18px">
-      <div style="display:flex;align-items:center;margin-bottom:10px">
-        <span class="level-icon">{{ level_info.current.icon }}</span>
-        <span class="level-name">{{ level_info.current.name }}</span>
-      </div>
-      {% if level_info.next %}
-      <div class="level-bar-wrap">
-        <div class="level-bar-fill" style="width:{{ level_info.progress }}%"></div>
-      </div>
-      <div class="level-pts">{{ level_info.points }} / {{ level_info.next.min }} Punkte</div>
-      <div class="level-next">Nächstes Level: {{ level_info.next.name }}</div>
-      {% else %}
-      <div class="level-pts">{{ level_info.points }} Punkte — Maximum erreicht 🏆</div>
-      {% endif %}
-
-      <div class="n-kpi-label" style="margin-top:14px">Achievements</div>
-      <div class="achievement-list">
-        {% for ach in achievements %}
-        <div class="achievement-item {% if ach.earned %}earned{% else %}locked{% endif %}">
-          <span class="ach-icon" style="{% if not ach.earned %}filter:grayscale(1);opacity:.35{% endif %}">{{ ach.icon }}</span>
-          <div>
-            <div class="ach-name">{% if ach.earned %}✓ {% endif %}{{ ach.name }}</div>
-            <div class="ach-desc">{{ ach.desc }}</div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- Heatmap -->
-    <div class="n-glass" style="padding:18px;overflow:hidden">
-      <div class="n-kpi-label" style="margin-top:0">Aktivität (letzte 13 Wochen)</div>
-      <div id="heatmap-container"></div>
-      <div class="heatmap-stats">
-        <span class="heatmap-stat">🔥 Streak: <strong>{{ streak }} Tage</strong></span>
-        <span class="heatmap-stat">📊 Sessions (30T): <strong>{{ stats.gespraeche }}</strong></span>
-      </div>
-    </div>
-  </div>
-  {% endif %}{# /dashboard_style != fokus #}
-
-  <!-- ROI Tracker -->
-  {% if roi %}
-  <div class="n-glass" style="padding:18px;margin-bottom:24px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div class="n-kpi-label" style="margin:0">ROI-Tracker</div>
-      {% if roi.stark %}<span class="roi-badge">🚀 Starke Performance</span>{% endif %}
-    </div>
-    <div style="font-size:12px;color:var(--page-text-muted);margin-top:4px;margin-bottom:0">
-      Basierend auf {{ roi.einwaende_behandelt }} behandelten Einwänden in {{ roi.einwaende_gesamt }} gesamt
-    </div>
-    <div class="roi-grid">
-      <div class="roi-cell">
-        <div class="roi-val">{{ roi.erfolgsquote }}%</div>
-        <div class="roi-lbl">Einwand-Erfolg</div>
-      </div>
-      <div class="roi-cell">
-        <div class="roi-val">+{{ roi.geschaetzte_deals }}</div>
-        <div class="roi-lbl">Est. Zusatz-Deals</div>
-      </div>
-      <div class="roi-cell">
-        <div class="roi-val">{{ roi.roi_faktor }}x</div>
-        <div class="roi-lbl">ROI-Faktor</div>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--page-text-secondary);border-top:1px solid rgba(255,255,255,.04);padding-top:10px">
-      Geschätzter Mehrwert: <strong class="text-success">+{{ "{:,.0f}".format(roi.geschaetzter_mehrwert) }}€</strong>
-      <span class="text-muted" style="font-size:11px"> — Ø Deal-Wert {{ roi.branche }}: {{ roi.avg_deal_value }}€</span>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Recent + Quick -->
-  {% if dashboard_style != 'fokus' %}
-  <div class="bottom-grid">
-    <div class="n-glass" style="padding:18px">
-      <div class="n-kpi-label" style="margin-top:0">Letzte Aktivitäten</div>
-      {% if recent_logs %}
-        {% for log in recent_logs[:5] %}
-        <div class="n-feed-item" style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.03)">
-          <div class="n-feed-dot n-feed-dot-primary" style="margin-top:5px"></div>
-          <div style="flex:1">
-            <div class="n-feed-text">
-              {{ log.profil }}{% if log.einwaende > 0 %} · {{ log.einwaende }} Einwände{% endif %}{% if log.dauer != '–' %} · {{ log.dauer }}{% endif %}
-            </div>
-            <div class="n-feed-time">{{ log.uhrzeit }}</div>
-          </div>
-        </div>
-        {% endfor %}
-      {% else %}
-        <div class="text-muted" style="font-size:13px;padding:12px 0">
-          Noch keine Gespräche. Starte dein erstes Training!
-        </div>
-      {% endif %}
-    </div>
-
-    <div class="n-glass" style="padding:18px">
-      <div class="n-kpi-label" style="margin-top:0">Quick Actions</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <a class="n-btn n-btn-ghost" href="/training" style="justify-content:flex-start;border-radius:8px;padding:10px 14px;font-size:13px">🎯 Training starten</a>
-        <a class="n-btn n-btn-ghost" href="/live" style="justify-content:flex-start;border-radius:8px;padding:10px 14px;font-size:13px">⚡ Live-Modus</a>
-        <a class="n-btn n-btn-ghost" href="/profiles" style="justify-content:flex-start;border-radius:8px;padding:10px 14px;font-size:13px">◎ Profil bearbeiten</a>
-        <a class="n-btn n-btn-ghost" href="/logs" style="justify-content:flex-start;border-radius:8px;padding:10px 14px;font-size:13px">📋 Logs anzeigen</a>
-      </div>
-    </div>
-  </div>
-  {% endif %}{# /dashboard_style != fokus #}
 
 </div>
 
@@ -354,120 +200,45 @@
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
-// ── Greeting time ──────────────────────────────────────────────────────────
-(function(){
-  const h = new Date().getHours();
-  const el = document.getElementById('greeting-time');
-  if (h < 12) el.textContent = 'Guten Morgen';
-  else if (h < 18) el.textContent = 'Guten Tag';
-  else el.textContent = 'Guten Abend';
-})();
-
-// ── Animate stat circles ───────────────────────────────────────────────────
-(function(){
-  const C = 2 * Math.PI * 36;
-  function animate(id, pct) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const target = (Math.min(pct, 100) / 100) * C;
-    setTimeout(() => { el.style.strokeDasharray = target + ' ' + C; }, 300);
-  }
-  animate('circle-kb', {{ stats.avg_kb }});
-  animate('circle-einwand', {{ stats.einwand_erfolg }});
-  animate('circle-rede', {{ stats.avg_redeanteil }});
-  animate('circle-calls', Math.min({{ stats.gespraeche }} * 5, 100));
-})();
-
-// ── Heatmap ────────────────────────────────────────────────────────────────
-(function(){
-  const activityMap = {{ activity_map | safe }};
-  const container = document.getElementById('heatmap-container');
-  if (!container) return;
-
-  const today = new Date(); today.setHours(0,0,0,0);
-  const totalDays = 91;
-  const start = new Date(today); start.setDate(today.getDate() - totalDays + 1);
-
-  // Get day of week of start (Mon=0)
-  const startDow = (start.getDay() + 6) % 7;
-
-  const cols = 13, rows = 7;
-  const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat('+cols+',14px);grid-auto-rows:14px;gap:3px';
-
-  // Build cells array indexed by (col * rows + row)
-  const cells = [];
-  for (let d = 0; d < totalDays; d++) {
-    const dt = new Date(start); dt.setDate(start.getDate() + d);
-    const key = dt.toISOString().split('T')[0];
-    const count = activityMap[key] || 0;
-    cells.push({key, count, dow: (dt.getDay() + 6) % 7});
-  }
-
-  // Place: for each col (week), for each row (day)
-  for (let col = 0; col < cols; col++) {
-    for (let row = 0; row < rows; row++) {
-      const cellDiv = document.createElement('div');
-      cellDiv.style.cssText = 'width:12px;height:12px;border-radius:2px';
-      // Find matching day
-      const dayIdx = col * 7 + row - startDow;
-      if (dayIdx < 0 || dayIdx >= totalDays) {
-        cellDiv.style.background = 'transparent';
-      } else {
-        const c = cells[dayIdx].count;
-        cellDiv.className = c === 0 ? 'heat-0' : c === 1 ? 'heat-1' : c === 2 ? 'heat-2' : 'heat-3';
-        cellDiv.title = cells[dayIdx].key + ': ' + c + ' Session' + (c !== 1 ? 's' : '');
-      }
-      grid.appendChild(cellDiv);
-    }
-  }
-  container.appendChild(grid);
-})();
-
-// ── Nudge ──────────────────────────────────────────────────────────────────
-let currentNudgeId = null;
-const nudgeKey = 'nerve_nudge_' + (new Date().toISOString().slice(0,7));
-if (!localStorage.getItem(nudgeKey)) {
-  fetch('/api/nudge').then(r => r.json()).then(d => {
-    if (d.nudge) {
-      currentNudgeId = d.nudge.id;
-      document.getElementById('nudge-title').textContent = d.nudge.title;
-      document.getElementById('nudge-text').textContent = d.nudge.text;
-      const cta = document.getElementById('nudge-cta');
-      cta.textContent = d.nudge.cta;
-      cta.onclick = () => window.location.href = d.nudge.cta_url;
-      document.getElementById('nudge-card').classList.add('visible');
-      localStorage.setItem(nudgeKey, '1');
-    }
-  }).catch(() => {});
+function dismissNba() {
+  var card = document.getElementById('nba-card');
+  if (card) card.style.display = 'none';
+  var now = new Date();
+  var weekKey = now.toISOString().slice(0,4) + '-W' +
+    String(Math.ceil((((now - new Date(now.getFullYear(),0,1)) / 86400000) + new Date(now.getFullYear(),0,1).getDay() + 1) / 7)).padStart(2,'0');
+  try { localStorage.setItem('sn_nba_dismissed_' + weekKey, '1'); } catch(e) {}
 }
 
-async function dismissNudge() {
-  if (!currentNudgeId) return;
-  document.getElementById('nudge-card').classList.remove('visible');
-  await fetch('/api/nudge/dismiss', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({nudge_id: currentNudgeId})
-  }).catch(() => {});
-}
+// Check if NBA dismissed this week
+(function() {
+  var now = new Date();
+  var weekKey = now.toISOString().slice(0,4) + '-W' +
+    String(Math.ceil((((now - new Date(now.getFullYear(),0,1)) / 86400000) + new Date(now.getFullYear(),0,1).getDay() + 1) / 7)).padStart(2,'0');
+  try {
+    if (localStorage.getItem('sn_nba_dismissed_' + weekKey) === '1') {
+      var card = document.getElementById('nba-card');
+      if (card) card.style.display = 'none';
+    }
+  } catch(e) {}
+})();
 
 // ── Notifications (Toasts) ─────────────────────────────────────────────────
 fetch('/api/notifications').then(r => r.json()).then(d => {
-  const dismissed = JSON.parse(localStorage.getItem('nerve_dismissed_notifs') || '[]');
-  const wrap = document.getElementById('toast-wrap');
+  var dismissed = JSON.parse(localStorage.getItem('nerve_dismissed_notifs') || '[]');
+  var wrap = document.getElementById('toast-wrap');
   (d.notifications || []).filter(n => !dismissed.includes(n.id)).forEach(n => {
-    const t = document.createElement('div');
+    var t = document.createElement('div');
     t.className = 'toast';
-    t.innerHTML = `<span class="toast-icon">${n.icon}</span><span class="toast-text">${n.text}</span><span class="toast-arrow">→</span>`;
-    t.onclick = () => {
-      const dis = JSON.parse(localStorage.getItem('nerve_dismissed_notifs') || '[]');
+    t.innerHTML = '<span class="toast-icon">' + n.icon + '</span><span class="toast-text">' + n.text + '</span><span class="toast-arrow">\u2192</span>';
+    t.onclick = function() {
+      var dis = JSON.parse(localStorage.getItem('nerve_dismissed_notifs') || '[]');
       dis.push(n.id); localStorage.setItem('nerve_dismissed_notifs', JSON.stringify(dis));
       t.remove();
       if (n.url) window.location.href = n.url;
     };
     wrap.appendChild(t);
-    setTimeout(() => { if (t.parentNode) t.remove(); }, 8000);
+    setTimeout(function() { if (t.parentNode) t.remove(); }, 8000);
   });
-}).catch(() => {});
+}).catch(function() {});
 </script>
 {% endblock %}
