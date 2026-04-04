@@ -208,7 +208,7 @@ Plans:
 - [x] 04.3-02-PLAN.md — Light Mode entfernen + Dark Theme CSS-Variablen auf Zielwerte setzen (DU-02, DU-03)
 - [x] 04.3-03-PLAN.md — Einstellungen + Analytics Dark Theme Fixes (DU-04, DU-05)
 - [x] 04.3-04-PLAN.md — Training + Profil-Editor + Hilfe-Center Dark Theme (DU-06, DU-07, DU-08)
-- [ ] 04.3-05-PLAN.md — Footer-Links entfernen + Header aufräumen + Rechtliches Tab (DU-09, DU-10)
+- [x] 04.3-05-PLAN.md — Footer-Links entfernen + Header aufräumen + Rechtliches Tab (DU-09, DU-10)
 - [ ] 04.3-06-PLAN.md — Sprachauswahl aus Training + Settings-Button Fix + Dark Theme Sweep (DU-11, DU-12, DU-03)
 
 ### Phase 5: Launch

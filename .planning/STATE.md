@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.3-04-PLAN.md
-last_updated: "2026-04-04T10:28:05.514Z"
+stopped_at: Completed 04.3-05-PLAN.md
+last_updated: "2026-04-04T10:32:29.967Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 11
   completed_phases: 6
   total_plans: 46
-  completed_plans: 38
+  completed_plans: 39
   percent: 65
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.3 (design-unification) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -89,6 +89,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.3-design-unification P02 | 15 | 2 tasks | 3 files |
 | Phase 04.3-design-unification P03 | 3 | 2 tasks | 2 files |
 | Phase 04.3-design-unification P04 | 3min | 2 tasks | 3 files |
+| Phase 04.3-design-unification P05 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -185,6 +186,7 @@ Recent decisions affecting current work:
 - [Phase 04.3-design-unification]: Logs page dark alternating rows use #1C2333/#161B22, thead #0D1117 — consistent with page bg token hierarchy
 - [Phase 04.3-design-unification]: profile_editor inputs use explicit #1C2333/#2D3748 hex over CSS vars — vars too dark to distinguish from page bg
 - [Phase 04.3-design-unification]: All help.html #E8B040 orange replaced with #00D4AA teal — section headers, focus borders, hover states, contact link
+- [Phase 04.3-design-unification]: app.html stats footer left intact - not a legal links footer; Rechtliches tab outside role-check for all-user visibility
 
 ### Roadmap Evolution
 
@@ -229,6 +231,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-04T10:28:05.510Z
-Stopped at: Completed 04.3-04-PLAN.md
+Last session: 2026-04-04T10:32:29.964Z
+Stopped at: Completed 04.3-05-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
