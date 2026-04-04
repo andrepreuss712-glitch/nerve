@@ -227,17 +227,6 @@
     </script>
   </div>
 
-    <!-- Design / Theme -->
-    <div class="settings-card" style="margin-top:20px">
-      <div class="settings-card-title">Design</div>
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="color:var(--page-text-secondary);font-size:13px">Theme</span>
-        <button onclick="toggleTheme()" id="settingsThemeBtn"
-          style="background:var(--input-bg);border:1px solid var(--input-border);color:var(--page-text-color);padding:6px 14px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px">
-          <span class="theme-icon">&#x2600;</span> <span id="settingsThemeLabel">Light Mode</span>
-        </button>
-      </div>
-    </div>
 
   <!-- TAB: ABRECHNUNG -->
   {% if session.get('rolle') in ('owner', 'admin') %}
