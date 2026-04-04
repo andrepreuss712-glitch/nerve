@@ -23,10 +23,7 @@
     <span class="ea-badge">Early Access</span>
     {% endif %}
   </div>
-  <div class="g-hright">
-    <span class="g-user">{{ g.user.email if g.user else '' }}</span>
-    <a href="/logout" class="n-btn n-btn-ghost n-btn-sm">Abmelden</a>
-  </div>
+
 </div>
 
 {% if g.org and g.org.cancelled_at %}
@@ -122,11 +119,6 @@
 
 </div>
 
-<footer style="text-align:center;padding:20px;font-size:12px;color:var(--n-text-muted);border-top:1px solid var(--n-border);margin-top:40px;">
-  <a href="/impressum" style="color:var(--n-text-muted);text-decoration:none;margin:0 12px;">Impressum</a>
-  <a href="/agb" style="color:var(--n-text-muted);text-decoration:none;margin:0 12px;">AGB</a>
-  <a href="/datenschutz" style="color:var(--n-text-muted);text-decoration:none;margin:0 12px;">Datenschutz</a>
-</footer>
 
 <!-- Help FAB -->
 <a href="/settings/help" class="help-fab" title="Hilfe">?</a>
