@@ -92,7 +92,7 @@ def get_recent_calls_db(user_id, db, limit=5):
             'session_mode': getattr(c, 'session_mode', None) or 'meeting',
             'score': c.kb_end or 0,
             'dauer': f"{dauer_sec // 60}:{dauer_sec % 60:02d}" if dauer_sec else '-',
-            'profil': c.profil_name or '-',
+            'profil': c.profile_name or '-',
             'relative': _relative_date(c.created_at) if c.created_at else '-',
         })
     return result
