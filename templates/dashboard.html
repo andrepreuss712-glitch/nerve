@@ -33,22 +33,22 @@
 .call-row:last-child { border-bottom: none; }
 .call-date { color: var(--page-text-muted); min-width: 70px; font-size: 12px; font-weight: 600; }
 .call-mode { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; }
-.call-mode-cold { background: rgba(45,212,168,0.1); color: #2dd4a8; }
+.call-mode-cold { background: rgba(0,212,170,0.1); color: #00D4AA; }
 .call-mode-meeting { background: rgba(212,168,83,0.1); color: #d4a853; }
 .call-score { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); font-weight: 600; min-width: 36px; }
-.call-score-high { color: #2dd4a8; }
+.call-score-high { color: #00D4AA; }
 .call-score-mid { color: #fbbf24; }
 .call-score-low { color: #f87171; }
 .call-dauer { color: var(--page-text-muted); margin-left: auto; font-size: 12px; }
 
 /* Next Best Action */
-.nba-card { border-left: 3px solid #2dd4a8; background: var(--glass-bg); border-radius: 0 10px 10px 0;
-  padding: 16px 18px; margin-bottom: 16px; border: 1px solid var(--glass-border); border-left: 3px solid #2dd4a8; }
+.nba-card { border-left: 3px solid #00D4AA; background: var(--glass-bg); border-radius: 0 10px 10px 0;
+  padding: 16px 18px; margin-bottom: 16px; border: 1px solid var(--glass-border); border-left: 3px solid #00D4AA; }
 .nba-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .nba-heading { font-size: 16px; font-weight: 600; }
 .nba-dismiss { margin-left: auto; background: none; border: none; color: var(--page-text-muted); cursor: pointer; font-size: 14px; }
 .nba-body { font-size: 14px; color: var(--page-text-secondary); line-height: 1.5; }
-.nba-body a { color: #2dd4a8; text-decoration: none; }
+.nba-body a { color: #00D4AA; text-decoration: none; }
 .nba-body a:hover { text-decoration: underline; }
 
 /* Footer chips */
@@ -65,11 +65,11 @@
 .toast{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;
   padding:12px 14px;font-size:13px;color:var(--page-text-secondary);display:flex;align-items:flex-start;
   gap:10px;animation:slideIn .3s ease;cursor:pointer;backdrop-filter:blur(10px)}
-.toast:hover{border-color:rgba(45,212,168,0.3)}
+.toast:hover{border-color:rgba(0,212,170,0.3)}
 @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 .toast-icon{font-size:16px;flex-shrink:0;margin-top:1px}
 .toast-text{flex:1;line-height:1.4}
-.toast-arrow{color:#2dd4a8;font-size:14px;flex-shrink:0}
+.toast-arrow{color:#00D4AA;font-size:14px;flex-shrink:0}
 {% endblock %}
 
 {% block content %}
@@ -77,10 +77,10 @@
 
   <!-- Early Access Banner -->
   {% if g.org and g.org.is_early_access %}
-  <div class="n-glass" style="border:1px solid rgba(45,212,168,0.15);padding:12px 16px;font-size:13px;color:var(--page-text-secondary);margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    &#11088; Du bist <strong style="color:#2dd4a8">Early Access User</strong> &mdash;
-    <strong style="color:#2dd4a8">50% Gründerrabatt für immer.</strong>
-    Feedback? Schreib direkt an <strong style="color:#2dd4a8">andre@nerve.sale</strong>
+  <div class="n-glass" style="border:1px solid rgba(0,212,170,0.15);padding:12px 16px;font-size:13px;color:var(--page-text-secondary);margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    &#11088; Du bist <strong style="color:#00D4AA">Early Access User</strong> &mdash;
+    <strong style="color:#00D4AA">50% Gründerrabatt für immer.</strong>
+    Feedback? Schreib direkt an <strong style="color:#00D4AA">andre@nerve.sale</strong>
   </div>
   {% endif %}
 
@@ -89,13 +89,13 @@
     <!-- North Star -->
     <div class="n-glass" style="padding:24px">
       <div class="ns-label">Score diese Woche</div>
-      <div class="ns-score" style="color:{% if stats.trend_score == 'down' %}#f87171{% else %}#2dd4a8{% endif %}">
+      <div class="ns-score" style="color:{% if stats.trend_score == 'down' %}#f87171{% else %}#00D4AA{% endif %}">
         {{ stats.avg_kb }} <span style="font-size:14px;font-weight:400;color:var(--page-text-muted)">/ 100</span>
       </div>
       <div class="ns-trend">
         {% if stats.trend_score == 'up' %}
-          <i data-lucide="arrow-up" style="width:16px;height:16px;color:#2dd4a8"></i>
-          <span style="color:#2dd4a8">Trend steigend</span>
+          <i data-lucide="arrow-up" style="width:16px;height:16px;color:#00D4AA"></i>
+          <span style="color:#00D4AA">Trend steigend</span>
         {% elif stats.trend_score == 'down' %}
           <i data-lucide="arrow-down" style="width:16px;height:16px;color:#f87171"></i>
           <span style="color:#f87171">Trend fallend</span>
@@ -124,7 +124,7 @@
         <span>{{ usage.minuten_used }} / {{ usage.minuten_limit }} Min</span>
       </div>
       <div class="usage-bar-wrap">
-        <div class="usage-bar-fill" style="width:{{ usage.minuten_prozent }}%;background:{% if usage.minuten_prozent >= 80 %}var(--metric-fill-warning-to, #fbbf24){% else %}#2dd4a8{% endif %}"></div>
+        <div class="usage-bar-fill" style="width:{{ usage.minuten_prozent }}%;background:{% if usage.minuten_prozent >= 80 %}var(--metric-fill-warning-to, #fbbf24){% else %}#00D4AA{% endif %}"></div>
       </div>
     </div>
     <div>
@@ -133,7 +133,7 @@
         <span>{{ usage.voice_used }} / {{ usage.voice_limit }} Sessions</span>
       </div>
       <div class="usage-bar-wrap">
-        <div class="usage-bar-fill" style="width:{{ usage.voice_prozent }}%;background:{% if usage.voice_prozent >= 80 %}var(--metric-fill-warning-to, #fbbf24){% else %}#2dd4a8{% endif %}"></div>
+        <div class="usage-bar-fill" style="width:{{ usage.voice_prozent }}%;background:{% if usage.voice_prozent >= 80 %}var(--metric-fill-warning-to, #fbbf24){% else %}#00D4AA{% endif %}"></div>
       </div>
     </div>
   </div>
