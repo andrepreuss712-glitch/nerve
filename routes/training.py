@@ -332,7 +332,8 @@ def training_end():
         scoring = {
             'gesamt_score': 0, 'kategorien': [],
             'staerken': [], 'verbesserungen': ['Scoring konnte nicht generiert werden'],
-            'zusammenfassung': 'Fehler bei der Auswertung.'
+            'zusammenfassung': 'Fehler bei der Auswertung.',
+            'wendepunkt_saetze': [],
         }
 
     # Modus-based points calculation
@@ -363,6 +364,73 @@ def training_end():
         'punkte_verdient':         points,
         'live_preview':            live_preview,
     }
+
+    # ── ConversationLog + Phrases + Streak ────────────────────────────────────
+    wendepunkt_saetze = scoring.get('wendepunkt_saetze', [])
+    ga_details = json.dumps([
+        {'einwand_typ': ws['einwand_typ'], 'behandelt': True, 'gegenargument': ws['text']}
+        for ws in wendepunkt_saetze
+        if ws.get('einwand_typ') and ws.get('text')
+    ])
+
+    try:
+        db_log = get_session()
+        from database.models import ConversationLog as CLog, Phrase as PhraseModel
+        log_entry = CLog(
+            user_id              = g.user.id,
+            org_id               = g.org.id,
+            profile_id           = session.get('profile_id'),
+            profile_name         = session['profile_name'],
+            started_at           = session['started_at'],
+            ended_at             = datetime.now(),
+            dauer_sekunden       = int((datetime.now() - session['started_at']).total_seconds()),
+            hilfe_genutzt        = hilfe_count,
+            kb_end               = scoring.get('gesamt_score', 0),
+            einwaende_gesamt     = len(wendepunkt_saetze),
+            einwaende_behandelt  = len([ws for ws in wendepunkt_saetze if ws.get('text')]),
+            gegenargument_details= ga_details,
+            phasen_details       = json.dumps(scoring),
+            typ                  = 'training',
+            session_mode         = session.get('modus', 'guided'),
+        )
+        db_log.add(log_entry)
+        db_log.flush()  # log_entry.id verfuegbar fuer Phrase FKs
+
+        for ws in wendepunkt_saetze:
+            if ws.get('text') and ws.get('einwand_typ'):
+                p = PhraseModel(
+                    user_id        = g.user.id,
+                    session_id     = log_entry.id,
+                    text           = ws['text'],
+                    objection_type = ws['einwand_typ'],
+                )
+                db_log.add(p)
+
+        # Streak-Update
+        from datetime import date as _date_type
+        from database.models import User as _UStreak
+        streak_user = db_log.get(_UStreak, g.user.id)
+        if streak_user:
+            today = _date_type.today()
+            if streak_user.streak_last_date:
+                days_diff = (today - streak_user.streak_last_date).days
+                if days_diff == 1:
+                    streak_user.streak_count = (streak_user.streak_count or 0) + 1
+                elif days_diff > 1:
+                    streak_user.streak_count = 1
+                # days_diff == 0: already trained today, no change
+            else:
+                streak_user.streak_count = 1
+            streak_user.streak_last_date = today
+
+        db_log.commit()
+    except Exception as ex:
+        print(f"[Training] ConversationLog-Speicherung Fehler: {ex}")
+    finally:
+        try:
+            db_log.close()
+        except Exception:
+            pass
 
     with _sessions_lock:
         _sessions.pop(g.user.id, None)

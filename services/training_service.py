@@ -389,12 +389,35 @@ def build_customer_prompt(profile_data: dict, schwierigkeit: str, persona: dict,
                           sprache: str = 'de') -> str:
     lang       = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
     diff       = SCHWIERIGKEITEN.get(schwierigkeit, SCHWIERIGKEITEN['mittel'])
-    produkt    = profile_data.get('produkt', 'ein Produkt')
+    basis      = profile_data.get('basis', {})
+    zielgruppe = profile_data.get('zielgruppe', {})
+    schmerzen  = profile_data.get('schmerzen', {})
     einwaende  = profile_data.get('einwaende', [])
-    einw_liste = "\n".join(f"- '{e.get('einwand', '')}'" for e in einwaende[:6])
+    wettbew    = profile_data.get('wettbewerber', [])
+    ki         = profile_data.get('ki', {})
+    produkt    = basis.get('produktbeschreibung') or profile_data.get('produkt', 'ein Produkt')
+    einw_liste = "\n".join(
+        f"- '{e.get('einwand','')}'" +
+        (f" (auch: {', '.join(e['varianten'][:2])})" if e.get('varianten') else '')
+        for e in einwaende[:6] if e.get('einwand')
+    )
     if not einw_liste:
         einw_liste = "- Das ist mir zu teuer\n- Ich muss das erstmal intern besprechen\n- Wir haben sowas schon"
-
+    zusatz = []
+    if zielgruppe.get('vorwissen') == 'hoch':
+        zusatz.append('Du hast hohes Fachwissen — stelle technische Detailfragen.')
+    elif zielgruppe.get('vorwissen') == 'gering':
+        zusatz.append('Du hast wenig Vorwissen — stelle einfache Grundfragen.')
+    if zielgruppe.get('entscheidungsverhalten'):
+        zusatz.append(f'Dein Entscheidungsverhalten: {", ".join(zielgruppe["entscheidungsverhalten"])}')
+    schmerzpunkte = schmerzen.get('schmerzpunkte', [])
+    if schmerzpunkte and isinstance(schmerzpunkte[0], dict) and schmerzpunkte[0].get('situation'):
+        zusatz.append(f'Dein Hauptproblem: {schmerzpunkte[0]["situation"]}')
+    wettb_namen = [w.get('name','') for w in wettbew if w.get('name')]
+    if wettb_namen:
+        zusatz.append(f'Du kennst die Konkurrenz ({", ".join(wettb_namen[:3])}) — vergleiche gelegentlich.')
+    ansprache = ki.get('ansprache', 'Du')
+    zusatz.append(f'Sprich den Berater mit "{ansprache}" an.')
     base = KUNDEN_PROMPT_TEMPLATE.format(
         produkt=produkt,
         name=f"{persona['chef_vorname']} {persona['chef_nachname']}",
@@ -406,6 +429,8 @@ def build_customer_prompt(profile_data: dict, schwierigkeit: str, persona: dict,
         schwierigkeit_prompt=diff['prompt_zusatz'],
         einwaende=einw_liste,
     )
+    if zusatz:
+        base += '\n\nZUSATZ-KONTEXT:\n' + '\n'.join(zusatz)
     return base + f"\n\n{lang['prompt_sprache']}"
 
 
@@ -434,21 +459,31 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
         f"[{'Berater' if m['speaker'] == 'berater' else 'Kunde'}] {m['text']}"
         for m in conversation_history[-6:]
     )
-    produkt = profile_data.get('produkt', '')
-    usps    = ", ".join(profile_data.get('usps', []))
+    basis    = profile_data.get('basis', {})
+    ki       = profile_data.get('ki', {})
+    einwaende= profile_data.get('einwaende', [])
+    produkt  = basis.get('produktbeschreibung') or profile_data.get('produkt', '')
+    usps     = basis.get('usps') or profile_data.get('usps', [])
+    ansprache= ki.get('ansprache', 'Du')
+    einw_str = ''
+    if einwaende:
+        einw_str = '\nBekannte Gegenargumente:\n' + '\n'.join(
+            f"- {e.get('einwand','')}: {e.get('gegenargument','')}"
+            for e in einwaende[:4] if e.get('gegenargument')
+        )
 
     prompt = f"""Du bist ein Vertriebscoach. Der Berater steckt in einem
 Trainingsgespräch und braucht Hilfe. Was sollte er als nächstes sagen?
 
 Produkt: {produkt}
-USPs: {usps}
+USPs: {", ".join(usps)}{einw_str}
 
 Letzte Gesprächszeilen:
 {gespraech}
 
 Gib EINEN konkreten Antwortvorschlag (2-3 Sätze) den der Berater
-jetzt sagen könnte. Kein Markdown, reiner Text. Ende mit einer
-offenen Frage.
+jetzt sagen könnte. Sprich den Kunden mit "{ansprache}" an.
+Kein Markdown, reiner Text. Ende mit einer offenen Frage.
 
 {lang['prompt_sprache']}"""
 
@@ -496,6 +531,8 @@ Bewerte in diesen Kategorien (jeweils 1-10):
 4. Gesprächsführung — Gespräch kontrolliert, offene Fragen?
 5. Abschluss — Klaren nächsten Schritt vereinbart?{sek_bonus}
 
+Extrahiere ausserdem die 1-3 besten Saetze des Beraters, die einen Einwand erfolgreich entkraeftet haben (Wendepunkt-Saetze). Wenn keine erkennbar sind, gib ein leeres Array zurueck.
+
 Antworte NUR als valides JSON:
 {{
   "gesamt_score": 0,
@@ -508,7 +545,10 @@ Antworte NUR als valides JSON:
   ],
   "staerken": ["Stärke 1", "Stärke 2"],
   "verbesserungen": ["Verbesserung 1", "Verbesserung 2", "Verbesserung 3"],
-  "zusammenfassung": "2-3 Sätze Gesamtbewertung"
+  "zusammenfassung": "2-3 Sätze Gesamtbewertung",
+  "wendepunkt_saetze": [
+    {{"text": "Konkreter Satz des Beraters der den Einwand erfolgreich behandelt hat", "einwand_typ": "Name des Einwands"}}
+  ]
 }}
 
 {lang['prompt_sprache']}"""
