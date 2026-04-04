@@ -87,6 +87,8 @@ def _migrate():
             ('preferred_theme', "VARCHAR(10) DEFAULT 'dark'"),
             # Block 11: Training Analytics
             ('weekly_goal', 'INTEGER DEFAULT 5'),
+            # Block 12: Sales Performance Calculator
+            ('avg_deal_wert', 'INTEGER'),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE users ADD COLUMN {col} {typedef}'))
@@ -156,6 +158,8 @@ def _migrate():
         # ── conversation_logs ────────────────────────────────────────────────
         for col, typedef in [
             ('session_mode', "VARCHAR(20) DEFAULT 'meeting'"),
+            # Block 12: Sales Performance Calculator
+            ('result', 'VARCHAR(20)'),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE conversation_logs ADD COLUMN {col} {typedef}'))

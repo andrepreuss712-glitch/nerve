@@ -104,6 +104,8 @@ class User(Base):
     preferred_theme       = Column(String(10), default='dark')
     # Block 11: Training Analytics
     weekly_goal           = Column(Integer, default=5)
+    # Block 12: Sales Performance Calculator
+    avg_deal_wert         = Column(Integer, nullable=True)   # Euro, NULL = nicht gesetzt
 
 
 class Profile(Base):
@@ -223,6 +225,7 @@ class ConversationLog(Base):
     typ                      = Column(String(20), default='live')
     session_mode             = Column(String(20), default='meeting')  # 'cold_call' or 'meeting'
     created_at               = Column(DateTime, default=utcnow)
+    result                   = Column(String(20), nullable=True)  # 'gewonnen' | 'verloren' | NULL
 
 
 class Phrase(Base):
