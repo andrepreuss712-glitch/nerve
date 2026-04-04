@@ -9,26 +9,26 @@
 /* ── Phase 1: Setup ── */
 .t-setup-wrap{max-width:580px}
 .t-section{margin-bottom:28px}
-.t-section-label{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--page-text-muted);text-transform:uppercase;margin-bottom:10px}
+.t-section-label{font-size:11px;font-weight:700;letter-spacing:.08em;color:#1a1a1a;text-transform:uppercase;margin-bottom:10px}
 .t-profile-select{max-width:360px}
 .t-diff-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 @media(max-width:680px){.t-diff-grid{grid-template-columns:repeat(2,1fr)}}
 .t-diff-card{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:12px;
   padding:16px 14px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
-.t-diff-card:hover{border-color:var(--glass-border-hover);background:rgba(255,255,255,0.06)}
-.t-diff-card.t-diff-active{border-color:#00D4AA;background:rgba(0,212,170,0.06)}
-.t-diff-icon{font-size:22px;margin-bottom:8px}
+.t-diff-card:hover{border-color:var(--glass-border-hover);background:#F8FAFC}
+.t-diff-card.t-diff-active{border-color:var(--glass-border);box-shadow:0 0 0 2px #00D4AA;background:#FFFFFF}
+.t-diff-icon{margin-bottom:8px}
 .t-diff-label{font-size:13px;font-weight:700;margin-bottom:4px}
 .t-diff-desc{font-size:11px;color:var(--page-text-muted);line-height:1.45}
 .t-call-btn{margin-top:8px;width:220px;padding:13px 0;background:#00D4AA;color:var(--page-bg);
   border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;
   letter-spacing:.04em;transition:opacity .15s}
-.t-call-btn:disabled{opacity:.3;cursor:default}
+.t-call-btn:disabled{opacity:1;cursor:default;background:#CBD5E1;color:#64748B}
 .t-call-btn:not(:disabled):hover{opacity:.88}
 
 /* ── Phase 2: Einwahl ── */
 .t-call-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  flex:1;gap:10px;background:#0D1117;padding:40px 20px}
+  flex:1;gap:10px;background:#F0F2F5;padding:40px 20px}
 .t-call-firm{font-size:26px;font-weight:800;color:var(--page-text-color);letter-spacing:-.01em;text-align:center}
 .t-call-pos{font-size:13px;color:var(--page-text-muted);margin-top:-4px}
 .t-phone-ring{font-size:72px;margin:28px 0;animation:pulse-ring 1.5s ease-in-out infinite}
@@ -103,7 +103,7 @@
 .t-send-btn{background:var(--glass-bg);border:1px solid var(--glass-border);color:#00D4AA;border-radius:8px;
   padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;
   transition:background .15s;white-space:nowrap}
-.t-send-btn:hover{background:rgba(255,255,255,0.06)}
+.t-send-btn:hover{background:#F8FAFC}
 .t-send-btn:disabled{opacity:.35;cursor:default}
 .t-status-bar{font-size:11px;color:var(--page-text-muted);min-height:15px;font-style:italic}
 
@@ -146,15 +146,15 @@
 .t-modus-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px}
 .t-modus-card{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:12px;
   padding:16px 14px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
-.t-modus-card:hover{border-color:var(--glass-border-hover);background:rgba(255,255,255,0.06)}
-.t-modus-card.t-modus-active{border-color:#00D4AA;background:rgba(0,212,170,0.06)}
-.t-modus-icon{font-size:22px;margin-bottom:8px}
+.t-modus-card:hover{border-color:var(--glass-border-hover);background:#F8FAFC}
+.t-modus-card.t-modus-active{border-color:var(--glass-border);box-shadow:0 0 0 2px #00D4AA;background:#FFFFFF}
+.t-modus-icon{margin-bottom:8px}
 .t-modus-name{font-size:13px;font-weight:700;margin-bottom:4px}
 .t-modus-desc{font-size:11px;color:var(--page-text-muted);line-height:1.45;margin-bottom:6px}
 .t-modus-badge{font-size:10px;color:var(--page-text-muted);font-weight:600;letter-spacing:.04em;
   background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:20px;padding:2px 8px;
   display:inline-block}
-.t-modus-active .t-modus-badge{border-color:rgba(212,168,83,0.3);color:#d4a853;background:rgba(212,168,83,0.05)}
+.t-modus-active .t-modus-badge{border-color:#00D4AA;color:#000000;background:rgba(0,212,170,0.15)}
 
 /* ── Hilfe-Counter ── */
 .t-hilfe-counter{font-size:10px;color:var(--page-text-muted);font-weight:600;margin-left:6px}
@@ -192,7 +192,7 @@
 /* ── Scenario modal ── */
 .t-modal-bg{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.75);
   display:flex;align-items:center;justify-content:center;padding:20px}
-.t-modal{background:#0D1117;border:1px solid var(--glass-border);border-radius:16px;
+.t-modal{background:#FFFFFF;border:1px solid var(--glass-border);border-radius:16px;
   padding:24px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto}
 .t-modal-title{font-size:16px;font-weight:800;margin-bottom:18px}
 .t-modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
@@ -226,18 +226,18 @@
 }
 /* ── Custom Scenario Dropdown ── */
 .n-custom-select{position:relative;max-width:100%;flex:1}
-.n-select-trigger{background:var(--input-bg,rgba(255,255,255,0.04));border:1px solid var(--input-border,rgba(255,255,255,0.12));
+.n-select-trigger{background:var(--input-bg,#FFFFFF);border:1px solid var(--input-border,#E2E8F0);
   border-radius:6px;padding:8px 12px;color:var(--page-text-color);font-size:13px;cursor:pointer;
   display:flex;justify-content:space-between;align-items:center;transition:border-color .15s;font-family:inherit}
-.n-select-trigger:hover{border-color:var(--input-border-focus,rgba(255,255,255,0.25))}
+.n-select-trigger:hover{border-color:var(--input-border-focus,#00D4AA)}
 .n-select-arrow{color:var(--page-text-secondary);font-size:11px;flex-shrink:0;margin-left:6px}
-.n-select-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
-  background:var(--glass-bg,rgba(20,20,40,0.97));backdrop-filter:blur(20px);
-  border:1px solid var(--input-border,rgba(255,255,255,0.12));border-radius:6px;
+.n-select-dropdown{display:none;position:absolute;bottom:calc(100% + 4px);left:0;right:0;
+  background:var(--glass-bg,#FFFFFF);backdrop-filter:blur(20px);
+  border:1px solid var(--input-border,#E2E8F0);border-radius:6px;
   box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:100;max-height:220px;overflow-y:auto;padding:4px 0}
 .n-select-dropdown.open{display:block}
 .n-select-option{padding:8px 12px;color:var(--page-text-color);font-size:13px;cursor:pointer;transition:background .1s}
-.n-select-option:hover{background:rgba(255,255,255,0.06)}
+.n-select-option:hover{background:#F8FAFC}
 .n-select-option.selected{color:#00D4AA}
 .n-select-group-label{padding:4px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.07em;
   color:var(--page-text-muted);text-transform:uppercase;cursor:default}
@@ -250,12 +250,13 @@
   <div class="page-wrap">
     <div class="page-header">
       <div>
-        <div class="page-title">🎯 Trainingsmodus</div>
+        <div class="page-title"><svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:8px"><path d="M8 22V20C8 13.4 13.4 8 20 8C26.6 8 32 13.4 32 20V22" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/><rect x="5" y="22" width="5" height="8" rx="2" stroke="#00D4AA" stroke-width="2"/><rect x="30" y="22" width="5" height="8" rx="2" stroke="#00D4AA" stroke-width="2"/><path d="M30 30C30 33.3 25.5 36 20 36" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="36" r="2" fill="#00D4AA"/></svg> Trainingsmodus</div>
         <div class="page-sub">Übe Cold Calls gegen einen KI-Kunden — mit Stimme und Auswertung</div>
       </div>
     </div>
 
-    <div class="t-setup-wrap">
+    <div class="t-training-layout">
+      <div class="t-setup-wrap">
 
       <div class="t-section">
         <div class="t-section-label">Verkaufsprofil</div>
@@ -277,10 +278,10 @@
           <div class="t-diff-card n-glass {% if key == 'mittel' %}t-diff-active{% endif %}"
                data-key="{{ key }}" onclick="selectDiff('{{ key }}')">
             <div class="t-diff-icon">
-              {%- if key == 'leicht' %}🟢
-              {%- elif key == 'mittel' %}🟡
-              {%- elif key == 'schwer' %}🔴
-              {%- else %}🟣{%- endif %}
+              {%- if key == 'leicht' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 24C10 20 14 20 18 24C22 28 26 28 34 24" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="16" r="2" fill="#22C55E" opacity="0.3"/></svg>
+              {%- elif key == 'mittel' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 20C10 16 14 16 18 20C22 24 26 24 34 20" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/><path d="M6 28C10 24 14 24 18 28C22 32 26 32 34 28" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" opacity="0.5"/></svg>
+              {%- elif key == 'schwer' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 14C9 10 12 10 15 14C18 18 21 18 24 14C27 10 30 10 34 14" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round"/><path d="M6 22C9 18 12 18 15 22C18 26 21 26 24 22C27 18 30 18 34 22" stroke="#EF4444" stroke-width="2" stroke-linecap="round" opacity="0.6"/><path d="M6 30C9 26 12 26 15 30C18 34 21 34 24 30C27 26 30 26 34 30" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/></svg>
+              {%- else %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="13" r="4" stroke="#8B5CF6" stroke-width="2"/><path d="M6 30C6 25.6 9.6 22 14 22C18.4 22 22 25.6 22 30" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round"/><circle cx="27" cy="11" r="3.5" stroke="#8B5CF6" stroke-width="2" opacity="0.5"/><path d="M20 28C20 24.4 23 21 27 21C31 21 34 24.4 34 28" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" opacity="0.5"/></svg>{%- endif %}
             </div>
             <div class="t-diff-label">{{ diff.label }}</div>
             <div class="t-diff-desc">{{ diff.beschreibung }}</div>
@@ -293,13 +294,13 @@
         <div class="t-section-label">Trainings-Modus</div>
         <div class="t-modus-grid">
           <div class="t-modus-card" id="t-modus-free" onclick="selectModus('free')">
-            <div class="t-modus-icon">🎯</div>
+            <div class="t-modus-icon"><svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="14" stroke="#00D4AA" stroke-width="2" stroke-dasharray="4 3"/><path d="M15 20L18 23L25 16" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
             <div class="t-modus-name">Frei</div>
             <div class="t-modus-desc">Nur du und der Kunde. Kein Netz. Maximale Punkte.</div>
             <div class="t-modus-badge">Für Fortgeschrittene · +50% Punkte</div>
           </div>
           <div class="t-modus-card t-modus-active" id="t-modus-guided" onclick="selectModus('guided')">
-            <div class="t-modus-icon">💡</div>
+            <div class="t-modus-icon"><svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="14" stroke="#00D4AA" stroke-width="2"/><circle cx="20" cy="20" r="3" fill="#00D4AA" opacity="0.2"/><path d="M20 8V12" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/><path d="M20 28V32" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/><path d="M8 20H12" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/><path d="M28 20H32" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/><path d="M20 20L16 14L20 16L24 14Z" fill="#00D4AA"/><path d="M20 20L16 26L20 24L24 26Z" fill="#00D4AA" opacity="0.4"/></svg></div>
             <div class="t-modus-name">Geführt</div>
             <div class="t-modus-desc">Hilfe-Button verfügbar. Nutzung wird gezählt.</div>
             <div class="t-modus-badge">Für Einsteiger</div>
@@ -319,18 +320,147 @@
           </div>
           <input type="hidden" id="t-scenarioSelect" value="">
           <button class="btn btn-secondary btn-sm" onclick="openScenarioModal()" style="white-space:nowrap">+ Neu</button>
-          <button class="btn btn-danger btn-sm" id="t-deleteScenBtn" style="display:none"
-                  onclick="deleteSelectedScenario()" title="Szenario löschen">🗑</button>
+          <button id="t-deleteScenBtn" style="display:none;background:#00D4AA;color:#000000;border:none;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap"
+                  onclick="deleteSelectedScenario()">Profil löschen</button>
         </div>
       </div>
 
       <button class="t-call-btn" id="t-callBtn" onclick="startTraining()" disabled>
-        📞&nbsp; Anrufen
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:6px"><path d="M22 16.92V19.92C22 20.48 21.56 20.93 21 20.97C20.64 21 20.28 21 19.92 21C10.4 21 3 13.6 3 4.08C3 3.72 3 3.36 3.03 3C3.07 2.44 3.52 2 4.08 2H7.08C7.56 2 7.97 2.34 8.05 2.81C8.14 3.38 8.3 3.93 8.52 4.45L7.02 5.95C6.83 6.14 6.78 6.42 6.88 6.67C7.94 9.14 10.02 11.38 12.33 13.12C12.58 13.3 12.93 13.29 13.15 13.07L14.95 11.27C15.47 11.49 16.02 11.65 16.59 11.74C17.07 11.82 17.4 12.23 17.4 12.71V16.92C17.4 16.92 22 16.92 22 16.92Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 5C16.1 5.49 17 6.35 17.5 7.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 1C18.13 1.61 20.39 3.87 21 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Anrufen
       </button>
 
-    </div>
-  </div>
-</div>
+      </div><!-- /.t-setup-wrap -->
+
+      <div class="t-analytics-panel" id="t-analytics-panel">
+
+        <!-- Card 1: Fortschritt -->
+        <div class="t-analytics-card" id="t-card-fortschritt">
+          <div class="t-analytics-card-title">
+            <span class="t-card-icon" style="background:rgba(0,212,170,0.12)">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 14V8l3-3 3 3 4-6 2 2" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Fortschritt
+          </div>
+          <div class="t-stats-row">
+            <div class="t-stat-item">
+              <div class="t-stat-value" id="t-stat-woche">--</div>
+              <div class="t-stat-label">Diese Woche</div>
+            </div>
+            <div class="t-stat-item">
+              <div class="t-stat-value" id="t-stat-monat">--</div>
+              <div class="t-stat-label">Diesen Monat</div>
+            </div>
+            <div class="t-stat-item">
+              <div class="t-stat-value" id="t-stat-gesamt">--</div>
+              <div class="t-stat-label">Gesamt</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+            <span class="t-stat-label" id="t-avg-dauer"></span>
+            <span class="t-streak-badge" id="t-streak-badge" style="display:none"></span>
+          </div>
+        </div>
+
+        <!-- Card 2: Wochenziel -->
+        <div class="t-analytics-card" id="t-card-wochenziel">
+          <div class="t-analytics-card-title">
+            <span class="t-card-icon" style="background:rgba(0,212,170,0.12)">
+              <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#00D4AA" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="#00D4AA"/></svg>
+            </span>
+            Wochenziel
+          </div>
+          <div class="t-goal-row">
+            <span class="t-goal-text" id="t-goal-text">0 / 5 Sessions</span>
+            <div class="t-goal-progress-wrap">
+              <div class="t-goal-progress-bar" id="t-goal-bar" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="t-goal-edit">
+            <span class="t-stat-label">Ziel:</span>
+            <input type="number" class="t-goal-input" id="t-goal-input" min="1" max="30" value="5">
+            <button class="t-goal-save-btn" id="t-goal-save">Speichern</button>
+          </div>
+        </div>
+
+        <!-- Card 3: Einwand-Heatmap -->
+        <div class="t-analytics-card" id="t-card-heatmap">
+          <div class="t-analytics-card-title">
+            <span class="t-card-icon" style="background:rgba(248,81,73,0.12)">
+              <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" fill="#F85149" opacity="0.6"/><rect x="9" y="1" width="6" height="6" rx="1" fill="#F59E0B" opacity="0.6"/><rect x="1" y="9" width="6" height="6" rx="1" fill="#00D4AA" opacity="0.6"/><rect x="9" y="9" width="6" height="6" rx="1" fill="#E5E7EB" opacity="0.6"/></svg>
+            </span>
+            Einwand-Heatmap
+          </div>
+          <div class="t-heatmap-grid" id="t-heatmap-grid">
+            <div class="t-empty-state">Lade Daten...</div>
+          </div>
+        </div>
+
+        <!-- Card 4: Verbesserungskurve -->
+        <div class="t-analytics-card" id="t-card-trend">
+          <div class="t-analytics-card-title">
+            <span class="t-card-icon" style="background:rgba(0,212,170,0.12)">
+              <svg viewBox="0 0 16 16" fill="none"><polyline points="1,12 4,8 7,10 11,4 15,6" stroke="#00D4AA" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Verbesserungskurve
+          </div>
+          <div class="t-trend-chart-wrap">
+            <canvas id="t-trend-chart"></canvas>
+          </div>
+          <div class="t-empty-state" id="t-trend-empty" style="display:none">Noch keine Daten</div>
+        </div>
+
+        <!-- Card 5: KI-Empfehlung -->
+        <div class="t-analytics-card" id="t-card-reco">
+          <div class="t-analytics-card-title">
+            <span class="t-card-icon" style="background:rgba(245,158,11,0.12)">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4.5H15l-3.5 3 1.5 5L8 10.5 3 13.5l1.5-5L1 5.5h5z" fill="#F59E0B"/></svg>
+            </span>
+            KI-Empfehlung
+          </div>
+          <div class="t-reco-text" id="t-reco-text">Lade Empfehlung...</div>
+          <a class="t-reco-btn" id="t-reco-btn" href="/training" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M8 4l4 4-4 4" stroke="#FFF" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Jetzt trainieren
+          </a>
+        </div>
+
+        <!-- Card 6: Phrasen-Bank -->
+        <div class="t-analytics-card" id="t-card-phrasen">
+          <div class="t-analytics-card-title">
+            <span class="t-card-icon" style="background:rgba(0,212,170,0.12)">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h10" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            Phrasen-Bank
+          </div>
+          <div class="t-phrases-filter" id="t-phrases-filter"></div>
+          <div class="t-phrases-list" id="t-phrases-list">
+            <div class="t-empty-state">Lade Phrasen...</div>
+          </div>
+          <div class="t-phrases-pagination" id="t-phrases-pagination" style="display:none">
+            <button id="t-phrases-prev" disabled>Zurueck</button>
+            <span class="t-stat-label" id="t-phrases-page-info"></span>
+            <button id="t-phrases-next">Weiter</button>
+          </div>
+        </div>
+
+        <!-- Card 7: Letzte Session -->
+        <div class="t-analytics-card" id="t-card-letzte">
+          <div class="t-analytics-card-title">
+            <span class="t-card-icon" style="background:rgba(0,212,170,0.12)">
+              <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#00D4AA" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            Letzte Session
+          </div>
+          <div id="t-letzte-content">
+            <div class="t-empty-state">Lade...</div>
+          </div>
+        </div>
+
+      </div><!-- /.t-analytics-panel -->
+
+    </div><!-- /.t-training-layout -->
+  </div><!-- /.page-wrap -->
+</div><!-- /#t-setup -->
 
 <!-- ── Phase 2: Einwahl ───────────────────────────────────────────────────── -->
 <div id="t-einwahl" class="t-overlay t-hidden">
@@ -384,7 +514,7 @@
 <div id="t-scoring" class="t-overlay t-hidden">
   <div class="t-scoring-scroll">
     <div class="t-scoring-inner" id="t-scoringInner">
-      <div style="text-align:center;color:#6b6b80;font-style:italic;padding:40px 0">
+      <div style="text-align:center;color:#6B7280;font-style:italic;padding:40px 0">
         Auswertung wird erstellt…
       </div>
     </div>
@@ -978,7 +1108,7 @@ function buildScoring(data) {
     }).join('');
 
     const freeIntro = modus === 'free'
-      ? '<div style="font-size:12px;color:#6b6b80;margin-bottom:2px">Du hast das ohne Hilfe gemeistert. Aber schau was NERVE zusätzlich erkannt hätte:</div>'
+      ? '<div style="font-size:12px;color:#6B7280;margin-bottom:2px">Du hast das ohne Hilfe gemeistert. Aber schau was NERVE zusätzlich erkannt hätte:</div>'
       : '';
 
     const ctaHtml = (PLAN_TYP === 'training')
@@ -1001,14 +1131,14 @@ function buildScoring(data) {
   document.getElementById('t-scoringInner').innerHTML =
     '<div class="t-score-header">' +
       '<svg class="t-score-circle" width="110" height="110" viewBox="0 0 110 110">' +
-        '<circle cx="55" cy="55" r="' + r + '" stroke="#1C2333" stroke-width="8" fill="none"/>' +
+        '<circle cx="55" cy="55" r="' + r + '" stroke="#E2E8F0" stroke-width="8" fill="none"/>' +
         '<circle cx="55" cy="55" r="' + r + '" stroke="' + col + '" stroke-width="8" fill="none"' +
           ' stroke-linecap="round"' +
           ' stroke-dasharray="' + circ + '"' +
           ' stroke-dashoffset="' + offs + '"' +
           ' transform="rotate(-90 55 55)"/>' +
-        '<text x="55" y="51" text-anchor="middle" fill="#f0ebe0" font-size="22" font-weight="900">' + score + '</text>' +
-        '<text x="55" y="67" text-anchor="middle" fill="#6b6b80" font-size="11">/100</text>' +
+        '<text x="55" y="51" text-anchor="middle" fill="#1a1a1a" font-size="22" font-weight="900">' + score + '</text>' +
+        '<text x="55" y="67" text-anchor="middle" fill="#6B7280" font-size="11">/100</text>' +
       '</svg>' +
       '<div class="t-score-meta">' +
         '<div class="t-score-title">📊 Auswertung</div>' +
@@ -1320,4 +1450,298 @@ loadScenarios();
     <p class="t-loading-text" id="t-loading-subtext">Einwände analysieren...</p>
   </div>
 </div>
+
+<!-- Chart.js CDN for Training Analytics sparkline -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+<!-- ── Training Analytics Panel JS ──────────────────────────────────────── -->
+<script>
+(function() {
+  let _trendChart = null;
+  let _phrasePage = 1;
+  let _phraseFilter = '';
+
+  function loadAnalytics() {
+    loadStats();
+    loadRecommendation();
+    loadPhrases();
+    loadLastSession();
+  }
+
+  // ── Stats ──────────────────────────────────────────────────
+  function loadStats() {
+    fetch('/api/training/stats')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return;
+        document.getElementById('t-stat-woche').textContent = d.sessions.diese_woche;
+        document.getElementById('t-stat-monat').textContent = d.sessions.diesen_monat;
+        document.getElementById('t-stat-gesamt').textContent = d.sessions.gesamt;
+
+        // Avg Dauer
+        const avgMin = Math.round((d.avg_dauer_sekunden || 0) / 60);
+        document.getElementById('t-avg-dauer').textContent = avgMin > 0 ? ('Ø ' + avgMin + ' Min/Session') : '';
+
+        // Streak
+        const streakEl = document.getElementById('t-streak-badge');
+        if (d.streak > 0) {
+          streakEl.style.display = '';
+          streakEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1C6 5 3 6 3 9.5a5 5 0 0010 0C13 6 10 5 8 1z" fill="#00D4AA"/></svg> ' + d.streak + ' Tage Streak';
+        }
+
+        // Wochenziel
+        const wz = d.wochenziel || 5;
+        const wSessions = d.sessions.diese_woche;
+        const pct = Math.min(100, Math.round((wSessions / wz) * 100));
+        document.getElementById('t-goal-text').textContent = wSessions + ' / ' + wz + ' Sessions';
+        document.getElementById('t-goal-bar').style.width = pct + '%';
+        document.getElementById('t-goal-input').value = wz;
+
+        // Heatmap
+        renderHeatmap(d.heatmap);
+
+        // Trend Chart
+        renderTrend(d.trend_scores);
+      })
+      .catch(e => console.warn('[Analytics] Stats error:', e));
+  }
+
+  // ── Heatmap ────────────────────────────────────────────────
+  function renderHeatmap(heatmap) {
+    const grid = document.getElementById('t-heatmap-grid');
+    if (!heatmap || Object.keys(heatmap).length === 0) {
+      grid.innerHTML = '<div class="t-empty-state">Noch keine Einwand-Daten</div>';
+      return;
+    }
+    let html = '';
+    for (const [typ, stats] of Object.entries(heatmap)) {
+      const gesamt = stats.gesamt || 0;
+      const behandelt = stats.behandelt || 0;
+      let colorClass = 't-heatmap-tile--neutral';
+      let quoteText = '--';
+
+      if (gesamt > 0) {
+        const quote = Math.round((behandelt / gesamt) * 100);
+        quoteText = quote + '%';
+        if (quote >= 70) colorClass = 't-heatmap-tile--gruen';
+        else if (quote >= 40) colorClass = 't-heatmap-tile--gelb';
+        else colorClass = 't-heatmap-tile--rot';
+      }
+
+      html += '<div class="t-heatmap-tile ' + colorClass + '" data-einwand="' + typ + '" title="Klick: Quick-Training mit ' + typ + '">'
+        + '<div class="t-heatmap-tile-name">' + typ + '</div>'
+        + '<div class="t-heatmap-tile-quote">' + quoteText + '</div>'
+        + '<div class="t-heatmap-tile-count">' + behandelt + '/' + gesamt + '</div>'
+        + '</div>';
+    }
+    grid.innerHTML = html;
+
+    // Click handler: Quick-Training
+    grid.querySelectorAll('.t-heatmap-tile').forEach(tile => {
+      tile.addEventListener('click', function() {
+        const einwand = this.dataset.einwand;
+        window.location.href = '/training?quick=1&einwand_typ=' + encodeURIComponent(einwand);
+      });
+    });
+  }
+
+  // ── Trend Chart ────────────────────────────────────────────
+  function renderTrend(scores) {
+    const canvas = document.getElementById('t-trend-chart');
+    const emptyEl = document.getElementById('t-trend-empty');
+
+    if (!scores || scores.length < 2) {
+      canvas.style.display = 'none';
+      emptyEl.style.display = '';
+      return;
+    }
+
+    canvas.style.display = '';
+    emptyEl.style.display = 'none';
+
+    if (_trendChart) _trendChart.destroy();
+    _trendChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: scores.map(function(_, i) { return 'S' + (i + 1); }),
+        datasets: [{
+          data: scores,
+          borderColor: '#00D4AA',
+          backgroundColor: 'rgba(0,212,170,0.08)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#00D4AA',
+          tension: 0.4,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+        scales: {
+          x: { display: false },
+          y: { display: false, min: 0, max: 100 }
+        }
+      }
+    });
+  }
+
+  // ── Recommendation ─────────────────────────────────────────
+  function loadRecommendation() {
+    fetch('/api/training/recommendation')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return;
+        document.getElementById('t-reco-text').textContent = d.text;
+        const btn = document.getElementById('t-reco-btn');
+        if (d.quick_url) {
+          btn.href = d.quick_url;
+          btn.style.display = '';
+        }
+      })
+      .catch(e => console.warn('[Analytics] Recommendation error:', e));
+  }
+
+  // ── Phrases ────────────────────────────────────────────────
+  function loadPhrases(page, filter) {
+    page = page || 1;
+    filter = filter || '';
+    _phrasePage = page;
+    _phraseFilter = filter;
+
+    let url = '/api/training/phrases?page=' + page;
+    if (filter) url += '&objection_type=' + encodeURIComponent(filter);
+
+    fetch(url)
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return;
+        const list = document.getElementById('t-phrases-list');
+
+        if (d.phrases.length === 0) {
+          list.innerHTML = '<div class="t-empty-state">Noch keine Wendepunkt-Saetze gesammelt</div>';
+          document.getElementById('t-phrases-pagination').style.display = 'none';
+          return;
+        }
+
+        let html = '';
+        d.phrases.forEach(function(p) {
+          html += '<div class="t-phrase-item">'
+            + '<div class="t-phrase-text">"' + p.text + '"</div>'
+            + '<div class="t-phrase-meta"><span class="t-phrase-tag">' + p.objection_type + '</span> ' + (p.created_at || '') + '</div>'
+            + '</div>';
+        });
+        list.innerHTML = html;
+
+        // Pagination
+        const pagEl = document.getElementById('t-phrases-pagination');
+        if (d.pages > 1) {
+          pagEl.style.display = '';
+          document.getElementById('t-phrases-page-info').textContent = 'Seite ' + d.page + '/' + d.pages;
+          document.getElementById('t-phrases-prev').disabled = d.page <= 1;
+          document.getElementById('t-phrases-next').disabled = d.page >= d.pages;
+        } else {
+          pagEl.style.display = 'none';
+        }
+      })
+      .catch(e => console.warn('[Analytics] Phrases error:', e));
+  }
+
+  // Phrases filter buttons
+  function renderPhraseFilters() {
+    const TYPEN = ['Keine Zeit', 'Zu teuer', 'Kein Interesse', 'Haben schon', 'Muss ueberlegen', 'Schicken Sie Unterlagen', 'Kein Bedarf'];
+    const filterEl = document.getElementById('t-phrases-filter');
+    let html = '<button class="t-phrases-filter-btn t-phrases-filter-btn--active" data-filter="">Alle</button>';
+    TYPEN.forEach(function(t) {
+      html += '<button class="t-phrases-filter-btn" data-filter="' + t + '">' + t + '</button>';
+    });
+    filterEl.innerHTML = html;
+    filterEl.querySelectorAll('.t-phrases-filter-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        filterEl.querySelectorAll('.t-phrases-filter-btn').forEach(function(b) { b.classList.remove('t-phrases-filter-btn--active'); });
+        this.classList.add('t-phrases-filter-btn--active');
+        loadPhrases(1, this.dataset.filter);
+      });
+    });
+  }
+
+  // ── Last Session ───────────────────────────────────────────
+  function loadLastSession() {
+    fetch('/api/training/last-session')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return;
+        const el = document.getElementById('t-letzte-content');
+        const s = d.session;
+
+        if (!s) {
+          el.innerHTML = '<div class="t-empty-state">Noch keine Training-Session absolviert</div>';
+          return;
+        }
+
+        const dauerMin = Math.round((s.dauer_sekunden || 0) / 60);
+        let html = '<div class="t-last-session-row"><span class="t-last-session-label">Szenario</span><span class="t-last-session-value">' + (s.profile_name || '--') + '</span></div>'
+          + '<div class="t-last-session-row"><span class="t-last-session-label">Dauer</span><span class="t-last-session-value">' + dauerMin + ' Min</span></div>'
+          + '<div class="t-last-session-row"><span class="t-last-session-label">Score</span><span class="t-last-session-value">' + (s.gesamt_score || 0) + '/100</span></div>';
+
+        if (s.haupt_einwand) {
+          html += '<div class="t-last-session-row"><span class="t-last-session-label">Haupt-Einwand</span><span class="t-last-session-value">' + s.haupt_einwand + '</span></div>';
+        }
+        if (s.top_verbesserung) {
+          html += '<div class="t-last-session-row"><span class="t-last-session-label">Top-Tipp</span><span class="t-last-session-value" style="font-size:12px;font-weight:400;max-width:200px;text-align:right">' + s.top_verbesserung + '</span></div>';
+        }
+
+        html += '<a class="t-last-session-link" href="' + (s.dashboard_link || '/dashboard') + '">Analyse ansehen <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>';
+
+        el.innerHTML = html;
+      })
+      .catch(e => console.warn('[Analytics] Last session error:', e));
+  }
+
+  // ── Wochenziel Save ────────────────────────────────────────
+  document.getElementById('t-goal-save').addEventListener('click', function() {
+    const val = parseInt(document.getElementById('t-goal-input').value);
+    if (isNaN(val) || val < 1 || val > 30) return;
+    fetch('/api/training/goal', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({goal: val})
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) loadStats();
+    })
+    .catch(e => console.warn('[Analytics] Goal save error:', e));
+  });
+
+  // ── Phrases Pagination ─────────────────────────────────────
+  document.getElementById('t-phrases-prev').addEventListener('click', function() {
+    if (_phrasePage > 1) loadPhrases(_phrasePage - 1, _phraseFilter);
+  });
+  document.getElementById('t-phrases-next').addEventListener('click', function() {
+    loadPhrases(_phrasePage + 1, _phraseFilter);
+  });
+
+  // ── Quick-Training URL Parameter ───────────────────────────
+  function checkQuickTraining() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('quick') === '1') {
+      const einwandTyp = params.get('einwand_typ');
+      if (einwandTyp) {
+        const diffSelect = document.querySelector('[name="schwierigkeit"], #t-schwierigkeit, select[data-schwierigkeit]');
+        if (diffSelect) diffSelect.value = 'schwer';
+
+        const startBtn = document.getElementById('t-startBtn') || document.querySelector('.t-start-btn');
+        if (startBtn) startBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
+      }
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────────────
+  renderPhraseFilters();
+  loadAnalytics();
+  checkQuickTraining();
+})();
+</script>
 {% endblock %}
