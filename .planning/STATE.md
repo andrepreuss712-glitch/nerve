@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.3-01-PLAN.md
-last_updated: "2026-04-04T10:17:26.571Z"
+stopped_at: Completed 04.3-02-PLAN.md
+last_updated: "2026-04-04T10:22:32.015Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 11
   completed_phases: 6
   total_plans: 46
-  completed_plans: 35
+  completed_plans: 36
   percent: 65
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.3 (design-unification) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -86,6 +86,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.2.1 P04 | 8 | 5 tasks | 2 files |
 | Phase 04.2.1 P05 | 12 | 3 tasks | 5 files |
 | Phase 04.3-design-unification P01 | 5 | 1 tasks | 1 files |
+| Phase 04.3-design-unification P02 | 15 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -175,6 +176,9 @@ Recent decisions affecting current work:
 - [Phase 04.2.1]: EWB ranking throttled to every 3rd analyse_loop cycle — ewb_top2 stored in live_session.state and exposed via /api/ergebnis polling endpoint
 - [Phase 04.3-design-unification]: back-link placed after .nav-mark inside the left header flex section — integrates naturally with existing header layout
 - [Phase 04.3-design-unification]: href=C:/Program Files/Git/dashboard used (not history.back()) in app.html back-link — avoids Socket.IO/AudioContext state issues from browser history navigation
+- [Phase 04.3-design-unification]: Light mode fully removed — theme hardcoded to dark in base.html, no toggle UI anywhere in app
+- [Phase 04.3-design-unification]: Teal updated from #2dd4a8 to #00D4AA / #20b090 to #00B894 across all 30+ occurrences in nerve.css
+- [Phase 04.3-design-unification]: Page bg updated from #06060a to #0D1117, sidebar from rgba(6,6,10,0.95) to #0A0E14 (solid)
 
 ### Roadmap Evolution
 
@@ -219,6 +223,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-04T10:17:26.568Z
-Stopped at: Completed 04.3-01-PLAN.md
+Last session: 2026-04-04T10:22:32.012Z
+Stopped at: Completed 04.3-02-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)

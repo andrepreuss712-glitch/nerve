@@ -205,7 +205,7 @@ Plans:
 
 Plans:
 - [x] 04.3-01-PLAN.md — Beenden-Button Fix: Dashboard back-link in app.html header (DU-01)
-- [ ] 04.3-02-PLAN.md — Light Mode entfernen + Dark Theme CSS-Variablen auf Zielwerte setzen (DU-02, DU-03)
+- [x] 04.3-02-PLAN.md — Light Mode entfernen + Dark Theme CSS-Variablen auf Zielwerte setzen (DU-02, DU-03)
 - [ ] 04.3-03-PLAN.md — Einstellungen + Analytics Dark Theme Fixes (DU-04, DU-05)
 - [ ] 04.3-04-PLAN.md — Training + Profil-Editor + Hilfe-Center Dark Theme (DU-06, DU-07, DU-08)
 - [ ] 04.3-05-PLAN.md — Footer-Links entfernen + Header aufräumen + Rechtliches Tab (DU-09, DU-10)
@@ -236,7 +236,7 @@ Phases execute in numeric order.
 | 4. Payments & Legal | 1/3 | In Progress|  |
 | 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
 | 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
-| 4.3 Design Unification | 1/6 | In Progress|  |
+| 4.3 Design Unification | 2/6 | In Progress|  |
 | 5. Launch | 0/? | Not started | - |
 
 ---
