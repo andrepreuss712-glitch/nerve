@@ -746,3 +746,62 @@ def api_training_last_session():
         })
     finally:
         db.close()
+
+
+@training_bp.route('/api/training/phrases')
+@login_required
+def api_training_phrases():
+    db = get_session()
+    try:
+        from database.models import Phrase as _P
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        objection_type = request.args.get('objection_type', '').strip()
+
+        query = db.query(_P).filter(_P.user_id == g.user.id)
+        if objection_type:
+            query = query.filter(_P.objection_type == objection_type)
+
+        total = query.count()
+        phrases = query.order_by(_P.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+        return jsonify({
+            'ok': True,
+            'phrases': [{
+                'id': p.id,
+                'text': p.text,
+                'objection_type': p.objection_type,
+                'created_at': p.created_at.strftime('%d.%m.%Y') if p.created_at else None,
+            } for p in phrases],
+            'total': total,
+            'page': page,
+            'pages': (total + per_page - 1) // per_page,
+        })
+    finally:
+        db.close()
+
+
+@training_bp.route('/api/training/goal', methods=['POST'])
+@login_required
+def api_training_goal():
+    data = request.get_json(force=True) or {}
+    goal = data.get('goal')
+
+    # Input validation: Integer, 1-30 range (ASVS V5)
+    try:
+        goal = int(goal)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'goal muss eine Zahl sein'}), 400
+    if goal < 1 or goal > 30:
+        return jsonify({'error': 'goal muss zwischen 1 und 30 liegen'}), 400
+
+    db = get_session()
+    try:
+        from database.models import User as _U
+        user = db.get(_U, g.user.id)
+        if user:
+            user.weekly_goal = goal
+            db.commit()
+        return jsonify({'ok': True, 'weekly_goal': goal})
+    finally:
+        db.close()
