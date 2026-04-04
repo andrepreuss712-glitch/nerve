@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04.3-05-PLAN.md
-last_updated: "2026-04-04T10:32:29.967Z"
+status: verifying
+stopped_at: Completed 04.3-06-PLAN.md
+last_updated: "2026-04-04T10:36:22.659Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 11
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 46
-  completed_plans: 39
+  completed_plans: 40
   percent: 65
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 Phase: 04.3 (design-unification) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-04
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
@@ -90,6 +90,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.3-design-unification P03 | 3 | 2 tasks | 2 files |
 | Phase 04.3-design-unification P04 | 3min | 2 tasks | 3 files |
 | Phase 04.3-design-unification P05 | 5 | 2 tasks | 2 files |
+| Phase 04.3-design-unification P06 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -187,6 +188,8 @@ Recent decisions affecting current work:
 - [Phase 04.3-design-unification]: profile_editor inputs use explicit #1C2333/#2D3748 hex over CSS vars — vars too dark to distinguish from page bg
 - [Phase 04.3-design-unification]: All help.html #E8B040 orange replaced with #00D4AA teal — section headers, focus borders, hover states, contact link
 - [Phase 04.3-design-unification]: app.html stats footer left intact - not a legal links footer; Rechtliches tab outside role-check for all-user visibility
+- [Phase 04.3-design-unification]: Training language sourced from Jinja preferred_language const — TRAINING_LANGUAGES kept for ring tones, selectLanguage() removed, no client-side UI switching
+- [Phase 04.3-design-unification]: Sidebar Settings pinned to bottom via flex:1 spacer div inside .g-sidebar-inner — preserves collapsed sidebar CSS, no position:fixed used
 
 ### Roadmap Evolution
 
@@ -231,6 +234,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-04T10:32:29.964Z
-Stopped at: Completed 04.3-05-PLAN.md
+Last session: 2026-04-04T10:36:22.655Z
+Stopped at: Completed 04.3-06-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)

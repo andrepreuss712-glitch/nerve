@@ -209,7 +209,7 @@ Plans:
 - [x] 04.3-03-PLAN.md — Einstellungen + Analytics Dark Theme Fixes (DU-04, DU-05)
 - [x] 04.3-04-PLAN.md — Training + Profil-Editor + Hilfe-Center Dark Theme (DU-06, DU-07, DU-08)
 - [x] 04.3-05-PLAN.md — Footer-Links entfernen + Header aufräumen + Rechtliches Tab (DU-09, DU-10)
-- [ ] 04.3-06-PLAN.md — Sprachauswahl aus Training + Settings-Button Fix + Dark Theme Sweep (DU-11, DU-12, DU-03)
+- [x] 04.3-06-PLAN.md — Sprachauswahl aus Training + Settings-Button Fix + Dark Theme Sweep (DU-11, DU-12, DU-03)
 
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
@@ -236,7 +236,7 @@ Phases execute in numeric order.
 | 4. Payments & Legal | 1/3 | In Progress|  |
 | 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
 | 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
-| 4.3 Design Unification | 4/6 | In Progress|  |
+| 4.3 Design Unification | 6/6 | Complete   | 2026-04-04 |
 | 5. Launch | 0/? | Not started | - |
 
 ---

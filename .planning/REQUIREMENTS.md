@@ -71,10 +71,10 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [x] **DU-06**: Training-Seite hat dunklen Hintergrund; Anrufen-Button ist kontrastreich (Teal auf Dark)
 - [x] **DU-07**: Profil-Editor hat dunklen Hintergrund, Input-Felder mit dunklem BG + heller Border, Labels in Weiß/Teal
 - [x] **DU-08**: Hilfe-Center konsistent mit Dark Theme; Section-Headers in Teal statt Orange
-- [ ] **DU-09**: Footer-Links (Impressum, AGB, Datenschutz) aus allen Seiten entfernt; stattdessen in Einstellungen unter "Rechtliches" Tab
-- [ ] **DU-10**: Header-Bereich ohne `admin@nerve.local` und Logout-Button; E-Mail-Anzeige und Logout in Einstellungen (Profil-Tab)
-- [ ] **DU-11**: Sprach-Buttons aus Training-Seite entfernt; Spracheinstellung in Einstellungen (Profil-Tab, "Bevorzugte Sprache")
-- [ ] **DU-12**: Settings-Button in Sidebar hat identische Pixel-Position auf allen Seiten (kein Springen)
+- [x] **DU-09**: Footer-Links (Impressum, AGB, Datenschutz) aus allen Seiten entfernt; stattdessen in Einstellungen unter "Rechtliches" Tab
+- [x] **DU-10**: Header-Bereich ohne `admin@nerve.local` und Logout-Button; E-Mail-Anzeige und Logout in Einstellungen (Profil-Tab)
+- [x] **DU-11**: Sprach-Buttons aus Training-Seite entfernt; Spracheinstellung in Einstellungen (Profil-Tab, "Bevorzugte Sprache")
+- [x] **DU-12**: Settings-Button in Sidebar hat identische Pixel-Position auf allen Seiten (kein Springen)
 
 ### Business Setup
 
@@ -175,10 +175,10 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | DU-06 | Phase 4.3 | Complete |
 | DU-07 | Phase 4.3 | Complete |
 | DU-08 | Phase 4.3 | Complete |
-| DU-09 | Phase 4.3 | Pending |
-| DU-10 | Phase 4.3 | Pending |
-| DU-11 | Phase 4.3 | Pending |
-| DU-12 | Phase 4.3 | Pending |
+| DU-09 | Phase 4.3 | Complete |
+| DU-10 | Phase 4.3 | Complete |
+| DU-11 | Phase 4.3 | Complete |
+| DU-12 | Phase 4.3 | Complete |
 | LAUNCH-01 | Phase 5 | Pending |
 
 **Coverage:**
