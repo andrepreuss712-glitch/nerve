@@ -21,6 +21,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 04.1: Live-Mikrofon Fix** - Replace server-side PyAudio with browser getUserMedia + Socket.IO streaming (INSERTED)  (completed 2026-04-03)
 - [x] **Phase 04.2: Cold Call und Meeting Modi** - Two distinct live session modes with DSGVO-compliant consent flow and EWB buttons (INSERTED) (completed 2026-04-03)
 - [x] **Phase 04.3: Design Unification** - Light/Dark Mode entfernen, einheitliches dunkles Theme, Beenden-Button Fix, UI-Elemente konsolidieren (INSERTED) (completed 2026-04-04)
+- [ ] **Phase 04.5: Training Analytics & Tools** - Analytics-Panel mit Stats, Heatmap, Phrasen-Bank, Wochenziel, Quick-Training (INSERTED)
+- [ ] **Phase 04.6: Sales Performance Calculator** - Interaktiver ROI-Rechner im Dashboard: echte Call-Daten + Simulations-Schieberegler, KPI-Karten, Charts, Umsatz-Forecast (INSERTED)
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
 ## Phase Details
@@ -211,6 +213,52 @@ Plans:
 - [x] 04.3-05-PLAN.md — Footer-Links entfernen + Header aufräumen + Rechtliches Tab (DU-09, DU-10)
 - [x] 04.3-06-PLAN.md — Sprachauswahl aus Training + Settings-Button Fix + Dark Theme Sweep (DU-11, DU-12, DU-03)
 
+### Phase 04.5: Training Analytics & Tools (INSERTED)
+
+**Goal**: Die Training-Seite zeigt rechts neben den Einstellungen sinnvolle Statistiken (Fortschritt, Einwand-Heatmap, Stärken/Schwächen, Verbesserungskurve) und intelligente Tools (KI-Empfehlung, Quick-Training, Phrasen-Bank, Wochenziel, Letzte Session) — der leere Platz ist vollständig genutzt.
+**Depends on**: Phase 04.3 (Training-Seite Layout + Light Content Design)
+**Requirements**: TA-01, TA-02, TA-03, TA-04, TA-05, TA-06, TA-07, TA-08, TA-09
+**Success Criteria** (what must be TRUE):
+  1. `GET /api/training/stats` liefert Sessions, Dauer, Streak, Heatmap-Daten für den eingeloggten User
+  2. `GET /api/training/recommendation` liefert eine regelbasierte KI-Empfehlung basierend auf Schwächen
+  3. Einwand-Heatmap zeigt alle 7 Einwand-Typen als farbige Kacheln (grün/gelb/rot nach Erfolgsquote)
+  4. Klick auf Heatmap-Kachel startet Quick-Training mit diesem Einwand-Typ
+  5. Phrasen-Bank zeigt Wendepunkt-Sätze aus Post-Call Analysen, filterbar nach Einwand-Typ
+  6. Wochenziel-Card: User kann Ziel setzen, Fortschrittsbalken und Streak werden korrekt berechnet
+  7. Letzte Session Card zeigt kompakte Zusammenfassung der letzten Trainings-Session
+  8. Alle neuen Cards verwenden exakt die Design-Spezifikation (#FFFFFF Card BG, 12px radius, teal #00D4AA Akzente)
+  9. Keine neuen Farben außerhalb der definierten Palette, keine Gradient-Backgrounds, Sidebar unverändert
+**UI hint**: yes
+**Plans**: 4 plans
+
+Plans:
+- [x] 04.5-01-PLAN.md — DB-Schema + ConversationLog-Persistenz fuer Training-Sessions (TA-01, TA-05)
+- [x] 04.5-02-PLAN.md — 5 neue API-Endpoints: stats, recommendation, phrases, goal, last-session (TA-01, TA-02, TA-05, TA-06, TA-07)
+- [x] 04.5-03-PLAN.md — Frontend Analytics Panel: 7 Cards + Chart.js + CSS + JS Fetch (TA-01, TA-03, TA-05, TA-06, TA-07, TA-08, TA-09)
+- [ ] 04.5-04-PLAN.md — Quick-Training Flow + Visual Verification Checkpoint (TA-04, TA-08, TA-09)
+
+### Phase 04.6: Sales Performance Calculator (INSERTED)
+
+**Goal**: Der User sieht im Dashboard auf einen Blick was NERVE ihm finanziell bringt — echte Call-Daten kombiniert mit einem interaktiven Simulations-Rechner. Rechtfertigt den Preis (99€/Mo) mit harten Zahlen und macht das Dashboard zum täglichen Anlaufpunkt.
+**Depends on**: Phase 04.3 (Light Content Design), Phase 04.5 (ConversationLog-Persistenz)
+**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04, PERF-05, PERF-06
+**Success Criteria** (what must be TRUE):
+  1. `GET /api/performance` liefert echte Metriken: Calls/Woche, Closing-Rate, Einwand-Erfolgsquote, Umsatz-Forecast
+  2. Dashboard zeigt KPI-Karten (Deals, Umsatz, Wachstum %, ROI) mit echten User-Daten
+  3. Balkendiagramm zeigt Call-Aktivität pro Woche/Monat (Chart.js)
+  4. Wachstumskurve zeigt Umsatz-Forecast über 3/6/12 Monate (S-Kurve, Chart.js)
+  5. Simulations-Modus: 5 Schieberegler (Calls/Tag, Show-Rate, Closing-Rate, Deal-Wert, Arbeitstage) berechnen live Umsatz-Szenarien
+  6. ROI-Berechnung: "NERVE kostet 99€ und bringt dir X.XXX€ mehr" — basierend auf Einwand-Verbesserung
+  7. Design exakt nach Spezifikation: #FFFFFF Cards, 12px Radius, #00D4AA Teal, DM Sans, keine eigenen Farben
+**UI hint**: yes
+**Plans**: 4 plans
+
+Plans:
+- [x] 04.6-01-PLAN.md — DB-Migration (result + avg_deal_wert) + performance Blueprint + 3 API-Endpoints (PERF-01, PERF-02)
+- [ ] 04.6-02-PLAN.md — Dashboard HTML: Sales Performance Sektion + KPI-Karten + Charts + Slider + Modal (PERF-03, PERF-04, PERF-05, PERF-06)
+- [ ] 04.6-03-PLAN.md — CSS Slider-Styling + vollstaendiges JavaScript (Chart.js + Simulation + Modal + Tagging) (PERF-03, PERF-04, PERF-05, PERF-06)
+- [ ] 04.6-04-PLAN.md — End-to-End visuelle Verifikation + Checkpoint (PERF-01 bis PERF-06)
+
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
 **Depends on**: Phase 4
@@ -237,6 +285,8 @@ Phases execute in numeric order.
 | 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
 | 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
 | 4.3 Design Unification | 6/6 | Complete   | 2026-04-04 |
+| 4.5 Training Analytics & Tools | 0/4 | Not started | - |
+| 4.6 Sales Performance Calculator | 1/4 | In Progress|  |
 | 5. Launch | 0/? | Not started | - |
 
 ---
