@@ -1283,3 +1283,66 @@ body.kompakt .help-fab,body.live-active .help-fab{display:none}
   font-weight: 600;
 }
 .g-sidebar.collapsed .sidebar-user-popup { display: none !important; }
+
+/* ── Sales Performance Calculator ─────────────────────────────────────────── */
+
+/* Slider Track + Thumb */
+input[type="range"].perf-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #E5E7EB;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"].perf-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #00D4AA;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,212,170,0.3);
+}
+input[type="range"].perf-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #00D4AA;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* KPI-Karten-Grid: 4 Spalten -> 2 auf Tablet -> 1 auf Mobile */
+#perf-kpis {
+  display: none;  /* JS zeigt via .style.display = 'grid' */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) {
+  #perf-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  #perf-kpis { grid-template-columns: 1fr; }
+}
+
+/* Charts-Grid: 2 Spalten -> 1 auf Mobile */
+#perf-charts {
+  display: none;  /* JS zeigt via .style.display = 'grid' */
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 768px) {
+  #perf-charts { grid-template-columns: 1fr; }
+}
+
+/* Simulations-Slider-Grid: 2 Spalten -> 1 auf Mobile */
+.perf-slider-group { margin-bottom: 4px; }
+@media (max-width: 768px) {
+  #perf-sim-panel > div:nth-child(3) {
+    grid-template-columns: 1fr !important;
+  }
+}
