@@ -189,14 +189,6 @@
   padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;
   white-space:nowrap;letter-spacing:.03em;text-decoration:none}
 
-/* ── Language selector ── */
-.t-lang-btns{display:flex;flex-wrap:wrap;gap:6px}
-.t-lang-btn{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:8px;
-  color:var(--page-text-secondary);font-size:12px;font-weight:600;padding:5px 11px;cursor:pointer;
-  transition:border-color .15s,color .15s;white-space:nowrap}
-.t-lang-btn:hover{border-color:var(--glass-border-hover);color:var(--page-text-color)}
-.t-lang-btn.t-lang-active{border-color:#00D4AA;color:#00D4AA;background:rgba(0,212,170,0.06)}
-
 /* ── Scenario modal ── */
 .t-modal-bg{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.75);
   display:flex;align-items:center;justify-content:center;padding:20px}
@@ -264,18 +256,6 @@
     </div>
 
     <div class="t-setup-wrap">
-
-      <div class="t-section">
-        <div class="t-section-label">Sprache</div>
-        <div class="t-lang-btns" id="t-langBtns">
-          {% for code, lang in training_languages.items() %}
-          <button class="t-lang-btn {% if code == preferred_language %}t-lang-active{% endif %}"
-                  data-code="{{ code }}" onclick="selectLanguage('{{ code }}')">
-            {{ lang.flag }} {{ lang.label }}
-          </button>
-          {% endfor %}
-        </div>
-      </div>
 
       <div class="t-section">
         <div class="t-section-label">Verkaufsprofil</div>
@@ -488,7 +468,7 @@
 // ── State ──────────────────────────────────────────────────────────────────────
 const TRAINING_LANGUAGES = {{ training_languages | tojson }};
 const PLAN_TYP = {{ (g.org.plan_typ or '') | tojson }};
-let currentLanguage = {{ preferred_language | default('de') | tojson }};
+const currentLanguage = {{ preferred_language | tojson }};
 let tUI             = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES['de']).ui;
 let selectedScenario= null;
 let selectedDiff    = 'mittel';
@@ -508,13 +488,6 @@ let currentAudio    = null;
 const audioStore    = {};   // id → {b64, el}
 let msgCnt          = 0;
 
-// Pre-activate saved language on load
-document.addEventListener('DOMContentLoaded', function() {
-  if (currentLanguage !== 'de') {
-    selectLanguage(currentLanguage);
-  }
-});
-
 // ── Setup ──────────────────────────────────────────────────────────────────────
 function selectModus(modus) {
   trainingModus = modus;
@@ -528,21 +501,6 @@ function selectDiff(key) {
   const card = document.querySelector('.t-diff-card[data-key="' + key + '"]');
   if (card) card.classList.add('t-diff-active');
   selectedDiff = key;
-}
-
-function selectLanguage(code) {
-  currentLanguage = code;
-  tUI = (TRAINING_LANGUAGES[code] || TRAINING_LANGUAGES['de']).ui;
-  document.querySelectorAll('.t-lang-btn').forEach(b => {
-    b.classList.toggle('t-lang-active', b.dataset.code === code);
-  });
-  const sendBtn = document.getElementById('t-sendBtn');
-  if (sendBtn) sendBtn.textContent = tUI.senden || 'Senden →';
-  const helpBtn = document.getElementById('t-helpBtn');
-  if (helpBtn) helpBtn.textContent = tUI.hilfe_btn || '💡 Was soll ich sagen?';
-  // Update Beenden button in chat header
-  const endBtn = document.getElementById('t-endBtn');
-  if (endBtn) endBtn.textContent = tUI.beenden || '■ Beenden';
 }
 
 function checkReady() {
