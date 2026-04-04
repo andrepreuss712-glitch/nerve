@@ -61,6 +61,21 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [x] **MODE-05**: `session_mode` ('cold_call'/'meeting') wird in `ConversationLog` gespeichert; aktiver Modus als Badge im `/live` Header sichtbar
 - [x] **MODE-06**: EWB-Button-Presses werden in `quick_action_log` mit `typ='ewb'` geloggt und über bestehenden `qa_count`-Mechanismus in `api_beenden` persistiert
 
+### Design Unification (INSERTED — Phase 04.3)
+
+- [ ] **DU-01**: Beenden-Button im Live-Assistenten funktioniert — User kann jederzeit zurück zum Dashboard navigieren
+- [ ] **DU-02**: Light Mode komplett entfernt — alle CSS Media Queries, Variablen und Toggle-Logic für `prefers-color-scheme: light` sind gelöscht (nicht versteckt)
+- [ ] **DU-03**: Dashboard, Training, Live-Assistent, Analytics, Profil, Profil-Editor, Einstellungen (alle 4 Tabs), Hilfe-Center zeigen einheitliches dunkles Farbschema
+- [ ] **DU-04**: Einstellungen-Seite hat dunklen Page-Background; Cards sind nahtlos integriert (kein "schweben auf hellem Hintergrund")
+- [ ] **DU-05**: Analytics/Logs-Tabelle hat dunklen Page-Background und Dark-Theme-Styling
+- [ ] **DU-06**: Training-Seite hat dunklen Hintergrund; Anrufen-Button ist kontrastreich (Teal auf Dark)
+- [ ] **DU-07**: Profil-Editor hat dunklen Hintergrund, Input-Felder mit dunklem BG + heller Border, Labels in Weiß/Teal
+- [ ] **DU-08**: Hilfe-Center konsistent mit Dark Theme; Section-Headers in Teal statt Orange
+- [ ] **DU-09**: Footer-Links (Impressum, AGB, Datenschutz) aus allen Seiten entfernt; stattdessen in Einstellungen unter "Rechtliches" Tab
+- [ ] **DU-10**: Header-Bereich ohne `admin@nerve.local` und Logout-Button; E-Mail-Anzeige und Logout in Einstellungen (Profil-Tab)
+- [ ] **DU-11**: Sprach-Buttons aus Training-Seite entfernt; Spracheinstellung in Einstellungen (Profil-Tab, "Bevorzugte Sprache")
+- [ ] **DU-12**: Settings-Button in Sidebar hat identische Pixel-Position auf allen Seiten (kein Springen)
+
 ### Business Setup
 
 - [ ] **BIZ-01**: Gewerbeanmeldung beim Gewerbeamt Iserlohn ist eingereicht
@@ -152,13 +167,25 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | MODE-04 | Phase 4.2 | Complete |
 | MODE-05 | Phase 4.2 | Complete |
 | MODE-06 | Phase 4.2 | Complete |
+| DU-01 | Phase 4.3 | Pending |
+| DU-02 | Phase 4.3 | Pending |
+| DU-03 | Phase 4.3 | Pending |
+| DU-04 | Phase 4.3 | Pending |
+| DU-05 | Phase 4.3 | Pending |
+| DU-06 | Phase 4.3 | Pending |
+| DU-07 | Phase 4.3 | Pending |
+| DU-08 | Phase 4.3 | Pending |
+| DU-09 | Phase 4.3 | Pending |
+| DU-10 | Phase 4.3 | Pending |
+| DU-11 | Phase 4.3 | Pending |
+| DU-12 | Phase 4.3 | Pending |
 | LAUNCH-01 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 41 total
-- Mapped to phases: 41/41
+- v1 requirements: 53 total
+- Mapped to phases: 53/53
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-30*
-*Last updated: 2026-04-03 — MODE-01 through MODE-06 added for Phase 4.2*
+*Last updated: 2026-04-04 — DU-01 through DU-12 added for Phase 4.3 Design Unification*

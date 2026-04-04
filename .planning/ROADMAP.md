@@ -20,6 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
 - [x] **Phase 04.1: Live-Mikrofon Fix** - Replace server-side PyAudio with browser getUserMedia + Socket.IO streaming (INSERTED)  (completed 2026-04-03)
 - [x] **Phase 04.2: Cold Call und Meeting Modi** - Two distinct live session modes with DSGVO-compliant consent flow and EWB buttons (INSERTED) (completed 2026-04-03)
+- [ ] **Phase 04.3: Design Unification** - Light/Dark Mode entfernen, einheitliches dunkles Theme, Beenden-Button Fix, UI-Elemente konsolidieren (INSERTED)
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
 ## Phase Details
@@ -188,6 +189,23 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 04.2.1 to break down)
 
+### Phase 04.3: Design Unification (INSERTED)
+
+**Goal:** Einheitliches dunkles Theme auf allen Seiten — Light/Dark Mode komplett entfernt, konsistentes Farbschema (#0D1117 Page BG / #1C2333 Cards / #00D4AA Teal Akzent), kritischer Beenden-Button Fix, UI-Elemente (Footer, Header, Sprachauswahl) umgezogen.
+**Depends on**: Phase 04.2
+**Requirements**: DU-01, DU-02, DU-03, DU-04, DU-05, DU-06, DU-07, DU-08, DU-09, DU-10, DU-11, DU-12
+**Success Criteria** (what must be TRUE):
+  1. Beenden-Button in `/live` navigiert zurück zum Dashboard
+  2. Kein `prefers-color-scheme` Media Query und kein Theme-Toggle mehr im Codebase
+  3. Alle 8 App-Bereiche (Dashboard, Training, Live, Analytics, Profil, Profil-Editor, Einstellungen, Hilfe-Center) zeigen identisches dunkles Farbschema
+  4. Footer-Links, Header-Email/Logout und Sprach-Buttons aus den Seiten entfernt und in Einstellungen verschoben
+  5. Settings-Button in Sidebar an gleicher Position auf allen Seiten
+**UI hint**: yes
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 04.3 to break down)
+
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
 **Depends on**: Phase 4
@@ -213,6 +231,7 @@ Phases execute in numeric order.
 | 4. Payments & Legal | 1/3 | In Progress|  |
 | 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
 | 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
+| 4.3 Design Unification | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
 ---
