@@ -355,6 +355,26 @@
   </section>
   <!-- ── Ende Sales Performance Calculator ──────────────────────────────────── -->
 
+  <!-- Ergebnis-Tag (wird per JS gefuellt wenn URL-Param tag_session vorhanden) -->
+  <div id="result-tag-bar" style="display:none;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:16px 20px;margin-bottom:20px;border-left:3px solid #00D4AA">
+    <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:10px">Wie lief der Call?</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button id="tag-btn-gewonnen" onclick="tagSession('gewonnen')"
+        style="padding:8px 18px;background:#00D4AA;color:#FFFFFF;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+        Gewonnen
+      </button>
+      <button id="tag-btn-verloren" onclick="tagSession('verloren')"
+        style="padding:8px 18px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+        Verloren
+      </button>
+      <button id="tag-btn-offen" onclick="tagSession(null)"
+        style="padding:8px 18px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+        Offen lassen
+      </button>
+    </div>
+    <div id="tag-feedback" style="font-size:12px;color:#00D4AA;margin-top:8px;display:none">Gespeichert.</div>
+  </div>
+
   <!-- Footer: Streak + Level chip -->
   <div class="dash-footer">
     {% if streak and streak > 0 %}
@@ -412,4 +432,37 @@ fetch('/api/notifications').then(r => r.json()).then(d => {
   });
 }).catch(function() {});
 </script>
+<!-- ── Deal-Wert-Modal ───────────────────────────────────────────────────── -->
+<div id="deal-wert-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#FFFFFF;border-radius:16px;padding:32px;max-width:420px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(0,0,0,0.12)">
+    <div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px">Dein Deal-Wert</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:24px">
+      Wie hoch ist dein durchschnittlicher Deal-Wert? Diese Zahl berechnet deinen Umsatz-Forecast.
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:13px;font-weight:500;color:#1a1a1a;display:block;margin-bottom:6px">
+        Durchschnittlicher Deal-Wert (&#8364;)
+      </label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="deal-wert-input" placeholder="z.B. 5000" min="1" max="10000000"
+          style="flex:1;padding:10px 14px;border:1px solid #E5E7EB;border-radius:8px;font-size:15px;color:#1a1a1a;background:#FFFFFF;outline:none"
+          onfocus="this.style.borderColor='#00D4AA'" onblur="this.style.borderColor='#E5E7EB'">
+        <span style="font-size:15px;font-weight:600;color:#6b7280">&#8364;</span>
+      </div>
+      <div id="deal-wert-error" style="font-size:12px;color:#f87171;margin-top:4px;display:none">
+        Bitte gib einen gueltigen Betrag ein (min. 1 Euro)
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveDealWert()"
+        style="flex:1;padding:11px 0;background:#00D4AA;color:#FFFFFF;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+        Speichern
+      </button>
+      <button onclick="closeDealWertModal()"
+        style="padding:11px 20px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+        Spaeter
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
