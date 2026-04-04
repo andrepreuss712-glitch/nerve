@@ -63,7 +63,7 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 
 ### Design Unification (INSERTED — Phase 04.3)
 
-- [ ] **DU-01**: Beenden-Button im Live-Assistenten funktioniert — User kann jederzeit zurück zum Dashboard navigieren
+- [x] **DU-01**: Beenden-Button im Live-Assistenten funktioniert — User kann jederzeit zurück zum Dashboard navigieren
 - [ ] **DU-02**: Light Mode komplett entfernt — alle CSS Media Queries, Variablen und Toggle-Logic für `prefers-color-scheme: light` sind gelöscht (nicht versteckt)
 - [ ] **DU-03**: Dashboard, Training, Live-Assistent, Analytics, Profil, Profil-Editor, Einstellungen (alle 4 Tabs), Hilfe-Center zeigen einheitliches dunkles Farbschema
 - [ ] **DU-04**: Einstellungen-Seite hat dunklen Page-Background; Cards sind nahtlos integriert (kein "schweben auf hellem Hintergrund")
@@ -167,7 +167,7 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | MODE-04 | Phase 4.2 | Complete |
 | MODE-05 | Phase 4.2 | Complete |
 | MODE-06 | Phase 4.2 | Complete |
-| DU-01 | Phase 4.3 | Pending |
+| DU-01 | Phase 4.3 | Complete |
 | DU-02 | Phase 4.3 | Pending |
 | DU-03 | Phase 4.3 | Pending |
 | DU-04 | Phase 4.3 | Pending |
