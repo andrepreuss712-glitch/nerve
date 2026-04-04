@@ -1,7 +1,7 @@
 import json
 import base64
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from flask import (Blueprint, render_template, request, jsonify,
                    g, session as flask_session)
 from routes.auth import login_required
@@ -551,5 +551,198 @@ def training_scenarios_delete(sid):
         db.delete(s)
         db.commit()
         return jsonify({'ok': True})
+    finally:
+        db.close()
+
+
+# ── Analytics API Endpoints ────────────────────────────────────────────────────
+
+@training_bp.route('/api/training/stats')
+@login_required
+def api_training_stats():
+    db = get_session()
+    try:
+        from database.models import User as _U, ConversationLog as _CL
+        user = db.get(_U, g.user.id)
+        heute = datetime.now()
+        woche_start = (heute - timedelta(days=heute.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+        monat_start = heute.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        basis = db.query(_CL).filter(_CL.user_id == g.user.id, _CL.typ == 'training')
+        sessions_gesamt = basis.count()
+        sessions_diese_woche = basis.filter(_CL.created_at >= woche_start).count()
+        sessions_diesen_monat = basis.filter(_CL.created_at >= monat_start).count()
+
+        alle_logs = basis.order_by(_CL.created_at.desc()).all()
+        avg_dauer = 0
+        if alle_logs:
+            dauern = [l.dauer_sekunden for l in alle_logs if l.dauer_sekunden]
+            avg_dauer = int(sum(dauern) / len(dauern)) if dauern else 0
+
+        # Heatmap: Erfolgsquote pro Einwand-Typ
+        EINWAND_TYPEN = ['Keine Zeit', 'Zu teuer', 'Kein Interesse',
+                         'Haben schon', 'Muss ueberlegen',
+                         'Schicken Sie Unterlagen', 'Kein Bedarf']
+        einwand_stats = {et: {'gesamt': 0, 'behandelt': 0} for et in EINWAND_TYPEN}
+        for log in alle_logs:
+            if not log.gegenargument_details:
+                continue
+            try:
+                for ga in json.loads(log.gegenargument_details):
+                    et = ga.get('einwand_typ', '')
+                    if et in einwand_stats:
+                        einwand_stats[et]['gesamt'] += 1
+                        if ga.get('behandelt'):
+                            einwand_stats[et]['behandelt'] += 1
+            except Exception:
+                pass
+
+        # Trend: letzte 10 Sessions gesamt_score
+        letzte_scores = [l.kb_end or 0 for l in reversed(alle_logs[:10])]
+
+        return jsonify({
+            'ok': True,
+            'sessions': {
+                'diese_woche': sessions_diese_woche,
+                'diesen_monat': sessions_diesen_monat,
+                'gesamt': sessions_gesamt,
+            },
+            'avg_dauer_sekunden': avg_dauer,
+            'streak': user.streak_count or 0,
+            'streak_date': user.streak_last_date.isoformat() if user.streak_last_date else None,
+            'wochenziel': user.weekly_goal or 5,
+            'heatmap': einwand_stats,
+            'trend_scores': letzte_scores,
+        })
+    finally:
+        db.close()
+
+
+@training_bp.route('/api/training/recommendation')
+@login_required
+def api_training_recommendation():
+    db = get_session()
+    try:
+        from database.models import User as _U, ConversationLog as _CL
+        user = db.get(_U, g.user.id)
+        alle_logs = db.query(_CL).filter(
+            _CL.user_id == g.user.id, _CL.typ == 'training'
+        ).order_by(_CL.created_at.desc()).limit(50).all()
+
+        if not alle_logs:
+            return jsonify({'ok': True, 'typ': 'empty',
+                'text': 'Starte dein erstes Training um personalisierte Empfehlungen zu erhalten.',
+                'quick_url': '/training'})
+
+        # Heatmap berechnen
+        einwand_stats = {}
+        for log in alle_logs:
+            if not log.gegenargument_details:
+                continue
+            try:
+                for ga in json.loads(log.gegenargument_details):
+                    et = ga.get('einwand_typ', '')
+                    if not et:
+                        continue
+                    if et not in einwand_stats:
+                        einwand_stats[et] = {'gesamt': 0, 'behandelt': 0}
+                    einwand_stats[et]['gesamt'] += 1
+                    if ga.get('behandelt'):
+                        einwand_stats[et]['behandelt'] += 1
+            except Exception:
+                pass
+
+        # Regel 1: Schlechtester Einwand-Typ (< 40% + >= 3 Versuche)
+        schlechtester = None
+        schlechteste_quote = 1.0
+        for et, stats in einwand_stats.items():
+            if stats['gesamt'] >= 3:
+                quote = stats['behandelt'] / stats['gesamt']
+                if quote < schlechteste_quote:
+                    schlechteste_quote = quote
+                    schlechtester = et
+
+        if schlechtester and schlechteste_quote < 0.40:
+            verluste = einwand_stats[schlechtester]['gesamt'] - einwand_stats[schlechtester]['behandelt']
+            return jsonify({'ok': True, 'typ': 'schwaeche', 'einwand_typ': schlechtester,
+                'text': f'Du hast "{schlechtester}" {verluste}x verloren \u2014 ueb das jetzt.',
+                'quick_url': f'/training?quick=1&einwand_typ={schlechtester}'})
+
+        # Regel 2: Streak-Break (> 3 Tage)
+        if user.streak_last_date:
+            tage_seit = (date.today() - user.streak_last_date).days
+            if tage_seit > 3:
+                return jsonify({'ok': True, 'typ': 'streak_break',
+                    'text': f'Seit {tage_seit} Tagen nicht trainiert \u2014 10 Minuten reichen.',
+                    'quick_url': '/training'})
+
+        # Regel 3: Positiver Trend (letzte 5 Sessions vs. vorherige 5)
+        if len(alle_logs) >= 10:
+            letzte_5 = [l.kb_end or 0 for l in alle_logs[:5]]
+            vorherige_5 = [l.kb_end or 0 for l in alle_logs[5:10]]
+            avg_neu = sum(letzte_5) / 5
+            avg_alt = sum(vorherige_5) / 5
+            if avg_alt > 0 and ((avg_neu - avg_alt) / avg_alt) > 0.15:
+                return jsonify({'ok': True, 'typ': 'trend',
+                    'text': f'Dein Score ist von {int(avg_alt)} auf {int(avg_neu)} gestiegen \u2014 weiter so!',
+                    'quick_url': '/training'})
+
+        # Fallback
+        fallback_einwand = schlechtester or 'Zu teuer'
+        return jsonify({'ok': True, 'typ': 'fallback',
+            'text': f'Trainiere heute den haertesten Einwand: {fallback_einwand}',
+            'quick_url': f'/training?quick=1&einwand_typ={fallback_einwand}'})
+    finally:
+        db.close()
+
+
+@training_bp.route('/api/training/last-session')
+@login_required
+def api_training_last_session():
+    db = get_session()
+    try:
+        from database.models import ConversationLog as _CL
+        log = db.query(_CL).filter(
+            _CL.user_id == g.user.id, _CL.typ == 'training'
+        ).order_by(_CL.created_at.desc()).first()
+
+        if not log:
+            return jsonify({'ok': True, 'session': None})
+
+        haupt_einwand = None
+        top_verbesserung = None
+
+        # Haupt-Einwand aus gegenargument_details
+        if log.gegenargument_details:
+            try:
+                ga_list = json.loads(log.gegenargument_details)
+                if ga_list:
+                    haupt_einwand = ga_list[0].get('einwand_typ', '')
+            except Exception:
+                pass
+
+        # Top-Feedback aus phasen_details (= full scoring dict from Plan 01)
+        if log.phasen_details:
+            try:
+                scoring = json.loads(log.phasen_details)
+                verbesserungen = scoring.get('verbesserungen', [])
+                if verbesserungen:
+                    top_verbesserung = verbesserungen[0]
+            except Exception:
+                pass
+
+        return jsonify({
+            'ok': True,
+            'session': {
+                'id': log.id,
+                'profile_name': log.profile_name,
+                'dauer_sekunden': log.dauer_sekunden,
+                'gesamt_score': log.kb_end,
+                'haupt_einwand': haupt_einwand,
+                'top_verbesserung': top_verbesserung,
+                'datum': log.created_at.strftime('%d.%m.%Y') if log.created_at else None,
+                'dashboard_link': f'/dashboard#session-{log.id}',
+            }
+        })
     finally:
         db.close()
