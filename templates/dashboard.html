@@ -10,7 +10,7 @@
 
 /* North Star */
 .ns-score { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); font-size: 28px; font-weight: 600; }
-.ns-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--page-text-muted); margin-bottom: 8px; }
+.ns-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1a1a1a; margin-bottom: 8px; }
 .ns-trend { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 14px; }
 
 /* Quick Actions */
@@ -20,11 +20,11 @@
 
 /* Usage row */
 .usage-panel { margin-bottom: 24px; }
-.usage-section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--page-text-muted); margin-bottom: 16px; }
+.usage-section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1a1a1a; margin-bottom: 16px; }
 .usage-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .usage-row-lbl { display: flex; justify-content: space-between; width: 100%; font-size: 14px; margin-bottom: 4px; }
 .usage-row-lbl span:last-child { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); color: var(--page-text-muted); }
-.usage-bar-wrap { background: rgba(255,255,255,0.04); border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 16px; }
+.usage-bar-wrap { background: #E2E8F0; border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 16px; }
 .usage-bar-fill { height: 100%; border-radius: 4px; }
 
 /* Recent calls */
@@ -62,9 +62,9 @@
 /* Toasts */
 .toast-wrap{position:fixed;top:16px;right:16px;z-index:1000;
   display:flex;flex-direction:column;gap:8px;max-width:280px}
-.toast{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;
+.toast{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;
   padding:12px 14px;font-size:13px;color:var(--page-text-secondary);display:flex;align-items:flex-start;
-  gap:10px;animation:slideIn .3s ease;cursor:pointer;backdrop-filter:blur(10px)}
+  gap:10px;animation:slideIn .3s ease;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
 .toast:hover{border-color:rgba(0,212,170,0.3)}
 @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 .toast-icon{font-size:16px;flex-shrink:0;margin-top:1px}
@@ -183,6 +183,177 @@
     </div>
   </div>
   {% endif %}
+
+  <!-- ── Sales Performance Calculator ──────────────────────────────────────── -->
+  <section id="perf-section" style="margin-top:32px">
+
+    <!-- Section Header + Modus-Toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="usage-section-label" style="margin-bottom:2px">Sales Performance</div>
+        <div style="font-size:13px;color:#6b7280">Deine Zahlen. Dein Potential.</div>
+      </div>
+      <div style="display:flex;background:#F0F2F5;border-radius:8px;padding:3px;gap:2px">
+        <button id="perf-mode-real" class="n-btn" onclick="perfSetMode('real')"
+          style="font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;background:#FFFFFF;color:#1a1a1a;border:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
+          Echte Daten
+        </button>
+        <button id="perf-mode-sim" class="n-btn" onclick="perfSetMode('sim')"
+          style="font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;background:transparent;color:#6b7280;border:none;cursor:pointer">
+          Simulation
+        </button>
+      </div>
+    </div>
+
+    <!-- Leerzustand (wird per JS ausgeblendet wenn Daten vorhanden) -->
+    <div id="perf-empty" style="display:none;text-align:center;padding:40px 24px;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:20px">
+      <div style="font-size:32px;margin-bottom:12px">&#128202;</div>
+      <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:6px">Starte deinen ersten Live-Call</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Sobald du Live-Calls mit NERVE durchfuehrst, siehst du hier deine echten Performance-Daten.</div>
+      <button onclick="perfSetMode('sim')" class="n-btn n-btn-primary" style="font-size:13px;padding:8px 20px">
+        Simulation ausprobieren
+      </button>
+    </div>
+
+    <!-- Lade-Zustand -->
+    <div id="perf-loading" style="text-align:center;padding:40px 24px;color:#6b7280;font-size:13px">
+      Daten werden geladen...
+    </div>
+
+    <!-- KPI-Karten (4er Reihe) -->
+    <div id="perf-kpis" style="display:none;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">
+      <!-- KPI: Deals/Monat -->
+      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:8px">Deals / Monat</div>
+        <div id="kpi-deals" style="font-size:32px;font-weight:700;color:#1a1a1a;line-height:1">&#8212;</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px">basierend auf Closing-Rate</div>
+      </div>
+      <!-- KPI: Umsatz/Monat -->
+      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:8px">Umsatz / Monat</div>
+        <div id="kpi-umsatz" style="font-size:32px;font-weight:700;color:#00D4AA;line-height:1">&#8212;</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px">Calls &times; Closing-Rate &times; Deal-Wert</div>
+      </div>
+      <!-- KPI: Wachstum 12M -->
+      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:8px">Forecast 12 Monate</div>
+        <div id="kpi-forecast" style="font-size:32px;font-weight:700;color:#1a1a1a;line-height:1">&#8212;</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px">inkl. 5% Wachstum/Monat</div>
+      </div>
+      <!-- KPI: ROI -->
+      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:8px">ROI vs. 99&#8364;/Mo</div>
+        <div id="kpi-roi" style="font-size:32px;font-weight:700;color:#1a1a1a;line-height:1">&#8212;</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px">NERVE-Mehrwert (Annahme: +15% EWB)</div>
+      </div>
+    </div>
+
+    <!-- Charts: Balken + Wachstumskurve -->
+    <div id="perf-charts" style="display:none;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <!-- Balkendiagramm -->
+      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
+        <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px">Call-Aktivitaet</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:16px">Letzte 8 Wochen</div>
+        <div style="position:relative;height:180px">
+          <canvas id="call-activity-chart"></canvas>
+        </div>
+      </div>
+      <!-- Wachstumskurve -->
+      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
+        <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px">Umsatz-Forecast</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:16px">12-Monats-Projektion (mit NERVE-Effekt)</div>
+        <div style="position:relative;height:180px">
+          <canvas id="growth-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Closing-Rate Hinweis (wenn keine Daten) -->
+    <div id="perf-no-closing" style="display:none;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:16px 20px;margin-bottom:20px;font-size:13px;color:#6b7280;border-left:3px solid #00D4AA">
+      <strong style="color:#1a1a1a">Keine Closing-Rate verfuegbar</strong> &mdash; tagge deine Calls als Gewonnen/Verloren um echte Daten zu sehen. Bis dahin: Nutze den Simulations-Modus.
+    </div>
+
+    <!-- Simulation Panel (Schieberegler) -->
+    <div id="perf-sim-panel" style="display:none;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:24px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px">Simulation</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:20px">Verschiebe die Regler um dein Potential zu berechnen</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- Slider 1: Calls/Tag -->
+        <div class="perf-slider-group">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Calls pro Tag</label>
+            <span id="lbl-calls-tag" style="font-size:13px;font-weight:700;color:#00D4AA">10</span>
+          </div>
+          <input type="range" id="sl-calls-tag" min="5" max="50" value="10"
+            oninput="perfSimUpdate()" style="width:100%">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>5</span><span>50</span></div>
+        </div>
+
+        <!-- Slider 2: Show-Rate -->
+        <div class="perf-slider-group">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Show-Rate</label>
+            <span id="lbl-show-rate" style="font-size:13px;font-weight:700;color:#00D4AA">70%</span>
+          </div>
+          <input type="range" id="sl-show-rate" min="10" max="100" value="70"
+            oninput="perfSimUpdate()" style="width:100%">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>10%</span><span>100%</span></div>
+        </div>
+
+        <!-- Slider 3: Closing-Rate -->
+        <div class="perf-slider-group">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Closing-Rate</label>
+            <span id="lbl-closing-rate" style="font-size:13px;font-weight:700;color:#00D4AA">20%</span>
+          </div>
+          <input type="range" id="sl-closing-rate" min="5" max="80" value="20"
+            oninput="perfSimUpdate()" style="width:100%">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>5%</span><span>80%</span></div>
+        </div>
+
+        <!-- Slider 4: Deal-Wert -->
+        <div class="perf-slider-group">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Avg. Deal-Wert</label>
+            <span id="lbl-deal-wert" style="font-size:13px;font-weight:700;color:#00D4AA">2.000&#8364;</span>
+          </div>
+          <input type="range" id="sl-deal-wert" min="100" max="50000" step="100" value="2000"
+            oninput="perfSimUpdate()" style="width:100%">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>100&#8364;</span><span>50.000&#8364;</span></div>
+        </div>
+
+        <!-- Slider 5: Arbeitstage -->
+        <div class="perf-slider-group" style="grid-column:1/-1">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Arbeitstage / Woche</label>
+            <span id="lbl-arbeitstage" style="font-size:13px;font-weight:700;color:#00D4AA">5</span>
+          </div>
+          <input type="range" id="sl-arbeitstage" min="3" max="7" value="5"
+            oninput="perfSimUpdate()" style="width:100%;max-width:400px">
+          <div style="display:flex;justify-content:space-between;max-width:400px;font-size:11px;color:#6b7280;margin-top:2px"><span>3</span><span>7</span></div>
+        </div>
+      </div>
+
+      <!-- Simulations-Ergebnis -->
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid #E5E7EB;display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+        <div style="text-align:center">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px">Umsatz / Monat</div>
+          <div id="sim-umsatz" style="font-size:24px;font-weight:700;color:#00D4AA">&#8212;</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px">Forecast 12M</div>
+          <div id="sim-forecast12" style="font-size:24px;font-weight:700;color:#1a1a1a">&#8212;</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px">ROI vs. 99&#8364;/Mo</div>
+          <div id="sim-roi" style="font-size:24px;font-weight:700;color:#1a1a1a">&#8212;</div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+  <!-- ── Ende Sales Performance Calculator ──────────────────────────────────── -->
 
   <!-- Footer: Streak + Level chip -->
   <div class="dash-footer">
