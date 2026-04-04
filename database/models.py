@@ -102,6 +102,8 @@ class User(Base):
     preferred_language    = Column(String(10), default='de')
     # Block 10: Theme Preference
     preferred_theme       = Column(String(10), default='dark')
+    # Block 11: Training Analytics
+    weekly_goal           = Column(Integer, default=5)
 
 
 class Profile(Base):
@@ -221,6 +223,16 @@ class ConversationLog(Base):
     typ                      = Column(String(20), default='live')
     session_mode             = Column(String(20), default='meeting')  # 'cold_call' or 'meeting'
     created_at               = Column(DateTime, default=utcnow)
+
+
+class Phrase(Base):
+    __tablename__ = 'phrases'
+    id             = Column(Integer, primary_key=True)
+    user_id        = Column(Integer, ForeignKey('users.id'), nullable=False)
+    session_id     = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
+    text           = Column(Text, nullable=False)
+    objection_type = Column(String(100), nullable=False)
+    created_at     = Column(DateTime, default=utcnow)
 
 
 # Block 5: Early Access Waitlist

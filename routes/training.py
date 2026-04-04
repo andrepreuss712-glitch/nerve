@@ -165,6 +165,7 @@ def training_start():
                 'system_prompt':   system_prompt,
                 'customer_prompt': customer_prompt,
                 'schwierigkeit':   schwierigkeit,
+                'profile_id':      profile.id,
                 'profile_name':    profile.name,
                 'profile_data':    profile_data,
                 'persona':         persona,

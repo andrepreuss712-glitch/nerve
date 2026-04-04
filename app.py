@@ -22,6 +22,7 @@ logging.getLogger('werkzeug').addFilter(_SuppressPolling())
 app = Flask(__name__)
 app.config['SECRET_KEY']       = SECRET_KEY
 app.config['SESSION_PERMANENT'] = True
+app.config['CSS_VERSION']      = '20260404-7'
 
 if SECRET_KEY == 'dev-secret-change-me' and not os.environ.get('FLASK_DEBUG'):
     raise RuntimeError('[NERVE] SECRET_KEY is insecure — set SECRET_KEY env var before starting in production')
@@ -84,6 +85,8 @@ def _migrate():
             ('preferred_language', "VARCHAR(10) DEFAULT 'de'"),
             # Block 10: Theme Preference
             ('preferred_theme', "VARCHAR(10) DEFAULT 'dark'"),
+            # Block 11: Training Analytics
+            ('weekly_goal', 'INTEGER DEFAULT 5'),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE users ADD COLUMN {col} {typedef}'))
