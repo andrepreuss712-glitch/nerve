@@ -201,10 +201,15 @@ Plans:
   4. Footer-Links, Header-Email/Logout und Sprach-Buttons aus den Seiten entfernt und in Einstellungen verschoben
   5. Settings-Button in Sidebar an gleicher Position auf allen Seiten
 **UI hint**: yes
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 04.3 to break down)
+- [ ] 04.3-01-PLAN.md — Beenden-Button Fix: Dashboard back-link in app.html header (DU-01)
+- [ ] 04.3-02-PLAN.md — Light Mode entfernen + Dark Theme CSS-Variablen auf Zielwerte setzen (DU-02, DU-03)
+- [ ] 04.3-03-PLAN.md — Einstellungen + Analytics Dark Theme Fixes (DU-04, DU-05)
+- [ ] 04.3-04-PLAN.md — Training + Profil-Editor + Hilfe-Center Dark Theme (DU-06, DU-07, DU-08)
+- [ ] 04.3-05-PLAN.md — Footer-Links entfernen + Header aufräumen + Rechtliches Tab (DU-09, DU-10)
+- [ ] 04.3-06-PLAN.md — Sprachauswahl aus Training + Settings-Button Fix + Dark Theme Sweep (DU-11, DU-12, DU-03)
 
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
@@ -231,7 +236,7 @@ Phases execute in numeric order.
 | 4. Payments & Legal | 1/3 | In Progress|  |
 | 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
 | 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
-| 4.3 Design Unification | 0/? | Not started | - |
+| 4.3 Design Unification | 0/6 | Planned | - |
 | 5. Launch | 0/? | Not started | - |
 
 ---
