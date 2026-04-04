@@ -2,14 +2,17 @@
 {% block title %} – Logs{% endblock %}
 
 {% block extra_style %}
-.empty-state{text-align:center;padding:60px 20px;color:#444466}
+.empty-state{text-align:center;padding:60px 20px;color:#8B949E}
 .empty-icon{font-size:40px;margin-bottom:12px}
 .empty-text{font-size:14px}
 .log-stats{display:flex;gap:16px;align-items:center}
 .log-stat-chip{font-size:11px;color:#6b6b80;display:flex;align-items:center;gap:4px}
 .log-stat-chip strong{color:#a0a0c0}
-.log-profil-tag{font-size:11px;background:#1a1a2e;border:1px solid #2e2e40;
+.log-profil-tag{font-size:11px;background:#1C2333;border:1px solid #2D3748;
   color:#8888aa;padding:1px 7px;border-radius:20px;white-space:nowrap}
+.tbl tr:nth-child(odd) td { background: #1C2333; }
+.tbl tr:nth-child(even) td { background: #161B22; }
+.tbl thead th { background: #0D1117; color: #8B949E; border-bottom: 1px solid #2D3748; }
 {% endblock %}
 
 {% block content %}
@@ -45,7 +48,7 @@
             {% if log.profil != '–' %}
             <span class="log-profil-tag">{{ log.profil }}</span>
             {% else %}
-            <span style="color:#444466">–</span>
+            <span style="color:#8B949E">–</span>
             {% endif %}
           </td>
           <td style="color:#6b6b80;font-variant-numeric:tabular-nums">{{ log.dauer }}</td>
@@ -54,14 +57,14 @@
             {% if log.einwaende > 0 %}
             <span style="color:#f0a05a;font-weight:700">{{ log.einwaende }}</span>
             {% else %}
-            <span style="color:#444466">0</span>
+            <span style="color:#8B949E">0</span>
             {% endif %}
           </td>
           <td>
             {% if log.painpoints > 0 %}
             <span style="color:#ff8040;font-weight:700">{{ log.painpoints }}</span>
             {% else %}
-            <span style="color:#444466">0</span>
+            <span style="color:#8B949E">0</span>
             {% endif %}
           </td>
           <td>
@@ -78,7 +81,7 @@
   <div class="empty-state">
     <div class="empty-icon">📋</div>
     <div class="empty-text">Noch keine Logs vorhanden.<br>
-      <a href="/live" style="color:#E8B040">Gespräch starten →</a>
+      <a href="/live" style="color:#00D4AA">Gespräch starten →</a>
     </div>
   </div>
   {% endif %}
