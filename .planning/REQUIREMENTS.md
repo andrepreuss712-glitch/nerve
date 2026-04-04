@@ -66,8 +66,8 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [x] **DU-01**: Beenden-Button im Live-Assistenten funktioniert — User kann jederzeit zurück zum Dashboard navigieren
 - [x] **DU-02**: Light Mode komplett entfernt — alle CSS Media Queries, Variablen und Toggle-Logic für `prefers-color-scheme: light` sind gelöscht (nicht versteckt)
 - [x] **DU-03**: Dashboard, Training, Live-Assistent, Analytics, Profil, Profil-Editor, Einstellungen (alle 4 Tabs), Hilfe-Center zeigen einheitliches dunkles Farbschema
-- [ ] **DU-04**: Einstellungen-Seite hat dunklen Page-Background; Cards sind nahtlos integriert (kein "schweben auf hellem Hintergrund")
-- [ ] **DU-05**: Analytics/Logs-Tabelle hat dunklen Page-Background und Dark-Theme-Styling
+- [x] **DU-04**: Einstellungen-Seite hat dunklen Page-Background; Cards sind nahtlos integriert (kein "schweben auf hellem Hintergrund")
+- [x] **DU-05**: Analytics/Logs-Tabelle hat dunklen Page-Background und Dark-Theme-Styling
 - [ ] **DU-06**: Training-Seite hat dunklen Hintergrund; Anrufen-Button ist kontrastreich (Teal auf Dark)
 - [ ] **DU-07**: Profil-Editor hat dunklen Hintergrund, Input-Felder mit dunklem BG + heller Border, Labels in Weiß/Teal
 - [ ] **DU-08**: Hilfe-Center konsistent mit Dark Theme; Section-Headers in Teal statt Orange
@@ -170,8 +170,8 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | DU-01 | Phase 4.3 | Complete |
 | DU-02 | Phase 4.3 | Complete |
 | DU-03 | Phase 4.3 | Complete |
-| DU-04 | Phase 4.3 | Pending |
-| DU-05 | Phase 4.3 | Pending |
+| DU-04 | Phase 4.3 | Complete |
+| DU-05 | Phase 4.3 | Complete |
 | DU-06 | Phase 4.3 | Pending |
 | DU-07 | Phase 4.3 | Pending |
 | DU-08 | Phase 4.3 | Pending |
