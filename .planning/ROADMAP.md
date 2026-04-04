@@ -256,7 +256,7 @@ Plans:
 Plans:
 - [x] 04.6-01-PLAN.md — DB-Migration (result + avg_deal_wert) + performance Blueprint + 3 API-Endpoints (PERF-01, PERF-02)
 - [x] 04.6-02-PLAN.md — Dashboard HTML: Sales Performance Sektion + KPI-Karten + Charts + Slider + Modal (PERF-03, PERF-04, PERF-05, PERF-06)
-- [ ] 04.6-03-PLAN.md — CSS Slider-Styling + vollstaendiges JavaScript (Chart.js + Simulation + Modal + Tagging) (PERF-03, PERF-04, PERF-05, PERF-06)
+- [x] 04.6-03-PLAN.md — CSS Slider-Styling + vollstaendiges JavaScript (Chart.js + Simulation + Modal + Tagging) (PERF-03, PERF-04, PERF-05, PERF-06)
 - [ ] 04.6-04-PLAN.md — End-to-End visuelle Verifikation + Checkpoint (PERF-01 bis PERF-06)
 
 ### Phase 5: Launch
@@ -286,7 +286,7 @@ Phases execute in numeric order.
 | 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
 | 4.3 Design Unification | 6/6 | Complete   | 2026-04-04 |
 | 4.5 Training Analytics & Tools | 0/4 | Not started | - |
-| 4.6 Sales Performance Calculator | 2/4 | In Progress|  |
+| 4.6 Sales Performance Calculator | 3/4 | In Progress|  |
 | 5. Launch | 0/? | Not started | - |
 
 ---
