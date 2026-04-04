@@ -1,91 +1,22 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-03T08:27:46Z",
-  "phase": "04",
-  "phase_name": "payments-legal",
-  "phase_dir": ".planning/phases/04-payments-legal",
-  "plan": 2,
-  "task": 1,
-  "total_tasks": 5,
-  "status": "paused",
+  "timestamp": "2026-04-04T07:41:06.897Z",
+  "phase": "04.2.1",
+  "phase_name": "ui-ux-overhaul",
+  "status": "complete",
   "completed_tasks": [
-    {"id": "04-01 T1", "name": "Stripe dependency + DB schema + config", "status": "done", "commit": "7727fe0"},
-    {"id": "04-01 T2", "name": "Payments blueprint — Checkout, Webhook, Portal, Success", "status": "done", "commit": "0c5e1e9"},
-    {"id": "04-03 T1", "name": "Legal page templates + routes + footer links", "status": "done", "commit": "ff0515e"},
-    {"id": "04-03 T2", "name": "Deepgram EU endpoint + nginx webhook config + LEGAL-01 verified", "status": "done", "commit": "934c329"},
-    {"id": "04.1 complete", "name": "Phase 4.1 live mic fix — all 3 plans done, approved on getnerve.app", "status": "done", "commit": "368838f"}
+    {"id": 1, "name": "Sidebar overhaul", "status": "done", "commit": "61c47ca"},
+    {"id": 2, "name": "Document PiP", "status": "done", "commit": "e9ab45f"},
+    {"id": 3, "name": "Dashboard restructure", "status": "done", "commit": "28a8a47"},
+    {"id": 4, "name": "Vollbild chrome reduction", "status": "done", "commit": "ae43fd4"},
+    {"id": 5, "name": "EWB AI selection", "status": "done", "commit": "7c07b2a"}
   ],
-  "remaining_tasks": [
-    {"id": "04-03 T3", "name": "AVV signing checklist (manual — LEGAL-03)", "status": "checkpoint_human_action"},
-    {"id": "04-02 T1", "name": "Pricing page (pricing.html) — 3 NERVE plans with Gründerrabatt badge", "status": "not_started"},
-    {"id": "04-02 T2", "name": "Fair-use metering — soft warnings on Dashboard + /live session start", "status": "not_started"}
+  "remaining_tasks": [],
+  "blockers": [],
+  "bugs_fixed": [
+    "nginx 502 port 5000->8000 (7c2c734)",
+    "ConversationLog.session_start does not exist -> dauer_sekunden (741cc67)",
+    "profil_name -> profile_name (970b562)"
   ],
-  "blockers": [
-    {
-      "description": "AVV signing required with Stripe, Deepgram, Anthropic, ElevenLabs",
-      "type": "human_action",
-      "workaround": "Can be done in parallel — Wave 2 (pricing page) can execute once user says done"
-    },
-    {
-      "description": "Impressum placeholders need real address + USt-IdNr",
-      "type": "human_action",
-      "workaround": "placeholders [STRASSE HAUSNUMMER, PLZ STADT] in templates/impressum.html"
-    },
-    {
-      "description": "Stripe Dashboard setup needed before payment flows can be tested",
-      "type": "human_action",
-      "workaround": "Code complete — just needs Stripe products/prices/webhook configured"
-    }
-  ],
-  "human_actions_pending": [
-    {
-      "action": "Sign Stripe DPA: Dashboard → Settings → Compliance → Data Processing Agreement",
-      "context": "LEGAL-03 AVV requirement",
-      "blocking": false
-    },
-    {
-      "action": "Sign Deepgram DPA: Dashboard → Settings → Privacy/Legal or privacy@deepgram.com",
-      "context": "LEGAL-03 AVV requirement",
-      "blocking": false
-    },
-    {
-      "action": "Sign Anthropic DPA: console.anthropic.com → Account Settings → Legal/Privacy or privacy@anthropic.com",
-      "context": "LEGAL-03 AVV requirement",
-      "blocking": false
-    },
-    {
-      "action": "Sign ElevenLabs DPA: Dashboard → Account → Legal/Privacy or legal@elevenlabs.io",
-      "context": "LEGAL-03 AVV requirement",
-      "blocking": false
-    },
-    {
-      "action": "Fill impressum.html placeholders: street address and USt-IdNr (once from Finanzamt)",
-      "context": "templates/impressum.html has [STRASSE HAUSNUMMER, PLZ STADT] and [DE123456789]",
-      "blocking": false
-    },
-    {
-      "action": "Stripe Dashboard setup: 3 products (Starter 49/Pro 59/Business 69 EUR/mo), webhook endpoint, Customer Portal config, SEPA/Kreditkarte/PayPal payment methods",
-      "context": "Required before payment flows can be tested end-to-end",
-      "blocking": true
-    },
-    {
-      "action": "Set VPS .env: DEEPGRAM_HOST=api.eu.deepgram.com + all STRIPE_* vars",
-      "context": "Required for production Stripe and EU Deepgram endpoint",
-      "blocking": true
-    }
-  ],
-  "decisions": [
-    {"decision": "flask.request not flask_socketio.request for SID in Socket.IO handlers", "rationale": "flask_socketio does not export request — Flask patches the standard request object with .sid", "phase": "04.1"},
-    {"decision": "Deploy via scp (no git on VPS, no rsync on Windows)", "rationale": "VPS /opt/nerve/app has no .git; rsync unavailable in Windows git bash; deploy.sh updated to scp", "phase": "04.1"},
-    {"decision": "Webhook uses raw request.data for Stripe signature verification", "rationale": "Required by Stripe SDK", "phase": "04"},
-    {"decision": "Idempotency via stripe_event_id UNIQUE index — silent skip on duplicate", "rationale": "Prevents double-activation on webhook retries", "phase": "04"},
-    {"decision": "checkout_success only flashes, subscription activation in webhook only", "rationale": "D-12 — webhook is authoritative source of truth", "phase": "04"},
-    {"decision": "All services on EU servers (Deepgram api.eu.deepgram.com, Claude Bedrock Frankfurt, ElevenLabs EU Residency, Stripe Frankfurt)", "rationale": "DSGVO compliance — no SCCs needed for EU-to-EU transfers", "phase": "04"}
-  ],
-  "uncommitted_files": [
-    ".claude/settings.local.json",
-    ".planning/phases/04-payments-legal/04-CONTEXT.md"
-  ],
-  "next_action": "Resume Phase 4: reply 'done' to 04-03 AVV checkpoint OR skip to Wave 2 (04-02 pricing page). Run: /gsd:execute-phase 4",
-  "context_notes": "Phase 4.1 (live mic) fully complete and verified on getnerve.app 2026-04-03. Root bug was flask_socketio.request import. Phase 4 Wave 1 is 75% done — 04-01 complete, 04-03 code done but waiting on human AVV signing checkpoint. Wave 2 (04-02 pricing + fair-use) not started."
+  "next_action": "Manual UAT of PiP/sidebar/EWB, then /gsd:plan-phase 03.1 --gaps or Phase 4 after Gewerbeanmeldung"
 }
