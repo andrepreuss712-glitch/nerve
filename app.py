@@ -675,6 +675,7 @@ from routes.waitlist       import waitlist_bp
 from routes.changelog      import changelog_bp
 from routes.payments       import payments_bp
 from routes.legal          import legal_bp
+from routes.performance    import performance_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(orgs_bp)
@@ -690,6 +691,7 @@ app.register_blueprint(waitlist_bp)
 app.register_blueprint(changelog_bp)
 app.register_blueprint(payments_bp)
 app.register_blueprint(legal_bp)
+app.register_blueprint(performance_bp)
 
 # ── Share socketio with services ──────────────────────────────────────────────
 # Patch extensions module so services can import socketio
