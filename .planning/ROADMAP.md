@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
 - [x] **Phase 04.1: Live-Mikrofon Fix** - Replace server-side PyAudio with browser getUserMedia + Socket.IO streaming (INSERTED)  (completed 2026-04-03)
 - [x] **Phase 04.2: Cold Call und Meeting Modi** - Two distinct live session modes with DSGVO-compliant consent flow and EWB buttons (INSERTED) (completed 2026-04-03)
-- [ ] **Phase 04.3: Design Unification** - Light/Dark Mode entfernen, einheitliches dunkles Theme, Beenden-Button Fix, UI-Elemente konsolidieren (INSERTED)
+- [x] **Phase 04.3: Design Unification** - Light/Dark Mode entfernen, einheitliches dunkles Theme, Beenden-Button Fix, UI-Elemente konsolidieren (INSERTED) (completed 2026-04-04)
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
 ## Phase Details
