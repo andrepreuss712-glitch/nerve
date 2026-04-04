@@ -465,4 +465,434 @@ fetch('/api/notifications').then(r => r.json()).then(d => {
     </div>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ── Sales Performance Calculator ─────────────────────────────────────────────
+
+var _perfData = null;           // API-Response Cache
+var _perfMode = 'real';         // 'real' | 'sim'
+var _chartActivity = null;      // Chart.js Instanz Balkendiagramm
+var _chartGrowth = null;        // Chart.js Instanz Wachstumskurve
+var _simTimer = null;           // Debounce-Timer fuer Slider
+var _tagSessionId = null;       // ID aus URL-Param tag_session
+
+// ── Hilfsfunktionen ──────────────────────────────────────────────────────────
+
+function formatEuro(val) {
+  if (val == null || isNaN(val)) return '—';
+  val = Math.round(val);
+  if (val >= 1000000) return (val / 1000000).toFixed(1).replace('.', ',') + ' Mio €';
+  if (val >= 1000) return Math.round(val / 100) * 100 >= 1000
+    ? (val / 1000).toFixed(0) + '.' + String(val % 1000).padStart(3, '0') + ' €'
+    : val.toLocaleString('de-DE') + ' €';
+  return val.toLocaleString('de-DE') + ' €';
+}
+
+function formatEuroShort(val) {
+  if (val == null || isNaN(val)) return '—';
+  val = Math.round(val);
+  if (val >= 1000000) return (val/1000000).toFixed(1).replace('.', ',') + ' Mio €';
+  if (val >= 1000) return Math.round(val/1000) + 'K €';
+  return val + ' €';
+}
+
+function formatPercent(val, dec) {
+  if (val == null || isNaN(val)) return '—';
+  return val.toFixed(dec != null ? dec : 1).replace('.', ',') + '%';
+}
+
+// ── Modus wechseln ────────────────────────────────────────────────────────────
+
+function perfSetMode(mode) {
+  _perfMode = mode;
+  var btnReal = document.getElementById('perf-mode-real');
+  var btnSim  = document.getElementById('perf-mode-sim');
+  var simPanel = document.getElementById('perf-sim-panel');
+
+  if (mode === 'real') {
+    btnReal.style.background = '#FFFFFF';
+    btnReal.style.color = '#1a1a1a';
+    btnReal.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+    btnSim.style.background = 'transparent';
+    btnSim.style.color = '#6b7280';
+    btnSim.style.boxShadow = 'none';
+    if (simPanel) simPanel.style.display = 'none';
+    if (_perfData) perfRenderReal(_perfData);
+  } else {
+    btnSim.style.background = '#FFFFFF';
+    btnSim.style.color = '#1a1a1a';
+    btnSim.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+    btnReal.style.background = 'transparent';
+    btnReal.style.color = '#6b7280';
+    btnReal.style.boxShadow = 'none';
+    if (simPanel) simPanel.style.display = 'block';
+    perfSimUpdate();
+  }
+}
+
+// ── Echte Daten rendern ───────────────────────────────────────────────────────
+
+function perfRenderReal(d) {
+  var loading = document.getElementById('perf-loading');
+  var empty   = document.getElementById('perf-empty');
+  var kpis    = document.getElementById('perf-kpis');
+  var charts  = document.getElementById('perf-charts');
+  var noClose = document.getElementById('perf-no-closing');
+
+  if (loading) loading.style.display = 'none';
+
+  if (!d.hat_daten) {
+    if (empty) empty.style.display = 'block';
+    if (kpis) kpis.style.display = 'none';
+    if (charts) charts.style.display = 'none';
+    // Direkt in Simulations-Modus wechseln wenn keine Daten
+    perfSetMode('sim');
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+  if (kpis) kpis.style.display = 'grid';
+  if (charts) charts.style.display = 'grid';
+
+  // KPI-Karten befuellen
+  var deals = d.calls_pro_monat && d.closing_rate
+    ? Math.round(d.calls_pro_monat * (d.closing_rate / 100))
+    : null;
+  var kpiDeals = document.getElementById('kpi-deals');
+  if (kpiDeals) kpiDeals.textContent = deals != null ? deals : '—';
+
+  var kpiUmsatz = document.getElementById('kpi-umsatz');
+  if (kpiUmsatz) kpiUmsatz.textContent = d.umsatz_pro_monat ? formatEuroShort(d.umsatz_pro_monat) : '—';
+
+  var kpiForecast = document.getElementById('kpi-forecast');
+  if (kpiForecast) kpiForecast.textContent = d.forecast_12m ? formatEuroShort(d.forecast_12m) : '—';
+
+  var kpiRoi = document.getElementById('kpi-roi');
+  if (kpiRoi) {
+    if (d.roi_mehrwert != null) {
+      kpiRoi.textContent = (d.roi_mehrwert >= 0 ? '+' : '') + formatEuroShort(d.roi_mehrwert);
+      kpiRoi.style.color = d.roi_mehrwert >= 0 ? '#00D4AA' : '#f87171';
+    } else {
+      kpiRoi.textContent = '—';
+    }
+  }
+
+  // Closing-Rate Hinweis
+  if (noClose) noClose.style.display = d.closing_rate == null ? 'block' : 'none';
+
+  // Charts rendern
+  perfRenderBarChart(d.chart_data);
+  perfRenderGrowthChart(d);
+
+  // Slider-Defaults mit echten Daten befuellen
+  if (d.calls_pro_woche) {
+    var slCallsTag = document.getElementById('sl-calls-tag');
+    var callsTag = Math.round(d.calls_pro_woche / 5 * 10) / 10;
+    if (slCallsTag) {
+      slCallsTag.value = Math.min(50, Math.max(5, Math.round(callsTag)));
+      document.getElementById('lbl-calls-tag').textContent = slCallsTag.value;
+    }
+  }
+  if (d.closing_rate) {
+    var slCr = document.getElementById('sl-closing-rate');
+    if (slCr) {
+      slCr.value = Math.min(80, Math.max(5, Math.round(d.closing_rate)));
+      document.getElementById('lbl-closing-rate').textContent = slCr.value + '%';
+    }
+  }
+  if (d.avg_deal_wert) {
+    var slDw = document.getElementById('sl-deal-wert');
+    if (slDw) {
+      slDw.value = Math.min(50000, Math.max(100, d.avg_deal_wert));
+      document.getElementById('lbl-deal-wert').textContent = formatEuroShort(d.avg_deal_wert);
+    }
+  }
+}
+
+// ── Balkendiagramm ────────────────────────────────────────────────────────────
+
+function perfRenderBarChart(chartData) {
+  var canvas = document.getElementById('call-activity-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (_chartActivity) { _chartActivity.destroy(); _chartActivity = null; }
+
+  var labels = (chartData && chartData.labels) ? chartData.labels.map(function(w) {
+    return w.replace(/^\d{4}-/, '');
+  }) : [];
+  var calls       = (chartData && chartData.calls)       ? chartData.calls       : [];
+  var abschluesse = (chartData && chartData.abschluesse) ? chartData.abschluesse : [];
+
+  _chartActivity = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Calls',
+          data: calls,
+          backgroundColor: 'rgba(0,212,170,0.2)',
+          borderColor: '#00D4AA',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: 'Abschluesse',
+          data: abschluesse,
+          backgroundColor: 'rgba(0,212,170,0.6)',
+          borderColor: '#00B894',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, color: '#6b7280', boxWidth: 12, padding: 12 } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#6b7280', font: { size: 11 }, stepSize: 1 }, beginAtZero: true },
+      },
+    },
+  });
+}
+
+// ── Wachstumskurve ────────────────────────────────────────────────────────────
+
+function perfRenderGrowthChart(d) {
+  var canvas = document.getElementById('growth-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (_chartGrowth) { _chartGrowth.destroy(); _chartGrowth = null; }
+
+  var umsatz0 = d.umsatz_pro_monat || 0;
+  var labels = [], data = [];
+  for (var i = 1; i <= 12; i++) {
+    var monatUmsatz = Math.round(umsatz0 * Math.pow(1.05, i));
+    labels.push('M' + i);
+    data.push(monatUmsatz);
+  }
+
+  _chartGrowth = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Umsatz-Forecast',
+        data: data,
+        borderColor: '#00D4AA',
+        backgroundColor: 'rgba(0,212,170,0.08)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointBackgroundColor: '#00D4AA',
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return formatEuroShort(ctx.parsed.y); }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
+        y: {
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: { color: '#6b7280', font: { size: 11 }, callback: function(v) { return formatEuroShort(v); } },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+// ── Simulations-Berechnung ────────────────────────────────────────────────────
+
+function perfSimUpdate() {
+  var callsTag  = parseInt(document.getElementById('sl-calls-tag').value);
+  var showRate  = parseInt(document.getElementById('sl-show-rate').value);
+  var closingCr = parseInt(document.getElementById('sl-closing-rate').value);
+  var dealWert  = parseInt(document.getElementById('sl-deal-wert').value);
+  var arbTage   = parseInt(document.getElementById('sl-arbeitstage').value);
+
+  document.getElementById('lbl-calls-tag').textContent = callsTag;
+  document.getElementById('lbl-show-rate').textContent = showRate + '%';
+  document.getElementById('lbl-closing-rate').textContent = closingCr + '%';
+  document.getElementById('lbl-deal-wert').textContent = formatEuroShort(dealWert);
+  document.getElementById('lbl-arbeitstage').textContent = arbTage;
+
+  // Debounce 150ms
+  if (_simTimer) clearTimeout(_simTimer);
+  _simTimer = setTimeout(function() {
+    var callsProWoche = callsTag * arbTage;
+    var callsProMonat = Math.round(callsProWoche * 4.3);
+    var showsProMonat = Math.round(callsProMonat * showRate / 100);
+    var dealsProMonat = Math.round(showsProMonat * closingCr / 100);
+    var umsatzMonat   = dealsProMonat * dealWert;
+
+    // Forecast mit 5% monatlichem Wachstum (S-Kurve)
+    var f12 = 0;
+    for (var i = 1; i <= 12; i++) {
+      f12 += Math.round(umsatzMonat * Math.pow(1.05, i));
+    }
+
+    // ROI: 15% Einwand-Verbesserung Annahme (Marketing-Annahme, dokumentiert)
+    var crDelta = closingCr * 0.15 / 100;
+    var roiMehrwert = Math.round(callsProMonat * crDelta * dealWert) - 99;
+
+    var simUmsatz = document.getElementById('sim-umsatz');
+    var simF12    = document.getElementById('sim-forecast12');
+    var simRoi    = document.getElementById('sim-roi');
+
+    if (simUmsatz) simUmsatz.textContent = formatEuroShort(umsatzMonat);
+    if (simF12)    simF12.textContent    = formatEuroShort(f12);
+    if (simRoi) {
+      simRoi.textContent = (roiMehrwert >= 0 ? '+' : '') + formatEuroShort(roiMehrwert);
+      simRoi.style.color = roiMehrwert >= 0 ? '#00D4AA' : '#f87171';
+    }
+  }, 150);
+}
+
+// ── Deal-Wert Modal ───────────────────────────────────────────────────────────
+
+function openDealWertModal() {
+  var modal = document.getElementById('deal-wert-modal');
+  if (modal) modal.style.display = 'flex';
+  setTimeout(function() {
+    var input = document.getElementById('deal-wert-input');
+    if (input) input.focus();
+  }, 100);
+}
+
+function closeDealWertModal() {
+  var modal = document.getElementById('deal-wert-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function saveDealWert() {
+  var input = document.getElementById('deal-wert-input');
+  var err   = document.getElementById('deal-wert-error');
+  var val   = parseInt(input ? input.value : '');
+  if (!val || val < 1) {
+    if (err) err.style.display = 'block';
+    return;
+  }
+  if (err) err.style.display = 'none';
+
+  fetch('/api/user/deal-wert', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avg_deal_wert: val }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      closeDealWertModal();
+      var slDw = document.getElementById('sl-deal-wert');
+      if (slDw) {
+        slDw.value = Math.min(50000, Math.max(100, val));
+        document.getElementById('lbl-deal-wert').textContent = formatEuroShort(val);
+      }
+      perfInit();
+    }
+  })
+  .catch(function() {});
+}
+
+// Enter-Taste im Modal
+document.addEventListener('DOMContentLoaded', function() {
+  var inp = document.getElementById('deal-wert-input');
+  if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveDealWert(); });
+});
+
+// ── Ergebnis-Tagging ──────────────────────────────────────────────────────────
+
+function tagSession(result) {
+  if (!_tagSessionId) return;
+  var bar = document.getElementById('result-tag-bar');
+  var fb  = document.getElementById('tag-feedback');
+
+  fetch('/api/session/' + _tagSessionId + '/result', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ result: result }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      if (fb) { fb.style.display = 'block'; fb.textContent = 'Gespeichert.'; }
+      ['gewonnen','verloren','offen'].forEach(function(k) {
+        var btn = document.getElementById('tag-btn-' + k);
+        if (btn) {
+          btn.style.background = (k === (result || 'offen')) ? '#00D4AA' : '#F0F2F5';
+          btn.style.color      = (k === (result || 'offen')) ? '#FFFFFF'  : '#6b7280';
+        }
+      });
+      setTimeout(function() { if (bar) bar.style.display = 'none'; }, 2000);
+    }
+  })
+  .catch(function() {});
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+function perfInit() {
+  var loading = document.getElementById('perf-loading');
+  if (loading) loading.style.display = 'block';
+
+  // Ergebnis-Tag-Bar aus URL-Param
+  var params = new URLSearchParams(window.location.search);
+  var tagId  = params.get('tag_session');
+  if (tagId) {
+    _tagSessionId = parseInt(tagId);
+    var bar = document.getElementById('result-tag-bar');
+    if (bar) bar.style.display = 'block';
+    try {
+      var clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+    } catch(e) {}
+  }
+
+  fetch('/api/performance')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      _perfData = d;
+      if (loading) loading.style.display = 'none';
+
+      if (!d.avg_deal_wert) {
+        openDealWertModal();
+      }
+
+      if (d.avg_deal_wert) {
+        var slDw = document.getElementById('sl-deal-wert');
+        if (slDw) {
+          slDw.value = Math.min(50000, Math.max(100, d.avg_deal_wert));
+          document.getElementById('lbl-deal-wert').textContent = formatEuroShort(d.avg_deal_wert);
+        }
+      }
+
+      perfRenderReal(d);
+      perfSimUpdate();
+    })
+    .catch(function() {
+      if (loading) loading.style.display = 'none';
+      var empty = document.getElementById('perf-empty');
+      if (empty) empty.style.display = 'block';
+    });
+}
+
+// Start sobald DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', perfInit);
+} else {
+  perfInit();
+}
+</script>
 {% endblock %}
