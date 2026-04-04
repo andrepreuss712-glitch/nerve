@@ -85,11 +85,7 @@ def get_recent_calls_db(user_id, db, limit=5):
              .all())
     result = []
     for c in calls:
-        dauer_sec = 0
-        if c.session_start and c.session_end:
-            dauer_sec = int((c.session_end - c.session_start).total_seconds())
-        elif c.dauer_sekunden:
-            dauer_sec = c.dauer_sekunden or 0
+        dauer_sec = c.dauer_sekunden or 0
         result.append({
             'datum': c.created_at.strftime('%d.%m.%Y') if c.created_at else '-',
             'uhrzeit': c.created_at.strftime('%H:%M') if c.created_at else '-',
