@@ -4,7 +4,7 @@
 
 NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertriebler im DACH-Markt. Er hört Verkaufsgesprächen live zu, erkennt Einwände in Echtzeit und liefert Gegenargumente sowie Coaching-Tipps direkt auf den Bildschirm — unsichtbar für den Kunden. Ergänzend bietet NERVE einen KI-Trainingsmodus, eine Coach-Plattform für Teams und automatisierte Post-Call-Analysen.
 
-**Status:** v0.9.5, Pre-Launch — Phase 4.2 complete (Cold Call/Meeting Modi live)
+**Status:** v0.9.5, Pre-Launch — Phase 04.3 complete (Design Unification, dark-only theme)
 **Founder:** André Preuß, Iserlohn (Solo-Founder, Einzelunternehmer)
 
 ## Core Value
@@ -28,7 +28,11 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - ✓ DSGVO-Modus (Default AN) — existing
 - ✓ Skript-Teleprompter mit Abdeckungs-Tracking — existing
 - ✓ Kompakt-Modus (320px floating overlay, bottom-right) — validated Phase 03.2
-- ✓ Light/Dark Mode Toggle mit System-Detection und DB-Persistenz — validated Phase 03.2
+- ✓ Light/Dark Mode Toggle mit System-Detection und DB-Persistenz — validated Phase 03.2 (removed in Phase 04.3: dark-only)
+- ✓ Einheitliches dunkles Theme (#0D1117/#1C2333/#00D4AA) auf allen Seiten — validated Phase 04.3
+- ✓ Dashboard back-link im Live-Assistent Header — validated Phase 04.3
+- ✓ Rechtliches Tab in Einstellungen — validated Phase 04.3
+- ✓ Footer und Header-Email/Logout entfernt — validated Phase 04.3
 - ✓ Sidebar User Menu (Avatar + Dropdown) — validated Phase 03.2
 - ✓ Globale Sprachpräferenz (DB-persistent, Training pre-selected) — validated Phase 03.2
 - ✓ Trainingsmodus: KI-Kunde mit ElevenLabs-Stimme, 4 Schwierigkeitsstufen, 9 Sprachen, Scoring — existing
@@ -129,7 +133,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 03.2 (uat-bug-fixes) completion — 17 UAT issues resolved*
+*Last updated: 2026-04-04 after Phase 04.3 (design-unification) completion — dark-only theme, all 12 DU requirements verified*
 
 ## Phase Completion Notes
 
