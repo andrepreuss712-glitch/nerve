@@ -643,6 +643,10 @@ async function startTraining() {
   const pid = document.getElementById('t-profileSelect').value;
   if (!pid) return;
 
+  // Read Quick-Training URL param (einwand_typ) before clearing URL
+  const _quickParams = new URLSearchParams(window.location.search);
+  const _quickEinwand = _quickParams.get('einwand_typ') || null;
+
   showPhase('einwahl');
   startFreizeichen();
 
@@ -656,6 +660,7 @@ async function startTraining() {
         sprache:      currentLanguage,
         scenario_id:  selectedScenario,
         modus:        trainingModus,
+        einwand_typ:  _quickEinwand,
       })
     });
     const data = await res.json();
@@ -664,6 +669,11 @@ async function startTraining() {
       showPhase('setup');
       stopFreizeichen();
       return;
+    }
+
+    // Clean up Quick-Training URL params from browser history
+    if (window.location.search) {
+      window.history.replaceState({}, '', window.location.pathname);
     }
 
     if (data.ui) tUI = data.ui;
@@ -1729,11 +1739,19 @@ loadScenarios();
     if (params.get('quick') === '1') {
       const einwandTyp = params.get('einwand_typ');
       if (einwandTyp) {
-        const diffSelect = document.querySelector('[name="schwierigkeit"], #t-schwierigkeit, select[data-schwierigkeit]');
-        if (diffSelect) diffSelect.value = 'schwer';
+        // Pre-select hardest difficulty for weakness training
+        selectDiff('schwer');
 
-        const startBtn = document.getElementById('t-startBtn') || document.querySelector('.t-start-btn');
-        if (startBtn) startBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
+        // Show Quick-Training hint banner above Start button
+        const startBtn = document.getElementById('t-callBtn');
+        if (startBtn) {
+          const hint = document.createElement('div');
+          hint.id = 'quick-training-hint';
+          hint.style.cssText = 'padding:8px 12px;background:rgba(0,212,170,0.1);border:1px solid #00D4AA;border-radius:8px;color:#00D4AA;font-size:13px;font-weight:600;margin-bottom:8px;text-align:center';
+          hint.textContent = 'Quick-Training: ' + decodeURIComponent(einwandTyp);
+          startBtn.parentNode.insertBefore(hint, startBtn);
+          startBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
+        }
       }
     }
   }

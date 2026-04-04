@@ -95,6 +95,7 @@ def training_start():
     sprache       = data.get('sprache', 'de')
     scenario_id   = data.get('scenario_id')
     modus         = data.get('modus', 'guided')
+    einwand_typ   = data.get('einwand_typ')  # Optional: Quick-Training Einwand-Fokus
 
     if sprache not in TRAINING_LANGUAGES:
         sprache = 'de'
@@ -122,6 +123,10 @@ def training_start():
         hat_sekretaerin = diff.get('sekretaerin', False)
 
         customer_prompt = build_customer_prompt(profile_data, schwierigkeit, persona, sprache)
+
+        # Quick-Training: inject einwand_typ focus into customer prompt
+        if einwand_typ:
+            customer_prompt += f"\n\nWICHTIG: Fokussiere dich in diesem Training besonders auf den Einwand '{einwand_typ}'. Bringe diesen Einwand frueh und hartnaeckig vor."
 
         # Append scenario context to customer prompt
         if scenario:
@@ -181,6 +186,7 @@ def training_start():
                     'ts':      datetime.now().strftime('%H:%M:%S'),
                 }],
                 'started_at': datetime.now(),
+                'einwand_typ': einwand_typ,  # Quick-Training Fokus-Einwand
             }
 
         return jsonify({
