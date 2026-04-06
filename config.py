@@ -17,6 +17,12 @@ STRIPE_PRICE_IDS = {
     'pro':      os.environ.get('STRIPE_PRICE_ID_PRO', ''),
     'business': os.environ.get('STRIPE_PRICE_ID_BUSINESS', ''),
 }
+# OAuth (Phase 04.6.1)
+GOOGLE_CLIENT_ID        = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET    = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+MICROSOFT_CLIENT_ID     = os.environ.get('MICROSOFT_CLIENT_ID', '')
+MICROSOFT_CLIENT_SECRET = os.environ.get('MICROSOFT_CLIENT_SECRET', '')
+
 DATABASE_URL      = os.environ.get('DATABASE_URL', 'sqlite:///database/nerve.db')
 MAX_SESSION_HOURS = int(os.environ.get('MAX_SESSION_HOURS', 8))
 
