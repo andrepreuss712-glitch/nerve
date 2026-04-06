@@ -172,8 +172,11 @@ def _migrate():
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
         new_db = _os.path.join(_os.path.dirname(__file__), 'database', 'nerve.db')
         if _os.path.exists(old_db) and not _os.path.exists(new_db):
-            _os.rename(old_db, new_db)
-            print('[DB] Renamed salesnerve.db -> nerve.db')
+            try:
+                _os.rename(old_db, new_db)
+                print('[DB] Renamed salesnerve.db -> nerve.db')
+            except Exception:
+                pass
 
 _migrate()
 
