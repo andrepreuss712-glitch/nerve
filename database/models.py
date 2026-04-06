@@ -57,7 +57,7 @@ class User(Base):
     id                  = Column(Integer, primary_key=True)
     org_id              = Column(Integer, ForeignKey('organisations.id'), nullable=False)
     email               = Column(String(200), unique=True, nullable=False)
-    passwort_hash       = Column(String(256), nullable=False)
+    passwort_hash       = Column(String(256), nullable=True)  # Phase 04.6.1: nullable für OAuth-User. SQLite Tabellen-NOT-NULL bleibt — OAuth-Flow setzt '' als Sentinel.
     rolle               = Column(String(50), default='member')  # owner/admin/member
     aktiv               = Column(Boolean, default=True)
     erstellt_am         = Column(DateTime, default=utcnow)
@@ -106,6 +106,10 @@ class User(Base):
     weekly_goal           = Column(Integer, default=5)
     # Block 12: Sales Performance Calculator
     avg_deal_wert         = Column(Integer, nullable=True)   # Euro, NULL = nicht gesetzt
+    # Block 13: OAuth (Google + Microsoft) — Phase 04.6.1
+    oauth_provider        = Column(String(50),  nullable=True)  # 'google' | 'microsoft' | None
+    oauth_id              = Column(String(200), nullable=True)  # Provider Sub-ID (eindeutig pro Provider)
+    avatar_url            = Column(String(500), nullable=True)
 
 
 class Profile(Base):

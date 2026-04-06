@@ -89,6 +89,10 @@ def _migrate():
             ('weekly_goal', 'INTEGER DEFAULT 5'),
             # Block 12: Sales Performance Calculator
             ('avg_deal_wert', 'INTEGER'),
+            # Block 13: OAuth — Phase 04.6.1
+            ('oauth_provider', 'VARCHAR(50)'),
+            ('oauth_id',       'VARCHAR(200)'),
+            ('avatar_url',     'VARCHAR(500)'),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE users ADD COLUMN {col} {typedef}'))
