@@ -264,12 +264,12 @@ Plans:
 **Goal:** User können sich mit Google- oder Microsoft-Account einloggen. Bestehende Email/Passwort-Auth bleibt erhalten. Email-Match verhindert Duplikat-Accounts. Login-Modal auf Landing Page bekommt OAuth-Buttons.
 **Requirements**: AUTH-OAUTH-01, AUTH-OAUTH-02, AUTH-OAUTH-03, AUTH-OAUTH-04, AUTH-OAUTH-05, AUTH-OAUTH-06
 **Depends on:** Phase 4.6
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 04.6.1-01-PLAN.md — DB-Migration (oauth_provider/oauth_id/avatar_url, passwort_hash nullable) + Auth-Refactor (_login_user, _create_org_and_user)
-- [ ] 04.6.1-02-PLAN.md — routes/oauth.py Blueprint (Google + Microsoft via authlib) + app.py Integration + ProxyFix
-- [ ] 04.6.1-03-PLAN.md — Landing-Modal UI (Google + Microsoft Buttons, Trennlinie, oauth_error-Anzeige) + Visual Checkpoint
+- [x] 04.6.1-01-PLAN.md — DB-Migration (oauth_provider/oauth_id/avatar_url, passwort_hash nullable) + Auth-Refactor (_login_user, _create_org_and_user)
+- [x] 04.6.1-02-PLAN.md — routes/oauth.py Blueprint (Google + Microsoft via authlib) + app.py Integration + ProxyFix
+- [x] 04.6.1-03-PLAN.md — Landing-Modal UI (Google + Microsoft Buttons, Trennlinie, oauth_error-Anzeige) + Visual Checkpoint
 
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers

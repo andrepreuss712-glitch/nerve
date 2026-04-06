@@ -4,14 +4,14 @@ milestone: v0.9.4
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04.6-03-PLAN.md
-last_updated: "2026-04-04T19:51:37.090Z"
-last_activity: 2026-04-04
+last_updated: "2026-04-06T18:14:14.559Z"
+last_activity: 2026-04-06
 progress:
-  total_phases: 13
-  completed_phases: 7
-  total_plans: 54
-  completed_plans: 46
-  percent: 85
+  total_phases: 14
+  completed_phases: 8
+  total_plans: 57
+  completed_plans: 49
+  percent: 86
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.6 — sales-performance-calculator
+**Current focus:** Phase 04.6.1 — auth-upgrade-google-microsoft-oauth-login
 
 ## Current Position
 
-Phase: 04.6 (sales-performance-calculator) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-04-04
+Phase: 5
+Plan: Not started
+Status: Executing Phase 04.6.1
+Last activity: 2026-04-06
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
 
@@ -38,7 +38,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 3
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -46,7 +46,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 04.6.1 | 3 | - | - |
 
 **Recent Trend:**
 
@@ -206,6 +206,7 @@ Recent decisions affecting current work:
 - Phase 04.2 inserted after Phase 04: Cold Call und Meeting Modi (URGENT) — dedicated modes for cold call (only consultant audio) and meeting (consent popup) before Phase 5
 - Phase 04.2.1 inserted after Phase 04.2: UI/UX Overhaul — Dashboard, Live-Assistent, Kompaktmodus (URGENT) — complete layout overhaul, Getclose.ai design reference, PiP overlay
 - Phase 1 (Business Setup) removed from GSD tracking — user handles manually (Gewerbeanmeldung, Geschäftskonto, etc.)
+- Phase 04.6.1 inserted after Phase 04.6: Auth-Upgrade Google + Microsoft OAuth Login (URGENT) — Authlib-basierter OAuth-Flow für Google + Microsoft, User-Model nullable passwort_hash, Login-UI Buttons
 
 ### Pending Todos
 
