@@ -259,6 +259,18 @@ Plans:
 - [x] 04.6-03-PLAN.md — CSS Slider-Styling + vollstaendiges JavaScript (Chart.js + Simulation + Modal + Tagging) (PERF-03, PERF-04, PERF-05, PERF-06)
 - [ ] 04.6-04-PLAN.md — End-to-End visuelle Verifikation + Checkpoint (PERF-01 bis PERF-06)
 
+### Phase 04.6.1: Auth-Upgrade Google + Microsoft OAuth Login (INSERTED)
+
+**Goal:** User können sich mit Google- oder Microsoft-Account einloggen. Bestehende Email/Passwort-Auth bleibt erhalten. Email-Match verhindert Duplikat-Accounts. Login-Modal auf Landing Page bekommt OAuth-Buttons.
+**Requirements**: AUTH-OAUTH-01, AUTH-OAUTH-02, AUTH-OAUTH-03, AUTH-OAUTH-04, AUTH-OAUTH-05, AUTH-OAUTH-06
+**Depends on:** Phase 4.6
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04.6.1-01-PLAN.md — DB-Migration (oauth_provider/oauth_id/avatar_url, passwort_hash nullable) + Auth-Refactor (_login_user, _create_org_and_user)
+- [ ] 04.6.1-02-PLAN.md — routes/oauth.py Blueprint (Google + Microsoft via authlib) + app.py Integration + ProxyFix
+- [ ] 04.6.1-03-PLAN.md — Landing-Modal UI (Google + Microsoft Buttons, Trennlinie, oauth_error-Anzeige) + Visual Checkpoint
+
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
 **Depends on**: Phase 4
