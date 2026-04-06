@@ -1,78 +1,8 @@
 {% extends 'base.html' %}
 {% block title %} — Dashboard{% endblock %}
 
-{% block extra_style %}
-.dash-wrap { padding: 24px; max-width: 1200px; }
-
-/* Top row: North Star + Quick Actions */
-.dash-top { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; }
-
-/* North Star */
-.ns-score { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); font-size: 28px; font-weight: 600; }
-.ns-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1a1a1a; margin-bottom: 8px; }
-.ns-trend { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 14px; }
-
-/* Quick Actions */
-.qa-panel { display: flex; flex-direction: column; gap: 12px; }
-.qa-panel .n-btn-primary,
-.qa-panel .n-btn-ghost { width: 100%; text-align: center; padding: 12px 16px; font-size: 14px; font-weight: 600; }
-
-/* Usage row */
-.usage-panel { margin-bottom: 24px; }
-.usage-section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1a1a1a; margin-bottom: 16px; }
-.usage-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.usage-row-lbl { display: flex; justify-content: space-between; width: 100%; font-size: 14px; margin-bottom: 4px; }
-.usage-row-lbl span:last-child { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); color: var(--page-text-muted); }
-.usage-bar-wrap { background: #E2E8F0; border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 16px; }
-.usage-bar-fill { height: 100%; border-radius: 4px; }
-
-/* Recent calls */
-.calls-panel { margin-bottom: 24px; }
-.call-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--glass-border); font-size: 14px; }
-.call-row:last-child { border-bottom: none; }
-.call-date { color: var(--page-text-muted); min-width: 70px; font-size: 12px; font-weight: 600; }
-.call-mode { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; }
-.call-mode-cold { background: rgba(0,212,170,0.1); color: #00D4AA; }
-.call-mode-meeting { background: rgba(212,168,83,0.1); color: #d4a853; }
-.call-score { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); font-weight: 600; min-width: 36px; }
-.call-score-high { color: #00D4AA; }
-.call-score-mid { color: #fbbf24; }
-.call-score-low { color: #f87171; }
-.call-dauer { color: var(--page-text-muted); margin-left: auto; font-size: 12px; }
-
-/* Next Best Action */
-.nba-card { border-left: 3px solid #00D4AA; background: var(--glass-bg); border-radius: 0 10px 10px 0;
-  padding: 16px 18px; margin-bottom: 16px; border: 1px solid var(--glass-border); border-left: 3px solid #00D4AA; }
-.nba-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.nba-heading { font-size: 16px; font-weight: 600; }
-.nba-dismiss { margin-left: auto; background: none; border: none; color: var(--page-text-muted); cursor: pointer; font-size: 14px; }
-.nba-body { font-size: 14px; color: var(--page-text-secondary); line-height: 1.5; }
-.nba-body a { color: #00D4AA; text-decoration: none; }
-.nba-body a:hover { text-decoration: underline; }
-
-/* Footer chips */
-.dash-footer { display: flex; align-items: center; gap: 8px; }
-.dash-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--glass-bg); border: 1px solid var(--glass-border);
-  border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 600; color: var(--page-text-muted); }
-
-/* Empty state */
-.empty-state { font-size: 14px; color: var(--page-text-muted); padding: 24px 0; text-align: center; }
-
-/* Toasts */
-.toast-wrap{position:fixed;top:16px;right:16px;z-index:1000;
-  display:flex;flex-direction:column;gap:8px;max-width:280px}
-.toast{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;
-  padding:12px 14px;font-size:13px;color:var(--page-text-secondary);display:flex;align-items:flex-start;
-  gap:10px;animation:slideIn .3s ease;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
-.toast:hover{border-color:rgba(0,212,170,0.3)}
-@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-.toast-icon{font-size:16px;flex-shrink:0;margin-top:1px}
-.toast-text{flex:1;line-height:1.4}
-.toast-arrow{color:#00D4AA;font-size:14px;flex-shrink:0}
-{% endblock %}
-
 {% block content %}
-<div class="dash-wrap page-wrap">
+<div class="db2-wrap page-wrap">
 
   <!-- Early Access Banner -->
   {% if g.org and g.org.is_early_access %}
@@ -83,280 +13,231 @@
   </div>
   {% endif %}
 
-  <!-- Top row: North Star + Quick Actions -->
-  <!-- Score + Letzte Calls: nebeneinander -->
-  <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;margin-bottom:16px;align-items:start">
+  <!-- ── Zeile 1: Begrüßung + Quick Actions ────────────────────────────────── -->
+  <div class="db2-greeting">
+    <div>
+      <h2 class="db2-greeting-title" id="db2-greeting-text">Hallo{% if g.user and g.user.vorname %}, {{ g.user.vorname }}{% endif %} 👋</h2>
+      <div class="db2-greeting-sub" id="db2-greeting-sub">Daten werden geladen...</div>
+    </div>
+    <div class="db2-greeting-actions">
+      <a href="/live" class="n-btn n-btn-primary" style="font-size:13px;padding:9px 18px;font-weight:600;white-space:nowrap">🟢 Call starten</a>
+      <a href="/training" class="n-btn n-btn-ghost" style="font-size:13px;padding:9px 18px;font-weight:600;white-space:nowrap">Training</a>
+    </div>
+  </div>
 
-    <!-- Score diese Woche -->
-    <div class="n-glass" style="padding:10px 16px;display:flex;flex-direction:column;gap:2px;white-space:nowrap">
-      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280">Score diese Woche</span>
-      <div style="display:flex;align-items:baseline;gap:8px">
-        <span style="font-size:22px;font-weight:700;color:{% if stats.trend_score == 'down' %}#f87171{% else %}#00D4AA{% endif %}">{{ stats.avg_kb }}</span>
-        <span style="font-size:12px;color:var(--page-text-muted)">/ 100</span>
-        {% if stats.trend_score == 'up' %}
-          <i data-lucide="arrow-up" style="width:13px;height:13px;color:#00D4AA"></i>
-        {% elif stats.trend_score == 'down' %}
-          <i data-lucide="arrow-down" style="width:13px;height:13px;color:#f87171"></i>
-        {% endif %}
+  <!-- ── Zeile 2: KPI-Reihe (5 Kacheln) ───────────────────────────────────── -->
+  <div class="db2-kpi-row">
+    <div class="db2-kpi">
+      <div class="db2-kpi-value" id="kpi-score">—</div>
+      <div class="db2-kpi-label">Ø Score</div>
+      <div class="db2-kpi-trend" id="kpi-score-trend"></div>
+    </div>
+    <div class="db2-kpi">
+      <div class="db2-kpi-value" id="kpi-sessions">—</div>
+      <div class="db2-kpi-label">Sessions d. Woche</div>
+      <div class="db2-kpi-trend" id="kpi-sessions-trend"></div>
+    </div>
+    <div class="db2-kpi">
+      <div class="db2-kpi-value" id="kpi-deals">—</div>
+      <div class="db2-kpi-label">Deals gesamt</div>
+      <div class="db2-kpi-trend" id="kpi-deals-trend"></div>
+    </div>
+    <div class="db2-kpi">
+      <div class="db2-kpi-value" id="kpi-revenue">—</div>
+      <div class="db2-kpi-label">Umsatz / Monat</div>
+      <div class="db2-kpi-trend" id="kpi-revenue-trend"></div>
+    </div>
+    <div class="db2-kpi">
+      <div class="db2-kpi-value" id="kpi-streak">—</div>
+      <div class="db2-kpi-label">Streak Tage</div>
+      <div class="db2-kpi-trend" id="kpi-streak-trend"></div>
+    </div>
+  </div>
+
+  <!-- ── Zeile 3: Aktivität + Einwand-Performance ─────────────────────────── -->
+  <div class="db2-two-col">
+
+    <!-- Aktivitäts-Chart -->
+    <div class="db2-card">
+      <div class="db2-card-title">AKTIVITÄT</div>
+      <div class="db2-card-sub">Letzte 4 Wochen</div>
+      <div style="position:relative;height:160px;margin-top:12px">
+        <canvas id="chart-activity"></canvas>
       </div>
     </div>
 
-    <!-- Letzte Calls -->
-    <div class="n-glass" style="padding:10px 16px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px">Letzte Calls</div>
-      {% if recent_calls %}
-        {% for call in recent_calls[:3] %}
-        <div class="call-row" style="padding:4px 0;font-size:13px">
-          <span class="call-date">{{ call.relative }}</span>
-          <span class="call-mode {% if call.session_mode == 'cold_call' %}call-mode-cold{% else %}call-mode-meeting{% endif %}">{{ 'Cold Call' if call.session_mode == 'cold_call' else 'Meeting' }}</span>
-          <span class="call-score {% if call.score >= 70 %}call-score-high{% elif call.score >= 40 %}call-score-mid{% else %}call-score-low{% endif %}">{{ call.score }}</span>
-          <span class="call-dauer">{{ call.dauer }}</span>
-        </div>
-        {% endfor %}
-      {% else %}
-        <div style="font-size:13px;color:var(--page-text-muted);padding:2px 0">Noch keine Calls</div>
-      {% endif %}
+    <!-- Einwand-Performance -->
+    <div class="db2-card">
+      <div class="db2-card-title">EINWAND-PERFORMANCE</div>
+      <div class="db2-card-sub">Erfolgsquote nach Einwand-Typ</div>
+      <div id="objection-list" style="margin-top:14px">
+        <div style="color:#6b7280;font-size:13px;padding:20px 0;text-align:center">Lade Daten...</div>
+      </div>
+      <div id="objection-avg" style="display:none;margin-top:12px;padding-top:10px;border-top:1px solid #F0F2F5;font-size:12px;color:#6b7280"></div>
     </div>
 
   </div>
 
-  <!-- Next Best Action -->
-  {% if improvement_tip %}
-  <div class="nba-card" id="nba-card">
-    <div class="nba-head">
-      <i data-lucide="lightbulb" style="width:16px;height:16px;color:#d4a853"></i>
-      <span class="nba-heading">
-        {% if improvement_tip.type == 'redeanteil' %}Redeanteil zu hoch
-        {% elif improvement_tip.type == 'einwaende' %}Einwand-Training empfohlen
-        {% elif improvement_tip.type == 'kb' %}Kaufbereitschaft verbessern
-        {% elif improvement_tip.type == 'positiv' %}Starke Woche!
-        {% else %}Tipp{% endif %}
-      </span>
-      <button class="nba-dismiss" onclick="dismissNba()" title="Ausblenden">&times;</button>
-    </div>
-    <div class="nba-body">
-      {{ improvement_tip.text }}
-      {% if improvement_tip.type in ('redeanteil', 'einwaende', 'kb') %}
-        <br><a href="/training">Training starten &rarr;</a>
-      {% elif improvement_tip.type == 'start' %}
-        <br><a href="/live">Ersten Call starten &rarr;</a>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- ── Sales Performance Calculator ──────────────────────────────────────── -->
-  <section id="perf-section" style="margin-top:32px">
-
-    <!-- Section Header + Modus-Toggle -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+  <!-- ── Zeile 4: Sales Performance (kompakt) ──────────────────────────────── -->
+  <div class="db2-card" style="margin-bottom:20px">
+    <!-- Header mit Toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div>
-        <div class="usage-section-label" style="margin-bottom:2px">Sales Performance</div>
-        <div style="font-size:13px;color:#6b7280">Deine Zahlen. Dein Potential.</div>
+        <div class="db2-card-title">SALES PERFORMANCE</div>
+        <div class="db2-card-sub">Deine Zahlen. Dein Potenzial.</div>
       </div>
-      <div style="display:flex;background:#F0F2F5;border-radius:8px;padding:3px;gap:2px">
-        <button id="perf-mode-real" class="n-btn" onclick="perfSetMode('real')"
-          style="font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;background:#FFFFFF;color:#1a1a1a;border:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
-          Echte Daten
-        </button>
-        <button id="perf-mode-sim" class="n-btn" onclick="perfSetMode('sim')"
-          style="font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;background:transparent;color:#6b7280;border:none;cursor:pointer">
-          Simulation
-        </button>
+      <div class="db2-mode-toggle">
+        <button id="perf-btn-real" class="db2-mode-btn db2-mode-btn-active" onclick="perfSetMode('real')">Echte Daten</button>
+        <button id="perf-btn-sim"  class="db2-mode-btn" onclick="perfSetMode('sim')">Simulation</button>
       </div>
     </div>
 
-    <!-- Leerzustand (wird per JS ausgeblendet wenn Daten vorhanden) -->
-    <div id="perf-empty" style="display:none;text-align:center;padding:40px 24px;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:20px">
-      <div style="font-size:32px;margin-bottom:12px">&#128202;</div>
-      <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:6px">Starte deinen ersten Live-Call</div>
-      <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Sobald du Live-Calls mit NERVE durchfuehrst, siehst du hier deine echten Performance-Daten.</div>
-      <button onclick="perfSetMode('sim')" class="n-btn n-btn-primary" style="font-size:13px;padding:8px 20px">
-        Simulation ausprobieren
-      </button>
-    </div>
-
-    <!-- Lade-Zustand -->
-    <div id="perf-loading" style="text-align:center;padding:40px 24px;color:#6b7280;font-size:13px">
-      Daten werden geladen...
-    </div>
-
-    <!-- KPI Reihe 1: 5 Karten -->
-    <div id="perf-kpi-row-1" class="perf-kpi-row">
-      <div class="kpi-card">
-        <div class="kpi-label">&#216; Score</div>
-        <div id="kpi-score" class="kpi-value">&#8212;</div>
-        <div class="kpi-sub">letzte 90 Tage</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Umsatz / Monat</div>
-        <div id="kpi-umsatz" class="kpi-value" style="color:#00D4AA">&#8212;</div>
-        <div class="kpi-sub">Calls &times; Closing &times; Deal-Wert</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Deals / Woche</div>
-        <div id="kpi-deals-woche" class="kpi-value">&#8212;</div>
-        <div class="kpi-sub">diese Woche</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Deals gesamt</div>
-        <div id="kpi-deals-gesamt" class="kpi-value">&#8212;</div>
-        <div class="kpi-sub">letzte 90 Tage</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">ROI vs. 99&#8364;/Mo</div>
-        <div id="kpi-roi" class="kpi-value">&#8212;</div>
-        <div class="kpi-sub">Mehrwert durch NERVE (+15% EWB)</div>
-      </div>
-    </div>
-
-    <!-- KPI Reihe 2: 2 breitere Karten -->
-    <div id="perf-kpi-row-2" class="perf-kpi-row">
-      <div class="kpi-card">
-        <div class="kpi-label">Finanzielle Performance</div>
-        <div id="kpi-fin-perf" class="kpi-value">&#8212;</div>
-        <div class="kpi-sub">Umsatz abzgl. NERVE (99&#8364;/Mo)</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Forecast 12 Monate</div>
-        <div id="kpi-forecast" class="kpi-value">&#8212;</div>
-        <div class="kpi-sub">inkl. 5% Wachstum/Monat (S-Kurve)</div>
-      </div>
-    </div>
-
-    <!-- Charts: Balken + Wachstumskurve (2 Spalten) -->
-    <div id="perf-charts">
-      <div class="perf-chart-card">
-        <div class="perf-chart-title">Call-Aktivitaet</div>
-        <div class="perf-chart-sub">Letzte 8 Wochen</div>
-        <div style="position:relative">
-          <canvas id="call-activity-chart"></canvas>
+    <!-- Echte Daten: KPIs links + S-Kurve rechts -->
+    <div id="perf-real-panel" class="db2-perf-split">
+      <!-- Links: 3 KPI-Kacheln + Hint -->
+      <div>
+        <div class="db2-perf-kpis">
+          <div class="db2-perf-kpi">
+            <div class="db2-perf-kpi-val" id="perf-umsatz">—</div>
+            <div class="db2-perf-kpi-lbl">Umsatz / Monat</div>
+          </div>
+          <div class="db2-perf-kpi">
+            <div class="db2-perf-kpi-val" id="perf-forecast">—</div>
+            <div class="db2-perf-kpi-lbl">Forecast / Jahr</div>
+          </div>
+          <div class="db2-perf-kpi">
+            <div class="db2-perf-kpi-val" id="perf-roi">—</div>
+            <div class="db2-perf-kpi-lbl">ROI vs. 99€/Mo</div>
+          </div>
+        </div>
+        <div id="perf-hint" class="db2-hint-bar" style="display:none"></div>
+        <div id="perf-nodeal" style="display:none;margin-top:12px;padding:10px 14px;background:#FFF8F0;border-radius:8px;border-left:3px solid #F59E0B;font-size:12px;color:#92400E">
+          Kein Deal-Wert hinterlegt — <a href="#" onclick="openDealWertModal();return false" style="color:#00D4AA;font-weight:600">jetzt eintragen</a> um Umsatz zu berechnen.
         </div>
       </div>
-      <div class="perf-chart-card">
-        <div class="perf-chart-title">Umsatz-Forecast</div>
-        <div class="perf-chart-sub">12-Monats-Projektion (mit NERVE-Effekt)</div>
-        <div style="position:relative">
-          <canvas id="growth-chart"></canvas>
+      <!-- Rechts: S-Kurve Chart -->
+      <div style="position:relative;min-height:160px">
+        <canvas id="chart-growth"></canvas>
+        <div id="perf-empty-chart" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#6b7280;font-size:13px;text-align:center">
+          <div style="font-size:28px">📊</div>
+          <div>Starte Live-Calls um Forecast-Daten zu sehen</div>
+          <button onclick="perfSetMode('sim')" style="font-size:12px;padding:6px 14px;background:#00D4AA;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:4px">Simulation ausprobieren</button>
         </div>
       </div>
     </div>
 
-    <!-- Closing-Rate Hinweis (wenn keine Daten) -->
-    <div id="perf-no-closing" style="display:none;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:16px 20px;margin-bottom:20px;font-size:13px;color:#6b7280;border-left:3px solid #00D4AA">
-      <strong style="color:#1a1a1a">Keine Closing-Rate verfuegbar</strong> &mdash; tagge deine Calls als Gewonnen/Verloren um echte Daten zu sehen. Bis dahin: Nutze den Simulations-Modus.
+    <!-- Simulation: Slider links + KPIs + S-Kurve rechts -->
+    <div id="perf-sim-panel" style="display:none" class="db2-perf-split">
+      <!-- Links: Schieberegler -->
+      <div class="db2-card" style="background:#F9FAFB;box-shadow:none;border:1px solid #E5E7EB">
+        <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px">Simulation</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:16px">Regler verschieben um Potenzial zu berechnen</div>
+
+        <div class="db2-slider-group">
+          <div class="db2-slider-row">
+            <label>Calls pro Tag</label>
+            <span id="lbl-calls-tag" class="db2-slider-val">10</span>
+          </div>
+          <input type="range" id="sl-calls-tag" class="db2-slider" min="5" max="50" value="10" oninput="simUpdate()">
+          <div class="db2-slider-range"><span>5</span><span>50</span></div>
+        </div>
+
+        <div class="db2-slider-group">
+          <div class="db2-slider-row">
+            <label>Show-Rate</label>
+            <span id="lbl-show-rate" class="db2-slider-val">70%</span>
+          </div>
+          <input type="range" id="sl-show-rate" class="db2-slider" min="10" max="100" value="70" oninput="simUpdate()">
+          <div class="db2-slider-range"><span>10%</span><span>100%</span></div>
+        </div>
+
+        <div class="db2-slider-group">
+          <div class="db2-slider-row">
+            <label>Closing-Rate</label>
+            <span id="lbl-closing-rate" class="db2-slider-val">20%</span>
+          </div>
+          <input type="range" id="sl-closing-rate" class="db2-slider" min="5" max="80" value="20" oninput="simUpdate()">
+          <div class="db2-slider-range"><span>5%</span><span>80%</span></div>
+        </div>
+
+        <div class="db2-slider-group">
+          <div class="db2-slider-row">
+            <label>Avg. Deal-Wert</label>
+            <span id="lbl-deal-wert" class="db2-slider-val">2.000€</span>
+          </div>
+          <input type="range" id="sl-deal-wert" class="db2-slider" min="100" max="50000" step="100" value="2000" oninput="simUpdate()">
+          <div class="db2-slider-range"><span>100€</span><span>50K€</span></div>
+        </div>
+
+        <div class="db2-slider-group">
+          <div class="db2-slider-row">
+            <label>Arbeitstage / Woche</label>
+            <span id="lbl-arbeitstage" class="db2-slider-val">5</span>
+          </div>
+          <input type="range" id="sl-arbeitstage" class="db2-slider" min="3" max="7" value="5" oninput="simUpdate()">
+          <div class="db2-slider-range"><span>3</span><span>7</span></div>
+        </div>
+      </div>
+
+      <!-- Rechts: Ergebnis-KPIs + S-Kurve -->
+      <div>
+        <div class="db2-perf-kpis" style="margin-bottom:12px">
+          <div class="db2-perf-kpi">
+            <div class="db2-perf-kpi-val" style="color:#00D4AA" id="sim-umsatz">—</div>
+            <div class="db2-perf-kpi-lbl">Umsatz / Monat</div>
+          </div>
+          <div class="db2-perf-kpi">
+            <div class="db2-perf-kpi-val" id="sim-forecast">—</div>
+            <div class="db2-perf-kpi-lbl">Forecast / Jahr</div>
+          </div>
+          <div class="db2-perf-kpi">
+            <div class="db2-perf-kpi-val" id="sim-roi">—</div>
+            <div class="db2-perf-kpi-lbl">ROI vs. 99€/Mo</div>
+          </div>
+        </div>
+        <div style="position:relative;height:160px">
+          <canvas id="chart-growth-sim"></canvas>
+        </div>
+        <div id="sim-hint" class="db2-hint-bar" style="margin-top:12px">
+          💡 10% bessere Einwandbehandlung = <strong id="sim-hint-val">—</strong> mehr Umsatz/Monat
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Simulation Panel: Split-Layout (Slider links, Ergebnis rechts) -->
-    <div id="perf-sim-panel" style="display:none;margin-bottom:20px">
-      <div class="perf-sim-split">
+  <!-- ── Zeile 5: Letzte Sessions + Empfehlungen ───────────────────────────── -->
+  <div class="db2-two-col">
 
-        <!-- Links: Schieberegler -->
-        <div class="sim-sliders-card">
-          <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px">Simulation</div>
-          <div style="font-size:12px;color:#6b7280;margin-bottom:20px">Regler verschieben um Potential zu berechnen</div>
-
-          <div class="perf-slider-group">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Calls pro Tag</label>
-              <span id="lbl-calls-tag" style="font-size:13px;font-weight:700;color:#00D4AA">10</span>
-            </div>
-            <input type="range" id="sl-calls-tag" class="perf-slider" min="5" max="50" value="10" oninput="perfSimUpdate()">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>5</span><span>50</span></div>
-          </div>
-
-          <div class="perf-slider-group">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Show-Rate</label>
-              <span id="lbl-show-rate" style="font-size:13px;font-weight:700;color:#00D4AA">70%</span>
-            </div>
-            <input type="range" id="sl-show-rate" class="perf-slider" min="10" max="100" value="70" oninput="perfSimUpdate()">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>10%</span><span>100%</span></div>
-          </div>
-
-          <div class="perf-slider-group">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Closing-Rate</label>
-              <span id="lbl-closing-rate" style="font-size:13px;font-weight:700;color:#00D4AA">20%</span>
-            </div>
-            <input type="range" id="sl-closing-rate" class="perf-slider" min="5" max="80" value="20" oninput="perfSimUpdate()">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>5%</span><span>80%</span></div>
-          </div>
-
-          <div class="perf-slider-group">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Avg. Deal-Wert</label>
-              <span id="lbl-deal-wert" style="font-size:13px;font-weight:700;color:#00D4AA">2.000&#8364;</span>
-            </div>
-            <input type="range" id="sl-deal-wert" class="perf-slider" min="100" max="50000" step="100" value="2000" oninput="perfSimUpdate()">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>100&#8364;</span><span>50.000&#8364;</span></div>
-          </div>
-
-          <div class="perf-slider-group">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Arbeitstage / Woche</label>
-              <span id="lbl-arbeitstage" style="font-size:13px;font-weight:700;color:#00D4AA">5</span>
-            </div>
-            <input type="range" id="sl-arbeitstage" class="perf-slider" min="3" max="7" value="5" oninput="perfSimUpdate()">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>3</span><span>7</span></div>
-          </div>
-        </div>
-
-        <!-- Rechts: Ergebnis-KPIs + Hint -->
-        <div>
-          <div class="sim-result-kpis">
-            <div class="kpi-card">
-              <div class="kpi-label">Umsatz / Monat</div>
-              <div id="sim-umsatz" class="kpi-value" style="color:#00D4AA">&#8212;</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-label">Forecast / Jahr</div>
-              <div id="sim-forecast12" class="kpi-value">&#8212;</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-label">ROI vs. 99&#8364;/Mo</div>
-              <div id="sim-roi" class="kpi-value">&#8212;</div>
-            </div>
-          </div>
-          <div class="perf-hint-bar">
-            &#128161; 10% bessere Einwandbehandlung = <strong id="sim-hint-val">&#8212;</strong> mehr Umsatz/Monat
-          </div>
-        </div>
-
+    <!-- Letzte Sessions -->
+    <div class="db2-card">
+      <div class="db2-card-title">LETZTE SESSIONS</div>
+      <div id="session-list" style="margin-top:12px">
+        <div style="color:#6b7280;font-size:13px;padding:16px 0;text-align:center">Lade Sessions...</div>
+      </div>
+      <div style="margin-top:12px">
+        <a href="/dashboard" style="font-size:12px;color:#00D4AA;text-decoration:none;font-weight:600">Alle anzeigen →</a>
       </div>
     </div>
 
-  </section>
-  <!-- ── Ende Sales Performance Calculator ──────────────────────────────────── -->
+    <!-- Empfehlungen -->
+    <div class="db2-card">
+      <div class="db2-card-title">EMPFEHLUNGEN</div>
+      <div id="reco-list" style="margin-top:12px">
+        <div style="color:#6b7280;font-size:13px;padding:16px 0;text-align:center">Lade Empfehlungen...</div>
+      </div>
+    </div>
 
-  <!-- Ergebnis-Tag (wird per JS gefuellt wenn URL-Param tag_session vorhanden) -->
+  </div>
+
+  <!-- ── Ergebnis-Tag-Bar (URL-Param ?tag_session=ID) ──────────────────────── -->
   <div id="result-tag-bar" style="display:none;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:16px 20px;margin-bottom:20px;border-left:3px solid #00D4AA">
     <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:10px">Wie lief der Call?</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button id="tag-btn-gewonnen" onclick="tagSession('gewonnen')"
-        style="padding:8px 18px;background:#00D4AA;color:#FFFFFF;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-        Gewonnen
-      </button>
-      <button id="tag-btn-verloren" onclick="tagSession('verloren')"
-        style="padding:8px 18px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-        Verloren
-      </button>
-      <button id="tag-btn-offen" onclick="tagSession(null)"
-        style="padding:8px 18px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-        Offen lassen
-      </button>
+      <button onclick="tagSession('gewonnen')" style="padding:8px 18px;background:#00D4AA;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Gewonnen</button>
+      <button onclick="tagSession('verloren')" style="padding:8px 18px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Verloren</button>
+      <button onclick="tagSession(null)"      style="padding:8px 18px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Offen lassen</button>
     </div>
     <div id="tag-feedback" style="font-size:12px;color:#00D4AA;margin-top:8px;display:none">Gespeichert.</div>
-  </div>
-
-  <!-- Footer: Streak + Level chip -->
-  <div class="dash-footer">
-    {% if streak and streak > 0 %}
-    <div class="dash-chip">&#128293; Streak {{ streak }}</div>
-    {% endif %}
-    {% if level_info %}
-    <div class="dash-chip">{{ level_info.current.icon }} {{ level_info.current.name }}</div>
-    {% endif %}
   </div>
 
 </div>
@@ -364,34 +245,466 @@
 <!-- Toast container -->
 <div class="toast-wrap" id="toast-wrap"></div>
 
+<!-- Deal-Wert Modal -->
+<div id="deal-wert-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:32px;max-width:420px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(0,0,0,0.12)">
+    <div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px">Dein Deal-Wert</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:24px">Wie hoch ist dein durchschnittlicher Deal-Wert? Diese Zahl berechnet deinen Umsatz-Forecast.</div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:13px;font-weight:500;color:#1a1a1a;display:block;margin-bottom:6px">Durchschnittlicher Deal-Wert (€)</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="deal-wert-input" placeholder="z.B. 5000" min="1" max="10000000"
+          style="flex:1;padding:10px 14px;border:1px solid #E5E7EB;border-radius:8px;font-size:15px;color:#1a1a1a;background:#fff;outline:none"
+          onfocus="this.style.borderColor='#00D4AA'" onblur="this.style.borderColor='#E5E7EB'">
+        <span style="font-size:15px;font-weight:600;color:#6b7280">€</span>
+      </div>
+      <div id="deal-wert-error" style="font-size:12px;color:#f87171;margin-top:4px;display:none">Bitte gib einen gültigen Betrag ein (min. 1 Euro)</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveDealWert()" style="flex:1;padding:11px 0;background:#00D4AA;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Speichern</button>
+      <button onclick="closeDealWertModal()" style="padding:11px 20px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Später</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-function dismissNba() {
-  var card = document.getElementById('nba-card');
-  if (card) card.style.display = 'none';
-  var now = new Date();
-  var weekKey = now.toISOString().slice(0,4) + '-W' +
-    String(Math.ceil((((now - new Date(now.getFullYear(),0,1)) / 86400000) + new Date(now.getFullYear(),0,1).getDay() + 1) / 7)).padStart(2,'0');
-  try { localStorage.setItem('sn_nba_dismissed_' + weekKey, '1'); } catch(e) {}
+// ═══════════════════════════════════════════════════════════════════════════════
+// NERVE Dashboard v2
+// ═══════════════════════════════════════════════════════════════════════════════
+
+var _dash       = null;   // API response cache
+var _perfMode   = 'real'; // 'real' | 'sim'
+var _simTimer   = null;
+var _chartAct   = null;
+var _chartGrow  = null;
+var _chartGrowSim = null;
+var _tagId      = null;
+
+// ── Formatierung ─────────────────────────────────────────────────────────────
+
+function fEuro(v) {
+  if (v == null || isNaN(v)) return '—';
+  v = Math.round(v);
+  if (v >= 1000000) return (v/1000000).toFixed(1).replace('.',',') + ' Mio €';
+  if (v >= 1000)    return Math.round(v/1000) + 'K €';
+  return v.toLocaleString('de-DE') + ' €';
 }
 
-// Check if NBA dismissed this week
-(function() {
-  var now = new Date();
-  var weekKey = now.toISOString().slice(0,4) + '-W' +
-    String(Math.ceil((((now - new Date(now.getFullYear(),0,1)) / 86400000) + new Date(now.getFullYear(),0,1).getDay() + 1) / 7)).padStart(2,'0');
-  try {
-    if (localStorage.getItem('sn_nba_dismissed_' + weekKey) === '1') {
-      var card = document.getElementById('nba-card');
-      if (card) card.style.display = 'none';
+function fNum(v) {
+  if (v == null || isNaN(v)) return '—';
+  return v % 1 === 0 ? v : v.toFixed(1).replace('.',',');
+}
+
+function fTrend(val, unit) {
+  if (val == null) return '';
+  var sign = val > 0 ? '↑ ' : (val < 0 ? '↓ ' : '');
+  var cls  = val > 0 ? 'db2-trend-up' : (val < 0 ? 'db2-trend-down' : 'db2-trend-neutral');
+  return '<span class="' + cls + '">' + sign + Math.abs(val) + (unit || '') + '</span>';
+}
+
+// ── Dashboard-Daten laden ─────────────────────────────────────────────────────
+
+function loadDashboard() {
+  fetch('/api/dashboard').then(function(r){ return r.json(); }).then(function(d) {
+    _dash = d;
+    renderGreeting(d);
+    renderKpis(d);
+    renderActivity(d);
+    renderObjections(d);
+    renderPerformance(d);
+    renderSessions(d);
+    renderRecommendations(d);
+    checkDealWertModal(d);
+  }).catch(function(e) {
+    document.getElementById('db2-greeting-sub').textContent = 'Fehler beim Laden.';
+  });
+}
+
+// ── Zeile 1: Begrüßung ────────────────────────────────────────────────────────
+
+function renderGreeting(d) {
+  var vorname = d.vorname ? ', ' + d.vorname : '';
+  document.getElementById('db2-greeting-text').textContent = d.greeting + vorname + ' 👋';
+  document.getElementById('db2-greeting-sub').textContent  = d.greeting_subtitle || '';
+}
+
+// ── Zeile 2: KPIs ─────────────────────────────────────────────────────────────
+
+function renderKpis(d) {
+  var k = d.kpis || {};
+  var t = d.kpi_trends || {};
+
+  setText('kpi-score',   k.avg_score != null ? fNum(k.avg_score) : '—');
+  setText('kpi-sessions', k.sessions_this_week != null ? k.sessions_this_week : '—');
+  setText('kpi-deals',    k.deals_total != null ? k.deals_total : '—');
+  setText('kpi-revenue',  k.revenue_month ? fEuro(k.revenue_month) : '—');
+
+  var streak = k.streak_days || 0;
+  document.getElementById('kpi-streak').innerHTML = streak > 0
+    ? '<span class="db2-streak-fire">🔥</span> ' + streak
+    : '—';
+
+  setHtml('kpi-score-trend',    fTrend(t.avg_score_pct, '%'));
+  setHtml('kpi-sessions-trend', fTrend(t.sessions_delta, ''));
+}
+
+// ── Zeile 3a: Aktivitäts-Chart ────────────────────────────────────────────────
+
+function renderActivity(d) {
+  var ac = d.activity_chart || {};
+  var labels = ac.labels || ['KW?','KW?','KW?','KW?'];
+  var data   = ac.data   || [0,0,0,0];
+
+  var ctx = document.getElementById('chart-activity').getContext('2d');
+  if (_chartAct) _chartAct.destroy();
+  _chartAct = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: data.map(function(v,i){ return i===data.length-1?'#00D4AA':'rgba(0,212,170,0.35)'; }),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: function(ctx){ return ctx.parsed.y + ' Sessions'; } }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#6b7280' } },
+        y: { beginAtZero: true, grid: { color: '#F0F2F5' }, ticks: { font: { size: 11 }, color: '#6b7280', stepSize: 1 } }
+      }
     }
-  } catch(e) {}
+  });
+}
+
+// ── Zeile 3b: Einwand-Performance ────────────────────────────────────────────
+
+function renderObjections(d) {
+  var list = d.objection_performance || [];
+  var el   = document.getElementById('objection-list');
+  var avg_el = document.getElementById('objection-avg');
+
+  if (!list.length) {
+    el.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:20px 0;text-align:center">Noch keine Einwand-Daten.<br><a href="/training" style="color:#00D4AA;font-weight:600">Training starten →</a></div>';
+    return;
+  }
+
+  var html = '';
+  list.forEach(function(item) {
+    var pct  = item.success_rate;
+    var color = pct >= 70 ? '#00D4AA' : (pct >= 40 ? '#F59E0B' : '#F85149');
+    html += '<div style="margin-bottom:10px">';
+    html +=   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+    html +=     '<span style="font-size:13px;color:#1a1a1a">' + esc(item.name) + '</span>';
+    html +=     '<span style="font-size:13px;font-weight:700;color:' + color + '">' + pct + '%</span>';
+    html +=   '</div>';
+    html +=   '<div style="height:6px;background:#F0F2F5;border-radius:3px;overflow:hidden">';
+    html +=     '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px;transition:width .4s"></div>';
+    html +=   '</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+
+  var total = list.reduce(function(s,i){ return s+i.success_rate; }, 0);
+  var avg   = Math.round(total / list.length);
+  avg_el.style.display = '';
+  avg_el.textContent   = 'Ø Erfolgsquote: ' + avg + '%';
+}
+
+// ── Zeile 4: Sales Performance ────────────────────────────────────────────────
+
+function renderPerformance(d) {
+  var p = d.performance || {};
+
+  // Echte Daten befüllen
+  setText('perf-umsatz',   p.umsatz_pro_monat ? fEuro(p.umsatz_pro_monat) : '—');
+  setText('perf-forecast',  p.forecast_12m ? fEuro(p.forecast_12m) : '—');
+
+  var roiEl = document.getElementById('perf-roi');
+  if (roiEl) {
+    if (p.roi_mehrwert != null) {
+      roiEl.textContent  = (p.roi_mehrwert >= 0 ? '+' : '') + fEuro(p.roi_mehrwert);
+      roiEl.style.color  = p.roi_mehrwert >= 0 ? '#00D4AA' : '#F85149';
+    } else {
+      roiEl.textContent = '—';
+    }
+  }
+
+  // Hint
+  var hintEl   = document.getElementById('perf-hint');
+  var nodeAlEl = document.getElementById('perf-nodeal');
+  if (!p.avg_deal_wert) {
+    if (nodeAlEl) nodeAlEl.style.display = '';
+    if (hintEl)   hintEl.style.display   = 'none';
+  } else {
+    if (nodeAlEl) nodeAlEl.style.display = 'none';
+    if (hintEl && p.hint_ewb) {
+      hintEl.innerHTML  = '💡 10% bessere Einwandbehandlung = <strong>+' + fEuro(p.hint_ewb) + '</strong> mehr Umsatz/Monat';
+      hintEl.style.display = '';
+    }
+  }
+
+  // S-Kurve Chart
+  renderGrowthChart(p.s_curve || [], 'chart-growth', '_chartGrow');
+
+  // Leerzustand
+  var emptyEl = document.getElementById('perf-empty-chart');
+  if (!p.hat_daten && emptyEl) {
+    emptyEl.style.display = 'flex';
+    document.getElementById('chart-growth').style.display = 'none';
+  }
+
+  // Slider-Defaults aus echten Daten
+  if (p.calls_pro_monat) {
+    var callsTag = Math.max(5, Math.min(50, Math.round(p.calls_pro_monat / 4.3 / 5)));
+    document.getElementById('sl-calls-tag').value = callsTag;
+    document.getElementById('lbl-calls-tag').textContent = callsTag;
+  }
+  if (p.closing_rate) {
+    document.getElementById('sl-closing-rate').value = Math.round(p.closing_rate);
+    document.getElementById('lbl-closing-rate').textContent = Math.round(p.closing_rate) + '%';
+  }
+  if (p.avg_deal_wert) {
+    var dw = Math.min(50000, Math.max(100, p.avg_deal_wert));
+    document.getElementById('sl-deal-wert').value = dw;
+    document.getElementById('lbl-deal-wert').textContent = fEuro(dw);
+  }
+  simUpdate();
+}
+
+function renderGrowthChart(curveData, canvasId) {
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  var existingChart = canvasId === 'chart-growth' ? _chartGrow : _chartGrowSim;
+  if (existingChart) existingChart.destroy();
+
+  var labels = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12'];
+  var chart = new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: curveData,
+        borderColor: '#00D4AA',
+        backgroundColor: 'rgba(0,212,170,0.08)',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#00D4AA',
+        fill: true,
+        tension: 0.4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: function(ctx){ return fEuro(ctx.parsed.y); } }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#6b7280' } },
+        y: { beginAtZero: true, grid: { color: '#F0F2F5' }, ticks: {
+          font: { size: 10 }, color: '#6b7280',
+          callback: function(v){ return v >= 1000 ? Math.round(v/1000)+'K' : v; }
+        }}
+      }
+    }
+  });
+
+  if (canvasId === 'chart-growth')    _chartGrow    = chart;
+  if (canvasId === 'chart-growth-sim') _chartGrowSim = chart;
+  return chart;
+}
+
+// ── Modus wechseln ────────────────────────────────────────────────────────────
+
+function perfSetMode(mode) {
+  _perfMode = mode;
+  var realBtn  = document.getElementById('perf-btn-real');
+  var simBtn   = document.getElementById('perf-btn-sim');
+  var realPanel = document.getElementById('perf-real-panel');
+  var simPanel  = document.getElementById('perf-sim-panel');
+
+  if (mode === 'real') {
+    realBtn.classList.add('db2-mode-btn-active');
+    simBtn.classList.remove('db2-mode-btn-active');
+    realPanel.style.display = '';
+    simPanel.style.display  = 'none';
+  } else {
+    simBtn.classList.add('db2-mode-btn-active');
+    realBtn.classList.remove('db2-mode-btn-active');
+    realPanel.style.display = 'none';
+    simPanel.style.display  = '';
+    simUpdate();
+  }
+}
+
+// ── Simulations-Update ────────────────────────────────────────────────────────
+
+function simUpdate() {
+  clearTimeout(_simTimer);
+  _simTimer = setTimeout(function() {
+    var callsTag    = parseFloat(document.getElementById('sl-calls-tag').value) || 10;
+    var showRate    = parseFloat(document.getElementById('sl-show-rate').value) / 100 || 0.7;
+    var closingRate = parseFloat(document.getElementById('sl-closing-rate').value) / 100 || 0.2;
+    var dealWert    = parseFloat(document.getElementById('sl-deal-wert').value) || 2000;
+    var arbeitstage = parseFloat(document.getElementById('sl-arbeitstage').value) || 5;
+
+    document.getElementById('lbl-calls-tag').textContent    = callsTag;
+    document.getElementById('lbl-show-rate').textContent    = Math.round(showRate*100) + '%';
+    document.getElementById('lbl-closing-rate').textContent = Math.round(closingRate*100) + '%';
+    document.getElementById('lbl-deal-wert').textContent    = fEuro(dealWert);
+    document.getElementById('lbl-arbeitstage').textContent  = arbeitstage;
+
+    var callsPM    = callsTag * showRate * arbeitstage * 4.3;
+    var dealsPM    = callsPM * closingRate;
+    var umsatzPM   = dealsPM * dealWert;
+    var forecast12 = 0;
+    for (var i=1; i<=12; i++) { forecast12 += umsatzPM * Math.pow(1.05, i); }
+    var roi = Math.round(umsatzPM * closingRate * 0.15) - 99;
+
+    // S-Kurve Daten
+    var curve = [];
+    var cum   = 0;
+    for (var j=1; j<=12; j++) {
+      cum += Math.round(umsatzPM * Math.pow(1.05, j));
+      curve.push(cum);
+    }
+
+    setText('sim-umsatz',   fEuro(Math.round(umsatzPM)));
+    setText('sim-forecast', fEuro(Math.round(forecast12)));
+    var simRoi = document.getElementById('sim-roi');
+    if (simRoi) {
+      simRoi.textContent = (roi >= 0 ? '+' : '') + fEuro(roi);
+      simRoi.style.color = roi >= 0 ? '#00D4AA' : '#F85149';
+    }
+
+    var hintVal = Math.round(umsatzPM * closingRate * 0.10);
+    setText('sim-hint-val', '+' + fEuro(hintVal));
+
+    renderGrowthChart(curve, 'chart-growth-sim');
+  }, 120);
+}
+
+// ── Zeile 5a: Letzte Sessions ─────────────────────────────────────────────────
+
+function renderSessions(d) {
+  var sessions = d.recent_sessions || [];
+  var el = document.getElementById('session-list');
+  if (!sessions.length) {
+    el.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:16px 0;text-align:center">Noch keine Sessions</div>';
+    return;
+  }
+  var typeLabel = { cold_call: 'Cold Call', meeting: 'Meeting', training: 'Training' };
+  var typeCls   = { cold_call: 'db2-badge-cold', meeting: 'db2-badge-meeting', training: 'db2-badge-training' };
+  var html = '';
+  sessions.forEach(function(s) {
+    var scoreColor = s.score >= 70 ? '#00D4AA' : (s.score >= 40 ? '#F59E0B' : '#F85149');
+    html += '<div class="db2-session-row">';
+    html +=   '<span class="db2-session-date">'  + esc(s.date_str) + '</span>';
+    html +=   '<span class="db2-badge ' + (typeCls[s.session_type] || 'db2-badge-cold') + '">' + (typeLabel[s.session_type] || s.session_type) + '</span>';
+    html +=   '<span class="db2-session-score" style="color:' + scoreColor + '">' + (s.score || '—') + '</span>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── Zeile 5b: Empfehlungen ────────────────────────────────────────────────────
+
+function renderRecommendations(d) {
+  var recos = d.recommendations || [];
+  var el    = document.getElementById('reco-list');
+  if (!recos.length) {
+    el.innerHTML = '<div style="color:#6b7280;font-size:13px">Keine Empfehlungen verfügbar.</div>';
+    return;
+  }
+  var html = '';
+  recos.forEach(function(r) {
+    html += '<div class="db2-reco-item"' + (r.url ? ' onclick="location.href=\'' + esc(r.url) + '\'" style="cursor:pointer"' : '') + '>';
+    html +=   '<div class="db2-reco-icon">' + r.icon + '</div>';
+    html +=   '<div>';
+    html +=     '<div class="db2-reco-title">' + esc(r.title) + '</div>';
+    if (r.subtitle) html += '<div class="db2-reco-sub">' + esc(r.subtitle) + '</div>';
+    html +=   '</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── Deal-Wert Modal ───────────────────────────────────────────────────────────
+
+function checkDealWertModal(d) {
+  var p = d.performance || {};
+  if (!p.avg_deal_wert) {
+    var dismissed = localStorage.getItem('nerve_dw_dismissed');
+    if (!dismissed) openDealWertModal();
+  }
+}
+
+function openDealWertModal() {
+  var m = document.getElementById('deal-wert-modal');
+  m.style.display = 'flex';
+}
+
+function closeDealWertModal() {
+  document.getElementById('deal-wert-modal').style.display = 'none';
+  try { localStorage.setItem('nerve_dw_dismissed', '1'); } catch(e){}
+}
+
+function saveDealWert() {
+  var inp = document.getElementById('deal-wert-input');
+  var err = document.getElementById('deal-wert-error');
+  var val = parseInt(inp.value, 10);
+  if (!val || val < 1) { err.style.display = ''; return; }
+  err.style.display = 'none';
+  fetch('/api/user/deal-wert', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avg_deal_wert: val })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok) {
+      closeDealWertModal();
+      loadDashboard();
+    }
+  });
+}
+
+// ── Ergebnis-Tagging ──────────────────────────────────────────────────────────
+
+function tagSession(result) {
+  if (!_tagId) return;
+  fetch('/api/session/' + _tagId + '/result', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ result: result })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok) {
+      var fb = document.getElementById('tag-feedback');
+      fb.style.display = '';
+      setTimeout(function(){ document.getElementById('result-tag-bar').style.display='none'; }, 2000);
+    }
+  });
+}
+
+(function checkTagParam() {
+  var m = window.location.search.match(/[?&]tag_session=(\d+)/);
+  if (m) {
+    _tagId = m[1];
+    document.getElementById('result-tag-bar').style.display = '';
+  }
 })();
 
-// ── Notifications (Toasts) ─────────────────────────────────────────────────
-fetch('/api/notifications').then(r => r.json()).then(d => {
+// ── Notifications (Toasts) ────────────────────────────────────────────────────
+
+fetch('/api/notifications').then(function(r){ return r.json(); }).then(function(d) {
   var dismissed = JSON.parse(localStorage.getItem('nerve_dismissed_notifs') || '[]');
   var wrap = document.getElementById('toast-wrap');
-  (d.notifications || []).filter(n => !dismissed.includes(n.id)).forEach(n => {
+  (d.notifications || []).filter(function(n){ return !dismissed.includes(n.id); }).forEach(function(n) {
     var t = document.createElement('div');
     t.className = 'toast';
     t.innerHTML = '<span class="toast-icon">' + n.icon + '</span><span class="toast-text">' + n.text + '</span><span class="toast-arrow">\u2192</span>';
@@ -402,506 +715,36 @@ fetch('/api/notifications').then(r => r.json()).then(d => {
       if (n.url) window.location.href = n.url;
     };
     wrap.appendChild(t);
-    setTimeout(function() { if (t.parentNode) t.remove(); }, 8000);
+    setTimeout(function(){ if (t.parentNode) t.remove(); }, 8000);
   });
-}).catch(function() {});
-</script>
-<!-- ── Deal-Wert-Modal ───────────────────────────────────────────────────── -->
-<div id="deal-wert-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center">
-  <div style="background:#FFFFFF;border-radius:16px;padding:32px;max-width:420px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(0,0,0,0.12)">
-    <div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px">Dein Deal-Wert</div>
-    <div style="font-size:13px;color:#6b7280;margin-bottom:24px">
-      Wie hoch ist dein durchschnittlicher Deal-Wert? Diese Zahl berechnet deinen Umsatz-Forecast.
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="font-size:13px;font-weight:500;color:#1a1a1a;display:block;margin-bottom:6px">
-        Durchschnittlicher Deal-Wert (&#8364;)
-      </label>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input type="number" id="deal-wert-input" placeholder="z.B. 5000" min="1" max="10000000"
-          style="flex:1;padding:10px 14px;border:1px solid #E5E7EB;border-radius:8px;font-size:15px;color:#1a1a1a;background:#FFFFFF;outline:none"
-          onfocus="this.style.borderColor='#00D4AA'" onblur="this.style.borderColor='#E5E7EB'">
-        <span style="font-size:15px;font-weight:600;color:#6b7280">&#8364;</span>
-      </div>
-      <div id="deal-wert-error" style="font-size:12px;color:#f87171;margin-top:4px;display:none">
-        Bitte gib einen gueltigen Betrag ein (min. 1 Euro)
-      </div>
-    </div>
-    <div style="display:flex;gap:10px">
-      <button onclick="saveDealWert()"
-        style="flex:1;padding:11px 0;background:#00D4AA;color:#FFFFFF;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
-        Speichern
-      </button>
-      <button onclick="closeDealWertModal()"
-        style="padding:11px 20px;background:#F0F2F5;color:#6b7280;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
-        Spaeter
-      </button>
-    </div>
-  </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-// ── Sales Performance Calculator ─────────────────────────────────────────────
+}).catch(function(){});
 
-var _perfData = null;           // API-Response Cache
-var _perfMode = 'real';         // 'real' | 'sim'
-var _chartActivity = null;      // Chart.js Instanz Balkendiagramm
-var _chartGrowth = null;        // Chart.js Instanz Wachstumskurve
-var _simTimer = null;           // Debounce-Timer fuer Slider
-var _tagSessionId = null;       // ID aus URL-Param tag_session
+// ── Utils ─────────────────────────────────────────────────────────────────────
 
-// ── Hilfsfunktionen ──────────────────────────────────────────────────────────
-
-function formatEuro(val) {
-  if (val == null || isNaN(val)) return '—';
-  val = Math.round(val);
-  if (val >= 1000000) return (val / 1000000).toFixed(1).replace('.', ',') + ' Mio €';
-  if (val >= 1000) return Math.round(val / 100) * 100 >= 1000
-    ? (val / 1000).toFixed(0) + '.' + String(val % 1000).padStart(3, '0') + ' €'
-    : val.toLocaleString('de-DE') + ' €';
-  return val.toLocaleString('de-DE') + ' €';
+function setText(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
 }
-
-function formatEuroShort(val) {
-  if (val == null || isNaN(val)) return '—';
-  val = Math.round(val);
-  if (val >= 1000000) return (val/1000000).toFixed(1).replace('.', ',') + ' Mio €';
-  if (val >= 1000) return Math.round(val/1000) + 'K €';
-  return val + ' €';
+function setHtml(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.innerHTML = val;
 }
-
-function formatPercent(val, dec) {
-  if (val == null || isNaN(val)) return '—';
-  return val.toFixed(dec != null ? dec : 1).replace('.', ',') + '%';
-}
-
-// ── Modus wechseln ────────────────────────────────────────────────────────────
-
-function perfSetMode(mode) {
-  _perfMode = mode;
-  var btnReal  = document.getElementById('perf-mode-real');
-  var btnSim   = document.getElementById('perf-mode-sim');
-  var simPanel = document.getElementById('perf-sim-panel');
-  var row1     = document.getElementById('perf-kpi-row-1');
-  var row2     = document.getElementById('perf-kpi-row-2');
-  var charts   = document.getElementById('perf-charts');
-
-  if (mode === 'real') {
-    btnReal.style.background = '#FFFFFF';
-    btnReal.style.color = '#1a1a1a';
-    btnReal.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
-    btnSim.style.background = 'transparent';
-    btnSim.style.color = '#6b7280';
-    btnSim.style.boxShadow = 'none';
-    if (simPanel) simPanel.style.display = 'none';
-    if (_perfData) perfRenderReal(_perfData);
-  } else {
-    btnSim.style.background = '#FFFFFF';
-    btnSim.style.color = '#1a1a1a';
-    btnSim.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
-    btnReal.style.background = 'transparent';
-    btnReal.style.color = '#6b7280';
-    btnReal.style.boxShadow = 'none';
-    if (row1)  row1.style.display  = 'none';
-    if (row2)  row2.style.display  = 'none';
-    if (charts) charts.style.display = 'none';
-    if (simPanel) simPanel.style.display = 'block';
-    perfSimUpdate();
-  }
-}
-
-// ── Echte Daten rendern ───────────────────────────────────────────────────────
-
-function perfRenderReal(d) {
-  var loading = document.getElementById('perf-loading');
-  var empty   = document.getElementById('perf-empty');
-  var row1    = document.getElementById('perf-kpi-row-1');
-  var row2    = document.getElementById('perf-kpi-row-2');
-  var charts  = document.getElementById('perf-charts');
-  var noClose = document.getElementById('perf-no-closing');
-
-  if (loading) loading.style.display = 'none';
-
-  if (!d.hat_daten) {
-    if (empty) empty.style.display = 'block';
-    if (row1)   row1.style.display  = 'none';
-    if (row2)   row2.style.display  = 'none';
-    if (charts) charts.style.display = 'none';
-    perfSetMode('sim');
-    return;
-  }
-
-  if (empty) empty.style.display = 'none';
-  if (row1)   row1.style.display   = 'grid';
-  if (row2)   row2.style.display   = 'grid';
-  if (charts) charts.style.display = 'grid';
-
-  // Reihe 1: Ø Score
-  var elScore = document.getElementById('kpi-score');
-  if (elScore) elScore.textContent = d.avg_score != null ? d.avg_score : '—';
-
-  // Reihe 1: Umsatz/Monat
-  var elUmsatz = document.getElementById('kpi-umsatz');
-  if (elUmsatz) elUmsatz.textContent = d.umsatz_pro_monat ? formatEuroShort(d.umsatz_pro_monat) : '—';
-
-  // Reihe 1: Deals diese Woche
-  var elDealsWoche = document.getElementById('kpi-deals-woche');
-  if (elDealsWoche) elDealsWoche.textContent = d.deals_diese_woche != null ? d.deals_diese_woche : '—';
-
-  // Reihe 1: Deals gesamt
-  var elDealsGesamt = document.getElementById('kpi-deals-gesamt');
-  if (elDealsGesamt) elDealsGesamt.textContent = d.deals_gesamt != null ? d.deals_gesamt : '—';
-
-  // Reihe 1: ROI
-  var elRoi = document.getElementById('kpi-roi');
-  if (elRoi) {
-    if (d.roi_mehrwert != null) {
-      elRoi.textContent = (d.roi_mehrwert >= 0 ? '+' : '') + formatEuroShort(d.roi_mehrwert);
-      elRoi.style.color = d.roi_mehrwert >= 0 ? '#00D4AA' : '#f87171';
-    } else {
-      elRoi.textContent = '—';
-    }
-  }
-
-  // Reihe 2: Finanzielle Performance (Umsatz - 99€)
-  var elFinPerf = document.getElementById('kpi-fin-perf');
-  if (elFinPerf) {
-    var finPerf = d.umsatz_pro_monat ? d.umsatz_pro_monat - 99 : null;
-    if (finPerf != null) {
-      elFinPerf.textContent = (finPerf >= 0 ? '' : '') + formatEuroShort(finPerf);
-      elFinPerf.style.color = finPerf >= 0 ? '#00D4AA' : '#f87171';
-    } else {
-      elFinPerf.textContent = '—';
-    }
-  }
-
-  // Reihe 2: Forecast 12M
-  var elForecast = document.getElementById('kpi-forecast');
-  if (elForecast) elForecast.textContent = d.forecast_12m ? formatEuroShort(d.forecast_12m) : '—';
-
-  // Closing-Rate Hinweis
-  if (noClose) noClose.style.display = d.closing_rate == null ? 'block' : 'none';
-
-  // Charts rendern
-  perfRenderBarChart(d.chart_data);
-  perfRenderGrowthChart(d);
-
-  // Slider-Defaults mit echten Daten befuellen
-  if (d.calls_pro_woche) {
-    var slCallsTag = document.getElementById('sl-calls-tag');
-    var callsTag = Math.round(d.calls_pro_woche / 5 * 10) / 10;
-    if (slCallsTag) {
-      slCallsTag.value = Math.min(50, Math.max(5, Math.round(callsTag)));
-      document.getElementById('lbl-calls-tag').textContent = slCallsTag.value;
-    }
-  }
-  if (d.closing_rate) {
-    var slCr = document.getElementById('sl-closing-rate');
-    if (slCr) {
-      slCr.value = Math.min(80, Math.max(5, Math.round(d.closing_rate)));
-      document.getElementById('lbl-closing-rate').textContent = slCr.value + '%';
-    }
-  }
-  if (d.avg_deal_wert) {
-    var slDw = document.getElementById('sl-deal-wert');
-    if (slDw) {
-      slDw.value = Math.min(50000, Math.max(100, d.avg_deal_wert));
-      document.getElementById('lbl-deal-wert').textContent = formatEuroShort(d.avg_deal_wert);
-    }
-  }
-}
-
-// ── Balkendiagramm ────────────────────────────────────────────────────────────
-
-function perfRenderBarChart(chartData) {
-  var canvas = document.getElementById('call-activity-chart');
-  if (!canvas || typeof Chart === 'undefined') return;
-  if (_chartActivity) { _chartActivity.destroy(); _chartActivity = null; }
-
-  var labels = (chartData && chartData.labels) ? chartData.labels.map(function(w) {
-    return w.replace(/^\d{4}-/, '');
-  }) : [];
-  var calls       = (chartData && chartData.calls)       ? chartData.calls       : [];
-  var abschluesse = (chartData && chartData.abschluesse) ? chartData.abschluesse : [];
-
-  _chartActivity = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Calls',
-          data: calls,
-          backgroundColor: 'rgba(0,212,170,0.2)',
-          borderColor: '#00D4AA',
-          borderWidth: 1.5,
-          borderRadius: 4,
-        },
-        {
-          label: 'Abschluesse',
-          data: abschluesse,
-          backgroundColor: 'rgba(0,212,170,0.6)',
-          borderColor: '#00B894',
-          borderWidth: 1.5,
-          borderRadius: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, color: '#6b7280', boxWidth: 12, padding: 12 } },
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
-        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#6b7280', font: { size: 11 }, stepSize: 1 }, beginAtZero: true },
-      },
-    },
-  });
-}
-
-// ── Wachstumskurve ────────────────────────────────────────────────────────────
-
-function perfRenderGrowthChart(d) {
-  var canvas = document.getElementById('growth-chart');
-  if (!canvas || typeof Chart === 'undefined') return;
-  if (_chartGrowth) { _chartGrowth.destroy(); _chartGrowth = null; }
-
-  var umsatz0 = d.umsatz_pro_monat || 0;
-  var labels = [], data = [];
-  for (var i = 1; i <= 12; i++) {
-    var monatUmsatz = Math.round(umsatz0 * Math.pow(1.05, i));
-    labels.push('M' + i);
-    data.push(monatUmsatz);
-  }
-
-  _chartGrowth = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Umsatz-Forecast',
-        data: data,
-        borderColor: '#00D4AA',
-        backgroundColor: 'rgba(0,212,170,0.08)',
-        borderWidth: 2.5,
-        fill: true,
-        tension: 0.4,
-        pointRadius: 3,
-        pointBackgroundColor: '#00D4AA',
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(ctx) { return formatEuroShort(ctx.parsed.y); }
-          }
-        }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
-        y: {
-          grid: { color: 'rgba(0,0,0,0.04)' },
-          ticks: { color: '#6b7280', font: { size: 11 }, callback: function(v) { return formatEuroShort(v); } },
-          beginAtZero: true,
-        },
-      },
-    },
-  });
-}
-
-// ── Simulations-Berechnung ────────────────────────────────────────────────────
-
-function perfSimUpdate() {
-  var callsTag  = parseInt(document.getElementById('sl-calls-tag').value);
-  var showRate  = parseInt(document.getElementById('sl-show-rate').value);
-  var closingCr = parseInt(document.getElementById('sl-closing-rate').value);
-  var dealWert  = parseInt(document.getElementById('sl-deal-wert').value);
-  var arbTage   = parseInt(document.getElementById('sl-arbeitstage').value);
-
-  document.getElementById('lbl-calls-tag').textContent = callsTag;
-  document.getElementById('lbl-show-rate').textContent = showRate + '%';
-  document.getElementById('lbl-closing-rate').textContent = closingCr + '%';
-  document.getElementById('lbl-deal-wert').textContent = formatEuroShort(dealWert);
-  document.getElementById('lbl-arbeitstage').textContent = arbTage;
-
-  // Debounce 150ms
-  if (_simTimer) clearTimeout(_simTimer);
-  _simTimer = setTimeout(function() {
-    var callsProWoche = callsTag * arbTage;
-    var callsProMonat = Math.round(callsProWoche * 4.3);
-    var showsProMonat = Math.round(callsProMonat * showRate / 100);
-    var dealsProMonat = Math.round(showsProMonat * closingCr / 100);
-    var umsatzMonat   = dealsProMonat * dealWert;
-
-    // Forecast mit 5% monatlichem Wachstum (S-Kurve)
-    var f12 = 0;
-    for (var i = 1; i <= 12; i++) {
-      f12 += Math.round(umsatzMonat * Math.pow(1.05, i));
-    }
-
-    // ROI: 15% Einwand-Verbesserung Annahme (Marketing-Annahme, dokumentiert)
-    var crDelta = closingCr * 0.15 / 100;
-    var roiMehrwert = Math.round(callsProMonat * crDelta * dealWert) - 99;
-
-    var simUmsatz = document.getElementById('sim-umsatz');
-    var simF12    = document.getElementById('sim-forecast12');
-    var simRoi    = document.getElementById('sim-roi');
-
-    if (simUmsatz) simUmsatz.textContent = formatEuroShort(umsatzMonat);
-    if (simF12)    simF12.textContent    = formatEuroShort(f12);
-    if (simRoi) {
-      simRoi.textContent = (roiMehrwert >= 0 ? '+' : '') + formatEuroShort(roiMehrwert);
-      simRoi.style.color = roiMehrwert >= 0 ? '#00D4AA' : '#f87171';
-    }
-
-    // Hint: 10% bessere Einwandbehandlung
-    var hintVal = document.getElementById('sim-hint-val');
-    if (hintVal) {
-      var hintUmsatz = Math.round(showsProMonat * (closingCr * 1.1 / 100) * dealWert) - umsatzMonat;
-      hintVal.textContent = formatEuroShort(Math.max(0, hintUmsatz));
-    }
-  }, 150);
-}
-
-// ── Deal-Wert Modal ───────────────────────────────────────────────────────────
-
-function openDealWertModal() {
-  var modal = document.getElementById('deal-wert-modal');
-  if (modal) modal.style.display = 'flex';
-  setTimeout(function() {
-    var input = document.getElementById('deal-wert-input');
-    if (input) input.focus();
-  }, 100);
-}
-
-function closeDealWertModal() {
-  var modal = document.getElementById('deal-wert-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-function saveDealWert() {
-  var input = document.getElementById('deal-wert-input');
-  var err   = document.getElementById('deal-wert-error');
-  var val   = parseInt(input ? input.value : '');
-  if (!val || val < 1) {
-    if (err) err.style.display = 'block';
-    return;
-  }
-  if (err) err.style.display = 'none';
-
-  fetch('/api/user/deal-wert', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ avg_deal_wert: val }),
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.ok) {
-      closeDealWertModal();
-      var slDw = document.getElementById('sl-deal-wert');
-      if (slDw) {
-        slDw.value = Math.min(50000, Math.max(100, val));
-        document.getElementById('lbl-deal-wert').textContent = formatEuroShort(val);
-      }
-      perfInit();
-    }
-  })
-  .catch(function() {});
-}
-
-// Enter-Taste im Modal
-document.addEventListener('DOMContentLoaded', function() {
-  var inp = document.getElementById('deal-wert-input');
-  if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveDealWert(); });
-});
-
-// ── Ergebnis-Tagging ──────────────────────────────────────────────────────────
-
-function tagSession(result) {
-  if (!_tagSessionId) return;
-  var bar = document.getElementById('result-tag-bar');
-  var fb  = document.getElementById('tag-feedback');
-
-  fetch('/api/session/' + _tagSessionId + '/result', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ result: result }),
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.ok) {
-      if (fb) { fb.style.display = 'block'; fb.textContent = 'Gespeichert.'; }
-      ['gewonnen','verloren','offen'].forEach(function(k) {
-        var btn = document.getElementById('tag-btn-' + k);
-        if (btn) {
-          btn.style.background = (k === (result || 'offen')) ? '#00D4AA' : '#F0F2F5';
-          btn.style.color      = (k === (result || 'offen')) ? '#FFFFFF'  : '#6b7280';
-        }
-      });
-      setTimeout(function() { if (bar) bar.style.display = 'none'; }, 2000);
-    }
-  })
-  .catch(function() {});
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-
-function perfInit() {
-  var loading = document.getElementById('perf-loading');
-  if (loading) loading.style.display = 'block';
-
-  // Ergebnis-Tag-Bar aus URL-Param
-  var params = new URLSearchParams(window.location.search);
-  var tagId  = params.get('tag_session');
-  if (tagId) {
-    _tagSessionId = parseInt(tagId);
-    var bar = document.getElementById('result-tag-bar');
-    if (bar) bar.style.display = 'block';
-    try {
-      var clean = window.location.pathname;
-      window.history.replaceState({}, '', clean);
-    } catch(e) {}
-  }
-
-  fetch('/api/performance')
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      _perfData = d;
-      if (loading) loading.style.display = 'none';
-
-      if (!d.avg_deal_wert) {
-        openDealWertModal();
-      }
-
-      if (d.avg_deal_wert) {
-        var slDw = document.getElementById('sl-deal-wert');
-        if (slDw) {
-          slDw.value = Math.min(50000, Math.max(100, d.avg_deal_wert));
-          document.getElementById('lbl-deal-wert').textContent = formatEuroShort(d.avg_deal_wert);
-        }
-      }
-
-      perfRenderReal(d);
-      perfSimUpdate();
-    })
-    .catch(function() {
-      if (loading) loading.style.display = 'none';
-      var empty = document.getElementById('perf-empty');
-      if (empty) empty.style.display = 'block';
-    });
-}
-
-// Start sobald DOM ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', perfInit);
-} else {
-  perfInit();
-}
+loadDashboard();
 </script>
+
+<style>
+/* Toasts */
+.toast-wrap{position:fixed;top:16px;right:16px;z-index:1000;display:flex;flex-direction:column;gap:8px;max-width:280px}
+.toast{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;font-size:13px;color:var(--page-text-secondary);display:flex;align-items:flex-start;gap:10px;animation:slideIn .3s ease;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.toast:hover{border-color:rgba(0,212,170,0.3)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.toast-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.toast-text{flex:1;line-height:1.4}
+.toast-arrow{color:#00D4AA;font-size:14px;flex-shrink:0}
+</style>
 {% endblock %}

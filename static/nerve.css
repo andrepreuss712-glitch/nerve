@@ -1423,3 +1423,293 @@ input[type="range"].perf-slider::-moz-range-thumb {
 }
 
 .perf-slider-group { margin-bottom: 4px; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD v2
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Layout wrapper */
+.db2-wrap {
+  padding: 24px;
+  max-width: 1200px;
+}
+
+/* ── Zeile 1: Begrüßung ──────────────────────────────────────── */
+.db2-greeting {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.db2-greeting-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+.db2-greeting-sub {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 3px;
+}
+.db2-greeting-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Zeile 2: KPI-Reihe ──────────────────────────────────────── */
+.db2-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.db2-kpi {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  min-height: 80px;
+}
+.db2-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+}
+.db2-kpi-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 5px;
+}
+.db2-kpi-trend {
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 3px;
+  min-height: 14px;
+}
+.db2-trend-up      { color: #00D4AA; }
+.db2-trend-down    { color: #F85149; }
+.db2-trend-neutral { color: #6b7280; }
+.db2-streak-fire   { color: #F59E0B; }
+
+/* ── Shared Card ─────────────────────────────────────────────── */
+.db2-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.db2-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.db2-card-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+/* ── Zeile 3: Zwei Spalten ───────────────────────────────────── */
+.db2-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ── Zeile 4: Sales Performance ──────────────────────────────── */
+.db2-mode-toggle {
+  display: flex;
+  background: #F0F2F5;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.db2-mode-btn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: #6b7280;
+  transition: all .15s;
+}
+.db2-mode-btn-active {
+  background: #FFFFFF;
+  color: #1a1a1a;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.db2-perf-split {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 20px;
+  align-items: start;
+}
+.db2-perf-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.db2-perf-kpi {
+  background: #F9FAFB;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.db2-perf-kpi-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+}
+.db2-perf-kpi-lbl {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* Hint bar */
+.db2-hint-bar {
+  background: rgba(0,212,170,0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #1a1a1a;
+}
+
+/* ── Sliders ─────────────────────────────────────────────────── */
+.db2-slider-group {
+  margin-bottom: 14px;
+}
+.db2-slider-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.db2-slider-row label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+.db2-slider-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: #00D4AA;
+}
+.db2-slider-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.db2-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #E5E7EB;
+  border-radius: 3px;
+  outline: none;
+}
+.db2-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #00D4AA;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.db2-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #00D4AA;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* ── Zeile 5a: Session-Liste ─────────────────────────────────── */
+.db2-session-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #F0F2F5;
+  font-size: 13px;
+}
+.db2-session-row:last-child { border-bottom: none; }
+.db2-session-date {
+  color: #6b7280;
+  font-size: 12px;
+  min-width: 90px;
+}
+.db2-session-score {
+  font-weight: 700;
+  margin-left: auto;
+  font-size: 13px;
+}
+
+/* Session-Badges */
+.db2-badge {
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.db2-badge-cold     { background: rgba(0,212,170,0.12);  color: #00D4AA; }
+.db2-badge-meeting  { background: rgba(59,130,246,0.12); color: #3B82F6; }
+.db2-badge-training { background: rgba(139,92,246,0.12); color: #8B5CF6; }
+
+/* ── Zeile 5b: Empfehlungen ──────────────────────────────────── */
+.db2-reco-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #F0F2F5;
+}
+.db2-reco-item:last-child { border-bottom: none; }
+.db2-reco-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.db2-reco-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.db2-reco-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .db2-kpi-row   { grid-template-columns: repeat(3, 1fr); }
+  .db2-two-col   { grid-template-columns: 1fr; }
+  .db2-perf-split { grid-template-columns: 1fr; }
+  .db2-perf-kpis  { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .db2-kpi-row  { grid-template-columns: repeat(2, 1fr); }
+  .db2-perf-kpis { grid-template-columns: 1fr; }
+  .db2-greeting { flex-direction: column; align-items: flex-start; }
+}
