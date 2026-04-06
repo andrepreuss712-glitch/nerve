@@ -220,49 +220,62 @@
       Daten werden geladen...
     </div>
 
-    <!-- KPI-Karten (4er Reihe) -->
-    <div id="perf-kpis" style="display:none;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">
-      <!-- KPI: Deals/Monat -->
-      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
-        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:8px">Deals / Monat</div>
-        <div id="kpi-deals" style="font-size:32px;font-weight:700;color:#1a1a1a;line-height:1">&#8212;</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px">basierend auf Closing-Rate</div>
+    <!-- KPI Reihe 1: 5 Karten -->
+    <div id="perf-kpi-row-1" class="perf-kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">&#216; Score</div>
+        <div id="kpi-score" class="kpi-value">&#8212;</div>
+        <div class="kpi-sub">letzte 90 Tage</div>
       </div>
-      <!-- KPI: Umsatz/Monat -->
-      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
-        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:8px">Umsatz / Monat</div>
-        <div id="kpi-umsatz" style="font-size:32px;font-weight:700;color:#00D4AA;line-height:1">&#8212;</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px">Calls &times; Closing-Rate &times; Deal-Wert</div>
+      <div class="kpi-card">
+        <div class="kpi-label">Umsatz / Monat</div>
+        <div id="kpi-umsatz" class="kpi-value" style="color:#00D4AA">&#8212;</div>
+        <div class="kpi-sub">Calls &times; Closing &times; Deal-Wert</div>
       </div>
-      <!-- KPI: Wachstum 12M -->
-      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
-        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:8px">Forecast 12 Monate</div>
-        <div id="kpi-forecast" style="font-size:32px;font-weight:700;color:#1a1a1a;line-height:1">&#8212;</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px">inkl. 5% Wachstum/Monat</div>
+      <div class="kpi-card">
+        <div class="kpi-label">Deals / Woche</div>
+        <div id="kpi-deals-woche" class="kpi-value">&#8212;</div>
+        <div class="kpi-sub">diese Woche</div>
       </div>
-      <!-- KPI: ROI -->
-      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
-        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:8px">ROI vs. 99&#8364;/Mo</div>
-        <div id="kpi-roi" style="font-size:32px;font-weight:700;color:#1a1a1a;line-height:1">&#8212;</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px">NERVE-Mehrwert (Annahme: +15% EWB)</div>
+      <div class="kpi-card">
+        <div class="kpi-label">Deals gesamt</div>
+        <div id="kpi-deals-gesamt" class="kpi-value">&#8212;</div>
+        <div class="kpi-sub">letzte 90 Tage</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">ROI vs. 99&#8364;/Mo</div>
+        <div id="kpi-roi" class="kpi-value">&#8212;</div>
+        <div class="kpi-sub">Mehrwert durch NERVE (+15% EWB)</div>
       </div>
     </div>
 
-    <!-- Charts: Balken + Wachstumskurve -->
-    <div id="perf-charts" style="display:none;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <!-- Balkendiagramm -->
-      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
-        <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px">Call-Aktivitaet</div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:16px">Letzte 8 Wochen</div>
-        <div style="position:relative;height:180px">
+    <!-- KPI Reihe 2: 2 breitere Karten -->
+    <div id="perf-kpi-row-2" class="perf-kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Finanzielle Performance</div>
+        <div id="kpi-fin-perf" class="kpi-value">&#8212;</div>
+        <div class="kpi-sub">Umsatz abzgl. NERVE (99&#8364;/Mo)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Forecast 12 Monate</div>
+        <div id="kpi-forecast" class="kpi-value">&#8212;</div>
+        <div class="kpi-sub">inkl. 5% Wachstum/Monat (S-Kurve)</div>
+      </div>
+    </div>
+
+    <!-- Charts: Balken + Wachstumskurve (2 Spalten) -->
+    <div id="perf-charts">
+      <div class="perf-chart-card">
+        <div class="perf-chart-title">Call-Aktivitaet</div>
+        <div class="perf-chart-sub">Letzte 8 Wochen</div>
+        <div style="position:relative">
           <canvas id="call-activity-chart"></canvas>
         </div>
       </div>
-      <!-- Wachstumskurve -->
-      <div style="background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:20px">
-        <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px">Umsatz-Forecast</div>
-        <div style="font-size:12px;color:#6b7280;margin-bottom:16px">12-Monats-Projektion (mit NERVE-Effekt)</div>
-        <div style="position:relative;height:180px">
+      <div class="perf-chart-card">
+        <div class="perf-chart-title">Umsatz-Forecast</div>
+        <div class="perf-chart-sub">12-Monats-Projektion (mit NERVE-Effekt)</div>
+        <div style="position:relative">
           <canvas id="growth-chart"></canvas>
         </div>
       </div>
@@ -273,82 +286,82 @@
       <strong style="color:#1a1a1a">Keine Closing-Rate verfuegbar</strong> &mdash; tagge deine Calls als Gewonnen/Verloren um echte Daten zu sehen. Bis dahin: Nutze den Simulations-Modus.
     </div>
 
-    <!-- Simulation Panel (Schieberegler) -->
-    <div id="perf-sim-panel" style="display:none;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:24px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px">Simulation</div>
-      <div style="font-size:12px;color:#6b7280;margin-bottom:20px">Verschiebe die Regler um dein Potential zu berechnen</div>
+    <!-- Simulation Panel: Split-Layout (Slider links, Ergebnis rechts) -->
+    <div id="perf-sim-panel" style="display:none;margin-bottom:20px">
+      <div class="perf-sim-split">
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <!-- Slider 1: Calls/Tag -->
-        <div class="perf-slider-group">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Calls pro Tag</label>
-            <span id="lbl-calls-tag" style="font-size:13px;font-weight:700;color:#00D4AA">10</span>
+        <!-- Links: Schieberegler -->
+        <div class="sim-sliders-card">
+          <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px">Simulation</div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:20px">Regler verschieben um Potential zu berechnen</div>
+
+          <div class="perf-slider-group">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Calls pro Tag</label>
+              <span id="lbl-calls-tag" style="font-size:13px;font-weight:700;color:#00D4AA">10</span>
+            </div>
+            <input type="range" id="sl-calls-tag" class="perf-slider" min="5" max="50" value="10" oninput="perfSimUpdate()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>5</span><span>50</span></div>
           </div>
-          <input type="range" id="sl-calls-tag" class="perf-slider" min="5" max="50" value="10"
-            oninput="perfSimUpdate()" style="width:100%">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>5</span><span>50</span></div>
-        </div>
 
-        <!-- Slider 2: Show-Rate -->
-        <div class="perf-slider-group">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Show-Rate</label>
-            <span id="lbl-show-rate" style="font-size:13px;font-weight:700;color:#00D4AA">70%</span>
+          <div class="perf-slider-group">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Show-Rate</label>
+              <span id="lbl-show-rate" style="font-size:13px;font-weight:700;color:#00D4AA">70%</span>
+            </div>
+            <input type="range" id="sl-show-rate" class="perf-slider" min="10" max="100" value="70" oninput="perfSimUpdate()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>10%</span><span>100%</span></div>
           </div>
-          <input type="range" id="sl-show-rate" class="perf-slider" min="10" max="100" value="70"
-            oninput="perfSimUpdate()" style="width:100%">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>10%</span><span>100%</span></div>
-        </div>
 
-        <!-- Slider 3: Closing-Rate -->
-        <div class="perf-slider-group">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Closing-Rate</label>
-            <span id="lbl-closing-rate" style="font-size:13px;font-weight:700;color:#00D4AA">20%</span>
+          <div class="perf-slider-group">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Closing-Rate</label>
+              <span id="lbl-closing-rate" style="font-size:13px;font-weight:700;color:#00D4AA">20%</span>
+            </div>
+            <input type="range" id="sl-closing-rate" class="perf-slider" min="5" max="80" value="20" oninput="perfSimUpdate()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>5%</span><span>80%</span></div>
           </div>
-          <input type="range" id="sl-closing-rate" class="perf-slider" min="5" max="80" value="20"
-            oninput="perfSimUpdate()" style="width:100%">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>5%</span><span>80%</span></div>
-        </div>
 
-        <!-- Slider 4: Deal-Wert -->
-        <div class="perf-slider-group">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Avg. Deal-Wert</label>
-            <span id="lbl-deal-wert" style="font-size:13px;font-weight:700;color:#00D4AA">2.000&#8364;</span>
+          <div class="perf-slider-group">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Avg. Deal-Wert</label>
+              <span id="lbl-deal-wert" style="font-size:13px;font-weight:700;color:#00D4AA">2.000&#8364;</span>
+            </div>
+            <input type="range" id="sl-deal-wert" class="perf-slider" min="100" max="50000" step="100" value="2000" oninput="perfSimUpdate()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>100&#8364;</span><span>50.000&#8364;</span></div>
           </div>
-          <input type="range" id="sl-deal-wert" class="perf-slider" min="100" max="50000" step="100" value="2000"
-            oninput="perfSimUpdate()" style="width:100%">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>100&#8364;</span><span>50.000&#8364;</span></div>
-        </div>
 
-        <!-- Slider 5: Arbeitstage -->
-        <div class="perf-slider-group" style="grid-column:1/-1">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-            <label style="font-size:13px;font-weight:500;color:#1a1a1a">Arbeitstage / Woche</label>
-            <span id="lbl-arbeitstage" style="font-size:13px;font-weight:700;color:#00D4AA">5</span>
+          <div class="perf-slider-group">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <label style="font-size:13px;font-weight:500;color:#1a1a1a">Arbeitstage / Woche</label>
+              <span id="lbl-arbeitstage" style="font-size:13px;font-weight:700;color:#00D4AA">5</span>
+            </div>
+            <input type="range" id="sl-arbeitstage" class="perf-slider" min="3" max="7" value="5" oninput="perfSimUpdate()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px"><span>3</span><span>7</span></div>
           </div>
-          <input type="range" id="sl-arbeitstage" class="perf-slider" min="3" max="7" value="5"
-            oninput="perfSimUpdate()" style="width:100%;max-width:400px">
-          <div style="display:flex;justify-content:space-between;max-width:400px;font-size:11px;color:#6b7280;margin-top:2px"><span>3</span><span>7</span></div>
         </div>
-      </div>
 
-      <!-- Simulations-Ergebnis -->
-      <div style="margin-top:24px;padding-top:20px;border-top:1px solid #E5E7EB;display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-        <div style="text-align:center">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px">Umsatz / Monat</div>
-          <div id="sim-umsatz" style="font-size:24px;font-weight:700;color:#00D4AA">&#8212;</div>
+        <!-- Rechts: Ergebnis-KPIs + Hint -->
+        <div>
+          <div class="sim-result-kpis">
+            <div class="kpi-card">
+              <div class="kpi-label">Umsatz / Monat</div>
+              <div id="sim-umsatz" class="kpi-value" style="color:#00D4AA">&#8212;</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Forecast / Jahr</div>
+              <div id="sim-forecast12" class="kpi-value">&#8212;</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">ROI vs. 99&#8364;/Mo</div>
+              <div id="sim-roi" class="kpi-value">&#8212;</div>
+            </div>
+          </div>
+          <div class="perf-hint-bar">
+            &#128161; 10% bessere Einwandbehandlung = <strong id="sim-hint-val">&#8212;</strong> mehr Umsatz/Monat
+          </div>
         </div>
-        <div style="text-align:center">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px">Forecast 12M</div>
-          <div id="sim-forecast12" style="font-size:24px;font-weight:700;color:#1a1a1a">&#8212;</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px">ROI vs. 99&#8364;/Mo</div>
-          <div id="sim-roi" style="font-size:24px;font-weight:700;color:#1a1a1a">&#8212;</div>
-        </div>
+
       </div>
     </div>
 
@@ -505,9 +518,12 @@ function formatPercent(val, dec) {
 
 function perfSetMode(mode) {
   _perfMode = mode;
-  var btnReal = document.getElementById('perf-mode-real');
-  var btnSim  = document.getElementById('perf-mode-sim');
+  var btnReal  = document.getElementById('perf-mode-real');
+  var btnSim   = document.getElementById('perf-mode-sim');
   var simPanel = document.getElementById('perf-sim-panel');
+  var row1     = document.getElementById('perf-kpi-row-1');
+  var row2     = document.getElementById('perf-kpi-row-2');
+  var charts   = document.getElementById('perf-charts');
 
   if (mode === 'real') {
     btnReal.style.background = '#FFFFFF';
@@ -525,6 +541,9 @@ function perfSetMode(mode) {
     btnReal.style.background = 'transparent';
     btnReal.style.color = '#6b7280';
     btnReal.style.boxShadow = 'none';
+    if (row1)  row1.style.display  = 'none';
+    if (row2)  row2.style.display  = 'none';
+    if (charts) charts.style.display = 'none';
     if (simPanel) simPanel.style.display = 'block';
     perfSimUpdate();
   }
@@ -535,7 +554,8 @@ function perfSetMode(mode) {
 function perfRenderReal(d) {
   var loading = document.getElementById('perf-loading');
   var empty   = document.getElementById('perf-empty');
-  var kpis    = document.getElementById('perf-kpis');
+  var row1    = document.getElementById('perf-kpi-row-1');
+  var row2    = document.getElementById('perf-kpi-row-2');
   var charts  = document.getElementById('perf-charts');
   var noClose = document.getElementById('perf-no-closing');
 
@@ -543,39 +563,60 @@ function perfRenderReal(d) {
 
   if (!d.hat_daten) {
     if (empty) empty.style.display = 'block';
-    if (kpis) kpis.style.display = 'none';
+    if (row1)   row1.style.display  = 'none';
+    if (row2)   row2.style.display  = 'none';
     if (charts) charts.style.display = 'none';
-    // Direkt in Simulations-Modus wechseln wenn keine Daten
     perfSetMode('sim');
     return;
   }
 
   if (empty) empty.style.display = 'none';
-  if (kpis) kpis.style.display = 'grid';
+  if (row1)   row1.style.display   = 'grid';
+  if (row2)   row2.style.display   = 'grid';
   if (charts) charts.style.display = 'grid';
 
-  // KPI-Karten befuellen
-  var deals = d.calls_pro_monat && d.closing_rate
-    ? Math.round(d.calls_pro_monat * (d.closing_rate / 100))
-    : null;
-  var kpiDeals = document.getElementById('kpi-deals');
-  if (kpiDeals) kpiDeals.textContent = deals != null ? deals : '—';
+  // Reihe 1: Ø Score
+  var elScore = document.getElementById('kpi-score');
+  if (elScore) elScore.textContent = d.avg_score != null ? d.avg_score : '—';
 
-  var kpiUmsatz = document.getElementById('kpi-umsatz');
-  if (kpiUmsatz) kpiUmsatz.textContent = d.umsatz_pro_monat ? formatEuroShort(d.umsatz_pro_monat) : '—';
+  // Reihe 1: Umsatz/Monat
+  var elUmsatz = document.getElementById('kpi-umsatz');
+  if (elUmsatz) elUmsatz.textContent = d.umsatz_pro_monat ? formatEuroShort(d.umsatz_pro_monat) : '—';
 
-  var kpiForecast = document.getElementById('kpi-forecast');
-  if (kpiForecast) kpiForecast.textContent = d.forecast_12m ? formatEuroShort(d.forecast_12m) : '—';
+  // Reihe 1: Deals diese Woche
+  var elDealsWoche = document.getElementById('kpi-deals-woche');
+  if (elDealsWoche) elDealsWoche.textContent = d.deals_diese_woche != null ? d.deals_diese_woche : '—';
 
-  var kpiRoi = document.getElementById('kpi-roi');
-  if (kpiRoi) {
+  // Reihe 1: Deals gesamt
+  var elDealsGesamt = document.getElementById('kpi-deals-gesamt');
+  if (elDealsGesamt) elDealsGesamt.textContent = d.deals_gesamt != null ? d.deals_gesamt : '—';
+
+  // Reihe 1: ROI
+  var elRoi = document.getElementById('kpi-roi');
+  if (elRoi) {
     if (d.roi_mehrwert != null) {
-      kpiRoi.textContent = (d.roi_mehrwert >= 0 ? '+' : '') + formatEuroShort(d.roi_mehrwert);
-      kpiRoi.style.color = d.roi_mehrwert >= 0 ? '#00D4AA' : '#f87171';
+      elRoi.textContent = (d.roi_mehrwert >= 0 ? '+' : '') + formatEuroShort(d.roi_mehrwert);
+      elRoi.style.color = d.roi_mehrwert >= 0 ? '#00D4AA' : '#f87171';
     } else {
-      kpiRoi.textContent = '—';
+      elRoi.textContent = '—';
     }
   }
+
+  // Reihe 2: Finanzielle Performance (Umsatz - 99€)
+  var elFinPerf = document.getElementById('kpi-fin-perf');
+  if (elFinPerf) {
+    var finPerf = d.umsatz_pro_monat ? d.umsatz_pro_monat - 99 : null;
+    if (finPerf != null) {
+      elFinPerf.textContent = (finPerf >= 0 ? '' : '') + formatEuroShort(finPerf);
+      elFinPerf.style.color = finPerf >= 0 ? '#00D4AA' : '#f87171';
+    } else {
+      elFinPerf.textContent = '—';
+    }
+  }
+
+  // Reihe 2: Forecast 12M
+  var elForecast = document.getElementById('kpi-forecast');
+  if (elForecast) elForecast.textContent = d.forecast_12m ? formatEuroShort(d.forecast_12m) : '—';
 
   // Closing-Rate Hinweis
   if (noClose) noClose.style.display = d.closing_rate == null ? 'block' : 'none';
@@ -756,6 +797,13 @@ function perfSimUpdate() {
     if (simRoi) {
       simRoi.textContent = (roiMehrwert >= 0 ? '+' : '') + formatEuroShort(roiMehrwert);
       simRoi.style.color = roiMehrwert >= 0 ? '#00D4AA' : '#f87171';
+    }
+
+    // Hint: 10% bessere Einwandbehandlung
+    var hintVal = document.getElementById('sim-hint-val');
+    if (hintVal) {
+      var hintUmsatz = Math.round(showsProMonat * (closingCr * 1.1 / 100) * dealWert) - umsatzMonat;
+      hintVal.textContent = formatEuroShort(Math.max(0, hintUmsatz));
     }
   }, 150);
 }

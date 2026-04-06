@@ -96,6 +96,19 @@ def api_performance():
         gewonnen = [l for l in getaggt if getattr(l, 'result', None) == 'gewonnen']
         closing_rate = round(len(gewonnen) / len(getaggt) * 100, 1) if getaggt else None
 
+        # ── Ø Score (aus kb_end der Live-Sessions) ────────────────────────
+        scores = [l.kb_end for l in logs_90 if getattr(l, 'kb_end', None) is not None]
+        avg_score = round(sum(scores) / len(scores), 1) if scores else None
+
+        # ── Deals diese Woche / gesamt ────────────────────────────────────
+        cutoff_7 = datetime.now() - timedelta(days=7)
+        deals_diese_woche = sum(
+            1 for l in logs_90
+            if getattr(l, 'result', None) == 'gewonnen'
+            and l.created_at and l.created_at >= cutoff_7
+        )
+        deals_gesamt = sum(1 for l in logs_90 if getattr(l, 'result', None) == 'gewonnen')
+
         # ── Einwand-Erfolgsquote ──────────────────────────────────────────
         total_einwaende = sum(l.einwaende_gesamt or 0 for l in logs_90)
         total_behandelt = sum(l.einwaende_behandelt or 0 for l in logs_90)
@@ -141,6 +154,9 @@ def api_performance():
             'chart_data':           chart_data,
             'roi_mehrwert':         roi_mehrwert,
             'total_live_calls':     len(logs_90),
+            'avg_score':            avg_score,
+            'deals_diese_woche':    deals_diese_woche,
+            'deals_gesamt':         deals_gesamt,
         })
     finally:
         db.close()

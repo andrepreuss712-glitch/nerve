@@ -1314,35 +1314,112 @@ input[type="range"].perf-slider::-moz-range-thumb {
   border: none;
 }
 
-/* KPI-Karten-Grid: 4 Spalten -> 2 auf Tablet -> 1 auf Mobile */
-#perf-kpis {
-  display: none;  /* JS zeigt via .style.display = 'grid' */
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
+/* KPI-Karten: Basis-Card */
+.kpi-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-@media (max-width: 900px) {
-  #perf-kpis { grid-template-columns: repeat(2, 1fr); }
+.kpi-card .kpi-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+  margin-bottom: 6px;
 }
-@media (max-width: 480px) {
-  #perf-kpis { grid-template-columns: 1fr; }
+.kpi-card .kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.kpi-card .kpi-sub {
+  font-size: 12px;
+  color: #6b7280;
 }
 
-/* Charts-Grid: 2 Spalten -> 1 auf Mobile */
+/* KPI-Reihe generisch */
+.perf-kpi-row {
+  display: none; /* JS: style.display = 'grid' */
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Reihe 1: 5 Karten */
+#perf-kpi-row-1 { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 1100px) { #perf-kpi-row-1 { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px)  { #perf-kpi-row-1 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px)  { #perf-kpi-row-1 { grid-template-columns: 1fr; } }
+
+/* Reihe 2: 2 breitere Karten */
+#perf-kpi-row-2 { grid-template-columns: 1fr 1fr; margin-bottom: 16px; }
+@media (max-width: 768px)  { #perf-kpi-row-2 { grid-template-columns: 1fr; } }
+
+/* Charts-Grid: 2 Spalten */
 #perf-charts {
-  display: none;  /* JS zeigt via .style.display = 'grid' */
+  display: none; /* JS: style.display = 'grid' */
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
-@media (max-width: 768px) {
-  #perf-charts { grid-template-columns: 1fr; }
+@media (max-width: 768px) { #perf-charts { grid-template-columns: 1fr; } }
+
+.perf-chart-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.perf-chart-card .perf-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+}
+.perf-chart-card .perf-chart-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 14px;
+}
+.perf-chart-card canvas { max-height: 220px; }
+
+/* Simulation: Split-Layout */
+.perf-sim-split {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) { .perf-sim-split { grid-template-columns: 1fr; } }
+
+.sim-sliders-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-/* Simulations-Slider-Grid: 2 Spalten -> 1 auf Mobile */
-.perf-slider-group { margin-bottom: 4px; }
-@media (max-width: 768px) {
-  #perf-sim-panel > div:nth-child(3) {
-    grid-template-columns: 1fr !important;
-  }
+/* Simulation Ergebnis-KPIs: 3 Karten nebeneinander */
+.sim-result-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
 }
+@media (max-width: 600px) { .sim-result-kpis { grid-template-columns: 1fr; } }
+
+/* Hint-Bar */
+.perf-hint-bar {
+  background: rgba(0,212,170,0.06);
+  border-left: 3px solid #00D4AA;
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #1a1a1a;
+  margin-top: 4px;
+}
+
+.perf-slider-group { margin-bottom: 4px; }
