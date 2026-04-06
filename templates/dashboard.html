@@ -84,44 +84,40 @@
   {% endif %}
 
   <!-- Top row: North Star + Quick Actions -->
-  <!-- Score diese Woche: kompakte Zeile -->
-  <div class="n-glass" style="padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-    <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280">Score diese Woche</span>
-    <span class="ns-score" style="font-size:20px;color:{% if stats.trend_score == 'down' %}#f87171{% else %}#00D4AA{% endif %}">
-      {{ stats.avg_kb }}<span style="font-size:12px;font-weight:400;color:var(--page-text-muted)"> / 100</span>
-    </span>
-    <span class="ns-trend" style="font-size:13px;margin-top:0">
-      {% if stats.trend_score == 'up' %}
-        <i data-lucide="arrow-up" style="width:14px;height:14px;color:#00D4AA"></i>
-        <span style="color:#00D4AA">Steigend</span>
-      {% elif stats.trend_score == 'down' %}
-        <i data-lucide="arrow-down" style="width:14px;height:14px;color:#f87171"></i>
-        <span style="color:#f87171">Fallend</span>
-      {% else %}
-        <span style="color:var(--page-text-muted)">Stabil</span>
-      {% endif %}
-    </span>
-  </div>
+  <!-- Score + Letzte Calls: nebeneinander -->
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;margin-bottom:16px;align-items:start">
 
-  <!-- Letzte Calls: kompakt -->
-  <div class="n-glass calls-panel" style="padding:12px 16px;margin-bottom:16px">
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:6px">Letzte Calls</div>
-    {% if recent_calls %}
-      {% for call in recent_calls[:3] %}
-      <div class="call-row" style="padding:6px 0;font-size:13px">
-        <span class="call-date">{{ call.relative }}</span>
-        <span class="call-mode {% if call.session_mode == 'cold_call' %}call-mode-cold{% else %}call-mode-meeting{% endif %}">
-          {{ 'Cold Call' if call.session_mode == 'cold_call' else 'Meeting' }}
-        </span>
-        <span class="call-score {% if call.score >= 70 %}call-score-high{% elif call.score >= 40 %}call-score-mid{% else %}call-score-low{% endif %}">
-          {{ call.score }}
-        </span>
-        <span class="call-dauer">{{ call.dauer }}</span>
+    <!-- Score diese Woche -->
+    <div class="n-glass" style="padding:10px 16px;display:flex;flex-direction:column;gap:2px;white-space:nowrap">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280">Score diese Woche</span>
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <span style="font-size:22px;font-weight:700;color:{% if stats.trend_score == 'down' %}#f87171{% else %}#00D4AA{% endif %}">{{ stats.avg_kb }}</span>
+        <span style="font-size:12px;color:var(--page-text-muted)">/ 100</span>
+        {% if stats.trend_score == 'up' %}
+          <i data-lucide="arrow-up" style="width:13px;height:13px;color:#00D4AA"></i>
+        {% elif stats.trend_score == 'down' %}
+          <i data-lucide="arrow-down" style="width:13px;height:13px;color:#f87171"></i>
+        {% endif %}
       </div>
-      {% endfor %}
-    {% else %}
-      <div class="empty-state" style="font-size:13px;padding:4px 0">Noch keine Calls</div>
-    {% endif %}
+    </div>
+
+    <!-- Letzte Calls -->
+    <div class="n-glass" style="padding:10px 16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:4px">Letzte Calls</div>
+      {% if recent_calls %}
+        {% for call in recent_calls[:3] %}
+        <div class="call-row" style="padding:4px 0;font-size:13px">
+          <span class="call-date">{{ call.relative }}</span>
+          <span class="call-mode {% if call.session_mode == 'cold_call' %}call-mode-cold{% else %}call-mode-meeting{% endif %}">{{ 'Cold Call' if call.session_mode == 'cold_call' else 'Meeting' }}</span>
+          <span class="call-score {% if call.score >= 70 %}call-score-high{% elif call.score >= 40 %}call-score-mid{% else %}call-score-low{% endif %}">{{ call.score }}</span>
+          <span class="call-dauer">{{ call.dauer }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="font-size:13px;color:var(--page-text-muted);padding:2px 0">Noch keine Calls</div>
+      {% endif %}
+    </div>
+
   </div>
 
   <!-- Next Best Action -->
