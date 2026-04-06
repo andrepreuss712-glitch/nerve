@@ -20,6 +20,9 @@ logging.getLogger('werkzeug').addFilter(_SuppressPolling())
 
 # ── Flask App ─────────────────────────────────────────────────────────────────
 app = Flask(__name__)
+# Phase 04.6.1: für korrekte https-Redirect-URIs hinter nginx
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
 app.config['SECRET_KEY']       = SECRET_KEY
 app.config['SESSION_PERMANENT'] = True
 app.config['CSS_VERSION']      = '20260404-7'
@@ -683,6 +686,7 @@ from routes.changelog      import changelog_bp
 from routes.payments       import payments_bp
 from routes.legal          import legal_bp
 from routes.performance    import performance_bp
+from routes.oauth          import oauth_bp, init_oauth
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(orgs_bp)
@@ -699,6 +703,8 @@ app.register_blueprint(changelog_bp)
 app.register_blueprint(payments_bp)
 app.register_blueprint(legal_bp)
 app.register_blueprint(performance_bp)
+app.register_blueprint(oauth_bp)
+init_oauth(app)
 
 # ── Share socketio with services ──────────────────────────────────────────────
 # Patch extensions module so services can import socketio
