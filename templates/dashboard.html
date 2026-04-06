@@ -5,8 +5,7 @@
 .dash-wrap { padding: 24px; max-width: 1200px; }
 
 /* Top row: North Star + Quick Actions */
-.dash-top { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-@media (max-width: 768px) { .dash-top { grid-template-columns: 1fr; } }
+.dash-top { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; }
 
 /* North Star */
 .ns-score { font-family: var(--page-font-mono, 'JetBrains Mono', monospace); font-size: 28px; font-weight: 600; }
@@ -103,15 +102,6 @@
           <span style="color:var(--page-text-muted)">Stabil</span>
         {% endif %}
       </div>
-    </div>
-    <!-- Quick Actions -->
-    <div class="n-glass qa-panel" style="padding:24px">
-      <a href="/live" class="n-btn n-btn-primary" style="display:flex;align-items:center;justify-content:center;gap:8px">
-        <i data-lucide="phone" style="width:16px;height:16px"></i> Call starten
-      </a>
-      <a href="/training" class="n-btn n-btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px">
-        <i data-lucide="book-open" style="width:16px;height:16px"></i> Training starten
-      </a>
     </div>
   </div>
 
