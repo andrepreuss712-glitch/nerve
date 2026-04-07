@@ -76,6 +76,18 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [x] **DU-11**: Sprach-Buttons aus Training-Seite entfernt; Spracheinstellung in Einstellungen (Profil-Tab, "Bevorzugte Sprache")
 - [x] **DU-12**: Settings-Button in Sidebar hat identische Pixel-Position auf allen Seiten (kein Springen)
 
+### Training Analytics & Tools (INSERTED — Phase 04.5)
+
+- [ ] **TA-01**: `GET /api/training/stats` liefert Sessions (Woche/Monat/Gesamt), Durchschnittsdauer, Streak, Wochenziel und Heatmap-Daten fuer den eingeloggten User
+- [ ] **TA-02**: `GET /api/training/recommendation` liefert eine regelbasierte KI-Empfehlung (schlechtester Einwand, Streak-Break, Trend) ohne zusaetzlichen LLM-Call
+- [ ] **TA-03**: Einwand-Heatmap zeigt alle 7 Einwand-Typen als farbige CSS-Kacheln (gruen > 70%, gelb 40-70%, rot < 40%, neutral bei fehlenden Daten)
+- [ ] **TA-04**: Klick auf eine Heatmap-Kachel startet Quick-Training mit vorkonfiguriertem Einwand-Typ via URL-Parameter `?quick=1&einwand_typ=...`
+- [ ] **TA-05**: Phrasen-Bank zeigt Wendepunkt-Saetze aus Post-Call Analysen (extrahiert via `generate_scoring()`), filterbar nach Einwand-Typ, paginiert mit 20 Eintraegen pro Seite
+- [ ] **TA-06**: Wochenziel-Card: User kann Ziel setzen (1-30), Fortschrittsbalken zeigt Sessions dieser Woche vs. Ziel, Reset per Kalenderwoche
+- [ ] **TA-07**: Letzte Session Card zeigt kompakte Zusammenfassung (Szenario, Dauer, Score, Haupt-Einwand, Top-Verbesserungstipp) mit Link zur Dashboard-Analyse
+- [ ] **TA-08**: Alle neuen Cards verwenden exakt die Design-Spezifikation: #FFFFFF Card BG, 12px Border-Radius, `0 1px 3px rgba(0,0,0,0.08)` Shadow, teal #00D4AA Akzente
+- [ ] **TA-09**: Keine neuen Farben ausserhalb der definierten Palette, keine Gradient-Backgrounds, Sidebar (#0D1117) unveraendert
+
 ### Business Setup
 
 - [ ] **BIZ-01**: Gewerbeanmeldung beim Gewerbeamt Iserlohn ist eingereicht
@@ -179,13 +191,22 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | DU-10 | Phase 4.3 | Complete |
 | DU-11 | Phase 4.3 | Complete |
 | DU-12 | Phase 4.3 | Complete |
+| TA-01 | Phase 4.5 | Pending |
+| TA-02 | Phase 4.5 | Pending |
+| TA-03 | Phase 4.5 | Pending |
+| TA-04 | Phase 4.5 | Pending |
+| TA-05 | Phase 4.5 | Pending |
+| TA-06 | Phase 4.5 | Pending |
+| TA-07 | Phase 4.5 | Pending |
+| TA-08 | Phase 4.5 | Pending |
+| TA-09 | Phase 4.5 | Pending |
 | LAUNCH-01 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 53 total
-- Mapped to phases: 53/53
+- v1 requirements: 62 total
+- Mapped to phases: 62/62
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-30*
-*Last updated: 2026-04-04 — DU-01 through DU-12 added for Phase 4.3 Design Unification*
+*Last updated: 2026-04-04 — TA-01 through TA-09 added for Phase 4.5 Training Analytics & Tools*

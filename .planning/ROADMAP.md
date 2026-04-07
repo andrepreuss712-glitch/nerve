@@ -168,12 +168,12 @@ Plans:
 **Goal:** Deploy-Pipeline härten (rsync mit DB-Schutz) und verbleibende OAuth-Rough-Edges aus 04.6.1 glätten (Landing-Link, MS-Branding, Consumer-Account-Block, Silent-SSO, Onboarding-Render-Bug)
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06
 **Depends on:** Phase 04.6.1
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 Plans:
 - [ ] 04.6.2-01-PLAN.md — Deploy-Hardening: deploy.sh auf rsync mit Excludes und Prod-DB-Schutz (D-01)
-- [ ] 04.6.2-02-PLAN.md — Landing & Branding: Header-Login → app.getnerve.app, Microsoft 365 Button-Labels (D-02, D-03)
-- [ ] 04.6.2-03-PLAN.md — OAuth Flow Polish: Consumer-Tenant-Block verifizieren + conditional prompt=consent (D-04, D-06)
+- [x] 04.6.2-02-PLAN.md — Landing & Branding: Header-Login → app.getnerve.app, Microsoft 365 Button-Labels (D-02, D-03)
+- [x] 04.6.2-03-PLAN.md — OAuth Flow Polish: Consumer-Tenant-Block verifizieren + conditional prompt=consent (D-04, D-06)
 - [ ] 04.6.2-04-PLAN.md — Onboarding-Bug Fix: Root-Cause-Analyse + Fix für fehlende Buttons nach OAuth (D-05)
 
 ### Phase 04.1: Live-Mikrofon Fix: PyAudio -> Browser getUserMedia (INSERTED)
