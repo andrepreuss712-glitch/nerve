@@ -16,7 +16,7 @@ echo "[deploy] Uploading app files via scp..."
 # Upload entire project tree directory by directory (no rsync needed)
 scp -i ~/.ssh/nerve_vps -r \
   app.py config.py requirements.txt extensions.py \
-  routes services templates static \
+  routes services templates static database \
   "$VPS_HOST:$APP_DIR/"
 
 ssh -i ~/.ssh/nerve_vps "$VPS_HOST" bash -s << 'EOF'
