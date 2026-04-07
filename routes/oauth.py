@@ -32,13 +32,12 @@ def init_oauth(app):
             name='microsoft',
             client_id=MICROSOFT_CLIENT_ID,
             client_secret=MICROSOFT_CLIENT_SECRET,
-            # Entra External ID (CIAM) Tenant 'nervesales' — Kunden erstellen NERVE-spezifische
-            # Accounts die in Microsofts CIAM-Infrastruktur liegen. Kein Workforce-Flow, kein
-            # /organizations/ Endpoint. Alle User haben tid = CIAM-Tenant-GUID.
-            server_metadata_url='https://nervesales.ciamlogin.com/nervesales.onmicrosoft.com/v2.0/.well-known/openid-configuration',
+            # /organizations/ endpoint: nur Work/School-Accounts (Microsoft 365), keine personal accounts.
+            # Multi-Tenant App im Shell-Tenant (AzureADMultipleOrgs). Matcht die B2B-Zielgruppe.
+            server_metadata_url='https://login.microsoftonline.com/organizations/v2.0/.well-known/openid-configuration',
             client_kwargs={'scope': 'openid email profile'},
         )
-        print('[OAuth] Microsoft client registered (CIAM / nervesales External ID)')
+        print('[OAuth] Microsoft client registered (organizations / Work-School only)')
     else:
         print('[OAuth] Microsoft credentials missing — /auth/microsoft disabled')
 
