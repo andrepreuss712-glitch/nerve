@@ -4,14 +4,14 @@ milestone: v0.9.4
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04.6-03-PLAN.md
-last_updated: "2026-04-07T16:16:12.346Z"
+last_updated: "2026-04-07T16:50:51.682Z"
 last_activity: 2026-04-07
 progress:
-  total_phases: 27
+  total_phases: 28
   completed_phases: 8
-  total_plans: 57
-  completed_plans: 49
-  percent: 86
+  total_plans: 61
+  completed_plans: 50
+  percent: 82
 ---
 
 # Project State
@@ -207,6 +207,7 @@ Recent decisions affecting current work:
 - Phase 04.2.1 inserted after Phase 04.2: UI/UX Overhaul — Dashboard, Live-Assistent, Kompaktmodus (URGENT) — complete layout overhaul, Getclose.ai design reference, PiP overlay
 - Phase 1 (Business Setup) removed from GSD tracking — user handles manually (Gewerbeanmeldung, Geschäftskonto, etc.)
 - Phase 04.6.1 inserted after Phase 04.6: Auth-Upgrade Google + Microsoft OAuth Login (URGENT) — Authlib-basierter OAuth-Flow für Google + Microsoft, User-Model nullable passwort_hash, Login-UI Buttons
+- Phase 04.6.2 inserted after Phase 04.6.1: deploy hardening and oauth polish (URGENT) — gehört zum Auth-Block
 
 ### Pending Todos
 

@@ -23,7 +23,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 04.3: Design Unification** - Light/Dark Mode entfernen, einheitliches dunkles Theme, Beenden-Button Fix, UI-Elemente konsolidieren (INSERTED) (completed 2026-04-04)
 - [ ] **Phase 04.5: Training Analytics & Tools** - Analytics-Panel mit Stats, Heatmap, Phrasen-Bank, Wochenziel, Quick-Training (INSERTED)
 - [ ] **Phase 04.6: Sales Performance Calculator** - Interaktiver ROI-Rechner im Dashboard: echte Call-Daten + Simulations-Schieberegler, KPI-Karten, Charts, Umsatz-Forecast (INSERTED)
-- [x] **Phase 04.6.1: Auth-Upgrade Google + Microsoft OAuth Login** - OAuth-Login via authlib, nullable passwort_hash, Login-UI Buttons (INSERTED) (completed 2026-04-06) (completed 2026-04-07)
+- [x] **Phase 04.6.1: Auth-Upgrade Google + Microsoft OAuth Login** - OAuth-Login via authlib, nullable passwort_hash, Login-UI Buttons (INSERTED) (completed 2026-04-06)
+ (completed 2026-04-07)
+- [ ] **Phase 04.6.2: Deploy Hardening & OAuth Polish** - Urgent: deploy hardening and oauth polish (INSERTED)
 - [ ] **Phase 04.7: Backend & Feedback System** - Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails (Resend/Postmark), Session-History (INSERTED)
 - [ ] **Phase 04.7.1: FineTuning Logging Grundlage** - ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions Tabellen von Tag 1 (INSERTED)
 - [ ] **Phase 04.7.2: Founder Cost Dashboard** - Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export für count.tax, API-Preismonitor (INSERTED)
@@ -160,6 +162,19 @@ Plans:
 - [x] 04-01-PLAN.md — Stripe foundation: DB migration, config, payments blueprint (Checkout, Webhook, Portal) (PAY-01, PAY-02, PAY-03, PAY-04)
 - [ ] 04-02-PLAN.md — Pricing page + fair-use metering with soft warnings (PAY-05, PAY-06)
 - [ ] 04-03-PLAN.md — Legal pages (Impressum, AGB, Datenschutz) + Deepgram EU + AVV checklist (LEGAL-01, LEGAL-02, LEGAL-03)
+
+### Phase 04.6.2: deploy hardening and oauth polish (INSERTED)
+
+**Goal:** Deploy-Pipeline härten (rsync mit DB-Schutz) und verbleibende OAuth-Rough-Edges aus 04.6.1 glätten (Landing-Link, MS-Branding, Consumer-Account-Block, Silent-SSO, Onboarding-Render-Bug)
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06
+**Depends on:** Phase 04.6.1
+**Plans:** 4 plans
+
+Plans:
+- [ ] 04.6.2-01-PLAN.md — Deploy-Hardening: deploy.sh auf rsync mit Excludes und Prod-DB-Schutz (D-01)
+- [ ] 04.6.2-02-PLAN.md — Landing & Branding: Header-Login → app.getnerve.app, Microsoft 365 Button-Labels (D-02, D-03)
+- [ ] 04.6.2-03-PLAN.md — OAuth Flow Polish: Consumer-Tenant-Block verifizieren + conditional prompt=consent (D-04, D-06)
+- [ ] 04.6.2-04-PLAN.md — Onboarding-Bug Fix: Root-Cause-Analyse + Fix für fehlende Buttons nach OAuth (D-05)
 
 ### Phase 04.1: Live-Mikrofon Fix: PyAudio -> Browser getUserMedia (INSERTED)
 
