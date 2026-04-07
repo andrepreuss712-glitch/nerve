@@ -23,6 +23,20 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 04.3: Design Unification** - Light/Dark Mode entfernen, einheitliches dunkles Theme, Beenden-Button Fix, UI-Elemente konsolidieren (INSERTED) (completed 2026-04-04)
 - [ ] **Phase 04.5: Training Analytics & Tools** - Analytics-Panel mit Stats, Heatmap, Phrasen-Bank, Wochenziel, Quick-Training (INSERTED)
 - [ ] **Phase 04.6: Sales Performance Calculator** - Interaktiver ROI-Rechner im Dashboard: echte Call-Daten + Simulations-Schieberegler, KPI-Karten, Charts, Umsatz-Forecast (INSERTED)
+- [x] **Phase 04.6.1: Auth-Upgrade Google + Microsoft OAuth Login** - OAuth-Login via authlib, nullable passwort_hash, Login-UI Buttons (INSERTED) (completed 2026-04-06) (completed 2026-04-07)
+- [ ] **Phase 04.7: Backend & Feedback System** - Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails (Resend/Postmark), Session-History (INSERTED)
+- [ ] **Phase 04.7.1: FineTuning Logging Grundlage** - ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions Tabellen von Tag 1 (INSERTED)
+- [ ] **Phase 04.7.2: Founder Cost Dashboard** - Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export für count.tax, API-Preismonitor (INSERTED)
+- [ ] **Phase 04.8: KI-Logik Upgrade** - Gesprächsphasen-Erkennung (6 Phasen), Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung, Cold Call Inferenz, dynamische EWB-Buttons (INSERTED)
+- [ ] **Phase 04.9: Training-Modul Upgrade** - 6 Persönlichkeitstypen, Stimmungs-Dynamik (-5 bis +5), Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade (INSERTED)
+- [ ] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED)
+- [ ] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
+- [ ] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED)
+- [ ] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
+- [ ] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED)
+- [ ] **Phase 04.15: Rollen, Support & Kompensation** - Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff, Kompensation bei Ausfällen (INSERTED)
+- [ ] **Phase 04.16: Finaler Polish + UAT** - Finaler UAT-Durchlauf, Design-Pass, CSS Refactoring, Code Audit, Performance-Check (INSERTED)
+- [ ] **Phase 04.17: PiP Launcher** - Always-on-Top verschiebbarer Live-Assistent via Document Picture-in-Picture API, Call-Start aus CRM heraus, Modus/Kunden/Skript-Auswahl im PiP (INSERTED)
 - [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
 
 ## Phase Details
@@ -271,6 +285,97 @@ Plans:
 - [x] 04.6.1-02-PLAN.md — routes/oauth.py Blueprint (Google + Microsoft via authlib) + app.py Integration + ProxyFix
 - [x] 04.6.1-03-PLAN.md — Landing-Modal UI (Google + Microsoft Buttons, Trennlinie, oauth_error-Anzeige) + Visual Checkpoint
 
+### Phase 04.7: Backend & Feedback System (INSERTED)
+
+**Goal:** Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails und Session-History stehen — Grundlage für alle folgenden Phasen.
+**Depends on:** Phase 04.6.1
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.7)
+**Plans:** TBD
+
+### Phase 04.7.1: FineTuning Logging Grundlage (INSERTED)
+
+**Goal:** Strukturierte Logging-Tabellen für Fine-Tuning Trainingsdaten von Tag 1 — ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions. Markt-Trennung DACH/US, Anonymisierung, JSONL-Export.
+**Depends on:** Phase 04.7
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE FineTuning Logging Architektur.md`
+**Plans:** TBD
+
+### Phase 04.7.2: Founder Cost Dashboard (INSERTED)
+
+**Goal:** André sieht auf einen Blick wie sein Business steht — 6 Tabs (Übersicht, Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export). Am Monatsende: Klick auf Export → count.tax bekommt alles fertig aufbereitet.
+**Depends on:** Phase 04.7
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Admin Dashboard Final.md`
+**Plans:** TBD
+
+### Phase 04.8: KI-Logik Upgrade (INSERTED)
+
+**Goal:** Kernarchitektur für intelligente Hinweise — automatische Gesprächsphasen-Erkennung (6 Phasen), Live-Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung (nie mehr als einer gleichzeitig), Cold Call Inferenz aus Vertriebler-Aussagen, dynamische EWB-Buttons pro Phase.
+**Depends on:** Phase 04.7.1
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE KI-Logik Kernarchitektur.md`
+**Plans:** TBD
+
+### Phase 04.9: Training-Modul Upgrade (INSERTED)
+
+**Goal:** Training gegen lebendige KI-Persönlichkeiten — 6 Typen (Beschäftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider), dynamische Stimmung (-5 bis +5), echte Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade.
+**Depends on:** Phase 04.8
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training-Modul.md`
+**Plans:** TBD
+
+### Phase 04.10: Training Realismus (INSERTED)
+
+**Goal:** Sekretärin + Chef Modus mit 2 Stimmen, echte Audio-Simulation (Freizeichen, Klingeln, Besetztzeichen), Auflegen-Flow mit Besetztzeichen → Pop-up → Scoring.
+**Depends on:** Phase 04.9
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training Realismus Regeln.md`
+**Plans:** TBD
+
+### Phase 04.11: Coach-Modul (INSERTED)
+
+**Goal:** Persönliches Lernsystem — Post-Call Analyse mit max 3 konkreten Lernkarten-Vorschlägen, max 5 aktive Lernkarten, KI-Gedächtnis im nächsten Call (goldener Rahmen bei passender Situation), Wöchentlicher Coach-Report, Langzeit-Fortschritt über 4-12 Wochen.
+**Depends on:** Phase 04.8, Phase 04.9
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Coach-Modul.md`
+**Plans:** TBD
+
+### Phase 04.12: Gesamt-Integration (INSERTED)
+
+**Goal:** Alle Module zu einem geschlossenen Lernökosystem verbinden — learning_events Tabelle, 5 Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen↔EWB), Selbstverbesserungs-Kreislauf, Netzwerkeffekt durch aggregierte anonymisierte Daten.
+**Depends on:** Phase 04.11
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Gesamt-Architektur.md`
+**Plans:** TBD
+
+### Phase 04.13: PreCall Intelligence (INSERTED)
+
+**Goal:** Automatische Firmen-Recherche vor dem Call — Vertriebler gibt Firmenname + Ansprechpartner ein, NERVE erstellt kompaktes Call-Briefing in ~30 Sekunden, Briefing erscheint im PIP. Datenquellen-Ansatz wird beim Start der Phase gemeinsam festgelegt.
+**Depends on:** Phase 04.8
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Phase 5.1 PreCall Intelligence.md`
+**Plans:** TBD
+
+### Phase 04.14: CRM & Customer Success (INSERTED)
+
+**Goal:** Internes CRM mit Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen basierend auf Performance (nicht Kalendertagen), Erfolgs-Metriken.
+**Depends on:** Phase 04.7
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.14)
+**Plans:** TBD
+
+### Phase 04.15: Rollen, Support & Kompensation (INSERTED)
+
+**Goal:** Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff auf Kundenprofile mit Audit-Trail, Kompensation (Gratis-Tage bei Ausfällen), Mitarbeiter-Verwaltung.
+**Depends on:** Phase 04.14
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.15)
+**Plans:** TBD
+
+### Phase 04.16: Finaler Polish + UAT (INSERTED)
+
+**Goal:** Letzter Schliff vor Launch — finaler UAT-Durchlauf aller Features auf Produktion, Design-Pass (Farben, Fonts, Abstände), CSS Refactoring (Inline-Styles → nerve.css), Code Audit + Refactoring, Performance-Check.
+**Depends on:** Alle vorherigen Phasen
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Finaler Polish Pass.md`
+**Plans:** TBD
+
+### Phase 04.17: PiP Launcher (INSERTED)
+
+**Goal:** Always-on-Top verschiebbarer Live-Assistent via Document Picture-in-Picture API. User kann aus CRM/Outlook/Teams heraus direkt einen NERVE-Call starten — Modus waehlen, Kundendaten eingeben, Skript auswaehlen, Live-Coaching im PiP-Fenster.
+**Depends on:** Phase 04.8 (Consent-System), Phase 04.12 (Gesamt-Integration). Optional: Phase 04.13 (PreCall Auto-Recherche Button)
+**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE PiP Launcher.md`
+**Plans:** TBD
+
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
 **Depends on**: Phase 4
@@ -297,8 +402,22 @@ Phases execute in numeric order.
 | 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
 | 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
 | 4.3 Design Unification | 6/6 | Complete   | 2026-04-04 |
-| 4.5 Training Analytics & Tools | 0/4 | Not started | - |
-| 4.6 Sales Performance Calculator | 3/4 | In Progress|  |
+| 4.5 Training Analytics & Tools | 3/4 | In Progress | - |
+| 4.6 Sales Performance Calculator | 3/4 | In Progress | - |
+| 4.6.1 Auth-Upgrade OAuth | 3/3 ✓ | Complete | 2026-04-06 |
+| 4.7 Backend & Feedback System | 0/? | Not started | - |
+| 4.7.1 FineTuning Logging | 0/? | Not started | - |
+| 4.7.2 Founder Cost Dashboard | 0/? | Not started | - |
+| 4.8 KI-Logik Upgrade | 0/? | Not started | - |
+| 4.9 Training-Modul Upgrade | 0/? | Not started | - |
+| 4.10 Training Realismus | 0/? | Not started | - |
+| 4.11 Coach-Modul | 0/? | Not started | - |
+| 4.12 Gesamt-Integration | 0/? | Not started | - |
+| 4.13 PreCall Intelligence | 0/? | Not started | - |
+| 4.14 CRM & Customer Success | 0/? | Not started | - |
+| 4.15 Rollen, Support & Kompensation | 0/? | Not started | - |
+| 4.16 Finaler Polish + UAT | 0/? | Not started | - |
+| 4.17 PiP Launcher | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
 ---
