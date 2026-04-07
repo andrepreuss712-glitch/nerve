@@ -1,6 +1,7 @@
 """OAuth 2.0 / OIDC Login für Google + Microsoft (Phase 04.6.1)."""
 from flask import Blueprint, redirect, url_for, session, flash, request
 from authlib.integrations.flask_client import OAuth
+from sqlalchemy import func
 from database.db import get_session
 from database.models import User
 from routes.auth import _login_user, _create_org_and_user
@@ -11,6 +12,28 @@ from config import (
 
 oauth_bp = Blueprint('oauth', __name__)
 oauth = OAuth()
+
+
+def _is_known_oauth_tenant(provider, email_hint):
+    """Liefert True wenn bereits ein User aus dieser Email-Domain via diesem Provider eingeloggt ist.
+
+    Heuristik für D-06: Ist der Tenant Azure bereits 'bekannt' (= Service-Principal
+    provisioniert), brauchen Folge-Logins kein prompt=consent mehr → Silent-SSO möglich.
+    """
+    if not email_hint or '@' not in email_hint:
+        return False
+    domain = email_hint.split('@', 1)[1].strip().lower()
+    if not domain:
+        return False
+    db = get_session()
+    try:
+        existing = db.query(User).filter(
+            User.oauth_provider == provider,
+            func.lower(User.email).like(f'%@{domain}')
+        ).first()
+        return existing is not None
+    finally:
+        db.close()
 
 
 def init_oauth(app):
@@ -110,7 +133,14 @@ def google_login():
     if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
         return _oauth_error_redirect('not_configured', 'Google-Login nicht konfiguriert.')
     redirect_uri = url_for('oauth.google_callback', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+    # D-06: login_hint durchreichen falls Frontend ihn liefert. Kein prompt=consent
+    # nötig für Google (kein Service-Principal-Konzept wie bei Azure).
+    # TODO: Frontend kann ?login_hint=<email> mitsenden wenn User Email kennt.
+    login_hint = request.args.get('login_hint', '').strip()
+    extra = {}
+    if login_hint:
+        extra['login_hint'] = login_hint
+    return oauth.google.authorize_redirect(redirect_uri, **extra)
 
 
 @oauth_bp.route('/auth/google/callback')
@@ -139,10 +169,23 @@ def microsoft_login():
     if not (MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET):
         return _oauth_error_redirect('not_configured', 'Microsoft-Login nicht konfiguriert.')
     redirect_uri = url_for('oauth.microsoft_callback', _external=True)
-    # prompt=consent zwingt Azure dazu, den Service-Principal im Ziel-Tenant beim
-    # ersten Login neu zu provisionieren. Umgeht einen bekannten AADSTS900971-Bug
-    # bei Multi-Tenant Apps aus Shell-Home-Tenants.
-    return oauth.microsoft.authorize_redirect(redirect_uri, prompt='consent')
+    # D-06: prompt=consent nur beim ersten Login eines Tenants senden.
+    # Hintergrund: prompt=consent zwingt Azure dazu, den Service-Principal im Ziel-Tenant
+    # beim ersten Login neu zu provisionieren. Umgeht einen bekannten AADSTS900971-Bug
+    # bei Multi-Tenant Apps aus Shell-Home-Tenants. Sobald jedoch ein User aus dieser
+    # Email-Domain bereits via Microsoft eingeloggt ist, ist der Service-Principal im
+    # Ziel-Tenant bereits provisioniert → Silent-SSO möglich, kein consent nötig.
+    # TODO: Frontend kann ?login_hint=<email> mitsenden wenn User Email kennt.
+    login_hint = request.args.get('login_hint', '').strip()
+    extra = {}
+    if login_hint:
+        extra['login_hint'] = login_hint
+        if not _is_known_oauth_tenant('microsoft', login_hint):
+            extra['prompt'] = 'consent'
+    else:
+        # Kein Hint → konservativ consent senden (alter Default, Tenant-Provisioning sicher).
+        extra['prompt'] = 'consent'
+    return oauth.microsoft.authorize_redirect(redirect_uri, **extra)
 
 
 @oauth_bp.route('/auth/microsoft/callback')
