@@ -32,10 +32,12 @@ def init_oauth(app):
             name='microsoft',
             client_id=MICROSOFT_CLIENT_ID,
             client_secret=MICROSOFT_CLIENT_SECRET,
-            server_metadata_url='https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration',
+            # /organizations/ endpoint: nur Work/School-Accounts (Microsoft 365), keine personal accounts.
+            # Matcht die Azure-App-Registrierung "Nur Multi-Tenant" und unsere B2B-Zielgruppe.
+            server_metadata_url='https://login.microsoftonline.com/organizations/v2.0/.well-known/openid-configuration',
             client_kwargs={'scope': 'openid email profile'},
         )
-        print('[OAuth] Microsoft client registered')
+        print('[OAuth] Microsoft client registered (organizations / Work-School only)')
     else:
         print('[OAuth] Microsoft credentials missing — /auth/microsoft disabled')
 
@@ -148,6 +150,16 @@ def microsoft_callback():
         print(f'[OAuth] Microsoft callback failed: {type(e).__name__}')
         return _oauth_error_redirect('microsoft_failed', 'Microsoft-Login abgebrochen oder fehlgeschlagen.')
     userinfo = token.get('userinfo') or {}
+    # Defense-in-Depth: persönliche MS-Konten (outlook.com, hotmail.com, live.com) ablehnen.
+    # Der /organizations/ endpoint sollte sie bereits blocken, aber falls Azure-Config
+    # später versehentlich auf 'common' oder 'AzureADandPersonalMicrosoftAccount' umgestellt
+    # wird, fängt dieser Check es trotzdem ab. Personal-Account tenant GUID ist konstant.
+    MS_PERSONAL_TENANT = '9188040d-6c67-4c5b-b112-36a304b66dad'
+    if userinfo.get('tid') == MS_PERSONAL_TENANT:
+        return _oauth_error_redirect(
+            'personal_account',
+            'Bitte verwende ein Microsoft 365 Firmenkonto. Persönliche Microsoft-Konten (outlook.com, hotmail.com, live.com) werden nicht unterstützt.'
+        )
     # Microsoft: KEIN email_verified-Check (siehe RESEARCH.md)
     email = userinfo.get('email') or userinfo.get('preferred_username') or ''
     name  = userinfo.get('name') or ''
