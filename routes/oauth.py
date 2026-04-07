@@ -101,7 +101,10 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
             session.clear()
             _login_user(db, user)
             db.commit()
-            print(f'[OAuth] {provider} login: existing user id={user.id}')
+            print(f'[OAuth] {provider} login: existing user id={user.id} onboarding_done={onboarding_done_flag}')
+            # D-05: diagnostic — log redirect target for existing-user path
+            target = 'onboarding.wizard' if not onboarding_done_flag else 'dashboard.index'
+            print(f'[OAuth] redirect target: {target} (existing user id={user.id})')
             return redirect(url_for('onboarding.wizard') if not onboarding_done_flag else url_for('dashboard.index'))
         # Neuanlage
         firmenname_platzhalter = (vorname + ' ' + nachname).strip() or email.split('@')[0]
@@ -122,6 +125,8 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
         _login_user(db, new_user)
         db.commit()
         print(f'[OAuth] {provider} register: new user id={new_user.id}')
+        # D-05: diagnostic — log redirect target for new-user path
+        print(f'[OAuth] redirect target: onboarding.wizard (new user id={new_user.id})')
         return redirect(url_for('onboarding.wizard'))
     finally:
         db.close()

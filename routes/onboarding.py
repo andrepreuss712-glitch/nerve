@@ -1,5 +1,5 @@
 import json
-from flask import Blueprint, render_template, redirect, url_for, g, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, g, request, jsonify, make_response
 from routes.auth import login_required
 from database.db import get_session
 from database.models import User, Profile
@@ -149,12 +149,20 @@ BRANCHE_TEMPLATES = {
 @onboarding_bp.route('/')
 @login_required
 def wizard():
+    # D-05: diagnostic — log every wizard hit with onboarding state
+    print(f'[Onboarding] wizard hit: user_id={g.user.id} email={g.user.email} onboarding_done={g.user.onboarding_done}')
     if g.user.onboarding_done:
+        print(f'[Onboarding] wizard hit: redirecting to dashboard (onboarding_done=True)')
         return redirect(url_for('dashboard.index'))
     db = get_session()
     try:
         profiles = db.query(Profile).filter_by(org_id=g.org.id).all()
-        return render_template('onboarding.html', profiles=profiles)
+        # D-05: Cache-Control no-store — verhindert dass Browser/Proxy eine alte
+        # Onboarding-Antwort cached und beim zweiten OAuth-Login fälschlich zurückspielt.
+        resp = make_response(render_template('onboarding.html', profiles=profiles))
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        return resp
     finally:
         db.close()
 
