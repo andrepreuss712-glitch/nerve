@@ -161,7 +161,7 @@ def microsoft_callback():
     if userinfo.get('tid') == MS_PERSONAL_TENANT:
         return _oauth_error_redirect(
             'personal_account',
-            'Bitte verwende ein Microsoft 365 Firmenkonto. Persönliche Microsoft-Konten (outlook.com, hotmail.com, live.com) werden nicht unterstützt.'
+            'NERVE benötigt ein Microsoft 365 Business-Konto. Private Microsoft-Konten (Hotmail, Outlook, Live) werden nicht unterstützt. Bitte verwende deinen Firmen-Account oder melde dich mit Google an.'
         )
     # Microsoft: KEIN email_verified-Check (siehe RESEARCH.md)
     email = userinfo.get('email') or userinfo.get('preferred_username') or ''
