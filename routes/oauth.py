@@ -139,7 +139,10 @@ def microsoft_login():
     if not (MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET):
         return _oauth_error_redirect('not_configured', 'Microsoft-Login nicht konfiguriert.')
     redirect_uri = url_for('oauth.microsoft_callback', _external=True)
-    return oauth.microsoft.authorize_redirect(redirect_uri)
+    # prompt=consent zwingt Azure dazu, den Service-Principal im Ziel-Tenant beim
+    # ersten Login neu zu provisionieren. Umgeht einen bekannten AADSTS900971-Bug
+    # bei Multi-Tenant Apps aus Shell-Home-Tenants.
+    return oauth.microsoft.authorize_redirect(redirect_uri, prompt='consent')
 
 
 @oauth_bp.route('/auth/microsoft/callback')
