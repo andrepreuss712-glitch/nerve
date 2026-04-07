@@ -1,7 +1,7 @@
 #!/bin/bash
 # ── NERVE Deploy Script ─────────────────────────────────────────────────────
-# Usage: ./deploy.sh
-# Deploys the latest main branch to the production VPS.
+# Usage: ./deploy.sh [--dry-run]
+# Deploys the latest main branch to the production VPS via rsync.
 # Prerequisites: SSH key auth configured for VPS_HOST.
 
 set -e
@@ -10,14 +10,44 @@ VPS_HOST="root@178.104.82.166"
 APP_DIR="/opt/nerve/app"
 VENV_DIR="/opt/nerve/venv"
 
+RSYNC_FLAGS="-avz --delete"
+DRY_RUN=0
+if [[ "${1:-}" == "--dry-run" ]]; then
+  RSYNC_FLAGS="$RSYNC_FLAGS --dry-run"
+  DRY_RUN=1
+  echo "[deploy] DRY RUN — keine Dateien werden geändert"
+fi
+
 echo "[deploy] Connecting to $VPS_HOST..."
 
-echo "[deploy] Uploading app files via scp..."
-# Upload entire project tree directory by directory (no rsync needed)
-scp -i ~/.ssh/nerve_vps -r \
-  app.py config.py requirements.txt extensions.py \
-  routes services templates static database \
-  "$VPS_HOST:$APP_DIR/"
+echo "[deploy] Uploading via rsync (excludes: .git, .env, .planning, *.db, ...)"
+# Prod-SQLite NICHT überschreiben — Schema-Code (database/models.py, db.py)
+# wird übertragen, .db-Dateien nicht.
+rsync $RSYNC_FLAGS \
+  -e "ssh -i ~/.ssh/nerve_vps" \
+  --exclude='.git' \
+  --exclude='.gitignore' \
+  --exclude='.env' \
+  --exclude='.planning' \
+  --exclude='.claude' \
+  --exclude='__pycache__' \
+  --exclude='*.pyc' \
+  --exclude='node_modules' \
+  --exclude='logs' \
+  --exclude='salesnerve_log_*.txt' \
+  --exclude='deploy' \
+  --exclude='deploy.sh' \
+  --exclude='*.db-journal' \
+  --exclude='*.db-wal' \
+  --exclude='*.db-shm' \
+  --exclude='database/*.db' \
+  --exclude='database/salesnerve.db' \
+  ./ "$VPS_HOST:$APP_DIR/"
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "[deploy] DRY RUN abgeschlossen — kein Remote-Setup ausgeführt."
+  exit 0
+fi
 
 ssh -i ~/.ssh/nerve_vps "$VPS_HOST" bash -s << 'EOF'
   set -e
