@@ -5,26 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NERVE — Sales Intelligence{% block title %}{% endblock %}</title>
 <script>document.documentElement.setAttribute('data-theme','dark')</script>
-<link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}?v={{ config.get('CSS_VERSION', '1') }}">
 <script src="https://unpkg.com/lucide@latest"></script>
 <style>{% block extra_style %}{% endblock %}</style>
 </head>
 <body>
-
-<div class="g-header">
-  <div style="display:flex;align-items:center">
-    <a href="/dashboard">
-      <div class="nav-mark">
-        <div class="nav-n">N</div>
-        <div class="nav-word">NERVE<small>SALES INTELLIGENCE</small></div>
-      </div>
-    </a>
-    {% if g.org and g.org.is_early_access %}
-    <span class="ea-badge">Early Access</span>
-    {% endif %}
-  </div>
-
-</div>
 
 {% if g.org and g.org.cancelled_at %}
 <div class="cancel-banner">
@@ -37,6 +22,15 @@
 
 <nav class="g-sidebar">
   <div class="g-sidebar-inner">
+  <a href="/dashboard" class="sidebar-logo-link">
+    <div class="nav-mark">
+      <div class="nav-n">N</div>
+      <div class="nav-word sidebar-logo-word">NERVE<small>SALES INTELLIGENCE</small></div>
+    </div>
+    {% if g.org and g.org.is_early_access %}
+    <span class="ea-badge">Early Access</span>
+    {% endif %}
+  </a>
   <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Sidebar einklappen">
     <i data-lucide="chevrons-left" class="sidebar-collapse-icon"></i>
   </button>
@@ -44,7 +38,7 @@
     <i data-lucide="layout-dashboard" class="nav-icon-lucide"></i>
     <span class="n-nav-label">Dashboard</span>
   </a>
-  <a class="n-nav-item {% if request.path == '/live' %}n-nav-item-active{% endif %}" href="/live" title="Live-Assistent">
+  <a class="n-nav-item {% if request.path == '/live' %}n-nav-item-active{% endif %}" href="/live" onclick="if(window.location.pathname !== '/live'){ openLiveOverlay(); return false; }" title="Live-Assistent">
     <i data-lucide="mic" class="nav-icon-lucide"></i>
     <span class="n-nav-label">Live-Assistent</span>
   </a>
@@ -61,10 +55,6 @@
     <span class="n-nav-label">Profil</span>
   </a>
   <div style="flex:1"></div>
-  <a class="n-nav-item {% if request.path == '/settings' %}n-nav-item-active{% endif %}" href="/settings" title="Einstellungen">
-    <i data-lucide="settings" class="nav-icon-lucide"></i>
-    <span class="n-nav-label">Einstellungen</span>
-  </a>
   <!-- Hidden legacy nav items (D-31: kept in DOM, not deleted) -->
   <div style="display:none">
     {% if session.get('rolle') in ('owner', 'admin') %}
@@ -80,27 +70,56 @@
     </a>
   </div>
   </div>
-  <!-- Sidebar User Menu (ARCH-16) -->
+  <!-- Sidebar User Menu (nur wenn eingeloggt — public pages wie /changelog, /impressum haben kein g.user) -->
+  {% if g.get('user') %}
   <div class="sidebar-user-block" onclick="toggleSidebarUserMenu(event)">
     <div class="sidebar-avatar">{{ (g.user.email or 'U')[0] | upper }}</div>
     <div class="sidebar-user-info">
-      <div style="display:flex;align-items:center;gap:6px">
-        <div class="sidebar-user-name">{{ g.user.vorname or g.user.email.split('@')[0] }}</div>
-        {% if g.org and g.org.plan %}
-        <span class="sidebar-plan-badge">{{ g.org.plan | capitalize }}</span>
-        {% endif %}
-      </div>
-      <div class="sidebar-user-email">{{ g.user.email }}</div>
+      <div class="sidebar-user-name">{{ g.user.vorname or g.user.email.split('@')[0] }}</div>
+      {% if g.org and g.org.plan %}
+      <div class="sidebar-user-plan">{{ g.org.plan | capitalize }}</div>
+      {% endif %}
     </div>
-    <div class="sidebar-user-dropdown" id="sidebarUserMenu">
-      <a href="/profiles">Mein Profil</a>
-      <a href="/settings">Einstellungen</a>
-      <a href="/settings">Abrechnung &amp; Plan</a>
-      <a href="/organisations">Team verwalten</a>
-      <div class="dropdown-divider"></div>
-      <a href="/logout">Abmelden</a>
+    <!-- User popup (bottom-anchored) -->
+    <div class="sidebar-user-popup" id="sidebarUserMenu" onclick="event.stopPropagation()">
+      <div class="popup-email">{{ g.user.email }}</div>
+      <div class="popup-divider"></div>
+      <a href="/settings" class="popup-item">Einstellungen</a>
+      <!-- Sprache flyout -->
+      <div class="popup-flyout-wrap">
+        <div class="popup-item popup-flyout-trigger" onclick="openFlyout(this.parentElement, event)">
+          <span>Sprache</span>
+          <span class="popup-arrow">&#9658;</span>
+        </div>
+        <div class="popup-flyout">
+          {% set _langs = [('de','🇩🇪','Deutsch'),('en','🇬🇧','English'),('fr','🇫🇷','Français'),('es','🇪🇸','Español'),('it','🇮🇹','Italiano'),('nl','🇳🇱','Nederlands'),('pl','🇵🇱','Polski'),('pt','🇧🇷','Português'),('tr','🇹🇷','Türkçe')] %}
+          {% for code, flag, label in _langs %}
+          <button class="popup-flyout-item" onclick="setLanguage('{{ code }}', event)">
+            <span>{{ flag }} {{ label }}</span>
+            {% if g.user.preferred_language == code %}<span class="popup-flyout-check">&#10003;</span>{% endif %}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      <a href="/settings/help" class="popup-item">Hilfe erhalten</a>
+      <a href="/settings#billing" class="popup-item">Tarif upgraden</a>
+      <!-- Rechtliches flyout -->
+      <div class="popup-flyout-wrap">
+        <div class="popup-item popup-flyout-trigger" onclick="openFlyout(this.parentElement, event)">
+          <span>Rechtliches</span>
+          <span class="popup-arrow">&#9658;</span>
+        </div>
+        <div class="popup-flyout">
+          <a href="/agb" class="popup-flyout-item">AGB</a>
+          <a href="/datenschutz" class="popup-flyout-item">Datenschutz</a>
+          <a href="/impressum" class="popup-flyout-item">Impressum</a>
+        </div>
+      </div>
+      <div class="popup-divider"></div>
+      <a href="/logout" class="popup-item popup-item-logout">Abmelden</a>
     </div>
   </div>
+  {% endif %}
 </nav>
 
 <div class="g-content">
@@ -120,6 +139,116 @@
 
 </div>
 
+
+<!-- ── Live Mode Select + Consent Overlays (shown from nav, before navigating to /live) ── -->
+<style>
+.nav-live-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;display:none}
+.nav-live-overlay.open{display:flex}
+.nav-live-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:520px;width:90%;display:flex;flex-direction:column;align-items:center;gap:20px}
+.nav-live-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:36px;line-height:1;color:var(--page-text-muted);cursor:pointer;padding:2px 8px;border-radius:6px;font-family:inherit;transition:color .15s,background .15s}
+.nav-live-close:hover{color:var(--page-text-color);background:var(--glass-bg)}
+.nav-live-title{font-size:22px;font-weight:800;color:var(--page-text-color);letter-spacing:.02em;text-align:center}
+.nav-live-sub{font-size:13px;color:var(--page-text-muted);text-align:center;margin-top:-12px;max-width:380px;line-height:1.5}
+.nav-live-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;width:100%}
+.nav-live-card{background:var(--glass-bg);border:2px solid var(--glass-border);border-radius:12px;padding:28px 24px;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .2s;flex:1;min-width:180px;text-align:center}
+.nav-live-card:hover{border-color:#00D4AA;transform:translateY(-3px);box-shadow:0 0 24px rgba(0,212,170,0.15)}
+.nav-live-card-icon{font-size:36px;margin-bottom:10px}
+.nav-live-card-title{font-size:17px;font-weight:700;color:var(--page-text-color);margin-bottom:6px}
+.nav-live-card-desc{font-size:12px;color:var(--page-text-muted);line-height:1.6}
+/* Consent overlay */
+.nav-consent-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:480px;width:90%;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.nav-consent-title{font-size:17px;font-weight:700;color:var(--page-text-color)}
+.nav-consent-pflicht{font-size:12px;font-weight:800;color:#f87171;letter-spacing:.05em;text-transform:uppercase}
+.nav-consent-script{background:rgba(248,113,113,0.22);border:1px solid rgba(248,113,113,0.5);border-radius:8px;padding:16px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.6;font-style:italic;width:100%;box-sizing:border-box}
+.nav-consent-tipp{background:rgba(0,212,170,0.22);border:1px solid rgba(0,212,170,0.5);border-radius:20px;padding:8px 16px;font-size:13px;color:#1a1a1a;line-height:1.5;font-style:italic}
+.nav-consent-actions{display:flex;gap:10px;justify-content:flex-end;width:100%;margin-top:4px}
+.nav-consent-btn{border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.nav-consent-btn:hover{opacity:.8}
+.nav-consent-accept{background:#00D4AA;color:#fff}
+.nav-consent-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171}
+</style>
+
+<!-- Mode Selection Overlay -->
+<div id="navLiveOverlay" class="nav-live-overlay">
+  <div class="nav-live-box">
+    <button class="nav-live-close" onclick="closeLiveOverlay()" title="Schließen">&times;</button>
+    <div class="nav-live-title">Gesprächsmodus wählen</div>
+    <div class="nav-live-sub">Wähle den passenden Modus für dein Gespräch. Der Modus kann während des Calls nicht gewechselt werden.</div>
+    <div class="nav-live-cards">
+      <div class="nav-live-card" onclick="startLiveMode('cold_call')">
+        <div class="nav-live-card-icon">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 8C13 8 11 8 10 10C9 12 8 15 10 18C12 21 14 23 16 25C18 27 20 29 23 31C26 33 29 32 31 31C33 30 33 28 33 28L29 24C29 24 27 25 26 25C25 25 24 24 22 22C20 20 19 19 19 18C19 17 20 15 20 15L16 11C16 11 15 8 13 8Z" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="nav-live-card-title">Cold Call</div>
+        <div class="nav-live-card-desc">Nur deine Stimme wird analysiert.<br>Kein Kunden-Audio verarbeitet.<br>EWB-Buttons für manuelle Einwand-Trigger.</div>
+      </div>
+      <div class="nav-live-card" onclick="startLiveMode('meeting')">
+        <div class="nav-live-card-icon">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="15" cy="13" r="4" stroke="#00D4AA" stroke-width="2.2"/>
+            <circle cx="25" cy="13" r="4" stroke="#00D4AA" stroke-width="2.2"/>
+            <path d="M6 30C6 25 10 22 15 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M34 30C34 25 30 22 25 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M15 22C17 21 19 21 20 21C21 21 23 21 25 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="nav-live-card-title">Meeting</div>
+        <div class="nav-live-card-desc">Volle Analyse beider Sprecher.<br>Einwilligung des Gesprächspartners erforderlich.<br>Automatische Einwanderkennung + EWB.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Consent Overlay (Meeting Mode) -->
+<div id="navConsentOverlay" class="nav-live-overlay">
+  <div class="nav-consent-box">
+    <button class="nav-live-close" onclick="closeConsentOverlay()" title="Schließen">&times;</button>
+    <div class="nav-consent-title">Einwilligung des Gesprächspartners</div>
+    <div class="nav-consent-pflicht">Pflicht — laut vorlesen</div>
+    <div class="nav-consent-script">„Ist es okay wenn eine KI mithört damit wir die Qualität unseres Service verbessern können?"</div>
+    <div class="nav-consent-tipp">Tipp: „Dabei werden keine vollen Aufzeichnungen gemacht, nur Stichpunkte."</div>
+    <div class="nav-consent-actions">
+      <button class="nav-consent-btn nav-consent-reject" onclick="navRejectConsent()">Abgelehnt</button>
+      <button class="nav-consent-btn nav-consent-accept" onclick="navAcceptConsent()">Stattgegeben</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openLiveOverlay() {
+  document.getElementById('navLiveOverlay').classList.add('open');
+}
+function closeLiveOverlay() {
+  document.getElementById('navLiveOverlay').classList.remove('open');
+}
+function closeConsentOverlay() {
+  document.getElementById('navConsentOverlay').classList.remove('open');
+  openLiveOverlay(); // go back to mode selection
+}
+function startLiveMode(mode) {
+  closeLiveOverlay();
+  if (mode === 'meeting') {
+    document.getElementById('navConsentOverlay').classList.add('open');
+  } else {
+    window.location.href = '/live?mode=cold_call';
+  }
+}
+function navAcceptConsent() {
+  window.location.href = '/live?mode=meeting';
+}
+function navRejectConsent() {
+  // Consent rejected — fall back to cold call silently
+  window.location.href = '/live?mode=cold_call';
+}
+document.getElementById('navLiveOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeLiveOverlay();
+});
+document.getElementById('navConsentOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeConsentOverlay();
+});
+</script>
 
 <!-- Help FAB -->
 <a href="/settings/help" class="help-fab" title="Hilfe">?</a>
@@ -250,7 +379,7 @@ function toggleSidebar() {
 </script>
 <script>lucide.createIcons();</script>
 <script>
-// ── Sidebar User Menu toggle (ARCH-16) ─────────────────────────────────────
+// ── Sidebar User Popup ─────────────────────────────────────────────────────
 function toggleSidebarUserMenu(e) {
   e.stopPropagation();
   var menu = document.getElementById('sidebarUserMenu');
@@ -259,7 +388,36 @@ function toggleSidebarUserMenu(e) {
 document.addEventListener('click', function() {
   var menu = document.getElementById('sidebarUserMenu');
   if (menu) menu.classList.remove('open');
+  document.querySelectorAll('.popup-flyout-wrap').forEach(function(w) {
+    w.classList.remove('flyout-open');
+  });
 });
+function openFlyout(wrap, e) {
+  e.stopPropagation();
+  var isOpen = wrap.classList.contains('flyout-open');
+  document.querySelectorAll('.popup-flyout-wrap').forEach(function(w) {
+    w.classList.remove('flyout-open');
+  });
+  if (!isOpen) {
+    var flyout = wrap.querySelector('.popup-flyout');
+    var trigger = wrap.querySelector('.popup-flyout-trigger');
+    var rect = trigger.getBoundingClientRect();
+    flyout.style.top = 'auto';
+    flyout.style.bottom = (window.innerHeight - rect.bottom) + 'px';
+    flyout.style.left = (rect.right + 4) + 'px';
+    wrap.classList.add('flyout-open');
+  }
+}
+function setLanguage(code, e) {
+  e.stopPropagation();
+  fetch('/settings/language', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({language: code})
+  }).then(function(r){ return r.json(); }).then(function(data){
+    if (data.ok) { window.location.reload(); }
+  }).catch(function(){});
+}
 </script>
 {% block scripts %}{% endblock %}
 </body>
