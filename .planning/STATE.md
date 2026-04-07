@@ -207,7 +207,7 @@ Recent decisions affecting current work:
 - Phase 04.2.1 inserted after Phase 04.2: UI/UX Overhaul — Dashboard, Live-Assistent, Kompaktmodus (URGENT) — complete layout overhaul, Getclose.ai design reference, PiP overlay
 - Phase 1 (Business Setup) removed from GSD tracking — user handles manually (Gewerbeanmeldung, Geschäftskonto, etc.)
 - Phase 04.6.1 inserted after Phase 04.6: Auth-Upgrade Google + Microsoft OAuth Login (URGENT) — Authlib-basierter OAuth-Flow für Google + Microsoft, User-Model nullable passwort_hash, Login-UI Buttons
-- Phase 04.6.2 inserted after Phase 04.6.1: deploy hardening and oauth polish (URGENT) — gehört zum Auth-Block
+- Phase 04.6.2 inserted after Phase 04.6.1: deploy hardening and oauth polish (URGENT) — gehört zum Auth-Block (completed 2026-04-07: tar-over-ssh deploy, header→app.getnerve.app link, MS Consumer-tenant block + conditional prompt=consent, onboarding diagnostic logging)
 
 ### Pending Todos
 
