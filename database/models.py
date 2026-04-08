@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, date
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Date
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint
 from database.db import Base
 
 
@@ -111,6 +111,9 @@ class User(Base):
     oauth_provider        = Column(String(50),  nullable=True)  # 'google' | 'microsoft' | None
     oauth_id              = Column(String(200), nullable=True)  # Provider Sub-ID (eindeutig pro Provider)
     avatar_url            = Column(String(500), nullable=True)
+    # Phase 04.7.1: Markt-Trennung (FT-Logging)
+    market                = Column(String(10), nullable=False, default='dach')
+    language              = Column(String(10), nullable=False, default='de')
 
 
 class Profile(Base):
@@ -231,6 +234,9 @@ class ConversationLog(Base):
     session_mode             = Column(String(20), default='meeting')  # 'cold_call' or 'meeting'
     created_at               = Column(DateTime, default=utcnow)
     result                   = Column(String(20), nullable=True)  # 'gewonnen' | 'verloren' | NULL
+    # Phase 04.7.1: Markt-Trennung (FT-Logging)
+    market                   = Column(String(10), nullable=False, default='dach')
+    language                 = Column(String(10), nullable=False, default='de')
 
 
 class Phrase(Base):
@@ -324,6 +330,104 @@ class PlanningFeedbackLink(Base):
     planning_title   = Column(String(200), nullable=False)
     planning_status  = Column(String(40), default='backlog', nullable=False)  # backlog|active|done
     created_at       = Column(DateTime, default=utcnow, nullable=False)
+
+
+# ── Phase 04.7.1: FineTuning Logging Grundlage ───────────────────────────────
+
+class FtCallSession(Base):
+    __tablename__ = 'ft_call_sessions'
+    id                    = Column(Integer, primary_key=True)
+    conversation_log_id   = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
+    user_id               = Column(Integer, ForeignKey('users.id'), nullable=False)
+    mode                  = Column(String(20), nullable=False)  # 'cold_call'|'meeting'
+    duration_seconds      = Column(Integer)
+    market                = Column(String(10), nullable=False, default='dach')
+    language              = Column(String(10), nullable=False, default='de')
+    customer_industry     = Column(String(200), nullable=True)
+    customer_position     = Column(String(200), nullable=True)
+    customer_company_size = Column(String(50), nullable=True)
+    phases_completed      = Column(Text)  # JSON
+    talk_ratio_rep        = Column(Float)
+    talk_ratio_customer   = Column(Float)
+    readiness_score_start = Column(Integer)
+    readiness_score_end   = Column(Integer)
+    readiness_score_peak  = Column(Integer)
+    hints_shown           = Column(Integer, default=0)
+    hints_used            = Column(Integer, default=0)
+    buttons_pressed       = Column(Integer, default=0)
+    outcome               = Column(String(50))
+    user_rating           = Column(Integer)
+    user_feedback         = Column(Text)
+    model_used            = Column(String(100))
+    prompt_version        = Column(String(50))
+    created_at            = Column(DateTime, default=utcnow)
+
+
+class FtAssistantEvent(Base):
+    __tablename__ = 'ft_assistant_events'
+    id                    = Column(Integer, primary_key=True)
+    ft_session_id         = Column(Integer, ForeignKey('ft_call_sessions.id'), nullable=False)
+    user_id               = Column(Integer, ForeignKey('users.id'), nullable=False)
+    market                = Column(String(10), nullable=False, default='dach')
+    language              = Column(String(10), nullable=False, default='de')
+    timestamp_ms          = Column(Integer, nullable=False)
+    conversation_phase    = Column(String(50), nullable=False)
+    speaker               = Column(String(20), nullable=True)   # D-04
+    transcript_segment    = Column(Text, nullable=True)         # D-05
+    context_window        = Column(Text, nullable=True)         # JSON
+    customer_data         = Column(Text, nullable=True)         # JSON
+    profile_data          = Column(Text, nullable=True)         # JSON
+    readiness_score       = Column(Integer, nullable=True)
+    active_learning_cards = Column(Text, nullable=True)         # JSON; kein FK (D-11)
+    hint_type             = Column(String(50), nullable=False)
+    hint_text             = Column(Text, nullable=False)
+    hint_category         = Column(String(50))
+    model_used            = Column(String(100), nullable=False)
+    prompt_version        = Column(String(50), nullable=False)
+    hint_action           = Column(String(30))
+    score_change          = Column(Integer)
+    call_rating           = Column(Integer)
+    call_outcome          = Column(String(50))
+    created_at            = Column(DateTime, default=utcnow)
+
+
+class FtObjectionEvent(Base):
+    __tablename__ = 'ft_objection_events'
+    id                     = Column(Integer, primary_key=True)
+    ft_session_id          = Column(Integer, ForeignKey('ft_call_sessions.id'), nullable=False)
+    user_id                = Column(Integer, ForeignKey('users.id'), nullable=False)
+    market                 = Column(String(10), nullable=False, default='dach')
+    language               = Column(String(10), nullable=False, default='de')
+    timestamp_ms           = Column(Integer, nullable=False)
+    objection_type         = Column(String(100), nullable=False)
+    conversation_phase     = Column(String(50))
+    readiness_score_before = Column(Integer)
+    context_window         = Column(Text, nullable=True)   # JSON
+    customer_data          = Column(Text, nullable=True)   # JSON
+    ki_classification      = Column(String(50))
+    ki_recommendation      = Column(Text)
+    recommended_response   = Column(Text)
+    recommendation_used    = Column(Boolean, default=False)
+    readiness_score_after  = Column(Integer)
+    objection_resolved     = Column(Boolean)
+    call_outcome           = Column(String(50))
+    model_used             = Column(String(100), nullable=False)
+    prompt_version         = Column(String(50), nullable=False)
+    created_at             = Column(DateTime, default=utcnow)
+
+
+class PromptVersion(Base):
+    __tablename__ = 'prompt_versions'
+    __table_args__ = (
+        UniqueConstraint('version', 'module', name='uq_prompt_version_module'),
+    )
+    id          = Column(Integer, primary_key=True)
+    version     = Column(String(50), nullable=False)
+    module      = Column(String(50), nullable=False)
+    prompt_text = Column(Text, nullable=False)
+    changelog   = Column(Text)
+    is_active   = Column(Boolean, default=False, nullable=False)
+    created_at  = Column(DateTime, default=utcnow)
 
 
 def init_db(engine_instance):
