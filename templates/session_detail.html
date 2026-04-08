@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="n-page">
+  <a class="n-btn n-btn-ghost" href="{{ url_for('dashboard.analytics_page') }}">&#8592; Zur&uuml;ck zur History</a>
+  <h1 class="n-h1">Session #{{ conv.id }}</h1>
+  <div class="n-grid">
+    <div class="n-card"><div class="n-label">Modus</div><div class="n-val">{{ conv.session_mode or '&mdash;' }}</div></div>
+    <div class="n-card"><div class="n-label">Start</div><div class="n-val">{{ conv.started_at }}</div></div>
+    <div class="n-card"><div class="n-label">Ende</div><div class="n-val">{{ conv.ended_at or '&mdash;' }}</div></div>
+    <div class="n-card"><div class="n-label">Dauer</div><div class="n-val">{{ conv.dauer_sekunden or 0 }}s</div></div>
+    <div class="n-card"><div class="n-label">Einw&auml;nde gesamt</div><div class="n-val">{{ conv.einwaende_total or 0 }}</div></div>
+    <div class="n-card"><div class="n-label">Erfolgreich</div><div class="n-val">{{ conv.einwaende_ok or 0 }}</div></div>
+    <div class="n-card"><div class="n-label">Result</div><div class="n-val">{{ conv.result or '&mdash;' }}</div></div>
+    <div class="n-card"><div class="n-label">Typ</div><div class="n-val">{{ conv.typ or '&mdash;' }}</div></div>
+  </div>
+
+  <h2 class="n-h2" style="margin-top:28px">Einwand-Ereignisse ({{ events|length }})</h2>
+  <table class="n-table">
+    <thead><tr><th>Zeit</th><th>Einwand-Typ</th><th>Erfolg</th></tr></thead>
+    <tbody>
+      {% for e in events %}
+      <tr>
+        <td>{{ e.created_at.strftime('%H:%M:%S') if e.created_at else '&mdash;' }}</td>
+        <td>{{ e.einwand_typ }}</td>
+        <td>{% if e.success %}Ja{% else %}Nein{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">Keine EWB-Klicks erfasst.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<style>
+.n-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.n-card{background:#1C2333;border:1px solid #2D3748;border-radius:10px;padding:14px}
+.n-label{color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.n-val{color:#fff;font-size:20px;font-weight:600;margin-top:4px}
+.n-table{width:100%;border-collapse:collapse;background:#1C2333;color:#fff;border-radius:10px;overflow:hidden;margin-top:12px}
+.n-table th,.n-table td{padding:10px 12px;border-bottom:1px solid #2D3748;text-align:left}
+.n-table thead{background:#0D1117;color:#00D4AA}
+</style>
+{% endblock %}
