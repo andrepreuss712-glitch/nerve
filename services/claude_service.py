@@ -73,6 +73,27 @@ Antworte NUR als valides JSON ohne weiteren Text:
 Felder die nicht zutreffen als null setzen (außer kb_delta, das ist immer eine Zahl)."""
 
 
+_ACTIVE_PROMPT_CACHE: dict = {}
+
+
+def get_active_prompt_version(module: str) -> str:
+    if module in _ACTIVE_PROMPT_CACHE:
+        return _ACTIVE_PROMPT_CACHE[module]
+    try:
+        from database.db import SessionLocal
+        from database.models import PromptVersion
+        db = SessionLocal()
+        try:
+            pv = db.query(PromptVersion).filter_by(module=module, is_active=True).first()
+            version = pv.version if pv else 'unknown'
+        finally:
+            db.close()
+    except Exception:
+        version = 'unknown'
+    _ACTIVE_PROMPT_CACHE[module] = version
+    return version
+
+
 def _get_erfolgsquoten() -> str:
     """Lädt Gegenargument-Erfolgsquoten aus der DB und gibt Lern-Kontext zurück."""
     try:

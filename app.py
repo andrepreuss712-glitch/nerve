@@ -232,6 +232,52 @@ def _migrate():
 
 _migrate()
 
+
+def _seed_prompt_versions(db=None):
+    from database.db import SessionLocal
+    from database.models import PromptVersion
+    from services.claude_service import (
+        SYSTEM_PROMPT_BASE,
+        COACHING_PROMPT_BASE,
+        EWB_RANKING_PROMPT_BASE,
+    )
+    from routes.app_routes import (
+        OBJECTION_TRIGGER_PROMPT_BASE,
+        API_FRAGE_PROMPT_BASE,
+    )
+    from services.training_service import TRAINING_PERSONA_PROMPT_BASE
+
+    modules = [
+        ('assistant_live',    SYSTEM_PROMPT_BASE),
+        ('coaching_live',     COACHING_PROMPT_BASE),
+        ('objection_trigger', OBJECTION_TRIGGER_PROMPT_BASE),
+        ('ewb_ranking',       EWB_RANKING_PROMPT_BASE),
+        ('api_frage',         API_FRAGE_PROMPT_BASE),
+        ('training_persona',  TRAINING_PERSONA_PROMPT_BASE),
+    ]
+    owns_session = db is None
+    if owns_session:
+        db = SessionLocal()
+    try:
+        for module, ptext in modules:
+            exists = db.query(PromptVersion).filter_by(module=module, version='v1.0.0').first()
+            if exists:
+                continue
+            db.add(PromptVersion(
+                module=module,
+                version='v1.0.0',
+                prompt_text=ptext,
+                is_active=True,
+                changelog='Initial seed (Phase 04.7.1)',
+            ))
+        db.commit()
+    finally:
+        if owns_session:
+            db.close()
+
+
+_seed_prompt_versions()
+
 # ── Audit-Log Immutable Trigger (Defense-in-Depth, nach create_all + migrate) ─
 try:
     with engine.connect() as conn:
