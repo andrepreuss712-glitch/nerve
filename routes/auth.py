@@ -177,6 +177,11 @@ def api_register():
         db.commit()
         _login_user(db, user)
         session['welcome_trial'] = True
+        try:
+            from services.email_service import send_welcome
+            send_welcome(user.email, getattr(user, 'vorname', '') or '')
+        except Exception as e:
+            print(f'[AUTH] welcome mail failed: {e}')
         return jsonify({'ok': True})
     finally:
         db.close()

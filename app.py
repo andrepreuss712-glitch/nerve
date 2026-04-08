@@ -790,6 +790,22 @@ admin = Admin(
     index_view=SecureIndexView(url='/admin'),
 )
 
+# ── Flask-Admin ModelViews + CustomViews ──────────────────────────────────────
+from routes.admin_views import (
+    UserAdmin, OrgAdmin, FeedbackAdmin, AuditLogAdmin, ConvLogAdmin,
+    KpiDashboardView, PlanningListView, register_admin_screenshot_route,
+)
+from database.models import Feedback as _Feedback, AuditLog as _AuditLog, ConversationLog as _ConvLog
+
+admin.add_view(KpiDashboardView(name='KPI', endpoint='kpi', url='/admin/kpi'))
+admin.add_view(PlanningListView(name='Planung', endpoint='planning', url='/admin/planning'))
+admin.add_view(FeedbackAdmin(_Feedback, _db_session, name='Feedback', endpoint='feedback_admin'))
+admin.add_view(UserAdmin(User, _db_session, name='Users'))
+admin.add_view(OrgAdmin(Organisation, _db_session, name='Orgs'))
+admin.add_view(ConvLogAdmin(_ConvLog, _db_session, name='Sessions', category='Logs'))
+admin.add_view(AuditLogAdmin(_AuditLog, _db_session, name='Audit', category='Logs'))
+register_admin_screenshot_route(app)
+
 # ── Share socketio with services ──────────────────────────────────────────────
 # Patch extensions module so services can import socketio
 import extensions as _ext

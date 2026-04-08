@@ -1,0 +1,19 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<h2>NERVE KPI Dashboard</h2>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px">
+  <div class="card"><h3>{{ stats.users_total }}</h3><div>Users gesamt</div></div>
+  <div class="card"><h3>{{ stats.orgs_total }}</h3><div>Organisationen</div></div>
+  <div class="card"><h3>{{ stats.sessions_week }}</h3><div>Sessions (7d)</div></div>
+  <div class="card"><h3>{{ stats.feedback_new }}</h3><div>Neue Feedbacks</div></div>
+  <div class="card"><h3>{{ stats.feedback_planning }}</h3><div>In Planung</div></div>
+  <div class="card"><h3>{{ stats.audit_week }}</h3><div>Audit-Events (7d)</div></div>
+</div>
+<style>.card{padding:18px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}.card h3{margin:0 0 6px;font-size:28px;color:#00B894}</style>
+{% if stats.feedback_new > 0 %}
+  <div style="margin-top:24px;padding:14px;border-radius:10px;background:#fff8e1;border:1px solid #f0c040">
+    <strong>{{ stats.feedback_new }}</strong> neue Feedback-Tickets warten auf dich.
+    <a href="{{ url_for('feedback_admin.index_view') }}">Jetzt ansehen &rarr;</a>
+  </div>
+{% endif %}
+{% endblock %}

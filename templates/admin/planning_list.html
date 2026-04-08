@@ -1,0 +1,28 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<h2>Planungs-Liste</h2>
+<table class="table table-striped">
+  <thead><tr><th>ID</th><th>Titel</th><th>Status</th><th>Erstellt</th><th>Aktion</th></tr></thead>
+  <tbody>
+  {% for link in links %}
+    <tr>
+      <td>{{ link.id }}</td>
+      <td>{{ link.planning_title }}</td>
+      <td>{{ link.planning_status }}</td>
+      <td>{{ link.created_at }}</td>
+      <td>
+        <form method="post" style="display:flex;gap:6px">
+          <input type="hidden" name="id" value="{{ link.id }}">
+          <select name="status">
+            <option value="backlog" {% if link.planning_status=='backlog' %}selected{% endif %}>backlog</option>
+            <option value="active"  {% if link.planning_status=='active' %}selected{% endif %}>active</option>
+            <option value="done"    {% if link.planning_status=='done' %}selected{% endif %}>done</option>
+          </select>
+          <button class="btn btn-sm btn-primary" type="submit">Speichern</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

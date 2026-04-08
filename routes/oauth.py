@@ -131,6 +131,11 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
                    target_type='user', target_id=new_user.id,
                    details={'method': provider}, request=request)
         db.commit()
+        try:
+            from services.email_service import send_welcome
+            send_welcome(new_user.email, getattr(new_user, 'vorname', '') or '')
+        except Exception as e:
+            print(f'[OAUTH] welcome mail failed: {e}')
         print(f'[OAuth] {provider} register: new user id={new_user.id}')
         # D-05: diagnostic — log redirect target for new-user path
         print(f'[OAuth] redirect target: onboarding.wizard (new user id={new_user.id})')
