@@ -59,6 +59,7 @@ class User(Base):
     email               = Column(String(200), unique=True, nullable=False)
     passwort_hash       = Column(String(256), nullable=False)
     rolle               = Column(String(50), default='member')  # owner/admin/member
+    is_superadmin       = Column(Boolean, default=False, nullable=False)
     aktiv               = Column(Boolean, default=True)
     erstellt_am         = Column(DateTime, default=utcnow)
     active_profile_id   = Column(Integer, ForeignKey('profiles.id'), nullable=True)

@@ -167,6 +167,13 @@ def _migrate():
                 print(f"[DB] Migration: added conversation_logs.{col}")
             except Exception:
                 pass
+        # ── Phase 04.7: Superadmin ────────────────────────────────────────────
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_superadmin BOOLEAN DEFAULT 0"))
+            conn.commit()
+            print("[DB] Migration: added users.is_superadmin")
+        except Exception:
+            pass
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
