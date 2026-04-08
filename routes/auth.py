@@ -1,3 +1,4 @@
+import os
 import secrets
 from datetime import datetime, timezone, timedelta
 from functools import wraps
@@ -64,6 +65,11 @@ def _login_user(db, user):
     ablauf = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=MAX_SESSION_HOURS)
     db_sess = DbSession(user_id=user_id, token=tok, ablauf_am=ablauf)
     db.add(db_sess)
+    # ── Superadmin ENV-Seed (idempotent) ──────────────────────────────
+    _sa_email = os.environ.get('SUPERADMIN_EMAIL', '').strip().lower()
+    if _sa_email and user.email and user.email.lower() == _sa_email and not getattr(user, 'is_superadmin', False):
+        user.is_superadmin = True
+        print(f"[AUTH] Seeded superadmin: {user.email}")
     db.commit()
     return {
         'id':              user_id,

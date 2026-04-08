@@ -1,6 +1,6 @@
 import os
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import sessionmaker, DeclarativeBase, scoped_session
 
 # Resolve relative SQLite paths relative to project root
 _DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database/nerve.db')
@@ -24,6 +24,7 @@ if 'sqlite' in _DATABASE_URL:
         cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+db_session = scoped_session(SessionLocal)
 
 
 class Base(DeclarativeBase):

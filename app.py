@@ -174,6 +174,13 @@ def _migrate():
                 print(f"[DB] Migration: added conversation_logs.{col}")
             except Exception:
                 pass
+        # ── Phase 04.7: Superadmin ────────────────────────────────────────────
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_superadmin BOOLEAN DEFAULT 0"))
+            conn.commit()
+            print("[DB] Migration: added users.is_superadmin")
+        except Exception:
+            pass
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
@@ -705,6 +712,26 @@ app.register_blueprint(legal_bp)
 app.register_blueprint(performance_bp)
 app.register_blueprint(oauth_bp)
 init_oauth(app)
+
+# ── Flask-Admin (Superadmin only, gated via SecureIndexView) ─────────────────
+from flask_admin import Admin, AdminIndexView, expose
+from flask import g as _g, redirect as _redirect, url_for as _url_for, abort as _abort
+from database.db import db_session as _db_session
+
+class SecureIndexView(AdminIndexView):
+    def is_accessible(self):
+        return getattr(_g, 'user', None) is not None and getattr(_g.user, 'is_superadmin', False)
+    def inaccessible_callback(self, name, **kwargs):
+        if getattr(_g, 'user', None) is None:
+            return _redirect(_url_for('auth.login'))
+        _abort(403)
+
+admin = Admin(
+    app,
+    name='NERVE Admin',
+    template_mode='bootstrap4',
+    index_view=SecureIndexView(url='/admin'),
+)
 
 # ── Share socketio with services ──────────────────────────────────────────────
 # Patch extensions module so services can import socketio
