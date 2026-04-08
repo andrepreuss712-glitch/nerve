@@ -93,7 +93,7 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [ ] **BE-01**: users.is_superadmin Flag + ENV-Seed via SUPERADMIN_EMAIL + @superadmin_required Decorator
 - [ ] **BE-02**: Flask-Admin unter /admin mit SecureIndexView Auth-Gate (Bootstrap4 Theme)
 - [x] **BE-03**: audit_log Tabelle + SQLite Immutable Trigger + log_action() Helper + Wire-up in Login/Session/Profil Routes
-- [ ] **BE-04**: objection_events Tabelle + EWB-Klick-Persistenz pro ConversationLog (Naming-Konflikt avg_deal_wert dokumentiert)
+- [x] **BE-04**: objection_events Tabelle + EWB-Klick-Persistenz pro ConversationLog (Naming-Konflikt avg_deal_wert dokumentiert)
 - [ ] **BE-05**: feedback Tabelle (NEU, getrennt von FeedbackEvent) + Sidebar-Button + Modal + Screenshot-Upload /opt/nerve/uploads/feedback + POST /api/feedback + /api/feedback/quick
 - [ ] **BE-06**: Resend EU-Region Integration + 3 Templates (Welcome, Feedback-in-Planung, Password-Reset)
 - [ ] **BE-07**: Session-History Seite (Umbau bestehender Analytics-Seite zu chronologischer ConversationLog-Liste + Detail-View)
@@ -216,7 +216,7 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | BE-01 | Phase 4.7 | Pending |
 | BE-02 | Phase 4.7 | Pending |
 | BE-03 | Phase 4.7 | Complete |
-| BE-04 | Phase 4.7 | Pending |
+| BE-04 | Phase 4.7 | Complete |
 | BE-05 | Phase 4.7 | Pending |
 | BE-06 | Phase 4.7 | Pending |
 | BE-07 | Phase 4.7 | Pending |
