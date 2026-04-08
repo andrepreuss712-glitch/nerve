@@ -70,6 +70,11 @@
     </a>
   </div>
   </div>
+  {% if g.user %}
+  <button id="nerve-fb-btn" class="nerve-fb-btn" type="button" title="Feedback geben">
+    <span>NERVE Feedback</span>
+  </button>
+  {% endif %}
   <!-- Sidebar User Menu (nur wenn eingeloggt — public pages wie /changelog, /impressum haben kein g.user) -->
   {% if g.get('user') %}
   <div class="sidebar-user-block" onclick="toggleSidebarUserMenu(event)">
@@ -420,5 +425,31 @@ function setLanguage(code, e) {
 }
 </script>
 {% block scripts %}{% endblock %}
+{% if g.user %}
+<link rel="stylesheet" href="{{ url_for('static', filename='feedback.css') }}">
+<div id="nerve-fb-modal" class="nerve-fb-modal" role="dialog" aria-modal="true">
+  <div class="nerve-fb-card">
+    <h3>Dein Feedback</h3>
+    <form enctype="multipart/form-data">
+      <label for="fb-typ">Typ</label>
+      <select id="fb-typ" name="typ" required>
+        <option value="bug">Bug / Fehler</option>
+        <option value="idea">Idee / Wunsch</option>
+        <option value="praise">Lob</option>
+        <option value="question">Frage</option>
+      </select>
+      <label for="fb-text">Was ist los?</label>
+      <textarea id="fb-text" name="text" minlength="3" required placeholder="Kurz und ehrlich..."></textarea>
+      <label for="fb-shot">Screenshot (optional, max 5 MB)</label>
+      <input id="fb-shot" type="file" name="screenshot" accept="image/png,image/jpeg,image/webp">
+      <div class="nerve-fb-actions">
+        <button type="button" class="nerve-fb-cancel">Abbrechen</button>
+        <button type="submit" class="nerve-fb-submit">Senden</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='feedback.js') }}"></script>
+{% endif %}
 </body>
 </html>

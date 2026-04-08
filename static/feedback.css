@@ -1,0 +1,27 @@
+.nerve-fb-btn{
+  position:relative;display:flex;align-items:center;gap:8px;
+  margin:8px 12px;padding:10px 14px;border-radius:10px;
+  background:#00D4AA;color:#0D1117;font-weight:600;border:0;cursor:pointer;
+  box-shadow:0 0 0 0 rgba(0,212,170,.6);
+  animation:nerveFbGlow 2.6s ease-in-out infinite;
+  width:calc(100% - 24px);box-sizing:border-box;font-family:inherit;font-size:14px;
+}
+@keyframes nerveFbGlow{
+  0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.55)}
+  50%{box-shadow:0 0 0 8px rgba(0,212,170,0)}
+}
+.nerve-fb-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:none;align-items:center;justify-content:center;z-index:9999}
+.nerve-fb-modal.show{display:flex}
+.nerve-fb-card{background:#1C2333;color:#fff;padding:24px;border-radius:14px;
+  width:min(520px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nerve-fb-card h3{margin:0 0 12px;color:#00D4AA}
+.nerve-fb-card label{display:block;margin:10px 0 6px;font-size:13px;color:#cbd5e1}
+.nerve-fb-card select,.nerve-fb-card textarea,.nerve-fb-card input[type=file]{
+  width:100%;padding:10px;border-radius:8px;border:1px solid #2D3748;
+  background:#0D1117;color:#fff;box-sizing:border-box;font-family:inherit}
+.nerve-fb-card textarea{min-height:110px;resize:vertical}
+.nerve-fb-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.nerve-fb-actions button{padding:10px 16px;border-radius:8px;border:0;cursor:pointer;font-family:inherit;font-size:14px}
+.nerve-fb-cancel{background:#2D3748;color:#fff}
+.nerve-fb-submit{background:#00D4AA;color:#0D1117;font-weight:600}
