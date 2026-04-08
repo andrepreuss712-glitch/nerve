@@ -1,1 +1,61 @@
-<div class="fcd-stub">Tab "Export" — wird in Plan 04.7.2-07 implementiert.</div>
+<div class="fcd-export">
+  <h3>DATEN-EXPORT FÜR STEUERBERATER — <span class="fcd-period-label"></span></h3>
+  <p>Zeitraum aus Header-Dropdown. Homeoffice-Tage: <input type="number" id="fcd-export-home" value="0" min="0" max="366"></p>
+
+  <h4>Berichte</h4>
+  <ul class="fcd-export-list">
+    <li>
+      <strong>EÜR als PDF</strong> — DIN A4, deutsches Zahlenformat, Anlage-EÜR-Format
+      <a id="fcd-dl-pdf" href="#" class="n-btn">Herunterladen (PDF)</a>
+      <a id="fcd-dl-html" href="#" class="n-btn-ghost">HTML-Preview (Dev-Fallback)</a>
+    </li>
+    <li>
+      <strong>Einnahmen-Detail (CSV)</strong> — alle Stripe-Transaktionen mit Netto/USt/Brutto/Land/Plan/Treatment
+      <a id="fcd-dl-einn" href="#" class="n-btn">Herunterladen (CSV)</a>
+    </li>
+    <li>
+      <strong>Ausgaben-Detail (CSV)</strong> — API-Kosten + Fixkosten mit SKR03/EÜR-Zeile
+      <a id="fcd-dl-ausg" href="#" class="n-btn">Herunterladen (CSV)</a>
+    </li>
+    <li>
+      <strong>USt-Voranmeldung Daten (CSV)</strong> — KZ 81/21/45/84/85/66/67 + Zahllast
+      <a id="fcd-dl-ustva" href="#" class="n-btn">Herunterladen (CSV)</a>
+    </li>
+    <li>
+      <strong>DATEV-Buchungsstapel (CSV-Stub)</strong> — <em>NICHT DATEV-format-konform.</em>
+      Einfache Spalten Datum/Konto/Gegenkonto/Betrag/Text. Voll-Implementierung wartet auf count.tax-Format-Anfrage.
+      <a id="fcd-dl-datev" href="#" class="n-btn">Herunterladen (CSV)</a>
+    </li>
+  </ul>
+
+  <h4>Automatisierung</h4>
+  <p class="fcd-stub">Monatliche automatische Datenlieferung an count.tax: <strong>Deferred auf Milestone 3</strong> (Phase 04.7.3 oder später per Briefing).</p>
+</div>
+<script>
+(function(){
+  function updateLinks() {
+    const wrap = document.querySelector('.fcd-wrap');
+    const period = (wrap && wrap.dataset.period) || '';
+    const homeDays = parseInt(document.getElementById('fcd-export-home').value || 0);
+    const q = `period=${encodeURIComponent(period)}&home_days=${homeDays}`;
+    document.getElementById('fcd-dl-pdf').href  = '/admin/dashboard/export/eur.pdf?' + q;
+    document.getElementById('fcd-dl-html').href = '/admin/dashboard/export/eur.html?' + q;
+    document.getElementById('fcd-dl-einn').href = '/admin/dashboard/export/einnahmen.csv?' + q;
+    document.getElementById('fcd-dl-ausg').href = '/admin/dashboard/export/ausgaben.csv?' + q;
+    document.getElementById('fcd-dl-ustva').href= '/admin/dashboard/export/ustva.csv?' + q;
+    document.getElementById('fcd-dl-datev').href= '/admin/dashboard/export/datev_stub.csv?' + q;
+    document.querySelectorAll('.fcd-period-label').forEach(e => e.textContent = period);
+  }
+  document.getElementById('fcd-export-home').addEventListener('change', updateLinks);
+  const panel = document.getElementById('panel-export');
+  if (panel) {
+    const obs = new MutationObserver(()=>{
+      if (!panel.hidden && !panel.dataset.loaded) { panel.dataset.loaded='1'; updateLinks(); }
+    });
+    obs.observe(panel, {attributes:true});
+    if (!panel.hidden) { panel.dataset.loaded='1'; updateLinks(); }
+  } else {
+    updateLinks();
+  }
+})();
+</script>
