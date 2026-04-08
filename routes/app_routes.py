@@ -405,6 +405,30 @@ def api_beenden():
         if ewb_clicks:
             db_conv.commit()
 
+        # FT logging: update ft_call_sessions with aggregates (Phase 04.7.1)
+        try:
+            from database.models import FtCallSession
+            with ls.state_lock:
+                ft_session_id = ls.state.get('ft_session_id')
+                buttons_pressed = len(ls.state.get('ewb_clicks') or [])
+            readiness_end = getattr(ls, 'kaufbereitschaft', None)
+            if ft_session_id:
+                ft_row = db_conv.query(FtCallSession).filter_by(id=ft_session_id).first()
+                if ft_row:
+                    ft_row.duration_seconds = int(postcall.get('dauer_sek', 0))
+                    ft_row.hints_shown = len([e for e in log_entries if e.get('type') == 'tipp'])
+                    ft_row.hints_used = hilfe_count
+                    ft_row.buttons_pressed = buttons_pressed
+                    ft_row.readiness_score_end = readiness_end
+                    ft_row.readiness_score_start = kb_start_val
+                    ft_row.conversation_log_id = conv.id if 'conv' in locals() and conv else None
+                    ft_row.outcome = (req_data.get('outcome') or 'unknown')
+                    db_conv.commit()
+                with ls.state_lock:
+                    ls.state['ft_session_id'] = None
+        except Exception as _e:
+            print(f"[FT] ft_call_sessions update failed: {_e}")
+
         # ── Audit: session_start + session_end (DSGVO: nur Aggregate, kein Transkript) ─
         log_action(db_conv, g.user.id, g.org.id, 'session_start',
                    target_type='conversation_log', target_id=conv.id,
