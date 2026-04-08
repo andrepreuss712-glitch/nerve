@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_session
 from database.models import User, Organisation, Session as DbSession, Invitation
 from config import MAX_SESSION_HOURS, PLANS
+from services.audit import log_action
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -92,6 +93,9 @@ def _do_login(email, passwort):
         if not check_password_hash(user.passwort_hash, passwort):
             return None, 'E-Mail oder Passwort falsch.'
         user_info = _login_user(db, user)
+        log_action(db, user.id, getattr(user, 'org_id', None), 'login',
+                   target_type='user', target_id=user.id,
+                   details={'method': 'password'}, request=request)
         return user_info, None
     finally:
         db.close()
@@ -223,6 +227,19 @@ def register():
 @auth_bp.route('/logout')
 def logout():
     auto = request.args.get('auto')
+    # Audit vor session.clear() — danach ist g.user nicht mehr verfügbar
+    if 'user_id' in session:
+        try:
+            _uid = session.get('user_id')
+            _oid = session.get('org_id')
+            _db = get_session()
+            try:
+                log_action(_db, _uid, _oid, 'logout',
+                           target_type='user', target_id=_uid, request=request)
+            finally:
+                _db.close()
+        except Exception:
+            pass
     session.clear()
     if auto:
         flash('Du wurdest automatisch ausgeloggt.', 'info')

@@ -4,6 +4,7 @@ from flask import (Blueprint, render_template, request, redirect,
 from database.db import get_session
 from database.models import Profile, User as UserModel
 from routes.auth import login_required
+from services.audit import log_action
 
 profiles_bp = Blueprint('profiles', __name__, url_prefix='/profiles')
 
@@ -139,6 +140,9 @@ def bearbeiten(pid):
             p.branche = request.form.get('branche', p.branche or '').strip()
             p.daten   = daten_json
             db.commit()
+            log_action(db, g.user.id, g.org.id, 'profile_update',
+                       target_type='profile', target_id=p.id,
+                       details={'name': p.name}, request=request)
             flash('Profil gespeichert.', 'success')
             return redirect(url_for('profiles.liste'))
         try:

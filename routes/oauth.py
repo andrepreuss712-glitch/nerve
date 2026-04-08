@@ -5,6 +5,7 @@ from sqlalchemy import func
 from database.db import get_session
 from database.models import User
 from routes.auth import _login_user, _create_org_and_user
+from services.audit import log_action
 from config import (
     GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
     MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET,
@@ -100,6 +101,9 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
             # Session-Fixation-Schutz: alte Session-Keys löschen, dann frisch setzen
             session.clear()
             _login_user(db, user)
+            log_action(db, user.id, getattr(user, 'org_id', None), 'login',
+                       target_type='user', target_id=user.id,
+                       details={'method': provider}, request=request)
             db.commit()
             print(f'[OAuth] {provider} login: existing user id={user.id} onboarding_done={onboarding_done_flag}')
             # D-05: diagnostic — log redirect target for existing-user path
@@ -123,6 +127,9 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
         )
         session.clear()
         _login_user(db, new_user)
+        log_action(db, new_user.id, getattr(new_user, 'org_id', None), 'login',
+                   target_type='user', target_id=new_user.id,
+                   details={'method': provider}, request=request)
         db.commit()
         print(f'[OAuth] {provider} register: new user id={new_user.id}')
         # D-05: diagnostic — log redirect target for new-user path

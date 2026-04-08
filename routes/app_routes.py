@@ -5,6 +5,7 @@ from routes.auth import login_required
 import services.live_session as ls
 from services.live_session import LOG_DIR, _build_log_content, reset_session
 from database.db import get_session
+from services.audit import log_action
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
@@ -238,6 +239,9 @@ def api_beenden():
     with ls.speech_lock:
         bw = ls.berater_words
         kw = ls.kunde_words
+        _st = ls.session_start_time
+    import time as _time
+    dauer_sek = int(_time.monotonic() - _st) if _st else 0
 
     einwaende_liste = []
     kaufsignale_liste = []
@@ -278,6 +282,7 @@ def api_beenden():
         'kb_end': kb_end,
         'kb_verlauf': kb_verlauf,
         'skript_abdeckung': {'gesamt_prozent': gesamt_prozent, 'phasen': phasen_abdeckung},
+        'dauer_sek': dauer_sek,
     }
 
     # CRM-Export generieren
@@ -366,6 +371,20 @@ def api_beenden():
         db_conv.add(conv)
         db_conv.commit()
         print(f"[DB] Gespräch gespeichert: conv.id={conv.id}")
+
+        # ── Audit: session_start + session_end (DSGVO: nur Aggregate, kein Transkript) ─
+        log_action(db_conv, g.user.id, g.org.id, 'session_start',
+                   target_type='conversation_log', target_id=conv.id,
+                   details={'mode': session_mode}, request=request)
+        log_action(db_conv, g.user.id, g.org.id, 'session_end',
+                   target_type='conversation_log', target_id=conv.id,
+                   details={
+                       'mode': conv.session_mode,
+                       'dauer_sekunden': conv.dauer_sekunden,
+                       'einwaende_total': conv.einwaende_gesamt,
+                       'einwaende_ok':    conv.einwaende_behandelt,
+                   },
+                   request=request)
 
         # Award points for completing a live call
         try:
