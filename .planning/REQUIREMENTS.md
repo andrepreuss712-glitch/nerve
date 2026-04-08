@@ -88,6 +88,17 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [ ] **TA-08**: Alle neuen Cards verwenden exakt die Design-Spezifikation: #FFFFFF Card BG, 12px Border-Radius, `0 1px 3px rgba(0,0,0,0.08)` Shadow, teal #00D4AA Akzente
 - [ ] **TA-09**: Keine neuen Farben ausserhalb der definierten Palette, keine Gradient-Backgrounds, Sidebar (#0D1117) unveraendert
 
+### Backend & Feedback System (INSERTED - Phase 04.7)
+
+- [ ] **BE-01**: users.is_superadmin Flag + ENV-Seed via SUPERADMIN_EMAIL + @superadmin_required Decorator
+- [ ] **BE-02**: Flask-Admin unter /admin mit SecureIndexView Auth-Gate (Bootstrap4 Theme)
+- [ ] **BE-03**: audit_log Tabelle + SQLite Immutable Trigger + log_action() Helper + Wire-up in Login/Session/Profil Routes
+- [ ] **BE-04**: objection_events Tabelle + EWB-Klick-Persistenz pro ConversationLog (Naming-Konflikt avg_deal_wert dokumentiert)
+- [ ] **BE-05**: feedback Tabelle (NEU, getrennt von FeedbackEvent) + Sidebar-Button + Modal + Screenshot-Upload /opt/nerve/uploads/feedback + POST /api/feedback + /api/feedback/quick
+- [ ] **BE-06**: Resend EU-Region Integration + 3 Templates (Welcome, Feedback-in-Planung, Password-Reset)
+- [ ] **BE-07**: Session-History Seite (Umbau bestehender Analytics-Seite zu chronologischer ConversationLog-Liste + Detail-View)
+- [ ] **BE-08**: Admin-Dashboard mit ModelViews (User, Org, Feedback, AuditLog, ConversationLog) + KPI CustomView + Planungs-Liste + Ticket-Workflow (new -> in_planning mit Resend-Trigger)
+
 ### Business Setup
 
 - [ ] **BIZ-01**: Gewerbeanmeldung beim Gewerbeamt Iserlohn ist eingereicht
@@ -201,6 +212,15 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | TA-08 | Phase 4.5 | Pending |
 | TA-09 | Phase 4.5 | Pending |
 | LAUNCH-01 | Phase 5 | Pending |
+
+| BE-01 | Phase 4.7 | Pending |
+| BE-02 | Phase 4.7 | Pending |
+| BE-03 | Phase 4.7 | Pending |
+| BE-04 | Phase 4.7 | Pending |
+| BE-05 | Phase 4.7 | Pending |
+| BE-06 | Phase 4.7 | Pending |
+| BE-07 | Phase 4.7 | Pending |
+| BE-08 | Phase 4.7 | Pending |
 
 **Coverage:**
 - v1 requirements: 62 total

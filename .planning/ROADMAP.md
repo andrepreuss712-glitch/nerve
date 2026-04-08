@@ -302,10 +302,19 @@ Plans:
 
 ### Phase 04.7: Backend & Feedback System (INSERTED)
 
-**Goal:** Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails und Session-History stehen — Grundlage für alle folgenden Phasen.
+**Goal:** Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails und Session-History stehen - Grundlage fuer alle folgenden Phasen.
 **Depends on:** Phase 04.6.1
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.7)
-**Plans:** TBD
+**Briefing:** Nerve-Vault/02 Projekte/NERVE Backend & Feedback System.md
+**Requirements:** [BE-01, BE-02, BE-03, BE-04, BE-05, BE-06, BE-07, BE-08]
+**Plans:** 6 plans
+
+Plans:
+- [ ] 04.7-01-PLAN.md - Foundation: is_superadmin + Decorator + ENV-Seed + Flask-Admin /admin Mount
+- [ ] 04.7-02-PLAN.md - Audit-Log Tabelle + Immutable Trigger + log_action Wire-up
+- [ ] 04.7-03-PLAN.md - Daten-Tracking: ObjectionEvent Tabelle + EWB-Persistenz (avg_deal_wert reuse)
+- [ ] 04.7-04-PLAN.md - Feedback-Buttons + Modal + Upload + API + feedback Tabelle
+- [ ] 04.7-05-PLAN.md - Admin-Dashboard KPI + Tickets + Planung + Resend EU Emails + Checkpoint
+- [ ] 04.7-06-PLAN.md - Session-History (Analytics-Umbau zu ConversationLog-Liste + Detail)
 
 ### Phase 04.7.1: FineTuning Logging Grundlage (INSERTED)
 
