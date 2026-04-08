@@ -630,6 +630,23 @@ def text_to_speech(text: str, voice_id: str = None,
     try:
         response = requests.post(url, json=data, headers=headers, timeout=10)
         if response.status_code == 200:
+            # ── Phase 04.7.2 Cost-Hook: TTS-Zeichen ────────────────────────────
+            try:
+                from services.cost_tracker import log_api_cost
+                char_units = len(text or '') / 1000.0
+                if char_units > 0:
+                    uid = None
+                    try:
+                        from flask import g
+                        uid = getattr(getattr(g, 'user', None), 'id', None)
+                    except Exception:
+                        uid = None
+                    log_api_cost('elevenlabs', 'multilingual-v2', user_id=uid,
+                                 units=char_units, unit_type='per_1k_chars',
+                                 context_tag='training_tts')
+            except Exception as _e:
+                print(f"[CostHook] elevenlabs tts skipped: {_e}")
+            # ────────────────────────────────────────────────────────────────────
             return response.content
         print(f"[ElevenLabs] Fehler {response.status_code}: {response.text[:200]}")
     except Exception as e:

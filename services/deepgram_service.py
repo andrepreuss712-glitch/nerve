@@ -8,6 +8,7 @@ import services.live_session as ls
 # ── Per-session Deepgram connections ──────────────────────────────────────────
 _deepgram_sessions = {}   # {sid: connection}
 _session_modes = {}       # {sid: 'cold_call'|'meeting'}
+_cost_opened_at = {}      # {sid: float} — Phase 04.7.2 STT-minute tracking
 _sessions_lock = threading.Lock()
 
 
@@ -144,6 +145,7 @@ def _open_deepgram_connection(sid, mode='meeting'):
     with _sessions_lock:
         _deepgram_sessions[sid] = connection
         _session_modes[sid] = mode
+        _cost_opened_at[sid] = time.time()
     print(f"[DG] Session gestartet (sid={sid}, mode={mode}, diarize={is_meeting})")
 
 
@@ -151,6 +153,20 @@ def _close_deepgram_connection(sid):
     with _sessions_lock:
         connection = _deepgram_sessions.pop(sid, None)
         _session_modes.pop(sid, None)
+        opened = _cost_opened_at.pop(sid, None)
+    # ── Phase 04.7.2 Cost-Hook: STT-Minuten ────────────────────────────
+    try:
+        from services.cost_tracker import log_api_cost
+        if opened:
+            seconds = max(0.0, time.time() - opened)
+            minutes = seconds / 60.0
+            if minutes > 0.01:  # keine Artefakt-Rows fuer Sub-Sekunden
+                log_api_cost('deepgram', 'nova-2', user_id=None,
+                             units=minutes, unit_type='per_minute',
+                             session_id=str(sid), context_tag='stt')
+    except Exception as _e:
+        print(f"[CostHook] deepgram stt skipped: {_e}")
+    # ────────────────────────────────────────────────────────────────────
     if connection:
         try:
             connection.finish()
