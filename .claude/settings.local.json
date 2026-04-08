@@ -14,7 +14,18 @@
       "Bash(node:*)",
       "Skill(gsd:plan-phase)",
       "Skill(gsd:update)",
-      "Skill(gsd:discuss-phase)"
+      "Skill(gsd:discuss-phase)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Skill(gsd:insert-phase)",
+      "Bash(echo \"still running\" git log --oneline --since=\"5 minutes ago\" --grep=\"03.1-03\")",
+      "Bash(bash deploy.sh)",
+      "Bash(ssh-keygen:*)",
+      "Bash(ssh-copy-id:*)",
+      "Bash(curl:*)",
+      "Bash(ssh:*)",
+      "Bash(grep:*)",
+      "Skill(gsd:quick)"
     ]
   }
 }

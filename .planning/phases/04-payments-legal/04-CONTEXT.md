@@ -50,6 +50,31 @@ No Stripe account exists yet — full setup from scratch including products and 
 - **D-19:** Footer links on `landing.html` and `base.html` must link to all three legal pages.
 - **D-20:** LEGAL-03 (signed AVVs with Deepgram, Anthropic, ElevenLabs, Stripe) is a **manual task** — tracked as checklist items in the plan, not codeable. Deepgram EU endpoint (`api.eu.deepgram.com`) switch IS codeable (update `DEEPGRAM_URL` in config/env).
 
+### DSGVO-Architektur (ergänzt 2026-04-02 — mit Rechtsberater erarbeitet)
+
+- **D-21:** **Kein Audio wird gespeichert.** NERVE verarbeitet Audio ephemeral: rein → Analyse → sofort gelöscht. Niemals persistent. Dies ist das zentrale Datenschutzargument und muss in der Datenschutzerklärung explizit stehen.
+- **D-22:** Live-Assistent hat **zwei Modi** mit unterschiedlicher Rechtsgrundlage:
+  - **Cold-Call-Modus:** KI hört NUR den Berater, NICHT den Kunden. EWB-Buttons statt Kundenstimme. Kein Transkript, nur Metadaten. Rechtsgrundlage: berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO) — Dritte werden nicht verarbeitet.
+  - **Meeting-Modus:** Consent-Pop-up vor dem Call. Zustimmung = volle Analyse beider Seiten. Ablehnung = automatischer Wechsel in Cold-Call-Modus. Rechtsgrundlage: Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).
+  - Die AGB und Datenschutzerklärung müssen beide Modi und ihre Rechtsgrundlagen klar beschreiben.
+- **D-23:** **Training-Modus:** Verarbeitung ist durch AGB/Vertragserfüllung abgedeckt (Art. 6 Abs. 1 lit. b DSGVO). Kein separates Consent-Pop-up notwendig.
+- **D-24:** **KI-Training mit Nutzerdaten:** Separate freiwillige Checkbox in den Einstellungen. DARF Training-Modus NICHT blockieren (Koppelungsverbot Art. 7 Abs. 4 DSGVO). Rechtsgrundlage: Einwilligung. Datenschutzerklärung muss diesen Verarbeitungszweck separat ausweisen.
+- **D-25:** **EU-Server für alle Dienste** — kein Drittlandtransfer ohne Dokumentation:
+  - Deepgram: EU-Endpoint (`api.eu.deepgram.com`) — update in config/env als Teil von Plan 04-01.
+  - Anthropic Claude: AWS Bedrock Frankfurt (`eu-central-1`) — falls aktuell US-Endpoint, im Code prüfen und updaten.
+  - ElevenLabs: EU Data Residency aktivieren (manuelle Aufgabe im Account).
+  - Stripe: EU-Datenverarbeitung (Frankfurt) — standardmäßig DSGVO-konform.
+  - Datenschutzerklärung muss Serverstandorte und Drittlandtransfer-Mechanismen (SCCs) dokumentieren.
+- **D-26:** **Datenschutzerklärung Pflichtinhalt** — folgende Punkte MÜSSEN abgebildet sein:
+  - Deepgram als Auftragsverarbeiter (STT), EU-Endpoint, AVV-Status
+  - Anthropic als Auftragsverarbeiter (KI-Analyse), Bedrock Frankfurt, AVV-Status
+  - ElevenLabs als Auftragsverarbeiter (TTS Training), EU Data Residency, AVV-Status
+  - Stripe als Auftragsverarbeiter (Zahlungen), EU-Verarbeitung, AVV-Status
+  - Cold-Call vs. Meeting-Modus: Rechtsgrundlagen und Verarbeitungsumfang
+  - Ephemeral Audio Processing: explizit keine Speicherung
+  - Freiwillige KI-Trainingsdaten-Einwilligung (Art. 7 Abs. 4 DSGVO)
+  - Betroffenenrechte (Auskunft, Löschung, Widerspruch, Portabilität)
+
 ### Claude's Discretion
 
 - Exact styling of the Gründerrabatt-Badge (size, placement, color — teal or gold)
