@@ -306,7 +306,7 @@ Plans:
 **Depends on:** Phase 04.6.1
 **Briefing:** Nerve-Vault/02 Projekte/NERVE Backend & Feedback System.md
 **Requirements:** [BE-01, BE-02, BE-03, BE-04, BE-05, BE-06, BE-07, BE-08]
-**Plans:** 3/6 plans executed
+**Plans:** 4/6 plans executed
 
 Plans:
 - [x] 04.7-01-PLAN.md - Foundation: is_superadmin + Decorator + ENV-Seed + Flask-Admin /admin Mount
@@ -314,7 +314,7 @@ Plans:
 - [x] 04.7-03-PLAN.md - Daten-Tracking: ObjectionEvent Tabelle + EWB-Persistenz (avg_deal_wert reuse)
 - [ ] 04.7-04-PLAN.md - Feedback-Buttons + Modal + Upload + API + feedback Tabelle
 - [ ] 04.7-05-PLAN.md - Admin-Dashboard KPI + Tickets + Planung + Resend EU Emails + Checkpoint
-- [ ] 04.7-06-PLAN.md - Session-History (Analytics-Umbau zu ConversationLog-Liste + Detail)
+- [x] 04.7-06-PLAN.md - Session-History (Analytics-Umbau zu ConversationLog-Liste + Detail)
 
 ### Phase 04.7.1: FineTuning Logging Grundlage (INSERTED)
 

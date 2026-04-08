@@ -96,7 +96,7 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [x] **BE-04**: objection_events Tabelle + EWB-Klick-Persistenz pro ConversationLog (Naming-Konflikt avg_deal_wert dokumentiert)
 - [ ] **BE-05**: feedback Tabelle (NEU, getrennt von FeedbackEvent) + Sidebar-Button + Modal + Screenshot-Upload /opt/nerve/uploads/feedback + POST /api/feedback + /api/feedback/quick
 - [ ] **BE-06**: Resend EU-Region Integration + 3 Templates (Welcome, Feedback-in-Planung, Password-Reset)
-- [ ] **BE-07**: Session-History Seite (Umbau bestehender Analytics-Seite zu chronologischer ConversationLog-Liste + Detail-View)
+- [x] **BE-07**: Session-History Seite (Umbau bestehender Analytics-Seite zu chronologischer ConversationLog-Liste + Detail-View)
 - [ ] **BE-08**: Admin-Dashboard mit ModelViews (User, Org, Feedback, AuditLog, ConversationLog) + KPI CustomView + Planungs-Liste + Ticket-Workflow (new -> in_planning mit Resend-Trigger)
 
 ### Business Setup
@@ -219,7 +219,7 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | BE-04 | Phase 4.7 | Complete |
 | BE-05 | Phase 4.7 | Pending |
 | BE-06 | Phase 4.7 | Pending |
-| BE-07 | Phase 4.7 | Pending |
+| BE-07 | Phase 4.7 | Complete |
 | BE-08 | Phase 4.7 | Pending |
 
 **Coverage:**
