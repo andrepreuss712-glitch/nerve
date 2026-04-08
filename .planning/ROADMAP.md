@@ -335,7 +335,14 @@ Plans:
 **Goal:** André sieht auf einen Blick wie sein Business steht — 6 Tabs (Übersicht, Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export). Am Monatsende: Klick auf Export → count.tax bekommt alles fertig aufbereitet.
 **Depends on:** Phase 04.7
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Admin Dashboard Final.md`
-**Plans:** TBD
+**Plans:** 7 plans in 6 waves
+- [ ] 04.7.2-01-PLAN.md — DB Models + Migration + Seed + Test-Skeletons (Wave 1)
+- [ ] 04.7.2-02-PLAN.md — services/cost_tracker.py + Hooks in claude/deepgram/training_service (Wave 2)
+- [ ] 04.7.2-03-PLAN.md — Frankfurter exchange_rates + APScheduler + Stripe invoice.payment_succeeded Webhook (Wave 2)
+- [ ] 04.7.2-04-PLAN.md — admin_dashboard Blueprint + Shell + Tab Übersicht + Tab Einnahmen (Wave 3)
+- [ ] 04.7.2-05-PLAN.md — Tab Ausgaben (CRUD FixedCost + ApiRate) + Tab Kunden (Org+User-Drilldown) (Wave 4)
+- [ ] 04.7.2-06-PLAN.md — services/eur_calculator.py + §13b TDD + Tab EÜR (Wave 5)
+- [ ] 04.7.2-07-PLAN.md — WeasyPrint EÜR-PDF + 4 CSV-Exports + Tab Export (Wave 6)
 
 ### Phase 04.8: KI-Logik Upgrade (INSERTED)
 
