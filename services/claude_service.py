@@ -94,6 +94,87 @@ def get_active_prompt_version(module: str) -> str:
     return version
 
 
+def _write_ft_assistant_event(
+    module: str,
+    hint_type: str,
+    hint_text: str,
+    model_used: str,
+    context: dict | None = None,
+) -> None:
+    """
+    Write one row to ft_assistant_events. Called from background threads
+    (analyse_loop, coaching_loop). MUST NOT raise — swallows all errors.
+
+    Cold-Call DSGVO enforcement: transcript_segment and speaker are
+    hard-set to None when ls.state['mode'] == 'cold_call' (or when mode
+    is missing/unknown — default to cold_call for safety), regardless
+    of what the caller passed in.
+    """
+    context = context or {}
+    try:
+        import services.live_session as ls
+        from database.db import SessionLocal
+        from database.models import FtAssistantEvent
+
+        with ls.state_lock:
+            ft_session_id = ls.state.get('ft_session_id')
+            mode          = ls.state.get('mode') or 'cold_call'
+            user_id       = ls.state.get('user_id')
+            market        = ls.state.get('market') or 'dach'
+            language      = ls.state.get('language') or 'de'
+            readiness     = ls.state.get('kaufbereitschaft')
+
+        if ft_session_id is None or user_id is None:
+            # Phase not yet started or anonymous — skip write (no error)
+            return
+
+        # D-03/D-04/D-05: Cold-Call hard NULL enforcement (DSGVO)
+        if mode == 'cold_call':
+            transcript_segment = None
+            speaker = None
+        else:
+            transcript_segment = context.get('transcript_segment')
+            speaker = context.get('speaker')
+
+        def _jdump(v):
+            if v is None:
+                return None
+            try:
+                return json.dumps(v, ensure_ascii=False)
+            except Exception:
+                return None
+
+        db = SessionLocal()
+        try:
+            row = FtAssistantEvent(
+                ft_session_id=ft_session_id,
+                user_id=user_id,
+                market=market,
+                language=language,
+                timestamp_ms=int(time.time() * 1000),
+                conversation_phase=context.get('conversation_phase') or 'unknown',
+                speaker=speaker,
+                transcript_segment=transcript_segment,
+                context_window=_jdump(context.get('context_window')),
+                customer_data=_jdump(context.get('customer_data')),
+                profile_data=_jdump(context.get('profile_data')),
+                readiness_score=readiness,
+                active_learning_cards=None,  # Phase 4.11
+                hint_type=hint_type or 'hint',
+                hint_text=hint_text or '',
+                hint_category=context.get('hint_category'),
+                model_used=model_used or 'unknown',
+                prompt_version=get_active_prompt_version(module),
+            )
+            db.add(row)
+            db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        # NEVER raise — analyse_loop/coaching_loop must not crash on FT logging
+        print(f"[FT] assistant_event write failed (module={module}): {e}")
+
+
 def _get_erfolgsquoten() -> str:
     """Lädt Gegenargument-Erfolgsquoten aus der DB und gibt Lern-Kontext zurück."""
     try:
