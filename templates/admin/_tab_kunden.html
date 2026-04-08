@@ -1,1 +1,59 @@
-<div class="fcd-stub">Tab "Kunden" — wird in Plan 04.7.2-05 implementiert.</div>
+<div class="fcd-kunden">
+  <h3>KUNDEN-PROFITABILITÄT — <span class="fcd-period-label"></span></h3>
+  <div id="fcd-kunden-summary"></div>
+  <table class="fcd-table">
+    <thead><tr><th>Org</th><th>Plan</th><th>User</th><th>Umsatz</th><th>API-Kosten</th><th>Marge</th><th>Status</th><th></th></tr></thead>
+    <tbody id="fcd-kunden-rows"></tbody>
+  </table>
+</div>
+<script>
+(function(){
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = n => Number(n||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+  const statusBadge = s => ({healthy:'✅ OK', warn:'⚠️ WARN', critical:'🔴 KRIT'})[s] || s;
+  async function load() {
+    const wrap = document.querySelector('.fcd-wrap');
+    const period = wrap ? wrap.dataset.period : '';
+    const r = await fetch('/admin/dashboard/kunden?period=' + encodeURIComponent(period));
+    if (!r.ok) return;
+    const d = await r.json();
+    document.querySelectorAll('.fcd-period-label').forEach(e => e.textContent = d.period);
+    document.getElementById('fcd-kunden-summary').innerHTML =
+      `<p>Gesund: <strong>${d.summary.healthy}</strong> | Warn: <strong>${d.summary.warn}</strong> | Kritisch: <strong>${d.summary.critical}</strong></p>`;
+    document.getElementById('fcd-kunden-rows').innerHTML =
+      (d.orgs||[]).map(o => `
+        <tr class="fcd-kunden-row" data-org-id="${o.org_id}">
+          <td>${esc(o.name)}</td><td>${esc(o.plan)}</td><td>${o.user_count}</td>
+          <td>${fmt(o.revenue_eur)}</td><td>${fmt(o.api_cost_eur)}</td>
+          <td>${o.margin_pct}%</td><td>${statusBadge(o.status)}</td>
+          <td><button class="fcd-kunden-drill n-btn-ghost" data-org-id="${o.org_id}">User</button></td>
+        </tr>
+        <tr class="fcd-kunden-detail" id="fcd-kunden-detail-${o.org_id}" hidden><td colspan="8"></td></tr>
+      `).join('');
+    document.querySelectorAll('.fcd-kunden-drill').forEach(b => b.addEventListener('click', async () => {
+      const oid = b.dataset.orgId;
+      const row = document.getElementById('fcd-kunden-detail-' + oid);
+      if (!row.hidden) { row.hidden = true; return; }
+      const wrap2 = document.querySelector('.fcd-wrap');
+      const period2 = wrap2 ? wrap2.dataset.period : '';
+      const rr = await fetch(`/admin/dashboard/kunden/${oid}/users?period=${encodeURIComponent(period2)}`);
+      const dd = await rr.json();
+      const html = (dd.users||[]).map(u => {
+        const bp = Object.entries(u.by_provider||{}).map(([p,v]) => `${esc(p)}: ${fmt(v)}`).join(', ');
+        const trend = (u.weekly_trend||[]).map(w => `${w.week_start}: ${fmt(w.cost)}`).join(' | ');
+        return `<div><strong>${esc(u.email)}</strong> — gesamt ${fmt(u.total_cost_eur)}<br><small>${bp}</small><br><small>Trend: ${trend}</small></div>`;
+      }).join('<hr>');
+      row.querySelector('td').innerHTML = html || '<em>Keine User</em>';
+      row.hidden = false;
+    }));
+  }
+  const panel = document.getElementById('panel-kunden');
+  if (panel) {
+    const obs = new MutationObserver(()=>{
+      if (!panel.hidden && !panel.dataset.loaded) { panel.dataset.loaded='1'; load(); }
+    });
+    obs.observe(panel, {attributes:true});
+    if (!panel.hidden) { panel.dataset.loaded='1'; load(); }
+  }
+})();
+</script>
