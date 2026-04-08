@@ -1,1 +1,73 @@
-<div class="fcd-stub">Tab "EÜR" — wird in Plan 04.7.2-06 implementiert.</div>
+<div class="fcd-eur">
+  <h3>EINNAHME-ÜBERSCHUSS-RECHNUNG (EÜR) — <span class="fcd-period-label"></span></h3>
+  <label>Homeoffice-Tage im Zeitraum: <input type="number" id="fcd-eur-home-days" value="0" min="0" max="366"></label>
+  <button id="fcd-eur-reload" class="n-btn">Neu berechnen</button>
+
+  <div id="fcd-eur-body">
+    <p class="fcd-stub">Bitte Zeitraum wählen…</p>
+  </div>
+</div>
+<script>
+(function(){
+  const fmt = n => (Number(n)||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' EUR';
+  async function load() {
+    const period = document.querySelector('.fcd-wrap').dataset.period;
+    const homeDays = parseInt(document.getElementById('fcd-eur-home-days').value || 0);
+    const r = await fetch(`/admin/dashboard/eur?period=${encodeURIComponent(period)}&home_days=${homeDays}`);
+    if (!r.ok) { document.getElementById('fcd-eur-body').innerHTML = 'Fehler.'; return; }
+    const d = await r.json();
+    document.querySelectorAll('.fcd-period-label').forEach(e => e.textContent = period);
+    const E = d.einnahmen, A = d.ausgaben, R = d.ergebnis, U = d.ust_voranmeldung;
+    document.getElementById('fcd-eur-body').innerHTML = `
+      <h4>A. BETRIEBSEINNAHMEN</h4>
+      <table class="fcd-table">
+        <tr><td>Umsatzerlöse 19% USt (DE)</td><td>${fmt(E.Z14_de_19.netto)}</td><td>Z.14</td></tr>
+        <tr><td>Umsatzerlöse Reverse Charge EU B2B</td><td>${fmt(E.Z16_eu_rc.netto)}</td><td>Z.16</td></tr>
+        <tr><td>Nicht steuerbare Drittland-Leistungen</td><td>${fmt(E.Z17_drittland.netto)}</td><td>Z.17</td></tr>
+        <tr><td>Vereinnahmte USt</td><td>${fmt(E.Z19_vereinnahmte_ust)}</td><td>Z.19</td></tr>
+        <tr><th>SUMME EINNAHMEN</th><th>${fmt(E.summe_einnahmen_netto)}</th><th></th></tr>
+      </table>
+
+      <h4>B. BETRIEBSAUSGABEN</h4>
+      <table class="fcd-table">
+        <tr><td>Bezogene Fremdleistungen (Anthropic, Deepgram, ElevenLabs)</td><td>${fmt(A.Z26_fremdleistungen.total_netto)}</td><td>Z.26</td></tr>
+        <tr><td>Miete/Leasing EDV</td><td>${fmt(A.Z52_miete_edv.total_netto)}</td><td>Z.52</td></tr>
+        <tr><td>Übrige Betriebsausgaben (Domain, Kontist, Steuerberater, Stripe)</td><td>${fmt(A.Z57_uebrige.total_netto)}</td><td>Z.57</td></tr>
+        <tr><td>Häusliches Arbeitszimmer (Homeoffice)</td><td>${fmt(A.Z65_homeoffice.total_netto)}</td><td>Z.65</td></tr>
+        <tr><th>SUMME AUSGABEN (netto)</th><th>${fmt(A.summe_ausgaben_netto)}</th><th>Z.75</th></tr>
+        <tr><td>Vorsteuer Inland</td><td>${fmt(A.Z72_vorsteuer.inland_vst)}</td><td>Z.72</td></tr>
+        <tr><td>Vorsteuer Reverse Charge §13b</td><td>${fmt(A.Z72_vorsteuer.rc_13b_vst)}</td><td>Z.72</td></tr>
+        <tr><th>VORSTEUER GESAMT</th><th>${fmt(A.Z72_vorsteuer.total)}</th><th></th></tr>
+      </table>
+
+      <h4>C. ERGEBNIS</h4>
+      <table class="fcd-table">
+        <tr><th>GEWINN VOR STEUERN</th><th>${fmt(R.Z77_gewinn_vor_steuern)}</th><th>Z.77</th></tr>
+        <tr><td>USt-Zahllast</td><td>${fmt(R.ust_zahllast)}</td><td></td></tr>
+        <tr><th>GEWINN NACH USt</th><th>${fmt(R.gewinn_nach_ust)}</th><th></th></tr>
+      </table>
+
+      <h4>USt-VORANMELDUNG</h4>
+      <table class="fcd-table">
+        <tr><td>KZ 81 Steuerpfl. 19% (Basis / USt)</td><td>${fmt(U.KZ81_steuerpfl_19.basis)} / ${fmt(U.KZ81_steuerpfl_19.ust)}</td></tr>
+        <tr><td>KZ 21 Steuerfreie igL (EU B2B RC)</td><td>${fmt(U.KZ21_igL)}</td></tr>
+        <tr><td>KZ 45 Nicht steuerbare Drittland</td><td>${fmt(U.KZ45_drittland)}</td></tr>
+        <tr><td>KZ 84 RC Bemessungsgrundlage §13b</td><td>${fmt(U.KZ84_rc_bemessung)}</td></tr>
+        <tr><td>KZ 85 RC USt §13b</td><td>${fmt(U.KZ85_rc_ust)}</td></tr>
+        <tr><td>KZ 66 Vorsteuer Inland</td><td>${fmt(U.KZ66_vst_inland)}</td></tr>
+        <tr><td>KZ 67 Vorsteuer Reverse Charge</td><td>${fmt(U.KZ67_vst_rc)}</td></tr>
+        <tr><th>USt-Zahllast</th><th>${fmt(U.zahllast)}</th></tr>
+      </table>
+    `;
+  }
+  document.getElementById('fcd-eur-reload').addEventListener('click', load);
+  document.getElementById('fcd-eur-home-days').addEventListener('change', load);
+  const panel = document.getElementById('panel-eur');
+  if (panel) {
+    const obs = new MutationObserver(()=>{
+      if (panel && !panel.hidden && !panel.dataset.loaded) { panel.dataset.loaded='1'; load(); }
+    });
+    obs.observe(panel, {attributes:true});
+  }
+})();
+</script>

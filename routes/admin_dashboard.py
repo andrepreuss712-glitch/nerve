@@ -632,3 +632,24 @@ def kunden_drilldown(org_id):
         return jsonify({'org_id': org_id, 'users': result})
     finally:
         db.close()
+
+
+# ── Tab EÜR ───────────────────────────────────────────────────────
+
+@admin_dashboard_bp.route('/eur')
+@login_required
+@superadmin_required
+def eur_data():
+    period = request.args.get('period')
+    start, end = _parse_period(period)
+    try:
+        home_days = int(request.args.get('home_days', 0))
+    except (TypeError, ValueError):
+        home_days = 0
+    from services.eur_calculator import compute_eur
+    db = get_session()
+    try:
+        data = compute_eur(start, end, db, home_days=home_days)
+        return jsonify(data)
+    finally:
+        db.close()
