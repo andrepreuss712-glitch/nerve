@@ -663,6 +663,41 @@ def api_ewb_trigger():
         # Granulares EWB-Klick-Tracking fuer objection_events (Plan 03)
         from services.live_session import record_ewb_click
         record_ewb_click(einwand_typ=einwand_typ, success=False)
+
+        # FT logging: ft_objection_events (Phase 04.7.1)
+        try:
+            import time as _t
+            from services.claude_service import get_active_prompt_version
+            from database.models import FtObjectionEvent
+            with ls.state_lock:
+                ft_session_id = ls.state.get('ft_session_id')
+                user_id = ls.state.get('user_id')
+                market = ls.state.get('market') or 'dach'
+                language = ls.state.get('language') or 'de'
+            readiness_before = getattr(ls, 'kaufbereitschaft', None)
+            if ft_session_id and user_id:
+                db_ft = get_session()
+                try:
+                    db_ft.add(FtObjectionEvent(
+                        ft_session_id=ft_session_id,
+                        user_id=user_id,
+                        market=market,
+                        language=language,
+                        timestamp_ms=int(_t.time() * 1000),
+                        objection_type=einwand_typ or 'unknown',
+                        conversation_phase='unknown',
+                        readiness_score_before=readiness_before,
+                        recommended_response=antwort,
+                        recommendation_used=False,
+                        model_used='claude-haiku-4-5-20251001',
+                        prompt_version=get_active_prompt_version('objection_trigger'),
+                    ))
+                    db_ft.commit()
+                finally:
+                    db_ft.close()
+        except Exception as _e:
+            print(f"[FT] ft_objection_events insert failed: {_e}")
+
         return jsonify({'ok': True, 'antwort': antwort, 'einwand_typ': einwand_typ})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
