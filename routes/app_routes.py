@@ -405,6 +405,30 @@ def api_beenden():
         if ewb_clicks:
             db_conv.commit()
 
+        # FT logging: update ft_call_sessions with aggregates (Phase 04.7.1)
+        try:
+            from database.models import FtCallSession
+            with ls.state_lock:
+                ft_session_id = ls.state.get('ft_session_id')
+                buttons_pressed = len(ls.state.get('ewb_clicks') or [])
+            readiness_end = getattr(ls, 'kaufbereitschaft', None)
+            if ft_session_id:
+                ft_row = db_conv.query(FtCallSession).filter_by(id=ft_session_id).first()
+                if ft_row:
+                    ft_row.duration_seconds = int(postcall.get('dauer_sek', 0))
+                    ft_row.hints_shown = len([e for e in log_entries if e.get('type') == 'tipp'])
+                    ft_row.hints_used = hilfe_count
+                    ft_row.buttons_pressed = buttons_pressed
+                    ft_row.readiness_score_end = readiness_end
+                    ft_row.readiness_score_start = kb_start_val
+                    ft_row.conversation_log_id = conv.id if 'conv' in locals() and conv else None
+                    ft_row.outcome = (req_data.get('outcome') or 'unknown')
+                    db_conv.commit()
+                with ls.state_lock:
+                    ls.state['ft_session_id'] = None
+        except Exception as _e:
+            print(f"[FT] ft_call_sessions update failed: {_e}")
+
         # ── Audit: session_start + session_end (DSGVO: nur Aggregate, kein Transkript) ─
         log_action(db_conv, g.user.id, g.org.id, 'session_start',
                    target_type='conversation_log', target_id=conv.id,
@@ -639,6 +663,41 @@ def api_ewb_trigger():
         # Granulares EWB-Klick-Tracking fuer objection_events (Plan 03)
         from services.live_session import record_ewb_click
         record_ewb_click(einwand_typ=einwand_typ, success=False)
+
+        # FT logging: ft_objection_events (Phase 04.7.1)
+        try:
+            import time as _t
+            from services.claude_service import get_active_prompt_version
+            from database.models import FtObjectionEvent
+            with ls.state_lock:
+                ft_session_id = ls.state.get('ft_session_id')
+                user_id = ls.state.get('user_id')
+                market = ls.state.get('market') or 'dach'
+                language = ls.state.get('language') or 'de'
+            readiness_before = getattr(ls, 'kaufbereitschaft', None)
+            if ft_session_id and user_id:
+                db_ft = get_session()
+                try:
+                    db_ft.add(FtObjectionEvent(
+                        ft_session_id=ft_session_id,
+                        user_id=user_id,
+                        market=market,
+                        language=language,
+                        timestamp_ms=int(_t.time() * 1000),
+                        objection_type=einwand_typ or 'unknown',
+                        conversation_phase='unknown',
+                        readiness_score_before=readiness_before,
+                        recommended_response=antwort,
+                        recommendation_used=False,
+                        model_used='claude-haiku-4-5-20251001',
+                        prompt_version=get_active_prompt_version('objection_trigger'),
+                    ))
+                    db_ft.commit()
+                finally:
+                    db_ft.close()
+        except Exception as _e:
+            print(f"[FT] ft_objection_events insert failed: {_e}")
+
         return jsonify({'ok': True, 'antwort': antwort, 'einwand_typ': einwand_typ})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

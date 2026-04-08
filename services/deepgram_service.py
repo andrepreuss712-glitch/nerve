@@ -170,6 +170,43 @@ def register_audio_handlers(sio):
         print(f"[DG] start_live_session received (sid={_sid}, mode={mode})")
         _open_deepgram_connection(_sid, mode=mode)
 
+        # FT logging: create ft_call_sessions row (Phase 04.7.1)
+        try:
+            from flask import session as flask_session
+            from database.db import SessionLocal
+            from database.models import FtCallSession, User
+            import services.live_session as ls
+
+            user_id = flask_session.get('user_id')
+            if user_id:
+                db = SessionLocal()
+                try:
+                    u = db.query(User).filter_by(id=user_id).first()
+                    market = (getattr(u, 'market', None) if u else None) or 'dach'
+                    language = (getattr(u, 'language', None) if u else None) or 'de'
+                    ft_row = FtCallSession(
+                        user_id=user_id,
+                        mode=mode,
+                        market=market,
+                        language=language,
+                        hints_shown=0,
+                        hints_used=0,
+                        buttons_pressed=0,
+                    )
+                    db.add(ft_row)
+                    db.commit()
+                    ft_session_id = ft_row.id
+                finally:
+                    db.close()
+                with ls.state_lock:
+                    ls.state['ft_session_id'] = ft_session_id
+                    ls.state['user_id'] = user_id
+                    ls.state['market'] = market
+                    ls.state['language'] = language
+                print(f"[FT] ft_call_sessions row created id={ft_session_id} market={market}")
+        except Exception as _e:
+            print(f"[FT] ft_call_sessions insert failed: {_e}")
+
     @sio.on('stop_live_session')
     def handle_stop_live_session(sid=None):
         from flask import request
