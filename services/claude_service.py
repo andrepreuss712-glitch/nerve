@@ -570,6 +570,28 @@ def analyse_loop():
                 ls.state['aktiv']           = False
                 ls.state['version']        += 1
                 ls.state['kaufbereitschaft'] = kb_aktuell
+            # ── FT logging hook (Phase 04.7.1) ────────────────────────────────
+            try:
+                if ergebnis.get('einwand'):
+                    _hint_text = (ergebnis.get('gegenargument_1') or '').strip()
+                    _hint_type = ergebnis.get('typ') or 'einwand'
+                else:
+                    _hint_text = ergebnis.get('notiz') or ''
+                    _hint_type = 'kein_einwand'
+                _write_ft_assistant_event(
+                    module='assistant_live',
+                    hint_type=_hint_type,
+                    hint_text=_hint_text,
+                    model_used='claude-haiku-4-5-20251001',
+                    context={
+                        'transcript_segment': neuer_text,
+                        'speaker': 'rep',
+                        'conversation_phase': None,
+                        'hint_category': ergebnis.get('typ'),
+                    },
+                )
+            except Exception as _e:
+                print(f"[FT] assistant_live hook skipped: {_e}")
             # ── EWB-Ranking (throttled: every 3rd cycle) ──────────────────────
             _ewb_rank_counter += 1
             if _ewb_rank_counter % 3 == 0:
@@ -697,5 +719,25 @@ def coaching_loop():
                 'tipp': tipp, 'painpoint': painpoint,
                 'kategorie': kategorie, 'ts': ts,
             })
+            # ── FT logging hook (Phase 04.7.1) ────────────────────────────────
+            try:
+                _coach_text_parts = []
+                if tipp:
+                    _coach_text_parts.append(f"tipp: {tipp}")
+                if painpoint:
+                    _coach_text_parts.append(f"painpoint: {painpoint}")
+                _coach_text = ' | '.join(_coach_text_parts)
+                if _coach_text:
+                    _write_ft_assistant_event(
+                        module='coaching_live',
+                        hint_type='coaching',
+                        hint_text=_coach_text,
+                        model_used='claude-sonnet-4-6',
+                        context={
+                            'hint_category': 'coaching',
+                        },
+                    )
+            except Exception as _e:
+                print(f"[FT] coaching_live hook skipped: {_e}")
         except Exception as e:
             print(f"[Claude-2] Fehler: {e}")
