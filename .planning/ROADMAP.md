@@ -318,10 +318,17 @@ Plans:
 
 ### Phase 04.7.1: FineTuning Logging Grundlage (INSERTED)
 
-**Goal:** Strukturierte Logging-Tabellen für Fine-Tuning Trainingsdaten von Tag 1 — ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions. Markt-Trennung DACH/US, Anonymisierung, JSONL-Export.
+**Goal:** Strukturierte Logging-Tabellen fuer Fine-Tuning Trainingsdaten von Tag 1 — ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions. Markt-Trennung DACH/US, synchroner Write-Path im Live-Assistent, Prompt-Versionierung, Cold-Call DSGVO NULL-Enforcement, JSONL-Export-Stub.
 **Depends on:** Phase 04.7
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE FineTuning Logging Architektur.md`
-**Plans:** TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 04.7.1-01-PLAN.md — pytest Setup + tests/conftest.py + Test-Scaffolds (Wave 0)
+- [ ] 04.7.1-02-PLAN.md — SQLAlchemy Models (FtCallSession/FtAssistantEvent/FtObjectionEvent/PromptVersion) + users/conversation_logs market+language ALTER (Wave 1)
+- [ ] 04.7.1-03-PLAN.md — Prompt-Seed fuer alle 6 Module + get_active_prompt_version Cache-Helper (Wave 2)
+- [ ] 04.7.1-04-PLAN.md — Write-Hooks analyse_loop + coaching_loop -> ft_assistant_events mit Cold-Call NULL-Enforcement (Wave 2)
+- [ ] 04.7.1-05-PLAN.md — Lifecycle Hooks: start_live_session INSERT, api_ewb_trigger -> ft_objection_events, api_beenden UPDATE + JSONL-Export-CLI-Stub (Wave 2)
 
 ### Phase 04.7.2: Founder Cost Dashboard (INSERTED)
 
