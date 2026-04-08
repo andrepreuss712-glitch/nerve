@@ -1,1 +1,179 @@
-<div class="fcd-stub">Tab "Ausgaben" — wird in Plan 04.7.2-05 implementiert.</div>
+<div class="fcd-ausgaben" data-endpoint="/admin/dashboard/ausgaben">
+  <h3>AUSGABEN — <span class="fcd-period-label"></span></h3>
+
+  <h4>EÜR-Kategorien</h4>
+  <table class="fcd-table">
+    <thead><tr><th>Kategorie</th><th>Posten</th><th>Netto</th><th>EÜR-Zeile</th><th>SKR03</th></tr></thead>
+    <tbody id="fcd-ausg-kategorien"></tbody>
+    <tfoot><tr><th colspan="2">Gesamt</th><th id="fcd-ausg-total">—</th><th colspan="2"></th></tr></tfoot>
+  </table>
+
+  <h4 style="margin-top:24px;">Anbieter-Verteilung</h4>
+  <div id="fcd-ausg-providers"></div>
+
+  <h4 style="margin-top:24px;">Tageskosten (letzte 30 Tage)</h4>
+  <div class="fcd-chart-card">
+    <canvas id="fcd-ausg-daily"></canvas>
+  </div>
+
+  <h4 style="margin-top:24px;">API-Preise <button id="fcd-rate-new" class="n-btn">+ Neuen Preis eintragen</button></h4>
+  <table class="fcd-table">
+    <thead><tr><th>Anbieter</th><th>Modell</th><th>Einheit</th><th>Preis</th><th>Geprüft</th><th>Aktion</th></tr></thead>
+    <tbody id="fcd-ausg-rates"></tbody>
+  </table>
+
+  <h4 style="margin-top:24px;">Fixe Betriebskosten <button id="fcd-fc-new" class="n-btn">+ Neue Fixkosten</button></h4>
+  <table class="fcd-table">
+    <thead><tr><th>Name</th><th>Betrag</th><th>Zyklus</th><th>SKR03</th><th>Zeile</th><th>Periode-Kosten</th><th>Aktion</th></tr></thead>
+    <tbody id="fcd-ausg-fc"></tbody>
+  </table>
+
+  <div id="fcd-fc-form" hidden>
+    <h5>Fixkosten anlegen</h5>
+    <form id="fcd-fc-form-form">
+      <input name="name" placeholder="Name" required>
+      <input name="amount_eur" placeholder="Betrag (EUR)" required>
+      <input name="vat_rate" placeholder="USt % (19 / 0)" value="19">
+      <select name="cycle">
+        <option value="monthly">monatlich</option>
+        <option value="yearly">jährlich</option>
+        <option value="per_day">pro Tag (Homeoffice)</option>
+      </select>
+      <input name="skr03" placeholder="SKR03 (optional)">
+      <input name="eur_line" placeholder="EÜR-Zeile" value="57">
+      <button type="submit">Speichern</button>
+      <button type="button" id="fcd-fc-cancel">Abbrechen</button>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = n => Number(n||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+  async function load() {
+    const wrap = document.querySelector('.fcd-wrap');
+    const period = wrap ? wrap.dataset.period : '';
+    const r = await fetch('/admin/dashboard/ausgaben?period=' + encodeURIComponent(period));
+    if (!r.ok) return;
+    const d = await r.json();
+    document.querySelectorAll('.fcd-period-label').forEach(e => e.textContent = d.period);
+
+    // EÜR-Kategorien
+    const grouped = {};
+    (d.by_provider||[]).forEach(p => {
+      const k = p.cat || 'Übrige';
+      (grouped[k] = grouped[k] || []).push(p);
+    });
+    (d.fixed_costs||[]).forEach(fc => {
+      const lineLabel = { 52:'Miete/Leasing (EDV)', 57:'Nebenkosten/Übrige', 65:'Homeoffice' }[fc.eur_line] || 'Übrige';
+      (grouped[lineLabel] = grouped[lineLabel] || []).push({
+        label: fc.name, netto: fc.period_cost, eur_line: fc.eur_line, skr03: fc.skr03
+      });
+    });
+    let html = '';
+    for (const cat in grouped) {
+      grouped[cat].forEach((item, i) => {
+        html += `<tr>${i===0?`<td rowspan="${grouped[cat].length}">${esc(cat)}</td>`:''}`
+             + `<td>${esc(item.label)}</td><td>${fmt(item.netto)}</td>`
+             + `<td>${esc(item.eur_line||'')}</td><td>${esc(item.skr03||'')}</td></tr>`;
+      });
+    }
+    document.getElementById('fcd-ausg-kategorien').innerHTML = html;
+    document.getElementById('fcd-ausg-total').textContent = fmt(d.grand_total);
+
+    // Anbieter-Balken
+    const maxVal = Math.max(1, ...(d.by_provider||[]).map(p=>p.netto));
+    document.getElementById('fcd-ausg-providers').innerHTML =
+      (d.by_provider||[]).map(p => {
+        const pct = (p.netto / maxVal * 100).toFixed(0);
+        return `<div style="margin:4px 0;"><span style="display:inline-block;width:180px;">${esc(p.label)}</span>`
+             + `<span style="display:inline-block;background:#00D4AA;height:14px;width:${pct}%;"></span>`
+             + `<span style="margin-left:8px;">${fmt(p.netto)}</span></div>`;
+      }).join('');
+
+    // 30-Tage-Chart
+    const el = document.getElementById('fcd-ausg-daily');
+    if (el && window.Chart) {
+      if (window._fcdDailyChart) window._fcdDailyChart.destroy();
+      window._fcdDailyChart = new Chart(el, {
+        type: 'bar',
+        data: { labels: d.daily_30.map(x=>x.date.slice(5)),
+                datasets: [{ label: 'API-Kosten €', data: d.daily_30.map(x=>x.cost), backgroundColor:'#00D4AA' }] },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    // API-Rates
+    document.getElementById('fcd-ausg-rates').innerHTML =
+      (d.api_rates||[]).map(r => `
+        <tr${r.stale?' style="background:rgba(239,68,68,.1);"':''}>
+          <td>${esc(r.provider)}</td><td>${esc(r.model)}</td><td>${esc(r.unit_type)}</td>
+          <td>${esc(r.price)} ${esc(r.currency)}</td>
+          <td>${esc(r.last_checked)} ${r.stale?'⚠️ ('+r.stale_days+' Tage)':''}</td>
+          <td><button data-rate-id="${r.id}" class="fcd-rate-check n-btn-ghost">Jetzt geprüft</button>
+              <button data-rate-id="${r.id}" class="fcd-rate-newprice n-btn-ghost">Neuer Preis</button></td>
+        </tr>`).join('');
+    document.querySelectorAll('.fcd-rate-check').forEach(b => b.addEventListener('click', async () => {
+      await fetch(`/admin/dashboard/api_rates/${b.dataset.rateId}/mark_checked`, {method:'POST'});
+      load();
+    }));
+    document.querySelectorAll('.fcd-rate-newprice').forEach(b => b.addEventListener('click', async () => {
+      const p = prompt('Neuer Preis (z.B. 0.00025):');
+      if (!p) return;
+      const fd = new FormData(); fd.append('new_price', p);
+      const r2 = await fetch(`/admin/dashboard/api_rates/${b.dataset.rateId}/new_price`, {method:'POST', body:fd});
+      const j = await r2.json().catch(()=>({}));
+      if (j.ok) alert(`Neuer Preis gespeichert. Geschätzter Impact: ${j.impact_eur_per_month} €/Monat`);
+      load();
+    }));
+
+    // Fixed-Costs
+    document.getElementById('fcd-ausg-fc').innerHTML =
+      (d.fixed_costs||[]).map(fc => `
+        <tr>
+          <td>${esc(fc.name)}</td>
+          <td>${fmt(fc.amount_eur)}</td>
+          <td>${esc(fc.cycle)}</td>
+          <td>${esc(fc.skr03||'')}</td>
+          <td>${esc(fc.eur_line||'')}</td>
+          <td>${fmt(fc.period_cost)}</td>
+          <td>
+            <button data-fc-id="${fc.id}" data-action="toggle" class="fcd-fc-act n-btn-ghost">An/Aus</button>
+            <button data-fc-id="${fc.id}" data-action="delete" class="fcd-fc-act n-btn-ghost">Löschen</button>
+          </td>
+        </tr>`).join('');
+    document.querySelectorAll('.fcd-fc-act').forEach(b => b.addEventListener('click', async () => {
+      if (b.dataset.action === 'delete' && !confirm('Fixkosten löschen?')) return;
+      const fd = new FormData(); fd.append('_action', b.dataset.action);
+      await fetch(`/admin/dashboard/fixed_costs/${b.dataset.fcId}`, {method:'POST', body:fd});
+      load();
+    }));
+  }
+
+  const newBtn = document.getElementById('fcd-fc-new');
+  if (newBtn) newBtn.addEventListener('click', () => {
+    document.getElementById('fcd-fc-form').hidden = false;
+  });
+  const cancelBtn = document.getElementById('fcd-fc-cancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', () => {
+    document.getElementById('fcd-fc-form').hidden = true;
+  });
+  const fcForm = document.getElementById('fcd-fc-form-form');
+  if (fcForm) fcForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const r = await fetch('/admin/dashboard/fixed_costs', {method:'POST', body:fd});
+    if (r.ok) { document.getElementById('fcd-fc-form').hidden = true; e.target.reset(); load(); }
+  });
+
+  // Lazy load on tab show
+  const panel = document.getElementById('panel-ausgaben');
+  if (panel) {
+    const obs = new MutationObserver(()=>{
+      if (!panel.hidden && !panel.dataset.loaded) { panel.dataset.loaded='1'; load(); }
+    });
+    obs.observe(panel, {attributes:true});
+    if (!panel.hidden) { panel.dataset.loaded='1'; load(); }
+  }
+})();
+</script>
