@@ -317,6 +317,15 @@ class Feedback(Base):
     notification_sent = Column(Boolean, default=False, nullable=False)
 
 
+class PlanningFeedbackLink(Base):
+    __tablename__ = 'planning_feedback_link'
+    id               = Column(Integer, primary_key=True)
+    feedback_id      = Column(Integer, ForeignKey('feedback.id'), nullable=False)
+    planning_title   = Column(String(200), nullable=False)
+    planning_status  = Column(String(40), default='backlog', nullable=False)  # backlog|active|done
+    created_at       = Column(DateTime, default=utcnow, nullable=False)
+
+
 def init_db(engine_instance):
     """Create all tables."""
     Base.metadata.create_all(engine_instance)

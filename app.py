@@ -182,6 +182,21 @@ def _migrate():
             print("[DB] Migration: added users.is_superadmin")
         except Exception:
             pass
+        # ── Phase 04.7 Plan 05: planning_feedback_link Tabelle ───────────────
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS planning_feedback_link (
+                    id INTEGER PRIMARY KEY,
+                    feedback_id INTEGER NOT NULL REFERENCES feedback(id),
+                    planning_title VARCHAR(200) NOT NULL,
+                    planning_status VARCHAR(40) NOT NULL DEFAULT 'backlog',
+                    created_at DATETIME NOT NULL
+                )
+            """))
+            conn.commit()
+            print("[DB] Migration: created planning_feedback_link table")
+        except Exception:
+            pass
         # ── Phase 04.7 Plan 04: Feedback Tabelle ─────────────────────────────
         for col, typedef in [
             ('screenshot_path',   'VARCHAR(300)'),
