@@ -40,6 +40,21 @@ def _fromjson(s):
     except Exception:
         return {}
 
+
+def de_currency_filter(value):
+    """Formatiert Zahl im deutschen Format mit Euro-Symbol: 1234.56 -> '1.234,56 €'."""
+    if value is None:
+        return '—'
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    formatted = f"{n:,.2f}"  # '1,234.56' (US)
+    # Swap . and , via sentinel
+    return formatted.replace(',', '§').replace('.', ',').replace('§', '.') + ' €'
+
+app.jinja_env.filters['de_currency'] = de_currency_filter
+
 # ── Initialize DB ─────────────────────────────────────────────────────────────
 init_db(engine)
 

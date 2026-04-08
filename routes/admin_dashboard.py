@@ -653,3 +653,226 @@ def eur_data():
         return jsonify(data)
     finally:
         db.close()
+
+
+# ── Tab Export: PDF + CSV Downloads ─────────────────────────────────
+
+@admin_dashboard_bp.route('/export/eur.html')
+@login_required
+@superadmin_required
+def export_eur_html_preview():
+    """HTML-Preview des EÜR-Reports. Funktioniert IMMER (auch ohne WeasyPrint).
+    Dev-Fallback wenn WeasyPrint nicht installiert ist."""
+    period = request.args.get('period')
+    start, end = _parse_period(period)
+    try:
+        home_days = int(request.args.get('home_days', 0))
+    except (TypeError, ValueError):
+        home_days = 0
+    from services.eur_calculator import compute_eur
+    db = get_session()
+    try:
+        data = compute_eur(start, end, db, home_days=home_days)
+    finally:
+        db.close()
+    return render_template('admin/eur_pdf.html', data=data)
+
+
+@admin_dashboard_bp.route('/export/eur.pdf')
+@login_required
+@superadmin_required
+def export_eur_pdf():
+    """EÜR als PDF via WeasyPrint. 501 wenn WeasyPrint nicht installiert (Dev-Maschine)."""
+    try:
+        from weasyprint import HTML
+    except ImportError:
+        return ("WeasyPrint nicht installiert. Verwende /export/eur.html für Preview.", 501)
+    period = request.args.get('period')
+    start, end = _parse_period(period)
+    try:
+        home_days = int(request.args.get('home_days', 0))
+    except (TypeError, ValueError):
+        home_days = 0
+    from services.eur_calculator import compute_eur
+    db = get_session()
+    try:
+        data = compute_eur(start, end, db, home_days=home_days)
+    finally:
+        db.close()
+    html = render_template('admin/eur_pdf.html', data=data)
+    pdf_bytes = HTML(string=html).write_pdf()
+    from flask import Response
+    return Response(pdf_bytes, mimetype='application/pdf', headers={
+        'Content-Disposition': f'attachment; filename=eur_{period or "current"}.pdf'
+    })
+
+
+# ── CSV Exports ──────────────────────────────────────────────────────
+
+def _csv_response(rows: list, headers: list, filename: str):
+    """Hilfs-Helper für CSV-Download mit UTF-8-BOM (Excel-kompatibel)."""
+    import csv
+    from io import StringIO
+    from flask import Response
+    buf = StringIO()
+    writer = csv.writer(buf, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    data = '\ufeff' + buf.getvalue()  # BOM for Excel
+    return Response(data, mimetype='text/csv; charset=utf-8', headers={
+        'Content-Disposition': f'attachment; filename={filename}'
+    })
+
+
+@admin_dashboard_bp.route('/export/einnahmen.csv')
+@login_required
+@superadmin_required
+def export_einnahmen_csv():
+    from database.models import RevenueLog
+    period = request.args.get('period')
+    start, end = _parse_period(period)
+    db = get_session()
+    try:
+        rows = (db.query(RevenueLog)
+                  .filter(RevenueLog.paid_at >= start, RevenueLog.paid_at < end)
+                  .order_by(RevenueLog.paid_at).all())
+        csv_rows = [[
+            r.paid_at.strftime('%Y-%m-%d') if r.paid_at else '',
+            r.stripe_invoice_id or '',
+            r.country or '',
+            r.plan_key or '',
+            f"{(r.netto_cents or 0)/100:.2f}".replace('.', ','),
+            f"{(r.ust_cents or 0)/100:.2f}".replace('.', ','),
+            f"{(r.brutto_cents or 0)/100:.2f}".replace('.', ','),
+            r.tax_treatment or '',
+        ] for r in rows]
+        return _csv_response(csv_rows,
+            ['Datum','Rechnung','Land','Plan','Netto EUR','USt EUR','Brutto EUR','Behandlung'],
+            f'einnahmen_{period or "current"}.csv')
+    finally:
+        db.close()
+
+
+@admin_dashboard_bp.route('/export/ausgaben.csv')
+@login_required
+@superadmin_required
+def export_ausgaben_csv():
+    from database.models import ApiCostLog, FixedCost
+    period = request.args.get('period')
+    start, end = _parse_period(period)
+    try:
+        home_days = int(request.args.get('home_days', 0))
+    except (TypeError, ValueError):
+        home_days = 0
+    db = get_session()
+    try:
+        csv_rows = []
+        api_rows = (db.query(ApiCostLog)
+                      .filter(ApiCostLog.created_at >= start, ApiCostLog.created_at < end)
+                      .order_by(ApiCostLog.created_at).all())
+        for a in api_rows:
+            category = EUR_CATEGORY_BY_PROVIDER.get(a.provider, {})
+            csv_rows.append([
+                a.created_at.strftime('%Y-%m-%d') if a.created_at else '',
+                a.provider,
+                category.get('label', a.provider),
+                f"{float(a.cost_eur or 0):.6f}".replace('.', ','),
+                str(category.get('eur_line', '')),
+                category.get('skr03', ''),
+                getattr(a, 'context_tag', '') or '',
+            ])
+        for fc in db.query(FixedCost).filter(FixedCost.active == True).all():  # noqa: E712
+            amt = float(fc.amount_eur)
+            if fc.cycle == 'monthly':
+                period_cost = amt
+            elif fc.cycle == 'yearly':
+                period_cost = amt / 12.0
+            elif fc.cycle == 'per_day':
+                period_cost = amt * home_days
+            else:
+                period_cost = 0
+            if period_cost > 0:
+                csv_rows.append([
+                    start.strftime('%Y-%m-%d'),
+                    'fixed_cost',
+                    fc.name,
+                    f"{period_cost:.2f}".replace('.', ','),
+                    str(fc.eur_line or ''),
+                    fc.skr03 or '',
+                    fc.cycle,
+                ])
+        return _csv_response(csv_rows,
+            ['Datum','Quelle','Bezeichnung','Netto EUR','EÜR-Zeile','SKR03','Kontext'],
+            f'ausgaben_{period or "current"}.csv')
+    finally:
+        db.close()
+
+
+@admin_dashboard_bp.route('/export/ustva.csv')
+@login_required
+@superadmin_required
+def export_ustva_csv():
+    from services.eur_calculator import compute_eur
+    period = request.args.get('period')
+    start, end = _parse_period(period)
+    try:
+        home_days = int(request.args.get('home_days', 0))
+    except (TypeError, ValueError):
+        home_days = 0
+    db = get_session()
+    try:
+        data = compute_eur(start, end, db, home_days=home_days)
+    finally:
+        db.close()
+    u = data['ust_voranmeldung']
+    rows = [
+        ['KZ 81', 'Steuerpflichtige Umsätze 19% (Basis)', f"{u['KZ81_steuerpfl_19']['basis']:.2f}".replace('.', ',')],
+        ['KZ 81', 'Darauf entfallende USt',              f"{u['KZ81_steuerpfl_19']['ust']:.2f}".replace('.', ',')],
+        ['KZ 21', 'Steuerfreie igL (EU B2B RC)',         f"{u['KZ21_igL']:.2f}".replace('.', ',')],
+        ['KZ 45', 'Nicht steuerbare Drittland',          f"{u['KZ45_drittland']:.2f}".replace('.', ',')],
+        ['KZ 84', 'Bemessungsgrundlage §13b RC',         f"{u['KZ84_rc_bemessung']:.2f}".replace('.', ',')],
+        ['KZ 85', 'USt §13b RC',                         f"{u['KZ85_rc_ust']:.2f}".replace('.', ',')],
+        ['KZ 66', 'Vorsteuer Inland',                    f"{u['KZ66_vst_inland']:.2f}".replace('.', ',')],
+        ['KZ 67', 'Vorsteuer §13b RC',                   f"{u['KZ67_vst_rc']:.2f}".replace('.', ',')],
+        ['—',     'USt-Zahllast',                         f"{u['zahllast']:.2f}".replace('.', ',')],
+    ]
+    return _csv_response(rows, ['KZ','Bezeichnung','Betrag EUR'],
+                         f'ustva_{period or "current"}.csv')
+
+
+@admin_dashboard_bp.route('/export/datev_stub.csv')
+@login_required
+@superadmin_required
+def export_datev_stub():
+    """D-07: STUB. NICHT DATEV-format-konform. Volle Implementierung wartet auf count.tax."""
+    from database.models import RevenueLog, ApiCostLog
+    period = request.args.get('period')
+    start, end = _parse_period(period)
+    db = get_session()
+    try:
+        csv_rows = []
+        for r in db.query(RevenueLog).filter(
+                RevenueLog.paid_at >= start, RevenueLog.paid_at < end).all():
+            betrag = f"{(r.brutto_cents or 0)/100:.2f}".replace('.', ',')
+            konto = '8400' if r.tax_treatment == 'DE_19' else '8338'
+            csv_rows.append([
+                r.paid_at.strftime('%d.%m.%Y') if r.paid_at else '',
+                konto, '1200', betrag,
+                f"NERVE Abo {r.plan_key or ''} {r.country or ''} #{r.stripe_invoice_id or ''}"[:200],
+            ])
+        for a in db.query(ApiCostLog).filter(
+                ApiCostLog.created_at >= start, ApiCostLog.created_at < end).all():
+            category = EUR_CATEGORY_BY_PROVIDER.get(a.provider, {})
+            konto_haben = category.get('skr03', '3100')
+            betrag = f"{float(a.cost_eur or 0):.2f}".replace('.', ',')
+            csv_rows.append([
+                a.created_at.strftime('%d.%m.%Y') if a.created_at else '',
+                konto_haben, '1200', betrag,
+                f"{a.provider} {getattr(a, 'model', '') or ''} {getattr(a, 'context_tag', '') or ''}"[:200],
+            ])
+        return _csv_response(csv_rows,
+            ['Datum','Konto','Gegenkonto','Betrag','Buchungstext'],
+            f'datev_stub_{period or "current"}.csv')
+    finally:
+        db.close()

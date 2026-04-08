@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>EÜR — André Preuß — {{ data.period.start }} bis {{ data.period.end }}</title>
+<style>
+  @page { size: A4; margin: 20mm; }
+  body { font-family: sans-serif; font-size: 10pt; color: #000; }
+  h1 { font-size: 16pt; margin: 0 0 4pt; }
+  h2 { font-size: 12pt; margin: 12pt 0 6pt; border-bottom: 1pt solid #000; padding-bottom: 2pt; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8pt; }
+  td, th { padding: 3pt 4pt; text-align: left; vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .sum { border-top: 0.5pt solid #000; font-weight: bold; }
+  .grand { border-top: 1.5pt double #000; font-weight: bold; font-size: 11pt; }
+  .header { margin-bottom: 12pt; }
+  .line-col { width: 60pt; color: #666; }
+  .footer-note { margin-top: 16pt; font-size: 8pt; color: #666; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>EINNAHME-ÜBERSCHUSS-RECHNUNG</h1>
+    <div>André Preuß — Einzelunternehmer — NERVE (SaaS-Software)</div>
+    <div>Zeitraum: {{ data.period.start }} bis {{ data.period.end }}</div>
+  </div>
+
+  <h2>A. Betriebseinnahmen</h2>
+  <table>
+    <tr><td>Umsatzerlöse 19% USt (DE-Kunden)</td><td class="num">{{ data.einnahmen.Z14_de_19.netto|de_currency }}</td><td class="line-col">Z.14</td></tr>
+    <tr><td>Umsatzerlöse 0% Reverse Charge (EU B2B)</td><td class="num">{{ data.einnahmen.Z16_eu_rc.netto|de_currency }}</td><td class="line-col">Z.16</td></tr>
+    <tr><td>Umsatzerlöse 0% Drittland</td><td class="num">{{ data.einnahmen.Z17_drittland.netto|de_currency }}</td><td class="line-col">Z.17</td></tr>
+    <tr><td>Vereinnahmte USt (19%)</td><td class="num">{{ data.einnahmen.Z19_vereinnahmte_ust|de_currency }}</td><td class="line-col">Z.19</td></tr>
+    <tr class="sum"><td>SUMME EINNAHMEN</td><td class="num">{{ data.einnahmen.summe_einnahmen_netto|de_currency }}</td><td></td></tr>
+  </table>
+
+  <h2>B. Betriebsausgaben</h2>
+  <table>
+    <tr><td>Bezogene Fremdleistungen</td><td class="num">{{ data.ausgaben.Z26_fremdleistungen.total_netto|de_currency }}</td><td class="line-col">Z.26</td></tr>
+    {% for item in data.ausgaben.Z26_fremdleistungen['items'] %}
+      <tr><td style="padding-left:16pt;">— {{ item.provider }}</td><td class="num">{{ item.netto|de_currency }}</td><td></td></tr>
+    {% endfor %}
+    <tr><td>Miete/Leasing EDV</td><td class="num">{{ data.ausgaben.Z52_miete_edv.total_netto|de_currency }}</td><td class="line-col">Z.52</td></tr>
+    <tr><td>Übrige Betriebsausgaben</td><td class="num">{{ data.ausgaben.Z57_uebrige.total_netto|de_currency }}</td><td class="line-col">Z.57</td></tr>
+    <tr><td>Häusliches Arbeitszimmer</td><td class="num">{{ data.ausgaben.Z65_homeoffice.total_netto|de_currency }}</td><td class="line-col">Z.65</td></tr>
+    <tr class="sum"><td>SUMME AUSGABEN (netto)</td><td class="num">{{ data.ausgaben.Z75_summe_ausgaben|de_currency }}</td><td class="line-col">Z.75</td></tr>
+    <tr><td>Vorsteuer Inland</td><td class="num">{{ data.ausgaben.Z72_vorsteuer.inland_vst|de_currency }}</td><td class="line-col">Z.72</td></tr>
+    <tr><td>Vorsteuer §13b Reverse Charge</td><td class="num">{{ data.ausgaben.Z72_vorsteuer.rc_13b_vst|de_currency }}</td><td class="line-col">Z.72</td></tr>
+    <tr class="sum"><td>VORSTEUER GESAMT</td><td class="num">{{ data.ausgaben.Z72_vorsteuer.total|de_currency }}</td><td></td></tr>
+  </table>
+
+  <h2>C. Ergebnis</h2>
+  <table>
+    <tr><td>Betriebseinnahmen</td><td class="num">{{ data.einnahmen.summe_einnahmen_netto|de_currency }}</td></tr>
+    <tr><td>./. Betriebsausgaben</td><td class="num">{{ data.ausgaben.Z75_summe_ausgaben|de_currency }}</td></tr>
+    <tr class="grand"><td>GEWINN VOR STEUERN</td><td class="num">{{ data.ergebnis.Z77_gewinn_vor_steuern|de_currency }}</td><td class="line-col">Z.77</td></tr>
+    <tr><td>./. USt-Zahllast</td><td class="num">{{ data.ergebnis.ust_zahllast|de_currency }}</td></tr>
+    <tr class="grand"><td>GEWINN NACH USt</td><td class="num">{{ data.ergebnis.gewinn_nach_ust|de_currency }}</td></tr>
+  </table>
+
+  <h2>USt-Voranmeldung ({{ data.period.start }} bis {{ data.period.end }})</h2>
+  <table>
+    <tr><td>KZ 81 — Steuerpfl. Umsätze 19% (Basis)</td><td class="num">{{ data.ust_voranmeldung.KZ81_steuerpfl_19.basis|de_currency }}</td></tr>
+    <tr><td>KZ 81 — davon USt</td><td class="num">{{ data.ust_voranmeldung.KZ81_steuerpfl_19.ust|de_currency }}</td></tr>
+    <tr><td>KZ 21 — Steuerfreie igL (EU B2B RC)</td><td class="num">{{ data.ust_voranmeldung.KZ21_igL|de_currency }}</td></tr>
+    <tr><td>KZ 45 — Nicht steuerbare Drittland</td><td class="num">{{ data.ust_voranmeldung.KZ45_drittland|de_currency }}</td></tr>
+    <tr><td>KZ 84 — §13b RC Bemessungsgrundlage</td><td class="num">{{ data.ust_voranmeldung.KZ84_rc_bemessung|de_currency }}</td></tr>
+    <tr><td>KZ 85 — §13b RC USt</td><td class="num">{{ data.ust_voranmeldung.KZ85_rc_ust|de_currency }}</td></tr>
+    <tr><td>KZ 66 — Vorsteuer Inland</td><td class="num">{{ data.ust_voranmeldung.KZ66_vst_inland|de_currency }}</td></tr>
+    <tr><td>KZ 67 — Vorsteuer §13b RC</td><td class="num">{{ data.ust_voranmeldung.KZ67_vst_rc|de_currency }}</td></tr>
+    <tr class="sum"><td>USt-Zahllast</td><td class="num">{{ data.ust_voranmeldung.zahllast|de_currency }}</td></tr>
+  </table>
+
+  <div class="footer-note">
+    Diese EÜR ist maschinell generiert aus dem NERVE Founder Cost Dashboard.
+    Einkommensteuer und Gewerbesteuer werden durch count.tax auf Basis dieser Daten berechnet.
+    §13b Reverse-Charge-Behandlung der US-API-Anbieter (Anthropic, Deepgram, ElevenLabs)
+    basiert auf Briefing-Interpretation und wurde vor erstem produktiven USt-VA-Export
+    durch count.tax validiert (HT-04).
+  </div>
+</body>
+</html>
