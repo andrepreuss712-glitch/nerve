@@ -194,6 +194,28 @@ def _migrate():
 
 _migrate()
 
+# ── Audit-Log Immutable Trigger (Defense-in-Depth, nach create_all + migrate) ─
+try:
+    with engine.connect() as conn:
+        conn.exec_driver_sql("""
+            CREATE TRIGGER IF NOT EXISTS audit_log_no_update
+            BEFORE UPDATE ON audit_log
+            BEGIN
+              SELECT RAISE(ABORT, 'audit_log is immutable');
+            END;
+        """)
+        conn.exec_driver_sql("""
+            CREATE TRIGGER IF NOT EXISTS audit_log_no_delete
+            BEFORE DELETE ON audit_log
+            BEGIN
+              SELECT RAISE(ABORT, 'audit_log is immutable');
+            END;
+        """)
+        conn.commit()
+        print("[DB] Audit-Log Trigger installed")
+except Exception as e:
+    print(f"[DB] Audit-Log Trigger setup failed: {e}")
+
 # ── Plan definitions ──────────────────────────────────────────────────────────
 PLANS = {
     'starter':  {'name': 'Starter',  'preis': 49, 'max_users': 1,
@@ -715,6 +737,7 @@ init_oauth(app)
 
 # ── Flask-Admin (Superadmin only, gated via SecureIndexView) ─────────────────
 from flask_admin import Admin, AdminIndexView, expose
+from flask_admin.theme import Bootstrap4Theme
 from flask import g as _g, redirect as _redirect, url_for as _url_for, abort as _abort
 from database.db import db_session as _db_session
 
@@ -729,7 +752,7 @@ class SecureIndexView(AdminIndexView):
 admin = Admin(
     app,
     name='NERVE Admin',
-    template_mode='bootstrap4',
+    theme=Bootstrap4Theme(),
     index_view=SecureIndexView(url='/admin'),
 )
 

@@ -275,6 +275,20 @@ class Changelog(Base):
     created_at      = Column(DateTime, default=utcnow)
 
 
+class AuditLog(Base):
+    __tablename__ = 'audit_log'
+    id          = Column(Integer, primary_key=True)
+    user_id     = Column(Integer, ForeignKey('users.id'), nullable=True)
+    org_id      = Column(Integer, ForeignKey('organisations.id'), nullable=True)
+    action      = Column(String(100), nullable=False)
+    target_type = Column(String(100), nullable=True)
+    target_id   = Column(Integer, nullable=True)
+    details     = Column(Text, nullable=True)
+    ip_address  = Column(String(64), nullable=True)
+    user_agent  = Column(String(500), nullable=True)
+    created_at  = Column(DateTime, default=utcnow, nullable=False)
+
+
 def init_db(engine_instance):
     """Create all tables."""
     Base.metadata.create_all(engine_instance)
