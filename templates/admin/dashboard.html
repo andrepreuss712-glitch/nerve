@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 {% block title %}NERVE Admin — Founder Cost Dashboard{% endblock %}
-{% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='admin_dashboard.css') }}">
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='admin_dashboard.css') }}?v=2">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endblock %}
 {% block content %}
 <div class="fcd-wrap" data-period="{{ period }}">
   <header class="fcd-header">
-    <h1>NERVE ADMIN <span class="fcd-sub">André Preuß — Founder Cost Dashboard</span></h1>
+    <div>
+      <h1>NERVE ADMIN</h1>
+      <p class="fcd-sub">Founder Cost Dashboard</p>
+    </div>
     <div class="fcd-period-picker">
       <label>Zeitraum: <input type="month" id="fcd-period" value="{{ period }}"></label>
     </div>

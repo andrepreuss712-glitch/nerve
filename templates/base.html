@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}?v={{ config.get('CSS_VERSION', '1') }}">
 <script src="https://unpkg.com/lucide@latest"></script>
 <style>{% block extra_style %}{% endblock %}</style>
+{% block head_extra %}{% endblock %}
 </head>
 <body>
 
@@ -54,6 +55,12 @@
     <i data-lucide="user" class="nav-icon-lucide"></i>
     <span class="n-nav-label">Profil</span>
   </a>
+  {% if g.user and g.user.is_superadmin %}
+  <a class="n-nav-item {% if request.path.startswith('/admin/dashboard') %}n-nav-item-active{% endif %}" href="/admin/dashboard" title="Admin Dashboard">
+    <i data-lucide="shield" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">Admin</span>
+  </a>
+  {% endif %}
   <div style="flex:1"></div>
   <!-- Hidden legacy nav items (D-31: kept in DOM, not deleted) -->
   <div style="display:none">

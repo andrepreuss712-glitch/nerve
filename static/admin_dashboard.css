@@ -1,31 +1,459 @@
-/* Phase 04.7.2 — Founder Cost Dashboard */
-.fcd-wrap { max-width: 1400px; margin: 0 auto; padding: 24px; color: var(--n-text, #e6edf3); }
-.fcd-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.fcd-header h1 { font-size: 20px; font-weight: 700; margin: 0; }
-.fcd-sub { color: #9ca3af; font-weight: 400; margin-left: 12px; font-size: 14px; }
-.fcd-period-picker input { background: #1C2333; color: #e6edf3; border: 1px solid #2D3748; padding: 6px 10px; border-radius: 6px; }
-.fcd-tabs { display: flex; gap: 4px; border-bottom: 2px solid #1C2333; margin-bottom: 20px; }
-.fcd-tab { background: transparent; color: #9ca3af; border: none; padding: 10px 16px; cursor: pointer; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -2px; }
-.fcd-tab:hover { color: #e6edf3; }
-.fcd-tab.active { color: #00D4AA; border-bottom-color: #00D4AA; }
-.fcd-panel { min-height: 400px; }
-.fcd-kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
-.fcd-kpi { background: #1C2333; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
-.fcd-kpi h3 { margin: 0 0 8px; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
-.fcd-kpi .value { font-size: 24px; font-weight: 700; color: #e6edf3; }
-.fcd-kpi .delta { font-size: 12px; margin-top: 4px; }
-.fcd-kpi .delta.up { color: #00D4AA; }
-.fcd-kpi .delta.down { color: #ef4444; }
-.fcd-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-.fcd-chart-card { background: #1C2333; border-radius: 12px; padding: 16px; }
-.fcd-chart-card h3 { margin: 0 0 12px; font-size: 14px; color: #e6edf3; }
-.fcd-chart-card canvas { height: 280px !important; }
-.fcd-breakeven { background: #1C2333; border-radius: 12px; padding: 16px; }
-.fcd-stub { padding: 40px; text-align: center; color: #9ca3af; background: #1C2333; border-radius: 12px; }
-.fcd-table { width: 100%; border-collapse: collapse; }
-.fcd-table th, .fcd-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #2D3748; font-size: 13px; }
-.fcd-table th { color: #9ca3af; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+/* Phase 04.7.2 — Founder Cost Dashboard
+   Design: Light Content (#F0F2F5) + White Cards (#FFFFFF) + Teal (#00D4AA)
+   Matches NERVE Design System from Phase 4.3 */
+
+/* ── Scrollbar-Stabilisierung ───────────────────────────────────────── */
+html:has(.fcd-wrap) {
+  scrollbar-gutter: stable;
+}
+
+/* ── Layout ────────────────────────────────────────────────────────── */
+.fcd-wrap {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 32px;
+  color: #1a1a1a;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ── Header ────────────────────────────────────────────────────────── */
+.fcd-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.fcd-header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  color: #0D1117;
+  letter-spacing: -0.3px;
+}
+.fcd-sub {
+  color: #6B7280;
+  font-weight: 400;
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+.fcd-period-picker input {
+  background: #FFFFFF;
+  color: #1a1a1a;
+  border: 1px solid #E2E8F0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.fcd-period-picker input:focus {
+  outline: none;
+  border-color: #00D4AA;
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────────── */
+.fcd-tabs {
+  display: flex;
+  gap: 2px;
+  background: #FFFFFF;
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.fcd-tab {
+  background: transparent;
+  color: #6B7280;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.fcd-tab:hover {
+  color: #1a1a1a;
+  background: #F0F2F5;
+}
+.fcd-tab.active {
+  color: #FFFFFF;
+  background: #00D4AA;
+  box-shadow: 0 2px 6px rgba(0, 212, 170, 0.3);
+}
+
+/* ── Panels ────────────────────────────────────────────────────────── */
+.fcd-body {
+  min-height: calc(100vh - 180px);
+}
+.fcd-panel {
+  min-height: calc(100vh - 180px);
+}
+
+/* ── KPI Cards ─────────────────────────────────────────────────────── */
+.fcd-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.fcd-kpi {
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border: 1px solid #E2E8F0;
+  transition: box-shadow 0.15s ease;
+}
+.fcd-kpi:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.fcd-kpi h3 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+.fcd-kpi .value {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0D1117;
+  letter-spacing: -0.5px;
+}
+.fcd-kpi .delta {
+  font-size: 12px;
+  margin-top: 6px;
+  color: #9CA3AF;
+}
+.fcd-kpi .delta.up { color: #00D4AA; font-weight: 600; }
+.fcd-kpi .delta.down { color: #EF4444; font-weight: 600; }
+
+/* ── Chart Cards ───────────────────────────────────────────────────── */
+.fcd-chart-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.fcd-chart-card {
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.fcd-chart-card h3 {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0D1117;
+}
+.fcd-chart-card canvas {
+  height: 280px !important;
+}
+
+/* ── Breakeven Bar ─────────────────────────────────────────────────── */
+.fcd-breakeven {
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 16px 20px;
+  border: 1px solid #E2E8F0;
+  font-size: 14px;
+  color: #374151;
+}
+.fcd-breakeven strong {
+  color: #00D4AA;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────── */
+.fcd-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #FFFFFF;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border: 1px solid #E2E8F0;
+  margin-bottom: 16px;
+}
+.fcd-table th,
+.fcd-table td {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  border-bottom: 1px solid #F0F2F5;
+}
+.fcd-table th {
+  background: #F8FAFC;
+  color: #6B7280;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.fcd-table td {
+  color: #374151;
+}
+.fcd-table tr:last-child td {
+  border-bottom: none;
+}
+.fcd-table tr:hover td {
+  background: #F8FAFC;
+}
+.fcd-table tfoot th {
+  background: #F0F2F5;
+  color: #0D1117;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* ── Section Headers (h3, h4 in tabs) ──────────────────────────────── */
+.fcd-einnahmen h3,
+.fcd-ausgaben h3,
+.fcd-kunden h3,
+.fcd-eur h3,
+.fcd-export h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0D1117;
+  margin: 0 0 20px;
+  letter-spacing: -0.2px;
+}
+.fcd-einnahmen h4,
+.fcd-ausgaben h4,
+.fcd-kunden h4,
+.fcd-eur h4,
+.fcd-export h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 28px 0 12px;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────── */
+.n-btn {
+  display: inline-block;
+  background: #00D4AA;
+  color: #000000;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+.n-btn:hover { opacity: 0.85; }
+
+.n-btn-ghost {
+  display: inline-block;
+  background: #F0F2F5;
+  color: #374151;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.n-btn-ghost:hover { background: #E2E8F0; }
+
+/* ── Kunden Summary ────────────────────────────────────────────────── */
+.fcd-kunden #fcd-kunden-summary p {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px 20px;
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 16px;
+}
+.fcd-kunden-detail td {
+  background: #F8FAFC;
+  padding: 16px 20px !important;
+}
+.fcd-kunden-detail div {
+  margin-bottom: 12px;
+}
+.fcd-kunden-detail strong {
+  color: #0D1117;
+}
+.fcd-kunden-detail small {
+  color: #6B7280;
+}
+
+/* ── Ausgaben: Provider Bars ───────────────────────────────────────── */
+.fcd-ausgaben #fcd-ausg-providers {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.fcd-ausgaben #fcd-ausg-providers > div {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+}
+
+/* ── Fixed Cost Form ───────────────────────────────────────────────── */
+#fcd-fc-form {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 16px;
+}
+#fcd-fc-form h5 {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0D1117;
+}
+#fcd-fc-form-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+#fcd-fc-form-form input,
+#fcd-fc-form-form select {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1a1a1a;
+  font-family: inherit;
+  min-width: 120px;
+}
+#fcd-fc-form-form input:focus,
+#fcd-fc-form-form select:focus {
+  outline: none;
+  border-color: #00D4AA;
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+}
+#fcd-fc-form-form button[type="submit"] {
+  background: #00D4AA;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+#fcd-fc-form-form button[type="button"] {
+  background: #F0F2F5;
+  color: #374151;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ── EÜR Tab ───────────────────────────────────────────────────────── */
+.fcd-eur label {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+.fcd-eur input[type="number"] {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #1a1a1a;
+  width: 80px;
+  font-family: inherit;
+  margin: 0 8px;
+}
+.fcd-eur input[type="number"]:focus {
+  outline: none;
+  border-color: #00D4AA;
+}
+
+/* ── Export Tab ─────────────────────────────────────────────────────── */
+.fcd-export p {
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 16px;
+}
+.fcd-export-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.fcd-export-list li {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.fcd-export-list li strong {
+  color: #0D1117;
+  font-size: 14px;
+}
+.fcd-export-list li em {
+  color: #EF4444;
+  font-size: 12px;
+}
+.fcd-export input[type="number"] {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  width: 60px;
+  font-family: inherit;
+}
+
+/* ── Stub / Empty State ────────────────────────────────────────────── */
+.fcd-stub {
+  padding: 40px;
+  text-align: center;
+  color: #9CA3AF;
+  background: #FFFFFF;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  font-size: 14px;
+}
+
+/* ── Period Label ──────────────────────────────────────────────────── */
+.fcd-period-label {
+  color: #00D4AA;
+  font-weight: 700;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .fcd-kpi-row { grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 900px) {
   .fcd-kpi-row { grid-template-columns: repeat(2, 1fr); }
   .fcd-chart-row { grid-template-columns: 1fr; }
+  .fcd-wrap { padding: 16px; }
+  .fcd-tabs { flex-wrap: wrap; }
 }
