@@ -47,6 +47,7 @@ def create_checkout(plan):
         success_url=url_for('payments.checkout_success', _external=True),
         cancel_url=url_for('payments.pricing', _external=True),
         metadata={'org_id': str(g.org.id), 'plan': plan},
+        automatic_tax={'enabled': True},  # Phase 04.7.2 D-03 — requires active Tax Registration (HT-01)
     )
     return redirect(session.url, code=303)
 
@@ -92,6 +93,11 @@ def stripe_webhook():
             _cancel_subscription(db, obj)
         elif etype == 'invoice.paid':
             _reset_fair_use_on_invoice(db, obj)
+        elif etype == 'invoice.payment_succeeded':
+            try:
+                _record_revenue(db, obj)
+            except Exception as _rev_e:
+                print(f"[Revenue] _record_revenue failed: {_rev_e}")
         elif etype == 'invoice.payment_failed':
             _handle_payment_failed(db, obj)
 
@@ -211,6 +217,105 @@ def _handle_payment_failed(db, invoice_obj):
             .values(subscription_status='past_due')
         )
         print(f'[Stripe] Payment failed for customer {cust_id}')
+
+
+# ── Phase 04.7.2 — Revenue Tracking ──────────────────────────────────────────
+
+EU_COUNTRIES = {
+    'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR',
+    'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK',
+    'SI', 'ES', 'SE',
+}
+
+
+def _classify_tax_treatment(country, tax_amount_cents):
+    """Klassifiziert Stripe-Invoice nach DE_19 / EU_RC / DRITTLAND.
+    - DE + USt > 0 → DE_19 (Inland 19%)
+    - EU (nicht DE) → EU_RC (Reverse Charge, tax_amount typisch 0)
+    - sonst → DRITTLAND (Nicht-EU, nicht steuerbar)
+    Fallback bei country=None: conservative — DE_19 nur wenn USt>0, sonst DRITTLAND.
+    """
+    if not country:
+        return 'DE_19' if tax_amount_cents > 0 else 'DRITTLAND'
+    country = country.upper()
+    if country == 'DE':
+        return 'DE_19'
+    if country in EU_COUNTRIES:
+        return 'EU_RC'
+    return 'DRITTLAND'
+
+
+def _record_revenue(db, invoice_obj):
+    """Schreibt RevenueLog aus invoice.payment_succeeded Event.
+    Idempotent via UNIQUE(stripe_invoice_id).
+    """
+    import json as _json
+    from datetime import datetime
+    from database.models import RevenueLog
+
+    invoice_id = invoice_obj.get('id')
+    if not invoice_id:
+        return
+
+    # Idempotency check
+    existing = db.query(RevenueLog).filter_by(stripe_invoice_id=invoice_id).first()
+    if existing:
+        return
+
+    customer_id = invoice_obj.get('customer')
+    country = None
+    if customer_id:
+        try:
+            cust = stripe.Customer.retrieve(customer_id)
+            addr = (cust.get('address') or {}) if hasattr(cust, 'get') else {}
+            country = (addr or {}).get('country')
+        except Exception as e:
+            print(f"[Revenue] customer retrieve failed: {e}")
+
+    # Sum tax from all line items; capture plan_key from first line
+    total_tax = 0
+    plan_key = None
+    for line in (invoice_obj.get('lines') or {}).get('data', []) or []:
+        for ta in (line.get('tax_amounts') or []):
+            total_tax += int(ta.get('amount') or 0)
+        if not plan_key:
+            price = line.get('price') or {}
+            plan_key = price.get('lookup_key') or price.get('nickname')
+
+    netto_cents = int(invoice_obj.get('subtotal') or 0)
+    brutto_cents = int(invoice_obj.get('total') or 0)
+    currency = (invoice_obj.get('currency') or 'eur').upper()
+    tax_treatment = _classify_tax_treatment(country, total_tax)
+
+    paid_at_ts = ((invoice_obj.get('status_transitions') or {}).get('paid_at') or 0)
+    paid_at = datetime.fromtimestamp(paid_at_ts) if paid_at_ts else datetime.utcnow()
+
+    # org resolution via stripe_customer_id on Organisation (Phase 04 Pattern)
+    org_id = None
+    if customer_id:
+        try:
+            org = db.query(Organisation).filter_by(stripe_customer_id=customer_id).first()
+            if org:
+                org_id = org.id
+        except Exception as e:
+            print(f"[Revenue] org resolution failed: {e}")
+
+    db.add(RevenueLog(
+        stripe_invoice_id=invoice_id,
+        stripe_customer_id=customer_id,
+        org_id=org_id,
+        paid_at=paid_at,
+        netto_cents=netto_cents,
+        ust_cents=total_tax,
+        brutto_cents=brutto_cents,
+        currency=currency,
+        country=country,
+        tax_treatment=tax_treatment,
+        plan_key=plan_key,
+        raw_json=_json.dumps(invoice_obj, default=str)[:50000],
+    ))
+    db.commit()
+    print(f"[Revenue] logged {invoice_id}: {netto_cents/100}EUR netto, {tax_treatment}, {country}")
 
 
 def _resolve_org_id(db, event):
