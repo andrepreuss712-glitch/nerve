@@ -1,0 +1,22 @@
+{
+  "id": "in_test_de_19",
+  "object": "invoice",
+  "customer": "cus_test_de",
+  "subtotal": 6900,
+  "total": 8211,
+  "currency": "eur",
+  "status_transitions": {"paid_at": 1712000000},
+  "lines": {
+    "data": [
+      {
+        "id": "il_1",
+        "amount": 6900,
+        "currency": "eur",
+        "tax_amounts": [
+          {"amount": 1311, "tax_rate": "txr_de_19", "inclusive": false}
+        ],
+        "price": {"lookup_key": "solo"}
+      }
+    ]
+  }
+}

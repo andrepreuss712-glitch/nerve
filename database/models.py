@@ -456,6 +456,9 @@ class ApiCostLog(Base):
 class ApiRate(Base):
     """Aktuelle API-Preise, editierbar, historisch ueber active-Flag."""
     __tablename__ = 'api_rates'
+    __table_args__ = (
+        UniqueConstraint('provider', 'model', 'unit_type', 'active', name='uix_api_rate_active'),
+    )
     id = Column(Integer, primary_key=True)
     provider = Column(String(32), nullable=False, index=True)
     model = Column(String(64), nullable=False)
@@ -517,20 +520,15 @@ class RevenueLog(Base):
 class ExchangeRate(Base):
     """D-05: Taeglicher EZB-Kurs (Frankfurter API)."""
     __tablename__ = 'exchange_rates'
+    __table_args__ = (
+        UniqueConstraint('date', 'currency_pair', name='uix_exchange_rate_date_pair'),
+    )
     id = Column(Integer, primary_key=True)
     date = Column(Date, nullable=False, index=True)
     currency_pair = Column(String(7), nullable=False)  # 'USD_EUR'
     rate = Column(Numeric(10, 6), nullable=False)
     source = Column(String(16), nullable=False, default='frankfurter')
     created_at = Column(DateTime, default=utcnow, nullable=False)
-
-
-ExchangeRate.__table_args__ = (
-    UniqueConstraint('date', 'currency_pair', name='uix_exchange_rate_date_pair'),
-)
-ApiRate.__table_args__ = (
-    UniqueConstraint('provider', 'model', 'unit_type', 'active', name='uix_api_rate_active'),
-)
 
 
 def init_db(engine_instance):
