@@ -11,6 +11,24 @@ app_routes_bp = Blueprint('app_routes', __name__)
 
 _letzte_gemeldete_version = 0
 
+API_FRAGE_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent. Der Berater hat live eine Frage gestellt.
+{profile_ctx}
+Letzter Gesprächskontext:
+{ctx_text}
+
+Frage des Beraters: {frage}
+
+Antworte direkt, konkret, max 2-3 Sätze. Kein Fettdruck, kein Markdown. Immer mit einer offenen Gegenfrage enden."""
+
+OBJECTION_TRIGGER_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent. Der Kunde hat gerade einen Einwand geäußert.
+{profile_ctx}
+Einwand-Typ: {einwand_typ}
+
+Letzter Gesprächskontext:
+{ctx_text}
+
+Liefere ein konkretes Gegenargument für den Einwand "{einwand_typ}". Max 2-3 Sätze. Kein Fettdruck, kein Markdown. Ende mit einer offenen Gegenfrage."""
+
 
 @app_routes_bp.route('/live')
 @login_required
@@ -540,14 +558,11 @@ def api_frage():
         ki = pdata.get('ki', {})
         if ki.get('zusatz'):
             profile_ctx += f'KI-Anweisung: {ki["zusatz"]}\n'
-    prompt   = f"""Du bist ein Echtzeit-Vertriebsassistent. Der Berater hat live eine Frage gestellt.
-{profile_ctx}
-Letzter Gesprächskontext:
-{ctx_text if ctx_text else '(kein Kontext)'}
-
-Frage des Beraters: {frage}
-
-Antworte direkt, konkret, max 2-3 Sätze. Kein Fettdruck, kein Markdown. Immer mit einer offenen Gegenfrage enden."""
+    prompt = API_FRAGE_PROMPT_BASE.format(
+        profile_ctx=profile_ctx,
+        ctx_text=ctx_text if ctx_text else '(kein Kontext)',
+        frage=frage,
+    )
     try:
         client   = _ant.Anthropic(api_key=ANTHROPIC_API_KEY)
         msg      = client.messages.create(
@@ -600,14 +615,11 @@ def api_ewb_trigger():
         if ki.get('zusatz'):
             profile_ctx += f'KI-Anweisung: {ki["zusatz"]}\n'
 
-    prompt = f"""Du bist ein Echtzeit-Vertriebsassistent. Der Kunde hat gerade einen Einwand geäußert.
-{profile_ctx}
-Einwand-Typ: {einwand_typ}
-
-Letzter Gesprächskontext:
-{ctx_text if ctx_text else '(kein Kontext)'}
-
-Liefere ein konkretes Gegenargument für den Einwand "{einwand_typ}". Max 2-3 Sätze. Kein Fettdruck, kein Markdown. Ende mit einer offenen Gegenfrage."""
+    prompt = OBJECTION_TRIGGER_PROMPT_BASE.format(
+        profile_ctx=profile_ctx,
+        einwand_typ=einwand_typ,
+        ctx_text=ctx_text if ctx_text else '(kein Kontext)',
+    )
 
     try:
         client = _ant.Anthropic(api_key=ANTHROPIC_API_KEY)

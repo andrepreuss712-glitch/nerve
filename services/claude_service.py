@@ -137,19 +137,115 @@ def _build_system_prompt() -> str:
     _, pdata = ls.get_active_profile()
     if not pdata:
         return SYSTEM_PROMPT_BASE
+    basis      = pdata.get('basis', {})
+    zielgruppe = pdata.get('zielgruppe', {})
+    schmerzen  = pdata.get('schmerzen', {})
+    einwaende  = pdata.get('einwaende', [])
+    fragen     = pdata.get('fragen', [])
+    nogos      = pdata.get('nogos', [])
+    wettbew    = pdata.get('wettbewerber', [])
+    techniken  = pdata.get('techniken', {})
+    uebergaenge= pdata.get('uebergaenge', [])
+    ki         = pdata.get('ki', {})
     lines = [SYSTEM_PROMPT_BASE, '\n--- AKTIVES VERKAUFSPROFIL ---']
-    if pdata.get('produkt'):
-        lines.append(f'Produkt: {pdata["produkt"]}')
-    if pdata.get('preismodell'):
-        lines.append(f'Preismodell: {json.dumps(pdata["preismodell"], ensure_ascii=False)}')
-    einwaende = pdata.get('einwaende', [])
+    if basis.get('unternehmen'):
+        lines.append(f'Unternehmen: {basis["unternehmen"]}')
+    if basis.get('produktbeschreibung'):
+        lines.append(f'Produkt: {basis["produktbeschreibung"]}')
+    if basis.get('preismodell'):
+        lines.append(f'Preismodell: {basis["preismodell"]}')
+    if basis.get('usps'):
+        lines.append(f'Alleinstellungsmerkmale (USPs): {", ".join(basis["usps"])}')
+    if basis.get('konsequenz'):
+        lines.append(f'Konsequenz wenn Kunde nicht kauft: {basis["konsequenz"]}')
+    zg_parts = []
+    if zielgruppe.get('alter'): zg_parts.append(f'Alter: {zielgruppe["alter"]}')
+    if zielgruppe.get('berufsstatus'): zg_parts.append(f'Beruf: {zielgruppe["berufsstatus"]}')
+    if zielgruppe.get('einkommensniveau'): zg_parts.append(f'Einkommen: {zielgruppe["einkommensniveau"]}')
+    if zielgruppe.get('lebenssituation'): zg_parts.append(f'Lebenssituation: {zielgruppe["lebenssituation"]}')
+    if zielgruppe.get('beruflicher_hintergrund'): zg_parts.append(f'Hintergrund: {", ".join(zielgruppe["beruflicher_hintergrund"])}')
+    if zielgruppe.get('vorwissen'): zg_parts.append(f'Vorwissen: {zielgruppe["vorwissen"]}')
+    if zielgruppe.get('entscheidungsverhalten'): zg_parts.append(f'Entscheidungsverhalten: {", ".join(zielgruppe["entscheidungsverhalten"])}')
+    if zg_parts:
+        lines.append(f'\nZielgruppe: {" | ".join(zg_parts)}')
+    trigger = schmerzen.get('trigger', {})
+    _trigger_map = {
+        'verlust':      ('Verlust',        'Formuliere aus dem Verlust-Winkel — was verliert der Kunde wenn er nicht handelt. Gegenfrage beginnt mit "Was verlieren Sie wenn…"'),
+        'familie':      ('Familie/Soziales','Betone persönlichen und familiären Nutzen. Gegenfrage beginnt mit "Für wen tun Sie das eigentlich…"'),
+        'status':       ('Status',         'Betone Ansehen, Reputation und Wettbewerbsvorsprung. Gegenfrage beginnt mit "Was sagen Ihre Kunden/Kollegen wenn…"'),
+        'zahlen':       ('Zahlen/Fakten',  'Führe konkrete Zahlen, ROI und Fakten an. Gegenfrage lädt zu konkreten Zahlen ein.'),
+        'dringlichkeit':('Dringlichkeit',  'Betone Opportunitätskosten und Zeitdruck. Gegenfrage beginnt mit "Je länger Sie warten…"'),
+        'micro':        ('Micro',          'Mach das Risiko klein — biete einen ersten kleinen Schritt an. Gegenfrage beginnt mit "Was wäre ein erster kleiner Schritt…"'),
+    }
+    sorted_triggers = sorted(
+        [(k, int(trigger.get(k, 0))) for k in _trigger_map if trigger.get(k)],
+        key=lambda x: x[1], reverse=True
+    )
+    active_triggers = [(k, v) for k, v in sorted_triggers if v > 3]
+    if active_triggers:
+        lines.append('\nGegenargument-Stil (basierend auf Kundenprofil):')
+        if len(active_triggers) >= 1:
+            k1, v1 = active_triggers[0]
+            label1, style1 = _trigger_map[k1]
+            lines.append(f'gegenargument_1 → {label1}-Trigger ({v1}/10): {style1}')
+        if len(active_triggers) >= 2:
+            k2, v2 = active_triggers[1]
+            label2, style2 = _trigger_map[k2]
+            lines.append(f'gegenargument_2 → {label2}-Trigger ({v2}/10): {style2}')
+        elif len(active_triggers) == 1:
+            lines.append('gegenargument_2 → alternativer Winkel, sachlich und lösungsorientiert')
     if einwaende:
         lines.append('\nProfilspezifische Einwände und Gegenargumente:')
         for e in einwaende:
-            lines.append(f'- {e.get("typ","")}: {e.get("gegenargument","")}')
-    if pdata.get('verbotene_phrasen'):
-        lines.append(f'\nVerbotene Phrasen (nie verwenden): {", ".join(pdata["verbotene_phrasen"])}')
-    ki = pdata.get('ki', {})
+            typ      = e.get('kategorie') or e.get('typ', '')
+            text     = e.get('einwand', '')
+            gegen    = e.get('gegenargument', '')
+            technik  = e.get('technik', '')
+            intens   = e.get('intensitaet', '')
+            varianten= e.get('varianten', [])
+            var_str  = ' / '.join(v for v in (varianten if isinstance(varianten, list) else [varianten]) if v)
+            line = f'- [{typ}]'
+            if text:    line += f' "{text}"'
+            if var_str: line += f' (Varianten: {var_str})'
+            if gegen:   line += f' → {gegen}'
+            if technik: line += f' | Technik: {technik}'
+            if intens:  line += f' | Intensität: {intens}'
+            lines.append(line)
+    if fragen:
+        lines.append('\nHäufige Kundenfragen:')
+        for f in fragen[:5]:
+            if f.get('frage'):
+                lines.append(f'- F: "{f["frage"]}" → A: {f.get("antwort","")}')
+    if wettbew:
+        lines.append('\nWettbewerber:')
+        for w in wettbew:
+            if w.get('name'):
+                lines.append(f'- {w["name"]}: Schwäche: {w.get("schwaeche","")}')
+    if nogos:
+        lines.append('\nDisqualifikationskriterien (No-Gos):')
+        for n in nogos:
+            krit = n.get('kriterium') or n.get('krit', '')
+            if krit:
+                lines.append(f'- {krit}: {n.get("beschreibung","")}')
+    verboten = techniken.get('verboten', [])
+    if verboten:
+        lines.append(f'\nVerbotene Phrasen/Techniken (nie verwenden): {", ".join(verboten)}')
+    aktiv = techniken.get('aktiv', [])
+    if aktiv:
+        lines.append(f'Bevorzugte Verkaufstechniken: {", ".join(aktiv)}')
+    if techniken.get('offene_fragen'):
+        lines.append(f'Offene Fragen Vorlage: {techniken["offene_fragen"]}')
+    if uebergaenge:
+        lines.append('\nGesprächsübergänge:')
+        for u in uebergaenge:
+            if u.get('von') or u.get('nach'):
+                lines.append(f'- {u.get("von","")} → {u.get("nach","")}: "{u.get("bruecke","")}"')
+    if ki.get('ansprache'):
+        lines.append(f'\nKundenansprache: {ki["ansprache"]} (immer einhalten)')
+    if ki.get('antwortlaenge'):
+        lines.append(f'Antwortlänge: {ki["antwortlaenge"]}')
+    if ki.get('sensitivitaet'):
+        lines.append(f'Sensitivität: {ki["sensitivitaet"]}')
     if ki.get('ton'):
         lines.append(f'Ton: {ki["ton"]}')
     if ki.get('zusatz'):
@@ -165,28 +261,55 @@ def _build_coaching_prompt() -> str:
     _, pdata = ls.get_active_profile()
     if not pdata:
         return COACHING_PROMPT_BASE
-    lines = [COACHING_PROMPT_BASE, '\n--- AKTIVES VERKAUFSPROFIL ---']
-    if pdata.get('produkt'):
-        lines.append(f'Produkt: {pdata["produkt"]}')
+    basis       = pdata.get('basis', {})
+    zielgruppe  = pdata.get('zielgruppe', {})
+    schmerzen   = pdata.get('schmerzen', {})
     kaufsignale = pdata.get('kaufsignale', [])
+    uebergaenge = pdata.get('uebergaenge', [])
+    wettbew     = pdata.get('wettbewerber', [])
+    phasen      = pdata.get('phasen', [])
+    ki          = pdata.get('ki', {})
+    lines = [COACHING_PROMPT_BASE, '\n--- AKTIVES VERKAUFSPROFIL ---']
+    if basis.get('produktbeschreibung'):
+        lines.append(f'Produkt: {basis["produktbeschreibung"]}')
+    if basis.get('unternehmen'):
+        lines.append(f'Unternehmen: {basis["unternehmen"]}')
+    zg_parts = []
+    if zielgruppe.get('vorwissen'): zg_parts.append(f'Vorwissen: {zielgruppe["vorwissen"]}')
+    if zielgruppe.get('entscheidungsverhalten'): zg_parts.append(f'Entscheidungstyp: {", ".join(zielgruppe["entscheidungsverhalten"])}')
+    if zg_parts:
+        lines.append(f'Zielgruppe: {" | ".join(zg_parts)}')
     if kaufsignale:
         lines.append('\nProfilspezifische Kaufsignale:')
         for k in kaufsignale:
-            lines.append(f'- Signal: "{k.get("signal","")}" → Reaktion: {k.get("reaktion","")}')
-    schmerzpunkte = pdata.get('schmerzpunkte', [])
+            reaktion = k.get('beschreibung') or k.get('reaktion', '')
+            if k.get('signal'):
+                lines.append(f'- Signal: "{k["signal"]}" → Reaktion: {reaktion}')
+    schmerzpunkte = schmerzen.get('schmerzpunkte', [])
     if schmerzpunkte:
         lines.append('\nHauptschmerzpunkte des Kunden:')
         for s in schmerzpunkte:
-            if isinstance(s, dict):
-                lines.append(f'- {s.get("situation","")}')
-    phasen = pdata.get('phasen', [])
+            if isinstance(s, dict) and s.get('situation'):
+                kern = s.get('kern', '')
+                lines.append(f'- {s["situation"]}' + (f': {kern}' if kern else ''))
+    if wettbew:
+        lines.append('\nWettbewerber (achte auf Erwähnungen):')
+        for w in wettbew:
+            if w.get('name'):
+                lines.append(f'- {w["name"]}: {w.get("schwaeche","")}')
+    if uebergaenge:
+        lines.append('\nGesprächsübergänge (erkenne wann der Zeitpunkt kommt):')
+        for u in uebergaenge:
+            if u.get('von') or u.get('nach'):
+                lines.append(f'- {u.get("von","")} → {u.get("nach","")}: "{u.get("bruecke","")}"')
     if phasen:
         with ls.phase_lock:
             idx = ls.aktive_phase_idx
         if 0 <= idx < len(phasen):
             ph = phasen[idx]
-            lines.append(f'\nAktuelle Gesprächsphase: {ph.get("name","")} — {ph.get("beschreibung","")}')
-    ki = pdata.get('ki', {})
+            lines.append(f'\nAktuelle Gesprächsphase: {ph.get("name","")} — {ph.get("ziel","") or ph.get("beschreibung","")}')
+    if ki.get('ansprache'):
+        lines.append(f'Kundenansprache: {ki["ansprache"]}')
     if ki.get('zusatz'):
         lines.append(f'Zusatz-Anweisung: {ki["zusatz"]}')
     return '\n'.join(lines)
@@ -201,6 +324,14 @@ def _parse_json(raw: str) -> dict:
 # ── EWB-Ranking (throttled, Option B) ────────────────────────────────────────
 _ewb_rank_counter = 0
 
+EWB_RANKING_PROMPT_BASE = """Basierend auf diesen letzten Gesprächssegmenten:
+{segments}
+
+Welche 2 dieser Einwände kommen am wahrscheinlichsten als nächstes?
+Einwände: {einwaende}
+
+Antworte NUR mit einem JSON-Array der 2 wahrscheinlichsten: ["typ1", "typ2"]"""
+
 
 def rank_ewb(transcript_segments: list, einwaende_list: list) -> list:
     """Rank top 2 most likely upcoming objections based on recent transcript."""
@@ -209,12 +340,9 @@ def rank_ewb(transcript_segments: list, einwaende_list: list) -> list:
     if len(einwaende_list) <= 2:
         return einwaende_list[:2]
     try:
-        prompt = (
-            'Basierend auf diesen letzten Gesprächssegmenten:\n'
-            + '\n'.join(transcript_segments[-5:])
-            + '\n\nWelche 2 dieser Einwände kommen am wahrscheinlichsten als nächstes?\n'
-            + 'Einwände: ' + ', '.join(einwaende_list)
-            + '\n\nAntworte NUR mit einem JSON-Array der 2 wahrscheinlichsten: ["typ1", "typ2"]'
+        prompt = EWB_RANKING_PROMPT_BASE.format(
+            segments='\n'.join(transcript_segments[-5:]),
+            einwaende=', '.join(einwaende_list),
         )
         msg = claude_client.messages.create(
             model='claude-haiku-4-5-20251001',

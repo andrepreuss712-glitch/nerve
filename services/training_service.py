@@ -359,6 +359,8 @@ REGELN:
 - Starte mit einer kurzen Begrüßung
 """
 
+TRAINING_PERSONA_PROMPT_BASE = KUNDEN_PROMPT_TEMPLATE
+
 
 def _random_persona(sprache: str = 'de') -> dict:
     pool = NAMEN_POOL.get(sprache, NAMEN_POOL['en'])
@@ -555,7 +557,7 @@ Antworte NUR als valides JSON:
 
     response = claude_client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=600,
+        max_tokens=1200,
         messages=[{"role": "user", "content": prompt}]
     )
     text  = response.content[0].text.strip()
