@@ -2,17 +2,17 @@
 {% block title %} – Logs{% endblock %}
 
 {% block extra_style %}
-.empty-state{text-align:center;padding:60px 20px;color:#8B949E}
+.empty-state{text-align:center;padding:60px 20px;color:#6B7280}
 .empty-icon{font-size:40px;margin-bottom:12px}
 .empty-text{font-size:14px}
 .log-stats{display:flex;gap:16px;align-items:center}
-.log-stat-chip{font-size:11px;color:#6b6b80;display:flex;align-items:center;gap:4px}
-.log-stat-chip strong{color:#a0a0c0}
-.log-profil-tag{font-size:11px;background:#1C2333;border:1px solid #2D3748;
-  color:#8888aa;padding:1px 7px;border-radius:20px;white-space:nowrap}
-.tbl tr:nth-child(odd) td { background: #1C2333; }
-.tbl tr:nth-child(even) td { background: #161B22; }
-.tbl thead th { background: #0D1117; color: #8B949E; border-bottom: 1px solid #2D3748; }
+.log-stat-chip{font-size:11px;color:#6B7280;display:flex;align-items:center;gap:4px}
+.log-stat-chip strong{color:#1a1a1a}
+.log-profil-tag{font-size:11px;background:#F0F2F5;border:1px solid #E2E8F0;
+  color:#374151;padding:1px 7px;border-radius:20px;white-space:nowrap}
+.tbl tr:nth-child(odd) td { background: #FFFFFF; }
+.tbl tr:nth-child(even) td { background: #F8FAFC; }
+.tbl thead th { background: #F0F2F5; color: #1a1a1a; border-bottom: 1px solid #E2E8F0; }
 {% endblock %}
 
 {% block content %}
@@ -43,12 +43,12 @@
         {% for log in logs %}
         <tr>
           <td>{{ log.datum }}</td>
-          <td style="color:#6b6b80">{{ log.uhrzeit }}</td>
+          <td style="color:#6B7280">{{ log.uhrzeit }}</td>
           <td>
             {% if log.profil != '–' %}
             <span class="log-profil-tag">{{ log.profil }}</span>
             {% else %}
-            <span style="color:#8B949E">–</span>
+            <span style="color:#9CA3AF">–</span>
             {% endif %}
           </td>
           <td style="color:#6b6b80;font-variant-numeric:tabular-nums">{{ log.dauer }}</td>
@@ -57,14 +57,14 @@
             {% if log.einwaende > 0 %}
             <span style="color:#f0a05a;font-weight:700">{{ log.einwaende }}</span>
             {% else %}
-            <span style="color:#8B949E">0</span>
+            <span style="color:#9CA3AF">0</span>
             {% endif %}
           </td>
           <td>
             {% if log.painpoints > 0 %}
             <span style="color:#ff8040;font-weight:700">{{ log.painpoints }}</span>
             {% else %}
-            <span style="color:#8B949E">0</span>
+            <span style="color:#9CA3AF">0</span>
             {% endif %}
           </td>
           <td>

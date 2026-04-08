@@ -58,7 +58,7 @@ Nutze Stichpunkte mit "- " Prefix. Antworte NUR mit dem JSON."""
 
     msg = _client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=900,
+        max_tokens=1200,
         messages=[{"role": "user", "content": prompt}]
     )
     text  = msg.content[0].text.strip()

@@ -4,52 +4,52 @@
 {% block extra_style %}
 .settings-wrap{padding:28px 32px;max-width:720px}
 /* Tabs */
-.tabs{display:flex;gap:0;border-bottom:1px solid #2D3748;margin-bottom:28px}
-.tab-btn{background:none;border:none;color:#6b6b80;padding:10px 18px;font-size:14px;
+.tabs{display:flex;gap:0;border-bottom:1px solid #E2E8F0;margin-bottom:28px}
+.tab-btn{background:none;border:none;color:#6B7280;padding:10px 18px;font-size:14px;
   font-weight:600;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;
   margin-bottom:-1px;transition:all .2s}
-.tab-btn:hover{color:#b0b0c8}
+.tab-btn:hover{color:#374151}
 .tab-btn.active{color:#00D4AA;border-bottom-color:#00D4AA}
 .tab-pane{display:none}
 .tab-pane.active{display:block}
 /* Cards */
-.settings-card{background:#1C2333;border-radius:12px;padding:22px;margin-bottom:20px}
+.settings-card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:22px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 .settings-card-title{font-size:14px;font-weight:700;margin-bottom:16px}
 /* Form */
 .form-group{margin-bottom:16px}
 .form-label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;
-  color:#6b6b80;text-transform:uppercase;margin-bottom:6px}
-.form-input,.form-select,.form-textarea{width:100%;background:#1C2333;
-  border:1px solid #2D3748;border-radius:8px;color:#FFFFFF;font-size:13px;
+  color:#1a1a1a;text-transform:uppercase;margin-bottom:6px}
+.form-input,.form-select,.form-textarea{width:100%;background:#FFFFFF;
+  border:1px solid #E2E8F0;border-radius:8px;color:#1a1a1a;font-size:13px;
   padding:9px 12px;outline:none;font-family:inherit;transition:border-color .15s}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#00D4AA}
 .form-textarea{resize:vertical;min-height:80px;line-height:1.5}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.form-hint{font-size:11px;color:#444466;margin-top:4px}
+.form-hint{font-size:11px;color:#6B7280;margin-top:4px}
 /* Toggle */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;
-  border-bottom:1px solid rgba(255,255,255,.04)}
+  border-bottom:1px solid #E2E8F0}
 .toggle-row:last-child{border-bottom:none}
 .toggle-info{}
-.toggle-label{font-size:13px;font-weight:600;color:#FFFFFF}
-.toggle-desc{font-size:12px;color:#6b6b80;margin-top:2px}
+.toggle-label{font-size:13px;font-weight:600;color:#1a1a1a}
+.toggle-desc{font-size:12px;color:#6B7280;margin-top:2px}
 .toggle{position:relative;width:36px;height:20px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0;position:absolute}
-.toggle-track{position:absolute;inset:0;background:#1C2333;border:1px solid #2D3748;
+.toggle-track{position:absolute;inset:0;background:#E2E8F0;border:1px solid #CBD5E1;
   border-radius:20px;cursor:pointer;transition:all .2s}
 .toggle input:checked + .toggle-track{background:#00D4AA;border-color:#00D4AA}
-.toggle-knob{position:absolute;top:3px;left:3px;width:12px;height:12px;background:#6b6b80;
+.toggle-knob{position:absolute;top:3px;left:3px;width:12px;height:12px;background:#9CA3AF;
   border-radius:50%;transition:all .2s;pointer-events:none}
-.toggle input:checked ~ .toggle-knob{left:19px;background:#1C2333}
+.toggle input:checked ~ .toggle-knob{left:19px;background:#FFFFFF}
 /* Usage bars */
 .s-usage-row{margin-bottom:12px}
-.s-usage-lbl{display:flex;justify-content:space-between;font-size:12px;color:#b8b0a0;margin-bottom:5px}
-.s-usage-bar-wrap{background:#1C2333;border-radius:4px;height:8px;overflow:hidden}
+.s-usage-lbl{display:flex;justify-content:space-between;font-size:12px;color:#374151;margin-bottom:5px}
+.s-usage-bar-wrap{background:#E2E8F0;border-radius:4px;height:8px;overflow:hidden}
 .s-usage-bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
 /* Billing plan cards */
 .plan-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
 @media(max-width:600px){.plan-cards{grid-template-columns:1fr 1fr}}
-.plan-card{background:#1C2333;border:2px solid #2D3748;border-radius:10px;padding:16px;
+.plan-card{background:#FFFFFF;border:2px solid #E2E8F0;border-radius:10px;padding:16px;
   position:relative;text-align:center}
 .plan-card.active{border-color:#00D4AA}
 .plan-card.recommended::before{content:'Empfohlen';position:absolute;top:-10px;left:50%;
@@ -57,43 +57,45 @@
   padding:2px 10px;border-radius:20px;letter-spacing:.06em}
 .plan-name{font-size:14px;font-weight:700;margin-bottom:4px}
 .plan-price{font-size:22px;font-weight:800;color:#00D4AA}
-.plan-price small{font-size:11px;font-weight:400;color:#6b6b80}
-.plan-features{text-align:left;margin:12px 0;font-size:12px;color:#b8b0a0}
+.plan-price small{font-size:11px;font-weight:400;color:#6B7280}
+.plan-features{text-align:left;margin:12px 0;font-size:12px;color:#374151}
 .plan-feature{padding:3px 0;display:flex;gap:6px}
 .plan-feature::before{content:'✓';color:#00D4AA}
-.plan-feature.no::before{content:'○';color:#444466}
-.plan-feature.no{color:#444466}
+.plan-feature.no::before{content:'○';color:#9CA3AF}
+.plan-feature.no{color:#9CA3AF}
+.plan-card .btn{background:#00D4AA;color:#000000;border:none;border-radius:99px}
+.plan-card .btn:hover{background:#00FFCC;opacity:1}
 /* Billing table */
 .bill-row{display:flex;align-items:center;gap:12px;padding:10px 0;
-  border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+  border-bottom:1px solid #E2E8F0;font-size:13px}
 .bill-row:last-child{border-bottom:none}
 .bill-icon{font-size:16px;flex-shrink:0}
-.bill-date{color:#6b6b80;flex-shrink:0;min-width:100px}
-.bill-desc{color:#b8b0a0;flex:1}
-.bill-amount{font-weight:700;color:#FFFFFF;flex-shrink:0}
-.bill-pdf{font-size:11px;color:#444466;flex-shrink:0}
+.bill-date{color:#6B7280;flex-shrink:0;min-width:100px}
+.bill-desc{color:#374151;flex:1}
+.bill-amount{font-weight:700;color:#1a1a1a;flex-shrink:0}
+.bill-pdf{font-size:11px;color:#6B7280;flex-shrink:0}
 /* Cancel button */
-.btn-cancel{background:#1a0808;border:1px solid #5a2020;color:#e05c5c;border-radius:8px;
+.btn-cancel{background:#00D4AA;border:none;color:#000000;border-radius:8px;
   padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
   transition:all .2s}
-.btn-cancel:hover{border-color:#e05c5c}
+.btn-cancel:hover{background:#00FFCC}
 /* Modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
   display:flex;align-items:center;justify-content:center;opacity:0;
   pointer-events:none;transition:opacity .3s}
 .modal-overlay.open{opacity:1;pointer-events:all}
-.modal-box{background:#1C2333;border:1px solid #2D3748;border-top:3px solid #00D4AA;
-  border-radius:12px;padding:28px;max-width:460px;width:90%;position:relative}
-.modal-title{font-size:18px;font-weight:700;margin-bottom:12px}
-.modal-text{font-size:14px;color:#b8b0a0;line-height:1.6;margin-bottom:18px}
+.modal-box{background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid #00D4AA;
+  border-radius:12px;padding:28px;max-width:460px;width:90%;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:12px;color:#1a1a1a}
+.modal-text{font-size:14px;color:#374151;line-height:1.6;margin-bottom:18px}
 .modal-actions{display:flex;justify-content:space-between;align-items:center;margin-top:20px}
-.btn-stay{background:none;border:none;color:#444466;font-size:13px;cursor:pointer;font-family:inherit}
-.btn-stay:hover{color:#6b6b80}
-.btn-confirm-cancel{background:#c0392b;color:#fff;border:none;border-radius:8px;
+.btn-stay{background:none;border:none;color:#6B7280;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-stay:hover{color:#374151}
+.btn-confirm-cancel{background:#e05c5c;color:#fff;border:none;border-radius:8px;
   padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 /* Success / info boxes */
 .info-box{background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;
-  padding:12px 16px;font-size:13px;color:#b8b0a0;line-height:1.5;margin-top:12px}
+  padding:12px 16px;font-size:13px;color:#374151;line-height:1.5;margin-top:12px}
 .info-box strong{color:#00D4AA}
 {% endblock %}
 
@@ -154,9 +156,9 @@
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Über mich (für Dashboard-Begrüßung)</label>
+        <label class="form-label">Über mich</label>
         <textarea class="form-textarea" id="prof-persoenlich"
-          placeholder="Ich bin André, 35, komme aus dem Handwerk und bin jetzt im Vertrieb.">{{ g.user.persoenlich or '' }}</textarea>
+          placeholder="">{{ g.user.persoenlich or '' }}</textarea>
       </div>
       <div class="form-group">
         <label class="form-label">Größter Schmerzpunkt im Vertrieb</label>
@@ -168,7 +170,7 @@
 
     <div class="settings-card">
       <div class="settings-card-title">Dashboard-Persönlichkeit</div>
-      <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px;line-height:1.5">
+      <p style="font-size:13px;color:#374151;margin-bottom:14px;line-height:1.5">
         Erzähl NERVE was dich begeistert — Hobbys, Lieblingsspiele, Sportarten, Serien.
         NERVE nutzt das um deine Ergebnisse in <em>deinem</em> Stil zu formulieren.
       </p>
@@ -178,13 +180,13 @@
             Standard (professionell)
           </button>
           <button class="btn btn-sm" id="btn-stil-custom"
-            style="background:{% if g.user.dashboard_stil %}#00D4AA;color:#0D1117{% else %}#1C2333;color:#6b6b80;border:1px solid #2D3748{% endif %}">
+            style="background:{% if g.user.dashboard_stil %}#00D4AA;color:#0D1117{% else %}#F0F2F5;color:#6B7280;border:1px solid #E2E8F0{% endif %}">
             Mein Stil
           </button>
         </div>
         <textarea class="form-textarea" id="prof-stil" rows="3"
-          placeholder="Ich zocke gerne World of Warcraft und bin Horde-Fan&#10;Oder: Ich boxe seit 10 Jahren und liebe Muhammad Ali&#10;Oder: Ich bin BVB-Fan und stehe auf klare Ansagen">{{ g.user.dashboard_stil or '' }}</textarea>
-        <div class="form-hint">Beispiele: „Ich zocke WoW" · „Ich boxe" · „Ich bin BVB-Fan"</div>
+          placeholder="">{{ g.user.dashboard_stil or '' }}</textarea>
+        <div class="form-hint">Beispiele: Ich spiele gerne Videospiele, Ich boxe, Ich bin Fußballfan</div>
       </div>
       <button class="btn btn-secondary btn-sm" onclick="previewStil()">Vorschau generieren</button>
       <div id="stil-preview" style="display:none;margin-top:12px"></div>
@@ -196,7 +198,7 @@
     <!-- Language Preference -->
     <div class="settings-card" style="margin-top:20px">
       <div class="settings-card-title">Sprache</div>
-      <p style="font-size:12px;color:#6b6b80;margin-bottom:10px">
+      <p style="font-size:12px;color:#6B7280;margin-bottom:10px">
         Bevorzugte Sprache für das Training
       </p>
       <select id="settingsLang" class="form-select" style="max-width:240px"
@@ -245,13 +247,13 @@
         {% endif %}
       </div>
       {% if g.org.is_early_access %}
-      <div style="font-size:13px;color:#b8b0a0;margin-bottom:10px">
-        <span style="text-decoration:line-through;color:#444466">{% if usage %}{{ usage.plan_preis * 2 }}{% else %}49{% endif %}€</span>
+      <div style="font-size:13px;color:#374151;margin-bottom:10px">
+        <span style="text-decoration:line-through;color:#9CA3AF">{% if usage %}{{ usage.plan_preis * 2 }}{% else %}49{% endif %}€</span>
         <strong style="color:#00D4AA"> {% if usage %}{{ (usage.plan_preis / 2) | int }}{% else %}24{% endif %}€</strong>/Monat
-        <span style="font-size:11px;color:#6b6b80"> (50% Early Access Rabatt — für immer)</span>
+        <span style="font-size:11px;color:#6B7280"> (50% Early Access Rabatt — für immer)</span>
       </div>
       {% elif usage %}
-      <div style="font-size:13px;color:#b8b0a0;margin-bottom:10px">
+      <div style="font-size:13px;color:#374151;margin-bottom:10px">
         <strong style="color:#00D4AA">{{ usage.plan_preis }}€</strong>/Monat
       </div>
       {% endif %}
@@ -263,13 +265,13 @@
       {% endif %}
 
       {% if usage %}
-      <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#6b6b80;text-transform:uppercase;margin:14px 0 10px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.07em;color:#1a1a1a;text-transform:uppercase;margin:14px 0 10px">
         Verbrauch diesen Monat
       </div>
       <div class="s-usage-row">
         <div class="s-usage-lbl">
           <span>Live-Analyse</span>
-          <span style="color:{% if usage.minuten_prozent >= 100 %}#e05c5c{% elif usage.minuten_prozent >= 90 %}#f0a500{% else %}#00D4AA{% endif %}">
+          <span style="color:#1a1a1a">
             {{ usage.minuten_used }} / {{ usage.minuten_limit }} Min ({{ usage.minuten_prozent }}%)
           </span>
         </div>
@@ -280,16 +282,16 @@
       <div class="s-usage-row" style="margin-bottom:0">
         <div class="s-usage-lbl">
           <span>Training mit Stimme</span>
-          <span style="color:{% if usage.voice_prozent >= 100 %}#e05c5c{% elif usage.voice_prozent >= 90 %}#f0a500{% else %}#22c55e{% endif %}">
+          <span style="color:#1a1a1a">
             {{ usage.voice_used }} / {{ usage.voice_limit }} Sessions ({{ usage.voice_prozent }}%)
           </span>
         </div>
         <div class="s-usage-bar-wrap">
-          <div class="s-usage-bar-fill" style="width:{{ usage.voice_prozent }}%;background:{% if usage.voice_prozent >= 100 %}#e05c5c{% elif usage.voice_prozent >= 90 %}#f0a500{% else %}#22c55e{% endif %}"></div>
+          <div class="s-usage-bar-fill" style="width:{{ usage.voice_prozent }}%;background:{% if usage.voice_prozent >= 100 %}#e05c5c{% elif usage.voice_prozent >= 90 %}#f0a500{% else %}#00D4AA{% endif %}"></div>
         </div>
       </div>
       {% if usage.reset_date %}
-      <div style="font-size:11px;color:#444466;margin-top:8px">
+      <div style="font-size:11px;color:#6B7280;margin-top:8px">
         Nächster Reset: {{ usage.reset_date.strftime('%d.%m.%Y') if usage.reset_date else '–' }}
       </div>
       {% endif %}
@@ -350,14 +352,14 @@
             onclick="window.location='mailto:andre@nerve.sale?subject=Enterprise'">Kontakt</button>
         </div>
       </div>
-      <div style="font-size:12px;color:#6b6b80">
+      <div style="font-size:12px;color:#6B7280">
         Alle Pläne inkl. Fair-Use — wir blockieren nie. Plan-Wechsel: support@nerve.sale
       </div>
     </div>
 
     <div class="settings-card">
       <div class="settings-card-title">Rechnungshistorie</div>
-      <div style="font-size:13px;color:#444466;font-style:italic">
+      <div style="font-size:13px;color:#6B7280;font-style:italic">
         Rechnungen sind nach Stripe-Integration verfügbar.
       </div>
     </div>
@@ -367,7 +369,7 @@
       <div class="form-group">
         <label class="form-label">Name / Firma</label>
         <input class="form-input" id="bill-name" type="text"
-               value="{{ g.org.billing_name or '' }}" placeholder="André Preuß / Muster GmbH">
+               value="{{ g.org.billing_name or '' }}" placeholder="Max Mustermann / Muster GmbH">
       </div>
       <div class="form-group">
         <label class="form-label">Straße</label>
@@ -378,12 +380,12 @@
         <div class="form-group">
           <label class="form-label">PLZ</label>
           <input class="form-input" id="bill-zip" type="text"
-                 value="{{ g.org.billing_zip or '' }}" placeholder="58636">
+                 value="{{ g.org.billing_zip or '' }}" placeholder="12345">
         </div>
         <div class="form-group">
           <label class="form-label">Stadt</label>
           <input class="form-input" id="bill-city" type="text"
-                 value="{{ g.org.billing_city or '' }}" placeholder="Iserlohn">
+                 value="{{ g.org.billing_city or '' }}" placeholder="Musterstadt">
         </div>
       </div>
       <div class="form-group">
@@ -407,9 +409,9 @@
     </div>
     {% endif %}
 
-    <div class="settings-card" style="border-color:#3a1414">
-      <div class="settings-card-title" style="color:#e05c5c">Abo kündigen</div>
-      <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px;line-height:1.5">
+    <div class="settings-card">
+      <div class="settings-card-title">Abo kündigen</div>
+      <p style="font-size:13px;color:#374151;margin-bottom:14px;line-height:1.5">
         Du kannst jederzeit kündigen. Dein Zugang bleibt bis zum Ende des bezahlten Zeitraums aktiv.
         Keine Kündigungsfrist.
       </p>
@@ -437,7 +439,7 @@
 
     <div class="settings-card">
       <div class="settings-card-title">Datenexport</div>
-      <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px">
+      <p style="font-size:13px;color:#374151;margin-bottom:14px">
         Lade alle deine Daten als ZIP herunter.
       </p>
       <button class="btn btn-secondary btn-sm"
@@ -446,9 +448,9 @@
       </button>
     </div>
 
-    <div class="settings-card" style="border-color:#3a1414">
-      <div class="settings-card-title" style="color:#e05c5c">Account löschen</div>
-      <p style="font-size:13px;color:#b8b0a0;margin-bottom:14px;line-height:1.5">
+    <div class="settings-card">
+      <div class="settings-card-title">Account löschen</div>
+      <p style="font-size:13px;color:#374151;margin-bottom:14px;line-height:1.5">
         Alle Daten werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
       </p>
       <button class="btn-cancel" onclick="openDeleteModal()">Account löschen</button>
@@ -521,7 +523,7 @@
         </label>
       </div>
     </div>
-    <div style="font-size:12px;color:#444466;font-style:italic">
+    <div style="font-size:12px;color:#6B7280;font-style:italic">
       Email-Benachrichtigungen kommen bald.
     </div>
   </div>
@@ -718,10 +720,10 @@ async function previewStil() {
   const prev = document.getElementById('stil-preview');
   if (!stil) { prev.style.display = 'none'; return; }
   prev.style.display = 'block';
-  prev.innerHTML = '<div style="font-size:13px;color:#6b6b80">Generiere Vorschau…</div>';
+  prev.innerHTML = '<div style="font-size:13px;color:#6B7280">Generiere Vorschau…</div>';
   // Simple local preview
-  prev.innerHTML = `<div style="background:#1C2333;border-left:3px solid #00D4AA;
-    border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:#b8b0a0">
+  prev.innerHTML = `<div style="background:#F8FAFC;border-left:3px solid #00D4AA;
+    border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:#374151">
     Vorschau: NERVE wird deinen persönlichen Stil nutzen sobald du genug Gespräche hast.
     Dein Stil: <em>${stil}</em>
   </div>`;

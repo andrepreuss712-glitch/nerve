@@ -151,6 +151,16 @@
           <div class="db2-slider-range"><span>10%</span><span>100%</span></div>
         </div>
 
+        <div class="db2-slider-group slider-ewb-highlight">
+          <div class="db2-slider-row">
+            <label>EWB-Erfolgsquote</label>
+            <span id="lbl-ewb-rate" class="db2-slider-val">50%</span>
+          </div>
+          <input type="range" id="sl-ewb-rate" class="db2-slider" min="10" max="100" value="50" oninput="simUpdate()">
+          <div class="db2-slider-range"><span>10%</span><span>100%</span></div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:4px">Wie oft überwindest du Einwände erfolgreich?</div>
+        </div>
+
         <div class="db2-slider-group">
           <div class="db2-slider-row">
             <label>Closing-Rate</label>
@@ -199,7 +209,8 @@
           <canvas id="chart-growth-sim"></canvas>
         </div>
         <div id="sim-hint" class="db2-hint-bar" style="margin-top:12px">
-          💡 10% bessere Einwandbehandlung = <strong id="sim-hint-val">—</strong> mehr Umsatz/Monat
+          💡 <span id="sim-hint-text">Wenn du deine Closing-Rate von <strong>20%</strong> auf <strong>22%</strong> steigerst (+10%), verdienst du <strong id="sim-hint-val">—</strong> mehr pro Monat</span>
+          <div style="font-size:11px;color:#9ca3af;margin-top:3px">Basierend auf deinen aktuellen Simulator-Einstellungen</div>
         </div>
       </div>
     </div>
@@ -445,7 +456,10 @@ function renderPerformance(d) {
   } else {
     if (nodeAlEl) nodeAlEl.style.display = 'none';
     if (hintEl && p.hint_ewb) {
-      hintEl.innerHTML  = '💡 10% bessere Einwandbehandlung = <strong>+' + fEuro(p.hint_ewb) + '</strong> mehr Umsatz/Monat';
+      var crOld = Math.round(p.closing_rate || 20);
+      var crNew = Math.round((p.closing_rate || 20) * 1.10);
+      hintEl.innerHTML = '💡 Wenn du deine Closing-Rate von <strong>' + crOld + '%</strong> auf <strong>' + crNew + '%</strong> steigerst (+10%), verdienst du <strong>+' + fEuro(p.hint_ewb) + '</strong> mehr pro Monat'
+        + '<div style="font-size:11px;color:#9ca3af;margin-top:3px">Basierend auf deinen letzten ' + (p.calls_pro_monat ? Math.round(p.calls_pro_monat) + ' Calls/Monat' : 'Gesprächsdaten') + '</div>';
       hintEl.style.display = '';
     }
   }
@@ -551,17 +565,19 @@ function simUpdate() {
   _simTimer = setTimeout(function() {
     var callsTag    = parseFloat(document.getElementById('sl-calls-tag').value) || 10;
     var showRate    = parseFloat(document.getElementById('sl-show-rate').value) / 100 || 0.7;
+    var ewbRate     = parseFloat(document.getElementById('sl-ewb-rate').value) / 100 || 0.5;
     var closingRate = parseFloat(document.getElementById('sl-closing-rate').value) / 100 || 0.2;
     var dealWert    = parseFloat(document.getElementById('sl-deal-wert').value) || 2000;
     var arbeitstage = parseFloat(document.getElementById('sl-arbeitstage').value) || 5;
 
     document.getElementById('lbl-calls-tag').textContent    = callsTag;
     document.getElementById('lbl-show-rate').textContent    = Math.round(showRate*100) + '%';
+    document.getElementById('lbl-ewb-rate').textContent     = Math.round(ewbRate*100) + '%';
     document.getElementById('lbl-closing-rate').textContent = Math.round(closingRate*100) + '%';
     document.getElementById('lbl-deal-wert').textContent    = fEuro(dealWert);
     document.getElementById('lbl-arbeitstage').textContent  = arbeitstage;
 
-    var callsPM    = callsTag * showRate * arbeitstage * 4.3;
+    var callsPM    = callsTag * showRate * ewbRate * arbeitstage * 4.3;
     var dealsPM    = callsPM * closingRate;
     var umsatzPM   = dealsPM * dealWert;
     var forecast12 = 0;
@@ -584,8 +600,13 @@ function simUpdate() {
       simRoi.style.color = roi >= 0 ? '#00D4AA' : '#F85149';
     }
 
-    var hintVal = Math.round(umsatzPM * closingRate * 0.10);
-    setText('sim-hint-val', '+' + fEuro(hintVal));
+    var ewbOld  = Math.round(ewbRate * 100);
+    var ewbNew  = Math.round(ewbRate * 1.10 * 100);
+    var hintVal = Math.round((ewbRate * 1.10 - ewbRate) * callsTag * showRate * closingRate * dealWert * arbeitstage * 4);
+    var hintText = document.getElementById('sim-hint-text');
+    if (hintText) {
+      hintText.innerHTML = 'Wenn du deine EWB-Erfolgsquote von <strong>' + ewbOld + '%</strong> auf <strong>' + ewbNew + '%</strong> steigerst (+10%), verdienst du <strong>+' + fEuro(hintVal) + '</strong> mehr pro Monat';
+    }
 
     renderGrowthChart(curve, 'chart-growth-sim');
   }, 120);

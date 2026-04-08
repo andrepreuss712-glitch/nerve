@@ -6,12 +6,12 @@
 .profile-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;
   padding:20px;display:flex;flex-direction:column;gap:14px;transition:border-color .15s}
 .profile-card:hover{border-color:var(--glass-border-hover)}
-.profile-card.active-card{border-color:#2dd4a8;background:linear-gradient(135deg,rgba(45,212,168,0.06) 0%,rgba(255,255,255,0.02) 70%)}
+.profile-card.active-card{border-color:#2dd4a8;background:#FFFFFF}
 .profile-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .profile-name{font-size:15px;font-weight:700;line-height:1.3}
 .profile-branche{font-size:11px;color:var(--page-text-muted);margin-top:3px}
 .profile-card-actions{display:flex;gap:6px;flex-wrap:wrap}
-.profile-dashed{background:transparent;border:2px dashed rgba(255,255,255,0.08);border-radius:12px;
+.profile-dashed{background:transparent;border:2px dashed #E2E8F0;border-radius:12px;
   padding:28px 20px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:10px;cursor:pointer;text-decoration:none;
   transition:border-color .15s,background .15s;text-align:center;border:none;width:100%}
@@ -23,29 +23,29 @@
 .wiz-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;
   display:none;align-items:center;justify-content:center;padding:16px}
 .wiz-overlay.open{display:flex}
-.wiz-modal{background:var(--page-bg);border:1px solid rgba(255,255,255,0.08);border-radius:16px;
+.wiz-modal{background:var(--page-bg);border:1px solid #E2E8F0;border-radius:16px;
   width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;
-  box-shadow:0 20px 60px rgba(0,0,0,.6)}
-.wiz-header{padding:20px 24px 16px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0}
+  box-shadow:0 4px 24px rgba(0,0,0,0.12)}
+.wiz-header{padding:20px 24px 16px;border-bottom:1px solid #E2E8F0;flex-shrink:0}
 .wiz-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .wiz-title{font-size:16px;font-weight:700}
 .wiz-close{background:none;border:none;color:var(--page-text-muted);font-size:18px;cursor:pointer;
   padding:0 4px;font-family:inherit;transition:color .15s}
 .wiz-close:hover{color:var(--page-text-secondary)}
 .wiz-progress{display:flex;align-items:center;gap:0}
-.wiz-dot{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.08);
+.wiz-dot{width:28px;height:28px;border-radius:50%;background:#F0F2F5;border:2px solid #E2E8F0;
   display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
   color:var(--page-text-muted);flex-shrink:0;transition:all .25s}
 .wiz-dot.active{background:rgba(45,212,168,0.15);border-color:#2dd4a8;color:#2dd4a8}
 .wiz-dot.done{background:#2dd4a8;border-color:#2dd4a8;color:var(--page-bg)}
-.wiz-pline{flex:1;height:2px;background:rgba(255,255,255,0.06);transition:background .25s}
+.wiz-pline{flex:1;height:2px;background:#E2E8F0;transition:background .25s}
 .wiz-pline.done{background:rgba(45,212,168,0.4)}
 .wiz-step-label{font-size:11px;color:var(--page-text-muted);margin-top:8px}
 .wiz-body{flex:1;overflow-y:auto;padding:20px 24px;display:none}
 .wiz-body.active{display:block}
 .wiz-body::-webkit-scrollbar{width:3px}
-.wiz-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06)}
-.wiz-footer{padding:16px 24px;border-top:1px solid rgba(255,255,255,0.06);display:flex;
+.wiz-body::-webkit-scrollbar-thumb{background:#CBD5E1}
+.wiz-footer{padding:16px 24px;border-top:1px solid #E2E8F0;display:flex;
   align-items:center;justify-content:space-between;flex-shrink:0}
 .wiz-sub{font-size:13px;color:var(--page-text-muted);margin-bottom:20px;line-height:1.5}
 
@@ -76,7 +76,7 @@ option{background:var(--page-bg)}
   padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;
   transition:border-color .15s;margin-right:8px}
 .btn-add-obj:hover{border-color:#4899c8}
-.btn-load-tmpl{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--page-text-secondary);border-radius:6px;
+.btn-load-tmpl{background:#F8FAFC;border:1px solid #E2E8F0;color:var(--page-text-secondary);border-radius:6px;
   padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;
   transition:all .15s}
 .btn-load-tmpl:hover{border-color:rgba(45,212,168,0.4);color:#2dd4a8}
@@ -139,7 +139,7 @@ option{background:var(--page-bg)}
         <a href="/profiles/{{ p.id }}/edit" class="n-btn n-btn-ghost n-btn-sm">Bearbeiten</a>
         <form method="post" action="/profiles/{{ p.id }}/delete" style="margin:0"
               onsubmit="return confirm('Profil löschen?')">
-          <button class="n-btn n-btn-danger n-btn-sm" type="submit">Löschen</button>
+          <button class="n-btn n-btn-ghost n-btn-sm" type="submit">Löschen</button>
         </form>
         {% endif %}
       </div>
@@ -147,8 +147,8 @@ option{background:var(--page-bg)}
     {% endfor %}
 
     {% if session.get('rolle') in ('owner', 'admin') %}
-    <div class="profile-card n-glass" style="border:2px dashed rgba(255,255,255,0.08);align-items:center;justify-content:center;cursor:pointer;min-height:120px"
-         onclick="openWizard()" onmouseover="this.style.borderColor='rgba(45,212,168,0.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+    <div class="profile-card n-glass" style="border:2px dashed #E2E8F0;align-items:center;justify-content:center;cursor:pointer;min-height:120px"
+         onclick="openWizard()" onmouseover="this.style.borderColor='rgba(45,212,168,0.4)'" onmouseout="this.style.borderColor='#E2E8F0'">
       <div style="font-size:28px;color:var(--page-text-muted)">+</div>
       <div style="font-size:13px;color:var(--page-text-muted);font-weight:500">Neues Profil erstellen</div>
     </div>

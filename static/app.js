@@ -9,7 +9,19 @@ let interim = null;
 let paused  = false;
 
 // ── Session Mode State ───────────────────────────────────────────────────────
-let sessionMode = null;  // 'cold_call' or 'meeting', set by mode overlay
+let sessionMode = null;  // 'cold_call' or 'meeting', set by mode overlay or URL param
+
+// Auto-select mode from URL param (e.g. /live?mode=cold_call from nav overlay)
+// Consent was already handled before navigation, so skip it and activate directly.
+(function() {
+  var urlMode = new URLSearchParams(window.location.search).get('mode');
+  if (urlMode === 'cold_call' || urlMode === 'meeting') {
+    var overlay = document.getElementById('modeOverlay');
+    if (overlay) overlay.classList.add('hidden');
+    sessionMode = urlMode;
+    setTimeout(function() { activateSession(); }, 0);
+  }
+})();
 
 // ── Browser Mic State ─────────────────────────────────────────────────────────
 let micStream  = null;   // MediaStream from getUserMedia
@@ -477,14 +489,18 @@ function escHtml(t){
 async function beenden(){
   // Guard: no real conversation detected — show placeholder instead of fake postcall
   if(sessionSeconds < 10 || words < 20){
-    const overlay=document.getElementById('postcall-overlay');
+    const overlay=document.getElementById('postcallOverlay');
     if(overlay){
-      overlay.style.display='flex';
-      overlay.innerHTML=
-        '<div class="n-glass" style="padding:32px;text-align:center;max-width:500px;margin:auto">' +
-          '<h3 style="color:var(--page-text-color);margin-bottom:12px">Kein Gespräch erkannt</h3>' +
-          '<p style="color:var(--page-text-secondary)">Es wurde kein ausreichendes Gespräch für eine Analyse erkannt.</p>' +
-          '<a href="/dashboard" class="btn btn-primary" style="margin-top:16px">← Zurück zum Dashboard</a>' +
+      overlay.classList.add('open');
+      const box=document.getElementById('postcallBox');
+      if(box) box.innerHTML=
+        '<div style="padding:48px 32px;text-align:center;max-width:500px;margin:auto">' +
+          '<h3 style="margin-bottom:12px">Kein Gespräch erkannt</h3>' +
+          '<p style="color:var(--page-text-muted)">Es wurde kein ausreichendes Gespräch für eine Analyse erkannt.</p>' +
+          '<div style="margin-top:24px;display:flex;gap:12px;justify-content:center">' +
+            '<a href="/dashboard" class="btn btn-primary">← Dashboard</a>' +
+            '<button class="btn btn-secondary" onclick="document.getElementById(\'postcallOverlay\').classList.remove(\'open\')">Schließen</button>' +
+          '</div>' +
         '</div>';
     }
     return;

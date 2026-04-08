@@ -6,24 +6,24 @@
 
 /* ── Topbar ───────────────────────────────────────────────────────── */
 .editor-topbar {
-  padding: 10px 24px; background: var(--page-bg); border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 24px; background: var(--page-bg); border-bottom: 1px solid #E2E8F0;
   display: flex; align-items: center; gap: 14px; flex-shrink: 0;
 }
 .editor-topbar .back-link {
   font-size: 12px; color: var(--page-text-muted); background: transparent;
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 5px 11px;
+  border: 1px solid #E2E8F0; border-radius: 6px; padding: 5px 11px;
   cursor: pointer; white-space: nowrap; transition: border-color .15s, color .15s;
   font-family: inherit;
 }
-.editor-topbar .back-link:hover { border-color: rgba(255,255,255,0.14); color: var(--page-text-secondary); }
+.editor-topbar .back-link:hover { border-color: #CBD5E1; color: var(--page-text-secondary); }
 .topbar-name {
-  flex: 1; max-width: 320px; background: #1C2333; border: 1px solid #2D3748;
-  border-radius: 7px; color: var(--page-text-color); font-size: 15px; font-weight: 700;
+  flex: 1; max-width: 320px; background: #FFFFFF; border: 1px solid #E2E8F0;
+  border-radius: 7px; color: #1a1a1a; font-size: 15px; font-weight: 700;
   padding: 7px 12px; outline: none; font-family: inherit;
 }
 .topbar-name:focus { border-color: var(--input-border-focus); }
 .topbar-branche {
-  max-width: 200px; background: #1C2333; border: 1px solid #2D3748;
+  max-width: 200px; background: #FFFFFF; border: 1px solid #E2E8F0;
   border-radius: 7px; color: var(--page-text-secondary); font-size: 13px; padding: 7px 12px;
   outline: none; font-family: inherit;
 }
@@ -35,38 +35,63 @@
 }
 .save-btn:hover { opacity: .85; }
 
+/* ── Unsaved-Changes Popup ─────────────────────────────────────────── */
+.unsaved-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  z-index: 9999; align-items: center; justify-content: center;
+}
+.unsaved-overlay.open { display: flex; }
+.unsaved-box {
+  background: #FFFFFF; border-radius: 14px; padding: 28px 28px 22px;
+  max-width: 380px; width: 90%; box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  text-align: center;
+}
+.unsaved-title { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
+.unsaved-sub { font-size: 13px; color: #6B7280; margin-bottom: 22px; line-height: 1.5; }
+.unsaved-actions { display: flex; gap: 10px; justify-content: center; }
+.unsaved-btn-save {
+  background: #00D4AA; color: #000000; border: none; border-radius: 20px;
+  padding: 8px 22px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.unsaved-btn-leave {
+  background: #F0F2F5; color: #374151; border: 1px solid #E2E8F0; border-radius: 20px;
+  padding: 8px 22px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.unsaved-btn-save:hover { opacity: .85; }
+.unsaved-btn-leave:hover { background: #E2E8F0; }
+
 /* ── Layout ───────────────────────────────────────────────────────── */
 .editor-layout { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
 /* ── Sidebar ──────────────────────────────────────────────────────── */
 .editor-sidebar {
-  width: 192px; flex-shrink: 0; background: rgba(255,255,255,0.02);
-  border-right: 1px solid rgba(255,255,255,0.06); overflow-y: auto; padding: 10px 0;
+  width: 192px; flex-shrink: 0; background: #F8FAFC;
+  border-right: 1px solid #E2E8F0; overflow-y: auto; padding: 10px 0;
 }
 .editor-sidebar::-webkit-scrollbar { width: 3px; }
-.editor-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); }
+.editor-sidebar::-webkit-scrollbar-thumb { background: #E2E8F0; }
 .sec-link {
   display: flex; align-items: center; gap: 7px; padding: 7px 14px;
   font-size: 12px; color: var(--page-text-muted); cursor: pointer; user-select: none;
   border-left: 3px solid transparent; transition: color .12s, background .12s;
   white-space: nowrap;
 }
-.sec-link:hover { color: var(--page-text-secondary); background: rgba(255,255,255,0.02); }
-.sec-link.active { color: #00D4AA; border-left-color: #00D4AA; background: rgba(0,212,170,0.04); }
+.sec-link:hover { color: var(--page-text-secondary); background: #F0F2F5; }
+.sec-link.active { color: #00D4AA; border-left-color: #00D4AA; background: rgba(0,212,170,0.06); }
 .sec-num { font-size: 10px; font-weight: 700; color: var(--page-text-muted); flex-shrink: 0; width: 16px; }
 .sec-link.active .sec-num { color: #1a8a78; }
 
 /* ── Main scroll area ─────────────────────────────────────────────── */
 .editor-main { flex: 1; overflow-y: auto; padding: 24px 28px; }
 .editor-main::-webkit-scrollbar { width: 4px; }
-.editor-main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+.editor-main::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 2px; }
 
 /* ── Sections ─────────────────────────────────────────────────────── */
 .sec { margin-bottom: 44px; scroll-margin-top: 16px; }
 .sec-title {
   font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
   color: #00D4AA; margin-bottom: 18px; padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; gap: 8px;
 }
 .sec-title-num {
   background: rgba(0,212,170,0.08); color: #00D4AA; border-radius: 4px; padding: 1px 6px; font-size: 10px;
@@ -81,8 +106,8 @@
   color: var(--label-color); text-transform: uppercase; margin-bottom: 5px;
 }
 .fi, .fs, .fta {
-  width: 100%; background: #1C2333; border: 1px solid #2D3748;
-  border-radius: 6px; color: #FFFFFF; font-size: 13px; padding: 8px 11px;
+  width: 100%; background: #FFFFFF; border: 1px solid #E2E8F0;
+  border-radius: 6px; color: #1a1a1a; font-size: 13px; padding: 8px 11px;
   outline: none; font-family: inherit; transition: border-color .15s;
 }
 .fi:focus, .fs:focus, .fta:focus { border-color: var(--input-border-focus); }
@@ -94,8 +119,8 @@
 /* ── Tooltip icon ─────────────────────────────────────────────────── */
 .tip-icon {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 14px; height: 14px; min-width: 14px; background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08); color: var(--page-text-muted); border-radius: 50%;
+  width: 14px; height: 14px; min-width: 14px; background: #F0F2F5;
+  border: 1px solid #E2E8F0; color: var(--page-text-muted); border-radius: 50%;
   font-size: 9px; font-weight: 700; cursor: help; vertical-align: middle;
   transition: border-color .12s, color .12s; font-style: normal;
   text-transform: none; letter-spacing: 0;
@@ -108,16 +133,16 @@
   display: none; max-width: 240px; width: 240px;
 }
 #g-tip-inner {
-  background: rgba(255,255,255,0.06); border: 1px solid #00D4AA;
+  background: #FFFFFF; border: 1px solid #00D4AA;
   color: var(--page-text-secondary); font-size: 12px; font-weight: 400;
   padding: 9px 12px; border-radius: 8px; line-height: 1.55;
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
+  box-shadow: 0 4px 20px rgba(0,0,0,.15);
   text-transform: none; letter-spacing: 0; white-space: normal;
 }
 
 /* ── Tags ─────────────────────────────────────────────────────────── */
 .tag-container {
-  background: #1C2333; border: 1px solid #2D3748; border-radius: 6px;
+  background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px;
   padding: 5px 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
   min-height: 38px; transition: border-color .15s; cursor: text;
 }
@@ -172,33 +197,33 @@
 }
 .btn-rm:hover { border-color: #e05c5c; }
 .btn-ord {
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--page-text-muted);
+  background: #F8FAFC; border: 1px solid #E2E8F0; color: var(--page-text-muted);
   border-radius: 5px; padding: 5px 7px; font-size: 11px; cursor: pointer;
   font-family: inherit; line-height: 1; transition: border-color .15s, color .15s;
 }
-.btn-ord:hover { border-color: rgba(255,255,255,0.14); color: var(--page-text-color); }
+.btn-ord:hover { border-color: #CBD5E1; color: var(--page-text-color); }
 
 /* ── Block cards ──────────────────────────────────────────────────── */
 .block {
-  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 9px;
+  background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px;
   padding: 14px; margin-bottom: 10px;
 }
 .block-hd {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 12px; gap: 8px;
 }
-.block-lbl { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--page-text-muted); }
+.block-lbl { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #1a1a1a; }
 .block-hd-right { display: flex; align-items: center; gap: 6px; }
-.einwand-preview { font-size: 12px; font-weight: 600; color: #f0a05a; flex: 1; }
+.einwand-preview { font-size: 12px; font-weight: 600; color: #1a1a1a; flex: 1; }
 .einwand-body { display: grid; gap: 10px; }
 .einwand-body.collapsed { display: none; }
 
 /* Column header rows */
 .col-header {
   display: flex; gap: 8px; padding: 0 0 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 8px;
+  border-bottom: 1px solid #E2E8F0; margin-bottom: 8px;
 }
-.col-header span { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--page-text-muted); display: flex; align-items: center; gap: 4px; }
+.col-header span { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #1a1a1a; display: flex; align-items: center; gap: 4px; }
 
 /* Inline grids */
 .drow { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
@@ -228,7 +253,7 @@
       value="{{ profile.name if profile else '' }}">
     <input id="vi_branche" class="topbar-branche" placeholder="Branche"
       value="{{ profile.branche if profile else '' }}">
-    <button type="button" class="save-btn" onclick="buildAndSubmit()">💾 Speichern</button>
+    <button type="button" class="save-btn" onclick="buildAndSubmit()">Speichern</button>
   </div>
 
   <div class="editor-layout">
@@ -266,8 +291,7 @@
         <div class="sec-title"><span class="sec-title-num">1</span>Basis & Produkt</div>
         <div class="fg">
           <label class="fl">Unternehmen</label>
-          <input class="fta" id="vi_unternehmen" placeholder="Ihr Unternehmen"
-            value="">
+          <textarea class="fta" id="vi_unternehmen" placeholder="z.B. Muster GmbH – Wir vertreiben Softwarelösungen für den Mittelstand. Gegründet 2015, 12 Mitarbeiter, Standort Dortmund." style="min-height:72px"></textarea>
         </div>
         <div class="fg">
           <label class="fl">Produktbeschreibung <i class="tip-icon" data-tip="Was genau bietest du an? Beschreibe es so wie du es einem Fremden in 30 Sekunden erklären würdest.">?</i></label>
@@ -872,6 +896,7 @@ function buildAndSubmit(){
   document.getElementById('f_branche').value=document.getElementById('vi_branche').value.trim();
   const daten={
     basis:{
+      unternehmen:document.getElementById('vi_unternehmen').value.trim(),
       produktbeschreibung:document.getElementById('vi_produkt').value.trim(),
       preismodell:document.getElementById('vi_preis').value.trim(),
       usps:getTags('usps-tags'),
@@ -926,6 +951,7 @@ function init(){
   const isNew=DATEN.basis!==undefined;
   if(isNew){
     const b=DATEN.basis||{};
+    setVal('vi_unternehmen',b.unternehmen);
     setVal('vi_produkt',b.produktbeschreibung);
     setVal('vi_preis',b.preismodell);
     setVal('vi_konsequenz',b.konsequenz);
@@ -992,5 +1018,60 @@ setupScrollSpy();
 if (new URLSearchParams(window.location.search).get('from') === 'wizard') {
   document.getElementById('wizard-banner').style.display = '';
 }
+
+/* ── Unsaved Changes Guard ─────────────────────────────────────────── */
+let _isDirty = false;
+let _pendingUrl = null;
+
+function _markDirty() { _isDirty = true; }
+
+// Watch all inputs/textareas/selects inside the editor
+document.querySelector('.editor-layout').addEventListener('input', _markDirty);
+document.querySelector('.editor-layout').addEventListener('change', _markDirty);
+
+// Browser back / tab close
+window.addEventListener('beforeunload', function(e) {
+  if (_isDirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+function _showUnsaved(url) {
+  _pendingUrl = url;
+  document.getElementById('unsaved-overlay').classList.add('open');
+}
+function _unsavedLeave() {
+  _isDirty = false;
+  document.getElementById('unsaved-overlay').classList.remove('open');
+  if (_pendingUrl) window.location.href = _pendingUrl;
+}
+function _unsavedSave() {
+  document.getElementById('unsaved-overlay').classList.remove('open');
+  buildAndSubmit();
+}
+
+// Intercept back-link button
+document.querySelector('.back-link').addEventListener('click', function(e) {
+  if (_isDirty) { e.preventDefault(); e.stopImmediatePropagation(); _showUnsaved('/profiles'); }
+}, true);
+
+// Intercept sidebar nav links in the main g-sidebar
+document.querySelectorAll('.g-sidebar a[href]').forEach(function(a) {
+  a.addEventListener('click', function(e) {
+    if (_isDirty) { e.preventDefault(); e.stopImmediatePropagation(); _showUnsaved(a.getAttribute('href')); }
+  }, true);
+});
+
+// Mark clean after successful save (form submit)
+document.getElementById('editorForm').addEventListener('submit', function() { _isDirty = false; });
 </script>
+
+<div class="unsaved-overlay" id="unsaved-overlay">
+  <div class="unsaved-box">
+    <div class="unsaved-title">Ungespeicherte Änderungen</div>
+    <div class="unsaved-sub">Du hast Änderungen vorgenommen, die noch nicht gespeichert wurden. Möchtest du sie speichern, bevor du die Seite verlässt?</div>
+    <div class="unsaved-actions">
+      <button class="unsaved-btn-save" onclick="_unsavedSave()">Speichern</button>
+      <button class="unsaved-btn-leave" onclick="_unsavedLeave()">Verlassen</button>
+    </div>
+  </div>
+</div>
 {% endblock %}

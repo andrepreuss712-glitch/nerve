@@ -21,9 +21,9 @@
   .header-nav{display:flex;align-items:center;gap:10px}
   .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .back-link{font-size:12px;font-weight:600;color:var(--page-text-muted);background:transparent;
-    border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:5px 10px;cursor:pointer;
+    border:1px solid #E2E8F0;border-radius:7px;padding:5px 10px;cursor:pointer;
     letter-spacing:.03em;transition:border-color .15s,color .15s;white-space:nowrap;text-decoration:none}
-  .back-link:hover{border-color:rgba(255,255,255,0.2);color:var(--page-text-secondary)}
+  .back-link:hover{border-color:#CBD5E1;color:var(--page-text-secondary)}
   .status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--page-text-muted)}
   .dot{width:8px;height:8px;border-radius:50%;background:#00D4AA;animation:blink 1s infinite}
   .dot.paused{background:#f87171;animation:none}
@@ -59,7 +59,7 @@
   .toast.visible{opacity:1}
 
   /* ── Profile bar ── */
-  .profile-bar{padding:7px 20px;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--glass-border);
+  .profile-bar{padding:7px 20px;background:#F8FAFC;border-bottom:1px solid var(--glass-border);
     display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative}
   .profile-label{font-size:10px;color:var(--page-text-muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-right:8px}
   .profile-name{font-size:13px;color:#00D4AA;font-weight:600}
@@ -79,7 +79,7 @@
   .profile-menu-item.cur{color:#00D4AA}
 
   /* ── Phasen-Bar ── */
-  .phasen-bar{padding:6px 20px;background:rgba(255,255,255,0.01);border-bottom:1px solid var(--glass-border);
+  .phasen-bar{padding:6px 20px;background:#F8FAFC;border-bottom:1px solid var(--glass-border);
     display:flex;align-items:center;gap:0;overflow-x:auto;flex-shrink:0}
   .phasen-bar::-webkit-scrollbar{height:3px}
   .phasen-bar::-webkit-scrollbar-thumb{background:var(--glass-border)}
@@ -87,7 +87,7 @@
   .phase-btn{background:none;border:1px solid var(--glass-border);border-radius:6px;
     padding:4px 12px;font-size:11px;font-weight:600;color:var(--page-text-muted);
     cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
-  .phase-btn:hover{border-color:rgba(255,255,255,0.2);color:var(--page-text-secondary)}
+  .phase-btn:hover{border-color:#CBD5E1;color:var(--page-text-secondary)}
   .phase-btn.active{background:rgba(0,212,170,0.08);border-color:#00D4AA;color:#00D4AA}
   .phase-arrow{color:var(--page-text-muted);font-size:12px;padding:0 4px;flex-shrink:0}
 
@@ -96,7 +96,7 @@
     background:var(--page-bg);border:1px solid var(--glass-border);border-radius:20px;
     padding:3px 12px;font-size:11px;font-weight:700;color:var(--page-text-muted);cursor:pointer;
     font-family:inherit;letter-spacing:.04em;transition:all .15s;white-space:nowrap}
-  .btn-view-toggle:hover{border-color:rgba(255,255,255,0.2);color:var(--page-text-secondary)}
+  .btn-view-toggle:hover{border-color:#CBD5E1;color:var(--page-text-secondary)}
 
   /* ── Kompakt-Panel (floating overlay, bottom-right) ── */
   .kompakt-panel{
@@ -173,9 +173,9 @@
   /* ── Transcript ── */
   .msg{padding:8px 13px;border-radius:8px;font-size:14px;line-height:1.65;animation:fi .15s ease}
   @keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-  .final{background:rgba(255,255,255,0.03);border-left:3px solid #00D4AA;color:var(--page-text-color)}
-  .final.sp0{background:rgba(0,212,170,0.04);border-left:3px solid #00D4AA;color:#e8f5f3}
-  .final.sp1{background:rgba(167,139,250,0.04);border-left:3px solid #a78bfa;color:#cccce8}
+  .final{background:#F8FAFC;border-left:3px solid #00D4AA;color:var(--page-text-color)}
+  .final.sp0{background:rgba(0,212,170,0.06);border-left:3px solid #00D4AA;color:#1a1a1a}
+  .final.sp1{background:rgba(167,139,250,0.06);border-left:3px solid #a78bfa;color:#1a1a1a}
   .interim{color:var(--page-text-muted);font-style:italic;font-size:13px;border-left:3px solid var(--glass-border);padding-left:12px}
   .row-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
   .speaker-tag{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
@@ -183,7 +183,7 @@
   .row-swap-btn{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:5px;cursor:pointer;
     font-size:13px;color:var(--page-text-secondary);padding:3px 9px;line-height:1.4;font-weight:600;
     transition:background .15s,color .15s,border-color .15s;white-space:nowrap;flex-shrink:0}
-  .row-swap-btn:hover{background:rgba(255,255,255,0.06);border-color:var(--glass-border-hover);color:var(--page-text-color)}
+  .row-swap-btn:hover{background:#F8FAFC;border-color:var(--glass-border-hover);color:var(--page-text-color)}
   .row-swap-btn:disabled{opacity:.4;cursor:default}
 
   /* ── Right column ── */
@@ -371,7 +371,7 @@
   .sp-items::-webkit-scrollbar{width:3px}
   .sp-items::-webkit-scrollbar-thumb{background:var(--glass-border)}
   .sp-item{display:flex;align-items:flex-start;gap:8px;padding:7px 14px;cursor:pointer;
-    transition:background .1s;font-size:12px;line-height:1.5;color:var(--page-text-secondary);border-bottom:1px solid rgba(255,255,255,0.03)}
+    transition:background .1s;font-size:12px;line-height:1.5;color:var(--page-text-secondary);border-bottom:1px solid var(--glass-border)}
   .sp-item:hover{background:var(--glass-bg)}
   .sp-item.done{color:var(--page-text-muted);text-decoration:line-through}
   .sp-item.done .sp-dot{color:rgba(0,212,170,0.3)}
@@ -417,7 +417,7 @@
 
   /* ── DSGVO Banner ── */
   .dsgvo-banner{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);
-    background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 16px;
+    background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:8px 16px;
     font-size:11px;color:var(--page-text-secondary);z-index:400;display:none;align-items:center;gap:8px;
     max-width:500px;text-align:center}
   .dsgvo-banner.visible{display:flex}
@@ -448,9 +448,12 @@
   .consent-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:12px;padding:24px;
     max-width:480px;width:90%}
   .consent-title{font-size:15px;font-weight:700;color:var(--page-text-color);margin-bottom:12px}
-  .consent-script{background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.2);border-radius:8px;
-    padding:16px;font-size:14px;color:var(--page-text-secondary);line-height:1.6;margin-bottom:16px;font-style:italic}
-  .consent-hint{font-size:11px;color:var(--page-text-muted);margin-bottom:16px}
+  .consent-script{background:rgba(248,113,113,0.22);border:1px solid rgba(248,113,113,0.5);border-radius:8px;
+    padding:16px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.6;margin-bottom:8px;font-style:italic}
+  .consent-pflicht-label{font-size:12px;font-weight:800;color:#f87171;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+  .consent-tipp{display:inline-block;background:rgba(0,212,170,0.22);border:1px solid rgba(0,212,170,0.5);
+    border-radius:20px;padding:8px 16px;font-size:13px;color:#1a1a1a;line-height:1.5;margin-bottom:16px;font-style:italic}
+  .consent-hint{font-size:11px;color:var(--page-text-muted);margin-bottom:8px}
   .consent-actions{display:flex;gap:10px;justify-content:flex-end}
   .consent-btn{border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;
     font-family:inherit;transition:opacity .15s}
@@ -499,7 +502,7 @@
 
   /* ---- PiP Window ---- */
   .pip-header { height: 36px; display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px; border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.06));
+    padding: 0 16px; border-bottom: 1px solid var(--glass-border, #E2E8F0);
     background: var(--page-bg, #06060a); }
   .pip-mode-badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 9999px;
     border: 1px solid #00D4AA; color: #00D4AA; }
@@ -509,7 +512,7 @@
   .pip-to-fullscreen:hover { color: var(--page-text-secondary, #c5c9d4); }
 
   .pip-tabs { height: 36px; display: flex; align-items: center; gap: 4px; padding: 0 16px;
-    border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.06)); }
+    border-bottom: 1px solid var(--glass-border, #E2E8F0); }
   .pip-tab { background: none; border: none; font-size: 12px; font-weight: 600; padding: 6px 8px;
     border-radius: 6px; color: var(--page-text-muted, #8b92a5); cursor: pointer; font-family: inherit;
     min-height: 28px; position: relative; }
@@ -525,7 +528,7 @@
 
   .pip-ewb-row { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 16px 8px;
     flex-wrap: wrap; }
-  .pip-ewb-btn { background: none; border: 1px solid var(--glass-border, rgba(255,255,255,0.06));
+  .pip-ewb-btn { background: none; border: 1px solid var(--glass-border, #E2E8F0);
     color: var(--page-text-secondary, #c5c9d4); border-radius: 9999px; padding: 6px 12px;
     font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .pip-ewb-btn:hover { border-color: #00D4AA; color: #00D4AA; }
@@ -545,26 +548,40 @@
   <div class="mode-overlay-subtitle">Wähle den passenden Modus für dein Gespräch. Der Modus kann während des Calls nicht gewechselt werden.</div>
   <div class="mode-cards">
     <div class="mode-card" onclick="selectMode('cold_call')">
-      <div class="mode-card-icon">🔒</div>
+      <div class="mode-card-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13 8C13 8 11 8 10 10C9 12 8 15 10 18C12 21 14 23 16 25C18 27 20 29 23 31C26 33 29 32 31 31C33 30 33 28 33 28L29 24C29 24 27 25 26 25C25 25 24 24 22 22C20 20 19 19 19 18C19 17 20 15 20 15L16 11C16 11 15 8 13 8Z" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <div class="mode-card-title">Cold Call</div>
       <div class="mode-card-desc">Nur deine Stimme wird analysiert.<br>Kein Kunden-Audio verarbeitet.<br>EWB-Buttons für manuelle Einwand-Trigger.</div>
     </div>
     <div class="mode-card" onclick="selectMode('meeting')">
-      <div class="mode-card-icon">🤝</div>
+      <div class="mode-card-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="15" cy="13" r="4" stroke="#00D4AA" stroke-width="2.2"/>
+          <circle cx="25" cy="13" r="4" stroke="#00D4AA" stroke-width="2.2"/>
+          <path d="M6 30C6 25 10 22 15 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M34 30C34 25 30 22 25 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M15 22C17 21 19 21 20 21C21 21 23 21 25 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
       <div class="mode-card-title">Meeting</div>
       <div class="mode-card-desc">Volle Analyse beider Sprecher.<br>Einwilligung des Gesprächspartners erforderlich.<br>Automatische Einwanderkennung + EWB.</div>
     </div>
   </div>
+  <a href="/dashboard" class="back-link" style="margin-top:8px">&#8592; Dashboard</a>
 </div>
 
 <!-- ── Consent Modal (Meeting Mode) ───────────────────────────────────────── -->
 <div class="consent-overlay" id="consentOverlay" onclick="if(event.target===this)rejectConsent()">
   <div class="consent-box">
     <div class="consent-title">Einwilligung des Gesprächspartners</div>
+    <div class="consent-pflicht-label">Pflicht — laut vorlesen</div>
     <div class="consent-script">
-      „Ich nutze eine KI-Assistenz, die unser Gespräch live analysiert. Einverstanden?"
+      „Ist es okay wenn eine KI mithört damit wir die Qualität unseres Service verbessern können?"
     </div>
-    <div class="consent-hint">Diesen Satz laut vorlesen, dann bestätigen oder ablehnen.</div>
+    <div class="consent-tipp">Tipp: „Dabei werden keine vollen Aufzeichnungen gemacht, nur Stichpunkte."</div>
     <div class="consent-actions">
       <button class="consent-btn consent-btn-reject" onclick="rejectConsent()">Abgelehnt</button>
       <button class="consent-btn consent-btn-accept" onclick="acceptConsent()">Stattgegeben</button>
@@ -1017,7 +1034,7 @@
 <div id="postcall-loading" style="display:none;position:fixed;inset:0;z-index:800;background:var(--page-bg);align-items:center;justify-content:center">
   <div class="n-glass" style="padding:32px;text-align:center;border-radius:12px">
     <h3 style="color:var(--page-text-color);margin-bottom:16px">Gespräch wird ausgewertet...</h3>
-    <div style="width:280px;height:4px;background:var(--glass-bg,rgba(255,255,255,0.05));border-radius:2px;overflow:hidden;margin:0 auto">
+    <div style="width:280px;height:4px;background:var(--glass-bg,#E2E8F0);border-radius:2px;overflow:hidden;margin:0 auto">
       <div style="height:100%;width:50%;background:#00D4AA;border-radius:2px;animation:indeterminate-bar 1.4s ease infinite"></div>
     </div>
   </div>

@@ -876,6 +876,14 @@ body.kompakt .help-fab,body.live-active .help-fab{display:none}
 .g-sidebar.collapsed .sidebar-user-block { justify-content: center; padding: 12px 8px; }
 .g-sidebar.collapsed .sidebar-avatar { margin-right: 0; }
 
+/* ── Simulator EWB Highlight ────────────────────────────────── */
+.slider-ewb-highlight {
+  background: rgba(0, 212, 170, 0.08);
+  border: 1px solid rgba(0, 212, 170, 0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
 /* ── Training Analytics Panel ──────────────────────────────── */
 
 .t-training-layout {
@@ -927,9 +935,11 @@ body.kompakt .help-fab,body.live-active .help-fab{display:none}
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
   margin-bottom: 12px;
 }
 

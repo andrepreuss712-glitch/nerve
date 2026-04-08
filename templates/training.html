@@ -255,6 +255,30 @@
       </div>
     </div>
 
+    <!-- KPI-Leiste -->
+    <div class="db2-kpi-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="db2-kpi">
+        <div class="db2-kpi-value" id="t-kpi-sessions">—</div>
+        <div class="db2-kpi-label">Sessions d. Woche</div>
+        <div class="db2-kpi-trend" id="t-kpi-sessions-trend"></div>
+      </div>
+      <div class="db2-kpi">
+        <div class="db2-kpi-value" id="t-kpi-streak">—</div>
+        <div class="db2-kpi-label">Streak Tage</div>
+        <div class="db2-kpi-trend" id="t-kpi-streak-trend"></div>
+      </div>
+      <div class="db2-kpi">
+        <div class="db2-kpi-value" id="t-kpi-score">—</div>
+        <div class="db2-kpi-label">Ø Score</div>
+        <div class="db2-kpi-trend" id="t-kpi-score-trend"></div>
+      </div>
+      <div class="db2-kpi">
+        <div class="db2-kpi-value" id="t-kpi-ziel">—</div>
+        <div class="db2-kpi-label">Wochenziel</div>
+        <div class="db2-kpi-trend" id="t-kpi-ziel-trend"></div>
+      </div>
+    </div>
+
     <div class="t-training-layout">
       <div class="t-setup-wrap">
 
@@ -390,7 +414,7 @@
             </span>
             Einwand-Heatmap
           </div>
-          <div class="t-heatmap-grid" id="t-heatmap-grid">
+          <div id="t-heatmap-grid">
             <div class="t-empty-state">Lade Daten...</div>
           </div>
         </div>
@@ -1484,6 +1508,31 @@ loadScenarios();
       .then(r => r.json())
       .then(d => {
         if (!d.ok) return;
+
+        // KPI-Leiste
+        const wSess = d.sessions.diese_woche;
+        document.getElementById('t-kpi-sessions').textContent = wSess;
+
+        const streak = d.streak || 0;
+        document.getElementById('t-kpi-streak').textContent = streak;
+        if (streak >= 3) document.getElementById('t-kpi-streak-trend').innerHTML = '🔥 ' + streak + ' Tage am Stück';
+
+        const scores = d.trend_scores || [];
+        const avgScore = scores.length ? Math.round(scores.slice(-5).reduce((a,b) => a+b, 0) / Math.min(scores.length, 5)) : null;
+        document.getElementById('t-kpi-score').textContent = avgScore != null ? avgScore + '%' : '—';
+        if (avgScore != null) {
+          const scoreEl = document.getElementById('t-kpi-score-trend');
+          scoreEl.className = 'db2-kpi-trend ' + (avgScore >= 70 ? 'db2-trend-up' : avgScore >= 40 ? 'db2-trend-neutral' : 'db2-trend-down');
+          scoreEl.textContent = avgScore >= 70 ? '↑ Stark' : avgScore >= 40 ? '→ Solide' : '↓ Üben';
+        }
+
+        const wz = d.wochenziel || 5;
+        const zielPct = Math.min(100, Math.round((wSess / wz) * 100));
+        document.getElementById('t-kpi-ziel').textContent = wSess + ' / ' + wz;
+        const zielTrend = document.getElementById('t-kpi-ziel-trend');
+        zielTrend.className = 'db2-kpi-trend ' + (zielPct >= 100 ? 'db2-trend-up' : 'db2-trend-neutral');
+        zielTrend.textContent = zielPct >= 100 ? '✓ Erreicht' : zielPct + '% erreicht';
+
         document.getElementById('t-stat-woche').textContent = d.sessions.diese_woche;
         document.getElementById('t-stat-monat').textContent = d.sessions.diesen_monat;
         document.getElementById('t-stat-gesamt').textContent = d.sessions.gesamt;
@@ -1500,10 +1549,8 @@ loadScenarios();
         }
 
         // Wochenziel
-        const wz = d.wochenziel || 5;
-        const wSessions = d.sessions.diese_woche;
-        const pct = Math.min(100, Math.round((wSessions / wz) * 100));
-        document.getElementById('t-goal-text').textContent = wSessions + ' / ' + wz + ' Sessions';
+        const pct = Math.min(100, Math.round((wSess / wz) * 100));
+        document.getElementById('t-goal-text').textContent = wSess + ' / ' + wz + ' Sessions';
         document.getElementById('t-goal-bar').style.width = pct + '%';
         document.getElementById('t-goal-input').value = wz;
 
@@ -1527,27 +1574,32 @@ loadScenarios();
     for (const [typ, stats] of Object.entries(heatmap)) {
       const gesamt = stats.gesamt || 0;
       const behandelt = stats.behandelt || 0;
-      let colorClass = 't-heatmap-tile--neutral';
+      let color = '#9CA3AF';
+      let pct = 0;
       let quoteText = '--';
 
       if (gesamt > 0) {
-        const quote = Math.round((behandelt / gesamt) * 100);
-        quoteText = quote + '%';
-        if (quote >= 70) colorClass = 't-heatmap-tile--gruen';
-        else if (quote >= 40) colorClass = 't-heatmap-tile--gelb';
-        else colorClass = 't-heatmap-tile--rot';
+        pct = Math.round((behandelt / gesamt) * 100);
+        quoteText = pct + '%';
+        if (pct >= 70) color = '#00D4AA';
+        else if (pct >= 40) color = '#F59E0B';
+        else color = '#F85149';
       }
 
-      html += '<div class="t-heatmap-tile ' + colorClass + '" data-einwand="' + typ + '" title="Klick: Quick-Training mit ' + typ + '">'
-        + '<div class="t-heatmap-tile-name">' + typ + '</div>'
-        + '<div class="t-heatmap-tile-quote">' + quoteText + '</div>'
-        + '<div class="t-heatmap-tile-count">' + behandelt + '/' + gesamt + '</div>'
-        + '</div>';
+      html += '<div style="margin-bottom:10px;cursor:pointer" data-einwand="' + typ + '" title="Quick-Training: ' + typ + '">';
+      html +=   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+      html +=     '<span style="font-size:13px;color:#1a1a1a">' + typ + '</span>';
+      html +=     '<span style="font-size:13px;font-weight:700;color:' + color + '">' + quoteText + '</span>';
+      html +=   '</div>';
+      html +=   '<div style="height:6px;background:#F0F2F5;border-radius:3px;overflow:hidden">';
+      html +=     '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px;transition:width .4s"></div>';
+      html +=   '</div>';
+      html += '</div>';
     }
     grid.innerHTML = html;
 
     // Click handler: Quick-Training
-    grid.querySelectorAll('.t-heatmap-tile').forEach(tile => {
+    grid.querySelectorAll('[data-einwand]').forEach(tile => {
       tile.addEventListener('click', function() {
         const einwand = this.dataset.einwand;
         window.location.href = '/training?quick=1&einwand_typ=' + encodeURIComponent(einwand);
