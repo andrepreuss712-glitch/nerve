@@ -23,9 +23,10 @@ app = Flask(__name__)
 # Phase 04.6.1: für korrekte https-Redirect-URIs hinter nginx
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
-app.config['SECRET_KEY']       = SECRET_KEY
-app.config['SESSION_PERMANENT'] = True
-app.config['CSS_VERSION']      = '20260404-7'
+app.config['SECRET_KEY']           = SECRET_KEY
+app.config['SESSION_PERMANENT']    = True
+app.config['CSS_VERSION']          = '20260404-7'
+app.config['MAX_CONTENT_LENGTH']   = 5 * 1024 * 1024  # 5 MB feedback uploads
 
 if SECRET_KEY == 'dev-secret-change-me' and not os.environ.get('FLASK_DEBUG'):
     raise RuntimeError('[NERVE] SECRET_KEY is insecure — set SECRET_KEY env var before starting in production')
@@ -181,6 +182,22 @@ def _migrate():
             print("[DB] Migration: added users.is_superadmin")
         except Exception:
             pass
+        # ── Phase 04.7 Plan 04: Feedback Tabelle ─────────────────────────────
+        for col, typedef in [
+            ('screenshot_path',   'VARCHAR(300)'),
+            ('context_url',       'VARCHAR(500)'),
+            ('status',            "VARCHAR(30) DEFAULT 'new'"),
+            ('kategorie',         'VARCHAR(50)'),
+            ('rating',            'INTEGER'),
+            ('updated_at',        'DATETIME'),
+            ('notification_sent', 'BOOLEAN DEFAULT 0'),
+        ]:
+            try:
+                conn.execute(text(f'ALTER TABLE feedback ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added feedback.{col}")
+            except Exception:
+                pass
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
@@ -716,7 +733,9 @@ from routes.payments       import payments_bp
 from routes.legal          import legal_bp
 from routes.performance    import performance_bp
 from routes.oauth          import oauth_bp, init_oauth
+from routes.feedback       import feedback_bp
 
+app.register_blueprint(feedback_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(orgs_bp)
 app.register_blueprint(profiles_bp)

@@ -300,6 +300,23 @@ class ObjectionEvent(Base):
     created_at          = Column(DateTime, default=utcnow, nullable=False)
 
 
+class Feedback(Base):
+    __tablename__ = 'feedback'
+    id                = Column(Integer, primary_key=True)
+    user_id           = Column(Integer, ForeignKey('users.id'), nullable=False)
+    org_id            = Column(Integer, ForeignKey('organisations.id'), nullable=True)
+    typ               = Column(String(50), nullable=False)   # 'bug' | 'idea' | 'praise' | 'question'
+    text              = Column(Text, nullable=False)
+    screenshot_path   = Column(String(300), nullable=True)   # relativ: 'feedback/{uuid}.png'
+    context_url       = Column(String(500), nullable=True)
+    status            = Column(String(30), default='new', nullable=False)  # new|seen|in_planning|done|wont_fix
+    kategorie         = Column(String(50), nullable=True)
+    rating            = Column(Integer, nullable=True)       # 1-5 für Quick-Rating
+    created_at        = Column(DateTime, default=utcnow, nullable=False)
+    updated_at        = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+    notification_sent = Column(Boolean, default=False, nullable=False)
+
+
 def init_db(engine_instance):
     """Create all tables."""
     Base.metadata.create_all(engine_instance)
