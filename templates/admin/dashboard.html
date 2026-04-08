@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}NERVE Admin — Founder Cost Dashboard{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='admin_dashboard.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="fcd-wrap" data-period="{{ period }}">
+  <header class="fcd-header">
+    <h1>NERVE ADMIN <span class="fcd-sub">André Preuß — Founder Cost Dashboard</span></h1>
+    <div class="fcd-period-picker">
+      <label>Zeitraum: <input type="month" id="fcd-period" value="{{ period }}"></label>
+    </div>
+  </header>
+
+  <nav class="fcd-tabs" role="tablist">
+    <button class="fcd-tab" data-tab="uebersicht">Übersicht</button>
+    <button class="fcd-tab" data-tab="einnahmen">Einnahmen</button>
+    <button class="fcd-tab" data-tab="ausgaben">Ausgaben</button>
+    <button class="fcd-tab" data-tab="kunden">Kunden</button>
+    <button class="fcd-tab" data-tab="eur">EÜR</button>
+    <button class="fcd-tab" data-tab="export">Export</button>
+  </nav>
+
+  <main class="fcd-body">
+    <section class="fcd-panel" id="panel-uebersicht">
+      {% include 'admin/_tab_uebersicht.html' %}
+    </section>
+    <section class="fcd-panel" id="panel-einnahmen" hidden>
+      {% include 'admin/_tab_einnahmen.html' %}
+    </section>
+    <section class="fcd-panel" id="panel-ausgaben" hidden>
+      {% include 'admin/_tab_ausgaben.html' %}
+    </section>
+    <section class="fcd-panel" id="panel-kunden" hidden>
+      {% include 'admin/_tab_kunden.html' %}
+    </section>
+    <section class="fcd-panel" id="panel-eur" hidden>
+      {% include 'admin/_tab_eur.html' %}
+    </section>
+    <section class="fcd-panel" id="panel-export" hidden>
+      {% include 'admin/_tab_export.html' %}
+    </section>
+  </main>
+</div>
+<script>window.FCD_INITIAL_TAB = "{{ active_tab }}";</script>
+<script src="{{ url_for('static', filename='admin_dashboard.js') }}"></script>
+{% endblock %}

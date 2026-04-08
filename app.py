@@ -867,8 +867,10 @@ from routes.legal          import legal_bp
 from routes.performance    import performance_bp
 from routes.oauth          import oauth_bp, init_oauth
 from routes.feedback       import feedback_bp
+from routes.admin_dashboard import admin_dashboard_bp
 
 app.register_blueprint(feedback_bp)
+app.register_blueprint(admin_dashboard_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(orgs_bp)
 app.register_blueprint(profiles_bp)

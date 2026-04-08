@@ -1,0 +1,55 @@
+<div class="fcd-einnahmen" data-endpoint="/admin/dashboard/einnahmen">
+  <h3>EINNAHMEN — <span class="fcd-period-label"></span></h3>
+
+  <h4>Zusammenfassung</h4>
+  <table class="fcd-table">
+    <thead><tr><th>Kategorie</th><th>Netto</th><th>USt</th><th>Brutto</th><th>Anzahl</th></tr></thead>
+    <tbody id="fcd-einn-summary"></tbody>
+  </table>
+
+  <h4 style="margin-top:24px;">Nach Abo-Plan</h4>
+  <table class="fcd-table">
+    <thead><tr><th>Plan</th><th>Anzahl</th><th>Netto</th></tr></thead>
+    <tbody id="fcd-einn-plans"></tbody>
+  </table>
+
+  <h4 style="margin-top:24px;">Nach Kundenland (USt-VA-relevant)</h4>
+  <table class="fcd-table">
+    <thead><tr><th>Land</th><th>Behandlung</th><th>Anzahl</th><th>Netto</th></tr></thead>
+    <tbody id="fcd-einn-country"></tbody>
+  </table>
+
+  <h4 style="margin-top:24px;">Einzeltransaktionen</h4>
+  <table class="fcd-table">
+    <thead><tr><th>Datum</th><th>Rechnung</th><th>Land</th><th>Plan</th><th>Netto</th><th>USt</th><th>Brutto</th></tr></thead>
+    <tbody id="fcd-einn-tx"></tbody>
+  </table>
+</div>
+<script>
+(function(){
+  async function load() {
+    const period = document.querySelector('.fcd-wrap').dataset.period;
+    const r = await fetch('/admin/dashboard/einnahmen?period=' + encodeURIComponent(period));
+    if (!r.ok) return;
+    const d = await r.json();
+    document.querySelectorAll('.fcd-period-label').forEach(e => e.textContent = d.period);
+    const fmt = n => n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+    document.getElementById('fcd-einn-summary').innerHTML =
+      (d.summary||[]).map(s=>`<tr><td>${s.treatment}</td><td>${fmt(s.netto)}</td><td>${fmt(s.ust)}</td><td>${fmt(s.brutto)}</td><td>${s.count}</td></tr>`).join('');
+    document.getElementById('fcd-einn-plans').innerHTML =
+      (d.by_plan||[]).map(p=>`<tr><td>${p.plan}</td><td>${p.count}</td><td>${fmt(p.netto)}</td></tr>`).join('');
+    document.getElementById('fcd-einn-country').innerHTML =
+      (d.by_country||[]).map(c=>`<tr><td>${c.country}</td><td>${c.treatment}</td><td>${c.count}</td><td>${fmt(c.netto)}</td></tr>`).join('');
+    document.getElementById('fcd-einn-tx').innerHTML =
+      (d.transactions||[]).map(t=>`<tr><td>${t.date}</td><td>${t.invoice_id}</td><td>${t.country}</td><td>${t.plan}</td><td>${fmt(t.netto)}</td><td>${fmt(t.ust)}</td><td>${fmt(t.brutto)}</td></tr>`).join('');
+  }
+  const panel = document.getElementById('panel-einnahmen');
+  if (panel) {
+    const obs = new MutationObserver(()=>{
+      if (!panel.hidden && !panel.dataset.loaded) { panel.dataset.loaded = '1'; load(); }
+    });
+    obs.observe(panel, {attributes:true});
+    if (!panel.hidden) { panel.dataset.loaded = '1'; load(); }
+  }
+})();
+</script>

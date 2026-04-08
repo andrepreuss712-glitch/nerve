@@ -1,0 +1,31 @@
+/* Phase 04.7.2 — Founder Cost Dashboard */
+.fcd-wrap { max-width: 1400px; margin: 0 auto; padding: 24px; color: var(--n-text, #e6edf3); }
+.fcd-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.fcd-header h1 { font-size: 20px; font-weight: 700; margin: 0; }
+.fcd-sub { color: #9ca3af; font-weight: 400; margin-left: 12px; font-size: 14px; }
+.fcd-period-picker input { background: #1C2333; color: #e6edf3; border: 1px solid #2D3748; padding: 6px 10px; border-radius: 6px; }
+.fcd-tabs { display: flex; gap: 4px; border-bottom: 2px solid #1C2333; margin-bottom: 20px; }
+.fcd-tab { background: transparent; color: #9ca3af; border: none; padding: 10px 16px; cursor: pointer; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.fcd-tab:hover { color: #e6edf3; }
+.fcd-tab.active { color: #00D4AA; border-bottom-color: #00D4AA; }
+.fcd-panel { min-height: 400px; }
+.fcd-kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+.fcd-kpi { background: #1C2333; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.fcd-kpi h3 { margin: 0 0 8px; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+.fcd-kpi .value { font-size: 24px; font-weight: 700; color: #e6edf3; }
+.fcd-kpi .delta { font-size: 12px; margin-top: 4px; }
+.fcd-kpi .delta.up { color: #00D4AA; }
+.fcd-kpi .delta.down { color: #ef4444; }
+.fcd-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.fcd-chart-card { background: #1C2333; border-radius: 12px; padding: 16px; }
+.fcd-chart-card h3 { margin: 0 0 12px; font-size: 14px; color: #e6edf3; }
+.fcd-chart-card canvas { height: 280px !important; }
+.fcd-breakeven { background: #1C2333; border-radius: 12px; padding: 16px; }
+.fcd-stub { padding: 40px; text-align: center; color: #9ca3af; background: #1C2333; border-radius: 12px; }
+.fcd-table { width: 100%; border-collapse: collapse; }
+.fcd-table th, .fcd-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #2D3748; font-size: 13px; }
+.fcd-table th { color: #9ca3af; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+@media (max-width: 900px) {
+  .fcd-kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .fcd-chart-row { grid-template-columns: 1fr; }
+}
