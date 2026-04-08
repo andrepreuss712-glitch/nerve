@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, date
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric
 from database.db import Base
 
 
@@ -428,6 +428,109 @@ class PromptVersion(Base):
     changelog   = Column(Text)
     is_active   = Column(Boolean, default=False, nullable=False)
     created_at  = Column(DateTime, default=utcnow)
+
+
+# ── Phase 04.7.2: Founder Cost Dashboard Models ──────────────────────────
+
+class ApiCostLog(Base):
+    """Jeder einzelne API-Call mit eingefrorenem Wechselkurs und gefrorener Rate.
+    D-02: Wechselkurs wird beim Schreiben eingefroren (steuerlich korrekt).
+    """
+    __tablename__ = 'api_cost_log'
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False, index=True)
+    provider = Column(String(32), nullable=False, index=True)
+    model = Column(String(64), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    org_id = Column(Integer, ForeignKey('organisations.id'), nullable=True, index=True)
+    units = Column(Numeric(14, 4), nullable=False)
+    unit_type = Column(String(32), nullable=False)
+    rate_applied = Column(Numeric(12, 8), nullable=False)
+    rate_currency = Column(String(3), nullable=False, default='USD')
+    fx_rate_applied = Column(Numeric(10, 6), nullable=False)
+    cost_eur = Column(Numeric(12, 6), nullable=False)
+    session_id = Column(String(64), nullable=True, index=True)
+    context_tag = Column(String(32), nullable=True)
+
+
+class ApiRate(Base):
+    """Aktuelle API-Preise, editierbar, historisch ueber active-Flag."""
+    __tablename__ = 'api_rates'
+    id = Column(Integer, primary_key=True)
+    provider = Column(String(32), nullable=False, index=True)
+    model = Column(String(64), nullable=False)
+    unit_type = Column(String(32), nullable=False)
+    price_per_unit = Column(Numeric(12, 8), nullable=False)
+    currency = Column(String(3), nullable=False, default='USD')
+    active = Column(Boolean, default=True, nullable=False)
+    last_checked_at = Column(DateTime, default=utcnow, nullable=False)
+    source_url = Column(String(512), nullable=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+
+
+class PriceChangeLog(Base):
+    """D-06: Manuell erkannte Preisaenderungen mit Impact-Berechnung."""
+    __tablename__ = 'price_change_log'
+    id = Column(Integer, primary_key=True)
+    api_rate_id = Column(Integer, ForeignKey('api_rates.id'), nullable=False)
+    changed_at = Column(DateTime, default=utcnow, nullable=False, index=True)
+    old_rate = Column(Numeric(12, 8), nullable=False)
+    new_rate = Column(Numeric(12, 8), nullable=False)
+    currency = Column(String(3), nullable=False, default='USD')
+    impact_eur_per_month = Column(Numeric(12, 2), nullable=True)
+    note = Column(Text, nullable=True)
+
+
+class FixedCost(Base):
+    """D-10: Fixe Betriebskosten (Hetzner, Domain, Kontist, count.tax, Homeoffice)."""
+    __tablename__ = 'fixed_costs'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(128), nullable=False)
+    amount_eur = Column(Numeric(12, 2), nullable=False)
+    vat_rate = Column(Numeric(4, 2), nullable=False, default=19.00)
+    cycle = Column(String(16), nullable=False)  # 'monthly' | 'yearly' | 'per_day'
+    skr03 = Column(String(8), nullable=True)
+    eur_line = Column(Integer, nullable=True)
+    active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+
+
+class RevenueLog(Base):
+    """D-03: Jede Stripe-Zahlung aus invoice.payment_succeeded mit USt-Split + Land."""
+    __tablename__ = 'revenue_log'
+    id = Column(Integer, primary_key=True)
+    stripe_invoice_id = Column(String(128), nullable=False, unique=True, index=True)
+    stripe_customer_id = Column(String(128), nullable=True, index=True)
+    org_id = Column(Integer, ForeignKey('organisations.id'), nullable=True, index=True)
+    paid_at = Column(DateTime, nullable=False, index=True)
+    netto_cents = Column(Integer, nullable=False, default=0)
+    ust_cents = Column(Integer, nullable=False, default=0)
+    brutto_cents = Column(Integer, nullable=False, default=0)
+    currency = Column(String(3), nullable=False, default='EUR')
+    country = Column(String(2), nullable=True, index=True)
+    tax_treatment = Column(String(16), nullable=False)  # 'DE_19' | 'EU_RC' | 'DRITTLAND'
+    plan_key = Column(String(32), nullable=True)
+    raw_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+
+
+class ExchangeRate(Base):
+    """D-05: Taeglicher EZB-Kurs (Frankfurter API)."""
+    __tablename__ = 'exchange_rates'
+    id = Column(Integer, primary_key=True)
+    date = Column(Date, nullable=False, index=True)
+    currency_pair = Column(String(7), nullable=False)  # 'USD_EUR'
+    rate = Column(Numeric(10, 6), nullable=False)
+    source = Column(String(16), nullable=False, default='frankfurter')
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+
+
+ExchangeRate.__table_args__ = (
+    UniqueConstraint('date', 'currency_pair', name='uix_exchange_rate_date_pair'),
+)
+ApiRate.__table_args__ = (
+    UniqueConstraint('provider', 'model', 'unit_type', 'active', name='uix_api_rate_active'),
+)
 
 
 def init_db(engine_instance):
