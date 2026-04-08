@@ -88,6 +88,7 @@ state = {
     'line_id':          None,
     'kaufbereitschaft': 30,
     'ewb_top2':         None,  # List of 2 EWB type strings, AI-ranked
+    'ewb_clicks':       [],    # Liste von dicts: {'einwand_typ': str, 'success': bool, 'ts': iso}
 }
 
 # ── Conversation Log ──────────────────────────────────────────────────────────
@@ -312,6 +313,8 @@ def reset_session():
         quick_action_log.clear()
     with phasen_log_lock:
         phasen_log.clear()
+    with state_lock:
+        state['ewb_clicks'] = []
     with session_meta_lock:
         session_meta.update({
             'profil_name': '', 'profil_branche': '', 'schwierigkeit': None,
@@ -325,6 +328,17 @@ def reset_session():
             'redeanteil_durchschnitt': 0, 'tempo_durchschnitt': 0, 'laengster_monolog': 0,
             'kb_start': 30, 'kb_end': 30, 'kb_min': 30, 'kb_max': 30,
             'sterne_bewertung': None, 'feedback_kommentar': '',
+        })
+
+
+def record_ewb_click(einwand_typ: str, success: bool = False):
+    """Erfasst einen EWB-Button-Klick im Session-State (thread-safe)."""
+    import datetime as _dt
+    with state_lock:
+        state.setdefault('ewb_clicks', []).append({
+            'einwand_typ': einwand_typ,
+            'success':     bool(success),
+            'ts':          _dt.datetime.utcnow().isoformat(),
         })
 
 

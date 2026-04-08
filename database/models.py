@@ -289,6 +289,17 @@ class AuditLog(Base):
     created_at  = Column(DateTime, default=utcnow, nullable=False)
 
 
+class ObjectionEvent(Base):
+    __tablename__ = 'objection_events'
+    id                  = Column(Integer, primary_key=True)
+    user_id             = Column(Integer, ForeignKey('users.id'), nullable=False)
+    org_id              = Column(Integer, ForeignKey('organisations.id'), nullable=True)
+    conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=False)
+    einwand_typ         = Column(String(100), nullable=False)
+    success             = Column(Boolean, default=False, nullable=False)
+    created_at          = Column(DateTime, default=utcnow, nullable=False)
+
+
 def init_db(engine_instance):
     """Create all tables."""
     Base.metadata.create_all(engine_instance)
