@@ -372,6 +372,21 @@ def api_beenden():
         db_conv.commit()
         print(f"[DB] Gespräch gespeichert: conv.id={conv.id}")
 
+        # ── ObjectionEvents: granulare EWB-Klicks persistieren (Plan 03) ──────────
+        from database.models import ObjectionEvent
+        with ls.state_lock:
+            ewb_clicks = list(ls.state.get('ewb_clicks', []))
+        for click in ewb_clicks:
+            db_conv.add(ObjectionEvent(
+                user_id=g.user.id,
+                org_id=g.org.id,
+                conversation_log_id=conv.id,
+                einwand_typ=click['einwand_typ'],
+                success=click['success'],
+            ))
+        if ewb_clicks:
+            db_conv.commit()
+
         # ── Audit: session_start + session_end (DSGVO: nur Aggregate, kein Transkript) ─
         log_action(db_conv, g.user.id, g.org.id, 'session_start',
                    target_type='conversation_log', target_id=conv.id,
@@ -609,6 +624,9 @@ Liefere ein konkretes Gegenargument für den Einwand "{einwand_typ}". Max 2-3 S�
                 'frage': einwand_typ,
                 'antwort': antwort,
             })
+        # Granulares EWB-Klick-Tracking fuer objection_events (Plan 03)
+        from services.live_session import record_ewb_click
+        record_ewb_click(einwand_typ=einwand_typ, success=False)
         return jsonify({'ok': True, 'antwort': antwort, 'einwand_typ': einwand_typ})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
