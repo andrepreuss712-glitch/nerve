@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 04.6.1: Auth-Upgrade Google + Microsoft OAuth Login** - OAuth-Login via authlib, nullable passwort_hash, Login-UI Buttons (INSERTED) (completed 2026-04-06)
  (completed 2026-04-07)
 - [x] **Phase 04.6.2: Deploy Hardening & OAuth Polish** - Urgent: deploy hardening and oauth polish (INSERTED) (completed 2026-04-07)
-- [ ] **Phase 04.7: Backend & Feedback System** - Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails (Resend/Postmark), Session-History (INSERTED)
+- [x] **Phase 04.7: Backend & Feedback System** - Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails (Resend/Postmark), Session-History (INSERTED) (completed 2026-04-08)
 - [ ] **Phase 04.7.1: FineTuning Logging Grundlage** - ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions Tabellen von Tag 1 (INSERTED)
 - [ ] **Phase 04.7.2: Founder Cost Dashboard** - Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export für count.tax, API-Preismonitor (INSERTED)
 - [ ] **Phase 04.8: KI-Logik Upgrade** - Gesprächsphasen-Erkennung (6 Phasen), Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung, Cold Call Inferenz, dynamische EWB-Buttons (INSERTED)
@@ -306,14 +306,14 @@ Plans:
 **Depends on:** Phase 04.6.1
 **Briefing:** Nerve-Vault/02 Projekte/NERVE Backend & Feedback System.md
 **Requirements:** [BE-01, BE-02, BE-03, BE-04, BE-05, BE-06, BE-07, BE-08]
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 - [x] 04.7-01-PLAN.md - Foundation: is_superadmin + Decorator + ENV-Seed + Flask-Admin /admin Mount
 - [x] 04.7-02-PLAN.md - Audit-Log Tabelle + Immutable Trigger + log_action Wire-up
 - [x] 04.7-03-PLAN.md - Daten-Tracking: ObjectionEvent Tabelle + EWB-Persistenz (avg_deal_wert reuse)
 - [x] 04.7-04-PLAN.md - Feedback-Buttons + Modal + Upload + API + feedback Tabelle
-- [ ] 04.7-05-PLAN.md - Admin-Dashboard KPI + Tickets + Planung + Resend EU Emails + Checkpoint
+- [x] 04.7-05-PLAN.md - Admin-Dashboard KPI + Tickets + Planung + Resend EU Emails + Checkpoint
 - [x] 04.7-06-PLAN.md - Session-History (Analytics-Umbau zu ConversationLog-Liste + Detail)
 
 ### Phase 04.7.1: FineTuning Logging Grundlage (INSERTED)
