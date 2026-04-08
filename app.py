@@ -233,6 +233,64 @@ def _migrate():
 _migrate()
 
 
+def _seed_founder_dashboard_defaults():
+    """Phase 04.7.2 — idempotenter Seed von FixedCost + ApiRate + ExchangeRate-Fallback.
+    Re-run-safe: prueft COUNT pro Tabelle vor INSERT.
+    """
+    from database.db import SessionLocal
+    from database.models import FixedCost, ApiRate, ExchangeRate
+    from datetime import date
+    db = SessionLocal()
+    try:
+        # --- FixedCost Seed (D-10 Briefing-Defaults) ---
+        if db.query(FixedCost).count() == 0:
+            defaults = [
+                ('Hetzner CX22 VPS',         4.00,  19.00, 'monthly', '4806', 52),
+                ('nerve.app Domain',         1.25,  19.00, 'monthly', '4806', 57),
+                ('Kontist Geschaeftskonto',  4.95,  19.00, 'monthly', '4970', 57),
+                ('count.tax Steuerberater',  150.00, 19.00, 'monthly', '4950', 57),
+                ('Homeoffice Tagespauschale', 6.00, 0.00,  'per_day', '4590', 65),
+            ]
+            for name, amt, vat, cycle, skr, line in defaults:
+                db.add(FixedCost(name=name, amount_eur=amt, vat_rate=vat,
+                                 cycle=cycle, skr03=skr, eur_line=line, active=True))
+            print(f"[DB] Seeded {len(defaults)} fixed_costs (Phase 04.7.2)")
+
+        # --- ApiRate Seed (Briefing Default-Preise) ---
+        if db.query(ApiRate).count() == 0:
+            rates = [
+                ('anthropic',  'haiku-4-5',       'per_1k_input_tokens',  0.00025, 'USD'),
+                ('anthropic',  'haiku-4-5',       'per_1k_output_tokens', 0.00125, 'USD'),
+                ('anthropic',  'sonnet-4',        'per_1k_input_tokens',  0.003,   'USD'),
+                ('anthropic',  'sonnet-4',        'per_1k_output_tokens', 0.015,   'USD'),
+                ('deepgram',   'nova-2',          'per_minute',           0.0036,  'USD'),
+                ('elevenlabs', 'multilingual-v2', 'per_1k_chars',         0.30,    'USD'),
+                ('stripe',     'card',            'percent',              0.014,   'EUR'),
+                ('stripe',     'card',            'fixed_per_tx',         0.25,    'EUR'),
+            ]
+            for provider, model, unit_type, price, currency in rates:
+                db.add(ApiRate(provider=provider, model=model, unit_type=unit_type,
+                               price_per_unit=price, currency=currency, active=True,
+                               source_url=f'briefing:2026-03-31/{provider}'))
+            print(f"[DB] Seeded {len(rates)} api_rates (Phase 04.7.2)")
+
+        # --- ExchangeRate Fallback-Seed ---
+        if db.query(ExchangeRate).count() == 0:
+            db.add(ExchangeRate(date=date.today(), currency_pair='USD_EUR',
+                                rate=0.92, source='seed'))
+            print("[DB] Seeded initial USD_EUR fallback rate=0.92 (Phase 04.7.2)")
+
+        db.commit()
+    except Exception as e:
+        print(f"[DB] _seed_founder_dashboard_defaults failed: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+_seed_founder_dashboard_defaults()
+
+
 def _seed_prompt_versions(db=None):
     from database.db import SessionLocal
     from database.models import PromptVersion
