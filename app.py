@@ -291,6 +291,14 @@ def _seed_founder_dashboard_defaults():
 _seed_founder_dashboard_defaults()
 
 
+# ── Phase 04.7.2 — Wechselkurs-Scheduler (Frankfurter daily 06:00 UTC) ────────
+try:
+    from services.exchange_rates import start_scheduler
+    start_scheduler()
+except Exception as _fx_e:
+    print(f"[FX] scheduler start skipped: {_fx_e}")
+
+
 def _seed_prompt_versions(db=None):
     from database.db import SessionLocal
     from database.models import PromptVersion
