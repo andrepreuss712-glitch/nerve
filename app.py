@@ -97,6 +97,9 @@ def _migrate():
             ('oauth_provider', 'VARCHAR(50)'),
             ('oauth_id',       'VARCHAR(200)'),
             ('avatar_url',     'VARCHAR(500)'),
+            # Phase 04.7.1: Markt-Trennung (FT-Logging)
+            ('market',   "VARCHAR(10) NOT NULL DEFAULT 'dach'"),
+            ('language', "VARCHAR(10) NOT NULL DEFAULT 'de'"),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE users ADD COLUMN {col} {typedef}'))
@@ -168,6 +171,9 @@ def _migrate():
             ('session_mode', "VARCHAR(20) DEFAULT 'meeting'"),
             # Block 12: Sales Performance Calculator
             ('result', 'VARCHAR(20)'),
+            # Phase 04.7.1: Markt-Trennung (FT-Logging)
+            ('market',   "VARCHAR(10) NOT NULL DEFAULT 'dach'"),
+            ('language', "VARCHAR(10) NOT NULL DEFAULT 'de'"),
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE conversation_logs ADD COLUMN {col} {typedef}'))
