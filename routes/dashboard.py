@@ -3,7 +3,7 @@ import re
 import json
 import hashlib
 from datetime import datetime, timedelta, date
-from flask import Blueprint, render_template, redirect, url_for, g, session as flask_session, jsonify, request
+from flask import Blueprint, render_template, redirect, url_for, g, session as flask_session, jsonify, request, abort
 from routes.auth import login_required
 from database.db import get_session
 from database.models import Profile, User as UserModel, ConversationLog, Organisation
@@ -609,6 +609,45 @@ def get_notifications():
             })
 
     return jsonify({'notifications': notifs[:2]})
+
+
+@dashboard_bp.route('/analytics')
+@login_required
+def analytics_page():
+    from database.models import ConversationLog as CL
+    db = get_session()
+    try:
+        mode = (request.args.get('mode') or '').strip()
+        q = db.query(CL).filter(CL.user_id == g.user.id)
+        if mode in ('cold_call', 'meeting', 'training'):
+            q = q.filter(CL.session_mode == mode)
+        q = q.order_by(CL.id.desc()).limit(200)
+        rows = q.all()
+        return render_template('analytics.html',
+                               sessions=rows,
+                               active_mode=mode)
+    finally:
+        db.close()
+
+
+@dashboard_bp.route('/session/<int:sid>')
+@login_required
+def session_detail(sid):
+    from database.models import ConversationLog as CL, ObjectionEvent
+    db = get_session()
+    try:
+        conv = db.query(CL).filter(
+            CL.id == sid,
+            CL.user_id == g.user.id,
+        ).first()
+        if not conv:
+            abort(404)
+        events = db.query(ObjectionEvent).filter(
+            ObjectionEvent.conversation_log_id == sid,
+        ).all()
+        return render_template('session_detail.html', conv=conv, events=events)
+    finally:
+        db.close()
 
 
 @dashboard_bp.route('/api/analytics')

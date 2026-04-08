@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="n-page">
+  <h1 class="n-h1">Session History</h1>
+  <form method="get" class="n-filter-bar" style="display:flex;gap:8px;margin:16px 0">
+    <select name="mode" onchange="this.form.submit()" class="n-input">
+      <option value="">Alle Modi</option>
+      <option value="cold_call" {% if active_mode=='cold_call' %}selected{% endif %}>Cold Call</option>
+      <option value="meeting"   {% if active_mode=='meeting'   %}selected{% endif %}>Meeting</option>
+      <option value="training"  {% if active_mode=='training'  %}selected{% endif %}>Training</option>
+    </select>
+  </form>
+  <table class="n-table">
+    <thead>
+      <tr><th>ID</th><th>Modus</th><th>Start</th><th>Dauer</th><th>Einw&auml;nde</th><th>Erfolg</th><th>Result</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.session_mode or '&mdash;' }}</td>
+        <td>{{ s.started_at.strftime('%Y-%m-%d %H:%M') if s.started_at else '&mdash;' }}</td>
+        <td>{{ s.dauer_sekunden or 0 }}s</td>
+        <td>{{ s.einwaende_total or 0 }}</td>
+        <td>{{ s.einwaende_ok or 0 }}</td>
+        <td>{{ s.result or '&mdash;' }}</td>
+        <td><a class="n-btn n-btn-ghost" href="{{ url_for('dashboard.session_detail', sid=s.id) }}">Details</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">Noch keine Sessions.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<style>
+.n-table{width:100%;border-collapse:collapse;background:#1C2333;color:#fff;border-radius:10px;overflow:hidden}
+.n-table th,.n-table td{padding:10px 12px;border-bottom:1px solid #2D3748;text-align:left}
+.n-table thead{background:#0D1117;color:#00D4AA}
+.n-input{background:#0D1117;color:#fff;border:1px solid #2D3748;border-radius:8px;padding:8px 10px}
+</style>
+{% endblock %}
