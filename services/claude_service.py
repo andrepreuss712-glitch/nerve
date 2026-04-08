@@ -451,6 +451,22 @@ def rank_ewb(transcript_segments: list, einwaende_list: list) -> list:
             max_tokens=100,
             messages=[{'role': 'user', 'content': prompt}]
         )
+        # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
+        try:
+            from services.cost_tracker import log_api_cost
+            u = getattr(msg, 'usage', None)
+            if u is not None:
+                in_tok = getattr(u, 'input_tokens', 0) or 0
+                out_tok = getattr(u, 'output_tokens', 0) or 0
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=in_tok/1000.0, unit_type='per_1k_input_tokens',
+                             context_tag='ewb_rank')
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=out_tok/1000.0, unit_type='per_1k_output_tokens',
+                             context_tag='ewb_rank')
+        except Exception as _e:
+            print(f"[CostHook] claude ewb_rank skipped: {_e}")
+        # ────────────────────────────────────────────────────────────────────
         import re as _re
         raw = msg.content[0].text.strip()
         # Extract JSON array from response
@@ -479,6 +495,22 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         system=_build_system_prompt(),
         messages=[{"role": "user", "content": user_msg}]
     )
+    # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
+    try:
+        from services.cost_tracker import log_api_cost
+        u = getattr(msg, 'usage', None)
+        if u is not None:
+            in_tok = getattr(u, 'input_tokens', 0) or 0
+            out_tok = getattr(u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=in_tok/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='live_haiku')
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=out_tok/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='live_haiku')
+    except Exception as _e:
+        print(f"[CostHook] claude live_haiku skipped: {_e}")
+    # ────────────────────────────────────────────────────────────────────
     return _parse_json(msg.content[0].text.strip())
 
 
@@ -495,6 +527,22 @@ Aktuelles Gesprächssegment:
         system=_build_coaching_prompt(),
         messages=[{"role": "user", "content": user_msg}]
     )
+    # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
+    try:
+        from services.cost_tracker import log_api_cost
+        u = getattr(msg, 'usage', None)
+        if u is not None:
+            in_tok = getattr(u, 'input_tokens', 0) or 0
+            out_tok = getattr(u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'sonnet-4', user_id=None,
+                         units=in_tok/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='post_sonnet')
+            log_api_cost('anthropic', 'sonnet-4', user_id=None,
+                         units=out_tok/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='post_sonnet')
+    except Exception as _e:
+        print(f"[CostHook] claude post_sonnet skipped: {_e}")
+    # ────────────────────────────────────────────────────────────────────
     return _parse_json(msg.content[0].text.strip())
 
 
