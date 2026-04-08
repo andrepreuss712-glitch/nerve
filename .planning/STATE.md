@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.6-03-PLAN.md
-last_updated: "2026-04-07T16:52:27.726Z"
+stopped_at: Completed 04.7-02-PLAN.md
+last_updated: "2026-04-08T10:10:52.214Z"
 last_activity: 2026-04-07
 progress:
   total_phases: 28
   completed_phases: 8
-  total_plans: 61
-  completed_plans: 51
-  percent: 84
+  total_plans: 67
+  completed_plans: 54
+  percent: 81
 ---
 
 # Project State
@@ -198,6 +198,8 @@ Recent decisions affecting current work:
 - [Phase 04.6-sales-performance-calculator]: HTML entities used for special chars in dashboard.html (em dash, euro, emoji) — encoding safety, cosmetically identical
 - [Phase 04.6-sales-performance-calculator]: Chart.js CDN added to dashboard.html directly — only needed on dashboard, avoids loading on all pages
 - [Phase 04.6-sales-performance-calculator]: perfRenderReal auto-switches to sim mode when hat_daten=false — empty state UX per CONTEXT
+- [Phase 04.7]: session_start + session_end beide in api_beenden — kein HTTP-Start-Endpoint, Socket.IO hat kein g.user
+- [Phase 04.7]: Bootstrap4Theme() statt template_mode — flask-admin 2.x API
 
 ### Roadmap Evolution
 
@@ -244,6 +246,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-04T19:51:37.086Z
-Stopped at: Completed 04.6-03-PLAN.md
+Last session: 2026-04-08T10:10:52.099Z
+Stopped at: Completed 04.7-02-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
