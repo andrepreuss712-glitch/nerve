@@ -255,3 +255,30 @@ def test_dynamic_ewb_buttons_returns_fresh_list():
     b1.append("MUTATED")
     b2 = dynamic_ewb_buttons(1)
     assert "MUTATED" not in b2
+
+
+# ── Phase 04.8 P03: infer_cold_call_context wrapper ──────────────────────────
+
+def test_infer_cold_call_meeting_mode_skips():
+    from services.ki_logik import infer_cold_call_context
+    assert infer_cold_call_context(['blah'], 1, 'meeting',
+        haiku_caller=lambda a, b: {'x': 1}) is None
+
+
+def test_infer_cold_call_without_haiku_caller():
+    from services.ki_logik import infer_cold_call_context
+    assert infer_cold_call_context(['blah'], 1, 'cold_call') is None
+
+
+def test_infer_cold_call_invokes_haiku_caller():
+    from services.ki_logik import infer_cold_call_context
+    captured = {}
+    def fake(seg, phase):
+        captured['seg'] = seg
+        captured['phase'] = phase
+        return {'likely_customer_action': 'einwand', 'confidence': 0.8,
+                'recommended_next': 'nachhaken', 'ts': 'x'}
+    out = infer_cold_call_context(['a', 'b'], 3, 'cold_call', haiku_caller=fake)
+    assert out['likely_customer_action'] == 'einwand'
+    assert captured['seg'] == ['a', 'b']
+    assert captured['phase'] == 3
