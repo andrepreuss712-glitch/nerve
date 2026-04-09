@@ -156,9 +156,18 @@ def detect_phase(raw_phase: int, raw_confidence: float,
     return current_phase, raw_confidence
 
 
-def infer_cold_call_context(seller_transcript, current_phase):
-    """Infer customer state from seller-only audio (cold-call mode).
+def infer_cold_call_context(seller_transcript: list, current_phase: int,
+                             mode: str, haiku_caller=None) -> Optional[dict]:
+    """Thin wrapper around the Haiku cold-call inference helper (D-05).
 
-    Implemented in Phase 04.8 P03.
+    Skips entirely unless `mode == 'cold_call'` — meeting mode never triggers
+    a Haiku call (zero cost impact). `haiku_caller` is injectable for unit
+    tests; production wiring passes `claude_service.infer_customer_state`.
+
+    Returns the caller's dict result, or None when skipped/unavailable.
     """
-    raise NotImplementedError("infer_cold_call_context lands in Phase 04.8 P03")
+    if mode != 'cold_call':
+        return None
+    if not haiku_caller:
+        return None
+    return haiku_caller(seller_transcript, current_phase)

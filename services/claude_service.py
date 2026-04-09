@@ -521,6 +521,79 @@ def classify_phase(transcript_window, current_phase, elapsed_s, mode):
     return None
 
 
+COLDCALL_INFER_PROMPT = """Du bist Vertriebs-Assistent im Cold-Call-Modus. Du hörst NUR den Vertriebler — der Kunde ist nicht zu hören. Leite aus den letzten Aussagen des Vertrieblers den wahrscheinlichsten Kunden-State ab.
+
+Aktuelle Phase: {phase}
+Letzte Aussagen des Vertrieblers (chronologisch):
+{seller_transcript}
+
+Inferenzregeln (Beispiele):
+- Vertriebler wiederholt/umformuliert Frage → Kunde schweigt/zögert → recommended_next: "konkreter nachhaken"
+- Vertriebler sagt "verstehe", "klar", "das kann ich nachvollziehen" → Kunde hat Einwand geäußert → likely_customer_action: "einwand"
+- Vertriebler wird leiser/kürzer → Kunde übernimmt Gespräch → recommended_next: "zuhören, nicht unterbrechen"
+- Vertriebler nennt Preis und schweigt → Kunde prüft/rechnet → recommended_next: "Stille halten"
+- Vertriebler sagt "wann passt es Ihnen" → Kunde bei Terminfindung → likely_customer_action: "terminbereit"
+
+Antworte NUR als JSON:
+{{"likely_customer_action": "<max 8 Wörter>", "confidence": <0.0-1.0>, "recommended_next": "<max 10 Wörter>"}}"""
+
+
+def infer_customer_state(seller_transcript, phase):
+    """Haiku call for D-05 cold-call customer-state inference.
+    Returns dict or None on empty input / parse failure."""
+    if not seller_transcript:
+        return None
+    formatted = "\n".join(f"- {t}" for t in seller_transcript[-6:])
+    prompt = COLDCALL_INFER_PROMPT.format(phase=phase, seller_transcript=formatted)
+    try:
+        resp = claude_client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=120,
+            messages=[{'role': 'user', 'content': prompt}],
+        )
+        # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
+        try:
+            from services.cost_tracker import log_api_cost
+            u = getattr(resp, 'usage', None)
+            if u is not None:
+                in_tok = getattr(u, 'input_tokens', 0) or 0
+                out_tok = getattr(u, 'output_tokens', 0) or 0
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=in_tok/1000.0, unit_type='per_1k_input_tokens',
+                             context_tag='coldcall_infer')
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=out_tok/1000.0, unit_type='per_1k_output_tokens',
+                             context_tag='coldcall_infer')
+        except Exception as _e:
+            print(f"[CostHook] claude coldcall_infer skipped: {_e}")
+        # ────────────────────────────────────────────────────────────────────
+        text = resp.content[0].text.strip()
+        if text.startswith('```'):
+            text = text.strip('`')
+            if '\n' in text:
+                text = text.split('\n', 1)[1]
+            if text.endswith('```'):
+                text = text[:-3]
+            text = text.strip()
+        if text.startswith('json'):
+            text = text[4:].strip()
+        data = json.loads(text)
+        if not isinstance(data.get('likely_customer_action'), str):
+            return None
+        conf = float(data.get('confidence', 0.0))
+        if not 0.0 <= conf <= 1.0:
+            return None
+        return {
+            'likely_customer_action': data['likely_customer_action'][:200],
+            'confidence': conf,
+            'recommended_next': str(data.get('recommended_next', ''))[:200],
+            'ts': datetime.utcnow().isoformat(),
+        }
+    except Exception as e:
+        print(f"[coldcall_infer] error: {e}")
+        return None
+
+
 def analysiere_mit_claude(neuer_text: str, kontext: str) -> dict:
     user_msg = f"""Bisheriger Gesprächskontext (zur Orientierung, letzte Aussagen):
 {kontext if kontext else "(Kein vorheriger Kontext)"}
@@ -711,6 +784,23 @@ def analyse_loop():
                                 ls.state['_phase_cycle_at_last_change'] = _phase_cycle_counter
                                 print(f"[phase_classify] {cur_phase}→{new_phase} ({_PHASE_NAMES.get(new_phase,'')}) conf={new_conf:.2f} grund={raw.get('grund','')}")
                             ls.state['phase_confidence'] = new_conf
+                    # ── Phase 04.8 P03: Cold-call inference (coldcall mode only) ──
+                    try:
+                        from services.ki_logik import infer_cold_call_context
+                        with ls.state_lock:
+                            cc_mode = ls.state.get('mode', 'meeting')
+                            cc_phase = ls.state.get('current_phase', 1) or 1
+                        if cc_mode == 'cold_call':
+                            with ls.buffer_lock:
+                                seller_window = list(ls.analysiert_bisher[-6:])
+                            inference = infer_cold_call_context(
+                                seller_window, cc_phase, cc_mode,
+                                haiku_caller=infer_customer_state,
+                            )
+                            with ls.state_lock:
+                                ls.state['cold_call_inference'] = inference
+                    except Exception as e:
+                        print(f"[coldcall_infer] loop error: {e}")
                 except Exception as e:
                     print(f"[phase_classify] loop error: {e}")
         except Exception as e:
