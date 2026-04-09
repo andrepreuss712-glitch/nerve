@@ -25,7 +25,8 @@
       "Bash(curl:*)",
       "Bash(ssh:*)",
       "Bash(grep:*)",
-      "Skill(gsd:quick)"
+      "Skill(gsd:quick)",
+      "Skill(gsd-discuss-phase)"
     ]
   }
 }
