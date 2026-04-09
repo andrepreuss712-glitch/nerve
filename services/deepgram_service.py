@@ -39,12 +39,6 @@ def _make_on_message(sid):
                     return
 
             if result.is_final:
-                # Latenz-Optimierung: wake analyse_loop immediately on is_final
-                # instead of waiting for the MERGE_WINDOW flush (~1s) or the
-                # ANALYSE_INTERVALL fallback (2s). Idempotent — multiple sets
-                # coalesce; analyse_loop clears the event at loop start.
-                ls.analyse_trigger.set()
-                ls.coaching_trigger.set()
                 speaker = ls.stabilize_speaker(_get_speaker(result))
                 line_id = ls.next_line_id()
                 ts      = datetime.now().strftime('%H:%M:%S')

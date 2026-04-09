@@ -1,7 +1,11 @@
 // Browser mic: getUserMedia → AudioWorklet (PCM16) → Socket.IO → Server → Deepgram
 
 // ── Socket & DOM ──────────────────────────────────────────────────────────────
-const socket = io();
+const socket = io({
+  reconnectionAttempts: 3,
+  reconnectionDelay: 2000,
+  transports: ['polling']
+});
 const tr     = document.getElementById('tr');
 const ai     = document.getElementById('ai');
 let words = 0, einwaende = 0, analysen = 0;
