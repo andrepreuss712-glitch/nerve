@@ -1,12 +1,10 @@
 // Browser mic: getUserMedia → AudioWorklet (PCM16) → Socket.IO → Server → Deepgram
 
 // ── Socket & DOM ──────────────────────────────────────────────────────────────
-// 260409-s29: WebSocket-first transport (polling fallback if proxy blocks)
 const socket = io({
   reconnectionAttempts: 3,
   reconnectionDelay: 2000,
-  transports: ['websocket', 'polling'],
-  upgrade: true
+  transports: ['polling']
 });
 const tr     = document.getElementById('tr');
 const ai     = document.getElementById('ai');
@@ -552,7 +550,7 @@ async function beenden(){
     return;
   }
   if(!confirm('Gespräch beenden?\nLog wird gespeichert und State zurückgesetzt.')) return;
-  window._pollingActive = false;  // 260409-s29: legacy flag (poll chain removed, server push replaces it)
+  window._pollingActive = false;  // stop /api/ergebnis setTimeout chain
   stopMicStream();  // stop mic before ending session
   const pcLoading=document.getElementById('postcall-loading');
   if(pcLoading){pcLoading.style.display='flex';}
@@ -683,12 +681,14 @@ function zeigeKarte(d, lineId){
   updatePipFromErgebnis(d);
 }
 
-// 260409-s29: server push replaces HTTP polling (0-500ms latency saved).
-// analyse_loop emits 'ergebnis' whenever state advances. We keep an initial
-// GET /api/ergebnis once on load to seed baseline state in case analyse_loop
-// already ran before the socket connected.
-function handleErgebnis(data){
+// Latenz-Optimierung: self-scheduling setTimeout chain instead of setInterval.
+// The next /api/ergebnis poll only fires AFTER the previous response is fully
+// processed, preventing request queue buildup when the server is slow and
+// letting us stop cleanly by flipping window._pollingActive to false.
+window._pollingActive = true;
+async function pollErgebnis(){
   try{
+    const res=await fetch('/api/ergebnis');const data=await res.json();
     if(data.aktiv&&!paused) zeigeSpinner();
     if(data.version>letzteVersion&&data.ergebnis!==null){
       letzteVersion=data.version;
@@ -710,19 +710,12 @@ function handleErgebnis(data){
     if (data.ewb_buttons && Array.isArray(data.ewb_buttons) && data.ewb_buttons.length) {
       renderDynamicEwbButtons(data.ewb_buttons);
     }
-  }catch(e){console.error('[ERGEBNIS] Fehler:',e);}
+  }catch(e){console.error('[POLL] Fehler:',e);}
+  finally{
+    if(window._pollingActive) setTimeout(pollErgebnis, 500);
+  }
 }
-
-socket.on('ergebnis', handleErgebnis);
-
-// One-shot baseline fetch (reconnect race safety)
-(async () => {
-  try {
-    const res  = await fetch('/api/ergebnis');
-    const data = await res.json();
-    handleErgebnis(data);
-  } catch(e) { console.error('[ERGEBNIS-INIT] Fehler:', e); }
-})();
+pollErgebnis();
 
 // ── Gegenargument "Genutzt" Tracking ─────────────────────────────────────────
 function logGenutzt(cardId, option, einwandTyp){

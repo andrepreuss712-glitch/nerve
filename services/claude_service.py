@@ -886,34 +886,6 @@ def analyse_loop():
                 ls.kaufbereitschaft = score_p4  # module global mirror
             except Exception as e:
                 print(f"[readiness/active_hint] loop error: {e}")
-
-            # ── 260409-s29: server-push ergebnis to client via Socket.IO ──
-            # Replaces /api/ergebnis HTTP polling with push → 0-500ms latency gain.
-            # /api/ergebnis endpoint is kept as reconnect fallback.
-            try:
-                from extensions import socketio as _sio
-                with ls.state_lock:
-                    push_payload = {
-                        'version':             ls.state.get('version'),
-                        'aktiv':               ls.state.get('aktiv'),
-                        'ergebnis':            ls.state.get('ergebnis'),
-                        'line_id':             ls.state.get('line_id'),
-                        'kaufbereitschaft':    ls.state.get('kaufbereitschaft', 30),
-                        'ewb_top2':            ls.state.get('ewb_top2'),
-                        'current_phase':       ls.state.get('current_phase', 1),
-                        'current_phase_name':  ls.state.get('current_phase_name', 'Opener'),
-                        'phase_confidence':    ls.state.get('phase_confidence', 0.0),
-                        'readiness_score':     ls.state.get('readiness_score', 30),
-                        'readiness_bucket':    ls.state.get('readiness_bucket', 'cold'),
-                        'active_hint':         ls.state.get('active_hint'),
-                        'ewb_buttons':         ls.state.get('ewb_buttons'),
-                        'cold_call_inference': ls.state.get('cold_call_inference'),
-                        'speech_stats':        ls.state.get('speech_stats'),
-                    }
-                if _sio is not None:
-                    _sio.emit('ergebnis', push_payload)
-            except Exception as e:
-                print(f"[socketio-push] emit failed: {e}")
         except Exception as e:
             print(f"[Claude-1] Fehler: {e}")
             with ls.kb_lock:

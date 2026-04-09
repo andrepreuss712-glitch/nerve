@@ -1,9 +1,3 @@
-# ── 260409-s29: eventlet monkey-patch MUST be first (before any stdlib imports
-# that use threading/socket/ssl). Patches threading.Event/Lock so
-# live_session.analyse_trigger + state_lock cooperate with the eventlet loop.
-import eventlet
-eventlet.monkey_patch()
-
 import json
 import logging
 import os
@@ -37,7 +31,7 @@ app.config['MAX_CONTENT_LENGTH']   = 5 * 1024 * 1024  # 5 MB feedback uploads
 if SECRET_KEY == 'dev-secret-change-me' and not os.environ.get('FLASK_DEBUG'):
     raise RuntimeError('[NERVE] SECRET_KEY is insecure — set SECRET_KEY env var before starting in production')
 
-socketio = SocketIO(app, cors_allowed_origins=CORS_ORIGIN, async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins=CORS_ORIGIN, async_mode='threading')
 
 @app.template_filter('fromjson')
 def _fromjson(s):
