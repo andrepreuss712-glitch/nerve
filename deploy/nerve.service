@@ -17,12 +17,12 @@ WorkingDirectory=/opt/nerve/app
 # Environment — secrets live in /etc/nerve/.env (not in repo)
 EnvironmentFile=/etc/nerve/.env
 
-# gunicorn with gthread worker class (required for Flask-SocketIO threading mode)
-# 1 worker + 4 threads: optimal for CX22 (2 vCPU, 4 GB RAM) with Socket.IO
+# gunicorn with eventlet worker class for Flask-SocketIO eventlet async_mode
+# (260409-s29: WebSocket-first transport + server push)
+# 1 worker: eventlet uses a cooperative greenlet loop, no OS threads needed.
 ExecStart=/opt/nerve/venv/bin/gunicorn \
-    --worker-class gthread \
+    --worker-class eventlet \
     --workers 1 \
-    --threads 4 \
     --bind 127.0.0.1:8000 \
     --timeout 120 \
     --access-logfile - \
