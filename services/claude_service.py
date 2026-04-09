@@ -813,6 +813,79 @@ def analyse_loop():
                         print(f"[coldcall_infer] loop error: {e}")
                 except Exception as e:
                     print(f"[phase_classify] loop error: {e}")
+            # ── Phase 04.8 P04: Readiness score + active hint orchestration ──
+            try:
+                from services.ki_logik import (
+                    compute_readiness_score,
+                    select_active_hint,
+                    dynamic_ewb_buttons,
+                )
+                with ls.state_lock:
+                    factors = dict(ls.state.get('score_factors_seen') or {})
+                    cur_phase_p4 = ls.state.get('current_phase', 1) or 1
+                    cold_inf = ls.state.get('cold_call_inference')
+                # Tally factors from latest ergebnis (non-destructive — increments only)
+                if ergebnis:
+                    if ergebnis.get('kaufsignal'):
+                        factors['kaufsignal'] = factors.get('kaufsignal', 0) + 1
+                    if ergebnis.get('einwand') and ergebnis.get('einwand_geloest'):
+                        factors['einwand_geloest'] = factors.get('einwand_geloest', 0) + 1
+                    elif ergebnis.get('einwand'):
+                        factors['einwand_offen'] = factors.get('einwand_offen', 0) + 1
+                    for _k in ('detailfrage','budget_erwaehnt','naechster_schritt',
+                               'zustimmung','konkurrenz','zeitdruck_kunde','monosyllabisch'):
+                        if ergebnis.get(_k):
+                            factors[_k] = factors.get(_k, 0) + 1
+                score_p4, bucket_p4 = compute_readiness_score({'score_factors_seen': factors}, [])
+                # Build hint candidates
+                _now_iso = datetime.utcnow().isoformat()
+                candidates = []
+                if ergebnis.get('kritischer_fehler'):
+                    candidates.append({'type':'critical','priority':1,
+                        'text': str(ergebnis.get('kritischer_fehler'))[:120],
+                        'color':'red','source':'analyse_loop','ts': _now_iso})
+                if bucket_p4 == 'closing' and (ergebnis.get('kb_delta') or 0) > 0:
+                    candidates.append({'type':'kaufsignal','priority':2,
+                        'text':'Kaufsignal erkannt — jetzt abschließen',
+                        'color':'gold','source':'readiness_rule','ts': _now_iso})
+                if ergebnis.get('einwand') and ergebnis.get('gegenargument_1'):
+                    candidates.append({'type':'einwand','priority':3,
+                        'text': str(ergebnis.get('gegenargument_1'))[:120],
+                        'color':'orange','source':'analyse_loop','ts': _now_iso})
+                if cold_inf and cold_inf.get('recommended_next'):
+                    candidates.append({'type':'phase','priority':4,
+                        'text': str(cold_inf['recommended_next'])[:120],
+                        'color':'blue','source':'cold_call_infer','ts': _now_iso})
+                if ergebnis.get('tipp'):
+                    candidates.append({'type':'tipp','priority':5,
+                        'text': str(ergebnis.get('tipp'))[:120],
+                        'color':'gray','source':'analyse_loop','ts': _now_iso})
+                active_hint = select_active_hint(candidates)
+                # Dynamic EWB buttons for current phase (profile fallback)
+                try:
+                    if hasattr(ls, 'get_active_profile_ewbs'):
+                        base_buttons = ls.get_active_profile_ewbs()
+                    else:
+                        _pid, _pdata = ls.get_active_profile()
+                        base_buttons = None
+                        if _pdata:
+                            _eins = _pdata.get('einwaende') or []
+                            base_buttons = [e.get('einwand') or e.get('kategorie') or ''
+                                            for e in _eins if isinstance(e, dict)]
+                            base_buttons = [b for b in base_buttons if b]
+                except Exception:
+                    base_buttons = None
+                ewb_buttons = dynamic_ewb_buttons(cur_phase_p4, base_buttons)
+                with ls.state_lock:
+                    ls.state['score_factors_seen'] = factors
+                    ls.state['readiness_score'] = score_p4
+                    ls.state['readiness_bucket'] = bucket_p4
+                    ls.state['kaufbereitschaft'] = score_p4  # legacy mirror (RESEARCH Q2 R2)
+                    ls.state['active_hint'] = active_hint
+                    ls.state['ewb_buttons'] = ewb_buttons
+                ls.kaufbereitschaft = score_p4  # module global mirror
+            except Exception as e:
+                print(f"[readiness/active_hint] loop error: {e}")
         except Exception as e:
             print(f"[Claude-1] Fehler: {e}")
             with ls.kb_lock:
