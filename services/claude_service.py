@@ -521,27 +521,28 @@ def analysiere_coaching(segmente: list, kontext: str) -> dict:
 
 Aktuelles Gesprächssegment:
 {gespraech}"""
+    # Phase 04.8 P07: migrated Sonnet→Haiku per Haiku-only-live constraint
     msg = claude_client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         max_tokens=200,
         system=_build_coaching_prompt(),
         messages=[{"role": "user", "content": user_msg}]
     )
-    # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
+    # ── Phase 04.7.2 Cost-Hook (04.8 P07: Haiku) ────────────────────────
     try:
         from services.cost_tracker import log_api_cost
         u = getattr(msg, 'usage', None)
         if u is not None:
             in_tok = getattr(u, 'input_tokens', 0) or 0
             out_tok = getattr(u, 'output_tokens', 0) or 0
-            log_api_cost('anthropic', 'sonnet-4', user_id=None,
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                         context_tag='post_sonnet')
-            log_api_cost('anthropic', 'sonnet-4', user_id=None,
+                         context_tag='coaching_haiku')
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                         context_tag='post_sonnet')
+                         context_tag='coaching_haiku')
     except Exception as _e:
-        print(f"[CostHook] claude post_sonnet skipped: {_e}")
+        print(f"[CostHook] claude coaching_haiku skipped: {_e}")
     # ────────────────────────────────────────────────────────────────────
     return _parse_json(msg.content[0].text.strip())
 
@@ -670,7 +671,7 @@ def analyse_loop():
 
 
 def coaching_loop():
-    """Call 2 — Berater-Coaching (Sonnet, parallel)."""
+    """Call 2 — Berater-Coaching (Haiku, parallel). [04.8 P07: Sonnet→Haiku]"""
     import services.live_session as ls
     from extensions import socketio as sio
     _bof_count_local = 0  # local ref updated via ls._bof_lock
@@ -780,7 +781,7 @@ def coaching_loop():
                         module='coaching_live',
                         hint_type='coaching',
                         hint_text=_coach_text,
-                        model_used='claude-sonnet-4-6',
+                        model_used='claude-haiku-4-5-20251001',
                         context={
                             'hint_category': 'coaching',
                         },
