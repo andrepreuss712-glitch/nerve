@@ -89,6 +89,22 @@ state = {
     'kaufbereitschaft': 30,
     'ewb_top2':         None,  # List of 2 EWB type strings, AI-ranked
     'ewb_clicks':       [],    # Liste von dicts: {'einwand_typ': str, 'success': bool, 'ts': iso}
+    # ── Phase 04.8: Conversation Phase Model (6-phase auto-detected) ──
+    'current_phase':        1,
+    'current_phase_name':   'Opener',
+    'phase_confidence':     0.0,
+    'phase_changed_at':     None,
+    'phase_change_count':   0,
+    # ── Phase 04.8: Readiness Score (deterministic) ──
+    'readiness_score':      30,
+    'readiness_bucket':     'cold',
+    'score_factors_seen':   {},   # dict[str,int] — tally for compute_readiness_score
+    # ── Phase 04.8: Active Hint (single-slot prio winner) ──
+    'active_hint':          None,
+    # ── Phase 04.8: Dynamic EWB Buttons (phase-aware) ──
+    'ewb_buttons':          None,
+    # ── Phase 04.8: Cold-Call Inference ──
+    'cold_call_inference':  None,
 }
 
 # ── Conversation Log ──────────────────────────────────────────────────────────
@@ -271,6 +287,18 @@ def reset_session():
         state['line_id']          = None
         state['kaufbereitschaft'] = 30
         state['ewb_top2']         = None
+        # ── Phase 04.8 field resets (R3: missing resets cause stale hints) ──
+        state['current_phase']       = 1
+        state['current_phase_name']  = 'Opener'
+        state['phase_confidence']    = 0.0
+        state['phase_changed_at']    = None
+        state['phase_change_count']  = 0
+        state['readiness_score']     = 30
+        state['readiness_bucket']    = 'cold'
+        state['score_factors_seen']  = {}
+        state['active_hint']         = None
+        state['ewb_buttons']         = None
+        state['cold_call_inference'] = None
     with _line_id_lock:
         _line_id_counter = 0
     with _log_sp_lock:
