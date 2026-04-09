@@ -423,64 +423,102 @@ def _parse_json(raw: str) -> dict:
     return json.loads(raw[start:end])
 
 
-# ── EWB-Ranking (throttled, Option B) ────────────────────────────────────────
-_ewb_rank_counter = 0
+# ── Phase-Classifier (Phase 04.8 P02, D-01) ──────────────────────────────────
+# rank_ewb / EWB-Ranking Haiku call REMOVED per Phase 04.8 D-08 + user override.
+# Phase-based button table from briefing (ki_logik.PHASE_BUTTONS) replaces it.
 
-EWB_RANKING_PROMPT_BASE = """Basierend auf diesen letzten Gesprächssegmenten:
-{segments}
+_PHASE_NAMES = {
+    1: 'Opener',
+    2: 'Qualifizierung',
+    3: 'Bedarfsanalyse',
+    4: 'Pitch',
+    5: 'Einwandbehandlung',
+    6: 'Abschluss',
+}
 
-Welche 2 dieser Einwände kommen am wahrscheinlichsten als nächstes?
-Einwände: {einwaende}
+PHASE_CLASSIFIER_PROMPT = """Du klassifizierst die aktuelle Phase eines B2B-Verkaufsgesprächs.
 
-Antworte NUR mit einem JSON-Array der 2 wahrscheinlichsten: ["typ1", "typ2"]"""
+Die 6 Phasen (exakt in dieser Reihenfolge):
+1 = Opener — Begrüßung, Aufmerksamkeit gewinnen, Gesprächserlaubnis (0-3 Min)
+2 = Qualifizierung — Entscheider? Budget? Bedarf? (3-10 Min)
+3 = Bedarfsanalyse — Kunde artikuliert seinen Schmerz (10-20 Min)
+4 = Pitch — Lösungspräsentation, USPs auf Schmerz mappen (20-30 Min)
+5 = Einwandbehandlung — Einwand kam, wird adressiert (variabel)
+6 = Abschluss — Verbindliche Entscheidung herbeiführen (variabel)
+
+Aktueller Kontext:
+- Bisherige Phase: {current_phase}
+- Gesprächsdauer bisher: {elapsed_s} Sekunden
+- Modus: {mode}
+
+Letzte Gesprächsaussagen (chronologisch):
+{transcript_window}
+
+Bestimme die AKTUELLE Phase basierend auf den letzten Aussagen.
+Eine Phase kann bestehen bleiben. Phase 5 kann aus jeder späteren Phase zurück-aktiviert werden wenn ein Einwand kommt.
+
+Antworte NUR als JSON:
+{{"phase": <1-6>, "confidence": <0.0-1.0>, "grund": "<max 10 Wörter>"}}"""
 
 
-def rank_ewb(transcript_segments: list, einwaende_list: list) -> list:
-    """Rank top 2 most likely upcoming objections based on recent transcript."""
-    if not transcript_segments or not einwaende_list:
-        return einwaende_list[:2]
-    if len(einwaende_list) <= 2:
-        return einwaende_list[:2]
+def classify_phase(transcript_window, current_phase, elapsed_s, mode):
+    """Haiku call. Returns {'phase': int 1-6, 'confidence': float, 'grund': str}
+    or None on parse failure / empty input."""
+    if not transcript_window:
+        return None
+    formatted = "\n".join(f"- {t}" for t in transcript_window[-10:])
+    prompt = PHASE_CLASSIFIER_PROMPT.format(
+        current_phase=current_phase,
+        elapsed_s=int(elapsed_s or 0),
+        mode=mode or 'meeting',
+        transcript_window=formatted,
+    )
     try:
-        prompt = EWB_RANKING_PROMPT_BASE.format(
-            segments='\n'.join(transcript_segments[-5:]),
-            einwaende=', '.join(einwaende_list),
-        )
-        msg = claude_client.messages.create(
+        resp = claude_client.messages.create(
             model='claude-haiku-4-5-20251001',
-            max_tokens=100,
-            messages=[{'role': 'user', 'content': prompt}]
+            max_tokens=60,
+            messages=[{'role': 'user', 'content': prompt}],
         )
         # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
         try:
             from services.cost_tracker import log_api_cost
-            u = getattr(msg, 'usage', None)
+            u = getattr(resp, 'usage', None)
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='ewb_rank')
+                             context_tag='phase_classify')
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='ewb_rank')
+                             context_tag='phase_classify')
         except Exception as _e:
-            print(f"[CostHook] claude ewb_rank skipped: {_e}")
+            print(f"[CostHook] claude phase_classify skipped: {_e}")
         # ────────────────────────────────────────────────────────────────────
-        import re as _re
-        raw = msg.content[0].text.strip()
-        # Extract JSON array from response
-        match = _re.search(r'\[.*?\]', raw, _re.DOTALL)
-        if match:
-            result = json.loads(match.group(0))
-            if isinstance(result, list) and len(result) >= 2:
-                # Validate: only accept types that exist in the profile list
-                valid = [t for t in result if t in einwaende_list]
-                if len(valid) >= 2:
-                    return valid[:2]
+        text = resp.content[0].text.strip()
+        # strip markdown fences if present
+        if text.startswith('```'):
+            text = text.strip('`')
+            if '\n' in text:
+                text = text.split('\n', 1)[1]
+            if text.endswith('```'):
+                text = text[:-3]
+            text = text.strip()
+        # tolerate a leading "json" language hint
+        if text.startswith('json'):
+            text = text[4:].strip()
+        data = json.loads(text)
+        phase = int(data.get('phase', current_phase))
+        conf = float(data.get('confidence', 0.0))
+        if 1 <= phase <= 6 and 0.0 <= conf <= 1.0:
+            return {
+                'phase': phase,
+                'confidence': conf,
+                'grund': data.get('grund', ''),
+            }
     except Exception as e:
-        print(f'[EWB-Rank] Fehler: {e}')
-    return einwaende_list[:2]
+        print(f"[phase_classify] parse error: {e}")
+    return None
 
 
 def analysiere_mit_claude(neuer_text: str, kontext: str) -> dict:
@@ -551,7 +589,6 @@ def analyse_loop():
     """Call 1 — Einwand-Analyse (Haiku, schnell)."""
     import services.live_session as ls
     from extensions import socketio as sio
-    global _ewb_rank_counter
     while True:
         ls.analyse_trigger.wait(timeout=ANALYSE_INTERVALL)
         ls.analyse_trigger.clear()
@@ -641,23 +678,41 @@ def analyse_loop():
                 )
             except Exception as _e:
                 print(f"[FT] assistant_live hook skipped: {_e}")
-            # ── EWB-Ranking (throttled: every 3rd cycle) ──────────────────────
-            _ewb_rank_counter += 1
-            if _ewb_rank_counter % 3 == 0:
-                _, pdata = ls.get_active_profile()
-                ewb_list = []
-                if pdata and pdata.get('einwaende'):
-                    ewb_list = [e.get('typ') or e.get('name') or str(e)
-                                for e in pdata['einwaende'] if e]
-                    ewb_list = [t for t in ewb_list if isinstance(t, str) and t]
-                # Only rank when profile has EWBs; fallback (empty profile) handled client-side
-                if ewb_list:
+            # ── Phase 04.8: phase classifier (every 5th cycle) ────────────────
+            _phase_cycle_counter = getattr(analyse_loop, '_phase_cycle_counter', 0) + 1
+            analyse_loop._phase_cycle_counter = _phase_cycle_counter
+            if _phase_cycle_counter % 5 == 0:
+                try:
+                    from services.ki_logik import detect_phase
                     with ls.buffer_lock:
-                        recent_segs = list(ls.analysiert_bisher[-5:])
-                    top2 = rank_ewb(recent_segs, ewb_list)
+                        transcript_window = list(ls.analysiert_bisher[-10:])
                     with ls.state_lock:
-                        ls.state['ewb_top2'] = top2
-                    print(f'[EWB-Rank] Top2: {top2}')
+                        cur_phase = ls.state.get('current_phase', 1) or 1
+                        phase_change_count = ls.state.get('phase_change_count', 0) or 0
+                        last_change_cycle = ls.state.get('_phase_cycle_at_last_change', 0) or 0
+                        mode = ls.state.get('mode', 'meeting')
+                    elapsed_s = (time.time() - ls.session_start_ts) if hasattr(ls, 'session_start_ts') else 0
+                    raw = classify_phase(transcript_window, cur_phase, elapsed_s, mode)
+                    if raw:
+                        cycles_since_change = _phase_cycle_counter - last_change_cycle
+                        new_phase, new_conf = detect_phase(
+                            raw_phase=raw['phase'],
+                            raw_confidence=raw['confidence'],
+                            current_phase=cur_phase,
+                            phase_change_count=phase_change_count,
+                            cycles_since_change=cycles_since_change,
+                        )
+                        with ls.state_lock:
+                            if new_phase != cur_phase:
+                                ls.state['current_phase'] = new_phase
+                                ls.state['current_phase_name'] = _PHASE_NAMES.get(new_phase, '')
+                                ls.state['phase_changed_at'] = datetime.utcnow().isoformat()
+                                ls.state['phase_change_count'] = phase_change_count + 1
+                                ls.state['_phase_cycle_at_last_change'] = _phase_cycle_counter
+                                print(f"[phase_classify] {cur_phase}→{new_phase} ({_PHASE_NAMES.get(new_phase,'')}) conf={new_conf:.2f} grund={raw.get('grund','')}")
+                            ls.state['phase_confidence'] = new_conf
+                except Exception as e:
+                    print(f"[phase_classify] loop error: {e}")
         except Exception as e:
             print(f"[Claude-1] Fehler: {e}")
             with ls.kb_lock:
