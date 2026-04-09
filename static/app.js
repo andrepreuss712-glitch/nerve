@@ -175,6 +175,46 @@ function renderEwbButtons() {
   if (kpBar) kpBar.innerHTML = html;
 }
 
+// ── Phase 04.8: Active Hint + Phase/Readiness + Dynamic EWB ───────────────
+function renderActiveHint(hint) {
+  const ids = ['active-hint-slot','kp-active-hint','pip-active-hint'];
+  const slots = ids.map(id => document.getElementById(id)).filter(Boolean);
+  if (!hint) {
+    slots.forEach(s => { s.style.display='none'; s.innerHTML=''; });
+    return;
+  }
+  const symbol = hint.color === 'red' ? '\u26a0' : hint.color === 'gold' ? '\u2605' : '\u25cf';
+  const html = `<div class="hint-${hint.type||'tipp'}"><span class="hint-label">${symbol}</span><span class="hint-text">${escHtml(hint.text||'')}</span></div>`;
+  slots.forEach(s => { s.innerHTML = html; s.style.display = 'flex'; });
+}
+function renderPhaseBadge(phase, name, confidence) {
+  const el = document.getElementById('phaseBadge');
+  if (!el) return;
+  if (typeof phase === 'undefined' || phase === null) return;
+  el.textContent = `Phase ${phase} \u00b7 ${name || ''}`.trim();
+  el.classList.toggle('low-conf', (confidence||0) < 0.6);
+}
+function renderReadinessBadge(score, bucket) {
+  const el = document.getElementById('readinessBadge');
+  if (!el) return;
+  if (typeof score !== 'number') return;
+  el.textContent = `${score}%`;
+  el.className = `readiness-badge bucket-${bucket||'cold'}`;
+}
+function renderDynamicEwbButtons(buttons) {
+  if (!Array.isArray(buttons) || buttons.length === 0) return;
+  const bar   = document.getElementById('ewbBar');
+  const kpBar = document.getElementById('kp-ewbBar');
+  if (!bar && !kpBar) return;
+  const labels = buttons.map(b => (typeof b === 'string') ? b : (b && (b.label || b.typ || b.text)) || '').filter(Boolean);
+  if (!labels.length) return;
+  const html = labels.map(typ =>
+    `<button class="ewb-btn" onclick="triggerEwb('${escHtml(typ)}')" title="Einwand: ${escHtml(typ)}">\uD83D\uDEE1\uFE0F ${escHtml(typ)}</button>`
+  ).join('');
+  if (bar)   bar.innerHTML   = html;
+  if (kpBar) kpBar.innerHTML = html;
+}
+
 async function triggerEwb(einwandTyp) {
   // Find the clicked button and show loading state
   const buttons = document.querySelectorAll('.ewb-btn');
@@ -652,6 +692,13 @@ setInterval(async()=>{
     // Update PiP EWB buttons if AI selection provided
     if(data.ewb_top2 && Array.isArray(data.ewb_top2) && data.ewb_top2.length >= 2){
       renderPipEwbButtons(data.ewb_top2);
+    }
+    // Phase 04.8: active hint + phase/readiness badges + dynamic EWB
+    renderActiveHint(data.active_hint);
+    renderPhaseBadge(data.current_phase, data.current_phase_name, data.phase_confidence);
+    renderReadinessBadge(data.readiness_score, data.readiness_bucket);
+    if (data.ewb_buttons && Array.isArray(data.ewb_buttons) && data.ewb_buttons.length) {
+      renderDynamicEwbButtons(data.ewb_buttons);
     }
   }catch(e){console.error('[POLL] Fehler:',e);}
 },500);
