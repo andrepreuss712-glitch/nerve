@@ -599,6 +599,8 @@
     </div>
     <a class="back-link" href="/dashboard">&larr; Dashboard</a>
     <span class="mode-badge" id="modeBadge">{{ session_mode_label or 'Meeting' }}</span>
+    <span id="phaseBadge" class="phase-badge">Phase 1 · Opener</span>
+    <span id="readinessBadge" class="readiness-badge bucket-cold">30%</span>
     <div class="status">
       <div class="dot" id="dot"></div>
       <span id="st" style="display:none">Verbinde...</span>
@@ -704,6 +706,7 @@
     <div class="panel panel-einwand">
       <div class="panel-header"><span>⚡</span> KI-Einwandbehandlung</div>
       <div class="scroll n-ai-panel" id="ai" style="border-radius:0;border:none;border-top:none;padding:14px 16px">
+        <div id="active-hint-slot" class="active-hint-slot" style="display:none"></div>
         <!-- Opener Section (D-19) -->
         <div class="opener-section n-glass" id="opener-section" style="padding:16px;margin-bottom:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -805,6 +808,7 @@
     <button class="kp-btn kp-btn-expand" onclick="closePipToVollbild()">▶ Vollbild</button>
     <span class="kp-profile" id="kp-profileName">{{ active_profile.name if active_profile else '–' }}</span>
   </div>
+  <div id="kp-active-hint" class="active-hint-slot kompakt" style="display:none"></div>
   <div class="kp-skript" id="kp-skript">
     <div class="kp-section-label" style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--page-text-muted);text-transform:uppercase;margin-bottom:3px">📋 Nächster Punkt</div>
     <div class="kp-skript-text" id="kp-skript-text">–</div>
@@ -889,6 +893,8 @@
       <div class="pip-tip-text" id="pip-ewb-text">EWB-Vorschlaege werden geladen...</div>
     </div>
   </div>
+
+  <div id="pip-active-hint" class="active-hint-slot pip" style="display:none"></div>
 
   <!-- EWB row (always visible at bottom) -->
   <div class="pip-ewb-row" id="pip-ewb-row"></div>

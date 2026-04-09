@@ -1723,3 +1723,24 @@ input[type="range"].perf-slider::-moz-range-thumb {
   .db2-perf-kpis { grid-template-columns: 1fr; }
   .db2-greeting { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Phase 04.8: Active Hint Slot + Phase/Readiness Badges ──────────────── */
+.active-hint-slot { padding:12px 16px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:10px; font-size:14px; line-height:1.3; }
+.active-hint-slot > div { display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:6px; }
+.active-hint-slot .hint-label { font-size:18px; }
+.active-hint-slot .hint-critical   { background:#3a1515; color:#ff6b6b; border-left:3px solid #ff4444; }
+.active-hint-slot .hint-kaufsignal { background:#2d2518; color:#ffd166; border-left:3px solid #ffc00e; }
+.active-hint-slot .hint-einwand    { background:#2d1f15; color:#ff9a3c; border-left:3px solid #ff7a1a; }
+.active-hint-slot .hint-phase      { background:#152530; color:#6bb6ff; border-left:3px solid #3a8fd8; }
+.active-hint-slot .hint-tipp       { background:#1C2333; color:#a0a8b8; border-left:3px solid #4a5568; }
+.active-hint-slot.kompakt { padding:8px 12px; font-size:12px; }
+.active-hint-slot.pip     { padding:6px 10px; font-size:11px; border-radius:6px; }
+
+.phase-badge { padding:4px 10px; border-radius:12px; background:#1C2333; color:#00D4AA; font-size:12px; font-weight:600; }
+.phase-badge.low-conf { opacity:0.55; }
+.readiness-badge { padding:4px 10px; border-radius:12px; font-size:12px; font-weight:700; }
+.readiness-badge.bucket-cold    { background:#152530; color:#6bb6ff; }
+.readiness-badge.bucket-warm    { background:#2d2518; color:#ffd166; }
+.readiness-badge.bucket-hot     { background:#2d1f15; color:#ff9a3c; }
+.readiness-badge.bucket-closing { background:#153020; color:#00D4AA; }
+
