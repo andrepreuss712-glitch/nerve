@@ -320,7 +320,6 @@ def _seed_prompt_versions(db=None):
     from services.claude_service import (
         SYSTEM_PROMPT_BASE,
         COACHING_PROMPT_BASE,
-        EWB_RANKING_PROMPT_BASE,
     )
     from routes.app_routes import (
         OBJECTION_TRIGGER_PROMPT_BASE,
@@ -328,11 +327,12 @@ def _seed_prompt_versions(db=None):
     )
     from services.training_service import TRAINING_PERSONA_PROMPT_BASE
 
+    # ewb_ranking module removed in Phase 04.8 (D-08): rank_ewb Haiku call
+    # deleted in favor of deterministic phase-based button tables.
     modules = [
         ('assistant_live',    SYSTEM_PROMPT_BASE),
         ('coaching_live',     COACHING_PROMPT_BASE),
         ('objection_trigger', OBJECTION_TRIGGER_PROMPT_BASE),
-        ('ewb_ranking',       EWB_RANKING_PROMPT_BASE),
         ('api_frage',         API_FRAGE_PROMPT_BASE),
         ('training_persona',  TRAINING_PERSONA_PROMPT_BASE),
     ]
