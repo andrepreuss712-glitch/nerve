@@ -205,6 +205,7 @@ function renderReadinessBadge(score, bucket) {
   el.textContent = `${score}%`;
   el.className = `readiness-badge bucket-${bucket||'cold'}`;
 }
+let _lastEwbKey = '';  // skip re-render when buttons unchanged
 function renderDynamicEwbButtons(buttons) {
   if (!Array.isArray(buttons) || buttons.length === 0) return;
   const bar   = document.getElementById('ewbBar');
@@ -212,6 +213,9 @@ function renderDynamicEwbButtons(buttons) {
   if (!bar && !kpBar) return;
   const labels = buttons.map(b => (typeof b === 'string') ? b : (b && (b.label || b.typ || b.text)) || '').filter(Boolean);
   if (!labels.length) return;
+  const key = labels.join('|');
+  if (key === _lastEwbKey) return;  // no change → keep DOM intact (preserves hover)
+  _lastEwbKey = key;
   const html = labels.map(typ =>
     `<button class="ewb-btn" onclick="triggerEwb('${escHtml(typ)}')" title="Einwand: ${escHtml(typ)}">\uD83D\uDEE1\uFE0F ${escHtml(typ)}</button>`
   ).join('');
