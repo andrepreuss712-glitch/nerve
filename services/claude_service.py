@@ -45,6 +45,16 @@ Falls KEIN Einwand:
 
 Falls Einwand erkannt:
 {"einwand": true, "typ": "Einwand-Typ", "intensitaet": "mittel oder hoch", "ist_vorwand": false, "einwand_zitat": "Wörtliches Zitat max 15 Wörter", "gegenargument_1": "Erster Ansatz, direkt, 2-3 Sätze reiner Text, mit offener Gegenfrage", "gegenargument_2": "Alternativer Ansatz, weicher oder aus anderer Perspektive, 2-3 Sätze reiner Text, mit offener Gegenfrage"}
+
+Zusätzlich (Phase 04.8 — Score-Signale): In JEDER Antwort (egal ob Einwand oder nicht) darfst du die folgenden optionalen Boolean-Flags ergänzen. Alle Flags sind optional — bei Unsicherheit false. Antworte ausschließlich gültiges JSON.
+- "einwand_geloest": bool — true wenn der Kunde einen zuvor genannten Einwand in diesem Transcript-Fenster akzeptiert oder zurückgenommen hat
+- "detailfrage": bool — true wenn der Kunde konkrete Detailfragen zum Produkt/Prozess/Vertrag stellt
+- "budget_erwaehnt": bool — true wenn der Kunde konkrete Zahlen oder Budget nennt
+- "naechster_schritt": bool — true wenn der Kunde aktiv nach nächsten Schritten, Timing, oder Folgetermin fragt
+- "zustimmung": bool — true wenn der Kunde deutlich zustimmt oder bestätigt
+- "konkurrenz": bool — true wenn der Kunde Konkurrenzprodukte oder -anbieter erwähnt
+- "zeitdruck_kunde": bool — true wenn der Kunde Zeitdruck oder Dringlichkeit als Hindernis signalisiert
+- "monosyllabisch": bool — true wenn der Kunde im aktuellen Fenster überwiegend kurze einsilbige Antworten gibt
 """
 
 COACHING_PROMPT_BASE = """Du bist ein Sales-Coach der live ein Beratungsgespräch beobachtet.
