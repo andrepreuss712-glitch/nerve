@@ -24,10 +24,13 @@ OBJECTION_TRIGGER_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent. Der 
 {profile_ctx}
 Einwand-Typ: {einwand_typ}
 
+Aktuelle Phase: {current_phase_name} (Phase {current_phase})
+Aktuelle Kaufbereitschaft: {readiness_score}% ({readiness_bucket})
+{inference_hint}
 Letzter Gesprächskontext:
 {ctx_text}
 
-Liefere ein konkretes Gegenargument für den Einwand "{einwand_typ}". Max 2-3 Sätze. Kein Fettdruck, kein Markdown. Ende mit einer offenen Gegenfrage."""
+Liefere ein konkretes Gegenargument für den Einwand "{einwand_typ}", passend zur aktuellen Phase und Kaufbereitschaft. Max 2-3 Sätze. Kein Fettdruck, kein Markdown. Ende mit einer offenen Gegenfrage."""
 
 
 @app_routes_bp.route('/live')
@@ -639,10 +642,26 @@ def api_ewb_trigger():
         if ki.get('zusatz'):
             profile_ctx += f'KI-Anweisung: {ki["zusatz"]}\n'
 
+    # Read live state context under lock (D-07 + D-10)
+    with ls.state_lock:
+        cur_phase      = ls.state.get('current_phase', 1)
+        cur_phase_name = ls.state.get('current_phase_name', 'Opener')
+        score          = ls.state.get('readiness_score', 30)
+        bucket         = ls.state.get('readiness_bucket', 'cold')
+        cold_inf       = ls.state.get('cold_call_inference')
+    inference_hint = ''
+    if cold_inf and isinstance(cold_inf, dict) and cold_inf.get('likely_customer_action'):
+        inference_hint = f"Cold-Call-Kontext: Kunde scheint {cold_inf['likely_customer_action']}"
+
     prompt = OBJECTION_TRIGGER_PROMPT_BASE.format(
         profile_ctx=profile_ctx,
         einwand_typ=einwand_typ,
         ctx_text=ctx_text if ctx_text else '(kein Kontext)',
+        current_phase=cur_phase,
+        current_phase_name=cur_phase_name,
+        readiness_score=score,
+        readiness_bucket=bucket,
+        inference_hint=inference_hint,
     )
 
     try:
@@ -674,7 +693,6 @@ def api_ewb_trigger():
                 user_id = ls.state.get('user_id')
                 market = ls.state.get('market') or 'dach'
                 language = ls.state.get('language') or 'de'
-            readiness_before = getattr(ls, 'kaufbereitschaft', None)
             if ft_session_id and user_id:
                 db_ft = get_session()
                 try:
@@ -684,9 +702,9 @@ def api_ewb_trigger():
                         market=market,
                         language=language,
                         timestamp_ms=int(_t.time() * 1000),
-                        objection_type=einwand_typ or 'unknown',
-                        conversation_phase='unknown',
-                        readiness_score_before=readiness_before,
+                        objection_type=einwand_typ or 'unbekannt',
+                        conversation_phase=cur_phase_name,
+                        readiness_score_before=score,
                         recommended_response=antwort,
                         recommendation_used=False,
                         model_used='claude-haiku-4-5-20251001',
