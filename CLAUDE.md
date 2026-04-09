@@ -265,6 +265,13 @@ Use these entry points:
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
 
+## Git-Regel: Immer pushen
+
+Nach jeder abgeschlossenen GSD-Phase und am Ende jeder Arbeitssession: `git push origin main` ausführen. GitHub muss immer den aktuellen Stand haben.
+
+- **Wann:** Phase fertig, Session-Ende, vor riskanten Änderungen
+- **Kein Auto-Push per Hook:** GSD macht 20+ Commits pro Phase. Ein Push am Ende reicht — gleich sicher, null Overhead.
+- **Secrets:** Keine API-Keys, OAuth-Credentials oder Passwörter in committed Files. Alles in `.env`, Referenz in Code als `→ siehe .env`.
 
 
 <!-- GSD:profile-start -->
