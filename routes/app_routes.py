@@ -130,8 +130,17 @@ def api_ergebnis():
             'aktiv':            ls.state['aktiv'],
             'ergebnis':         ls.state['ergebnis'],
             'line_id':          ls.state['line_id'],
-            'kaufbereitschaft': ls.state.get('kaufbereitschaft', 30),
-            'ewb_top2':         ls.state.get('ewb_top2'),  # AI-ranked top 2 EWBs, or None
+            'kaufbereitschaft': ls.state.get('kaufbereitschaft', 30),   # legacy alias (P04: mirrors readiness_score)
+            'ewb_top2':         ls.state.get('ewb_top2'),  # legacy (may be None post-04.8)
+            # ── Phase 04.8 additions ──
+            'current_phase':       ls.state.get('current_phase', 1),
+            'current_phase_name':  ls.state.get('current_phase_name', 'Opener'),
+            'phase_confidence':    ls.state.get('phase_confidence', 0.0),
+            'readiness_score':     ls.state.get('readiness_score', 30),
+            'readiness_bucket':    ls.state.get('readiness_bucket', 'cold'),
+            'active_hint':         ls.state.get('active_hint'),
+            'ewb_buttons':         ls.state.get('ewb_buttons'),
+            'cold_call_inference': ls.state.get('cold_call_inference'),
         }
     payload['speech_stats'] = ls.get_speech_stats()
     if payload['version'] > _letzte_gemeldete_version:
