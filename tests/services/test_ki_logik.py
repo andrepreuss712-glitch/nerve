@@ -9,9 +9,71 @@ from services.ki_logik import (
     SCORE_BASE,
     SCORE_FACTORS,
     compute_readiness_score,
+    detect_phase,
     dynamic_ewb_buttons,
     select_active_hint,
 )
+
+
+# ── detect_phase (Phase 04.8 P02 hysteresis) ─────────────────────────────────
+
+def test_detect_phase_same_phase_passes_through():
+    assert detect_phase(3, 0.42, current_phase=3) == (3, 0.42)
+
+
+def test_detect_phase_forward_low_conf_blocked():
+    # 2 → 3 with conf 0.6 < 0.7 → stays at 2
+    new, conf = detect_phase(3, 0.6, current_phase=2)
+    assert new == 2
+    assert conf == 0.6
+
+
+def test_detect_phase_forward_high_conf_advances():
+    new, conf = detect_phase(3, 0.75, current_phase=2)
+    assert new == 3
+    assert conf == 0.75
+
+
+def test_detect_phase_forward_skip_multiple_allowed():
+    # 1 → 4 with high conf allowed (forward progression, no skip penalty)
+    new, _ = detect_phase(4, 0.9, current_phase=1)
+    assert new == 4
+
+
+def test_detect_phase_regress_to_5_allowed_with_debounce():
+    # 4 → 5 with conf 0.85, 3 cycles since last change → allowed
+    new, conf = detect_phase(5, 0.85, current_phase=4, cycles_since_change=3)
+    assert new == 5
+    assert conf == 0.85
+
+
+def test_detect_phase_regress_to_5_from_6_allowed():
+    new, _ = detect_phase(5, 0.9, current_phase=6, cycles_since_change=5)
+    assert new == 5
+
+
+def test_detect_phase_regress_to_5_debounce_blocks():
+    # 6 → 5 with cycles_since_change < 3 → BLOCKED even with high conf
+    new, _ = detect_phase(5, 0.9, current_phase=6, cycles_since_change=2)
+    assert new == 6
+
+
+def test_detect_phase_regress_to_5_low_conf_blocks():
+    # 6 → 5 with conf < 0.8 → BLOCKED
+    new, _ = detect_phase(5, 0.75, current_phase=6, cycles_since_change=5)
+    assert new == 6
+
+
+def test_detect_phase_regress_to_non_5_always_blocked():
+    # 4 → 3 always blocked regardless of confidence
+    new, _ = detect_phase(3, 0.99, current_phase=4, cycles_since_change=10)
+    assert new == 4
+
+
+def test_detect_phase_regress_from_phase_6_to_3_blocked():
+    # Regression target != 5 → always blocked
+    new, _ = detect_phase(3, 0.99, current_phase=6, cycles_since_change=10)
+    assert new == 6
 
 
 # ── compute_readiness_score ──────────────────────────────────────────────────

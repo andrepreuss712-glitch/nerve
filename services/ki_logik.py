@@ -126,13 +126,34 @@ def dynamic_ewb_buttons(phase: int, base_buttons: Optional[list] = None) -> list
 
 # ── Stubs for Phase 04.8 P02/P03 implementation ──────────────────────────────
 
-def detect_phase(transcript_window, current_phase, elapsed_s, mode):
-    """Classify current conversation phase (1-6) via Haiku helper.
+def detect_phase(raw_phase: int, raw_confidence: float,
+                 current_phase: int, phase_change_count: int = 0,
+                 cycles_since_change: int = 0) -> tuple:
+    """Hysteresis rule for phase transitions (Phase 04.8 P02, RESEARCH §Q4).
 
-    Implemented in Phase 04.8 P02. Raises until then to fail loud if a
-    caller wires it in prematurely.
+    Returns (accepted_phase, accepted_confidence).
+
+    Rules:
+    - Same phase → pass through
+    - Forward advance requires confidence >= 0.7
+    - Regression is only allowed to Phase 5 (Einwandbehandlung) AND only with
+      confidence >= 0.8 AND cycles_since_change >= 3 (3-cycle debounce) AND
+      current_phase >= 2 (Phase 1 cannot regress).
+    - All other regressions are blocked (flicker suppression).
     """
-    raise NotImplementedError("detect_phase lands in Phase 04.8 P02")
+    if raw_phase == current_phase:
+        return current_phase, raw_confidence
+    if raw_phase > current_phase:
+        if raw_confidence < 0.7:
+            return current_phase, raw_confidence
+        return raw_phase, raw_confidence
+    # regression: only to phase 5, with strong evidence + debounce
+    if (raw_phase == 5
+            and raw_confidence >= 0.8
+            and cycles_since_change >= 3
+            and current_phase >= 2):
+        return 5, raw_confidence
+    return current_phase, raw_confidence
 
 
 def infer_cold_call_context(seller_transcript, current_phase):
