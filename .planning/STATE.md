@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 04.9 context gathered
-last_updated: "2026-04-10T14:06:12.895Z"
-last_activity: 2026-04-10 -- Phase 04.8.1 complete
+status: executing
+stopped_at: Completed 04.9-01-PLAN.md
+last_updated: "2026-04-10T14:35:20.135Z"
+last_activity: 2026-04-10
 progress:
   total_phases: 29
   completed_phases: 13
-  total_plans: 91
-  completed_plans: 82
-  percent: 90
+  total_plans: 96
+  completed_plans: 83
+  percent: 86
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.8.1 — echtzeit-engine-rebuild COMPLETE
+**Current focus:** Phase 04.9 — Training-Modul Upgrade
 
 ## Current Position
 
-Phase: 04.8.1 (echtzeit-engine-rebuild) — COMPLETE ✓
-Plan: 5 of 5 ✓
-Status: All plans executed, verification passed
-Last activity: 2026-04-10 -- Phase 04.8.1 complete
+Phase: 04.9 (Training-Modul Upgrade) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-04-10
 
 **Next:** Next phase in roadmap
 
@@ -103,6 +103,7 @@ Progress: [█████████░] ~90% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.8.1 P03 | 2 | 2 tasks | 3 files |
 | Phase 04.8.1 P04 | 3min | 2 tasks | 4 files |
 | Phase 04.8.1 P05 | 3min | 2 tasks | 5 files |
+| Phase 04.9-training-modul-upgrade-inserted P01 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -229,6 +230,9 @@ Recent decisions affecting current work:
 - [Phase 04.8.1]: Sync redis-py in Flask (not async) — Flask is threaded, not asyncio
 - [Phase 04.8.1]: pollErgebnis starts inactive — only activated by startPolling() or 3s WS timeout
 - [Phase 04.8.1]: EWB clicks forwarded to Engine before Flask API call for D-05 ground truth
+- [Phase 04.9]: System personality types seeded via INSERT OR IGNORE in _migrate() — idempotent, runs on every app start
+- [Phase 04.9]: System training scenarios use org_id=first_org.id with erstellt_von=NULL as system marker — avoids NOT NULL constraint without schema change
+- [Phase 04.9]: SCHWIERIGKEITEN internal keys unchanged (leicht/mittel/schwer) — only display labels updated to Einsteiger/Fortgeschritten/Experte
 
 ### Roadmap Evolution
 
@@ -277,6 +281,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T14:06:12.891Z
-Stopped at: Phase 04.9 context gathered
+Last session: 2026-04-10T14:35:20.131Z
+Stopped at: Completed 04.9-01-PLAN.md
 Resume: Next phase in roadmap

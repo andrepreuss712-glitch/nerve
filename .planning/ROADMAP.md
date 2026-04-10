@@ -371,10 +371,10 @@ Plans:
 **Depends on:** Phase 04.8
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training-Modul.md`
 **Requirements:** D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 
 Plans:
-- [ ] 04.9-01-PLAN.md — DB foundation: PersonalityType model, 6 system types seed, ConversationLog extension, system scenarios, difficulty labels (D-01, D-03, D-04, D-11)
+- [x] 04.9-01-PLAN.md — DB foundation: PersonalityType model, 6 system types seed, ConversationLog extension, system scenarios, difficulty labels (D-01, D-03, D-04, D-11)
 - [ ] 04.9-02-PLAN.md — AI logic: build_personality_prompt() + generate_response_with_mood() with mood tracking and auflege rules (D-08, D-10)
 - [ ] 04.9-03-PLAN.md — Backend API: personality endpoints (list/generate/save), training start/respond/end wiring, scenario list fix (D-02, D-03, D-05, D-06, D-13)
 - [ ] 04.9-04-PLAN.md — Frontend setup + chat: personality type cards, scenario step, mood indicator, hangup UX, save prompt (D-02, D-05, D-06, D-07, D-09, D-12, D-13)
