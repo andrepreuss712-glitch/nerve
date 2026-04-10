@@ -210,19 +210,17 @@ function renderDynamicEwbButtons(buttons) {
   if (!Array.isArray(buttons) || buttons.length === 0) return;
   const bar   = document.getElementById('ewbBar');
   const kpBar = document.getElementById('kp-ewbBar');
-  if (!bar && !kpBar) { console.warn('[EWB] bar+kpBar not found!'); return; }
+  if (!bar && !kpBar) return;
   const labels = buttons.map(b => (typeof b === 'string') ? b : (b && (b.label || b.typ || b.text)) || '').filter(Boolean);
   if (!labels.length) return;
   const key = labels.join('|');
   if (key === _lastEwbKey) return;  // no change → keep DOM intact (preserves hover)
-  console.warn('[EWB] BUTTONS CHANGED:', _lastEwbKey, '→', key);
-  document.title = 'EWB: ' + labels.join(', ');  // DEBUG — sichtbar im Tab-Titel
   _lastEwbKey = key;
   const html = labels.map(typ =>
     `<button class="ewb-btn" onclick="triggerEwb('${escHtml(typ)}')" title="Einwand: ${escHtml(typ)}">\uD83D\uDEE1\uFE0F ${escHtml(typ)}</button>`
   ).join('');
-  if (bar)   { bar.innerHTML = html; console.warn('[EWB] ewbBar updated'); }
-  if (kpBar) { kpBar.innerHTML = html; console.warn('[EWB] kp-ewbBar updated'); }
+  if (bar)   bar.innerHTML   = html;
+  if (kpBar) kpBar.innerHTML = html;
 }
 
 async function triggerEwb(einwandTyp) {
