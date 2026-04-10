@@ -224,6 +224,9 @@ function renderDynamicEwbButtons(buttons) {
 }
 
 async function triggerEwb(einwandTyp) {
+  // Forward EWB click to Engine for shadow mode ground truth (D-05)
+  sendRTControl({ type: 'ewb_click', einwand_typ: einwandTyp });
+
   // Find the clicked button and show loading state
   const buttons = document.querySelectorAll('.ewb-btn');
   const clickedBtn = Array.from(buttons).find(b => b.textContent.includes(einwandTyp));
@@ -555,6 +558,10 @@ async function beenden(){
   }
   if(!confirm('Gespräch beenden?\nLog wird gespeichert und State zurückgesetzt.')) return;
   window._pollingActive = false;  // stop /api/ergebnis setTimeout chain
+  // Stop RT Engine WebSocket (Phase 04.8.1 — D-06)
+  sendRTControl({ type: 'stop_session' });
+  if (rtSocket) { rtSocket.close(); rtSocket = null; }
+  rtConnected = false;
   stopMicStream();  // stop mic before ending session
   const pcLoading=document.getElementById('postcall-loading');
   if(pcLoading){pcLoading.style.display='flex';}
@@ -685,11 +692,126 @@ function zeigeKarte(d, lineId){
   updatePipFromErgebnis(d);
 }
 
+// ── RT Engine WebSocket (Phase 04.8.1 — D-06) ───────────────────────────────
+// Native WebSocket to Engine for real-time push. Falls back to HTTP polling
+// if Engine is unavailable (D-07: build alongside).
+let rtSocket = null;
+let rtConnected = false;
+
+function connectRTEngine() {
+    if (!window._rtSessionToken) {
+        console.log('[RT] No session token — using polling fallback');
+        startPolling();
+        return;
+    }
+
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${location.host}/ws/${window._rtSessionToken}`;
+    console.log('[RT] Connecting to Engine...');
+
+    try {
+        rtSocket = new WebSocket(wsUrl);
+    } catch (e) {
+        console.warn('[RT] WebSocket create failed, falling back to polling:', e);
+        startPolling();
+        return;
+    }
+
+    rtSocket.onopen = () => {
+        console.log('[RT] Engine connected');
+        rtConnected = true;
+        window._pollingActive = false;  // Stop polling when WS is active
+    };
+
+    rtSocket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            handleRTMessage(data);
+        } catch (e) {
+            console.error('[RT] Message parse error:', e);
+        }
+    };
+
+    rtSocket.onclose = (event) => {
+        console.log(`[RT] Connection closed (code=${event.code})`);
+        rtConnected = false;
+        rtSocket = null;
+        if (event.code !== 4401 && window._pollingActive !== false) {
+            // Unexpected close — fall back to polling (D-07 fallback)
+            console.log('[RT] Falling back to polling');
+            startPolling();
+        }
+    };
+
+    rtSocket.onerror = (err) => {
+        console.warn('[RT] WebSocket error:', err);
+    };
+}
+
+function handleRTMessage(data) {
+    if (data.type === 'analysis_update') {
+        // Same logic as existing pollErgebnis handler
+        if (data.aktiv && !paused) zeigeSpinner();
+        if (data.version > letzteVersion && data.ergebnis !== null) {
+            zeigeKarte(data.ergebnis, data.line_id);
+        }
+        letzteVersion = data.version;
+        if (typeof data.kaufbereitschaft === 'number') {
+            updateKaufbereitschaft(data.kaufbereitschaft);
+        }
+        if (data.readiness_score !== undefined) {
+            renderReadinessBadge(data.readiness_score, data.readiness_bucket);
+        }
+        if (data.current_phase !== undefined) {
+            renderPhaseBadge(data.current_phase, data.current_phase_name, data.phase_confidence);
+        }
+        if (data.active_hint) {
+            renderActiveHint(data.active_hint);
+        }
+        if (data.ewb_buttons && Array.isArray(data.ewb_buttons) && data.ewb_buttons.length) {
+            renderDynamicEwbButtons(data.ewb_buttons);
+        }
+        if (data.speech_stats) {
+            updateSpeechCircles(data.speech_stats);
+            updateKompaktMetrics(data.speech_stats, data.kaufbereitschaft || null);
+        }
+    } else if (data.type === 'transcript') {
+        // Real-time transcript from Engine (supplements Socket.IO transcript)
+        // Future: Engine becomes primary transcript source
+        console.log('[RT] Transcript:', data.text);
+    } else if (data.type === 'status') {
+        console.log('[RT] Status:', data);
+    } else if (data.type === 'error') {
+        console.error('[RT] Engine error:', data.code, data.message);
+    }
+}
+
+// Send audio to Engine via WebSocket binary frame
+function sendAudioToEngine(audioData) {
+    if (rtSocket && rtSocket.readyState === WebSocket.OPEN) {
+        rtSocket.send(audioData);
+    }
+}
+
+// Send control message to Engine
+function sendRTControl(msg) {
+    if (rtSocket && rtSocket.readyState === WebSocket.OPEN) {
+        rtSocket.send(JSON.stringify(msg));
+    }
+}
+
+// ── Polling Fallback (existing behaviour, D-07) ──────────────────────────────
+function startPolling() {
+    if (window._pollingActive) return;  // Already polling
+    window._pollingActive = true;
+    pollErgebnis();
+}
+
 // Latenz-Optimierung: self-scheduling setTimeout chain instead of setInterval.
 // The next /api/ergebnis poll only fires AFTER the previous response is fully
 // processed, preventing request queue buildup when the server is slow and
 // letting us stop cleanly by flipping window._pollingActive to false.
-window._pollingActive = true;
+window._pollingActive = false;  // Start as false — connectRTEngine or startPolling will activate
 async function pollErgebnis(){
   try{
     const res=await fetch('/api/ergebnis');const data=await res.json();
@@ -719,7 +841,16 @@ async function pollErgebnis(){
     if(window._pollingActive) setTimeout(pollErgebnis, 500);
   }
 }
-pollErgebnis();
+
+// ── Initialization: Try Engine WebSocket first, fall back to polling ─────────
+connectRTEngine();
+// If WS doesn't connect within 3 seconds, start polling as safety net
+setTimeout(() => {
+    if (!rtConnected && !window._pollingActive) {
+        console.log('[RT] Engine timeout — starting polling fallback');
+        startPolling();
+    }
+}, 3000);
 
 // ── Gegenargument "Genutzt" Tracking ─────────────────────────────────────────
 function logGenutzt(cardId, option, einwandTyp){

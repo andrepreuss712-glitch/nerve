@@ -1,4 +1,6 @@
 import os
+import json
+import secrets
 from datetime import datetime
 from flask import Blueprint, render_template, jsonify, request, Response, g, session as flask_session
 from routes.auth import login_required
@@ -6,6 +8,15 @@ import services.live_session as ls
 from services.live_session import LOG_DIR, _build_log_content, reset_session
 from database.db import get_session
 from services.audit import log_action
+
+# ── RT Engine Redis client (Phase 04.8.1 — D-02 Redis Bridge) ────────────────
+# Optional dependency: if redis is not installed or unavailable, Flask falls
+# back gracefully (rt_session_token=None → frontend uses polling).
+try:
+    import redis as _redis_lib
+    _redis_client = _redis_lib.Redis(host='127.0.0.1', port=6379, decode_responses=True)
+except (ImportError, Exception):
+    _redis_client = None
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
@@ -112,10 +123,33 @@ def live():
             except Exception:
                 active_profile_daten = {}
         ls.set_active_profile(active_profile.name if active_profile else '', ad)
+
+        # ── RT Engine session token (Phase 04.8.1 — D-02 Redis Bridge) ──
+        # Generate a single-use token, store session data in Redis for Engine.
+        # If Redis is unavailable: token stays None → frontend falls back to polling.
+        session_mode = flask_session.get('session_mode', 'meeting')
+        rt_session_token = None
+        if _redis_client:
+            try:
+                rt_session_token = secrets.token_urlsafe(32)
+                _redis_client.hset(f"nerve:session:{rt_session_token}", mapping={
+                    "user_id": str(g.user.id),
+                    "mode": session_mode,
+                    "profile_id": str(active_profile.id) if active_profile else "",
+                    "language": getattr(g.user, 'preferred_language', 'de') or 'de',
+                    "profile_data": json.dumps(active_profile_daten) if active_profile_daten else "{}",
+                    "system_prompt": "",  # Populated by Engine from profile_data
+                })
+                _redis_client.expire(f"nerve:session:{rt_session_token}", 60)
+            except Exception as e:
+                print(f"[RT] Redis token error (fallback to polling): {e}")
+                rt_session_token = None
+
         return render_template('app.html', user=g.user, org=g.org,
                                active_profile=active_profile, profiles=profiles,
                                active_phasen=active_phasen,
-                               active_profile_daten=active_profile_daten)
+                               active_profile_daten=active_profile_daten,
+                               rt_session_token=rt_session_token)
     finally:
         db.close()
 
