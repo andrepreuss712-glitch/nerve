@@ -626,6 +626,67 @@ def generate_response(conversation_history: list, system_prompt: str) -> str:
     return response.content[0].text.strip()
 
 
+def generate_response_with_mood(
+    conversation_history: list,
+    system_prompt: str,
+    current_mood: int,
+    schwierigkeit: str = 'mittel',
+) -> dict:
+    """Returns dict with keys: text, neue_stimmung, aufgelegt, letzte_chance.
+
+    Falls back gracefully on JSON parse failure: returns plain text with unchanged mood.
+    Used for personality-driven training (Phase 04.9). The original generate_response()
+    remains for sekretaerin mode which does not need mood tracking.
+    """
+    messages = []
+    for msg in conversation_history:
+        role = "assistant" if msg['speaker'] == 'kunde' else "user"
+        messages.append({"role": role, "content": msg['text']})
+    if not messages:
+        messages = [{"role": "user", "content": "(Telefon klingelt. Geh ran.)"}]
+
+    response = claude_client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=300,
+        system=system_prompt,
+        messages=messages
+    )
+    text = response.content[0].text.strip()
+
+    # Parse JSON from response (same pattern as generate_scoring)
+    start = text.find('{')
+    end   = text.rfind('}') + 1
+    if start == -1 or end <= start:
+        # Fallback: no JSON found, treat as plain text
+        print(f"[Training] Mood JSON parse: no braces found, falling back to plain text")
+        return {
+            'text': text,
+            'neue_stimmung': current_mood,
+            'aufgelegt': False,
+            'letzte_chance': False
+        }
+    try:
+        parsed = json.loads(text[start:end])
+        # Validate required keys exist
+        result = {
+            'text': parsed.get('text', text),
+            'neue_stimmung': int(parsed.get('neue_stimmung', current_mood)),
+            'aufgelegt': bool(parsed.get('aufgelegt', False)),
+            'letzte_chance': bool(parsed.get('letzte_chance', False)),
+        }
+        # Clamp mood to valid range
+        result['neue_stimmung'] = max(-5, min(5, result['neue_stimmung']))
+        return result
+    except (json.JSONDecodeError, ValueError, TypeError) as e:
+        print(f"[Training] Mood JSON parse error: {e}, falling back to plain text")
+        return {
+            'text': text,
+            'neue_stimmung': current_mood,
+            'aufgelegt': False,
+            'letzte_chance': False
+        }
+
+
 def generate_help_suggestion(conversation_history: list, profile_data: dict,
                              sprache: str = 'de') -> str:
     lang     = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
