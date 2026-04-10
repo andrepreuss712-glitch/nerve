@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 04.7.1: FineTuning Logging Grundlage** - ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions Tabellen von Tag 1 (INSERTED)
 - [ ] **Phase 04.7.2: Founder Cost Dashboard** - Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export für count.tax, API-Preismonitor (INSERTED)
 - [ ] **Phase 04.8: KI-Logik Upgrade** - Gesprächsphasen-Erkennung (6 Phasen), Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung, Cold Call Inferenz, dynamische EWB-Buttons (INSERTED)
-- [ ] **Phase 04.9: Training-Modul Upgrade** - 6 Persönlichkeitstypen, Stimmungs-Dynamik (-5 bis +5), Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade (INSERTED)
+- [x] **Phase 04.9: Training-Modul Upgrade** - 6 Persönlichkeitstypen, Stimmungs-Dynamik (-5 bis +5), Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade (INSERTED) (completed 2026-04-10)
 - [ ] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED)
 - [ ] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
 - [ ] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED)
@@ -371,14 +371,14 @@ Plans:
 **Depends on:** Phase 04.8
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training-Modul.md`
 **Requirements:** D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 - [x] 04.9-01-PLAN.md — DB foundation: PersonalityType model, 6 system types seed, ConversationLog extension, system scenarios, difficulty labels (D-01, D-03, D-04, D-11)
 - [x] 04.9-02-PLAN.md — AI logic: build_personality_prompt() + generate_response_with_mood() with mood tracking and auflege rules (D-08, D-10)
 - [x] 04.9-03-PLAN.md — Backend API: personality endpoints (list/generate/save), training start/respond/end wiring, scenario list fix (D-02, D-03, D-05, D-06, D-13)
 - [x] 04.9-04-PLAN.md — Frontend setup + chat: personality type cards, scenario step, mood indicator, hangup UX, save prompt (D-02, D-05, D-06, D-07, D-09, D-12, D-13)
-- [ ] 04.9-05-PLAN.md — Scoring upgrade: 6th category Beziehungsaufbau, mood curve Chart.js, Wendepunkt-Analyse, basis points + visual checkpoint (D-14, D-15, D-16, D-17)
+- [x] 04.9-05-PLAN.md — Scoring upgrade: 6th category Beziehungsaufbau, mood curve Chart.js, Wendepunkt-Analyse, basis points + visual checkpoint (D-14, D-15, D-16, D-17)
 
 ### Phase 04.10: Training Realismus (INSERTED)
 

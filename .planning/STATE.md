@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04.9-04-PLAN.md
-last_updated: "2026-04-10T14:49:23.945Z"
+status: verifying
+stopped_at: Completed 04.9-05-PLAN.md
+last_updated: "2026-04-10T14:53:33.246Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 29
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 96
-  completed_plans: 86
-  percent: 90
+  completed_plans: 87
+  percent: 91
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 Phase: 04.9 (Training-Modul Upgrade) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-10
 
 **Next:** Next phase in roadmap
@@ -107,6 +107,7 @@ Progress: [█████████░] ~90% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.9-training-modul-upgrade-inserted P02 | 1min | 2 tasks | 1 files |
 | Phase 04.9-training-modul-upgrade-inserted P03 | 3min | 2 tasks | 1 files |
 | Phase 04.9-training-modul-upgrade-inserted P04 | 5min | 2 tasks | 1 files |
+| Phase 04.9-training-modul-upgrade-inserted P05 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -243,6 +244,8 @@ Recent decisions affecting current work:
 - [Phase 04.9-training-modul-upgrade-inserted]: D-07 stimmung only returned to frontend when schwierigkeit=leicht — Fortgeschritten/Experte stay blind
 - [Phase 04.9-training-modul-upgrade-inserted]: selectModus() triggers loadPersonalityTypes() + shows t-typ-section — personality type selection appears after modus step
 - [Phase 04.9-training-modul-upgrade-inserted]: confirmEndTraining() reused for hangup auto-transition — avoids duplication
+- [Phase 04.9-training-modul-upgrade-inserted]: generate_scoring() punkte field (10+bonus) coexists with punkte_verdient (modus/hilfe penalty) — both serve different display purposes
+- [Phase 04.9-training-modul-upgrade-inserted]: Chart containers injected as placeholders in buildScoring() innerHTML, rendered post-DOM by renderMoodChart()/renderWendepunkteDetail()
 
 ### Roadmap Evolution
 
@@ -291,6 +294,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T14:49:23.942Z
-Stopped at: Completed 04.9-04-PLAN.md
+Last session: 2026-04-10T14:53:33.242Z
+Stopped at: Completed 04.9-05-PLAN.md
 Resume: Next phase in roadmap
