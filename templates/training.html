@@ -189,6 +189,18 @@
   padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;
   white-space:nowrap;letter-spacing:.03em;text-decoration:none}
 
+/* ── Scenario cards (glass redesign D-15) ── */
+.t-szenario-card .t-diff-label {
+  font-size: 13px;
+}
+.t-szenario-card .t-diff-desc {
+  font-size: 11px;
+  -webkit-line-clamp: 3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ── Scenario modal ── */
 .t-modal-bg{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.75);
   display:flex;align-items:center;justify-content:center;padding:20px}
@@ -652,6 +664,19 @@
   </div>
 </div>
 
+<!-- ── No Profile Modal (D-14) ────────────────────────────────────────────── -->
+<div id="t-noProfileModal" class="t-modal-bg t-hidden">
+  <div class="t-modal" style="max-width:380px">
+    <div class="t-modal-title">Kein Profil ausgewaehlt</div>
+    <p style="font-size:13px;color:var(--page-text-secondary);margin-bottom:12px">
+      Bitte waehle zuerst ein Verkaufsprofil aus, bevor du das Training startest.
+    </p>
+    <div class="t-modal-footer">
+      <button class="btn btn-primary" onclick="document.getElementById('t-noProfileModal').classList.add('t-hidden'); document.getElementById('t-profileSelect').focus();">Profil waehlen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Confirm Delete Scenario Modal ──────────────────────────────────────── -->
 <div id="t-confirmDeleteModal" class="t-modal-bg t-hidden">
   <div class="t-modal" style="max-width:380px">
@@ -845,14 +870,14 @@ async function loadSzenarienForTypFlow() {
     const scenarios = data.scenarios || data;
     const container = document.getElementById('t-szenario-list');
     if (!container) return;
-    container.innerHTML = scenarios.map(s => `
-      <div class="t-szenario-card" data-id="${s.id}" onclick="selectSzenario(${s.id}, this)"
-           style="background:#1C2333; border:1px solid #2D3748; border-radius:8px; padding:12px; cursor:pointer;">
-        <div style="color:#E2E8F0; font-weight:600; font-size:13px;">${escH(s.name)}</div>
-        <div style="color:#A0AEC0; font-size:11px; margin-top:4px;">${escH(s.beschreibung || '')}</div>
-        ${s.is_system ? '<div style="color:#00D4AA; font-size:10px; margin-top:4px;">NERVE Standard</div>' : ''}
-      </div>
-    `).join('');
+    container.innerHTML = scenarios.map(s => {
+      const systemBadge = s.is_system ? '<div style="font-size:10px;color:#00D4AA;margin-top:4px;">NERVE Standard</div>' : '';
+      return `<div class="t-diff-card n-glass t-szenario-card" data-id="${s.id}" onclick="selectSzenarioCard(${s.id}, this)">
+        <div class="t-diff-label">${escH(s.name)}</div>
+        <div class="t-diff-desc">${escH(s.beschreibung || s.kunde_situation || '')}</div>
+        ${systemBadge}
+      </div>`;
+    }).join('');
   } catch(e) {
     console.error('[Training] Failed to load scenarios for typ flow:', e);
   }
@@ -860,8 +885,14 @@ async function loadSzenarienForTypFlow() {
 
 function selectSzenario(id, el) {
   selectedScenarioId = id;
-  document.querySelectorAll('.t-szenario-card').forEach(c => c.style.borderColor = '#2D3748');
-  if (el) el.style.borderColor = '#00D4AA';
+  document.querySelectorAll('.t-szenario-card').forEach(c => c.classList.remove('t-diff-active'));
+  if (el) el.classList.add('t-diff-active');
+}
+
+function selectSzenarioCard(id, el) {
+  selectedScenarioId = id;
+  document.querySelectorAll('.t-szenario-card').forEach(c => c.classList.remove('t-diff-active'));
+  if (el) el.classList.add('t-diff-active');
 }
 
 function skipSzenario() {
@@ -872,7 +903,10 @@ function skipSzenario() {
 // ── Start Training ─────────────────────────────────────────────────────────────
 async function startTraining() {
   const pid = document.getElementById('t-profileSelect').value;
-  if (!pid) return;
+  if (!pid) {
+    document.getElementById('t-noProfileModal').classList.remove('t-hidden');
+    return;
+  }
 
   // Read Quick-Training URL param (einwand_typ) before clearing URL
   const _quickParams = new URLSearchParams(window.location.search);
