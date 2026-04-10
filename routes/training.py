@@ -90,13 +90,21 @@ def training_start():
     except Exception as _te:
         print(f'[FairUse] Training org counter error: {_te}')
 
-    data          = request.get_json(force=True)
-    profile_id    = data.get('profile_id')
-    schwierigkeit = data.get('schwierigkeit', 'mittel')
-    sprache       = data.get('sprache', 'de')
-    scenario_id   = data.get('scenario_id')
-    modus         = data.get('modus', 'guided')
-    einwand_typ   = data.get('einwand_typ')  # Optional: Quick-Training Einwand-Fokus
+    data                = request.get_json(force=True)
+    profile_id          = data.get('profile_id')
+    schwierigkeit       = data.get('schwierigkeit', 'mittel')
+    sprache             = data.get('sprache', 'de')
+    scenario_id         = data.get('scenario_id')
+    personality_type_id = data.get('personality_type_id', type(None)) or data.get('personality_type_id')
+    modus               = data.get('modus', 'guided')
+    einwand_typ         = data.get('einwand_typ')  # Optional: Quick-Training Einwand-Fokus
+
+    # Support personality_type_id as int
+    if personality_type_id is not None:
+        try:
+            personality_type_id = int(personality_type_id)
+        except (TypeError, ValueError):
+            personality_type_id = None
 
     if sprache not in TRAINING_LANGUAGES:
         sprache = 'de'
@@ -114,45 +122,85 @@ def training_start():
         except Exception:
             profile_data = {}
 
-        scenario = None
+        # Load personality type if provided
+        personality_data   = None
+        personality_hidden = False
+        startstimmung      = 0
+        if personality_type_id:
+            pt = db.get(PersonalityType, personality_type_id)
+            if pt:
+                personality_data = json.loads(pt.attribute) if pt.attribute else {}
+                personality_data['name'] = pt.name
+                personality_data['icon'] = pt.icon
+                personality_data['kurzbeschreibung'] = pt.kurzbeschreibung or ''
+                startstimmung = personality_data.get('startstimmung', 0)
+                # D-05: Hide personality in Experte mode with custom type
+                if schwierigkeit == 'schwer' and pt.is_custom:
+                    personality_hidden = True
+
+        # Load scenario data if provided
+        scenario      = None
+        szenario_data = None
         if scenario_id:
-            scenario = db.query(TrainingScenario).filter_by(
-                id=scenario_id, org_id=g.org.id).first()
+            scenario = db.query(TrainingScenario).filter(
+                (TrainingScenario.id == scenario_id) &
+                ((TrainingScenario.org_id == g.org.id) | (TrainingScenario.erstellt_von == None))
+            ).first()
+            if scenario:
+                szenario_data = {
+                    'name':            scenario.name,
+                    'kunde_situation': scenario.kunde_situation,
+                    'kunde_verhalten': scenario.kunde_verhalten,
+                    'spezial_einwaende': scenario.spezial_einwaende,
+                }
 
         persona         = _random_persona(sprache)
         diff            = SCHWIERIGKEITEN.get(schwierigkeit, SCHWIERIGKEITEN['mittel'])
         hat_sekretaerin = diff.get('sekretaerin', False)
 
-        customer_prompt = build_customer_prompt(profile_data, schwierigkeit, persona, sprache)
-
-        # Quick-Training: inject einwand_typ focus into customer prompt
-        if einwand_typ:
-            customer_prompt += f"\n\nWICHTIG: Fokussiere dich in diesem Training besonders auf den Einwand '{einwand_typ}'. Bringe diesen Einwand frueh und hartnaeckig vor."
-
-        # Append scenario context to customer prompt
-        if scenario:
-            sc_ctx = f"\n\nTRAININGS-SZENARIO: {scenario.name}"
-            if scenario.beschreibung:
-                sc_ctx += f"\nSituation: {scenario.beschreibung}"
-            if scenario.kunde_situation:
-                sc_ctx += f"\nDeine Situation: {scenario.kunde_situation}"
-            if scenario.kunde_verhalten:
-                sc_ctx += f"\nDein Verhalten: {scenario.kunde_verhalten}"
-            if scenario.spezial_einwaende:
-                try:
-                    einw = json.loads(scenario.spezial_einwaende)
-                    if einw:
-                        sc_ctx += "\nSpezial-Einwände: " + ", ".join(f"'{e}'" for e in einw[:5])
-                except Exception:
-                    pass
-            customer_prompt += sc_ctx
-
-        if hat_sekretaerin:
-            system_prompt = build_sekretaerin_prompt(persona, sprache)
-            phase         = 'sekretaerin'
+        # Build system prompt: personality path or classic path
+        if personality_data and not hat_sekretaerin:
+            system_prompt   = build_personality_prompt(
+                profile_data=profile_data,
+                personality_data=personality_data,
+                schwierigkeit=schwierigkeit,
+                current_mood=startstimmung,
+                sprache=sprache,
+                szenario=szenario_data,
+            )
+            customer_prompt = system_prompt  # keep in sync for sekretaerin fallback
+            phase           = 'kunde'
         else:
-            system_prompt = customer_prompt
-            phase         = 'kunde'
+            customer_prompt = build_customer_prompt(profile_data, schwierigkeit, persona, sprache)
+
+            # Quick-Training: inject einwand_typ focus into customer prompt
+            if einwand_typ:
+                customer_prompt += f"\n\nWICHTIG: Fokussiere dich in diesem Training besonders auf den Einwand '{einwand_typ}'. Bringe diesen Einwand frueh und hartnaeckig vor."
+
+            # Append scenario context to customer prompt (classic path)
+            if scenario:
+                sc_ctx = f"\n\nTRAININGS-SZENARIO: {scenario.name}"
+                if scenario.beschreibung:
+                    sc_ctx += f"\nSituation: {scenario.beschreibung}"
+                if scenario.kunde_situation:
+                    sc_ctx += f"\nDeine Situation: {scenario.kunde_situation}"
+                if scenario.kunde_verhalten:
+                    sc_ctx += f"\nDein Verhalten: {scenario.kunde_verhalten}"
+                if scenario.spezial_einwaende:
+                    try:
+                        einw = json.loads(scenario.spezial_einwaende)
+                        if einw:
+                            sc_ctx += "\nSpezial-Einwände: " + ", ".join(f"'{e}'" for e in einw[:5])
+                    except Exception:
+                        pass
+                customer_prompt += sc_ctx
+
+            if hat_sekretaerin:
+                system_prompt = build_sekretaerin_prompt(persona, sprache)
+                phase         = 'sekretaerin'
+            else:
+                system_prompt = customer_prompt
+                phase         = 'kunde'
 
         erste_antwort = generate_response([], system_prompt)
 
@@ -186,11 +234,20 @@ def training_start():
                     'text':    erste_antwort,
                     'ts':      datetime.now().strftime('%H:%M:%S'),
                 }],
-                'started_at': datetime.now(),
-                'einwand_typ': einwand_typ,  # Quick-Training Fokus-Einwand
+                'started_at':          datetime.now(),
+                'einwand_typ':         einwand_typ,
+                'personality_type_id': personality_type_id,
+                'personality_data':    personality_data,
+                'stimmung':            startstimmung,
+                'stimmung_history':    [{'turn': 0, 'wert': startstimmung, 'grund': 'Start'}],
+                'personality_hidden':  personality_hidden,
+                'aufgelegt':           False,
+                'scenario_id':         scenario_id,
+                'szenario_data':       szenario_data,
             }
 
-        return jsonify({
+        # Build response — conditionally expose personality info (D-05 / T-04.9-07)
+        resp = {
             'ok':             True,
             'session_id':     session_id,
             'kunde_text':     erste_antwort,
@@ -202,11 +259,22 @@ def training_start():
                 'chef_position': persona['chef_position'],
                 'sek_name':      persona['sek_name'] if hat_sekretaerin else None,
             },
-            'hat_sekretaerin':  hat_sekretaerin,
-            'voice_available':  voice_available,
-            'voice_message':    voice_message,
-            'ui':               lang_config['ui'],
-        })
+            'hat_sekretaerin':    hat_sekretaerin,
+            'voice_available':    voice_available,
+            'voice_message':      voice_message,
+            'ui':                 lang_config['ui'],
+            'personality_hidden': personality_hidden,
+        }
+        if personality_data and not personality_hidden:
+            resp['personality_name'] = personality_data.get('name', '')
+            resp['personality_icon'] = personality_data.get('icon', '')
+            resp['stimmung']         = startstimmung
+        elif personality_hidden:
+            resp['personality_name'] = 'Unbekannt'
+            resp['personality_icon'] = '\u2753'  # question mark
+            resp['stimmung']         = None  # hidden
+
+        return resp
     finally:
         db.close()
 
@@ -237,7 +305,48 @@ def training_respond():
         'ts':      datetime.now().strftime('%H:%M:%S'),
     })
 
-    kunde_antwort = generate_response(session['history'], session['system_prompt'])
+    # Personality mode: use mood-tracking response; classic path otherwise
+    aufgelegt    = False
+    letzte_chance = False
+    neue_stimmung = session.get('stimmung', 0)
+
+    if session.get('personality_data') and session.get('schwierigkeit') != 'sekretaerin':
+        current_mood = session.get('stimmung', 0)
+
+        # Rebuild system prompt with current mood
+        system_prompt = build_personality_prompt(
+            profile_data=session.get('profile_data', {}),
+            personality_data=session['personality_data'],
+            schwierigkeit=session['schwierigkeit'],
+            current_mood=current_mood,
+            sprache=session.get('sprache', 'de'),
+            szenario=session.get('szenario_data'),
+        )
+
+        mood_result   = generate_response_with_mood(
+            conversation_history=session['history'],
+            system_prompt=system_prompt,
+            current_mood=current_mood,
+            schwierigkeit=session['schwierigkeit'],
+        )
+
+        kunde_antwort = mood_result['text']
+        neue_stimmung = mood_result['neue_stimmung']
+        aufgelegt     = mood_result['aufgelegt']
+        letzte_chance = mood_result['letzte_chance']
+
+        # Update session mood state
+        with _sessions_lock:
+            _sessions[g.user.id]['stimmung'] = neue_stimmung
+            _sessions[g.user.id]['stimmung_history'].append({
+                'turn': len(session['history']),
+                'wert': neue_stimmung,
+                'grund': 'response',
+            })
+            if aufgelegt:
+                _sessions[g.user.id]['aufgelegt'] = True
+    else:
+        kunde_antwort = generate_response(session['history'], session['system_prompt'])
 
     durchgestellt = False
     if session['phase'] == 'sekretaerin' and '[DURCHGESTELLT]' in kunde_antwort:
@@ -270,7 +379,17 @@ def training_respond():
         'phase':         session['phase'],
         'durchgestellt': durchgestellt,
         'turn_count':    len([h for h in session['history'] if h['speaker'] == 'berater']),
+        'aufgelegt':     aufgelegt,
+        'letzte_chance': letzte_chance,
+        'schwierigkeit': session['schwierigkeit'],
     }
+
+    # D-07: Only expose mood to Einsteiger (leicht)
+    if session.get('personality_data'):
+        if session['schwierigkeit'] == 'leicht':
+            result['stimmung'] = neue_stimmung
+        else:
+            result['stimmung'] = None  # hidden from frontend
 
     if durchgestellt:
         chef_antwort   = generate_response([], session['system_prompt'])
@@ -370,7 +489,16 @@ def training_end():
         'hilfe_count':             hilfe_count,
         'punkte_verdient':         points,
         'live_preview':            live_preview,
+        'stimmung_history':        session.get('stimmung_history', []),
     }
+
+    # D-05: Reveal personality at end when it was hidden (Experte mode)
+    if session.get('personality_hidden') and session.get('personality_data'):
+        result['personality_revealed'] = {
+            'name':             session['personality_data'].get('name', ''),
+            'icon':             session['personality_data'].get('icon', ''),
+            'kurzbeschreibung': session['personality_data'].get('kurzbeschreibung', ''),
+        }
 
     # ── ConversationLog + Phrases + Streak ────────────────────────────────────
     wendepunkt_saetze = scoring.get('wendepunkt_saetze', [])
@@ -402,6 +530,12 @@ def training_end():
         )
         db_log.add(log_entry)
         db_log.flush()  # log_entry.id verfuegbar fuer Phrase FKs
+
+        # Persist personality_type_id and stimmung_history to ConversationLog
+        if session.get('personality_type_id'):
+            log_entry.personality_type_id = session['personality_type_id']
+        if session.get('stimmung_history'):
+            log_entry.stimmung_history = json.dumps(session['stimmung_history'], ensure_ascii=False)
 
         for ws in wendepunkt_saetze:
             if ws.get('text') and ws.get('einwand_typ'):
