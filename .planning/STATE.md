@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.8.1-04-PLAN.md
-last_updated: "2026-04-10T10:02:30.331Z"
+stopped_at: Completed 04.8.1-05-PLAN.md
+last_updated: "2026-04-10T10:08:11.573Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 29
-  completed_phases: 12
+  completed_phases: 13
   total_plans: 91
-  completed_plans: 81
-  percent: 89
+  completed_plans: 82
+  percent: 90
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.8 (ki-logik-upgrade-inserted) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-04-10
 
@@ -102,6 +102,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.8.1 P02 | 2min | 2 tasks | 3 files |
 | Phase 04.8.1 P03 | 2 | 2 tasks | 3 files |
 | Phase 04.8.1 P04 | 3min | 2 tasks | 4 files |
+| Phase 04.8.1 P05 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -225,6 +226,9 @@ Recent decisions affecting current work:
 - [Phase 04.8.1]: SessionManager injected via set_session_manager() statt Depends() -- WebSocket langlebige Objekte
 - [Phase 04.8.1]: Drei concurrent Tasks via asyncio.gather -- audio_receiver + stt_forwarder + analysis_loop, kein threading
 - [Phase 04.8.1]: Audio Queue bounded 100 mit Drop-Oldest -- QueueFull -> get_nowait + put_nowait, kein Memory-Wachstum
+- [Phase 04.8.1]: Sync redis-py in Flask (not async) — Flask is threaded, not asyncio
+- [Phase 04.8.1]: pollErgebnis starts inactive — only activated by startPolling() or 3s WS timeout
+- [Phase 04.8.1]: EWB clicks forwarded to Engine before Flask API call for D-05 ground truth
 
 ### Roadmap Evolution
 
@@ -272,6 +276,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T10:02:30.328Z
-Stopped at: Completed 04.8.1-04-PLAN.md
+Last session: 2026-04-10T10:08:11.569Z
+Stopped at: Completed 04.8.1-05-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
