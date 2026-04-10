@@ -494,6 +494,120 @@ def build_customer_prompt(profile_data: dict, schwierigkeit: str, persona: dict,
     return base + f"\n\n{lang['prompt_sprache']}"
 
 
+# ── Personality-Driven Training (Phase 04.9) ──────────────────────────────────
+
+AUFLEGE_REGELN = {
+    'leicht': """Einsteiger-Modus:
+- Setze letzte_chance=true wenn Stimmung auf -4 faellt (IMMER warnen vor Auflegen)
+- Setze aufgelegt=true NUR wenn Stimmung auf -5 faellt UND du schon letzte_chance gegeben hast
+- Gib dem Berater immer eine zweite Chance""",
+    'mittel': """Fortgeschritten-Modus:
+- Setze letzte_chance=true bei weichen Triggern (z.B. zu viel reden, generisch) wenn Stimmung <= -3
+- Setze aufgelegt=true bei harten Triggern OHNE Warnung
+- Setze aufgelegt=true wenn Stimmung auf -5 faellt""",
+    'schwer': """Experte-Modus:
+- KEINE letzte_chance Warnung — setze letzte_chance IMMER auf false
+- Setze aufgelegt=true SOFORT bei harten Triggern
+- Setze aufgelegt=true wenn Stimmung auf -4 faellt (strenger als andere Modi)""",
+}
+
+PERSONALITY_MOOD_PROMPT_SUFFIX = """
+STIMMUNGS-TRACKING:
+Deine aktuelle Stimmung: {current_mood} (Skala: -5 = kurz vor Auflegen, +5 = kaufbereit)
+
+Berechne nach jeder Antwort des Beraters deine neue Stimmung.
+Regeln fuer Stimmungsaenderungen:
+- Konkreter Nutzen ohne Umschweife: +1
+- Ehrliche Antwort auf kritische Frage: +1
+- Gute Frage statt Pitch: +1
+- Verstaendnis fuer meine Situation: +2
+- Ruhig unter Druck: +1
+- Generischer Opener: -2
+- Zu frueh pitchen: -1
+- Ausweichen bei direkter Frage: -2
+- Uebertriebene Versprechen: -1
+- Zu viel reden: -1
+- Preis vor Bedarfsanalyse: -2
+
+AUFLEGE-LOGIK ({schwierigkeit}):
+{auflege_regeln}
+
+HARTE AUFLEGE-TRIGGER (persoenlichkeitsabhaengig):
+{hart_trigger}
+
+Antworte IMMER als valides JSON (kein Text davor oder danach):
+{{
+  "text": "Deine gesprochene Antwort als Kunde (1-3 Saetze, kein Markdown)",
+  "neue_stimmung": <int zwischen -5 und +5>,
+  "aufgelegt": false,
+  "letzte_chance": false
+}}
+"""
+
+
+def build_personality_prompt(profile_data: dict, personality_data: dict,
+                             schwierigkeit: str, current_mood: int,
+                             sprache: str = 'de', szenario: dict = None) -> str:
+    """Build system prompt for personality-driven training with mood tracking."""
+    lang = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
+
+    # Base profile context (reuse existing pattern from build_customer_prompt)
+    produkt = profile_data.get('produkt', 'ein Produkt')
+    branche = profile_data.get('branche', 'B2B')
+    einwaende = profile_data.get('einwaende', [])
+
+    # Personality-specific behavior
+    name = personality_data.get('name', 'Kunde')
+    verhaltensregeln = personality_data.get('verhaltensregeln', '')
+    position = personality_data.get('position_profil', 'Geschaeftskontakt')
+    vorgeschichte = personality_data.get('vorgeschichte', '')
+    beispiel_reaktionen = personality_data.get('beispiel_reaktionen', [])
+
+    # Scenario context
+    szenario_ctx = ''
+    if szenario:
+        szenario_ctx = f"""
+SZENARIO:
+Situation: {szenario.get('kunde_situation', '')}
+Dein Verhalten: {szenario.get('kunde_verhalten', '')}
+Spezielle Einwaende die du bringen sollst: {szenario.get('spezial_einwaende', '[]')}
+"""
+
+    # Hard triggers from personality
+    hart_trigger_list = personality_data.get('auflege_trigger_hart', [])
+    hart_trigger = '\n'.join(f'- {t}' for t in hart_trigger_list) if hart_trigger_list else '- Keine speziellen harten Trigger'
+
+    # Auflege rules per difficulty
+    auflege_regeln = AUFLEGE_REGELN.get(schwierigkeit, AUFLEGE_REGELN['mittel'])
+
+    prompt = f"""Du bist {name}, {position}. Du fuehrst ein Telefonat mit einem Vertriebler.
+
+DEINE PERSOENLICHKEIT:
+{verhaltensregeln}
+{'Vorgeschichte: ' + vorgeschichte if vorgeschichte else ''}
+Beispiel-Reaktionen: {json.dumps(beispiel_reaktionen, ensure_ascii=False)}
+
+DER BERATER VERKAUFT:
+Produkt: {produkt}
+Branche: {branche}
+Bekannte Einwaende: {json.dumps([e.get('name', e) if isinstance(e, dict) else e for e in einwaende], ensure_ascii=False)}
+
+{szenario_ctx}
+
+{lang.get('prompt_sprache', 'Antworte auf Deutsch.')}
+"""
+
+    # Append mood tracking suffix
+    mood_suffix = PERSONALITY_MOOD_PROMPT_SUFFIX.format(
+        current_mood=current_mood,
+        schwierigkeit=schwierigkeit,
+        auflege_regeln=auflege_regeln,
+        hart_trigger=hart_trigger
+    )
+
+    return prompt + mood_suffix
+
+
 def generate_response(conversation_history: list, system_prompt: str) -> str:
     messages = []
     for msg in conversation_history:
