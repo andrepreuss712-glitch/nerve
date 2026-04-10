@@ -601,19 +601,21 @@ def training_end():
     try:
         db_pts = get_session()
         from database.models import User as UserModel
-        train_user = db_pts.get(UserModel, g.user.id)
-        if train_user:
-            train_user.total_points   = (train_user.total_points or 0) + points
-            train_user.trainings_used = (train_user.trainings_used or 0) + 1
-            if session.get('voice_available', True):
-                train_user.trainings_voice_used = (train_user.trainings_voice_used or 0) + 1
-            _LEVELS = [('rookie',0),('starter',200),('professional',1000),('expert',3000),('master',7000),('legend',15000)]
-            for lname, threshold in reversed(_LEVELS):
-                if train_user.total_points >= threshold:
-                    train_user.level = lname
-                    break
-            db_pts.commit()
-        db_pts.close()
+        try:
+            train_user = db_pts.get(UserModel, g.user.id)
+            if train_user:
+                train_user.total_points   = (train_user.total_points or 0) + points
+                train_user.trainings_used = (train_user.trainings_used or 0) + 1
+                if session.get('voice_available', True):
+                    train_user.trainings_voice_used = (train_user.trainings_voice_used or 0) + 1
+                _LEVELS = [('rookie',0),('starter',200),('professional',1000),('expert',3000),('master',7000),('legend',15000)]
+                for lname, threshold in reversed(_LEVELS):
+                    if train_user.total_points >= threshold:
+                        train_user.level = lname
+                        break
+                db_pts.commit()
+        finally:
+            db_pts.close()
     except Exception as ex:
         print(f"[Points] Training-Punkte Fehler: {ex}")
 
