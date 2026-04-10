@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.8.1-03-PLAN.md
-last_updated: "2026-04-10T09:57:08.700Z"
+stopped_at: Completed 04.8.1-04-PLAN.md
+last_updated: "2026-04-10T10:02:30.331Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 29
   completed_phases: 12
   total_plans: 91
-  completed_plans: 80
-  percent: 88
+  completed_plans: 81
+  percent: 89
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.8 (ki-logik-upgrade-inserted) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-04-10
 
@@ -101,6 +101,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.8.1 P01 | 3min | 2 tasks | 7 files |
 | Phase 04.8.1 P02 | 2min | 2 tasks | 3 files |
 | Phase 04.8.1 P03 | 2 | 2 tasks | 3 files |
+| Phase 04.8.1 P04 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -221,6 +222,9 @@ Recent decisions affecting current work:
 - [Phase 04.8.1]: start()/finish() wrapped with iscoroutine check -- Deepgram SDK version may return bool or coroutine (Pitfall 5)
 - [Phase 04.8.1]: AsyncAnthropic statt sync Anthropic -- blockiert nicht den asyncio Event Loop (Pitfall 2)
 - [Phase 04.8.1]: D-05 Ground Truth: user_ewb_click/readiness_delta/hint_acted_on auf ShadowComparison -- Claude Outputs nur Vergleich, nie Training Targets
+- [Phase 04.8.1]: SessionManager injected via set_session_manager() statt Depends() -- WebSocket langlebige Objekte
+- [Phase 04.8.1]: Drei concurrent Tasks via asyncio.gather -- audio_receiver + stt_forwarder + analysis_loop, kein threading
+- [Phase 04.8.1]: Audio Queue bounded 100 mit Drop-Oldest -- QueueFull -> get_nowait + put_nowait, kein Memory-Wachstum
 
 ### Roadmap Evolution
 
@@ -268,6 +272,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T09:57:08.696Z
-Stopped at: Completed 04.8.1-03-PLAN.md
+Last session: 2026-04-10T10:02:30.328Z
+Stopped at: Completed 04.8.1-04-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
