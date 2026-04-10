@@ -224,6 +224,14 @@
   color:var(--page-text-secondary);
   font-size:13px;
 }
+/* ── Hangup Flash Animation ── */
+@keyframes hangupFlash {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ── Custom Scenario Dropdown ── */
 .n-custom-select{position:relative;max-width:100%;flex:1}
 .n-select-trigger{background:var(--input-bg,#FFFFFF);border:1px solid var(--input-border,#E2E8F0);
@@ -295,9 +303,32 @@
         {% endif %}
       </div>
 
+      <!-- ── Persoenlichkeitstyp ───────────────────────────────────────────────── -->
+      <div class="t-section" id="t-typ-section" style="display:none;">
+        <div class="t-section-label">Kundentyp waehlen</div>
+        <div id="t-typ-cards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px;">
+          <!-- Filled by JS -->
+        </div>
+        <div style="margin-top:16px; text-align:center;">
+          <button id="t-typ-random-btn" onclick="generateRandomPersonality()"
+                  style="background:transparent; border:1px solid #00D4AA; color:#00D4AA; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px;">
+            &#x1F3B2; Zufaellig generieren
+          </button>
+        </div>
+        <!-- Briefing card for generated personality (hidden by default) -->
+        <div id="t-typ-briefing" style="display:none; margin-top:16px; padding:16px; background:#1C2333; border:1px solid #2D3748; border-radius:12px;">
+          <h4 style="color:#00D4AA; margin:0 0 8px;">Dein Kunde:</h4>
+          <p id="t-typ-briefing-text" style="color:#E2E8F0; margin:0 0 12px; line-height:1.5;"></p>
+          <div style="display:flex; gap:8px;">
+            <button onclick="confirmGeneratedPersonality()" style="background:#00D4AA; color:#0D1117; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">Diesen Kunden nehmen</button>
+            <button onclick="generateRandomPersonality()" style="background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Nochmal wuerfeln</button>
+          </div>
+        </div>
+      </div>
+
       <div class="t-section">
         <div class="t-section-label">Schwierigkeit</div>
-        <div class="t-diff-grid">
+        <div class="t-diff-grid" id="t-diff-section">
           {% for key, diff in schwierigkeiten.items() %}
           <div class="t-diff-card n-glass {% if key == 'mittel' %}t-diff-active{% endif %}"
                data-key="{{ key }}" onclick="selectDiff('{{ key }}')">
@@ -312,6 +343,15 @@
           </div>
           {% endfor %}
         </div>
+      </div>
+
+      <!-- ── Szenario-Auswahl (new step) ───────────────────────────────────────── -->
+      <div class="t-section" id="t-szenario-section" style="display:none;">
+        <div class="t-section-label">Szenario (optional)</div>
+        <div id="t-szenario-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">
+          <!-- Filled by JS from /api/training/scenarios -->
+        </div>
+        <button onclick="skipSzenario()" style="margin-top:12px; background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Ohne Szenario starten</button>
       </div>
 
       <div class="t-section">
@@ -508,8 +548,15 @@
       <div class="t-chat-who" id="t-chatWho">—</div>
       <div class="t-chat-sub" id="t-chatSub"></div>
     </div>
-    <div>
-      <button class="btn btn-danger btn-sm" id="t-endBtn" onclick="endTraining()">■ Beenden</button>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div id="t-mood-indicator" style="display:none; align-items:center; gap:8px; padding:4px 12px; background:#1C2333; border-radius:20px;">
+        <span style="font-size:11px; color:#A0AEC0;">Stimmung:</span>
+        <div id="t-mood-bar" style="width:80px; height:8px; background:#2D3748; border-radius:4px; overflow:hidden;">
+          <div id="t-mood-fill" style="height:100%; width:50%; border-radius:4px; transition:width 0.3s, background-color 0.3s;"></div>
+        </div>
+        <span id="t-mood-value" style="font-size:12px; font-weight:600; color:#E2E8F0;">0</span>
+      </div>
+      <button class="btn btn-danger btn-sm" id="t-endBtn" onclick="endTraining()">&#x25A0; Beenden</button>
     </div>
   </div>
 
@@ -544,6 +591,9 @@
     </div>
   </div>
 </div>
+
+<!-- ── Hangup Overlay ─────────────────────────────────────────────────────── -->
+<div id="t-hangup-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(220,38,38,0.3); z-index:1000; pointer-events:none;"></div>
 
 <!-- ── Confirm End Training Modal ─────────────────────────────────────────── -->
 <div id="t-confirmEndModal" class="t-modal-bg t-hidden">
@@ -627,6 +677,9 @@ let tUI             = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES
 let selectedScenario= null;
 let selectedDiff    = 'mittel';
 let trainingModus   = 'guided';   // 'free' | 'guided'
+let selectedPersonalityTypeId = null;
+let generatedPersonality = null;  // holds temp generated data before save
+let selectedScenarioId   = null;  // new personality-flow scenario selection
 let hilfeCount      = 0;
 let voiceAvailable  = true;       // set on training start; false = text-only mode
 let sessionMeta     = null;   // {firma, chefName, chefPosition, sekName, hatSek}
@@ -648,6 +701,9 @@ function selectModus(modus) {
   document.querySelectorAll('.t-modus-card').forEach(c => c.classList.remove('t-modus-active'));
   const card = document.getElementById('t-modus-' + modus);
   if (card) card.classList.add('t-modus-active');
+  // Load personality types so cards are ready when section shows
+  loadPersonalityTypes();
+  document.getElementById('t-typ-section').style.display = '';
 }
 
 function selectDiff(key) {
@@ -655,11 +711,106 @@ function selectDiff(key) {
   const card = document.querySelector('.t-diff-card[data-key="' + key + '"]');
   if (card) card.classList.add('t-diff-active');
   selectedDiff = key;
+  // After difficulty is set, show scenario section
+  loadSzenarienForTypFlow();
+  document.getElementById('t-szenario-section').style.display = '';
 }
 
 function checkReady() {
   const ok = document.getElementById('t-profileSelect').value !== '';
   document.getElementById('t-callBtn').disabled = !ok;
+}
+
+// ── Personality Type Cards ──────────────────────────────────────────────────────
+async function loadPersonalityTypes() {
+  try {
+    const res = await fetch('/api/training/personalities');
+    const types = await res.json();
+    const container = document.getElementById('t-typ-cards');
+    if (!container) return;
+    container.innerHTML = types.map(t => `
+      <div class="t-typ-card" data-id="${t.id}" onclick="selectTyp(${t.id}, this)"
+           style="background:#1C2333; border:1px solid #2D3748; border-radius:12px; padding:16px; cursor:pointer; text-align:center; transition:border-color 0.2s;">
+        <div style="font-size:32px; margin-bottom:8px;">${t.icon || '\u{1F464}'}</div>
+        <div style="color:#E2E8F0; font-weight:600; font-size:14px;">${escH(t.name)}</div>
+        <div style="color:#A0AEC0; font-size:12px; margin-top:4px;">${escH(t.kurzbeschreibung || '')}</div>
+        ${t.is_custom ? '<div style="color:#00D4AA; font-size:10px; margin-top:4px;">Eigener Typ</div>' : ''}
+      </div>
+    `).join('');
+  } catch(e) {
+    console.error('[Training] Failed to load personality types:', e);
+  }
+}
+
+function selectTyp(id, el) {
+  selectedPersonalityTypeId = id;
+  generatedPersonality = null;
+  document.querySelectorAll('.t-typ-card').forEach(c => c.style.borderColor = '#2D3748');
+  if (el) el.style.borderColor = '#00D4AA';
+  document.getElementById('t-typ-briefing').style.display = 'none';
+}
+
+async function generateRandomPersonality() {
+  const btn = document.getElementById('t-typ-random-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generiere...';
+  try {
+    const res = await fetch('/api/training/personalities/generate', {method: 'POST'});
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    generatedPersonality = data;
+    selectedPersonalityTypeId = null;  // not saved yet, no ID
+
+    // Show briefing card (D-02)
+    document.getElementById('t-typ-briefing').style.display = 'block';
+    document.getElementById('t-typ-briefing-text').textContent = data.briefing || data.kurzbeschreibung || '';
+
+    // Deselect any card
+    document.querySelectorAll('.t-typ-card').forEach(c => c.style.borderColor = '#2D3748');
+  } catch(e) {
+    console.error('[Training] Generation failed:', e);
+    alert('Generierung fehlgeschlagen. Bitte erneut versuchen.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '\u{1F3B2} Zufaellig generieren';
+  }
+}
+
+function confirmGeneratedPersonality() {
+  // User confirmed generated personality — advance to difficulty (already visible)
+  document.getElementById('t-diff-section').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+// ── Scenario selection (new flow) ───────────────────────────────────────────────
+async function loadSzenarienForTypFlow() {
+  try {
+    const res = await fetch('/training/scenarios');
+    const data = await res.json();
+    const scenarios = data.scenarios || data;
+    const container = document.getElementById('t-szenario-list');
+    if (!container) return;
+    container.innerHTML = scenarios.map(s => `
+      <div class="t-szenario-card" data-id="${s.id}" onclick="selectSzenario(${s.id}, this)"
+           style="background:#1C2333; border:1px solid #2D3748; border-radius:8px; padding:12px; cursor:pointer;">
+        <div style="color:#E2E8F0; font-weight:600; font-size:13px;">${escH(s.name)}</div>
+        <div style="color:#A0AEC0; font-size:11px; margin-top:4px;">${escH(s.beschreibung || '')}</div>
+        ${s.is_system ? '<div style="color:#00D4AA; font-size:10px; margin-top:4px;">NERVE Standard</div>' : ''}
+      </div>
+    `).join('');
+  } catch(e) {
+    console.error('[Training] Failed to load scenarios for typ flow:', e);
+  }
+}
+
+function selectSzenario(id, el) {
+  selectedScenarioId = id;
+  document.querySelectorAll('.t-szenario-card').forEach(c => c.style.borderColor = '#2D3748');
+  if (el) el.style.borderColor = '#00D4AA';
+}
+
+function skipSzenario() {
+  selectedScenarioId = null;
+  document.querySelectorAll('.t-szenario-card').forEach(c => c.style.borderColor = '#2D3748');
 }
 
 // ── Start Training ─────────────────────────────────────────────────────────────
@@ -675,17 +826,24 @@ async function startTraining() {
   startFreizeichen();
 
   try {
+    const startPayload = {
+      profile_id:   parseInt(pid),
+      schwierigkeit: selectedDiff,
+      sprache:      currentLanguage,
+      scenario_id:  selectedScenarioId || selectedScenario,
+      modus:        trainingModus,
+      einwand_typ:  _quickEinwand,
+    };
+    if (selectedPersonalityTypeId) {
+      startPayload.personality_type_id = selectedPersonalityTypeId;
+    }
+    if (generatedPersonality && !selectedPersonalityTypeId) {
+      startPayload.generated_personality = generatedPersonality;
+    }
     const res  = await fetch('/training/start', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        profile_id:   parseInt(pid),
-        schwierigkeit: selectedDiff,
-        sprache:      currentLanguage,
-        scenario_id:  selectedScenario,
-        modus:        trainingModus,
-        einwand_typ:  _quickEinwand,
-      })
+      body: JSON.stringify(startPayload)
     });
     const data = await res.json();
     if (!data.ok) {
@@ -761,6 +919,11 @@ function initChat(data) {
   const role = data.hat_sekretaerin ? (tUI.phase_sek || 'Sekretärin') : (tUI.phase_kunde || 'Kunde');
   const name = data.hat_sekretaerin ? sessionMeta.sekName : sessionMeta.chefName;
   addInMsg(data.kunde_text, data.kunde_audio, role, name);
+
+  // D-07: show mood indicator on start only for Einsteiger (leicht)
+  if (selectedDiff === 'leicht' && data.stimmung !== null && data.stimmung !== undefined) {
+    updateMoodIndicator(data.stimmung);
+  }
 
   showPhase('chat');
 }
@@ -892,6 +1055,44 @@ async function sendToKI(text) {
       const name = (apiPhase === 'sekretaerin') ? sessionMeta.sekName : sessionMeta.chefName;
       addInMsg(data.kunde_text, data.kunde_audio, role, name);
     }
+
+    // Handle mood update (D-07: only Einsteiger/leicht sees it)
+    if (data.schwierigkeit === 'leicht' && data.stimmung !== null && data.stimmung !== undefined) {
+      updateMoodIndicator(data.stimmung);
+    }
+
+    // Handle letzte_chance warning
+    if (data.letzte_chance) {
+      const msgs = document.querySelectorAll('#t-messages .t-msg-in');
+      const lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
+      if (lastMsg) {
+        lastMsg.style.borderLeft = '3px solid #F6AD55';
+        const warning = document.createElement('div');
+        warning.style.cssText = 'color:#F6AD55; font-size:11px; margin-top:4px; font-style:italic;';
+        warning.textContent = '\u26A0 Der Kunde wird ungeduldig...';
+        lastMsg.appendChild(warning);
+      }
+    }
+
+    // Handle aufgelegt (D-09)
+    if (data.aufgelegt) {
+      const overlay = document.getElementById('t-hangup-overlay');
+      overlay.style.display = 'block';
+      overlay.style.animation = 'hangupFlash 1.5s ease-in-out';
+      // Disable input
+      const input = document.getElementById('t-textInput');
+      if (input) input.disabled = true;
+      const ptt = document.getElementById('t-pttBtn');
+      if (ptt) ptt.disabled = true;
+      const send = document.getElementById('t-sendBtn');
+      if (send) send.disabled = true;
+      // After 2 seconds, auto-end training and go to scoring
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        confirmEndTraining();
+      }, 2000);
+    }
+
     showStatus('');
   } catch(e) {
     console.error('[Training] Respond:', e);
@@ -899,6 +1100,33 @@ async function sendToKI(text) {
   } finally {
     setWaiting(false);
   }
+}
+
+// ── Mood Indicator ──────────────────────────────────────────────────────────────
+function updateMoodIndicator(stimmung) {
+  const indicator = document.getElementById('t-mood-indicator');
+  if (!indicator) return;
+  if (stimmung === null || stimmung === undefined) {
+    indicator.style.display = 'none';
+    return;
+  }
+  indicator.style.display = 'flex';
+  const fill  = document.getElementById('t-mood-fill');
+  const value = document.getElementById('t-mood-value');
+
+  // Map -5..+5 to 0..100%
+  const pct = ((stimmung + 5) / 10) * 100;
+  fill.style.width = pct + '%';
+
+  // Color: red <= -3, orange -2..0, yellow 1..3, green 4..5
+  let color = '#48BB78';  // green
+  if (stimmung <= -3) color = '#FC8181';       // red
+  else if (stimmung <= 0) color = '#F6AD55';   // orange
+  else if (stimmung <= 3) color = '#F6E05E';   // yellow
+
+  fill.style.backgroundColor = color;
+  value.textContent = stimmung > 0 ? '+' + stimmung : String(stimmung);
+  value.style.color = color;
 }
 
 function setWaiting(w) {
@@ -1055,6 +1283,36 @@ async function confirmEndTraining() {
     if (!data.ok) { alert('Fehler bei der Auswertung'); setWaiting(false); return; }
     buildScoring(data);
     showPhase('scoring');
+    // D-05: personality reveal for Experte mode
+    if (data.personality_revealed) {
+      const reveal = data.personality_revealed;
+      const revealDiv = document.createElement('div');
+      revealDiv.style.cssText = 'margin-bottom:20px; padding:16px; background:#1C2333; border:1px solid #00D4AA; border-radius:12px; text-align:center;';
+      revealDiv.innerHTML =
+        '<div style="font-size:10px; color:#A0AEC0; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Dein Kunde war:</div>' +
+        '<div style="font-size:36px; margin-bottom:8px;">' + escH(reveal.icon || '') + '</div>' +
+        '<div style="font-size:18px; color:#E2E8F0; font-weight:600;">' + escH(reveal.name) + '</div>' +
+        '<div style="font-size:13px; color:#A0AEC0; margin-top:4px;">' + escH(reveal.kurzbeschreibung || '') + '</div>';
+      const scoringInner = document.getElementById('t-scoringInner');
+      if (scoringInner) scoringInner.insertBefore(revealDiv, scoringInner.firstChild);
+    }
+    // D-03: save prompt for generated personalities
+    if (generatedPersonality && !selectedPersonalityTypeId) {
+      const saveDiv = document.createElement('div');
+      saveDiv.id = 't-save-personality-div';
+      saveDiv.style.cssText = 'margin-top:20px; padding:16px; background:#1C2333; border:1px solid #2D3748; border-radius:12px;';
+      saveDiv.innerHTML =
+        '<h4 style="color:#00D4AA; margin:0 0 8px;">Kunden speichern?</h4>' +
+        '<p style="color:#A0AEC0; font-size:13px; margin:0 0 12px;">' + escH(generatedPersonality.name) + ' fuer spaetere Trainings speichern?</p>' +
+        '<input id="t-save-comment" placeholder="Kommentar (optional)" ' +
+               'style="width:100%; padding:8px; background:#0D1117; border:1px solid #2D3748; border-radius:6px; color:#E2E8F0; margin-bottom:8px; box-sizing:border-box;">' +
+        '<div style="display:flex; gap:8px;">' +
+          '<button onclick="saveGeneratedPersonality()" style="background:#00D4AA; color:#0D1117; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">Speichern</button>' +
+          '<button onclick="document.getElementById(\'t-save-personality-div\').remove()" style="background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Verwerfen</button>' +
+        '</div>';
+      const scoringInner = document.getElementById('t-scoringInner');
+      if (scoringInner) scoringInner.appendChild(saveDiv);
+    }
   } catch(e) {
     clearInterval(loadInterval);
     if (loadOverlay) loadOverlay.style.display = 'none';
@@ -1206,6 +1464,15 @@ function resetTraining() {
   isWaiting    = false;
   isRecording  = false;
   sessionMeta  = null;
+  selectedPersonalityTypeId = null;
+  generatedPersonality      = null;
+  selectedScenarioId        = null;
+  // Reset mood indicator
+  const moodInd = document.getElementById('t-mood-indicator');
+  if (moodInd) moodInd.style.display = 'none';
+  // Reset hangup overlay
+  const overlay = document.getElementById('t-hangup-overlay');
+  if (overlay) { overlay.style.display = 'none'; overlay.style.animation = ''; }
   showPhase('setup');
 }
 
@@ -1289,6 +1556,33 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function showStatus(t) {
   const el = document.getElementById('t-statusBar');
   if (el) el.textContent = t;
+}
+
+// ── Save Generated Personality ──────────────────────────────────────────────────
+async function saveGeneratedPersonality() {
+  if (!generatedPersonality) return;
+  const kommentar = (document.getElementById('t-save-comment') || {}).value || '';
+  try {
+    const res = await fetch('/api/training/personalities/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name:             generatedPersonality.name,
+        icon:             generatedPersonality.icon,
+        kurzbeschreibung: generatedPersonality.kurzbeschreibung,
+        attribute:        generatedPersonality.attribute,
+        kommentar:        kommentar
+      })
+    });
+    const data = await res.json();
+    if (data.id) {
+      selectedPersonalityTypeId = data.id;
+      const saveDiv = document.getElementById('t-save-personality-div');
+      if (saveDiv) saveDiv.innerHTML = '<p style="color:#00D4AA;">&#x2713; Gespeichert!</p>';
+    }
+  } catch(e) {
+    console.error('[Training] Save personality failed:', e);
+  }
 }
 
 // ── Szenarien ────────────────────────────────────────────────────────────────
