@@ -9,9 +9,10 @@ from database.db import get_session
 from database.models import Profile, TrainingScenario, PersonalityType, ConversationLog
 from services.training_service import (
     build_customer_prompt, build_sekretaerin_prompt,
+    build_sekretaerin_type_prompt,
     generate_response, generate_response_with_mood,
     generate_scoring, generate_help_suggestion,
-    text_to_speech, _random_persona, SCHWIERIGKEITEN, TRAINING_LANGUAGES,
+    text_to_speech, _random_persona, SCHWIERIGKEITEN, SEKRETAERIN_TYPES, TRAINING_LANGUAGES,
     _generate_live_preview, build_personality_prompt,
 )
 
@@ -31,6 +32,7 @@ def training_page():
         return render_template('training.html',
                                profiles=profiles,
                                schwierigkeiten=SCHWIERIGKEITEN,
+                               sekretaerin_types=SEKRETAERIN_TYPES,
                                training_languages=TRAINING_LANGUAGES,
                                preferred_language=preferred_language)
     finally:
@@ -98,6 +100,8 @@ def training_start():
     personality_type_id  = data.get('personality_type_id') or None
     generated_personality = data.get('generated_personality')
     modus               = data.get('modus', 'guided')
+    anruf_typ           = data.get('anruf_typ', 'direkt')        # 'direkt' or 'sekretaerin'
+    sekretaerin_typ     = data.get('sekretaerin_typ', 'blockerin')  # default blockerin
     einwand_typ         = data.get('einwand_typ')  # Optional: Quick-Training Einwand-Fokus
 
     # Support personality_type_id as int
@@ -171,7 +175,7 @@ def training_start():
 
         persona         = _random_persona(sprache)
         diff            = SCHWIERIGKEITEN.get(schwierigkeit, SCHWIERIGKEITEN['mittel'])
-        hat_sekretaerin = diff.get('sekretaerin', False)
+        hat_sekretaerin = (anruf_typ == 'sekretaerin')
 
         # Build system prompt: personality path or classic path
         if personality_data and not hat_sekretaerin:
@@ -211,7 +215,7 @@ def training_start():
                 customer_prompt += sc_ctx
 
             if hat_sekretaerin:
-                system_prompt = build_sekretaerin_prompt(persona, sprache)
+                system_prompt = build_sekretaerin_type_prompt(persona, sekretaerin_typ, schwierigkeit, sprache)
                 phase         = 'sekretaerin'
             else:
                 system_prompt = customer_prompt
@@ -242,6 +246,7 @@ def training_start():
                 'phase':           phase,
                 'modus':            modus,
                 'voice_available':  voice_available,
+                'sekretaerin_typ':         sekretaerin_typ if hat_sekretaerin else None,
                 'sekretaerin_ueberwunden': False,
                 'history': [{
                     'speaker': 'kunde',
@@ -275,6 +280,7 @@ def training_start():
                 'sek_name':      persona['sek_name'] if hat_sekretaerin else None,
             },
             'hat_sekretaerin':    hat_sekretaerin,
+            'sekretaerin_typ':    sekretaerin_typ if hat_sekretaerin else None,
             'voice_available':    voice_available,
             'voice_message':      voice_message,
             'ui':                 lang_config['ui'],
@@ -292,6 +298,13 @@ def training_start():
         return resp
     finally:
         db.close()
+
+
+def _hangup_reason(session):
+    """Return human-readable hangup reason for popup (D-09)."""
+    if session.get('phase') == 'sekretaerin' and not session.get('sekretaerin_ueberwunden'):
+        return 'Sekretaerin hat abgeblockt'
+    return 'Kunde hat aufgelegt'
 
 
 @training_bp.route('/training/respond', methods=['POST'])
@@ -373,6 +386,12 @@ def training_respond():
             session['system_prompt']           = session['customer_prompt']
             kunde_antwort                      = kunde_antwort.replace('[DURCHGESTELLT]', '').strip()
 
+        # Sekretaerin blocks — she hung up
+        if session['phase'] == 'sekretaerin' and '[AUFGELEGT]' in kunde_antwort:
+            session['aufgelegt'] = True
+            aufgelegt = True
+            kunde_antwort = kunde_antwort.replace('[AUFGELEGT]', '').strip()
+
         is_sek = (not durchgestellt and session['phase'] == 'sekretaerin')
         rolle  = 'Sekretärin' if is_sek else 'Kunde'
 
@@ -397,9 +416,12 @@ def training_respond():
         'phase':         session['phase'],
         'durchgestellt': durchgestellt,
         'turn_count':    len([h for h in session['history'] if h['speaker'] == 'berater']),
-        'aufgelegt':     aufgelegt,
-        'letzte_chance': letzte_chance,
-        'schwierigkeit': session['schwierigkeit'],
+        'aufgelegt':      aufgelegt,
+        'letzte_chance':  letzte_chance,
+        'schwierigkeit':  session['schwierigkeit'],
+        'hangup_reason':  _hangup_reason(session) if aufgelegt else None,
+        'sek_ueberwunden': session.get('sekretaerin_ueberwunden', False),
+        'hat_sekretaerin': session.get('sekretaerin_typ') is not None,
     }
 
     # D-07: Only expose mood to Einsteiger (leicht)
