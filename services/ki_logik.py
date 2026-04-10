@@ -58,6 +58,29 @@ PHASE_BUTTONS = {
         "Kein Termin heute", "Zu schnell"],
 }
 
+# After a specific objection, the NEXT likely objections shift.
+# Key = normalized einwand_typ from Haiku, Value = follow-up buttons.
+# These replace the phase-based defaults when a recent objection exists.
+EINWAND_FOLLOWUP = {
+    'Zeit/Aufschub':        ["Zu teuer", "Kein Bedarf", "Rücksprache nötig",
+                             "Schicken Sie Unterlagen", "Rufen Sie später"],
+    'Kosten/Preis':         ["Brauche Bedenkzeit", "Haben schon Lösung",
+                             "Funktioniert das wirklich?", "Rücksprache nötig"],
+    'Kein Bedarf':          ["Haben schon Lösung", "Zu abstrakt",
+                             "Wir haben keine Probleme", "Zu teuer"],
+    'Vertrauen':            ["Haben Sie Referenzen?", "Funktioniert das wirklich?",
+                             "Risiko zu hoch", "Brauche Bedenkzeit"],
+    'Komplexität':          ["Zu teuer", "Brauche Bedenkzeit",
+                             "Schicken Sie Unterlagen", "Wie meinen Sie das?"],
+    'Angst/Risiko':         ["Haben Sie Referenzen?", "Brauche Bedenkzeit",
+                             "Zu teuer", "Rücksprache nötig"],
+    'Vergleich':            ["Zu teuer", "Funktioniert das wirklich?",
+                             "Haben Sie Referenzen?", "Brauche Bedenkzeit"],
+    'Entscheidungsträger':  ["Rücksprache nötig", "Schicken Sie Unterlagen",
+                             "Kein Termin heute", "Brauche Bedenkzeit"],
+    'Abbruch':              ["Rufen Sie später", "Schicken Sie Unterlagen"],
+}
+
 # Hint priority order from briefing (D-03). Lower number = higher importance.
 HINT_PRIORITY = {
     'critical':   1,
@@ -112,13 +135,21 @@ def select_active_hint(candidates: list) -> Optional[dict]:
     return min(valid, key=lambda c: c['priority'])
 
 
-def dynamic_ewb_buttons(phase: int, base_buttons: Optional[list] = None) -> list:
-    """Return the briefing-table button set for phase 1-6.
+def dynamic_ewb_buttons(phase: int, base_buttons: Optional[list] = None,
+                        last_einwand_typ: Optional[str] = None) -> list:
+    """Return context-aware EWB buttons.
 
-    Falls back to `base_buttons` (typically profile-defined) for unknown
-    phases. Always returns a fresh list (never shares references with the
-    module-level PHASE_BUTTONS dict).
+    Priority:
+    1. If a recent objection exists and has a follow-up mapping → use that
+       (conversation-driven, not phase-driven)
+    2. Otherwise fall back to phase-based button set
+    3. Otherwise fall back to base_buttons (profile-defined)
+
+    Always returns a fresh list.
     """
+    # Context-based: after a specific objection, show likely follow-ups
+    if last_einwand_typ and last_einwand_typ in EINWAND_FOLLOWUP:
+        return list(EINWAND_FOLLOWUP[last_einwand_typ])
     if phase in PHASE_BUTTONS:
         return list(PHASE_BUTTONS[phase])
     return list(base_buttons or [])

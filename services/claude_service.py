@@ -29,6 +29,11 @@ Regeln für Gegenargumente:
 - Ton: direkt, menschlich, auf Augenhöhe — nicht wie ein Berater sondern wie jemand der sich auskennt
 - Die Gegenfrage soll den Kunden zum Nachdenken bringen, nicht in die Enge treiben
 
+Einwand-Wiederholung durch den Berater:
+- Wenn der Berater den Einwand des Kunden wiederholt oder paraphrasiert (z.B. "Achso, Sie haben dafür keine Zeit, sagen Sie", "Verstehe, das ist Ihnen zu teuer"), dann IST das ein Einwand — auch wenn der Berater spricht, nicht der Kunde
+- In diesem Fall: einwand=true, Typ aus der Wiederholung ableiten, einwand_zitat ist die Berater-Paraphrase
+- Das gilt besonders im Cold-Call-Modus wo nur der Berater zu hören ist
+
 Umgang mit akustisch unklaren oder unvollständigen Segmenten:
 - Wenn ein Satz abgeschnitten wirkt, Wörter fehlen oder der Sinn unklar ist, interpretiere ihn anhand der letzten 3-4 Aussagen im Bisherigen Gesprächskontext sinnvoll
 - Werte einen unvollständigen Satz NICHT automatisch als "Kein Einwand" — prüfe zuerst ob der Kontext auf einen Einwand hindeutet
@@ -861,7 +866,7 @@ def analyse_loop():
                         'text': str(ergebnis.get('tipp'))[:120],
                         'color':'gray','source':'analyse_loop','ts': _now_iso})
                 active_hint = select_active_hint(candidates)
-                # Dynamic EWB buttons for current phase (profile fallback)
+                # Dynamic EWB buttons — context-aware (last objection) + phase fallback
                 try:
                     if hasattr(ls, 'get_active_profile_ewbs'):
                         base_buttons = ls.get_active_profile_ewbs()
@@ -875,7 +880,19 @@ def analyse_loop():
                             base_buttons = [b for b in base_buttons if b]
                 except Exception:
                     base_buttons = None
-                ewb_buttons = dynamic_ewb_buttons(cur_phase_p4, base_buttons)
+                # Track last objection type for context-based buttons
+                _last_ewb_typ = None
+                if ergebnis.get('einwand') and ergebnis.get('typ'):
+                    _last_ewb_typ = ergebnis['typ']
+                elif not ergebnis.get('einwand'):
+                    # No new objection — check if there's a recent one in state
+                    with ls.state_lock:
+                        _last_ewb_typ = ls.state.get('last_einwand_typ')
+                if ergebnis.get('einwand') and ergebnis.get('typ'):
+                    with ls.state_lock:
+                        ls.state['last_einwand_typ'] = ergebnis['typ']
+                ewb_buttons = dynamic_ewb_buttons(cur_phase_p4, base_buttons,
+                                                  last_einwand_typ=_last_ewb_typ)
                 with ls.state_lock:
                     ls.state['score_factors_seen'] = factors
                     ls.state['readiness_score'] = score_p4
