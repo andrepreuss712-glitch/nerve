@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04.10-02-PLAN.md
-last_updated: "2026-04-10T17:59:27.418Z"
+status: verifying
+stopped_at: Completed 04.10-03-PLAN.md (Tasks 1-2; Task 3 human-verify pending)
+last_updated: "2026-04-10T18:05:16.394Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 29
-  completed_phases: 14
+  completed_phases: 15
   total_plans: 99
-  completed_plans: 89
-  percent: 90
+  completed_plans: 90
+  percent: 91
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 Phase: 04.10 (training-realismus-inserted) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-10
 
 **Next:** Next phase in roadmap
@@ -111,6 +111,7 @@ Progress: [█████████░] ~90% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.9-training-modul-upgrade-inserted P05 | 5min | 2 tasks | 3 files |
 | Phase 04.10 P01 | 3min | 2 tasks | 2 files |
 | Phase 04.10 P02 | 3min | 2 tasks | 15 files |
+| Phase 04.10 P03 | 4min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -251,6 +252,7 @@ Recent decisions affecting current work:
 - [Phase 04.9-training-modul-upgrade-inserted]: Chart containers injected as placeholders in buildScoring() innerHTML, rendered post-DOM by renderMoodChart()/renderWendepunkteDetail()
 - [Phase 04.10]: Patience (geduld) modifiers mapped to existing leicht/mittel/schwer keys, not separate scale
 - [Phase 04.10]: Transfer audio (wartemusik/klingeln/verbindungston) plays regardless of voice_available flag -- UI feedback, not TTS
+- [Phase 04.10]: selectDiff scoped to #t-diff-section to avoid deselecting anruf-typ cards sharing t-diff-card class
 
 ### Roadmap Evolution
 
@@ -299,6 +301,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T17:59:27.414Z
-Stopped at: Completed 04.10-02-PLAN.md
+Last session: 2026-04-10T18:05:16.390Z
+Stopped at: Completed 04.10-03-PLAN.md (Tasks 1-2; Task 3 human-verify pending)
 Resume: Next phase in roadmap

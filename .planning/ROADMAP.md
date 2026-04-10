@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 04.7.2: Founder Cost Dashboard** - Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export für count.tax, API-Preismonitor (INSERTED)
 - [ ] **Phase 04.8: KI-Logik Upgrade** - Gesprächsphasen-Erkennung (6 Phasen), Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung, Cold Call Inferenz, dynamische EWB-Buttons (INSERTED)
 - [x] **Phase 04.9: Training-Modul Upgrade** - 6 Persönlichkeitstypen, Stimmungs-Dynamik (-5 bis +5), Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade (INSERTED) (completed 2026-04-10)
-- [ ] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED)
+- [x] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED) (completed 2026-04-10)
 - [ ] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
 - [ ] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED)
 - [ ] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
@@ -385,12 +385,12 @@ Plans:
 **Goal:** Sekretärin + Chef Modus mit 2 Stimmen, echte Audio-Simulation (Freizeichen, Klingeln, Besetztzeichen), Auflegen-Flow mit Besetztzeichen → Pop-up → Scoring.
 **Depends on:** Phase 04.9
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training Realismus Regeln.md`
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 04.10-01-PLAN.md -- Backend: 3 Sekretaerin-Typen, anruf_typ-Logik, Audio-Pfade, Hangup-Metadaten
 - [x] 04.10-02-PLAN.md -- Frontend: Audio-Manager, Transfer-Sequenz, Hangup-Popup, Auflegen-Button
-- [ ] 04.10-03-PLAN.md -- Setup-Flow linear, Anruf-Typ Step, Profil-Modal, Szenario-Karten Glass-Design
+- [x] 04.10-03-PLAN.md -- Setup-Flow linear, Anruf-Typ Step, Profil-Modal, Szenario-Karten Glass-Design
 
 ### Phase 04.11: Coach-Modul (INSERTED)
 
