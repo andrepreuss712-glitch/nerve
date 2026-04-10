@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Phase 04.7.1 context gathered
-last_updated: "2026-04-09T16:14:40.156Z"
-last_activity: 2026-04-09 -- Phase 04.8 execution started
+stopped_at: Completed 04.8.1-01-PLAN.md
+last_updated: "2026-04-10T09:48:32.608Z"
+last_activity: 2026-04-10
 progress:
-  total_phases: 28
-  completed_phases: 11
-  total_plans: 86
-  completed_plans: 70
-  percent: 81
+  total_phases: 29
+  completed_phases: 12
+  total_plans: 91
+  completed_plans: 78
+  percent: 86
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.8 (ki-logik-upgrade-inserted) — EXECUTING
-Plan: 1 of 7
-Status: Executing Phase 04.8
-Last activity: 2026-04-09 -- Phase 04.8 execution started
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-04-10
 
 **Next:** `/gsd:plan-phase 03.1 --gaps` — close 15 UAT issues, then plan Phase 4
 
@@ -98,6 +98,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.7 P06 | 10 | 2 tasks | 3 files |
 | Phase 04.7 P04 | 20 | 2 tasks | 7 files |
 | Phase 04.7 P05 | 25 | 2 tasks | 10 files |
+| Phase 04.8.1 P01 | 3min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -210,6 +211,9 @@ Recent decisions affecting current work:
 - [Phase 04.7]: Feedback-Tabelle getrennt von FeedbackEvent — FeedbackEvent bleibt Post-Session-Sterne, Feedback ist Ticket-System
 - [Phase 04.7]: MAX_CONTENT_LENGTH=5MB global gesetzt fuer alle Uploads in der App
 - [Phase 04.7]: FeedbackAdmin endpoint='feedback_admin' wegen Blueprint-Namenskonflikt mit feedback_bp aus Plan 04 (Rule 1 Auto-fix)
+- [Phase 04.8.1]: os.environ.get + load_dotenv statt pydantic-settings -- konsistent mit Flask config.py Pattern
+- [Phase 04.8.1]: Session tokens single-use (delete after read) -- Replay-Attack-Mitigation T-04.8.1-01
+- [Phase 04.8.1]: Redis Pool max_connections=10 -- DoS-Mitigation T-04.8.1-04, ausreichend fuer Single-Worker Uvicorn
 
 ### Roadmap Evolution
 
@@ -220,6 +224,7 @@ Recent decisions affecting current work:
 - Phase 1 (Business Setup) removed from GSD tracking — user handles manually (Gewerbeanmeldung, Geschäftskonto, etc.)
 - Phase 04.6.1 inserted after Phase 04.6: Auth-Upgrade Google + Microsoft OAuth Login (URGENT) — Authlib-basierter OAuth-Flow für Google + Microsoft, User-Model nullable passwort_hash, Login-UI Buttons
 - Phase 04.6.2 inserted after Phase 04.6.1: deploy hardening and oauth polish (URGENT) — gehört zum Auth-Block (completed 2026-04-07: tar-over-ssh deploy, header→app.getnerve.app link, MS Consumer-tenant block + conditional prompt=consent, onboarding diagnostic logging)
+- Phase 04.8.1 inserted after Phase 04.8: Echtzeit-Engine Rebuild — Split-Architektur (URGENT) — Async FastAPI+uvicorn WebSocket Engine als eigener Service, Redis Bridge zu Flask, STT/LLM Abstraktionsschicht, HTTP-Polling durch WebSocket-Push ersetzen. Fundament für eigene KI, eigene STT, Skalierung.
 
 ### Pending Todos
 
@@ -256,6 +261,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-08T11:43:32.424Z
-Stopped at: Phase 04.7.1 context gathered
+Last session: 2026-04-10T09:48:32.604Z
+Stopped at: Completed 04.8.1-01-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
