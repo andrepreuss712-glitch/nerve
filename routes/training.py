@@ -6,12 +6,13 @@ from flask import (Blueprint, render_template, request, jsonify,
                    g, session as flask_session)
 from routes.auth import login_required
 from database.db import get_session
-from database.models import Profile, TrainingScenario
+from database.models import Profile, TrainingScenario, PersonalityType, ConversationLog
 from services.training_service import (
     build_customer_prompt, build_sekretaerin_prompt,
-    generate_response, generate_scoring, generate_help_suggestion,
+    generate_response, generate_response_with_mood,
+    generate_scoring, generate_help_suggestion,
     text_to_speech, _random_persona, SCHWIERIGKEITEN, TRAINING_LANGUAGES,
-    _generate_live_preview,
+    _generate_live_preview, build_personality_prompt,
 )
 
 training_bp = Blueprint('training', __name__)
@@ -494,6 +495,116 @@ def training_transcribe():
         return jsonify({'error': str(e)}), 500
 
 
+# ── Personality API Endpoints ──────────────────────────────────────────────────
+
+@training_bp.route('/api/training/personalities')
+@login_required
+def api_training_personalities():
+    """List system + user's custom personality types."""
+    db = get_session()
+    try:
+        types = db.query(PersonalityType).filter(
+            (PersonalityType.is_custom == False) |
+            ((PersonalityType.is_custom == True) & (PersonalityType.user_id == g.user.id))
+        ).order_by(PersonalityType.is_custom, PersonalityType.id).all()
+
+        result = []
+        for t in types:
+            attr = json.loads(t.attribute) if t.attribute else {}
+            result.append({
+                'id': t.id,
+                'name': t.name,
+                'icon': t.icon,
+                'kurzbeschreibung': t.kurzbeschreibung,
+                'is_custom': t.is_custom,
+                'startstimmung': attr.get('startstimmung', 0),
+                'kommentar': t.kommentar,
+            })
+        return jsonify(result)
+    finally:
+        db.close()
+
+
+@training_bp.route('/api/training/personalities/generate', methods=['POST'])
+@login_required
+def api_training_personality_generate():
+    """Generate a random personality via Claude Haiku (not saved until user confirms)."""
+    from services.training_service import claude_client
+
+    prompt = """Erstelle eine neue B2B-Kundenpersoenlichkeit fuer ein Vertriebstraining.
+Die Person soll NICHT einer dieser 6 Standard-Typen sein: Beschaeftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider.
+
+Erstelle eine einzigartige, realistische Person aus dem DACH-B2B-Umfeld.
+
+Antworte NUR als valides JSON:
+{
+  "name": "Kurzname des Typs (2-3 Woerter)",
+  "icon": "ein passendes Emoji",
+  "kurzbeschreibung": "1 Satz Beschreibung",
+  "briefing": "2-3 Saetze Briefing fuer den Vertriebler: Wer ist die Person, Alter, Position, Situation, worauf achten",
+  "attribute": {
+    "geduld": <1-5>,
+    "skeptik": <1-5>,
+    "zeitdruck": <1-5>,
+    "startstimmung": <-3 bis +1>,
+    "auflege_trigger_hart": ["Trigger 1", "Trigger 2"],
+    "auflege_trigger_weich": ["Trigger 1"],
+    "beispiel_reaktionen": ["Reaktion 1", "Reaktion 2"],
+    "verhaltensregeln": "Fliesstext: Wie verhaelt sich diese Person im Gespraech",
+    "position_profil": "Position und Alter",
+    "vorgeschichte": "1-2 Saetze relevante Vorgeschichte"
+  }
+}"""
+
+    try:
+        response = claude_client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = response.content[0].text.strip()
+        start = text.find('{')
+        end   = text.rfind('}') + 1
+        if start == -1 or end <= start:
+            return jsonify({'error': 'Generation fehlgeschlagen'}), 500
+        parsed = json.loads(text[start:end])
+        return jsonify(parsed)
+    except Exception as e:
+        print(f"[Training] Personality generation error: {e}")
+        return jsonify({'error': 'Generation fehlgeschlagen'}), 500
+
+
+@training_bp.route('/api/training/personalities/save', methods=['POST'])
+@login_required
+def api_training_personality_save():
+    """Save a generated personality as custom type for the user."""
+    data = request.get_json()
+    if not data or not data.get('name') or not data.get('attribute'):
+        return jsonify({'error': 'Name und Attribute erforderlich'}), 400
+
+    db = get_session()
+    try:
+        pt = PersonalityType(
+            user_id=g.user.id,
+            org_id=g.org.id,
+            is_custom=True,
+            name=data['name'][:100],
+            icon=data.get('icon', '\U0001F464')[:10],
+            kurzbeschreibung=data.get('kurzbeschreibung', '')[:300],
+            attribute=json.dumps(data['attribute'], ensure_ascii=False),
+            kommentar=data.get('kommentar', '')
+        )
+        db.add(pt)
+        db.commit()
+        return jsonify({'id': pt.id, 'name': pt.name})
+    except Exception as e:
+        db.rollback()
+        print(f"[Training] Personality save error: {e}")
+        return jsonify({'error': 'Speichern fehlgeschlagen'}), 500
+    finally:
+        db.close()
+
+
 # ── Szenario-Routen ────────────────────────────────────────────────────────────
 
 @training_bp.route('/training/scenarios', methods=['GET'])
@@ -501,10 +612,9 @@ def training_transcribe():
 def training_scenarios_list():
     db = get_session()
     try:
-        scenarios = (db.query(TrainingScenario)
-                     .filter_by(org_id=g.org.id)
-                     .order_by(TrainingScenario.erstellt_am.desc())
-                     .all())
+        scenarios = db.query(TrainingScenario).filter(
+            (TrainingScenario.org_id == g.org.id) | (TrainingScenario.erstellt_von == None)
+        ).order_by(TrainingScenario.name).all()
         return jsonify({'ok': True, 'scenarios': [{
             'id':            s.id,
             'name':          s.name,
