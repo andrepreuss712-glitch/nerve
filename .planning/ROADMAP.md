@@ -385,10 +385,10 @@ Plans:
 **Goal:** Sekretärin + Chef Modus mit 2 Stimmen, echte Audio-Simulation (Freizeichen, Klingeln, Besetztzeichen), Auflegen-Flow mit Besetztzeichen → Pop-up → Scoring.
 **Depends on:** Phase 04.9
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training Realismus Regeln.md`
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 04.10-01-PLAN.md -- Backend: 3 Sekretaerin-Typen, anruf_typ-Logik, Audio-Pfade, Hangup-Metadaten
+- [x] 04.10-01-PLAN.md -- Backend: 3 Sekretaerin-Typen, anruf_typ-Logik, Audio-Pfade, Hangup-Metadaten
 - [ ] 04.10-02-PLAN.md -- Frontend: Audio-Manager, Transfer-Sequenz, Hangup-Popup, Auflegen-Button
 - [ ] 04.10-03-PLAN.md -- Setup-Flow linear, Anruf-Typ Step, Profil-Modal, Szenario-Karten Glass-Design
 
