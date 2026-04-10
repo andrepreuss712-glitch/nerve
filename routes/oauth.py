@@ -107,9 +107,9 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
             db.commit()
             print(f'[OAuth] {provider} login: existing user id={user.id} onboarding_done={onboarding_done_flag}')
             # D-05: diagnostic — log redirect target for existing-user path
-            target = 'onboarding.wizard' if not onboarding_done_flag else 'dashboard.index'
-            print(f'[OAuth] redirect target: {target} (existing user id={user.id})')
-            return redirect(url_for('onboarding.wizard') if not onboarding_done_flag else url_for('dashboard.index'))
+            # Onboarding redirect disabled — wird in einer späteren Phase neu gebaut
+            print(f'[OAuth] redirect target: dashboard.index (existing user id={user.id})')
+            return redirect(url_for('dashboard.index'))
         # Neuanlage
         firmenname_platzhalter = (vorname + ' ' + nachname).strip() or email.split('@')[0]
         firmenname_platzhalter = firmenname_platzhalter + ' (Workspace)'
@@ -138,8 +138,9 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
             print(f'[OAUTH] welcome mail failed: {e}')
         print(f'[OAuth] {provider} register: new user id={new_user.id}')
         # D-05: diagnostic — log redirect target for new-user path
-        print(f'[OAuth] redirect target: onboarding.wizard (new user id={new_user.id})')
-        return redirect(url_for('onboarding.wizard'))
+        # Onboarding redirect disabled — wird in einer späteren Phase neu gebaut
+        print(f'[OAuth] redirect target: dashboard.index (new user id={new_user.id})')
+        return redirect(url_for('dashboard.index'))
     finally:
         db.close()
 

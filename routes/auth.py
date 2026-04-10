@@ -30,9 +30,9 @@ def login_required(f):
             onboarding_done = bool(getattr(user, 'onboarding_done', True))
         finally:
             db.close()
-        # Redirect to onboarding if not done yet (skip for onboarding routes themselves)
-        if not onboarding_done and not request.path.startswith('/onboarding'):
-            return redirect(url_for('onboarding.wizard'))
+        # Onboarding redirect disabled — wird in einer späteren Phase neu gebaut
+        # if not onboarding_done and not request.path.startswith('/onboarding'):
+        #     return redirect(url_for('onboarding.wizard'))
         return f(*args, **kwargs)
     return decorated
 
