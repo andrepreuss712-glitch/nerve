@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.8.1-01-PLAN.md
-last_updated: "2026-04-10T09:48:32.608Z"
+stopped_at: Completed 04.8.1-02-PLAN.md
+last_updated: "2026-04-10T09:52:29.186Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 29
   completed_phases: 12
   total_plans: 91
-  completed_plans: 78
-  percent: 86
+  completed_plans: 79
+  percent: 87
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.8 (ki-logik-upgrade-inserted) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-04-10
 
@@ -99,6 +99,7 @@ Progress: [████████░░] ~65% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.7 P04 | 20 | 2 tasks | 7 files |
 | Phase 04.7 P05 | 25 | 2 tasks | 10 files |
 | Phase 04.8.1 P01 | 3min | 2 tasks | 7 files |
+| Phase 04.8.1 P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -214,6 +215,9 @@ Recent decisions affecting current work:
 - [Phase 04.8.1]: os.environ.get + load_dotenv statt pydantic-settings -- konsistent mit Flask config.py Pattern
 - [Phase 04.8.1]: Session tokens single-use (delete after read) -- Replay-Attack-Mitigation T-04.8.1-01
 - [Phase 04.8.1]: Redis Pool max_connections=10 -- DoS-Mitigation T-04.8.1-04, ausreichend fuer Single-Worker Uvicorn
+- [Phase 04.8.1]: TranscriptCallback is async Callable -- streaming pattern requires async callbacks for non-blocking asyncio operation
+- [Phase 04.8.1]: Connection handle is opaque Any type -- adapter controls concrete type, interface doesnt leak implementation
+- [Phase 04.8.1]: start()/finish() wrapped with iscoroutine check -- Deepgram SDK version may return bool or coroutine (Pitfall 5)
 
 ### Roadmap Evolution
 
@@ -261,6 +265,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T09:48:32.604Z
-Stopped at: Completed 04.8.1-01-PLAN.md
+Last session: 2026-04-10T09:52:29.181Z
+Stopped at: Completed 04.8.1-02-PLAN.md
 Resume: `/gsd:execute-phase 4` — Stripe blocker overridden (account can be created before Gewerbeanmeldung)
