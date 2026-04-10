@@ -1046,8 +1046,8 @@
   </div>
 </div>
 <script>
-  try { window._profileEinwaende = JSON.parse({{ (active_profile.daten | tojson | safe) if active_profile and active_profile.daten else '"{}"' }}); } catch(e) { window._profileEinwaende = {}; }
-  try { window._profileData = JSON.parse({{ (active_profile.daten | tojson | safe) if active_profile and active_profile.daten else '"{}"' }}); } catch(e) { window._profileData = {}; }
+  try { window._profileEinwaende = JSON.parse({{ ((active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"') | safe }}); } catch(e) { window._profileEinwaende = {}; }
+  try { window._profileData = JSON.parse({{ ((active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"') | safe }}); } catch(e) { window._profileData = {}; }
   window.sessionMode = null; // set by mode overlay via selectMode()
 </script>
 <script src="/static/app.js"></script>
