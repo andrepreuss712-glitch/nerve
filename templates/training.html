@@ -303,8 +303,30 @@
         {% endif %}
       </div>
 
+      <!-- ── Schwierigkeit ─────────────────────────────────────────────────────── -->
+      <div class="t-section">
+        <div class="t-section-label">Schwierigkeit</div>
+        <div class="t-diff-grid" id="t-diff-section" style="grid-template-columns:repeat(3, 1fr);">
+          {% for key, diff in schwierigkeiten.items() %}
+          {% if key != 'sekretaerin' %}
+          <div class="t-diff-card n-glass {% if key == 'mittel' %}t-diff-active{% endif %}"
+               data-key="{{ key }}" onclick="selectDiff('{{ key }}')">
+            <div class="t-diff-icon">
+              {%- if key == 'leicht' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 24C10 20 14 20 18 24C22 28 26 28 34 24" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="16" r="2" fill="#22C55E" opacity="0.3"/></svg>
+              {%- elif key == 'mittel' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 20C10 16 14 16 18 20C22 24 26 24 34 20" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/><path d="M6 28C10 24 14 24 18 28C22 32 26 32 34 28" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" opacity="0.5"/></svg>
+              {%- elif key == 'schwer' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 14C9 10 12 10 15 14C18 18 21 18 24 14C27 10 30 10 34 14" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round"/><path d="M6 22C9 18 12 18 15 22C18 26 21 26 24 22C27 18 30 18 34 22" stroke="#EF4444" stroke-width="2" stroke-linecap="round" opacity="0.6"/><path d="M6 30C9 26 12 26 15 30C18 34 21 34 24 30C27 26 30 26 34 30" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/></svg>
+              {%- else %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="13" r="4" stroke="#8B5CF6" stroke-width="2"/><path d="M6 30C6 25.6 9.6 22 14 22C18.4 22 22 25.6 22 30" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round"/><circle cx="27" cy="11" r="3.5" stroke="#8B5CF6" stroke-width="2" opacity="0.5"/><path d="M20 28C20 24.4 23 21 27 21C31 21 34 24.4 34 28" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" opacity="0.5"/></svg>{%- endif %}
+            </div>
+            <div class="t-diff-label">{{ diff.label }}</div>
+            <div class="t-diff-desc">{{ diff.beschreibung }}</div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
       <!-- ── Persoenlichkeitstyp ───────────────────────────────────────────────── -->
-      <div class="t-section" id="t-typ-section" style="display:none;">
+      <div class="t-section" id="t-typ-section">
         <div class="t-section-label">Kundentyp waehlen</div>
         <div id="t-typ-cards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px;">
           <!-- Filled by JS -->
@@ -326,27 +348,52 @@
         </div>
       </div>
 
-      <div class="t-section">
-        <div class="t-section-label">Schwierigkeit</div>
-        <div class="t-diff-grid" id="t-diff-section">
-          {% for key, diff in schwierigkeiten.items() %}
-          <div class="t-diff-card n-glass {% if key == 'mittel' %}t-diff-active{% endif %}"
-               data-key="{{ key }}" onclick="selectDiff('{{ key }}')">
+      <!-- ── Anruf-Typ (D-11) ──────────────────────────────────────────────────── -->
+      <div class="t-section" id="t-anruftyp-section">
+        <div class="t-section-label">Anruf-Typ</div>
+        <div class="t-diff-grid" style="grid-template-columns: repeat(2, 1fr);">
+          <div class="t-diff-card n-glass t-diff-active" data-anruftyp="direkt" onclick="selectAnrufTyp('direkt')">
             <div class="t-diff-icon">
-              {%- if key == 'leicht' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 24C10 20 14 20 18 24C22 28 26 28 34 24" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round"/><circle cx="20" cy="16" r="2" fill="#22C55E" opacity="0.3"/></svg>
-              {%- elif key == 'mittel' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 20C10 16 14 16 18 20C22 24 26 24 34 20" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/><path d="M6 28C10 24 14 24 18 28C22 32 26 32 34 28" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" opacity="0.5"/></svg>
-              {%- elif key == 'schwer' %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 14C9 10 12 10 15 14C18 18 21 18 24 14C27 10 30 10 34 14" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round"/><path d="M6 22C9 18 12 18 15 22C18 26 21 26 24 22C27 18 30 18 34 22" stroke="#EF4444" stroke-width="2" stroke-linecap="round" opacity="0.6"/><path d="M6 30C9 26 12 26 15 30C18 34 21 34 24 30C27 26 30 26 34 30" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/></svg>
-              {%- else %}<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="13" r="4" stroke="#8B5CF6" stroke-width="2"/><path d="M6 30C6 25.6 9.6 22 14 22C18.4 22 22 25.6 22 30" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round"/><circle cx="27" cy="11" r="3.5" stroke="#8B5CF6" stroke-width="2" opacity="0.5"/><path d="M20 28C20 24.4 23 21 27 21C31 21 34 24.4 34 28" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" opacity="0.5"/></svg>{%- endif %}
+              <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 8C14.5 8 10 12.5 10 18C10 23.5 14.5 28 20 28C25.5 28 30 23.5 30 18C30 12.5 25.5 8 20 8Z" stroke="#00D4AA" stroke-width="2"/>
+                <path d="M20 14V22" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/>
+                <path d="M16 18H24" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/>
+              </svg>
             </div>
-            <div class="t-diff-label">{{ diff.label }}</div>
-            <div class="t-diff-desc">{{ diff.beschreibung }}</div>
+            <div class="t-diff-label">Direktgespraech</div>
+            <div class="t-diff-desc">Direkt zum Entscheider durchgestellt.</div>
           </div>
-          {% endfor %}
+          <div class="t-diff-card n-glass" data-anruftyp="sekretaerin" onclick="selectAnrufTyp('sekretaerin')">
+            <div class="t-diff-icon">
+              <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="14" cy="13" r="4" stroke="#8B5CF6" stroke-width="2"/>
+                <path d="M6 30C6 25.6 9.6 22 14 22C18.4 22 22 25.6 22 30" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="27" cy="11" r="3.5" stroke="#8B5CF6" stroke-width="2" opacity="0.5"/>
+                <path d="M20 28C20 24.4 23 21 27 21C31 21 34 24.4 34 28" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+              </svg>
+            </div>
+            <div class="t-diff-label">Ueber Sekretaerin</div>
+            <div class="t-diff-desc">Erst die Sekretaerin ueberwinden, dann den Entscheider ueberzeugen.</div>
+          </div>
+        </div>
+        <!-- Sekretaerin-Typ Sub-Selection (shown when sekretaerin selected) -->
+        <div id="t-sektyp-cards" style="display:none; margin-top:16px;">
+          <div class="t-section-label" style="font-size:13px;">Sekretaerin-Typ</div>
+          <div class="t-diff-grid" style="grid-template-columns: repeat(3, 1fr);">
+            {% for key, sek in sekretaerin_types.items() %}
+            <div class="t-diff-card n-glass {% if loop.first %}t-diff-active{% endif %}"
+                 data-sektyp="{{ key }}" onclick="selectSekTyp('{{ key }}', this)">
+              <div class="t-diff-icon" style="font-size:24px;">{{ sek.icon }}</div>
+              <div class="t-diff-label">{{ sek.label }}</div>
+              <div class="t-diff-desc">{{ sek.beschreibung }}</div>
+            </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
 
-      <!-- ── Szenario-Auswahl (new step) ───────────────────────────────────────── -->
-      <div class="t-section" id="t-szenario-section" style="display:none;">
+      <!-- ── Szenario-Auswahl ──────────────────────────────────────────────────── -->
+      <div class="t-section" id="t-szenario-section">
         <div class="t-section-label">Szenario (optional)</div>
         <div id="t-szenario-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">
           <!-- Filled by JS from /api/training/scenarios -->
@@ -354,6 +401,7 @@
         <button onclick="skipSzenario()" style="margin-top:12px; background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Ohne Szenario starten</button>
       </div>
 
+      <!-- ── Trainings-Modus ───────────────────────────────────────────────────── -->
       <div class="t-section">
         <div class="t-section-label">Trainings-Modus</div>
         <div class="t-modus-grid">
@@ -369,23 +417,6 @@
             <div class="t-modus-desc">Hilfe-Button verfügbar. Nutzung wird gezählt.</div>
             <div class="t-modus-badge">Für Einsteiger</div>
           </div>
-        </div>
-      </div>
-
-      <div class="t-section">
-        <div class="t-section-label">Trainings-Szenario <span style="font-weight:400;color:#4a4a60">(optional)</span></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="n-custom-select" id="t-scenarioSelectWrap">
-            <div class="n-select-trigger" onclick="toggleScenarioDropdown()">
-              <span id="n-select-display">— Kein Szenario —</span>
-              <span class="n-select-arrow">▾</span>
-            </div>
-            <div class="n-select-dropdown" id="n-select-dropdown"></div>
-          </div>
-          <input type="hidden" id="t-scenarioSelect" value="">
-          <button class="btn btn-secondary btn-sm" onclick="openScenarioModal()" style="white-space:nowrap">+ Neu</button>
-          <button id="t-deleteScenBtn" style="display:none;background:#00D4AA;color:#000000;border:none;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap"
-                  onclick="deleteSelectedScenario()">Profil löschen</button>
         </div>
       </div>
 
@@ -689,6 +720,8 @@ let tUI             = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES
 let selectedScenario= null;
 let selectedDiff    = 'mittel';
 let trainingModus   = 'guided';   // 'free' | 'guided'
+let selectedAnrufTyp = 'direkt';   // 'direkt' | 'sekretaerin'
+let selectedSekTyp   = 'blockerin'; // 'blockerin' | 'helferin' | 'abwimmlerin'
 let selectedPersonalityTypeId = null;
 let generatedPersonality = null;  // holds temp generated data before save
 let selectedScenarioId   = null;  // new personality-flow scenario selection
@@ -713,19 +746,30 @@ function selectModus(modus) {
   document.querySelectorAll('.t-modus-card').forEach(c => c.classList.remove('t-modus-active'));
   const card = document.getElementById('t-modus-' + modus);
   if (card) card.classList.add('t-modus-active');
-  // Load personality types so cards are ready when section shows
   loadPersonalityTypes();
-  document.getElementById('t-typ-section').style.display = '';
 }
 
 function selectDiff(key) {
-  document.querySelectorAll('.t-diff-card').forEach(c => c.classList.remove('t-diff-active'));
+  document.querySelectorAll('#t-diff-section .t-diff-card').forEach(c => c.classList.remove('t-diff-active'));
   const card = document.querySelector('.t-diff-card[data-key="' + key + '"]');
   if (card) card.classList.add('t-diff-active');
   selectedDiff = key;
-  // After difficulty is set, show scenario section
   loadSzenarienForTypFlow();
-  document.getElementById('t-szenario-section').style.display = '';
+}
+
+function selectAnrufTyp(typ) {
+  selectedAnrufTyp = typ;
+  document.querySelectorAll('#t-anruftyp-section > .t-diff-grid > .t-diff-card').forEach(c => c.classList.remove('t-diff-active'));
+  const card = document.querySelector('.t-diff-card[data-anruftyp="' + typ + '"]');
+  if (card) card.classList.add('t-diff-active');
+  // Show/hide sekretaerin type sub-cards
+  document.getElementById('t-sektyp-cards').style.display = (typ === 'sekretaerin') ? '' : 'none';
+}
+
+function selectSekTyp(key, el) {
+  selectedSekTyp = key;
+  document.querySelectorAll('#t-sektyp-cards .t-diff-card').forEach(c => c.classList.remove('t-diff-active'));
+  el.classList.add('t-diff-active');
 }
 
 function checkReady() {
@@ -845,6 +889,8 @@ async function startTraining() {
       scenario_id:  selectedScenarioId || selectedScenario,
       modus:        trainingModus,
       einwand_typ:  _quickEinwand,
+      anruf_typ:    selectedAnrufTyp,
+      sekretaerin_typ: selectedSekTyp,
     };
     if (selectedPersonalityTypeId) {
       startPayload.personality_type_id = selectedPersonalityTypeId;
@@ -1982,6 +2028,8 @@ function deleteSelectedScenario() {
 // ── Init ────────────────────────────────────────────────────────────────────────
 initPTT();
 loadScenarios();
+loadPersonalityTypes();
+loadSzenarienForTypFlow();
 </script>
 
 <div id="t-loading-overlay" class="t-loading-overlay" style="display:none">
