@@ -216,6 +216,7 @@ function renderDynamicEwbButtons(buttons) {
   const key = labels.join('|');
   if (key === _lastEwbKey) return;  // no change → keep DOM intact (preserves hover)
   console.warn('[EWB] BUTTONS CHANGED:', _lastEwbKey, '→', key);
+  document.title = 'EWB: ' + labels.join(', ');  // DEBUG — sichtbar im Tab-Titel
   _lastEwbKey = key;
   const html = labels.map(typ =>
     `<button class="ewb-btn" onclick="triggerEwb('${escHtml(typ)}')" title="Einwand: ${escHtml(typ)}">\uD83D\uDEE1\uFE0F ${escHtml(typ)}</button>`
