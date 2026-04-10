@@ -1,0 +1,46 @@
+# ── NERVE RT Engine systemd Service Unit ─────────────────────────────────────
+# Copy to: /etc/systemd/system/nerve-rt.service
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable nerve-rt
+# Start:   sudo systemctl start nerve-rt
+# Logs:    sudo journalctl -u nerve-rt -f
+#
+# Prerequisites:
+#   - Redis server running (sudo apt install redis-server && sudo systemctl enable redis-server)
+#   - pip install -r requirements-rt.txt in venv
+#   - /etc/nerve/.env contains DEEPGRAM_API_KEY, ANTHROPIC_API_KEY
+
+[Unit]
+Description=NERVE Real-Time Engine (FastAPI/uvicorn)
+After=network.target redis.service nerve.service
+Requires=redis.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/nerve/app
+
+# Environment — same secrets file as Flask
+EnvironmentFile=/etc/nerve/.env
+
+# uvicorn with uvloop for async performance
+# --workers 1: single worker (asyncio handles concurrency internally)
+# --loop uvloop: faster event loop
+# --host 127.0.0.1: only accessible via nginx (not externally)
+# --port 8001: separate from Flask (8000)
+ExecStart=/opt/nerve/venv/bin/uvicorn nerve_rt.main:app \
+    --host 127.0.0.1 \
+    --port 8001 \
+    --workers 1 \
+    --loop uvloop
+
+# Restart policy
+Restart=always
+RestartSec=5s
+
+# Security hardening (same as nerve.service)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
