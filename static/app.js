@@ -431,10 +431,10 @@ socket.on('transcript', d => {
     words+=wc;
     document.getElementById('wc').textContent=words;
     updateSpeechUI();
+    tr.scrollTop=tr.scrollHeight;
+    recentSegments.push({speaker:sp===0?'Berater':(sp===1?'Kunde':'?'),text:d.text||''});
+    if(recentSegments.length>10) recentSegments.shift();
   }
-  tr.scrollTop=tr.scrollHeight;
-  recentSegments.push({speaker:sp===0?'Berater':(sp===1?'Kunde':'?'),text:d.text||''});
-  if(recentSegments.length>10) recentSegments.shift();
 });
 
 // letzte Segmente für "Frage stellen" Kontext
