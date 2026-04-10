@@ -309,12 +309,13 @@ def training_respond():
     lang_config = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
     persona     = session['persona']
 
-    session['history'].append({
-        'speaker': 'berater',
-        'rolle':   'Berater',
-        'text':    user_text,
-        'ts':      datetime.now().strftime('%H:%M:%S'),
-    })
+    with _sessions_lock:
+        session['history'].append({
+            'speaker': 'berater',
+            'rolle':   'Berater',
+            'text':    user_text,
+            'ts':      datetime.now().strftime('%H:%M:%S'),
+        })
 
     # Personality mode: use mood-tracking response; classic path otherwise
     aufgelegt    = False
@@ -346,11 +347,11 @@ def training_respond():
         aufgelegt     = mood_result['aufgelegt']
         letzte_chance = mood_result['letzte_chance']
 
-        # Update session mood state
+        # Update session mood state (WR-04: read turn count inside the lock)
         with _sessions_lock:
             _sessions[g.user.id]['stimmung'] = neue_stimmung
             _sessions[g.user.id]['stimmung_history'].append({
-                'turn': len(session['history']),
+                'turn': len(_sessions[g.user.id]['history']),
                 'wert': neue_stimmung,
                 'grund': 'response',
             })
@@ -360,28 +361,30 @@ def training_respond():
         kunde_antwort = generate_response(session['history'], session['system_prompt'])
 
     durchgestellt = False
-    if session['phase'] == 'sekretaerin' and '[DURCHGESTELLT]' in kunde_antwort:
-        durchgestellt                      = True
-        session['sekretaerin_ueberwunden'] = True
-        session['phase']                   = 'kunde'
-        session['system_prompt']           = session['customer_prompt']
-        kunde_antwort                      = kunde_antwort.replace('[DURCHGESTELLT]', '').strip()
+    with _sessions_lock:
+        if session['phase'] == 'sekretaerin' and '[DURCHGESTELLT]' in kunde_antwort:
+            durchgestellt                      = True
+            session['sekretaerin_ueberwunden'] = True
+            session['phase']                   = 'kunde'
+            session['system_prompt']           = session['customer_prompt']
+            kunde_antwort                      = kunde_antwort.replace('[DURCHGESTELLT]', '').strip()
 
-    is_sek = (not durchgestellt and session['phase'] == 'sekretaerin')
-    rolle  = 'Sekretärin' if is_sek else 'Kunde'
+        is_sek = (not durchgestellt and session['phase'] == 'sekretaerin')
+        rolle  = 'Sekretärin' if is_sek else 'Kunde'
 
-    session['history'].append({
-        'speaker': 'kunde',
-        'rolle':   rolle,
-        'text':    kunde_antwort,
-        'ts':      datetime.now().strftime('%H:%M:%S'),
-    })
+        session['history'].append({
+            'speaker': 'kunde',
+            'rolle':   rolle,
+            'text':    kunde_antwort,
+            'ts':      datetime.now().strftime('%H:%M:%S'),
+        })
 
-    voice_id    = persona['voice_female']['id'] if is_sek else persona['voice_male']['id']
-    audio_b64   = None
-    audio_bytes = text_to_speech(kunde_antwort, voice_id, lang_config['elevenlabs_model'])
-    if audio_bytes:
-        audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+    voice_id  = persona['voice_female']['id'] if is_sek else persona['voice_male']['id']
+    audio_b64 = None
+    if session.get('voice_available', True):
+        audio_bytes = text_to_speech(kunde_antwort, voice_id, lang_config['elevenlabs_model'])
+        if audio_bytes:
+            audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
 
     result = {
         'ok':            True,
@@ -405,17 +408,19 @@ def training_respond():
     if durchgestellt:
         chef_antwort   = generate_response([], session['system_prompt'])
         chef_audio_b64 = None
-        chef_audio     = text_to_speech(
-            chef_antwort, persona['voice_male']['id'], lang_config['elevenlabs_model'])
-        if chef_audio:
-            chef_audio_b64 = base64.b64encode(chef_audio).decode('utf-8')
+        if session.get('voice_available', True):
+            chef_audio = text_to_speech(
+                chef_antwort, persona['voice_male']['id'], lang_config['elevenlabs_model'])
+            if chef_audio:
+                chef_audio_b64 = base64.b64encode(chef_audio).decode('utf-8')
 
-        session['history'].append({
-            'speaker': 'kunde',
-            'rolle':   'Kunde',
-            'text':    chef_antwort,
-            'ts':      datetime.now().strftime('%H:%M:%S'),
-        })
+        with _sessions_lock:
+            session['history'].append({
+                'speaker': 'kunde',
+                'rolle':   'Kunde',
+                'text':    chef_antwort,
+                'ts':      datetime.now().strftime('%H:%M:%S'),
+            })
 
         result['chef_text']  = chef_antwort
         result['chef_audio'] = chef_audio_b64
