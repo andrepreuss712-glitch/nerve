@@ -557,6 +557,7 @@
         <span id="t-mood-value" style="font-size:12px; font-weight:600; color:#E2E8F0;">0</span>
       </div>
       <button class="btn btn-danger btn-sm" id="t-endBtn" onclick="endTraining()">&#x25A0; Beenden</button>
+      <button class="btn" id="t-hangupBtn" onclick="userHangup()" style="display:none; background:#DC2626; color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:13px; cursor:pointer; margin-left:8px;">Auflegen</button>
     </div>
   </div>
 
@@ -605,6 +606,17 @@
     <div class="t-modal-footer">
       <button class="btn btn-secondary" onclick="document.getElementById('t-confirmEndModal').classList.add('t-hidden')">Weiter trainieren</button>
       <button class="btn btn-primary" onclick="confirmEndTraining()">Auswertung anzeigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Hangup Popup (D-08/D-09) ───────────────────────────────────────────── -->
+<div id="t-hangup-popup" class="t-modal-bg t-hidden">
+  <div class="t-modal" style="max-width:380px">
+    <div class="t-modal-title" id="t-hangup-title">Anruf beendet</div>
+    <div id="t-hangup-stats" style="margin-bottom:16px;font-size:13px;color:var(--page-text-secondary);line-height:1.8;"></div>
+    <div class="t-modal-footer">
+      <button class="btn btn-primary" onclick="confirmEndTraining()">Zur Auswertung</button>
     </div>
   </div>
 </div>
@@ -877,6 +889,10 @@ async function startTraining() {
     };
     apiPhase = data.phase;
 
+    // Show hangup button during active call
+    const hangupBtn = document.getElementById('t-hangupBtn');
+    if (hangupBtn) hangupBtn.style.display = 'inline-block';
+
     document.getElementById('t-callFirm').textContent = sessionMeta.firma;
     document.getElementById('t-callPos').textContent  =
       sessionMeta.hatSek ? 'Sekretariat' : sessionMeta.chefPosition;
@@ -1041,11 +1057,25 @@ async function sendToKI(text) {
     if (!data.ok) { showStatus('Fehler: ' + (data.error || '?')); return; }
 
     if (data.durchgestellt) {
-      // Sekretärin's transfer message
+      // 1. Show secretary's transfer message
       addInMsg(data.kunde_text, data.kunde_audio, tUI.phase_sek || 'Sekretärin', sessionMeta.sekName);
-      await sleep(600);
+      stopFreizeichen();  // ensure any active audio stops
+
+      // 2. Play wartemusik (hold music) per D-04
       addSysMsg((tUI.verbindet || 'Verbinde mit') + ' ' + sessionMeta.chefName + '…');
+      audioPlayLoop(AUDIO_UNIVERSAL.wartemusik);
+      await sleep(2500);
+      audioStop();
+
+      // 3. Play klingeln (ringing)
+      audioPlayLoop(AUDIO_UNIVERSAL.klingeln);
       await sleep(2000);
+      audioStop();
+
+      // 4. Play verbindungston (connection click)
+      await audioPlayOnce(AUDIO_UNIVERSAL.verbindungston);
+
+      // 5. Show chef message
       apiPhase = 'kunde';
       updateChatHeader();
       addSysMsg((tUI.durchgestellt || '✓ Durchgestellt zu') + ' ' + sessionMeta.chefName);
@@ -1074,23 +1104,9 @@ async function sendToKI(text) {
       }
     }
 
-    // Handle aufgelegt (D-09)
+    // Handle aufgelegt (D-08/D-09)
     if (data.aufgelegt) {
-      const overlay = document.getElementById('t-hangup-overlay');
-      overlay.style.display = 'block';
-      overlay.style.animation = 'hangupFlash 1.5s ease-in-out';
-      // Disable input
-      const input = document.getElementById('t-textInput');
-      if (input) input.disabled = true;
-      const ptt = document.getElementById('t-pttBtn');
-      if (ptt) ptt.disabled = true;
-      const send = document.getElementById('t-sendBtn');
-      if (send) send.disabled = true;
-      // After 2 seconds, auto-end training and go to scoring
-      setTimeout(() => {
-        overlay.style.display = 'none';
-        confirmEndTraining();
-      }, 2000);
+      handleAufgelegt(data);
     }
 
     showStatus('');
@@ -1256,7 +1272,9 @@ async function endTraining() {
 }
 
 async function confirmEndTraining() {
+  audioStop();  // ensure no audio still playing
   document.getElementById('t-confirmEndModal').classList.add('t-hidden');
+  document.getElementById('t-hangup-popup').classList.add('t-hidden');
   stopTimer();
   if (currentAudio) { try { currentAudio.pause(); } catch(e){} }
   setWaiting(true);
@@ -1661,6 +1679,84 @@ function startFreizeichen() {
 
 function stopFreizeichen() {
   audioStop();
+}
+
+// ── Hangup Handling (D-08/D-09/D-10) ──────────────────────────────────────────
+async function handleAufgelegt(data) {
+  // 1. Disable inputs
+  const input = document.getElementById('t-textInput');
+  if (input) input.disabled = true;
+  const ptt = document.getElementById('t-pttBtn');
+  if (ptt) ptt.disabled = true;
+  const send = document.getElementById('t-sendBtn');
+  if (send) send.disabled = true;
+  // Hide user hangup button
+  const hb = document.getElementById('t-hangupBtn');
+  if (hb) hb.style.display = 'none';
+
+  // 2. Red flash overlay (keep for visual effect)
+  const overlay = document.getElementById('t-hangup-overlay');
+  overlay.style.display = 'block';
+  overlay.style.animation = 'hangupFlash 1.5s ease-in-out';
+
+  // 3. Play besetztzeichen per D-08
+  stopFreizeichen();
+  audioPlayLoop(AUDIO_UNIVERSAL.besetztzeichen);
+  await sleep(2500);
+  audioStop();
+  overlay.style.display = 'none';
+
+  // 4. Show popup with quick-stats per D-09
+  showHangupPopup({
+    grund: data.hangup_reason || 'Kunde hat aufgelegt',
+    dauer: document.getElementById('t-timer') ? document.getElementById('t-timer').textContent : '---',
+    turns: data.turn_count || 0,
+    hat_sekretaerin: data.hat_sekretaerin || false,
+    sek_ueberwunden: data.sek_ueberwunden || false,
+  });
+}
+
+function showHangupPopup(stats) {
+  const title = (stats.hat_sekretaerin && !stats.sek_ueberwunden)
+    ? 'Sekretaerin hat abgeblockt'
+    : 'Anruf beendet';
+  document.getElementById('t-hangup-title').textContent = title;
+  let html = '<div style="display:grid; gap:6px;">';
+  html += '<div><span style="color:#A0AEC0;">Grund:</span> ' + escH(stats.grund) + '</div>';
+  html += '<div><span style="color:#A0AEC0;">Dauer:</span> ' + escH(stats.dauer) + '</div>';
+  html += '<div><span style="color:#A0AEC0;">Nachrichten:</span> ' + stats.turns + '</div>';
+  if (stats.hat_sekretaerin) {
+    html += '<div><span style="color:#A0AEC0;">Sekretaerin ueberwunden:</span> ' +
+      (stats.sek_ueberwunden ? '<span style="color:#22C55E;">Ja</span>' : '<span style="color:#EF4444;">Nein</span>') + '</div>';
+  }
+  html += '</div>';
+  document.getElementById('t-hangup-stats').innerHTML = html;
+  document.getElementById('t-hangup-popup').classList.remove('t-hidden');
+}
+
+function userHangup() {
+  // D-10: Confirm dialog before user-initiated hangup
+  document.getElementById('t-confirmEndModal').querySelector('.t-modal-title').textContent = 'Wirklich auflegen?';
+  document.getElementById('t-confirmEndModal').querySelector('p').textContent = 'Das Gespraech wird beendet und die Auswertung angezeigt.';
+  // Replace the confirm button action
+  const footer = document.getElementById('t-confirmEndModal').querySelector('.t-modal-footer');
+  footer.innerHTML = '<button class="btn btn-secondary" onclick="document.getElementById(\'t-confirmEndModal\').classList.add(\'t-hidden\')">Weiter telefonieren</button>' +
+    '<button class="btn" style="background:#DC2626;color:#fff;border:none;" onclick="executeUserHangup()">Auflegen</button>';
+  document.getElementById('t-confirmEndModal').classList.remove('t-hidden');
+}
+
+async function executeUserHangup() {
+  document.getElementById('t-confirmEndModal').classList.add('t-hidden');
+  // Hide hangup button
+  const hb = document.getElementById('t-hangupBtn');
+  if (hb) hb.style.display = 'none';
+  // Play besetztzeichen like a real hangup
+  stopFreizeichen();
+  audioPlayLoop(AUDIO_UNIVERSAL.besetztzeichen);
+  await sleep(2500);
+  audioStop();
+  // Go to scoring
+  confirmEndTraining();
 }
 
 // ── Utilities ───────────────────────────────────────────────────────────────────
