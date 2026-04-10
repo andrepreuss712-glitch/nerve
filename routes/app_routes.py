@@ -145,7 +145,7 @@ def api_ergebnis():
     payload['speech_stats'] = ls.get_speech_stats()
     if payload['version'] > _letzte_gemeldete_version:
         _letzte_gemeldete_version = payload['version']
-        print(f"[API] Neues Ergebnis v{payload['version']} (line {payload['line_id']}) an Browser")
+        print(f"[API] Neues Ergebnis v{payload['version']} (line {payload['line_id']}) an Browser ewb={payload.get('ewb_buttons')}")
     return jsonify(payload)
 
 
