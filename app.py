@@ -234,6 +234,157 @@ def _migrate():
                 print(f"[DB] Migration: added feedback.{col}")
             except Exception:
                 pass
+        # ── Phase 04.9: personality_types table ──────────────────────────────
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS personality_types (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    org_id INTEGER REFERENCES organisations(id),
+                    is_custom BOOLEAN NOT NULL DEFAULT 0,
+                    name VARCHAR(100) NOT NULL,
+                    icon VARCHAR(10),
+                    kurzbeschreibung VARCHAR(300),
+                    attribute TEXT NOT NULL DEFAULT '{}',
+                    kommentar TEXT,
+                    erstellt_am DATETIME
+                )
+            """))
+            conn.commit()
+            print("[DB] Migration: created personality_types table")
+        except Exception:
+            pass
+        # ── Phase 04.9: conversation_logs extensions ──────────────────────────
+        for col, typedef in [
+            ('personality_type_id', 'INTEGER'),
+            ('stimmung_history',    'TEXT'),
+        ]:
+            try:
+                conn.execute(text(f'ALTER TABLE conversation_logs ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added conversation_logs.{col}")
+            except Exception:
+                pass
+        # ── Phase 04.9: Seed 6 system personality types ───────────────────────
+        import json as _json
+        _personality_seed = [
+            {
+                'name': 'Beschaeftigter Chef',
+                'icon': '\U0001F4BC',
+                'kurzbeschreibung': 'Hat keine Zeit. Komm zum Punkt oder er legt auf.',
+                'attribute': _json.dumps({
+                    'startstimmung': -2, 'geduld': 1, 'skeptik': 3, 'zeitdruck': 5,
+                    'auflege_trigger_hart': ['Generischer Opener', 'Preis in ersten 2 Minuten'],
+                    'auflege_trigger_weich': ['Lange Einleitung ohne Nutzen', 'Kein konkretes Angebot'],
+                    'beispiel_reaktionen': [
+                        'Ich habe gerade keine Zeit, schicken Sie mir eine Email.',
+                        'Kommen Sie auf den Punkt, ich habe 2 Minuten.',
+                        'Was bringt mir das konkret?'
+                    ],
+                    'verhaltensregeln': 'Du bist ein vielbeschaeftigter Geschaeftsfuehrer. Du hast keine Geduld fuer lange Floskeln. Du legst sofort auf wenn der Berater keinen klaren Nutzen in den ersten 30 Sekunden nennt.',
+                    'position_profil': 'Geschaeftsfuehrer / CEO'
+                }, ensure_ascii=False),
+            },
+            {
+                'name': 'Skeptiker',
+                'icon': '\U0001F914',
+                'kurzbeschreibung': 'Hinterfragt alles. Braucht harte Fakten, keine Floskeln.',
+                'attribute': _json.dumps({
+                    'startstimmung': -1, 'geduld': 3, 'skeptik': 5, 'zeitdruck': 2,
+                    'auflege_trigger_hart': ['Uebertriebene Versprechen', 'Ausweichen bei direkter Frage'],
+                    'auflege_trigger_weich': ['Unkonkrete Aussagen', 'Keine Referenzen'],
+                    'beispiel_reaktionen': [
+                        'Das klingt nach Marketing. Was sind die echten Zahlen?',
+                        'Haben Sie Referenzen aus unserer Branche?',
+                        'Was passiert wenn das Produkt nicht das haelt was Sie versprechen?'
+                    ],
+                    'verhaltensregeln': 'Du bist extrem skeptisch und hinterfragst jede Aussage. Du willst Beweise, Zahlen und Referenzen. Uebertreibungen bringen dich sofort zum Aufhaengen.',
+                    'position_profil': 'Einkaufsleiter / Head of Procurement'
+                }, ensure_ascii=False),
+            },
+            {
+                'name': 'Analytiker',
+                'icon': '\U0001F4CA',
+                'kurzbeschreibung': 'Will Zahlen, Daten, Fakten. Emotionen prallen ab.',
+                'attribute': _json.dumps({
+                    'startstimmung': 0, 'geduld': 4, 'skeptik': 4, 'zeitdruck': 2,
+                    'auflege_trigger_hart': ['Erfundene technische Antworten', 'Nur Emotion statt Fakten'],
+                    'auflege_trigger_weich': ['Vage Aussagen ohne Daten', 'Ignorieren technischer Fragen'],
+                    'beispiel_reaktionen': [
+                        'Welche konkreten KPIs verbessert Ihr Produkt und um wie viel Prozent?',
+                        'Wie ist die Systemarchitektur aufgebaut?',
+                        'Ich brauche ein detailliertes technisches Datenblatt.'
+                    ],
+                    'verhaltensregeln': 'Du bist ein analytischer Typ der alles mit Zahlen und Fakten bewertet. Du hoerst geduldig zu aber nur wenn Fakten geliefert werden. Emotionale Argumente ignorierst du voellig.',
+                    'position_profil': 'IT-Leiter / CTO / Technischer Projektleiter'
+                }, ensure_ascii=False),
+            },
+            {
+                'name': 'Freundlicher Ja-Sager',
+                'icon': '\U0001F60A',
+                'kurzbeschreibung': 'Nett, aber kauft nie. Die Herausforderung: echtes Commitment.',
+                'attribute': _json.dumps({
+                    'startstimmung': 1, 'geduld': 5, 'skeptik': 1, 'zeitdruck': 1,
+                    'auflege_trigger_hart': [],
+                    'auflege_trigger_weich': ['Zu direkter Abschlussversuch ohne Rapport'],
+                    'beispiel_reaktionen': [
+                        'Das klingt super interessant! Schicken Sie mir mal was zu.',
+                        'Ja, das koennen wir gerne mal anschauen, aber gerade ist nicht der beste Zeitpunkt.',
+                        'Ich muss das noch mit meinem Kollegen besprechen.'
+                    ],
+                    'verhaltensregeln': 'Du bist freundlich und hoerst alles gerne an, gibst aber nie ein klares Commitment. Du stimmst allem zu aber ohne konkrete naechste Schritte. Die Herausforderung fuer den Berater ist es echte Verbindlichkeit herauszuholen.',
+                    'position_profil': 'Abteilungsleiter / Middle Manager'
+                }, ensure_ascii=False),
+            },
+            {
+                'name': 'Aggressiver',
+                'icon': '\U0001F4A2',
+                'kurzbeschreibung': 'Laut, direkt, provozierend. Ruhe bewahren ist der Schluessel.',
+                'attribute': _json.dumps({
+                    'startstimmung': -3, 'geduld': 2, 'skeptik': 3, 'zeitdruck': 4,
+                    'auflege_trigger_hart': ['Berater wird defensiv oder emotional'],
+                    'auflege_trigger_weich': ['Unsicherheit im Ton', 'Entschuldigungen'],
+                    'beispiel_reaktionen': [
+                        'Was ist das fuer ein Anruf? Ich habe besseres zu tun!',
+                        'Das ist doch Quatsch, das haben wir schon probiert!',
+                        'Sprechen Sie mit mir nicht so als waere ich ein Idiot.'
+                    ],
+                    'verhaltensregeln': 'Du bist laut, direkt und manchmal provozierend. Du testest ob der Berater unter Druck ruhig bleibt. Wenn der Berater sachlich und ruhig bleibt respektierst du das. Wenn er defensiv wird oder sich entschuldigt legst du auf.',
+                    'position_profil': 'Unternehmer / Inhaber / Selbststaendiger'
+                }, ensure_ascii=False),
+            },
+            {
+                'name': 'Entscheider',
+                'icon': '\U0001F451',
+                'kurzbeschreibung': 'Kein Drama, schnelle Entscheidung. Passt oder passt nicht.',
+                'attribute': _json.dumps({
+                    'startstimmung': 0, 'geduld': 3, 'skeptik': 2, 'zeitdruck': 3,
+                    'auflege_trigger_hart': ['Passt offensichtlich nicht zum Unternehmen'],
+                    'auflege_trigger_weich': ['Zu viel Smalltalk', 'Kein klares Preismodell'],
+                    'beispiel_reaktionen': [
+                        'Was kostet es, was bringt es, wann kann ich starten?',
+                        'Ich entscheide schnell. Ueberzeugen Sie mich in 3 Minuten.',
+                        'Wenn das passt, machen wir einen Termin fuer naechste Woche.'
+                    ],
+                    'verhaltensregeln': 'Du bist ein erfahrener Entscheider der schnell und rational entscheidet. Du willst keine langen Praesentation sondern eine klare Zusammenfassung: Problem, Loesung, Preis, naechster Schritt. Du bist bereit zu kaufen wenn es passt.',
+                    'position_profil': 'Geschaeftsfuehrer / Vorstand / Partner'
+                }, ensure_ascii=False),
+            },
+        ]
+        for pt in _personality_seed:
+            try:
+                conn.execute(text("""
+                    INSERT OR IGNORE INTO personality_types
+                        (user_id, org_id, is_custom, name, icon, kurzbeschreibung, attribute, erstellt_am)
+                    VALUES
+                        (NULL, NULL, 0, :name, :icon, :kurzbeschreibung, :attribute, datetime('now'))
+                """), {'name': pt['name'], 'icon': pt['icon'],
+                       'kurzbeschreibung': pt['kurzbeschreibung'],
+                       'attribute': pt['attribute']})
+                conn.commit()
+            except Exception:
+                pass
+        print("[DB] Migration: seeded system personality types")
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
@@ -815,6 +966,93 @@ def _seed_training_scenarios():
         db.close()
 
 
+def _seed_system_training_scenarios():
+    """Phase 04.9: Legt 7 DACH-B2B System-Trainingsszenarien an (erstellt_von=NULL als Systemmarker)."""
+    from database.models import TrainingScenario
+    db = get_session()
+    try:
+        org = db.query(Organisation).first()
+        if not org:
+            return
+        # Idempotent: skip if any system scenarios already exist (erstellt_von IS NULL)
+        existing = db.query(TrainingScenario).filter(TrainingScenario.erstellt_von == None, TrainingScenario.name == 'SaaS-Vertrieb: Cloud-Migration').first()
+        if existing:
+            return
+
+        _j = json.dumps
+        system_szenarien = [
+            TrainingScenario(
+                org_id=org.id, schwierigkeit='mittel',
+                name='SaaS-Vertrieb: Cloud-Migration',
+                beschreibung='Mittelstaendischer IT-Leiter prueft Cloud-Loesungen fuer seine On-Premise-Infrastruktur. Kosten, Sicherheit und Migration sind die zentralen Themen.',
+                kunde_situation='IT-Leiter in einem Produktionsunternehmen mit 80 Mitarbeitern. Aktuelle Server sind veraltet, Budget fuer Neuanschaffung wurde genehmigt. Prueft gerade 3 Cloud-Anbieter.',
+                kunde_verhalten='Technisch versiert, fragt nach Details zu Datensicherheit und Migration. Hat Bedenken wegen Ausfallzeiten. Braucht gute Argumente fuer den Geschaeftsfuehrer.',
+                spezial_einwaende=_j(['Unsere Daten liegen sensibel, wir koennen nicht einfach in die Cloud', 'Was passiert bei einem Ausfall?', 'Der Migrationaufwand klingt enorm'], ensure_ascii=False),
+                erstellt_von=None,
+            ),
+            TrainingScenario(
+                org_id=org.id, schwierigkeit='mittel',
+                name='Maschinenbau: Automatisierungsloesung',
+                beschreibung='Produktionsleiter sucht Effizienzsteigerung durch Automatisierung. ROI und Implementierungszeit sind entscheidend.',
+                kunde_situation='Produktionsleiter in einem Maschinenbauunternehmen mit 150 Mitarbeitern. Hat manuelle Prozesse die Fehler und Verzoegerungen verursachen. Sein Chef hat Druck wegen Lieferterminen.',
+                kunde_verhalten='Pragmatisch, will konkrete Zahlen zum ROI. Skeptisch gegenueber langen Implementierungszeiten. Fragt nach Referenzen aus der Branche.',
+                spezial_einwaende=_j(['Wir haben das schon mal probiert und es hat nicht funktioniert', 'Wie lange dauert die Implementierung realistisch?', 'Was kostet das in der Gesamtkalkulation?'], ensure_ascii=False),
+                erstellt_von=None,
+            ),
+            TrainingScenario(
+                org_id=org.id, schwierigkeit='mittel',
+                name='Versicherung: Betriebliche Altersvorsorge',
+                beschreibung='Geschaeftsfuehrer 50+ evaluiert betriebliche Altersvorsorge fuer sein Team. Steuervorteile und Mitarbeiterbindung sind Hauptmotive.',
+                kunde_situation='Inhaber eines Handwerksbetriebs mit 12 Mitarbeitern. Hat gerade einen Mitarbeiter durch bessere bAV beim Wettbewerber verloren. Will das Thema jetzt angehen aber ist sich unsicher.',
+                kunde_verhalten='Fragt viel nach steuerlichen Aspekten, will keine Komplexitaet. Bedenken wegen Verwaltungsaufwand und Haftung. Vertraut dem Berater erst nach Referenzen.',
+                spezial_einwaende=_j(['Das ist mir zu komplex, ich habe keinen Steuerberater der sich auskennt', 'Was ist wenn ein Mitarbeiter kuendigt?', 'Ich kenne da schon jemanden der das macht'], ensure_ascii=False),
+                erstellt_von=None,
+            ),
+            TrainingScenario(
+                org_id=org.id, schwierigkeit='leicht',
+                name='Immobilien: Gewerbeflaechen-Vermittlung',
+                beschreibung='Expandierendes Startup sucht neue Bueroflaechen. Flexibilitaet und guenstige Konditionen sind Prioritaet.',
+                kunde_situation='CEO eines Series-A-Startups mit 25 Mitarbeitern. Aktuelles Buero wird zu klein, sucht in 3 Monaten neue Flaechen. Hat schon erste Angebote eingeholt.',
+                kunde_verhalten='Offen und gespraechsbereit, will aber flexible Mietloesungen. Vergleicht aktiv mehrere Angebote. Entscheidet gemeinsam mit Co-Founder.',
+                spezial_einwaende=_j(['Wir brauchen maximale Flexibilitaet, kein 5-Jahres-Vertrag', 'Haben Sie auch Flaechen mit Ausbauoption?'], ensure_ascii=False),
+                erstellt_von=None,
+            ),
+            TrainingScenario(
+                org_id=org.id, schwierigkeit='schwer',
+                name='Dienstleistung: IT-Security Audit',
+                beschreibung='CFO nach Datenleck evaluiert Security-Partner. Vertrauen und Expertise muessen erst bewiesen werden.',
+                kunde_situation='CFO eines Finanzdienstleisters der vor 3 Monaten einen Datenleck hatte. Ist intern unter Druck, will jetzt schnell handeln aber die falsche Wahl kostet ihn den Job.',
+                kunde_verhalten='Sehr skeptisch und vorsichtig. Prueft jeden Punkt genau. Fragt nach Zertifizierungen, Referenzen und konkreter Vorgehensweise. Kein Spielraum fuer vage Antworten.',
+                spezial_einwaende=_j(['Warum sollte ich Ihnen vertrauen? Ich kenne Sie nicht', 'Was ist Ihre ISO-Zertifizierung?', 'Wie laeuft das ab wenn Sie Schwachstellen finden?', 'Mein letzter Dienstleister hat versagt'], ensure_ascii=False),
+                erstellt_von=None,
+            ),
+            TrainingScenario(
+                org_id=org.id, schwierigkeit='mittel',
+                name='SaaS-Vertrieb: CRM-Wechsel',
+                beschreibung='Vertriebsleiter unzufrieden mit aktuellem CRM aber wechselscheu. Migration und Teamakzeptanz sind die groessten Huerde.',
+                kunde_situation='Vertriebsleiter in einem B2B-Software-Unternehmen. Nutzt seit 4 Jahren ein altes CRM das schlecht integriert. Team klagt, aber alle Wechselversuche sind bisher gescheitert.',
+                kunde_verhalten='Interessiert aber muede von gescheiterten Projekten. Fragt konkret nach Migrationsunterstuetzung und Onboarding. Will einen Piloten mit 3 Leuten vor dem Rollout.',
+                spezial_einwaende=_j(['Wir haben das schon dreimal versucht, das Team zieht nie mit', 'Was passiert mit unseren 4 Jahre alten CRM-Daten?', 'Wie lange dauert das Onboarding realistisch?'], ensure_ascii=False),
+                erstellt_von=None,
+            ),
+            TrainingScenario(
+                org_id=org.id, schwierigkeit='leicht',
+                name='Maschinenbau: Wartungsvertrag',
+                beschreibung='Werkleiter will Ausfallzeiten reduzieren und sucht praediktiven Wartungsvertrag. Preis-Leistung ist entscheidend.',
+                kunde_situation='Werkleiter in einem Metallverarbeitungsbetrieb. Hatte letztes Jahr zwei ungeplante Maschinenausfaelle die je 50.000 Euro Schaden verursachten. Jetzt offen fuer praeventive Loesungen.',
+                kunde_verhalten='Offen und pragmatisch. Hat das Problem bereits beziffert. Fragt nach konkreten Leistungen und Reaktionszeiten. Entscheidet relativ schnell wenn das Preis-Leistungs-Verhaeltnis stimmt.',
+                spezial_einwaende=_j(['Was ist in dem Wartungsvertrag konkret enthalten?', 'Wie schnell sind Sie vor Ort wenn etwas ist?'], ensure_ascii=False),
+                erstellt_von=None,
+            ),
+        ]
+        for s in system_szenarien:
+            db.add(s)
+        db.commit()
+        print(f"[DB] {len(system_szenarien)} DACH-System-Trainingsszenarien erstellt")
+    finally:
+        db.close()
+
+
 def _seed_changelog():
     """Legt initiale Changelog-Einträge an."""
     db = get_session()
@@ -861,6 +1099,7 @@ def _seed_changelog():
 _seed()
 _seed_demo_profiles()
 _seed_training_scenarios()
+_seed_system_training_scenarios()
 _load_initial_profile()
 _seed_changelog()
 

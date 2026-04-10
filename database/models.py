@@ -191,6 +191,20 @@ class TrainingScenario(Base):
     erstellt_am       = Column(DateTime, default=utcnow)
 
 
+class PersonalityType(Base):
+    __tablename__ = 'personality_types'
+    id               = Column(Integer, primary_key=True)
+    user_id          = Column(Integer, ForeignKey('users.id'), nullable=True)
+    org_id           = Column(Integer, ForeignKey('organisations.id'), nullable=True)
+    is_custom        = Column(Boolean, default=False, nullable=False)
+    name             = Column(String(100), nullable=False)
+    icon             = Column(String(10), nullable=True)
+    kurzbeschreibung = Column(String(300), nullable=True)
+    attribute        = Column(Text, nullable=False)  # JSON
+    kommentar        = Column(Text, nullable=True)
+    erstellt_am      = Column(DateTime, default=utcnow)
+
+
 class ConversationLog(Base):
     __tablename__ = 'conversation_logs'
     id                       = Column(Integer, primary_key=True)
@@ -237,6 +251,9 @@ class ConversationLog(Base):
     # Phase 04.7.1: Markt-Trennung (FT-Logging)
     market                   = Column(String(10), nullable=False, default='dach')
     language                 = Column(String(10), nullable=False, default='de')
+    # Phase 04.9: Personality-driven training
+    personality_type_id      = Column(Integer, ForeignKey('personality_types.id'), nullable=True)
+    stimmung_history         = Column(Text, nullable=True)  # JSON list
 
 
 class Phrase(Base):
