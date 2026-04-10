@@ -816,7 +816,12 @@ Antworte NUR als valides JSON:
     text   = response.content[0].text.strip()
     start  = text.find('{')
     end    = text.rfind('}') + 1
-    result = json.loads(text[start:end])
+    if start == -1 or end <= start:
+        raise ValueError(f"No JSON braces in Claude response: {text[:100]}")
+    try:
+        result = json.loads(text[start:end])
+    except (json.JSONDecodeError, ValueError) as e:
+        raise ValueError(f"Scoring JSON parse failed: {e}") from e
 
     # ── Basis-Punkte (D-16) ────────────────────────────────────────────────────
     gesamt = result.get('gesamt_score', 0)
@@ -864,7 +869,12 @@ Finde 2-4 der wichtigsten Momente. Sei konkret — keine generischen Phrasen."""
     text  = response.content[0].text.strip()
     start = text.find('{')
     end   = text.rfind('}') + 1
-    return json.loads(text[start:end])
+    if start == -1 or end <= start:
+        return {'momente': [], 'zusammenfassung': ''}
+    try:
+        return json.loads(text[start:end])
+    except (json.JSONDecodeError, ValueError):
+        return {'momente': [], 'zusammenfassung': ''}
 
 
 def text_to_speech(text: str, voice_id: str = None,
