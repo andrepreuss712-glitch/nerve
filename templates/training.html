@@ -690,7 +690,7 @@ let trainingTimer   = null;
 let trainingSecs    = 0;
 let mediaRecorder   = null;
 let audioChunks     = [];
-let freizCtx = null, freizOsc = null;
+// freizCtx/freizOsc removed — replaced by audio manager below
 let currentAudio    = null;
 const audioStore    = {};   // id → {b64, el}
 let msgCnt          = 0;
@@ -884,8 +884,8 @@ async function startTraining() {
     // Min. 2 Freizeichen-Töne abwarten
     await sleep(2300);
     stopFreizeichen();
-    playAbhebenSound();
-    await sleep(350);
+    await audioPlayOnce(AUDIO_UNIVERSAL.verbindungston);
+    await sleep(150);
 
     initChat(data);
   } catch(e) {
@@ -1622,49 +1622,45 @@ function stopTimer() {
   if (trainingTimer) { clearInterval(trainingTimer); trainingTimer = null; }
 }
 
-// ── Freizeichen (language-specific ring tone) ───────────────────────────────
-async function startFreizeichen() {
-  try {
-    const fz  = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES['de']).freizeichen;
-    const hz  = fz.hz  || 425;
-    const on  = fz.on  || 1.0;
-    const off = fz.off || 4.0;
-    const period = on + off;
-    freizCtx = new (window.AudioContext || window.webkitAudioContext)();
-    // Resume AudioContext — browsers auto-suspend it until a user gesture
-    if (freizCtx.state === 'suspended') { await freizCtx.resume(); }
-    freizOsc = freizCtx.createOscillator();
-    const g  = freizCtx.createGain();
-    freizOsc.type = 'sine';
-    freizOsc.frequency.value = hz;
-    freizOsc.connect(g);
-    g.connect(freizCtx.destination);
-    g.gain.setValueAtTime(0, freizCtx.currentTime);
-    for (let i = 0; i < 8; i++) {
-      const t = freizCtx.currentTime + i * period;
-      g.gain.setValueAtTime(0.15, t);
-      g.gain.setValueAtTime(0, t + on);
-    }
-    freizOsc.start();
-  } catch(e) { console.warn('[Freiz]', e); }
+// ── Audio Manager (replaces Web Audio API oscillators) ────────────────────────
+const AUDIO_UNIVERSAL = {
+  klingeln:       '/static/audio/klingeln.mp3',
+  besetztzeichen: '/static/audio/besetztzeichen.mp3',
+  verbindungston: '/static/audio/verbindungston.mp3',
+  wartemusik:     '/static/audio/wartemusik.mp3',
+};
+let _loopAudio = null;
+
+function audioPlayLoop(src) {
+  audioStop();
+  _loopAudio = new Audio(src);
+  _loopAudio.loop = true;
+  _loopAudio.volume = 0.5;
+  _loopAudio.play().catch(e => console.warn('[Audio]', e));
+}
+
+function audioPlayOnce(src) {
+  return new Promise(resolve => {
+    const a = new Audio(src);
+    a.volume = 0.5;
+    a.onended = resolve;
+    a.onerror = resolve;
+    a.play().catch(() => resolve());
+  });
+}
+
+function audioStop() {
+  if (_loopAudio) { _loopAudio.pause(); _loopAudio.currentTime = 0; _loopAudio = null; }
+}
+
+function startFreizeichen() {
+  const lang = TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES['de'];
+  const src = lang.audio_freizeichen || '/static/audio/freizeichen_de.mp3';
+  audioPlayLoop(src);
 }
 
 function stopFreizeichen() {
-  if (freizOsc) { try { freizOsc.stop(); } catch(e){} freizOsc = null; }
-  if (freizCtx) { try { freizCtx.close(); } catch(e){} freizCtx = null; }
-}
-
-function playAbhebenSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const buf = ctx.createBuffer(1, Math.round(ctx.sampleRate * 0.045), ctx.sampleRate);
-    const d   = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1)*(1-i/d.length);
-    const src = ctx.createBufferSource();
-    const g   = ctx.createGain(); g.gain.value = 0.1;
-    src.buffer = buf; src.connect(g); g.connect(ctx.destination); src.start();
-    setTimeout(() => ctx.close(), 200);
-  } catch(e) {}
+  audioStop();
 }
 
 // ── Utilities ───────────────────────────────────────────────────────────────────
