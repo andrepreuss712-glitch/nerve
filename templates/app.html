@@ -1217,7 +1217,7 @@ function updateKompaktSkript(){
 }
 
 // Init from server-injected phasen
-initSkript({{ active_phasen | tojson }});
+initSkript({{ active_phasen | tojson | safe }});
 
 // ── Auto-logout ───────────────────────────────────────────────────────────────
 (function(){

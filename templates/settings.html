@@ -217,7 +217,7 @@
     </div>
     <script>
     (function() {
-      var current = {{ (g.user.preferred_language or 'de') | tojson }};
+      var current = {{ (g.user.preferred_language or 'de') | tojson | safe }};
       var sel = document.getElementById('settingsLang');
       if (sel) sel.value = current;
     })();

@@ -550,7 +550,7 @@
 <div id="g-tip"><div id="g-tip-inner"></div></div>
 
 <script>
-const DATEN = {{ daten | tojson }};
+const DATEN = {{ daten | tojson | safe }};
 const EW_KATEGORIEN = ['Kosten/Preis','Zeit/Aufschub','Vertrauen','Komplexität',
   'Kein Bedarf','Angst/Risiko','Vergleich','Entscheidungsträger','Abbruch'];
 const ALL_SECS = ['sec-basis','sec-zielgruppe','sec-schmerzen','sec-phasen',

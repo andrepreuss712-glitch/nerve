@@ -620,9 +620,9 @@
 {% block scripts %}
 <script>
 // ── State ──────────────────────────────────────────────────────────────────────
-const TRAINING_LANGUAGES = {{ training_languages | tojson }};
-const PLAN_TYP = {{ (g.org.plan_typ or '') | tojson }};
-const currentLanguage = {{ preferred_language | tojson }};
+const TRAINING_LANGUAGES = {{ training_languages | tojson | safe }};
+const PLAN_TYP = {{ (g.org.plan_typ or '') | tojson | safe }};
+const currentLanguage = {{ preferred_language | tojson | safe }};
 let tUI             = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES['de']).ui;
 let selectedScenario= null;
 let selectedDiff    = 'mittel';
