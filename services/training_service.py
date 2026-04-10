@@ -26,7 +26,7 @@ VOICE_FEMALE = VOICE_POOL_FEMALE[0]['id']
 
 SCHWIERIGKEITEN = {
     'leicht': {
-        'label': 'Leicht',
+        'label': 'Einsteiger',
         'beschreibung': 'Offener Kunde. Wenig Einwände, lässt sich überzeugen.',
         'sekretaerin': False,
         'prompt_zusatz': """Du bist ein freundlicher, offener Interessent.
@@ -35,7 +35,7 @@ relativ leicht überzeugen. Du bringst maximal 1-2 leichte Einwände.
 Wenn der Berater gut argumentiert, stimmst du zu."""
     },
     'mittel': {
-        'label': 'Mittel',
+        'label': 'Fortgeschritten',
         'beschreibung': 'Skeptischer Kunde. Mehrere Einwände, braucht gute Argumente.',
         'sekretaerin': False,
         'prompt_zusatz': """Du bist ein skeptischer aber fairer Interessent.
@@ -45,7 +45,7 @@ die Argumente gut sind, aber nicht bei Floskeln. Du stellst
 kritische Rückfragen."""
     },
     'schwer': {
-        'label': 'Schwer',
+        'label': 'Experte',
         'beschreibung': 'Harter Kunde. Viele Einwände, Vorwände, schwer zu knacken.',
         'sekretaerin': False,
         'prompt_zusatz': """Du bist ein schwieriger Interessent. Du bringst 5+ Einwände,
@@ -65,6 +65,64 @@ maximal 2 Minuten. Wenn er dich in dieser Zeit nicht fesselt,
 beendest du das Gespräch höflich aber bestimmt."""
     }
 }
+
+# ── Persoenlichkeitstypen (System-Konstante, gespiegelt aus DB-Seed) ──────────
+PERSONALITY_TYPES_SEED = [
+    {
+        'name': 'Beschaeftigter Chef',
+        'icon': '\U0001F4BC',  # briefcase emoji
+        'kurzbeschreibung': 'Hat keine Zeit. Komm zum Punkt oder er legt auf.',
+        'startstimmung': -2,
+        'geduld': 1,
+        'skeptik': 3,
+        'zeitdruck': 5,
+    },
+    {
+        'name': 'Skeptiker',
+        'icon': '\U0001F914',  # thinking emoji
+        'kurzbeschreibung': 'Hinterfragt alles. Braucht harte Fakten, keine Floskeln.',
+        'startstimmung': -1,
+        'geduld': 3,
+        'skeptik': 5,
+        'zeitdruck': 2,
+    },
+    {
+        'name': 'Analytiker',
+        'icon': '\U0001F4CA',  # bar_chart emoji
+        'kurzbeschreibung': 'Will Zahlen, Daten, Fakten. Emotionen prallen ab.',
+        'startstimmung': 0,
+        'geduld': 4,
+        'skeptik': 4,
+        'zeitdruck': 2,
+    },
+    {
+        'name': 'Freundlicher Ja-Sager',
+        'icon': '\U0001F60A',  # smile emoji
+        'kurzbeschreibung': 'Nett, aber kauft nie. Die Herausforderung: echtes Commitment.',
+        'startstimmung': 1,
+        'geduld': 5,
+        'skeptik': 1,
+        'zeitdruck': 1,
+    },
+    {
+        'name': 'Aggressiver',
+        'icon': '\U0001F4A2',  # anger emoji
+        'kurzbeschreibung': 'Laut, direkt, provozierend. Ruhe bewahren ist der Schluessel.',
+        'startstimmung': -3,
+        'geduld': 2,
+        'skeptik': 3,
+        'zeitdruck': 4,
+    },
+    {
+        'name': 'Entscheider',
+        'icon': '\U0001F451',  # crown emoji
+        'kurzbeschreibung': 'Kein Drama, schnelle Entscheidung. Passt oder passt nicht.',
+        'startstimmung': 0,
+        'geduld': 3,
+        'skeptik': 2,
+        'zeitdruck': 3,
+    },
+]
 
 # ── Sprachen ───────────────────────────────────────────────────────────────────
 TRAINING_LANGUAGES = {
