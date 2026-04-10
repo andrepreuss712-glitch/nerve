@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.9-03-PLAN.md
-last_updated: "2026-04-10T14:43:22.811Z"
+stopped_at: Completed 04.9-04-PLAN.md
+last_updated: "2026-04-10T14:49:23.945Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 29
   completed_phases: 13
   total_plans: 96
-  completed_plans: 85
-  percent: 89
+  completed_plans: 86
+  percent: 90
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.9 (Training-Modul Upgrade) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-10
 
@@ -106,6 +106,7 @@ Progress: [█████████░] ~90% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.9-training-modul-upgrade-inserted P01 | 3min | 2 tasks | 3 files |
 | Phase 04.9-training-modul-upgrade-inserted P02 | 1min | 2 tasks | 1 files |
 | Phase 04.9-training-modul-upgrade-inserted P03 | 3min | 2 tasks | 1 files |
+| Phase 04.9-training-modul-upgrade-inserted P04 | 5min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -240,6 +241,8 @@ Recent decisions affecting current work:
 - [Phase 04.9-training-modul-upgrade-inserted]: scenario_id lookup in training_start extended to include system scenarios (erstellt_von IS NULL)
 - [Phase 04.9-training-modul-upgrade-inserted]: personality_hidden=True only for schwierigkeit=schwer + is_custom — standard system types always visible
 - [Phase 04.9-training-modul-upgrade-inserted]: D-07 stimmung only returned to frontend when schwierigkeit=leicht — Fortgeschritten/Experte stay blind
+- [Phase 04.9-training-modul-upgrade-inserted]: selectModus() triggers loadPersonalityTypes() + shows t-typ-section — personality type selection appears after modus step
+- [Phase 04.9-training-modul-upgrade-inserted]: confirmEndTraining() reused for hangup auto-transition — avoids duplication
 
 ### Roadmap Evolution
 
@@ -288,6 +291,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T14:43:22.807Z
-Stopped at: Completed 04.9-03-PLAN.md
+Last session: 2026-04-10T14:49:23.942Z
+Stopped at: Completed 04.9-04-PLAN.md
 Resume: Next phase in roadmap
