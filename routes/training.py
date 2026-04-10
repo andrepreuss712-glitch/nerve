@@ -95,7 +95,8 @@ def training_start():
     schwierigkeit       = data.get('schwierigkeit', 'mittel')
     sprache             = data.get('sprache', 'de')
     scenario_id         = data.get('scenario_id')
-    personality_type_id = data.get('personality_type_id', type(None)) or data.get('personality_type_id')
+    personality_type_id  = data.get('personality_type_id') or None
+    generated_personality = data.get('generated_personality')
     modus               = data.get('modus', 'guided')
     einwand_typ         = data.get('einwand_typ')  # Optional: Quick-Training Einwand-Fokus
 
@@ -137,6 +138,16 @@ def training_start():
                 # D-05: Hide personality in Experte mode with custom type
                 if schwierigkeit == 'schwer' and pt.is_custom:
                     personality_hidden = True
+
+        # Use generated (unsaved) personality if no personality_type_id was given
+        if personality_type_id is None and generated_personality and isinstance(generated_personality, dict):
+            personality_data = dict(generated_personality.get('attribute') or {})
+            personality_data['name']             = generated_personality.get('name', 'Generiert')
+            personality_data['icon']             = generated_personality.get('icon', '\U0001F464')
+            personality_data['kurzbeschreibung'] = generated_personality.get('kurzbeschreibung', '')
+            startstimmung = personality_data.get('startstimmung', 0)
+            if schwierigkeit == 'schwer':
+                personality_hidden = True
 
         # Load scenario data if provided
         scenario      = None
