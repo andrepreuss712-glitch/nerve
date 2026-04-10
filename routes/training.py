@@ -445,13 +445,14 @@ def training_end():
 
     try:
         scoring = generate_scoring(
-            session['history'],
-            session['profile_data'],
-            session['schwierigkeit'],
-            session.get('sekretaerin_ueberwunden', False),
-            sprache,
-            modus,
-            hilfe_count,
+            conversation_history=session['history'],
+            profile_data=session['profile_data'],
+            schwierigkeit=session['schwierigkeit'],
+            sekretaerin_ueberwunden=session.get('sekretaerin_ueberwunden', False),
+            sprache=sprache,
+            modus=modus,
+            hilfe_count=hilfe_count,
+            stimmung_history=session.get('stimmung_history'),
         )
     except Exception as e:
         print(f"[Training] Scoring-Fehler: {e}")

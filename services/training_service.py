@@ -733,7 +733,8 @@ Kein Markdown, reiner Text. Ende mit einer offenen Frage.
 def generate_scoring(conversation_history: list, profile_data: dict,
                      schwierigkeit: str, sekretaerin_ueberwunden: bool,
                      sprache: str = 'de', modus: str = 'guided',
-                     hilfe_count: int = 0) -> dict:
+                     hilfe_count: int = 0,
+                     stimmung_history: list = None) -> dict:
     lang      = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
     gespraech = "\n".join(
         f"[{'Berater' if m['speaker'] == 'berater' else m.get('rolle', 'Kunde')}] {m['text']}"
@@ -745,6 +746,25 @@ def generate_scoring(conversation_history: list, profile_data: dict,
         sek_bonus = "\n6. Sekretärin überwunden — Hat er die Sekretärin professionell überzeugt? (1-10)"
 
     sek_json = ', {"name": "Sekretärin", "score": 7, "feedback": "1 Satz"}' if sekretaerin_ueberwunden else ''
+
+    # ── 6. Beziehungsaufbau category (D-14) — only when stimmung_history is present ──
+    beziehung_kategorie = ""
+    beziehung_json = ""
+    stimmung_kontext = ""
+    wendepunkte_prompt = ""
+    wendepunkte_json_example = ""
+    if stimmung_history:
+        stimmung_kontext = f"""
+Stimmungsverlauf des Kunden waehrend des Gespraechs:
+{json.dumps(stimmung_history, ensure_ascii=False)}
+"""
+        beziehung_kategorie = "\n6. Beziehungsaufbau — Hat der Berater die Stimmung des Kunden positiv beeinflusst? Hat er Rapport aufgebaut? (1-10)"
+        beziehung_json = ', {{"name": "Beziehungsaufbau", "score": 6, "feedback": "1 Satz"}}'
+        wendepunkte_prompt = "\nIdentifiziere die 1-3 kritischen Wendepunkte im Gespraech wo die Stimmung signifikant gefallen ist. Fuer jeden Wendepunkt: was hat der Berater gesagt, was war das Problem, und was haette er stattdessen sagen sollen."
+        wendepunkte_json_example = """,
+  "wendepunkte_detail": [
+    {{"turn": 3, "berater_sagt": "Was der Berater gesagt hat", "was_schief": "Was schiefging", "alternativ": "Was er haette sagen sollen"}}
+  ]"""
 
     if modus == 'free':
         modus_info = "Der Berater hat im FREIEN Modus trainiert — ohne jede Hilfestellung. Bewerte entsprechend strenger."
@@ -758,14 +778,14 @@ Schwierigkeitsgrad: {schwierigkeit}
 
 Gespräch:
 {gespraech}
-
+{stimmung_kontext}
 Bewerte in diesen Kategorien (jeweils 1-10):
 1. Gesprächseröffnung — Guter Einstieg?
 2. Bedarfsanalyse — Richtige Fragen gestellt?
 3. Einwandbehandlung — Einwände gut entkräftet?
 4. Gesprächsführung — Gespräch kontrolliert, offene Fragen?
-5. Abschluss — Klaren nächsten Schritt vereinbart?{sek_bonus}
-
+5. Abschluss — Klaren nächsten Schritt vereinbart?{beziehung_kategorie}{sek_bonus}
+{wendepunkte_prompt}
 Extrahiere ausserdem die 1-3 besten Saetze des Beraters, die einen Einwand erfolgreich entkraeftet haben (Wendepunkt-Saetze). Wenn keine erkennbar sind, gib ein leeres Array zurueck.
 
 Antworte NUR als valides JSON:
@@ -776,27 +796,34 @@ Antworte NUR als valides JSON:
     {{"name": "Bedarfsanalyse", "score": 5, "feedback": "1 Satz"}},
     {{"name": "Einwandbehandlung", "score": 8, "feedback": "1 Satz"}},
     {{"name": "Gesprächsführung", "score": 6, "feedback": "1 Satz"}},
-    {{"name": "Abschluss", "score": 4, "feedback": "1 Satz"}}{sek_json}
+    {{"name": "Abschluss", "score": 4, "feedback": "1 Satz"}}{beziehung_json}{sek_json}
   ],
   "staerken": ["Stärke 1", "Stärke 2"],
   "verbesserungen": ["Verbesserung 1", "Verbesserung 2", "Verbesserung 3"],
   "zusammenfassung": "2-3 Sätze Gesamtbewertung",
   "wendepunkt_saetze": [
     {{"text": "Konkreter Satz des Beraters der den Einwand erfolgreich behandelt hat", "einwand_typ": "Name des Einwands"}}
-  ]
+  ]{wendepunkte_json_example}
 }}
 
 {lang['prompt_sprache']}"""
 
     response = claude_client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1200,
+        max_tokens=1500,
         messages=[{"role": "user", "content": prompt}]
     )
-    text  = response.content[0].text.strip()
-    start = text.find('{')
-    end   = text.rfind('}') + 1
-    return json.loads(text[start:end])
+    text   = response.content[0].text.strip()
+    start  = text.find('{')
+    end    = text.rfind('}') + 1
+    result = json.loads(text[start:end])
+
+    # ── Basis-Punkte (D-16) ────────────────────────────────────────────────────
+    gesamt = result.get('gesamt_score', 0)
+    bonus  = max(0, gesamt - 50)  # bonus for scores above 50
+    result['punkte'] = 10 + bonus  # 10 base points + score bonus
+
+    return result
 
 
 def _generate_live_preview(conversation_history: list, profile_data: dict) -> dict:

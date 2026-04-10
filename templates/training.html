@@ -1283,6 +1283,10 @@ async function confirmEndTraining() {
     if (!data.ok) { alert('Fehler bei der Auswertung'); setWaiting(false); return; }
     buildScoring(data);
     showPhase('scoring');
+    // D-15: Render mood curve chart
+    renderMoodChart(data.stimmung_history);
+    // D-17: Render Wendepunkt-Analyse block
+    renderWendepunkteDetail((data.scoring || {}).wendepunkte_detail);
     // D-05: personality reveal for Experte mode
     if (data.personality_revealed) {
       const reveal = data.personality_revealed;
@@ -1443,6 +1447,8 @@ function buildScoring(data) {
       '</div>' +
     '</div>' +
     modusHtml +
+    '<div id="t-mood-chart-container" style="display:none; margin-bottom:24px; padding:16px; background:#1C2333; border-radius:12px;"><h4 style="color:#00D4AA; margin:0 0 12px; font-size:14px;">Stimmungsverlauf</h4><div style="position:relative;height:180px;"><canvas id="t-mood-chart"></canvas></div></div>' +
+    '<div id="t-wendepunkte-detail" style="display:none; margin-bottom:24px;"></div>' +
     (catsHtml ? '<div class="t-cats">' + catsHtml + '</div>' : '') +
     (staerkenHtml ? '<div class="t-score-box"><div class="t-score-box-title">Stärken</div>' + staerkenHtml + '</div>' : '') +
     (verbHtml ? '<div class="t-score-box"><div class="t-score-box-title">Verbesserungspotenzial</div>' + verbHtml + '</div>' : '') +
@@ -1452,6 +1458,121 @@ function buildScoring(data) {
       '<button class="btn btn-secondary" onclick="resetTraining()">🔄 Nochmal trainieren</button>' +
       '<button class="btn btn-primary" onclick="showPhase(\'setup\')">✕ Schließen</button>' +
     '</div>';
+}
+
+// ── Mood curve chart (D-15) ────────────────────────────────────────────────────
+function renderMoodChart(stimmungHistory) {
+    if (!stimmungHistory || stimmungHistory.length === 0) {
+        const c = document.getElementById('t-mood-chart-container');
+        if (c) c.style.display = 'none';
+        return;
+    }
+    document.getElementById('t-mood-chart-container').style.display = 'block';
+
+    // Destroy existing chart if re-rendering (Pitfall 5)
+    const existing = Chart.getChart('t-mood-chart');
+    if (existing) existing.destroy();
+
+    const ctx = document.getElementById('t-mood-chart').getContext('2d');
+
+    // Find wendepunkte (mood drops of >= 2 in negative direction)
+    const wendepunkte = [];
+    for (let i = 1; i < stimmungHistory.length; i++) {
+        const delta = stimmungHistory[i].wert - stimmungHistory[i-1].wert;
+        if (delta <= -2) wendepunkte.push(i);
+    }
+
+    // Point colors: red for wendepunkte, teal for others
+    const pointColors = stimmungHistory.map((_, i) =>
+        wendepunkte.includes(i) ? '#FC8181' : '#00D4AA'
+    );
+    const pointRadii = stimmungHistory.map((_, i) =>
+        wendepunkte.includes(i) ? 8 : 4
+    );
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: stimmungHistory.map((e, i) => 'Runde ' + (i + 1)),
+            datasets: [{
+                label: 'Kundenstimmung',
+                data: stimmungHistory.map(e => e.wert),
+                borderColor: '#00D4AA',
+                backgroundColor: 'rgba(0, 212, 170, 0.1)',
+                tension: 0.3,
+                pointRadius: pointRadii,
+                pointBackgroundColor: pointColors,
+                pointBorderColor: pointColors,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            const val = ctx.parsed.y;
+                            return 'Stimmung: ' + (val > 0 ? '+' : '') + val;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: -5,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1,
+                        color: '#A0AEC0',
+                        callback: function(v) { return v > 0 ? '+' + v : v; }
+                    },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                },
+                x: {
+                    ticks: { color: '#A0AEC0' },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+// ── Wendepunkt-Analyse block (D-17) ───────────────────────────────────────────
+function renderWendepunkteDetail(wendepunkte) {
+    const container = document.getElementById('t-wendepunkte-detail');
+    if (!container) return;
+    if (!wendepunkte || wendepunkte.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'block';
+    container.innerHTML =
+        '<h4 style="color:#FC8181; margin:0 0 16px; font-size:16px; display:flex; align-items:center; gap:8px;">' +
+            '<span style="font-size:20px;">&#x1F4A1;</span> Wendepunkt-Analyse' +
+        '</h4>' +
+        wendepunkte.map(function(w, i) {
+            return '<div style="background:#1C2333; border-left:3px solid #FC8181; border-radius:0 12px 12px 0; padding:16px; margin-bottom:12px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+                    '<span style="color:#FC8181; font-size:12px; font-weight:600;">Wendepunkt ' + (i+1) + '</span>' +
+                    (w.turn ? '<span style="color:#A0AEC0; font-size:11px;">Runde ' + w.turn + '</span>' : '') +
+                '</div>' +
+                '<div style="margin-bottom:8px;">' +
+                    '<div style="color:#A0AEC0; font-size:11px; margin-bottom:2px;">Du hast gesagt:</div>' +
+                    '<div style="color:#E2E8F0; font-size:13px; font-style:italic;">"' + escH(w.berater_sagt || '') + '"</div>' +
+                '</div>' +
+                '<div style="margin-bottom:8px;">' +
+                    '<div style="color:#FC8181; font-size:11px; margin-bottom:2px;">Problem:</div>' +
+                    '<div style="color:#E2E8F0; font-size:13px;">' + escH(w.was_schief || '') + '</div>' +
+                '</div>' +
+                '<div>' +
+                    '<div style="color:#48BB78; font-size:11px; margin-bottom:2px;">Besser waere:</div>' +
+                    '<div style="color:#48BB78; font-size:13px; font-weight:500;">"' + escH(w.alternativ || '') + '"</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
 }
 
 function resetTraining() {
