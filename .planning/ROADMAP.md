@@ -356,12 +356,12 @@ Plans:
 **Goal:** Async FastAPI+uvicorn WebSocket Engine als eigener Service, Redis Bridge zu Flask, STT/LLM Abstraktionsschicht, HTTP-Polling durch WebSocket-Push ersetzen. Fundament fuer eigene KI, eigene STT, Skalierung.
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09
 **Depends on:** Phase 04.8
-**Plans:** 2/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 - [x] 04.8.1-01-PLAN.md — FastAPI skeleton, config, Redis bridge, Pydantic models (D-01, D-02)
 - [x] 04.8.1-02-PLAN.md — STTProvider ABC + DeepgramAdapter asyncwebsocket (D-03, D-09)
-- [ ] 04.8.1-03-PLAN.md — LLMProvider ABC + ClaudeAdapter async + ShadowLogger (D-04, D-05, D-09)
+- [x] 04.8.1-03-PLAN.md — LLMProvider ABC + ClaudeAdapter async + ShadowLogger (D-04, D-05, D-09)
 - [ ] 04.8.1-04-PLAN.md — SessionManager + WebSocket router, wire STT+LLM+push (D-06, D-07)
 - [ ] 04.8.1-05-PLAN.md — Flask token bridge, frontend WS client, systemd+nginx deploy (D-06, D-07, D-08)
 
