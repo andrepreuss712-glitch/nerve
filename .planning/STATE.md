@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.9-01-PLAN.md
-last_updated: "2026-04-10T14:35:20.135Z"
+stopped_at: Completed 04.9-02-PLAN.md
+last_updated: "2026-04-10T14:38:27.778Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 29
   completed_phases: 13
   total_plans: 96
-  completed_plans: 83
-  percent: 86
+  completed_plans: 84
+  percent: 88
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 04.9 (Training-Modul Upgrade) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-04-10
 
@@ -104,6 +104,7 @@ Progress: [█████████░] ~90% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.8.1 P04 | 3min | 2 tasks | 4 files |
 | Phase 04.8.1 P05 | 3min | 2 tasks | 5 files |
 | Phase 04.9-training-modul-upgrade-inserted P01 | 3min | 2 tasks | 3 files |
+| Phase 04.9-training-modul-upgrade-inserted P02 | 1min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -233,6 +234,8 @@ Recent decisions affecting current work:
 - [Phase 04.9]: System personality types seeded via INSERT OR IGNORE in _migrate() — idempotent, runs on every app start
 - [Phase 04.9]: System training scenarios use org_id=first_org.id with erstellt_von=NULL as system marker — avoids NOT NULL constraint without schema change
 - [Phase 04.9]: SCHWIERIGKEITEN internal keys unchanged (leicht/mittel/schwer) — only display labels updated to Einsteiger/Fortgeschritten/Experte
+- [Phase 04.9]: generate_response_with_mood uses find/rfind JSON extraction pattern — consistent with generate_scoring() in same file
+- [Phase 04.9]: generate_response() left untouched for sekretaerin mode backward compatibility — mood tracking only in new function
 
 ### Roadmap Evolution
 
@@ -281,6 +284,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T14:35:20.131Z
-Stopped at: Completed 04.9-01-PLAN.md
+Last session: 2026-04-10T14:38:27.774Z
+Stopped at: Completed 04.9-02-PLAN.md
 Resume: Next phase in roadmap
