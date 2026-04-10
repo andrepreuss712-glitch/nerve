@@ -128,7 +128,11 @@ def training_start():
         personality_hidden = False
         startstimmung      = 0
         if personality_type_id:
-            pt = db.get(PersonalityType, personality_type_id)
+            pt = db.query(PersonalityType).filter(
+                PersonalityType.id == personality_type_id,
+                (PersonalityType.is_custom == False) |
+                (PersonalityType.user_id == g.user.id)
+            ).first()
             if pt:
                 personality_data = json.loads(pt.attribute) if pt.attribute else {}
                 personality_data['name'] = pt.name
