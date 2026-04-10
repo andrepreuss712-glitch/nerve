@@ -1050,7 +1050,7 @@
   try { window._profileData = JSON.parse({{ (active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"' }}); } catch(e) { window._profileData = {}; }
   window.sessionMode = null; // set by mode overlay via selectMode()
   // RT Engine session token (Phase 04.8.1 — D-06 WebSocket push)
-  window._rtSessionToken = {{ rt_session_token | tojson }};
+  window._rtSessionToken = {{ rt_session_token | default(none) | tojson }};
 </script>
 <script src="/static/app.js"></script>
 <script>
