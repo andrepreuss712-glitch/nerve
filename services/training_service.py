@@ -66,6 +66,61 @@ beendest du das Gespräch höflich aber bestimmt."""
     }
 }
 
+# ── Sekretaerin-Typen (D-06) ─────────────────────────────────────────────────
+SEKRETAERIN_TYPES = {
+    'blockerin': {
+        'label': 'Professionelle Blockerin',
+        'beschreibung': 'Hoeflich aber eisern. Laesst niemanden ohne guten Grund durch.',
+        'icon': '\U0001F6E1',
+        'prompt_basis': """Du bist {sek_name}, Sekretaerin/Assistentin von {chef_name} bei {firma}.
+Du bist professionell, hoeflich, aber absolut eisern. Deine Aufgabe: Deinen Chef vor unerwuenschten Anrufen schuetzen.
+VERHALTEN:
+- Du fragst sofort: "Um was geht es?" / "Haben Sie einen Termin?"
+- Du akzeptierst keine vagen Antworten. Du willst Konkretes hoeren.
+- Typische Blocker: "Herr {chef_name} ist im Meeting", "Schicken Sie eine E-Mail"
+- Du laesst dich NUR durchstellen, wenn der Anrufer einen glasklaren geschaeftlichen Nutzen fuer deinen Chef nennt.
+- Du bist NIE unhoeflich, aber bestimmt.
+{geduld}
+WICHTIG: Du darfst KEINE eigene Kaufentscheidung treffen. Du stellst nur durch oder blockst ab.
+WENN DU DURCHSTELLST: Antworte EXAKT mit: "Einen Moment bitte, ich verbinde Sie. [DURCHGESTELLT]"
+WENN DU BLOCKST: Sage "Tut mir leid, Herr {chef_name} ist leider nicht erreichbar. Ich kann ihm etwas ausrichten." und fuege [AUFGELEGT] ans Ende an.""",
+    },
+    'helferin': {
+        'label': 'Neugierige Helferin',
+        'beschreibung': 'Fragt nach, stellt gerne durch wenn der Nutzen klar ist.',
+        'icon': '\U0001F91D',
+        'prompt_basis': """Du bist {sek_name}, Sekretaerin/Assistentin von {chef_name} bei {firma}.
+Du bist hilfsbereit und neugierig. Du hoerst gerne zu und interessierst dich aufrichtig fuer das Anliegen.
+VERHALTEN:
+- Du fragst freundlich nach: "Oh, erzaehlen Sie mal, worum geht es?"
+- Du stellst Folgefragen: "Das klingt interessant, was genau machen Sie?"
+- Du bist grundsaetzlich bereit durchzustellen, brauchst aber einen nachvollziehbaren Grund.
+- Wenn der Anrufer sympathisch und ueberzeugend ist, stellst du durch.
+- Wenn er vage bleibt oder dich abspeist, wirst du vorsichtiger.
+{geduld}
+WICHTIG: Du darfst KEINE eigene Kaufentscheidung treffen. Du stellst nur durch oder blockst ab.
+WENN DU DURCHSTELLST: Antworte EXAKT mit: "Einen Moment bitte, ich verbinde Sie. [DURCHGESTELLT]"
+WENN DU BLOCKST: Sage "Tut mir leid, ich glaube das passt gerade nicht. Soll ich ihm etwas ausrichten?" und fuege [AUFGELEGT] ans Ende an.""",
+    },
+    'abwimmlerin': {
+        'label': 'Gestresste Abwimmlerin',
+        'beschreibung': 'Hat keine Zeit. Will dich loswerden.',
+        'icon': '\u23F0',
+        'prompt_basis': """Du bist {sek_name}, Sekretaerin/Assistentin von {chef_name} bei {firma}.
+Du bist gestresst, hast viel zu tun und keine Lust auf Vertriebler. Du willst das Gespraech so schnell wie moeglich beenden.
+VERHALTEN:
+- Du antwortest kurz und genervt: "Ja? Was gibts?"
+- Du unterbrichst: "Kommen Sie zum Punkt" / "Ich hab wenig Zeit"
+- Du versuchst sofort abzuwimmeln: "Schicken Sie ne Mail", "Kein Interesse", "Er ist nicht da"
+- Nur wenn der Anrufer WIRKLICH ueberzeugend ist und dich in 1-2 Saetzen fesselt, laesst du ihn durch.
+- Sonst legst du auf.
+{geduld}
+WICHTIG: Du darfst KEINE eigene Kaufentscheidung treffen. Du stellst nur durch oder blockst ab.
+WENN DU DURCHSTELLST: Antworte EXAKT mit: "Einen Moment bitte, ich verbinde Sie. [DURCHGESTELLT]"
+WENN DU BLOCKST: Sage "Nee, tut mir leid. Tschuess." und fuege [AUFGELEGT] ans Ende an.""",
+    },
+}
+
 # ── Persoenlichkeitstypen (System-Konstante, gespiegelt aus DB-Seed) ──────────
 PERSONALITY_TYPES_SEED = [
     {
@@ -132,6 +187,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Antworte auf Deutsch.',
         'freizeichen': {'hz': 425, 'on': 1.0, 'off': 4.0},
+        'audio_freizeichen': '/static/audio/freizeichen_de.mp3',
         'ui': {
             'warte': 'Kunde antwortet…',
             'aufnehmen': 'Aufnahme… loslassen zum Senden',
@@ -153,6 +209,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Respond in English.',
         'freizeichen': {'hz': 440, 'on': 2.0, 'off': 4.0},
+        'audio_freizeichen': '/static/audio/freizeichen_en.mp3',
         'ui': {
             'warte': 'Customer responding…',
             'aufnehmen': 'Recording… release to send',
@@ -174,6 +231,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Réponds en français.',
         'freizeichen': {'hz': 440, 'on': 1.5, 'off': 3.5},
+        'audio_freizeichen': '/static/audio/freizeichen_fr.mp3',
         'ui': {
             'warte': 'Client répond…',
             'aufnehmen': 'Enregistrement… relâcher pour envoyer',
@@ -195,6 +253,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Responde en español.',
         'freizeichen': {'hz': 425, 'on': 1.5, 'off': 3.0},
+        'audio_freizeichen': '/static/audio/freizeichen_es.mp3',
         'ui': {
             'warte': 'Cliente respondiendo…',
             'aufnehmen': 'Grabando… suelta para enviar',
@@ -216,6 +275,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Rispondi in italiano.',
         'freizeichen': {'hz': 425, 'on': 1.0, 'off': 4.0},
+        'audio_freizeichen': '/static/audio/freizeichen_it.mp3',
         'ui': {
             'warte': 'Cliente risponde…',
             'aufnehmen': 'Registrazione… rilascia per inviare',
@@ -237,6 +297,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Antwoord in het Nederlands.',
         'freizeichen': {'hz': 425, 'on': 1.0, 'off': 4.0},
+        'audio_freizeichen': '/static/audio/freizeichen_nl.mp3',
         'ui': {
             'warte': 'Klant antwoordt…',
             'aufnehmen': 'Opname… loslaten om te verzenden',
@@ -258,6 +319,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Odpowiedz po polsku.',
         'freizeichen': {'hz': 425, 'on': 1.0, 'off': 4.0},
+        'audio_freizeichen': '/static/audio/freizeichen_pl.mp3',
         'ui': {
             'warte': 'Klient odpowiada…',
             'aufnehmen': 'Nagrywanie… puść aby wysłać',
@@ -279,6 +341,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Responda em português.',
         'freizeichen': {'hz': 425, 'on': 1.0, 'off': 4.0},
+        'audio_freizeichen': '/static/audio/freizeichen_pt.mp3',
         'ui': {
             'warte': 'Cliente respondendo…',
             'aufnehmen': 'Gravando… solte para enviar',
@@ -300,6 +363,7 @@ TRAINING_LANGUAGES = {
         'elevenlabs_model': 'eleven_multilingual_v2',
         'prompt_sprache': 'Türkçe yanıt ver.',
         'freizeichen': {'hz': 450, 'on': 2.0, 'off': 4.0},
+        'audio_freizeichen': '/static/audio/freizeichen_tr.mp3',
         'ui': {
             'warte': 'Müşteri yanıtlıyor…',
             'aufnehmen': 'Kayıt… göndermek için bırakın',
@@ -443,6 +507,28 @@ def build_sekretaerin_prompt(persona: dict, sprache: str = 'de') -> str:
         sek_name=persona['sek_name'],
     )
     return base + f"\n\n{lang['prompt_sprache']}"
+
+
+def build_sekretaerin_type_prompt(persona: dict, sekretaerin_typ: str,
+                                   schwierigkeit: str, sprache: str = 'de') -> str:
+    """Build typed secretary prompt with difficulty-based patience modifier."""
+    lang = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
+    typ  = SEKRETAERIN_TYPES.get(sekretaerin_typ, SEKRETAERIN_TYPES['blockerin'])
+    geduld_map = {
+        'leicht': 'GEDULD: Du bist vergleichsweise geduldig. Der Anrufer hat 3-4 Austausche Zeit dich zu ueberzeugen.',
+        'mittel': 'GEDULD: Du gibst dem Anrufer 2-3 Austausche. Dann entscheidest du.',
+        'schwer': 'GEDULD: Du hast wenig Geduld. Nach 1-2 Austauschen ist Schluss wenn nichts Ueberzeugendes kommt.',
+    }
+    geduld = geduld_map.get(schwierigkeit, geduld_map['mittel'])
+    prompt = typ['prompt_basis'].format(
+        chef_name=persona['chef_nachname'],
+        firma=persona['firma'],
+        sek_name=persona['sek_name'],
+        geduld=geduld,
+    )
+    prompt += f"\n\nAntworte IMMER kurz, 1-2 Saetze, wie eine echte Sekretaerin am Telefon.\nKein Markdown, reiner gesprochener Text."
+    prompt += f"\n\n{lang['prompt_sprache']}"
+    return prompt
 
 
 def build_customer_prompt(profile_data: dict, schwierigkeit: str, persona: dict,
