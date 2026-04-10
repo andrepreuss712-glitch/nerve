@@ -370,7 +370,15 @@ Plans:
 **Goal:** Training gegen lebendige KI-Persönlichkeiten — 6 Typen (Beschäftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider), dynamische Stimmung (-5 bis +5), echte Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade.
 **Depends on:** Phase 04.8
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training-Modul.md`
-**Plans:** TBD
+**Requirements:** D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17
+**Plans:** 5 plans
+
+Plans:
+- [ ] 04.9-01-PLAN.md — DB foundation: PersonalityType model, 6 system types seed, ConversationLog extension, system scenarios, difficulty labels (D-01, D-03, D-04, D-11)
+- [ ] 04.9-02-PLAN.md — AI logic: build_personality_prompt() + generate_response_with_mood() with mood tracking and auflege rules (D-08, D-10)
+- [ ] 04.9-03-PLAN.md — Backend API: personality endpoints (list/generate/save), training start/respond/end wiring, scenario list fix (D-02, D-03, D-05, D-06, D-13)
+- [ ] 04.9-04-PLAN.md — Frontend setup + chat: personality type cards, scenario step, mood indicator, hangup UX, save prompt (D-02, D-05, D-06, D-07, D-09, D-12, D-13)
+- [ ] 04.9-05-PLAN.md — Scoring upgrade: 6th category Beziehungsaufbau, mood curve Chart.js, Wendepunkt-Analyse, basis points + visual checkpoint (D-14, D-15, D-16, D-17)
 
 ### Phase 04.10: Training Realismus (INSERTED)
 
@@ -461,7 +469,7 @@ Phases execute in numeric order.
 | 4.7.1 FineTuning Logging | 0/? | Not started | - |
 | 4.7.2 Founder Cost Dashboard | 0/? | Not started | - |
 | 4.8 KI-Logik Upgrade | 0/? | Not started | - |
-| 4.9 Training-Modul Upgrade | 0/? | Not started | - |
+| 4.9 Training-Modul Upgrade | 0/5 | Planned | - |
 | 4.10 Training Realismus | 0/? | Not started | - |
 | 4.11 Coach-Modul | 0/? | Not started | - |
 | 4.12 Gesamt-Integration | 0/? | Not started | - |
