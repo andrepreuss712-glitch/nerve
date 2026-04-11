@@ -329,6 +329,16 @@ def training_start():
             }
 
         # Build response — conditionally expose personality info (D-05 / T-04.9-07)
+        # Use personality name for header if available
+        if personality_data and personality_data.get('name') and not personality_hidden:
+            # Extract name without age suffix (e.g. "Katrin Behrens, 48" -> "Katrin Behrens")
+            _pname = personality_data['name'].split(',')[0].strip()
+            display_name = _pname
+            display_position = personality_data.get('kurzbeschreibung', persona['chef_position'])
+        else:
+            display_name = f"{persona['chef_vorname']} {persona['chef_nachname']}"
+            display_position = persona['chef_position']
+
         resp = {
             'ok':             True,
             'session_id':     session_id,
@@ -337,8 +347,8 @@ def training_start():
             'phase':          phase,
             'persona': {
                 'firma':         persona['firma'],
-                'chef_name':     f"{persona['chef_vorname']} {persona['chef_nachname']}",
-                'chef_position': persona['chef_position'],
+                'chef_name':     display_name,
+                'chef_position': display_position,
                 'sek_name':      persona['sek_name'] if hat_sekretaerin else None,
             },
             'hat_sekretaerin':    hat_sekretaerin,
