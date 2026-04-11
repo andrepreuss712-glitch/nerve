@@ -1011,6 +1011,14 @@ async function startTraining() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(startPayload)
     });
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error('[Training] Start error:', res.status, txt.substring(0, 300));
+      alert('Startfehler: ' + txt.substring(0, 200));
+      showPhase('setup');
+      stopFreizeichen();
+      return;
+    }
     const data = await res.json();
     if (!data.ok) {
       alert('Fehler: ' + (data.error || '?'));
