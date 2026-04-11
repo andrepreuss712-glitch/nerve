@@ -1012,9 +1012,16 @@ async function startTraining() {
       body: JSON.stringify(startPayload)
     });
     if (!res.ok) {
-      const txt = await res.text();
-      console.error('[Training] Start error:', res.status, txt.substring(0, 300));
-      alert('Startfehler: ' + txt.substring(0, 200));
+      try {
+        const errData = await res.json();
+        console.error('[Training] Start error:', errData.error);
+        if (errData.traceback) console.error('[Training] Traceback:', errData.traceback);
+        alert('Startfehler: ' + (errData.error || res.status));
+      } catch(_) {
+        const txt = await res.text();
+        console.error('[Training] Start error:', res.status, txt.substring(0, 500));
+        alert('Startfehler: ' + txt.substring(0, 200));
+      }
       showPhase('setup');
       stopFreizeichen();
       return;
@@ -1393,7 +1400,10 @@ async function getHelp() {
   try {
     const res  = await fetch('/training/help', {method: 'POST'});
     const data = await res.json();
-    if (!res.ok) { console.error('[Help] Server error:', data.error || res.status); }
+    if (!res.ok) {
+      console.error('[Help] Server error:', data.error);
+      if (data.traceback) console.error('[Help] Traceback:', data.traceback);
+    }
     if (data.ok && data.vorschlag) {
       sugg.innerHTML =
         '<div class="t-help-suggestion" onclick="adoptSugg(this)">' +
