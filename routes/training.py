@@ -222,11 +222,16 @@ def training_start():
                 phase         = 'kunde'
 
         # Use mood-aware response if personality prompt (contains JSON instruction)
-        if personality_data and not hat_sekretaerin:
-            mood_result = generate_response_with_mood([], system_prompt, 0, schwierigkeit)
-            erste_antwort = mood_result['text']
-        else:
-            erste_antwort = generate_response([], system_prompt)
+        try:
+            if personality_data and not hat_sekretaerin:
+                mood_result = generate_response_with_mood([], system_prompt, startstimmung, schwierigkeit)
+                erste_antwort = mood_result['text']
+            else:
+                erste_antwort = generate_response([], system_prompt)
+        except Exception as _gen_err:
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'KI-Antwort fehlgeschlagen: {type(_gen_err).__name__}: {str(_gen_err)[:200]}'}), 500
 
         voice_id    = persona['voice_female']['id'] if hat_sekretaerin else persona['voice_male']['id']
         audio_b64   = None
