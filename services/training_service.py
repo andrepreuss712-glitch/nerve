@@ -1,5 +1,6 @@
 import json
 import random
+import re
 import requests
 from datetime import datetime
 import anthropic
@@ -713,7 +714,11 @@ def generate_response(conversation_history: list, system_prompt: str) -> str:
         system=system_prompt,
         messages=messages
     )
-    return response.content[0].text.strip()
+    text = response.content[0].text.strip()
+    # Strip any markdown formatting that slipped through
+    text = re.sub(r'\*\*[A-ZÄÖÜ]+:?\*\*\s*', '', text)
+    text = text.replace('**', '').replace('*', '')
+    return text
 
 
 def generate_response_with_mood(
@@ -759,7 +764,7 @@ def generate_response_with_mood(
         parsed = json.loads(text[start:end])
         # Validate required keys exist
         result = {
-            'text': parsed.get('text', text),
+            'text': re.sub(r'\*\*[A-ZÄÖÜ]+:?\*\*\s*', '', parsed.get('text', text)).replace('**', '').replace('*', ''),
             'neue_stimmung': int(parsed.get('neue_stimmung', current_mood)),
             'aufgelegt': bool(parsed.get('aufgelegt', False)),
             'letzte_chance': bool(parsed.get('letzte_chance', False)),
@@ -853,7 +858,10 @@ REGELN:
         max_tokens=200,
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.content[0].text.strip()
+    text = response.content[0].text.strip()
+    text = re.sub(r'\*\*[A-ZÄÖÜ]+:?\*\*\s*', '', text)
+    text = text.replace('**', '').replace('*', '')
+    return text
 
 
 def generate_scoring(conversation_history: list, profile_data: dict,
