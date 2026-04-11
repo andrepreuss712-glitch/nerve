@@ -233,7 +233,15 @@ def training_start():
             traceback.print_exc()
             return jsonify({'error': f'KI-Antwort fehlgeschlagen: {type(_gen_err).__name__}: {str(_gen_err)[:200]}'}), 500
 
-        voice_id    = persona['voice_female']['id'] if hat_sekretaerin else persona['voice_male']['id']
+        # Voice selection: sekretaerin=female, generated personality=from geschlecht, default=male
+        if hat_sekretaerin:
+            voice_id = persona['voice_female']['id']
+        elif generated_personality and generated_personality.get('geschlecht') == 'w':
+            voice_id = persona['voice_female']['id']
+        elif personality_data and personality_data.get('geschlecht') == 'w':
+            voice_id = persona['voice_female']['id']
+        else:
+            voice_id = persona['voice_male']['id']
         audio_b64   = None
         if voice_available:
             audio_bytes = text_to_speech(erste_antwort, voice_id, lang_config['elevenlabs_model'])
@@ -256,6 +264,7 @@ def training_start():
                 'phase':           phase,
                 'modus':            modus,
                 'voice_available':  voice_available,
+                'voice_id':                voice_id,
                 'sekretaerin_typ':         sekretaerin_typ if hat_sekretaerin else None,
                 'sekretaerin_ueberwunden': False,
                 'history': [{
@@ -412,7 +421,7 @@ def training_respond():
             'ts':      datetime.now().strftime('%H:%M:%S'),
         })
 
-    voice_id  = persona['voice_female']['id'] if is_sek else persona['voice_male']['id']
+    voice_id  = persona['voice_female']['id'] if is_sek else session.get('voice_id', persona['voice_male']['id'])
     audio_b64 = None
     if session.get('voice_available', True):
         audio_bytes = text_to_speech(kunde_antwort, voice_id, lang_config['elevenlabs_model'])
@@ -756,6 +765,7 @@ Die Person soll NICHT einer dieser 6 Standard-Typen sein: Beschäftigter Chef, S
 
 REGELN:
 - IMMER einen realistischen deutschen Vor- und Nachnamen generieren (z.B. "Thomas Brenner", "Sabine Krämer")
+- Mische Geschlechter: ca. 50% männlich, 50% weiblich
 - Alter angeben (35-62)
 - Fokus auf CHARAKTER und VERHALTEN: Wie tickt diese Person? Was macht sie schwierig/interessant im Gespräch?
 - KEINE Jobtitel, KEINE Firmennamen, KEINE Produktdetails, KEINE technischen Fragen — das gehört ins Szenario, nicht in den Kundentyp
@@ -764,6 +774,7 @@ REGELN:
 Antworte NUR als valides JSON:
 {{
   "name": "Vorname Nachname, Alter",
+  "geschlecht": "m" oder "w",
   "icon": "ein passendes Emoji",
   "kurzbeschreibung": "1 Satz Charakterbeschreibung — WIE die Person reagiert, nicht WAS sie beruflich macht",
   "briefing": "2-3 Sätze für den Vertriebler: Charakter, Eigenarten, worauf achten, was diese Person triggert",
