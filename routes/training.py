@@ -486,9 +486,19 @@ def training_respond():
             session['system_prompt']           = session['customer_prompt']
             kunde_antwort                      = kunde_antwort.replace('[DURCHGESTELLT]', '').strip()
             # Switch voice: chef must have different voice than secretary
-            # Secretary always uses voice_female, so chef uses voice_male
-            # (even if chef is female — different voice = different person)
-            session['voice_id']                = persona['voice_male']['id']
+            sek_voice = persona['voice_female']['id']
+            # Detect chef gender from personality data
+            chef_is_female = _detect_female(
+                _ensure_dict(session.get('personality_data')),
+                None
+            )
+            if chef_is_female:
+                # Female chef needs a DIFFERENT female voice than the secretary
+                from services.training_service import VOICE_POOL_FEMALE
+                alt_voices = [v['id'] for v in VOICE_POOL_FEMALE if v['id'] != sek_voice]
+                session['voice_id'] = alt_voices[0] if alt_voices else persona['voice_male']['id']
+            else:
+                session['voice_id'] = persona['voice_male']['id']
 
         # Sekretaerin blocks — she hung up
         if session['phase'] == 'sekretaerin' and '[AUFGELEGT]' in kunde_antwort:
@@ -540,7 +550,7 @@ def training_respond():
         chef_audio_b64 = None
         if session.get('voice_available', True):
             chef_audio = text_to_speech(
-                chef_antwort, persona['voice_male']['id'], lang_config['elevenlabs_model'])
+                chef_antwort, session['voice_id'], lang_config['elevenlabs_model'])
             if chef_audio:
                 chef_audio_b64 = base64.b64encode(chef_audio).decode('utf-8')
 
