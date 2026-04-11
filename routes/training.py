@@ -143,6 +143,8 @@ def training_start():
             ).first()
             if pt:
                 personality_data = json.loads(pt.attribute) if pt.attribute else {}
+                if isinstance(personality_data, str):
+                    personality_data = json.loads(personality_data)
                 personality_data['name'] = pt.name
                 personality_data['icon'] = pt.icon
                 personality_data['kurzbeschreibung'] = pt.kurzbeschreibung or ''
@@ -153,7 +155,10 @@ def training_start():
 
         # Use generated (unsaved) personality if no personality_type_id was given
         if personality_type_id is None and generated_personality and isinstance(generated_personality, dict):
-            personality_data = dict(generated_personality.get('attribute') or {})
+            attr = generated_personality.get('attribute') or {}
+            if isinstance(attr, str):
+                attr = json.loads(attr)
+            personality_data = dict(attr)
             personality_data['name']             = generated_personality.get('name', 'Generiert')
             personality_data['icon']             = generated_personality.get('icon', '\U0001F464')
             personality_data['kurzbeschreibung'] = generated_personality.get('kurzbeschreibung', '')
