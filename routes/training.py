@@ -485,6 +485,8 @@ def training_help():
     try:
         sprache  = session.get('sprache', 'de')
         profile_data = session.get('profile_data', {})
+        if isinstance(profile_data, str):
+            profile_data = json.loads(profile_data) if profile_data else {}
         vorschlag = generate_help_suggestion(
             session['history'], profile_data, sprache)
         return jsonify({'ok': True, 'vorschlag': vorschlag})
