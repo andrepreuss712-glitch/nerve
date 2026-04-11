@@ -221,7 +221,12 @@ def training_start():
                 system_prompt = customer_prompt
                 phase         = 'kunde'
 
-        erste_antwort = generate_response([], system_prompt)
+        # Use mood-aware response if personality prompt (contains JSON instruction)
+        if personality_data and not hat_sekretaerin:
+            mood_result = generate_response_with_mood([], system_prompt, 0, schwierigkeit)
+            erste_antwort = mood_result['text']
+        else:
+            erste_antwort = generate_response([], system_prompt)
 
         voice_id    = persona['voice_female']['id'] if hat_sekretaerin else persona['voice_male']['id']
         audio_b64   = None
@@ -464,11 +469,14 @@ def training_help():
 
     try:
         sprache  = session.get('sprache', 'de')
+        profile_data = session.get('profile_data', {})
         vorschlag = generate_help_suggestion(
-            session['history'], session['profile_data'], sprache)
+            session['history'], profile_data, sprache)
         return jsonify({'ok': True, 'vorschlag': vorschlag})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'{type(e).__name__}: {str(e)[:200]}'}), 500
 
 
 @training_bp.route('/training/end', methods=['POST'])
