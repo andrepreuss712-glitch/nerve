@@ -797,21 +797,39 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
         if parts:
             einw_str = '\nBekannte Gegenargumente:\n' + '\n'.join(parts)
 
-    prompt = f"""Du bist ein erfahrener Vertriebscoach. Der Berater steckt in einem Telefonat und braucht JETZT eine gute Antwort.
+    # Detect conversation phase for context-appropriate suggestion
+    berater_count = sum(1 for m in conversation_history if m.get('speaker') == 'berater')
+    if berater_count == 0:
+        phase_hint = """PHASE: OPENER — Der Berater hat noch NICHTS gesagt. Der Kunde hat gerade den Hörer abgenommen.
+Der Berater braucht einen professionellen Gesprächseinstieg:
+1. Sich vorstellen (Name + Firma)
+2. Kurz sagen warum er anruft (1 Satz Nutzenversprechen)
+3. Fragen ob es gerade passt
+Beispiel-Struktur: "Guten Tag, [Name] von [Firma]. Ich rufe an weil [Nutzen in einem Satz]. Passt es gerade kurz?"
+"""
+    elif berater_count <= 2:
+        phase_hint = "PHASE: FRÜHE BEDARFSANALYSE — Der Berater soll Interesse wecken und Fragen stellen, NICHT pitchen."
+    else:
+        phase_hint = "PHASE: GESPRÄCH LÄUFT — Der Berater soll auf den Kunden eingehen und das Gespräch voranbringen."
+
+    prompt = f"""Du bist ein erfahrener Vertriebscoach. Der Berater telefoniert mit einem Kunden und braucht JETZT einen konkreten Vorschlag was er sagen soll.
 
 Produkt: {produkt}
 USPs: {", ".join(usps)}{einw_str}
 
-LETZTE GESPRÄCHSZEILEN:
-{gespraech}
+{phase_hint}
 
-WICHTIG: Lies die LETZTE Aussage des Kunden genau. Dein Vorschlag MUSS direkt darauf eingehen.
-- Wenn der Kunde "keine Zeit" sagt: Nicht weiterpitchen, sondern Verständnis zeigen und kurz halten.
-- Wenn der Kunde eine Frage stellt: Die Frage beantworten, nicht ignorieren.
-- Wenn der Kunde einen Einwand bringt: Den Einwand anerkennen, dann entkräften.
+GESPRÄCHSVERLAUF:
+{gespraech if gespraech.strip() else "(Noch kein Gespräch — Kunde hat gerade abgenommen)"}
 
-Gib EINEN konkreten Satz (maximal 2 Sätze) den der Berater JETZT sagen sollte.
-Sprich den Kunden mit "{ansprache}" an. Kein Markdown, reiner gesprochener Text.
+REGELN:
+- Lies die LETZTE Aussage des Kunden genau. Dein Vorschlag MUSS darauf eingehen.
+- Wenn der Kunde "keine Zeit" sagt: Verständnis zeigen, kurz halten, Termin anbieten.
+- Wenn der Kunde eine Frage stellt: Die Frage beantworten.
+- Wenn der Kunde einen Einwand bringt: Anerkennen, dann entkräften.
+- Der Vorschlag muss wie ein ECHTER Satz klingen den man am Telefon sagt.
+- Maximal 2 Sätze. Sprich den Kunden mit "{ansprache}" an.
+- Kein Markdown, reiner gesprochener Text.
 
 {lang['prompt_sprache']}"""
 
