@@ -1085,6 +1085,13 @@ function initChat(data) {
   document.getElementById('t-messages').innerHTML = '';
   document.getElementById('t-helpSugg').style.display = 'none';
   document.getElementById('t-statusBar').textContent  = '';
+  // Re-enable inputs (may have been disabled by previous handleAufgelegt)
+  const _ptt = document.getElementById('t-pttBtn');
+  const _send = document.getElementById('t-sendBtn');
+  const _inp = document.getElementById('t-textInput');
+  if (_ptt) _ptt.disabled = false;
+  if (_send) _send.disabled = false;
+  if (_inp) _inp.disabled = false;
   hilfeCount = 0;
   const hilfeRow = document.getElementById('t-helpRow');
   if (hilfeRow) hilfeRow.style.display = trainingModus === 'free' ? 'none' : '';

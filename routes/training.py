@@ -257,12 +257,31 @@ def training_start():
             traceback.print_exc()
             return jsonify({'error': f'KI-Antwort fehlgeschlagen: {type(_gen_err).__name__}: {str(_gen_err)[:200]}'}), 500
 
-        # Voice selection: sekretaerin=female, generated personality=from geschlecht, default=male
+        # Voice selection: match gender to personality
+        def _detect_female(pd, gp):
+            """Check geschlecht field or detect from common German female first names."""
+            for src in [gp, pd]:
+                if isinstance(src, dict) and src.get('geschlecht') == 'w':
+                    return True
+            name = ''
+            if isinstance(pd, dict):
+                name = pd.get('name', '')
+            if isinstance(gp, dict) and not name:
+                name = gp.get('name', '')
+            first = name.split()[0].rstrip(',') if name else ''
+            female_names = {'anna','andrea','angelika','birgit','brigitte','carmen','caroline','charlotte',
+                'christa','claudia','dagmar','diana','doris','elena','elke','eva','franziska',
+                'gabriele','gabi','heike','ines','iris','jana','julia','jutta','karen','karin',
+                'katja','katrin','kerstin','laura','lena','lisa','luisa','manuela','maria',
+                'marina','marlene','martina','melanie','monika','nadine','nicole','nina',
+                'petra','renate','ruth','sabine','sandra','sara','sarah','silke','simone',
+                'sofia','sophie','stefanie','susanne','svenja','tanja','ulrike','ursula',
+                'ute','vera','verena'}
+            return first.lower() in female_names
+
         if hat_sekretaerin:
             voice_id = persona['voice_female']['id']
-        elif generated_personality and generated_personality.get('geschlecht') == 'w':
-            voice_id = persona['voice_female']['id']
-        elif personality_data and personality_data.get('geschlecht') == 'w':
+        elif _detect_female(personality_data, generated_personality):
             voice_id = persona['voice_female']['id']
         else:
             voice_id = persona['voice_male']['id']
