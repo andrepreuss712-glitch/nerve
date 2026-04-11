@@ -42,6 +42,7 @@ def training_page():
 @training_bp.route('/training/start', methods=['POST'])
 @login_required
 def training_start():
+  try:
     # Monthly usage reset + voice-limit check (soft — degrades to text, no hard block)
     from datetime import date as _date
     from database.models import User as _UModel
@@ -321,6 +322,10 @@ def training_start():
         return resp
     finally:
         db.close()
+  except Exception as _start_err:
+    import traceback
+    traceback.print_exc()
+    return jsonify({'ok': False, 'error': f'{type(_start_err).__name__}: {str(_start_err)[:300]}'}), 500
 
 
 def _hangup_reason(session):
