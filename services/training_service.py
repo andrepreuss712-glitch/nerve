@@ -694,7 +694,7 @@ def generate_response(conversation_history: list, system_prompt: str) -> str:
 
     response = claude_client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=150,
+        max_tokens=400,
         system=system_prompt,
         messages=messages
     )
@@ -722,7 +722,7 @@ def generate_response_with_mood(
 
     response = claude_client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=300,
+        max_tokens=500,
         system=system_prompt,
         messages=messages
     )
