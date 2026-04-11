@@ -882,6 +882,7 @@ REGELN:
 - Der Vorschlag muss wie ein ECHTER Satz klingen den man am Telefon sagt.
 - Maximal 2 Sätze. KEINE Platzhalter — formuliere einen fertigen Satz.
 - Kein Markdown, kein Englisch, reiner gesprochener deutscher Text.
+- KEIN Vorsatz, KEINE Einleitung, KEINE Erklärung. Gib NUR den Satz aus den der Berater sagen soll. Kein "Vorschlag:", kein "Hier ist:", kein "Sie könnten sagen:". Nur den reinen Satz.
 
 {lang['prompt_sprache']}"""
 
@@ -891,9 +892,15 @@ REGELN:
         messages=[{"role": "user", "content": prompt}]
     )
     text = response.content[0].text.strip()
+    # Strip markdown
     text = re.sub(r'\*\*[A-ZÄÖÜ]+:?\*\*\s*', '', text)
     text = text.replace('**', '').replace('*', '')
-    return text
+    # Strip common AI prefixes
+    text = re.sub(r'^(Vorschlag[^:]*:|Hier ist[^:]*:|Sie könnten sagen:|Antwort:|Tipp:)\s*', '', text, flags=re.IGNORECASE)
+    # Strip surrounding quotes if the whole text is quoted
+    if len(text) > 2 and text[0] == '"' and text[-1] == '"':
+        text = text[1:-1]
+    return text.strip()
 
 
 def generate_scoring(conversation_history: list, profile_data: dict,
