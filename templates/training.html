@@ -409,6 +409,11 @@
             <button onclick="generateRandomPersonality()" style="background:transparent; border:1.5px solid var(--glass-border); color:var(--page-text-muted); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px;">Nochmal würfeln</button>
           </div>
         </div>
+        <!-- Gespeicherte Kundentypen (direkt unter Kundentyp-Grid) -->
+        <div id="t-saved-types-section" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid var(--glass-border);">
+          <div style="font-size:11px; font-weight:700; color:var(--page-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;">Gespeicherte Kunden</div>
+          <div id="t-saved-types-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+        </div>
       </div>
 
       <!-- ── Anruf-Typ (D-11) ──────────────────────────────────────────────────── -->
@@ -481,15 +486,6 @@
             <div class="t-modus-badge">Für Einsteiger</div>
           </div>
         </div>
-      </div>
-
-      <!-- ── Gespeicherte Kundentypen ────────────────────────────────────────── -->
-      <div class="t-section" id="t-saved-types-section" style="display:none;">
-        <div class="t-section-label">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px; margin-right:4px;"><circle cx="6" cy="5" r="3" stroke="#8B5CF6" stroke-width="1.5"/><path d="M1 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#8B5CF6" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="4" r="2" stroke="#8B5CF6" stroke-width="1.5" opacity="0.5"/><path d="M11 14c0-2 1.3-3.5 3-4" stroke="#8B5CF6" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/></svg>
-          Meine Kundentypen
-        </div>
-        <div id="t-saved-types-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
       </div>
 
       <button class="t-call-btn" id="t-callBtn" onclick="startTraining()" disabled>
@@ -881,17 +877,17 @@ async function loadPersonalityTypes() {
     const types = await res.json();
     const container = document.getElementById('t-typ-cards');
     if (!container) return;
-    const cards = types.map(t => {
+    // Only show system types in the main grid — custom types shown in "Gespeicherte Kunden" below
+    const systemTypes = types.filter(t => !t.is_custom);
+    const cards = systemTypes.map(t => {
       const svg = PERSONALITY_SVGS[t.name] || '';
       const iconHtml = svg
         ? '<div style="margin-bottom:6px;">' + svg + '</div>'
         : '<div style="font-size:24px; margin-bottom:6px;">' + (t.icon || '\u{1F464}') + '</div>';
-      const customBadge = t.is_custom ? '<div style="color:#00D4AA; font-size:10px; margin-top:4px;">Eigener Typ</div>' : '';
       return '<div class="t-typ-card" data-id="' + t.id + '" onclick="selectTyp(' + t.id + ', this)">' +
         iconHtml +
         '<div class="t-typ-name">' + escH(t.name) + '</div>' +
         '<div class="t-typ-desc">' + escH(t.kurzbeschreibung || '') + '</div>' +
-        customBadge +
       '</div>';
     }).join('');
     // Append full-width random generator card at end
