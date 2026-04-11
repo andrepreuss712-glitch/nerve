@@ -738,7 +738,7 @@ Antworte NUR als valides JSON:
     try:
         response = claude_client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=500,
+            max_tokens=1200,
             messages=[{"role": "user", "content": prompt}]
         )
         text = response.content[0].text.strip()
@@ -746,7 +746,7 @@ Antworte NUR als valides JSON:
         end   = text.rfind('}') + 1
         if start == -1 or end <= start:
             print(f"[Training] No JSON in response: {text[:500]}")
-            return jsonify({'error': f'Keine JSON-Antwort: {text[:150]}'}), 500
+            return jsonify({'error': 'KI-Antwort unvollständig. Bitte erneut versuchen.'}), 500
         parsed = json.loads(text[start:end])
         return jsonify(parsed)
     except Exception as e:
