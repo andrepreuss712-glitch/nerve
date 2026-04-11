@@ -254,6 +254,29 @@ def _migrate():
             print("[DB] Migration: created personality_types table")
         except Exception:
             pass
+        # ── Phase 04.10: deduplicate system personality_types + add UNIQUE index ─
+        try:
+            # Remove duplicates: keep only the lowest id per system type name
+            conn.execute(text("""
+                DELETE FROM personality_types
+                WHERE is_custom = 0 AND id NOT IN (
+                    SELECT MIN(id) FROM personality_types
+                    WHERE is_custom = 0
+                    GROUP BY name
+                )
+            """))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(text("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_personality_system_name
+                ON personality_types (name) WHERE is_custom = 0 AND user_id IS NULL
+            """))
+            conn.commit()
+            print("[DB] Migration: added unique index on personality_types")
+        except Exception:
+            pass
         # ── Phase 04.9: conversation_logs extensions ──────────────────────────
         for col, typedef in [
             ('personality_type_id', 'INTEGER'),
