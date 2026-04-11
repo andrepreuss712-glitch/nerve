@@ -745,8 +745,8 @@ Antworte NUR als valides JSON:
         start = text.find('{')
         end   = text.rfind('}') + 1
         if start == -1 or end <= start:
-            print(f"[Training] No JSON in response: {text[:200]}")
-            return jsonify({'error': 'Keine JSON-Antwort von KI erhalten'}), 500
+            print(f"[Training] No JSON in response: {text[:500]}")
+            return jsonify({'error': f'Keine JSON-Antwort: {text[:150]}'}), 500
         parsed = json.loads(text[start:end])
         return jsonify(parsed)
     except Exception as e:
