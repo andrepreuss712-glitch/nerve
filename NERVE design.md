@@ -3,6 +3,7 @@
 > Diese Datei ist die einzige Quelle der Wahrheit für alle visuellen Entscheidungen.
 > Alle Farben, Abstände und Fonts werden ausschließlich als CSS Custom Properties verwendet.
 > Keine Hex-Codes direkt in Templates, keine Inline-Styles, keine Werte in JavaScript hardcoden.
+> Claude Code / GSD liest diese Datei vor jeder UI-Arbeit.
 
 ---
 
@@ -10,40 +11,49 @@
 
 ```css
 :root {
-  /* Backgrounds */
-  --color-bg:           #0C0C0C;
-  --color-bg-elevated:  #141414;
-  --color-card:         rgba(255, 255, 255, 0.06);
-  --color-card-hover:   rgba(255, 255, 255, 0.09);
+  /* Seitenhintergrund */
+  --page-bg:              #F0F2F5;
+  --page-text-color:      #1a1a1a;
+  --page-text-secondary:  #6B7280;
+  --page-text-muted:      #9CA3AF;
 
-  /* Gradient (Amber → Gold) — das Markenzeichen */
-  --gradient-primary:   linear-gradient(135deg, #E8922A 0%, #C9A84C 100%);
-  --gradient-primary-h: linear-gradient(135deg, #F09A30 0%, #D4B458 100%); /* hover */
-  --gradient-text:      linear-gradient(135deg, #E8922A, #C9A84C);
+  /* Glass Panels (.n-glass) */
+  --glass-bg:             #FFFFFF;
+  --glass-border:         #E2E8F0;
+  --glass-border-hover:   #CBD5E1;
+  --glass-radius:         20px;
+  --glass-shadow:         0 1px 3px rgba(0,0,0,0.08);
+  --glass-shadow-hover:   0 4px 12px rgba(0,0,0,0.12);
 
-  /* Accent Farben einzeln (für Schatten, Borders) */
-  --color-amber:        #E8922A;
-  --color-gold:         #C9A84C;
+  /* Primärfarbe: Teal */
+  --color-teal:           #00D4AA;
+  --color-teal-dark:      #00B894;
+  --color-teal-glow:      0 0 20px rgba(0,212,170,0.15);
 
-  /* Text */
-  --color-text-primary:   #F5F5F5;
-  --color-text-secondary: #888888;
-  --color-text-muted:     #555555;
-
-  /* Borders & Dividers */
-  --color-border:       rgba(255, 255, 255, 0.10);
-  --color-border-gold:  rgba(201, 168, 76, 0.35);
+  /* Akzent: Gold (nur für KI-Elemente) */
+  --color-gold:           #d4a853;
+  --color-gold-light:     #e8c476;
 
   /* Status */
-  --color-danger:       #EF4444;
-  --color-success:      #22C55E;
-  --color-live:         #E8922A;
+  --color-danger:         #f87171;
+  --color-success:        #00D4AA;
+  --color-warning:        #fbbf24;
 
-  /* Shadows */
-  --shadow-button:      0 4px 16px rgba(232, 146, 42, 0.35);
-  --shadow-card:        0 8px 32px rgba(0, 0, 0, 0.6);
-  --shadow-panel:       0 16px 48px rgba(0, 0, 0, 0.8);
+  /* Borders & Dividers */
+  --color-border:         #E2E8F0;
+  --color-border-hover:   #CBD5E1;
 }
+```
+
+### Dark Mode (Sidebar, Live-Assistent PiP)
+```css
+/* Sidebar + PiP nutzen Dark Mode */
+--sidebar-bg:           #0D1117;
+--sidebar-text:         #E2E8F0;
+--sidebar-text-muted:   #A0AEC0;
+--sidebar-border:       #2D3748;
+--sidebar-hover:        rgba(255,255,255,0.06);
+--sidebar-active:       rgba(0,212,170,0.12);
 ```
 
 ---
@@ -52,146 +62,152 @@
 
 ```css
 :root {
-  --font-headline: 'Playfair Display', Georgia, serif;
-  --font-body:     'DM Sans', system-ui, sans-serif;
-  --font-mono:     'DM Mono', 'Courier New', monospace;
+  --page-font:       'Inter', system-ui, sans-serif;
+  --page-font-mono:  'JetBrains Mono', monospace;
 }
 ```
 
 **Verwendung:**
-- `--font-headline` → Alle h1, h2, Alert-Titel ("Einwand erkannt"), Dashboard-Begrüßung
-- `--font-body` → Alles andere: Labels, Buttons, Body-Text, Navigation
-- `--font-mono` → Timer, Prozent-Zahlen, Metriken
+- `Inter` → Alles: Headlines, Labels, Buttons, Body-Text, Navigation
+- `JetBrains Mono` → Timer, Prozent-Zahlen, KPI-Werte, Metriken
 
 **Größen-Hierarchie:**
 ```
-Hero / Panel-Headline:  2rem    (Playfair Display, bold)
-Section Headline:       1.25rem (Playfair Display, semibold)
-Button / Label:         0.875rem (DM Sans, medium 500)
-Body:                   0.875rem (DM Sans, regular 400)
-Caption / Muted:        0.75rem  (DM Sans, regular 400)
-Timer / Zahlen:         1rem     (DM Mono)
+Page Title:       24px  (Inter, weight 700)
+Section Label:    12px  (Inter, weight 700, uppercase, letter-spacing 0.5px)
+Button / Label:   14px  (Inter, weight 600)
+Body:             14px  (Inter, weight 400)
+Caption / Muted:  11-12px (Inter, weight 400-600)
+KPI-Werte:        28px  (JetBrains Mono, weight 600)
 ```
+
+**WICHTIG:** Kein Playfair Display, kein DM Sans, kein DM Mono. Nur Inter + JetBrains Mono.
 
 ---
 
 ## Komponenten
 
-### Button — Primary (Gradient)
+### Glass Panel (.n-glass)
 ```css
-.btn-primary {
-  background:    var(--gradient-primary);
-  color:         #0C0C0C;
-  font-family:   var(--font-body);
-  font-weight:   600;
-  font-size:     0.875rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border-radius: 6px;
-  padding:       10px 20px;
-  border:        none;
-  box-shadow:    var(--shadow-button),
-                 inset 0 1px 0 rgba(255,255,255,0.20); /* 3D Bevel oben */
-  transition:    all 0.15s ease;
-  cursor:        pointer;
+.n-glass {
+  background:       var(--glass-bg);
+  border:           1px solid var(--glass-border);
+  border-radius:    var(--glass-radius);  /* 20px */
+  box-shadow:       var(--glass-shadow);
+  transition:       all 0.2s ease;
 }
 
-.btn-primary:hover {
-  background:    var(--gradient-primary-h);
-  box-shadow:    0 6px 20px rgba(232, 146, 42, 0.50),
-                 inset 0 1px 0 rgba(255,255,255,0.25);
-  transform:     translateY(-1px); /* leichtes Heben */
-}
-
-.btn-primary:active {
-  transform:     translateY(0);
-  box-shadow:    0 2px 8px rgba(232, 146, 42, 0.30),
-                 inset 0 2px 4px rgba(0,0,0,0.20); /* gedrückt */
+.n-glass:hover {
+  border-color:     var(--glass-border-hover);
+  box-shadow:       var(--glass-shadow-hover);
 }
 ```
 
-### Button — Secondary (Ghost)
+### Button — Primary (.n-btn-primary)
 ```css
-.btn-secondary {
-  background:    transparent;
-  color:         var(--color-gold);
-  font-family:   var(--font-body);
-  font-weight:   500;
-  font-size:     0.875rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border-radius: 6px;
-  padding:       10px 20px;
-  border:        1px solid var(--color-border-gold);
-  transition:    all 0.15s ease;
-  cursor:        pointer;
-}
-
-.btn-secondary:hover {
-  background:    rgba(201, 168, 76, 0.08);
-  border-color:  var(--color-gold);
+.n-btn-primary {
+  background:       linear-gradient(135deg, #00D4AA, #00B894);
+  color:            #0D1117;
+  font-size:        14px;
+  font-weight:      600;
+  border-radius:    9999px;  /* Pill-Form */
+  padding:          12px 28px;
+  border:           none;
+  box-shadow:       var(--color-teal-glow);
 }
 ```
 
-### Karte — Glassmorphism
+### Button — Accent/KI (.n-btn-accent)
 ```css
+.n-btn-accent {
+  background:       linear-gradient(135deg, #d4a853, #e8c476);
+  color:            #0D1117;
+  border-radius:    9999px;
+  padding:          12px 28px;
+}
+```
+**Verwendung:** Nur für KI-bezogene Aktionen (KI-Frage, KI-Analyse).
+
+### Button — Ghost (.n-btn-ghost)
+```css
+.n-btn-ghost {
+  background:       rgba(0,0,0,0.04);
+  color:            #1a1a1a;
+  border:           1px solid rgba(0,0,0,0.12);
+  border-radius:    9999px;
+  padding:          12px 28px;
+}
+```
+
+### Button — Danger (.n-btn-danger)
+```css
+.n-btn-danger {
+  background:       rgba(248,113,113,0.1);
+  color:            #f87171;
+  border:           1px solid rgba(248,113,113,0.2);
+  border-radius:    9999px;
+}
+```
+
+### KPI Card (.n-kpi)
+```css
+.n-kpi {
+  background:       #FFFFFF;
+  border:           1px solid #E2E8F0;
+  border-radius:    20px;
+  padding:          22px;
+  box-shadow:       0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* KPI Label */
+font-size:        11px;
+font-weight:      600;
+letter-spacing:   1.5px;
+text-transform:   uppercase;
+color:            #6B7280;
+
+/* KPI Wert */
+font-family:      'JetBrains Mono';
+font-size:        28px;
+font-weight:      600;
+color:            #1a1a1a;
+
+/* Delta Badges */
+--kpi-delta-up:   #00D4AA auf rgba(0,212,170,0.08);
+--kpi-delta-down: #f87171 auf rgba(248,113,113,0.08);
+```
+
+### Badge (.n-badge)
+```css
+.n-badge {
+  border-radius:    9999px;
+  padding:          3px 10px;
+  font-size:        11px;
+  font-weight:      600;
+}
+
+/* Varianten */
+.n-badge-primary:  #00D4AA auf rgba(0,212,170,0.08)
+.n-badge-accent:   #d4a853 auf rgba(212,168,83,0.08)
+.n-badge-danger:   #f87171 auf rgba(248,113,113,0.08)
+.n-badge-success:  #00D4AA auf rgba(0,212,170,0.08)
+.n-badge-warning:  #fbbf24 auf rgba(251,191,36,0.08)
+```
+
+### Karten mit Selection-State (Schwierigkeit, Typ, Modus)
+```css
+/* Nicht ausgewählt */
 .card {
-  background:    var(--color-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border:        1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow:    var(--shadow-card);
+  background:       var(--glass-bg);
+  border:           1px solid var(--glass-border);
+  border-radius:    var(--glass-radius);
+  cursor:           pointer;
 }
 
-/* Alert-Karte mit Gradient-Rand links */
-.card-alert {
-  border-left:   3px solid transparent;
-  border-image:  var(--gradient-primary) 1;
-}
-```
-
-### Badge — Live / Status
-```css
-.badge-live {
-  background:    var(--gradient-primary);
-  color:         #0C0C0C;
-  font-family:   var(--font-body);
-  font-weight:   700;
-  font-size:     0.65rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-radius: 4px;
-  padding:       2px 8px;
-}
-```
-
-### Gauge — Kaufbereitschaft (Semicircle Speedometer)
-```
-Hintergrund-Arc:  rgba(255,255,255,0.08)
-Fill-Arc:         Gradient von --color-amber zu --color-gold
-Nadel:            --color-gold, 2px breit
-Zahl im Zentrum:  Playfair Display, 2rem, --color-text-primary
-Label darunter:   DM Sans, 0.7rem, --color-text-secondary, uppercase
-```
-
-### Phasen-Tabs
-```css
-.phase-tab {
-  font-family:   var(--font-body);
-  font-size:     0.75rem;
-  font-weight:   500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color:         var(--color-text-muted);
-  padding-bottom: 6px;
-  border-bottom: 2px solid transparent;
-}
-
-.phase-tab.active {
-  color:           var(--color-text-primary);
-  border-image:    var(--gradient-primary) 1;
-  border-bottom:   2px solid transparent;
+/* Ausgewählt / Aktiv */
+.card-active {
+  border-color:     #00D4AA;
+  box-shadow:       0 0 0 1px #00D4AA;
 }
 ```
 
@@ -201,10 +217,10 @@ Label darunter:   DM Sans, 0.7rem, --color-text-secondary, uppercase
 
 ```css
 :root {
-  --radius-sm:   4px;   /* Badges, kleine Elemente */
-  --radius-md:   6px;   /* Buttons */
-  --radius-lg:   12px;  /* Karten, Panels */
-  --radius-xl:   16px;  /* Große Container */
+  --radius-sm:   4px;     /* Kleine Elemente */
+  --radius-md:   12px;    /* Inputs */
+  --radius-lg:   20px;    /* Karten, Panels, KPIs */
+  --radius-pill: 9999px;  /* Buttons, Badges */
 
   --space-xs:    4px;
   --space-sm:    8px;
@@ -214,41 +230,50 @@ Label darunter:   DM Sans, 0.7rem, --color-text-secondary, uppercase
 }
 ```
 
-**Regel:** Maximaler Border-Radius für Buttons = 6px. NERVE ist ein professionelles Werkzeug, keine Consumer-App. Keine Pillen-Buttons.
+---
+
+## Sidebar
+
+```
+Breite:          240px (collapsible auf Icon-only)
+Hintergrund:     #0D1117 (immer Dark)
+Logo:            NERVE + "SALES INTELLIGENCE" Subline
+Nav-Items:       Icons (Lucide) + Label, 14px, Inter weight 500
+Active-State:    Teal-Highlight (#00D4AA), linker Border oder Background-Tint
+User-Section:    Avatar + Name + Plan-Badge, unten fixiert
+```
 
 ---
 
-## Live-Assist Panel (380px)
+## Farbverwendung — Wann welche Farbe
 
-```
-Breite:         380px (fest, floating)
-Hintergrund:    var(--color-bg)
-Border-radius:  var(--radius-xl)
-Box-shadow:     var(--shadow-panel)
-
-Innenabstand:   var(--space-md) überall
-
-Aufbau (oben → unten):
-1. Header-Bar      — Phasen-Tabs + Timer
-2. Alert-Card      — Badge + Headline + Text + Links-Border
-3. Action-Buttons  — Primary + Secondary, volle Breite
-4. Gauge-Section   — Kaufbereitschaft Speedometer
-5. Footer-Bar      — "NERVE KI AKTIV" + Redeanteil
-```
+| Farbe | Hex | Verwendung |
+|-------|-----|------------|
+| **Teal** | #00D4AA | Primäre Aktionen, aktive States, Erfolg, Links, Primary Buttons |
+| **Gold** | #d4a853 | KI-Elemente (KI-Speaker, KI-Buttons, KI-Badges) |
+| **Rot** | #f87171 | Danger, Fehler, Löschen, kritische Alerts |
+| **Grün** | #22C55E | Schwierigkeitsgrad "Einsteiger", positive Trends |
+| **Orange** | #F59E0B | Schwierigkeitsgrad "Fortgeschritten", Warnungen |
+| **Lila** | #8B5CF6 | Sekundäre Akzente, Sekretärin-Modus |
+| **Grau** | #6B7280 | Sekundärer Text, Labels, Muted-Elemente |
 
 ---
 
 ## Regeln für die Implementierung
 
 1. **Niemals** Hex-Codes direkt in HTML-Templates schreiben
-2. **Niemals** `style=""` Attribute für Farben nutzen
-3. **Immer** CSS Custom Properties: `var(--color-amber)` statt `#E8922A`
-4. Gradient als `var(--gradient-primary)` referenzieren, nicht inline
-5. Alle Komponenten-Klassen in einer zentralen `design-tokens.css` definieren
-6. Neue Farben erst hier definieren, dann verwenden — nie andersrum
+2. **Niemals** `style=""` Attribute für Farben nutzen (Ausnahme: dynamische JS-Werte)
+3. **Immer** CSS Custom Properties aus nerve.css verwenden
+4. **Immer** `.n-glass` für Karten und Panels
+5. **Immer** `.n-btn-primary` / `.n-btn-ghost` für Buttons
+6. **Immer** Pill-Form (border-radius: 9999px) für Buttons und Badges
+7. **Niemals** Playfair Display, DM Sans oder DM Mono verwenden — nur Inter + JetBrains Mono
+8. **Gold nur für KI** — nicht als allgemeiner Akzent
+9. Neue Farben/Tokens erst in nerve.css definieren, dann verwenden — nie andersrum
+10. Jinja `tojson` in `<script>`-Blöcken: **immer `| safe`** am Ende der gesamten Expression
 
 ---
 
-*Erstellt: 2026-03-30 | NERVE v0.9.4 → v1.0*
-*Basis: Stitch-Sessions + Design-Analyse Pinterest-Referenzen*
+*Aktualisiert: 2026-04-11 | NERVE v0.9.4*
+*Quelle: nerve.css (live Design System) + base.html + aktive Templates*
 *Änderungen hier → wirken sich auf ALLE Screens aus*
