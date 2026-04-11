@@ -7,7 +7,7 @@ VPS="root@178.104.82.166"
 REMOTE_DIR="/opt/nerve/app"
 
 echo "[1/4] Packing..."
-tar czf /tmp/nerve-deploy.tar.gz --exclude='.git' --exclude='__pycache__' --exclude='.planning' --exclude='database/*.db' .
+tar czf /tmp/nerve-deploy.tar.gz --exclude='.git' --exclude='__pycache__' --exclude='.planning' --exclude='database/*.db' --exclude='database/*.db-wal' --exclude='database/*.db-shm' .
 
 echo "[2/4] Uploading..."
 scp /tmp/nerve-deploy.tar.gz "$VPS:/tmp/"
