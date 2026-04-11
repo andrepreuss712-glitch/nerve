@@ -803,7 +803,8 @@ def generate_response_with_mood(
 
 
 def generate_help_suggestion(conversation_history: list, profile_data: dict,
-                             sprache: str = 'de', berater_name: str = '') -> str:
+                             sprache: str = 'de', berater_name: str = '',
+                             phase: str = 'kunde') -> str:
     lang     = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
     gespraech = "\n".join(
         f"[{'Berater' if m['speaker'] == 'berater' else 'Kunde'}] {m['text']}"
@@ -834,8 +835,22 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
 
     # Detect conversation phase for context-appropriate suggestion
     berater_count = sum(1 for m in conversation_history if m.get('speaker') == 'berater')
-    if berater_count == 0:
-        firma_text = f' von {firma}' if firma else ''
+
+    # Secretary phase: completely different coaching strategy
+    if phase == 'sekretaerin':
+        phase_hint = f"""PHASE: SEKRETÄRIN — Der Berater spricht mit der SEKRETÄRIN, NICHT mit dem Entscheider.
+ZIEL: An der Sekretärin vorbeikommen und zum Chef durchgestellt werden.
+Der Berater darf die Sekretärin NICHT pitchen. Sie versteht das Produkt nicht und es interessiert sie nicht.
+
+STRATEGIE FÜR DIE SEKRETÄRIN:
+- Kurz und selbstbewusst: Wer du bist, warum du den Chef persönlich sprechen musst
+- NICHT das Produkt erklären — die Sekretärin ist nicht die Zielgruppe
+- Nutze den Chef-Namen: "Es geht um ein Thema das für Herrn X persönlich relevant ist"
+- Wenn sie blockt: Verständnis zeigen, konkreten Rückruf-Termin vorschlagen
+- Wenn sie fragt "worum geht es": In EINEM Satz sagen warum der Chef profitiert, nicht was das Produkt kann
+Name des Beraters: {berater_name if berater_name else '(nicht bekannt)'}
+Firma des Beraters: {firma if firma else '(nicht bekannt)'}"""
+    elif berater_count == 0:
         phase_hint = f"""PHASE: OPENER — Der Berater hat noch NICHTS gesagt. Der Kunde hat gerade den Hörer abgenommen.
 Der Berater braucht einen professionellen Gesprächseinstieg:
 1. Sich mit echtem Namen und Firma vorstellen
@@ -843,14 +858,14 @@ Der Berater braucht einen professionellen Gesprächseinstieg:
 3. Fragen ob es gerade 2 Minuten passt
 Formuliere den FERTIGEN Satz — KEINE Platzhalter wie [Name] oder [Firma].
 Name des Beraters: {berater_name if berater_name else '(nicht bekannt)'}
-Firma des Beraters: {firma if firma else '(nicht bekannt)'}
-"""
+Firma des Beraters: {firma if firma else '(nicht bekannt)'}"""
     elif berater_count <= 2:
         phase_hint = "PHASE: FRÜHE BEDARFSANALYSE — Der Berater soll Interesse wecken und Fragen stellen, NICHT pitchen."
     else:
         phase_hint = "PHASE: GESPRÄCH LÄUFT — Der Berater soll auf den Kunden eingehen und das Gespräch voranbringen."
 
-    prompt = f"""Du bist ein erfahrener B2B-Vertriebscoach im DACH-Raum. Der Berater telefoniert mit einem Kunden und braucht JETZT einen konkreten Vorschlag was er sagen soll.
+    gespraechspartner = 'der Sekretärin' if phase == 'sekretaerin' else 'einem Kunden'
+    prompt = f"""Du bist ein erfahrener B2B-Vertriebscoach im DACH-Raum. Der Berater telefoniert mit {gespraechspartner} und braucht JETZT einen konkreten Vorschlag was er sagen soll.
 
 Berater arbeitet bei: {firma if firma else '(nicht angegeben)'}
 Produkt: {produkt}
@@ -859,14 +874,11 @@ USPs: {", ".join(usps) if usps else '(nicht angegeben)'}{einw_str}
 {phase_hint}
 
 GESPRÄCHSVERLAUF:
-{gespraech if gespraech.strip() else "(Noch kein Gespräch — Kunde hat gerade abgenommen)"}
+{gespraech if gespraech.strip() else "(Noch kein Gespräch — Gegenüber hat gerade abgenommen)"}
 
 REGELN:
 - IMMER SIEZEN. Im DACH-B2B sagt man "Sie", "Ihnen", "Ihr" — NIEMALS "du".
-- Lies die LETZTE Aussage des Kunden genau. Dein Vorschlag MUSS darauf eingehen.
-- Wenn der Kunde "keine Zeit" sagt: Verständnis zeigen, kurz halten, Termin anbieten.
-- Wenn der Kunde eine Frage stellt: Die Frage beantworten.
-- Wenn der Kunde einen Einwand bringt: Anerkennen, dann entkräften.
+- Lies die LETZTE Aussage genau. Dein Vorschlag MUSS darauf eingehen.
 - Der Vorschlag muss wie ein ECHTER Satz klingen den man am Telefon sagt.
 - Maximal 2 Sätze. KEINE Platzhalter — formuliere einen fertigen Satz.
 - Kein Markdown, kein Englisch, reiner gesprochener deutscher Text.

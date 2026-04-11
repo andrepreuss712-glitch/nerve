@@ -566,8 +566,10 @@ def training_help():
         sprache  = session.get('sprache', 'de')
         profile_data = _ensure_dict(session.get('profile_data'))
         berater_name = session.get('berater_name', 'der Berater')
+        phase = session.get('phase', 'kunde')
         vorschlag = generate_help_suggestion(
-            session['history'], profile_data, sprache, berater_name=berater_name)
+            session['history'], profile_data, sprache,
+            berater_name=berater_name, phase=phase)
         return jsonify({'ok': True, 'vorschlag': vorschlag})
     except Exception as e:
         import traceback
