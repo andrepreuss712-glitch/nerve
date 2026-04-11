@@ -124,7 +124,7 @@ WENN DU BLOCKST: Sage "Nee, tut mir leid. Tschüss." und füge [AUFGELEGT] ans E
 # ── Persoenlichkeitstypen (System-Konstante, gespiegelt aus DB-Seed) ──────────
 PERSONALITY_TYPES_SEED = [
     {
-        'name': 'Beschaeftigter Chef',
+        'name': 'Beschäftigter Chef',
         'icon': '\U0001F4BC',  # briefcase emoji
         'kurzbeschreibung': 'Hat keine Zeit. Komm zum Punkt oder er legt auf.',
         'startstimmung': -2,
@@ -162,7 +162,7 @@ PERSONALITY_TYPES_SEED = [
     {
         'name': 'Aggressiver',
         'icon': '\U0001F4A2',  # anger emoji
-        'kurzbeschreibung': 'Laut, direkt, provozierend. Ruhe bewahren ist der Schluessel.',
+        'kurzbeschreibung': 'Laut, direkt, provozierend. Ruhe bewahren ist der Schlüssel.',
         'startstimmung': -3,
         'geduld': 2,
         'skeptik': 3,

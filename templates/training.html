@@ -189,6 +189,40 @@
   padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;
   white-space:nowrap;letter-spacing:.03em;text-decoration:none}
 
+/* ── Kundentyp cards ── */
+.t-typ-card {
+  background: #1C2333;
+  border: 1px solid #2D3748;
+  border-radius: 10px;
+  padding: 14px 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s;
+}
+.t-typ-card:hover {
+  border-color: #4A5568;
+  background: #222c3d;
+}
+.t-typ-card.t-typ-active {
+  border-color: #00D4AA;
+  background: rgba(0,212,170,0.08);
+}
+.t-typ-name {
+  color: #E2E8F0;
+  font-weight: 600;
+  font-size: 13px;
+}
+.t-typ-desc {
+  color: #A0AEC0;
+  font-size: 11px;
+  margin-top: 3px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ── Scenario cards (glass redesign D-15) ── */
 .t-szenario-card .t-diff-label {
   font-size: 13px;
@@ -337,15 +371,15 @@
         </div>
       </div>
 
-      <!-- ── Persoenlichkeitstyp ───────────────────────────────────────────────── -->
+      <!-- ── Kundentyp ──────────────────────────────────────────────────────────── -->
       <div class="t-section" id="t-typ-section">
-        <div class="t-section-label">Kundentyp wählen</div>
-        <div id="t-typ-cards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px;">
+        <div class="t-section-label">Kundentyp</div>
+        <div id="t-typ-cards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;">
           <!-- Filled by JS -->
         </div>
-        <div style="margin-top:16px; text-align:center;">
+        <div style="margin-top:12px; text-align:center;">
           <button id="t-typ-random-btn" onclick="generateRandomPersonality()"
-                  style="background:transparent; border:1px solid #00D4AA; color:#00D4AA; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px;">
+                  style="background:#00D4AA; color:#0D1117; border:none; padding:8px 20px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600;">
             &#x1F3B2; Zufällig generieren
           </button>
         </div>
@@ -354,7 +388,7 @@
           <h4 style="color:#00D4AA; margin:0 0 8px;">Dein Kunde:</h4>
           <p id="t-typ-briefing-text" style="color:#E2E8F0; margin:0 0 12px; line-height:1.5;"></p>
           <div style="display:flex; gap:8px;">
-            <button onclick="confirmGeneratedPersonality()" style="background:#00D4AA; color:#0D1117; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">Diesen Kunden nehmen</button>
+            <button onclick="confirmGeneratedPersonality()" style="background:#00D4AA; color:#0D1117; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-weight:600;">Diesen Kunden nehmen</button>
             <button onclick="generateRandomPersonality()" style="background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Nochmal würfeln</button>
           </div>
         </div>
@@ -410,7 +444,7 @@
         <div id="t-szenario-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">
           <!-- Filled by JS from /api/training/scenarios -->
         </div>
-        <button onclick="skipSzenario()" style="margin-top:12px; background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Ohne Szenario</button>
+        <button onclick="skipSzenario()" style="margin-top:12px; background:#00D4AA; color:#0D1117; border:none; padding:8px 20px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600;">Ohne Szenario</button>
       </div>
 
       <!-- ── Trainings-Modus ───────────────────────────────────────────────────── -->
@@ -802,21 +836,35 @@ function checkReady() {
 }
 
 // ── Personality Type Cards ──────────────────────────────────────────────────────
+// SVG icons for system personality types (keyed by name)
+const PERSONALITY_SVGS = {
+  'Beschäftigter Chef': '<svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect x="4" y="14" width="24" height="14" rx="2" stroke="#F59E0B" stroke-width="1.5"/><path d="M10 14V10a6 6 0 0112 0v4" stroke="#F59E0B" stroke-width="1.5"/><circle cx="16" cy="21" r="2" fill="#F59E0B" opacity="0.5"/></svg>',
+  'Skeptiker': '<svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="11" stroke="#8B5CF6" stroke-width="1.5"/><path d="M12 14c0-2.2 1.8-4 4-4s4 1.8 4 4c0 2-1.5 3-3 3.5V19" stroke="#8B5CF6" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="23" r="1.2" fill="#8B5CF6"/></svg>',
+  'Analytiker': '<svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect x="5" y="18" width="5" height="8" rx="1" fill="#3B82F6" opacity="0.4"/><rect x="13" y="12" width="5" height="14" rx="1" fill="#3B82F6" opacity="0.6"/><rect x="21" y="6" width="5" height="20" rx="1" fill="#3B82F6" opacity="0.8"/><path d="M5 26h22" stroke="#3B82F6" stroke-width="1.5"/></svg>',
+  'Freundlicher Ja-Sager': '<svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="11" stroke="#22C55E" stroke-width="1.5"/><path d="M11 18c1.5 2.5 4 4 5 4s3.5-1.5 5-4" stroke="#22C55E" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="13" r="1.5" fill="#22C55E"/><circle cx="20" cy="13" r="1.5" fill="#22C55E"/></svg>',
+  'Aggressiver': '<svg width="28" height="28" viewBox="0 0 32 32" fill="none"><path d="M16 4L19 10H26L20.5 14.5L22.5 22L16 17.5L9.5 22L11.5 14.5L6 10H13L16 4Z" stroke="#EF4444" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 14L16 17L20 14" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  'Entscheider': '<svg width="28" height="28" viewBox="0 0 32 32" fill="none"><path d="M16 4L20 10H26L22 16L24 24H16H8L10 16L6 10H12L16 4Z" stroke="#00D4AA" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M13 16L15.5 18.5L20 13" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
 async function loadPersonalityTypes() {
   try {
     const res = await fetch('/api/training/personalities');
     const types = await res.json();
     const container = document.getElementById('t-typ-cards');
     if (!container) return;
-    container.innerHTML = types.map(t => `
-      <div class="t-typ-card" data-id="${t.id}" onclick="selectTyp(${t.id}, this)"
-           style="background:#1C2333; border:1px solid #2D3748; border-radius:12px; padding:16px; cursor:pointer; text-align:center; transition:border-color 0.2s;">
-        <div style="font-size:32px; margin-bottom:8px;">${t.icon || '\u{1F464}'}</div>
-        <div style="color:#E2E8F0; font-weight:600; font-size:14px;">${escH(t.name)}</div>
-        <div style="color:#A0AEC0; font-size:12px; margin-top:4px;">${escH(t.kurzbeschreibung || '')}</div>
-        ${t.is_custom ? '<div style="color:#00D4AA; font-size:10px; margin-top:4px;">Eigener Typ</div>' : ''}
-      </div>
-    `).join('');
+    container.innerHTML = types.map(t => {
+      const svg = PERSONALITY_SVGS[t.name] || '';
+      const iconHtml = svg
+        ? '<div style="margin-bottom:6px;">' + svg + '</div>'
+        : '<div style="font-size:24px; margin-bottom:6px;">' + (t.icon || '\u{1F464}') + '</div>';
+      const customBadge = t.is_custom ? '<div style="color:#00D4AA; font-size:10px; margin-top:4px;">Eigener Typ</div>' : '';
+      return '<div class="t-typ-card" data-id="' + t.id + '" onclick="selectTyp(' + t.id + ', this)">' +
+        iconHtml +
+        '<div class="t-typ-name">' + escH(t.name) + '</div>' +
+        '<div class="t-typ-desc">' + escH(t.kurzbeschreibung || '') + '</div>' +
+        customBadge +
+      '</div>';
+    }).join('');
   } catch(e) {
     console.error('[Training] Failed to load personality types:', e);
   }
@@ -825,8 +873,8 @@ async function loadPersonalityTypes() {
 function selectTyp(id, el) {
   selectedPersonalityTypeId = id;
   generatedPersonality = null;
-  document.querySelectorAll('.t-typ-card').forEach(c => c.style.borderColor = '#2D3748');
-  if (el) el.style.borderColor = '#00D4AA';
+  document.querySelectorAll('.t-typ-card').forEach(c => c.classList.remove('t-typ-active'));
+  if (el) el.classList.add('t-typ-active');
   document.getElementById('t-typ-briefing').style.display = 'none';
 }
 
@@ -846,13 +894,13 @@ async function generateRandomPersonality() {
     document.getElementById('t-typ-briefing-text').textContent = data.briefing || data.kurzbeschreibung || '';
 
     // Deselect any card
-    document.querySelectorAll('.t-typ-card').forEach(c => c.style.borderColor = '#2D3748');
+    document.querySelectorAll('.t-typ-card').forEach(c => c.classList.remove('t-typ-active'));
   } catch(e) {
     console.error('[Training] Generation failed:', e);
     alert('Generierung fehlgeschlagen. Bitte erneut versuchen.');
   } finally {
     btn.disabled = false;
-    btn.textContent = '\u{1F3B2} Zufällig generieren';
+    btn.textContent = '🎲 Zufällig generieren';
   }
 }
 

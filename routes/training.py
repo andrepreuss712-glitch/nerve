@@ -710,17 +710,17 @@ def api_training_personality_generate():
     """Generate a random personality via Claude Haiku (not saved until user confirms)."""
     from services.training_service import claude_client
 
-    prompt = """Erstelle eine neue B2B-Kundenpersoenlichkeit fuer ein Vertriebstraining.
-Die Person soll NICHT einer dieser 6 Standard-Typen sein: Beschaeftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider.
+    prompt = """Erstelle eine neue B2B-Kundenpersönlichkeit für ein Vertriebstraining.
+Die Person soll NICHT einer dieser 6 Standard-Typen sein: Beschäftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider.
 
 Erstelle eine einzigartige, realistische Person aus dem DACH-B2B-Umfeld.
 
 Antworte NUR als valides JSON:
 {
-  "name": "Kurzname des Typs (2-3 Woerter)",
+  "name": "Kurzname des Typs (2-3 Wörter)",
   "icon": "ein passendes Emoji",
   "kurzbeschreibung": "1 Satz Beschreibung",
-  "briefing": "2-3 Saetze Briefing fuer den Vertriebler: Wer ist die Person, Alter, Position, Situation, worauf achten",
+  "briefing": "2-3 Sätze Briefing für den Vertriebler: Wer ist die Person, Alter, Position, Situation, worauf achten",
   "attribute": {
     "geduld": <1-5>,
     "skeptik": <1-5>,
@@ -729,9 +729,9 @@ Antworte NUR als valides JSON:
     "auflege_trigger_hart": ["Trigger 1", "Trigger 2"],
     "auflege_trigger_weich": ["Trigger 1"],
     "beispiel_reaktionen": ["Reaktion 1", "Reaktion 2"],
-    "verhaltensregeln": "Fliesstext: Wie verhaelt sich diese Person im Gespraech",
+    "verhaltensregeln": "Fließtext: Wie verhält sich diese Person im Gespräch",
     "position_profil": "Position und Alter",
-    "vorgeschichte": "1-2 Saetze relevante Vorgeschichte"
+    "vorgeschichte": "1-2 Sätze relevante Vorgeschichte"
   }
 }"""
 
