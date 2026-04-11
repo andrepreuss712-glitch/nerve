@@ -818,19 +818,26 @@ def api_training_personality_generate():
         finally:
             db.close()
 
+    import random as _rnd
+    _gender = _rnd.choice(['männlich', 'weiblich'])
+    _age = _rnd.randint(35, 62)
+
     prompt = f"""Erstelle eine PERSÖNLICHKEIT für ein B2B-Vertriebstraining.
 
 WICHTIG: Du generierst einen MENSCHEN mit Charakter — KEIN Szenario, KEINE Firma, KEINE Branche, KEINE technischen Details.
 Die Person soll NICHT einer dieser 6 Standard-Typen sein: Beschäftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider.
 {branche_ctx}
 
+VORGABE FÜR DIESE GENERIERUNG:
+- Geschlecht: {_gender}
+- Alter: {_age} Jahre
+
 REGELN:
-- IMMER einen realistischen deutschen Vor- und Nachnamen generieren (z.B. "Thomas Brenner", "Sabine Krämer")
-- Mische Geschlechter: ca. 50% männlich, 50% weiblich
-- Alter angeben (35-62)
+- Generiere einen realistischen deutschen Vor- und Nachnamen passend zum Geschlecht
 - Fokus auf CHARAKTER und VERHALTEN: Wie tickt diese Person? Was macht sie schwierig/interessant im Gespräch?
 - KEINE Jobtitel, KEINE Firmennamen, KEINE Produktdetails, KEINE technischen Fragen — das gehört ins Szenario, nicht in den Kundentyp
-- Kurzbeschreibung: 1 Satz der den Charakter beschreibt, z.B. "Misstrauisch, zahlengetrieben, testet ob du Substanz hast."
+- Kurzbeschreibung: 1 Satz der den Charakter beschreibt
+- Sei KREATIV: Jede Person soll sich deutlich von den vorherigen unterscheiden
 
 Antworte NUR als valides JSON:
 {{
