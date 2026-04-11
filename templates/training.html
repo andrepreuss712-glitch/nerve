@@ -884,6 +884,10 @@ async function generateRandomPersonality() {
   btn.textContent = 'Generiere...';
   try {
     const res = await fetch('/api/training/personalities/generate', {method: 'POST'});
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error('Server ' + res.status + ': ' + txt.substring(0, 200));
+    }
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     generatedPersonality = data;
@@ -896,8 +900,8 @@ async function generateRandomPersonality() {
     // Deselect any card
     document.querySelectorAll('.t-typ-card').forEach(c => c.classList.remove('t-typ-active'));
   } catch(e) {
-    console.error('[Training] Generation failed:', e);
-    alert('Generierung fehlgeschlagen. Bitte erneut versuchen.');
+    console.error('[Training] Generation failed:', e.message || e);
+    alert('Generierung fehlgeschlagen: ' + (e.message || 'Unbekannter Fehler'));
   } finally {
     btn.disabled = false;
     btn.textContent = '🎲 Zufällig generieren';
