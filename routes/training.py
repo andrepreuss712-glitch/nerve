@@ -745,14 +745,14 @@ Antworte NUR als valides JSON:
         start = text.find('{')
         end   = text.rfind('}') + 1
         if start == -1 or end <= start:
-            return jsonify({'error': 'Generation fehlgeschlagen'}), 500
+            print(f"[Training] No JSON in response: {text[:200]}")
+            return jsonify({'error': 'Keine JSON-Antwort von KI erhalten'}), 500
         parsed = json.loads(text[start:end])
         return jsonify(parsed)
     except Exception as e:
         import traceback
         traceback.print_exc()
-        print(f"[Training] Personality generation error: {type(e).__name__}: {e}")
-        return jsonify({'error': f'Generation fehlgeschlagen: {type(e).__name__}'}), 500
+        return jsonify({'error': f'{type(e).__name__}: {str(e)[:200]}'}), 500
 
 
 @training_bp.route('/api/training/personalities/save', methods=['POST'])
