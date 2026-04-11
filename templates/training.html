@@ -232,6 +232,32 @@
   border-style: dashed;
 }
 
+/* ── Step numbers & optional labels ── */
+.t-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #00D4AA;
+  color: #0D1117;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 6px;
+}
+.t-step-opt {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--page-text-muted);
+}
+.t-call-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--page-text-muted);
+  margin-top: 6px;
+}
+
 /* ── Scenario modal ── */
 .t-modal-bg{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.75);
   display:flex;align-items:center;justify-content:center;padding:20px}
@@ -334,7 +360,7 @@
       <div class="t-setup-wrap">
 
       <div class="t-section">
-        <div class="t-section-label">Verkaufsprofil</div>
+        <div class="t-section-label"><span class="t-step-num">1</span> Verkaufsprofil</div>
         <select id="t-profileSelect" class="form-select t-profile-select" onchange="checkReady()">
           <option value="">— Profil wählen —</option>
           {% for p in profiles %}
@@ -348,7 +374,7 @@
 
       <!-- ── Schwierigkeit ─────────────────────────────────────────────────────── -->
       <div class="t-section">
-        <div class="t-section-label">Schwierigkeit</div>
+        <div class="t-section-label"><span class="t-step-num">2</span> Schwierigkeit</div>
         <div class="t-diff-grid" id="t-diff-section" style="grid-template-columns:repeat(3, 1fr);">
           {% for key, diff in schwierigkeiten.items() %}
           {% if key != 'sekretaerin' %}
@@ -370,7 +396,7 @@
 
       <!-- ── Kundentyp ──────────────────────────────────────────────────────────── -->
       <div class="t-section" id="t-typ-section">
-        <div class="t-section-label">Kundentyp</div>
+        <div class="t-section-label"><span class="t-step-num">3</span> Kundentyp <span class="t-step-opt">(optional)</span></div>
         <div id="t-typ-cards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;">
           <!-- Filled by JS — random card appended at end -->
         </div>
@@ -387,7 +413,7 @@
 
       <!-- ── Anruf-Typ (D-11) ──────────────────────────────────────────────────── -->
       <div class="t-section" id="t-anruftyp-section">
-        <div class="t-section-label">Anruf-Typ</div>
+        <div class="t-section-label"><span class="t-step-num">4</span> Anruf-Typ</div>
         <div class="t-diff-grid" style="grid-template-columns: repeat(2, 1fr);">
           <div class="t-diff-card n-glass t-diff-active" data-anruftyp="direkt" onclick="selectAnrufTyp('direkt')">
             <div class="t-diff-icon">
@@ -431,7 +457,7 @@
 
       <!-- ── Szenario-Auswahl ──────────────────────────────────────────────────── -->
       <div class="t-section" id="t-szenario-section">
-        <div class="t-section-label">Szenario (optional)</div>
+        <div class="t-section-label"><span class="t-step-num">5</span> Szenario <span class="t-step-opt">(optional)</span></div>
         <select id="t-szenario-select" class="form-select t-profile-select" onchange="selectSzenarioDropdown(this.value)">
           <option value="">— Ohne Szenario —</option>
           <!-- Filled by JS -->
@@ -440,7 +466,7 @@
 
       <!-- ── Trainings-Modus ───────────────────────────────────────────────────── -->
       <div class="t-section">
-        <div class="t-section-label">Trainings-Modus</div>
+        <div class="t-section-label"><span class="t-step-num">6</span> Trainings-Modus</div>
         <div class="t-modus-grid">
           <div class="t-modus-card" id="t-modus-free" onclick="selectModus('free')">
             <div class="t-modus-icon"><svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="14" stroke="#00D4AA" stroke-width="2" stroke-dasharray="4 3"/><path d="M15 20L18 23L25 16" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -460,6 +486,7 @@
       <button class="t-call-btn" id="t-callBtn" onclick="startTraining()" disabled>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:6px"><path d="M22 16.92V19.92C22 20.48 21.56 20.93 21 20.97C20.64 21 20.28 21 19.92 21C10.4 21 3 13.6 3 4.08C3 3.72 3 3.36 3.03 3C3.07 2.44 3.52 2 4.08 2H7.08C7.56 2 7.97 2.34 8.05 2.81C8.14 3.38 8.3 3.93 8.52 4.45L7.02 5.95C6.83 6.14 6.78 6.42 6.88 6.67C7.94 9.14 10.02 11.38 12.33 13.12C12.58 13.3 12.93 13.29 13.15 13.07L14.95 11.27C15.47 11.49 16.02 11.65 16.59 11.74C17.07 11.82 17.4 12.23 17.4 12.71V16.92C17.4 16.92 22 16.92 22 16.92Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 5C16.1 5.49 17 6.35 17.5 7.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 1C18.13 1.61 20.39 3.87 21 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Anrufen
       </button>
+      <div class="t-call-hint" id="t-call-hint">Wähle oben ein Profil aus um loszulegen</div>
 
       </div><!-- /.t-setup-wrap -->
 
@@ -824,6 +851,8 @@ function selectSekTyp(key, el) {
 function checkReady() {
   const ok = document.getElementById('t-profileSelect').value !== '';
   document.getElementById('t-callBtn').disabled = !ok;
+  const hint = document.getElementById('t-call-hint');
+  if (hint) hint.textContent = ok ? 'Alles andere hat Voreinstellungen — du kannst direkt loslegen' : 'Wähle oben ein Profil aus um loszulegen';
 }
 
 // ── Personality Type Cards ──────────────────────────────────────────────────────
