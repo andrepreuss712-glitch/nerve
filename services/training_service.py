@@ -531,11 +531,16 @@ def build_customer_prompt(profile_data: dict, schwierigkeit: str, persona: dict,
     wettbew    = profile_data.get('wettbewerber', [])
     ki         = profile_data.get('ki', {})
     produkt    = basis.get('produktbeschreibung') or profile_data.get('produkt', 'ein Produkt')
-    einw_liste = "\n".join(
-        f"- '{e.get('einwand','')}'" +
-        (f" (auch: {', '.join(e['varianten'][:2])})" if e.get('varianten') else '')
-        for e in einwaende[:6] if e.get('einwand')
-    )
+    einw_parts = []
+    for e in einwaende[:6]:
+        if isinstance(e, dict) and e.get('einwand'):
+            line = f"- '{e['einwand']}'"
+            if e.get('varianten'):
+                line += f" (auch: {', '.join(e['varianten'][:2])})"
+            einw_parts.append(line)
+        elif isinstance(e, str) and e:
+            einw_parts.append(f"- '{e}'")
+    einw_liste = "\n".join(einw_parts)
     if not einw_liste:
         einw_liste = "- Das ist mir zu teuer\n- Ich muss das erstmal intern besprechen\n- Wir haben sowas schon"
     zusatz = []
@@ -655,19 +660,25 @@ Spezielle Einwaende die du bringen sollst: {szenario.get('spezial_einwaende', '[
     # Auflege rules per difficulty
     auflege_regeln = AUFLEGE_REGELN.get(schwierigkeit, AUFLEGE_REGELN['mittel'])
 
-    prompt = f"""Du bist {name}, {position}. Du fuehrst ein Telefonat mit einem Vertriebler.
+    prompt = f"""Du bist {name}, {position}. Du führst ein Telefonat mit einem Vertriebler.
 
-DEINE PERSOENLICHKEIT:
+DEINE PERSÖNLICHKEIT:
 {verhaltensregeln}
 {'Vorgeschichte: ' + vorgeschichte if vorgeschichte else ''}
-Beispiel-Reaktionen: {json.dumps(beispiel_reaktionen, ensure_ascii=False)}
 
 DER BERATER VERKAUFT:
 Produkt: {produkt}
 Branche: {branche}
-Bekannte Einwaende: {json.dumps([e.get('name', e) if isinstance(e, dict) else e for e in einwaende], ensure_ascii=False)}
 
 {szenario_ctx}
+
+GESPRÄCHSREGELN (WICHTIG):
+- Du sprichst wie ein ECHTER Mensch am Telefon: kurz, natürlich, mit Pausen-Wörtern (hmm, naja, also).
+- Maximal 2-3 Sätze pro Antwort. Echte Menschen reden am Telefon NICHT in langen Absätzen.
+- KEINE Rechtschreibfehler, KEINE Sonderzeichen, KEIN Markdown. Nur sauberer, gesprochener Text.
+- Reagiere IMMER auf das, was der Berater GERADE gesagt hat. Ignoriere nie seine letzte Aussage.
+- Wenn du gesagt hast "ich bin im Meeting" und er fragt trotzdem weiter: reagiere genervt, nicht freundlich.
+- Dein Name ist {name} — stelle dich am Anfang mit diesem Namen vor.
 
 {lang.get('prompt_sprache', 'Antworte auf Deutsch.')}
 """
@@ -786,24 +797,27 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
         if parts:
             einw_str = '\nBekannte Gegenargumente:\n' + '\n'.join(parts)
 
-    prompt = f"""Du bist ein Vertriebscoach. Der Berater steckt in einem
-Trainingsgespräch und braucht Hilfe. Was sollte er als nächstes sagen?
+    prompt = f"""Du bist ein erfahrener Vertriebscoach. Der Berater steckt in einem Telefonat und braucht JETZT eine gute Antwort.
 
 Produkt: {produkt}
 USPs: {", ".join(usps)}{einw_str}
 
-Letzte Gesprächszeilen:
+LETZTE GESPRÄCHSZEILEN:
 {gespraech}
 
-Gib EINEN konkreten Antwortvorschlag (2-3 Sätze) den der Berater
-jetzt sagen könnte. Sprich den Kunden mit "{ansprache}" an.
-Kein Markdown, reiner Text. Ende mit einer offenen Frage.
+WICHTIG: Lies die LETZTE Aussage des Kunden genau. Dein Vorschlag MUSS direkt darauf eingehen.
+- Wenn der Kunde "keine Zeit" sagt: Nicht weiterpitchen, sondern Verständnis zeigen und kurz halten.
+- Wenn der Kunde eine Frage stellt: Die Frage beantworten, nicht ignorieren.
+- Wenn der Kunde einen Einwand bringt: Den Einwand anerkennen, dann entkräften.
+
+Gib EINEN konkreten Satz (maximal 2 Sätze) den der Berater JETZT sagen sollte.
+Sprich den Kunden mit "{ansprache}" an. Kein Markdown, reiner gesprochener Text.
 
 {lang['prompt_sprache']}"""
 
     response = claude_client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=150,
+        max_tokens=200,
         messages=[{"role": "user", "content": prompt}]
     )
     return response.content[0].text.strip()
