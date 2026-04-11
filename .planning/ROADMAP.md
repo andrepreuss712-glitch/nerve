@@ -32,6 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 04.8: KI-Logik Upgrade** - Gesprächsphasen-Erkennung (6 Phasen), Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung, Cold Call Inferenz, dynamische EWB-Buttons (INSERTED)
 - [x] **Phase 04.9: Training-Modul Upgrade** - 6 Persönlichkeitstypen, Stimmungs-Dynamik (-5 bis +5), Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade (INSERTED) (completed 2026-04-10)
 - [x] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED) (completed 2026-04-10)
+- [ ] **Phase 04.10.1: Emotionale TTS-Stimmen** - Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch (INSERTED)
 - [ ] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
 - [ ] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED)
 - [ ] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
@@ -391,6 +392,12 @@ Plans:
 - [x] 04.10-01-PLAN.md -- Backend: 3 Sekretaerin-Typen, anruf_typ-Logik, Audio-Pfade, Hangup-Metadaten
 - [x] 04.10-02-PLAN.md -- Frontend: Audio-Manager, Transfer-Sequenz, Hangup-Popup, Auflegen-Button
 - [x] 04.10-03-PLAN.md -- Setup-Flow linear, Anruf-Typ Step, Profil-Modal, Szenario-Karten Glass-Design
+
+### Phase 04.10.1: Emotionale TTS-Stimmen (INSERTED)
+
+**Goal:** Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch. Wenn der Kunde wuetend wird (-3 bis -5), soll man das an der Stimme hoeren. Aktuell hardcoded (stability: 0.5, similarity_boost: 0.75).
+**Depends on:** Phase 04.9, Phase 04.10
+**Plans:** TBD
 
 ### Phase 04.11: Coach-Modul (INSERTED)
 
