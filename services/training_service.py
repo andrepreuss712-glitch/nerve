@@ -784,12 +784,6 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
         f"[{'Berater' if m['speaker'] == 'berater' else 'Kunde'}] {m['text']}"
         for m in conversation_history[-6:]
     )
-    if isinstance(basis, str):
-        try: basis = json.loads(basis)
-        except Exception: basis = {}
-    if isinstance(ki, str):
-        try: ki = json.loads(ki)
-        except Exception: ki = {}
     basis    = profile_data.get('basis', {})
     if isinstance(basis, str):
         try: basis = json.loads(basis)
