@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04.10-03-PLAN.md (Tasks 1-2; Task 3 human-verify pending)
-last_updated: "2026-04-10T18:05:16.394Z"
-last_activity: 2026-04-10
+status: executing
+stopped_at: Phase 04.10 complete
+last_updated: "2026-04-11T17:00:00.000Z"
+last_activity: 2026-04-11
 progress:
   total_phases: 29
-  completed_phases: 15
+  completed_phases: 16
   total_plans: 99
-  completed_plans: 90
-  percent: 91
+  completed_plans: 93
+  percent: 94
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 
 ## Current Position
 
-Phase: 04.10 (training-realismus-inserted) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 04.10 (training-realismus-inserted) — COMPLETE ✓
+Plan: 3/3 ✓
+Status: Phase complete — verified by user in browser
 Last activity: 2026-04-10
 
 **Next:** Next phase in roadmap
@@ -292,6 +292,7 @@ Recent decisions affecting current work:
 | Phase 3.1: Frontend Redesign | 6/6 ✓ | Complete — nerve.css deployed, all app pages migrated. Visual UAT: 15 issues found. |
 | Phase 1: Business Setup | — | Skipped from GSD — user handles manually |
 | Phase 04.8.1: Echtzeit-Engine Rebuild | 5/5 ✓ | Complete — FastAPI+uvicorn RT Engine, Redis Bridge, STT/LLM Abstraktion, Shadow Mode, WS Push, Deployment |
+| Phase 04.10: Training-Realismus | 3/3 ✓ | Complete — 3 Sekretärin-Typen, Audio-Simulation (13 MP3), Transfer-Sequenz, Hangup-Popup, Anruf-Typ Auswahl, linearer Setup-Flow, Kundentyp-Generator mit Profilbezug, Gender-Voice-Matching, Siezen, globaler Error Handler |
 
 **Phase 3 verification (manual):**
 
