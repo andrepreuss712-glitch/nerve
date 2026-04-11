@@ -485,6 +485,10 @@ def training_respond():
             session['phase']                   = 'kunde'
             session['system_prompt']           = session['customer_prompt']
             kunde_antwort                      = kunde_antwort.replace('[DURCHGESTELLT]', '').strip()
+            # Switch voice: chef must have different voice than secretary
+            # Secretary always uses voice_female, so chef uses voice_male
+            # (even if chef is female — different voice = different person)
+            session['voice_id']                = persona['voice_male']['id']
 
         # Sekretaerin blocks — she hung up
         if session['phase'] == 'sekretaerin' and '[AUFGELEGT]' in kunde_antwort:
