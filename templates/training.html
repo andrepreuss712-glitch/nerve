@@ -232,18 +232,6 @@
   border-style: dashed;
 }
 
-/* ── Scenario cards (glass redesign D-15) ── */
-.t-szenario-card .t-diff-label {
-  font-size: 13px;
-}
-.t-szenario-card .t-diff-desc {
-  font-size: 11px;
-  -webkit-line-clamp: 3;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
 /* ── Scenario modal ── */
 .t-modal-bg{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.75);
   display:flex;align-items:center;justify-content:center;padding:20px}
@@ -444,10 +432,10 @@
       <!-- ── Szenario-Auswahl ──────────────────────────────────────────────────── -->
       <div class="t-section" id="t-szenario-section">
         <div class="t-section-label">Szenario (optional)</div>
-        <div id="t-szenario-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">
-          <!-- Filled by JS from /api/training/scenarios -->
-        </div>
-        <button onclick="skipSzenario()" style="margin-top:12px; background:#00D4AA; color:#0D1117; border:none; padding:8px 20px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600;">Ohne Szenario</button>
+        <select id="t-szenario-select" class="form-select t-profile-select" onchange="selectSzenarioDropdown(this.value)">
+          <option value="">— Ohne Szenario —</option>
+          <!-- Filled by JS -->
+        </select>
       </div>
 
       <!-- ── Trainings-Modus ───────────────────────────────────────────────────── -->
@@ -932,42 +920,29 @@ function confirmGeneratedPersonality() {
   document.getElementById('t-diff-section').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
-// ── Scenario selection (new flow) ───────────────────────────────────────────────
+// ── Scenario selection (dropdown) ────────────────────────────────────────────────
 async function loadSzenarienForTypFlow() {
   try {
     const res = await fetch('/training/scenarios');
     const data = await res.json();
     const scenarios = data.scenarios || data;
-    const container = document.getElementById('t-szenario-list');
-    if (!container) return;
-    container.innerHTML = scenarios.map(s => {
-      const systemBadge = s.is_system ? '<div style="font-size:10px;color:#00D4AA;margin-top:4px;">NERVE Standard</div>' : '';
-      return `<div class="t-diff-card n-glass t-szenario-card" data-id="${s.id}" onclick="selectSzenarioCard(${s.id}, this)">
-        <div class="t-diff-label">${escH(s.name)}</div>
-        <div class="t-diff-desc">${escH(s.beschreibung || s.kunde_situation || '')}</div>
-        ${systemBadge}
-      </div>`;
-    }).join('');
+    const select = document.getElementById('t-szenario-select');
+    if (!select) return;
+    // Keep the first "Ohne Szenario" option
+    select.innerHTML = '<option value="">— Ohne Szenario —</option>';
+    scenarios.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      select.appendChild(opt);
+    });
   } catch(e) {
-    console.error('[Training] Failed to load scenarios for typ flow:', e);
+    console.error('[Training] Failed to load scenarios:', e);
   }
 }
 
-function selectSzenario(id, el) {
-  selectedScenarioId = id;
-  document.querySelectorAll('.t-szenario-card').forEach(c => c.classList.remove('t-diff-active'));
-  if (el) el.classList.add('t-diff-active');
-}
-
-function selectSzenarioCard(id, el) {
-  selectedScenarioId = id;
-  document.querySelectorAll('.t-szenario-card').forEach(c => c.classList.remove('t-diff-active'));
-  if (el) el.classList.add('t-diff-active');
-}
-
-function skipSzenario() {
-  selectedScenarioId = null;
-  document.querySelectorAll('.t-szenario-card').forEach(c => c.classList.remove('t-diff-active'));
+function selectSzenarioDropdown(val) {
+  selectedScenarioId = val ? parseInt(val) : null;
 }
 
 // ── Start Training ─────────────────────────────────────────────────────────────

@@ -277,6 +277,28 @@ def _migrate():
             print("[DB] Migration: added unique index on personality_types")
         except Exception:
             pass
+        # ── Phase 04.10: deduplicate training_scenarios + add UNIQUE index ─
+        try:
+            conn.execute(text("""
+                DELETE FROM training_scenarios
+                WHERE erstellt_von IS NULL AND id NOT IN (
+                    SELECT MIN(id) FROM training_scenarios
+                    WHERE erstellt_von IS NULL
+                    GROUP BY name
+                )
+            """))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(text("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_scenario_system_name
+                ON training_scenarios (name) WHERE erstellt_von IS NULL
+            """))
+            conn.commit()
+            print("[DB] Migration: added unique index on training_scenarios")
+        except Exception:
+            pass
         # ── Phase 04.9: conversation_logs extensions ──────────────────────────
         for col, typedef in [
             ('personality_type_id', 'INTEGER'),
@@ -292,7 +314,7 @@ def _migrate():
         import json as _json
         _personality_seed = [
             {
-                'name': 'Beschaeftigter Chef',
+                'name': 'Beschäftigter Chef',
                 'icon': '\U0001F4BC',
                 'kurzbeschreibung': 'Hat keine Zeit. Komm zum Punkt oder er legt auf.',
                 'attribute': _json.dumps({
@@ -304,8 +326,8 @@ def _migrate():
                         'Kommen Sie auf den Punkt, ich habe 2 Minuten.',
                         'Was bringt mir das konkret?'
                     ],
-                    'verhaltensregeln': 'Du bist ein vielbeschaeftigter Geschaeftsfuehrer. Du hast keine Geduld fuer lange Floskeln. Du legst sofort auf wenn der Berater keinen klaren Nutzen in den ersten 30 Sekunden nennt.',
-                    'position_profil': 'Geschaeftsfuehrer / CEO'
+                    'verhaltensregeln': 'Du bist ein vielbeschäftigter Geschäftsführer. Du hast keine Geduld für lange Floskeln. Du legst sofort auf wenn der Berater keinen klaren Nutzen in den ersten 30 Sekunden nennt.',
+                    'position_profil': 'Geschäftsführer / CEO'
                 }, ensure_ascii=False),
             },
             {
@@ -314,14 +336,14 @@ def _migrate():
                 'kurzbeschreibung': 'Hinterfragt alles. Braucht harte Fakten, keine Floskeln.',
                 'attribute': _json.dumps({
                     'startstimmung': -1, 'geduld': 3, 'skeptik': 5, 'zeitdruck': 2,
-                    'auflege_trigger_hart': ['Uebertriebene Versprechen', 'Ausweichen bei direkter Frage'],
+                    'auflege_trigger_hart': ['Übertriebene Versprechen', 'Ausweichen bei direkter Frage'],
                     'auflege_trigger_weich': ['Unkonkrete Aussagen', 'Keine Referenzen'],
                     'beispiel_reaktionen': [
                         'Das klingt nach Marketing. Was sind die echten Zahlen?',
                         'Haben Sie Referenzen aus unserer Branche?',
-                        'Was passiert wenn das Produkt nicht das haelt was Sie versprechen?'
+                        'Was passiert wenn das Produkt nicht das hält was Sie versprechen?'
                     ],
-                    'verhaltensregeln': 'Du bist extrem skeptisch und hinterfragst jede Aussage. Du willst Beweise, Zahlen und Referenzen. Uebertreibungen bringen dich sofort zum Aufhaengen.',
+                    'verhaltensregeln': 'Du bist extrem skeptisch und hinterfragst jede Aussage. Du willst Beweise, Zahlen und Referenzen. Übertreibungen bringen dich sofort zum Aufhängen.',
                     'position_profil': 'Einkaufsleiter / Head of Procurement'
                 }, ensure_ascii=False),
             },
@@ -338,7 +360,7 @@ def _migrate():
                         'Wie ist die Systemarchitektur aufgebaut?',
                         'Ich brauche ein detailliertes technisches Datenblatt.'
                     ],
-                    'verhaltensregeln': 'Du bist ein analytischer Typ der alles mit Zahlen und Fakten bewertet. Du hoerst geduldig zu aber nur wenn Fakten geliefert werden. Emotionale Argumente ignorierst du voellig.',
+                    'verhaltensregeln': 'Du bist ein analytischer Typ der alles mit Zahlen und Fakten bewertet. Du hörst geduldig zu aber nur wenn Fakten geliefert werden. Emotionale Argumente ignorierst du völlig.',
                     'position_profil': 'IT-Leiter / CTO / Technischer Projektleiter'
                 }, ensure_ascii=False),
             },
@@ -352,28 +374,28 @@ def _migrate():
                     'auflege_trigger_weich': ['Zu direkter Abschlussversuch ohne Rapport'],
                     'beispiel_reaktionen': [
                         'Das klingt super interessant! Schicken Sie mir mal was zu.',
-                        'Ja, das koennen wir gerne mal anschauen, aber gerade ist nicht der beste Zeitpunkt.',
+                        'Ja, das können wir gerne mal anschauen, aber gerade ist nicht der beste Zeitpunkt.',
                         'Ich muss das noch mit meinem Kollegen besprechen.'
                     ],
-                    'verhaltensregeln': 'Du bist freundlich und hoerst alles gerne an, gibst aber nie ein klares Commitment. Du stimmst allem zu aber ohne konkrete naechste Schritte. Die Herausforderung fuer den Berater ist es echte Verbindlichkeit herauszuholen.',
+                    'verhaltensregeln': 'Du bist freundlich und hörst alles gerne an, gibst aber nie ein klares Commitment. Du stimmst allem zu aber ohne konkrete nächste Schritte. Die Herausforderung für den Berater ist es echte Verbindlichkeit herauszuholen.',
                     'position_profil': 'Abteilungsleiter / Middle Manager'
                 }, ensure_ascii=False),
             },
             {
                 'name': 'Aggressiver',
                 'icon': '\U0001F4A2',
-                'kurzbeschreibung': 'Laut, direkt, provozierend. Ruhe bewahren ist der Schluessel.',
+                'kurzbeschreibung': 'Laut, direkt, provozierend. Ruhe bewahren ist der Schlüssel.',
                 'attribute': _json.dumps({
                     'startstimmung': -3, 'geduld': 2, 'skeptik': 3, 'zeitdruck': 4,
                     'auflege_trigger_hart': ['Berater wird defensiv oder emotional'],
                     'auflege_trigger_weich': ['Unsicherheit im Ton', 'Entschuldigungen'],
                     'beispiel_reaktionen': [
-                        'Was ist das fuer ein Anruf? Ich habe besseres zu tun!',
+                        'Was ist das für ein Anruf? Ich habe besseres zu tun!',
                         'Das ist doch Quatsch, das haben wir schon probiert!',
-                        'Sprechen Sie mit mir nicht so als waere ich ein Idiot.'
+                        'Sprechen Sie mit mir nicht so als wäre ich ein Idiot.'
                     ],
                     'verhaltensregeln': 'Du bist laut, direkt und manchmal provozierend. Du testest ob der Berater unter Druck ruhig bleibt. Wenn der Berater sachlich und ruhig bleibt respektierst du das. Wenn er defensiv wird oder sich entschuldigt legst du auf.',
-                    'position_profil': 'Unternehmer / Inhaber / Selbststaendiger'
+                    'position_profil': 'Unternehmer / Inhaber / Selbstständiger'
                 }, ensure_ascii=False),
             },
             {
@@ -386,11 +408,11 @@ def _migrate():
                     'auflege_trigger_weich': ['Zu viel Smalltalk', 'Kein klares Preismodell'],
                     'beispiel_reaktionen': [
                         'Was kostet es, was bringt es, wann kann ich starten?',
-                        'Ich entscheide schnell. Ueberzeugen Sie mich in 3 Minuten.',
-                        'Wenn das passt, machen wir einen Termin fuer naechste Woche.'
+                        'Ich entscheide schnell. Überzeugen Sie mich in 3 Minuten.',
+                        'Wenn das passt, machen wir einen Termin für nächste Woche.'
                     ],
-                    'verhaltensregeln': 'Du bist ein erfahrener Entscheider der schnell und rational entscheidet. Du willst keine langen Praesentation sondern eine klare Zusammenfassung: Problem, Loesung, Preis, naechster Schritt. Du bist bereit zu kaufen wenn es passt.',
-                    'position_profil': 'Geschaeftsfuehrer / Vorstand / Partner'
+                    'verhaltensregeln': 'Du bist ein erfahrener Entscheider der schnell und rational entscheidet. Du willst keine langen Präsentation sondern eine klare Zusammenfassung: Problem, Lösung, Preis, nächster Schritt. Du bist bereit zu kaufen wenn es passt.',
+                    'position_profil': 'Geschäftsführer / Vorstand / Partner'
                 }, ensure_ascii=False),
             },
         ]
@@ -1007,63 +1029,63 @@ def _seed_system_training_scenarios():
             TrainingScenario(
                 org_id=org.id, schwierigkeit='mittel',
                 name='SaaS-Vertrieb: Cloud-Migration',
-                beschreibung='Mittelstaendischer IT-Leiter prueft Cloud-Loesungen fuer seine On-Premise-Infrastruktur. Kosten, Sicherheit und Migration sind die zentralen Themen.',
-                kunde_situation='IT-Leiter in einem Produktionsunternehmen mit 80 Mitarbeitern. Aktuelle Server sind veraltet, Budget fuer Neuanschaffung wurde genehmigt. Prueft gerade 3 Cloud-Anbieter.',
-                kunde_verhalten='Technisch versiert, fragt nach Details zu Datensicherheit und Migration. Hat Bedenken wegen Ausfallzeiten. Braucht gute Argumente fuer den Geschaeftsfuehrer.',
-                spezial_einwaende=_j(['Unsere Daten liegen sensibel, wir koennen nicht einfach in die Cloud', 'Was passiert bei einem Ausfall?', 'Der Migrationaufwand klingt enorm'], ensure_ascii=False),
+                beschreibung='Mittelständischer IT-Leiter prüft Cloud-Lösungen für seine On-Premise-Infrastruktur. Kosten, Sicherheit und Migration sind die zentralen Themen.',
+                kunde_situation='IT-Leiter in einem Produktionsunternehmen mit 80 Mitarbeitern. Aktuelle Server sind veraltet, Budget für Neuanschaffung wurde genehmigt. Prüft gerade 3 Cloud-Anbieter.',
+                kunde_verhalten='Technisch versiert, fragt nach Details zu Datensicherheit und Migration. Hat Bedenken wegen Ausfallzeiten. Braucht gute Argumente für den Geschäftsführer.',
+                spezial_einwaende=_j(['Unsere Daten liegen sensibel, wir können nicht einfach in die Cloud', 'Was passiert bei einem Ausfall?', 'Der Migrationaufwand klingt enorm'], ensure_ascii=False),
                 erstellt_von=None,
             ),
             TrainingScenario(
                 org_id=org.id, schwierigkeit='mittel',
-                name='Maschinenbau: Automatisierungsloesung',
+                name='Maschinenbau: Automatisierungslösung',
                 beschreibung='Produktionsleiter sucht Effizienzsteigerung durch Automatisierung. ROI und Implementierungszeit sind entscheidend.',
-                kunde_situation='Produktionsleiter in einem Maschinenbauunternehmen mit 150 Mitarbeitern. Hat manuelle Prozesse die Fehler und Verzoegerungen verursachen. Sein Chef hat Druck wegen Lieferterminen.',
-                kunde_verhalten='Pragmatisch, will konkrete Zahlen zum ROI. Skeptisch gegenueber langen Implementierungszeiten. Fragt nach Referenzen aus der Branche.',
+                kunde_situation='Produktionsleiter in einem Maschinenbauunternehmen mit 150 Mitarbeitern. Hat manuelle Prozesse die Fehler und Verzögerungen verursachen. Sein Chef hat Druck wegen Lieferterminen.',
+                kunde_verhalten='Pragmatisch, will konkrete Zahlen zum ROI. Skeptisch gegenüber langen Implementierungszeiten. Fragt nach Referenzen aus der Branche.',
                 spezial_einwaende=_j(['Wir haben das schon mal probiert und es hat nicht funktioniert', 'Wie lange dauert die Implementierung realistisch?', 'Was kostet das in der Gesamtkalkulation?'], ensure_ascii=False),
                 erstellt_von=None,
             ),
             TrainingScenario(
                 org_id=org.id, schwierigkeit='mittel',
                 name='Versicherung: Betriebliche Altersvorsorge',
-                beschreibung='Geschaeftsfuehrer 50+ evaluiert betriebliche Altersvorsorge fuer sein Team. Steuervorteile und Mitarbeiterbindung sind Hauptmotive.',
+                beschreibung='Geschäftsführer 50+ evaluiert betriebliche Altersvorsorge für sein Team. Steuervorteile und Mitarbeiterbindung sind Hauptmotive.',
                 kunde_situation='Inhaber eines Handwerksbetriebs mit 12 Mitarbeitern. Hat gerade einen Mitarbeiter durch bessere bAV beim Wettbewerber verloren. Will das Thema jetzt angehen aber ist sich unsicher.',
-                kunde_verhalten='Fragt viel nach steuerlichen Aspekten, will keine Komplexitaet. Bedenken wegen Verwaltungsaufwand und Haftung. Vertraut dem Berater erst nach Referenzen.',
-                spezial_einwaende=_j(['Das ist mir zu komplex, ich habe keinen Steuerberater der sich auskennt', 'Was ist wenn ein Mitarbeiter kuendigt?', 'Ich kenne da schon jemanden der das macht'], ensure_ascii=False),
+                kunde_verhalten='Fragt viel nach steuerlichen Aspekten, will keine Komplexität. Bedenken wegen Verwaltungsaufwand und Haftung. Vertraut dem Berater erst nach Referenzen.',
+                spezial_einwaende=_j(['Das ist mir zu komplex, ich habe keinen Steuerberater der sich auskennt', 'Was ist wenn ein Mitarbeiter kündigt?', 'Ich kenne da schon jemanden der das macht'], ensure_ascii=False),
                 erstellt_von=None,
             ),
             TrainingScenario(
                 org_id=org.id, schwierigkeit='leicht',
-                name='Immobilien: Gewerbeflaechen-Vermittlung',
-                beschreibung='Expandierendes Startup sucht neue Bueroflaechen. Flexibilitaet und guenstige Konditionen sind Prioritaet.',
-                kunde_situation='CEO eines Series-A-Startups mit 25 Mitarbeitern. Aktuelles Buero wird zu klein, sucht in 3 Monaten neue Flaechen. Hat schon erste Angebote eingeholt.',
-                kunde_verhalten='Offen und gespraechsbereit, will aber flexible Mietloesungen. Vergleicht aktiv mehrere Angebote. Entscheidet gemeinsam mit Co-Founder.',
-                spezial_einwaende=_j(['Wir brauchen maximale Flexibilitaet, kein 5-Jahres-Vertrag', 'Haben Sie auch Flaechen mit Ausbauoption?'], ensure_ascii=False),
+                name='Immobilien: Gewerbeflächen-Vermittlung',
+                beschreibung='Expandierendes Startup sucht neue Büroflächen. Flexibilität und günstige Konditionen sind Priorität.',
+                kunde_situation='CEO eines Series-A-Startups mit 25 Mitarbeitern. Aktuelles Büro wird zu klein, sucht in 3 Monaten neue Flächen. Hat schon erste Angebote eingeholt.',
+                kunde_verhalten='Offen und gesprächsbereit, will aber flexible Mietlösungen. Vergleicht aktiv mehrere Angebote. Entscheidet gemeinsam mit Co-Founder.',
+                spezial_einwaende=_j(['Wir brauchen maximale Flexibilität, kein 5-Jahres-Vertrag', 'Haben Sie auch Flächen mit Ausbauoption?'], ensure_ascii=False),
                 erstellt_von=None,
             ),
             TrainingScenario(
                 org_id=org.id, schwierigkeit='schwer',
                 name='Dienstleistung: IT-Security Audit',
-                beschreibung='CFO nach Datenleck evaluiert Security-Partner. Vertrauen und Expertise muessen erst bewiesen werden.',
+                beschreibung='CFO nach Datenleck evaluiert Security-Partner. Vertrauen und Expertise müssen erst bewiesen werden.',
                 kunde_situation='CFO eines Finanzdienstleisters der vor 3 Monaten einen Datenleck hatte. Ist intern unter Druck, will jetzt schnell handeln aber die falsche Wahl kostet ihn den Job.',
-                kunde_verhalten='Sehr skeptisch und vorsichtig. Prueft jeden Punkt genau. Fragt nach Zertifizierungen, Referenzen und konkreter Vorgehensweise. Kein Spielraum fuer vage Antworten.',
-                spezial_einwaende=_j(['Warum sollte ich Ihnen vertrauen? Ich kenne Sie nicht', 'Was ist Ihre ISO-Zertifizierung?', 'Wie laeuft das ab wenn Sie Schwachstellen finden?', 'Mein letzter Dienstleister hat versagt'], ensure_ascii=False),
+                kunde_verhalten='Sehr skeptisch und vorsichtig. Prüft jeden Punkt genau. Fragt nach Zertifizierungen, Referenzen und konkreter Vorgehensweise. Kein Spielraum für vage Antworten.',
+                spezial_einwaende=_j(['Warum sollte ich Ihnen vertrauen? Ich kenne Sie nicht', 'Was ist Ihre ISO-Zertifizierung?', 'Wie läuft das ab wenn Sie Schwachstellen finden?', 'Mein letzter Dienstleister hat versagt'], ensure_ascii=False),
                 erstellt_von=None,
             ),
             TrainingScenario(
                 org_id=org.id, schwierigkeit='mittel',
                 name='SaaS-Vertrieb: CRM-Wechsel',
-                beschreibung='Vertriebsleiter unzufrieden mit aktuellem CRM aber wechselscheu. Migration und Teamakzeptanz sind die groessten Huerde.',
+                beschreibung='Vertriebsleiter unzufrieden mit aktuellem CRM aber wechselscheu. Migration und Teamakzeptanz sind die größten Hürde.',
                 kunde_situation='Vertriebsleiter in einem B2B-Software-Unternehmen. Nutzt seit 4 Jahren ein altes CRM das schlecht integriert. Team klagt, aber alle Wechselversuche sind bisher gescheitert.',
-                kunde_verhalten='Interessiert aber muede von gescheiterten Projekten. Fragt konkret nach Migrationsunterstuetzung und Onboarding. Will einen Piloten mit 3 Leuten vor dem Rollout.',
+                kunde_verhalten='Interessiert aber müde von gescheiterten Projekten. Fragt konkret nach Migrationsunterstützung und Onboarding. Will einen Piloten mit 3 Leuten vor dem Rollout.',
                 spezial_einwaende=_j(['Wir haben das schon dreimal versucht, das Team zieht nie mit', 'Was passiert mit unseren 4 Jahre alten CRM-Daten?', 'Wie lange dauert das Onboarding realistisch?'], ensure_ascii=False),
                 erstellt_von=None,
             ),
             TrainingScenario(
                 org_id=org.id, schwierigkeit='leicht',
                 name='Maschinenbau: Wartungsvertrag',
-                beschreibung='Werkleiter will Ausfallzeiten reduzieren und sucht praediktiven Wartungsvertrag. Preis-Leistung ist entscheidend.',
-                kunde_situation='Werkleiter in einem Metallverarbeitungsbetrieb. Hatte letztes Jahr zwei ungeplante Maschinenausfaelle die je 50.000 Euro Schaden verursachten. Jetzt offen fuer praeventive Loesungen.',
-                kunde_verhalten='Offen und pragmatisch. Hat das Problem bereits beziffert. Fragt nach konkreten Leistungen und Reaktionszeiten. Entscheidet relativ schnell wenn das Preis-Leistungs-Verhaeltnis stimmt.',
+                beschreibung='Werkleiter will Ausfallzeiten reduzieren und sucht prädiktiven Wartungsvertrag. Preis-Leistung ist entscheidend.',
+                kunde_situation='Werkleiter in einem Metallverarbeitungsbetrieb. Hatte letztes Jahr zwei ungeplante Maschinenausfälle die je 50.000 Euro Schaden verursachten. Jetzt offen für präventive Lösungen.',
+                kunde_verhalten='Offen und pragmatisch. Hat das Problem bereits beziffert. Fragt nach konkreten Leistungen und Reaktionszeiten. Entscheidet relativ schnell wenn das Preis-Leistungs-Verhältnis stimmt.',
                 spezial_einwaende=_j(['Was ist in dem Wartungsvertrag konkret enthalten?', 'Wie schnell sind Sie vor Ort wenn etwas ist?'], ensure_ascii=False),
                 erstellt_von=None,
             ),

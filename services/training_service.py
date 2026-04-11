@@ -27,32 +27,21 @@ VOICE_FEMALE = VOICE_POOL_FEMALE[0]['id']
 SCHWIERIGKEITEN = {
     'leicht': {
         'label': 'Einsteiger',
-        'beschreibung': 'Offener Kunde. Wenig Einwände, lässt sich überzeugen.',
+        'beschreibung': 'Kunde reagiert milder, mehr Geduld, gibt Hinweise.',
         'sekretaerin': False,
-        'prompt_zusatz': """Du bist ein freundlicher, offener Interessent.
-Du stellst Fragen, bist grundsätzlich interessiert und lässt dich
-relativ leicht überzeugen. Du bringst maximal 1-2 leichte Einwände.
-Wenn der Berater gut argumentiert, stimmst du zu."""
+        'prompt_zusatz': """Du reagierst etwas milder als normalerweise. Du gibst dem Berater mehr Zeit, stellst Fragen die ihm helfen, und bringst maximal 1-2 leichte Einwände. Wenn er gut argumentiert, stimmst du zu."""
     },
     'mittel': {
         'label': 'Fortgeschritten',
-        'beschreibung': 'Skeptischer Kunde. Mehrere Einwände, braucht gute Argumente.',
+        'beschreibung': 'Realistisches Verhalten, keine Geschenke.',
         'sekretaerin': False,
-        'prompt_zusatz': """Du bist ein skeptischer aber fairer Interessent.
-Du hast konkrete Bedenken und bringst 3-4 verschiedene Einwände
-(Preis, Zeit, Vertrauen, Vergleich). Du lässt dich überzeugen wenn
-die Argumente gut sind, aber nicht bei Floskeln. Du stellst
-kritische Rückfragen."""
+        'prompt_zusatz': """Du verhältst dich realistisch und fair. Du bringst 3-4 verschiedene Einwände (Preis, Zeit, Vertrauen, Vergleich). Du lässt dich überzeugen wenn die Argumente gut sind, aber nicht bei Floskeln. Du stellst kritische Rückfragen."""
     },
     'schwer': {
         'label': 'Experte',
-        'beschreibung': 'Harter Kunde. Viele Einwände, Vorwände, schwer zu knacken.',
+        'beschreibung': 'Kunde auf Maximum, kein Fehler wird verziehen.',
         'sekretaerin': False,
-        'prompt_zusatz': """Du bist ein schwieriger Interessent. Du bringst 5+ Einwände,
-darunter Vorwände ohne echten Grund, versteckte Einwände, und einen
-Abbruch-Versuch. Du unterbrichst den Berater gelegentlich.
-Du vergleichst aktiv mit Wettbewerbern. Nur ein wirklich
-überzeugender Berater kann dich rumdrehen."""
+        'prompt_zusatz': """Du bist auf Maximum. Du bringst 5+ Einwände, darunter Vorwände ohne echten Grund, versteckte Einwände, und einen Abbruch-Versuch. Du unterbrichst den Berater gelegentlich. Du vergleichst aktiv mit Wettbewerbern. Nur ein wirklich überzeugender Berater kann dich rumdrehen."""
     },
     'sekretaerin': {
         'label': 'Sekretärin + Chef',
