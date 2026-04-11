@@ -329,8 +329,12 @@ def training_start():
         db.close()
   except Exception as _start_err:
     import traceback
-    traceback.print_exc()
-    return jsonify({'ok': False, 'error': f'{type(_start_err).__name__}: {str(_start_err)[:300]}'}), 500
+    tb = traceback.format_exc()
+    print(tb)
+    # Extract last frame for debugging
+    lines = [l for l in tb.strip().split('\n') if l.strip()]
+    last_frame = ' | '.join(lines[-3:]) if len(lines) >= 3 else tb[-300:]
+    return jsonify({'ok': False, 'error': f'{last_frame[:500]}'}), 500
 
 
 def _hangup_reason(session):
