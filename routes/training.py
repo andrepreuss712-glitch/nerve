@@ -124,6 +124,9 @@ def training_start():
 
         try:
             profile_data = json.loads(profile.daten) if profile.daten else {}
+            # Handle double-encoded JSON (string inside string)
+            if isinstance(profile_data, str):
+                profile_data = json.loads(profile_data)
         except Exception:
             profile_data = {}
 
