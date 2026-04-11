@@ -821,8 +821,9 @@ def api_training_personality_save():
         return jsonify({'id': pt.id, 'name': pt.name})
     except Exception as e:
         db.rollback()
-        print(f"[Training] Personality save error: {e}")
-        return jsonify({'error': 'Speichern fehlgeschlagen'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'{type(e).__name__}: {str(e)[:200]}'}), 500
     finally:
         db.close()
 

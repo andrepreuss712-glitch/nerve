@@ -644,9 +644,9 @@
       <div class="t-chat-sub" id="t-chatSub"></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
-      <div id="t-mood-indicator" style="display:none; align-items:center; gap:8px; padding:4px 12px; background:#1C2333; border-radius:20px;">
+      <div id="t-mood-indicator" style="display:none; align-items:center; gap:8px; padding:4px 12px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:20px;">
         <span style="font-size:11px; color:#A0AEC0;">Stimmung:</span>
-        <div id="t-mood-bar" style="width:80px; height:8px; background:#2D3748; border-radius:4px; overflow:hidden;">
+        <div id="t-mood-bar" style="width:80px; height:8px; background:var(--glass-border); border-radius:4px; overflow:hidden;">
           <div id="t-mood-fill" style="height:100%; width:50%; border-radius:4px; transition:width 0.3s, background-color 0.3s;"></div>
         </div>
         <span id="t-mood-value" style="font-size:12px; font-weight:600; color:#E2E8F0;">0</span>
@@ -1463,7 +1463,7 @@ async function confirmEndTraining() {
     if (data.personality_revealed) {
       const reveal = data.personality_revealed;
       const revealDiv = document.createElement('div');
-      revealDiv.style.cssText = 'margin-bottom:20px; padding:16px; background:#1C2333; border:1px solid #00D4AA; border-radius:12px; text-align:center;';
+      revealDiv.style.cssText = 'margin-bottom:20px; padding:16px; background:var(--glass-bg); border:1px solid #00D4AA; border-radius:12px; text-align:center;';
       revealDiv.innerHTML =
         '<div style="font-size:10px; color:#A0AEC0; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Dein Kunde war:</div>' +
         '<div style="font-size:36px; margin-bottom:8px;">' + escH(reveal.icon || '') + '</div>' +
@@ -1476,12 +1476,12 @@ async function confirmEndTraining() {
     if (generatedPersonality && !selectedPersonalityTypeId) {
       const saveDiv = document.createElement('div');
       saveDiv.id = 't-save-personality-div';
-      saveDiv.style.cssText = 'margin-top:20px; padding:16px; background:#1C2333; border:1px solid #2D3748; border-radius:12px;';
+      saveDiv.style.cssText = 'margin-top:20px; padding:16px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;';
       saveDiv.innerHTML =
         '<h4 style="color:#00D4AA; margin:0 0 8px;">Kunden speichern?</h4>' +
         '<p style="color:#A0AEC0; font-size:13px; margin:0 0 12px;">' + escH(generatedPersonality.name) + ' für spätere Trainings speichern?</p>' +
         '<input id="t-save-comment" placeholder="Kommentar (optional)" ' +
-               'style="width:100%; padding:8px; background:#0D1117; border:1px solid #2D3748; border-radius:6px; color:#E2E8F0; margin-bottom:8px; box-sizing:border-box;">' +
+               'style="width:100%; padding:8px; background:var(--page-bg); border:1px solid var(--glass-border); border-radius:6px; margin-bottom:8px; box-sizing:border-box;">' +
         '<div style="display:flex; gap:8px;">' +
           '<button onclick="saveGeneratedPersonality()" style="background:#00D4AA; color:#0D1117; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">Speichern</button>' +
           '<button onclick="document.getElementById(\'t-save-personality-div\').remove()" style="background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Verwerfen</button>' +
@@ -1619,7 +1619,7 @@ function buildScoring(data) {
       '</div>' +
     '</div>' +
     modusHtml +
-    '<div id="t-mood-chart-container" style="display:none; margin-bottom:24px; padding:16px; background:#1C2333; border-radius:12px;"><h4 style="color:#00D4AA; margin:0 0 12px; font-size:14px;">Stimmungsverlauf</h4><div style="position:relative;height:180px;"><canvas id="t-mood-chart"></canvas></div></div>' +
+    '<div id="t-mood-chart-container" class="t-score-box" style="display:none;"><div class="t-score-box-title">Stimmungsverlauf</div><div style="position:relative;height:180px;"><canvas id="t-mood-chart"></canvas></div></div>' +
     '<div id="t-wendepunkte-detail" style="display:none; margin-bottom:24px;"></div>' +
     (catsHtml ? '<div class="t-cats">' + catsHtml + '</div>' : '') +
     (staerkenHtml ? '<div class="t-score-box"><div class="t-score-box-title">Stärken</div>' + staerkenHtml + '</div>' : '') +
@@ -1726,7 +1726,7 @@ function renderWendepunkteDetail(wendepunkte) {
             '<span style="font-size:20px;">&#x1F4A1;</span> Wendepunkt-Analyse' +
         '</h4>' +
         wendepunkte.map(function(w, i) {
-            return '<div style="background:#1C2333; border-left:3px solid #FC8181; border-radius:0 12px 12px 0; padding:16px; margin-bottom:12px;">' +
+            return '<div style="background:var(--glass-bg); border:1px solid var(--glass-border); border-left:3px solid #FC8181; border-radius:0 12px 12px 0; padding:16px; margin-bottom:12px;">' +
                 '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
                     '<span style="color:#FC8181; font-size:12px; font-weight:600;">Wendepunkt ' + (i+1) + '</span>' +
                     (w.turn ? '<span style="color:#A0AEC0; font-size:11px;">Runde ' + w.turn + '</span>' : '') +
