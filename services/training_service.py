@@ -777,10 +777,14 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
     ansprache= ki.get('ansprache', 'Du')
     einw_str = ''
     if einwaende:
-        einw_str = '\nBekannte Gegenargumente:\n' + '\n'.join(
-            f"- {e.get('einwand','')}: {e.get('gegenargument','')}"
-            for e in einwaende[:4] if e.get('gegenargument')
-        )
+        parts = []
+        for e in einwaende[:4]:
+            if isinstance(e, dict) and e.get('gegenargument'):
+                parts.append(f"- {e.get('einwand','')}: {e.get('gegenargument','')}")
+            elif isinstance(e, str) and e:
+                parts.append(f"- {e}")
+        if parts:
+            einw_str = '\nBekannte Gegenargumente:\n' + '\n'.join(parts)
 
     prompt = f"""Du bist ein Vertriebscoach. Der Berater steckt in einem
 Trainingsgespräch und braucht Hilfe. Was sollte er als nächstes sagen?

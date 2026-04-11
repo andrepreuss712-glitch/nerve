@@ -1191,13 +1191,13 @@ init_oauth(app)
 # ── Global JSON Error Handler ─────────────────────────────────────────────────
 # Returns full traceback as JSON for API endpoints instead of HTML 500 page
 import traceback as _tb
+from flask import request as _request
 
 @app.errorhandler(500)
 def _handle_500(e):
     tb_str = _tb.format_exc()
     print(tb_str)
-    # Only return JSON for API/AJAX requests, HTML for browser navigation
-    if (request.content_type and 'json' in request.content_type) or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    if (_request.content_type and 'json' in _request.content_type) or _request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({
             'ok': False,
             'error': str(e),
@@ -1209,7 +1209,7 @@ def _handle_500(e):
 def _handle_exception(e):
     tb_str = _tb.format_exc()
     print(tb_str)
-    if (request.content_type and 'json' in request.content_type) or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    if (_request.content_type and 'json' in _request.content_type) or _request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({
             'ok': False,
             'error': f'{type(e).__name__}: {str(e)}',
