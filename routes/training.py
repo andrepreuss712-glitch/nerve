@@ -303,7 +303,7 @@ def training_start():
 def _hangup_reason(session):
     """Return human-readable hangup reason for popup (D-09)."""
     if session.get('phase') == 'sekretaerin' and not session.get('sekretaerin_ueberwunden'):
-        return 'Sekretaerin hat abgeblockt'
+        return 'Sekretärin hat abgeblockt'
     return 'Kunde hat aufgelegt'
 
 

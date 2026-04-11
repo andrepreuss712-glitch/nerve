@@ -339,14 +339,14 @@
 
       <!-- ── Persoenlichkeitstyp ───────────────────────────────────────────────── -->
       <div class="t-section" id="t-typ-section">
-        <div class="t-section-label">Kundentyp waehlen</div>
+        <div class="t-section-label">Kundentyp wählen</div>
         <div id="t-typ-cards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px;">
           <!-- Filled by JS -->
         </div>
         <div style="margin-top:16px; text-align:center;">
           <button id="t-typ-random-btn" onclick="generateRandomPersonality()"
                   style="background:transparent; border:1px solid #00D4AA; color:#00D4AA; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px;">
-            &#x1F3B2; Zufaellig generieren
+            &#x1F3B2; Zufällig generieren
           </button>
         </div>
         <!-- Briefing card for generated personality (hidden by default) -->
@@ -355,7 +355,7 @@
           <p id="t-typ-briefing-text" style="color:#E2E8F0; margin:0 0 12px; line-height:1.5;"></p>
           <div style="display:flex; gap:8px;">
             <button onclick="confirmGeneratedPersonality()" style="background:#00D4AA; color:#0D1117; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">Diesen Kunden nehmen</button>
-            <button onclick="generateRandomPersonality()" style="background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Nochmal wuerfeln</button>
+            <button onclick="generateRandomPersonality()" style="background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Nochmal würfeln</button>
           </div>
         </div>
       </div>
@@ -372,7 +372,7 @@
                 <path d="M16 18H24" stroke="#00D4AA" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </div>
-            <div class="t-diff-label">Direktgespraech</div>
+            <div class="t-diff-label">Direktgespräch</div>
             <div class="t-diff-desc">Direkt zum Entscheider durchgestellt.</div>
           </div>
           <div class="t-diff-card n-glass" data-anruftyp="sekretaerin" onclick="selectAnrufTyp('sekretaerin')">
@@ -384,13 +384,13 @@
                 <path d="M20 28C20 24.4 23 21 27 21C31 21 34 24.4 34 28" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
               </svg>
             </div>
-            <div class="t-diff-label">Ueber Sekretaerin</div>
-            <div class="t-diff-desc">Erst die Sekretaerin ueberwinden, dann den Entscheider ueberzeugen.</div>
+            <div class="t-diff-label">Über Sekretärin</div>
+            <div class="t-diff-desc">Erst die Sekretärin überwinden, dann den Entscheider überzeugen.</div>
           </div>
         </div>
         <!-- Sekretaerin-Typ Sub-Selection (shown when sekretaerin selected) -->
         <div id="t-sektyp-cards" style="display:none; margin-top:16px;">
-          <div class="t-section-label" style="font-size:13px;">Sekretaerin-Typ</div>
+          <div class="t-section-label" style="font-size:13px;">Sekretärin-Typ</div>
           <div class="t-diff-grid" style="grid-template-columns: repeat(3, 1fr);">
             {% for key, sek in sekretaerin_types.items() %}
             <div class="t-diff-card n-glass {% if loop.first %}t-diff-active{% endif %}"
@@ -410,7 +410,7 @@
         <div id="t-szenario-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">
           <!-- Filled by JS from /api/training/scenarios -->
         </div>
-        <button onclick="skipSzenario()" style="margin-top:12px; background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Ohne Szenario starten</button>
+        <button onclick="skipSzenario()" style="margin-top:12px; background:transparent; border:1px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Ohne Szenario</button>
       </div>
 
       <!-- ── Trainings-Modus ───────────────────────────────────────────────────── -->
@@ -667,12 +667,12 @@
 <!-- ── No Profile Modal (D-14) ────────────────────────────────────────────── -->
 <div id="t-noProfileModal" class="t-modal-bg t-hidden">
   <div class="t-modal" style="max-width:380px">
-    <div class="t-modal-title">Kein Profil ausgewaehlt</div>
+    <div class="t-modal-title">Kein Profil ausgewählt</div>
     <p style="font-size:13px;color:var(--page-text-secondary);margin-bottom:12px">
-      Bitte waehle zuerst ein Verkaufsprofil aus, bevor du das Training startest.
+      Bitte wähle zuerst ein Verkaufsprofil aus, bevor du das Training startest.
     </p>
     <div class="t-modal-footer">
-      <button class="btn btn-primary" onclick="document.getElementById('t-noProfileModal').classList.add('t-hidden'); document.getElementById('t-profileSelect').focus();">Profil waehlen</button>
+      <button class="btn btn-primary" onclick="document.getElementById('t-noProfileModal').classList.add('t-hidden'); document.getElementById('t-profileSelect').focus();">Profil wählen</button>
     </div>
   </div>
 </div>
@@ -771,7 +771,6 @@ function selectModus(modus) {
   document.querySelectorAll('.t-modus-card').forEach(c => c.classList.remove('t-modus-active'));
   const card = document.getElementById('t-modus-' + modus);
   if (card) card.classList.add('t-modus-active');
-  loadPersonalityTypes();
 }
 
 function selectDiff(key) {
@@ -853,7 +852,7 @@ async function generateRandomPersonality() {
     alert('Generierung fehlgeschlagen. Bitte erneut versuchen.');
   } finally {
     btn.disabled = false;
-    btn.textContent = '\u{1F3B2} Zufaellig generieren';
+    btn.textContent = '\u{1F3B2} Zufällig generieren';
   }
 }
 
@@ -897,7 +896,7 @@ function selectSzenarioCard(id, el) {
 
 function skipSzenario() {
   selectedScenarioId = null;
-  document.querySelectorAll('.t-szenario-card').forEach(c => c.style.borderColor = '#2D3748');
+  document.querySelectorAll('.t-szenario-card').forEach(c => c.classList.remove('t-diff-active'));
 }
 
 // ── Start Training ─────────────────────────────────────────────────────────────
@@ -1405,7 +1404,7 @@ async function confirmEndTraining() {
       saveDiv.style.cssText = 'margin-top:20px; padding:16px; background:#1C2333; border:1px solid #2D3748; border-radius:12px;';
       saveDiv.innerHTML =
         '<h4 style="color:#00D4AA; margin:0 0 8px;">Kunden speichern?</h4>' +
-        '<p style="color:#A0AEC0; font-size:13px; margin:0 0 12px;">' + escH(generatedPersonality.name) + ' fuer spaetere Trainings speichern?</p>' +
+        '<p style="color:#A0AEC0; font-size:13px; margin:0 0 12px;">' + escH(generatedPersonality.name) + ' für spätere Trainings speichern?</p>' +
         '<input id="t-save-comment" placeholder="Kommentar (optional)" ' +
                'style="width:100%; padding:8px; background:#0D1117; border:1px solid #2D3748; border-radius:6px; color:#E2E8F0; margin-bottom:8px; box-sizing:border-box;">' +
         '<div style="display:flex; gap:8px;">' +
@@ -1798,7 +1797,7 @@ async function handleAufgelegt(data) {
 
 function showHangupPopup(stats) {
   const title = (stats.hat_sekretaerin && !stats.sek_ueberwunden)
-    ? 'Sekretaerin hat abgeblockt'
+    ? 'Sekretärin hat abgeblockt'
     : 'Anruf beendet';
   document.getElementById('t-hangup-title').textContent = title;
   let html = '<div style="display:grid; gap:6px;">';
@@ -1806,7 +1805,7 @@ function showHangupPopup(stats) {
   html += '<div><span style="color:#A0AEC0;">Dauer:</span> ' + escH(stats.dauer) + '</div>';
   html += '<div><span style="color:#A0AEC0;">Nachrichten:</span> ' + stats.turns + '</div>';
   if (stats.hat_sekretaerin) {
-    html += '<div><span style="color:#A0AEC0;">Sekretaerin ueberwunden:</span> ' +
+    html += '<div><span style="color:#A0AEC0;">Sekretärin überwunden:</span> ' +
       (stats.sek_ueberwunden ? '<span style="color:#22C55E;">Ja</span>' : '<span style="color:#EF4444;">Nein</span>') + '</div>';
   }
   html += '</div>';
@@ -1817,7 +1816,7 @@ function showHangupPopup(stats) {
 function userHangup() {
   // D-10: Confirm dialog before user-initiated hangup
   document.getElementById('t-confirmEndModal').querySelector('.t-modal-title').textContent = 'Wirklich auflegen?';
-  document.getElementById('t-confirmEndModal').querySelector('p').textContent = 'Das Gespraech wird beendet und die Auswertung angezeigt.';
+  document.getElementById('t-confirmEndModal').querySelector('p').textContent = 'Das Gespräch wird beendet und die Auswertung angezeigt.';
   // Replace the confirm button action
   const footer = document.getElementById('t-confirmEndModal').querySelector('.t-modal-footer');
   footer.innerHTML = '<button class="btn btn-secondary" onclick="document.getElementById(\'t-confirmEndModal\').classList.add(\'t-hidden\')">Weiter telefonieren</button>' +
@@ -2271,7 +2270,7 @@ loadSzenarienForTypFlow();
         const list = document.getElementById('t-phrases-list');
 
         if (d.phrases.length === 0) {
-          list.innerHTML = '<div class="t-empty-state">Noch keine Wendepunkt-Saetze gesammelt</div>';
+          list.innerHTML = '<div class="t-empty-state">Noch keine Wendepunkt-Sätze gesammelt</div>';
           document.getElementById('t-phrases-pagination').style.display = 'none';
           return;
         }
