@@ -375,13 +375,7 @@
       <div class="t-section" id="t-typ-section">
         <div class="t-section-label">Kundentyp</div>
         <div id="t-typ-cards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;">
-          <!-- Filled by JS -->
-        </div>
-        <div style="margin-top:12px; text-align:center;">
-          <button id="t-typ-random-btn" onclick="generateRandomPersonality()"
-                  style="background:#00D4AA; color:#0D1117; border:none; padding:8px 20px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:600;">
-            &#x1F3B2; Zufällig generieren
-          </button>
+          <!-- Filled by JS — random card appended at end -->
         </div>
         <!-- Briefing card for generated personality (hidden by default) -->
         <div id="t-typ-briefing" style="display:none; margin-top:16px; padding:16px; background:#1C2333; border:1px solid #2D3748; border-radius:12px;">
@@ -852,7 +846,7 @@ async function loadPersonalityTypes() {
     const types = await res.json();
     const container = document.getElementById('t-typ-cards');
     if (!container) return;
-    container.innerHTML = types.map(t => {
+    const cards = types.map(t => {
       const svg = PERSONALITY_SVGS[t.name] || '';
       const iconHtml = svg
         ? '<div style="margin-bottom:6px;">' + svg + '</div>'
@@ -865,6 +859,16 @@ async function loadPersonalityTypes() {
         customBadge +
       '</div>';
     }).join('');
+    // Append random generator card at end
+    const randomCard = '<div class="t-typ-card" id="t-typ-random-card" onclick="generateRandomPersonality()" style="border-style:dashed;">' +
+      '<div style="margin-bottom:6px;"><svg width="28" height="28" viewBox="0 0 32 32" fill="none">' +
+      '<rect x="4" y="4" width="24" height="24" rx="4" stroke="#00D4AA" stroke-width="1.5"/>' +
+      '<circle cx="11" cy="11" r="2" fill="#00D4AA"/><circle cx="21" cy="11" r="2" fill="#00D4AA"/>' +
+      '<circle cx="11" cy="21" r="2" fill="#00D4AA"/><circle cx="21" cy="21" r="2" fill="#00D4AA"/>' +
+      '<circle cx="16" cy="16" r="2" fill="#00D4AA"/></svg></div>' +
+      '<div class="t-typ-name" id="t-typ-random-btn">Zufällig generieren</div>' +
+      '<div class="t-typ-desc">KI erstellt einen Kunden passend zu deinem Profil</div></div>';
+    container.innerHTML = cards + randomCard;
   } catch(e) {
     console.error('[Training] Failed to load personality types:', e);
   }
@@ -880,7 +884,8 @@ function selectTyp(id, el) {
 
 async function generateRandomPersonality() {
   const btn = document.getElementById('t-typ-random-btn');
-  btn.disabled = true;
+  const card = document.getElementById('t-typ-random-card');
+  if (card) card.style.pointerEvents = 'none';
   btn.textContent = 'Generiere...';
   try {
     const pid = document.getElementById('t-profileSelect').value;
@@ -908,8 +913,8 @@ async function generateRandomPersonality() {
     console.error('[Training] Generation failed:', e.message || e);
     alert('Generierung fehlgeschlagen: ' + (e.message || 'Unbekannter Fehler'));
   } finally {
-    btn.disabled = false;
-    btn.textContent = '🎲 Zufällig generieren';
+    if (card) card.style.pointerEvents = '';
+    btn.textContent = 'Zufällig generieren';
   }
 }
 
