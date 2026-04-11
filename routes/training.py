@@ -18,6 +18,25 @@ from services.training_service import (
 
 training_bp = Blueprint('training', __name__)
 
+
+def _ensure_dict(val, fallback=None):
+    """Ensure val is a dict — handles double-encoded JSON, None, and other types."""
+    if fallback is None:
+        fallback = {}
+    if val is None:
+        return fallback
+    if isinstance(val, dict):
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, str):
+                parsed = json.loads(parsed)
+            return parsed if isinstance(parsed, dict) else fallback
+        except (json.JSONDecodeError, TypeError):
+            return fallback
+    return fallback
+
 _sessions      = {}
 _sessions_lock = threading.Lock()
 
@@ -123,13 +142,7 @@ def training_start():
         if not profile:
             return jsonify({'error': 'Profil nicht gefunden'}), 404
 
-        try:
-            profile_data = json.loads(profile.daten) if profile.daten else {}
-            # Handle double-encoded JSON (string inside string)
-            if isinstance(profile_data, str):
-                profile_data = json.loads(profile_data)
-        except Exception:
-            profile_data = {}
+        profile_data = _ensure_dict(profile.daten)
 
         # Load personality type if provided
         personality_data   = None
@@ -142,9 +155,7 @@ def training_start():
                 (PersonalityType.user_id == g.user.id)
             ).first()
             if pt:
-                personality_data = json.loads(pt.attribute) if pt.attribute else {}
-                if isinstance(personality_data, str):
-                    personality_data = json.loads(personality_data)
+                personality_data = _ensure_dict(pt.attribute)
                 personality_data['name'] = pt.name
                 personality_data['icon'] = pt.icon
                 personality_data['kurzbeschreibung'] = pt.kurzbeschreibung or ''
@@ -155,10 +166,7 @@ def training_start():
 
         # Use generated (unsaved) personality if no personality_type_id was given
         if personality_type_id is None and generated_personality and isinstance(generated_personality, dict):
-            attr = generated_personality.get('attribute') or {}
-            if isinstance(attr, str):
-                attr = json.loads(attr)
-            personality_data = dict(attr)
+            personality_data = _ensure_dict(generated_personality.get('attribute'))
             personality_data['name']             = generated_personality.get('name', 'Generiert')
             personality_data['icon']             = generated_personality.get('icon', '\U0001F464')
             personality_data['kurzbeschreibung'] = generated_personality.get('kurzbeschreibung', '')
@@ -381,8 +389,8 @@ def training_respond():
 
         # Rebuild system prompt with current mood
         system_prompt = build_personality_prompt(
-            profile_data=session.get('profile_data', {}),
-            personality_data=session['personality_data'],
+            profile_data=_ensure_dict(session.get('profile_data')),
+            personality_data=_ensure_dict(session.get('personality_data')),
             schwierigkeit=session['schwierigkeit'],
             current_mood=current_mood,
             sprache=session.get('sprache', 'de'),
@@ -501,9 +509,7 @@ def training_help():
 
     try:
         sprache  = session.get('sprache', 'de')
-        profile_data = session.get('profile_data', {})
-        if isinstance(profile_data, str):
-            profile_data = json.loads(profile_data) if profile_data else {}
+        profile_data = _ensure_dict(session.get('profile_data'))
         vorschlag = generate_help_suggestion(
             session['history'], profile_data, sprache)
         return jsonify({'ok': True, 'vorschlag': vorschlag})
@@ -731,7 +737,7 @@ def api_training_personalities():
 
         result = []
         for t in types:
-            attr = json.loads(t.attribute) if t.attribute else {}
+            attr = _ensure_dict(t.attribute)
             result.append({
                 'id': t.id,
                 'name': t.name,
@@ -761,7 +767,7 @@ def api_training_personality_generate():
         try:
             profile = db.query(Profile).filter_by(id=pid, org_id=g.user.org_id).first()
             if profile:
-                prof_data = json.loads(profile.daten) if profile.daten else {}
+                prof_data = _ensure_dict(profile.daten)
                 firma = prof_data.get('firma', '')
                 produkt = prof_data.get('produkt', prof_data.get('dienstleistung', ''))
                 branche = profile.branche or prof_data.get('branche', '')
