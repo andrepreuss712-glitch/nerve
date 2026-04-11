@@ -463,8 +463,10 @@ TYPISCHE EINWÄNDE DIE DU NUTZEN KANNST:
 GESPRÄCHSREGELN:
 - Maximal 2-3 Sätze pro Antwort, wie ein echter Mensch am Telefon
 - Kurze Sätze, natürlich, manchmal "ähm", "naja", "hmm"
+- SIEZE den Berater — im B2B sagt man "Sie", nicht "du"
+- NUR DEUTSCH. Kein einziges englisches Wort (kein "Alright", "Sure", "Sounds good"). "Okay" ist erlaubt.
+- KEINE Rechtschreibfehler, KEIN Markdown, keine Sonderzeichen — nur sauberer, gesprochener Text
 - Reagiere IMMER auf das was der Berater GERADE gesagt hat
-- Kein Markdown, keine Sternchen, keine Formatierung — nur gesprochener Text
 """
 
 TRAINING_PERSONA_PROMPT_BASE = KUNDEN_PROMPT_TEMPLATE
@@ -677,6 +679,8 @@ Branche: {branche}
 GESPRÄCHSREGELN:
 - Maximal 2-3 Sätze pro Antwort. Echte Menschen reden am Telefon NICHT in langen Absätzen.
 - Kurze Sätze, natürlich, mit Pausen-Wörtern (hmm, naja, also).
+- SIEZE den Berater — im B2B sagt man "Sie", nicht "du".
+- NUR DEUTSCH. Kein einziges englisches Wort (kein "Alright", "Okay" ist erlaubt aber kein "Sure", "Sounds good" etc.).
 - KEINE Rechtschreibfehler, KEIN Markdown, KEINE Sonderzeichen. Nur sauberer, gesprochener Text.
 - Reagiere IMMER direkt auf das, was der Berater GERADE gesagt hat.
 
@@ -780,12 +784,24 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
         f"[{'Berater' if m['speaker'] == 'berater' else 'Kunde'}] {m['text']}"
         for m in conversation_history[-6:]
     )
+    if isinstance(basis, str):
+        try: basis = json.loads(basis)
+        except Exception: basis = {}
+    if isinstance(ki, str):
+        try: ki = json.loads(ki)
+        except Exception: ki = {}
     basis    = profile_data.get('basis', {})
+    if isinstance(basis, str):
+        try: basis = json.loads(basis)
+        except Exception: basis = {}
     ki       = profile_data.get('ki', {})
+    if isinstance(ki, str):
+        try: ki = json.loads(ki)
+        except Exception: ki = {}
     einwaende= profile_data.get('einwaende', [])
     produkt  = basis.get('produktbeschreibung') or profile_data.get('produkt', '')
+    firma    = basis.get('firmenname') or profile_data.get('firma', '')
     usps     = basis.get('usps') or profile_data.get('usps', [])
-    ansprache= ki.get('ansprache', 'Du')
     einw_str = ''
     if einwaende:
         parts = []
@@ -800,22 +816,25 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
     # Detect conversation phase for context-appropriate suggestion
     berater_count = sum(1 for m in conversation_history if m.get('speaker') == 'berater')
     if berater_count == 0:
-        phase_hint = """PHASE: OPENER — Der Berater hat noch NICHTS gesagt. Der Kunde hat gerade den Hörer abgenommen.
+        firma_text = f' von {firma}' if firma else ''
+        phase_hint = f"""PHASE: OPENER — Der Berater hat noch NICHTS gesagt. Der Kunde hat gerade den Hörer abgenommen.
 Der Berater braucht einen professionellen Gesprächseinstieg:
-1. Sich vorstellen (Name + Firma)
-2. Kurz sagen warum er anruft (1 Satz Nutzenversprechen)
-3. Fragen ob es gerade passt
-Beispiel-Struktur: "Guten Tag, [Name] von [Firma]. Ich rufe an weil [Nutzen in einem Satz]. Passt es gerade kurz?"
+1. Sich mit echtem Namen und Firma vorstellen
+2. Kurz sagen warum er anruft (1 Satz konkreter Nutzen)
+3. Fragen ob es gerade 2 Minuten passt
+Formuliere den FERTIGEN Satz — KEINE Platzhalter wie [Name] oder [Firma].
+Verwende den Firmennamen: {firma if firma else '(Firma des Beraters)'}
 """
     elif berater_count <= 2:
         phase_hint = "PHASE: FRÜHE BEDARFSANALYSE — Der Berater soll Interesse wecken und Fragen stellen, NICHT pitchen."
     else:
         phase_hint = "PHASE: GESPRÄCH LÄUFT — Der Berater soll auf den Kunden eingehen und das Gespräch voranbringen."
 
-    prompt = f"""Du bist ein erfahrener Vertriebscoach. Der Berater telefoniert mit einem Kunden und braucht JETZT einen konkreten Vorschlag was er sagen soll.
+    prompt = f"""Du bist ein erfahrener B2B-Vertriebscoach im DACH-Raum. Der Berater telefoniert mit einem Kunden und braucht JETZT einen konkreten Vorschlag was er sagen soll.
 
+Berater arbeitet bei: {firma if firma else '(nicht angegeben)'}
 Produkt: {produkt}
-USPs: {", ".join(usps)}{einw_str}
+USPs: {", ".join(usps) if usps else '(nicht angegeben)'}{einw_str}
 
 {phase_hint}
 
@@ -823,13 +842,14 @@ GESPRÄCHSVERLAUF:
 {gespraech if gespraech.strip() else "(Noch kein Gespräch — Kunde hat gerade abgenommen)"}
 
 REGELN:
+- IMMER SIEZEN. Im DACH-B2B sagt man "Sie", "Ihnen", "Ihr" — NIEMALS "du".
 - Lies die LETZTE Aussage des Kunden genau. Dein Vorschlag MUSS darauf eingehen.
 - Wenn der Kunde "keine Zeit" sagt: Verständnis zeigen, kurz halten, Termin anbieten.
 - Wenn der Kunde eine Frage stellt: Die Frage beantworten.
 - Wenn der Kunde einen Einwand bringt: Anerkennen, dann entkräften.
 - Der Vorschlag muss wie ein ECHTER Satz klingen den man am Telefon sagt.
-- Maximal 2 Sätze. Sprich den Kunden mit "{ansprache}" an.
-- Kein Markdown, reiner gesprochener Text.
+- Maximal 2 Sätze. KEINE Platzhalter — formuliere einen fertigen Satz.
+- Kein Markdown, kein Englisch, reiner gesprochener deutscher Text.
 
 {lang['prompt_sprache']}"""
 
