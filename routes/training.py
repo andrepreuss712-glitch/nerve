@@ -735,30 +735,36 @@ def api_training_personality_generate():
         finally:
             db.close()
 
-    prompt = f"""Erstelle eine neue B2B-Kundenpersönlichkeit für ein Vertriebstraining.
+    prompt = f"""Erstelle eine PERSÖNLICHKEIT für ein B2B-Vertriebstraining.
+
+WICHTIG: Du generierst einen MENSCHEN mit Charakter — KEIN Szenario, KEINE Firma, KEINE Branche, KEINE technischen Details.
 Die Person soll NICHT einer dieser 6 Standard-Typen sein: Beschäftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider.
+{branche_ctx}
 
-Erstelle eine einzigartige, realistische Person aus dem DACH-B2B-Umfeld.{branche_ctx}
-
-Der generierte Kunde muss jemand sein, der das Produkt/die Dienstleistung des Verkäufers realistisch kaufen oder ablehnen könnte.
+REGELN:
+- IMMER einen realistischen deutschen Vor- und Nachnamen generieren (z.B. "Thomas Brenner", "Sabine Krämer")
+- Alter angeben (35-62)
+- Fokus auf CHARAKTER und VERHALTEN: Wie tickt diese Person? Was macht sie schwierig/interessant im Gespräch?
+- KEINE Jobtitel, KEINE Firmennamen, KEINE Produktdetails, KEINE technischen Fragen — das gehört ins Szenario, nicht in den Kundentyp
+- Kurzbeschreibung: 1 Satz der den Charakter beschreibt, z.B. "Misstrauisch, zahlengetrieben, testet ob du Substanz hast."
 
 Antworte NUR als valides JSON:
 {{
-  "name": "Kurzname des Typs (2-3 Wörter)",
+  "name": "Vorname Nachname, Alter",
   "icon": "ein passendes Emoji",
-  "kurzbeschreibung": "1 Satz Beschreibung",
-  "briefing": "2-3 Sätze Briefing für den Vertriebler: Wer ist die Person, Alter, Position, Situation, worauf achten",
+  "kurzbeschreibung": "1 Satz Charakterbeschreibung — WIE die Person reagiert, nicht WAS sie beruflich macht",
+  "briefing": "2-3 Sätze für den Vertriebler: Charakter, Eigenarten, worauf achten, was diese Person triggert",
   "attribute": {{
     "geduld": 1-5,
     "skeptik": 1-5,
     "zeitdruck": 1-5,
     "startstimmung": -3 bis +1,
-    "auflege_trigger_hart": ["Trigger 1", "Trigger 2"],
-    "auflege_trigger_weich": ["Trigger 1"],
-    "beispiel_reaktionen": ["Reaktion 1", "Reaktion 2"],
-    "verhaltensregeln": "Fließtext: Wie verhält sich diese Person im Gespräch",
-    "position_profil": "Position und Alter",
-    "vorgeschichte": "1-2 Sätze relevante Vorgeschichte"
+    "auflege_trigger_hart": ["Verhaltens-Trigger 1", "Verhaltens-Trigger 2"],
+    "auflege_trigger_weich": ["Verhaltens-Trigger"],
+    "beispiel_reaktionen": ["Typische Reaktion 1", "Typische Reaktion 2"],
+    "verhaltensregeln": "Fließtext: Wie verhält sich diese Person im Gespräch — Charakter, Tonfall, Muster",
+    "position_profil": "Alter und allgemeine Rolle (z.B. 'Entscheider, 52 Jahre')",
+    "vorgeschichte": "1-2 Sätze persönliche Vorgeschichte die das Verhalten erklärt"
   }}
 }}"""
 
