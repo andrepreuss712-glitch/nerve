@@ -201,6 +201,17 @@ def training_start():
         diff            = SCHWIERIGKEITEN.get(schwierigkeit, SCHWIERIGKEITEN['mittel'])
         hat_sekretaerin = (anruf_typ == 'sekretaerin')
 
+        # Sync persona chef name with personality name if available
+        if personality_data and personality_data.get('name') and not personality_hidden:
+            _pname = personality_data['name'].split(',')[0].strip()
+            parts = _pname.split()
+            if len(parts) >= 2:
+                persona['chef_vorname'] = parts[0]
+                persona['chef_nachname'] = ' '.join(parts[1:])
+            elif parts:
+                persona['chef_vorname'] = parts[0]
+                persona['chef_nachname'] = ''
+
         # Build system prompt: personality path or classic path
         if personality_data and not hat_sekretaerin:
             system_prompt   = build_personality_prompt(
