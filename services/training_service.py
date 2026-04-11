@@ -778,7 +778,7 @@ def generate_response_with_mood(
 
 
 def generate_help_suggestion(conversation_history: list, profile_data: dict,
-                             sprache: str = 'de') -> str:
+                             sprache: str = 'de', berater_name: str = '') -> str:
     lang     = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
     gespraech = "\n".join(
         f"[{'Berater' if m['speaker'] == 'berater' else 'Kunde'}] {m['text']}"
@@ -817,7 +817,8 @@ Der Berater braucht einen professionellen Gesprächseinstieg:
 2. Kurz sagen warum er anruft (1 Satz konkreter Nutzen)
 3. Fragen ob es gerade 2 Minuten passt
 Formuliere den FERTIGEN Satz — KEINE Platzhalter wie [Name] oder [Firma].
-Verwende den Firmennamen: {firma if firma else '(Firma des Beraters)'}
+Name des Beraters: {berater_name if berater_name else '(nicht bekannt)'}
+Firma des Beraters: {firma if firma else '(nicht bekannt)'}
 """
     elif berater_count <= 2:
         phase_hint = "PHASE: FRÜHE BEDARFSANALYSE — Der Berater soll Interesse wecken und Fragen stellen, NICHT pitchen."

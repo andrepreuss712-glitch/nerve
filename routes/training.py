@@ -201,6 +201,11 @@ def training_start():
         diff            = SCHWIERIGKEITEN.get(schwierigkeit, SCHWIERIGKEITEN['mittel'])
         hat_sekretaerin = (anruf_typ == 'sekretaerin')
 
+        # Berater-Name für Prompts
+        berater_vorname  = getattr(g.user, 'vorname', '') or ''
+        berater_nachname = getattr(g.user, 'nachname', '') or ''
+        berater_name     = f"{berater_vorname} {berater_nachname}".strip() or 'der Berater'
+
         # Sync persona chef name with personality name if available
         if personality_data and personality_data.get('name') and not personality_hidden:
             _pname = personality_data['name'].split(',')[0].strip()
@@ -212,6 +217,9 @@ def training_start():
                 persona['chef_vorname'] = parts[0]
                 persona['chef_nachname'] = ''
 
+        # Berater context injected into all prompts
+        _berater_ctx = f"\n\nDER BERATER: Der Vertriebler der dich anruft heißt {berater_name}. Wenn er sich vorstellt, nutze seinen Namen im Gespräch."
+
         # Build system prompt: personality path or classic path
         if personality_data and not hat_sekretaerin:
             system_prompt   = build_personality_prompt(
@@ -221,11 +229,11 @@ def training_start():
                 current_mood=startstimmung,
                 sprache=sprache,
                 szenario=szenario_data,
-            )
+            ) + _berater_ctx
             customer_prompt = system_prompt  # keep in sync for sekretaerin fallback
             phase           = 'kunde'
         else:
-            customer_prompt = build_customer_prompt(profile_data, schwierigkeit, persona, sprache)
+            customer_prompt = build_customer_prompt(profile_data, schwierigkeit, persona, sprache) + _berater_ctx
 
             # Quick-Training: inject einwand_typ focus into customer prompt
             if einwand_typ:
@@ -319,6 +327,7 @@ def training_start():
                 'modus':            modus,
                 'voice_available':  voice_available,
                 'voice_id':                voice_id,
+                'berater_name':            berater_name,
                 'sekretaerin_typ':         sekretaerin_typ if hat_sekretaerin else None,
                 'sekretaerin_ueberwunden': False,
                 'history': [{
@@ -556,8 +565,9 @@ def training_help():
     try:
         sprache  = session.get('sprache', 'de')
         profile_data = _ensure_dict(session.get('profile_data'))
+        berater_name = session.get('berater_name', 'der Berater')
         vorschlag = generate_help_suggestion(
-            session['history'], profile_data, sprache)
+            session['history'], profile_data, sprache, berater_name=berater_name)
         return jsonify({'ok': True, 'vorschlag': vorschlag})
     except Exception as e:
         import traceback
