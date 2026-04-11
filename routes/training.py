@@ -153,6 +153,7 @@ def training_start():
             personality_data['name']             = generated_personality.get('name', 'Generiert')
             personality_data['icon']             = generated_personality.get('icon', '\U0001F464')
             personality_data['kurzbeschreibung'] = generated_personality.get('kurzbeschreibung', '')
+            personality_data['geschlecht']       = generated_personality.get('geschlecht', 'm')
             startstimmung = personality_data.get('startstimmung', 0)
             if schwierigkeit == 'schwer':
                 personality_hidden = True
