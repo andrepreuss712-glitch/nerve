@@ -710,30 +710,57 @@ def api_training_personality_generate():
     """Generate a random personality via Claude Haiku (not saved until user confirms)."""
     from services.training_service import claude_client
 
-    prompt = """Erstelle eine neue B2B-Kundenpersönlichkeit für ein Vertriebstraining.
+    # Load profile context for industry-relevant personality
+    branche_ctx = ""
+    data = request.get_json(silent=True) or {}
+    pid = data.get('profile_id')
+    if pid:
+        db = get_session()
+        try:
+            profile = db.query(Profile).filter_by(id=pid, org_id=g.user.org_id).first()
+            if profile:
+                prof_data = json.loads(profile.daten) if profile.daten else {}
+                firma = prof_data.get('firma', '')
+                produkt = prof_data.get('produkt', prof_data.get('dienstleistung', ''))
+                branche = profile.branche or prof_data.get('branche', '')
+                parts = []
+                if branche:
+                    parts.append(f"Branche des Verkäufers: {branche}")
+                if firma:
+                    parts.append(f"Firma des Verkäufers: {firma}")
+                if produkt:
+                    parts.append(f"Produkt/Dienstleistung: {produkt}")
+                if parts:
+                    branche_ctx = "\n\nKONTEXT DES VERKÄUFERS (der Kunde muss ein REALISTISCHER Ansprechpartner für diese Branche sein):\n" + "\n".join(parts)
+        finally:
+            db.close()
+
+    prompt = f"""Erstelle eine neue B2B-Kundenpersönlichkeit für ein Vertriebstraining.
 Die Person soll NICHT einer dieser 6 Standard-Typen sein: Beschäftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider.
 
-Erstelle eine einzigartige, realistische Person aus dem DACH-B2B-Umfeld.
+Erstelle eine einzigartige, realistische Person aus dem DACH-B2B-Umfeld.{branche_ctx}
+
+Der generierte Kunde muss jemand sein, der das Produkt/die Dienstleistung des Verkäufers realistisch kaufen oder ablehnen könnte.
 
 Antworte NUR als valides JSON:
-{
+{{
   "name": "Kurzname des Typs (2-3 Wörter)",
   "icon": "ein passendes Emoji",
   "kurzbeschreibung": "1 Satz Beschreibung",
   "briefing": "2-3 Sätze Briefing für den Vertriebler: Wer ist die Person, Alter, Position, Situation, worauf achten",
-  "attribute": {
-    "geduld": <1-5>,
-    "skeptik": <1-5>,
-    "zeitdruck": <1-5>,
-    "startstimmung": <-3 bis +1>,
+  "attribute": {{
+    "geduld": 1-5,
+    "skeptik": 1-5,
+    "zeitdruck": 1-5,
+    "startstimmung": -3 bis +1,
     "auflege_trigger_hart": ["Trigger 1", "Trigger 2"],
     "auflege_trigger_weich": ["Trigger 1"],
     "beispiel_reaktionen": ["Reaktion 1", "Reaktion 2"],
     "verhaltensregeln": "Fließtext: Wie verhält sich diese Person im Gespräch",
     "position_profil": "Position und Alter",
     "vorgeschichte": "1-2 Sätze relevante Vorgeschichte"
-  }
-}"""
+  }}
+}}"""
 
     try:
         response = claude_client.messages.create(

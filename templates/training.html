@@ -883,7 +883,12 @@ async function generateRandomPersonality() {
   btn.disabled = true;
   btn.textContent = 'Generiere...';
   try {
-    const res = await fetch('/api/training/personalities/generate', {method: 'POST'});
+    const pid = document.getElementById('t-profileSelect').value;
+    const res = await fetch('/api/training/personalities/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({profile_id: pid || null}),
+    });
     if (!res.ok) {
       const txt = await res.text();
       throw new Error('Server ' + res.status + ': ' + txt.substring(0, 200));
