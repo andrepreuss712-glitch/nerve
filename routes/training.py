@@ -749,8 +749,10 @@ Antworte NUR als valides JSON:
         parsed = json.loads(text[start:end])
         return jsonify(parsed)
     except Exception as e:
-        print(f"[Training] Personality generation error: {e}")
-        return jsonify({'error': 'Generation fehlgeschlagen'}), 500
+        import traceback
+        traceback.print_exc()
+        print(f"[Training] Personality generation error: {type(e).__name__}: {e}")
+        return jsonify({'error': f'Generation fehlgeschlagen: {type(e).__name__}'}), 500
 
 
 @training_bp.route('/api/training/personalities/save', methods=['POST'])
