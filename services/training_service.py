@@ -81,6 +81,7 @@ Du stellst NUR durch wenn der Anrufer einen klaren, konkreten Grund nennt warum 
 {geduld}
 WENN DU DURCHSTELLST: Antworte EXAKT mit: "Einen Moment bitte, ich verbinde Sie. [DURCHGESTELLT]"
 WENN DU BLOCKST: Sage "Tut mir leid, Herr {chef_name} ist leider nicht erreichbar. Ich kann ihm etwas ausrichten." und füge [AUFGELEGT] ans Ende an.""",
+        'voice_settings': {'stability': 0.60, 'similarity_boost': 0.75, 'style': 0.10},
     },
     'helferin': {
         'label': 'Neugierige Helferin',
@@ -104,6 +105,7 @@ Du bist grundsätzlich bereit durchzustellen, brauchst aber einen nachvollziehba
 {geduld}
 WENN DU DURCHSTELLST: Antworte EXAKT mit: "Einen Moment bitte, ich verbinde Sie. [DURCHGESTELLT]"
 WENN DU BLOCKST: Sage "Tut mir leid, ich glaube das passt gerade nicht. Soll ich ihm etwas ausrichten?" und füge [AUFGELEGT] ans Ende an.""",
+        'voice_settings': {'stability': 0.45, 'similarity_boost': 0.75, 'style': 0.25},
     },
     'abwimmlerin': {
         'label': 'Gestresste Abwimmlerin',
@@ -128,8 +130,31 @@ Nur wenn der Anrufer dich in 1-2 Sätzen WIRKLICH fesselt, lässt du ihn durch. 
 {geduld}
 WENN DU DURCHSTELLST: Antworte EXAKT mit: "Einen Moment bitte, ich verbinde Sie. [DURCHGESTELLT]"
 WENN DU BLOCKST: Sage "Nee, tut mir leid. Tschüss." und füge [AUFGELEGT] ans Ende an.""",
+        'voice_settings': {'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.50},
     },
 }
+
+# ── Mood Voice Zones (D-01, D-02, D-04, D-05) ──────────────────────────────────
+MOOD_VOICE_ZONES = {
+    'positiv':  {'stability': 0.65, 'similarity_boost': 0.75, 'style': 0.15},
+    'neutral':  {'stability': 0.50, 'similarity_boost': 0.75, 'style': 0.00},
+    'gereizt':  {'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.45},
+    'wuetend':  {'stability': 0.20, 'similarity_boost': 0.75, 'style': 0.70},
+}
+
+
+def mood_to_voice_settings(stimmung: int) -> dict:
+    """Map mood score (-5 to +5) to ElevenLabs voice_settings.
+    4-zone step model per D-01. No interpolation per D-02."""
+    if stimmung >= 2:
+        return MOOD_VOICE_ZONES['positiv'].copy()
+    elif stimmung >= -1:
+        return MOOD_VOICE_ZONES['neutral'].copy()
+    elif stimmung >= -3:
+        return MOOD_VOICE_ZONES['gereizt'].copy()
+    else:
+        return MOOD_VOICE_ZONES['wuetend'].copy()
+
 
 # ── Persoenlichkeitstypen (System-Konstante, gespiegelt aus DB-Seed) ──────────
 PERSONALITY_TYPES_SEED = [
@@ -1051,7 +1076,8 @@ Finde 2-4 der wichtigsten Momente. Sei konkret — keine generischen Phrasen."""
 
 
 def text_to_speech(text: str, voice_id: str = None,
-                   model: str = 'eleven_multilingual_v2') -> bytes:
+                   model: str = 'eleven_multilingual_v2',
+                   voice_settings: dict = None) -> bytes:
     if not ELEVENLABS_API_KEY:
         return None
 
@@ -1067,7 +1093,7 @@ def text_to_speech(text: str, voice_id: str = None,
     data = {
         "text": text,
         "model_id": model,
-        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
+        "voice_settings": voice_settings if voice_settings else {"stability": 0.5, "similarity_boost": 0.75}
     }
 
     try:
