@@ -1,8 +1,11 @@
 """Coach-Modul: Post-Call Analyse (Sonnet) + Lernkarten Helpers."""
 import json
+import threading
 from datetime import datetime, timezone
 from config import ANTHROPIC_API_KEY
 import anthropic
+
+_analysis_lock = threading.Lock()
 
 _client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -55,87 +58,88 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
     T-04.11-05: Guard against duplicate analysis — check if suggestions
     already exist for this conv_id before calling Sonnet.
     """
-    # T-04.11-05: Duplicate guard — one analysis per conversation
-    from database.db import get_session
-    from database.models import LearningCard
-    db_check = get_session()
-    try:
-        existing = db_check.query(LearningCard).filter_by(call_id=conv_id).count()
-        if existing > 0:
-            print(f"[Coach] Suggestions already exist for conv_id={conv_id}, skipping Sonnet call")
-            return []
-    finally:
-        db_check.close()
-
-    prompt_text = POSTCALL_PROMPT.format(
-        einwaende=json.dumps(einwaende, ensure_ascii=False)[:2000],
-        kaufsignale=json.dumps(kaufsignale or [], ensure_ascii=False)[:1000],
-        painpoints=json.dumps(painpoints, ensure_ascii=False)[:1000],
-        kb_start=kb_start, kb_end=kb_end,
-        redeanteil_berater=redeanteil_berater,
-        redeanteil_kunde=redeanteil_kunde,
-        dauer_sek=dauer_sek,
-        skript_abdeckung=skript_abdeckung,
-        ga_details=json.dumps(ga_details, ensure_ascii=False)[:2000],
-    )
-    try:
-        response = _client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt_text}]
-        )
-        # Cost tracking (D-02: Sonnet)
+    with _analysis_lock:
+        # T-04.11-05: Duplicate guard — one analysis per conversation
+        from database.db import get_session
+        from database.models import LearningCard
+        db_check = get_session()
         try:
-            from services.cost_tracker import log_api_cost
-            u = getattr(response, 'usage', None)
-            if u:
-                log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
-                             units=(getattr(u, 'input_tokens', 0) or 0)/1000.0,
-                             unit_type='per_1k_input_tokens',
-                             context_tag='postcall_coach')
-                log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
-                             units=(getattr(u, 'output_tokens', 0) or 0)/1000.0,
-                             unit_type='per_1k_output_tokens',
-                             context_tag='postcall_coach')
-        except Exception as _ce:
-            print(f"[CostHook] postcall_coach skipped: {_ce}")
-
-        text = response.content[0].text.strip()
-        start = text.find('{')
-        end = text.rfind('}') + 1
-        if start < 0 or end <= start:
-            print(f"[Coach] No JSON found in Sonnet response")
-            return []
-        result = json.loads(text[start:end])
-        vorschlaege = result.get('vorschlaege', [])[:3]
-
-        # Persist suggestions linked to conv_id
-        db = get_session()
-        try:
-            for v in vorschlaege:
-                card = LearningCard(
-                    user_id=user_id,
-                    call_id=conv_id,
-                    category=v.get('category', 'allgemein'),
-                    original_suggestion=v.get('original_suggestion', ''),
-                    final_text=v.get('original_suggestion', ''),
-                    lernziel=v.get('lernziel', ''),
-                    source='ki',
-                    status='vorschlag',  # not yet 'aktiv' — user must confirm
-                )
-                db.add(card)
-            db.commit()
-        except Exception as _de:
-            print(f"[Coach] DB persist failed: {_de}")
-            db.rollback()
-            return []  # Return empty so frontend knows analysis failed
+            existing = db_check.query(LearningCard).filter_by(call_id=conv_id).count()
+            if existing > 0:
+                print(f"[Coach] Suggestions already exist for conv_id={conv_id}, skipping Sonnet call")
+                return []
         finally:
-            db.close()
+            db_check.close()
 
-        return vorschlaege
-    except Exception as e:
-        print(f"[Coach] Sonnet analysis failed: {e}")
-        return []
+        prompt_text = POSTCALL_PROMPT.format(
+            einwaende=json.dumps(einwaende, ensure_ascii=False)[:2000],
+            kaufsignale=json.dumps(kaufsignale or [], ensure_ascii=False)[:1000],
+            painpoints=json.dumps(painpoints, ensure_ascii=False)[:1000],
+            kb_start=kb_start, kb_end=kb_end,
+            redeanteil_berater=redeanteil_berater,
+            redeanteil_kunde=redeanteil_kunde,
+            dauer_sek=dauer_sek,
+            skript_abdeckung=skript_abdeckung,
+            ga_details=json.dumps(ga_details, ensure_ascii=False)[:2000],
+        )
+        try:
+            response = _client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt_text}]
+            )
+            # Cost tracking (D-02: Sonnet)
+            try:
+                from services.cost_tracker import log_api_cost
+                u = getattr(response, 'usage', None)
+                if u:
+                    log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
+                                 units=(getattr(u, 'input_tokens', 0) or 0)/1000.0,
+                                 unit_type='per_1k_input_tokens',
+                                 context_tag='postcall_coach')
+                    log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
+                                 units=(getattr(u, 'output_tokens', 0) or 0)/1000.0,
+                                 unit_type='per_1k_output_tokens',
+                                 context_tag='postcall_coach')
+            except Exception as _ce:
+                print(f"[CostHook] postcall_coach skipped: {_ce}")
+
+            text = response.content[0].text.strip()
+            start = text.find('{')
+            end = text.rfind('}') + 1
+            if start < 0 or end <= start:
+                print(f"[Coach] No JSON found in Sonnet response")
+                return []
+            result = json.loads(text[start:end])
+            vorschlaege = result.get('vorschlaege', [])[:3]
+
+            # Persist suggestions linked to conv_id
+            db = get_session()
+            try:
+                for v in vorschlaege:
+                    card = LearningCard(
+                        user_id=user_id,
+                        call_id=conv_id,
+                        category=v.get('category', 'allgemein'),
+                        original_suggestion=v.get('original_suggestion', ''),
+                        final_text=v.get('original_suggestion', ''),
+                        lernziel=v.get('lernziel', ''),
+                        source='ki',
+                        status='vorschlag',  # not yet 'aktiv' — user must confirm
+                    )
+                    db.add(card)
+                db.commit()
+            except Exception as _de:
+                print(f"[Coach] DB persist failed: {_de}")
+                db.rollback()
+                return []  # Return empty so frontend knows analysis failed
+            finally:
+                db.close()
+
+            return vorschlaege
+        except Exception as e:
+            print(f"[Coach] Sonnet analysis failed: {e}")
+            return []
 
 
 def validate_user_text(user_text, lernziel):
