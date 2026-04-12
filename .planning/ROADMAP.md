@@ -31,7 +31,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 04.7.2: Founder Cost Dashboard** - Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export für count.tax, API-Preismonitor (INSERTED)
 - [ ] **Phase 04.8: KI-Logik Upgrade** - Gesprächsphasen-Erkennung (6 Phasen), Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung, Cold Call Inferenz, dynamische EWB-Buttons (INSERTED)
 - [x] **Phase 04.9: Training-Modul Upgrade** - 6 Persönlichkeitstypen, Stimmungs-Dynamik (-5 bis +5), Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade (INSERTED) (completed 2026-04-10)
-- [x] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED) (completed 2026-04-10)
+- [x] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED)
+ (completed 2026-04-10)
 - [x] **Phase 04.10.1: Emotionale TTS-Stimmen** - Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch (INSERTED) (completed 2026-04-12)
 - [ ] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
 - [ ] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED)
@@ -410,10 +411,13 @@ Plans:
 **Goal:** Persönliches Lernsystem — Post-Call Analyse mit max 3 konkreten Lernkarten-Vorschlägen, max 5 aktive Lernkarten, KI-Gedächtnis im nächsten Call (goldener Rahmen bei passender Situation), Wöchentlicher Coach-Report, Langzeit-Fortschritt über 4-12 Wochen.
 **Depends on:** Phase 04.8, Phase 04.9
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Coach-Modul.md`
-**Plans:** 1 plan
+**Plans:** 4 plans
 
 Plans:
-- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
+- [ ] 04.11-01-PLAN.md -- DB schema (LearningCard + CoachingReport), coaching_service.py, learning blueprint, api_beenden conv_id wiring
+- [ ] 04.11-02-PLAN.md -- PostCall Lernkarten UI (app.html/app.js), golden frame CSS (nerve.css)
+- [ ] 04.11-03-PLAN.md -- Live-Call KI-Gedaechtnis: learning card injection into Haiku prompt
+- [ ] 04.11-04-PLAN.md -- Dashboard: Meine Lernkarten, Coach-Report, Langzeit-Fortschritt Charts
 
 ### Phase 04.12: Gesamt-Integration (INSERTED)
 
