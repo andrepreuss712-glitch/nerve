@@ -411,10 +411,10 @@ Plans:
 **Goal:** Persönliches Lernsystem — Post-Call Analyse mit max 3 konkreten Lernkarten-Vorschlägen, max 5 aktive Lernkarten, KI-Gedächtnis im nächsten Call (goldener Rahmen bei passender Situation), Wöchentlicher Coach-Report, Langzeit-Fortschritt über 4-12 Wochen.
 **Depends on:** Phase 04.8, Phase 04.9
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Coach-Modul.md`
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
-- [ ] 04.11-01-PLAN.md -- DB schema (LearningCard + CoachingReport), coaching_service.py, learning blueprint, api_beenden conv_id wiring
+- [x] 04.11-01-PLAN.md -- DB schema (LearningCard + CoachingReport), coaching_service.py, learning blueprint, api_beenden conv_id wiring
 - [ ] 04.11-02-PLAN.md -- PostCall Lernkarten UI (app.html/app.js), golden frame CSS (nerve.css)
 - [ ] 04.11-03-PLAN.md -- Live-Call KI-Gedaechtnis: learning card injection into Haiku prompt
 - [ ] 04.11-04-PLAN.md -- Dashboard: Meine Lernkarten, Coach-Report, Langzeit-Fortschritt Charts

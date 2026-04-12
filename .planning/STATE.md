@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Phase 04.11 context gathered
-last_updated: "2026-04-12T11:02:41.074Z"
-last_activity: 2026-04-12 -- Phase 04.11 planning complete
+stopped_at: Completed 04.11-01-PLAN.md
+last_updated: "2026-04-12T11:07:59.078Z"
+last_activity: 2026-04-12
 progress:
   total_phases: 30
   completed_phases: 16
   total_plans: 104
-  completed_plans: 91
+  completed_plans: 92
   percent: 88
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.11 — coach-modul
+**Current focus:** Phase 04.11 — coach-modul-inserted
 
 ## Current Position
 
-Phase: 04.11
-Plan: Not started
+Phase: 04.11 (coach-modul-inserted) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-04-12 -- Phase 04.11 planning complete
+Last activity: 2026-04-12
 
 **Next:** Discuss/plan Phase 04.11
 
@@ -114,6 +114,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.10 P02 | 3min | 2 tasks | 15 files |
 | Phase 04.10 P03 | 4min | 2 tasks | 1 files |
 | Phase 04.10.1 P01 | 3min | 2 tasks | 3 files |
+| Phase 04.11 P01 | 3min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -256,6 +257,9 @@ Recent decisions affecting current work:
 - [Phase 04.10]: Transfer audio (wartemusik/klingeln/verbindungston) plays regardless of voice_available flag -- UI feedback, not TTS
 - [Phase 04.10]: selectDiff scoped to #t-diff-section to avoid deselecting anruf-typ cards sharing t-diff-card class
 - [Phase 04.10.1]: 4-zone step model (positiv/neutral/gereizt/wuetend) with fixed boundaries, no interpolation (D-01, D-02)
+- [Phase 04.11]: T-04.11-02 mitigated: conv_id ownership check in api_postcall_analysis
+- [Phase 04.11]: T-04.11-05 mitigated: duplicate Sonnet analysis guard per conversation
+- [Phase 04.11]: Learning cards stored as vorschlag status until user explicit confirmation
 
 ### Roadmap Evolution
 
@@ -306,6 +310,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-12T10:28:32.545Z
-Stopped at: Phase 04.11 context gathered
-Resume file: .planning/phases/04.11-coach-modul-inserted/04.11-CONTEXT.md
+Last session: 2026-04-12T11:07:59.074Z
+Stopped at: Completed 04.11-01-PLAN.md
+Resume file: None
