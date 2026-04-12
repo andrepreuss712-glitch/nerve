@@ -195,7 +195,7 @@ function renderActiveHint(hint) {
 function renderLernkarteHint(text, category) {
   const hint = document.createElement('div');
   hint.className = 'n-hint-learning';
-  hint.innerHTML = `<div style="font-size:11px;color:#E8B040;margin-bottom:4px">&#127919; Dein Lernziel &ndash; jetzt ist der Moment</div><div style="font-size:14px">"${text}"</div>`;
+  hint.innerHTML = `<div style="font-size:11px;color:#E8B040;margin-bottom:4px">&#127919; Dein Lernziel &ndash; jetzt ist der Moment</div><div style="font-size:14px">"${escHtml(text)}"</div>`;
   return hint;
 }
 function renderPhaseBadge(phase, name, confidence) {
