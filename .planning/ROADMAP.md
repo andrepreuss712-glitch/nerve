@@ -403,7 +403,7 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
+- [x] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.11: Coach-Modul (INSERTED)
 
