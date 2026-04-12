@@ -1744,3 +1744,84 @@ input[type="range"].perf-slider::-moz-range-thumb {
 .readiness-badge.bucket-hot     { background:#2d1f15; color:#ff9a3c; }
 .readiness-badge.bucket-closing { background:#153020; color:#00D4AA; }
 
+/* ── Coach-Modul: Lernkarten (Phase 04.11) ────────────────────────────── */
+:root {
+  --learning-gold: #E8B040;
+  --learning-gold-dim: rgba(232, 176, 64, 0.15);
+}
+
+/* D-10: Live-call learning card hint — golden frame */
+.n-hint-learning {
+  border: 2px solid var(--learning-gold);
+  background: var(--learning-gold-dim);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  animation: lk-glow 2s ease-in-out;
+}
+
+@keyframes lk-glow {
+  0% { box-shadow: 0 0 0 0 rgba(232, 176, 64, 0.4); }
+  50% { box-shadow: 0 0 12px 2px rgba(232, 176, 64, 0.2); }
+  100% { box-shadow: none; }
+}
+
+/* D-06: PostCall suggestion cards */
+.n-lk-suggestion {
+  background: #1C2333;
+  border: 1px solid #2D3748;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.n-lk-suggestion:hover {
+  border-color: var(--learning-gold);
+}
+
+/* D-11: Applied tracking cards */
+.n-lk-applied-card {
+  background: #1C2333;
+  border: 1px solid #2D3748;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+/* D-05: Dashboard learning cards */
+.n-lk-dashboard-card {
+  background: #1C2333;
+  border: 1px solid #2D3748;
+  border-radius: 10px;
+  padding: 16px;
+  position: relative;
+}
+
+.n-lk-dashboard-card .n-lk-category {
+  font-size: 11px;
+  color: var(--learning-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.n-lk-dashboard-card .n-lk-text {
+  font-size: 14px;
+  color: var(--page-text-primary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.n-lk-dashboard-card .n-lk-meta {
+  font-size: 12px;
+  color: var(--page-text-secondary);
+  display: flex;
+  gap: 16px;
+}
+
+.n-lk-dashboard-card .n-lk-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
