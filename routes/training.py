@@ -13,7 +13,7 @@ from services.training_service import (
     generate_response, generate_response_with_mood,
     generate_scoring, generate_help_suggestion,
     text_to_speech, _random_persona, SCHWIERIGKEITEN, SEKRETAERIN_TYPES, TRAINING_LANGUAGES,
-    _generate_live_preview, build_personality_prompt,
+    _generate_live_preview, build_personality_prompt, mood_to_voice_settings,
 )
 
 training_bp = Blueprint('training', __name__)
@@ -306,7 +306,14 @@ def training_start():
             voice_id = persona['voice_male']['id']
         audio_b64   = None
         if voice_available:
-            audio_bytes = text_to_speech(erste_antwort, voice_id, lang_config['elevenlabs_model'])
+            # Voice settings: secretary = fixed preset, customer = mood zone, fallback = None
+            if hat_sekretaerin:
+                vs = SEKRETAERIN_TYPES[sekretaerin_typ].get('voice_settings')
+            elif personality_data:
+                vs = mood_to_voice_settings(startstimmung)
+            else:
+                vs = None
+            audio_bytes = text_to_speech(erste_antwort, voice_id, lang_config['elevenlabs_model'], voice_settings=vs)
             if audio_bytes:
                 audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
 
@@ -519,7 +526,14 @@ def training_respond():
     voice_id  = persona['voice_female']['id'] if is_sek else session.get('voice_id', persona['voice_male']['id'])
     audio_b64 = None
     if session.get('voice_available', True):
-        audio_bytes = text_to_speech(kunde_antwort, voice_id, lang_config['elevenlabs_model'])
+        # Voice settings: secretary = fixed preset, customer = mood zone, fallback = None
+        if is_sek:
+            vs = SEKRETAERIN_TYPES.get(session.get('sekretaerin_typ', 'blockerin'), {}).get('voice_settings')
+        elif session.get('personality_data'):
+            vs = mood_to_voice_settings(neue_stimmung)
+        else:
+            vs = None
+        audio_bytes = text_to_speech(kunde_antwort, voice_id, lang_config['elevenlabs_model'], voice_settings=vs)
         if audio_bytes:
             audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
 
