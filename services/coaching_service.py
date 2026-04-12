@@ -159,7 +159,7 @@ Deckt der Satz das Lernziel ab? Antworte als JSON:
         return json.loads(text[start:end])
     except Exception as e:
         print(f"[Coach] Validation failed: {e}")
-        return {"covers_goal": True, "feedback": ""}
+        return {"covers_goal": False, "feedback": "Validierung fehlgeschlagen, bitte erneut versuchen."}
 
 
 def get_active_cards(user_id):
