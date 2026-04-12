@@ -105,6 +105,8 @@ state = {
     'ewb_buttons':          None,
     # ── Phase 04.8: Cold-Call Inference ──
     'cold_call_inference':  None,
+    # ── Phase 04.11: Active Learning Cards (D-09) ──
+    'active_learning_cards': [],
 }
 
 # ── Conversation Log ──────────────────────────────────────────────────────────
@@ -170,6 +172,20 @@ def set_active_profile(name: str, daten: dict):
 def get_active_profile():
     with active_profile_lock:
         return active_profile_name, dict(active_profile_data)
+
+
+def load_learning_cards(user_id):
+    """D-09: Load active learning cards for the current user at session start."""
+    try:
+        from services.coaching_service import get_active_cards
+        cards = get_active_cards(user_id)
+        with state_lock:
+            state['active_learning_cards'] = cards[:5]  # max 5 per D-07
+        print(f"[Coach] {len(cards)} aktive Lernkarten geladen")
+    except Exception as e:
+        print(f"[Coach] Lernkarten laden fehlgeschlagen: {e}")
+        with state_lock:
+            state['active_learning_cards'] = []
 
 
 # ── Letztes Post-Call Snapshot ────────────────────────────────────────────────
@@ -299,6 +315,7 @@ def reset_session():
         state['active_hint']         = None
         state['ewb_buttons']         = None
         state['cold_call_inference'] = None
+        state['active_learning_cards'] = []
     with _line_id_lock:
         _line_id_counter = 0
     with _log_sp_lock:

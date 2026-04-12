@@ -112,6 +112,7 @@ def live():
             except Exception:
                 active_profile_daten = {}
         ls.set_active_profile(active_profile.name if active_profile else '', ad)
+        ls.load_learning_cards(g.user.id)
         return render_template('app.html', user=g.user, org=g.org,
                                active_profile=active_profile, profiles=profiles,
                                active_phasen=active_phasen,
@@ -540,6 +541,7 @@ def api_set_profile():
         except Exception:
             daten = {}
         ls.set_active_profile(p.name, daten)
+        ls.load_learning_cards(g.user.id)
         u = db.get(UserModel, g.user.id)
         if u:
             u.active_profile_id = p.id
