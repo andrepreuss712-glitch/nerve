@@ -127,6 +127,8 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
             db.commit()
         except Exception as _de:
             print(f"[Coach] DB persist failed: {_de}")
+            db.rollback()
+            return []  # Return empty so frontend knows analysis failed
         finally:
             db.close()
 
