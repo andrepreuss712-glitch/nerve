@@ -216,6 +216,83 @@
     </div>
   </div>
 
+  <!-- ── Meine Lernkarten (Phase 04.11, D-05) ──────────────────────────── -->
+  <div class="db2-card" style="margin-bottom:20px" id="lernkarten-section">
+    <div class="db2-card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>&#127919; Meine Lernkarten</span>
+      <span style="font-size:12px;color:var(--page-text-secondary)" id="lk-count"></span>
+    </div>
+    <div id="lk-dashboard-list">
+      {% if learning_cards %}
+        {% for card in learning_cards %}
+        <div class="n-lk-dashboard-card" style="margin-bottom:10px" id="lk-card-{{ card.id }}">
+          <div class="n-lk-category">{{ card.category | replace('_', ' ') }}</div>
+          <div class="n-lk-text">&ldquo;{{ card.final_text }}&rdquo;</div>
+          <div class="n-lk-meta">
+            <span>Angewendet: {{ card.applied_count }}x</span>
+            {% if card.lernziel %}<span>Ziel: {{ card.lernziel }}</span>{% endif %}
+          </div>
+          <div class="n-lk-actions">
+            <button class="n-btn n-btn-primary" style="font-size:11px;padding:5px 12px" onclick="lkSetStatus({{ card.id }}, 'gelernt')">&#10003; Gelernt</button>
+            <button class="n-btn n-btn-ghost" style="font-size:11px;padding:5px 12px" onclick="lkArchive({{ card.id }})">Archivieren</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="color:var(--page-text-secondary);font-size:13px;padding:12px 0">
+          Noch keine Lernkarten &mdash; starte einen Call und erhalte deine ersten Vorschl&auml;ge.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Dein Coach-Report (Phase 04.11, D-12) ─────────────────────────── -->
+  <div class="db2-card" style="margin-bottom:20px" id="coach-report-section">
+    <div class="db2-card-title">&#128218; Dein Coach-Report</div>
+    {% if weekly_report %}
+      <div class="db2-card-sub">{{ weekly_report.period_start }} &ndash; {{ weekly_report.period_end }}</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin:12px 0">
+        <div><span style="color:#00D4AA;font-size:20px;font-weight:700">{{ weekly_report.calls_count }}</span><br><span style="font-size:12px;color:var(--page-text-secondary)">Calls</span></div>
+        <div><span style="color:#00D4AA;font-size:20px;font-weight:700">{{ weekly_report.avg_readiness_score }}%</span><br><span style="font-size:12px;color:var(--page-text-secondary)">&Oslash; Score</span></div>
+        <div><span style="font-size:14px">{{ weekly_report.strongest_phase or '&mdash;' }}</span><br><span style="font-size:12px;color:var(--page-text-secondary)">St&auml;rkste Phase</span></div>
+        <div><span style="font-size:14px">{{ weekly_report.weakest_phase or '&mdash;' }}</span><br><span style="font-size:12px;color:var(--page-text-secondary)">Schw&auml;chste Phase</span></div>
+      </div>
+      <div style="font-size:14px;line-height:1.6;color:var(--page-text-primary);margin-top:12px;white-space:pre-line">{{ weekly_report.report_text }}</div>
+      {% if weekly_report.suggested_card %}
+      <div style="margin-top:16px;border:1px solid #E8B040;border-radius:8px;padding:12px;background:rgba(232,176,64,0.08)">
+        <div style="font-size:12px;color:#E8B040;margin-bottom:6px">&#127919; Neuer Lernkarten-Vorschlag aus deinem Wochenmuster</div>
+        <div style="font-size:14px;color:var(--page-text-primary)">&ldquo;{{ weekly_report.suggested_card.text }}&rdquo;</div>
+      </div>
+      {% endif %}
+    {% else %}
+      <div style="color:var(--page-text-secondary);font-size:13px;padding:12px 0">
+        Keine Calls diese Woche &mdash; starte einen Call f&uuml;r deinen Coach-Report.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Langzeit-Fortschritt (Phase 04.11, D-15) ─────────────────────── -->
+  <div class="db2-two-col" style="margin-bottom:12px">
+    <div class="db2-card">
+      <div class="db2-card-title">Kaufbereitschafts-Score</div>
+      <canvas id="chart-kb-trend" height="180"></canvas>
+    </div>
+    <div class="db2-card">
+      <div class="db2-card-title">Redeanteil-Verh&auml;ltnis</div>
+      <canvas id="chart-talk-trend" height="180"></canvas>
+    </div>
+  </div>
+  <div class="db2-two-col" style="margin-bottom:20px">
+    <div class="db2-card">
+      <div class="db2-card-title">Einwand-Erfolgsrate</div>
+      <canvas id="chart-ewb-trend" height="180"></canvas>
+    </div>
+    <div class="db2-card">
+      <div class="db2-card-title">Calls pro Woche</div>
+      <canvas id="chart-calls-trend" height="180"></canvas>
+    </div>
+  </div>
+
   <!-- ── Zeile 5: Letzte Sessions + Empfehlungen ───────────────────────────── -->
   <div class="db2-two-col">
 
@@ -753,6 +830,75 @@ function setHtml(id, val) {
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ── Lernkarten Management (Phase 04.11, D-05) ────────────────────────────────
+
+async function lkSetStatus(cardId, status) {
+  try {
+    var res = await fetch('/api/learning_cards/' + cardId + '/status', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: status})
+    });
+    var json = await res.json();
+    if (json.ok) {
+      var el = document.getElementById('lk-card-' + cardId);
+      if (el) el.remove();
+    }
+  } catch(e) { console.error('[LK]', e); }
+}
+function lkArchive(cardId) { lkSetStatus(cardId, 'archiviert'); }
+
+// ── Langzeit-Charts (Phase 04.11, D-15/D-16) ────────────────────────────────
+
+(function() {
+  var raw = {{ longterm_data_json | safe }};
+  if (!raw || !raw.labels || raw.labels.length === 0) return;
+
+  var chartOpts = {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#8B949E', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+      y: { ticks: { color: '#8B949E', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+    }
+  };
+
+  // KB Score trend
+  var ctxKB = document.getElementById('chart-kb-trend');
+  if (ctxKB) new Chart(ctxKB, {
+    type: 'line', data: {
+      labels: raw.labels,
+      datasets: [{ data: raw.kaufbereitschaft, borderColor: '#00D4AA', backgroundColor: 'rgba(0,212,170,0.1)', fill: true, tension: 0.3, pointRadius: 3 }]
+    }, options: Object.assign({}, chartOpts, { scales: { x: chartOpts.scales.x, y: Object.assign({}, chartOpts.scales.y, { min: 0, max: 100 }) } })
+  });
+
+  // Talk ratio trend
+  var ctxTalk = document.getElementById('chart-talk-trend');
+  if (ctxTalk) new Chart(ctxTalk, {
+    type: 'line', data: {
+      labels: raw.labels,
+      datasets: [{ data: raw.redeanteil, borderColor: '#E8B040', backgroundColor: 'rgba(232,176,64,0.1)', fill: true, tension: 0.3, pointRadius: 3 }]
+    }, options: Object.assign({}, chartOpts, { scales: { x: chartOpts.scales.x, y: Object.assign({}, chartOpts.scales.y, { min: 0, max: 100 }) } })
+  });
+
+  // EWB success rate trend
+  var ctxEWB = document.getElementById('chart-ewb-trend');
+  if (ctxEWB) new Chart(ctxEWB, {
+    type: 'line', data: {
+      labels: raw.labels,
+      datasets: [{ data: raw.einwand_erfolgsrate, borderColor: '#58A6FF', backgroundColor: 'rgba(88,166,255,0.1)', fill: true, tension: 0.3, pointRadius: 3 }]
+    }, options: Object.assign({}, chartOpts, { scales: { x: chartOpts.scales.x, y: Object.assign({}, chartOpts.scales.y, { min: 0, max: 100 }) } })
+  });
+
+  // Calls per week
+  var ctxCalls = document.getElementById('chart-calls-trend');
+  if (ctxCalls) new Chart(ctxCalls, {
+    type: 'bar', data: {
+      labels: raw.labels,
+      datasets: [{ data: raw.calls_per_week, backgroundColor: 'rgba(0,212,170,0.3)', borderColor: '#00D4AA', borderWidth: 1 }]
+    }, options: chartOpts
+  });
+})();
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadDashboard();
