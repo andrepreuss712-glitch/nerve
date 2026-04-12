@@ -60,6 +60,12 @@ Zusätzlich (Phase 04.8 — Score-Signale): In JEDER Antwort (egal ob Einwand od
 - "konkurrenz": bool — true wenn der Kunde Konkurrenzprodukte oder -anbieter erwähnt
 - "zeitdruck_kunde": bool — true wenn der Kunde Zeitdruck oder Dringlichkeit als Hindernis signalisiert
 - "monosyllabisch": bool — true wenn der Kunde im aktuellen Fenster überwiegend kurze einsilbige Antworten gibt
+
+Zusaetzlich (Phase 04.11 — Lernkarten-Match): Falls aktive Lernkarten im Kontext vorhanden sind (markiert als [Aktive Lernkarten des Beraters]), pruefe ob die aktuelle Gespraechssituation zu einer Lernkarte passt. Falls ja, ergaenze diese optionalen Felder:
+- "lernkarte_match": bool — true wenn die aktuelle Situation zu einer aktiven Lernkarte passt (z.B. Kunde nennt Einwand der zur Lernkarte passt)
+- "lernkarte_match_text": string — der final_text der passenden Lernkarte (woertlich aus dem Kontext uebernehmen)
+- "lernkarte_match_category": string — die Kategorie der passenden Lernkarte
+Falls keine Lernkarten im Kontext oder keine Situation passt: diese Felder weglassen.
 """
 
 COACHING_PROMPT_BASE = """Du bist ein Sales-Coach der live ein Beratungsgespräch beobachtet.
@@ -692,6 +698,14 @@ def analyse_loop():
             kontext    = " ".join(ls.analysiert_bisher[-20:])
             ls.analysiert_bisher.extend(e['text'] for e in ls.transcript_buffer)
             ls.transcript_buffer.clear()
+        # D-09: Inject active learning cards into kontext
+        with ls.state_lock:
+            _lk_cards = ls.state.get('active_learning_cards', [])
+        if _lk_cards:
+            _lk_ctx = "\n\n[Aktive Lernkarten des Beraters - bei passender Situation mit lernkarte_match=true markieren]:\n"
+            for _c in _lk_cards[:5]:
+                _lk_ctx += f"- [{_c['category']}] {_c['final_text'][:80]}\n"
+            kontext = kontext + _lk_ctx
         print(f"[Claude-1] Analysiere (line {line_id}): {neuer_text[:80]}…")
         with ls.state_lock:
             ls.state['aktiv'] = True
