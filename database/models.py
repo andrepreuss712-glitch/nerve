@@ -560,7 +560,7 @@ class LearningCard(Base):
     final_text          = Column(Text, nullable=False)
     lernziel            = Column(Text, nullable=True)
     source              = Column(String(20), default='ki')       # 'ki' | 'user'
-    status              = Column(String(20), default='aktiv')    # 'aktiv' | 'gelernt' | 'archiviert'
+    status              = Column(String(20), default='vorschlag') # 'vorschlag' | 'aktiv' | 'gelernt' | 'archiviert'
     applied_count       = Column(Integer, default=0)
     regenerate_count    = Column(Integer, default=0)
     created_at          = Column(DateTime, default=utcnow)
