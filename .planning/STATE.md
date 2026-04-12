@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Phase 04.10 complete
-last_updated: "2026-04-11T17:00:00.000Z"
-last_activity: 2026-04-11
+status: verifying
+stopped_at: Completed 04.10.1-01-PLAN.md
+last_updated: "2026-04-12T09:40:13.261Z"
+last_activity: 2026-04-12
 progress:
-  total_phases: 29
+  total_phases: 30
   completed_phases: 16
-  total_plans: 99
-  completed_plans: 93
-  percent: 94
+  total_plans: 100
+  completed_plans: 91
+  percent: 91
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.10 — training-realismus-inserted
+**Current focus:** Phase 04.10.1 — emotionale-tts-stimmen-inserted
 
 ## Current Position
 
-Phase: 04.10 (training-realismus-inserted) — COMPLETE ✓
-Plan: 3/3 ✓
-Status: Phase complete — verified by user in browser
-Last activity: 2026-04-10
+Phase: 04.10.1 (emotionale-tts-stimmen-inserted) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-04-12
 
 **Next:** Next phase in roadmap
 
@@ -112,6 +112,7 @@ Progress: [█████████░] ~90% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.10 P01 | 3min | 2 tasks | 2 files |
 | Phase 04.10 P02 | 3min | 2 tasks | 15 files |
 | Phase 04.10 P03 | 4min | 2 tasks | 1 files |
+| Phase 04.10.1 P01 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -253,6 +254,7 @@ Recent decisions affecting current work:
 - [Phase 04.10]: Patience (geduld) modifiers mapped to existing leicht/mittel/schwer keys, not separate scale
 - [Phase 04.10]: Transfer audio (wartemusik/klingeln/verbindungston) plays regardless of voice_available flag -- UI feedback, not TTS
 - [Phase 04.10]: selectDiff scoped to #t-diff-section to avoid deselecting anruf-typ cards sharing t-diff-card class
+- [Phase 04.10.1]: 4-zone step model (positiv/neutral/gereizt/wuetend) with fixed boundaries, no interpolation (D-01, D-02)
 
 ### Roadmap Evolution
 
@@ -302,6 +304,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-10T18:05:16.390Z
-Stopped at: Completed 04.10-03-PLAN.md (Tasks 1-2; Task 3 human-verify pending)
+Last session: 2026-04-12T09:40:13.257Z
+Stopped at: Completed 04.10.1-01-PLAN.md
 Resume: Next phase in roadmap
