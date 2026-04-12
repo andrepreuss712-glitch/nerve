@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.11-01-PLAN.md
-last_updated: "2026-04-12T11:07:59.078Z"
+stopped_at: Completed 04.11-02-PLAN.md
+last_updated: "2026-04-12T11:12:58.319Z"
 last_activity: 2026-04-12
 progress:
   total_phases: 30
   completed_phases: 16
   total_plans: 104
-  completed_plans: 92
-  percent: 88
+  completed_plans: 93
+  percent: 89
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-12)
 ## Current Position
 
 Phase: 04.11 (coach-modul-inserted) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-12
 
@@ -115,6 +115,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.10 P03 | 4min | 2 tasks | 1 files |
 | Phase 04.10.1 P01 | 3min | 2 tasks | 3 files |
 | Phase 04.11 P01 | 3min | 3 tasks | 5 files |
+| Phase 04.11 P02 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -260,6 +261,7 @@ Recent decisions affecting current work:
 - [Phase 04.11]: T-04.11-02 mitigated: conv_id ownership check in api_postcall_analysis
 - [Phase 04.11]: T-04.11-05 mitigated: duplicate Sonnet analysis guard per conversation
 - [Phase 04.11]: Learning cards stored as vorschlag status until user explicit confirmation
+- [Phase 04.11]: Gold #E8B040 re-introduced as scoped exception via --learning-gold CSS variable for learning card hints per D-10
 
 ### Roadmap Evolution
 
@@ -310,6 +312,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-12T11:07:59.074Z
-Stopped at: Completed 04.11-01-PLAN.md
+Last session: 2026-04-12T11:12:58.315Z
+Stopped at: Completed 04.11-02-PLAN.md
 Resume file: None
