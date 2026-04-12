@@ -4,7 +4,7 @@ milestone: v0.9.4
 milestone_name: milestone
 status: verifying
 stopped_at: Completed 04.11-04-PLAN.md
-last_updated: "2026-04-12T11:20:44.075Z"
+last_updated: "2026-04-12T11:27:27.683Z"
 last_activity: 2026-04-12
 progress:
   total_phases: 30
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-04-12)
 
 ## Current Position
 
-Phase: 04.11 (coach-modul-inserted) — EXECUTING
-Plan: 4 of 4
+Phase: 04.12
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-12
 
@@ -38,7 +38,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 
 **Velocity:**
 
-- Total plans completed: 12
+- Total plans completed: 16
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -49,6 +49,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | 04.6.1 | 3 | - | - |
 | 04.9 | 5 | - | - |
 | 04.10.1 | 1 | - | - |
+| 04.11 | 4 | - | - |
 
 **Recent Trend:**
 
