@@ -357,10 +357,16 @@ def api_beenden():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+    # Redeanteil fuer postcall + async analysis
+    _stats = ls.get_speech_stats()
+    redeanteil_berater = _stats.get('redeanteil', 50)
+    redeanteil_kunde = 100 - redeanteil_berater
+
     # ── In DB speichern ───────────────────────────────────────────────────────
     import json as _json
     from database.models import ConversationLog
-    stats = ls.get_speech_stats()
+    saved_conv_id = None
+    stats = _stats
     kb_min_val = min((v['wert'] for v in kb_verlauf), default=30)
     kb_max_val = max((v['wert'] for v in kb_verlauf), default=30)
     kb_start_val = kb_verlauf[0]['wert'] if kb_verlauf else 30
@@ -400,6 +406,7 @@ def api_beenden():
         )
         db_conv.add(conv)
         db_conv.commit()
+        saved_conv_id = conv.id
         print(f"[DB] Gespräch gespeichert: conv.id={conv.id}")
 
         # ── ObjectionEvents: granulare EWB-Klicks persistieren (Plan 03) ──────────
@@ -500,9 +507,14 @@ def api_beenden():
     with ls.last_postcall_lock:
         ls.last_postcall = {'filename': filename, **postcall}
 
+    # Add additional fields for async postcall analysis
+    postcall['redeanteil_berater'] = redeanteil_berater
+    postcall['redeanteil_kunde'] = redeanteil_kunde
+    postcall['ga_details'] = ga_details
+
     reset_session()
     print("[Beenden] State zurückgesetzt.")
-    return jsonify({'ok': True, 'filename': filename, 'postcall': postcall})
+    return jsonify({'ok': True, 'filename': filename, 'postcall': postcall, 'conv_id': saved_conv_id})
 
 
 @app_routes_bp.route('/api/keepalive', methods=['POST'])
