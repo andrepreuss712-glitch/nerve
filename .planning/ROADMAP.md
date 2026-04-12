@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED)
  (completed 2026-04-10)
 - [x] **Phase 04.10.1: Emotionale TTS-Stimmen** - Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch (INSERTED) (completed 2026-04-12)
-- [ ] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
+- [x] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED) (completed 2026-04-12)
 - [ ] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED)
 - [ ] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
 - [ ] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED)
@@ -411,13 +411,13 @@ Plans:
 **Goal:** Persönliches Lernsystem — Post-Call Analyse mit max 3 konkreten Lernkarten-Vorschlägen, max 5 aktive Lernkarten, KI-Gedächtnis im nächsten Call (goldener Rahmen bei passender Situation), Wöchentlicher Coach-Report, Langzeit-Fortschritt über 4-12 Wochen.
 **Depends on:** Phase 04.8, Phase 04.9
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Coach-Modul.md`
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 04.11-01-PLAN.md -- DB schema (LearningCard + CoachingReport), coaching_service.py, learning blueprint, api_beenden conv_id wiring
 - [x] 04.11-02-PLAN.md -- PostCall Lernkarten UI (app.html/app.js), golden frame CSS (nerve.css)
 - [x] 04.11-03-PLAN.md -- Live-Call KI-Gedaechtnis: learning card injection into Haiku prompt
-- [ ] 04.11-04-PLAN.md -- Dashboard: Meine Lernkarten, Coach-Report, Langzeit-Fortschritt Charts
+- [x] 04.11-04-PLAN.md -- Dashboard: Meine Lernkarten, Coach-Report, Langzeit-Fortschritt Charts
 
 ### Phase 04.12: Gesamt-Integration (INSERTED)
 
