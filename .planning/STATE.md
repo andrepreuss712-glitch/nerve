@@ -18,21 +18,21 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-30)
+See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.10.1 — emotionale-tts-stimmen-inserted
+**Current focus:** Phase 04.11 — coach-modul
 
 ## Current Position
 
 Phase: 04.11
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Ready to plan
 Last activity: 2026-04-12
 
-**Next:** Next phase in roadmap
+**Next:** Discuss/plan Phase 04.11
 
-Progress: [█████████░] ~90% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓)
+Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓)
 
 ## Performance Metrics
 
@@ -296,6 +296,7 @@ Recent decisions affecting current work:
 | Phase 1: Business Setup | — | Skipped from GSD — user handles manually |
 | Phase 04.8.1: Echtzeit-Engine Rebuild | 5/5 ✓ | Complete — FastAPI+uvicorn RT Engine, Redis Bridge, STT/LLM Abstraktion, Shadow Mode, WS Push, Deployment |
 | Phase 04.10: Training-Realismus | 3/3 ✓ | Complete — 3 Sekretärin-Typen, Audio-Simulation (13 MP3), Transfer-Sequenz, Hangup-Popup, Anruf-Typ Auswahl, linearer Setup-Flow, Kundentyp-Generator mit Profilbezug, Gender-Voice-Matching, Siezen, globaler Error Handler |
+| Phase 04.10.1: Emotionale TTS-Stimmen | 1/1 ✓ | Complete — MOOD_VOICE_ZONES (4 Zonen), mood_to_voice_settings(), 3 Sekretärin-Presets, text_to_speech() erweitert, 3 TTS Call Sites verdrahtet |
 
 **Phase 3 verification (manual):**
 
@@ -305,6 +306,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-12T09:40:13.257Z
-Stopped at: Completed 04.10.1-01-PLAN.md
-Resume: Next phase in roadmap
+Last session: 2026-04-12
+Stopped at: Phase 04.10.1 complete, ready to plan Phase 04.11
+Resume file: None
