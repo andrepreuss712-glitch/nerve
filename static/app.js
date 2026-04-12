@@ -191,6 +191,13 @@ function renderActiveHint(hint) {
   const html = `<div class="hint-${hint.type||'tipp'}"><span class="hint-label">${symbol}</span><span class="hint-text">${escHtml(hint.text||'')}</span></div>`;
   slots.forEach(s => { s.innerHTML = html; s.style.display = 'flex'; });
 }
+// Learning card hint rendering (D-10: golden frame)
+function renderLernkarteHint(text, category) {
+  const hint = document.createElement('div');
+  hint.className = 'n-hint-learning';
+  hint.innerHTML = `<div style="font-size:11px;color:#E8B040;margin-bottom:4px">&#127919; Dein Lernziel &ndash; jetzt ist der Moment</div><div style="font-size:14px">"${text}"</div>`;
+  return hint;
+}
 function renderPhaseBadge(phase, name, confidence) {
   const el = document.getElementById('phaseBadge');
   if (!el) return;
@@ -592,6 +599,7 @@ async function beenden(){
         const sk=getSkriptAbdeckung();
         if(sk) data.postcall.skript_abdeckung=sk;
       }
+      window._lastConvId = data.conv_id || null;
       zeigePostcall(data.postcall, data.filename||'');
     }
     showToast('✓ Gespräch gespeichert — '+(data.filename||''));
@@ -697,6 +705,12 @@ async function pollErgebnis(){
     if(data.version>letzteVersion&&data.ergebnis!==null){
       letzteVersion=data.version;
       zeigeKarte(data.ergebnis,data.line_id||null);
+      // D-09/D-10: Check if ergebnis contains a learning card match
+      if (data.ergebnis && data.ergebnis.lernkarte_match && data.ergebnis.lernkarte_match_text) {
+        const lkHint = renderLernkarteHint(data.ergebnis.lernkarte_match_text, data.ergebnis.lernkarte_match_category || '');
+        const aiPanel = document.getElementById('ai');
+        if (aiPanel) aiPanel.prepend(lkHint);
+      }
     }
     if(typeof data.kaufbereitschaft==='number'){
       updateKaufbereitschaft(data.kaufbereitschaft);
@@ -960,6 +974,8 @@ function zeigePostcall(d, filename){
 
   // Claude Insights laden
   loadPostcallInsights(d);
+  loadPostcallAnalysis(d);
+  loadActiveCardsForApplied();
 }
 
 async function loadPostcallInsights(d){
@@ -980,6 +996,198 @@ async function loadPostcallInsights(d){
       ul.appendChild(li);
     });
   }catch(e){console.error('[INSIGHTS]',e);}
+}
+
+// ── Lernkarten Post-Call Analysis (D-01, D-06) ──────────────────────
+async function loadPostcallAnalysis(d) {
+  const section = document.getElementById('pc-lernkarten');
+  const loading = document.getElementById('pc-lk-loading');
+  const list = document.getElementById('pc-lk-list');
+  if (!section || !window._lastConvId) return;
+  section.style.display = 'block';
+  loading.style.display = 'block';
+  list.innerHTML = '';
+  try {
+    const total = (d.berater_words||0) + (d.kunde_words||0);
+    const rb = total > 0 ? Math.round((d.berater_words||0)/total*100) : 50;
+    const res = await fetch('/api/postcall_analysis', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        conv_id: window._lastConvId,
+        einwaende: d.einwaende || [], painpoints: d.painpoints || [],
+        kb_start: d.kb_start || 30, kb_end: d.kb_end || 30,
+        redeanteil_berater: rb, redeanteil_kunde: 100 - rb,
+        dauer_sek: d.dauer_sek || 0,
+        skript_abdeckung: (d.skript_abdeckung||{}).gesamt_prozent || 0,
+        ga_details: d.ga_details || [],
+        kaufsignale: d.kaufsignale || []
+      })
+    });
+    const json = await res.json();
+    loading.style.display = 'none';
+    if (!json.vorschlaege || json.vorschlaege.length === 0) {
+      list.innerHTML = '<div style="color:var(--page-text-secondary);font-size:13px">Keine Vorschlaege fuer diesen Call.</div>';
+      return;
+    }
+    renderLernkartenVorschlaege(json.vorschlaege, list);
+  } catch (e) {
+    console.error('[Coach] PostCall analysis error:', e);
+    loading.style.display = 'none';
+    list.innerHTML = '<div style="color:#f87171;font-size:13px">Analyse fehlgeschlagen.</div>';
+  }
+}
+
+function renderLernkartenVorschlaege(vorschlaege, container) {
+  // Track current alternative index per suggestion
+  const altState = vorschlaege.map(() => ({ idx: 0 }));  // 0=original, 1=alt1, 2=alt2
+
+  function getTextForState(v, state) {
+    if (state.idx === 0) return v.original_suggestion;
+    if (state.idx === 1) return v.alternative_1 || v.original_suggestion;
+    return v.alternative_2 || v.alternative_1 || v.original_suggestion;
+  }
+
+  function renderCards() {
+    container.innerHTML = '';
+    vorschlaege.forEach((v, i) => {
+      const currentText = getTextForState(v, altState[i]);
+      const cardEl = document.createElement('div');
+      cardEl.className = 'n-lk-suggestion';
+      cardEl.innerHTML = `
+        <div style="font-size:11px;color:#E8B040;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">${v.category.replace(/_/g,' ')}</div>
+        <div style="font-size:14px;color:var(--page-text-primary);margin-bottom:4px" id="lk-text-${i}">"${currentText}"</div>
+        <div style="font-size:12px;color:var(--page-text-secondary);margin-bottom:12px">${v.lernziel || ''}</div>
+        <div id="lk-input-${i}" style="display:none;margin-bottom:12px">
+          <textarea id="lk-textarea-${i}" style="width:100%;min-height:60px;background:#0D1117;border:1px solid #2D3748;border-radius:6px;color:var(--page-text-primary);padding:8px;font-size:13px" placeholder="Dein eigener Satz..."></textarea>
+          <div id="lk-feedback-${i}" style="font-size:12px;margin-top:4px"></div>
+          <button class="n-btn n-btn-primary" style="font-size:12px;padding:6px 14px;margin-top:6px" onclick="submitSelbstEingeben(${i})">Satz pruefen &amp; speichern</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="n-btn n-btn-primary" style="font-size:12px;padding:6px 14px" onclick="saveLernkarte(${i})">&#10003; Speichern</button>
+          <button class="n-btn n-btn-ghost" style="font-size:12px;padding:6px 14px" id="lk-regen-${i}" onclick="regenerateLernkarte(${i})"${altState[i].idx >= 2 ? ' disabled style="opacity:0.5;font-size:12px;padding:6px 14px"' : ''}>&#128260; Neuer Vorschlag ${altState[i].idx > 0 ? '(' + altState[i].idx + '/3)' : ''}</button>
+          <button class="n-btn n-btn-ghost" style="font-size:12px;padding:6px 14px" onclick="toggleSelbstEingeben(${i})">&#9997; Selbst eingeben</button>
+        </div>
+      `;
+      container.appendChild(cardEl);
+    });
+  }
+
+  // Make these accessible globally for onclick handlers
+  window._lkVorschlaege = vorschlaege;
+  window._lkAltState = altState;
+  window._lkRenderCards = renderCards;
+
+  renderCards();
+}
+
+async function saveLernkarte(idx) {
+  // The cards are pre-saved as 'vorschlag' status in DB by coaching_service
+  // We need to get the actual card IDs from the suggestions
+  try {
+    // Fetch cards with status 'vorschlag' for this conv
+    const res = await fetch('/api/learning_cards?status=vorschlag');
+    const json = await res.json();
+    const cards = json.cards || [];
+    if (idx >= cards.length) { showToast('Fehler: Karte nicht gefunden'); return; }
+    const cardId = cards[idx].id;
+    const altText = window._lkAltState[idx].idx > 0
+      ? document.getElementById('lk-text-' + idx)?.textContent?.replace(/^"|"$/g,'')
+      : null;
+    const saveRes = await fetch('/api/learning_cards/' + cardId + '/save', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(altText ? {final_text: altText} : {})
+    });
+    const saveJson = await saveRes.json();
+    if (saveJson.error === 'max_reached') {
+      showToast('Max 5 aktive Lernkarten erreicht. Markiere eine als gelernt.');
+      return;
+    }
+    showToast('&#127919; Lernkarte gespeichert!');
+  } catch (e) { console.error('[Coach] save error:', e); showToast('Fehler beim Speichern'); }
+}
+
+function regenerateLernkarte(idx) {
+  const state = window._lkAltState[idx];
+  if (state.idx >= 2) return;
+  state.idx++;
+  window._lkRenderCards();
+}
+
+function toggleSelbstEingeben(idx) {
+  const inputDiv = document.getElementById('lk-input-' + idx);
+  if (inputDiv) inputDiv.style.display = inputDiv.style.display === 'none' ? 'block' : 'none';
+}
+
+// D-06: Submit user-written text for KI validation and save
+async function submitSelbstEingeben(idx) {
+  const textarea = document.getElementById('lk-textarea-' + idx);
+  const feedback = document.getElementById('lk-feedback-' + idx);
+  if (!textarea || !textarea.value.trim()) {
+    if (feedback) { feedback.style.color = '#f87171'; feedback.textContent = 'Bitte einen Satz eingeben.'; }
+    return;
+  }
+  // Get card ID from vorschlag cards
+  try {
+    const res = await fetch('/api/learning_cards?status=vorschlag');
+    const json = await res.json();
+    const cards = json.cards || [];
+    if (idx >= cards.length) { if (feedback) feedback.textContent = 'Karte nicht gefunden.'; return; }
+    const cardId = cards[idx].id;
+    if (feedback) { feedback.style.color = 'var(--page-text-secondary)'; feedback.textContent = 'Wird geprueft...'; }
+    const valRes = await fetch('/api/learning_cards/' + cardId + '/user_text', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ text: textarea.value.trim() })
+    });
+    const valJson = await valRes.json();
+    const v = valJson.validation || {};
+    if (v.covers_goal) {
+      if (feedback) { feedback.style.color = '#00D4AA'; feedback.textContent = v.feedback || 'Passt zum Lernziel! Gespeichert.'; }
+      showToast('&#127919; Eigener Satz gespeichert!');
+    } else {
+      if (feedback) { feedback.style.color = '#f87171'; feedback.textContent = v.feedback || 'Deckt das Lernziel nicht ab. Versuch es nochmal.'; }
+    }
+  } catch (e) {
+    console.error('[Coach] submitSelbstEingeben error:', e);
+    if (feedback) { feedback.style.color = '#f87171'; feedback.textContent = 'Fehler bei der Pruefung.'; }
+  }
+}
+
+// D-11: Load active cards and show "Hast du angewendet?" section
+async function loadActiveCardsForApplied() {
+  const section = document.getElementById('pc-lk-applied');
+  const list = document.getElementById('pc-lk-applied-list');
+  if (!section || !list) return;
+  try {
+    const res = await fetch('/api/learning_cards?status=aktiv');
+    const json = await res.json();
+    const cards = json.cards || [];
+    if (cards.length === 0) return;
+    section.style.display = 'block';
+    list.innerHTML = '';
+    cards.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'n-lk-applied-card';
+      el.innerHTML = `
+        <div style="font-size:13px;color:var(--page-text-primary);margin-bottom:8px">"${c.final_text}"</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="n-btn n-btn-primary" style="font-size:12px;padding:5px 12px" onclick="markApplied(${c.id},'ja')">&#10003; Ja</button>
+          <button class="n-btn n-btn-ghost" style="font-size:12px;padding:5px 12px" onclick="markApplied(${c.id},'nein')">Nein</button>
+          <button class="n-btn n-btn-ghost" style="font-size:12px;padding:5px 12px" onclick="markApplied(${c.id},'anders')">Ja, aber anders</button>
+        </div>
+      `;
+      list.appendChild(el);
+    });
+  } catch (e) { console.error('[Coach] applied cards error:', e); }
+}
+
+async function markApplied(cardId, applied) {
+  try {
+    await fetch('/api/learning_cards/' + cardId + '/applied', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ applied })
+    });
+    showToast(applied === 'ja' ? '&#127919; Super!' : applied === 'anders' ? 'Satz wird angepasst' : 'OK');
+  } catch (e) { console.error('[Coach] mark applied error:', e); }
 }
 
 function closePostcall(){
