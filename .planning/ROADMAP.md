@@ -350,7 +350,10 @@ Plans:
 **Goal:** Kernarchitektur für intelligente Hinweise — automatische Gesprächsphasen-Erkennung (6 Phasen), Live-Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung (nie mehr als einer gleichzeitig), Cold Call Inferenz aus Vertriebler-Aussagen, dynamische EWB-Buttons pro Phase.
 **Depends on:** Phase 04.7.1
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE KI-Logik Kernarchitektur.md`
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.8.1: Echtzeit-Engine Rebuild — Async FastAPI WebSocket Engine, Redis Bridge, STT/LLM Abstraktionsschicht, Polling ersetzen (INSERTED)
 
@@ -397,56 +400,80 @@ Plans:
 
 **Goal:** Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch. Wenn der Kunde wuetend wird (-3 bis -5), soll man das an der Stimme hoeren. Aktuell hardcoded (stability: 0.5, similarity_boost: 0.75).
 **Depends on:** Phase 04.9, Phase 04.10
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.11: Coach-Modul (INSERTED)
 
 **Goal:** Persönliches Lernsystem — Post-Call Analyse mit max 3 konkreten Lernkarten-Vorschlägen, max 5 aktive Lernkarten, KI-Gedächtnis im nächsten Call (goldener Rahmen bei passender Situation), Wöchentlicher Coach-Report, Langzeit-Fortschritt über 4-12 Wochen.
 **Depends on:** Phase 04.8, Phase 04.9
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Coach-Modul.md`
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.12: Gesamt-Integration (INSERTED)
 
 **Goal:** Alle Module zu einem geschlossenen Lernökosystem verbinden — learning_events Tabelle, 5 Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen↔EWB), Selbstverbesserungs-Kreislauf, Netzwerkeffekt durch aggregierte anonymisierte Daten.
 **Depends on:** Phase 04.11
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Gesamt-Architektur.md`
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.13: PreCall Intelligence (INSERTED)
 
 **Goal:** Automatische Firmen-Recherche vor dem Call — Vertriebler gibt Firmenname + Ansprechpartner ein, NERVE erstellt kompaktes Call-Briefing in ~30 Sekunden, Briefing erscheint im PIP. Datenquellen-Ansatz wird beim Start der Phase gemeinsam festgelegt.
 **Depends on:** Phase 04.8
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Phase 5.1 PreCall Intelligence.md`
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.14: CRM & Customer Success (INSERTED)
 
 **Goal:** Internes CRM mit Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen basierend auf Performance (nicht Kalendertagen), Erfolgs-Metriken.
 **Depends on:** Phase 04.7
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.14)
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.15: Rollen, Support & Kompensation (INSERTED)
 
 **Goal:** Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff auf Kundenprofile mit Audit-Trail, Kompensation (Gratis-Tage bei Ausfällen), Mitarbeiter-Verwaltung.
 **Depends on:** Phase 04.14
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.15)
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.16: Finaler Polish + UAT (INSERTED)
 
 **Goal:** Letzter Schliff vor Launch — finaler UAT-Durchlauf aller Features auf Produktion, Design-Pass (Farben, Fonts, Abstände), CSS Refactoring (Inline-Styles → nerve.css), Code Audit + Refactoring, Performance-Check.
 **Depends on:** Alle vorherigen Phasen
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Finaler Polish Pass.md`
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 04.17: PiP Launcher (INSERTED)
 
 **Goal:** Always-on-Top verschiebbarer Live-Assistent via Document Picture-in-Picture API. User kann aus CRM/Outlook/Teams heraus direkt einen NERVE-Call starten — Modus waehlen, Kundendaten eingeben, Skript auswaehlen, Live-Coaching im PiP-Fenster.
 **Depends on:** Phase 04.8 (Consent-System), Phase 04.12 (Gesamt-Integration). Optional: Phase 04.13 (PreCall Auto-Recherche Button)
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE PiP Launcher.md`
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
 
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
