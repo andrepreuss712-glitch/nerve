@@ -172,3 +172,208 @@ def get_active_cards(user_id):
                 for c in cards]
     finally:
         db.close()
+
+
+def get_or_generate_weekly_report(user_id):
+    """D-12: On-demand weekly coach report with DB caching. Only generates if >= 1 call this week."""
+    from datetime import date, timedelta
+    from database.db import get_session
+    from database.models import CoachingReport, ConversationLog
+
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())  # Monday
+    week_end = week_start + timedelta(days=6)
+
+    db = get_session()
+    try:
+        # Check cache
+        existing = db.query(CoachingReport).filter_by(user_id=user_id).filter(
+            CoachingReport.period_start == week_start
+        ).first()
+        if existing:
+            return {
+                'calls_count': existing.calls_count,
+                'avg_readiness_score': existing.avg_readiness_score,
+                'strongest_phase': existing.strongest_phase,
+                'weakest_phase': existing.weakest_phase,
+                'talk_ratio_user': existing.talk_ratio_user,
+                'talk_ratio_customer': existing.talk_ratio_customer,
+                'report_text': existing.report_text,
+                'suggested_card': json.loads(existing.suggested_card_json) if existing.suggested_card_json else None,
+                'period_start': week_start.isoformat(),
+                'period_end': week_end.isoformat(),
+            }
+
+        # D-12/Pitfall 4: Only generate if user had >= 1 call this week
+        from datetime import datetime as _dt
+        week_start_dt = _dt.combine(week_start, _dt.min.time())
+        week_end_dt = _dt.combine(week_end, _dt.max.time())
+        calls = db.query(ConversationLog).filter(
+            ConversationLog.user_id == user_id,
+            ConversationLog.typ == 'live',
+            ConversationLog.started_at >= week_start_dt,
+            ConversationLog.started_at <= week_end_dt,
+        ).all()
+
+        if not calls:
+            return None  # No calls this week — frontend shows "Keine Calls diese Woche"
+
+        # Aggregate data for report (D-13)
+        calls_count = len(calls)
+        avg_kb = sum(c.kb_end or 30 for c in calls) / calls_count if calls_count else 0
+        avg_talk = sum(c.redeanteil_avg or 50 for c in calls) / calls_count if calls_count else 50
+        avg_talk_kunde = 100 - avg_talk
+
+        # Phase analysis: find strongest/weakest from phasen_details
+        phase_scores = {}
+        for c in calls:
+            if c.phasen_details:
+                try:
+                    phases = json.loads(c.phasen_details)
+                    for ph in phases:
+                        name = ph.get('name', '?')
+                        if name not in phase_scores:
+                            phase_scores[name] = []
+                        phase_scores[name].append(ph.get('dauer_sek', 0))
+                except Exception:
+                    pass
+        strongest = max(phase_scores, key=lambda k: sum(phase_scores[k])) if phase_scores else None
+        weakest = min(phase_scores, key=lambda k: sum(phase_scores[k])) if phase_scores else None
+
+        # Generate report text via Sonnet (D-14)
+        report_prompt = f"""Du bist ein Sales-Coach. Erstelle einen kurzen woechentlichen Coach-Report auf Deutsch.
+
+Wochendaten:
+- {calls_count} Calls gefuehrt
+- Durchschnittlicher Kaufbereitschafts-Score: {avg_kb:.0f}%
+- Redeanteil Berater: {avg_talk:.0f}% / Kunde: {avg_talk_kunde:.0f}%
+- Staerkste Phase: {strongest or 'unbekannt'}
+- Schwaechste Phase: {weakest or 'unbekannt'}
+
+Schreibe:
+1. Eine kurze Zusammenfassung (2-3 Saetze)
+2. Ein erkanntes Muster (1-2 Saetze, narrativ, nicht als Liste)
+3. Einen konkreten Lernkarten-Vorschlag (ein Satz den der Vertriebler sagen kann)
+
+Antworte als JSON:
+{{"report_text": "...", "muster": "...", "suggested_card": {{"category": "...", "text": "...", "lernziel": "..."}}}}"""
+
+        try:
+            response = _client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=800,
+                messages=[{"role": "user", "content": report_prompt}]
+            )
+            # Cost tracking
+            try:
+                from services.cost_tracker import log_api_cost
+                u = getattr(response, 'usage', None)
+                if u:
+                    log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
+                                 units=(getattr(u, 'input_tokens', 0) or 0)/1000.0,
+                                 unit_type='per_1k_input_tokens',
+                                 context_tag='weekly_coach_report')
+                    log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
+                                 units=(getattr(u, 'output_tokens', 0) or 0)/1000.0,
+                                 unit_type='per_1k_output_tokens',
+                                 context_tag='weekly_coach_report')
+            except Exception as _ce:
+                print(f"[CostHook] weekly_coach_report skipped: {_ce}")
+
+            text = response.content[0].text.strip()
+            start = text.find('{'); end = text.rfind('}') + 1
+            report_data = json.loads(text[start:end])
+            full_report = report_data.get('report_text', '') + '\n\nDein Muster:\n' + report_data.get('muster', '')
+            suggested = report_data.get('suggested_card')
+        except Exception as e:
+            print(f"[Coach] Weekly report Sonnet failed: {e}")
+            full_report = f"Diese Woche: {calls_count} Calls, Ø Score {avg_kb:.0f}%."
+            suggested = None
+
+        # Cache in DB (D-12)
+        report = CoachingReport(
+            user_id=user_id,
+            period_start=week_start,
+            period_end=week_end,
+            calls_count=calls_count,
+            avg_readiness_score=round(avg_kb, 1),
+            strongest_phase=strongest,
+            weakest_phase=weakest,
+            talk_ratio_user=round(avg_talk, 1),
+            talk_ratio_customer=round(avg_talk_kunde, 1),
+            report_text=full_report,
+            suggested_card_json=json.dumps(suggested, ensure_ascii=False) if suggested else None,
+        )
+        db.add(report)
+        db.commit()
+
+        return {
+            'calls_count': calls_count,
+            'avg_readiness_score': round(avg_kb, 1),
+            'strongest_phase': strongest,
+            'weakest_phase': weakest,
+            'talk_ratio_user': round(avg_talk, 1),
+            'talk_ratio_customer': round(avg_talk_kunde, 1),
+            'report_text': full_report,
+            'suggested_card': suggested,
+            'period_start': week_start.isoformat(),
+            'period_end': week_end.isoformat(),
+        }
+    except Exception as e:
+        print(f"[Coach] Weekly report generation failed: {e}")
+        return None
+    finally:
+        db.close()
+
+
+def get_longterm_data(user_id, weeks=12):
+    """D-15/D-16: Aggregate ConversationLog data over past N weeks for Chart.js."""
+    from datetime import date, timedelta
+    from database.db import get_session
+    from database.models import ConversationLog
+
+    today = date.today()
+    start_date = today - timedelta(weeks=weeks)
+
+    db = get_session()
+    try:
+        from datetime import datetime as _dt
+        start_dt = _dt.combine(start_date, _dt.min.time())
+        calls = db.query(ConversationLog).filter(
+            ConversationLog.user_id == user_id,
+            ConversationLog.typ == 'live',
+            ConversationLog.started_at >= start_dt,
+        ).order_by(ConversationLog.started_at).all()
+
+        # Group by ISO week
+        weekly = {}
+        for c in calls:
+            if not c.started_at:
+                continue
+            iso = c.started_at.isocalendar()
+            week_key = f"{iso[0]}-W{iso[1]:02d}"
+            if week_key not in weekly:
+                weekly[week_key] = {'kb_scores': [], 'talk_ratios': [], 'einwaende_total': 0, 'einwaende_ok': 0, 'calls': 0}
+            w = weekly[week_key]
+            w['calls'] += 1
+            w['kb_scores'].append(c.kb_end or 30)
+            w['talk_ratios'].append(c.redeanteil_avg or 50)
+            w['einwaende_total'] += c.einwaende_gesamt or 0
+            w['einwaende_ok'] += c.einwaende_behandelt or 0
+
+        # Build chart data arrays
+        labels = sorted(weekly.keys())
+        kb_data = [round(sum(weekly[k]['kb_scores'])/len(weekly[k]['kb_scores']), 1) if weekly[k]['kb_scores'] else 0 for k in labels]
+        talk_data = [round(sum(weekly[k]['talk_ratios'])/len(weekly[k]['talk_ratios']), 1) if weekly[k]['talk_ratios'] else 50 for k in labels]
+        ewb_rate = [round(weekly[k]['einwaende_ok']/weekly[k]['einwaende_total']*100, 1) if weekly[k]['einwaende_total'] > 0 else 0 for k in labels]
+        calls_per_week = [weekly[k]['calls'] for k in labels]
+
+        return {
+            'labels': labels,
+            'kaufbereitschaft': kb_data,
+            'redeanteil': talk_data,
+            'einwand_erfolgsrate': ewb_rate,
+            'calls_per_week': calls_per_week,
+        }
+    finally:
+        db.close()

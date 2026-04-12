@@ -494,6 +494,19 @@ def index():
 
         dashboard_style = getattr(user, 'dashboard_style', 'vollstaendig') or 'vollstaendig'
 
+        # ── Coach-Modul data (Phase 04.11) ─────────────────────────────────
+        try:
+            from services.coaching_service import get_active_cards, get_or_generate_weekly_report, get_longterm_data
+            import json as _json
+            learning_cards = get_active_cards(g.user.id)
+            weekly_report = get_or_generate_weekly_report(g.user.id)
+            longterm_data = get_longterm_data(g.user.id, weeks=12)
+        except Exception as _ce:
+            print(f"[Coach] Dashboard data error: {_ce}")
+            learning_cards = []
+            weekly_report = None
+            longterm_data = None
+
         return render_template('dashboard.html',
                                stats=stats,
                                activity_map=json.dumps(activity_map),
@@ -511,7 +524,10 @@ def index():
                                welcome_trial=welcome_trial,
                                usage=usage,
                                roi=roi,
-                               dashboard_style=dashboard_style)
+                               dashboard_style=dashboard_style,
+                               learning_cards=learning_cards,
+                               weekly_report=weekly_report,
+                               longterm_data_json=_json.dumps(longterm_data, ensure_ascii=False) if longterm_data else 'null')
     finally:
         db.close()
 
