@@ -1167,6 +1167,7 @@ from routes.performance    import performance_bp
 from routes.oauth          import oauth_bp, init_oauth
 from routes.feedback       import feedback_bp
 from routes.admin_dashboard import admin_dashboard_bp
+from routes.learning       import learning_bp
 
 app.register_blueprint(feedback_bp)
 app.register_blueprint(admin_dashboard_bp)
@@ -1186,6 +1187,7 @@ app.register_blueprint(payments_bp)
 app.register_blueprint(legal_bp)
 app.register_blueprint(performance_bp)
 app.register_blueprint(oauth_bp)
+app.register_blueprint(learning_bp)
 init_oauth(app)
 
 # ── Global JSON Error Handler ─────────────────────────────────────────────────

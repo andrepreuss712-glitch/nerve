@@ -548,6 +548,42 @@ class ExchangeRate(Base):
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
+# ── Phase 04.11: Coach-Modul (Persoenliches Lernsystem) ──────────────────────
+
+class LearningCard(Base):
+    __tablename__ = 'learning_cards'
+    id                  = Column(Integer, primary_key=True)
+    user_id             = Column(Integer, ForeignKey('users.id'), nullable=False)
+    call_id             = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
+    category            = Column(String(100), nullable=False)
+    original_suggestion = Column(Text, nullable=False)
+    final_text          = Column(Text, nullable=False)
+    lernziel            = Column(Text, nullable=True)
+    source              = Column(String(20), default='ki')       # 'ki' | 'user'
+    status              = Column(String(20), default='aktiv')    # 'aktiv' | 'gelernt' | 'archiviert'
+    applied_count       = Column(Integer, default=0)
+    regenerate_count    = Column(Integer, default=0)
+    created_at          = Column(DateTime, default=utcnow)
+    learned_at          = Column(DateTime, nullable=True)
+
+
+class CoachingReport(Base):
+    __tablename__ = 'coaching_reports'
+    id                  = Column(Integer, primary_key=True)
+    user_id             = Column(Integer, ForeignKey('users.id'), nullable=False)
+    period_start        = Column(Date, nullable=False)
+    period_end          = Column(Date, nullable=False)
+    calls_count         = Column(Integer, default=0)
+    avg_readiness_score = Column(Float, nullable=True)
+    strongest_phase     = Column(String(100), nullable=True)
+    weakest_phase       = Column(String(100), nullable=True)
+    talk_ratio_user     = Column(Float, nullable=True)
+    talk_ratio_customer = Column(Float, nullable=True)
+    report_text         = Column(Text, nullable=True)
+    suggested_card_json = Column(Text, nullable=True)
+    created_at          = Column(DateTime, default=utcnow)
+
+
 def init_db(engine_instance):
     """Create all tables."""
     Base.metadata.create_all(engine_instance)
