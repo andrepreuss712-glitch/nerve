@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
  (completed 2026-04-12)
 - [x] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED) (completed 2026-04-13)
-- [ ] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
+- [x] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED) (completed 2026-04-13)
 - [ ] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED)
 - [ ] **Phase 04.15: Rollen, Support & Kompensation** - Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff, Kompensation bei Ausfällen (INSERTED)
 - [ ] **Phase 04.16: Finaler Polish + UAT** - Finaler UAT-Durchlauf, Design-Pass, CSS Refactoring, Code Audit, Performance-Check (INSERTED)
@@ -438,11 +438,11 @@ Plans:
 **Goal:** Automatische Firmen-Recherche vor dem Call — Vertriebler gibt Firmenname + Ansprechpartner ein, NERVE erstellt kompaktes Call-Briefing in ~30 Sekunden, Briefing erscheint als einklappbarer Block im Live-View via Brave Search + Claude Haiku.
 **Depends on:** Phase 04.8
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Phase 5.1 PreCall Intelligence.md`
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 04.13-01-PLAN.md -- Backend: precall_service.py (Brave Search + Haiku briefing), config, DB migration
-- [ ] 04.13-02-PLAN.md -- Frontend: API route, PreCall UI panel, briefing display, session persistence
+- [x] 04.13-02-PLAN.md -- Frontend: API route, PreCall UI panel, briefing display, session persistence
 
 ### Phase 04.14: CRM & Customer Success (INSERTED)
 
