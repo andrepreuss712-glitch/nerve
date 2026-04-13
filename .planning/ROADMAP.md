@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
  (completed 2026-04-12)
 - [x] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED) (completed 2026-04-13)
 - [x] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED) (completed 2026-04-13)
-- [ ] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED)
+- [x] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED) (completed 2026-04-13)
 - [ ] **Phase 04.15: Rollen, Support & Kompensation** - Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff, Kompensation bei Ausfällen (INSERTED)
 - [ ] **Phase 04.16: Finaler Polish + UAT** - Finaler UAT-Durchlauf, Design-Pass, CSS Refactoring, Code Audit, Performance-Check (INSERTED)
 - [ ] **Phase 04.17: PiP Launcher** - Always-on-Top verschiebbarer Live-Assistent via Document Picture-in-Picture API, Call-Start aus CRM heraus, Modus/Kunden/Skript-Auswahl im PiP (INSERTED)
@@ -449,11 +449,11 @@ Plans:
 **Goal:** Internes CRM mit Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen basierend auf Performance (nicht Kalendertagen), Erfolgs-Metriken.
 **Depends on:** Phase 04.7
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.14)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 04.14-01-PLAN.md -- CrmNote model + customer_success_service.py (status badges, follow-up hints)
-- [ ] 04.14-02-PLAN.md -- CrmView admin page, crm_overview.html template, app.py registration
+- [x] 04.14-02-PLAN.md -- CrmView admin page, crm_overview.html template, app.py registration
 
 ### Phase 04.15: Rollen, Support & Kompensation (INSERTED)
 

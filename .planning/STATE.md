@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04.14-01-PLAN.md
-last_updated: "2026-04-13T11:31:00.733Z"
+status: verifying
+stopped_at: Completed 04.14-02-PLAN.md — awaiting human verification Task 3
+last_updated: "2026-04-13T11:35:04.846Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 30
-  completed_phases: 19
+  completed_phases: 20
   total_plans: 112
-  completed_plans: 102
-  percent: 91
+  completed_plans: 103
+  percent: 92
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 Phase: 04.14 (crm-customer-success-inserted) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-13
 
 **Next:** Discuss/plan Phase 04.13
@@ -128,6 +128,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.13 P01 | 2 | 2 tasks | 4 files |
 | Phase 04.13 P02 | 3 | 3 tasks | 3 files |
 | Phase 04.14-crm-customer-success-inserted P01 | 80 | 2 tasks | 2 files |
+| Phase 04.14 P02 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -287,6 +288,8 @@ Recent decisions affecting current work:
 - [Phase 04.13]: PreCall panel inserted into mode overlay flow with _showPrecallOrActivate gateway
 - [Phase 04.14]: CrmNote uses unique user_id (one note per user, upsert pattern)
 - [Phase 04.14]: Status badge thresholds: 7d Ruhig, 14d Churn, avg_calls+kb>60 Top
+- [Phase 04.14]: endpoint='crm_view' (not 'crm') to avoid Flask-Admin namespace collision
+- [Phase 04.14]: inaccessible_callback returns 403 for logged-in non-superadmin, redirect to login for anonymous
 
 ### Roadmap Evolution
 
@@ -337,6 +340,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-13T11:31:00.729Z
-Stopped at: Completed 04.14-01-PLAN.md
+Last session: 2026-04-13T11:35:04.843Z
+Stopped at: Completed 04.14-02-PLAN.md — awaiting human verification Task 3
 Resume file: None
