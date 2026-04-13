@@ -133,7 +133,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-12 after Phase 04.10.1 (emotionale TTS-Stimmen) completion — mood-to-voice mapping, secretary presets, 3 TTS call sites wired*
+*Last updated: 2026-04-13 after Phase 04.12 (Gesamt-Integration) completion — learning_events table, integration engine with pattern detection, training recommendations in PostCall overlay + dashboard, extended weekly reports with training data*
 
 ## Phase Completion Notes
 
