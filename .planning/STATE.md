@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Phase 04.12 context gathered
-last_updated: "2026-04-13T09:03:48.533Z"
-last_activity: 2026-04-13 -- Phase 04.12 planning complete
+stopped_at: Completed 04.12-01-PLAN.md
+last_updated: "2026-04-13T09:12:22.437Z"
+last_activity: 2026-04-13
 progress:
   total_phases: 30
   completed_phases: 17
   total_plans: 108
-  completed_plans: 95
-  percent: 88
+  completed_plans: 96
+  percent: 89
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.11 — coach-modul-inserted
+**Current focus:** Phase 04.12 — gesamt-integration-inserted
 
 ## Current Position
 
-Phase: 04.12
-Plan: Not started
+Phase: 04.12 (gesamt-integration-inserted) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-04-13 -- Phase 04.12 planning complete
+Last activity: 2026-04-13
 
 **Next:** Discuss/plan Phase 04.11
 
@@ -119,6 +119,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.11 P02 | 5min | 2 tasks | 3 files |
 | Phase 04.11 P03 | 2min | 2 tasks | 3 files |
 | Phase 04.11 P04 | 3min | 2 tasks | 3 files |
+| Phase 04.12 P01 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -267,6 +268,7 @@ Recent decisions affecting current work:
 - [Phase 04.11]: Gold #E8B040 re-introduced as scoped exception via --learning-gold CSS variable for learning card hints per D-10
 - [Phase 04.11]: Learning card context capped at ~200 tokens (80 chars/card, max 5 cards) to avoid live prompt bloat
 - [Phase 04.11]: Weekly report uses on-demand Sonnet generation with DB caching per ISO week (D-12)
+- [Phase 04.12]: event_metadata Python attribute maps to metadata DB column — SQLAlchemy reserves metadata on declarative models
 
 ### Roadmap Evolution
 
@@ -317,6 +319,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-13T08:42:41.243Z
-Stopped at: Phase 04.12 context gathered
-Resume file: .planning/phases/04.12-gesamt-integration-inserted/04.12-CONTEXT.md
+Last session: 2026-04-13T09:12:22.433Z
+Stopped at: Completed 04.12-01-PLAN.md
+Resume file: None
