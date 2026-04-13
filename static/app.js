@@ -1497,6 +1497,322 @@ function pipPopulateKundendatenHistory() {
   });
 }
 
+// ── PiP Kundendaten History (localStorage) ────────────────────────────────────
+var _KUNDENDATEN_HISTORY_KEY = 'nerve_pip_kundendaten';
+var _KUNDENDATEN_MAX = 5;
+
+function loadKundendatenHistory() {
+  try {
+    var data = JSON.parse(localStorage.getItem(_KUNDENDATEN_HISTORY_KEY) || '[]');
+    if (!Array.isArray(data)) return [];
+    return data.filter(function(h) { return h && typeof h.firma === 'string'; }).slice(0, _KUNDENDATEN_MAX);
+  } catch(e) { return []; }
+}
+
+function saveKundendaten(eintrag) {
+  if (!eintrag || !eintrag.firma) return;
+  try {
+    var history = loadKundendatenHistory().filter(function(h) {
+      return !(h.firma === eintrag.firma && h.name === eintrag.name);
+    });
+    history.unshift({ firma: eintrag.firma, name: eintrag.name || '', position: eintrag.position || '' });
+    localStorage.setItem(_KUNDENDATEN_HISTORY_KEY, JSON.stringify(history.slice(0, _KUNDENDATEN_MAX)));
+  } catch(e) {}
+}
+
+// ── PiP Setup Flow Functions ──────────────────────────────────────────────────
+
+function pipSelectMode(mode) {
+  _pipSelectedMode = mode;
+  if (mode === 'meeting') {
+    // Show inline consent (per Phase 4.2 consent pattern)
+    var consent = getPipElement('pip-consent-inline');
+    if (consent) consent.style.display = 'block';
+  } else {
+    // Cold Call: skip consent, go to Kundendaten
+    showPipSetupStep(2);
+  }
+}
+
+function pipConsentAccept() {
+  // Meeting mode with consent — proceed to Kundendaten
+  var consent = getPipElement('pip-consent-inline');
+  if (consent) consent.style.display = 'none';
+  showPipSetupStep(2);
+}
+
+function pipConsentReject() {
+  // Reject consent: fall back to Cold Call silently (per MODE-03)
+  _pipSelectedMode = 'cold_call';
+  var consent = getPipElement('pip-consent-inline');
+  if (consent) consent.style.display = 'none';
+  showPipSetupStep(2);
+}
+
+function pipSubmitKundendaten() {
+  var firma = (getPipElement('pip-kd-firma') || {}).value || '';
+  var name = (getPipElement('pip-kd-name') || {}).value || '';
+  var position = (getPipElement('pip-kd-position') || {}).value || '';
+  window._pipKundendaten = { firma: firma.trim(), name: name.trim(), position: position.trim() };
+  // Save to history if firma is filled
+  if (window._pipKundendaten.firma) {
+    saveKundendaten(window._pipKundendaten);
+    pipPopulateKundendatenHistory();  // refresh datalists
+  }
+  showPipSetupStep(3);
+}
+
+function pipStartPrecall() {
+  var firma = (getPipElement('pip-kd-firma') || {}).value || '';
+  var name = (getPipElement('pip-kd-name') || {}).value || '';
+  if (!firma.trim()) return;
+  var btn = getPipElement('pip-precall-btn');
+  var result = getPipElement('pip-precall-result');
+  if (btn) { btn.textContent = 'Recherche...'; btn.disabled = true; }
+  if (result) { result.style.display = 'block'; result.textContent = 'Lade Briefing...'; }
+
+  fetch('/api/precall/research', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ firmenname: firma.trim(), ansprechpartner: name.trim() || undefined })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (btn) { btn.textContent = 'PreCall-Recherche'; btn.disabled = false; }
+    if (data.briefing && data.briefing.text) {
+      precallBriefingText = data.briefing.text;
+      if (result) {
+        result.style.display = 'block';
+        result.textContent = data.briefing.text;
+      }
+    } else if (data.error) {
+      if (result) { result.style.display = 'block'; result.textContent = 'Fehler: ' + data.error; }
+    }
+  })
+  .catch(function(err) {
+    if (btn) { btn.textContent = 'PreCall-Recherche'; btn.disabled = false; }
+    if (result) { result.style.display = 'block'; result.textContent = 'Verbindungsfehler'; }
+  });
+}
+
+function pipStartCall() {
+  // Set profile if changed
+  var sel = getPipElement('pip-profil-select');
+  if (sel && sel.value) {
+    var selectedId = parseInt(sel.value);
+    if (selectedId && selectedId !== window._activeProfileId) {
+      // Switch profile server-side (fire and forget — mic start is the priority)
+      fetch('/api/set_profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_id: selectedId })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok) {
+          window._activeProfileId = selectedId;
+          // Refresh PiP live tabs with new profile data
+          initPipContent();
+        }
+      }).catch(function() {});
+    }
+  }
+
+  // Set session mode (module-level + window for PiP badge)
+  sessionMode = _pipSelectedMode || 'cold_call';
+  window.sessionMode = sessionMode;
+
+  // Switch PiP to live state
+  setPipState('live');
+  initPipContent();
+
+  // Start session timer (existing function)
+  if (typeof startSessionTimer === 'function') startSessionTimer();
+
+  // Render EWB buttons (existing function)
+  if (typeof renderEwbButtons === 'function') renderEwbButtons();
+
+  // Start mic stream — MUST be in direct click handler (user gesture for getUserMedia)
+  startMicStream();
+}
+
+function pipBeendenCall() {
+  // Guard: short/empty session
+  if (typeof sessionSeconds !== 'undefined' && sessionSeconds < 10) {
+    setPipState('postcall');
+    var scoreEl = getPipElement('pip-postcall-score');
+    if (scoreEl) scoreEl.textContent = '--';
+    var tagsEl = getPipElement('pip-postcall-tags');
+    if (tagsEl) tagsEl.innerHTML = '<span class="pip-tag pip-tag-yellow">Kein Gespraech erkannt</span>';
+    return;
+  }
+
+  window._pollingActive = false;
+  stopMicStream();
+
+  fetch('/api/beenden', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_mode: sessionMode || 'meeting',
+      precall_briefing: precallBriefingText
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (!data.ok) {
+      console.error('[PiP] Beenden failed:', data.error);
+      return;
+    }
+    if (typeof stopSessionTimer === 'function') stopSessionTimer();
+
+    // Reset counters (same as main beenden)
+    words = 0; einwaende = 0; analysen = 0;
+
+    // Store conv_id for Details button
+    window._lastConvId = data.conv_id || null;
+
+    // Show postcall in PiP
+    if (data.postcall) {
+      // Merge skript coverage from teleprompter if available
+      if (typeof getSkriptAbdeckung === 'function') {
+        var sk = getSkriptAbdeckung();
+        if (sk) data.postcall.skript_abdeckung = sk;
+      }
+      showPipPostcall(data.postcall);
+    } else {
+      setPipState('postcall');
+      var scoreEl = getPipElement('pip-postcall-score');
+      if (scoreEl) scoreEl.textContent = '--';
+    }
+
+    // Also show the main-tab postcall overlay (user might switch to it)
+    if (data.postcall && typeof zeigePostcall === 'function') {
+      zeigePostcall(data.postcall, data.filename || '');
+    }
+  })
+  .catch(function(err) {
+    console.error('[PiP] Beenden error:', err);
+  });
+}
+
+// ── PiP Post-Call Score & Highlights ──────────────────────────────────────────
+
+function calcPipScore(postcall) {
+  // Weighted composite score 0-100
+  // 40% Kaufbereitschaft + 30% Einwand-Behandlung + 20% Redeanteil (target ~40%) + 10% Skript
+  var kb = postcall.kb_end || 30;
+  var total = (postcall.berater_words || 0) + (postcall.kunde_words || 0);
+  var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
+
+  // Calculate einwaende_behandelt from ga_details (no backend change needed)
+  var gaDetails = postcall.ga_details || [];
+  var einwandeBehandelt = gaDetails.filter(function(x) { return x && x.erfolgreich === true; }).length;
+  var einwandeTotal = (postcall.einwaende || []).length;
+  var behandeltRate = einwandeTotal > 0 ? einwandeBehandelt / einwandeTotal : 0.5;
+
+  var skript = (postcall.skript_abdeckung || {}).gesamt_prozent || 0;
+
+  // Redeanteil score: best at 40%, penalize deviation
+  var redeanteilScore = Math.max(0, 100 - Math.abs(redeanteil - 40) * 2);
+
+  return Math.min(100, Math.max(0, Math.round(
+    kb * 0.4 + behandeltRate * 100 * 0.3 + redeanteilScore * 0.2 + skript * 0.1
+  )));
+}
+
+function buildHighlightTags(postcall) {
+  var tags = [];
+  var kb = postcall.kb_end || 0;
+  var kbStart = postcall.kb_start || 30;
+  var total = (postcall.berater_words || 0) + (postcall.kunde_words || 0);
+  var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
+  var gaDetails = postcall.ga_details || [];
+  var einwandeBehandelt = gaDetails.filter(function(x) { return x && x.erfolgreich === true; }).length;
+  var einwandeTotal = (postcall.einwaende || []).length;
+  var behandeltRate = einwandeTotal > 0 ? einwandeBehandelt / einwandeTotal : -1;
+  var dauer = postcall.dauer_sek || 0;
+
+  // Positive tags (teal)
+  if (kb >= 70) tags.push({ text: 'Starke Kaufbereitschaft', color: 'teal' });
+  if (kb - kbStart >= 20) tags.push({ text: 'KB deutlich gestiegen', color: 'teal' });
+  if (behandeltRate >= 0.8 && einwandeTotal > 0) tags.push({ text: 'Einwaende gemeistert', color: 'teal' });
+
+  // Warning tags (yellow)
+  if (redeanteil > 65) tags.push({ text: 'Redeanteil zu hoch', color: 'yellow' });
+  if (redeanteil > 0 && redeanteil < 25) tags.push({ text: 'Zu wenig gesprochen', color: 'yellow' });
+  if (dauer > 0 && dauer < 120) tags.push({ text: 'Sehr kurzer Call', color: 'yellow' });
+
+  // Negative tags (red)
+  if (behandeltRate >= 0 && behandeltRate < 0.4 && einwandeTotal > 0) tags.push({ text: 'Einwaende offen', color: 'red' });
+
+  // Limit to 3 tags: prefer 1-2 positive + 0-1 negative
+  var positive = tags.filter(function(t) { return t.color === 'teal'; });
+  var negative = tags.filter(function(t) { return t.color !== 'teal'; });
+  var result = positive.slice(0, 2);
+  if (result.length < 3 && negative.length > 0) result.push(negative[0]);
+  return result.slice(0, 3);
+}
+
+function showPipPostcall(postcall) {
+  setPipState('postcall');
+  var score = calcPipScore(postcall);
+
+  // Score display
+  var scoreEl = getPipElement('pip-postcall-score');
+  if (scoreEl) scoreEl.textContent = score + '%';
+
+  // Highlight tags
+  var tags = buildHighlightTags(postcall);
+  var tagsEl = getPipElement('pip-postcall-tags');
+  if (tagsEl) {
+    tagsEl.innerHTML = tags.map(function(t) {
+      return '<span class="pip-tag pip-tag-' + t.color + '">' + escHtml(t.text) + '</span>';
+    }).join('');
+  }
+
+  // Show Kundendaten context if available
+  var kdEl = getPipElement('pip-postcall-kundendaten');
+  if (kdEl && window._pipKundendaten && window._pipKundendaten.firma) {
+    var parts = [window._pipKundendaten.firma];
+    if (window._pipKundendaten.name) parts.push(window._pipKundendaten.name);
+    kdEl.textContent = parts.join(' \u2014 ');
+  } else if (kdEl) {
+    kdEl.textContent = '';
+  }
+}
+
+function pipNextCall() {
+  // Reset session state for next call
+  precallBriefingText = null;
+  sessionMode = null;
+  window.sessionMode = null;
+
+  // Clear input fields
+  var fields = ['pip-kd-firma', 'pip-kd-name', 'pip-kd-position'];
+  fields.forEach(function(id) {
+    var el = getPipElement(id);
+    if (el) el.value = '';
+  });
+
+  // Reset main-tab UI elements (same as beenden cleanup)
+  if (typeof entferneSpinner === 'function') entferneSpinner();
+
+  // Return to setup
+  pipStartSetup();
+}
+
+function pipShowDetails() {
+  // Open post-call analysis in main tab
+  if (window._lastConvId) {
+    // Navigate main tab to session detail
+    window.opener ? window.opener.location.href = '/dashboard' : window.location.href = '/dashboard';
+  } else {
+    // Fallback: just go to dashboard
+    if (window.opener) {
+      window.opener.focus();
+    }
+  }
+}
+
 // Helper: find element in PiP window first, fallback to main document
 function getPipElement(id) {
   if (window._pipWindow && !window._pipWindow.closed) {
