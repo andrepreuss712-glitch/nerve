@@ -499,6 +499,20 @@ def api_beenden():
                 db_conv.commit()
         except Exception as ex:
             print(f"[Points] Fehler beim Punktevergabe: {ex}")
+
+        # ── Phase 04.12: Integration Engine — Post-Call Events + Muster (D-03) ──
+        try:
+            from services.integration_engine import run_postcall_engine
+            run_postcall_engine(
+                db_session=db_conv,
+                user_id=g.user.id,
+                conv_id=saved_conv_id,
+                einwaende=einwaende_liste,
+                ewb_clicks=ewb_clicks,
+                ga_details=ga_details,
+            )
+        except Exception as _ie:
+            print(f"[Engine] Post-Call Engine Fehler: {_ie}")
     except Exception as e:
         print(f"[DB] Fehler beim Speichern des Gesprächs: {e}")
     finally:
@@ -770,6 +784,22 @@ def api_feedback():
             latest.sterne    = int(stars)
             latest.kommentar = comment
         db.commit()
+
+        # D-10: Rating-Diskrepanz als learning_event loggen
+        try:
+            from services.integration_engine import log_learning_event
+            if latest:
+                ki_score = latest.kb_end or 0
+                user_rating_pct = (int(stars) or 0) * 20  # 1-5 Sterne -> 0-100 Skala
+                discrepancy = user_rating_pct - ki_score
+                log_learning_event(db, g.user.id, 'call_rated', 'rating', latest.id, {
+                    'conv_id': latest.id, 'user_rating': int(stars),
+                    'ki_score': ki_score, 'discrepancy': discrepancy,
+                })
+                db.commit()
+        except Exception as _re:
+            print(f"[Engine] Rating-Event Fehler: {_re}")
+
         return jsonify({'ok': True})
     finally:
         db.close()

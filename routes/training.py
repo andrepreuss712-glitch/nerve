@@ -742,6 +742,21 @@ def training_end():
             streak_user.streak_last_date = today
 
         db_log.commit()
+
+        # ── Phase 04.12: Integration Engine — Post-Training Events + Muster (D-03) ──
+        try:
+            from services.integration_engine import run_posttraining_engine
+            saved_log_id = log_entry.id
+            run_posttraining_engine(
+                db_session=db_log,
+                user_id=g.user.id,
+                log_id=saved_log_id,
+                scoring=scoring,
+                wendepunkt_saetze=wendepunkt_saetze,
+                modus=modus,
+            )
+        except Exception as _ie:
+            print(f"[Engine] Post-Training Engine Fehler: {_ie}")
     except Exception as ex:
         print(f"[Training] ConversationLog-Speicherung Fehler: {ex}")
     finally:
