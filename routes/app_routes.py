@@ -254,6 +254,11 @@ def api_beenden():
     req_data = request.get_json(silent=True) or {}
     session_mode = req_data.get('session_mode', 'meeting')
     precall_briefing = req_data.get('precall_briefing', None)
+    if precall_briefing is not None:
+        if not isinstance(precall_briefing, str):
+            precall_briefing = None
+        elif len(precall_briefing) > 2000:
+            precall_briefing = precall_briefing[:2000]
     profile_name = ''
     apid = flask_session.get('active_profile_id')
     if apid:
