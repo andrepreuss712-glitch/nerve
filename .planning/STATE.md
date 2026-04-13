@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.12-01-PLAN.md
-last_updated: "2026-04-13T09:12:22.437Z"
+stopped_at: Completed 04.12-02-PLAN.md
+last_updated: "2026-04-13T09:18:22.173Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 30
   completed_phases: 17
   total_plans: 108
-  completed_plans: 96
-  percent: 89
+  completed_plans: 97
+  percent: 90
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-12)
 ## Current Position
 
 Phase: 04.12 (gesamt-integration-inserted) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-13
 
@@ -120,6 +120,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.11 P03 | 2min | 2 tasks | 3 files |
 | Phase 04.11 P04 | 3min | 2 tasks | 3 files |
 | Phase 04.12 P01 | 4min | 2 tasks | 3 files |
+| Phase 04.12 P02 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -269,6 +270,8 @@ Recent decisions affecting current work:
 - [Phase 04.11]: Learning card context capped at ~200 tokens (80 chars/card, max 5 cards) to avoid live prompt bloat
 - [Phase 04.11]: Weekly report uses on-demand Sonnet generation with DB caching per ISO week (D-12)
 - [Phase 04.12]: event_metadata Python attribute maps to metadata DB column — SQLAlchemy reserves metadata on declarative models
+- [Phase 04.12]: json_extract for metadata queries in SQLite — works with current DB, PostgreSQL migration would need jsonb equivalent
+- [Phase 04.12]: D-12 clearing only on success (gesamt_score >= 50) — failed training should not clear recommendation
 
 ### Roadmap Evolution
 
@@ -319,6 +322,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-13T09:12:22.433Z
-Stopped at: Completed 04.12-01-PLAN.md
+Last session: 2026-04-13T09:18:12.728Z
+Stopped at: Completed 04.12-02-PLAN.md
 Resume file: None
