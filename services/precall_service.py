@@ -54,6 +54,12 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None):
         if len(firmenname) < 3 or len(firmenname) > 200:
             return (None, "Firmenname muss zwischen 3 und 200 Zeichen lang sein")
 
+        # Abgelaufene Cache-Eintraege entfernen
+        now = time.time()
+        stale_keys = [k for k, (_, ts) in _briefing_cache.items() if now - ts >= _CACHE_TTL_S]
+        for k in stale_keys:
+            del _briefing_cache[k]
+
         # Cache pruefen
         cache_key = firmenname.strip().lower()
         cached = _briefing_cache.get(cache_key)
