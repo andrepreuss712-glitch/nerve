@@ -527,6 +527,20 @@ def api_beenden():
     postcall['redeanteil_kunde'] = redeanteil_kunde
     postcall['ga_details'] = ga_details
 
+    # D-12: Trainings-Empfehlung fuer PostCall-Overlay
+    try:
+        db_rec = get_session()
+        try:
+            from database.models import User as _URec
+            _u_rec = db_rec.get(_URec, g.user.id)
+            if _u_rec and _u_rec.pending_training_recommendation:
+                import json as _jrec
+                postcall['training_recommendation'] = _jrec.loads(_u_rec.pending_training_recommendation)
+        finally:
+            db_rec.close()
+    except Exception:
+        pass
+
     reset_session()
     print("[Beenden] State zurückgesetzt.")
     return jsonify({'ok': True, 'filename': filename, 'postcall': postcall, 'conv_id': saved_conv_id})

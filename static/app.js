@@ -972,10 +972,41 @@ function zeigePostcall(d, filename){
   document.getElementById('sterneHint').textContent='Klicke zum Bewerten';
   document.getElementById('sterneKommentar').value='';
 
+  // D-12: Trainings-Empfehlung im PostCall-Overlay anzeigen
+  if (d.training_recommendation) {
+    showTrainingRecommendation(d.training_recommendation);
+  } else {
+    var _trBlock = document.getElementById('training-recommendation-block');
+    if (_trBlock) _trBlock.style.display = 'none';
+  }
+
   // Claude Insights laden
   loadPostcallInsights(d);
   loadPostcallAnalysis(d);
   loadActiveCardsForApplied();
+}
+
+// D-12: Trainings-Empfehlung im PostCall-Overlay anzeigen
+function showTrainingRecommendation(rec) {
+  if (!rec || !rec.einwand_typ) return;
+  var block = document.getElementById('training-recommendation-block');
+  var text = document.getElementById('training-rec-text');
+  if (!block || !text) return;
+  var label = rec.einwand_typ.replace('einwand_', '').replace(/_/g, ' ');
+  label = label.charAt(0).toUpperCase() + label.slice(1);
+  text.textContent = 'Du hattest Schwierigkeiten mit "' + label + '"-Einw\u00e4nden. ' +
+    'Trainiere dieses Szenario: ' + (rec.scenario_name || 'Freies Training');
+  block.style.display = 'block';
+  window._trainingRecScenarioId = rec.scenario_id || null;
+  window._trainingRecEinwandTyp = rec.einwand_typ || null;
+}
+
+function startRecommendedTraining() {
+  var url = '/training';
+  if (window._trainingRecEinwandTyp) {
+    url += '?quick=1&einwand_typ=' + encodeURIComponent(window._trainingRecEinwandTyp);
+  }
+  window.location.href = url;
 }
 
 async function loadPostcallInsights(d){

@@ -494,6 +494,15 @@ def index():
 
         dashboard_style = getattr(user, 'dashboard_style', 'vollstaendig') or 'vollstaendig'
 
+        # ── D-12: Persistente Trainings-Empfehlung ────────────────────────
+        training_recommendation = None
+        try:
+            if hasattr(g.user, 'pending_training_recommendation') and g.user.pending_training_recommendation:
+                import json as _jtr
+                training_recommendation = _jtr.loads(g.user.pending_training_recommendation)
+        except Exception:
+            pass
+
         # ── Coach-Modul data (Phase 04.11) ─────────────────────────────────
         try:
             from services.coaching_service import get_active_cards, get_or_generate_weekly_report, get_longterm_data
@@ -527,7 +536,8 @@ def index():
                                dashboard_style=dashboard_style,
                                learning_cards=learning_cards,
                                weekly_report=weekly_report,
-                               longterm_data_json=_json.dumps(longterm_data, ensure_ascii=False) if longterm_data else 'null')
+                               longterm_data_json=_json.dumps(longterm_data, ensure_ascii=False) if longterm_data else 'null',
+                               training_recommendation=training_recommendation)
     finally:
         db.close()
 

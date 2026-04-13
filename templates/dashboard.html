@@ -13,6 +13,28 @@
   </div>
   {% endif %}
 
+  {% if training_recommendation %}
+  <!-- Phase 04.12: Persistente Trainings-Empfehlung (D-12) -->
+  <div class="db2-card" id="training-rec-card" style="border-left:3px solid #00D4AA;margin-bottom:16px">
+    <div class="db2-card-head">
+      <span class="db2-card-icon">&#127919;</span> Empfohlenes Training
+    </div>
+    <div class="db2-card-body">
+      <p style="color:var(--page-text-secondary);font-size:14px;margin-bottom:12px">
+        {% set label = training_recommendation.einwand_typ | replace('einwand_', '') | replace('_', ' ') | capitalize %}
+        Du hattest wiederholt Schwierigkeiten mit &bdquo;{{ label }}&ldquo;-Einw&auml;nden.
+        {% if training_recommendation.scenario_name %}
+          Empfohlenes Szenario: <strong>{{ training_recommendation.scenario_name }}</strong>
+        {% endif %}
+      </p>
+      <a href="/training{% if training_recommendation.einwand_typ %}?quick=1&einwand_typ={{ training_recommendation.einwand_typ }}{% endif %}"
+         class="n-btn n-btn-primary" style="font-size:13px;padding:8px 20px;text-decoration:none">
+        Training starten &rarr;
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── Zeile 1: Begrüßung + Quick Actions ────────────────────────────────── -->
   <div class="db2-greeting">
     <div>
