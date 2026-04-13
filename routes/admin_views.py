@@ -6,7 +6,7 @@ from sqlalchemy import func
 from database.db import db_session, get_session
 from database.models import (
     User, Organisation, Feedback, AuditLog, ConversationLog,
-    ObjectionEvent, PlanningFeedbackLink,
+    ObjectionEvent, PlanningFeedbackLink, CrmNote,
 )
 from services.email_service import send_feedback_in_planning
 from services.feedback_service import UPLOAD_DIR
@@ -152,6 +152,68 @@ class PlanningListView(BaseView):
                        .order_by(PlanningFeedbackLink.id.desc())
                        .limit(200).all())
             return self.render('admin/planning_list.html', links=links)
+        finally:
+            db.close()
+
+
+# ── CRM & Customer Success ─────────────────────────────────────────
+
+class CrmView(BaseView):
+    def is_accessible(self):
+        return _is_superadmin()
+
+    def inaccessible_callback(self, name, **kwargs):
+        if getattr(g, 'user', None) is None:
+            return redirect(url_for('auth.login'))
+        abort(403)
+
+    @expose('/')
+    def index(self):
+        db = get_session()
+        try:
+            from services.customer_success_service import (
+                get_all_user_crm_data, get_followup_hints,
+            )
+            users_crm = get_all_user_crm_data(db)
+            hints = get_followup_hints(users_crm)
+            status_counts = {}
+            for u in users_crm:
+                s = u['status']
+                status_counts[s] = status_counts.get(s, 0) + 1
+            return self.render(
+                'admin/crm_overview.html',
+                users=users_crm,
+                hints=hints,
+                status_counts=status_counts,
+                total_users=len(users_crm),
+            )
+        finally:
+            db.close()
+
+    @expose('/note', methods=['POST'])
+    def save_note(self):
+        """AJAX endpoint: save CRM note for a user. Per D-05."""
+        from flask import jsonify
+        user_id = request.form.get('user_id', type=int)
+        text = (request.form.get('notiz') or '').strip()
+        if not user_id:
+            return jsonify({'ok': False, 'error': 'user_id fehlt'}), 400
+        # Cap note length at 5000 chars (input validation per ASVS V5)
+        if len(text) > 5000:
+            text = text[:5000]
+        db = get_session()
+        try:
+            note = db.query(CrmNote).filter_by(user_id=user_id).first()
+            if note:
+                note.notiz = text
+            else:
+                note = CrmNote(user_id=user_id, notiz=text)
+                db.add(note)
+            db.commit()
+            return jsonify({'ok': True})
+        except Exception as e:
+            db.rollback()
+            return jsonify({'ok': False, 'error': str(e)}), 500
         finally:
             db.close()
 
