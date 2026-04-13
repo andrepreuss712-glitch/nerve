@@ -424,12 +424,12 @@ Plans:
 **Goal:** Alle Module zu einem geschlossenen Lernökosystem verbinden — learning_events Tabelle, 5 Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen↔EWB), Selbstverbesserungs-Kreislauf, Netzwerkeffekt durch aggregierte anonymisierte Daten.
 **Depends on:** Phase 04.11
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Gesamt-Architektur.md`
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [x] 04.12-01-PLAN.md -- LearningEvent Model, Migration, log_learning_event() Helper, Engine-Skeleton
 - [x] 04.12-02-PLAN.md -- Engine-Logik: Event-Logging, Muster-Erkennung, Hooks in api_beenden() und training_end()
-- [ ] 04.12-03-PLAN.md -- Training-Lernkarten API, LearningCard Event-Logging, Wochenbericht mit Training-Daten
+- [x] 04.12-03-PLAN.md -- Training-Lernkarten API, LearningCard Event-Logging, Wochenbericht mit Training-Daten
 - [ ] 04.12-04-PLAN.md -- PostCall-Overlay Trainings-Empfehlung, Dashboard Card, Ein-Klick-Start
 
 ### Phase 04.13: PreCall Intelligence (INSERTED)
