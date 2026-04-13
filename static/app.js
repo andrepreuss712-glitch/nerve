@@ -1413,6 +1413,90 @@ function updateKompaktMetrics(stats, kb){
 
 // ── Document Picture-in-Picture (PiP) ─────────────────────────────────────────
 
+// ── PiP Launcher State Machine ────────────────────────────────────────────────
+window._pipState = 'setup';  // 'setup' | 'live' | 'postcall'
+var _pipSetupStep = 1;       // 1: modus, 2: kundendaten, 3: skript
+var _pipSelectedMode = null; // 'cold_call' | 'meeting'
+window._pipKundendaten = null;  // { firma, name, position }
+
+function setPipState(newState) {
+  window._pipState = newState;
+  var sections = {
+    'setup':    getPipElement('pip-section-setup'),
+    'live':     getPipElement('pip-section-live'),
+    'postcall': getPipElement('pip-section-postcall'),
+  };
+  Object.keys(sections).forEach(function(k) {
+    if (sections[k]) sections[k].style.display = (k === newState) ? 'flex' : 'none';
+  });
+}
+
+function showPipSetupStep(step) {
+  [1, 2, 3].forEach(function(s) {
+    var el = getPipElement('pip-setup-step-' + s);
+    if (el) el.style.display = (s === step) ? 'flex' : 'none';
+  });
+  // Hide consent panel when switching steps
+  var consent = getPipElement('pip-consent-inline');
+  if (consent) consent.style.display = 'none';
+  _pipSetupStep = step;
+}
+
+function pipStartSetup() {
+  _pipSetupStep = 1;
+  _pipSelectedMode = null;
+  window._pipKundendaten = null;
+  setPipState('setup');
+  showPipSetupStep(1);
+  // Populate profile dropdown
+  pipPopulateProfiles();
+  // Populate kundendaten datalists from history
+  pipPopulateKundendatenHistory();
+  // Show/hide precall button
+  var pcBtn = getPipElement('pip-precall-btn');
+  if (pcBtn) pcBtn.style.display = window._precallVerfuegbar ? 'block' : 'none';
+  // Clear precall result
+  var pcResult = getPipElement('pip-precall-result');
+  if (pcResult) { pcResult.style.display = 'none'; pcResult.textContent = ''; }
+}
+
+function pipPopulateProfiles() {
+  var sel = getPipElement('pip-profil-select');
+  if (!sel) return;
+  sel.innerHTML = '';
+  var profiles = window._allProfiles || [];
+  var activeId = window._activeProfileId || null;
+  var doc = sel.ownerDocument || document;
+  profiles.forEach(function(p) {
+    var opt = doc.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    if (p.id === activeId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function pipPopulateKundendatenHistory() {
+  var _HISTORY_KEY = 'nerve_pip_kundendaten';
+  var history = [];
+  try { history = JSON.parse(localStorage.getItem(_HISTORY_KEY) || '[]'); } catch(e) { history = []; }
+  if (!Array.isArray(history)) history = [];
+  var fields = ['firma', 'name', 'position'];
+  fields.forEach(function(field) {
+    var dl = getPipElement('pip-kd-' + field + '-list');
+    if (!dl) return;
+    var doc = dl.ownerDocument || document;
+    dl.innerHTML = '';
+    history.forEach(function(entry) {
+      if (entry && entry[field]) {
+        var opt = doc.createElement('option');
+        opt.value = entry[field];
+        dl.appendChild(opt);
+      }
+    });
+  });
+}
+
 // Helper: find element in PiP window first, fallback to main document
 function getPipElement(id) {
   if (window._pipWindow && !window._pipWindow.closed) {
@@ -1441,7 +1525,7 @@ async function openPipWindow() {
 
   var pipWindow = await window.documentPictureInPicture.requestWindow({
     width: 380,
-    height: 280,
+    height: 400,
   });
 
   // Set title
@@ -1497,6 +1581,7 @@ async function openPipWindow() {
     }
     window._pipWindow = null;
     window._pipTabLocked = null;
+    window._pipState = 'setup';
     try { localStorage.setItem('sn_kompakt', '0'); } catch(e) {}
   });
 
@@ -1505,6 +1590,8 @@ async function openPipWindow() {
 
   // Initialize PiP content
   initPipContent();
+  // Start PiP in setup state (launcher mode)
+  pipStartSetup();
 }
 
 // Close PiP and return to Vollbild
