@@ -9,7 +9,8 @@ from services.audit import log_action
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
-_letzte_gemeldete_version = 0
+# Per-user polling version tracking (avoids cross-user state in single global)
+_letzte_gemeldete_version = {}  # user_id -> last_version
 
 API_FRAGE_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent. Der Berater hat live eine Frage gestellt.
 {profile_ctx}
@@ -124,7 +125,7 @@ def live():
 @app_routes_bp.route('/api/ergebnis')
 @login_required
 def api_ergebnis():
-    global _letzte_gemeldete_version
+    uid = getattr(g, 'user', None) and g.user.id
     with ls.state_lock:
         payload = {
             'version':          ls.state['version'],
@@ -144,8 +145,9 @@ def api_ergebnis():
             'cold_call_inference': ls.state.get('cold_call_inference'),
         }
     payload['speech_stats'] = ls.get_speech_stats()
-    if payload['version'] > _letzte_gemeldete_version:
-        _letzte_gemeldete_version = payload['version']
+    last_v = _letzte_gemeldete_version.get(uid, 0)
+    if payload['version'] > last_v:
+        _letzte_gemeldete_version[uid] = payload['version']
         print(f"[API] Neues Ergebnis v{payload['version']} (line {payload['line_id']}) an Browser")
     return jsonify(payload)
 
