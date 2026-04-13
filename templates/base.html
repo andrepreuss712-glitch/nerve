@@ -60,6 +60,10 @@
     <i data-lucide="shield" class="nav-icon-lucide"></i>
     <span class="n-nav-label">Admin</span>
   </a>
+  <a class="n-nav-item {% if request.path.startswith('/admin/crm') %}n-nav-item-active{% endif %}" href="/admin/crm" title="CRM">
+    <i data-lucide="users" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">CRM</span>
+  </a>
   {% endif %}
   <div style="flex:1"></div>
   <!-- Hidden legacy nav items (D-31: kept in DOM, not deleted) -->
