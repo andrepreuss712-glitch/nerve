@@ -449,10 +449,10 @@ Plans:
 **Goal:** Internes CRM mit Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen basierend auf Performance (nicht Kalendertagen), Erfolgs-Metriken.
 **Depends on:** Phase 04.7
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.14)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 04.14-01-PLAN.md -- CrmNote model + customer_success_service.py (status badges, follow-up hints)
+- [x] 04.14-01-PLAN.md -- CrmNote model + customer_success_service.py (status badges, follow-up hints)
 - [ ] 04.14-02-PLAN.md -- CrmView admin page, crm_overview.html template, app.py registration
 
 ### Phase 04.15: Rollen, Support & Kompensation (INSERTED)
