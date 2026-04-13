@@ -14,6 +14,7 @@ let paused  = false;
 
 // ── Session Mode State ───────────────────────────────────────────────────────
 let sessionMode = null;  // 'cold_call' or 'meeting', set by mode overlay or URL param
+var precallBriefingText = null;  // Phase 04.13: stored briefing for session persistence
 
 // Auto-select mode from URL param (e.g. /live?mode=cold_call from nav overlay)
 // Consent was already handled before navigation, so skip it and activate directly.
@@ -87,9 +88,9 @@ function selectMode(mode) {
     // Show consent modal (per D-04)
     document.getElementById('consentOverlay').classList.add('open');
   } else {
-    // Cold Call — start directly
+    // Cold Call — show precall or start directly
     sessionMode = 'cold_call';
-    activateSession();
+    _showPrecallOrActivate();
   }
 }
 
@@ -97,14 +98,87 @@ function acceptConsent() {
   // Consent given — Meeting mode (per D-06)
   sessionMode = 'meeting';
   document.getElementById('consentOverlay').classList.remove('open');
-  activateSession();
+  _showPrecallOrActivate();
 }
 
 function rejectConsent() {
   // Consent rejected — silent fallback to Cold Call (per D-07)
   sessionMode = 'cold_call';
   document.getElementById('consentOverlay').classList.remove('open');
+  _showPrecallOrActivate();
+}
+
+// ── PreCall Intelligence (Phase 04.13) ──────────────────────────────────────
+function _showPrecallOrActivate() {
+  var panel = document.getElementById('precallPanel');
+  if (panel) {
+    // Hide mode cards, show precall panel
+    document.querySelector('.mode-cards').style.display = 'none';
+    document.querySelector('.mode-overlay-title').textContent = 'PreCall Intelligence';
+    document.querySelector('.mode-overlay-subtitle').textContent = 'Optional: Recherchiere die Firma vor dem Gespraech.';
+    panel.style.display = 'block';
+  } else {
+    activateSession();
+  }
+}
+
+function startPrecallResearch() {
+  var firma = document.getElementById('precallFirma').value.trim();
+  if (!firma || firma.length < 2) {
+    var errEl = document.getElementById('precallError');
+    errEl.textContent = 'Bitte Firmennamen eingeben (mind. 2 Zeichen)';
+    errEl.style.display = 'block';
+    return;
+  }
+  var person = document.getElementById('precallPerson').value.trim() || null;
+  var branche = document.getElementById('precallBranche').value.trim() || null;
+
+  // Show loading, disable button
+  document.getElementById('precallLoading').style.display = 'block';
+  document.getElementById('precallError').style.display = 'none';
+  document.getElementById('btnRecherche').disabled = true;
+
+  fetch('/api/precall/research', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({firmenname: firma, ansprechpartner: person, branche: branche})
+  })
+  .then(function(resp) { return resp.json().then(function(d) { return {ok: resp.ok, data: d}; }); })
+  .then(function(result) {
+    document.getElementById('precallLoading').style.display = 'none';
+    document.getElementById('btnRecherche').disabled = false;
+    if (!result.ok) {
+      var errEl = document.getElementById('precallError');
+      errEl.textContent = result.data.error || 'Recherche fehlgeschlagen';
+      errEl.style.display = 'block';
+      return;
+    }
+    // Show briefing panel (per D-06, D-07)
+    precallBriefingText = result.data.briefing.text;
+    document.getElementById('briefingContent').textContent = precallBriefingText;
+    document.getElementById('briefingPanel').style.display = 'block';
+    // Auto-activate session after successful research
+    activateSession();
+  })
+  .catch(function(err) {
+    console.error('[PreCall] Fetch error:', err);
+    document.getElementById('precallLoading').style.display = 'none';
+    document.getElementById('btnRecherche').disabled = false;
+    var errEl = document.getElementById('precallError');
+    errEl.textContent = 'Netzwerkfehler — bitte erneut versuchen';
+    errEl.style.display = 'block';
+  });
+}
+
+function skipPrecall() {
   activateSession();
+}
+
+function toggleBriefing() {
+  var content = document.getElementById('briefingContent');
+  var toggle = document.getElementById('briefingToggle');
+  content.classList.toggle('hidden');
+  toggle.classList.toggle('collapsed');
 }
 
 function activateSession() {
@@ -569,7 +643,7 @@ async function beenden(){
     const res=await fetch('/api/beenden',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({session_mode: sessionMode || 'meeting'})
+      body:JSON.stringify({session_mode: sessionMode || 'meeting', precall_briefing: precallBriefingText})
     });
     const data=await res.json();
     if(pcLoading){pcLoading.style.display='none';}
