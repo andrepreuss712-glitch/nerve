@@ -563,6 +563,78 @@
   .pip-ewb-expanded { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 16px 8px; }
   .pip-ewb-ai-selected { border-color: #d4a853; color: #d4a853; }
   .pip-ewb-ai-selected:hover { border-color: #d4a853; background: rgba(212,168,83,0.08); }
+
+  /* PiP Launcher Sections */
+  .pip-section { flex-direction: column; }
+  .pip-setup-step { padding: 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .pip-setup-title { font-size: 14px; font-weight: 600; color: #00D4AA; text-align: center; margin-bottom: 4px; }
+  .pip-setup-buttons { display: flex; gap: 10px; justify-content: center; flex: 1; align-items: center; }
+  .pip-mode-btn {
+    background: #1C2333; border: 2px solid #2a3548; border-radius: 12px;
+    color: #e8ecf4; padding: 16px 20px; font-size: 14px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    transition: border-color 0.2s, background 0.2s; flex: 1; max-width: 140px;
+  }
+  .pip-mode-btn:hover { border-color: #00D4AA; background: #1a2a3a; }
+  .pip-mode-icon { font-size: 24px; }
+  .pip-input {
+    background: #1C2333; border: 1px solid #2a3548; border-radius: 8px;
+    color: #e8ecf4; padding: 8px 12px; font-size: 13px; width: 100%;
+    box-sizing: border-box; outline: none;
+  }
+  .pip-input:focus { border-color: #00D4AA; }
+  .pip-input::placeholder { color: #555e70; }
+  .pip-setup-form { display: flex; flex-direction: column; gap: 8px; }
+  .pip-setup-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .pip-select {
+    background: #1C2333; border: 1px solid #2a3548; border-radius: 8px;
+    color: #e8ecf4; padding: 8px 12px; font-size: 13px; width: 100%;
+    box-sizing: border-box; outline: none; margin-bottom: 12px;
+  }
+  .pip-btn-next, .pip-btn-start, .pip-btn-next-call {
+    background: #00D4AA; color: #0D1117; border: none; border-radius: 8px;
+    padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    flex: 1; transition: opacity 0.2s;
+  }
+  .pip-btn-next:hover, .pip-btn-start:hover, .pip-btn-next-call:hover { opacity: 0.85; }
+  .pip-btn-precall {
+    background: transparent; border: 1px solid #2a3548; border-radius: 8px;
+    color: #00D4AA; padding: 10px 12px; font-size: 12px; cursor: pointer;
+    flex: 0 0 auto; transition: border-color 0.2s;
+  }
+  .pip-btn-precall:hover { border-color: #00D4AA; }
+  .pip-btn-details {
+    background: #1C2333; border: 1px solid #2a3548; border-radius: 8px;
+    color: #e8ecf4; padding: 10px 16px; font-size: 13px; cursor: pointer;
+    flex: 1; transition: border-color 0.2s;
+  }
+  .pip-btn-details:hover { border-color: #00D4AA; }
+  .pip-btn-beenden {
+    background: transparent; border: 1px solid rgba(248,113,113,0.4); border-radius: 8px;
+    color: #f87171; padding: 6px 12px; font-size: 12px; cursor: pointer;
+    margin: 6px 8px; transition: background 0.2s;
+  }
+  .pip-btn-beenden:hover { background: rgba(248,113,113,0.1); }
+  .pip-consent { padding: 12px 16px; background: rgba(248,113,113,0.05); border-top: 1px solid rgba(248,113,113,0.2); }
+  .pip-consent-text { font-size: 12px; color: #e8ecf4; margin: 0 0 8px 0; }
+  .pip-consent-actions { display: flex; gap: 8px; }
+  .pip-btn-consent-yes { background: #00D4AA; color: #0D1117; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+  .pip-btn-consent-no { background: transparent; border: 1px solid #2a3548; border-radius: 6px; color: #e8ecf4; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+  .pip-precall-result {
+    background: #1C2333; border: 1px solid #2a3548; border-radius: 8px;
+    padding: 8px 12px; font-size: 11px; color: #a0aec0; max-height: 120px;
+    overflow-y: auto; margin-top: 8px; white-space: pre-wrap; line-height: 1.4;
+  }
+  /* PostCall */
+  .pip-postcall-score { font-size: 48px; font-weight: 700; color: #00D4AA; line-height: 1; }
+  .pip-postcall-label { font-size: 12px; color: #a0aec0; margin-top: 4px; }
+  .pip-postcall-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; justify-content: center; }
+  .pip-tag { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .pip-tag-teal { background: rgba(0,212,170,0.15); color: #00D4AA; }
+  .pip-tag-yellow { background: rgba(245,158,11,0.15); color: #F59E0B; }
+  .pip-tag-red { background: rgba(248,113,113,0.15); color: #F87171; }
+  .pip-postcall-kundendaten { font-size: 11px; color: #555e70; margin-top: 8px; }
+  .pip-postcall-actions { display: flex; gap: 10px; margin-top: 16px; width: 100%; max-width: 280px; }
 </style>
 </head>
 <body>
@@ -908,51 +980,125 @@
 
 <!-- ── PiP Window Content (moved into PiP document when opened) ──────────── -->
 <div id="pip-window" style="display:none">
-  <!-- Mini Header -->
-  <div class="pip-header">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span class="pip-mode-badge" id="pip-mode-badge">Cold Call</span>
-      <span class="pip-timer" id="pip-timer">00:00</span>
+
+  <!-- ── Section: SETUP (pre-call) ── -->
+  <div id="pip-section-setup" class="pip-section" style="display:flex;flex-direction:column;height:100%">
+
+    <!-- Step 1: Modus -->
+    <div id="pip-setup-step-1" class="pip-setup-step">
+      <div class="pip-setup-title">Modus waehlen</div>
+      <div class="pip-setup-buttons">
+        <button class="pip-mode-btn" onclick="pipSelectMode('cold_call')">
+          <span class="pip-mode-icon">&#x1F512;</span>
+          <span>Cold Call</span>
+        </button>
+        <button class="pip-mode-btn" onclick="pipSelectMode('meeting')">
+          <span class="pip-mode-icon">&#x1F91D;</span>
+          <span>Meeting</span>
+        </button>
+      </div>
     </div>
-    <a href="javascript:void(0)" onclick="closePipToVollbild()" class="pip-to-fullscreen">
-      <i data-lucide="maximize-2" style="width:16px;height:16px"></i>
-      <span>Vollbild</span>
-    </a>
+
+    <!-- Step 2: Kundendaten -->
+    <div id="pip-setup-step-2" class="pip-setup-step" style="display:none">
+      <div class="pip-setup-title">Kundendaten</div>
+      <div class="pip-setup-form">
+        <input type="text" id="pip-kd-firma" class="pip-input" placeholder="Firma" list="pip-kd-firma-list" autocomplete="off">
+        <datalist id="pip-kd-firma-list"></datalist>
+        <input type="text" id="pip-kd-name" class="pip-input" placeholder="Name" list="pip-kd-name-list" autocomplete="off">
+        <datalist id="pip-kd-name-list"></datalist>
+        <input type="text" id="pip-kd-position" class="pip-input" placeholder="Position" list="pip-kd-position-list" autocomplete="off">
+        <datalist id="pip-kd-position-list"></datalist>
+      </div>
+      <div class="pip-setup-actions">
+        <button class="pip-btn-precall" id="pip-precall-btn" onclick="pipStartPrecall()" style="display:none">PreCall-Recherche</button>
+        <button class="pip-btn-next" onclick="pipSubmitKundendaten()">Weiter</button>
+      </div>
+      <div id="pip-precall-result" class="pip-precall-result" style="display:none"></div>
+    </div>
+
+    <!-- Step 3: Skript/Profil -->
+    <div id="pip-setup-step-3" class="pip-setup-step" style="display:none">
+      <div class="pip-setup-title">Skript waehlen</div>
+      <select id="pip-profil-select" class="pip-select"></select>
+      <button class="pip-btn-start" onclick="pipStartCall()">Call starten</button>
+    </div>
+
+    <!-- Inline Meeting Consent (shown only if Meeting mode selected) -->
+    <div id="pip-consent-inline" class="pip-consent" style="display:none">
+      <p class="pip-consent-text">Alle Teilnehmer muessen dem Mitschnitt zustimmen.</p>
+      <div class="pip-consent-actions">
+        <button class="pip-btn-consent-yes" onclick="pipConsentAccept()">Akzeptieren</button>
+        <button class="pip-btn-consent-no" onclick="pipConsentReject()">Ablehnen</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Tabs -->
-  <div class="pip-tabs">
-    <button class="pip-tab pip-tab-active" data-tab="opener" onclick="handlePipTabClick('opener')">Opener</button>
-    <button class="pip-tab" data-tab="einwand" onclick="handlePipTabClick('einwand')">Einwand</button>
-    <button class="pip-tab" data-tab="coaching" onclick="handlePipTabClick('coaching')">Coaching</button>
-    <button class="pip-tab" data-tab="ewb" onclick="handlePipTabClick('ewb')">EWB</button>
+  <!-- ── Section: LIVE (existing coaching tabs) ── -->
+  <div id="pip-section-live" class="pip-section" style="display:none;flex-direction:column;height:100%">
+
+    <!-- Mini Header -->
+    <div class="pip-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="pip-mode-badge" id="pip-mode-badge">Cold Call</span>
+        <span class="pip-timer" id="pip-timer">00:00</span>
+      </div>
+      <a href="javascript:void(0)" onclick="closePipToVollbild()" class="pip-to-fullscreen">
+        <i data-lucide="maximize-2" style="width:16px;height:16px"></i>
+        <span>Vollbild</span>
+      </a>
+    </div>
+
+    <!-- Tabs -->
+    <div class="pip-tabs">
+      <button class="pip-tab pip-tab-active" data-tab="opener" onclick="handlePipTabClick('opener')">Opener</button>
+      <button class="pip-tab" data-tab="einwand" onclick="handlePipTabClick('einwand')">Einwand</button>
+      <button class="pip-tab" data-tab="coaching" onclick="handlePipTabClick('coaching')">Coaching</button>
+      <button class="pip-tab" data-tab="ewb" onclick="handlePipTabClick('ewb')">EWB</button>
+    </div>
+
+    <!-- Content area (one panel per tab, toggled via JS) -->
+    <div class="pip-content">
+      <div class="pip-panel" id="pip-panel-opener">
+        <div class="pip-tip-text" id="pip-opener-text">Kein Opener im Profil hinterlegt -- Profil bearbeiten</div>
+      </div>
+      <div class="pip-panel" id="pip-panel-einwand" style="display:none">
+        <div class="pip-tip-text" id="pip-einwand-text">Warte auf Einwand-Erkennung...</div>
+      </div>
+      <div class="pip-panel" id="pip-panel-coaching" style="display:none">
+        <div class="pip-tip-text" id="pip-coaching-text">Warte auf Coaching-Tipp...</div>
+      </div>
+      <div class="pip-panel" id="pip-panel-ewb" style="display:none">
+        <div class="pip-tip-text" id="pip-ewb-text">EWB-Vorschlaege werden geladen...</div>
+      </div>
+    </div>
+
+    <div id="pip-active-hint" class="active-hint-slot pip" style="display:none"></div>
+
+    <!-- EWB row (always visible at bottom) -->
+    <div class="pip-ewb-row" id="pip-ewb-row"></div>
+
+    <!-- Beenden button -->
+    <button class="pip-btn-beenden" id="pip-btn-beenden" onclick="pipBeendenCall()">Beenden</button>
+
+    <!-- PiP fallback warning (hidden by default, shown if no Document PiP support) -->
+    <div id="pip-fallback-warning" style="display:none;padding:8px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:6px;font-size:12px;color:#f87171;text-align:center;margin:8px">
+      PiP nicht unterstuetzt. Chrome 116+ erforderlich.
+    </div>
   </div>
 
-  <!-- Content area (one panel per tab, toggled via JS) -->
-  <div class="pip-content">
-    <div class="pip-panel" id="pip-panel-opener">
-      <div class="pip-tip-text" id="pip-opener-text">Kein Opener im Profil hinterlegt -- Profil bearbeiten</div>
-    </div>
-    <div class="pip-panel" id="pip-panel-einwand" style="display:none">
-      <div class="pip-tip-text" id="pip-einwand-text">Warte auf Einwand-Erkennung...</div>
-    </div>
-    <div class="pip-panel" id="pip-panel-coaching" style="display:none">
-      <div class="pip-tip-text" id="pip-coaching-text">Warte auf Coaching-Tipp...</div>
-    </div>
-    <div class="pip-panel" id="pip-panel-ewb" style="display:none">
-      <div class="pip-tip-text" id="pip-ewb-text">EWB-Vorschlaege werden geladen...</div>
+  <!-- ── Section: POSTCALL ── -->
+  <div id="pip-section-postcall" class="pip-section" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px">
+    <div class="pip-postcall-score" id="pip-postcall-score">--</div>
+    <div class="pip-postcall-label">Call Score</div>
+    <div class="pip-postcall-tags" id="pip-postcall-tags"></div>
+    <div class="pip-postcall-kundendaten" id="pip-postcall-kundendaten"></div>
+    <div class="pip-postcall-actions">
+      <button class="pip-btn-next-call" onclick="pipNextCall()">Naechster Call</button>
+      <button class="pip-btn-details" onclick="pipShowDetails()">Details</button>
     </div>
   </div>
 
-  <div id="pip-active-hint" class="active-hint-slot pip" style="display:none"></div>
-
-  <!-- EWB row (always visible at bottom) -->
-  <div class="pip-ewb-row" id="pip-ewb-row"></div>
-
-  <!-- PiP fallback warning (hidden by default, shown if no Document PiP support) -->
-  <div id="pip-fallback-warning" style="display:none;padding:8px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:6px;font-size:12px;color:#f87171;text-align:center;margin:8px">
-    PiP nicht unterstuetzt. Chrome 116+ erforderlich.
-  </div>
 </div>
 
 <!-- ── Frage Modal ────────────────────────────────────────────────────────── -->
@@ -1128,6 +1274,9 @@
   try { window._profileEinwaende = JSON.parse({{ ((active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"') | safe }}); } catch(e) { window._profileEinwaende = {}; }
   try { window._profileData = JSON.parse({{ ((active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"') | safe }}); } catch(e) { window._profileData = {}; }
   window.sessionMode = null; // set by mode overlay via selectMode()
+  window._allProfiles = {{ profiles_for_pip | tojson | safe }};
+  window._activeProfileId = {{ active_profile.id if active_profile else 'null' }};
+  window._precallVerfuegbar = {{ 'true' if precall_verfuegbar else 'false' }};
 </script>
 <script src="/static/app.js"></script>
 <script>

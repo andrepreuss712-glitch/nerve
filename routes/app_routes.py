@@ -117,11 +117,14 @@ def live():
         # Phase 04.13: PreCall Intelligence availability flag
         from services.precall_service import ist_verfuegbar
         precall_verfuegbar = ist_verfuegbar()
+        # Phase 04.17: Profile list for PiP Launcher profile dropdown
+        profiles_for_pip = [{'id': p.id, 'name': p.name} for p in profiles]
         return render_template('app.html', user=g.user, org=g.org,
                                active_profile=active_profile, profiles=profiles,
                                active_phasen=active_phasen,
                                active_profile_daten=active_profile_daten,
-                               precall_verfuegbar=precall_verfuegbar)
+                               precall_verfuegbar=precall_verfuegbar,
+                               profiles_for_pip=profiles_for_pip)
     finally:
         db.close()
 
