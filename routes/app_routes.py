@@ -874,8 +874,8 @@ def api_precall_research():
     from services.precall_service import recherche_firma
     data = request.get_json(force=True)
     firmenname = (data.get('firmenname') or '').strip()
-    if not firmenname or len(firmenname) < 2 or len(firmenname) > 200:
-        return jsonify({'error': 'Firmenname ist Pflicht (2-200 Zeichen)'}), 400
+    if not firmenname or len(firmenname) < 3 or len(firmenname) > 200:
+        return jsonify({'error': 'Firmenname ist Pflicht (3-200 Zeichen)'}), 400
 
     ansprechpartner = (data.get('ansprechpartner') or '').strip() or None
     branche = (data.get('branche') or '').strip() or None
