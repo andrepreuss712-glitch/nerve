@@ -5,6 +5,7 @@ Laeuft in api_beenden() (Post-Call) und training/end (Post-Training).
 Kein Background-Worker, kein Scheduler (D-03).
 """
 import json
+import re
 from datetime import datetime, timedelta
 from collections import Counter
 
@@ -62,6 +63,11 @@ def log_learning_event(db_session, user_id, event_type, source_module,
 
 # ── Hilfsfunktionen ─────────────────────────────────────────────────────────────
 
+def _escape_like(value):
+    """Escape SQL LIKE wildcards (%, _) in user input."""
+    return re.sub(r'([%_])', r'\\\1', value)
+
+
 def _persist_training_recommendation(db_session, user_id, einwand_typ):
     """Setzt User.pending_training_recommendation als JSON mit passendem Szenario."""
     try:
@@ -71,12 +77,13 @@ def _persist_training_recommendation(db_session, user_id, einwand_typ):
             return
 
         # Passendes Szenario suchen (Name oder spezial_einwaende enthaelt den Typ)
+        safe_typ = _escape_like(einwand_typ)
         scenario = (db_session.query(TrainingScenario)
-                    .filter(TrainingScenario.name.ilike(f'%{einwand_typ}%'))
+                    .filter(TrainingScenario.name.ilike(f'%{safe_typ}%'))
                     .first())
         if not scenario:
             scenario = (db_session.query(TrainingScenario)
-                        .filter(TrainingScenario.spezial_einwaende.ilike(f'%{einwand_typ}%'))
+                        .filter(TrainingScenario.spezial_einwaende.ilike(f'%{safe_typ}%'))
                         .first())
 
         rec = {
