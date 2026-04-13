@@ -114,10 +114,14 @@ def live():
                 active_profile_daten = {}
         ls.set_active_profile(active_profile.name if active_profile else '', ad)
         ls.load_learning_cards(g.user.id)
+        # Phase 04.13: PreCall Intelligence availability flag
+        from services.precall_service import ist_verfuegbar
+        precall_verfuegbar = ist_verfuegbar()
         return render_template('app.html', user=g.user, org=g.org,
                                active_profile=active_profile, profiles=profiles,
                                active_phasen=active_phasen,
-                               active_profile_daten=active_profile_daten)
+                               active_profile_daten=active_profile_daten,
+                               precall_verfuegbar=precall_verfuegbar)
     finally:
         db.close()
 
@@ -249,6 +253,7 @@ def api_log():
 def api_beenden():
     req_data = request.get_json(silent=True) or {}
     session_mode = req_data.get('session_mode', 'meeting')
+    precall_briefing = req_data.get('precall_briefing', None)
     profile_name = ''
     apid = flask_session.get('active_profile_id')
     if apid:
@@ -406,6 +411,7 @@ def api_beenden():
             phasen_details=_json.dumps(ph_details, ensure_ascii=False),
             typ='live',
             session_mode=session_mode,
+            precall_briefing=precall_briefing,
         )
         db_conv.add(conv)
         db_conv.commit()
@@ -854,3 +860,22 @@ Max 15 Wörter pro Bullet. Kein Markdown."""
         return jsonify({'ok': True, 'bullets': bullets[:3]})
     except Exception as e:
         return jsonify({'ok': True, 'bullets': ['Keine Insights verfügbar.', '', '']})
+
+
+# ── PreCall Intelligence (Phase 04.13, per D-04: button-triggered) ────────────
+@app_routes_bp.route('/api/precall/research', methods=['POST'])
+@login_required
+def api_precall_research():
+    from services.precall_service import recherche_firma
+    data = request.get_json(force=True)
+    firmenname = (data.get('firmenname') or '').strip()
+    if not firmenname or len(firmenname) < 2 or len(firmenname) > 200:
+        return jsonify({'error': 'Firmenname ist Pflicht (2-200 Zeichen)'}), 400
+
+    ansprechpartner = (data.get('ansprechpartner') or '').strip() or None
+    branche = (data.get('branche') or '').strip() or None
+
+    briefing, error = recherche_firma(firmenname, ansprechpartner, branche)
+    if error:
+        return jsonify({'error': error}), 502
+    return jsonify({'briefing': briefing})
