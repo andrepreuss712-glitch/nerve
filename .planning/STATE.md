@@ -18,19 +18,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-12)
+See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.12 — gesamt-integration-inserted
+**Current focus:** Phase 04.13 — precall-intelligence
 
 ## Current Position
 
 Phase: 04.13
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Ready to plan
 Last activity: 2026-04-13
 
-**Next:** Discuss/plan Phase 04.11
+**Next:** Discuss/plan Phase 04.13
 
 Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓)
 
