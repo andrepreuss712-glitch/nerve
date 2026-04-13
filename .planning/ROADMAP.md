@@ -37,7 +37,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
  (completed 2026-04-12)
 - [x] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED) (completed 2026-04-13)
-- [x] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED) (completed 2026-04-13)
+- [x] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
+ (completed 2026-04-13)
 - [x] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED) (completed 2026-04-13)
 - [ ] **Phase 04.15: Rollen, Support & Kompensation** - Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff, Kompensation bei Ausfällen (INSERTED)
 - [ ] **Phase 04.16: Finaler Polish + UAT** - Finaler UAT-Durchlauf, Design-Pass, CSS Refactoring, Code Audit, Performance-Check (INSERTED)
@@ -480,10 +481,12 @@ Plans:
 **Goal:** Always-on-Top verschiebbarer Live-Assistent via Document Picture-in-Picture API. User kann aus CRM/Outlook/Teams heraus direkt einen NERVE-Call starten — Modus waehlen, Kundendaten eingeben, Skript auswaehlen, Live-Coaching im PiP-Fenster.
 **Depends on:** Phase 04.8 (Consent-System), Phase 04.12 (Gesamt-Integration). Optional: Phase 04.13 (PreCall Auto-Recherche Button)
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE PiP Launcher.md`
-**Plans:** 1 plan
+**Plans:** 3 plans
 
 Plans:
-- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
+- [ ] 04.17-01-PLAN.md -- PiP HTML panels, CSS, profile embedding, state machine skeleton
+- [ ] 04.17-02-PLAN.md -- Setup flow JS, kundendaten history, precall, session start/end, postcall score/tags
+- [ ] 04.17-03-PLAN.md -- Human verification of PiP Launcher end-to-end flow
 
 ### Phase 5: Launch
 **Goal**: 50 Early Access slots are live and waitlist members can become paying customers
