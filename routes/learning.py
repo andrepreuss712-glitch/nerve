@@ -93,6 +93,15 @@ def api_save_card(card_id):
             card.final_text = data['final_text']
         card.status = 'aktiv'
         db.commit()
+        # D-01: Log learning_card_accepted event
+        try:
+            from services.integration_engine import log_learning_event
+            log_learning_event(db, g.user.id, 'learning_card_accepted', 'coach', card.call_id, {
+                'card_id': card.id, 'category': card.category,
+            })
+            db.commit()
+        except Exception as _le:
+            print(f"[Engine] LearningCard Event Fehler: {_le}")
         return jsonify({'ok': True})
     finally:
         db.close()
@@ -143,6 +152,16 @@ def api_update_status(card_id):
             from datetime import datetime, timezone
             card.learned_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
+        # D-01: Log learning_card_rejected when archiving
+        if new_status == 'archiviert':
+            try:
+                from services.integration_engine import log_learning_event
+                log_learning_event(db, g.user.id, 'learning_card_rejected', 'coach', card.call_id, {
+                    'card_id': card.id, 'category': card.category,
+                })
+                db.commit()
+            except Exception as _le:
+                print(f"[Engine] LearningCard Event Fehler: {_le}")
         return jsonify({'ok': True})
     finally:
         db.close()
@@ -168,6 +187,15 @@ def api_mark_applied(card_id):
             if data.get('new_text'):
                 card.final_text = data['new_text']
         db.commit()
+        # D-01: Log learning_card_applied event
+        try:
+            from services.integration_engine import log_learning_event
+            log_learning_event(db, g.user.id, 'learning_card_applied', 'coach', card.call_id, {
+                'card_id': card.id, 'category': card.category,
+            })
+            db.commit()
+        except Exception as _le:
+            print(f"[Engine] LearningCard Event Fehler: {_le}")
         return jsonify({'ok': True, 'applied_count': card.applied_count})
     finally:
         db.close()
@@ -194,6 +222,62 @@ def api_user_text(card_id):
             card.final_text = user_text
             card.source = 'user'
             db.commit()
+            # D-01: Log learning_card_custom event
+            try:
+                from services.integration_engine import log_learning_event
+                log_learning_event(db, g.user.id, 'learning_card_custom', 'coach', card.call_id, {
+                    'card_id': card.id, 'category': card.category,
+                })
+                db.commit()
+            except Exception as _le:
+                print(f"[Engine] LearningCard Event Fehler: {_le}")
         return jsonify({'ok': True, 'validation': validation})
+    finally:
+        db.close()
+
+
+@learning_bp.route('/api/training/postcall-analysis', methods=['POST'])
+@login_required
+def api_training_postcall_analysis():
+    """D-09: Lernkarten-Vorschlaege nach Training generieren.
+    Gleicher Mechanismus wie Post-Call Analyse, aber mit Training-ConversationLog."""
+    req_data = request.get_json(silent=True) or {}
+    conv_id = req_data.get('conv_id')
+    if not conv_id:
+        return jsonify({'ok': False, 'error': 'conv_id fehlt'}), 400
+
+    from database.db import get_session
+    db = get_session()
+    try:
+        from database.models import ConversationLog
+        conv = db.query(ConversationLog).filter_by(id=conv_id, user_id=g.user.id).first()
+        if not conv or conv.typ != 'training':
+            return jsonify({'ok': False, 'error': 'Training-Session nicht gefunden'}), 404
+
+        # Wendepunkt-Saetze aus phasen_details (scoring) extrahieren
+        import json
+        scoring = json.loads(conv.phasen_details or '{}')
+        wendepunkt_saetze = scoring.get('wendepunkt_saetze', [])
+        einwaende = [{'typ': ws.get('einwand_typ', '?'), 'zitat': ws.get('text', '')} for ws in wendepunkt_saetze]
+        ga_details = json.loads(conv.gegenargument_details or '[]')
+
+        from services.coaching_service import generate_postcall_analysis
+        suggestions = generate_postcall_analysis(
+            conv_id=conv.id,
+            user_id=g.user.id,
+            einwaende=einwaende,
+            painpoints=[],
+            kb_start=0,
+            kb_end=conv.kb_end or scoring.get('gesamt_score', 0),
+            redeanteil_berater=60,
+            redeanteil_kunde=40,
+            dauer_sek=conv.dauer_sekunden or 0,
+            skript_abdeckung=scoring.get('gesamt_score', 0),
+            ga_details=ga_details,
+        )
+        return jsonify({'ok': True, 'suggestions': suggestions})
+    except Exception as e:
+        print(f"[Learning] Training PostCall Analysis Fehler: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
     finally:
         db.close()
