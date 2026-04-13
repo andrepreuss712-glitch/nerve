@@ -92,16 +92,15 @@ def api_save_card(card_id):
         if data.get('final_text'):
             card.final_text = data['final_text']
         card.status = 'aktiv'
-        db.commit()
-        # D-01: Log learning_card_accepted event
+        # D-01: Log learning_card_accepted event before commit
         try:
             from services.integration_engine import log_learning_event
             log_learning_event(db, g.user.id, 'learning_card_accepted', 'coach', card.call_id, {
                 'card_id': card.id, 'category': card.category,
             })
-            db.commit()
         except Exception as _le:
             print(f"[Engine] LearningCard Event Fehler: {_le}")
+        db.commit()
         return jsonify({'ok': True})
     finally:
         db.close()
@@ -151,17 +150,16 @@ def api_update_status(card_id):
         if new_status == 'gelernt':
             from datetime import datetime, timezone
             card.learned_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        db.commit()
-        # D-01: Log learning_card_rejected when archiving
+        # D-01: Log learning_card_rejected when archiving (before commit)
         if new_status == 'archiviert':
             try:
                 from services.integration_engine import log_learning_event
                 log_learning_event(db, g.user.id, 'learning_card_rejected', 'coach', card.call_id, {
                     'card_id': card.id, 'category': card.category,
                 })
-                db.commit()
             except Exception as _le:
                 print(f"[Engine] LearningCard Event Fehler: {_le}")
+        db.commit()
         return jsonify({'ok': True})
     finally:
         db.close()
@@ -186,16 +184,15 @@ def api_mark_applied(card_id):
             card.applied_count += 1
             if data.get('new_text'):
                 card.final_text = data['new_text']
-        db.commit()
-        # D-01: Log learning_card_applied event
+        # D-01: Log learning_card_applied event (before commit)
         try:
             from services.integration_engine import log_learning_event
             log_learning_event(db, g.user.id, 'learning_card_applied', 'coach', card.call_id, {
                 'card_id': card.id, 'category': card.category,
             })
-            db.commit()
         except Exception as _le:
             print(f"[Engine] LearningCard Event Fehler: {_le}")
+        db.commit()
         return jsonify({'ok': True, 'applied_count': card.applied_count})
     finally:
         db.close()
@@ -221,16 +218,15 @@ def api_user_text(card_id):
         if validation.get('covers_goal', True):
             card.final_text = user_text
             card.source = 'user'
-            db.commit()
-            # D-01: Log learning_card_custom event
+            # D-01: Log learning_card_custom event (before commit)
             try:
                 from services.integration_engine import log_learning_event
                 log_learning_event(db, g.user.id, 'learning_card_custom', 'coach', card.call_id, {
                     'card_id': card.id, 'category': card.category,
                 })
-                db.commit()
             except Exception as _le:
                 print(f"[Engine] LearningCard Event Fehler: {_le}")
+            db.commit()
         return jsonify({'ok': True, 'validation': validation})
     finally:
         db.close()
