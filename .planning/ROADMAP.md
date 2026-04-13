@@ -481,11 +481,11 @@ Plans:
 **Goal:** Always-on-Top verschiebbarer Live-Assistent via Document Picture-in-Picture API. User kann aus CRM/Outlook/Teams heraus direkt einen NERVE-Call starten — Modus waehlen, Kundendaten eingeben, Skript auswaehlen, Live-Coaching im PiP-Fenster.
 **Depends on:** Phase 04.8 (Consent-System), Phase 04.12 (Gesamt-Integration). Optional: Phase 04.13 (PreCall Auto-Recherche Button)
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE PiP Launcher.md`
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
-- [ ] 04.17-01-PLAN.md -- PiP HTML panels, CSS, profile embedding, state machine skeleton
-- [ ] 04.17-02-PLAN.md -- Setup flow JS, kundendaten history, precall, session start/end, postcall score/tags
+- [x] 04.17-01-PLAN.md -- PiP HTML panels, CSS, profile embedding, state machine skeleton
+- [x] 04.17-02-PLAN.md -- Setup flow JS, kundendaten history, precall, session start/end, postcall score/tags
 - [ ] 04.17-03-PLAN.md -- Human verification of PiP Launcher end-to-end flow
 
 ### Phase 5: Launch
