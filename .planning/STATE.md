@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04.14-02-PLAN.md — awaiting human verification Task 3
-last_updated: "2026-04-13T11:35:04.846Z"
+status: executing
+stopped_at: Completed 04.17-pip-launcher-inserted plan 01
+last_updated: "2026-04-13T13:37:29.385Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 30
   completed_phases: 20
-  total_plans: 112
-  completed_plans: 103
-  percent: 92
+  total_plans: 115
+  completed_plans: 104
+  percent: 90
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.14 — crm-customer-success-inserted
+**Current focus:** Phase 04.17 — pip-launcher-inserted
 
 ## Current Position
 
-Phase: 04.14 (crm-customer-success-inserted) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 04.17 (pip-launcher-inserted) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-13
 
 **Next:** Discuss/plan Phase 04.13
@@ -129,6 +129,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.13 P02 | 3 | 3 tasks | 3 files |
 | Phase 04.14-crm-customer-success-inserted P01 | 80 | 2 tasks | 2 files |
 | Phase 04.14 P02 | 5 | 2 tasks | 3 files |
+| Phase 04.17-pip-launcher-inserted P01 | 18 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -290,6 +291,8 @@ Recent decisions affecting current work:
 - [Phase 04.14]: Status badge thresholds: 7d Ruhig, 14d Churn, avg_calls+kb>60 Top
 - [Phase 04.14]: endpoint='crm_view' (not 'crm') to avoid Flask-Admin namespace collision
 - [Phase 04.14]: inaccessible_callback returns 403 for logged-in non-superadmin, redirect to login for anonymous
+- [Phase 04.17-pip-launcher-inserted]: PiP window restructured into 3 sections (setup/live/postcall); existing live-coaching tabs wrapped in pip-section-live unchanged per D-12/D-13
+- [Phase 04.17-pip-launcher-inserted]: Profile list embedded as window._allProfiles via Flask template variable at page load — no new AJAX endpoint needed
 
 ### Roadmap Evolution
 
@@ -340,6 +343,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-13T11:35:04.843Z
-Stopped at: Completed 04.14-02-PLAN.md — awaiting human verification Task 3
+Last session: 2026-04-13T13:37:29.381Z
+Stopped at: Completed 04.17-pip-launcher-inserted plan 01
 Resume file: None

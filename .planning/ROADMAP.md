@@ -172,7 +172,7 @@ Plans:
 **Goal:** Deploy-Pipeline härten (rsync mit DB-Schutz) und verbleibende OAuth-Rough-Edges aus 04.6.1 glätten (Landing-Link, MS-Branding, Consumer-Account-Block, Silent-SSO, Onboarding-Render-Bug)
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06
 **Depends on:** Phase 04.6.1
-**Plans:** 2/4 plans executed
+**Plans:** 1/3 plans executed
 
 Plans:
 - [x] 04.6.2-01-PLAN.md — Deploy-Hardening: deploy.sh auf tar-over-ssh (Windows-kompat) mit Excludes und Prod-DB-Schutz (D-01)
