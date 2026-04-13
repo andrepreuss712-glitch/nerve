@@ -1232,6 +1232,26 @@ app.register_blueprint(oauth_bp)
 app.register_blueprint(learning_bp)
 init_oauth(app)
 
+# ── Global before_request: populate g.user for all routes (incl. Flask-Admin) ─
+@app.before_request
+def _load_user():
+    from flask import session as _sess, g as _g2
+    uid = _sess.get('user_id')
+    if uid is None:
+        return
+    if getattr(_g2, 'user', None) is not None:
+        return  # already set by login_required
+    from database.db import get_session as _get_sess
+    from database.models import User as _User, Organisation as _Org
+    db = _get_sess()
+    try:
+        user = db.get(_User, uid)
+        if user and user.aktiv:
+            _g2.user = user
+            _g2.org  = db.get(_Org, user.org_id)
+    finally:
+        db.close()
+
 # ── Global JSON Error Handler ─────────────────────────────────────────────────
 # Returns full traceback as JSON for API endpoints instead of HTML 500 page
 import traceback as _tb
