@@ -601,6 +601,17 @@ class LearningEvent(Base):
     created_at    = Column(DateTime, default=utcnow)
 
 
+# ── Phase 04.14: CRM Customer Success ────────────────────────────────────────
+
+class CrmNote(Base):
+    __tablename__ = 'crm_notes'
+    id         = Column(Integer, primary_key=True)
+    user_id    = Column(Integer, ForeignKey('users.id'), nullable=False, unique=True)
+    notiz      = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+    created_at = Column(DateTime, default=utcnow)
+
+
 def init_db(engine_instance):
     """Create all tables."""
     Base.metadata.create_all(engine_instance)
