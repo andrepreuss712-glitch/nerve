@@ -23,6 +23,9 @@ GOOGLE_CLIENT_SECRET    = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 MICROSOFT_CLIENT_ID     = os.environ.get('MICROSOFT_CLIENT_ID', '')
 MICROSOFT_CLIENT_SECRET = os.environ.get('MICROSOFT_CLIENT_SECRET', '')
 
+# PreCall Intelligence (Phase 04.13)
+BRAVE_SEARCH_API_KEY = os.environ.get('BRAVE_SEARCH_API_KEY', '')
+
 DATABASE_URL      = os.environ.get('DATABASE_URL', 'sqlite:///database/nerve.db')
 MAX_SESSION_HOURS = int(os.environ.get('MAX_SESSION_HOURS', 8))
 
