@@ -438,10 +438,10 @@ Plans:
 **Goal:** Automatische Firmen-Recherche vor dem Call — Vertriebler gibt Firmenname + Ansprechpartner ein, NERVE erstellt kompaktes Call-Briefing in ~30 Sekunden, Briefing erscheint als einklappbarer Block im Live-View via Brave Search + Claude Haiku.
 **Depends on:** Phase 04.8
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Phase 5.1 PreCall Intelligence.md`
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 04.13-01-PLAN.md -- Backend: precall_service.py (Brave Search + Haiku briefing), config, DB migration
+- [x] 04.13-01-PLAN.md -- Backend: precall_service.py (Brave Search + Haiku briefing), config, DB migration
 - [ ] 04.13-02-PLAN.md -- Frontend: API route, PreCall UI panel, briefing display, session persistence
 
 ### Phase 04.14: CRM & Customer Success (INSERTED)
