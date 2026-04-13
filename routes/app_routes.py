@@ -882,5 +882,8 @@ def api_precall_research():
 
     briefing, error = recherche_firma(firmenname, ansprechpartner, branche)
     if error:
+        # Distinguish client-caused validation errors from upstream failures
+        if 'Pflicht' in error or 'Zeichen' in error or 'konfiguriert' in error:
+            return jsonify({'error': error}), 400
         return jsonify({'error': error}), 502
     return jsonify({'briefing': briefing})
