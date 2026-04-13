@@ -221,10 +221,18 @@ def get_or_generate_weekly_report(user_id):
             ConversationLog.started_at <= week_end_dt,
         ).all()
 
-        if not calls:
-            return None  # No calls this week — frontend shows "Keine Calls diese Woche"
+        # D-08: Training-Sessions dieser Woche einbeziehen
+        training_sessions = db.query(ConversationLog).filter(
+            ConversationLog.user_id == user_id,
+            ConversationLog.typ == 'training',
+            ConversationLog.started_at >= week_start_dt,
+            ConversationLog.started_at <= week_end_dt,
+        ).all()
 
-        # Aggregate data for report (D-13)
+        if not calls and not training_sessions:
+            return None  # No calls or trainings this week
+
+        # Aggregate data for report (D-13) — safe for 0 calls
         calls_count = len(calls)
         avg_kb = sum(c.kb_end or 30 for c in calls) / calls_count if calls_count else 0
         avg_talk = sum(c.redeanteil_avg or 50 for c in calls) / calls_count if calls_count else 50
@@ -246,6 +254,49 @@ def get_or_generate_weekly_report(user_id):
         strongest = max(phase_scores, key=lambda k: sum(phase_scores[k])) if phase_scores else None
         weakest = min(phase_scores, key=lambda k: sum(phase_scores[k])) if phase_scores else None
 
+        # D-08: Training-Aggregation fuer Cross-Modul Insight
+        training_count = len(training_sessions)
+        training_avg_score = (
+            sum(t.kb_end or 0 for t in training_sessions) / training_count
+            if training_count else 0
+        )
+        # Einwand-Typen aus Training extrahieren
+        training_einwand_types = set()
+        for t in training_sessions:
+            if t.gegenargument_details:
+                try:
+                    for ga in json.loads(t.gegenargument_details):
+                        et = ga.get('einwand_typ', '')
+                        if et:
+                            training_einwand_types.add(et)
+                except Exception:
+                    pass
+        # Live-Call Einwand-Typen extrahieren
+        call_einwand_types = set()
+        for c in calls:
+            if c.gegenargument_details:
+                try:
+                    for ga in json.loads(c.gegenargument_details):
+                        et = ga.get('einwand_typ', '')
+                        if et:
+                            call_einwand_types.add(et)
+                except Exception:
+                    pass
+        # Cross-Modul Insight: Einwaende die in beiden vorkommen
+        cross_einwaende = training_einwand_types & call_einwand_types
+
+        # Training-Kontext zum Prompt hinzufuegen
+        training_context = ""
+        if training_count > 0:
+            training_context = f"""
+Trainingsdaten:
+- {training_count} Trainings-Sessions absolviert
+- Durchschnittlicher Training-Score: {training_avg_score:.0f}%
+- Trainierte Einwand-Typen: {', '.join(training_einwand_types) if training_einwand_types else 'keine'}
+"""
+            if cross_einwaende:
+                training_context += f"- Cross-Modul: Einwaende die sowohl im Training als auch im echten Call vorkamen: {', '.join(cross_einwaende)}\n"
+
         # Generate report text via Sonnet (D-14)
         report_prompt = f"""Du bist ein Sales-Coach. Erstelle einen kurzen woechentlichen Coach-Report auf Deutsch.
 
@@ -255,7 +306,7 @@ Wochendaten:
 - Redeanteil Berater: {avg_talk:.0f}% / Kunde: {avg_talk_kunde:.0f}%
 - Staerkste Phase: {strongest or 'unbekannt'}
 - Schwaechste Phase: {weakest or 'unbekannt'}
-
+{training_context}
 Schreibe:
 1. Eine kurze Zusammenfassung (2-3 Saetze)
 2. Ein erkanntes Muster (1-2 Saetze, narrativ, nicht als Liste)
