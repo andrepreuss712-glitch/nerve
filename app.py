@@ -430,6 +430,38 @@ def _migrate():
             except Exception:
                 pass
         print("[DB] Migration: seeded system personality types")
+        # ── Phase 04.12: learning_events ─────────────────────────────────────────────
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS learning_events (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id      INTEGER NOT NULL REFERENCES users(id),
+                    event_type   VARCHAR(50) NOT NULL,
+                    source_module VARCHAR(20) NOT NULL,
+                    source_id    INTEGER,
+                    metadata     TEXT,
+                    created_at   DATETIME DEFAULT (datetime('now'))
+                )
+            """))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS ix_learning_events_user_type
+                ON learning_events(user_id, event_type, created_at)
+            """))
+            conn.commit()
+            print("[DB] Migration: created learning_events + index")
+        except Exception:
+            pass
+        for col in ['pending_training_recommendation']:
+            try:
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} TEXT"))
+                conn.commit()
+                print(f"[DB] Migration: added users.{col}")
+            except Exception:
+                pass
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')

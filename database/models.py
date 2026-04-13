@@ -105,6 +105,8 @@ class User(Base):
     preferred_theme       = Column(String(10), default='dark')
     # Block 11: Training Analytics
     weekly_goal           = Column(Integer, default=5)
+    # Block 7: Integration Engine
+    pending_training_recommendation = Column(Text, nullable=True)  # JSON: {"einwand_typ": "...", "scenario_name": "...", "created_at": "..."}
     # Block 12: Sales Performance Calculator
     avg_deal_wert         = Column(Integer, nullable=True)   # Euro, NULL = nicht gesetzt
     # Block 13: OAuth (Google + Microsoft) — Phase 04.6.1
@@ -582,6 +584,19 @@ class CoachingReport(Base):
     report_text         = Column(Text, nullable=True)
     suggested_card_json = Column(Text, nullable=True)
     created_at          = Column(DateTime, default=utcnow)
+
+
+# ── Phase 04.12: Gesamt-Integration — Learning Events ────────────────────────
+
+class LearningEvent(Base):
+    __tablename__ = 'learning_events'
+    id            = Column(Integer, primary_key=True)
+    user_id       = Column(Integer, ForeignKey('users.id'), nullable=False)
+    event_type    = Column(String(50), nullable=False)
+    source_module = Column(String(20), nullable=False)
+    source_id     = Column(Integer, nullable=True)
+    event_metadata = Column('metadata', Text, nullable=True)
+    created_at    = Column(DateTime, default=utcnow)
 
 
 def init_db(engine_instance):
