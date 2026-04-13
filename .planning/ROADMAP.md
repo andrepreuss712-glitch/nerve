@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
  (completed 2026-04-10)
 - [x] **Phase 04.10.1: Emotionale TTS-Stimmen** - Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch (INSERTED) (completed 2026-04-12)
 - [x] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED) (completed 2026-04-12)
-- [ ] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED)
+- [x] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED) (completed 2026-04-13)
 - [ ] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
 - [ ] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED)
 - [ ] **Phase 04.15: Rollen, Support & Kompensation** - Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff, Kompensation bei Ausfällen (INSERTED)
@@ -424,13 +424,13 @@ Plans:
 **Goal:** Alle Module zu einem geschlossenen Lernökosystem verbinden — learning_events Tabelle, 5 Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen↔EWB), Selbstverbesserungs-Kreislauf, Netzwerkeffekt durch aggregierte anonymisierte Daten.
 **Depends on:** Phase 04.11
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Gesamt-Architektur.md`
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 04.12-01-PLAN.md -- LearningEvent Model, Migration, log_learning_event() Helper, Engine-Skeleton
 - [x] 04.12-02-PLAN.md -- Engine-Logik: Event-Logging, Muster-Erkennung, Hooks in api_beenden() und training_end()
 - [x] 04.12-03-PLAN.md -- Training-Lernkarten API, LearningCard Event-Logging, Wochenbericht mit Training-Daten
-- [ ] 04.12-04-PLAN.md -- PostCall-Overlay Trainings-Empfehlung, Dashboard Card, Ein-Klick-Start
+- [x] 04.12-04-PLAN.md -- PostCall-Overlay Trainings-Empfehlung, Dashboard Card, Ein-Klick-Start
 
 ### Phase 04.13: PreCall Intelligence (INSERTED)
 

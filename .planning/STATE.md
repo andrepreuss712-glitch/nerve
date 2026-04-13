@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04.12-03-PLAN.md
-last_updated: "2026-04-13T09:22:57.823Z"
+status: verifying
+stopped_at: Completed 04.12-04-PLAN.md
+last_updated: "2026-04-13T09:28:50.786Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 30
-  completed_phases: 17
+  completed_phases: 18
   total_plans: 108
-  completed_plans: 98
-  percent: 91
+  completed_plans: 99
+  percent: 92
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-12)
 
 Phase: 04.12 (gesamt-integration-inserted) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-13
 
 **Next:** Discuss/plan Phase 04.11
@@ -122,6 +122,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.12 P01 | 4min | 2 tasks | 3 files |
 | Phase 04.12 P02 | 4min | 2 tasks | 3 files |
 | Phase 04.12 P03 | 3min | 2 tasks | 2 files |
+| Phase 04.12 P04 | 4min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -275,6 +276,8 @@ Recent decisions affecting current work:
 - [Phase 04.12]: D-12 clearing only on success (gesamt_score >= 50) — failed training should not clear recommendation
 - [Phase 04.12]: learning_card_rejected logged on archiviert status change (no dedicated reject route)
 - [Phase 04.12]: Weekly report generates with training-only weeks (no live calls required)
+- [Phase 04.12]: JS functions in app.js for PostCall training recommendation display
+- [Phase 04.12]: Dashboard training-rec card placed before greeting row for maximum visibility
 
 ### Roadmap Evolution
 
@@ -325,6 +328,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-13T09:22:57.820Z
-Stopped at: Completed 04.12-03-PLAN.md
+Last session: 2026-04-13T09:28:50.782Z
+Stopped at: Completed 04.12-04-PLAN.md
 Resume file: None
