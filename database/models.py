@@ -256,6 +256,8 @@ class ConversationLog(Base):
     # Phase 04.9: Personality-driven training
     personality_type_id      = Column(Integer, ForeignKey('personality_types.id'), nullable=True)
     stimmung_history         = Column(Text, nullable=True)  # JSON list
+    # Phase 04.13: PreCall Intelligence
+    precall_briefing         = Column(Text, nullable=True)     # generated call briefing (per D-03: only briefing text, no raw search data)
 
 
 class Phrase(Base):

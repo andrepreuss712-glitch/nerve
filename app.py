@@ -310,6 +310,16 @@ def _migrate():
                 print(f"[DB] Migration: added conversation_logs.{col}")
             except Exception:
                 pass
+        # ── Phase 04.13: PreCall Intelligence ────────────────────────────────
+        for col, typedef in [
+            ('precall_briefing', 'TEXT'),
+        ]:
+            try:
+                conn.execute(text(f'ALTER TABLE conversation_logs ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added conversation_logs.{col}")
+            except Exception:
+                pass
         # ── Phase 04.9: Seed 6 system personality types ───────────────────────
         import json as _json
         _personality_seed = [
