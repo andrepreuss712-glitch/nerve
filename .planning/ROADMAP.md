@@ -34,7 +34,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED)
  (completed 2026-04-10)
 - [x] **Phase 04.10.1: Emotionale TTS-Stimmen** - Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch (INSERTED) (completed 2026-04-12)
-- [x] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED) (completed 2026-04-12)
+- [x] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
+ (completed 2026-04-12)
 - [x] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED) (completed 2026-04-13)
 - [ ] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
 - [ ] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED)
@@ -434,13 +435,14 @@ Plans:
 
 ### Phase 04.13: PreCall Intelligence (INSERTED)
 
-**Goal:** Automatische Firmen-Recherche vor dem Call — Vertriebler gibt Firmenname + Ansprechpartner ein, NERVE erstellt kompaktes Call-Briefing in ~30 Sekunden, Briefing erscheint im PIP. Datenquellen-Ansatz wird beim Start der Phase gemeinsam festgelegt.
+**Goal:** Automatische Firmen-Recherche vor dem Call — Vertriebler gibt Firmenname + Ansprechpartner ein, NERVE erstellt kompaktes Call-Briefing in ~30 Sekunden, Briefing erscheint als einklappbarer Block im Live-View via Brave Search + Claude Haiku.
 **Depends on:** Phase 04.8
 **Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Phase 5.1 PreCall Intelligence.md`
-**Plans:** 1 plan
+**Plans:** 2 plans
 
 Plans:
-- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
+- [ ] 04.13-01-PLAN.md -- Backend: precall_service.py (Brave Search + Haiku briefing), config, DB migration
+- [ ] 04.13-02-PLAN.md -- Frontend: API route, PreCall UI panel, briefing display, session persistence
 
 ### Phase 04.14: CRM & Customer Success (INSERTED)
 
