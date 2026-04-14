@@ -63,11 +63,7 @@ async function startMicStream() {
     source.connect(workletNode);
     workletNode.connect(audioCtx.destination);
     micStarted = true;
-    socket.emit('start_live_session', {
-      mode: sessionMode || 'meeting',
-      precall_briefing: window._precallBriefing || null,
-      skript_inhalt: window._pipActiveSkript || null
-    });
+    socket.emit('start_live_session', { mode: sessionMode || 'meeting' });
     console.log('[Mic] Browser-Mikrofon gestartet, AudioContext state:', audioCtx.state);
   } catch (err) {
     console.error('[Mic] getUserMedia Fehler:', err);
@@ -558,11 +554,7 @@ socket.on('coaching',d=>{
   if(added){
     coachingScroll.scrollTop=coachingScroll.scrollHeight;
     updateKompaktCoaching(d);
-    if (window._pipWindow && !window._pipWindow.closed) {
-      // PiP handles its own streaming via pip_token events, skip main-tab update
-    } else {
-      updatePipFromCoaching(d);
-    }
+    updatePipFromCoaching(d);
   }
 });
 
@@ -774,9 +766,7 @@ function zeigeKarte(d, lineId){
   }
   ai.appendChild(card);ai.scrollTop=ai.scrollHeight;
   updateKompaktEinwand(d);
-  if (!(window._pipWindow && !window._pipWindow.closed)) {
-    updatePipFromErgebnis(d);
-  }
+  updatePipFromErgebnis(d);
 }
 
 // Latenz-Optimierung: self-scheduling setTimeout chain instead of setInterval.
@@ -1436,17 +1426,11 @@ function setPipState(newState) {
   var sections = {
     'setup':    getPipElement('pip-section-setup'),
     'live':     getPipElement('pip-section-live'),
-    'consent':  getPipElement('pip-section-consent'),
     'postcall': getPipElement('pip-section-postcall'),
   };
   Object.keys(sections).forEach(function(k) {
     if (sections[k]) sections[k].style.display = (k === newState) ? 'flex' : 'none';
   });
-  // Show/hide opacity slider label+input only in live state (D-15)
-  var opacityLabel = getPipElement('pip-opacity-label');
-  var opacitySlider = getPipElement('pip-opacity-slider');
-  if (opacityLabel) opacityLabel.style.display = (newState === 'live') ? '' : 'none';
-  if (opacitySlider) opacitySlider.style.display = (newState === 'live') ? '' : 'none';
 }
 
 function showPipSetupStep(step) {
@@ -1491,13 +1475,6 @@ function pipPopulateProfiles() {
     opt.textContent = p.name;
     if (p.id === activeId) opt.selected = true;
     sel.appendChild(opt);
-  });
-  // Load scripts for initial selection (D-12)
-  if (sel.value) pipPopulateSkripte(parseInt(sel.value));
-  // Re-load scripts when profile changes
-  sel.addEventListener('change', function() {
-    if (sel.value) pipPopulateSkripte(parseInt(sel.value));
-    window._pipActiveSkript = null;
   });
 }
 
@@ -1661,27 +1638,9 @@ function pipStartCall() {
   sessionMode = _pipSelectedMode || 'cold_call';
   window.sessionMode = sessionMode;
 
-  // Switch PiP to live state -- consent check for meeting mode (D-05, D-06, D-07)
-  if (window.sessionMode === 'meeting') {
-    // Load consent text from profile (D-06)
-    var consentTextEl = getPipElement('pip-consent-text');
-    if (consentTextEl && window._profileData) {
-      var customConsent = window._profileData.consent_text;
-      if (customConsent) {
-        // Replace [Name] with kundendaten name
-        var kundenName = (window._pipKundendaten && window._pipKundendaten.name) || '[Name]';
-        consentTextEl.textContent = customConsent.replace('[Name]', kundenName);
-      } else {
-        var kundenName2 = (window._pipKundendaten && window._pipKundendaten.name) || '[Name]';
-        consentTextEl.textContent = 'Herr/Frau ' + kundenName2 + ', kurzer Hinweis -- ich mache mir waehrend unseres Gespraechs digitale Notizen. Ist das fuer Sie in Ordnung?';
-      }
-    }
-    setPipState('consent');
-  } else {
-    // Cold call -- no consent, direct to live (D-07)
-    setPipState('live');
-    initPipLiveContent();
-  }
+  // Switch PiP to live state
+  setPipState('live');
+  initPipContent();
 
   // Start session timer (existing function)
   if (typeof startSessionTimer === 'function') startSessionTimer();
@@ -1968,8 +1927,7 @@ async function openPipWindow() {
     'pipSelectMode','pipConsentAccept','pipConsentReject','pipSubmitKundendaten',
     'pipStartPrecall','pipStartCall','pipBeendenCall','pipNextCall','pipShowDetails',
     'showPipSetupStep','pipStartSetup','pipPopulateProfiles','pipPopulateKundendatenHistory',
-    'pipConsentGranted','pipConsentDenied','initPipLiveContent','setPipBgOpacity',
-    'closePipToVollbild','togglePipEwbExpand','triggerEwb',
+    'handlePipTabClick','closePipToVollbild','togglePipEwbExpand','triggerEwb',
     'setPipState','showPipPostcall','calcPipScore','buildHighlightTags'
   ];
   pipFns.forEach(function(fn) {
@@ -1989,189 +1947,51 @@ function closePipToVollbild() {
   }
 }
 
-// ── PiP Window Reference ───────────────────────────────────────────────────────
+// ── PiP Tab State Machine ──────────────────────────────────────────────────────
 window._pipWindow = null;
+window._pipTabLocked = null;
+var _lastKiResultTime = 0;
 
-// ── Phase 06: Dual-Slot Streaming State Machine (D-03, D-08) ─────────────────
-var _pipSlots = {
-  0: { streaming: false, text: '', result: null, context_key: null },
-  1: { streaming: false, text: '', result: null, context_key: null }
-};
-
-socket.on('pip_stream_start', function(data) {
-  var slot = data.slot;
-  var el = getPipElement('pip-slot-body-' + slot);
-  var container = getPipElement('pip-slot-' + slot);
-  if (!el) return;
-  // If replace_all signal (topic switch per D-03), clear both slots
-  if (data.replace_all) {
-    [0, 1].forEach(function(s) {
-      var sEl = getPipElement('pip-slot-body-' + s);
-      var sContainer = getPipElement('pip-slot-' + s);
-      var sResult = getPipElement('pip-slot-result-' + s);
-      if (sEl) { sEl.textContent = ''; sEl.classList.remove('pip-streaming'); }
-      if (sContainer) sContainer.classList.remove('pip-slot-streaming');
-      if (sResult) sResult.style.display = 'none';
-      _pipSlots[s] = { streaming: false, text: '', result: null, context_key: null };
-    });
-  }
-  el.textContent = '';
-  el.classList.add('pip-streaming');
-  if (container) container.classList.add('pip-slot-streaming');
-  // Hide result, show body
-  var resultEl = getPipElement('pip-slot-result-' + slot);
-  if (resultEl) resultEl.style.display = 'none';
-  el.style.display = '';
-  _pipSlots[slot].streaming = true;
-  _pipSlots[slot].text = '';
-  _pipSlots[slot].result = null;
-});
-
-socket.on('pip_token', function(data) {
-  var slot = data.slot;
-  if (!_pipSlots[slot].streaming) return;  // discard tokens for cancelled slots
-  var el = getPipElement('pip-slot-body-' + slot);
-  if (!el) return;
-  _pipSlots[slot].text += data.token;
-  el.textContent = _pipSlots[slot].text;
-});
-
-socket.on('pip_token_done', function(data) {
-  var slot = data.slot;
-  _pipSlots[slot].streaming = false;
-  _pipSlots[slot].result = data.result;
-  var bodyEl = getPipElement('pip-slot-body-' + slot);
-  if (bodyEl) bodyEl.classList.remove('pip-streaming');
-  var container = getPipElement('pip-slot-' + slot);
-  if (container) container.classList.remove('pip-slot-streaming');
-  // Render formatted result
-  renderPipSlotResult(slot, data.result);
-  // Update teleprompter position if skript_position present (D-13)
-  if (data.result && typeof data.result.skript_position === 'number') {
-    updateTeleprompterPosition(data.result.skript_position);
-  }
-  // Proactive fill when no einwand (D-02)
-  if (data.result && !data.result.einwand) {
-    fillProactiveSlots(data.result);
-  }
-});
-
-socket.on('pip_stream_error', function(data) {
-  var slot = data.slot;
-  _pipSlots[slot].streaming = false;
-  var bodyEl = getPipElement('pip-slot-body-' + slot);
-  if (bodyEl) {
-    bodyEl.classList.remove('pip-streaming');
-    bodyEl.textContent = 'KI-Fehler -- bitte erneut versuchen';
-  }
-  var container = getPipElement('pip-slot-' + slot);
-  if (container) container.classList.remove('pip-slot-streaming');
-});
-
-function renderPipSlotResult(slot, result) {
-  var bodyEl = getPipElement('pip-slot-body-' + slot);
-  var resultEl = getPipElement('pip-slot-result-' + slot);
-  var labelEl = getPipElement('pip-slot-' + slot);
-  if (!resultEl || !result) return;
-
-  if (result.einwand) {
-    // Show einwand type badge + gegenargument
-    var typLabel = result.typ || 'Einwand';
-    var ga1 = result.gegenargument_1 || result.gegenargument || '';
-    var ga2 = result.gegenargument_2 || '';
-    resultEl.innerHTML = '<span class="pip-slot-typ-badge" style="border:1px solid #d4a853;color:#d4a853">' +
-      escHtml(typLabel) + '</span>' +
-      '<div style="margin-top:4px">' + escHtml(ga1) + '</div>' +
-      (ga2 ? '<div style="margin-top:4px;color:rgba(255,255,255,0.6)">' + escHtml(ga2) + '</div>' : '');
-    // Update slot label
-    if (labelEl) {
-      var slotLabelEl = labelEl.querySelector('.pip-slot-label');
-      if (slotLabelEl) slotLabelEl.textContent = typLabel.toUpperCase();
-    }
-  } else if (result.notiz) {
-    resultEl.innerHTML = '<div>' + escHtml(result.notiz) + '</div>';
+function handlePipTabClick(tabName) {
+  if (window._pipTabLocked === tabName) {
+    // Click on locked tab = unlock
+    window._pipTabLocked = null;
   } else {
-    resultEl.innerHTML = '<div style="color:rgba(255,255,255,0.4)">Kein Einwand erkannt</div>';
+    window._pipTabLocked = tabName;
   }
-
-  if (bodyEl) bodyEl.style.display = 'none';
-  resultEl.style.display = '';
+  activatePipTab(tabName);
 }
 
-// ── Phase 06: Consent Flow (D-05, D-06, D-07) ────────────────────────────────
-function pipConsentGranted() {
-  // Full meeting mode -- KI hears both speakers
-  console.log('[PiP] Consent granted -- full meeting mode');
-  setPipState('live');
-  initPipLiveContent();
-}
-
-function pipConsentDenied() {
-  // Fallback to cold_call mode
-  console.log('[PiP] Consent denied -- fallback to cold call');
-  window.sessionMode = 'cold_call';
-  // Notify server of mode change
-  if (window.nerveApp && window.nerveApp.socket) {
-    window.nerveApp.socket.emit('update_session_mode', { mode: 'cold_call' });
+function setPipTabFromKI(tabName) {
+  if (window._pipTabLocked) {
+    // Check if 30s have elapsed since last KI result -- if so, unlock
+    if (Date.now() - _lastKiResultTime > 30000) {
+      window._pipTabLocked = null;
+    } else {
+      _lastKiResultTime = Date.now();
+      return; // Don't switch, user has locked a tab
+    }
   }
-  var badge = getPipElement('pip-mode-badge');
-  if (badge) badge.textContent = 'Cold Call';
-  setPipState('live');
-  initPipLiveContent();
+  _lastKiResultTime = Date.now();
+  activatePipTab(tabName);
 }
 
-// ── Phase 06: Opacity Slider (D-15, D-16, D-17) ──────────────────────────────
-function initPipOpacitySlider() {
-  var slider = getPipElement('pip-opacity-slider');
-  if (!slider) return;
-  var saved = 1.0;
-  try { saved = parseFloat(localStorage.getItem('nerve_pip_opacity') || '1'); } catch(e) {}
-  if (isNaN(saved) || saved < 0.1) saved = 0.1;
-  if (saved > 1) saved = 1;
-  slider.value = Math.round(saved * 100);
-  setPipBgOpacity(saved);
+function activatePipTab(tabName) {
+  // Update tab buttons
+  var tabs = (window._pipWindow && !window._pipWindow.closed)
+    ? window._pipWindow.document.querySelectorAll('.pip-tab')
+    : document.querySelectorAll('.pip-tab');
 
-  var debounceTimer = null;
-  slider.addEventListener('input', function() {
-    var val = parseInt(slider.value, 10) / 100;
-    setPipBgOpacity(val);
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(function() {
-      try { localStorage.setItem('nerve_pip_opacity', String(val)); } catch(e) {}
-    }, 200);
+  if (tabs) tabs.forEach(function(tab) {
+    var isActive = tab.getAttribute('data-tab') === tabName;
+    tab.classList.toggle('pip-tab-active', isActive);
+    tab.classList.toggle('pip-tab-locked', isActive && window._pipTabLocked === tabName);
   });
-}
 
-function setPipBgOpacity(value) {
-  var liveEl = getPipElement('pip-section-live');
-  if (liveEl) {
-    // D-16: Only background layer. Use rgba so text stays at full opacity.
-    liveEl.style.background = 'rgba(6,6,10,' + value + ')';
-  }
-}
-
-// ── Phase 06: initPipLiveContent ──────────────────────────────────────────────
-function initPipLiveContent() {
-  // Mode badge
-  var badge = getPipElement('pip-mode-badge');
-  if (badge && window.sessionMode) {
-    badge.textContent = window.sessionMode === 'cold_call' ? 'Cold Call' : 'Meeting';
-  }
-  // EWB buttons
-  renderPipEwbButtons();
-  // Timer sync
-  syncPipTimer();
-  // Opacity slider init
-  initPipOpacitySlider();
-  // Load teleprompter if script is active
-  if (window._pipActiveSkript) {
-    renderTeleprompterBlocks(window._pipActiveSkript, 0);
-  }
-  // Reset slots to waiting state
-  [0, 1].forEach(function(s) {
-    var bodyEl = getPipElement('pip-slot-body-' + s);
-    if (bodyEl) bodyEl.textContent = 'Warte auf Gespraechsinhalt...';
-    _pipSlots[s] = { streaming: false, text: '', result: null, context_key: null };
+  // Show/hide panels
+  ['opener', 'einwand', 'coaching', 'ewb'].forEach(function(name) {
+    var panel = getPipElement('pip-panel-' + name);
+    if (panel) panel.style.display = (name === tabName) ? 'block' : 'none';
   });
 }
 
@@ -2299,149 +2119,6 @@ function updatePipFromCoaching(d) {
   var text = d.tipp || d.painpoint || '';
   if (text) {
     el.textContent = text;
-  }
-}
-
-// ── Phase 06: Teleprompter (D-11, D-13, D-14) ────────────────────────────────
-var _teleprompterManualOverride = false;
-var _teleprompterOverrideTimer = null;
-var _teleprompterActiveBlock = 0;
-
-function renderTeleprompterBlocks(inhalt, activeBlockIdx) {
-  var container = getPipElement('pip-teleprompter');
-  if (!container) return;
-  if (!inhalt) {
-    container.innerHTML = '<div class="tp-empty">Kein Skript hinterlegt -- Profil bearbeiten</div>';
-    return;
-  }
-  var blocks = inhalt.split(/\n\n+/).filter(function(b) { return b.trim(); });
-  var doc = container.ownerDocument || document;
-  container.innerHTML = '';
-  blocks.forEach(function(block, idx) {
-    var div = doc.createElement('div');
-    div.className = 'tp-block' + (idx === activeBlockIdx ? ' tp-block-active' : '');
-    div.dataset.blockIdx = idx;
-    div.textContent = block.trim();
-    div.addEventListener('click', function() {
-      // Manual block selection -- override
-      _teleprompterManualOverride = true;
-      _teleprompterActiveBlock = idx;
-      highlightTeleprompterBlock(container, idx);
-      clearTimeout(_teleprompterOverrideTimer);
-      _teleprompterOverrideTimer = setTimeout(function() {
-        _teleprompterManualOverride = false;
-      }, 8000);
-    });
-    container.appendChild(div);
-  });
-  // Scroll active block into view
-  highlightTeleprompterBlock(container, activeBlockIdx);
-
-  // Manual scroll override detection (D-13)
-  container.addEventListener('scroll', function() {
-    _teleprompterManualOverride = true;
-    clearTimeout(_teleprompterOverrideTimer);
-    _teleprompterOverrideTimer = setTimeout(function() {
-      _teleprompterManualOverride = false;
-    }, 8000);
-  });
-}
-
-function highlightTeleprompterBlock(container, idx) {
-  if (!container) container = getPipElement('pip-teleprompter');
-  if (!container) return;
-  var blocks = container.querySelectorAll('.tp-block');
-  blocks.forEach(function(b, i) {
-    b.classList.toggle('tp-block-active', i === idx);
-  });
-  var activeEl = container.querySelector('.tp-block-active');
-  if (activeEl) {
-    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-}
-
-function updateTeleprompterPosition(blockIdx) {
-  _teleprompterActiveBlock = blockIdx;
-  if (_teleprompterManualOverride) return;  // D-13: honor manual override
-  highlightTeleprompterBlock(null, blockIdx);
-}
-
-// ── Phase 06: Script dropdown in Setup Step 3 (D-12) ─────────────────────────
-window._pipActiveSkript = null;  // Full script text for teleprompter
-
-function pipPopulateSkripte(profileId) {
-  var select = getPipElement('pip-skript-select');
-  if (!select) return;
-  select.innerHTML = '<option value="">Kein Skript</option>';
-  if (!profileId) return;
-  fetch('/api/skripte?profile_id=' + profileId)
-    .then(function(r) { return r.json(); })
-    .then(function(skripte) {
-      skripte.forEach(function(s) {
-        var opt = (select.ownerDocument || document).createElement('option');
-        opt.value = s.id;
-        opt.textContent = s.name;
-        opt.dataset.inhalt = s.inhalt;
-        select.appendChild(opt);
-      });
-    })
-    .catch(function(err) { console.error('[PiP] Skripte fetch error:', err); });
-
-  select.addEventListener('change', function() {
-    var selected = select.options[select.selectedIndex];
-    window._pipActiveSkript = selected && selected.dataset.inhalt ? selected.dataset.inhalt : null;
-  });
-}
-
-// ── Phase 06: Proactive KI Fill (D-02) ───────────────────────────────────────
-function fillProactiveSlots(result) {
-  // Called when no einwand -- fill slots with contextual content
-  if (!result) return;
-
-  // Slot 0: Phase change or coaching tipp
-  if (result.phase_hinweis) {
-    setPipSlotProactive(0, 'PHASE', 'Phase wechselt: ' + result.phase_hinweis);
-  } else if (result.frage_vorschlag) {
-    setPipSlotProactive(0, 'FRAGE', result.frage_vorschlag);
-  } else if (result.notiz) {
-    setPipSlotProactive(0, 'HINWEIS', result.notiz);
-  }
-
-  // Slot 1: KB trend
-  if (typeof result.kaufbereitschaft === 'number') {
-    var kb = result.kaufbereitschaft;
-    var trend = result.kb_trend || '';
-    var trendArrow = trend === 'steigend' ? ' ^' : (trend === 'fallend' ? ' v' : '');
-    var trendColor = trend === 'steigend' ? '#00D4AA' : (trend === 'fallend' ? '#f87171' : '#e8ecf4');
-    var resultEl = getPipElement('pip-slot-result-1');
-    var bodyEl = getPipElement('pip-slot-body-1');
-    var labelEl = getPipElement('pip-slot-1');
-    if (labelEl) {
-      var sl = labelEl.querySelector('.pip-slot-label');
-      if (sl) sl.textContent = 'KAUFBEREITSCHAFT';
-    }
-    if (bodyEl) bodyEl.style.display = 'none';
-    if (resultEl) {
-      resultEl.innerHTML = '<span style="font-family:JetBrains Mono,monospace;font-size:12px;color:' +
-        trendColor + '">' + kb + '%' + trendArrow + '</span>' +
-        '<div style="margin-top:4px;color:rgba(255,255,255,0.6)">' +
-        kb + '% Kaufbereitschaft -- ' + (trend || 'stabil') + '</div>';
-      resultEl.style.display = '';
-    }
-  }
-}
-
-function setPipSlotProactive(slot, label, text) {
-  var container = getPipElement('pip-slot-' + slot);
-  var bodyEl = getPipElement('pip-slot-body-' + slot);
-  var resultEl = getPipElement('pip-slot-result-' + slot);
-  if (container) {
-    var sl = container.querySelector('.pip-slot-label');
-    if (sl) sl.textContent = label;
-  }
-  if (bodyEl) bodyEl.style.display = 'none';
-  if (resultEl) {
-    resultEl.innerHTML = '<div>' + escHtml(text) + '</div>';
-    resultEl.style.display = '';
+    setPipTabFromKI('coaching');
   }
 }
