@@ -1553,9 +1553,13 @@ function pipSubmitKundendaten() {
   var firma = (getPipElement('pip-kd-firma') || {}).value || '';
   var name = (getPipElement('pip-kd-name') || {}).value || '';
   var position = (getPipElement('pip-kd-position') || {}).value || '';
-  window._pipKundendaten = { firma: firma.trim(), name: name.trim(), position: position.trim() };
+  var kd = { firma: firma.trim(), name: name.trim(), position: position.trim() };
+  window._pipKundendaten = kd;
+  // Also store on opener so cross-window access works
+  if (window._pipWindow) window._pipWindow._pipKundendaten = kd;
+  if (window.opener) window.opener._pipKundendaten = kd;
   // Save to history if firma is filled
-  if (window._pipKundendaten.firma) {
+  if (kd.firma) {
     saveKundendaten(window._pipKundendaten);
     pipPopulateKundendatenHistory();  // refresh datalists
   }
@@ -1563,12 +1567,19 @@ function pipSubmitKundendaten() {
 }
 
 function pipStartPrecall() {
-  var kd = window._pipKundendaten || {};
+  console.log('[PiP] pipStartPrecall called, _pipKundendaten:', window._pipKundendaten);
+  // Read from opener window if running inside PiP document
+  var openerWin = window.opener || window;
+  var kd = openerWin._pipKundendaten || window._pipKundendaten || {};
   var firma = kd.firma || '';
   var name = kd.name || '';
-  if (!firma.trim()) return;
   var btn = getPipElement('pip-precall-btn');
   var result = getPipElement('pip-precall-result');
+  if (!firma.trim()) {
+    console.log('[PiP] No firma found, kd:', kd);
+    if (result) { result.style.display = 'block'; result.textContent = 'Bitte zuerst Firmenname eingeben'; }
+    return;
+  }
   if (btn) { btn.textContent = 'Recherche...'; btn.disabled = true; }
   if (result) { result.style.display = 'block'; result.textContent = 'Lade Briefing...'; }
 
