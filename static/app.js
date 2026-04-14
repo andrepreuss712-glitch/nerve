@@ -1904,6 +1904,18 @@ async function openPipWindow() {
   window._pipWindow = pipWindow;
   try { localStorage.setItem('sn_kompakt', '1'); } catch(e) {}
 
+  // Proxy all PiP functions into PiP window so onclick handlers work
+  var pipFns = [
+    'pipSelectMode','pipConsentAccept','pipConsentReject','pipSubmitKundendaten',
+    'pipStartPrecall','pipStartCall','pipBeendenCall','pipNextCall','pipShowDetails',
+    'showPipSetupStep','pipStartSetup','pipPopulateProfiles','pipPopulateKundendatenHistory',
+    'handlePipTabClick','closePipToVollbild','togglePipEwbExpand','triggerEwb',
+    'setPipState','showPipPostcall','calcPipScore','buildHighlightTags'
+  ];
+  pipFns.forEach(function(fn) {
+    if (typeof window[fn] === 'function') pipWindow[fn] = window[fn];
+  });
+
   // Initialize PiP content
   initPipContent();
   // Start PiP in setup state (launcher mode)

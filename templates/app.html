@@ -1286,16 +1286,10 @@ function kpQuickAction(typ){
   openFrageModal();
   quickAction(typ);
 }
-// Initialisierung: URL-Param oder localStorage → auto-open PiP
+// Initialisierung: PiP ist der Standard-Modus — immer öffnen
 (function(){
-  const params = new URLSearchParams(window.location.search);
-  const urlKompakt = params.get('kompakt') === '1';
-  let storedKompakt = false;
-  try { storedKompakt = localStorage.getItem('sn_kompakt') === '1'; } catch(e){}
-  if (urlKompakt || storedKompakt) {
-    // Auto-open PiP after session starts (delay to ensure DOM ready)
-    setTimeout(function() { openPipWindow(); }, 500);
-  }
+  // Always auto-open PiP after DOM ready — /live is now just the backing page
+  setTimeout(function() { openPipWindow(); }, 500);
 })();
 
 // ── Profile switcher ──────────────────────────────────────────────────────────
