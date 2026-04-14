@@ -39,7 +39,7 @@
     <i data-lucide="layout-dashboard" class="nav-icon-lucide"></i>
     <span class="n-nav-label">Dashboard</span>
   </a>
-  <a class="n-nav-item {% if request.path == '/live' %}n-nav-item-active{% endif %}" href="/live" title="Live-Assistent">
+  <a class="n-nav-item {% if request.path == '/live' %}n-nav-item-active{% endif %}" href="javascript:void(0)" onclick="window.NerveLauncher && window.NerveLauncher.open()" title="Live-Assistent">
     <i data-lucide="mic" class="nav-icon-lucide"></i>
     <span class="n-nav-label">Live-Assistent</span>
   </a>
@@ -156,7 +156,7 @@
 </div>
 
 
-<!-- ── Live Mode Select + Consent Overlays (shown from nav, before navigating to /live) ── -->
+<!-- ── PiP Launcher Modal + PiP Live Window (managed by pip-launcher.js) ── -->
 <style>
 .nav-live-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;display:none}
 .nav-live-overlay.open{display:flex}
@@ -171,100 +171,121 @@
 .nav-live-card-icon{font-size:36px;margin-bottom:10px}
 .nav-live-card-title{font-size:17px;font-weight:700;color:var(--page-text-color);margin-bottom:6px}
 .nav-live-card-desc{font-size:12px;color:var(--page-text-muted);line-height:1.6}
-/* Consent overlay */
+/* Consent + action buttons */
 .nav-consent-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:480px;width:90%;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
 .nav-consent-title{font-size:17px;font-weight:700;color:var(--page-text-color)}
 .nav-consent-pflicht{font-size:12px;font-weight:800;color:#f87171;letter-spacing:.05em;text-transform:uppercase}
-.nav-consent-script{background:rgba(248,113,113,0.22);border:1px solid rgba(248,113,113,0.5);border-radius:8px;padding:16px;font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.6;font-style:italic;width:100%;box-sizing:border-box}
-.nav-consent-tipp{background:rgba(0,212,170,0.22);border:1px solid rgba(0,212,170,0.5);border-radius:20px;padding:8px 16px;font-size:13px;color:#1a1a1a;line-height:1.5;font-style:italic}
+.nav-consent-script{background:rgba(248,113,113,0.22);border:1px solid rgba(248,113,113,0.5);border-radius:8px;padding:16px;font-size:15px;font-weight:700;color:var(--page-text-color);line-height:1.6;font-style:italic;width:100%;box-sizing:border-box}
+.nav-consent-tipp{background:rgba(0,212,170,0.22);border:1px solid rgba(0,212,170,0.5);border-radius:20px;padding:8px 16px;font-size:13px;color:var(--page-text-color);line-height:1.5;font-style:italic}
 .nav-consent-actions{display:flex;gap:10px;justify-content:flex-end;width:100%;margin-top:4px}
 .nav-consent-btn{border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
 .nav-consent-btn:hover{opacity:.8}
-.nav-consent-accept{background:#00D4AA;color:#fff}
+.nav-consent-accept{background:#00D4AA;color:#0D1117}
 .nav-consent-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171}
+/* PiP CSS */
+.pip-header{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--glass-border,#E2E8F0);background:var(--page-bg,#06060a)}
+.pip-mode-badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;border:1px solid #00D4AA;color:#00D4AA}
+.pip-timer{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#00D4AA}
+.pip-tabs{height:36px;display:flex;align-items:center;gap:4px;padding:0 16px;border-bottom:1px solid var(--glass-border,#E2E8F0)}
+.pip-tab{background:none;border:none;font-size:12px;font-weight:600;padding:6px 8px;border-radius:6px;color:var(--page-text-muted,#8b92a5);cursor:pointer;font-family:inherit;min-height:28px;position:relative}
+.pip-tab:hover{color:var(--page-text-secondary,#c5c9d4)}
+.pip-tab-active{background:#00D4AA;color:#06060a}
+.pip-tab-locked::after{content:'';display:inline-block;width:10px;height:10px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2306060a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='11' x='3' y='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") no-repeat center;margin-left:4px;vertical-align:middle}
+.pip-content{flex:1;min-height:120px;padding:16px;overflow-y:auto}
+.pip-panel{}
+.pip-tip-text{font-size:14px;font-weight:400;line-height:1.5;color:var(--page-text-color,#e8ecf4)}
+.pip-ewb-row{min-height:44px;display:flex;align-items:center;gap:8px;padding:0 16px 8px;flex-wrap:wrap}
+.pip-ewb-btn{background:none;border:1px solid var(--glass-border,#E2E8F0);color:var(--page-text-secondary,#c5c9d4);border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.pip-ewb-btn:hover{border-color:#00D4AA;color:#00D4AA}
+.pip-ewb-ai-selected{border-color:#d4a853;color:#d4a853}
+.pip-ewb-ai-selected:hover{border-color:#d4a853;background:rgba(212,168,83,0.08)}
+.pip-btn-next-call{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
+.pip-btn-next-call:hover{opacity:.85}
+.pip-btn-details{background:#1C2333;border:1px solid #2a3548;border-radius:8px;color:#e8ecf4;padding:10px 16px;font-size:13px;cursor:pointer;flex:1;transition:border-color .2s}
+.pip-btn-details:hover{border-color:#00D4AA}
+.pip-btn-beenden{background:transparent;border:1px solid rgba(248,113,113,0.4);border-radius:8px;color:#f87171;padding:6px 12px;font-size:12px;cursor:pointer;margin:6px 8px;transition:background .2s}
+.pip-btn-beenden:hover{background:rgba(248,113,113,0.1)}
+.pip-postcall-score{font-size:48px;font-weight:700;color:#00D4AA;line-height:1}
+.pip-postcall-label{font-size:12px;color:#a0aec0;margin-top:4px}
+.pip-postcall-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;justify-content:center}
+.pip-tag{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:500}
+.pip-tag-teal{background:rgba(0,212,170,0.15);color:#00D4AA}
+.pip-tag-yellow{background:rgba(245,158,11,0.15);color:#F59E0B}
+.pip-tag-red{background:rgba(248,113,113,0.15);color:#F87171}
+.pip-postcall-kundendaten{font-size:11px;color:#555e70;margin-top:8px}
+.pip-postcall-actions{display:flex;gap:10px;margin-top:16px;width:100%;max-width:280px}
+/* Launcher modal step styles */
+.launcher-step{width:100%;display:flex;flex-direction:column;gap:16px}
+.launcher-form-input{width:100%;padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none}
+.launcher-form-input:focus{border-color:#00D4AA}
+.launcher-form-input::placeholder{color:var(--page-text-muted)}
+.launcher-select{width:100%;padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none}
+.launcher-select:focus{border-color:#00D4AA}
+.launcher-hint{background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--page-text-muted);line-height:1.5}
+.launcher-actions{display:flex;gap:10px;justify-content:flex-end;width:100%;flex-wrap:wrap}
+.launcher-btn-primary{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.launcher-btn-primary:hover{opacity:.85}
+.launcher-btn-ghost{background:transparent;border:1px solid var(--glass-border);border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--page-text-muted);cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s}
+.launcher-btn-ghost:hover{border-color:#00D4AA;color:var(--page-text-color)}
+.launcher-loading-bar{width:100%;height:4px;background:var(--glass-border);border-radius:2px;overflow:hidden}
+.launcher-loading-bar-inner{height:100%;background:#00D4AA;border-radius:2px;animation:launcherSlide 1.5s ease-in-out infinite}
+@keyframes launcherSlide{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+.launcher-briefing{width:100%;padding:12px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:12px;line-height:1.5;min-height:80px;max-height:160px;overflow-y:auto;font-family:inherit;resize:none;box-sizing:border-box}
+.launcher-opener-preview{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:12px;font-size:13px;color:var(--page-text-color);line-height:1.5;max-height:100px;overflow-y:auto;white-space:pre-wrap}
 </style>
 
-<!-- Mode Selection Overlay -->
-<div id="navLiveOverlay" class="nav-live-overlay">
-  <div class="nav-live-box">
-    <button class="nav-live-close" onclick="closeLiveOverlay()" title="Schließen">&times;</button>
-    <div class="nav-live-title">Gesprächsmodus wählen</div>
-    <div class="nav-live-sub">Wähle den passenden Modus für dein Gespräch. Der Modus kann während des Calls nicht gewechselt werden.</div>
-    <div class="nav-live-cards">
-      <div class="nav-live-card" onclick="startLiveMode('cold_call')">
-        <div class="nav-live-card-icon">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 8C13 8 11 8 10 10C9 12 8 15 10 18C12 21 14 23 16 25C18 27 20 29 23 31C26 33 29 32 31 31C33 30 33 28 33 28L29 24C29 24 27 25 26 25C25 25 24 24 22 22C20 20 19 19 19 18C19 17 20 15 20 15L16 11C16 11 15 8 13 8Z" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="nav-live-card-title">Cold Call</div>
-        <div class="nav-live-card-desc">Nur deine Stimme wird analysiert.<br>Kein Kunden-Audio verarbeitet.<br>EWB-Buttons für manuelle Einwand-Trigger.</div>
-      </div>
-      <div class="nav-live-card" onclick="startLiveMode('meeting')">
-        <div class="nav-live-card-icon">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="15" cy="13" r="4" stroke="#00D4AA" stroke-width="2.2"/>
-            <circle cx="25" cy="13" r="4" stroke="#00D4AA" stroke-width="2.2"/>
-            <path d="M6 30C6 25 10 22 15 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M34 30C34 25 30 22 25 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
-            <path d="M15 22C17 21 19 21 20 21C21 21 23 21 25 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div class="nav-live-card-title">Meeting</div>
-        <div class="nav-live-card-desc">Volle Analyse beider Sprecher.<br>Einwilligung des Gesprächspartners erforderlich.<br>Automatische Einwanderkennung + EWB.</div>
-      </div>
-    </div>
+<!-- PiP Launcher Setup Modal (shell — pip-launcher.js populates #launcherContent) -->
+<div id="launcherModal" class="nav-live-overlay">
+  <div class="nav-live-box" style="max-width:560px" id="launcherModalBox">
+    <button class="nav-live-close" id="launcherClose" title="Schliessen">&times;</button>
+    <div id="launcherContent" style="width:100%"></div>
   </div>
 </div>
 
-<!-- Consent Overlay (Meeting Mode) -->
-<div id="navConsentOverlay" class="nav-live-overlay">
-  <div class="nav-consent-box">
-    <button class="nav-live-close" onclick="closeConsentOverlay()" title="Schließen">&times;</button>
-    <div class="nav-consent-title">Einwilligung des Gesprächspartners</div>
-    <div class="nav-consent-pflicht">Pflicht — laut vorlesen</div>
-    <div class="nav-consent-script">„Ist es okay wenn eine KI mithört damit wir die Qualität unseres Service verbessern können?"</div>
-    <div class="nav-consent-tipp">Tipp: „Dabei werden keine vollen Aufzeichnungen gemacht, nur Stichpunkte."</div>
-    <div class="nav-consent-actions">
-      <button class="nav-consent-btn nav-consent-reject" onclick="navRejectConsent()">Abgelehnt</button>
-      <button class="nav-consent-btn nav-consent-accept" onclick="navAcceptConsent()">Stattgegeben</button>
+<!-- PiP Live Window (hidden — pip-launcher.js moves this into the PiP document) -->
+<div id="pip-live-window" style="display:none">
+  <!-- Mini Header -->
+  <div class="pip-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="pip-mode-badge" id="nlp-mode-badge">Cold Call</span>
+      <span class="pip-timer" id="nlp-timer">00:00</span>
+    </div>
+  </div>
+  <!-- Tabs -->
+  <div class="pip-tabs">
+    <button class="pip-tab pip-tab-active" data-tab="opener" id="nlp-tab-opener">Opener</button>
+    <button class="pip-tab" data-tab="einwand" id="nlp-tab-einwand">Einwand</button>
+    <button class="pip-tab" data-tab="coaching" id="nlp-tab-coaching">Coaching</button>
+    <button class="pip-tab" data-tab="ewb" id="nlp-tab-ewb">EWB</button>
+  </div>
+  <div class="pip-content">
+    <div class="pip-panel" id="nlp-panel-opener">
+      <div class="pip-tip-text" id="nlp-opener-text">Kein Opener hinterlegt</div>
+    </div>
+    <div class="pip-panel" id="nlp-panel-einwand" style="display:none">
+      <div class="pip-tip-text" id="nlp-einwand-text">Warte auf Einwand-Erkennung...</div>
+    </div>
+    <div class="pip-panel" id="nlp-panel-coaching" style="display:none">
+      <div class="pip-tip-text" id="nlp-coaching-text">Warte auf Coaching-Tipp...</div>
+    </div>
+    <div class="pip-panel" id="nlp-panel-ewb" style="display:none">
+      <div class="pip-tip-text" id="nlp-ewb-text">EWB-Vorschlaege werden geladen...</div>
+    </div>
+  </div>
+  <div class="pip-ewb-row" id="nlp-ewb-row"></div>
+  <button class="pip-btn-beenden" id="nlp-btn-beenden">Beenden</button>
+  <!-- Postcall section (shown after call ends) -->
+  <div id="nlp-section-postcall" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px">
+    <div class="pip-postcall-score" id="nlp-postcall-score">--</div>
+    <div class="pip-postcall-label">Call Score</div>
+    <div class="pip-postcall-tags" id="nlp-postcall-tags"></div>
+    <div class="pip-postcall-kundendaten" id="nlp-postcall-kundendaten"></div>
+    <div class="pip-postcall-actions">
+      <button class="pip-btn-next-call" id="nlp-btn-next-call">Naechster Call</button>
+      <button class="pip-btn-details" id="nlp-btn-details">Details</button>
     </div>
   </div>
 </div>
-
-<script>
-function openLiveOverlay() {
-  document.getElementById('navLiveOverlay').classList.add('open');
-}
-function closeLiveOverlay() {
-  document.getElementById('navLiveOverlay').classList.remove('open');
-}
-function closeConsentOverlay() {
-  document.getElementById('navConsentOverlay').classList.remove('open');
-  openLiveOverlay(); // go back to mode selection
-}
-function startLiveMode(mode) {
-  closeLiveOverlay();
-  if (mode === 'meeting') {
-    document.getElementById('navConsentOverlay').classList.add('open');
-  } else {
-    window.location.href = '/live?mode=cold_call';
-  }
-}
-function navAcceptConsent() {
-  window.location.href = '/live?mode=meeting';
-}
-function navRejectConsent() {
-  // Consent rejected — fall back to cold call silently
-  window.location.href = '/live?mode=cold_call';
-}
-document.getElementById('navLiveOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeLiveOverlay();
-});
-document.getElementById('navConsentOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeConsentOverlay();
-});
-</script>
 
 <!-- Help FAB -->
 <a href="/settings/help" class="help-fab" title="Hilfe">?</a>
@@ -435,6 +456,9 @@ function setLanguage(code, e) {
   }).catch(function(){});
 }
 </script>
+{% if g.user %}
+<script src="{{ url_for('static', filename='pip-launcher.js') }}"></script>
+{% endif %}
 {% block scripts %}{% endblock %}
 {% if g.user %}
 <link rel="stylesheet" href="{{ url_for('static', filename='feedback.css') }}">

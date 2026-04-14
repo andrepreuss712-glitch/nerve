@@ -595,6 +595,61 @@ def api_set_profile():
         db.close()
 
 
+@app_routes_bp.route('/api/launcher/init')
+@login_required
+def api_launcher_init():
+    """Return profiles + settings for pip-launcher.js (called from any page)."""
+    db = get_session()
+    try:
+        from database.models import Profile, User as _UModel
+        profiles_raw = db.query(Profile).filter_by(org_id=g.org.id).order_by(Profile.name).all()
+        profiles = [{'id': p.id, 'name': p.name} for p in profiles_raw]
+        u = db.get(_UModel, g.user.id)
+        active_profile_id = u.active_profile_id if u else None
+        # Get active profile data for EWB buttons + opener
+        active_profile_daten = {}
+        if active_profile_id:
+            ap = db.query(Profile).filter_by(id=active_profile_id, org_id=g.org.id).first()
+            if ap and ap.daten:
+                import json
+                try:
+                    active_profile_daten = json.loads(ap.daten) if isinstance(ap.daten, str) else ap.daten
+                except Exception:
+                    active_profile_daten = {}
+        from services.precall_service import ist_verfuegbar
+        precall_verfuegbar = ist_verfuegbar()
+        return jsonify({
+            'profiles': profiles,
+            'active_profile_id': active_profile_id,
+            'precall_verfuegbar': precall_verfuegbar,
+            'profile_daten': active_profile_daten
+        })
+    finally:
+        db.close()
+
+
+@app_routes_bp.route('/api/launcher/profile/<int:pid>')
+@login_required
+def api_launcher_profile(pid):
+    """Return profile daten for pip-launcher when profile changes."""
+    db = get_session()
+    try:
+        from database.models import Profile
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'Profil nicht gefunden'}), 404
+        import json
+        daten = {}
+        if p.daten:
+            try:
+                daten = json.loads(p.daten) if isinstance(p.daten, str) else p.daten
+            except Exception:
+                pass
+        return jsonify({'id': p.id, 'name': p.name, 'daten': daten})
+    finally:
+        db.close()
+
+
 @app_routes_bp.route('/api/set_phase', methods=['POST'])
 @login_required
 def api_set_phase():
