@@ -381,6 +381,16 @@ def _build_system_prompt() -> str:
     if precall_text:
         lines.append('\n## Firmenkontext (aus PreCall-Recherche)')
         lines.append(precall_text)
+    # Phase 06: skript_position for teleprompter (D-13)
+    with ls.state_lock:
+        aktives_skript = ls.state.get('aktives_skript_inhalt')
+        skript_bloecke = ls.state.get('skript_bloecke', [])
+    if aktives_skript and skript_bloecke:
+        lines.append('\n--- AKTIVES SKRIPT (Teleprompter) ---')
+        lines.append('Der Berater hat folgendes Skript geladen. Erkenne aus dem Gesprächsverlauf, in welchem Block sich der Berater befindet.')
+        for idx, block in enumerate(skript_bloecke):
+            lines.append(f'Block {idx}: {block[:100]}...' if len(block) > 100 else f'Block {idx}: {block}')
+        lines.append('Ergänze in deiner JSON-Antwort: "skript_position": <int> mit dem 0-basierten Index des aktuellen Blocks.')
     return '\n'.join(lines)
 
 
@@ -649,6 +659,62 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         print(f"[CostHook] claude live_haiku skipped: {_e}")
     # ────────────────────────────────────────────────────────────────────
     return _parse_json(msg.content[0].text.strip())
+
+
+def analysiere_mit_claude_streaming(neuer_text: str, kontext: str, sid: str, slot_id: int) -> dict:
+    """PiP-only streaming variant. Emits pip_token events to specific sid room.
+    Returns final parsed result dict (same shape as analysiere_mit_claude). Phase 06 D-08, D-09."""
+    from extensions import socketio as sio
+
+    user_msg = f"""Bisheriger Gesprächskontext (zur Orientierung, letzte Aussagen):
+{kontext if kontext else "(Kein vorheriger Kontext)"}
+
+Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
+{neuer_text}"""
+
+    sio.emit('pip_stream_start', {'slot': slot_id}, room=sid)
+    full_text = ''
+    try:
+        with claude_client.messages.stream(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=400,
+            system=_build_system_prompt(),
+            messages=[{'role': 'user', 'content': user_msg}]
+        ) as stream:
+            for token in stream.text_stream:
+                full_text += token
+                sio.emit('pip_token', {'slot': slot_id, 'token': token}, room=sid)
+        parsed = _parse_json(full_text)
+        sio.emit('pip_token_done', {'slot': slot_id, 'result': parsed}, room=sid)
+        # ── Cost tracking (same pattern as analysiere_mit_claude) ──────────
+        try:
+            from services.cost_tracker import log_api_cost
+            final_msg = stream.get_final_message()
+            u = getattr(final_msg, 'usage', None)
+            if u is not None:
+                in_tok = getattr(u, 'input_tokens', 0) or 0
+                out_tok = getattr(u, 'output_tokens', 0) or 0
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=in_tok/1000.0, unit_type='per_1k_input_tokens',
+                             context_tag='pip_stream')
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=out_tok/1000.0, unit_type='per_1k_output_tokens',
+                             context_tag='pip_stream')
+        except Exception as _e:
+            print(f'[CostHook] pip_stream skipped: {_e}')
+        # ── FT logging ─────────────────────────────────────────────────────
+        _write_ft_assistant_event(
+            module='pip_stream',
+            hint_type='einwand_streaming',
+            hint_text=full_text[:500],
+            model_used='haiku-4-5',
+            context={'slot_id': slot_id}
+        )
+        return parsed
+    except Exception as e:
+        print(f'[PiP-Stream] Fehler slot={slot_id}: {e}')
+        sio.emit('pip_stream_error', {'slot': slot_id, 'error': str(e)}, room=sid)
+        return {}
 
 
 def analysiere_coaching(segmente: list, kontext: str) -> dict:

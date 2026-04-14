@@ -128,6 +128,7 @@ class Profile(Base):
     erstellt_von    = Column(Integer, ForeignKey('users.id'))
     erstellt_am     = Column(DateTime, default=utcnow)
     aktualisiert_am = Column(DateTime, default=utcnow, onupdate=utcnow)
+    consent_text    = Column(Text, nullable=True)  # Phase 06: editable consent Vorlesetext
 
 
 class ProfileSkript(Base):

@@ -472,6 +472,14 @@ def _migrate():
                 print(f"[DB] Migration: added users.{col}")
             except Exception:
                 pass
+        # Phase 06: consent_text column on profiles
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE profiles ADD COLUMN consent_text TEXT"))
+                conn.commit()
+            print("[DB] Migration: added profiles.consent_text")
+        except Exception:
+            pass  # Column already exists
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')

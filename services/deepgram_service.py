@@ -190,6 +190,9 @@ def register_audio_handlers(sio):
 
         # Store precall briefing in live session state
         import services.live_session as ls
+        # Store active_sid for PiP streaming room targeting (Phase 06)
+        with ls.state_lock:
+            ls.state['active_sid'] = _sid
         if precall_briefing and isinstance(precall_briefing, str):
             if len(precall_briefing) > 2000:
                 precall_briefing = precall_briefing[:2000]
