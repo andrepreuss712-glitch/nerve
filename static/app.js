@@ -1587,12 +1587,14 @@ function pipStartPrecall() {
         result.textContent = data.briefing.text;
       }
     } else if (data.error) {
-      if (result) { result.style.display = 'block'; result.textContent = 'Fehler: ' + data.error; }
+      if (result) { result.style.display = 'block'; result.textContent = data.error; }
+    } else {
+      if (result) { result.style.display = 'block'; result.textContent = 'Keine Daten gefunden'; }
     }
   })
   .catch(function(err) {
     if (btn) { btn.textContent = 'PreCall-Recherche'; btn.disabled = false; }
-    if (result) { result.style.display = 'block'; result.textContent = 'Verbindungsfehler'; }
+    if (result) { result.style.display = 'block'; result.textContent = 'Verbindungsfehler: ' + err.message; }
   });
 }
 
