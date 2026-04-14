@@ -36,10 +36,11 @@ Regeln:
 - Auf Deutsch
 - Fokus auf vertriebsrelevante Informationen: Groesse, Branche, aktuelle News, Wachstum, Tech-Stack
 - Keine persoenlichen Daten ausser berufliche Rolle des Ansprechpartners
+- Wenn ein Vertriebsprofil mitgegeben wird: Verknuepfe die Firmen-Insights mit dem Produkt/Pitch des Beraters. Zeige auf wo das Produkt zum Bedarf der Firma passen koennte
 """
 
 
-def recherche_firma(firmenname, ansprechpartner=None, branche=None):
+def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None):
     """Web-Recherche + Claude-Briefing fuer eine Firma.
     Returns: (briefing_dict, error_msg) — per existing service tuple pattern.
     """
@@ -77,7 +78,7 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None):
             return (None, "Keine Suchergebnisse gefunden")
 
         # 2. Claude Haiku Briefing
-        briefing = _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse)
+        briefing = _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten)
         if not briefing:
             return (None, "Briefing-Generierung fehlgeschlagen")
 
@@ -123,7 +124,7 @@ def _brave_search(firmenname, ansprechpartner=None, branche=None):
         return None
 
 
-def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse):
+def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten=None):
     """Claude Haiku generates compact briefing from search results."""
     search_text = "\n\n".join([
         f"**{r['title']}**\n{r['description']}\nURL: {r['url']}"
@@ -136,6 +137,25 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse):
     if branche:
         user_msg += f"\nBranche: {branche}"
     user_msg += f"\n\nSuchergebnisse:\n{search_text}"
+
+    if profil_daten and isinstance(profil_daten, dict):
+        basis = profil_daten.get('basis', {})
+        zg = profil_daten.get('zielgruppe', {})
+        profile_parts = []
+        if basis.get('produktbeschreibung'):
+            profile_parts.append(f"Unser Produkt: {basis['produktbeschreibung']}")
+        if basis.get('usps'):
+            profile_parts.append(f"USPs: {', '.join(basis['usps'])}")
+        if zg.get('berufsstatus'):
+            profile_parts.append(f"Zielgruppe: {zg['berufsstatus']}")
+        opener = profil_daten.get('opener', '')
+        pitch = profil_daten.get('pitch', '')
+        if opener:
+            profile_parts.append(f"Opener: {opener}")
+        if pitch:
+            profile_parts.append(f"Pitch: {pitch}")
+        if profile_parts:
+            user_msg += f"\n\nVertriebsprofil des Beraters:\n" + "\n".join(profile_parts)
 
     try:
         msg = claude_client.messages.create(

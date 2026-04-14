@@ -938,7 +938,25 @@ def api_precall_research():
     ansprechpartner = (data.get('ansprechpartner') or '').strip() or None
     branche = (data.get('branche') or '').strip() or None
 
-    briefing, error = recherche_firma(firmenname, ansprechpartner, branche)
+    # Aktives Profil laden fuer kontextreicheres Briefing
+    profil_daten = None
+    apid = flask_session.get('active_profile_id')
+    if apid:
+        from database.db import get_session as get_db_session
+        from database.models import Profile as ProfileModel
+        import json as _json
+        db_pf = get_db_session()
+        try:
+            pf = db_pf.get(ProfileModel, apid)
+            if pf and pf.daten:
+                try:
+                    profil_daten = _json.loads(pf.daten) if isinstance(pf.daten, str) else pf.daten
+                except Exception:
+                    profil_daten = None
+        finally:
+            db_pf.close()
+
+    briefing, error = recherche_firma(firmenname, ansprechpartner, branche, profil_daten=profil_daten)
     if error:
         # Distinguish client-caused validation errors from upstream failures
         if 'Pflicht' in error or 'Zeichen' in error or 'konfiguriert' in error:
