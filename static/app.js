@@ -36,6 +36,8 @@ let micStarted = false;  // true while streaming
 
 async function startMicStream() {
   if (micStarted) return;
+  // If pip-launcher is running a session, don't start a second mic
+  if (window.NerveLauncher && window.NerveLauncher.isActive()) return;
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioCtx  = new AudioContext({ sampleRate: 16000 });
@@ -1610,6 +1612,8 @@ function pipStartPrecall() {
 }
 
 function pipStartCall() {
+  // If pip-launcher is running a session, don't start a second mic
+  if (window.NerveLauncher && window.NerveLauncher.isActive()) return;
   // Set profile if changed
   var sel = getPipElement('pip-profil-select');
   if (sel && sel.value) {

@@ -981,59 +981,6 @@
 <!-- ── PiP Window Content (moved into PiP document when opened) ──────────── -->
 <div id="pip-window" style="display:none">
 
-  <!-- ── Section: SETUP (pre-call) ── -->
-  <div id="pip-section-setup" class="pip-section" style="display:flex;flex-direction:column;height:100%">
-
-    <!-- Step 1: Modus -->
-    <div id="pip-setup-step-1" class="pip-setup-step">
-      <div class="pip-setup-title">Modus waehlen</div>
-      <div class="pip-setup-buttons">
-        <button class="pip-mode-btn" onclick="pipSelectMode('cold_call')">
-          <span class="pip-mode-icon">&#x1F512;</span>
-          <span>Cold Call</span>
-        </button>
-        <button class="pip-mode-btn" onclick="pipSelectMode('meeting')">
-          <span class="pip-mode-icon">&#x1F91D;</span>
-          <span>Meeting</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Step 2: Kundendaten -->
-    <div id="pip-setup-step-2" class="pip-setup-step" style="display:none">
-      <div class="pip-setup-title">Kundendaten</div>
-      <div class="pip-setup-form">
-        <input type="text" id="pip-kd-firma" class="pip-input" placeholder="Firma" list="pip-kd-firma-list" autocomplete="off">
-        <datalist id="pip-kd-firma-list"></datalist>
-        <input type="text" id="pip-kd-name" class="pip-input" placeholder="Name" list="pip-kd-name-list" autocomplete="off">
-        <datalist id="pip-kd-name-list"></datalist>
-        <input type="text" id="pip-kd-position" class="pip-input" placeholder="Position" list="pip-kd-position-list" autocomplete="off">
-        <datalist id="pip-kd-position-list"></datalist>
-      </div>
-      <div class="pip-setup-actions">
-        <button class="pip-btn-next" onclick="pipSubmitKundendaten()">Weiter</button>
-      </div>
-    </div>
-
-    <!-- Step 3: Skript/Profil + PreCall -->
-    <div id="pip-setup-step-3" class="pip-setup-step" style="display:none">
-      <div class="pip-setup-title">Skript waehlen</div>
-      <select id="pip-profil-select" class="pip-select"></select>
-      <button class="pip-btn-precall" id="pip-precall-btn" onclick="pipStartPrecall()">PreCall-Recherche</button>
-      <div id="pip-precall-result" class="pip-precall-result" style="display:none"></div>
-      <button class="pip-btn-start" onclick="pipStartCall()">Call starten</button>
-    </div>
-
-    <!-- Inline Meeting Consent (shown only if Meeting mode selected) -->
-    <div id="pip-consent-inline" class="pip-consent" style="display:none">
-      <p class="pip-consent-text">Alle Teilnehmer muessen dem Mitschnitt zustimmen.</p>
-      <div class="pip-consent-actions">
-        <button class="pip-btn-consent-yes" onclick="pipConsentAccept()">Akzeptieren</button>
-        <button class="pip-btn-consent-no" onclick="pipConsentReject()">Ablehnen</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ── Section: LIVE (existing coaching tabs) ── -->
   <div id="pip-section-live" class="pip-section" style="display:none;flex-direction:column;height:100%">
 
