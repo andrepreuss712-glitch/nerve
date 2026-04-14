@@ -469,30 +469,24 @@
 
       // Skript
       state.skripte.length > 0
-        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:2px"><label style="font-size:11px;color:var(--page-text-muted)">Skript</label><button type="button" class="launcher-inline-edit-btn" id="lnr-skript-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:0">Bearbeiten</button></div><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
+        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Skript</label><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
         : '',
-      skriptPreview
-        ? '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto">' + skriptPreview + '</div>'
-          + '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4">' + escHtml(skriptPreview) + '</textarea>'
-        : (state.skripte.length > 0
-          ? '<div class="launcher-opener-preview" id="lnr-skript-preview" style="color:var(--page-text-muted);font-style:italic">Skript auswaehlen fuer Vorschau</div>'
-            + '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4"></textarea>'
-          : ''),
+      '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto' + (skriptPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (skriptPreview || (state.skripte.length > 0 ? 'Skript auswaehlen fuer Vorschau' : '')) + '</div>',
+      '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4"></textarea>',
+      state.skripte.length > 0
+        ? '<button type="button" id="lnr-skript-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
+        : '',
 
       // Opener
       state.openerItems.length > 0
-        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:2px"><label style="font-size:11px;color:var(--page-text-muted)">Opener</label><button type="button" class="launcher-inline-edit-btn" id="lnr-opener-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:0">Bearbeiten</button></div><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
+        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
         : '',
-      openerPreview
-        ? '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap">' + openerPreview + '</div>'
-          + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3">' + escHtml(openerPreview) + '</textarea>'
-        : (state.openerItems.length > 0
-            ? '<div class="launcher-opener-preview" id="lnr-opener-preview" style="color:var(--page-text-muted);font-style:italic">Opener auswaehlen fuer Vorschau</div>'
-              + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>'
-            : (legacyOpener
-                ? '<div style="font-size:12px;color:var(--page-text-muted);margin-top:6px;margin-bottom:2px">Opener (aus Profil):</div><div class="launcher-opener-preview" id="lnr-opener-preview">' + escHtml(legacyOpener) + '</div>'
-                  + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3">' + escHtml(legacyOpener) + '</textarea>'
-                : '<div class="launcher-opener-preview" id="lnr-opener-preview" style="color:var(--page-text-muted);font-style:italic">Kein Opener hinterlegt</div>')),
+      '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (openerPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">'
+        + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswaehlen fuer Vorschau' : (legacyOpener ? escHtml(legacyOpener) : 'Kein Opener hinterlegt'))) + '</div>',
+      '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>',
+      (state.openerItems.length > 0 || legacyOpener)
+        ? '<button type="button" id="lnr-opener-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
+        : '',
 
       '<div class="launcher-actions">',
       '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurueck</button>',
@@ -583,7 +577,11 @@
       var ta = document.getElementById(textareaId);
       if (!ta) return;
       if (ta.style.display === 'none') {
-        // Switch to edit mode
+        // Switch to edit mode — populate textarea with current preview text
+        var currentText = preview ? preview.textContent : '';
+        if (currentText && currentText !== 'Skript auswaehlen fuer Vorschau' && currentText !== 'Opener auswaehlen fuer Vorschau' && currentText !== 'Kein Opener hinterlegt') {
+          ta.value = currentText;
+        }
         if (preview) preview.style.display = 'none';
         ta.style.display = 'block';
         ta.style.borderColor = '#00D4AA';
