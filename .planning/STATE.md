@@ -307,6 +307,7 @@ Recent decisions affecting current work:
 - Phase 04.6.1 inserted after Phase 04.6: Auth-Upgrade Google + Microsoft OAuth Login (URGENT) — Authlib-basierter OAuth-Flow für Google + Microsoft, User-Model nullable passwort_hash, Login-UI Buttons
 - Phase 04.6.2 inserted after Phase 04.6.1: deploy hardening and oauth polish (URGENT) — gehört zum Auth-Block (completed 2026-04-07: tar-over-ssh deploy, header→app.getnerve.app link, MS Consumer-tenant block + conditional prompt=consent, onboarding diagnostic logging)
 - Phase 04.8.1 inserted after Phase 04.8: Echtzeit-Engine Rebuild — Split-Architektur (URGENT) — Async FastAPI+uvicorn WebSocket Engine als eigener Service, Redis Bridge zu Flask, STT/LLM Abstraktionsschicht, HTTP-Polling durch WebSocket-Push ersetzen. Fundament für eigene KI, eigene STT, Skalierung.
+- Phase 6 added: PiP Komplett-Rebuild — Neues Layout (EWB+KI oben, Skript-Teleprompter unten), Claude Streaming, semantische Skript-Position-Erkennung, Transparenz-Regler. Ersetzt bestehenden PiP-Code.
 
 ### Pending Todos
 

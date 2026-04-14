@@ -532,6 +532,16 @@ Phases execute in numeric order.
 | 4.17 PiP Launcher | 0/? | Not started | - |
 | 5. Launch | 0/? | Not started | - |
 
+### Phase 6: PiP Komplett-Rebuild — Neues Layout, Claude Streaming, Skript-Teleprompter, Transparenz-Regler
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 6 to break down)
+
 ---
 *Roadmap created: 2026-03-30*
 *Milestone: NERVE Launch — v0.9.4 to first 50 paying customers*
