@@ -139,6 +139,7 @@ def bearbeiten(pid):
             p.name    = request.form.get('name', p.name).strip()
             p.branche = request.form.get('branche', p.branche or '').strip()
             p.daten   = daten_json
+            p.consent_text = request.form.get('consent_text', p.consent_text or '').strip() or None
             db.commit()
             log_action(db, g.user.id, g.org.id, 'profile_update',
                        target_type='profile', target_id=p.id,

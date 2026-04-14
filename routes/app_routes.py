@@ -946,6 +946,31 @@ Max 15 Wörter pro Bullet. Kein Markdown."""
 
 
 # ── PreCall Intelligence (Phase 04.13, per D-04: button-triggered) ────────────
+@app_routes_bp.route('/api/skripte')
+@login_required
+def api_skripte():
+    """Return scripts for a given profile_id (for PiP Setup-Step 3 dropdown). Per D-12.
+    Security: JOIN to profiles ensures profile belongs to user's org (T-06-01)."""
+    from database.db import SessionLocal
+    from database.models import ProfileSkript, Profile
+    profile_id = request.args.get('profile_id', type=int)
+    if not profile_id:
+        return jsonify([])
+    db = SessionLocal()
+    try:
+        # T-06-01: org_id check via JOIN -- prevents cross-org script access
+        skripte = (db.query(ProfileSkript)
+                   .join(Profile, ProfileSkript.profile_id == Profile.id)
+                   .filter(Profile.org_id == g.org.id)
+                   .filter(ProfileSkript.profile_id == profile_id)
+                   .order_by(ProfileSkript.sortierung)
+                   .all())
+        result = [{'id': s.id, 'name': s.name, 'inhalt': s.inhalt or ''} for s in skripte]
+    finally:
+        db.close()
+    return jsonify(result)
+
+
 @app_routes_bp.route('/api/precall/research', methods=['POST'])
 @login_required
 def api_precall_research():

@@ -585,6 +585,17 @@
       </div>
 
       <div style="height:40px"></div>
+
+      <!-- Phase 06: Consent-Text (D-06) -->
+      <div class="fg" style="margin-top:16px">
+        <label class="fl">Consent-Vorlesetext (Meeting-Modus)</label>
+        <textarea id="consent_text" name="consent_text" class="fta" rows="3"
+          placeholder="Herr/Frau [Name], kurzer Hinweis -- ich mache mir waehrend unseres Gespraechs digitale Notizen. Ist das fuer Sie in Ordnung?"
+        >{{ profile.consent_text or '' }}</textarea>
+        <small style="color:rgba(255,255,255,0.4);font-size:12px">
+          Wird im PiP vor Meeting-Calls vorgelesen. [Name] wird automatisch ersetzt. Leer = Standard-Text.
+        </small>
+      </div>
     </div><!-- editor-main -->
   </div><!-- editor-layout -->
 </form>
