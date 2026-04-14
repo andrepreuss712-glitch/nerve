@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-04-14T16:11:42.345Z"
-last_activity: 2026-04-13
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-04-14T16:58:45.461Z"
+last_activity: 2026-04-14
 progress:
   total_phases: 31
   completed_phases: 20
-  total_plans: 115
-  completed_plans: 105
-  percent: 91
+  total_plans: 119
+  completed_plans: 106
+  percent: 89
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 04.17 — pip-launcher-inserted
+**Current focus:** Phase 06 — PiP Komplett-Rebuild
 
 ## Current Position
 
-Phase: 04.17 (pip-launcher-inserted) — EXECUTING
-Plan: 3 of 3
+Phase: 06 (PiP Komplett-Rebuild) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-04-13
+Last activity: 2026-04-14
 
 **Next:** Discuss/plan Phase 04.13
 
@@ -131,6 +131,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.14 P02 | 5 | 2 tasks | 3 files |
 | Phase 04.17-pip-launcher-inserted P01 | 18 | 2 tasks | 3 files |
 | Phase 04.17-pip-launcher-inserted P02 | 12 | 2 tasks | 1 files |
+| Phase 06-pip-komplett-rebuild-neues-layout-claude-streaming-skript-te P01 | 10 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -296,6 +297,9 @@ Recent decisions affecting current work:
 - [Phase 04.17-pip-launcher-inserted]: Profile list embedded as window._allProfiles via Flask template variable at page load — no new AJAX endpoint needed
 - [Phase 04.17-pip-launcher-inserted]: calcPipScore uses ga_details.filter(x.erfolgreich) for behandelt rate — no backend change needed
 - [Phase 04.17-pip-launcher-inserted]: pipStartCall calls startMicStream() synchronously to preserve getUserMedia user gesture
+- [Phase 06-01]: Haiku used for pip streaming function per CLAUDE.md Live-cost constraint
+- [Phase 06-01]: room=sid targeting on all pip_token emits prevents cross-user broadcast (T-06-02)
+- [Phase 06-01]: JOIN to profiles in /api/skripte enforces org_id isolation (T-06-01)
 
 ### Roadmap Evolution
 
@@ -347,6 +351,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-14T16:11:42.340Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-pip-komplett-rebuild-neues-layout-claude-streaming-skript-te/06-CONTEXT.md
+Last session: 2026-04-14T16:58:45.456Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
