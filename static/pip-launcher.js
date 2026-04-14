@@ -469,7 +469,7 @@
 
       // Skript
       state.skripte.length > 0
-        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Skript</label><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
+        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:2px"><label style="font-size:11px;color:var(--page-text-muted)">Skript</label><a href="/profiles/' + state.activeProfileId + '/edit#sec-leitfaden" target="_blank" style="font-size:11px;color:#00D4AA;text-decoration:none">Bearbeiten</a></div><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
         : '',
       skriptPreview
         ? '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto">' + skriptPreview + '</div>'
@@ -477,7 +477,7 @@
 
       // Opener
       state.openerItems.length > 0
-        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
+        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:2px"><label style="font-size:11px;color:var(--page-text-muted)">Opener</label><a href="/profiles/' + state.activeProfileId + '/edit#sec-leitfaden" target="_blank" style="font-size:11px;color:#00D4AA;text-decoration:none">Bearbeiten</a></div><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
         : '',
       openerPreview
         ? '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap">' + openerPreview + '</div>'
