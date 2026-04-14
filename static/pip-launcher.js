@@ -558,7 +558,7 @@
     // Body styles
     var body = pipWindow.document.body;
     body.style.margin = '0';
-    body.style.background = 'var(--page-bg,#06060a)';
+    body.style.background = 'rgba(6,6,10,0.85)';
     body.style.color = 'var(--page-text-color,#e8ecf4)';
     body.style.fontFamily = "'Inter',sans-serif";
     body.style.display = 'flex';
