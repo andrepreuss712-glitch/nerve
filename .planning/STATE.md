@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-04-14T16:58:45.461Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-04-14T17:02:11.626Z"
 last_activity: 2026-04-14
 progress:
   total_phases: 31
   completed_phases: 20
   total_plans: 119
-  completed_plans: 106
-  percent: 89
+  completed_plans: 107
+  percent: 90
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 06 (PiP Komplett-Rebuild) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-14
 
@@ -132,6 +132,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 04.17-pip-launcher-inserted P01 | 18 | 2 tasks | 3 files |
 | Phase 04.17-pip-launcher-inserted P02 | 12 | 2 tasks | 1 files |
 | Phase 06-pip-komplett-rebuild-neues-layout-claude-streaming-skript-te P01 | 10 | 2 tasks | 7 files |
+| Phase 06 P02 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -300,6 +301,7 @@ Recent decisions affecting current work:
 - [Phase 06-01]: Haiku used for pip streaming function per CLAUDE.md Live-cost constraint
 - [Phase 06-01]: room=sid targeting on all pip_token emits prevents cross-user broadcast (T-06-02)
 - [Phase 06-01]: JOIN to profiles in /api/skripte enforces org_id isolation (T-06-01)
+- [Phase 06]: Removed duplicate .pip-consent-text CSS (old inline consent rule overrode new Phase 06 design)
 
 ### Roadmap Evolution
 
@@ -351,6 +353,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-14T16:58:45.456Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-04-14T17:02:11.622Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None

@@ -105,7 +105,7 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 - [x] **PIP-02**: Claude-Antworten erscheinen Wort-fuer-Wort via Socket.IO Streaming im PiP (kein Polling), mit blinkendem Cursor
 - [x] **PIP-03**: Dual-Slot-System zeigt zwei KI-Antworten gleichzeitig; bei Themenwechsel werden beide ersetzt, bei neuem Einwand waehrend Streaming laeuft Slot 1 weiter und Slot 2 beantwortet neu
 - [x] **PIP-04**: Skript-Teleprompter zeigt vollen Skript-Text mit semantischer KI-Positionserkennung (skript_position), aktiver Block hervorgehoben, manuelles Scrollen ueberschreibt KI-Position fuer 8 Sekunden
-- [ ] **PIP-05**: Transparenz-Regler steuert NUR den Hintergrund-Layer (rgba); Schrift, Buttons und KI-Hinweise bleiben bei 100% Opacity; Wert in localStorage gespeichert
+- [x] **PIP-05**: Transparenz-Regler steuert NUR den Hintergrund-Layer (rgba); Schrift, Buttons und KI-Hinweise bleiben bei 100% Opacity; Wert in localStorage gespeichert
 
 ### Business Setup
 
@@ -234,7 +234,7 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 | PIP-02 | Phase 6 | Complete |
 | PIP-03 | Phase 6 | Complete |
 | PIP-04 | Phase 6 | Complete |
-| PIP-05 | Phase 6 | Pending |
+| PIP-05 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 67 total
