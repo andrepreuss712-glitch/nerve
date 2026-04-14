@@ -181,17 +181,27 @@ def register_audio_handlers(sio):
         from flask import request
         _sid = request.sid if sid is None else sid
         mode = 'meeting'  # default for backward compatibility
+        precall_briefing = None
         if isinstance(data, dict):
             mode = data.get('mode', 'meeting')
+            precall_briefing = data.get('precall_briefing', None)
         print(f"[DG] start_live_session received (sid={_sid}, mode={mode})")
         _open_deepgram_connection(_sid, mode=mode)
+
+        # Store precall briefing in live session state
+        import services.live_session as ls
+        if precall_briefing and isinstance(precall_briefing, str):
+            if len(precall_briefing) > 2000:
+                precall_briefing = precall_briefing[:2000]
+            with ls.state_lock:
+                ls.state['precall_briefing'] = precall_briefing
+            print(f"[DG] PreCall-Briefing gespeichert ({len(precall_briefing)} Zeichen)")
 
         # FT logging: create ft_call_sessions row (Phase 04.7.1)
         try:
             from flask import session as flask_session
             from database.db import SessionLocal
             from database.models import FtCallSession, User
-            import services.live_session as ls
 
             user_id = flask_session.get('user_id')
             if user_id:

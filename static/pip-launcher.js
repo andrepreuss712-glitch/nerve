@@ -584,7 +584,11 @@
       state.audioCtx = audioCtx;
       state.workletNode = workletNode;
       state.micStarted = true;
-      state.socket.emit('start_live_session', { mode: state.mode || 'cold_call' });
+      var briefingText = (state.precallBriefing && state.precallBriefing.text) ? state.precallBriefing.text : null;
+      state.socket.emit('start_live_session', {
+        mode: state.mode || 'cold_call',
+        precall_briefing: briefingText
+      });
       console.log('[NerveLauncher] Mic started, mode:', state.mode);
     } catch (err) {
       console.error('[NerveLauncher] Audio worklet error:', err);

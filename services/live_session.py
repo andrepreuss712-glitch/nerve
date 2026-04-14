@@ -107,6 +107,7 @@ state = {
     'cold_call_inference':  None,
     # ── Phase 04.11: Active Learning Cards (D-09) ──
     'active_learning_cards': [],
+    'precall_briefing': None,  # PreCall briefing text injected at session start
 }
 
 # ── Conversation Log ──────────────────────────────────────────────────────────
@@ -316,6 +317,7 @@ def reset_session():
         state['ewb_buttons']         = None
         state['cold_call_inference'] = None
         state['active_learning_cards'] = []
+        state['precall_briefing'] = None
     with _line_id_lock:
         _line_id_counter = 0
     with _log_sp_lock:

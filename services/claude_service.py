@@ -376,6 +376,11 @@ def _build_system_prompt() -> str:
     lerndaten = _get_erfolgsquoten()
     if lerndaten:
         lines.append(lerndaten)
+    # PreCall-Briefing injizieren (Phase quick-260414)
+    precall_text = ls.state.get('precall_briefing')
+    if precall_text:
+        lines.append('\n## Firmenkontext (aus PreCall-Recherche)')
+        lines.append(precall_text)
     return '\n'.join(lines)
 
 
