@@ -14,6 +14,10 @@
     precallVerfuegbar: false,
     precallBriefing: null,
     precallFormData: null,  // saved form values for "back" navigation
+    skripte: [],
+    openerItems: [],
+    selectedSkriptId: null,
+    selectedOpenerId: null,
     socket: null,
     micStream: null,
     audioCtx: null,
@@ -84,6 +88,8 @@
         state.activeProfileId = data.active_profile_id || null;
         state.profileDaten = data.profile_daten || {};
         state.precallVerfuegbar = !!data.precall_verfuegbar;
+        state.skripte = data.skripte || [];
+        state.openerItems = data.opener || [];
         renderStep();
       })
       .catch(function () {
@@ -426,63 +432,129 @@
       return '<option value="' + p.id + '"' + sel + '>' + escHtml(p.name) + '</option>';
     }).join('');
 
-    var opener = (state.profileDaten && state.profileDaten.opener) ? state.profileDaten.opener : '';
+    // Skript-Dropdown
+    var skriptOptions = '<option value="">-- Kein Skript --</option>' + state.skripte.map(function (s) {
+      var sel = s.id === state.selectedSkriptId ? ' selected' : '';
+      return '<option value="' + s.id + '"' + sel + '>' + escHtml(s.name) + '</option>';
+    }).join('');
+
+    // Opener-Dropdown
+    var openerOptions = '<option value="">-- Kein Opener --</option>' + state.openerItems.map(function (o) {
+      var sel = o.id === state.selectedOpenerId ? ' selected' : '';
+      return '<option value="' + o.id + '"' + sel + '>' + escHtml(o.name) + '</option>';
+    }).join('');
+
+    // Vorschauen
+    var skriptPreview = '';
+    if (state.selectedSkriptId) {
+      var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
+      if (sk) skriptPreview = escHtml(sk.inhalt);
+    }
+    var openerPreview = '';
+    if (state.selectedOpenerId) {
+      var op = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
+      if (op) openerPreview = escHtml(op.inhalt);
+    }
+    // Fallback: alten Opener aus Profil-JSON verwenden wenn keine Opener-Items existieren
+    var legacyOpener = (state.profileDaten && state.profileDaten.opener) ? state.profileDaten.opener : '';
 
     c.innerHTML = [
       '<div class="launcher-step">',
       '<div class="nav-live-title">Skript & Opener waehlen</div>',
+
+      // Profil
       state.profiles.length > 0
-        ? '<select class="launcher-select" id="lnr-profile-select">' + profileOptions + '</select>'
+        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-bottom:2px;display:block">Profil</label><select class="launcher-select" id="lnr-profile-select">' + profileOptions + '</select>'
         : '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Profil angelegt. <a href="/profiles" style="color:#00D4AA">Profil erstellen</a></div>',
-      opener
-        ? '<div style="font-size:12px;color:var(--page-text-muted);margin-bottom:4px">Opener-Vorschau:</div><div class="launcher-opener-preview" id="lnr-opener-preview">' + escHtml(opener) + '</div>'
-        : '<div class="launcher-opener-preview" id="lnr-opener-preview" style="color:var(--page-text-muted);font-style:italic">Kein Opener im Profil hinterlegt</div>',
+
+      // Skript
+      state.skripte.length > 0
+        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Skript</label><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
+        : '',
+      skriptPreview
+        ? '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto">' + skriptPreview + '</div>'
+        : (state.skripte.length > 0 ? '<div class="launcher-opener-preview" id="lnr-skript-preview" style="color:var(--page-text-muted);font-style:italic">Skript auswaehlen fuer Vorschau</div>' : ''),
+
+      // Opener
+      state.openerItems.length > 0
+        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
+        : '',
+      openerPreview
+        ? '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap">' + openerPreview + '</div>'
+        : (state.openerItems.length > 0
+            ? '<div class="launcher-opener-preview" id="lnr-opener-preview" style="color:var(--page-text-muted);font-style:italic">Opener auswaehlen fuer Vorschau</div>'
+            : (legacyOpener
+                ? '<div style="font-size:12px;color:var(--page-text-muted);margin-top:6px;margin-bottom:2px">Opener (aus Profil):</div><div class="launcher-opener-preview" id="lnr-opener-preview">' + escHtml(legacyOpener) + '</div>'
+                : '<div class="launcher-opener-preview" id="lnr-opener-preview" style="color:var(--page-text-muted);font-style:italic">Kein Opener hinterlegt</div>')),
+
       '<div class="launcher-actions">',
-      state.precallVerfuegbar
-        ? '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurueck</button>'
-        : '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurueck</button>',
+      '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurueck</button>',
       '<button class="launcher-btn-ghost" id="lnr-step5-skip">Ueberspringen</button>',
       '<button class="launcher-btn-primary" id="lnr-step5-start">Call starten &#9654;</button>',
       '</div>',
       '</div>'
     ].join('');
 
-    // Profile change: fetch opener data
-    var sel = document.getElementById('lnr-profile-select');
-    if (sel) {
-      sel.onchange = function () {
-        var pid = parseInt(sel.value);
+    // Profile change: reload Skripte + Opener
+    var profileSel = document.getElementById('lnr-profile-select');
+    if (profileSel) {
+      profileSel.onchange = function () {
+        var pid = parseInt(profileSel.value);
         if (!pid) return;
         fetch('/api/launcher/profile/' + pid)
           .then(function (r) { return r.json(); })
           .then(function (data) {
             state.activeProfileId = data.id;
             state.profileDaten = data.daten || {};
-            var preview = document.getElementById('lnr-opener-preview');
-            if (preview) {
-              var op = (data.daten && data.daten.opener) ? data.daten.opener : '';
-              preview.textContent = op || 'Kein Opener im Profil hinterlegt';
-              preview.style.fontStyle = op ? 'normal' : 'italic';
-              preview.style.color = op ? '' : 'var(--page-text-muted)';
-            }
+            state.skripte = data.skripte || [];
+            state.openerItems = data.opener || [];
+            state.selectedSkriptId = null;
+            state.selectedOpenerId = null;
+            renderStep5();
           })
           .catch(function () {});
       };
     }
 
+    // Skript change: update preview
+    var skriptSel = document.getElementById('lnr-skript-select');
+    if (skriptSel) {
+      skriptSel.onchange = function () {
+        state.selectedSkriptId = parseInt(skriptSel.value) || null;
+        var preview = document.getElementById('lnr-skript-preview');
+        if (preview) {
+          var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
+          preview.textContent = sk ? sk.inhalt : 'Skript auswaehlen fuer Vorschau';
+          preview.style.fontStyle = sk ? 'normal' : 'italic';
+          preview.style.color = sk ? '' : 'var(--page-text-muted)';
+        }
+      };
+    }
+
+    // Opener change: update preview
+    var openerSel = document.getElementById('lnr-opener-select');
+    if (openerSel) {
+      openerSel.onchange = function () {
+        state.selectedOpenerId = parseInt(openerSel.value) || null;
+        var preview = document.getElementById('lnr-opener-preview');
+        if (preview) {
+          var op = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
+          preview.textContent = op ? op.inhalt : 'Opener auswaehlen fuer Vorschau';
+          preview.style.fontStyle = op ? 'normal' : 'italic';
+          preview.style.color = op ? '' : 'var(--page-text-muted)';
+        }
+      };
+    }
+
+    // Navigation
     document.getElementById('lnr-step5-back').onclick = function () {
-      if (state.precallVerfuegbar) {
-        state.step = 2;
-      } else {
-        state.step = 1;
-      }
+      state.step = state.precallVerfuegbar ? 2 : 1;
       renderStep();
     };
     document.getElementById('lnr-step5-skip').onclick = function () {
       startCall(false);
     };
     document.getElementById('lnr-step5-start').onclick = function () {
-      // Update profile selection before starting
       var s = document.getElementById('lnr-profile-select');
       if (s && s.value) state.activeProfileId = parseInt(s.value);
       startCall(true);
