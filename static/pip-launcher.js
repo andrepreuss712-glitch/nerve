@@ -482,22 +482,12 @@
 
     _registerSocketEvents();
 
-    // Request getUserMedia (user gesture required)
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(function (stream) {
-        state.micStream = stream;
-        _startAudio();
-      })
-      .catch(function (err) {
-        console.error('[NerveLauncher] getUserMedia error:', err);
-        alert('Mikrofon-Zugriff verweigert. Bitte Berechtigung erteilen und erneut versuchen.');
-        _cleanup();
-        return;
-      });
-
-    // Request PiP window — also requires user gesture
+    // MUST be sequential: PiP first (consumes user gesture), then mic
+    // Both need user activation but PiP is stricter about it
     if (!window.documentPictureInPicture) {
       console.warn('[NerveLauncher] Document PiP not supported');
+      // Fallback: start mic without PiP
+      _startMicOnly();
       return;
     }
 
@@ -505,9 +495,28 @@
       .then(function (pipWindow) {
         state.pipWindow = pipWindow;
         _setupPipWindow(pipWindow);
+        // NOW start mic — after PiP is open
+        _startMicOnly();
       })
       .catch(function (err) {
         console.error('[NerveLauncher] PiP requestWindow error:', err);
+        // Fallback: start mic without PiP
+        _startMicOnly();
+      });
+  }
+
+  function _startMicOnly() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(function (stream) {
+        state.micStream = stream;
+        _startAudio();
+        // Start polling for AI results (like app.js does)
+        _startPolling();
+      })
+      .catch(function (err) {
+        console.error('[NerveLauncher] getUserMedia error:', err);
+        alert('Mikrofon-Zugriff verweigert. Bitte Berechtigung erteilen und erneut versuchen.');
+        _cleanup();
       });
   }
 
@@ -659,48 +668,42 @@
   }
 
   function _triggerEwb(typ) {
-    if (!state.socket) return;
-    state.socket.emit('ewb_trigger', { einwand_typ: typ });
+    // EWB uses POST /api/analyse_line (same as app.js triggerEwb)
+    fetch('/api/analyse_line', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: typ, line_id: 'ewb_pip_' + Date.now() })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ergebnis && data.ergebnis.gegenargument_1) {
+          var el = pipEl('nlp-einwand-text');
+          if (el) el.textContent = data.ergebnis.gegenargument_1;
+          if (!state.pipTabLocked) _switchPipTab('einwand');
+        }
+      })
+      .catch(function (err) { console.error('[NerveLauncher] EWB error:', err); });
     console.log('[NerveLauncher] EWB trigger:', typ);
   }
 
-  // ── Socket Events ──────────────────────────────────────────────────────────
+  // ── Socket Events (transcript + coaching come via socket) ─────────────────
   function _registerSocketEvents() {
     if (!state.socket) return;
 
     state.socket.on('transcript', function (d) {
-      // Show einwand if detected
-      if (d && d.einwand) {
-        var el = pipEl('nlp-einwand-text');
-        if (el) el.textContent = d.einwand;
-        _switchPipTab('einwand');
+      if (d && d.type === 'final' && d.text) {
+        // Store for context
+        state.lastTranscript = d.text;
       }
     });
 
     state.socket.on('coaching', function (d) {
       if (!d) return;
       var tipp = d.tipp || d.text || '';
-      var kat = (d.kategorie || '').toLowerCase();
       if (tipp) {
-        if (kat === 'einwand' || kat === 'objection') {
-          var einEl = pipEl('nlp-einwand-text');
-          if (einEl) einEl.textContent = tipp;
-          _switchPipTab('einwand');
-        } else {
-          var coachEl = pipEl('nlp-coaching-text');
-          if (coachEl) coachEl.textContent = tipp;
-          _switchPipTab('coaching');
-        }
-      }
-    });
-
-    state.socket.on('ergebnis', function (d) {
-      if (!d) return;
-      // Update einwand tab if there's a gegenargument
-      if (d.gegenargument) {
-        var el = pipEl('nlp-einwand-text');
-        if (el) el.textContent = d.gegenargument;
-        if (!state.pipTabLocked) _switchPipTab('einwand');
+        var coachEl = pipEl('nlp-coaching-text');
+        if (coachEl) coachEl.textContent = tipp;
+        if (!state.pipTabLocked) _switchPipTab('coaching');
       }
     });
 
@@ -711,6 +714,58 @@
     state.socket.on('dg_error', function (d) {
       console.error('[NerveLauncher] Deepgram error:', d);
     });
+  }
+
+  // ── Polling for AI results (same pattern as app.js pollErgebnis) ──────────
+  var _pollVersion = 0;
+  state.pollingActive = false;
+
+  function _startPolling() {
+    state.pollingActive = true;
+    _pollVersion = 0;
+    _pollLoop();
+  }
+
+  function _stopPolling() {
+    state.pollingActive = false;
+  }
+
+  function _pollLoop() {
+    if (!state.pollingActive) return;
+    fetch('/api/ergebnis')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.version > _pollVersion && data.ergebnis !== null) {
+          _pollVersion = data.version;
+          _handleErgebnis(data.ergebnis);
+        }
+        if (state.pollingActive) setTimeout(_pollLoop, 500);
+      })
+      .catch(function () {
+        if (state.pollingActive) setTimeout(_pollLoop, 2000);
+      });
+  }
+
+  function _handleErgebnis(e) {
+    if (!e) return;
+    // Einwand detected — show gegenargument
+    if (e.einwand && (e.gegenargument_1 || e.gegenargument)) {
+      var el = pipEl('nlp-einwand-text');
+      if (el) el.textContent = e.gegenargument_1 || e.gegenargument || '';
+      if (!state.pipTabLocked) _switchPipTab('einwand');
+    }
+    // Update KB score bar if available
+    if (typeof e.kb !== 'undefined') {
+      var scoreEl = pipEl('nlp-kb-score');
+      if (scoreEl) scoreEl.textContent = e.kb + '%';
+      var barEl = pipEl('nlp-kb-bar-inner');
+      if (barEl) barEl.style.width = e.kb + '%';
+    }
+    // Update phase if available
+    if (e.phase) {
+      var phaseEl = pipEl('nlp-phase-text');
+      if (phaseEl) phaseEl.textContent = e.phase;
+    }
   }
 
   // ── Tab Management ─────────────────────────────────────────────────────────
@@ -762,6 +817,7 @@
       return;
     }
 
+    _stopPolling();
     _stopMic();
 
     fetch('/api/beenden', {
@@ -885,6 +941,7 @@
   // ── Cleanup ────────────────────────────────────────────────────────────────
   function _cleanup() {
     _stopTimer();
+    _stopPolling();
     if (state.micStarted) _stopMic();
     if (state.socket) { state.socket.disconnect(); state.socket = null; }
     state.micStarted = false;
