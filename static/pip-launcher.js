@@ -229,8 +229,9 @@
       '<div class="launcher-step">',
       '<div class="nav-live-title">Firmenrecherche</div>',
       '<input type="text" class="launcher-form-input" id="lnr-firma" placeholder="Firmenname *" maxlength="200" value="' + escHtml(saved.firma || '') + '">',
+      '<input type="text" class="launcher-form-input" id="lnr-ort" placeholder="Ort (optional)" maxlength="200" value="' + escHtml(saved.ort || '') + '">',
+      '<input type="text" class="launcher-form-input" id="lnr-branche" placeholder="Branche (optional)" maxlength="200" value="' + escHtml(saved.branche || '') + '">',
       '<input type="text" class="launcher-form-input" id="lnr-person" placeholder="Ansprechpartner (optional)" maxlength="200" value="' + escHtml(saved.person || '') + '">',
-      '<input type="text" class="launcher-form-input" id="lnr-branche" placeholder="Branche / Kontext (optional)" maxlength="200" value="' + escHtml(saved.branche || '') + '">',
       '<textarea class="launcher-form-input" id="lnr-optinfo" placeholder="Optionale Infos (optional)" maxlength="500" rows="2" style="resize:none">' + escHtml(saved.optinfo || '') + '</textarea>',
       '<div id="lnr-precall-loading" style="display:none">',
       '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:8px">Recherche laeuft... (~30 Sekunden)</div>',
@@ -266,6 +267,7 @@
   function saveFormData() {
     state.precallFormData = {
       firma: (document.getElementById('lnr-firma') || {}).value || '',
+      ort: (document.getElementById('lnr-ort') || {}).value || '',
       person: (document.getElementById('lnr-person') || {}).value || '',
       branche: (document.getElementById('lnr-branche') || {}).value || '',
       optinfo: (document.getElementById('lnr-optinfo') || {}).value || ''
@@ -287,17 +289,37 @@
     if (errEl2) errEl2.style.display = 'none';
     if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Laeuft...'; }
 
+    var ort = (document.getElementById('lnr-ort') || {}).value || '';
     var person = (document.getElementById('lnr-person') || {}).value || '';
     var branche = (document.getElementById('lnr-branche') || {}).value || '';
+    var optinfo = (document.getElementById('lnr-optinfo') || {}).value || '';
+
+    // Build enriched firmenname with location for better search results
+    var searchName = firma.trim();
+    if (ort.trim()) searchName += ' ' + ort.trim();
+
+    // Build enriched branche with optional info
+    var searchBranche = branche.trim();
+    if (optinfo.trim()) searchBranche = (searchBranche ? searchBranche + ' ' : '') + optinfo.trim();
 
     fetch('/api/precall/research', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firmenname: firma.trim(), ansprechpartner: person.trim() || null, branche: branche.trim() || null })
+      body: JSON.stringify({
+        firmenname: searchName,
+        ansprechpartner: person.trim() || null,
+        branche: searchBranche || null
+      })
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (loading) loading.style.display = 'none';
+        if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchfuehren'; }
+        if (data.error) {
+          // API returned an error
+          if (errEl2) { errEl2.textContent = data.error; errEl2.style.display = 'block'; }
+          return;
+        }
         if (data.briefing) {
           state.precallBriefing = data.briefing;
           state.precallResult = data.briefing;
