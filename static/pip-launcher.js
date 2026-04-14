@@ -27,7 +27,18 @@
     timerInterval: null,
     sessionSeconds: 0,
     lastConvId: null,
-    pipTabLocked: null
+    pipTabLocked: null,
+    // Phase 06: dual-slot streaming state
+    pipSlots: [
+      { streaming: false, text: '', result: null, contextKey: null },
+      { streaming: false, text: '', result: null, contextKey: null }
+    ],
+    consentDone: false,
+    teleprompterBlocks: [],
+    teleprompterActiveIdx: -1,
+    teleprompterManualOverride: false,
+    teleprompterOverrideTimer: null,
+    pipBgOpacity: 1.0
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -720,8 +731,7 @@
       .then(function (stream) {
         state.micStream = stream;
         _startAudio();
-        // Start polling for AI results (like app.js does)
-        _startPolling();
+        // Phase 06: No polling — streaming events arrive via state.socket automatically (D-09)
       })
       .catch(function (err) {
         console.error('[NerveLauncher] getUserMedia error:', err);
@@ -748,9 +758,24 @@
       state.workletNode = workletNode;
       state.micStarted = true;
       var briefingText = (state.precallBriefing && state.precallBriefing.text) ? state.precallBriefing.text : null;
+      // Get skript content for backend teleprompter context
+      var skriptInhalt = '';
+      var skriptBloecke = [];
+      if (state._editedSkriptText) {
+        skriptInhalt = state._editedSkriptText;
+      } else if (state.selectedSkriptId && state.skripte.length > 0) {
+        var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
+        if (sk && sk.inhalt) skriptInhalt = sk.inhalt;
+      }
+      if (skriptInhalt) {
+        skriptBloecke = skriptInhalt.split(/\n\n+/).filter(function (b) { return b.trim(); });
+      }
+
       state.socket.emit('start_live_session', {
         mode: state.mode || 'cold_call',
-        precall_briefing: briefingText
+        precall_briefing: briefingText,
+        skript_inhalt: skriptInhalt || null,
+        skript_bloecke: skriptBloecke.length > 0 ? skriptBloecke : null
       });
       console.log('[NerveLauncher] Mic started, mode:', state.mode);
     } catch (err) {
@@ -781,7 +806,7 @@
     // Body styles
     var body = pipWindow.document.body;
     body.style.margin = '0';
-    body.style.background = '#ffffff';
+    body.style.background = '#06060a';
     body.style.color = 'var(--page-text-color,#e8ecf4)';
     body.style.fontFamily = "'Inter',sans-serif";
     body.style.display = 'flex';
@@ -830,23 +855,15 @@
   }
 
   function _wirePipButtons(pipWindow) {
-    // Tab buttons
-    ['opener', 'einwand', 'coaching', 'ewb'].forEach(function (tab) {
-      var btn = pipWindow.document.getElementById('nlp-tab-' + tab);
-      if (btn) {
-        btn.onclick = function () { _switchPipTab(tab); };
-      }
-    });
-
     // Beenden
     var beendenBtn = pipWindow.document.getElementById('nlp-btn-beenden');
     if (beendenBtn) beendenBtn.onclick = function () { endCall(); };
 
-    // Next call
+    // Next call (postcall)
     var nextBtn = pipWindow.document.getElementById('nlp-btn-next-call');
     if (nextBtn) nextBtn.onclick = function () { nextCall(); };
 
-    // Details
+    // Details (postcall)
     var detailsBtn = pipWindow.document.getElementById('nlp-btn-details');
     if (detailsBtn) detailsBtn.onclick = function () { showDetails(); };
   }
@@ -856,8 +873,85 @@
     var badge = pipEl('nlp-mode-badge');
     if (badge) badge.textContent = state.mode === 'meeting' ? 'Meeting' : 'Cold Call';
 
-    // Set opener text — use selected opener from dropdown, edited text, or legacy fallback
-    var openerText = 'Kein Opener hinterlegt';
+    // D-05/D-07: Show consent screen for meeting mode, skip for cold_call
+    if (state.mode === 'meeting' && !state.consentDone) {
+      _showPipConsent();
+    } else {
+      _showPipLive();
+    }
+
+    // Render EWB buttons
+    _renderEwbButtons();
+  }
+
+  function _showPipConsent() {
+    var consentSection = pipEl('pip-section-consent');
+    var liveSection = pipEl('pip-section-live');
+    var beendenBtn = pipEl('nlp-btn-beenden');
+    if (consentSection) consentSection.style.display = 'flex';
+    if (liveSection) liveSection.style.display = 'none';
+    if (beendenBtn) beendenBtn.style.display = 'none';
+
+    // Hide opacity slider during consent
+    var slider = pipEl('pip-opacity-slider');
+    var sliderLabel = pipEl('pip-opacity-label');
+    if (slider) slider.style.display = 'none';
+    if (sliderLabel) sliderLabel.style.display = 'none';
+
+    // D-06: Load consent text from profile (or use default)
+    var consentText = (state.profileDaten && state.profileDaten.consent_text)
+      ? state.profileDaten.consent_text
+      : 'Herr/Frau [Name], kurzer Hinweis \u2014 ich mache mir w\u00e4hrend unseres Gespr\u00e4chs digitale Notizen. Ist das f\u00fcr Sie in Ordnung?';
+    // Replace [Name] with kundendaten name if available
+    if (state.precallFormData && state.precallFormData.person) {
+      consentText = consentText.replace('[Name]', state.precallFormData.person);
+    }
+    var textEl = pipEl('pip-consent-text');
+    if (textEl) textEl.textContent = consentText;
+
+    // Wire consent buttons
+    var acceptBtn = pipEl('pip-consent-accept');
+    var rejectBtn = pipEl('pip-consent-reject');
+    if (acceptBtn) {
+      acceptBtn.onclick = function () {
+        state.consentDone = true;
+        // Stay in meeting mode
+        _showPipLive();
+      };
+    }
+    if (rejectBtn) {
+      rejectBtn.onclick = function () {
+        state.consentDone = true;
+        state.mode = 'cold_call'; // D-05: fallback to cold_call
+        // Update mode badge
+        var b = pipEl('nlp-mode-badge');
+        if (b) b.textContent = 'Cold Call';
+        // Notify backend of mode change
+        if (state.socket) state.socket.emit('update_mode', { mode: 'cold_call' });
+        _showPipLive();
+      };
+    }
+  }
+
+  function _showPipLive() {
+    var consentSection = pipEl('pip-section-consent');
+    var liveSection = pipEl('pip-section-live');
+    var beendenBtn = pipEl('nlp-btn-beenden');
+    if (consentSection) consentSection.style.display = 'none';
+    if (liveSection) liveSection.style.display = 'flex';
+    if (beendenBtn) beendenBtn.style.display = 'block';
+
+    // Show opacity slider (D-15: only visible in live state)
+    var slider = pipEl('pip-opacity-slider');
+    var sliderLabel = pipEl('pip-opacity-label');
+    if (slider) slider.style.display = 'block';
+    if (sliderLabel) sliderLabel.style.display = 'block';
+
+    // Initialize opacity from localStorage (D-17)
+    _initOpacitySlider();
+
+    // Show opener in slot 0 (replaces old nlp-opener-text)
+    var openerText = 'Warte auf Gespr\u00e4chsinhalt...';
     if (state._editedOpenerText) {
       openerText = state._editedOpenerText;
     } else if (state.selectedOpenerId && state.openerItems.length > 0) {
@@ -866,11 +960,13 @@
     } else if (state.profileDaten && state.profileDaten.opener) {
       openerText = state.profileDaten.opener;
     }
-    var openerEl = pipEl('nlp-opener-text');
-    if (openerEl) openerEl.textContent = openerText;
+    var slot0Body = pipEl('pip-slot-body-0');
+    if (slot0Body) slot0Body.textContent = openerText;
+    var slot0Label = pipEl('pip-slot-label-0');
+    if (slot0Label && openerText !== 'Warte auf Gespr\u00e4chsinhalt...') slot0Label.textContent = 'OPENER';
 
-    // Render EWB buttons
-    _renderEwbButtons();
+    // Initialize teleprompter (D-11, D-12)
+    _initTeleprompter();
   }
 
   function _renderEwbButtons() {
@@ -890,42 +986,104 @@
   }
 
   function _triggerEwb(typ) {
-    // EWB uses POST /api/analyse_line (same as app.js triggerEwb)
+    // EWB triggers analysis — result arrives via pip_stream_start/pip_token/pip_token_done
     fetch('/api/analyse_line', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: typ, line_id: 'ewb_pip_' + Date.now() })
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.ergebnis && data.ergebnis.gegenargument_1) {
-          var el = pipEl('nlp-einwand-text');
-          if (el) el.textContent = data.ergebnis.gegenargument_1;
-          if (!state.pipTabLocked) _switchPipTab('einwand');
-        }
-      })
-      .catch(function (err) { console.error('[NerveLauncher] EWB error:', err); });
+    }).catch(function (err) { console.error('[NerveLauncher] EWB error:', err); });
     console.log('[NerveLauncher] EWB trigger:', typ);
   }
 
-  // ── Socket Events (transcript + coaching come via socket) ─────────────────
+  // ── Socket Events (Phase 06: streaming replaces polling) ─────────────────
   function _registerSocketEvents() {
     if (!state.socket) return;
 
     state.socket.on('transcript', function (d) {
       if (d && d.type === 'final' && d.text) {
-        // Store for context
         state.lastTranscript = d.text;
       }
     });
 
+    // Phase 06: Streaming event handlers (per D-08, D-09)
+    state.socket.on('pip_stream_start', function (d) {
+      if (!d) return;
+      var slot = d.slot || 0;
+      var body = pipEl('pip-slot-body-' + slot);
+      var container = pipEl('pip-slot-' + slot);
+      if (body) {
+        body.textContent = '';
+        body.classList.add('pip-streaming');
+      }
+      if (container) container.classList.add('pip-slot-streaming');
+      state.pipSlots[slot].streaming = true;
+      state.pipSlots[slot].text = '';
+      state.pipSlots[slot].result = null;
+      // Update label
+      var label = pipEl('pip-slot-label-' + slot);
+      if (label) label.textContent = d.replace_all ? 'ANTWORT' : (slot === 0 ? 'ANTWORT A' : 'ANTWORT B');
+      // D-03 topic switch: if replace_all, clear both slots
+      if (d.replace_all) {
+        [0, 1].forEach(function (s) {
+          var b = pipEl('pip-slot-body-' + s);
+          if (b) { b.textContent = ''; b.classList.remove('pip-streaming'); }
+          var c = pipEl('pip-slot-' + s);
+          if (c) c.classList.remove('pip-slot-streaming');
+          state.pipSlots[s] = { streaming: false, text: '', result: null, contextKey: null };
+        });
+        // Re-init the target slot
+        if (body) { body.textContent = ''; body.classList.add('pip-streaming'); }
+        if (container) container.classList.add('pip-slot-streaming');
+        state.pipSlots[slot].streaming = true;
+      }
+    });
+
+    state.socket.on('pip_token', function (d) {
+      if (!d) return;
+      var slot = d.slot || 0;
+      if (!state.pipSlots[slot].streaming) return; // discard if slot was cleared (topic switch)
+      state.pipSlots[slot].text += d.token;
+      var body = pipEl('pip-slot-body-' + slot);
+      if (body) body.textContent = state.pipSlots[slot].text;
+    });
+
+    state.socket.on('pip_token_done', function (d) {
+      if (!d) return;
+      var slot = d.slot || 0;
+      state.pipSlots[slot].streaming = false;
+      state.pipSlots[slot].result = d.result || {};
+      var body = pipEl('pip-slot-body-' + slot);
+      var container = pipEl('pip-slot-' + slot);
+      if (body) body.classList.remove('pip-streaming');
+      if (container) container.classList.remove('pip-slot-streaming');
+      // Render formatted result
+      _renderSlotResult(slot, d.result || {});
+      // D-13: update teleprompter position if skript_position present
+      if (d.result && typeof d.result.skript_position === 'number') {
+        _updateTeleprompterPosition(d.result.skript_position);
+      }
+      // D-02: if no einwand, show proactive content in the OTHER slot
+      if (d.result && !d.result.einwand) {
+        _showProactiveContent(1 - slot, d.result);
+      }
+    });
+
+    state.socket.on('pip_stream_error', function (d) {
+      if (!d) return;
+      var slot = d.slot || 0;
+      state.pipSlots[slot].streaming = false;
+      var body = pipEl('pip-slot-body-' + slot);
+      var container = pipEl('pip-slot-' + slot);
+      if (body) { body.textContent = 'KI-Fehler \u2014 bitte erneut versuchen'; body.classList.remove('pip-streaming'); }
+      if (container) container.classList.remove('pip-slot-streaming');
+    });
+
+    // Coaching via streaming now (not separate event) — but keep listener for backward compat
     state.socket.on('coaching', function (d) {
       if (!d) return;
       var tipp = d.tipp || d.text || '';
-      if (tipp) {
-        var coachEl = pipEl('nlp-coaching-text');
-        if (coachEl) coachEl.textContent = tipp;
-        if (!state.pipTabLocked) _switchPipTab('coaching');
+      if (tipp && !state.pipSlots[1].streaming) {
+        _showProactiveTipp(1, tipp);
       }
     });
 
@@ -938,67 +1096,195 @@
     });
   }
 
-  // ── Polling for AI results (same pattern as app.js pollErgebnis) ──────────
-  var _pollVersion = 0;
-  state.pollingActive = false;
-
-  function _startPolling() {
-    state.pollingActive = true;
-    _pollVersion = 0;
-    _pollLoop();
-  }
-
-  function _stopPolling() {
-    state.pollingActive = false;
-  }
-
-  function _pollLoop() {
-    if (!state.pollingActive) return;
-    fetch('/api/ergebnis')
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.version > _pollVersion && data.ergebnis !== null) {
-          _pollVersion = data.version;
-          _handleErgebnis(data.ergebnis);
-        }
-        if (state.pollingActive) setTimeout(_pollLoop, 500);
-      })
-      .catch(function () {
-        if (state.pollingActive) setTimeout(_pollLoop, 2000);
-      });
-  }
-
-  function _handleErgebnis(e) {
-    if (!e) return;
-    // Einwand detected — show gegenargument
-    if (e.einwand && (e.gegenargument_1 || e.gegenargument)) {
-      var el = pipEl('nlp-einwand-text');
-      if (el) el.textContent = e.gegenargument_1 || e.gegenargument || '';
-      if (!state.pipTabLocked) _switchPipTab('einwand');
-    }
-    // Update KB score bar if available
-    if (typeof e.kb !== 'undefined') {
-      var scoreEl = pipEl('nlp-kb-score');
-      if (scoreEl) scoreEl.textContent = e.kb + '%';
-      var barEl = pipEl('nlp-kb-bar-inner');
-      if (barEl) barEl.style.width = e.kb + '%';
-    }
-    // Update phase if available
-    if (e.phase) {
-      var phaseEl = pipEl('nlp-phase-text');
-      if (phaseEl) phaseEl.textContent = e.phase;
+  function _renderSlotResult(slot, result) {
+    var body = pipEl('pip-slot-body-' + slot);
+    if (!body) return;
+    var label = pipEl('pip-slot-label-' + slot);
+    // Format based on content
+    if (result.einwand && result.gegenargument_1) {
+      // Einwand detected — show typ badge + gegenargument
+      if (label) label.textContent = (result.typ || 'EINWAND').toUpperCase();
+      body.innerHTML = '';
+      var badge = (body.ownerDocument || document).createElement('span');
+      badge.className = 'pip-slot-typ-badge';
+      badge.textContent = result.typ || 'Einwand';
+      badge.style.cssText = _getTypBadgeStyle(result.typ);
+      body.appendChild(badge);
+      var textNode = (body.ownerDocument || document).createElement('div');
+      textNode.style.cssText = 'margin-top:6px;font-size:14px;line-height:1.5;color:#e8ecf4';
+      textNode.textContent = result.gegenargument_1;
+      body.appendChild(textNode);
+      // Highlight matching EWB button
+      _highlightEwbButton(result.typ || result.einwand);
+    } else if (result.gegenargument_1 || result.gegenargument) {
+      body.textContent = result.gegenargument_1 || result.gegenargument;
+    } else {
+      // Raw text from streaming is already displayed — keep it
     }
   }
 
-  // ── Tab Management ─────────────────────────────────────────────────────────
-  function _switchPipTab(tabName) {
-    var tabs = ['opener', 'einwand', 'coaching', 'ewb'];
-    tabs.forEach(function (t) {
-      var btn = pipEl('nlp-tab-' + t);
-      var panel = pipEl('nlp-panel-' + t);
-      if (btn) btn.classList.toggle('pip-tab-active', t === tabName);
-      if (panel) panel.style.display = t === tabName ? 'block' : 'none';
+  function _getTypBadgeStyle(typ) {
+    var colors = {
+      'Preis': 'background:rgba(212,168,83,0.15);color:#d4a853',
+      'Kein Bedarf': 'background:rgba(248,113,113,0.15);color:#f87171',
+      'Vertrauen': 'background:rgba(96,165,250,0.15);color:#60a5fa',
+      'Konkurrenz': 'background:rgba(168,85,247,0.15);color:#a855f7',
+      'Timing': 'background:rgba(251,191,36,0.15);color:#fbbf24'
+    };
+    return (colors[typ] || 'background:rgba(255,255,255,0.1);color:#c5c9d4') + ';font-size:11px;padding:2px 8px;border-radius:9999px';
+  }
+
+  function _highlightEwbButton(typ) {
+    var row = pipEl('nlp-ewb-row');
+    if (!row) return;
+    row.querySelectorAll('.pip-ewb-btn').forEach(function (btn) {
+      btn.classList.toggle('pip-ewb-ai-selected', btn.getAttribute('data-typ') === typ);
     });
+  }
+
+  function _showProactiveContent(slot, result) {
+    // D-02: Between einwaende, show contextual tips
+    if (result.phase) {
+      _showProactiveTipp(slot, 'Phase wechselt: ' + result.phase);
+      var label = pipEl('pip-slot-label-' + slot);
+      if (label) label.textContent = 'PHASE';
+    }
+    if (typeof result.kb === 'number') {
+      var trend = result.kb >= 50 ? 'steigend' : 'fallend';
+      var trendColor = result.kb >= 50 ? '#00D4AA' : '#f87171';
+      var body = pipEl('pip-slot-body-' + slot);
+      if (body) {
+        body.innerHTML = '<span class="pip-slot-kb" style="color:' + trendColor + '">' + result.kb + '%</span> Kaufbereitschaft \u2014 ' + trend;
+      }
+      var label2 = pipEl('pip-slot-label-' + slot);
+      if (label2) label2.textContent = 'KAUFBEREITSCHAFT';
+    }
+  }
+
+  function _showProactiveTipp(slot, tipp) {
+    var body = pipEl('pip-slot-body-' + slot);
+    if (body) body.textContent = tipp;
+    var label = pipEl('pip-slot-label-' + slot);
+    if (label && label.textContent === 'ANTWORT A' || label && label.textContent === 'ANTWORT B') {
+      label.textContent = 'TIPP';
+    }
+  }
+
+  function _initTeleprompter() {
+    var container = pipEl('pip-teleprompter');
+    if (!container) return;
+
+    // Get script content — from edited text, selected skript, or empty
+    var inhalt = '';
+    if (state._editedSkriptText) {
+      inhalt = state._editedSkriptText;
+    } else if (state.selectedSkriptId && state.skripte.length > 0) {
+      var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
+      if (sk && sk.inhalt) inhalt = sk.inhalt;
+    }
+
+    if (!inhalt || !inhalt.trim()) {
+      container.innerHTML = '<div class="tp-empty">Kein Skript hinterlegt \u2014 Profil bearbeiten</div>';
+      state.teleprompterBlocks = [];
+      return;
+    }
+
+    // Parse blocks by double-newline
+    var blocks = inhalt.split(/\n\n+/).filter(function (b) { return b.trim(); });
+    state.teleprompterBlocks = blocks;
+    state.teleprompterActiveIdx = 0;
+
+    _renderTeleprompterBlocks(0);
+
+    // Wire manual scroll override (D-13)
+    container.addEventListener('scroll', function () {
+      state.teleprompterManualOverride = true;
+      if (state.teleprompterOverrideTimer) clearTimeout(state.teleprompterOverrideTimer);
+      state.teleprompterOverrideTimer = setTimeout(function () {
+        state.teleprompterManualOverride = false;
+      }, 8000);
+    }, { passive: true });
+
+    // Click on block = manual override to that position
+    container.addEventListener('click', function (e) {
+      var blockEl = e.target.closest ? e.target.closest('.tp-block') : null;
+      if (blockEl && blockEl.dataset.blockIdx !== undefined) {
+        var idx = parseInt(blockEl.dataset.blockIdx);
+        state.teleprompterActiveIdx = idx;
+        state.teleprompterManualOverride = true;
+        if (state.teleprompterOverrideTimer) clearTimeout(state.teleprompterOverrideTimer);
+        state.teleprompterOverrideTimer = setTimeout(function () {
+          state.teleprompterManualOverride = false;
+        }, 8000);
+        _renderTeleprompterBlocks(idx);
+      }
+    });
+  }
+
+  function _renderTeleprompterBlocks(activeIdx) {
+    var container = pipEl('pip-teleprompter');
+    if (!container || !state.teleprompterBlocks.length) return;
+    var doc = container.ownerDocument || document;
+    container.innerHTML = '';
+    state.teleprompterBlocks.forEach(function (block, idx) {
+      var div = doc.createElement('div');
+      div.className = 'tp-block' + (idx === activeIdx ? ' tp-block-active' : '');
+      div.dataset.blockIdx = idx;
+      div.textContent = block.trim();
+      container.appendChild(div);
+    });
+    // Scroll active block into view (D-14: smooth auto-scroll)
+    var activeEl = container.querySelector('.tp-block-active');
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function _updateTeleprompterPosition(newIdx) {
+    // D-13: respect manual override
+    if (state.teleprompterManualOverride) {
+      // Update internal tracking but do not scroll
+      state.teleprompterActiveIdx = newIdx;
+      return;
+    }
+    if (newIdx === state.teleprompterActiveIdx) return;
+    state.teleprompterActiveIdx = newIdx;
+    _renderTeleprompterBlocks(newIdx);
+  }
+
+  function _initOpacitySlider() {
+    var slider = pipEl('pip-opacity-slider');
+    if (!slider) return;
+    // Load from localStorage (D-17)
+    var saved = 1.0;
+    try { saved = parseFloat(localStorage.getItem('nerve_pip_opacity') || '1'); } catch (e) {}
+    if (isNaN(saved) || saved < 0.1) saved = 0.1;
+    if (saved > 1) saved = 1;
+    state.pipBgOpacity = saved;
+    slider.value = Math.round(saved * 100);
+    _setPipBgOpacity(saved);
+
+    // D-16: input event for live feedback
+    var debounceTimer = null;
+    slider.addEventListener('input', function () {
+      var val = parseInt(slider.value) / 100;
+      state.pipBgOpacity = val;
+      _setPipBgOpacity(val);
+      // Debounce localStorage write (200ms)
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function () {
+        try { localStorage.setItem('nerve_pip_opacity', String(val)); } catch (e) {}
+      }, 200);
+    });
+  }
+
+  function _setPipBgOpacity(value) {
+    // D-16: ONLY background layer changes. Text stays 100%.
+    // Set CSS custom property on the pip-section-live element (not :root — PiP is separate Document)
+    var liveEl = pipEl('pip-section-live');
+    if (liveEl) {
+      liveEl.style.setProperty('--pip-bg-alpha', String(value));
+    }
   }
 
   // ── Timer ──────────────────────────────────────────────────────────────────
@@ -1032,7 +1318,6 @@
   // ── End Call ───────────────────────────────────────────────────────────────
   function endCall() {
     _stopTimer();
-    _stopPolling();
     _stopMic();
 
     fetch('/api/beenden', {
@@ -1104,26 +1389,15 @@
   }
 
   function _showPostcallRaw(scoreText, tags) {
-    // Hide live elements, show postcall
-    var liveWin = pipEl('pip-live-window');
-    if (liveWin) {
-      // Hide live-specific children, show postcall section
-      var postcallSection = pipEl('nlp-section-postcall');
-      if (postcallSection) {
-        postcallSection.style.display = 'flex';
-      }
-      // Hide live controls
-      ['nlp-btn-beenden', 'nlp-ewb-row'].forEach(function (id) {
-        var el = pipEl(id);
-        if (el) el.style.display = 'none';
-      });
-      var pipHeader = liveWin.querySelector ? liveWin.querySelector('.pip-header') : null;
-      if (pipHeader) pipHeader.style.display = 'none';
-      var pipTabs = liveWin.querySelector ? liveWin.querySelector('.pip-tabs') : null;
-      if (pipTabs) pipTabs.style.display = 'none';
-      var pipContent = liveWin.querySelector ? liveWin.querySelector('.pip-content') : null;
-      if (pipContent) pipContent.style.display = 'none';
-    }
+    var postcallSection = pipEl('nlp-section-postcall');
+    if (postcallSection) postcallSection.style.display = 'flex';
+    // Hide live controls
+    ['nlp-btn-beenden', 'nlp-ewb-row', 'pip-section-live', 'pip-section-consent'].forEach(function (id) {
+      var el = pipEl(id);
+      if (el) el.style.display = 'none';
+    });
+    var pipHeader = pipEl('pip-header');
+    if (pipHeader) pipHeader.style.display = 'none';
 
     var scoreEl = pipEl('nlp-postcall-score');
     if (scoreEl) scoreEl.textContent = scoreText;
@@ -1156,7 +1430,6 @@
   // ── Cleanup ────────────────────────────────────────────────────────────────
   function _cleanup() {
     _stopTimer();
-    _stopPolling();
     if (state.micStarted) _stopMic();
     if (state.socket) { state.socket.disconnect(); state.socket = null; }
     state.micStarted = false;
@@ -1164,6 +1437,16 @@
     state.sessionSeconds = 0;
     state.pipTabLocked = null;
     state.lastConvId = null;
+    state.pipSlots = [
+      { streaming: false, text: '', result: null, contextKey: null },
+      { streaming: false, text: '', result: null, contextKey: null }
+    ];
+    state.consentDone = false;
+    state.teleprompterBlocks = [];
+    state.teleprompterActiveIdx = -1;
+    state.teleprompterManualOverride = false;
+    if (state.teleprompterOverrideTimer) { clearTimeout(state.teleprompterOverrideTimer); state.teleprompterOverrideTimer = null; }
+    state.pipBgOpacity = 1.0;
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
