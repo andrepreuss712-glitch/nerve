@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04.17-pip-launcher-inserted plan 02
-last_updated: "2026-04-13T13:41:24.693Z"
+stopped_at: Phase 6 context gathered
+last_updated: "2026-04-14T16:11:42.345Z"
 last_activity: 2026-04-13
 progress:
-  total_phases: 30
+  total_phases: 31
   completed_phases: 20
   total_plans: 115
   completed_plans: 105
@@ -347,6 +347,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-13T13:41:24.688Z
-Stopped at: Completed 04.17-pip-launcher-inserted plan 02
-Resume file: None
+Last session: 2026-04-14T16:11:42.340Z
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-pip-komplett-rebuild-neues-layout-claude-streaming-skript-te/06-CONTEXT.md
