@@ -668,6 +668,9 @@
   .pip-tag-red { background: rgba(248,113,113,0.15); color: #F87171; }
   .pip-postcall-kundendaten { font-size: 11px; color: #555e70; margin-top: 8px; }
   .pip-postcall-actions { display: flex; gap: 10px; margin-top: 16px; width: 100%; max-width: 280px; }
+  .pip-setup-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
+  .pip-setup-select { background: #1C2333; border: 1px solid #2a3548; border-radius: 8px; color: #e8ecf4; padding: 8px 12px; font-size: 13px; width: 100%; box-sizing: border-box; outline: none; }
+  .pip-setup-select:focus { border-color: #00D4AA; }
 </style>
 </head>
 <body>
@@ -1013,6 +1016,73 @@
 
 <!-- ── PiP Window Content (moved into PiP document when opened) ──────────── -->
 <div id="pip-window" style="display:none">
+
+  <!-- Section: SETUP (3-step setup flow) -->
+  <div id="pip-section-setup" class="pip-section" style="display:flex;flex-direction:column;height:100%">
+
+    <!-- Step 1: Modus -->
+    <div id="pip-setup-step-1" class="pip-setup-step" style="display:flex">
+      <div class="pip-setup-title">Gespraechsmodus waehlen</div>
+      <div class="pip-setup-buttons">
+        <button class="pip-mode-btn" onclick="pipSelectMode('cold_call')">
+          <span class="pip-mode-icon">📞</span>
+          <span>Cold Call</span>
+        </button>
+        <button class="pip-mode-btn" onclick="pipSelectMode('meeting')">
+          <span class="pip-mode-icon">🤝</span>
+          <span>Meeting</span>
+        </button>
+      </div>
+      <!-- Inline consent for meeting mode -->
+      <div id="pip-consent-inline" style="display:none;flex-direction:column;gap:8px;margin-top:8px">
+        <div style="font-size:12px;color:#a0aec0">Einverstaendnis des Kunden einholen:</div>
+        <div style="font-size:12px;color:#e8ecf4;background:rgba(255,255,255,0.05);border-radius:8px;padding:10px 12px;line-height:1.5">
+          Herr/Frau [Name], kurzer Hinweis -- ich mache mir waehrend unseres Gespraechs digitale Notizen. Ist das fuer Sie in Ordnung?
+        </div>
+        <div class="pip-consent-actions">
+          <button class="pip-btn-consent-yes" onclick="pipConsentAccept()">Ja, einverstanden</button>
+          <button class="pip-btn-consent-no" onclick="pipConsentReject()">Nein</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Kundendaten -->
+    <div id="pip-setup-step-2" class="pip-setup-step" style="display:none">
+      <div class="pip-setup-title">Kundendaten</div>
+      <div class="pip-setup-form">
+        <input id="pip-kd-firma" class="pip-input" type="text" placeholder="Firmenname" autocomplete="off" list="pip-kd-firma-list">
+        <datalist id="pip-kd-firma-list"></datalist>
+        <input id="pip-kd-name" class="pip-input" type="text" placeholder="Ansprechpartner (optional)" autocomplete="off" list="pip-kd-name-list">
+        <datalist id="pip-kd-name-list"></datalist>
+        <input id="pip-kd-position" class="pip-input" type="text" placeholder="Position (optional)" autocomplete="off" list="pip-kd-position-list">
+        <datalist id="pip-kd-position-list"></datalist>
+        <div class="pip-setup-actions">
+          <button id="pip-precall-btn" class="pip-btn-precall" onclick="pipStartPrecall()" style="display:none">PreCall-Recherche</button>
+          <button class="pip-btn-next" onclick="pipSubmitKundendaten()">Weiter &rarr;</button>
+        </div>
+        <div id="pip-precall-result" class="pip-precall-result" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Profil + Skript -->
+    <div id="pip-setup-step-3" class="pip-setup-step" style="display:none">
+      <div class="pip-setup-title">Profil &amp; Skript</div>
+      <div class="pip-setup-form">
+        <label class="pip-setup-label">Profil</label>
+        <select id="pip-profil-select" class="pip-setup-select">
+          <option value="">Kein Profil</option>
+        </select>
+        <label class="pip-setup-label" style="margin-top:8px">Skript (optional)</label>
+        <select id="pip-skript-select" class="pip-setup-select">
+          <option value="">Kein Skript</option>
+        </select>
+        <div class="pip-setup-actions" style="margin-top:12px">
+          <button class="pip-btn-start" onclick="pipStartCall()">Call starten</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
 
   <!-- Section: LIVE (Split Layout per D-01) -->
   <div id="pip-section-live" class="pip-section" style="display:none;flex-direction:column;height:100%">
