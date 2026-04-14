@@ -781,7 +781,33 @@ def analyse_loop():
         with ls.state_lock:
             ls.state['aktiv'] = True
         try:
-            ergebnis  = analysiere_mit_claude(neuer_text, kontext)
+            # Phase 06: Use streaming for PiP sessions (D-08, D-09)
+            # D-03 dual-slot assignment logic:
+            #   - Default: stream to slot 0
+            #   - If slot 0 was used recently (within 5s) and is still "fresh",
+            #     use slot 1 for the new stream (alternative/parallel answer)
+            #   - This implements D-03: "Bei zweitem Einwand waehrend Streaming:
+            #     Slot 1 wird fertig gestreamt, Slot 2 beantwortet neue Frage"
+            #   - Topic switch detection (D-03 "Themenwechsel = beide ersetzen"):
+            #     handled on the frontend via replace_all flag in pip_stream_start
+            import time as _time_mod
+            with ls.state_lock:
+                active_sid = ls.state.get('active_sid')
+            if active_sid:
+                _last_slot = getattr(analyse_loop, '_last_slot', 1)
+                _last_slot_time = getattr(analyse_loop, '_last_slot_time', 0)
+                now = _time_mod.monotonic()
+                if _last_slot == 0 and (now - _last_slot_time) < 5:
+                    # Slot 0 was recently assigned -- use slot 1 for parallel answer
+                    slot_id = 1
+                else:
+                    # Default: use slot 0
+                    slot_id = 0
+                analyse_loop._last_slot = slot_id
+                analyse_loop._last_slot_time = now
+                ergebnis = analysiere_mit_claude_streaming(neuer_text, kontext, active_sid, slot_id)
+            else:
+                ergebnis  = analysiere_mit_claude(neuer_text, kontext)
             latency_e = round(time.monotonic() - t_start, 2)
             print(f"[Claude-1] Ergebnis (Latenz {latency_e}s): {ergebnis}")
             ts = datetime.now().strftime('%H:%M:%S')
@@ -1094,6 +1120,20 @@ def coaching_loop():
                         'ts': ts, 'type': 'tipp', 'text': tipp, 'kategorie': kategorie,
                     })
 
+            # Phase 06: Also stream coaching to PiP slot 1 if active
+            with ls.state_lock:
+                _pip_sid = ls.state.get('active_sid')
+            if _pip_sid:
+                sio.emit('pip_token_done', {
+                    'slot': 1,
+                    'result': {
+                        'notiz': tipp,
+                        'phase_hinweis': None,
+                        'kaufbereitschaft': None,
+                        'kb_trend': None,
+                        'frage_vorschlag': None,
+                    }
+                }, room=_pip_sid)
             sio.emit('coaching', {
                 'tipp': tipp, 'painpoint': painpoint,
                 'kategorie': kategorie, 'ts': ts,
