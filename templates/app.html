@@ -1011,16 +1011,16 @@
         <datalist id="pip-kd-position-list"></datalist>
       </div>
       <div class="pip-setup-actions">
-        <button class="pip-btn-precall" id="pip-precall-btn" onclick="pipStartPrecall()" style="display:none">PreCall-Recherche</button>
         <button class="pip-btn-next" onclick="pipSubmitKundendaten()">Weiter</button>
       </div>
-      <div id="pip-precall-result" class="pip-precall-result" style="display:none"></div>
     </div>
 
-    <!-- Step 3: Skript/Profil -->
+    <!-- Step 3: Skript/Profil + PreCall -->
     <div id="pip-setup-step-3" class="pip-setup-step" style="display:none">
       <div class="pip-setup-title">Skript waehlen</div>
       <select id="pip-profil-select" class="pip-select"></select>
+      <button class="pip-btn-precall" id="pip-precall-btn" onclick="pipStartPrecall()">PreCall-Recherche</button>
+      <div id="pip-precall-result" class="pip-precall-result" style="display:none"></div>
       <button class="pip-btn-start" onclick="pipStartCall()">Call starten</button>
     </div>
 

@@ -1563,8 +1563,9 @@ function pipSubmitKundendaten() {
 }
 
 function pipStartPrecall() {
-  var firma = (getPipElement('pip-kd-firma') || {}).value || '';
-  var name = (getPipElement('pip-kd-name') || {}).value || '';
+  var kd = window._pipKundendaten || {};
+  var firma = kd.firma || '';
+  var name = kd.name || '';
   if (!firma.trim()) return;
   var btn = getPipElement('pip-precall-btn');
   var result = getPipElement('pip-precall-result');
