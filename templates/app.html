@@ -1286,10 +1286,23 @@ function kpQuickAction(typ){
   openFrageModal();
   quickAction(typ);
 }
-// Initialisierung: PiP ist der Standard-Modus — immer öffnen
+// Initialisierung: PiP ist der Standard-Modus
+// Document PiP requires user activation — show a launch overlay if not already in PiP
 (function(){
-  // Always auto-open PiP after DOM ready — /live is now just the backing page
-  setTimeout(function() { openPipWindow(); }, 500);
+  if (window._pipWindow && !window._pipWindow.closed) return; // already open
+  // Show PiP launch prompt overlay
+  var overlay = document.createElement('div');
+  overlay.id = 'pip-launch-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(6,6,10,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+  overlay.innerHTML = '<div style="color:#00D4AA;font-size:24px;font-weight:700">NERVE Live-Assistent</div>'
+    + '<div style="color:#8b92a5;font-size:14px;max-width:300px;text-align:center">Klicke um den PiP-Assistenten zu starten. Er schwebt über allen Fenstern.</div>'
+    + '<button id="pip-launch-btn" style="margin-top:12px;padding:14px 32px;background:#00D4AA;color:#06060a;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">PiP starten</button>'
+    + '<a href="/dashboard" style="color:#8b92a5;font-size:12px;margin-top:8px;text-decoration:underline">Zurück zum Dashboard</a>';
+  document.body.appendChild(overlay);
+  document.getElementById('pip-launch-btn').addEventListener('click', function() {
+    overlay.remove();
+    openPipWindow();
+  });
 })();
 
 // ── Profile switcher ──────────────────────────────────────────────────────────
