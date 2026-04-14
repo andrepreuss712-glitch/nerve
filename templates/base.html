@@ -186,14 +186,45 @@
 .pip-header{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--glass-border,#E2E8F0);background:var(--page-bg,#06060a)}
 .pip-mode-badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;border:1px solid #00D4AA;color:#00D4AA}
 .pip-timer{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#00D4AA}
-.pip-tabs{height:36px;display:flex;align-items:center;gap:4px;padding:0 16px;border-bottom:1px solid var(--glass-border,#E2E8F0)}
-.pip-tab{background:none;border:none;font-size:12px;font-weight:600;padding:6px 8px;border-radius:6px;color:var(--page-text-muted,#8b92a5);cursor:pointer;font-family:inherit;min-height:28px;position:relative}
-.pip-tab:hover{color:var(--page-text-secondary,#c5c9d4)}
-.pip-tab-active{background:#00D4AA;color:#06060a}
-.pip-tab-locked::after{content:'';display:inline-block;width:10px;height:10px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2306060a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='11' x='3' y='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") no-repeat center;margin-left:4px;vertical-align:middle}
-.pip-content{flex:1;min-height:120px;padding:16px;overflow-y:auto}
-.pip-panel{}
-.pip-tip-text{font-size:14px;font-weight:400;line-height:1.5;color:var(--page-text-color,#e8ecf4)}
+/* ── Phase 06: Split Layout ── */
+.pip-live-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:rgba(6,6,10,var(--pip-bg-alpha,1))}
+.pip-ki-zone{flex:0 0 55%;display:flex;flex-direction:column;min-height:0;padding:12px 16px 0}
+.pip-ki-slots{display:flex;gap:8px;flex:1;min-height:0;overflow-y:auto}
+.pip-ki-slot{flex:1;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;background:rgba(255,255,255,0.04);display:flex;flex-direction:column;min-width:0;overflow-y:auto}
+.pip-ki-slot.pip-slot-streaming{border-color:rgba(0,212,170,0.3)}
+.pip-slot-label{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px}
+.pip-slot-body{font-size:14px;font-weight:400;line-height:1.5;color:#e8ecf4;flex:1;white-space:pre-wrap;word-break:break-word}
+.pip-slot-body.pip-streaming::after{content:'\258C';animation:pip-cursor-blink 0.7s step-end infinite;color:#00D4AA;margin-left:2px}
+@keyframes pip-cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
+.pip-slot-result{margin-top:8px}
+.pip-slot-typ-badge{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;margin-bottom:4px}
+.pip-zone-divider{height:1px;background:rgba(255,255,255,0.08);flex-shrink:0;margin:0}
+/* Teleprompter */
+.pip-teleprompter{flex:1;min-height:0;overflow-y:scroll;padding:0}
+.pip-teleprompter::-webkit-scrollbar{width:4px}
+.pip-teleprompter::-webkit-scrollbar-track{background:transparent}
+.pip-teleprompter::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px}
+.tp-block{padding:12px 16px;border-left:4px solid transparent;border-radius:0 8px 8px 0;font-size:14px;font-weight:400;line-height:1.5;color:rgba(255,255,255,0.4);cursor:pointer;transition:opacity 200ms,border-color 200ms}
+.tp-block-active{border-left-color:#00D4AA;color:#e8ecf4;background:rgba(0,212,170,0.06)}
+.tp-empty{font-size:14px;font-weight:400;color:rgba(255,255,255,0.3);text-align:center;padding:24px 16px}
+/* Consent Screen */
+.pip-consent-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:24px}
+.pip-consent-inner{display:flex;flex-direction:column;gap:12px;width:100%;max-width:400px}
+.pip-consent-heading{font-size:14px;font-weight:700;color:#e8ecf4}
+.pip-consent-subtext{font-size:12px;font-weight:700;color:rgba(255,255,255,0.5)}
+.pip-consent-textbox{background:rgba(255,255,255,0.05);border-radius:8px;padding:12px 16px;font-size:14px;font-weight:400;line-height:1.6;color:rgba(255,255,255,0.7)}
+.pip-consent-buttons{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.pip-consent-btn{border:none;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;width:100%;text-align:center}
+.pip-consent-btn:hover{opacity:0.85}
+.pip-consent-btn-accept{background:#00D4AA;color:#06060a}
+.pip-consent-btn-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171}
+/* Opacity Slider */
+.pip-opacity-label{font-size:12px;font-weight:700;color:rgba(255,255,255,0.5)}
+#pip-opacity-slider{width:80px;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.12);border-radius:2px;outline:none;accent-color:#00D4AA}
+#pip-opacity-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#ffffff;border:none;cursor:pointer}
+/* Proactive slot states */
+.pip-slot-phase .pip-slot-label::before{content:''}
+.pip-slot-kb{font-family:'JetBrains Mono',monospace;font-size:12px}
 .pip-ewb-row{min-height:44px;display:flex;align-items:center;gap:8px;padding:0 16px 8px;flex-wrap:wrap}
 .pip-ewb-btn{background:none;border:1px solid var(--glass-border,#E2E8F0);color:var(--page-text-secondary,#c5c9d4);border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
 .pip-ewb-btn:hover{border-color:#00D4AA;color:#00D4AA}
@@ -250,37 +281,64 @@
 
 <!-- PiP Live Window (hidden — pip-launcher.js moves this into the PiP document) -->
 <div id="pip-live-window" style="display:none">
-  <!-- Mini Header -->
-  <div class="pip-header">
+  <!-- Mini Header (per D-15: opacity slider added, only visible in live state) -->
+  <div class="pip-header" id="pip-header">
     <div style="display:flex;align-items:center;gap:8px">
       <span class="pip-mode-badge" id="nlp-mode-badge">Cold Call</span>
       <span class="pip-timer" id="nlp-timer">00:00</span>
     </div>
-  </div>
-  <!-- Tabs -->
-  <div class="pip-tabs">
-    <button class="pip-tab pip-tab-active" data-tab="opener" id="nlp-tab-opener">Opener</button>
-    <button class="pip-tab" data-tab="einwand" id="nlp-tab-einwand">Einwand</button>
-    <button class="pip-tab" data-tab="coaching" id="nlp-tab-coaching">Coaching</button>
-    <button class="pip-tab" data-tab="ewb" id="nlp-tab-ewb">EWB</button>
-  </div>
-  <div class="pip-content">
-    <div class="pip-panel" id="nlp-panel-opener">
-      <div class="pip-tip-text" id="nlp-opener-text">Kein Opener hinterlegt</div>
-    </div>
-    <div class="pip-panel" id="nlp-panel-einwand" style="display:none">
-      <div class="pip-tip-text" id="nlp-einwand-text">Warte auf Einwand-Erkennung...</div>
-    </div>
-    <div class="pip-panel" id="nlp-panel-coaching" style="display:none">
-      <div class="pip-tip-text" id="nlp-coaching-text">Warte auf Coaching-Tipp...</div>
-    </div>
-    <div class="pip-panel" id="nlp-panel-ewb" style="display:none">
-      <div class="pip-tip-text" id="nlp-ewb-text">EWB-Vorschlaege werden geladen...</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="pip-opacity-label" id="pip-opacity-label" style="display:none">BG</span>
+      <input type="range" id="pip-opacity-slider" min="10" max="100" step="5" value="100" style="display:none">
     </div>
   </div>
-  <div class="pip-ewb-row" id="nlp-ewb-row"></div>
-  <button class="pip-btn-beenden" id="nlp-btn-beenden">Beenden</button>
-  <!-- Postcall section (shown after call ends) -->
+
+  <!-- Consent Section (D-05: shown for meeting mode before live, full height) -->
+  <div id="pip-section-consent" style="display:none" class="pip-consent-screen">
+    <div class="pip-consent-inner">
+      <div class="pip-consent-heading">Hinweis an Kunden vorlesen</div>
+      <div class="pip-consent-subtext">Lesen Sie dem Kunden den folgenden Text vor:</div>
+      <div class="pip-consent-textbox" id="pip-consent-text">
+        Herr/Frau [Name], kurzer Hinweis — ich mache mir während unseres Gesprächs digitale Notizen. Ist das für Sie in Ordnung?
+      </div>
+      <div class="pip-consent-buttons">
+        <button class="pip-consent-btn pip-consent-btn-accept" id="pip-consent-accept">Stattgegeben — Meeting-Modus starten</button>
+        <button class="pip-consent-btn pip-consent-btn-reject" id="pip-consent-reject">Abgelehnt — Weiter als Cold Call</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Section (D-01: split layout, no tabs) -->
+  <div id="pip-section-live" style="display:none" class="pip-live-split">
+    <!-- KI Upper Zone (55%) per D-01 -->
+    <div class="pip-ki-zone" id="pip-ki-zone">
+      <div class="pip-ki-slots">
+        <div class="pip-ki-slot" id="pip-slot-0">
+          <div class="pip-slot-label" id="pip-slot-label-0">ANTWORT A</div>
+          <div class="pip-slot-body" id="pip-slot-body-0">Warte auf Gesprächsinhalt...</div>
+        </div>
+        <div class="pip-ki-slot" id="pip-slot-1">
+          <div class="pip-slot-label" id="pip-slot-label-1">ANTWORT B</div>
+          <div class="pip-slot-body" id="pip-slot-body-1">Warte auf Gesprächsinhalt...</div>
+        </div>
+      </div>
+      <!-- EWB Row (kept, same IDs) -->
+      <div class="pip-ewb-row" id="nlp-ewb-row"></div>
+    </div>
+
+    <!-- Divider -->
+    <div class="pip-zone-divider"></div>
+
+    <!-- Teleprompter Lower Zone (45%) per D-11, D-14 -->
+    <div class="pip-teleprompter" id="pip-teleprompter">
+      <div class="tp-empty">Kein Skript hinterlegt — Profil bearbeiten</div>
+    </div>
+  </div>
+
+  <!-- Beenden button -->
+  <button class="pip-btn-beenden" id="nlp-btn-beenden" style="display:none">Beenden</button>
+
+  <!-- Postcall section (UNCHANGED from existing — shown after call ends) -->
   <div id="nlp-section-postcall" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px">
     <div class="pip-postcall-score" id="nlp-postcall-score">--</div>
     <div class="pip-postcall-label">Call Score</div>
