@@ -469,22 +469,29 @@
 
       // Skript
       state.skripte.length > 0
-        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:2px"><label style="font-size:11px;color:var(--page-text-muted)">Skript</label><a href="/profiles/' + state.activeProfileId + '/edit#sec-leitfaden" target="_blank" style="font-size:11px;color:#00D4AA;text-decoration:none">Bearbeiten</a></div><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
+        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:2px"><label style="font-size:11px;color:var(--page-text-muted)">Skript</label><button type="button" class="launcher-inline-edit-btn" id="lnr-skript-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:0">Bearbeiten</button></div><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
         : '',
       skriptPreview
         ? '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto">' + skriptPreview + '</div>'
-        : (state.skripte.length > 0 ? '<div class="launcher-opener-preview" id="lnr-skript-preview" style="color:var(--page-text-muted);font-style:italic">Skript auswaehlen fuer Vorschau</div>' : ''),
+          + '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4">' + escHtml(skriptPreview) + '</textarea>'
+        : (state.skripte.length > 0
+          ? '<div class="launcher-opener-preview" id="lnr-skript-preview" style="color:var(--page-text-muted);font-style:italic">Skript auswaehlen fuer Vorschau</div>'
+            + '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4"></textarea>'
+          : ''),
 
       // Opener
       state.openerItems.length > 0
-        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:2px"><label style="font-size:11px;color:var(--page-text-muted)">Opener</label><a href="/profiles/' + state.activeProfileId + '/edit#sec-leitfaden" target="_blank" style="font-size:11px;color:#00D4AA;text-decoration:none">Bearbeiten</a></div><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
+        ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:2px"><label style="font-size:11px;color:var(--page-text-muted)">Opener</label><button type="button" class="launcher-inline-edit-btn" id="lnr-opener-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:0">Bearbeiten</button></div><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
         : '',
       openerPreview
         ? '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap">' + openerPreview + '</div>'
+          + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3">' + escHtml(openerPreview) + '</textarea>'
         : (state.openerItems.length > 0
             ? '<div class="launcher-opener-preview" id="lnr-opener-preview" style="color:var(--page-text-muted);font-style:italic">Opener auswaehlen fuer Vorschau</div>'
+              + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>'
             : (legacyOpener
                 ? '<div style="font-size:12px;color:var(--page-text-muted);margin-top:6px;margin-bottom:2px">Opener (aus Profil):</div><div class="launcher-opener-preview" id="lnr-opener-preview">' + escHtml(legacyOpener) + '</div>'
+                  + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3">' + escHtml(legacyOpener) + '</textarea>'
                 : '<div class="launcher-opener-preview" id="lnr-opener-preview" style="color:var(--page-text-muted);font-style:italic">Kein Opener hinterlegt</div>')),
 
       '<div class="launcher-actions">',
@@ -546,19 +553,105 @@
       };
     }
 
+    // Inline edit: Skript
+    _wireInlineEdit('lnr-skript-edit-btn', 'lnr-skript-preview', 'lnr-skript-textarea', 'skript');
+    // Inline edit: Opener
+    _wireInlineEdit('lnr-opener-edit-btn', 'lnr-opener-preview', 'lnr-opener-textarea', 'opener');
+
     // Navigation
     document.getElementById('lnr-step5-back').onclick = function () {
       state.step = state.precallVerfuegbar ? 2 : 1;
       renderStep();
     };
     document.getElementById('lnr-step5-skip').onclick = function () {
+      _collectEditedTexts();
       startCall(false);
     };
     document.getElementById('lnr-step5-start').onclick = function () {
       var s = document.getElementById('lnr-profile-select');
       if (s && s.value) state.activeProfileId = parseInt(s.value);
+      _collectEditedTexts();
       startCall(true);
     };
+  }
+
+  function _wireInlineEdit(btnId, previewId, textareaId, type) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.onclick = function () {
+      var preview = document.getElementById(previewId);
+      var ta = document.getElementById(textareaId);
+      if (!ta) return;
+      if (ta.style.display === 'none') {
+        // Switch to edit mode
+        if (preview) preview.style.display = 'none';
+        ta.style.display = 'block';
+        ta.style.borderColor = '#00D4AA';
+        ta.focus();
+        btn.textContent = 'Fertig';
+      } else {
+        // Save edit — ask if profile should be updated
+        var newText = ta.value;
+        var itemId = type === 'skript' ? state.selectedSkriptId : state.selectedOpenerId;
+        if (preview) {
+          preview.textContent = newText;
+          preview.style.display = 'block';
+          preview.style.fontStyle = 'normal';
+          preview.style.color = '';
+        }
+        ta.style.display = 'none';
+        btn.textContent = 'Bearbeiten';
+
+        // Update local state for this call
+        if (type === 'skript') state._editedSkriptText = newText;
+        if (type === 'opener') state._editedOpenerText = newText;
+
+        // Ask: save to profile too?
+        if (itemId) {
+          _showSaveToProfileDialog(type, itemId, newText);
+        }
+      }
+    };
+  }
+
+  function _showSaveToProfileDialog(type, itemId, newText) {
+    var label = type === 'skript' ? 'Skript' : 'Opener';
+    var endpoint = '/profiles/' + state.activeProfileId + '/' + (type === 'skript' ? 'skripte' : 'opener') + '/' + itemId;
+
+    // Create overlay
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = '<div style="background:var(--page-bg,#fff);border:1px solid var(--glass-border);border-radius:12px;padding:24px;max-width:400px;width:90%;text-align:center">'
+      + '<div style="font-size:15px;font-weight:700;margin-bottom:12px">' + label + ' auch im Profil aendern?</div>'
+      + '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:16px">Die Aenderung gilt sonst nur fuer diesen Call.</div>'
+      + '<div style="display:flex;gap:10px;justify-content:center">'
+      + '<button id="lnr-save-no" style="padding:8px 20px;border:1px solid var(--glass-border);border-radius:8px;background:none;color:var(--page-text-color);cursor:pointer;font-size:13px">Nur dieser Call</button>'
+      + '<button id="lnr-save-yes" style="padding:8px 20px;border:none;border-radius:8px;background:#00D4AA;color:#06060a;cursor:pointer;font-weight:700;font-size:13px">Im Profil speichern</button>'
+      + '</div></div>';
+    document.body.appendChild(overlay);
+
+    document.getElementById('lnr-save-no').onclick = function () { overlay.remove(); };
+    document.getElementById('lnr-save-yes').onclick = function () {
+      fetch(endpoint, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inhalt: newText })
+      }).catch(function () {});
+      // Update local state too
+      var list = type === 'skript' ? state.skripte : state.openerItems;
+      var item = list.find(function (i) { return i.id === itemId; });
+      if (item) item.inhalt = newText;
+      overlay.remove();
+    };
+    overlay.onclick = function (e) { if (e.target === overlay) overlay.remove(); };
+  }
+
+  function _collectEditedTexts() {
+    // If user edited inline, store the edited text for the session
+    var skTa = document.getElementById('lnr-skript-textarea');
+    if (skTa && skTa.style.display !== 'none') state._editedSkriptText = skTa.value;
+    var opTa = document.getElementById('lnr-opener-textarea');
+    if (opTa && opTa.style.display !== 'none') state._editedOpenerText = opTa.value;
   }
 
   // ── Start Call ─────────────────────────────────────────────────────────────
