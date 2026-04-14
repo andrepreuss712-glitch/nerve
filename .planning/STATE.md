@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-04-14T17:58:10.760Z"
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-04-14T18:40:00.334Z"
 last_activity: 2026-04-14
 progress:
   total_phases: 31
-  completed_phases: 20
+  completed_phases: 21
   total_plans: 118
-  completed_plans: 107
-  percent: 91
+  completed_plans: 108
+  percent: 92
 ---
 
 # Project State
@@ -135,6 +135,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06 P02 | 5 | 1 tasks | 1 files |
 | Phase 06 P03 | 20 | 3 tasks | 3 files |
 | Phase 06 P02 | 8 | 2 tasks | 1 files |
+| Phase 06 P03 | 13 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -306,6 +307,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Removed duplicate .pip-consent-text CSS (old inline consent rule overrode new Phase 06 design)
 - [Phase 06-03]: coaching_loop PiP forwarding uses pip_token_done directly (no streaming) since coaching tips are complete before emit
 - [Phase 06]: Tab system fully removed from pip-live-window; replaced with split 55/45 KI/teleprompter layout in base.html
+- [Phase 06]: Polling fully removed in pip-launcher.js — Socket.IO streaming (pip_stream_start/pip_token/pip_token_done) handles all AI results in Phase 06 split layout
+- [Phase 06]: EWB _triggerEwb keeps POST to /api/analyse_line but drops .then() handler — streaming events deliver results instead
 
 ### Roadmap Evolution
 
@@ -357,6 +360,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-14T17:58:10.755Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-04-14T18:40:00.329Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None

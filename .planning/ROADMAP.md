@@ -537,12 +537,12 @@ Phases execute in numeric order.
 **Goal:** PiP-Fenster komplett neu gebaut: Split-Layout (KI+EWB oben 55%, Skript-Teleprompter unten 45%), Claude Wort-fuer-Wort Streaming via Socket.IO, Dual-Slot KI-Antworten, Consent-Flow fuer Meeting-Modus, Background-Opacity-Regler, semantische Skript-Position-Erkennung
 **Requirements**: PIP-01, PIP-02, PIP-03, PIP-04, PIP-05
 **Depends on:** Phase 04.17
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 06-01-PLAN.md — Backend: Streaming relay, sid routing, consent_text migration, /api/skripte, skript_position prompt
 - [x] 06-02-PLAN.md — Frontend HTML+CSS: Replace #pip-live-window in base.html with split layout, consent section, opacity slider, teleprompter CSS
-- [ ] 06-03-PLAN.md — Frontend JS: pip-launcher.js streaming handlers, dual-slot state machine, consent flow, teleprompter, opacity, proactive fill
+- [x] 06-03-PLAN.md — Frontend JS: pip-launcher.js streaming handlers, dual-slot state machine, consent flow, teleprompter, opacity, proactive fill
 
 ---
 *Roadmap created: 2026-03-30*
