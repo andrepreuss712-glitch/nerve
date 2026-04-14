@@ -311,13 +311,21 @@
         branche: searchBranche || null
       })
     })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) {
+          return r.text().then(function (t) {
+            try { var j = JSON.parse(t); throw new Error(j.error || 'Server-Fehler (' + r.status + ')'); }
+            catch (e) { if (e.message) throw e; throw new Error('Server-Fehler (' + r.status + ')'); }
+          });
+        }
+        return r.json();
+      })
       .then(function (data) {
         if (loading) loading.style.display = 'none';
         if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchfuehren'; }
         if (data.error) {
-          // API returned an error
-          if (errEl2) { errEl2.textContent = data.error; errEl2.style.display = 'block'; }
+          var errMsg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+          if (errEl2) { errEl2.textContent = errMsg; errEl2.style.display = 'block'; }
           return;
         }
         if (data.briefing) {
@@ -333,7 +341,8 @@
       .catch(function (err) {
         if (loading) loading.style.display = 'none';
         if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchfuehren'; }
-        if (errEl2) { errEl2.textContent = 'Verbindungsfehler: ' + err.message; errEl2.style.display = 'block'; }
+        var msg = (err && err.message) ? err.message : String(err);
+        if (errEl2) { errEl2.textContent = msg; errEl2.style.display = 'block'; }
       });
   }
 
