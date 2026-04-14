@@ -260,28 +260,30 @@
     <div class="editor-sidebar" id="editorSidebar">
       <a class="sec-link active" data-target="sec-basis" onclick="goSec('sec-basis')">
         <span class="sec-num">1</span>Basis & Produkt</a>
+      <a class="sec-link" data-target="sec-leitfaden" onclick="goSec('sec-leitfaden')">
+        <span class="sec-num">2</span>Gespraechsleitfaden</a>
       <a class="sec-link" data-target="sec-zielgruppe" onclick="goSec('sec-zielgruppe')">
-        <span class="sec-num">2</span>Zielgruppe</a>
+        <span class="sec-num">3</span>Zielgruppe</a>
       <a class="sec-link" data-target="sec-schmerzen" onclick="goSec('sec-schmerzen')">
-        <span class="sec-num">3</span>Schmerzpunkte</a>
+        <span class="sec-num">4</span>Schmerzpunkte</a>
       <a class="sec-link" data-target="sec-phasen" onclick="goSec('sec-phasen')">
-        <span class="sec-num">4</span>Gesprächsphasen</a>
+        <span class="sec-num">5</span>Gesprächsphasen</a>
       <a class="sec-link" data-target="sec-einwaende" onclick="goSec('sec-einwaende')">
-        <span class="sec-num">5</span>Einwände</a>
+        <span class="sec-num">6</span>Einwände</a>
       <a class="sec-link" data-target="sec-fragen" onclick="goSec('sec-fragen')">
-        <span class="sec-num">6</span>Häufige Fragen</a>
+        <span class="sec-num">7</span>Häufige Fragen</a>
       <a class="sec-link" data-target="sec-kaufsignale" onclick="goSec('sec-kaufsignale')">
-        <span class="sec-num">7</span>Kaufsignale</a>
+        <span class="sec-num">8</span>Kaufsignale</a>
       <a class="sec-link" data-target="sec-nogos" onclick="goSec('sec-nogos')">
-        <span class="sec-num">8</span>No-Go Situationen</a>
+        <span class="sec-num">9</span>No-Go Situationen</a>
       <a class="sec-link" data-target="sec-wettbewerb" onclick="goSec('sec-wettbewerb')">
-        <span class="sec-num">9</span>Wettbewerber</a>
+        <span class="sec-num">10</span>Wettbewerber</a>
       <a class="sec-link" data-target="sec-techniken" onclick="goSec('sec-techniken')">
-        <span class="sec-num">10</span>Verkaufstechniken</a>
+        <span class="sec-num">11</span>Verkaufstechniken</a>
       <a class="sec-link" data-target="sec-uebergaenge" onclick="goSec('sec-uebergaenge')">
-        <span class="sec-num">11</span>Übergang-Ziele</a>
+        <span class="sec-num">12</span>Übergang-Ziele</a>
       <a class="sec-link" data-target="sec-ki" onclick="goSec('sec-ki')">
-        <span class="sec-num">12</span>KI-Anweisungen</a>
+        <span class="sec-num">13</span>KI-Anweisungen</a>
     </div>
 
     <div class="editor-main" id="editorMain">
@@ -313,9 +315,26 @@
         </div>
       </div>
 
-      <!-- ② Zielgruppe -->
+      <!-- ② Gespraechsleitfaden -->
+      <div class="sec" id="sec-leitfaden">
+        <div class="sec-title"><span class="sec-title-num">2</span>Gespraechsleitfaden</div>
+        <div class="fg">
+          <label class="fl">Opener <i class="tip-icon" data-tip="Dein Eroeffnungssatz am Telefon. So startest du das Gespraech.">?</i></label>
+          <textarea class="fta" id="vi_opener" placeholder="z.B. Guten Tag Herr/Frau XY, mein Name ist ... von ... Ich rufe an weil..." style="min-height:72px"></textarea>
+        </div>
+        <div class="fg">
+          <label class="fl">Erlaubnis <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis fuer das Gespraech? Der Satz nach dem Opener.">?</i></label>
+          <textarea class="fta" id="vi_erlaubnis" placeholder="z.B. Haben Sie kurz 2 Minuten Zeit? Ich moechte Ihnen zeigen wie..." style="min-height:72px"></textarea>
+        </div>
+        <div class="fg">
+          <label class="fl">Pitch <i class="tip-icon" data-tip="Dein Kernpitch in 2-3 Saetzen. Was sagst du wenn der Kunde sagt 'Erzaehlen Sie mal'?">?</i></label>
+          <textarea class="fta" id="vi_pitch" placeholder="z.B. Wir helfen Unternehmen wie Ihrem dabei..." style="min-height:96px"></textarea>
+        </div>
+      </div>
+
+      <!-- ③ Zielgruppe -->
       <div class="sec" id="sec-zielgruppe">
-        <div class="sec-title"><span class="sec-title-num">2</span>Zielgruppe</div>
+        <div class="sec-title"><span class="sec-title-num">3</span>Zielgruppe</div>
         <div class="frow frow-2">
           <div class="fg">
             <label class="fl">Alter <i class="tip-icon" data-tip="Typisches Alter deiner besten Kunden.">?</i></label>
@@ -358,9 +377,9 @@
         </div>
       </div>
 
-      <!-- ③ Schmerzpunkte & Trigger -->
+      <!-- ④ Schmerzpunkte & Trigger -->
       <div class="sec" id="sec-schmerzen">
-        <div class="sec-title"><span class="sec-title-num">3</span>Schmerzpunkte & Trigger</div>
+        <div class="sec-title"><span class="sec-title-num">4</span>Schmerzpunkte & Trigger</div>
         <div id="schmerz-list"></div>
         <button type="button" class="btn-add" onclick="addSchmerz()">+ Schmerzpunkt hinzufügen</button>
 
@@ -403,7 +422,7 @@
 
       <!-- ④ Gesprächsphasen -->
       <div class="sec" id="sec-phasen">
-        <div class="sec-title"><span class="sec-title-num">4</span>Gesprächsphasen</div>
+        <div class="sec-title"><span class="sec-title-num">5</span>Gesprächsphasen</div>
         <div class="col-header" style="grid-template-columns:36px 1fr 1fr auto auto;display:grid;gap:8px">
           <span></span>
           <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Kurzer Name der Phase, z.B. Smalltalk oder Closing.">?</i></span>
@@ -417,21 +436,21 @@
 
       <!-- ⑤ Einwände -->
       <div class="sec" id="sec-einwaende">
-        <div class="sec-title"><span class="sec-title-num">5</span>Einwände</div>
+        <div class="sec-title"><span class="sec-title-num">6</span>Einwände</div>
         <div id="einwaende-list"></div>
         <button type="button" class="btn-add" onclick="addEinwand()">+ Einwand hinzufügen</button>
       </div>
 
       <!-- ⑥ Häufige Fragen -->
       <div class="sec" id="sec-fragen">
-        <div class="sec-title"><span class="sec-title-num">6</span>Häufige Fragen</div>
+        <div class="sec-title"><span class="sec-title-num">7</span>Häufige Fragen</div>
         <div id="fragen-list"></div>
         <button type="button" class="btn-add" onclick="addFrage()">+ Frage hinzufügen</button>
       </div>
 
       <!-- ⑦ Kaufsignale -->
       <div class="sec" id="sec-kaufsignale">
-        <div class="sec-title"><span class="sec-title-num">7</span>Kaufsignale</div>
+        <div class="sec-title"><span class="sec-title-num">8</span>Kaufsignale</div>
         <div class="col-header" style="display:flex;gap:8px">
           <span class="fl" style="margin:0;flex:1">Signal <i class="tip-icon" data-tip="Woran erkennst du dass der Kunde kaufbereit ist?">?</i></span>
           <span class="fl" style="margin:0;flex:1">Wie reagieren <i class="tip-icon" data-tip="Was solltest du in diesem Moment tun oder sagen?">?</i></span>
@@ -443,7 +462,7 @@
 
       <!-- ⑧ No-Go Situationen -->
       <div class="sec" id="sec-nogos">
-        <div class="sec-title"><span class="sec-title-num">8</span>No-Go Situationen</div>
+        <div class="sec-title"><span class="sec-title-num">9</span>No-Go Situationen</div>
         <div class="col-header" style="display:flex;gap:8px">
           <span class="fl" style="margin:0;flex:1">Kriterium <i class="tip-icon" data-tip="Wann ist jemand definitiv kein passender Kunde?">?</i></span>
           <span class="fl" style="margin:0;flex:1">Beschreibung <i class="tip-icon" data-tip="Warum disqualifiziert das den Kontakt?">?</i></span>
@@ -455,7 +474,7 @@
 
       <!-- ⑨ Wettbewerber -->
       <div class="sec" id="sec-wettbewerb">
-        <div class="sec-title"><span class="sec-title-num">9</span>Wettbewerber</div>
+        <div class="sec-title"><span class="sec-title-num">10</span>Wettbewerber</div>
         <div class="col-header" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px">
           <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Wer ist der Hauptkonkurrent den Kunden oft nennen?">?</i></span>
           <span class="fl" style="margin:0">Schwäche <i class="tip-icon" data-tip="Was kann der Wettbewerber nicht oder schlechter?">?</i></span>
@@ -468,7 +487,7 @@
 
       <!-- ⑩ Verkaufstechniken -->
       <div class="sec" id="sec-techniken">
-        <div class="sec-title"><span class="sec-title-num">10</span>Verkaufstechniken</div>
+        <div class="sec-title"><span class="sec-title-num">11</span>Verkaufstechniken</div>
         <div class="fg">
           <label class="fl">Aktive Techniken <i class="tip-icon" data-tip="Welche Techniken soll NERVE bevorzugt einsetzen?">?</i></label>
           <div class="tag-container" id="techniken-aktiv-tags" onclick="focusTagInput('techniken-aktiv-tags')">
@@ -490,7 +509,7 @@
 
       <!-- ⑪ Übergang-Ziele -->
       <div class="sec" id="sec-uebergaenge">
-        <div class="sec-title"><span class="sec-title-num">11</span>Übergang-Ziele</div>
+        <div class="sec-title"><span class="sec-title-num">12</span>Übergang-Ziele</div>
         <div class="col-header" style="display:grid;grid-template-columns:1fr auto 1fr 1fr auto;gap:8px">
           <span class="fl" style="margin:0">Von-Thema <i class="tip-icon" data-tip="Von welchem Gesprächsthema kommst du?">?</i></span>
           <span></span>
@@ -504,7 +523,7 @@
 
       <!-- ⑫ KI-Anweisungen -->
       <div class="sec" id="sec-ki">
-        <div class="sec-title"><span class="sec-title-num">12</span>KI-Anweisungen</div>
+        <div class="sec-title"><span class="sec-title-num">13</span>KI-Anweisungen</div>
         <div class="frow frow-2">
           <div class="fg">
             <label class="fl">Ton <i class="tip-icon" data-tip="Wie soll NERVE klingen? z.B. Direkt, menschlich, auf Augenhöhe.">?</i></label>
@@ -902,6 +921,9 @@ function buildAndSubmit(){
       usps:getTags('usps-tags'),
       konsequenz:document.getElementById('vi_konsequenz').value.trim(),
     },
+    opener: document.getElementById('vi_opener').value.trim(),
+    erlaubnis: document.getElementById('vi_erlaubnis').value.trim(),
+    pitch: document.getElementById('vi_pitch').value.trim(),
     zielgruppe:{
       alter:document.getElementById('vi_alter').value.trim(),
       berufsstatus:document.getElementById('vi_berufsstatus').value.trim(),
@@ -956,6 +978,9 @@ function init(){
     setVal('vi_preis',b.preismodell);
     setVal('vi_konsequenz',b.konsequenz);
     (b.usps||[]).forEach(t=>addTag('usps-tags',t));
+    setVal('vi_opener', DATEN.opener);
+    setVal('vi_erlaubnis', DATEN.erlaubnis);
+    setVal('vi_pitch', DATEN.pitch);
     const zg=DATEN.zielgruppe||{};
     setVal('vi_alter',zg.alter);
     setVal('vi_berufsstatus',zg.berufsstatus);
