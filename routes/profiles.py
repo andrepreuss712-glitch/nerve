@@ -2,7 +2,7 @@ import json
 from flask import (Blueprint, render_template, request, redirect,
                    url_for, flash, g, jsonify, session as flask_session)
 from database.db import get_session
-from database.models import Profile, User as UserModel
+from database.models import Profile, User as UserModel, ProfileSkript, ProfileOpener
 from routes.auth import login_required
 from services.audit import log_action
 
@@ -197,3 +197,167 @@ def loeschen(pid):
     finally:
         db.close()
     return redirect(url_for('profiles.liste'))
+
+
+# ── Skripte CRUD ──────────────────────────────────────────────────────────────
+
+@profiles_bp.route('/<int:pid>/skripte')
+@login_required
+def skripte_liste(pid):
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        items = db.query(ProfileSkript).filter_by(profile_id=pid).order_by(ProfileSkript.sortierung, ProfileSkript.id).all()
+        return jsonify([{'id': s.id, 'name': s.name, 'inhalt': s.inhalt or '', 'sortierung': s.sortierung} for s in items])
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/skripte', methods=['POST'])
+@login_required
+def skript_erstellen(pid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        data = request.get_json(force=True)
+        max_sort = db.query(ProfileSkript).filter_by(profile_id=pid).count()
+        s = ProfileSkript(profile_id=pid, name=data.get('name', '').strip() or 'Neues Skript',
+                          inhalt=data.get('inhalt', ''), sortierung=max_sort)
+        db.add(s)
+        db.commit()
+        return jsonify({'id': s.id, 'name': s.name, 'inhalt': s.inhalt or '', 'sortierung': s.sortierung}), 201
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/skripte/<int:sid>', methods=['PUT'])
+@login_required
+def skript_bearbeiten(pid, sid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        s = db.query(ProfileSkript).filter_by(id=sid, profile_id=pid).first()
+        if not s:
+            return jsonify({'error': 'not found'}), 404
+        data = request.get_json(force=True)
+        if 'name' in data:
+            s.name = data['name'].strip()
+        if 'inhalt' in data:
+            s.inhalt = data['inhalt']
+        if 'sortierung' in data:
+            s.sortierung = data['sortierung']
+        db.commit()
+        return jsonify({'id': s.id, 'name': s.name, 'inhalt': s.inhalt or '', 'sortierung': s.sortierung})
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/skripte/<int:sid>', methods=['DELETE'])
+@login_required
+def skript_loeschen(pid, sid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        s = db.query(ProfileSkript).filter_by(id=sid, profile_id=pid).first()
+        if s:
+            db.delete(s)
+            db.commit()
+        return jsonify({'ok': True})
+    finally:
+        db.close()
+
+
+# ── Opener CRUD ───────────────────────────────────────────────────────────────
+
+@profiles_bp.route('/<int:pid>/opener')
+@login_required
+def opener_liste(pid):
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        items = db.query(ProfileOpener).filter_by(profile_id=pid).order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+        return jsonify([{'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung} for o in items])
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/opener', methods=['POST'])
+@login_required
+def opener_erstellen(pid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        data = request.get_json(force=True)
+        max_sort = db.query(ProfileOpener).filter_by(profile_id=pid).count()
+        o = ProfileOpener(profile_id=pid, name=data.get('name', '').strip() or 'Neuer Opener',
+                          inhalt=data.get('inhalt', ''), sortierung=max_sort)
+        db.add(o)
+        db.commit()
+        return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung}), 201
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/opener/<int:oid>', methods=['PUT'])
+@login_required
+def opener_bearbeiten(pid, oid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        o = db.query(ProfileOpener).filter_by(id=oid, profile_id=pid).first()
+        if not o:
+            return jsonify({'error': 'not found'}), 404
+        data = request.get_json(force=True)
+        if 'name' in data:
+            o.name = data['name'].strip()
+        if 'inhalt' in data:
+            o.inhalt = data['inhalt']
+        if 'sortierung' in data:
+            o.sortierung = data['sortierung']
+        db.commit()
+        return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung})
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/opener/<int:oid>', methods=['DELETE'])
+@login_required
+def opener_loeschen(pid, oid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        o = db.query(ProfileOpener).filter_by(id=oid, profile_id=pid).first()
+        if o:
+            db.delete(o)
+            db.commit()
+        return jsonify({'ok': True})
+    finally:
+        db.close()
