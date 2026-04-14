@@ -200,6 +200,16 @@ def register_audio_handlers(sio):
                 ls.state['precall_briefing'] = precall_briefing
             print(f"[DG] PreCall-Briefing gespeichert ({len(precall_briefing)} Zeichen)")
 
+        skript_inhalt = data.get('skript_inhalt') if isinstance(data, dict) else None
+        if skript_inhalt and isinstance(skript_inhalt, str):
+            # T-06-07: Truncate to 50000 chars max to prevent DoS
+            skript_inhalt = skript_inhalt[:50000]
+            bloecke = [b.strip() for b in skript_inhalt.split('\n\n') if b.strip()]
+            with ls.state_lock:
+                ls.state['aktives_skript_inhalt'] = skript_inhalt
+                ls.state['skript_bloecke'] = bloecke
+            print(f"[PiP] Skript geladen ({len(bloecke)} Bloecke)")
+
         # FT logging: create ft_call_sessions row (Phase 04.7.1)
         try:
             from flask import session as flask_session

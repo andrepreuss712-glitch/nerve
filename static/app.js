@@ -63,7 +63,11 @@ async function startMicStream() {
     source.connect(workletNode);
     workletNode.connect(audioCtx.destination);
     micStarted = true;
-    socket.emit('start_live_session', { mode: sessionMode || 'meeting' });
+    socket.emit('start_live_session', {
+      mode: sessionMode || 'meeting',
+      precall_briefing: window._precallBriefing || null,
+      skript_inhalt: window._pipActiveSkript || null
+    });
     console.log('[Mic] Browser-Mikrofon gestartet, AudioContext state:', audioCtx.state);
   } catch (err) {
     console.error('[Mic] getUserMedia Fehler:', err);
@@ -1488,6 +1492,13 @@ function pipPopulateProfiles() {
     if (p.id === activeId) opt.selected = true;
     sel.appendChild(opt);
   });
+  // Load scripts for initial selection (D-12)
+  if (sel.value) pipPopulateSkripte(parseInt(sel.value));
+  // Re-load scripts when profile changes
+  sel.addEventListener('change', function() {
+    if (sel.value) pipPopulateSkripte(parseInt(sel.value));
+    window._pipActiveSkript = null;
+  });
 }
 
 function pipPopulateKundendatenHistory() {
@@ -2288,6 +2299,149 @@ function updatePipFromCoaching(d) {
   var text = d.tipp || d.painpoint || '';
   if (text) {
     el.textContent = text;
-    setPipTabFromKI('coaching');
+  }
+}
+
+// ── Phase 06: Teleprompter (D-11, D-13, D-14) ────────────────────────────────
+var _teleprompterManualOverride = false;
+var _teleprompterOverrideTimer = null;
+var _teleprompterActiveBlock = 0;
+
+function renderTeleprompterBlocks(inhalt, activeBlockIdx) {
+  var container = getPipElement('pip-teleprompter');
+  if (!container) return;
+  if (!inhalt) {
+    container.innerHTML = '<div class="tp-empty">Kein Skript hinterlegt -- Profil bearbeiten</div>';
+    return;
+  }
+  var blocks = inhalt.split(/\n\n+/).filter(function(b) { return b.trim(); });
+  var doc = container.ownerDocument || document;
+  container.innerHTML = '';
+  blocks.forEach(function(block, idx) {
+    var div = doc.createElement('div');
+    div.className = 'tp-block' + (idx === activeBlockIdx ? ' tp-block-active' : '');
+    div.dataset.blockIdx = idx;
+    div.textContent = block.trim();
+    div.addEventListener('click', function() {
+      // Manual block selection -- override
+      _teleprompterManualOverride = true;
+      _teleprompterActiveBlock = idx;
+      highlightTeleprompterBlock(container, idx);
+      clearTimeout(_teleprompterOverrideTimer);
+      _teleprompterOverrideTimer = setTimeout(function() {
+        _teleprompterManualOverride = false;
+      }, 8000);
+    });
+    container.appendChild(div);
+  });
+  // Scroll active block into view
+  highlightTeleprompterBlock(container, activeBlockIdx);
+
+  // Manual scroll override detection (D-13)
+  container.addEventListener('scroll', function() {
+    _teleprompterManualOverride = true;
+    clearTimeout(_teleprompterOverrideTimer);
+    _teleprompterOverrideTimer = setTimeout(function() {
+      _teleprompterManualOverride = false;
+    }, 8000);
+  });
+}
+
+function highlightTeleprompterBlock(container, idx) {
+  if (!container) container = getPipElement('pip-teleprompter');
+  if (!container) return;
+  var blocks = container.querySelectorAll('.tp-block');
+  blocks.forEach(function(b, i) {
+    b.classList.toggle('tp-block-active', i === idx);
+  });
+  var activeEl = container.querySelector('.tp-block-active');
+  if (activeEl) {
+    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function updateTeleprompterPosition(blockIdx) {
+  _teleprompterActiveBlock = blockIdx;
+  if (_teleprompterManualOverride) return;  // D-13: honor manual override
+  highlightTeleprompterBlock(null, blockIdx);
+}
+
+// ── Phase 06: Script dropdown in Setup Step 3 (D-12) ─────────────────────────
+window._pipActiveSkript = null;  // Full script text for teleprompter
+
+function pipPopulateSkripte(profileId) {
+  var select = getPipElement('pip-skript-select');
+  if (!select) return;
+  select.innerHTML = '<option value="">Kein Skript</option>';
+  if (!profileId) return;
+  fetch('/api/skripte?profile_id=' + profileId)
+    .then(function(r) { return r.json(); })
+    .then(function(skripte) {
+      skripte.forEach(function(s) {
+        var opt = (select.ownerDocument || document).createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name;
+        opt.dataset.inhalt = s.inhalt;
+        select.appendChild(opt);
+      });
+    })
+    .catch(function(err) { console.error('[PiP] Skripte fetch error:', err); });
+
+  select.addEventListener('change', function() {
+    var selected = select.options[select.selectedIndex];
+    window._pipActiveSkript = selected && selected.dataset.inhalt ? selected.dataset.inhalt : null;
+  });
+}
+
+// ── Phase 06: Proactive KI Fill (D-02) ───────────────────────────────────────
+function fillProactiveSlots(result) {
+  // Called when no einwand -- fill slots with contextual content
+  if (!result) return;
+
+  // Slot 0: Phase change or coaching tipp
+  if (result.phase_hinweis) {
+    setPipSlotProactive(0, 'PHASE', 'Phase wechselt: ' + result.phase_hinweis);
+  } else if (result.frage_vorschlag) {
+    setPipSlotProactive(0, 'FRAGE', result.frage_vorschlag);
+  } else if (result.notiz) {
+    setPipSlotProactive(0, 'HINWEIS', result.notiz);
+  }
+
+  // Slot 1: KB trend
+  if (typeof result.kaufbereitschaft === 'number') {
+    var kb = result.kaufbereitschaft;
+    var trend = result.kb_trend || '';
+    var trendArrow = trend === 'steigend' ? ' ^' : (trend === 'fallend' ? ' v' : '');
+    var trendColor = trend === 'steigend' ? '#00D4AA' : (trend === 'fallend' ? '#f87171' : '#e8ecf4');
+    var resultEl = getPipElement('pip-slot-result-1');
+    var bodyEl = getPipElement('pip-slot-body-1');
+    var labelEl = getPipElement('pip-slot-1');
+    if (labelEl) {
+      var sl = labelEl.querySelector('.pip-slot-label');
+      if (sl) sl.textContent = 'KAUFBEREITSCHAFT';
+    }
+    if (bodyEl) bodyEl.style.display = 'none';
+    if (resultEl) {
+      resultEl.innerHTML = '<span style="font-family:JetBrains Mono,monospace;font-size:12px;color:' +
+        trendColor + '">' + kb + '%' + trendArrow + '</span>' +
+        '<div style="margin-top:4px;color:rgba(255,255,255,0.6)">' +
+        kb + '% Kaufbereitschaft -- ' + (trend || 'stabil') + '</div>';
+      resultEl.style.display = '';
+    }
+  }
+}
+
+function setPipSlotProactive(slot, label, text) {
+  var container = getPipElement('pip-slot-' + slot);
+  var bodyEl = getPipElement('pip-slot-body-' + slot);
+  var resultEl = getPipElement('pip-slot-result-' + slot);
+  if (container) {
+    var sl = container.querySelector('.pip-slot-label');
+    if (sl) sl.textContent = label;
+  }
+  if (bodyEl) bodyEl.style.display = 'none';
+  if (resultEl) {
+    resultEl.innerHTML = '<div>' + escHtml(text) + '</div>';
+    resultEl.style.display = '';
   }
 }
