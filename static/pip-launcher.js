@@ -781,7 +781,7 @@
     // Body styles
     var body = pipWindow.document.body;
     body.style.margin = '0';
-    body.style.background = 'rgba(6,6,10,0.85)';
+    body.style.background = '#ffffff';
     body.style.color = 'var(--page-text-color,#e8ecf4)';
     body.style.fontFamily = "'Inter',sans-serif";
     body.style.display = 'flex';
@@ -856,8 +856,16 @@
     var badge = pipEl('nlp-mode-badge');
     if (badge) badge.textContent = state.mode === 'meeting' ? 'Meeting' : 'Cold Call';
 
-    // Set opener text
-    var openerText = (state.profileDaten && state.profileDaten.opener) ? state.profileDaten.opener : 'Kein Opener im Profil hinterlegt';
+    // Set opener text — use selected opener from dropdown, edited text, or legacy fallback
+    var openerText = 'Kein Opener hinterlegt';
+    if (state._editedOpenerText) {
+      openerText = state._editedOpenerText;
+    } else if (state.selectedOpenerId && state.openerItems.length > 0) {
+      var selOp = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
+      if (selOp) openerText = selOp.inhalt;
+    } else if (state.profileDaten && state.profileDaten.opener) {
+      openerText = state.profileDaten.opener;
+    }
     var openerEl = pipEl('nlp-opener-text');
     if (openerEl) openerEl.textContent = openerText;
 
@@ -1024,13 +1032,6 @@
   // ── End Call ───────────────────────────────────────────────────────────────
   function endCall() {
     _stopTimer();
-
-    // Short/empty session guard
-    if (state.sessionSeconds < 5) {
-      _showPostcallRaw('--', [{ text: 'Kein Gespraech erkannt', color: 'yellow' }]);
-      return;
-    }
-
     _stopPolling();
     _stopMic();
 
