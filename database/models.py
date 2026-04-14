@@ -130,6 +130,26 @@ class Profile(Base):
     aktualisiert_am = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class ProfileSkript(Base):
+    __tablename__ = 'profile_skripte'
+    id          = Column(Integer, primary_key=True)
+    profile_id  = Column(Integer, ForeignKey('profiles.id'), nullable=False)
+    name        = Column(String(200), nullable=False)
+    inhalt      = Column(Text)
+    sortierung  = Column(Integer, default=0)
+    created_at  = Column(DateTime, default=utcnow)
+
+
+class ProfileOpener(Base):
+    __tablename__ = 'profile_opener'
+    id          = Column(Integer, primary_key=True)
+    profile_id  = Column(Integer, ForeignKey('profiles.id'), nullable=False)
+    name        = Column(String(200), nullable=False)
+    inhalt      = Column(Text)
+    sortierung  = Column(Integer, default=0)
+    created_at  = Column(DateTime, default=utcnow)
+
+
 class Session(Base):
     __tablename__ = 'sessions'
     id          = Column(Integer, primary_key=True)
