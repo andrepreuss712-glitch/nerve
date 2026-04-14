@@ -38,8 +38,9 @@ Declared values (multiples of 4):
 |-------|-------|-------|
 | xs | 4px | Icon gaps, badge padding, slot separator line |
 | sm | 8px | Button inner padding (vertical), header element gaps |
-| md | 16px | Section padding, slot content padding, teleprompter block padding |
-| lg | 24px | Gap between KI upper half and teleprompter lower half (divider) |
+| compact | 12px | Slot inner padding, teleprompter block padding, consent text padding — multiple of 4, justified for compact PiP viewport |
+| md | 16px | Section padding, teleprompter block horizontal padding, consent button horizontal padding |
+| lg | 24px | Gap between KI upper half and teleprompter lower half (divider), consent screen layout padding |
 | xl | 32px | Consent screen vertical spacing |
 | 2xl | 48px | Consent screen icon/headline spacing |
 
@@ -56,10 +57,13 @@ All type is inside the PiP window (dark background). The PiP is a separate `Docu
 
 | Role | Size | Weight | Line Height | Font | Usage |
 |------|------|--------|-------------|------|-------|
-| Body / slot text | 14px | 400 | 1.5 | Inter | KI slot streaming text, teleprompter block text |
-| Label / section title | 12px | 600 | 1.4 | Inter | "KI-Hinweise", "Skript", slot type labels, consent subtext |
+| Body / slot text | 14px | 400 | 1.5 | Inter | KI slot streaming text, teleprompter block text, gegenargument text, consent body text, teleprompter empty state |
+| Label / section title | 12px | 700 | 1.4 | Inter | "KI-Hinweise", "Skript", slot type labels, consent subtext, slot label badges, opacity slider "BG" label |
 | Heading | 16px | 700 | 1.3 | Inter | Consent screen main prompt text, opener headline |
-| Mono / timer | 12px | 600 | 1.0 | JetBrains Mono | Call timer, KB score percentage in proactive slot |
+| Mono / timer | 12px | 400 | 1.0 | JetBrains Mono | Call timer, KB score percentage in proactive slot |
+
+**Permitted sizes:** 12px, 14px, 16px (3 sizes — under maximum of 4).
+**Permitted weights:** 400 (regular) and 700 (bold) — exactly 2 weights. Weight 600 is not used in this phase.
 
 Maximum 4 sizes declared. No additional sizes permitted in this phase.
 
@@ -103,8 +107,9 @@ Structure: `[mode-badge] [timer]` left — `[opacity-slider] [fullscreen-link]` 
   - Filled track: `#00D4AA` via CSS accent-color or custom pseudo
   - Thumb: 16px diameter, white (`#ffffff`), no border
   - Width: 80px — compact, fits in header
-  - Label: "BG" in 10px/500 weight to left of slider
+  - Label: "BG" in 12px / weight 700 to left of slider
   - Visible: only when `pip-section-live` is active (hidden in setup and consent)
+- Fullscreen link: `aria-label="Vollbild öffnen"` — accessibility label on the `<a>` or `<button>` element
 
 ### 2. KI Upper Zone (55% of live area height)
 
@@ -120,15 +125,15 @@ Two-slot horizontal layout. Each slot is equal width (50% - 8px gap).
 
 - Slot border: `1px solid rgba(255,255,255,0.08)`
 - Slot border-radius: 12px
-- Slot padding: 12px (md minus 4px — compact for small PiP window)
+- Slot padding: 12px (compact token — for small PiP viewport)
 - Slot background: `rgba(255,255,255,0.04)` (slightly lighter than window bg)
 - Active streaming slot: `border-color: rgba(0,212,170,0.3)` — subtle teal pulse
 
-**Slot label typography:** 10px / weight 700 / letter-spacing 0.08em / uppercase / color `rgba(255,255,255,0.4)` — unobtrusive
+**Slot label typography:** 12px / weight 700 / letter-spacing 0.08em / uppercase / color `rgba(255,255,255,0.4)` — unobtrusive
 
 **Slot result layout** (after stream completes):
-- Einwand-Typ: 10px badge (`.pip-slot-typ-badge`) — color per typ: Preis = gold, Kein Bedarf = coral, Vertrauen = blue, etc. (follow existing badge palette)
-- Gegenargument text: 13px / weight 400 / line-height 1.5 / color `#e8ecf4`
+- Einwand-Typ: 12px badge (`.pip-slot-typ-badge`) — color per typ: Preis = gold, Kein Bedarf = coral, Vertrauen = blue, etc. (follow existing badge palette)
+- Gegenargument text: 14px / weight 400 / line-height 1.5 / color `#e8ecf4`
 - Transition: fade-in over 150ms
 
 **Streaming cursor:**
@@ -160,7 +165,7 @@ Scrollbar styling (WebKit, inside PiP document):
 - Thumb: `rgba(255,255,255,0.15)`, border-radius 2px
 
 **Block element** `.tp-block`:
-- Padding: 12px 16px
+- Padding: 12px 16px (compact vertical, md horizontal)
 - Border-left: 4px solid transparent (inactive)
 - Border-radius: 0 8px 8px 0
 - Font: 14px / weight 400 / line-height 1.5 / color `rgba(255,255,255,0.4)` (inactive = 40% opacity — D-14)
@@ -175,7 +180,7 @@ Scrollbar styling (WebKit, inside PiP document):
 
 **Empty / null state** `.tp-empty`:
 - Text: "Kein Skript hinterlegt — Profil bearbeiten"
-- Font: 13px / weight 400 / color `rgba(255,255,255,0.3)` / text-align center
+- Font: 14px / weight 400 / color `rgba(255,255,255,0.3)` / text-align center
 - Padding: 24px 16px
 
 **Divider between upper KI zone and lower teleprompter zone:**
@@ -193,13 +198,13 @@ Full-height section replacing the live section during consent flow (D-05).
 Layout: centered column, padding 24px.
 
 Elements top-to-bottom:
-1. NERVE logo mark (10px height "N" lettermark in teal) — optional, but grounding
+1. NERVE logo mark (12px height "N" lettermark in teal) — optional, but grounding
 2. Heading: "Consent erforderlich" — 14px / weight 700 / color `#e8ecf4`
-3. Consent text block: `#pip-consent-text` — 13px / weight 400 / line-height 1.6 / color `rgba(255,255,255,0.7)` / background `rgba(255,255,255,0.05)` / border-radius 8px / padding 12px 16px
+3. Consent text block: `#pip-consent-text` — 14px / weight 400 / line-height 1.6 / color `rgba(255,255,255,0.7)` / background `rgba(255,255,255,0.05)` / border-radius 8px / padding 12px 16px
 4. Gap: 16px
 5. Two buttons side by side:
-   - [Stattgegeben]: `background: #00D4AA` / `color: #06060a` / weight 600 / 14px / border-radius 8px / padding 10px 20px / full width
-   - [Abgelehnt]: `background: rgba(248,113,113,0.08)` / `color: #f87171` / `border: 1px solid rgba(248,113,113,0.2)` / weight 600 / 14px / border-radius 8px / padding 10px 20px / full width
+   - [Stattgegeben]: `background: #00D4AA` / `color: #06060a` / weight 700 / 14px / border-radius 8px / padding 12px 20px / full width
+   - [Abgelehnt]: `background: rgba(248,113,113,0.08)` / `color: #f87171` / `border: 1px solid rgba(248,113,113,0.2)` / weight 700 / 14px / border-radius 8px / padding 12px 20px / full width
 
 ### 6. Opacity Slider (detail — D-16)
 
