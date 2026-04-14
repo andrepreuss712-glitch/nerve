@@ -350,14 +350,15 @@
   function renderStep4() {
     var c = content();
     if (!c) return;
-    var briefing = state.precallBriefing || '';
-    var found = !!briefing;
+    var briefingObj = state.precallBriefing || null;
+    var briefingText = briefingObj ? (briefingObj.text || '') : '';
+    var found = !!briefingText;
 
     c.innerHTML = [
       '<div class="launcher-step">',
       '<div class="nav-live-title">' + (found ? 'Recherche-Ergebnis' : 'Keine Daten gefunden') + '</div>',
       found
-        ? '<textarea class="launcher-briefing" id="lnr-briefing-edit" readonly>' + escHtml(briefing) + '</textarea>'
+        ? '<textarea class="launcher-briefing" id="lnr-briefing-edit" readonly>' + escHtml(briefingText) + '</textarea>'
         : '<div style="color:var(--page-text-muted);font-size:13px;padding:12px 0">Fuer diese Firma konnten keine oeffentlichen Informationen gefunden werden. Du kannst trotzdem fortfahren.</div>',
       '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
       '<button class="launcher-btn-ghost" id="lnr-step4-back">&#8592; Zurueck</button>',
@@ -379,9 +380,9 @@
       renderStep();
     };
     document.getElementById('lnr-step4-accept').onclick = function () {
-      // Save edited briefing if textarea was made editable
+      // Save edited briefing text back into the briefing object
       var ta = document.getElementById('lnr-briefing-edit');
-      if (ta) state.precallBriefing = ta.value || state.precallBriefing;
+      if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
       state.step = 5;
       renderStep();
     };
