@@ -230,13 +230,19 @@
 .launcher-loading-bar{width:100%;height:4px;background:var(--glass-border);border-radius:2px;overflow:hidden}
 .launcher-loading-bar-inner{height:100%;background:#00D4AA;border-radius:2px;animation:launcherSlide 1.5s ease-in-out infinite}
 @keyframes launcherSlide{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
-.launcher-briefing{width:100%;padding:12px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:12px;line-height:1.5;min-height:80px;max-height:160px;overflow-y:auto;font-family:inherit;resize:none;box-sizing:border-box}
+.launcher-briefing{width:100%;padding:12px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;min-height:120px;max-height:400px;overflow-y:auto;font-family:inherit;resize:none;box-sizing:border-box}
+.launcher-briefing-html{width:100%;padding:16px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;max-height:400px;overflow-y:auto;box-sizing:border-box}
+.launcher-briefing-html h2{font-size:15px;font-weight:700;margin:12px 0 6px;color:#00D4AA}
+.launcher-briefing-html h2:first-child{margin-top:0}
+.launcher-briefing-html ul{margin:4px 0 8px;padding-left:20px}
+.launcher-briefing-html li{margin-bottom:4px}
+.launcher-briefing-html strong{color:#e8ecf4}
 .launcher-opener-preview{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:12px;font-size:13px;color:var(--page-text-color);line-height:1.5;max-height:100px;overflow-y:auto;white-space:pre-wrap}
 </style>
 
 <!-- PiP Launcher Setup Modal (shell — pip-launcher.js populates #launcherContent) -->
 <div id="launcherModal" class="nav-live-overlay">
-  <div class="nav-live-box" style="max-width:560px" id="launcherModalBox">
+  <div class="nav-live-box" style="max-width:640px" id="launcherModalBox">
     <button class="nav-live-close" id="launcherClose" title="Schliessen">&times;</button>
     <div id="launcherContent" style="width:100%"></div>
   </div>

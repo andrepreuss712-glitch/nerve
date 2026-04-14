@@ -35,6 +35,18 @@
       .replace(/"/g, '&quot;');
   }
 
+  // Simple markdown to HTML (handles ##, **, -, no external lib needed)
+  function mdToHtml(md) {
+    return String(md || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+      .replace(/\n{2,}/g, '<br>')
+      .replace(/\n/g, ' ');
+  }
+
   // Resolve element in PiP window first, fall back to main document
   function pipEl(id) {
     if (state.pipWindow && !state.pipWindow.closed) {
@@ -358,7 +370,8 @@
       '<div class="launcher-step">',
       '<div class="nav-live-title">' + (found ? 'Recherche-Ergebnis' : 'Keine Daten gefunden') + '</div>',
       found
-        ? '<textarea class="launcher-briefing" id="lnr-briefing-edit" readonly>' + escHtml(briefingText) + '</textarea>'
+        ? '<div class="launcher-briefing-html" id="lnr-briefing-view">' + mdToHtml(briefingText) + '</div>'
+          + '<textarea class="launcher-briefing" id="lnr-briefing-edit" style="display:none">' + escHtml(briefingText) + '</textarea>'
         : '<div style="color:var(--page-text-muted);font-size:13px;padding:12px 0">Fuer diese Firma konnten keine oeffentlichen Informationen gefunden werden. Du kannst trotzdem fortfahren.</div>',
       '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
       '<button class="launcher-btn-ghost" id="lnr-step4-back">&#8592; Zurueck</button>',
@@ -390,9 +403,11 @@
     var editBtn = document.getElementById('lnr-step4-edit');
     if (editBtn) {
       editBtn.onclick = function () {
+        var view = document.getElementById('lnr-briefing-view');
         var ta = document.getElementById('lnr-briefing-edit');
+        if (view) view.style.display = 'none';
         if (ta) {
-          ta.removeAttribute('readonly');
+          ta.style.display = 'block';
           ta.style.borderColor = '#00D4AA';
           ta.focus();
           editBtn.style.display = 'none';
