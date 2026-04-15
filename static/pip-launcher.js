@@ -883,9 +883,14 @@
     });
 
     // Body styles
+    // 06.1-r2 BUG-6b: html+body transparent — damit der Slider via --pip-bg-alpha echte
+    // Durchsicht auf CRM/Desktop ergibt. Der Farbton (slate-50) sitzt jetzt auf
+    // .pip-live-split/.pip-header/.pip-ki-slot via rgba(...,var(--pip-bg-alpha,1)) und
+    // wird kaskadiert transparent. D-16 gewahrt: Text/Icons/Buttons bleiben 100% opak.
+    pipWindow.document.documentElement.style.background = 'transparent';
     var body = pipWindow.document.body;
     body.style.margin = '0';
-    body.style.background = '#F8FAFC';  // D-05: slate-50 light body
+    body.style.background = 'transparent';
     body.style.color = 'var(--page-text-color,#e8ecf4)';
     body.style.fontFamily = "'Inter',sans-serif";
     body.style.display = 'flex';
@@ -1054,23 +1059,41 @@
         ? e
         : (e.kategorie || e.typ || e.name || e.einwand || '');
       if (!typ) return '';  // skip rather than render [object Object]
-      return '<button class="pip-ewb-btn" data-typ="' + escHtml(typ) + '">' + escHtml(typ) + '</button>';
+      return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(typ) + '">' + escHtml(typ) + '</button>';
     }).join('');
     row.innerHTML = html;
-    // Wire clicks
+    // 06.1-r2 BUG-5b: addEventListener + stopPropagation + Capture — robuster im PiP-Document
+    // als direct onclick-Assignment, und erlaubt mehrfache Handler ohne Override.
     row.querySelectorAll('.pip-ewb-btn').forEach(function (btn) {
-      btn.onclick = function () { _triggerEwb(btn.getAttribute('data-typ')); };
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var typ = btn.getAttribute('data-typ');
+        console.log('[NerveLauncher] EWB click:', typ);
+        _triggerEwb(typ, btn);
+      });
     });
   }
 
-  function _triggerEwb(typ) {
+  function _triggerEwb(typ, btn) {
     // EWB triggers analysis — result arrives via pip_stream_start/pip_token/pip_token_done
+    // 06.1-r2 BUG-5b: credentials:'include' damit Session-Cookie im PiP-Document-Kontext
+    // mitgesendet wird. response.ok/Status pruefen und bei Fehler sichtbar machen.
+    console.log('[NerveLauncher] EWB trigger:', typ);
+    if (btn) btn.classList.add('pip-ewb-ai-selected');  // sofortiges visuelles Feedback
     fetch('/api/analyse_line', {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: typ, line_id: 'ewb_pip_' + Date.now() })
-    }).catch(function (err) { console.error('[NerveLauncher] EWB error:', err); });
-    console.log('[NerveLauncher] EWB trigger:', typ);
+    }).then(function (res) {
+      console.log('[NerveLauncher] EWB fetch status:', res.status);
+      if (!res.ok) {
+        console.error('[NerveLauncher] EWB fetch failed:', res.status, res.statusText);
+      }
+    }).catch(function (err) {
+      console.error('[NerveLauncher] EWB fetch error:', err);
+    });
   }
 
   // ── Socket Events (Phase 06: streaming replaces polling) ─────────────────
