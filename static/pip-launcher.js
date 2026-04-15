@@ -38,7 +38,11 @@
     teleprompterActiveIdx: -1,
     teleprompterManualOverride: false,
     teleprompterOverrideTimer: null,
-    pipBgOpacity: 1.0
+    pipBgOpacity: 1.0,
+    // D-16: Mic-Indikator state
+    micAnalyser: null,
+    micLevelRafId: null,
+    micMuted: false
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -754,6 +758,14 @@
       };
       source.connect(workletNode);
       workletNode.connect(audioCtx.destination);
+      // D-16: AnalyserNode parallel zum Worklet — fuer Mic-Level-Bars, stoert Worklet-Streaming nicht
+      var analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.7;
+      source.connect(analyser);
+      state.micAnalyser = analyser;
+      state.micMuted = false;
+      _startMicLevelLoop();
       state.audioCtx = audioCtx;
       state.workletNode = workletNode;
       state.micStarted = true;
@@ -790,6 +802,63 @@
       console.log('[NerveLauncher] Mic started, mode:', state.mode);
     } catch (err) {
       console.error('[NerveLauncher] Audio worklet error:', err);
+    }
+  }
+
+  function _startMicLevelLoop() {
+    var analyser = state.micAnalyser;
+    if (!analyser) return;
+    var buffer = new Uint8Array(analyser.frequencyBinCount);
+    var lastTick = 0;
+    var N = 4;
+    var perBar = Math.floor(buffer.length / N);
+    function tick(ts) {
+      if (!state.micAnalyser) return;  // gestoppt
+      if (ts - lastTick >= 60) {  // ~16 fps Drosselung (D-16)
+        lastTick = ts;
+        analyser.getByteFrequencyData(buffer);
+        var bars = new Array(N);
+        for (var i = 0; i < N; i++) {
+          var sum = 0;
+          for (var j = 0; j < perBar; j++) sum += buffer[i * perBar + j];
+          bars[i] = (sum / perBar) / 255;  // normalisiert 0..1
+        }
+        _updateMicBarsDom(bars);
+      }
+      state.micLevelRafId = requestAnimationFrame(tick);
+    }
+    state.micLevelRafId = requestAnimationFrame(tick);
+  }
+
+  function _updateMicBarsDom(bars) {
+    // Bei Mute: Balken bleiben flach (15%), nicht animiert
+    if (state.micMuted) return;
+    for (var i = 0; i < bars.length; i++) {
+      var el = pipEl('pip-mic-bar-' + i);
+      if (el) el.style.height = (Math.max(0.15, bars[i]) * 100) + '%';
+    }
+  }
+
+  function _toggleMicMute() {
+    if (!state.micStream) return;
+    var tracks = state.micStream.getAudioTracks();
+    if (!tracks.length) return;
+    var nowMuted = tracks[0].enabled;  // wenn aktuell enabled → wir muten
+    tracks.forEach(function (t) { t.enabled = !nowMuted; });
+    state.micMuted = nowMuted;
+    _updateMicIndicatorState();
+    console.log('[NerveLauncher] Mic ' + (state.micMuted ? 'muted' : 'unmuted') + ' (track.enabled toggle, no session restart)');
+  }
+
+  function _updateMicIndicatorState() {
+    var indicator = pipEl('pip-mic-indicator');
+    if (!indicator) return;
+    indicator.classList.toggle('pip-mic-muted', !!state.micMuted);
+    if (state.micMuted) {
+      for (var i = 0; i < 4; i++) {
+        var b = pipEl('pip-mic-bar-' + i);
+        if (b) b.style.height = '15%';
+      }
     }
   }
 
@@ -876,6 +945,10 @@
     // Details (postcall)
     var detailsBtn = pipWindow.document.getElementById('nlp-btn-details');
     if (detailsBtn) detailsBtn.onclick = function () { showDetails(); };
+
+    // D-15: Mic-Mute-Toggle
+    var micBtn = pipEl('pip-mic-indicator');
+    if (micBtn) micBtn.onclick = function () { _toggleMicMute(); };
   }
 
   function _initPipLive() {
@@ -956,6 +1029,10 @@
     var sliderLabel = pipEl('pip-opacity-label');
     if (slider) slider.style.display = 'block';
     if (sliderLabel) sliderLabel.style.display = 'block';
+
+    // D-13: Mic-Indikator einschalten (erst im Live-Zustand sichtbar)
+    var micBtnShow = pipEl('pip-mic-indicator');
+    if (micBtnShow) micBtnShow.style.display = 'inline-flex';
 
     // Initialize opacity from localStorage (D-17)
     _initOpacitySlider();
@@ -1320,6 +1397,9 @@
 
   // ── Mic Stop ───────────────────────────────────────────────────────────────
   function _stopMic() {
+    if (state.micLevelRafId) { cancelAnimationFrame(state.micLevelRafId); state.micLevelRafId = null; }
+    if (state.micAnalyser) { try { state.micAnalyser.disconnect(); } catch(e){} state.micAnalyser = null; }
+    state.micMuted = false;
     state.micStarted = false;
     if (state.socket) state.socket.emit('stop_live_session');
     if (state.workletNode) { state.workletNode.disconnect(); state.workletNode = null; }
