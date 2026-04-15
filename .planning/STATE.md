@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Completed 06.1-03-PLAN.md
-last_updated: "2026-04-15T10:16:33.647Z"
+status: verifying
+stopped_at: Completed 06.1-04-PLAN.md
+last_updated: "2026-04-15T10:20:08.838Z"
 last_activity: 2026-04-15
 progress:
   total_phases: 32
-  completed_phases: 21
+  completed_phases: 22
   total_plans: 122
-  completed_plans: 111
-  percent: 91
+  completed_plans: 112
+  percent: 92
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 Phase: 06.1 (pip-uat-fixes-bugs-farben-proportionen-mic-indikator-slider) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-15
 
 **Next:** Discuss/plan Phase 04.13
@@ -139,6 +139,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.1 P01 | 15 | 3 tasks | 2 files |
 | Phase 06.1 P02 | 10 | 2 tasks | 2 files |
 | Phase 06.1 P03 | 12 | 2 tasks | 2 files |
+| Phase 06.1 P04 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -319,6 +320,8 @@ Recent decisions affecting current work:
 - [Phase 06.1]: Header explizit #0D1117 statt var(--page-bg) damit er unabhaengig vom Body-Scheme dunkel bleibt
 - [Phase 06.1]: MediaStreamTrack.enabled=false statt track.stop() fuer Mute-Toggle — Deepgram bleibt verbunden, kein Reconnect-Overhead
 - [Phase 06.1]: AnalyserNode nur an source connected (nicht an destination) — kein Audio-Echo, reine Pegel-Visualisierung
+- [Phase 06.1]: Integer-basierter localStorage-Read (10-100) statt Float — konsistenter mit Slider min/max, einfacher zu validieren
+- [Phase 06.1]: _updateSliderFill als separate Funktion fuer iOS-style Slider-Fill via --pip-slider-pct CSS-Variable
 
 ### Roadmap Evolution
 
@@ -371,6 +374,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-15T10:16:33.643Z
-Stopped at: Completed 06.1-03-PLAN.md
+Last session: 2026-04-15T10:20:03.792Z
+Stopped at: Completed 06.1-04-PLAN.md
 Resume file: None

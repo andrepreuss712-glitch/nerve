@@ -625,10 +625,10 @@ Plans:
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
 **Requirements**: PIP-01, PIP-03, PIP-04, PIP-05
 **Depends on:** Phase 6
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 06.1-01-PLAN.md — Bug-Fixes (D-01 EWB-Labels, D-02 Scrollbar, D-03 Opener→Teleprompter-Block-0)
 - [x] 06.1-02-PLAN.md — Layout-Rotation + helles Farbschema (D-04 bis D-12: 480×760, light body, teleprompter top 60%, EWB horizontal pills, slot colors inverted)
 - [x] 06.1-03-PLAN.md — Mic-Indikator (D-13 bis D-16: 4 audio-level bars, WebAudio AnalyserNode, green/grey states, click-to-mute via track.enabled)
-- [ ] 06.1-04-PLAN.md — Slider-Redesign (D-17 bis D-19: 140px iOS-style mit teal filled portion, touch hit-area, localStorage-clamp)
+- [x] 06.1-04-PLAN.md — Slider-Redesign (D-17 bis D-19: 140px iOS-style mit teal filled portion, touch hit-area, localStorage-clamp)
