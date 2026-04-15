@@ -726,6 +726,78 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         return {}
 
 
+def streame_manual_ewb_variante(typ: str, profile_einwand: dict, kontext: str, sid: str, slot: int = 1) -> dict:
+    """06.1-r2 r4: Manual-EWB Slot-1 Variante.
+    Berater hat EWB-Button 'typ' geklickt. Slot 0 zeigt bereits das Profil-Gegenargument
+    instant (client-side). Hier streamen wir eine KONTEXTBEZOGENE Variante in Slot 1:
+    Haiku bekommt Profil-Standard + Gespraechsverlauf, baut eine knappe Adaption.
+    Emits pip_stream_start (mit raw_text:true), pip_token (plain text), pip_token_done.
+    """
+    from extensions import socketio as sio
+    standard_ga = ''
+    if isinstance(profile_einwand, dict):
+        standard_ga = (profile_einwand.get('gegenargument_1')
+                       or profile_einwand.get('gegenargument')
+                       or profile_einwand.get('text')
+                       or '')
+
+    user_msg = f"""Der Berater hat im PiP-Live-Fenster den Einwand-Button "{typ}" geklickt.
+
+Standard-Gegenargument aus Profil:
+{standard_ga or "(keines hinterlegt)"}
+
+Bisheriger Gespraechsverlauf (letzte Aussagen):
+{kontext if kontext else "(kein Kontext — Call ist gerade gestartet)"}
+
+Baue eine KURZE, kontextbezogene Variante des Gegenarguments:
+- 2-3 Saetze maximal
+- Greif konkret den Gespraechsverlauf auf (falls Kontext vorhanden)
+- Authentischer Ton, wie der Berater wirklich sprechen wuerde
+- Kein Jargon, direkt und glaubwuerdig
+
+Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kommentare.
+"""
+
+    print(f"[PiP-Variante] ENTRY sid={sid} slot={slot} typ={typ!r}")
+    sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
+    full_text = ''
+    try:
+        with claude_client.messages.stream(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=250,
+            system="Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter, keine Meta-Kommentare.",
+            messages=[{'role': 'user', 'content': user_msg}]
+        ) as stream:
+            for token in stream.text_stream:
+                full_text += token
+                sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
+        cleaned = full_text.strip()
+        result = {'einwand': True, 'typ': typ, 'gegenargument_1': cleaned}
+        sio.emit('pip_token_done', {'slot': slot, 'result': result, 'raw_text': True}, room=sid)
+        print(f"[PiP-Variante] DONE sid={sid} slot={slot} chars={len(cleaned)}")
+        # Cost-Hook
+        try:
+            from services.cost_tracker import log_api_cost
+            final_msg = stream.get_final_message()
+            u = getattr(final_msg, 'usage', None)
+            if u is not None:
+                in_tok = getattr(u, 'input_tokens', 0) or 0
+                out_tok = getattr(u, 'output_tokens', 0) or 0
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=in_tok/1000.0, unit_type='per_1k_input_tokens',
+                             context_tag='pip_variante')
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=out_tok/1000.0, unit_type='per_1k_output_tokens',
+                             context_tag='pip_variante')
+        except Exception as _e:
+            print(f"[CostHook] pip_variante skipped: {_e}")
+        return result
+    except Exception as e:
+        print(f"[PiP-Variante] Fehler sid={sid} slot={slot}: {e}")
+        sio.emit('pip_stream_error', {'slot': slot, 'error': str(e)}, room=sid)
+        return {}
+
+
 def analysiere_coaching(segmente: list, kontext: str) -> dict:
     gespraech = "\n".join(f"[{s['speaker']}] {s['text']}" for s in segmente)
     user_msg  = f"""Bisheriger Gesprächskontext:

@@ -1106,9 +1106,16 @@
     if (body) body.classList.remove('pip-streaming');
     _renderSlotResult(0, fake);
 
-    // Klick ans Backend melden fuer postcall-ObjectionEvents (fire-and-forget).
+    // 06.1-r2 r4: Slot 1 bekommt gleich Placeholder bis Haiku-Variante streamt.
+    var slot1Body = pipEl('pip-slot-body-1');
+    if (slot1Body) {
+      slot1Body.textContent = 'Variante wird gebaut\u2026';
+      slot1Body.classList.add('pip-streaming');
+    }
+    // Klick + Variante-Request ans Backend. Backend loggt Klick (ewb_clicks fuer
+    // postcall-Analytics) UND streamt kontextbezogene Haiku-Variante in Slot 1.
     if (state.socket && state.socket.connected) {
-      state.socket.emit('manual_ewb', { text: typ, line_id: 'ewb_pip_' + Date.now(), slot: 0 });
+      state.socket.emit('manual_ewb', { text: typ, line_id: 'ewb_pip_' + Date.now(), slot: 1 });
     }
   }
 
@@ -1136,6 +1143,9 @@
       state.pipSlots[slot].streaming = true;
       state.pipSlots[slot].text = '';
       state.pipSlots[slot].result = null;
+      // 06.1-r2 r4: raw_text-Mode — Plain-Text-Stream (manual_ewb-Variante), kein JSON,
+      // pip_token darf die Tokens direkt im Slot anzeigen statt 'Analysiere...'.
+      state.pipSlots[slot].rawText = !!d.raw_text;
       // Update label
       var label = pipEl('pip-slot-label-' + slot);
       if (label) label.textContent = d.replace_all ? 'ANTWORT' : (slot === 0 ? 'ANTWORT A' : 'ANTWORT B');
@@ -1160,10 +1170,15 @@
       var slot = d.slot || 0;
       if (!state.pipSlots[slot].streaming) return; // discard if slot was cleared (topic switch)
       state.pipSlots[slot].text += d.token;
-      // 06.1-r2 BUG-4: Claude streamt rohes JSON — niemals rohe Tokens rendern.
-      // Placeholder "Analysiere…" bis pip_token_done die parsed result liefert.
       var body = pipEl('pip-slot-body-' + slot);
-      if (body && body.textContent !== 'Analysiere\u2026') body.textContent = 'Analysiere\u2026';
+      if (!body) return;
+      // 06.1-r2 r4: raw_text-Mode (manual_ewb-Variante) — Plain-Text live streamen.
+      // Sonst: Haiku streamt JSON (analyse_loop), wir zeigen 'Analysiere...' bis done.
+      if (state.pipSlots[slot].rawText) {
+        body.textContent = state.pipSlots[slot].text;
+      } else if (body.textContent !== 'Analysiere\u2026') {
+        body.textContent = 'Analysiere\u2026';
+      }
     });
 
     state.socket.on('pip_token_done', function (d) {

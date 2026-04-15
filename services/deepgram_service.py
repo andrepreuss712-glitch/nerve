@@ -279,12 +279,10 @@ def register_audio_handlers(sio):
         _first_chunk_logged.discard(_sid)
         _close_deepgram_connection(_sid)
 
-    # 06.1-r2 BUG-5d+r3: Manual EWB-Trigger = reiner Klick-Tracker.
-    # Der Gegenargument-Text wird client-side aus profile.einwaende gerendert
-    # (siehe _triggerEwb in pip-launcher.js). Kein Claude-Call, kein Streaming —
-    # spart Latenz + Haiku-Tokens, funktioniert deterministisch auch bei
-    # Bare-Kategorie-Strings wie 'Kosten/Preis' wo Claude korrekt einwand=False
-    # meldet und der Slot leer bliebe.
+    # 06.1-r2 r4: Dual-Slot Manual EWB
+    # - Slot 0 wird client-side aus profile.einwaende instant gerendert (null Latenz)
+    # - Slot 1 streamt Haiku eine kontextbezogene Variante (Gespraechsverlauf + Profil)
+    # Klick wird zusaetzlich in ls.state.ewb_clicks fuer postcall-Analytics geloggt.
     @sio.on('manual_ewb')
     def handle_manual_ewb(data=None, sid=None):
         from flask import request
@@ -294,9 +292,41 @@ def register_audio_handlers(sio):
         typ = (data.get('text') or '').strip()
         if not typ:
             return
-        print(f"[PiP] manual_ewb tracked (sid={_sid}): {typ[:80]}")
+        print(f"[PiP] manual_ewb (sid={_sid}): {typ[:80]}")
         import services.live_session as ls
         try:
             ls.record_ewb_click(typ, success=False)
         except Exception as e:
             print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
+
+        # Profil + Kontext fuer Haiku-Variante aufbereiten
+        profile_daten = {}
+        try:
+            profile_daten = ls.get_active_profile() or {}
+        except Exception:
+            pass
+        einwaende = (profile_daten.get('einwaende') or []) if isinstance(profile_daten, dict) else []
+        profile_einwand = None
+        typL = typ.lower().strip()
+        for e in einwaende:
+            if isinstance(e, dict):
+                cat = (e.get('kategorie') or e.get('typ') or e.get('name') or e.get('einwand') or '').lower().strip()
+                if cat == typL:
+                    profile_einwand = e
+                    break
+        with ls.buffer_lock:
+            kontext = " ".join(ls.analysiert_bisher[-20:])
+
+        from services.claude_service import streame_manual_ewb_variante
+
+        def _run():
+            try:
+                streame_manual_ewb_variante(typ, profile_einwand or {}, kontext, _sid, slot=1)
+            except Exception as ex:
+                print(f"[PiP] manual_ewb variante error (sid={_sid}): {ex}")
+                try:
+                    sio.emit('pip_stream_error', {'slot': 1, 'error': str(ex)}, room=_sid)
+                except Exception:
+                    pass
+
+        sio.start_background_task(_run)
