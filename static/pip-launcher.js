@@ -912,6 +912,9 @@
     };
     pipWindow.document.head.appendChild(lucide);
 
+    // Force PiP size — requestWindow hints werden von Chrome manchmal ignoriert
+    try { pipWindow.resizeTo(480, 900); } catch(e) {}
+
     // Wire PiP button events
     _wirePipButtons(pipWindow);
 
@@ -1070,48 +1073,34 @@
     _initTeleprompter();
   }
 
-  // 06.1-r2 BUG-14: Kurzlabel-Helper — "Das ist uns zu teuer" -> "Das ist uns..."
-  // Wird verwendet wenn weder e.kurzlabel noch e.kategorie im Profil vorhanden sind.
-  function _shortEwbLabel(full) {
-    var t = (full || '').trim().replace(/[\?!\.,;:]+$/, '');
-    if (t.length <= 20) return t;
-    var words = t.split(/\s+/);
-    var out = words.slice(0, 3).join(' ');
-    if (out.length > 22) out = out.slice(0, 20);
-    return out + '\u2026';
-  }
-
   function _renderEwbButtons() {
     var row = pipEl('nlp-ewb-row');
     if (!row) return;
     var einwaende = (state.profileDaten && state.profileDaten.einwaende) ? state.profileDaten.einwaende : [];
     if (!einwaende.length) { row.innerHTML = ''; return; }
-    // 06.1-r2 BUG-14: Button zeigt KURZLABEL (kurzlabel > kategorie > 3-Wort-Truncate),
-    // data-typ behaelt den VOLLEN einwand-Text fuer Matching im Trigger. Dedup weiterhin
-    // per full-text damit mehrere Einwaende derselben Kategorie distinct bleiben.
+    // 06.1-r2 BUG-14c final: Button-Label = kurzlabel ODER kategorie (nur diese zwei).
+    // Kein Truncation, kein name/einwand-Fallback. Dedup per Label (case-insensitive) —
+    // mehrere Einwaende ohne kurzlabel mit gleicher Kategorie kollabieren bewusst zu
+    // einem Button (Fix: kurzlabel im Profil pflegen fuer distinkte Buttons).
+    // data-typ = Label, matched gegen dieselbe Chain in _triggerEwb + Backend.
     var seen = {};
     var items = [];
     for (var i = 0; i < einwaende.length && items.length < 5; i++) {
       var e = einwaende[i];
-      var full, short;
+      var label;
       if (typeof e === 'string') {
-        full = e.trim();
-        short = _shortEwbLabel(full);
+        label = e.trim();
       } else {
-        full = (e.einwand || e.text || e.name || '').trim();
-        // 06.1-r2 BUG-14b: kategorie NIE als Label — mehrere Einwaende koennen dieselbe
-        // Kategorie teilen. Reihenfolge: kurzlabel > name > _shortEwbLabel(voller Text).
-        short = (e.kurzlabel || e.short_label || e.name || '').trim();
-        if (!short) short = _shortEwbLabel(full);
+        label = ((e.kurzlabel || e.short_label || e.kategorie || '').trim());
       }
-      if (!full) continue;
-      var key = full.toLowerCase();
+      if (!label) continue;
+      var key = label.toLowerCase();
       if (seen[key]) continue;
       seen[key] = true;
-      items.push({ full: full, short: short });
+      items.push(label);
     }
-    var html = items.map(function (it) {
-      return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(it.full) + '" title="' + escHtml(it.full) + '">' + escHtml(it.short) + '</button>';
+    var html = items.map(function (label) {
+      return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(label) + '">' + escHtml(label) + '</button>';
     }).join('');
     row.innerHTML = html;
     // Klicks werden ueber Event-Delegation im pip-Document gefangen (_wirePipButtons).
@@ -1125,11 +1114,11 @@
     var einwaende = (state.profileDaten && state.profileDaten.einwaende) || [];
     var match = null;
     var typL = (typ || '').toLowerCase().trim();
-    // Match per label (einwand/text/name/kategorie) — gleiche Prioritaet wie _renderEwbButtons
+    // 06.1-r2 BUG-14c: Match gegen kurzlabel ODER kategorie — gleiche Chain wie _renderEwbButtons.
     for (var i = 0; i < einwaende.length; i++) {
       var e = einwaende[i];
       if (typeof e === 'string') { if (e.toLowerCase() === typL) { match = { kategorie: e }; break; } continue; }
-      var label = (e.einwand || e.text || e.name || e.kategorie || '').toLowerCase().trim();
+      var label = (e.kurzlabel || e.short_label || e.kategorie || '').toLowerCase().trim();
       if (label === typL) { match = e; break; }
     }
     var fake = {

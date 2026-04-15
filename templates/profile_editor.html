@@ -810,6 +810,8 @@ function addEinwand(d={}){
         <option value="hoch" ${d.intensitaet==='hoch'?'selected':''}>Hoch</option>
       </select></div>
   </div>
+  <div class="fg"><label class="fl">Kurzlabel für PiP-Button ${ti('Max 2-3 Wörter, z.B. "Zu teuer", "Keine Zeit". Wird auf dem EWB-Button im PiP angezeigt. Leer lassen = Kategorie-Fallback.')}</label>
+    <input class="fi" data-ew="kurzlabel" placeholder="z.B. Zu teuer" value="${esc(d.kurzlabel||'')}"></div>
   <div class="fg"><label class="fl">Einwand-Text ${ti('Wie sagt der Kunde es wörtlich? z.B. Das ist mir zu teuer.')}</label>
     <input class="fi" data-ew="einwand" placeholder="Was sagt der Kunde? z.B. Das ist zu teuer" value="${esc(d.einwand)}"></div>
   <div class="fg"><label class="fl">Varianten ${ti('Andere Formulierungen desselben Einwands — eine pro Zeile.')}</label>
@@ -831,6 +833,7 @@ function getEinwaende(){
   return [...document.querySelectorAll('#einwaende-list .block')].map(b=>({
     kategorie:b.querySelector('[data-ew="kat"]').value,
     intensitaet:b.querySelector('[data-ew="int"]').value,
+    kurzlabel:b.querySelector('[data-ew="kurzlabel"]').value.trim(),
     einwand:b.querySelector('[data-ew="einwand"]').value.trim(),
     varianten:b.querySelector('[data-ew="varianten"]').value.trim().split('\n').map(s=>s.trim()).filter(Boolean),
     gegenargument:b.querySelector('[data-ew="gegen"]').value.trim(),

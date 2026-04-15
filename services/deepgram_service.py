@@ -308,10 +308,11 @@ def register_audio_handlers(sio):
         einwaende = (profile_daten.get('einwaende') or []) if isinstance(profile_daten, dict) else []
         profile_einwand = None
         typL = typ.lower().strip()
+        # 06.1-r2 BUG-14c: Match gegen kurzlabel || kategorie (gleiche Chain wie Frontend).
         for e in einwaende:
             if isinstance(e, dict):
-                cat = (e.get('kategorie') or e.get('typ') or e.get('name') or e.get('einwand') or '').lower().strip()
-                if cat == typL:
+                label = (e.get('kurzlabel') or e.get('short_label') or e.get('kategorie') or '').lower().strip()
+                if label == typL:
                     profile_einwand = e
                     break
         with ls.buffer_lock:
