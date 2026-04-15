@@ -201,9 +201,16 @@
 .pip-zone-divider{height:1px;background:rgba(255,255,255,0.08);flex-shrink:0;margin:0}
 /* Teleprompter */
 .pip-teleprompter{flex:1;min-height:0;overflow-y:scroll;padding:0}
+/* BUG-2: konsistente schlanke 4px-Scrollbar fuer Slots + Teleprompter (auf hellem Body aus Plan 02) */
+.pip-ki-slot::-webkit-scrollbar,
 .pip-teleprompter::-webkit-scrollbar{width:4px}
+.pip-ki-slot::-webkit-scrollbar-track,
 .pip-teleprompter::-webkit-scrollbar-track{background:transparent}
-.pip-teleprompter::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px}
+.pip-ki-slot::-webkit-scrollbar-thumb,
+.pip-teleprompter::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.15);border-radius:2px}
+/* Firefox */
+.pip-ki-slot{scrollbar-width:thin;scrollbar-color:rgba(0,0,0,0.15) transparent}
+.pip-teleprompter{scrollbar-width:thin;scrollbar-color:rgba(0,0,0,0.15) transparent}
 .tp-block{padding:12px 16px;border-left:4px solid transparent;border-radius:0 8px 8px 0;font-size:14px;font-weight:400;line-height:1.5;color:rgba(255,255,255,0.4);cursor:pointer;transition:opacity 200ms,border-color 200ms}
 .tp-block-active{border-left-color:#00D4AA;color:#e8ecf4;background:rgba(0,212,170,0.06)}
 .tp-empty{font-size:14px;font-weight:400;color:rgba(255,255,255,0.3);text-align:center;padding:24px 16px}
