@@ -1060,26 +1060,34 @@
     if (!row) return;
     var einwaende = (state.profileDaten && state.profileDaten.einwaende) ? state.profileDaten.einwaende : [];
     if (!einwaende.length) { row.innerHTML = ''; return; }
-    // 06.1-r2 BUG-5e: Kategorien deduplizieren, max 5 Buttons
+    // 06.1-r2 BUG-5g: Spezifisches Einwand-Label bevorzugen (einwand > text > name > kategorie),
+    // damit mehrere Einwaende derselben Kategorie als eigene Buttons erscheinen.
+    // Dedup auf das angezeigte Label (case-insensitive). Max 5 Buttons.
     var seen = {};
-    var kategorien = [];
-    for (var i = 0; i < einwaende.length && kategorien.length < 5; i++) {
+    var items = [];
+    for (var i = 0; i < einwaende.length && items.length < 5; i++) {
       var e = einwaende[i];
-      var typ = typeof e === 'string'
-        ? e
-        : (e.kategorie || e.typ || e.name || e.einwand || '');
-      if (!typ) continue;
-      var key = typ.toLowerCase().trim();
+      if (typeof e === 'string') {
+        var s = e.trim();
+        if (!s) continue;
+        var ks = s.toLowerCase();
+        if (seen[ks]) continue;
+        seen[ks] = true;
+        items.push(s);
+        continue;
+      }
+      var label = (e.einwand || e.text || e.name || e.kategorie || '').trim();
+      if (!label) continue;
+      var key = label.toLowerCase();
       if (seen[key]) continue;
       seen[key] = true;
-      kategorien.push(typ);
+      items.push(label);
     }
-    var html = kategorien.map(function (typ) {
-      return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(typ) + '">' + escHtml(typ) + '</button>';
+    var html = items.map(function (label) {
+      return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(label) + '">' + escHtml(label) + '</button>';
     }).join('');
     row.innerHTML = html;
-    // Klicks werden ueber Event-Delegation im pip-Document gefangen (_wirePipButtons),
-    // daher hier keine per-Button Listener mehr — ueberleben damit jedes innerHTML-Reset.
+    // Klicks werden ueber Event-Delegation im pip-Document gefangen (_wirePipButtons).
   }
 
   function _triggerEwb(typ, btn) {
@@ -1090,16 +1098,16 @@
     var einwaende = (state.profileDaten && state.profileDaten.einwaende) || [];
     var match = null;
     var typL = (typ || '').toLowerCase().trim();
+    // Match per label (einwand/text/name/kategorie) — gleiche Prioritaet wie _renderEwbButtons
     for (var i = 0; i < einwaende.length; i++) {
       var e = einwaende[i];
       if (typeof e === 'string') { if (e.toLowerCase() === typL) { match = { kategorie: e }; break; } continue; }
-      var cat = (e.kategorie || e.typ || e.name || e.einwand || '').toLowerCase();
-      if (cat === typL) { match = e; break; }
+      var label = (e.einwand || e.text || e.name || e.kategorie || '').toLowerCase().trim();
+      if (label === typL) { match = e; break; }
     }
-    // Simuliertes Einwand-Ergebnis fuer _renderSlotResult
     var fake = {
       einwand: true,
-      typ: (match && (match.kategorie || match.typ)) || typ,
+      typ: typ,
       gegenargument_1: (match && (match.gegenargument_1 || match.gegenargument || match.text)) || ('Kein hinterlegtes Gegenargument f\u00fcr "' + typ + '" im Profil.'),
     };
     var body = pipEl('pip-slot-body-0');
@@ -1256,17 +1264,10 @@
     var doc = body.ownerDocument || document;
 
     if (isEinwand && (argument || text)) {
-      // Einwand-Render: Typ-Badge + Gegenargument/Text
+      // 06.1-r2 DESIGN-11: Typ-Badge entfernt — aktiver EWB-Button zeigt bereits
+      // welcher Einwand gemeint ist. Slot zeigt nur noch das Gegenargument pur.
       if (label) label.textContent = (typ || 'EINWAND').toUpperCase();
-      var badge = doc.createElement('span');
-      badge.className = 'pip-slot-typ-badge';
-      badge.textContent = typ || 'Einwand';
-      badge.style.cssText = _getTypBadgeStyle(typ);
-      body.appendChild(badge);
-      var textNode = doc.createElement('div');
-      textNode.style.cssText = 'margin-top:6px;font-size:14px;line-height:1.5;color:#1a1a1a';
-      textNode.textContent = argument || text;
-      body.appendChild(textNode);
+      body.textContent = argument || text;
       _highlightEwbButton(typ);
     } else {
       // Kein Einwand: nur Text/Gegenargument, Label zurueck auf Antwort-Slot

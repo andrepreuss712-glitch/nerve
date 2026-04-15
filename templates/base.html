@@ -262,8 +262,9 @@
 .pip-ewb-btn:hover{background:rgba(0,212,170,0.08);color:#00D4AA}
 /* 06.1-r2 DESIGN-7: Klick-Flash teal — JS toggelt .pip-ewb-flashing fuer 400ms */
 .pip-ewb-btn.pip-ewb-flashing{background:#00D4AA;color:#ffffff;transition:none}
-.pip-ewb-ai-selected{background:rgba(212,168,83,0.12);color:#a07a2a}
-.pip-ewb-ai-selected:hover{background:rgba(212,168,83,0.18);color:#a07a2a}
+/* 06.1-r2 DESIGN-10: Selected-State jetzt teal (nicht gelb) — signalisiert 'aktiver Einwand' */
+.pip-ewb-ai-selected{background:rgba(0,212,170,0.14);color:#00877F;font-weight:700}
+.pip-ewb-ai-selected:hover{background:rgba(0,212,170,0.22);color:#00877F}
 .pip-btn-next-call{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
 .pip-btn-next-call:hover{opacity:.85}
 .pip-btn-details{background:#1C2333;border:1px solid #2a3548;border-radius:8px;color:#e8ecf4;padding:10px 16px;font-size:13px;cursor:pointer;flex:1;transition:border-color .2s}
@@ -371,12 +372,8 @@
     <!-- Divider -->
     <div class="pip-zone-divider"></div>
 
-    <!-- 06.1-r2 DESIGN-8: NERVE Coach Header statt A/B-Labels, Slots gestapelt mit Trennlinie -->
+    <!-- 06.1-r2 DESIGN-12: NERVE Coach Header entfernt — mehr Platz fuer Antworten. -->
     <div class="pip-ki-zone" id="pip-ki-zone">
-      <div class="pip-ki-header">
-        <div class="pip-ki-n">N</div>
-        <span class="pip-ki-brand">NERVE Coach</span>
-      </div>
       <div class="pip-ki-slots">
         <div class="pip-ki-slot" id="pip-slot-0">
           <div class="pip-slot-label" id="pip-slot-label-0">ANTWORT A</div>
