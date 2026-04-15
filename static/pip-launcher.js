@@ -933,9 +933,16 @@
   }
 
   function _wirePipButtons(pipWindow) {
-    // Beenden
+    // 06.1-r2 BUG-7: Beenden via addEventListener statt onclick — PiP-Document-robust.
     var beendenBtn = pipWindow.document.getElementById('nlp-btn-beenden');
-    if (beendenBtn) beendenBtn.onclick = function () { endCall(); };
+    if (beendenBtn) {
+      beendenBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        console.log('[NerveLauncher] Beenden click');
+        endCall();
+      });
+    }
 
     // Next call (postcall)
     var nextBtn = pipWindow.document.getElementById('nlp-btn-next-call');
@@ -1033,64 +1040,53 @@
     if (!row) return;
     var einwaende = (state.profileDaten && state.profileDaten.einwaende) ? state.profileDaten.einwaende : [];
     if (!einwaende.length) { row.innerHTML = ''; return; }
-    var html = einwaende.slice(0, 5).map(function (e) {
+    // 06.1-r2 BUG-5e: Kategorien deduplizieren, max 5 Buttons
+    var seen = {};
+    var kategorien = [];
+    for (var i = 0; i < einwaende.length && kategorien.length < 5; i++) {
+      var e = einwaende[i];
       var typ = typeof e === 'string'
         ? e
         : (e.kategorie || e.typ || e.name || e.einwand || '');
-      if (!typ) return '';  // skip rather than render [object Object]
+      if (!typ) continue;
+      var key = typ.toLowerCase().trim();
+      if (seen[key]) continue;
+      seen[key] = true;
+      kategorien.push(typ);
+    }
+    var html = kategorien.map(function (typ) {
       return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(typ) + '">' + escHtml(typ) + '</button>';
     }).join('');
     row.innerHTML = html;
-    // 06.1-r2 BUG-5b: addEventListener + stopPropagation + Capture — robuster im PiP-Document
-    // als direct onclick-Assignment, und erlaubt mehrfache Handler ohne Override.
     row.querySelectorAll('.pip-ewb-btn').forEach(function (btn) {
       btn.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
         var typ = btn.getAttribute('data-typ');
         console.log('[NerveLauncher] EWB click:', typ);
+        // 06.1-r2 DESIGN-7: Kurz teal aufblitzen, danach zurueck — Klick-Feedback
+        btn.classList.add('pip-ewb-flashing');
+        setTimeout(function () { btn.classList.remove('pip-ewb-flashing'); }, 400);
         _triggerEwb(typ, btn);
       });
     });
   }
 
   function _triggerEwb(typ, btn) {
-    // 06.1-r2 BUG-5c: /api/analyse_line gibt Ergebnis SYNCHRON als HTTP-Response zurueck
-    // (ohne Socket-Emit). Wir muessen res.json() konsumieren und das Ergebnis direkt in
-    // den Slot rendern — sonst feuert nie ein Render, auch wenn fetch 200 zurueckkommt.
+    // 06.1-r2 BUG-5d: Via Socket.IO statt HTTP — Backend handler 'manual_ewb' startet
+    // analysiere_mit_claude_streaming in Thread, Antwort kommt als pip_stream_start/
+    // pip_token/pip_token_done zurueck und landet ueber die existierenden Handler im Slot.
     console.log('[NerveLauncher] EWB trigger:', typ);
-    if (btn) btn.classList.add('pip-ewb-ai-selected');
-    // Slot 0 (ANTWORT A) zeigt Loading-Placeholder bis Response da ist
-    var slotBody = pipEl('pip-slot-body-0');
-    if (slotBody) slotBody.textContent = 'Analysiere\u2026';
-    fetch('/api/analyse_line', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: typ, line_id: 'ewb_pip_' + Date.now() })
-    }).then(function (res) {
-      console.log('[NerveLauncher] EWB fetch status:', res.status);
-      if (!res.ok) {
-        if (slotBody) slotBody.textContent = 'Fehler ' + res.status + ' \u2014 nochmal versuchen';
-        return null;
-      }
-      return res.json();
-    }).then(function (data) {
-      if (!data) return;
-      if (data.error) {
-        console.error('[NerveLauncher] EWB backend error:', data.error);
-        if (slotBody) slotBody.textContent = 'KI-Fehler: ' + data.error;
-        return;
-      }
-      var ergebnis = data.ergebnis || data.result || {};
-      console.log('[NerveLauncher] EWB result:', ergebnis);
-      _renderSlotResult(0, ergebnis);
-      if (ergebnis && typeof ergebnis.skript_position === 'number') {
-        _updateTeleprompterPosition(ergebnis.skript_position);
-      }
-    }).catch(function (err) {
-      console.error('[NerveLauncher] EWB fetch error:', err);
-      if (slotBody) slotBody.textContent = 'Netzwerkfehler \u2014 Verbindung pr\u00fcfen';
+    if (!state.socket || !state.socket.connected) {
+      console.error('[NerveLauncher] EWB: Socket nicht verbunden');
+      var slotBody = pipEl('pip-slot-body-0');
+      if (slotBody) slotBody.textContent = 'Keine Verbindung \u2014 Session neu starten';
+      return;
+    }
+    state.socket.emit('manual_ewb', {
+      text: typ,
+      line_id: 'ewb_pip_' + Date.now(),
+      slot: 0
     });
   }
 
