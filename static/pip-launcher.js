@@ -1043,9 +1043,28 @@
     var consentSection = pipEl('pip-section-consent');
     var liveSection = pipEl('pip-section-live');
     var beendenBtn = pipEl('nlp-btn-beenden');
+    // 06.1-r2 BUG-13: Postcall-Section explizit verstecken — verhindert dass die
+    // alte "Kein Gespraech erkannt"-View auf dem neuen Call liegen bleibt.
+    var postcallSection = pipEl('nlp-section-postcall');
+    if (postcallSection) postcallSection.style.display = 'none';
     if (consentSection) consentSection.style.display = 'none';
     if (liveSection) liveSection.style.display = 'flex';
     if (beendenBtn) beendenBtn.style.display = 'inline-block';
+    // 06.1-r2 BUG-13: Header wieder einblenden (Beenden wurde in _showPostcallRaw versteckt).
+    var pipHeader = pipEl('pip-header');
+    if (pipHeader) pipHeader.style.display = '';
+    // Score-Display zuruecksetzen falls Empty-State das :none gesetzt hat
+    var scoreEl = pipEl('nlp-postcall-score');
+    if (scoreEl) scoreEl.style.display = '';
+    var detailsBtn = pipEl('nlp-btn-details');
+    if (detailsBtn) detailsBtn.style.display = '';
+
+    // 06.1-r2 BUG-15: PiP zurueck auf Live-Groesse 480x900 — Postcall-Schrumpfung (420x520) bleibt sonst bestehen.
+    try {
+      if (state.pipWindow && !state.pipWindow.closed && typeof state.pipWindow.resizeTo === 'function') {
+        state.pipWindow.resizeTo(480, 900);
+      }
+    } catch (e) { /* resize nicht in allen Browsern supported */ }
 
     // D-13: Mic-Indikator einschalten (erst im Live-Zustand sichtbar)
     var micBtnShow = pipEl('pip-mic-indicator');
@@ -1058,36 +1077,45 @@
     _initTeleprompter();
   }
 
+  // 06.1-r2 BUG-14: Kurzlabel-Helper — "Das ist uns zu teuer" -> "Das ist uns..."
+  // Wird verwendet wenn weder e.kurzlabel noch e.kategorie im Profil vorhanden sind.
+  function _shortEwbLabel(full) {
+    var t = (full || '').trim().replace(/[\?!\.,;:]+$/, '');
+    if (t.length <= 20) return t;
+    var words = t.split(/\s+/);
+    var out = words.slice(0, 3).join(' ');
+    if (out.length > 22) out = out.slice(0, 20);
+    return out + '\u2026';
+  }
+
   function _renderEwbButtons() {
     var row = pipEl('nlp-ewb-row');
     if (!row) return;
     var einwaende = (state.profileDaten && state.profileDaten.einwaende) ? state.profileDaten.einwaende : [];
     if (!einwaende.length) { row.innerHTML = ''; return; }
-    // 06.1-r2 BUG-5g: Spezifisches Einwand-Label bevorzugen (einwand > text > name > kategorie),
-    // damit mehrere Einwaende derselben Kategorie als eigene Buttons erscheinen.
-    // Dedup auf das angezeigte Label (case-insensitive). Max 5 Buttons.
+    // 06.1-r2 BUG-14: Button zeigt KURZLABEL (kurzlabel > kategorie > 3-Wort-Truncate),
+    // data-typ behaelt den VOLLEN einwand-Text fuer Matching im Trigger. Dedup weiterhin
+    // per full-text damit mehrere Einwaende derselben Kategorie distinct bleiben.
     var seen = {};
     var items = [];
     for (var i = 0; i < einwaende.length && items.length < 5; i++) {
       var e = einwaende[i];
+      var full, short;
       if (typeof e === 'string') {
-        var s = e.trim();
-        if (!s) continue;
-        var ks = s.toLowerCase();
-        if (seen[ks]) continue;
-        seen[ks] = true;
-        items.push(s);
-        continue;
+        full = e.trim();
+        short = _shortEwbLabel(full);
+      } else {
+        full = (e.einwand || e.text || e.name || e.kategorie || '').trim();
+        short = ((e.kurzlabel || e.short_label || e.kategorie || '').trim()) || _shortEwbLabel(full);
       }
-      var label = (e.einwand || e.text || e.name || e.kategorie || '').trim();
-      if (!label) continue;
-      var key = label.toLowerCase();
+      if (!full) continue;
+      var key = full.toLowerCase();
       if (seen[key]) continue;
       seen[key] = true;
-      items.push(label);
+      items.push({ full: full, short: short });
     }
-    var html = items.map(function (label) {
-      return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(label) + '">' + escHtml(label) + '</button>';
+    var html = items.map(function (it) {
+      return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(it.full) + '" title="' + escHtml(it.full) + '">' + escHtml(it.short) + '</button>';
     }).join('');
     row.innerHTML = html;
     // Klicks werden ueber Event-Delegation im pip-Document gefangen (_wirePipButtons).
