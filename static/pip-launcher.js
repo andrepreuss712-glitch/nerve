@@ -770,6 +770,16 @@
       if (skriptInhalt) {
         skriptBloecke = skriptInhalt.split(/\n\n+/).filter(function (b) { return b.trim(); });
       }
+      // D-03: Opener als Block 0, damit KI-Position-Erkennung (skript_position) Phase 0 = Opener kennt
+      var openerFuerKi = '';
+      if (state._editedOpenerText) openerFuerKi = state._editedOpenerText;
+      else if (state.selectedOpenerId && state.openerItems) {
+        var selOp2 = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
+        if (selOp2) openerFuerKi = selOp2.inhalt;
+      } else if (state.profileDaten && state.profileDaten.opener) {
+        openerFuerKi = state.profileDaten.opener;
+      }
+      if (openerFuerKi) skriptBloecke = [openerFuerKi].concat(skriptBloecke);
 
       state.socket.emit('start_live_session', {
         mode: state.mode || 'cold_call',
@@ -950,20 +960,8 @@
     // Initialize opacity from localStorage (D-17)
     _initOpacitySlider();
 
-    // Show opener in slot 0 (replaces old nlp-opener-text)
-    var openerText = 'Warte auf Gespr\u00e4chsinhalt...';
-    if (state._editedOpenerText) {
-      openerText = state._editedOpenerText;
-    } else if (state.selectedOpenerId && state.openerItems.length > 0) {
-      var selOp = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
-      if (selOp) openerText = selOp.inhalt;
-    } else if (state.profileDaten && state.profileDaten.opener) {
-      openerText = state.profileDaten.opener;
-    }
-    var slot0Body = pipEl('pip-slot-body-0');
-    if (slot0Body) slot0Body.textContent = openerText;
-    var slot0Label = pipEl('pip-slot-label-0');
-    if (slot0Label && openerText !== 'Warte auf Gespr\u00e4chsinhalt...') slot0Label.textContent = 'OPENER';
+    // D-03: Opener wandert in den Teleprompter als Block 0 — Slot A bleibt leer fuer erste KI-Antwort
+    // (keine Slot-0-Zuweisung mehr; beide Slots starten mit "Warte auf Gespraechsinhalt..." Default-Markup)
 
     // Initialize teleprompter (D-11, D-12)
     _initTeleprompter();
@@ -1192,8 +1190,20 @@
       return;
     }
 
-    // Parse blocks by double-newline
-    var blocks = inhalt.split(/\n\n+/).filter(function (b) { return b.trim(); });
+    // D-03: Opener als erster Teleprompter-Block (Phase 0 = Opener fuer KI-Position-Erkennung)
+    var openerText = '';
+    if (state._editedOpenerText) {
+      openerText = state._editedOpenerText;
+    } else if (state.selectedOpenerId && state.openerItems && state.openerItems.length > 0) {
+      var selOp = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
+      if (selOp) openerText = selOp.inhalt;
+    } else if (state.profileDaten && state.profileDaten.opener) {
+      openerText = state.profileDaten.opener;
+    }
+
+    // Parse blocks by double-newline, prepend opener as block[0]
+    var skriptBlocks = inhalt.split(/\n\n+/).filter(function (b) { return b.trim(); });
+    var blocks = openerText ? [openerText].concat(skriptBlocks) : skriptBlocks;
     state.teleprompterBlocks = blocks;
     state.teleprompterActiveIdx = 0;
 
