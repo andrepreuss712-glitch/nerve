@@ -38,7 +38,6 @@
     teleprompterActiveIdx: -1,
     teleprompterManualOverride: false,
     teleprompterOverrideTimer: null,
-    pipBgOpacity: 1.0,
     // D-16: Mic-Indikator state
     micAnalyser: null,
     micLevelRafId: null,
@@ -716,7 +715,7 @@
       return;
     }
 
-    window.documentPictureInPicture.requestWindow({ width: 480, height: 760 })
+    window.documentPictureInPicture.requestWindow({ width: 480, height: 900 })
       .then(function (pipWindow) {
         state.pipWindow = pipWindow;
         _setupPipWindow(pipWindow);
@@ -882,15 +881,10 @@
       }
     });
 
-    // Body styles
-    // 06.1-r2 BUG-6b: html+body transparent — damit der Slider via --pip-bg-alpha echte
-    // Durchsicht auf CRM/Desktop ergibt. Der Farbton (slate-50) sitzt jetzt auf
-    // .pip-live-split/.pip-header/.pip-ki-slot via rgba(...,var(--pip-bg-alpha,1)) und
-    // wird kaskadiert transparent. D-16 gewahrt: Text/Icons/Buttons bleiben 100% opak.
-    pipWindow.document.documentElement.style.background = 'transparent';
+    // Body styles — 06.1-r2 CLEANUP: Slider raus, solide slate-50 Background wieder
     var body = pipWindow.document.body;
     body.style.margin = '0';
-    body.style.background = 'transparent';
+    body.style.background = '#F8FAFC';
     body.style.color = 'var(--page-text-color,#e8ecf4)';
     body.style.fontFamily = "'Inter',sans-serif";
     body.style.display = 'flex';
@@ -980,12 +974,6 @@
     if (liveSection) liveSection.style.display = 'none';
     if (beendenBtn) beendenBtn.style.display = 'none';
 
-    // Hide opacity slider during consent
-    var slider = pipEl('pip-opacity-slider');
-    var sliderLabel = pipEl('pip-opacity-label');
-    if (slider) slider.style.display = 'none';
-    if (sliderLabel) sliderLabel.style.display = 'none';
-
     // D-06: Load consent text from profile (or use default)
     var consentText = (state.profileDaten && state.profileDaten.consent_text)
       ? state.profileDaten.consent_text
@@ -1027,20 +1015,11 @@
     var beendenBtn = pipEl('nlp-btn-beenden');
     if (consentSection) consentSection.style.display = 'none';
     if (liveSection) liveSection.style.display = 'flex';
-    if (beendenBtn) beendenBtn.style.display = 'block';
-
-    // Show opacity slider (D-15: only visible in live state)
-    var slider = pipEl('pip-opacity-slider');
-    var sliderLabel = pipEl('pip-opacity-label');
-    if (slider) slider.style.display = 'block';
-    if (sliderLabel) sliderLabel.style.display = 'block';
+    if (beendenBtn) beendenBtn.style.display = 'inline-block';
 
     // D-13: Mic-Indikator einschalten (erst im Live-Zustand sichtbar)
     var micBtnShow = pipEl('pip-mic-indicator');
     if (micBtnShow) micBtnShow.style.display = 'inline-flex';
-
-    // Initialize opacity from localStorage (D-17)
-    _initOpacitySlider();
 
     // D-03: Opener wandert in den Teleprompter als Block 0 — Slot A bleibt leer fuer erste KI-Antwort
     // (keine Slot-0-Zuweisung mehr; beide Slots starten mit "Warte auf Gespraechsinhalt..." Default-Markup)
@@ -1076,11 +1055,14 @@
   }
 
   function _triggerEwb(typ, btn) {
-    // EWB triggers analysis — result arrives via pip_stream_start/pip_token/pip_token_done
-    // 06.1-r2 BUG-5b: credentials:'include' damit Session-Cookie im PiP-Document-Kontext
-    // mitgesendet wird. response.ok/Status pruefen und bei Fehler sichtbar machen.
+    // 06.1-r2 BUG-5c: /api/analyse_line gibt Ergebnis SYNCHRON als HTTP-Response zurueck
+    // (ohne Socket-Emit). Wir muessen res.json() konsumieren und das Ergebnis direkt in
+    // den Slot rendern — sonst feuert nie ein Render, auch wenn fetch 200 zurueckkommt.
     console.log('[NerveLauncher] EWB trigger:', typ);
-    if (btn) btn.classList.add('pip-ewb-ai-selected');  // sofortiges visuelles Feedback
+    if (btn) btn.classList.add('pip-ewb-ai-selected');
+    // Slot 0 (ANTWORT A) zeigt Loading-Placeholder bis Response da ist
+    var slotBody = pipEl('pip-slot-body-0');
+    if (slotBody) slotBody.textContent = 'Analysiere\u2026';
     fetch('/api/analyse_line', {
       method: 'POST',
       credentials: 'include',
@@ -1089,10 +1071,26 @@
     }).then(function (res) {
       console.log('[NerveLauncher] EWB fetch status:', res.status);
       if (!res.ok) {
-        console.error('[NerveLauncher] EWB fetch failed:', res.status, res.statusText);
+        if (slotBody) slotBody.textContent = 'Fehler ' + res.status + ' \u2014 nochmal versuchen';
+        return null;
+      }
+      return res.json();
+    }).then(function (data) {
+      if (!data) return;
+      if (data.error) {
+        console.error('[NerveLauncher] EWB backend error:', data.error);
+        if (slotBody) slotBody.textContent = 'KI-Fehler: ' + data.error;
+        return;
+      }
+      var ergebnis = data.ergebnis || data.result || {};
+      console.log('[NerveLauncher] EWB result:', ergebnis);
+      _renderSlotResult(0, ergebnis);
+      if (ergebnis && typeof ergebnis.skript_position === 'number') {
+        _updateTeleprompterPosition(ergebnis.skript_position);
       }
     }).catch(function (err) {
       console.error('[NerveLauncher] EWB fetch error:', err);
+      if (slotBody) slotBody.textContent = 'Netzwerkfehler \u2014 Verbindung pr\u00fcfen';
     });
   }
 
@@ -1387,58 +1385,6 @@
     _renderTeleprompterBlocks(newIdx);
   }
 
-  // D-17: iOS-style Slider Fill — setzt --pip-slider-pct auf dem input-Element
-  function _updateSliderFill(slider) {
-    if (!slider) return;
-    var min = parseFloat(slider.min) || 0;
-    var max = parseFloat(slider.max) || 100;
-    var val = parseFloat(slider.value);
-    if (!isFinite(val)) val = max;
-    var pct = ((val - min) / (max - min)) * 100;
-    pct = Math.min(100, Math.max(0, pct));
-    slider.style.setProperty('--pip-slider-pct', pct + '%');
-  }
-
-  function _initOpacitySlider() {
-    var slider = pipEl('pip-opacity-slider');
-    if (!slider) return;
-    // D-17 JS: Clamp gespeicherten Wert auf [10, 100] (T-06.1-03 Mitigation gegen getampertes localStorage)
-    var stored = null;
-    try { stored = localStorage.getItem('nerve_pip_opacity'); } catch (e) {}
-    var parsed = parseInt(stored, 10);
-    if (!isFinite(parsed)) parsed = 100;
-    parsed = Math.min(100, Math.max(10, parsed));
-    slider.value = String(parsed);
-    _setPipBgOpacity(parsed / 100);
-    _updateSliderFill(slider);  // D-17: initial fill-pct setzen
-
-    // D-16: input event for live feedback
-    var debounceTimer = null;
-    slider.addEventListener('input', function () {
-      var v = parseInt(slider.value, 10);
-      if (!isFinite(v)) v = 100;
-      v = Math.min(100, Math.max(10, v));
-      state.pipBgOpacity = v / 100;
-      _setPipBgOpacity(v / 100);
-      _updateSliderFill(slider);  // D-17: fill-pct bei jedem Move updaten
-      // Debounce localStorage write (200ms)
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(function () {
-        try { localStorage.setItem('nerve_pip_opacity', String(v)); } catch (e) {}
-      }, 200);
-    });
-  }
-
-  function _setPipBgOpacity(value) {
-    // D-16 + 06.1-r2 BUG-6: Alpha auf pip-live-window (umfasst Header + Live-Split) setzen,
-    // damit --pip-bg-alpha auch an .pip-header, .pip-ki-slot, .pip-ewb-btn vererbt wird.
-    // Text/Buttons/Icons bleiben 100% (CSS nutzt Alpha nur auf background-color).
-    var wrapEl = pipEl('pip-live-window');
-    if (wrapEl) {
-      wrapEl.style.setProperty('--pip-bg-alpha', String(value));
-    }
-  }
-
   // ── Timer ──────────────────────────────────────────────────────────────────
   function _startTimer() {
     state.sessionSeconds = 0;
@@ -1601,7 +1547,6 @@
     state.teleprompterActiveIdx = -1;
     state.teleprompterManualOverride = false;
     if (state.teleprompterOverrideTimer) { clearTimeout(state.teleprompterOverrideTimer); state.teleprompterOverrideTimer = null; }
-    state.pipBgOpacity = 1.0;
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────

@@ -184,17 +184,17 @@
 .nav-consent-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171}
 /* PiP CSS */
 /* D-04: Header explizit dunkel (nicht var(--page-bg)) damit Header auch auf hellem Body dunkel bleibt */
-.pip-header{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.08);background:rgba(13,17,23,var(--pip-bg-alpha,1))}
+.pip-header{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.08);background:#0D1117}
 .pip-mode-badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;border:1px solid #00D4AA;color:#00D4AA}
 .pip-timer{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#00D4AA}
 /* ── Phase 06.1: Split Layout Rotation + Light Body ── */
-/* D-05: Heller slate-50 Body mit alpha-controlled Transparenz (Slider steuert --pip-bg-alpha) */
-.pip-live-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:rgba(248,250,252,var(--pip-bg-alpha,1))}
-/* D-09: Neue Flex-Basis: Teleprompter 60% oben, EWB 10% Mitte, KI 30% unten */
-.pip-ki-zone{flex:0 0 30%;display:flex;flex-direction:column;min-height:0;padding:8px 12px;gap:8px}
-.pip-ki-slots{display:flex;gap:8px;flex:1;min-height:0}
-/* D-08: KI-Slots hell — weisser BG, dunkle Border */
-.pip-ki-slot{flex:1;border:1px solid #E2E8F0;border-radius:12px;padding:12px;background:rgba(255,255,255,var(--pip-bg-alpha,1));display:flex;flex-direction:column;min-width:0;overflow-y:auto}
+/* 06.1-r2 CLEANUP: Slider raus, solide slate-50 Body */
+.pip-live-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#F8FAFC}
+/* 06.1-r2 LAYOUT-1/3: PiP 900px — Teleprompter 50%, EWB auto, KI-Zone nimmt Rest (gestapelt) */
+.pip-ki-zone{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 12px;gap:6px}
+/* 06.1-r2 LAYOUT-1: Slots untereinander statt nebeneinander */
+.pip-ki-slots{display:flex;flex-direction:column;gap:6px;flex:1;min-height:0}
+.pip-ki-slot{flex:1 1 0;border:1px solid #E2E8F0;border-radius:12px;padding:12px;background:#FFFFFF;display:flex;flex-direction:column;min-width:0;min-height:0;overflow-y:auto}
 .pip-ki-slot.pip-slot-streaming{border-color:rgba(0,212,170,0.4)}
 .pip-slot-label{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#6B7280;margin-bottom:6px}
 /* D-08: dunkler Text auf hellem Slot */
@@ -206,10 +206,10 @@
 .pip-slot-typ-badge{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;margin-bottom:4px}
 /* Zone-Divider dezent auf hellem Grund */
 .pip-zone-divider{height:1px;background:rgba(0,0,0,0.08);flex:none}
-/* D-09: Teleprompter 60% oben (dominant) */
-.pip-teleprompter{flex:0 0 60%;padding:12px 16px;overflow-y:auto;background:transparent;color:#1a1a1a}
-/* 06.1-r2 BUG-5: EWB-Row waechst mit Inhalt, Buttons duerfen umbrechen */
-.pip-ewb-row{flex:0 0 auto;min-height:44px;display:flex;align-items:center;gap:6px;padding:6px 12px;flex-wrap:wrap;overflow:visible}
+/* 06.1-r2 LAYOUT-3: Teleprompter 50% bei 900px PiP = ~432px (dominant, lesbar) */
+.pip-teleprompter{flex:0 0 50%;padding:12px 16px;overflow-y:auto;background:transparent;color:#1a1a1a}
+/* 06.1-r2 LAYOUT-2: EWB als zusammenhaengende Leiste — keine Pills, keine Gaps */
+.pip-ewb-row{flex:0 0 auto;display:flex;align-items:stretch;gap:0;padding:0;border-top:1px solid #E2E8F0;border-bottom:1px solid #E2E8F0;overflow:hidden}
 /* BUG-2: konsistente schlanke 4px-Scrollbar fuer Slots + Teleprompter (heller Body) */
 .pip-ki-slot::-webkit-scrollbar,
 .pip-teleprompter::-webkit-scrollbar{width:4px}
@@ -235,15 +235,8 @@
 .pip-consent-btn:hover{opacity:0.85}
 .pip-consent-btn-accept{background:#00D4AA;color:#06060a}
 .pip-consent-btn-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171}
-/* Opacity Slider */
-.pip-opacity-label{display:inline-flex;align-items:center;color:rgba(255,255,255,0.5);cursor:default}
-/* D-17/D-18: iOS-style Slider, 140px, Filled-Portion in Teal, groessere Hit-Area */
-#pip-opacity-slider{width:140px;height:4px;-webkit-appearance:none;appearance:none;border-radius:2px;outline:none;cursor:pointer;background:linear-gradient(to right,#00D4AA 0%,#00D4AA var(--pip-slider-pct,100%),rgba(255,255,255,0.2) var(--pip-slider-pct,100%),rgba(255,255,255,0.2) 100%)}
-#pip-opacity-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#ffffff;border:none;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer}
-#pip-opacity-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#ffffff;border:none;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer}
-#pip-opacity-slider::-moz-range-track{background:transparent;border:none}
-/* D-18: Touch-Hit-Area via Wrapper-Padding */
-.pip-header-right{display:flex;align-items:center;gap:12px;padding:8px 0}
+/* 06.1-r2 CLEANUP: Opacity-Slider entfernt (Browser-Limitation — PiP-Doc kann nicht echt transparent ueber CRM) */
+.pip-header-right{display:flex;align-items:center;gap:10px}
 /* D-13: Mic-Indikator — 4 Balken, klickbar als Mute-Toggle */
 .pip-mic-indicator{display:inline-flex;align-items:flex-end;gap:3px;height:24px;padding:2px 6px;background:transparent;border:none;cursor:pointer;border-radius:4px;color:#00D4AA;transition:background 150ms,opacity 200ms}
 .pip-mic-icon{align-self:center;color:#00D4AA;flex-shrink:0}
@@ -256,11 +249,12 @@
 /* Proactive slot states */
 .pip-slot-phase .pip-slot-label::before{content:''}
 .pip-slot-kb{font-family:'JetBrains Mono',monospace;font-size:12px}
-/* 06.1-r2 BUG-5: Labels vollstaendig sichtbar — kein ellipsis, natuerliche Breite, Touch-Height */
-.pip-ewb-btn{background:rgba(255,255,255,var(--pip-bg-alpha,1));border:1px solid #E2E8F0;color:#1a1a1a;border-radius:9999px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;flex:0 1 auto;min-height:28px;white-space:nowrap;transition:border-color 150ms,color 150ms}
-.pip-ewb-btn:hover{border-color:#00D4AA;color:#00D4AA}
-.pip-ewb-ai-selected{border-color:#d4a853;color:#d4a853;background:rgba(212,168,83,0.08)}
-.pip-ewb-ai-selected:hover{border-color:#d4a853;background:rgba(212,168,83,0.08)}
+/* 06.1-r2 LAYOUT-2: Rechteckige EWB-Buttons stoss-an-stoss — shared right-border */
+.pip-ewb-btn{background:#FFFFFF;border:none;border-right:1px solid #E2E8F0;color:#1a1a1a;border-radius:0;padding:8px 6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;flex:1 1 0;min-width:0;min-height:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background 150ms,color 150ms}
+.pip-ewb-btn:last-child{border-right:none}
+.pip-ewb-btn:hover{background:rgba(0,212,170,0.08);color:#00D4AA}
+.pip-ewb-ai-selected{background:rgba(212,168,83,0.12);color:#a07a2a}
+.pip-ewb-ai-selected:hover{background:rgba(212,168,83,0.18);color:#a07a2a}
 .pip-btn-next-call{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
 .pip-btn-next-call:hover{opacity:.85}
 .pip-btn-details{background:#1C2333;border:1px solid #2a3548;border-radius:8px;color:#e8ecf4;padding:10px 16px;font-size:13px;cursor:pointer;flex:1;transition:border-color .2s}
@@ -329,11 +323,6 @@
         <span class="pip-mic-bar" id="pip-mic-bar-2"></span>
         <span class="pip-mic-bar" id="pip-mic-bar-3"></span>
       </button>
-      <!-- 06.1-r2 DESIGN-5: "BG" durch Opacity-Icon ersetzt (halbgefuelltes Quadrat) -->
-      <span class="pip-opacity-label" id="pip-opacity-label" title="Hintergrund-Transparenz" style="display:none" aria-label="Opacity">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 3 h9 v18 h-9 z" fill="currentColor" stroke="none"/></svg>
-      </span>
-      <input type="range" id="pip-opacity-slider" min="10" max="100" step="5" value="100" style="display:none">
       <!-- 06.1-r2 DESIGN-6: Beenden als kleiner roter Pill im Header (spart Footer-Zeile) -->
       <button type="button" class="pip-btn-beenden" id="nlp-btn-beenden" style="display:none">Beenden</button>
     </div>
