@@ -697,11 +697,14 @@
 
   // Called after Socket.IO is ready — still within the click handler call stack
   function _openPipAndMic() {
-    // Connect socket
+    // Connect socket — 06.1-r2 PERF-1: WebSocket-Upgrade erlaubt. Vorher
+    // erzwang transports:['polling'] bei jedem 100ms audio_chunk einen HTTP-POST
+    // (+ server long-poll GETs) = ~170 req/min. Mit WS-Upgrade: 1 persistente
+    // Connection, Audio-Chunks als WS-Frames, fast null Overhead.
     state.socket = io({
       reconnectionAttempts: 3,
       reconnectionDelay: 2000,
-      transports: ['polling']
+      transports: ['websocket', 'polling']
     });
 
     _registerSocketEvents();

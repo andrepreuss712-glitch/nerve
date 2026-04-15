@@ -1,10 +1,11 @@
 // Browser mic: getUserMedia → AudioWorklet (PCM16) → Socket.IO → Server → Deepgram
 
 // ── Socket & DOM ──────────────────────────────────────────────────────────────
+// 06.1-r2 PERF-1: WS-Upgrade erlaubt (vorher polling-only -> 170 req/min).
 const socket = io({
   reconnectionAttempts: 3,
   reconnectionDelay: 2000,
-  transports: ['polling']
+  transports: ['websocket', 'polling']
 });
 const tr     = document.getElementById('tr');
 const ai     = document.getElementById('ai');
