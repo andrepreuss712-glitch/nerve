@@ -1059,13 +1059,6 @@
     var detailsBtn = pipEl('nlp-btn-details');
     if (detailsBtn) detailsBtn.style.display = '';
 
-    // 06.1-r2 BUG-15: PiP zurueck auf Live-Groesse 480x900 — Postcall-Schrumpfung (420x520) bleibt sonst bestehen.
-    try {
-      if (state.pipWindow && !state.pipWindow.closed && typeof state.pipWindow.resizeTo === 'function') {
-        state.pipWindow.resizeTo(480, 900);
-      }
-    } catch (e) { /* resize nicht in allen Browsern supported */ }
-
     // D-13: Mic-Indikator einschalten (erst im Live-Zustand sichtbar)
     var micBtnShow = pipEl('pip-mic-indicator');
     if (micBtnShow) micBtnShow.style.display = 'inline-flex';
@@ -1105,8 +1098,11 @@
         full = e.trim();
         short = _shortEwbLabel(full);
       } else {
-        full = (e.einwand || e.text || e.name || e.kategorie || '').trim();
-        short = ((e.kurzlabel || e.short_label || e.kategorie || '').trim()) || _shortEwbLabel(full);
+        full = (e.einwand || e.text || e.name || '').trim();
+        // 06.1-r2 BUG-14b: kategorie NIE als Label — mehrere Einwaende koennen dieselbe
+        // Kategorie teilen. Reihenfolge: kurzlabel > name > _shortEwbLabel(voller Text).
+        short = (e.kurzlabel || e.short_label || e.name || '').trim();
+        if (!short) short = _shortEwbLabel(full);
       }
       if (!full) continue;
       var key = full.toLowerCase();
@@ -1487,14 +1483,11 @@
     _stopMic();
 
     // 06.1-r2 BUG-9: UI SOFORT umschalten mit Loading-Skeleton. Backend-Response
-    // fuellt Score/Tags nachtraeglich. User hat nie den Eindruck "Button reagiert nicht".
-    // DESIGN-9: PiP auf kompaktere Groesse schrumpfen da Postcall weniger Hoehe braucht.
+    // fuellt Score/Tags nachtraeglich.
+    // BUG-15b: KEIN resizeTo auf Postcall — Chrome merkt sich die zuletzt gesetzte
+    // PiP-Groesse und ignoriert spaetere requestWindow-Hints. PiP bleibt bei 480x900,
+    // Postcall-Content wird im bestehenden Fenster zentriert.
     _showPostcallLoading();
-    try {
-      if (state.pipWindow && !state.pipWindow.closed && typeof state.pipWindow.resizeTo === 'function') {
-        state.pipWindow.resizeTo(420, 520);
-      }
-    } catch (e) { /* resize nicht in allen Browsern supported — egal */ }
 
     fetch('/api/beenden', {
       method: 'POST',
