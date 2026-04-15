@@ -975,7 +975,10 @@
     var einwaende = (state.profileDaten && state.profileDaten.einwaende) ? state.profileDaten.einwaende : [];
     if (!einwaende.length) { row.innerHTML = ''; return; }
     var html = einwaende.slice(0, 5).map(function (e) {
-      var typ = typeof e === 'string' ? e : (e.typ || e.name || String(e));
+      var typ = typeof e === 'string'
+        ? e
+        : (e.kategorie || e.typ || e.name || e.einwand || '');
+      if (!typ) return '';  // skip rather than render [object Object]
       return '<button class="pip-ewb-btn" data-typ="' + escHtml(typ) + '">' + escHtml(typ) + '</button>';
     }).join('');
     row.innerHTML = html;
