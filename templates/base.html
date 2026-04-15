@@ -183,25 +183,34 @@
 .nav-consent-accept{background:#00D4AA;color:#0D1117}
 .nav-consent-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171}
 /* PiP CSS */
-.pip-header{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--glass-border,#E2E8F0);background:var(--page-bg,#06060a)}
+/* D-04: Header explizit dunkel (nicht var(--page-bg)) damit Header auch auf hellem Body dunkel bleibt */
+.pip-header{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.08);background:#0D1117}
 .pip-mode-badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;border:1px solid #00D4AA;color:#00D4AA}
 .pip-timer{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#00D4AA}
-/* ── Phase 06: Split Layout ── */
-.pip-live-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:rgba(6,6,10,var(--pip-bg-alpha,1))}
-.pip-ki-zone{flex:0 0 55%;display:flex;flex-direction:column;min-height:0;padding:12px 16px 0}
-.pip-ki-slots{display:flex;gap:8px;flex:1;min-height:0;overflow-y:auto}
-.pip-ki-slot{flex:1;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;background:rgba(255,255,255,0.04);display:flex;flex-direction:column;min-width:0;overflow-y:auto}
-.pip-ki-slot.pip-slot-streaming{border-color:rgba(0,212,170,0.3)}
-.pip-slot-label{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px}
-.pip-slot-body{font-size:14px;font-weight:400;line-height:1.5;color:#e8ecf4;flex:1;white-space:pre-wrap;word-break:break-word}
+/* ── Phase 06.1: Split Layout Rotation + Light Body ── */
+/* D-05: Heller slate-50 Body mit alpha-controlled Transparenz (Slider steuert --pip-bg-alpha) */
+.pip-live-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:rgba(248,250,252,var(--pip-bg-alpha,1))}
+/* D-09: Neue Flex-Basis: Teleprompter 60% oben, EWB 10% Mitte, KI 30% unten */
+.pip-ki-zone{flex:0 0 30%;display:flex;flex-direction:column;min-height:0;padding:8px 12px;gap:8px}
+.pip-ki-slots{display:flex;gap:8px;flex:1;min-height:0}
+/* D-08: KI-Slots hell — weisser BG, dunkle Border */
+.pip-ki-slot{flex:1;border:1px solid #E2E8F0;border-radius:12px;padding:12px;background:#FFFFFF;display:flex;flex-direction:column;min-width:0;overflow-y:auto}
+.pip-ki-slot.pip-slot-streaming{border-color:rgba(0,212,170,0.4)}
+.pip-slot-label{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#6B7280;margin-bottom:6px}
+/* D-08: dunkler Text auf hellem Slot */
+.pip-slot-body{font-size:14px;font-weight:400;line-height:1.5;color:#1a1a1a;flex:1;overflow-wrap:break-word;word-break:break-word}
+/* D-07: Streaming-Cursor teal blinkend (unveraendert) */
 .pip-slot-body.pip-streaming::after{content:'\258C';animation:pip-cursor-blink 0.7s step-end infinite;color:#00D4AA;margin-left:2px}
 @keyframes pip-cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
 .pip-slot-result{margin-top:8px}
 .pip-slot-typ-badge{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;margin-bottom:4px}
-.pip-zone-divider{height:1px;background:rgba(255,255,255,0.08);flex-shrink:0;margin:0}
-/* Teleprompter */
-.pip-teleprompter{flex:1;min-height:0;overflow-y:scroll;padding:0}
-/* BUG-2: konsistente schlanke 4px-Scrollbar fuer Slots + Teleprompter (auf hellem Body aus Plan 02) */
+/* Zone-Divider dezent auf hellem Grund */
+.pip-zone-divider{height:1px;background:rgba(0,0,0,0.08);flex:none}
+/* D-09: Teleprompter 60% oben (dominant) */
+.pip-teleprompter{flex:0 0 60%;padding:12px 16px;overflow-y:auto;background:transparent;color:#1a1a1a}
+/* D-09: EWB-Row 10% Mitte */
+.pip-ewb-row{flex:0 0 10%;min-height:44px;display:flex;align-items:center;gap:6px;padding:6px 12px;flex-wrap:nowrap;overflow:hidden}
+/* BUG-2: konsistente schlanke 4px-Scrollbar fuer Slots + Teleprompter (heller Body) */
 .pip-ki-slot::-webkit-scrollbar,
 .pip-teleprompter::-webkit-scrollbar{width:4px}
 .pip-ki-slot::-webkit-scrollbar-track,
@@ -211,9 +220,10 @@
 /* Firefox */
 .pip-ki-slot{scrollbar-width:thin;scrollbar-color:rgba(0,0,0,0.15) transparent}
 .pip-teleprompter{scrollbar-width:thin;scrollbar-color:rgba(0,0,0,0.15) transparent}
-.tp-block{padding:12px 16px;border-left:4px solid transparent;border-radius:0 8px 8px 0;font-size:14px;font-weight:400;line-height:1.5;color:rgba(255,255,255,0.4);cursor:pointer;transition:opacity 200ms,border-color 200ms}
-.tp-block-active{border-left-color:#00D4AA;color:#e8ecf4;background:rgba(0,212,170,0.06)}
-.tp-empty{font-size:14px;font-weight:400;color:rgba(255,255,255,0.3);text-align:center;padding:24px 16px}
+/* D-06: Teleprompter-Bloecke auf hellem Grund */
+.tp-block{padding:12px 16px;border-left:4px solid transparent;border-radius:0 8px 8px 0;font-size:14px;line-height:1.5;color:rgba(26,26,26,0.4);cursor:pointer;transition:opacity 200ms,border-color 200ms,color 200ms,background 200ms}
+.tp-block-active{border-left-color:#00D4AA;color:#1a1a1a;background:rgba(0,212,170,0.08)}
+.tp-empty{padding:24px 16px;text-align:center;color:#6B7280;font-size:13px}
 /* Consent Screen */
 .pip-consent-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:24px}
 .pip-consent-inner{display:flex;flex-direction:column;gap:12px;width:100%;max-width:400px}
@@ -227,15 +237,17 @@
 .pip-consent-btn-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171}
 /* Opacity Slider */
 .pip-opacity-label{font-size:12px;font-weight:700;color:rgba(255,255,255,0.5)}
-#pip-opacity-slider{width:80px;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.12);border-radius:2px;outline:none;accent-color:#00D4AA}
-#pip-opacity-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#ffffff;border:none;cursor:pointer}
+/* D-17/D-18: iOS-style Slider, 140px, Filled-Portion in Teal, groessere Hit-Area */
+#pip-opacity-slider{width:140px;height:4px;-webkit-appearance:none;appearance:none;border-radius:2px;outline:none;cursor:pointer;background:linear-gradient(to right,#00D4AA 0%,#00D4AA var(--pip-slider-pct,100%),rgba(255,255,255,0.2) var(--pip-slider-pct,100%),rgba(255,255,255,0.2) 100%)}
+#pip-opacity-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#ffffff;border:none;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer}
+#pip-opacity-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#ffffff;border:none;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer}
 /* Proactive slot states */
 .pip-slot-phase .pip-slot-label::before{content:''}
 .pip-slot-kb{font-family:'JetBrains Mono',monospace;font-size:12px}
-.pip-ewb-row{min-height:44px;display:flex;align-items:center;gap:8px;padding:0 16px 8px;flex-wrap:wrap}
-.pip-ewb-btn{background:none;border:1px solid var(--glass-border,#E2E8F0);color:var(--page-text-secondary,#c5c9d4);border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+/* D-11: EWB-Pills — horizontale Reihe, nowrap, ellipsis (flex-basis bereits auf .pip-ewb-row oben gesetzt) */
+.pip-ewb-btn{background:#FFFFFF;border:1px solid #E2E8F0;color:#1a1a1a;border-radius:9999px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:border-color 150ms,color 150ms}
 .pip-ewb-btn:hover{border-color:#00D4AA;color:#00D4AA}
-.pip-ewb-ai-selected{border-color:#d4a853;color:#d4a853}
+.pip-ewb-ai-selected{border-color:#d4a853;color:#d4a853;background:rgba(212,168,83,0.08)}
 .pip-ewb-ai-selected:hover{border-color:#d4a853;background:rgba(212,168,83,0.08)}
 .pip-btn-next-call{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
 .pip-btn-next-call:hover{opacity:.85}
@@ -315,9 +327,23 @@
     </div>
   </div>
 
-  <!-- Live Section (D-01: split layout, no tabs) -->
+  <!-- Live Section (D-09: Teleprompter 60% oben, EWB 10% Mitte, KI-Slots 30% unten) -->
   <div id="pip-section-live" style="display:none" class="pip-live-split">
-    <!-- KI Upper Zone (55%) per D-01 -->
+    <!-- D-09: Teleprompter oben 60% (dominant) -->
+    <div class="pip-teleprompter" id="pip-teleprompter">
+      <div class="tp-empty">Kein Skript hinterlegt — Profil bearbeiten</div>
+    </div>
+
+    <!-- Divider -->
+    <div class="pip-zone-divider"></div>
+
+    <!-- D-09: EWB-Pill-Reihe Mitte 10% -->
+    <div class="pip-ewb-row" id="nlp-ewb-row"></div>
+
+    <!-- Divider -->
+    <div class="pip-zone-divider"></div>
+
+    <!-- D-09: KI-Slots unten 30% -->
     <div class="pip-ki-zone" id="pip-ki-zone">
       <div class="pip-ki-slots">
         <div class="pip-ki-slot" id="pip-slot-0">
@@ -329,16 +355,6 @@
           <div class="pip-slot-body" id="pip-slot-body-1">Warte auf Gesprächsinhalt...</div>
         </div>
       </div>
-      <!-- EWB Row (kept, same IDs) -->
-      <div class="pip-ewb-row" id="nlp-ewb-row"></div>
-    </div>
-
-    <!-- Divider -->
-    <div class="pip-zone-divider"></div>
-
-    <!-- Teleprompter Lower Zone (45%) per D-11, D-14 -->
-    <div class="pip-teleprompter" id="pip-teleprompter">
-      <div class="tp-empty">Kein Skript hinterlegt — Profil bearbeiten</div>
     </div>
   </div>
 
