@@ -1121,8 +1121,10 @@
       var slot = d.slot || 0;
       if (!state.pipSlots[slot].streaming) return; // discard if slot was cleared (topic switch)
       state.pipSlots[slot].text += d.token;
+      // 06.1-r2 BUG-4: Claude streamt rohes JSON — niemals rohe Tokens rendern.
+      // Placeholder "Analysiere…" bis pip_token_done die parsed result liefert.
       var body = pipEl('pip-slot-body-' + slot);
-      if (body) body.textContent = state.pipSlots[slot].text;
+      if (body && body.textContent !== 'Analysiere\u2026') body.textContent = 'Analysiere\u2026';
     });
 
     state.socket.on('pip_token_done', function (d) {
@@ -1178,26 +1180,46 @@
     var body = pipEl('pip-slot-body-' + slot);
     if (!body) return;
     var label = pipEl('pip-slot-label-' + slot);
-    // Format based on content
-    if (result.einwand && result.gegenargument_1) {
-      // Einwand detected — show typ badge + gegenargument
-      if (label) label.textContent = (result.typ || 'EINWAND').toUpperCase();
-      body.innerHTML = '';
-      var badge = (body.ownerDocument || document).createElement('span');
+
+    // 06.1-r2 BUG-4: Claude liefert unterschiedliche Result-Shapes
+    // ({einwand, gegenargument_1}, {poin:{einwand,text}}, {text}, ...).
+    // Wir extrahieren in normalisierte Felder, damit nie rohes JSON zum User kommt.
+    var r = result || {};
+    // Unwrap {poin:{...}} / {point:{...}} — Haiku nutzt diese Schluessel in Round-2 Tests
+    var inner = r.poin || r.point || null;
+    var isEinwand = !!(r.einwand || (inner && inner.einwand));
+    var typ = r.typ || (inner && inner.typ) || '';
+    var argument = r.gegenargument_1 || r.gegenargument || (inner && (inner.gegenargument_1 || inner.gegenargument)) || '';
+    var text = r.text || (inner && inner.text) || '';
+
+    // Wenn kein nutzbares Feld vorliegt: faellt der Slot in den "Warte..."-Default statt JSON anzuzeigen
+    if (!argument && !text && !isEinwand) {
+      body.textContent = 'Warte auf Gespr\u00e4chsinhalt\u2026';
+      return;
+    }
+
+    body.innerHTML = '';
+    var doc = body.ownerDocument || document;
+
+    if (isEinwand && (argument || text)) {
+      // Einwand-Render: Typ-Badge + Gegenargument/Text
+      if (label) label.textContent = (typ || 'EINWAND').toUpperCase();
+      var badge = doc.createElement('span');
       badge.className = 'pip-slot-typ-badge';
-      badge.textContent = result.typ || 'Einwand';
-      badge.style.cssText = _getTypBadgeStyle(result.typ);
+      badge.textContent = typ || 'Einwand';
+      badge.style.cssText = _getTypBadgeStyle(typ);
       body.appendChild(badge);
-      var textNode = (body.ownerDocument || document).createElement('div');
-      textNode.style.cssText = 'margin-top:6px;font-size:14px;line-height:1.5;color:#e8ecf4';
-      textNode.textContent = result.gegenargument_1;
+      var textNode = doc.createElement('div');
+      textNode.style.cssText = 'margin-top:6px;font-size:14px;line-height:1.5;color:#1a1a1a';
+      textNode.textContent = argument || text;
       body.appendChild(textNode);
-      // Highlight matching EWB button
-      _highlightEwbButton(result.typ || result.einwand);
-    } else if (result.gegenargument_1 || result.gegenargument) {
-      body.textContent = result.gegenargument_1 || result.gegenargument;
+      _highlightEwbButton(typ);
     } else {
-      // Raw text from streaming is already displayed — keep it
+      // Kein Einwand: nur Text/Gegenargument, Label zurueck auf Antwort-Slot
+      if (label && (label.textContent === '' || /^\s*$/.test(label.textContent))) {
+        label.textContent = slot === 0 ? 'ANTWORT A' : 'ANTWORT B';
+      }
+      body.textContent = argument || text;
     }
   }
 
@@ -1385,11 +1407,12 @@
   }
 
   function _setPipBgOpacity(value) {
-    // D-16: ONLY background layer changes. Text stays 100%.
-    // Set CSS custom property on the pip-section-live element (not :root — PiP is separate Document)
-    var liveEl = pipEl('pip-section-live');
-    if (liveEl) {
-      liveEl.style.setProperty('--pip-bg-alpha', String(value));
+    // D-16 + 06.1-r2 BUG-6: Alpha auf pip-live-window (umfasst Header + Live-Split) setzen,
+    // damit --pip-bg-alpha auch an .pip-header, .pip-ki-slot, .pip-ewb-btn vererbt wird.
+    // Text/Buttons/Icons bleiben 100% (CSS nutzt Alpha nur auf background-color).
+    var wrapEl = pipEl('pip-live-window');
+    if (wrapEl) {
+      wrapEl.style.setProperty('--pip-bg-alpha', String(value));
     }
   }
 
