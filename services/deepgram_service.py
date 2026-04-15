@@ -279,32 +279,24 @@ def register_audio_handlers(sio):
         _first_chunk_logged.discard(_sid)
         _close_deepgram_connection(_sid)
 
-    # 06.1-r2 BUG-5d: Manual EWB-Trigger via Socket — Antwort kommt als
-    # pip_stream_start/pip_token/pip_token_done Events im Slot zurueck (statt HTTP-Response).
+    # 06.1-r2 BUG-5d+r3: Manual EWB-Trigger = reiner Klick-Tracker.
+    # Der Gegenargument-Text wird client-side aus profile.einwaende gerendert
+    # (siehe _triggerEwb in pip-launcher.js). Kein Claude-Call, kein Streaming —
+    # spart Latenz + Haiku-Tokens, funktioniert deterministisch auch bei
+    # Bare-Kategorie-Strings wie 'Kosten/Preis' wo Claude korrekt einwand=False
+    # meldet und der Slot leer bliebe.
     @sio.on('manual_ewb')
     def handle_manual_ewb(data=None, sid=None):
         from flask import request
         _sid = request.sid if sid is None else sid
         if not isinstance(data, dict):
             return
-        text = (data.get('text') or '').strip()
-        slot_id = int(data.get('slot', 0)) if str(data.get('slot', '0')).isdigit() else 0
-        if not text:
+        typ = (data.get('text') or '').strip()
+        if not typ:
             return
-        print(f"[PiP] manual_ewb (sid={_sid}, slot={slot_id}): {text[:80]}")
+        print(f"[PiP] manual_ewb tracked (sid={_sid}): {typ[:80]}")
         import services.live_session as ls
-        from services.claude_service import analysiere_mit_claude_streaming
-        with ls.buffer_lock:
-            kontext = " ".join(ls.analysiert_bisher[-20:])
-
-        def _run():
-            try:
-                analysiere_mit_claude_streaming(text, kontext, _sid, slot_id)
-            except Exception as e:
-                print(f"[PiP] manual_ewb error (sid={_sid}): {e}")
-                try:
-                    sio.emit('pip_stream_error', {'slot': slot_id, 'error': str(e)}, room=_sid)
-                except Exception:
-                    pass
-
-        sio.start_background_task(_run)
+        try:
+            ls.record_ewb_click(typ, success=False)
+        except Exception as e:
+            print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")

@@ -1083,28 +1083,33 @@
   }
 
   function _triggerEwb(typ, btn) {
-    // 06.1-r2 BUG-5d + r3: Sofortiges Feedback im Slot (ohne auf pip_stream_start zu warten),
-    // dann Socket emit. Wenn pip_stream_start ankommt, wird "Analysiere..." durch Result ersetzt.
+    // 06.1-r2 r3: Manual-EWB = deterministisch aus profile.einwaende rendern.
+    // Keine Claude-Call-Latenz, keine leeren Slots wenn Claude einwand=False meldet.
+    // Backend bekommt 'manual_ewb' nur noch fuer Klick-Tracking (postcall-Analytics).
     console.log('[NerveLauncher] EWB trigger:', typ);
-    var slotBody = pipEl('pip-slot-body-0');
-    var slotLabel = pipEl('pip-slot-label-0');
-    if (slotBody) {
-      slotBody.textContent = 'Analysiere: ' + typ + '\u2026';
-      slotBody.classList.add('pip-streaming');
+    var einwaende = (state.profileDaten && state.profileDaten.einwaende) || [];
+    var match = null;
+    var typL = (typ || '').toLowerCase().trim();
+    for (var i = 0; i < einwaende.length; i++) {
+      var e = einwaende[i];
+      if (typeof e === 'string') { if (e.toLowerCase() === typL) { match = { kategorie: e }; break; } continue; }
+      var cat = (e.kategorie || e.typ || e.name || e.einwand || '').toLowerCase();
+      if (cat === typL) { match = e; break; }
     }
-    if (!state.socket || !state.socket.connected) {
-      console.error('[NerveLauncher] EWB: Socket nicht verbunden');
-      if (slotBody) {
-        slotBody.textContent = 'Keine Verbindung \u2014 Session neu starten';
-        slotBody.classList.remove('pip-streaming');
-      }
-      return;
+    // Simuliertes Einwand-Ergebnis fuer _renderSlotResult
+    var fake = {
+      einwand: true,
+      typ: (match && (match.kategorie || match.typ)) || typ,
+      gegenargument_1: (match && (match.gegenargument_1 || match.gegenargument || match.text)) || ('Kein hinterlegtes Gegenargument f\u00fcr "' + typ + '" im Profil.'),
+    };
+    var body = pipEl('pip-slot-body-0');
+    if (body) body.classList.remove('pip-streaming');
+    _renderSlotResult(0, fake);
+
+    // Klick ans Backend melden fuer postcall-ObjectionEvents (fire-and-forget).
+    if (state.socket && state.socket.connected) {
+      state.socket.emit('manual_ewb', { text: typ, line_id: 'ewb_pip_' + Date.now(), slot: 0 });
     }
-    state.socket.emit('manual_ewb', {
-      text: typ,
-      line_id: 'ewb_pip_' + Date.now(),
-      slot: 0
-    });
   }
 
   // ── Socket Events (Phase 06: streaming replaces polling) ─────────────────
