@@ -712,7 +712,7 @@
       return;
     }
 
-    window.documentPictureInPicture.requestWindow({ width: 380, height: 440 })
+    window.documentPictureInPicture.requestWindow({ width: 480, height: 760 })
       .then(function (pipWindow) {
         state.pipWindow = pipWindow;
         _setupPipWindow(pipWindow);
@@ -816,7 +816,7 @@
     // Body styles
     var body = pipWindow.document.body;
     body.style.margin = '0';
-    body.style.background = '#06060a';
+    body.style.background = '#F8FAFC';  // D-05: slate-50 light body
     body.style.color = 'var(--page-text-color,#e8ecf4)';
     body.style.fontFamily = "'Inter',sans-serif";
     body.style.display = 'flex';
