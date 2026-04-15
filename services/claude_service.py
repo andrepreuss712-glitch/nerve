@@ -761,20 +761,43 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
     print(f"[PiP-Variante] ENTRY sid={sid} slot={slot} typ={typ!r}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
     full_text = ''
+    # 06.1-r2 r6: Retry bei 529 overloaded_error — Anthropic hat stossweise Spitzen,
+    # ein kurzer Backoff rettet i.d.R. den zweiten Versuch. Max 2 Retries, dann graceful fallback.
+    import time as _time
+    attempts = 0
+    last_err = None
+    stream_ctx = None
+    while attempts < 3:
+        attempts += 1
+        try:
+            with claude_client.messages.stream(
+                model='claude-haiku-4-5-20251001',
+                max_tokens=250,
+                system="Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter, keine Meta-Kommentare.",
+                messages=[{'role': 'user', 'content': user_msg}]
+            ) as stream:
+                stream_ctx = stream
+                for token in stream.text_stream:
+                    full_text += token
+                    sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
+            break  # Erfolg — raus aus Retry-Loop
+        except Exception as e:
+            last_err = e
+            msg = str(e).lower()
+            is_overloaded = '529' in msg or 'overloaded' in msg
+            if is_overloaded and attempts < 3:
+                backoff = 0.8 * attempts  # 0.8s, 1.6s
+                print(f"[PiP-Variante] 529 overloaded — retry {attempts}/3 in {backoff:.1f}s (sid={sid})")
+                full_text = ''  # Reset Akkumulator fuer neuen Versuch
+                _time.sleep(backoff)
+                continue
+            # Kein Overload ODER letzter Versuch: raise in den outer except
+            raise
     try:
-        with claude_client.messages.stream(
-            model='claude-haiku-4-5-20251001',
-            max_tokens=250,
-            system="Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter, keine Meta-Kommentare.",
-            messages=[{'role': 'user', 'content': user_msg}]
-        ) as stream:
-            for token in stream.text_stream:
-                full_text += token
-                sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
         cleaned = full_text.strip()
         result = {'einwand': True, 'typ': typ, 'gegenargument_1': cleaned}
         sio.emit('pip_token_done', {'slot': slot, 'result': result, 'raw_text': True}, room=sid)
-        print(f"[PiP-Variante] DONE sid={sid} slot={slot} chars={len(cleaned)}")
+        print(f"[PiP-Variante] DONE sid={sid} slot={slot} chars={len(cleaned)} (attempts={attempts})")
         # Cost-Hook
         try:
             from services.cost_tracker import log_api_cost
@@ -793,8 +816,18 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
             print(f"[CostHook] pip_variante skipped: {_e}")
         return result
     except Exception as e:
-        print(f"[PiP-Variante] Fehler sid={sid} slot={slot}: {e}")
-        sio.emit('pip_stream_error', {'slot': slot, 'error': str(e)}, room=sid)
+        # 06.1-r2 r6: Freundliche User-Message statt roher Exception.
+        # Slot 0 hat bereits das Profil-Gegenargument — Slot 1 sagt dem User nur
+        # dass die Variante gerade nicht geht, nicht mehr.
+        err_msg = str(e).lower()
+        if '529' in err_msg or 'overloaded' in err_msg:
+            friendly = 'KI aktuell ausgelastet — nimm die Standard-Antwort oben.'
+        elif 'rate' in err_msg or '429' in err_msg:
+            friendly = 'Zu viele Anfragen — gleich nochmal versuchen.'
+        else:
+            friendly = 'Variante nicht verfuegbar — Standard oben nutzen.'
+        print(f"[PiP-Variante] Fehler sid={sid} slot={slot} (attempts={attempts}): {e}")
+        sio.emit('pip_stream_error', {'slot': slot, 'error': friendly}, room=sid)
         return {}
 
 

@@ -1232,7 +1232,11 @@
       state.pipSlots[slot].streaming = false;
       var body = pipEl('pip-slot-body-' + slot);
       var container = pipEl('pip-slot-' + slot);
-      if (body) { body.textContent = 'KI-Fehler \u2014 bitte erneut versuchen'; body.classList.remove('pip-streaming'); }
+      // 06.1-r2 r6: Server schickt bereits eine user-freundliche Message
+      // (z.B. 'KI aktuell ausgelastet — nimm die Standard-Antwort oben.').
+      // Falls nicht vorhanden: generischer Fallback.
+      var friendly = (d.error && typeof d.error === 'string' && d.error.length < 200) ? d.error : 'KI-Variante aktuell nicht verf\u00fcgbar';
+      if (body) { body.textContent = friendly; body.classList.remove('pip-streaming'); }
       if (container) container.classList.remove('pip-slot-streaming');
     });
 
