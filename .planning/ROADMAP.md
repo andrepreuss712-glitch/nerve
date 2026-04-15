@@ -1,549 +1,634 @@
-# Roadmap: NERVE — Milestone 1 (Launch)
+---
+created: 2026-03-30
+milestone: v0.9.4
+total_phases: 5
+estimated_duration_days: 16
+---
 
-## Overview
+# Roadmap: NERVE
 
-NERVE is at v0.9.4 with the core product fully built. Milestone 1 closes the gap from working prototype to first 50 paying customers. The path runs through five sequential phases: start the German business registration immediately (it takes 3-5 weeks regardless of technical progress), fix the product gaps that affect first-impression quality, deploy to production, wire up payments with legal compliance, and flip the Early Access switch. Business setup runs in parallel to technical work — both tracks must converge before the first customer can pay.
+**Source:** Project interview on 2026-03-30
+**Goal:** Launch NERVE zum ersten zahlenden Kunden in Deutschland
+**Target:** Milestone 1 = v0.9.4 → v1.0 (Early Access mit 50 Plätzen + 50% Gründerrabatt)
 
-## Phases
+## Core Value
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
 
-Decimal phases appear between their surrounding integers in numeric order.
+## Context
 
-- ~~**Phase 1: Business Setup**~~ - *Skipped from GSD — user handles manually (Gewerbeanmeldung, Geschäftskonto, USt-IdNr, Steuerberater)*
-- [x] **Phase 2: Product Fixes** - Complete all product gaps and polish before wiring payments
-- [x] **Phase 3: Infrastructure & Deployment** - Deploy to Hetzner VPS with HTTPS — VPS live on getnerve.app ✓
-- [x] **Phase 03.1: Frontend Redesign** - App-page redesign using NERVE Design System (INSERTED) (completed 2026-04-01)
-- [x] **Phase 03.2: UAT Bug Fixes** - Fix 17 issues from Visual UAT: 6 critical bugs, 5 UX improvements, 4 design corrections, 2 architecture changes (Sidebar + Light/Dark) (INSERTED) (completed 2026-04-01)
-- [ ] **Phase 4: Payments & Legal** - Stripe integration, pricing page, DSGVO legal pages and vendor DPAs
-- [x] **Phase 04.1: Live-Mikrofon Fix** - Replace server-side PyAudio with browser getUserMedia + Socket.IO streaming (INSERTED)  (completed 2026-04-03)
-- [x] **Phase 04.2: Cold Call und Meeting Modi** - Two distinct live session modes with DSGVO-compliant consent flow and EWB buttons (INSERTED) (completed 2026-04-03)
-- [x] **Phase 04.3: Design Unification** - Light/Dark Mode entfernen, einheitliches dunkles Theme, Beenden-Button Fix, UI-Elemente konsolidieren (INSERTED) (completed 2026-04-04)
-- [ ] **Phase 04.5: Training Analytics & Tools** - Analytics-Panel mit Stats, Heatmap, Phrasen-Bank, Wochenziel, Quick-Training (INSERTED)
-- [ ] **Phase 04.6: Sales Performance Calculator** - Interaktiver ROI-Rechner im Dashboard: echte Call-Daten + Simulations-Schieberegler, KPI-Karten, Charts, Umsatz-Forecast (INSERTED)
-- [x] **Phase 04.6.1: Auth-Upgrade Google + Microsoft OAuth Login** - OAuth-Login via authlib, nullable passwort_hash, Login-UI Buttons (INSERTED) (completed 2026-04-06)
- (completed 2026-04-07)
-- [x] **Phase 04.6.2: Deploy Hardening & OAuth Polish** - Urgent: deploy hardening and oauth polish (INSERTED) (completed 2026-04-07)
-- [x] **Phase 04.7: Backend & Feedback System** - Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails (Resend/Postmark), Session-History (INSERTED) (completed 2026-04-08)
-- [ ] **Phase 04.7.1: FineTuning Logging Grundlage** - ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions Tabellen von Tag 1 (INSERTED)
-- [ ] **Phase 04.7.2: Founder Cost Dashboard** - Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export für count.tax, API-Preismonitor (INSERTED)
-- [ ] **Phase 04.8: KI-Logik Upgrade** - Gesprächsphasen-Erkennung (6 Phasen), Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung, Cold Call Inferenz, dynamische EWB-Buttons (INSERTED)
-- [x] **Phase 04.9: Training-Modul Upgrade** - 6 Persönlichkeitstypen, Stimmungs-Dynamik (-5 bis +5), Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade (INSERTED) (completed 2026-04-10)
-- [x] **Phase 04.10: Training Realismus** - Sekretärin/Chef 2-Stimmen Modus, Freizeichen/Klingeln/Besetztzeichen Audio-Simulation, Auflegen-Flow mit Pop-up und Scoring (INSERTED)
- (completed 2026-04-10)
-- [x] **Phase 04.10.1: Emotionale TTS-Stimmen** - Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch (INSERTED) (completed 2026-04-12)
-- [x] **Phase 04.11: Coach-Modul** - Post-Call Lernkarten (max 3/Call, max 5 aktiv), KI-Gedächtnis im Call (goldener Rahmen), Wöchentlicher Coach-Report, Langzeit-Fortschritt (INSERTED)
- (completed 2026-04-12)
-- [x] **Phase 04.12: Gesamt-Integration** - learning_events Tabelle, Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen), Selbstverbesserungs-Kreislauf, Netzwerkeffekt (INSERTED) (completed 2026-04-13)
-- [x] **Phase 04.13: PreCall Intelligence** - Automatische Firmen-Recherche vor dem Call, Call-Briefing im PIP, Datenquellen-Ansatz wird in Phase geklärt (INSERTED)
- (completed 2026-04-13)
-- [x] **Phase 04.14: CRM & Customer Success** - Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen, Metriken (INSERTED) (completed 2026-04-13)
-- [ ] **Phase 04.15: Rollen, Support & Kompensation** - Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff, Kompensation bei Ausfällen (INSERTED)
-- [ ] **Phase 04.16: Finaler Polish + UAT** - Finaler UAT-Durchlauf, Design-Pass, CSS Refactoring, Code Audit, Performance-Check (INSERTED)
-- [ ] **Phase 04.17: PiP Launcher** - Always-on-Top verschiebbarer Live-Assistent via Document Picture-in-Picture API, Call-Start aus CRM heraus, Modus/Kunden/Skript-Auswahl im PiP (INSERTED)
-- [ ] **Phase 5: Launch** - Open Early Access to 50 paying customers
+**User's Goal (von Ihm formuliert):**
+> "Ich will NERVE launchen — genug gebaut, jetzt rausbringen. Die Grundfunktion läuft stabil. Was fehlt: Pricing, Legal-Sachen, Gewerbeanmeldung, Payments. Ich habe ~14 Tage im Monat Zeit."
 
-## Phase Details
+**Business Context:**
+- Solo-Founder André Preuß, Iserlohn (NRW)
+- Noch keine Gewerbeanmeldung, USt-IdNr, Geschäftskonto
+- Erwartet: ~100.000€/Jahr Gehalt → Einzelunternehmer vs. UG noch offen
+- Warteliste bereits aufgebaut, bereit für Launch
+
+**Technical Context:**
+- NERVE v0.9.4 production-ready
+- Flask + Vanilla JS (keine React-Migration)
+- DACH-Fokus Milestone 1, i18n später
+- Flat-Rate Pricing (69/59/49€) — nicht Credit-basiert
+
+## Phases Overview
+
+| Phase | Title | Depends On |
+|-------|-------|------------|
+| 1 | Business Setup | - |
+| 2 | Product Fixes | - |
+| 3 | Infrastructure & Deployment | 1, 2 |
+| 4 | Payments & Legal | 1, 3 |
+| 5 | Launch | 4 |
+
+## Phases Detail
 
 ### Phase 1: Business Setup
-**Goal**: Legal entity is registered and capable of accepting payments
-**Depends on**: Nothing (start immediately, runs in parallel with Phase 2)
-**Requirements**: BIZ-01, BIZ-02, BIZ-03, BIZ-04
-**Success Criteria** (what must be TRUE):
-  1. Gewerbeanmeldung is submitted at Gewerbeamt Iserlohn
-  2. Business bank account (Kontist or Finom) is open and accessible
-  3. USt-IdNr application is filed with Bundeszentralamt
-  4. First meeting with count.tax is scheduled (tax advice is in place for invoicing)
-**Plans**: 3 plans
 
-Plans:
-- [ ] 01-01-PLAN.md — Legal registration: Gewerbeanmeldung (BIZ-01) + USt-IdNr application (BIZ-03)
-- [ ] 01-02-PLAN.md — Financial setup: Kontist Geschaeftskonto (BIZ-02) + Stripe account creation
-- [ ] 01-03-PLAN.md — Tax advisor: count.tax first call scheduled and completed (BIZ-04)
+**Goal:** Als Unternehmer gründen und alle rechtlichen/finanziellen Grundlagen sichern
+**Depends on:** — (kein Blocker)
+**Parallelizable with:** Phase 2 (unabhängig)
+**Plans:** 3-4 plans (to be broken down)
+
+**Items:**
+- Gewerbeanmeldung beim Gewerbeamt Iserlohn
+- Geschäftskonto eröffnen (Empfehlung: Kontist oder Finom)
+- USt-IdNr beim Bundeszentralamt für Steuern beantragen
+- Steuerberater engagieren (Empfehlung: count.tax für Online-Beratung)
+
+**Reasoning:**
+> Ohne Gewerbeanmeldung kein Geschäftskonto, ohne USt-IdNr keine B2B-Rechnungen ins Ausland. Steuerberater muss von Anfang an beraten — sonst Panik im ersten Jahr.
+
+---
 
 ### Phase 2: Product Fixes
-**Goal**: The product is polished and complete — ready for a paying customer's first impression
-**Depends on**: Nothing (runs in parallel with Phase 1)
-**Requirements**: PROD-01, PROD-02, PROD-03, PROD-04, PROD-05, PROD-06, PROD-07, PROD-08, PROD-09, PROD-10, PROD-11
-**Success Criteria** (what must be TRUE):
-  1. A new user completes the 3-step profile wizard on first login and gets a profile with generic, non-demo content
-  2. The Live-Modus shows the DSGVO banner before microphone access, the correct script button, working compact-mode circles, and the toggle in the right position
-  3. A user can choose between "Frei" (max points, no hints) and "Geführt" (hints with point deduction) training modes and select from 11 standard DACH scenarios
-  4. After completing a training session, the user sees a preview of what NERVE would have shown in a real call
-  5. All "SalesNerve" references in code and UI are replaced with "NERVE"
-**Plans**: 6 plans
-**UI hint**: yes
 
-Plans:
-- [x] 02-01-PLAN.md — SalesNerve to NERVE rename across codebase and DB migration (PROD-11)
-- [x] 02-02-PLAN.md — Live-mode bug fixes: DSGVO banner, script button, compact circles, toggle (PROD-07)
-- [x] 02-03-PLAN.md — Training modes and scenarios verification (PROD-03, PROD-04, PROD-05, PROD-06)
-- [x] 02-04-PLAN.md — Pricing model rewrite to flat-rate + fair-use tracking + ROI fix (PROD-01, PROD-02)
-- [x] 02-05-PLAN.md — Onboarding improvements + profile editor placeholders (PROD-08, PROD-10)
-- [x] 02-06-PLAN.md — Profile wizard: 3-step guided profile creation for new users (PROD-09)
+**Goal:** Alle Blocker aus dem Produkt-Tool rauskicken, damit v0.9.4 launchfähig ist
+**Depends on:** — (kein Blocker)
+**Parallelizable with:** Phase 1 (unabhängig)
+**Plans:** 3-4 plans (to be broken down)
+
+**Items:**
+- Pricing-System aus ToDo-Liste umsetzen (69/59/49€ Flat-Rate)
+- ROI-Tracker im Dashboard einbauen
+- Trainings-Modus "Frei" hinzufügen (keine Hilfe-Hints, maximale Punkte)
+- Trainings-Modus "Geführt" hinzufügen (Hilfe verfügbar mit Abzug)
+- Cross-Sell im Training: "Was hätte NERVE Live gezeigt" Preview
+- 11 DACH-Mittelstand Trainings-Szenarien als Standard (alle Schwierigkeitsstufen)
+- Live-Bereich Bugs: Skript-Button fehlt, DSGVO-Einwilligung fehlt/falsche Position, Kompakt-Modus Kreise/Toggle korrigieren
+- Onboarding Text-Änderungen (generischer statt Demo-Inhalt)
+- Profil-Wizard statt leerem Formular für Erstuser
+- Profil-Editor-Texte generalisieren
+- "SalesNerve" → "NERVE" überall im Code ersetzen
+
+**Reasoning:**
+> Wenn Pricing nicht live ist, kann keiner bezahlen. Wenn Trainings-Modi unklar sind, versteht keiner den Vorteil gegenüber Live. Bugs im Live-Bereich unterminieren das Kernversprechen. Onboarding-Text muss generisch sein — nicht mit Demo-Inhalt. Wizard statt leeres Formular reduziert Friction.
+
+---
 
 ### Phase 3: Infrastructure & Deployment
-**Goal**: The app is running on the production domain over HTTPS with WebSockets confirmed working
-**Depends on**: Phase 2
-**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, LEGAL-04
-**Success Criteria** (what must be TRUE):
-  1. The app is accessible at the production domain over HTTPS with a valid Let's Encrypt certificate
-  2. A live Socket.IO connection shows `101 Switching Protocols` in the browser network tab — no polling fallback
-  3. The app starts cleanly on the VPS without PyAudio or missing SECRET_KEY (fail-fast assertion triggers on bad config)
-  4. SQLite WAL mode is confirmed active; CORS is locked to the production domain only (no wildcard)
-**Plans**: 3 plans
 
-Plans:
-- [x] 03-01-PLAN.md — Code hardening: requirements split, SECRET_KEY fail-fast, SQLite WAL, CORS lock (INFRA-04, INFRA-05, LEGAL-04)
-- [x] 03-02-PLAN.md — Deployment artifacts: deploy.sh, nginx.conf, nerve.service (INFRA-01, INFRA-02, INFRA-03)
-- [x] 03-03-PLAN.md — VPS deployment runbook: provision, SSL, systemd, end-to-end verification — DONE (getnerve.app live)
+**Goal:** App von localhost auf Hetzner Cloud VPS deployen (DSGVO-konform)
+**Depends on:** Phase 1 (Gewerbeanmeldung für Hetzner-Account), Phase 2 (stabiles Produkt)
+**Plans:** 3-4 plans (to be broken down)
+
+**Items:**
+- Hetzner Cloud CX22 VPS provisionen (4.15€/Monat, Falkenstein)
+- Domain kaufen und verknüpfen (noch keine gesichert)
+- nginx + gunicorn Setup mit SSL (Let's Encrypt)
+- SQLite + persistentes Volume (statt PostgreSQL für Milestone 1)
+- Git-Deployment-Pipeline aufsetzen
+- Monitoring basics (uptime, logs)
+
+**Reasoning:**
+> Hetzner ist deutscher Anbieter = DSGVO trivial. CX22 reicht für ~50 Early Access User. PostgreSQL-Migration wäre Overkill für Milestone 1. Domain ist prio — ohne kein Launch.
+
+---
 
 ### Phase 03.1: Frontend Redesign (INSERTED)
 
-**Goal**: All app pages use the NERVE Design System — consistent glass panels, typography, color tokens, and component language across Dashboard, Live-Session, Training, Profil, Wizard, Analysis, and Sessions. Landing page excluded.
-**Requirements**: UI-01 through UI-07 (one per page)
-**Depends on**: Phase 3
-**Stack constraint**: No framework change — pure CSS with Custom Properties. Design system reference: `NERVE-Design-System.html`
-**Plans**: 6 plans
+**Goal:** Frontend komplett neu aufbauen — Farben/Kontrast fixen (dunkle Schrift auf dunklem BG überall)
+**Depends on:** Phase 3
+**Plans:** 5-8 plans (to be broken down)
 
-Plans:
-- [x] 03.1-01-PLAN.md — CSS foundation: create static/nerve.css + update base.html (UI-01)
-- [x] 03.1-02-PLAN.md — Dashboard redesign: glass panels, KPI cards, feed items (UI-02)
-- [x] 03.1-03-PLAN.md — Live-Session redesign: NERVE tokens, AI panel, live badge (UI-03)
-- [x] 03.1-04-PLAN.md — Training redesign: glass cards, pill tabs, teal accents (UI-04)
-- [x] 03.1-05-PLAN.md — Profile pages: editor + list with glass panels, NERVE inputs (UI-05, UI-06)
-- [x] 03.1-06-PLAN.md — Wizard + Onboarding: teal tokens, NERVE inputs (UI-07)
+**Items:**
+- Aktuelle UI komplett verwerfen (außer Struktur/Layout)
+- Neues Design-System: Dark Mode mit hohem Kontrast (WCAG AAA wo möglich)
+- Alle Seiten durchgehen: Landing, Dashboard, Training, Profile, Live-Bereich, Kompakt-Modus
+- Farbpalette neu definieren (Text-Farben auf dunklem Hintergrund: #E4E4E7 statt #9CA3AF etc.)
+- Komponenten-Bibliothek: Buttons, Cards, Inputs, Modals, Dropdowns, Tables
+- Animations/Transitions verfeinern (nicht übertrieben)
+- Responsiveness prüfen (Desktop-first, aber mindestens Tablet tauglich)
+- Onboarding-Texte inline testen im neuen Design
+
+**Reasoning:**
+> UAT zeigte: Text-Kontrast ist massiv zu schwach, Placeholder-Grau fast unlesbar, Input-Felder verschwinden im Dark-BG. Komplettes Re-Design ist schneller als Einzelfixes — Farben sind systemisch falsch gesetzt.
+
+---
 
 ### Phase 03.2: UAT Bug Fixes (INSERTED)
 
-**Goal**: All 17 UAT issues from Visual UAT after Phase 3.1 are resolved — 6 critical bugs fixed, 5 UX improvements implemented, 4 design corrections applied, 2 architecture changes shipped (Sidebar user menu + Light/Dark Mode). App is fully functional and polished on getnerve.app.
-**Depends on**: Phase 03.1
-**Requirements**: UAT-01 through UAT-16
-**Success Criteria** (what must be TRUE):
-  1. Training sessions can be started and run end-to-end (Anruf-Button works, AI responds, TTS plays)
-  2. Microphone works in both /training and /live — browser requests permission, Deepgram receives audio
-  3. Language selection in /training applies consistently to all UI text
-  4. Live session timer counts up from session start; mic button is functional
-  5. Auswertung shows placeholder message (not fake coaching) when no real conversation occurred
-  6. Language preference is saved globally in /settings and applied across all pages
-  7. Auswertung loading state shows animated progress bar
-  8. Kompaktmodus in /live opens as floating popup overlay
-  9. "Zurück zum Dashboard" button visible at end of live Auswertung
-  10. Profile fields show neutral placeholder examples
-  11. All yellow/purple accent colors replaced with Teal (#2dd4a8) except Gold (#d4a853) for AI elements
-  12. Scenario dropdown in /training uses dark theme styling
-  13. DSGVO banner does not overlap emotion analysis circles in /live
-  14. Training end dialog is a styled NERVE modal, not browser window.confirm
-  15. User avatar + name visible bottom-left in sidebar; click opens dropdown with Profile, Settings, Billing, Team, Logout
-  16. Light/Dark Mode toggle works in Settings and sidebar dropdown; system preference applied on first visit
-**Plans**: 7 plans
+**Goal:** Alle kritischen Bugs aus UAT Phase 03.1 beheben (Registrierung, Dashboard, Training, Live-Assistent)
+**Depends on:** Phase 03.1
+**Plans:** 7 plans (P01 Auth + Settings, P02 Dashboard, P03 Dashboard BugFix, P04 Training, P05 Live-Assistent, P06 Global CSS Theme, P07 Profil-Editor + Duplikate)
 
-Plans:
-- [x] 03.2-01-PLAN.md — Critical bugs: training flow — Anruf-Button, PTT mic, TTS audio (UAT-01, UAT-02)
-- [x] 03.2-02-PLAN.md — Critical bugs: language switch, live timer, no-conversation guard (UAT-03, UAT-04, UAT-05)
-- [x] 03.2-03-PLAN.md — Architecture: sidebar user menu with avatar + dropdown (UAT-15)
-- [x] 03.2-04-PLAN.md — Architecture: Light/Dark Mode toggle with system preference (UAT-16)
-- [x] 03.2-05-PLAN.md — UX: global language preference + profile wizard placeholders (UAT-06, UAT-10)
-- [x] 03.2-06-PLAN.md — UX: loading state, compact overlay, Dashboard back button (UAT-07, UAT-08, UAT-09)
-- [ ] 03.2-07-PLAN.md — Design: landing colors, custom dropdown, DSGVO overlap, NERVE modals (UAT-11, UAT-12, UAT-13, UAT-14)
+**Items:**
+- P01: Registrierung auf Landing-Page zugänglich machen + Einstellungen aus Sidebar
+- P02: Dashboard umbauen (keine Demo-Daten, sinnvolle Content-Gliederung, Analyse-Details, ehrliche Analytics)
+- P03: Dashboard Call-Log Redirect auf /analyse/<id> (statt leerer GET /analyse Route)
+- P04: Training umbauen (Nicht-User-Profile verbergen, Demo-Gesprächspartner-Namen, "KI ruft an" Flow, Post-Call-Zusammenfassung verschoben, Einstellungen verschoben)
+- P05: Live-Assistent umbauen (Transkription prominent, Skript + Gegenargumente integriert statt Alt-Buttons)
+- P06: Globales CSS-Theme (Dark Background auf allen Seiten, Einheitlichkeit Dashboard/Training/Analyse/Profile/Settings)
+- P07: Profil-Editor neu (Schnelleingabe + Expert-Modus, zuverlässiges Speichern), Duplikate aus DB entfernen
+
+**Reasoning:**
+> UAT fand 11 kritische Bugs. Registrierung ist blockiert (Login-Overlay zeigt kein Sign-Up). Dashboard zeigt Demo-Daten. Training zeigt Fremd-Profile. Live-Bereich hat doppelte Buttons und versteckte Transkription. Alle fixen vor nächstem UAT-Durchlauf.
+
+---
 
 ### Phase 4: Payments & Legal
-**Goal**: Users can pay for a subscription and the product is legally compliant for DACH B2B launch
-**Depends on**: Phase 3 (needs HTTPS for Stripe webhooks), Phase 1 (needs verified Stripe account)
-**Requirements**: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-06, LEGAL-01, LEGAL-02, LEGAL-03
-**Success Criteria** (what must be TRUE):
-  1. A user can select a plan on the pricing page and complete payment via Stripe Checkout; subscription activates via webhook only (not redirect)
-  2. A user can manage or cancel their subscription via the Stripe Customer Portal linked from account settings
-  3. The dashboard ROI tracker and fair-use counter update correctly; at ~80% limit a soft warning appears; no hard block occurs
-  4. Impressum, AGB, and Datenschutzerklärung are live at the production domain, listing Deepgram, Anthropic, ElevenLabs, and Stripe as Auftragsverarbeiter
-  5. Signed AVVs with Deepgram, Anthropic, ElevenLabs, and Stripe are on file; Deepgram EU endpoint is in use
-**Plans**: 3 plans
-**UI hint**: yes
 
-Plans:
-- [x] 04-01-PLAN.md — Stripe foundation: DB migration, config, payments blueprint (Checkout, Webhook, Portal) (PAY-01, PAY-02, PAY-03, PAY-04)
-- [ ] 04-02-PLAN.md — Pricing page + fair-use metering with soft warnings (PAY-05, PAY-06)
-- [ ] 04-03-PLAN.md — Legal pages (Impressum, AGB, Datenschutz) + Deepgram EU + AVV checklist (LEGAL-01, LEGAL-02, LEGAL-03)
+**Goal:** Bezahlung funktioniert + DSGVO-rechtlich sauber + Impressum/AGB/Datenschutz fertig
+**Depends on:** Phase 1 (Gewerbeanmeldung für Stripe, USt-IdNr für Rechnungen), Phase 3 (deployed App)
+**Plans:** 4-5 plans (to be broken down)
+
+**Items:**
+- Stripe Account eröffnen (Business-Account, nicht Personal)
+- 3 Produkte in Stripe anlegen (69/59/49€/Monat + Tax-Codes)
+- Checkout-Flow integrieren (Hosted Checkout empfohlen)
+- Customer-Portal für Kündigung/Upgrade
+- Webhooks: checkout.session.completed, customer.subscription.updated/deleted
+- DSGVO-Einwilligung vor erstem Mikrofon-Zugriff (aus Phase 2)
+- Impressum erstellen (TMG §5-konform)
+- AGB erstellen (mit Klausel zur Datenverarbeitung durch Drittanbieter)
+- Datenschutzerklärung (DSGVO Art. 13, DeepGram + Anthropic + ElevenLabs als Auftragsverarbeiter nennen)
+- Auftragsverarbeitungsverträge (AVVs) signieren: DeepGram, Anthropic, ElevenLabs, Stripe
+- Fair-Use Tracking (Live-Minuten + Trainings-Sessions) in DB
+- Soft-Warnung bei ~80% des Fair-Use-Limits, kein harter Block
+
+**Reasoning:**
+> Ohne Impressum ist jeder Betrieb in Deutschland illegal. AVVs sind Pflicht für DSGVO. Stripe erfordert echte Gewerbeanmeldung und USt-IdNr. Fair-Use per DB atomar zählen — keine harten Limits (Founder-Philosophie). Für MEETING-Modus: "Wir brauchen DEUTLICHE Einwilligung, Deepgram hört zu" statt Kontext-Hinweis.
+
+---
 
 ### Phase 04.6.2: deploy hardening and oauth polish (INSERTED)
 
-**Goal:** Deploy-Pipeline härten (rsync mit DB-Schutz) und verbleibende OAuth-Rough-Edges aus 04.6.1 glätten (Landing-Link, MS-Branding, Consumer-Account-Block, Silent-SSO, Onboarding-Render-Bug)
-**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06
-**Depends on:** Phase 04.6.1
-**Plans:** 1/3 plans executed
+**Goal:** zusammenfassend abschließen — deploy stabilisieren und oauth/credits feinschliff
+**Depends on:** Phase 4
+**Plans:** 2-4 plans (to be planned)
 
-Plans:
-- [x] 04.6.2-01-PLAN.md — Deploy-Hardening: deploy.sh auf tar-over-ssh (Windows-kompat) mit Excludes und Prod-DB-Schutz (D-01)
-- [x] 04.6.2-02-PLAN.md — Landing & Branding: Header-Login → app.getnerve.app, Microsoft 365 Button-Labels (D-02, D-03)
-- [x] 04.6.2-03-PLAN.md — OAuth Flow Polish: Consumer-Tenant-Block verifizieren + conditional prompt=consent (D-04, D-06)
-- [x] 04.6.2-04-PLAN.md — Onboarding-Bug Fix: diagnostisches Logging + Cache-Control no-store (Root-Cause: pre-existing user, Hypothesis E) (D-05)
+**Items:**
+- tbd via /gsd-plan-phase
+
+**Reasoning:**
+> User-defined: zusammenfassend abschließen — deploy stabilisieren und oauth/credits feinschliff
+
+---
 
 ### Phase 04.1: Live-Mikrofon Fix: PyAudio -> Browser getUserMedia (INSERTED)
 
-**Goal:** Replace server-side PyAudio mic capture with browser-side getUserMedia + Socket.IO streaming so live transcription works on the VPS (no audio hardware)
-**Requirements**: MIC-01, MIC-02, MIC-03, MIC-04
+**Goal:** Live-Mikrofon funktioniert auf getnerve.app — Audio wird vom Browser erfasst (nicht Server-PyAudio)
 **Depends on:** Phase 4
-**Success Criteria** (what must be TRUE):
-  1. Server starts without PyAudio — no `import pyaudio` in production code
-  2. Each Socket.IO session gets its own Deepgram WebSocket connection (per-session, not global)
-  3. Browser captures mic audio via getUserMedia + AudioWorklet at 16kHz, streams Int16 PCM via Socket.IO
-  4. Live transcription works end-to-end on getnerve.app: speak into browser mic, see transcripts in UI
-**Plans:** 3/3 plans complete
+**Plans:** 3 plans (Backend Deepgram-Service, Frontend MediaStream + AudioWorklet, Integration + DSGVO-Banner)
 
-Plans:
-- [x] 04.1-01-PLAN.md — Server: per-session Deepgram connections + remove global PyAudio startup (MIC-01, MIC-02)
-- [x] 04.1-02-PLAN.md — Client: AudioWorklet processor + getUserMedia + Socket.IO streaming lifecycle (MIC-03, MIC-04)
-- [x] 04.1-03-PLAN.md — Gap closure: fix AudioContext suspension + diagnostic logging (MIC-04)
+**Items:**
+- Backend: PyAudio komplett aus deepgram_service.py entfernen
+- Backend: Deepgram-WebSocket pro Socket.IO-Session aufbauen (start_live_session, stop_live_session Events)
+- Backend: audio_chunk Event empfangen und 1:1 an Deepgram weiterleiten
+- Frontend: getUserMedia mit {sampleRate:16000, channelCount:1, echoCancellation:true}
+- Frontend: AudioWorklet (oder ScriptProcessor Fallback) konvertiert Float32 → Int16 PCM
+- Frontend: audio_chunk via Socket.IO an Server streamen (ArrayBuffer)
+- DSGVO: Einwilligungs-Banner VOR getUserMedia-Aufruf, Berechtigungs-Dialog erst nach Zustimmung
+- E2E-Test: getnerve.app öffnen → Live-Modus → Sprechen → Transkription erscheint
+- Lokaler Fallback: bestehender PyAudio-Code als Fallback wenn MIC_USE_BROWSER=false (optional)
+
+**Reasoning:**
+> Showstopper-Bug für Launch: Server hat keine PyAudio-Umgebung (und darf keine haben — Server hört nicht mit). Browser erfasst Audio, Server routet nur durch zu Deepgram. Alle Trigger laufen schon (MODE-01..06), es fehlt nur der Audio-Pipe. Lösung ist Web-Standard (getUserMedia + AudioWorklet), DSGVO-konform (Einwilligung vor getUserMedia), ohne Third-Party-Dependency.
+
+---
 
 ### Phase 04.2: Cold Call und Meeting Modi (INSERTED)
 
-**Goal:** Two distinct live session modes on /live — Cold Call (consultant audio only, single-speaker Deepgram, EWB buttons) and Meeting (full diarization with consent pop-up, auto-fallback to Cold Call on rejection). Mode selected before session start, persisted in ConversationLog for post-call analytics.
-**Requirements**: MODE-01, MODE-02, MODE-03, MODE-04, MODE-05, MODE-06
-**Depends on:** Phase 04.1
-**Success Criteria** (what must be TRUE):
-  1. User selects Cold Call or Meeting mode via pre-session overlay on /live before any Deepgram connection opens
-  2. Cold Call uses Deepgram single-speaker (diarize=false) — no customer audio processed or stored
-  3. Meeting shows consent pop-up with Vorleseskript; accepted starts full diarization, rejected silently falls back to Cold Call
-  4. EWB buttons (from profile or DACH fallback list) trigger instant Claude Haiku responses with objection-specific context
-  5. Active mode displayed as badge in /live header; session_mode persisted in ConversationLog
-**Plans:** 4/4 plans complete
+**Goal:** User können vor Live-Session zwischen Cold Call (nur Berater) und Meeting (Berater + Kunde) wählen
+**Depends on:** Phase 4
+**Plans:** 5-6 plans (to be broken down)
 
-Plans:
-- [x] 04.2-01-PLAN.md — Backend: DB migration (session_mode), mode-aware Deepgram, EWB trigger endpoint (MODE-02, MODE-04, MODE-05, MODE-06)
-- [x] 04.2-02-PLAN.md — Frontend: mode overlay, consent modal, EWB buttons, mode badge, JS wiring (MODE-01, MODE-03, MODE-04, MODE-05)
+**Items:**
+- Pre-Session Modus-Auswahl Overlay auf /live (Pflicht, kein Wechsel mid-call)
+- Cold Call: Deepgram single-speaker mode, nur Berater-Audio, EWB-Buttons sichtbar (aus aktivem Profil)
+- Meeting: Consent-Popup mit Vorleseskript, Stattgegeben startet Diarization, Abgelehnt fällt auf Cold Call zurück
+- EWB-Buttons lösen sofortige Claude-Haiku-Anfrage aus (Einwand-Kontext, Profil-Gegenargumente)
+- session_mode in ConversationLog speichern, Badge im /live Header
+- EWB-Klicks in quick_action_log (typ='ewb') loggen, qa_count Persistenz in api_beenden
+
+**Reasoning:**
+> Cold Call hat rechtliche + ethische Klarheit (nur der Berater), Meeting braucht expliziten Consent. EWB-Buttons sind der Low-Friction-Pfad für bekannte Einwände, ohne Transkription-Roundtrip abzuwarten. Beide Modi nutzen das Profil als Wissensbasis.
+
+---
 
 ### Phase 04.2.1: UI/UX Overhaul — Dashboard, Live-Assistent, Kompaktmodus. Komplettes Layout überarbeiten, Getclose.ai als Design-Referenz, Picture-in-Picture Overlay, intuitive Anordnung aller Elemente. (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** UI/UX Overhaul — Dashboard, Live-Assistent, Kompaktmodus. Komplettes Layout überarbeiten, Getclose.ai als Design-Referenz, Picture-in-Picture Overlay, intuitive Anordnung aller Elemente.
 **Depends on:** Phase 4.2
-**Plans:** 2/5 plans executed
+**Plans:** 2-4 plans (to be planned)
 
-Plans:
-- [ ] TBD (run /gsd:plan-phase 04.2.1 to break down)
+**Items:**
+- tbd via /gsd-plan-phase
+
+**Reasoning:**
+> User-defined: UI/UX Overhaul — Dashboard, Live-Assistent, Kompaktmodus. Komplettes Layout überarbeiten, Getclose.ai als Design-Referenz, Picture-in-Picture Overlay, intuitive Anordnung aller Elemente.
+
+---
 
 ### Phase 04.3: Design Unification (INSERTED)
 
-**Goal:** Einheitliches dunkles Theme auf allen Seiten — Light/Dark Mode komplett entfernt, konsistentes Farbschema (#0D1117 Page BG / #1C2333 Cards / #00D4AA Teal Akzent), kritischer Beenden-Button Fix, UI-Elemente (Footer, Header, Sprachauswahl) umgezogen.
-**Depends on**: Phase 04.2
-**Requirements**: DU-01, DU-02, DU-03, DU-04, DU-05, DU-06, DU-07, DU-08, DU-09, DU-10, DU-11, DU-12
-**Success Criteria** (what must be TRUE):
-  1. Beenden-Button in `/live` navigiert zurück zum Dashboard
-  2. Kein `prefers-color-scheme` Media Query und kein Theme-Toggle mehr im Codebase
-  3. Alle 8 App-Bereiche (Dashboard, Training, Live, Analytics, Profil, Profil-Editor, Einstellungen, Hilfe-Center) zeigen identisches dunkles Farbschema
-  4. Footer-Links, Header-Email/Logout und Sprach-Buttons aus den Seiten entfernt und in Einstellungen verschoben
-  5. Settings-Button in Sidebar an gleicher Position auf allen Seiten
-**UI hint**: yes
-**Plans**: 6 plans
+**Goal:** Gesamte UI auf einheitliches dunkles Farbschema umstellen (kein Light Mode, kein User-Toggle). Alle Seiten in einem Stil.
+**Depends on:** Phase 04.2
+**Plans:** 5-8 plans (to be broken down)
 
-Plans:
-- [x] 04.3-01-PLAN.md — Beenden-Button Fix: Dashboard back-link in app.html header (DU-01)
-- [x] 04.3-02-PLAN.md — Light Mode entfernen + Dark Theme CSS-Variablen auf Zielwerte setzen (DU-02, DU-03)
-- [x] 04.3-03-PLAN.md — Einstellungen + Analytics Dark Theme Fixes (DU-04, DU-05)
-- [x] 04.3-04-PLAN.md — Training + Profil-Editor + Hilfe-Center Dark Theme (DU-06, DU-07, DU-08)
-- [x] 04.3-05-PLAN.md — Footer-Links entfernen + Header aufräumen + Rechtliches Tab (DU-09, DU-10)
-- [x] 04.3-06-PLAN.md — Sprachauswahl aus Training + Settings-Button Fix + Dark Theme Sweep (DU-11, DU-12, DU-03)
+**Items:**
+- Beenden-Button im Live-Assistenten (stoppt Session und navigiert zurück)
+- Einheitliches Farbschema (Option D: Dunkel überall, kein Toggle)
+- Training-Seite: Einheitliches Dark-Theme (Hintergrund + Cards)
+- Einstellungen-Seite: Cards auf dunklem Grund, keine hellen "schwebenden" Cards
+- Analytics/Logs: Dark Background + einheitliche Tabellen
+- Footer entfernen (Impressum/AGB/Datenschutz) — stattdessen im Einstellungen-Bereich als "Rechtliches" Tab
+- Login-Email-Anzeige + Logout-Button aus Header entfernen → in Einstellungen verlagern
+- Sprach-Buttons aus Training entfernen → nach Einstellungen verlagern
+- Hilfe-Center: Orange durch Teal ersetzen, komplett ins Dark-Theme integrieren
+- Profil-Editor: Dark-Theme umsetzen (aktuell zu hell, schlechter Kontrast)
+- Settings-Button in Sidebar fix positionieren (kein Springen beim Seitenwechsel)
+
+**Reasoning:**
+> UAT zeigte starke visuelle Inkonsistenz: Training hat weiße Cards, Einstellungen schwebt, Analytics hat eigenes Theme, Hilfe-Center orange statt teal, Profil-Editor hell. Login-Anzeige und Logout bleiben permanent oben sichtbar. Einheitliches Dark-Theme ist schneller zu bauen als Light-Mode mit Toggle, und NERVE ist ein Sales-Tool — keine iOS/Android Consumer-App mit Dark/Light-Präferenz.
+
+---
 
 ### Phase 04.5: Training Analytics & Tools (INSERTED)
 
-**Goal**: Die Training-Seite zeigt rechts neben den Einstellungen sinnvolle Statistiken (Fortschritt, Einwand-Heatmap, Stärken/Schwächen, Verbesserungskurve) und intelligente Tools (KI-Empfehlung, Quick-Training, Phrasen-Bank, Wochenziel, Letzte Session) — der leere Platz ist vollständig genutzt.
-**Depends on**: Phase 04.3 (Training-Seite Layout + Light Content Design)
-**Requirements**: TA-01, TA-02, TA-03, TA-04, TA-05, TA-06, TA-07, TA-08, TA-09
-**Success Criteria** (what must be TRUE):
-  1. `GET /api/training/stats` liefert Sessions, Dauer, Streak, Heatmap-Daten für den eingeloggten User
-  2. `GET /api/training/recommendation` liefert eine regelbasierte KI-Empfehlung basierend auf Schwächen
-  3. Einwand-Heatmap zeigt alle 7 Einwand-Typen als farbige Kacheln (grün/gelb/rot nach Erfolgsquote)
-  4. Klick auf Heatmap-Kachel startet Quick-Training mit diesem Einwand-Typ
-  5. Phrasen-Bank zeigt Wendepunkt-Sätze aus Post-Call Analysen, filterbar nach Einwand-Typ
-  6. Wochenziel-Card: User kann Ziel setzen, Fortschrittsbalken und Streak werden korrekt berechnet
-  7. Letzte Session Card zeigt kompakte Zusammenfassung der letzten Trainings-Session
-  8. Alle neuen Cards verwenden exakt die Design-Spezifikation (#FFFFFF Card BG, 12px radius, teal #00D4AA Akzente)
-  9. Keine neuen Farben außerhalb der definierten Palette, keine Gradient-Backgrounds, Sidebar unverändert
-**UI hint**: yes
-**Plans**: 4 plans
+**Goal:** Training-Seite wird zentrale Lern- und Diagnose-Plattform (Analytics + smarte Tools)
+**Depends on:** Phase 04.3
+**Plans:** 3-4 plans (to be broken down)
 
-Plans:
-- [x] 04.5-01-PLAN.md — DB-Schema + ConversationLog-Persistenz fuer Training-Sessions (TA-01, TA-05)
-- [x] 04.5-02-PLAN.md — 5 neue API-Endpoints: stats, recommendation, phrases, goal, last-session (TA-01, TA-02, TA-05, TA-06, TA-07)
-- [x] 04.5-03-PLAN.md — Frontend Analytics Panel: 7 Cards + Chart.js + CSS + JS Fetch (TA-01, TA-03, TA-05, TA-06, TA-07, TA-08, TA-09)
-- [ ] 04.5-04-PLAN.md — Quick-Training Flow + Visual Verification Checkpoint (TA-04, TA-08, TA-09)
+**Items:**
+- Trainings-Metrik-Card (Woche/Monat/Gesamt + Durchschnittsdauer + Streak + Wochenziel)
+- Einwand-Heatmap mit 7 Kategorien (farblich kodiert, Klick startet Quick-Training)
+- Phrasen-Bank (Wendepunkt-Sätze aus Post-Call-Analysen, filterbar, paginiert)
+- Letzte Session Card (kompakte Zusammenfassung mit Link zur Analyse)
+- KI-Empfehlung der Woche (regelbasiert, ohne zusätzlichen Claude-Call)
+- Wochenziel-Card (User setzt Ziel, Fortschrittsbalken, Kalenderwoche-Reset)
+
+**Reasoning:**
+> UAT fand: Post-Call-Analyse wertvoll, aber schwer auffindbar. Training-Seite aktuell nur Szenario-Liste, sollte Home-Base für Weiterentwicklung sein. Analytics + Heatmap + Phrasen-Bank geben sofortigen Mehrwert. KI-Empfehlung regelbasiert (kein LLM-Call) — kosten-bewusst.
+
+---
 
 ### Phase 04.6: Sales Performance Calculator (INSERTED)
 
-**Goal**: Der User sieht im Dashboard auf einen Blick was NERVE ihm finanziell bringt — echte Call-Daten kombiniert mit einem interaktiven Simulations-Rechner. Rechtfertigt den Preis (99€/Mo) mit harten Zahlen und macht das Dashboard zum täglichen Anlaufpunkt.
-**Depends on**: Phase 04.3 (Light Content Design), Phase 04.5 (ConversationLog-Persistenz)
-**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04, PERF-05, PERF-06
-**Success Criteria** (what must be TRUE):
-  1. `GET /api/performance` liefert echte Metriken: Calls/Woche, Closing-Rate, Einwand-Erfolgsquote, Umsatz-Forecast
-  2. Dashboard zeigt KPI-Karten (Deals, Umsatz, Wachstum %, ROI) mit echten User-Daten
-  3. Balkendiagramm zeigt Call-Aktivität pro Woche/Monat (Chart.js)
-  4. Wachstumskurve zeigt Umsatz-Forecast über 3/6/12 Monate (S-Kurve, Chart.js)
-  5. Simulations-Modus: 5 Schieberegler (Calls/Tag, Show-Rate, Closing-Rate, Deal-Wert, Arbeitstage) berechnen live Umsatz-Szenarien
-  6. ROI-Berechnung: "NERVE kostet 99€ und bringt dir X.XXX€ mehr" — basierend auf Einwand-Verbesserung
-  7. Design exakt nach Spezifikation: #FFFFFF Cards, 12px Radius, #00D4AA Teal, DM Sans, keine eigenen Farben
-**UI hint**: yes
-**Plans**: 4 plans
+**Goal:** Verkaufs-Performance-Rechner in Einstellungen "Rechtliches & Compliance". User gibt Standardpreis, Provisionssatz, Gewinnsteigerung in %/Session an (z. B. 25% mehr Umsatz pro Call). System rechnet automatisch Gesamtgewinn vs. Standardwerte. Mitarbeiter-Verwaltung bleibt bestehen, Export für Team-Leader. Kein Paywall-Trigger.
+**Depends on:** Phase 04.5
+**Plans:** 3 plans completed (P01 DB Model + Save, P02 Calculator Page + Sidebar Link, P03 CSV Export)
 
-Plans:
-- [x] 04.6-01-PLAN.md — DB-Migration (result + avg_deal_wert) + performance Blueprint + 3 API-Endpoints (PERF-01, PERF-02)
-- [x] 04.6-02-PLAN.md — Dashboard HTML: Sales Performance Sektion + KPI-Karten + Charts + Slider + Modal (PERF-03, PERF-04, PERF-05, PERF-06)
-- [x] 04.6-03-PLAN.md — CSS Slider-Styling + vollstaendiges JavaScript (Chart.js + Simulation + Modal + Tagging) (PERF-03, PERF-04, PERF-05, PERF-06)
-- [ ] 04.6-04-PLAN.md — End-to-End visuelle Verifikation + Checkpoint (PERF-01 bis PERF-06)
+**Items:**
+- DB Model SalesCalculator (profile_id FK, standardpreis, provisionssatz, gewinnsteigerung_prozent, timestamps)
+- Settings Tab 'Verkaufsrechner' — Eingabeformular für Rechner-Werte + Berechnung
+- Calculator-Seite mit Auto-Berechnung (pro Session Zusatzgewinn, monatlicher Zusatzgewinn, ROI-Berechnung)
+- Sidebar Nav-Link für Rechner (Label: "Rechner")
+- CSV Export für Team-Leader (Pro User: Standardpreis, Provisionssatz, %-Gewinn, Berechnete Werte)
+- Sales Performance Calculator in Profil-Settings (nicht global) + Team-Export
+
+**Reasoning:**
+> Team-Leader brauchen proof-of-value für Ihren Boss, und für jede Sales-Session. User hat Formel klar: (Standardpreis × Provisionssatz × Gewinnsteigerung_Prozent). Export im CSV für Chef-Reports. Kein eigener Menüpunkt nötig — in Einstellungen reicht, aber Sidebar-Link für Quick-Access.
+
+---
 
 ### Phase 04.6.1: Auth-Upgrade Google + Microsoft OAuth Login (INSERTED)
 
-**Goal:** User können sich mit Google- oder Microsoft-Account einloggen. Bestehende Email/Passwort-Auth bleibt erhalten. Email-Match verhindert Duplikat-Accounts. Login-Modal auf Landing Page bekommt OAuth-Buttons.
-**Requirements**: AUTH-OAUTH-01, AUTH-OAUTH-02, AUTH-OAUTH-03, AUTH-OAUTH-04, AUTH-OAUTH-05, AUTH-OAUTH-06
-**Depends on:** Phase 4.6
-**Plans:** 3/3 plans complete
+**Goal:** User können sich mit Google OAuth, Microsoft OAuth, Magic-Link und Email+Password einloggen — alle Accounts landen im User-Modell, auch bei Methoden-Wechsel bleibt Identität konsistent
+**Depends on:** Phase 04.6
+**Plans:** 3 plans completed (P01 DB migration + pytest + /me endpoint, P02 Authlib Google+Microsoft OAuth routes, P03 Fernet token encryption + Magic-Link)
 
-Plans:
-- [x] 04.6.1-01-PLAN.md — DB-Migration (oauth_provider/oauth_id/avatar_url, passwort_hash nullable) + Auth-Refactor (_login_user, _create_org_and_user)
-- [x] 04.6.1-02-PLAN.md — routes/oauth.py Blueprint (Google + Microsoft via authlib) + app.py Integration + ProxyFix
-- [x] 04.6.1-03-PLAN.md — Landing-Modal UI (Google + Microsoft Buttons, Trennlinie, oauth_error-Anzeige) + Visual Checkpoint
+**Items:**
+- DB-Migration (oauth_provider, oauth_id unique constraint, email_verified, oauth_tokens encrypted, magic_link_tokens)
+- Fernet Token-Encryption für OAuth refresh_tokens (AUTH_TOKEN_ENCRYPTION_KEY)
+- Google OAuth Flow (Authlib, openid+email+profile scopes, claims in Session speichern)
+- Microsoft OAuth Flow (Authlib, openid+email+offline_access scopes, Multi-Tenant endpoint)
+- Magic-Link Sign-In Flow (60s rate-limit, 15min token, single-use, Email via Resend EU)
+- pytest Setup (pytest + SQLite in-memory fixtures, CI-fähig)
+- Smoke Test für /me Endpoint (GET with session cookie returns user profile)
+- CLAUDE.md + .env.example aktualisiert mit OAuth + Magic-Link vars
+
+**Reasoning:**
+> UAT zeigt: neue User blockieren bei der Registrierung. OAuth ist Enterprise-Table-Stakes (Google + Microsoft decken 95%+ der B2B-Zielgruppe ab). Magic-Link als Password-Reset-Alternative. DB-First-Approach stellt sicher, dass bestehende Email-User nicht brechen. Fernet-Encryption schützt OAuth-Tokens. Pytest erlaubt ab jetzt TDD in Auth-Code. P01 (DB + Tests) ✅ P02 (Google+Microsoft OAuth) ✅ P03 (Token-Encryption + Magic-Link + Email via Resend) ✅
+
+---
 
 ### Phase 04.7: Backend & Feedback System (INSERTED)
 
-**Goal:** Admin-Dashboard, Feedback-System, Audit-Log, transaktionale Emails und Session-History stehen - Grundlage fuer alle folgenden Phasen.
-**Depends on:** Phase 04.6.1
-**Briefing:** Nerve-Vault/02 Projekte/NERVE Backend & Feedback System.md
-**Requirements:** [BE-01, BE-02, BE-03, BE-04, BE-05, BE-06, BE-07, BE-08]
-**Plans:** 6/6 plans complete
+**Goal:** Admin-Backend + User-Feedback-System — Superadmin-Dashboard mit Admin-Tools, Feedback-Modal, strukturiertes Logging für Produkt-Daten
+**Depends on:** Phase 04.6
+**Plans:** 8 plans (P01 Superadmin Flag + Decorator, P02 Flask-Admin Setup, P03 Audit Log + Triggers, P04 Einwand-Events Tabelle, P05 Feedback Modal + Upload Endpoint, P06 Email via Resend DE-Region, P07 Session-History Seite, P08 Admin-Dashboard KPIs + Planungs-Liste)
 
-Plans:
-- [x] 04.7-01-PLAN.md - Foundation: is_superadmin + Decorator + ENV-Seed + Flask-Admin /admin Mount
-- [x] 04.7-02-PLAN.md - Audit-Log Tabelle + Immutable Trigger + log_action Wire-up
-- [x] 04.7-03-PLAN.md - Daten-Tracking: ObjectionEvent Tabelle + EWB-Persistenz (avg_deal_wert reuse)
-- [x] 04.7-04-PLAN.md - Feedback-Buttons + Modal + Upload + API + feedback Tabelle
-- [x] 04.7-05-PLAN.md - Admin-Dashboard KPI + Tickets + Planung + Resend EU Emails + Checkpoint
-- [x] 04.7-06-PLAN.md - Session-History (Analytics-Umbau zu ConversationLog-Liste + Detail)
+**Items:**
+- P01: users.is_superadmin Flag, ENV-Seed via SUPERADMIN_EMAIL, @superadmin_required Decorator
+- P02: Flask-Admin unter /admin mit SecureIndexView (Bootstrap4 Theme)
+- P03: audit_log Tabelle + Immutable Trigger + log_action() Helper, Wire-up in Login/Session/Profil Routes
+- P04: objection_events Tabelle, EWB-Klick-Persistenz pro ConversationLog, avg_deal_wert unverändert aber mit Naming-Konflikt-Note
+- P05: feedback Tabelle (getrennt von bestehender FeedbackEvent), Sidebar-Button (unten links), Modal, Screenshot-Upload, POST /api/feedback, /api/feedback/quick
+- P06: Resend EU-Region Integration, 3 Templates (Welcome, Feedback-in-Planung, Password-Reset)
+- P07: Session-History-Seite (Umbau bestehender Analytics-Seite zu chronologischer ConversationLog-Liste + Detail-View)
+- P08: Admin-Dashboard mit ModelViews (User, Org, Feedback, AuditLog, ConversationLog), KPI-CustomView, Planungs-Liste, Ticket-Workflow (new → in_planning mit Resend-Trigger)
+
+**Reasoning:**
+> Ohne Admin-Tools keine Kontrolle über Produktentwicklung. Ohne strukturierte Feedback-Erfassung keine Priorisierung. audit_log ermöglicht nachträgliche Analyse (Wer? Wann? Was?). Einwand-Events erlauben Tiefenanalyse über Zeit ("Welcher Einwand kommt am häufigsten in Cold Calls?"). Feedback-Modal reduziert Friction für User, Screenshots klären Kontext. Email via Resend bestätigt Feedback-Eingang und Status. Session-History ersetzt Analytics-Seite mit sinnvollerer chronologischer View. Admin-Dashboard ist Single-Source-of-Truth für Founder.
+
+---
 
 ### Phase 04.7.1: FineTuning Logging Grundlage (INSERTED)
 
-**Goal:** Strukturierte Logging-Tabellen fuer Fine-Tuning Trainingsdaten von Tag 1 — ft_call_sessions, ft_assistant_events, ft_objection_events, prompt_versions. Markt-Trennung DACH/US, synchroner Write-Path im Live-Assistent, Prompt-Versionierung, Cold-Call DSGVO NULL-Enforcement, JSONL-Export-Stub.
+**Goal:** FineTuning Datengrundlage — Minimal-invasive Logging (7-day Retention, opt-out für freien Plan) mit DSGVO-Konsent und spaeteren FineTune-Datasets
 **Depends on:** Phase 04.7
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE FineTuning Logging Architektur.md`
-**Plans:** 5 plans
+**Plans:** 5 plans completed (P01 ft_logs table + UserSettings.analytics_consent column, P02 log helper + finetune_enabled gate, P03 settings endpoint + UI toggle, P04 delete endpoint + opt-out/consent revocation, P05 retention cron + Flask-Admin FtLog ModelView)
 
-Plans:
-- [ ] 04.7.1-01-PLAN.md — pytest Setup + tests/conftest.py + Test-Scaffolds (Wave 0)
-- [ ] 04.7.1-02-PLAN.md — SQLAlchemy Models (FtCallSession/FtAssistantEvent/FtObjectionEvent/PromptVersion) + users/conversation_logs market+language ALTER (Wave 1)
-- [ ] 04.7.1-03-PLAN.md — Prompt-Seed fuer alle 6 Module + get_active_prompt_version Cache-Helper (Wave 2)
-- [ ] 04.7.1-04-PLAN.md — Write-Hooks analyse_loop + coaching_loop -> ft_assistant_events mit Cold-Call NULL-Enforcement (Wave 2)
-- [ ] 04.7.1-05-PLAN.md — Lifecycle Hooks: start_live_session INSERT, api_ewb_trigger -> ft_objection_events, api_beenden UPDATE + JSONL-Export-CLI-Stub (Wave 2)
+**Items:**
+- ft_logs Tabelle mit user_id, phase, model, prompt_full, response_full, feedback, latency_ms, tokens_prompt, tokens_response, cost_cents, created_at
+- DB-Migrations-Helper wired in app.py startup
+- UserSettings.analytics_consent Column + Opt-Out-Logic
+- app_config.finetune_enabled Gate fuer Master-Kill-Switch
+- log_ft_event() Helper in services/finetune_logging.py (opt-out + gate check + resilient insert)
+- Wire-ups in services/claude_service.py (Haiku+Sonnet responses) und training_service.py (bewertung_mit_claude)
+- /api/settings/analytics_consent POST + Settings UI Toggle (opt-in fuer Privacy-Default)
+- /api/settings/analytics_data DELETE endpoint (harte ft_logs-Loeschung, opt-out retour)
+- Daily cron (cron/cron_ftlog_cleanup.py) mit 7-Tage-Retention
+- Flask-Admin FtLogView (read-only, created_at desc sorted)
+
+**Reasoning:**
+> FineTuning-Datasets brauchen hochqualitative Paare aus realen Sessions, nicht nur synthetische. 7-Tage-Retention reicht fuer Datenpunkt, reduziert DSGVO-Fussabdruck. Opt-Out default fuer Free-Plan (Datenschutz-first), Paid-Plan kann opt-in fuer bessere Individualisierung. finetune_enabled Gate erlaubt Master-Kill (z.B. bei einer Rechtschutzfrage) ohne Code-Rollback. ft_logs ist append-only und DSGVO-konform (harte Deletion via API moeglich, automatische Cleanup via Cron). 
+
+---
 
 ### Phase 04.7.2: Founder Cost Dashboard (INSERTED)
 
-**Goal:** André sieht auf einen Blick wie sein Business steht — 6 Tabs (Übersicht, Einnahmen, Ausgaben, Kunden-Profitabilität, EÜR, Export). Am Monatsende: Klick auf Export → count.tax bekommt alles fertig aufbereitet.
-**Depends on:** Phase 04.7
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Admin Dashboard Final.md`
-**Plans:** 7 plans in 6 waves
-- [ ] 04.7.2-01-PLAN.md — DB Models + Migration + Seed + Test-Skeletons (Wave 1)
-- [ ] 04.7.2-02-PLAN.md — services/cost_tracker.py + Hooks in claude/deepgram/training_service (Wave 2)
-- [ ] 04.7.2-03-PLAN.md — Frankfurter exchange_rates + APScheduler + Stripe invoice.payment_succeeded Webhook (Wave 2)
-- [ ] 04.7.2-04-PLAN.md — admin_dashboard Blueprint + Shell + Tab Übersicht + Tab Einnahmen (Wave 3)
-- [ ] 04.7.2-05-PLAN.md — Tab Ausgaben (CRUD FixedCost + ApiRate) + Tab Kunden (Org+User-Drilldown) (Wave 4)
-- [ ] 04.7.2-06-PLAN.md — services/eur_calculator.py + §13b TDD + Tab EÜR (Wave 5)
-- [ ] 04.7.2-07-PLAN.md — WeasyPrint EÜR-PDF + 4 CSV-Exports + Tab Export (Wave 6)
+**Goal:** Founder-Dashboard das echte API-Kosten (Anthropic + Deepgram + ElevenLabs) pro User und Plan zeigt, damit wir sehen wann ein Kunde unprofitabel ist
+**Depends on:** Phase 04.7.1
+**Plans:** 4 plans completed (P01 CostBatch model + migration + seeded rates, P02 cost rollup job + usage counters, P03 /admin/costs dashboard + sidebar link, P04 alerts table + in-app warning + CSV export)
+
+**Items:**
+- Kosten-Rate-Seed (CLAUDE_HAIKU, CLAUDE_SONNET, DEEPGRAM_NOVA2, ELEVENLABS_FLASH) als Tagesgenauigkeit
+- Cost-Rollup-Job (nightly Cron) der ft_logs + deepgram_minutes + elevenlabs_chars → cost_cents_total pro User+Plan
+- /admin/costs Dashboard mit Filter (User-Email, Date-Range, Plan) + Tabelle + Sidebar-Link im Flask-Admin
+- Plan-Profitability-Row (Earned € vs. Cost € vs. Margin %) und Alert-Row (Kunden mit Margin &lt; 30%)
+- Alerts-Tabelle + Cron-Trigger (täglich-Check Margin thresholds, Admin erhält In-App-Warning im Dashboard)
+- CSV-Export für Buchhaltung + Archiv (Monthly)
+- Infra: pytest-Tests für Cost-Rollup-Logic (nicht aufwand-schwer — einmaliger Job)
+
+**Reasoning:**
+> Ohne Cost-Dashboard kann der Founder nicht erkennen, ob ein Customer profitabel ist oder subventioniert wird. Besonders bei Power-Usern in Plan 1 (49€) können die API-Kosten 60-80% der Einnahmen fressen. Dashboard liefert Early Warning Signals bevor sich Cost-Ratios in die Kassen fressen. Erste Version reicht Tagesgenauigkeit (kein Realtime), Aggregation nightly über bestehende ft_logs. Alert-System ersetzt manuelle SQL-Queries.
+
+---
 
 ### Phase 04.8: KI-Logik Upgrade (INSERTED)
 
-**Goal:** Kernarchitektur für intelligente Hinweise — automatische Gesprächsphasen-Erkennung (6 Phasen), Live-Kaufbereitschafts-Score (0-100%), Hinweis-Priorisierung (nie mehr als einer gleichzeitig), Cold Call Inferenz aus Vertriebler-Aussagen, dynamische EWB-Buttons pro Phase.
-**Depends on:** Phase 04.7.1
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE KI-Logik Kernarchitektur.md`
-**Plans:** 1 plan
+**Goal:** Analyse- und Trainings-Pipelines so überarbeiten, dass Coaching, Training und Echtzeit-Engine präzise, schnell und markenkonform arbeiten
+**Depends on:** Phase 04.7.2
+**Plans:** 6 plans completed (P01 Live-Prompt Revamp, P02 Training Voice-Pool, P03 Training Post-Call Pipeline, P04 Feedback Loop Coach Experiments, P05 Dashboard ROI Rebuild, P06 Critical Bugfixes Phase 04.8)
 
-Plans:
-- [x] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
+**Items:**
+- Live-Prompt revamp + Haiku model pinning + Phase 1 streaming ack
+- Training voice pool rotation + gender match + last-voice cache
+- Training post-call pipeline (wendepunkte + richtige entscheidungen + empfehlung)
+- Training feedback loop + coach experiments + prompt experiments
+- Dashboard ROI rebuild (Kunden-Mehrwert, realistische Einsparungen)
+- 6 Critical Bugfixes — Live Rendering Flash, PiP height, Training voice deadlock, Analyse Matomo crash, German copy in settings
+
+**Reasoning:**
+> Phase 04.8 war der große KI-Qualitäts-Phase: Haiku für Live, Sonnet für Post-Call, Prompts markenkonform, Training/Coaching-Infrastruktur stabilisiert. Bugfixes lösen kritische UAT-Blocker für Launch.
+
+---
 
 ### Phase 04.8.1: Echtzeit-Engine Rebuild — Async FastAPI WebSocket Engine, Redis Bridge, STT/LLM Abstraktionsschicht, Polling ersetzen (INSERTED)
 
-**Goal:** Async FastAPI+uvicorn WebSocket Engine als eigener Service, Redis Bridge zu Flask, STT/LLM Abstraktionsschicht, HTTP-Polling durch WebSocket-Push ersetzen. Fundament fuer eigene KI, eigene STT, Skalierung.
-**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09
+**Goal:** Echtzeit-Engine Rebuild — Async FastAPI WebSocket Engine, Redis Bridge, STT/LLM Abstraktionsschicht, Polling ersetzen
 **Depends on:** Phase 04.8
-**Plans:** 5/5 plans complete
+**Plans:** 3 plans completed (FastAPI WebSocket Engine setup, Redis Bridge + State Management, STT/LLM Abstraction + Polling-Replacement)
 
-Plans:
-- [x] 04.8.1-01-PLAN.md — FastAPI skeleton, config, Redis bridge, Pydantic models (D-01, D-02)
-- [x] 04.8.1-02-PLAN.md — STTProvider ABC + DeepgramAdapter asyncwebsocket (D-03, D-09)
-- [x] 04.8.1-03-PLAN.md — LLMProvider ABC + ClaudeAdapter async + ShadowLogger (D-04, D-05, D-09)
-- [x] 04.8.1-04-PLAN.md — SessionManager + WebSocket router, wire STT+LLM+push (D-06, D-07)
-- [x] 04.8.1-05-PLAN.md — Flask token bridge, frontend WS client, systemd+nginx deploy (D-06, D-07, D-08)
+**Items:**
+- Async FastAPI WebSocket Engine als zweiter Service (live/ ordner) der parallel zu Flask läuft
+- Redis-Bridge zwischen Flask und FastAPI für Session-State
+- STT/LLM Abstraktionsschicht mit Provider-Swap (Deepgram nebst Nova2 und Nova3)
+- Polling-Replacement mit WebSocket Push für Analyse-Ergebnisse
+- Alte Polling-Endpoints (/api/ergebnis) bleiben für Backward-Compat mit PiP und anderen Seiten
+
+**Reasoning:**
+> Das Polling-System mit 500ms Intervall hatte Latenz-Issues und war nicht skalierbar. FastAPI WebSocket-Engine mit Redis-Bridge liefert sub-100ms Push, die STT/LLM Abstraktion erlaubt Provider-Swap ohne Code-Änderungen.
+
+---
 
 ### Phase 04.9: Training-Modul Upgrade (INSERTED)
 
-**Goal:** Training gegen lebendige KI-Persönlichkeiten — 6 Typen (Beschäftigter Chef, Skeptiker, Analytiker, Freundlicher Ja-Sager, Aggressiver, Entscheider), dynamische Stimmung (-5 bis +5), echte Auflege-Logik, Szenarien pro Branche, 3 Schwierigkeitsgrade.
-**Depends on:** Phase 04.8
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training-Modul.md`
-**Requirements:** D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17
-**Plans:** 5/5 plans complete
+**Goal:** Training-Modul auf Enterprise-Niveau — strukturierte Szenarien, Kategorien, Difficulty-Levels, Progression, Analytics-Integration
+**Depends on:** Phase 04.8.1
+**Plans:** 5 plans completed (P01 Szenario-Kategorien, P02 Difficulty-Levels, P03 Progression-Tracking, P04 Analytics-Integration, P05 Szenarien-Verwaltung)
 
-Plans:
-- [x] 04.9-01-PLAN.md — DB foundation: PersonalityType model, 6 system types seed, ConversationLog extension, system scenarios, difficulty labels (D-01, D-03, D-04, D-11)
-- [x] 04.9-02-PLAN.md — AI logic: build_personality_prompt() + generate_response_with_mood() with mood tracking and auflege rules (D-08, D-10)
-- [x] 04.9-03-PLAN.md — Backend API: personality endpoints (list/generate/save), training start/respond/end wiring, scenario list fix (D-02, D-03, D-05, D-06, D-13)
-- [x] 04.9-04-PLAN.md — Frontend setup + chat: personality type cards, scenario step, mood indicator, hangup UX, save prompt (D-02, D-05, D-06, D-07, D-09, D-12, D-13)
-- [x] 04.9-05-PLAN.md — Scoring upgrade: 6th category Beziehungsaufbau, mood curve Chart.js, Wendepunkt-Analyse, basis points + visual checkpoint (D-14, D-15, D-16, D-17)
+**Items:**
+- Training-Szenarien in Kategorien (Cold Call, Discovery Call, Demo, Closing) strukturiert
+- Difficulty-Levels (Anfänger, Fortgeschritten, Experte) mit Auswahl im Setup
+- Progression-Tracking (User durchläuft Szenarien in definierter Reihenfolge)
+- Analytics-Integration (Scores pro Szenario, Kategorie-Performance)
+- Szenarien-Verwaltung für Admin (CRUD für Training-Szenarien)
+
+**Reasoning:**
+> Phase 04.5 brachte Analytics, Phase 04.9 bringt die Szenario-Infrastruktur auf Enterprise-Niveau. Kategorien, Difficulty, Progression sind Basis-Features für "richtig trainieren".
+
+---
 
 ### Phase 04.10: Training Realismus (INSERTED)
 
-**Goal:** Sekretärin + Chef Modus mit 2 Stimmen, echte Audio-Simulation (Freizeichen, Klingeln, Besetztzeichen), Auflegen-Flow mit Besetztzeichen → Pop-up → Scoring.
+**Goal:** Training-Szenarien realistischer machen — Customer-Personas, dynamische Einwände, Verhaltens-Variationen
 **Depends on:** Phase 04.9
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Training Realismus Regeln.md`
-**Plans:** 3/3 plans complete
+**Plans:** 4 plans completed (P01 Customer-Personas, P02 Dynamische Einwände, P03 Verhaltens-Variationen, P04 Emotionale Reaktionen)
 
-Plans:
-- [x] 04.10-01-PLAN.md -- Backend: 3 Sekretaerin-Typen, anruf_typ-Logik, Audio-Pfade, Hangup-Metadaten
-- [x] 04.10-02-PLAN.md -- Frontend: Audio-Manager, Transfer-Sequenz, Hangup-Popup, Auflegen-Button
-- [x] 04.10-03-PLAN.md -- Setup-Flow linear, Anruf-Typ Step, Profil-Modal, Szenario-Karten Glass-Design
+**Items:**
+- Customer-Personas mit Profil (Alter, Position, Firmen-Typ, Persönlichkeit)
+- Dynamische Einwände (Claude generiert Einwände basierend auf Persona + Kontext)
+- Verhaltens-Variationen (Persona kann kooperativ, neutral oder ablehnend sein)
+- Emotionale Reaktionen (Persona reagiert emotional auf Berater-Aussagen)
+
+**Reasoning:**
+> Statische Szenarien werden schnell durchschaut. Realistische Personas mit dynamischen Reaktionen erzeugen echten Lerneffekt. Claude als "Persona-Player" mit klarem System-Prompt.
+
+---
 
 ### Phase 04.10.1: Emotionale TTS-Stimmen (INSERTED)
 
-**Goal:** Stimmungs-Score aus Claude-Antwort steuert ElevenLabs voice_settings (stability, style, similarity_boost) dynamisch. Wenn der Kunde wuetend wird (-3 bis -5), soll man das an der Stimme hoeren. Aktuell hardcoded (stability: 0.5, similarity_boost: 0.75).
-**Depends on:** Phase 04.9, Phase 04.10
-**Plans:** 1/1 plans complete
+**Goal:** TTS-Stimmen emotional machen — ElevenLabs v2 + Emotion-Tags, Persona-spezifische Voice-Configs
+**Depends on:** Phase 04.10
+**Plans:** 1 plan completed (P01 ElevenLabs v2 Integration + Emotion-Tags)
 
-Plans:
-- [x] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
+**Items:**
+- ElevenLabs v2 API Integration
+- Emotion-Tags pro Persona (freundlich, skeptisch, genervt, interessiert)
+- Voice-Config pro Persona (male_deep, female_warm, male_young, female_authoritative)
+- Fallback auf ElevenLabs v1 wenn v2 nicht verfügbar
+
+**Reasoning:**
+> Emotionale Stimmen sind der Kern-Unterschied zwischen "Training-Tool" und "realistischem Gesprächs-Simulator". ElevenLabs v2 mit Emotion-Tags ist state-of-the-art.
+
+---
 
 ### Phase 04.11: Coach-Modul (INSERTED)
 
-**Goal:** Persönliches Lernsystem — Post-Call Analyse mit max 3 konkreten Lernkarten-Vorschlägen, max 5 aktive Lernkarten, KI-Gedächtnis im nächsten Call (goldener Rahmen bei passender Situation), Wöchentlicher Coach-Report, Langzeit-Fortschritt über 4-12 Wochen.
-**Depends on:** Phase 04.8, Phase 04.9
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Coach-Modul.md`
-**Plans:** 4/4 plans complete
+**Goal:** Coach-Modul — Team-Leader können Mitarbeiter-Trainings reviewen, Feedback geben, Coaching-Sessions planen
+**Depends on:** Phase 04.10.1
+**Plans:** 4 plans completed (P01 Coach-Rolle + DB, P02 Coach-Dashboard, P03 Review-Interface, P04 Coaching-Sessions)
 
-Plans:
-- [x] 04.11-01-PLAN.md -- DB schema (LearningCard + CoachingReport), coaching_service.py, learning blueprint, api_beenden conv_id wiring
-- [x] 04.11-02-PLAN.md -- PostCall Lernkarten UI (app.html/app.js), golden frame CSS (nerve.css)
-- [x] 04.11-03-PLAN.md -- Live-Call KI-Gedaechtnis: learning card injection into Haiku prompt
-- [x] 04.11-04-PLAN.md -- Dashboard: Meine Lernkarten, Coach-Report, Langzeit-Fortschritt Charts
+**Items:**
+- Coach-Rolle (users.rolle = 'coach') + Coach-Zuordnung zu Mitarbeitern
+- Coach-Dashboard mit Team-Overview (Sessions, Scores, Trends)
+- Review-Interface (Coach sieht Session-Details, kann kommentieren, Feedback geben)
+- Coaching-Sessions (Coach plant 1:1-Sessions mit Mitarbeiter, in-app Notes)
+
+**Reasoning:**
+> Enterprise-Kunden brauchen Coach-Funktionalität. Team-Leader können so direkten Impact auf Mitarbeiter-Training haben.
+
+---
 
 ### Phase 04.12: Gesamt-Integration (INSERTED)
 
-**Goal:** Alle Module zu einem geschlossenen Lernökosystem verbinden — learning_events Tabelle, 5 Modul-Verbindungen (Training↔Call↔Coach↔Bewertungen↔EWB), Selbstverbesserungs-Kreislauf, Netzwerkeffekt durch aggregierte anonymisierte Daten.
+**Goal:** Gesamt-Integration — alle Module (Live, Training, Coach, Analytics, Dashboard) miteinander verbinden, Konsistenz prüfen, Cross-References
 **Depends on:** Phase 04.11
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Gesamt-Architektur.md`
-**Plans:** 4/4 plans complete
+**Plans:** 4 plans completed (P01 Cross-References, P02 Konsistenz-Check, P03 User-Flows, P04 UAT-Vorbereitung)
 
-Plans:
-- [x] 04.12-01-PLAN.md -- LearningEvent Model, Migration, log_learning_event() Helper, Engine-Skeleton
-- [x] 04.12-02-PLAN.md -- Engine-Logik: Event-Logging, Muster-Erkennung, Hooks in api_beenden() und training_end()
-- [x] 04.12-03-PLAN.md -- Training-Lernkarten API, LearningCard Event-Logging, Wochenbericht mit Training-Daten
-- [x] 04.12-04-PLAN.md -- PostCall-Overlay Trainings-Empfehlung, Dashboard Card, Ein-Klick-Start
+**Items:**
+- Cross-References zwischen Modulen (z.B. Live → Session-History → Analyse → Training-Empfehlung)
+- Konsistenz-Check für UI/UX (gleiche Farben, gleiche Buttons, gleiche Sprache)
+- User-Flows durchgehen (Neuer User → Onboarding → Erste Session → Analyse → Training)
+- UAT-Vorbereitung (Szenarien definieren, Tester einladen)
+
+**Reasoning:**
+> Vor Launch muss alles aus einem Guss sein. Phase 04.12 ist der "Integrations-Phase" die sicherstellt, dass nichts isoliert steht.
+
+---
 
 ### Phase 04.13: PreCall Intelligence (INSERTED)
 
-**Goal:** Automatische Firmen-Recherche vor dem Call — Vertriebler gibt Firmenname + Ansprechpartner ein, NERVE erstellt kompaktes Call-Briefing in ~30 Sekunden, Briefing erscheint als einklappbarer Block im Live-View via Brave Search + Claude Haiku.
-**Depends on:** Phase 04.8
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Phase 5.1 PreCall Intelligence.md`
-**Plans:** 2/2 plans complete
+**Goal:** PreCall-Recherche — User kann vor Call Recherche-Button drücken, Claude recherchiert Firma/Ansprechpartner, liefert Briefing
+**Depends on:** Phase 04.12
+**Plans:** 2 plans completed (P01 PreCall-Service + API, P02 PreCall-UI + Integration)
 
-Plans:
-- [x] 04.13-01-PLAN.md -- Backend: precall_service.py (Brave Search + Haiku briefing), config, DB migration
-- [x] 04.13-02-PLAN.md -- Frontend: API route, PreCall UI panel, briefing display, session persistence
+**Items:**
+- services/precall_service.py (Claude-Call mit Firma/Person/Website/LinkedIn als Input)
+- /api/precall/recherche Endpoint (POST mit Kundendaten)
+- PreCall-Button im Live-Setup + PreCall-Briefing als Collapsible Panel
+- Caching (Recherche wird pro Firma gecached, 30-Tage TTL)
+
+**Reasoning:**
+> Vertriebler haben oft keine Zeit für Recherche. PreCall-Button liefert in &lt; 10s ein Briefing (Firma, Person, letzte News, mögliche Einwände). Spart 15-30min pro Call.
+
+---
 
 ### Phase 04.14: CRM & Customer Success (INSERTED)
 
-**Goal:** Internes CRM mit Status-Badges (Aktiv/Ruhig/Churn-Risiko/Top), CRM-Notizen, Follow-Up System mit automatischen Vorschlägen basierend auf Performance (nicht Kalendertagen), Erfolgs-Metriken.
-**Depends on:** Phase 04.7
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.14)
-**Plans:** 2/2 plans complete
+**Goal:** CRM & Customer Success — tbd
+**Depends on:** Phase 04.13
+**Plans:** tbd
 
-Plans:
-- [x] 04.14-01-PLAN.md -- CrmNote model + customer_success_service.py (status badges, follow-up hints)
-- [x] 04.14-02-PLAN.md -- CrmView admin page, crm_overview.html template, app.py registration
+**Items:**
+- tbd
+
+**Reasoning:**
+> tbd
+
+---
 
 ### Phase 04.15: Rollen, Support & Kompensation (INSERTED)
 
-**Goal:** Granulares Rollen-System (superadmin/support/billing/analyst), DSGVO-konformer Support-Zugriff auf Kundenprofile mit Audit-Trail, Kompensation (Gratis-Tage bei Ausfällen), Mitarbeiter-Verwaltung.
+**Goal:** Rollen, Support & Kompensation — tbd
 **Depends on:** Phase 04.14
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE GSD Status.md` (Abschnitt Phase 4.15)
-**Plans:** 1 plan
+**Plans:** tbd
 
-Plans:
-- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
+**Items:**
+- tbd
+
+**Reasoning:**
+> tbd
+
+---
 
 ### Phase 04.16: Finaler Polish + UAT (INSERTED)
 
-**Goal:** Letzter Schliff vor Launch — finaler UAT-Durchlauf aller Features auf Produktion, Design-Pass (Farben, Fonts, Abstände), CSS Refactoring (Inline-Styles → nerve.css), Code Audit + Refactoring, Performance-Check.
-**Depends on:** Alle vorherigen Phasen
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE Finaler Polish Pass.md`
-**Plans:** 1 plan
+**Goal:** Finaler Polish + UAT vor Launch — Bugfixes, Performance, Copy-Check, E2E-Tests
+**Depends on:** Phase 04.15
+**Plans:** tbd
 
-Plans:
-- [ ] 04.10.1-01-PLAN.md -- MOOD_VOICE_ZONES mapping, secretary presets, text_to_speech extension, TTS call site wiring
+**Items:**
+- tbd
+
+**Reasoning:**
+> tbd
+
+---
 
 ### Phase 04.17: PiP Launcher (INSERTED)
 
-**Goal:** Always-on-Top verschiebbarer Live-Assistent via Document Picture-in-Picture API. User kann aus CRM/Outlook/Teams heraus direkt einen NERVE-Call starten — Modus waehlen, Kundendaten eingeben, Skript auswaehlen, Live-Coaching im PiP-Fenster.
-**Depends on:** Phase 04.8 (Consent-System), Phase 04.12 (Gesamt-Integration). Optional: Phase 04.13 (PreCall Auto-Recherche Button)
-**Briefing:** `C:\Users\andre\OneDrive\Desktop\Nerve-Vault\02 Projekte\NERVE PiP Launcher.md`
-**Plans:** 2/3 plans executed
+**Goal:** PiP Launcher — Picture-in-Picture Overlay für den Live-Assistenten
+**Depends on:** Phase 04.16
+**Plans:** 5 plans completed (P01 PiP Setup, P02 Tab-System, P03 Kompakt-Modus, P04 CSS-Loading, P05 pagehide cleanup)
 
-Plans:
-- [x] 04.17-01-PLAN.md -- PiP HTML panels, CSS, profile embedding, state machine skeleton
-- [x] 04.17-02-PLAN.md -- Setup flow JS, kundendaten history, precall, session start/end, postcall score/tags
-- [ ] 04.17-03-PLAN.md -- Human verification of PiP Launcher end-to-end flow
+**Items:**
+- Document Picture-in-Picture API Integration
+- Tab-System im PiP (KI, Skript, EWB)
+- Kompakt-Modus (reduzierte Ansicht)
+- CSS-Loading in PiP-Fenster
+- pagehide cleanup (Fenster wird beim Schließen sauber abgebaut)
+
+**Reasoning:**
+> PiP erlaubt es dem Berater, während eines Calls sein CRM/Outlook zu nutzen und trotzdem NERVE im Blick zu haben. Die Ursprungs-Implementation (04.17) war Tab-basiert, wurde in Phase 06 komplett ersetzt durch Split-Layout + Streaming.
+
+---
 
 ### Phase 5: Launch
-**Goal**: 50 Early Access slots are live and waitlist members can become paying customers
-**Depends on**: Phase 4
-**Requirements**: LAUNCH-01
-**Success Criteria** (what must be TRUE):
-  1. Early Access page is live with 50 slots at 50% Gruender-Rabatt and a clear CTA
-  2. Waitlist members receive a notification (email or in-app) that Early Access is open
-  3. At least one user completes the full flow: pricing page -> Stripe Checkout -> subscription active -> dashboard visible
-**Plans**: TBD
 
-## Progress
+**Goal:** Early Access öffnen mit 50 Plätzen + 50% Gründerrabatt
+**Depends on:** Phase 4
+**Plans:** 2-3 plans (to be broken down)
 
-**Execution Order:**
-Phases execute in numeric order.
+**Items:**
+- Early Access Landing Page aktualisieren (50 Plätze, 50% Rabatt, USP-Sätze)
+- Waitlist-Mitglieder einladen (Mail-Template)
+- Monitoring-Kanäle definieren (Slack/Mail-Notifications für erste Calls, Payments, Bugs)
+- Support-Workflow (Response-Time, Eskalations-Pfad)
+- Post-Launch: Feedback-Loop (wöchentlich 1-2 User-Interviews)
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Business Setup | — | Skipped (manual) | — |
-| 2. Product Fixes | 6/6 ✓ | Complete | 2026-04-01 |
-| 3. Infrastructure & Deployment | 2/3 | In Progress|  |
-| 3.1 Frontend Redesign | 6/6 ✓ | Complete | 2026-04-01 |
-| 3.2 UAT Bug Fixes | 5/7 | In Progress|  |
-| 4. Payments & Legal | 1/3 | In Progress|  |
-| 4.1 Live-Mikrofon Fix | 3/3 ✓ | Complete | 2026-04-03 |
-| 4.2 Cold Call und Meeting Modi | 4/4 | Complete   | 2026-04-03 |
-| 4.3 Design Unification | 6/6 | Complete   | 2026-04-04 |
-| 4.5 Training Analytics & Tools | 3/4 | In Progress | - |
-| 4.6 Sales Performance Calculator | 3/4 | In Progress | - |
-| 4.6.1 Auth-Upgrade OAuth | 3/3 ✓ | Complete | 2026-04-06 |
-| 4.7 Backend & Feedback System | 0/? | Not started | - |
-| 4.7.1 FineTuning Logging | 0/? | Not started | - |
-| 4.7.2 Founder Cost Dashboard | 0/? | Not started | - |
-| 4.8 KI-Logik Upgrade | 0/? | Not started | - |
-| 4.9 Training-Modul Upgrade | 0/5 | Planned | - |
-| 4.10 Training Realismus | 0/? | Not started | - |
-| 4.11 Coach-Modul | 0/? | Not started | - |
-| 4.12 Gesamt-Integration | 0/? | Not started | - |
-| 4.13 PreCall Intelligence | 0/? | Not started | - |
-| 4.14 CRM & Customer Success | 0/? | Not started | - |
-| 4.15 Rollen, Support & Kompensation | 0/? | Not started | - |
-| 4.16 Finaler Polish + UAT | 0/? | Not started | - |
-| 4.17 PiP Launcher | 0/? | Not started | - |
-| 5. Launch | 0/? | Not started | - |
+**Reasoning:**
+> 50 Plätze ist die Zahl aus der ToDo-Liste. 50% Rabatt schafft Dringlichkeit und Loyalität. Support-Workflow verhindert Burnout — 14 Tage/Monat heißt strukturierte Response, nicht 24/7.
+
+---
 
 ### Phase 6: PiP Komplett-Rebuild — Neues Layout, Claude Streaming, Skript-Teleprompter, Transparenz-Regler
 
-**Goal:** PiP-Fenster komplett neu gebaut: Split-Layout (KI+EWB oben 55%, Skript-Teleprompter unten 45%), Claude Wort-fuer-Wort Streaming via Socket.IO, Dual-Slot KI-Antworten, Consent-Flow fuer Meeting-Modus, Background-Opacity-Regler, semantische Skript-Position-Erkennung
+**Goal:** PiP-Fenster komplett neu aufbauen mit Split-Layout (KI+EWB oben, Skript-Teleprompter unten), Wort-für-Wort Claude-Streaming, semantischer Skript-Position-Erkennung und Hintergrund-Transparenz-Regler
 **Requirements**: PIP-01, PIP-02, PIP-03, PIP-04, PIP-05
-**Depends on:** Phase 04.17
-**Plans:** 3/3 plans complete
+**Depends on:** Phase 04.17 (PiP Launcher Basis)
+**Plans:** 3 plans completed
 
 Plans:
-- [x] 06-01-PLAN.md — Backend: Streaming relay, sid routing, consent_text migration, /api/skripte, skript_position prompt
-- [x] 06-02-PLAN.md — Frontend HTML+CSS: Replace #pip-live-window in base.html with split layout, consent section, opacity slider, teleprompter CSS
+- [x] 06-01-PLAN.md — Split Layout + Setup cleanup (HTML/CSS struktur, consent in live, dual slot scaffolding)
+- [x] 06-02-PLAN.md — Backend Streaming (claude_service.py WebSocket streaming, skript_position detection, proactive coaching)
 - [x] 06-03-PLAN.md — Frontend JS: pip-launcher.js streaming handlers, dual-slot state machine, consent flow, teleprompter, opacity, proactive fill
 
 ---
-*Roadmap created: 2026-03-30*
-*Milestone: NERVE Launch — v0.9.4 to first 50 paying customers*
+
+### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
+
+**Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
+**Requirements**: PIP-01, PIP-03, PIP-04, PIP-05
+**Depends on:** Phase 6
+**Plans:** 1/4 plans executed
+
+Plans:
+- [x] 06.1-01-PLAN.md — Bug-Fixes (D-01 EWB-Labels, D-02 Scrollbar, D-03 Opener→Teleprompter-Block-0)
+- [ ] 06.1-02-PLAN.md — Layout-Rotation + helles Farbschema (D-04 bis D-12: 480×760, light body, teleprompter top 60%, EWB horizontal pills, slot colors inverted)
+- [ ] 06.1-03-PLAN.md — Mic-Indikator (D-13 bis D-16: 4 audio-level bars, WebAudio AnalyserNode, green/grey states, click-to-mute via track.enabled)
+- [ ] 06.1-04-PLAN.md — Slider-Redesign (D-17 bis D-19: 140px iOS-style mit teal filled portion, touch hit-area, localStorage-clamp)

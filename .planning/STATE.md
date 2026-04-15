@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-04-14T18:40:00.334Z"
-last_activity: 2026-04-14
+status: executing
+stopped_at: Completed 06.1-01-PLAN.md
+last_updated: "2026-04-15T10:08:20.061Z"
+last_activity: 2026-04-15
 progress:
-  total_phases: 31
+  total_phases: 32
   completed_phases: 21
-  total_plans: 118
-  completed_plans: 108
-  percent: 92
+  total_plans: 122
+  completed_plans: 109
+  percent: 89
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 06 — PiP Komplett-Rebuild
+**Current focus:** Phase 06.1 — pip-uat-fixes-bugs-farben-proportionen-mic-indikator-slider
 
 ## Current Position
 
-Phase: 06 (PiP Komplett-Rebuild) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-04-14
+Phase: 06.1 (pip-uat-fixes-bugs-farben-proportionen-mic-indikator-slider) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-15
 
 **Next:** Discuss/plan Phase 04.13
 
@@ -136,6 +136,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06 P03 | 20 | 3 tasks | 3 files |
 | Phase 06 P02 | 8 | 2 tasks | 1 files |
 | Phase 06 P03 | 13 | 1 tasks | 1 files |
+| Phase 06.1 P01 | 15 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -309,6 +310,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Tab system fully removed from pip-live-window; replaced with split 55/45 KI/teleprompter layout in base.html
 - [Phase 06]: Polling fully removed in pip-launcher.js — Socket.IO streaming (pip_stream_start/pip_token/pip_token_done) handles all AI results in Phase 06 split layout
 - [Phase 06]: EWB _triggerEwb keeps POST to /api/analyse_line but drops .then() handler — streaming events deliver results instead
+- [Phase 06.1]: EWB-Fallback startet mit e.kategorie (Profile-Editor-Format) vor e.typ/e.name/e.einwand
+- [Phase 06.1]: Opener wandert vollstaendig in Teleprompter als Block 0 — keine Slot-A-Zuweisung mehr
+- [Phase 06.1]: Scrollbar-Farbe rgba(0,0,0,0.15) bereits auf hellen Body (Plan 02) vorbereitet
 
 ### Roadmap Evolution
 
@@ -321,6 +325,7 @@ Recent decisions affecting current work:
 - Phase 04.6.2 inserted after Phase 04.6.1: deploy hardening and oauth polish (URGENT) — gehört zum Auth-Block (completed 2026-04-07: tar-over-ssh deploy, header→app.getnerve.app link, MS Consumer-tenant block + conditional prompt=consent, onboarding diagnostic logging)
 - Phase 04.8.1 inserted after Phase 04.8: Echtzeit-Engine Rebuild — Split-Architektur (URGENT) — Async FastAPI+uvicorn WebSocket Engine als eigener Service, Redis Bridge zu Flask, STT/LLM Abstraktionsschicht, HTTP-Polling durch WebSocket-Push ersetzen. Fundament für eigene KI, eigene STT, Skalierung.
 - Phase 6 added: PiP Komplett-Rebuild — Neues Layout (EWB+KI oben, Skript-Teleprompter unten), Claude Streaming, semantische Skript-Position-Erkennung, Transparenz-Regler. Ersetzt bestehenden PiP-Code.
+- Phase 06.1 inserted after Phase 06: PiP UAT-Fixes — Bugs (EWB `[object Object]`, Scrollbar, Opener belegt Slot), Design (Farben umkehren, Mic-Indikator, Opacity-Slider), Proportionen (Teleprompter größer, EWB kompakter) (URGENT)
 
 ### Pending Todos
 
@@ -360,6 +365,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-14T18:40:00.329Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-04-15T10:08:20.055Z
+Stopped at: Completed 06.1-01-PLAN.md
 Resume file: None
