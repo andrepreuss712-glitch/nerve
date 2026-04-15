@@ -241,6 +241,13 @@
 #pip-opacity-slider{width:140px;height:4px;-webkit-appearance:none;appearance:none;border-radius:2px;outline:none;cursor:pointer;background:linear-gradient(to right,#00D4AA 0%,#00D4AA var(--pip-slider-pct,100%),rgba(255,255,255,0.2) var(--pip-slider-pct,100%),rgba(255,255,255,0.2) 100%)}
 #pip-opacity-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#ffffff;border:none;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer}
 #pip-opacity-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#ffffff;border:none;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer}
+/* D-13: Mic-Indikator — 4 Balken, klickbar als Mute-Toggle */
+.pip-mic-indicator{display:inline-flex;align-items:flex-end;gap:2px;height:20px;width:28px;padding:2px 3px;background:transparent;border:none;cursor:pointer;border-radius:4px;transition:background 150ms,opacity 200ms}
+.pip-mic-indicator:hover{background:rgba(0,212,170,0.12)}
+.pip-mic-bar{display:inline-block;width:4px;background:#00D4AA;border-radius:1px;height:15%;transition:height 60ms linear,background 200ms}
+/* D-14: Muted-State — Balken grau + flach + Button-Opacity */
+.pip-mic-indicator.pip-mic-muted .pip-mic-bar{background:#6B7280}
+.pip-mic-indicator.pip-mic-muted{opacity:0.6}
 /* Proactive slot states */
 .pip-slot-phase .pip-slot-label::before{content:''}
 .pip-slot-kb{font-family:'JetBrains Mono',monospace;font-size:12px}
@@ -306,7 +313,14 @@
       <span class="pip-mode-badge" id="nlp-mode-badge">Cold Call</span>
       <span class="pip-timer" id="nlp-timer">00:00</span>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <!-- D-13: Mic-Indikator — 4 animierte Balken, klickbar als Mute-Toggle -->
+      <button class="pip-mic-indicator" id="pip-mic-indicator" title="Mikrofon stumm schalten" aria-label="Mic Toggle" style="display:none">
+        <span class="pip-mic-bar" id="pip-mic-bar-0"></span>
+        <span class="pip-mic-bar" id="pip-mic-bar-1"></span>
+        <span class="pip-mic-bar" id="pip-mic-bar-2"></span>
+        <span class="pip-mic-bar" id="pip-mic-bar-3"></span>
+      </button>
       <span class="pip-opacity-label" id="pip-opacity-label" style="display:none">BG</span>
       <input type="range" id="pip-opacity-slider" min="10" max="100" step="5" value="100" style="display:none">
     </div>
