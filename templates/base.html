@@ -570,7 +570,7 @@ function setLanguage(code, e) {
 }
 </script>
 {% if g.user %}
-<script src="{{ url_for('static', filename='pip-launcher.js') }}"></script>
+<script src="{{ url_for('static', filename='pip-launcher.js') }}?v={{ static_mtime('pip-launcher.js') }}"></script>
 {% endif %}
 {% block scripts %}{% endblock %}
 {% if g.user %}

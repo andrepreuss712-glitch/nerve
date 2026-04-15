@@ -933,28 +933,48 @@
   }
 
   function _wirePipButtons(pipWindow) {
-    // 06.1-r2 BUG-7: Beenden via addEventListener statt onclick — PiP-Document-robust.
-    var beendenBtn = pipWindow.document.getElementById('nlp-btn-beenden');
-    if (beendenBtn) {
-      beendenBtn.addEventListener('click', function (ev) {
+    // 06.1-r2 round3: EVENT-DELEGATION am pip-Document-Level — bulletproof gegen
+    // alle DOM-Re-Renders und PiP-Context-Quirks. EIN Listener faengt alle Klicks
+    // auf Beenden und EWB-Buttons per .closest()-Matching.
+    pipWindow.document.addEventListener('click', function (ev) {
+      var t = ev.target;
+      if (!t || typeof t.closest !== 'function') return;
+
+      var beenden = t.closest('#nlp-btn-beenden');
+      if (beenden) {
         ev.preventDefault();
         ev.stopPropagation();
-        console.log('[NerveLauncher] Beenden click');
-        endCall();
-      });
-    }
+        console.log('[NerveLauncher] Beenden click (delegation)');
+        try { endCall(); } catch (e) { console.error('[NerveLauncher] endCall err:', e); }
+        return;
+      }
 
-    // Next call (postcall)
-    var nextBtn = pipWindow.document.getElementById('nlp-btn-next-call');
-    if (nextBtn) nextBtn.onclick = function () { nextCall(); };
+      var ewb = t.closest('.pip-ewb-btn');
+      if (ewb) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var typ = ewb.getAttribute('data-typ');
+        console.log('[NerveLauncher] EWB click (delegation):', typ);
+        ewb.classList.add('pip-ewb-flashing');
+        setTimeout(function () { ewb.classList.remove('pip-ewb-flashing'); }, 400);
+        try { _triggerEwb(typ, ewb); } catch (e) { console.error('[NerveLauncher] EWB err:', e); }
+        return;
+      }
 
-    // Details (postcall)
-    var detailsBtn = pipWindow.document.getElementById('nlp-btn-details');
-    if (detailsBtn) detailsBtn.onclick = function () { showDetails(); };
+      var mic = t.closest('#pip-mic-indicator');
+      if (mic) {
+        ev.preventDefault();
+        _toggleMicMute();
+        return;
+      }
 
-    // D-15: Mic-Mute-Toggle
-    var micBtn = pipEl('pip-mic-indicator');
-    if (micBtn) micBtn.onclick = function () { _toggleMicMute(); };
+      var nextBtn = t.closest('#nlp-btn-next-call');
+      if (nextBtn) { ev.preventDefault(); nextCall(); return; }
+
+      var detailsBtn = t.closest('#nlp-btn-details');
+      if (detailsBtn) { ev.preventDefault(); showDetails(); return; }
+    }, true);  // capture phase — vor allen anderen Handlern
+    console.log('[NerveLauncher] PiP click-delegation wired');
   }
 
   function _initPipLive() {
@@ -1058,18 +1078,8 @@
       return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(typ) + '">' + escHtml(typ) + '</button>';
     }).join('');
     row.innerHTML = html;
-    row.querySelectorAll('.pip-ewb-btn').forEach(function (btn) {
-      btn.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        var typ = btn.getAttribute('data-typ');
-        console.log('[NerveLauncher] EWB click:', typ);
-        // 06.1-r2 DESIGN-7: Kurz teal aufblitzen, danach zurueck — Klick-Feedback
-        btn.classList.add('pip-ewb-flashing');
-        setTimeout(function () { btn.classList.remove('pip-ewb-flashing'); }, 400);
-        _triggerEwb(typ, btn);
-      });
-    });
+    // Klicks werden ueber Event-Delegation im pip-Document gefangen (_wirePipButtons),
+    // daher hier keine per-Button Listener mehr — ueberleben damit jedes innerHTML-Reset.
   }
 
   function _triggerEwb(typ, btn) {
@@ -1419,6 +1429,7 @@
 
     fetch('/api/beenden', {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_mode: state.mode || 'cold_call',

@@ -55,6 +55,16 @@ def de_currency_filter(value):
 
 app.jinja_env.filters['de_currency'] = de_currency_filter
 
+# 06.1-r2: Cache-Bust fuer Static-Files — Template ruft static_mtime('pip-launcher.js')
+# auf, bekommt die mtime als Integer zurueck, Browser holt bei Aenderung neu.
+def _static_mtime(filename):
+    import os
+    try:
+        return str(int(os.path.getmtime(os.path.join(app.static_folder, filename))))
+    except Exception:
+        return '0'
+app.jinja_env.globals['static_mtime'] = _static_mtime
+
 # ── Initialize DB ─────────────────────────────────────────────────────────────
 init_db(engine)
 
