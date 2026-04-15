@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06.1-01-PLAN.md
-last_updated: "2026-04-15T10:08:20.061Z"
+stopped_at: Completed 06.1-02-PLAN.md
+last_updated: "2026-04-15T10:12:29.985Z"
 last_activity: 2026-04-15
 progress:
   total_phases: 32
   completed_phases: 21
   total_plans: 122
-  completed_plans: 109
-  percent: 89
+  completed_plans: 110
+  percent: 90
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 06.1 (pip-uat-fixes-bugs-farben-proportionen-mic-indikator-slider) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-15
 
@@ -137,6 +137,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06 P02 | 8 | 2 tasks | 1 files |
 | Phase 06 P03 | 13 | 1 tasks | 1 files |
 | Phase 06.1 P01 | 15 | 3 tasks | 2 files |
+| Phase 06.1 P02 | 10 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -313,6 +314,8 @@ Recent decisions affecting current work:
 - [Phase 06.1]: EWB-Fallback startet mit e.kategorie (Profile-Editor-Format) vor e.typ/e.name/e.einwand
 - [Phase 06.1]: Opener wandert vollstaendig in Teleprompter als Block 0 — keine Slot-A-Zuweisung mehr
 - [Phase 06.1]: Scrollbar-Farbe rgba(0,0,0,0.15) bereits auf hellen Body (Plan 02) vorbereitet
+- [Phase 06.1]: PiP-Default-Groesse 480x760: mehr Teleprompter-Bloecke sichtbar auf 1080p neben CRM
+- [Phase 06.1]: Header explizit #0D1117 statt var(--page-bg) damit er unabhaengig vom Body-Scheme dunkel bleibt
 
 ### Roadmap Evolution
 
@@ -365,6 +368,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-15T10:08:20.055Z
-Stopped at: Completed 06.1-01-PLAN.md
+Last session: 2026-04-15T10:12:29.979Z
+Stopped at: Completed 06.1-02-PLAN.md
 Resume file: None
