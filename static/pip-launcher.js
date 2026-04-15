@@ -1342,28 +1342,44 @@
     _renderTeleprompterBlocks(newIdx);
   }
 
+  // D-17: iOS-style Slider Fill — setzt --pip-slider-pct auf dem input-Element
+  function _updateSliderFill(slider) {
+    if (!slider) return;
+    var min = parseFloat(slider.min) || 0;
+    var max = parseFloat(slider.max) || 100;
+    var val = parseFloat(slider.value);
+    if (!isFinite(val)) val = max;
+    var pct = ((val - min) / (max - min)) * 100;
+    pct = Math.min(100, Math.max(0, pct));
+    slider.style.setProperty('--pip-slider-pct', pct + '%');
+  }
+
   function _initOpacitySlider() {
     var slider = pipEl('pip-opacity-slider');
     if (!slider) return;
-    // Load from localStorage (D-17)
-    var saved = 1.0;
-    try { saved = parseFloat(localStorage.getItem('nerve_pip_opacity') || '1'); } catch (e) {}
-    if (isNaN(saved) || saved < 0.1) saved = 0.1;
-    if (saved > 1) saved = 1;
-    state.pipBgOpacity = saved;
-    slider.value = Math.round(saved * 100);
-    _setPipBgOpacity(saved);
+    // D-17 JS: Clamp gespeicherten Wert auf [10, 100] (T-06.1-03 Mitigation gegen getampertes localStorage)
+    var stored = null;
+    try { stored = localStorage.getItem('nerve_pip_opacity'); } catch (e) {}
+    var parsed = parseInt(stored, 10);
+    if (!isFinite(parsed)) parsed = 100;
+    parsed = Math.min(100, Math.max(10, parsed));
+    slider.value = String(parsed);
+    _setPipBgOpacity(parsed / 100);
+    _updateSliderFill(slider);  // D-17: initial fill-pct setzen
 
     // D-16: input event for live feedback
     var debounceTimer = null;
     slider.addEventListener('input', function () {
-      var val = parseInt(slider.value) / 100;
-      state.pipBgOpacity = val;
-      _setPipBgOpacity(val);
+      var v = parseInt(slider.value, 10);
+      if (!isFinite(v)) v = 100;
+      v = Math.min(100, Math.max(10, v));
+      state.pipBgOpacity = v / 100;
+      _setPipBgOpacity(v / 100);
+      _updateSliderFill(slider);  // D-17: fill-pct bei jedem Move updaten
       // Debounce localStorage write (200ms)
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(function () {
-        try { localStorage.setItem('nerve_pip_opacity', String(val)); } catch (e) {}
+        try { localStorage.setItem('nerve_pip_opacity', String(v)); } catch (e) {}
       }, 200);
     });
   }
