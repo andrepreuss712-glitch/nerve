@@ -62,6 +62,12 @@ tar "${TAR_EXCLUDES[@]}" -cf - ./ | \
 
 ssh -i ~/.ssh/nerve_vps "$VPS_HOST" bash -s << 'EOF'
   set -e
+  echo "[deploy] Fixing file ownership (www-data fuer writable dirs)..."
+  # tar-over-ssh kann Windows-UIDs wie 197609 uebernehmen — gunicorn laeuft als www-data.
+  mkdir -p /opt/nerve/app/logs
+  chown -R www-data:www-data /opt/nerve/app/logs /opt/nerve/app/database 2>/dev/null || true
+  chmod 755 /opt/nerve/app/logs /opt/nerve/app/database 2>/dev/null || true
+
   echo "[deploy] Installing dependencies..."
   /opt/nerve/venv/bin/pip install -r /opt/nerve/app/requirements.txt --quiet
 

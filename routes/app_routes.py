@@ -366,12 +366,14 @@ def api_beenden():
     content  = _build_log_content(user_email=g.user.email, profile_name=profile_name)
     filename = f"nerve_log_U{g.user.id}_{datetime.now().strftime('%Y-%m-%dT%H-%M-%S')}.txt"
     filepath = os.path.join(LOG_DIR, filename)
+    # 06.1-r2: Log-Write ist nice-to-have — darf Call-Beendigung nicht blockieren.
+    # Perm-Fehler oder voller Disk wird geloggt, postcall laeuft trotzdem durch.
     try:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
         print(f"[Beenden] Log gespeichert: {filepath}")
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        print(f"[Beenden] WARN: Log-Write fehlgeschlagen ({e}) — postcall laeuft trotzdem durch")
 
     # Redeanteil fuer postcall + async analysis
     _stats = ls.get_speech_stats()
