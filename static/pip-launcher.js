@@ -1083,14 +1083,21 @@
   }
 
   function _triggerEwb(typ, btn) {
-    // 06.1-r2 BUG-5d: Via Socket.IO statt HTTP — Backend handler 'manual_ewb' startet
-    // analysiere_mit_claude_streaming in Thread, Antwort kommt als pip_stream_start/
-    // pip_token/pip_token_done zurueck und landet ueber die existierenden Handler im Slot.
+    // 06.1-r2 BUG-5d + r3: Sofortiges Feedback im Slot (ohne auf pip_stream_start zu warten),
+    // dann Socket emit. Wenn pip_stream_start ankommt, wird "Analysiere..." durch Result ersetzt.
     console.log('[NerveLauncher] EWB trigger:', typ);
+    var slotBody = pipEl('pip-slot-body-0');
+    var slotLabel = pipEl('pip-slot-label-0');
+    if (slotBody) {
+      slotBody.textContent = 'Analysiere: ' + typ + '\u2026';
+      slotBody.classList.add('pip-streaming');
+    }
     if (!state.socket || !state.socket.connected) {
       console.error('[NerveLauncher] EWB: Socket nicht verbunden');
-      var slotBody = pipEl('pip-slot-body-0');
-      if (slotBody) slotBody.textContent = 'Keine Verbindung \u2014 Session neu starten';
+      if (slotBody) {
+        slotBody.textContent = 'Keine Verbindung \u2014 Session neu starten';
+        slotBody.classList.remove('pip-streaming');
+      }
       return;
     }
     state.socket.emit('manual_ewb', {
@@ -1427,6 +1434,16 @@
     _stopTimer();
     _stopMic();
 
+    // 06.1-r2 BUG-9: UI SOFORT umschalten mit Loading-Skeleton. Backend-Response
+    // fuellt Score/Tags nachtraeglich. User hat nie den Eindruck "Button reagiert nicht".
+    // DESIGN-9: PiP auf kompaktere Groesse schrumpfen da Postcall weniger Hoehe braucht.
+    _showPostcallLoading();
+    try {
+      if (state.pipWindow && !state.pipWindow.closed && typeof state.pipWindow.resizeTo === 'function') {
+        state.pipWindow.resizeTo(420, 520);
+      }
+    } catch (e) { /* resize nicht in allen Browsern supported — egal */ }
+
     fetch('/api/beenden', {
       method: 'POST',
       credentials: 'include',
@@ -1438,16 +1455,17 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); return; }
+        if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); _showPostcallEmpty(); return; }
         state.lastConvId = data.conv_id || null;
         if (data.postcall) {
           _showPostcall(data.postcall);
         } else {
-          _showPostcallRaw('--', []);
+          _showPostcallEmpty();
         }
       })
       .catch(function (err) {
         console.error('[NerveLauncher] Beenden fetch error:', err);
+        _showPostcallEmpty();
       });
   }
 
@@ -1491,9 +1509,40 @@
   }
 
   function _showPostcall(postcall) {
+    // 06.1-r2 BUG-10: Leerer Call (keine Woerter, keine Einwaende) -> kein Score, stattdessen
+    // "Kein Gespraech erkannt" — 45% fuer leere Calls verwirrt nur.
+    var berater = (postcall && postcall.berater_words) || 0;
+    var kunde = (postcall && postcall.kunde_words) || 0;
+    var einwTotal = ((postcall && postcall.einwaende) || []).length;
+    if (berater === 0 && kunde === 0 && einwTotal === 0) {
+      _showPostcallEmpty();
+      return;
+    }
     var score = _calcScore(postcall);
     var tags = _buildTags(postcall);
     _showPostcallRaw(score + '%', tags);
+  }
+
+  function _showPostcallLoading() {
+    _showPostcallRaw('\u2026', []);
+    var labelEl = pipEl('nlp-postcall-score');
+    // Label unterhalb auf "Wird ausgewertet..." setzen indem wir die PostcallLabel-Div
+    // temporaer ueberschreiben — simpler Hack via tags-Bereich.
+    var tagsEl = pipEl('nlp-postcall-tags');
+    if (tagsEl) tagsEl.innerHTML = '<span class="pip-postcall-loading">Call wird ausgewertet\u2026</span>';
+  }
+
+  function _showPostcallEmpty() {
+    _showPostcallRaw('', []);
+    var scoreEl = pipEl('nlp-postcall-score');
+    if (scoreEl) scoreEl.style.display = 'none';
+    var labelEls = pipEl('nlp-section-postcall');
+    // Ersetze den Score-Bereich durch einen Empty-State
+    var tagsEl = pipEl('nlp-postcall-tags');
+    if (tagsEl) tagsEl.innerHTML = '<div class="pip-postcall-empty">Kein Gespr\u00e4ch erkannt.<br>Direkt n\u00e4chsten Call starten?</div>';
+    // Details-Button im Empty-State ausblenden (nichts zu zeigen)
+    var detailsBtn = pipEl('nlp-btn-details');
+    if (detailsBtn) detailsBtn.style.display = 'none';
   }
 
   function _showPostcallRaw(scoreText, tags) {
@@ -1508,7 +1557,10 @@
     if (pipHeader) pipHeader.style.display = 'none';
 
     var scoreEl = pipEl('nlp-postcall-score');
-    if (scoreEl) scoreEl.textContent = scoreText;
+    if (scoreEl) { scoreEl.style.display = ''; scoreEl.textContent = scoreText; }
+    // Details-Button in Filled-State wieder einblenden (Empty-State hatte ihn versteckt)
+    var detailsBtn = pipEl('nlp-btn-details');
+    if (detailsBtn && scoreText && scoreText !== '\u2026') detailsBtn.style.display = '';
 
     var tagsEl = pipEl('nlp-postcall-tags');
     if (tagsEl) {

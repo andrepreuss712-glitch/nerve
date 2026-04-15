@@ -672,8 +672,14 @@ def analysiere_mit_claude_streaming(neuer_text: str, kontext: str, sid: str, slo
 Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
 {neuer_text}"""
 
+    # 06.1-r2: Instrumentation fuer manual_ewb Debug — ohne diese prints haben wir
+    # im Produktions-Log nur den Handler-Entry aber keine Sicht auf was in der Thread-
+    # Ausfuehrung passiert (Claude-Call, Stream, Emit).
+    print(f"[PiP-Stream] ENTRY sid={sid} slot={slot_id} text={neuer_text[:60]!r}")
     sio.emit('pip_stream_start', {'slot': slot_id}, room=sid)
+    print(f"[PiP-Stream] emit start OK (sid={sid} slot={slot_id})")
     full_text = ''
+    token_count = 0
     try:
         with claude_client.messages.stream(
             model='claude-haiku-4-5-20251001',
@@ -683,9 +689,12 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         ) as stream:
             for token in stream.text_stream:
                 full_text += token
+                token_count += 1
                 sio.emit('pip_token', {'slot': slot_id, 'token': token}, room=sid)
+        print(f"[PiP-Stream] stream done sid={sid} slot={slot_id} tokens={token_count} chars={len(full_text)}")
         parsed = _parse_json(full_text)
         sio.emit('pip_token_done', {'slot': slot_id, 'result': parsed}, room=sid)
+        print(f"[PiP-Stream] emit done OK sid={sid} slot={slot_id} einwand={parsed.get('einwand') if isinstance(parsed, dict) else None}")
         # ── Cost tracking (same pattern as analysiere_mit_claude) ──────────
         try:
             from services.cost_tracker import log_api_cost

@@ -271,9 +271,12 @@
 /* 06.1-r2 DESIGN-6: Beenden als kleiner roter Pill im Header — gleiche Hoehe wie .pip-mode-badge */
 .pip-btn-beenden{background:transparent;border:1px solid rgba(248,113,113,0.5);border-radius:9999px;color:#f87171;padding:2px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s}
 .pip-btn-beenden:hover{background:rgba(248,113,113,0.12);border-color:#f87171}
-.pip-postcall-score{font-size:48px;font-weight:700;color:#00D4AA;line-height:1}
-.pip-postcall-label{font-size:12px;color:#a0aec0;margin-top:4px}
-.pip-postcall-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;justify-content:center}
+/* 06.1-r2 DESIGN-9: Kompakterer Postcall — Score bleibt dominant, aber Section ist luftiger */
+.pip-postcall-score{font-size:56px;font-weight:700;color:#00D4AA;line-height:1;letter-spacing:-0.02em}
+.pip-postcall-label{font-size:12px;color:#6B7280;margin-top:4px;letter-spacing:0.05em;text-transform:uppercase}
+.pip-postcall-empty{font-size:16px;color:#6B7280;text-align:center;padding:0 20px;line-height:1.5}
+.pip-postcall-loading{font-size:13px;color:#6B7280;margin-top:8px}
+.pip-postcall-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;justify-content:center}
 .pip-tag{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:500}
 .pip-tag-teal{background:rgba(0,212,170,0.15);color:#00D4AA}
 .pip-tag-yellow{background:rgba(245,158,11,0.15);color:#F59E0B}
@@ -394,7 +397,7 @@
     <div class="pip-postcall-tags" id="nlp-postcall-tags"></div>
     <div class="pip-postcall-kundendaten" id="nlp-postcall-kundendaten"></div>
     <div class="pip-postcall-actions">
-      <button class="pip-btn-next-call" id="nlp-btn-next-call">Naechster Call</button>
+      <button class="pip-btn-next-call" id="nlp-btn-next-call">N&auml;chster Call</button>
       <button class="pip-btn-details" id="nlp-btn-details">Details</button>
     </div>
   </div>
