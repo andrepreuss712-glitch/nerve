@@ -1038,7 +1038,11 @@ def analyse_loop():
                     # Slot 1 frei — parallele Variante starten
                     with ls.state_lock:
                         ls.state['slot1_variant_busy_until'] = _now + 6  # reserviert fuer 6s
-                    _profile_daten = ls.get_active_profile() or {}
+                    # get_active_profile() returns tuple (name, daten) — unpack it
+                    try:
+                        _profile_name, _profile_daten = ls.get_active_profile()
+                    except Exception:
+                        _profile_daten = {}
                     _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
                     sio.start_background_task(
                         streame_auto_variante,

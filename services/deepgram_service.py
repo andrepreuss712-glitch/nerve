@@ -370,12 +370,13 @@ def register_audio_handlers(sio):
         except Exception as e:
             print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
 
-        # Profil + Kontext fuer Haiku-Variante aufbereiten
+        # Profil + Kontext fuer Haiku-Variante aufbereiten.
+        # get_active_profile() returns tuple (name, daten) — unpack it.
         profile_daten = {}
         try:
-            profile_daten = ls.get_active_profile() or {}
+            _pname, profile_daten = ls.get_active_profile()
         except Exception:
-            pass
+            profile_daten = {}
         einwaende = (profile_daten.get('einwaende') or []) if isinstance(profile_daten, dict) else []
         profile_einwand = None
         typL = typ.lower().strip()
