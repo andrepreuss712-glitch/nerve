@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06.2-02-PLAN.md
-last_updated: "2026-04-16T13:16:43.330Z"
+stopped_at: Completed 06.2-03-PLAN.md
+last_updated: "2026-04-16T13:20:31.003Z"
 last_activity: 2026-04-16
 progress:
   total_phases: 33
   completed_phases: 22
   total_plans: 126
-  completed_plans: 114
-  percent: 90
+  completed_plans: 115
+  percent: 91
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 06.2 (auto-einwand-latenz-architektur) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-04-16
 
@@ -142,6 +142,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.1 P04 | 8 | 2 tasks | 2 files |
 | Phase 06.2 P01 | 183 | 3 tasks | 2 files |
 | Phase 06.2 P02 | 139 | 5 tasks | 3 files |
+| Phase 06.2 P03 | 240 | 4 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -328,6 +329,8 @@ Recent decisions affecting current work:
 - [Phase 06.2]: EinwandKeywordMatcher mit threading.Lock: match_with_dedup() wird aus Deepgram-Thread und Analyse-Thread gleichzeitig aufgerufen
 - [Phase 06.2]: slot1_variant_busy_until in ls.state statt Funktions-Attribut: einzige Quelle der Wahrheit, vereint Keyword-Pipe und analyse_loop ohne Race
 - [Phase 06.2]: Lock-Unifikation aus Wave 4 in Plan 02 vorgezogen: analyse_loop._variant_busy_until vollstaendig durch ls.state ersetzt
+- [Phase 06.2]: slot0LastKeywordTyp 3s-Fenster: gleicher typ -> pip_token_done ueberschreibt nicht
+- [Phase 06.2]: mute_mic emit NACH state-Toggle, damit Wert korrekt an Backend
 
 ### Roadmap Evolution
 
@@ -380,6 +383,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-16T13:16:43.325Z
-Stopped at: Completed 06.2-02-PLAN.md
+Last session: 2026-04-16T13:20:30.998Z
+Stopped at: Completed 06.2-03-PLAN.md
 Resume file: None
