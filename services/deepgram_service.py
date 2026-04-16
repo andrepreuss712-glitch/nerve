@@ -250,6 +250,7 @@ def register_audio_handlers(sio):
     def handle_stop_live_session(sid=None):
         from flask import request
         _sid = request.sid if sid is None else sid
+        print(f"[DG] stop_live_session event received (sid={_sid})")
         _close_deepgram_connection(_sid)
 
     _first_chunk_logged = set()  # Track which sids have logged their first chunk
@@ -276,6 +277,7 @@ def register_audio_handlers(sio):
     def handle_disconnect(sid=None):
         from flask import request
         _sid = request.sid if sid is None else sid
+        print(f"[DG] socket.io disconnect event (sid={_sid})")
         _first_chunk_logged.discard(_sid)
         _close_deepgram_connection(_sid)
 
