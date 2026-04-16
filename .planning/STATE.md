@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 06.1-04-PLAN.md
-last_updated: "2026-04-15T10:20:08.838Z"
-last_activity: 2026-04-15
+status: executing
+stopped_at: Completed 06.2-01-PLAN.md
+last_updated: "2026-04-16T13:11:49.154Z"
+last_activity: 2026-04-16
 progress:
-  total_phases: 32
+  total_phases: 33
   completed_phases: 22
-  total_plans: 122
-  completed_plans: 112
-  percent: 92
+  total_plans: 126
+  completed_plans: 113
+  percent: 90
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 06.1 — pip-uat-fixes-bugs-farben-proportionen-mic-indikator-slider
+**Current focus:** Phase 06.2 — auto-einwand-latenz-architektur
 
 ## Current Position
 
-Phase: 06.1 (pip-uat-fixes-bugs-farben-proportionen-mic-indikator-slider) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-04-15
+Phase: 06.2 (auto-einwand-latenz-architektur) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-16
 
 **Next:** Discuss/plan Phase 04.13
 
@@ -140,6 +140,7 @@ Progress: [█████████░] ~91% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.1 P02 | 10 | 2 tasks | 2 files |
 | Phase 06.1 P03 | 12 | 2 tasks | 2 files |
 | Phase 06.1 P04 | 8 | 2 tasks | 2 files |
+| Phase 06.2 P01 | 183 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -322,6 +323,8 @@ Recent decisions affecting current work:
 - [Phase 06.1]: AnalyserNode nur an source connected (nicht an destination) — kein Audio-Echo, reine Pegel-Visualisierung
 - [Phase 06.1]: Integer-basierter localStorage-Read (10-100) statt Float — konsistenter mit Slider min/max, einfacher zu validieren
 - [Phase 06.1]: _updateSliderFill als separate Funktion fuer iOS-style Slider-Fill via --pip-slider-pct CSS-Variable
+- [Phase 06.2]: KEYWORD_TO_PROFILE_ALIASES an echter salesnerve.db verifiziert: plan-draft Aliase durch real-DB-Werte ersetzt (kategorie/typ)
+- [Phase 06.2]: EinwandKeywordMatcher mit threading.Lock: match_with_dedup() wird aus Deepgram-Thread und Analyse-Thread gleichzeitig aufgerufen
 
 ### Roadmap Evolution
 
@@ -374,6 +377,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-15T10:20:03.792Z
-Stopped at: Completed 06.1-04-PLAN.md
+Last session: 2026-04-16T13:11:49.149Z
+Stopped at: Completed 06.2-01-PLAN.md
 Resume file: None
