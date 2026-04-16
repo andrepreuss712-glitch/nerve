@@ -1062,6 +1062,12 @@
     var detailsBtn = pipEl('nlp-btn-details');
     if (detailsBtn) detailsBtn.style.display = '';
 
+    // BUG-A FIX: _showPostcallRaw() setzt nlp-ewb-row display:none.
+    // _renderEwbButtons() setzt nur innerHTML, nicht display — hier zuruecksetzen
+    // damit die EWB-Leiste im naechsten Call sichtbar ist.
+    var ewbRow = pipEl('nlp-ewb-row');
+    if (ewbRow) ewbRow.style.display = '';
+
     // D-13: Mic-Indikator einschalten (erst im Live-Zustand sichtbar)
     var micBtnShow = pipEl('pip-mic-indicator');
     if (micBtnShow) micBtnShow.style.display = 'inline-flex';
@@ -1617,9 +1623,13 @@
 
   function showDetails() {
     if (state.pipWindow && !state.pipWindow.closed) state.pipWindow.close();
+    // BUG-B FIX: state.lastConvId muss VOR _cleanup() gespeichert werden —
+    // _cleanup() setzt state.lastConvId = null, weshalb die Weiterleitung
+    // immer auf /logs (statt /logs/{id}) landete (Regression von BUG-11).
+    var convId = state.lastConvId;
     _cleanup();
-    if (state.lastConvId) {
-      window.location.href = '/logs/' + state.lastConvId;
+    if (convId) {
+      window.location.href = '/logs/' + convId;
     } else {
       window.location.href = '/logs';
     }
