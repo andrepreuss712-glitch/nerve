@@ -8,6 +8,26 @@ import time
 from datetime import datetime
 from config import ANALYSE_INTERVALL, MERGE_WINDOW_S, SPEAKER_DEBOUNCE_S, KATEGORIE_LABEL
 
+# ── Einwand-Keyword-Matcher Registry (Wave 2: BUG-10-LAT) ────────────────────
+# Pro Session eine EinwandKeywordMatcher-Instanz. Lazy-init via get_matcher(sid).
+keyword_matchers: dict = {}          # sid -> EinwandKeywordMatcher
+keyword_matchers_lock = threading.Lock()
+
+
+def get_matcher(sid: str):
+    """Gibt den EinwandKeywordMatcher fuer die Session zurueck (lazy-init)."""
+    with keyword_matchers_lock:
+        if sid not in keyword_matchers:
+            from services.einwand_keyword_matcher import EinwandKeywordMatcher
+            keyword_matchers[sid] = EinwandKeywordMatcher()
+        return keyword_matchers[sid]
+
+
+def drop_matcher(sid: str) -> None:
+    """Entfernt den Matcher fuer `sid` — aufzurufen bei Session-Ende."""
+    with keyword_matchers_lock:
+        keyword_matchers.pop(sid, None)
+
 # ── Log-Ordner ────────────────────────────────────────────────────────────────
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -108,6 +128,9 @@ state = {
     # ── Phase 04.11: Active Learning Cards (D-09) ──
     'active_learning_cards': [],
     'precall_briefing': None,  # PreCall briefing text injected at session start
+    # ── Phase 06.2 Wave 2: Keyword-Match busy-guard + mic-mute ──
+    'slot1_variant_busy_until': 0.0,  # monotonic timestamp — shared lock between keyword-pipe and analyse_loop
+    'mic_muted': False,               # set via 'mute_mic' socket event
 }
 
 # ── Conversation Log ──────────────────────────────────────────────────────────
@@ -318,6 +341,8 @@ def reset_session():
         state['cold_call_inference'] = None
         state['active_learning_cards'] = []
         state['precall_briefing'] = None
+        state['slot1_variant_busy_until'] = 0.0
+        state['mic_muted'] = False
     with _line_id_lock:
         _line_id_counter = 0
     with _log_sp_lock:
