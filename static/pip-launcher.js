@@ -1456,6 +1456,9 @@
 
   // ── Timer ──────────────────────────────────────────────────────────────────
   function _startTimer() {
+    // BUG-11b FIX: clear any existing interval before starting a new one.
+    // Without this guard, a leaked old interval causes the clock to tick unevenly.
+    _stopTimer();
     state.sessionSeconds = 0;
     state.timerInterval = setInterval(function () {
       state.sessionSeconds++;
@@ -1482,7 +1485,9 @@
     if (state.workletNode) { state.workletNode.disconnect(); state.workletNode = null; }
     if (state.audioCtx) { state.audioCtx.close(); state.audioCtx = null; }
     if (state.micStream) { state.micStream.getTracks().forEach(function (t) { t.stop(); }); state.micStream = null; }
+    // BUG-11b DEBUG: trace caller so regressions are instantly debuggable
     console.log('[NerveLauncher] Mic stopped');
+    console.trace('[NerveLauncher] _stopMic caller trace');
   }
 
   // ── End Call ───────────────────────────────────────────────────────────────
@@ -1625,13 +1630,21 @@
 
   // ── PostCall Actions ───────────────────────────────────────────────────────
   function nextCall() {
-    if (state.pipWindow && !state.pipWindow.closed) state.pipWindow.close();
+    // BUG-11b FIX: null state.pipWindow BEFORE calling .close() so the pagehide
+    // guard (state.pipWindow === pipWindow) always evaluates false for the old window.
+    // This closes the sync-pagehide race that survived f2fe4f6.
+    var oldWin = state.pipWindow;
+    state.pipWindow = null;
+    if (oldWin && !oldWin.closed) oldWin.close();
     _cleanup();
     open();
   }
 
   function showDetails() {
-    if (state.pipWindow && !state.pipWindow.closed) state.pipWindow.close();
+    // BUG-11b FIX: same null-first approach as nextCall()
+    var oldWin = state.pipWindow;
+    state.pipWindow = null;
+    if (oldWin && !oldWin.closed) oldWin.close();
     // BUG-B FIX: state.lastConvId muss VOR _cleanup() gespeichert werden —
     // _cleanup() setzt state.lastConvId = null, weshalb die Weiterleitung
     // immer auf /logs (statt /logs/{id}) landete (Regression von BUG-11).
