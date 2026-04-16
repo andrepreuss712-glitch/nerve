@@ -167,12 +167,13 @@ def _make_on_error(sid):
 
 def _make_on_utterance_end(sid):
     def on_utterance_end(self, utterance_end, **kwargs):
-        try:
-            matcher = ls.get_matcher(sid)
-            matcher.reset_all()
-            print(f"[KeywordMatch] utterance-end reset sid={sid}")
-        except Exception as e:
-            print(f"[KeywordMatch] utterance-end reset error sid={sid}: {e}")
+        # 06.2-r1: Kein matcher.reset_all() hier — Feedback-Loop-Schutz:
+        # User liest Gegenargument vor ('...Sie haben dafuer keine Zeit...'),
+        # Deepgram committet UtteranceEnd, ohne Reset wuerde der Satz erneut
+        # matchen und einen doppelten Render triggern. 10s-Dedup PER KEYWORD
+        # reicht: verschiedene Einwaende (zu_teuer vs. keine_zeit) haben
+        # unabhaengige Dedup-Eintraege und blockieren sich nicht gegenseitig.
+        pass
     return on_utterance_end
 
 
