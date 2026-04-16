@@ -1017,11 +1017,14 @@ def analyse_loop():
                 analyse_loop._last_slot = slot_id
                 analyse_loop._last_slot_time = _time_mod.monotonic()
 
-                _variant_busy_until = getattr(analyse_loop, '_variant_busy_until', 0)
+                # BUG-10-LAT Wave 2: shared busy_until via ls.state (vereint mit Keyword-Pipe)
+                with ls.state_lock:
+                    _variant_busy_until = ls.state.get('slot1_variant_busy_until', 0)
                 _now = _time_mod.monotonic()
                 if _now >= _variant_busy_until:
                     # Slot 1 frei — parallele Variante starten
-                    analyse_loop._variant_busy_until = _now + 6  # reserviert fuer 6s (Stream-Dauer + Buffer)
+                    with ls.state_lock:
+                        ls.state['slot1_variant_busy_until'] = _now + 6  # reserviert fuer 6s
                     _profile_daten = ls.get_active_profile() or {}
                     _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
                     sio.start_background_task(
