@@ -4,5 +4,7 @@ __pycache__/
 .claude/worktrees/
 database/salesnerve.db
 database/nerve.db
+/nerve.db
 *.db-shm
 *.db-wal
+tests/tts_samples/

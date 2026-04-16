@@ -31,7 +31,27 @@
       "Skill(gsd-execute-phase)",
       "Skill(gsd-code-review)",
       "Bash(pip show:*)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "WebSearch",
+      "Bash(ls .planning/phases/04.10.1-emotionale-tts-stimmen-inserted/*-SUMMARY.md)",
+      "Bash(ls .planning/phases/04.10.1-emotionale-tts-stimmen-inserted/.continue-here*.md)",
+      "Bash(ls .planning/phases/*04.11*/*-CONTEXT.md)",
+      "Bash(git push:*)",
+      "Bash(ls .planning/codebase/*.md)",
+      "Bash(ls C:/Users/andre/dev/salesnerve/.planning/phases/04.11-coach-modul-inserted/*-VALIDATION.md)",
+      "Bash(ls:*)",
+      "Skill(gsd-code-review-fix)",
+      "Skill(gsd-quick)",
+      "Skill(gsd-add-phase)",
+      "Bash(git diff-tree:*)",
+      "Bash(git checkout:*)",
+      "Bash(sed -i '540s/.*/\\\\*\\\\*Plans:\\\\*\\\\* 3 plans \\(replanned: 02-03 target pip-launcher.js + base.html\\)/' .planning/ROADMAP.md)",
+      "Bash(sed -i '543s/.*/- [x] 06-01-PLAN.md \\\\xe2\\\\x80\\\\x94 Backend: Streaming relay, sid routing, consent_text migration, \\\\/api\\\\/skripte, skript_position prompt/' .planning/ROADMAP.md)",
+      "Bash(sed -i '544s/.*/- [ ] 06-02-PLAN.md \\\\xe2\\\\x80\\\\x94 Frontend HTML+CSS: Replace #pip-live-window in base.html with split layout, consent section, opacity slider, teleprompter CSS/' .planning/ROADMAP.md)",
+      "Bash(sed -i '545s/.*/- [ ] 06-03-PLAN.md \\\\xe2\\\\x80\\\\x94 Frontend JS: pip-launcher.js streaming handlers, dual-slot state machine, consent flow, teleprompter, opacity, proactive fill/' .planning/ROADMAP.md)",
+      "Bash(sed -i '546d' .planning/ROADMAP.md)",
+      "Bash([ -f \"static/pip-launcher.js\" ])",
+      "Bash([ -f \".planning/phases/06-pip-komplett-rebuild-neues-layout-claude-streaming-skript-te/06-03-SUMMARY.md\" ])"
     ]
   }
 }
