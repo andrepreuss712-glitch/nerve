@@ -632,3 +632,18 @@ Plans:
 - [x] 06.1-02-PLAN.md — Layout-Rotation + helles Farbschema (D-04 bis D-12: 480×760, light body, teleprompter top 60%, EWB horizontal pills, slot colors inverted)
 - [x] 06.1-03-PLAN.md — Mic-Indikator (D-13 bis D-16: 4 audio-level bars, WebAudio AnalyserNode, green/grey states, click-to-mute via track.enabled)
 - [x] 06.1-04-PLAN.md — Slider-Redesign (D-17 bis D-19: 140px iOS-style mit teal filled portion, touch hit-area, localStorage-clamp)
+
+---
+
+### Phase 06.2: Auto-Einwand-Erkennung Latenz-Architektur (INSERTED — BUG-10 Teil 2)
+
+**Goal:** Gefühlte Latenz bei Auto-Einwand-Erkennung von 2-2.5s auf <1s reduzieren. Lokaler Keyword-Klassifikator auf Deepgram-Interim-Transcripts rendert Slot 0 mit Profil-Antwort in <300ms (keine API-Latenz). Parallel startet Haiku-Variante für Slot 1 mit erstem Token in <1s. USP "KI erkennt Einwand automatisch" wird im Cold-Call benutzbar.
+**Requirements:** BUG-10-LAT
+**Depends on:** Phase 06, Phase 06.1
+**Plans:** 4 plans
+
+Plans:
+- [ ] 06.2-01-PLAN.md — Keyword-Matcher-Modul (DE-tolerant Regex + Profil-Mapping + Dedup-State)
+- [ ] 06.2-02-PLAN.md — Backend-Pipeline (Deepgram-Interim-Hook + Match + Socket-Emit + parallel Auto-Variante spawn + UtteranceEnd-Reset + Mute-Guard)
+- [ ] 06.2-03-PLAN.md — Frontend-Handler (keyword_einwand_match Instant-Render + pip_token_done-Respekt + mute_mic-Emit + Timing-Logs)
+- [ ] 06.2-04-PLAN.md — Shared busy_until-Lock (Keyword + analyse_loop teilen Guard → kein Doppel-Spawn, Button-Pfad unabhängig)
