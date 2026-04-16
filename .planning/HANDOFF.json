@@ -1,22 +1,44 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-04T07:41:06.897Z",
-  "phase": "04.2.1",
-  "phase_name": "ui-ux-overhaul",
-  "status": "complete",
+  "timestamp": "2026-04-16T14:15:00.000Z",
+  "phase": "06.2",
+  "phase_name": "auto-einwand-latenz-architektur",
+  "status": "complete_with_followup",
   "completed_tasks": [
-    {"id": 1, "name": "Sidebar overhaul", "status": "done", "commit": "61c47ca"},
-    {"id": 2, "name": "Document PiP", "status": "done", "commit": "e9ab45f"},
-    {"id": 3, "name": "Dashboard restructure", "status": "done", "commit": "28a8a47"},
-    {"id": 4, "name": "Vollbild chrome reduction", "status": "done", "commit": "ae43fd4"},
-    {"id": 5, "name": "EWB AI selection", "status": "done", "commit": "7c07b2a"}
+    {"id": 1, "name": "Keyword-Matcher Modul + 46 pytest-Tests", "status": "done", "commit": "bda77fe+02d825d"},
+    {"id": 2, "name": "Deepgram-Interim-Pipeline + keyword_einwand_match Emit + UtteranceEnd + mute_mic", "status": "done", "commit": "375faa8"},
+    {"id": 3, "name": "Shared-Lock slot1_variant_busy_until (keyword + analyse_loop)", "status": "done", "commit": "dbdcc36"},
+    {"id": 4, "name": "Frontend keyword_einwand_match + 3s-Dominanz + Latenz-Logs", "status": "done", "commit": "b60d904"},
+    {"id": 5, "name": "trigger-Parameter in streame_auto_variante + Shared-Lock-Doku", "status": "done", "commit": "014e671"}
   ],
   "remaining_tasks": [],
-  "blockers": [],
   "bugs_fixed": [
-    "nginx 502 port 5000->8000 (7c2c734)",
-    "ConversationLog.session_start does not exist -> dauer_sekunden (741cc67)",
-    "profil_name -> profile_name (970b562)"
+    "DEFAULT_KEYWORDS regex character-class statt alternation (bda77fe)",
+    "KEYWORD_TO_PROFILE_ALIASES gegen echte DB verifiziert (bda77fe)",
+    "tuple-unpack get_active_profile() in manual_ewb + analyse_loop fallback (60e743a)",
+    "matched_label liefert Feld-WERT statt Feld-NAME (8599063)",
+    "UtteranceEnd hebt Dedup nicht mehr auf — Feedback-Loop durch EWB-Vorlesen (4691f38)"
   ],
-  "next_action": "Manual UAT of PiP/sidebar/EWB, then /gsd:plan-phase 03.1 --gaps or Phase 4 after Gewerbeanmeldung"
+  "blockers": [],
+  "followup_phase_proposed": {
+    "id": "06.3",
+    "name": "analyse-loop-overload-fix",
+    "reason": "Sekundaerer Feedback-Loop: analyse_loop respektiert Keyword-Dominanz nicht — bei langem EWB-Vorlesen entstehen parallele Claude-Calls die 529 overloaded_error triggern",
+    "root_cause_hypothesis": "state.slot0LastKeywordTyp ist nur frontend-side — backend analyse_loop in claude_service.py prueft nicht ob Keyword-Pipe Slot 0 gerade dominiert",
+    "approach_options": [
+      "A: ls.state['slot0_keyword_active_until'] als Backend-Counterpart zum frontend-marker, analyse_loop skippt Claude-Call wenn aktiv",
+      "B: analyse_loop-Detection nur als Fallback wenn Keyword-Matcher nicht gematcht hat (Keyword = Primary, wie im originalen CONTEXT)",
+      "C: Anthropic 529 Retry-Backoff auch fuer analyse_loop hinzufuegen (streame_manual_ewb_variante hat es schon)"
+    ],
+    "priority": "klein-mittel",
+    "effort": "1-2 Stunden"
+  },
+  "launch_priorities_queue": [
+    {"id": "phase-4.19", "name": "Transkript-Persistierung + Anonymisierungs-Pipeline", "priority": "launch-blocker", "effort": "4-6 Tage"},
+    {"id": "polish-16", "name": "Headset-Pflicht-Modal (DSGVO Cold-Call)", "priority": "launch-blocker", "effort": "klein-mittel"},
+    {"id": "bug-09", "name": "Scoreboard auf /logs/{id}", "priority": "pre-launch", "effort": "klein"},
+    {"id": "06.3", "name": "analyse_loop Overload-Fix (siehe oben)", "priority": "nice-to-have-vor-launch", "effort": "klein-mittel"},
+    {"id": "latency-counter", "name": "Frontend [Latency]-Counter misst falsches Event", "priority": "cosmetic", "effort": "klein"}
+  ],
+  "next_action": "Waehle: /gsd-plan-phase 06.3 (analyse_loop overload) ODER /gsd-plan-phase 4.19 (Transkript-Persistierung, launch-blocker) ODER POLISH-16 direkt. .continue-here.md in Phase 06.2 hat Repro-Steps + Loesungsansaetze."
 }
