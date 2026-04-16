@@ -1052,6 +1052,10 @@
   }
 
   function _showPipLive() {
+    // Belt-and-suspenders: reset all live UI state first. Even if endCall() already
+    // called _resetLiveState(), this guarantees a clean start for call N+1 regardless
+    // of how we arrived here (nextCall, consent-accept path, etc.).
+    _resetLiveState();
     var consentSection = pipEl('pip-section-consent');
     var liveSection = pipEl('pip-section-live');
     var beendenBtn = pipEl('nlp-btn-beenden');
@@ -1475,6 +1479,62 @@
     if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
   }
 
+  // ── Live-State Reset — single source of truth for post-call/pre-call cleanup ─────
+  // Called from TWO places (belt-and-suspenders pattern):
+  //   1. endCall()      — AFTER _stopTimer+_stopMic, BEFORE _showPostcallLoading
+  //   2. _showPipLive() — AT THE VERY TOP (guarantees fresh state even if prior cleanup missed something)
+  // MUST NOT touch: state.lastConvId (needed for Details-link), state.profileDaten,
+  //                 state.skripte, state.selectedSkriptId, state.precallFormData, state.socket.
+  function _resetLiveState() {
+    // 1. Timer: stop interval AND reset DOM to 00:00 immediately (fixes 1s display lag)
+    _stopTimer();
+    state.sessionSeconds = 0;
+    var timerEl = pipEl('nlp-timer');
+    if (timerEl) timerEl.textContent = '00:00';
+
+    // 2. Slots: reset body text, labels, streaming class for both slots
+    [0, 1].forEach(function (s) {
+      var body = pipEl('pip-slot-body-' + s);
+      if (body) {
+        body.innerHTML = '';
+        body.textContent = 'Warte auf Gesprächsinhalt…';
+        body.classList.remove('pip-streaming');
+      }
+      var label = pipEl('pip-slot-label-' + s);
+      if (label) label.textContent = s === 0 ? 'ANTWORT A' : 'ANTWORT B';
+    });
+
+    // 3. Slot state objects
+    state.pipSlots = [
+      { streaming: false, text: '', result: null, contextKey: null },
+      { streaming: false, text: '', result: null, contextKey: null }
+    ];
+
+    // 4. EWB buttons: remove stale highlight and flashing classes
+    var ewbRow = pipEl('nlp-ewb-row');
+    if (ewbRow) {
+      ewbRow.querySelectorAll('.pip-ewb-btn').forEach(function (btn) {
+        btn.classList.remove('pip-ewb-ai-selected', 'pip-ewb-flashing');
+      });
+    }
+
+    // 5. Teleprompter: reset active position and clear override timer
+    state.teleprompterActiveIdx = -1;
+    state.teleprompterManualOverride = false;
+    if (state.teleprompterOverrideTimer) { clearTimeout(state.teleprompterOverrideTimer); state.teleprompterOverrideTimer = null; }
+    var tpContainer = pipEl('pip-teleprompter');
+    if (tpContainer) {
+      tpContainer.querySelectorAll('.tp-block-active').forEach(function (el) {
+        el.classList.remove('tp-block-active');
+      });
+    }
+
+    // 6. Mic muted flag (hardware already stopped by _stopMic — just clear the flag)
+    state.micMuted = false;
+    // NOTE: micAnalyser and micLevelRafId are _stopMic's responsibility — do NOT reset here.
+    console.log('[NerveLauncher] _resetLiveState() complete');
+  }
+
   // ── Mic Stop ───────────────────────────────────────────────────────────────
   function _stopMic() {
     if (state.micLevelRafId) { cancelAnimationFrame(state.micLevelRafId); state.micLevelRafId = null; }
@@ -1494,6 +1554,10 @@
   function endCall() {
     _stopTimer();
     _stopMic();
+    // Architecture fix: reset all live UI state before showing postcall section.
+    // Postcall appears over a clean live-UI — eliminates stale DOM/timer/slot bleed-through
+    // that caused BUG-11 alternating aborts and symptom-3 slot/timer leaks.
+    _resetLiveState();
 
     // 06.1-r2 BUG-9: UI SOFORT umschalten mit Loading-Skeleton. Backend-Response
     // fuellt Score/Tags nachtraeglich.
