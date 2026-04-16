@@ -265,6 +265,9 @@
 /* 06.1-r2 DESIGN-10: Selected-State jetzt teal (nicht gelb) — signalisiert 'aktiver Einwand' */
 .pip-ewb-ai-selected{background:rgba(0,212,170,0.14);color:#00877F;font-weight:700}
 .pip-ewb-ai-selected:hover{background:rgba(0,212,170,0.22);color:#00877F}
+/* Resize Handle — teal Ecke unten rechts */
+.pip-resize-handle{position:fixed;bottom:4px;right:4px;opacity:0.5;pointer-events:none;z-index:9999}
+.pip-resize-handle:hover{opacity:0.8}
 .pip-btn-next-call{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
 .pip-btn-next-call:hover{opacity:.85}
 .pip-btn-details{background:#1C2333;border:1px solid #2a3548;border-radius:8px;color:#e8ecf4;padding:10px 16px;font-size:13px;cursor:pointer;flex:1;transition:border-color .2s}
@@ -385,6 +388,11 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Resize Handle — visueller Hinweis dass PiP-Größe anpassbar ist -->
+  <div class="pip-resize-handle" title="Fenstergröße anpassen">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 2L2 10M10 6L6 10M10 10L10 10" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round"/></svg>
   </div>
 
   <!-- Postcall section (UNCHANGED from existing — shown after call ends) -->

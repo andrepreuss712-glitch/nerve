@@ -32,7 +32,7 @@ Format:
 Regeln:
 - Verwende NUR Informationen aus den Suchergebnissen
 - Erfinde KEINE Fakten. Wenn wenig Daten vorhanden, sage das ehrlich
-- Maximal 150 Woerter gesamt
+- Maximal 250 Woerter gesamt
 - Auf Deutsch
 - Fokus auf vertriebsrelevante Informationen: Groesse, Branche, aktuelle News, Wachstum, Tech-Stack
 - Keine persoenlichen Daten ausser berufliche Rolle des Ansprechpartners
@@ -160,7 +160,7 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, pr
     try:
         msg = claude_client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=400,
+            max_tokens=800,
             system=PRECALL_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_msg}],
         )
