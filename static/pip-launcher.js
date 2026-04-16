@@ -848,6 +848,10 @@
     var nowMuted = tracks[0].enabled;  // wenn aktuell enabled → wir muten
     tracks.forEach(function (t) { t.enabled = !nowMuted; });
     state.micMuted = nowMuted;
+    // 06.2: Backend ueber Mute-Zustand informieren, damit Keyword-Matcher pausiert
+    if (state.socket && state.socket.connected) {
+      state.socket.emit('mute_mic', { muted: !!state.micMuted });
+    }
     _updateMicIndicatorState();
     console.log('[NerveLauncher] Mic ' + (state.micMuted ? 'muted' : 'unmuted') + ' (track.enabled toggle, no session restart)');
   }
@@ -1190,6 +1194,11 @@
     state.socket.on('pip_stream_start', function (d) {
       if (!d) return;
       var slot = d.slot || 0;
+      // 06.2: Latenz-Log fuer Slot 1 (erstes Token nach keyword_einwand_match)
+      if (slot === 1 && state.slot0LastKeywordAt) {
+        var slot1Delta = Date.now() - state.slot0LastKeywordAt;
+        console.log('[Latency] Slot1 first token', slot1Delta, 'ms after keyword_einwand_match');
+      }
       var body = pipEl('pip-slot-body-' + slot);
       var container = pipEl('pip-slot-' + slot);
       if (body) {
@@ -1247,6 +1256,30 @@
       var container = pipEl('pip-slot-' + slot);
       if (body) body.classList.remove('pip-streaming');
       if (container) container.classList.remove('pip-slot-streaming');
+
+      // 06.2: Keyword-Match-Schutz fuer Slot 0.
+      // Wenn keyword_einwand_match bereits innerhalb der letzten 3s Slot 0 gerendert hat
+      // UND Claude denselben Einwand-Typ erkennt, bleibt der Profil-Text stehen.
+      // Bei abweichendem Typ: normale Render-Logik (Claude korrigiert Keyword-Falscherkennung).
+      if (slot === 0 && state.slot0LastKeywordTyp && state.slot0LastKeywordAt) {
+        var msSinceKeyword = Date.now() - state.slot0LastKeywordAt;
+        if (msSinceKeyword < 3000) {
+          var claudeTyp = (d.result && d.result.typ) ? String(d.result.typ).toLowerCase().trim() : '';
+          var keywordTyp = String(state.slot0LastKeywordTyp).toLowerCase().trim();
+          if (claudeTyp === keywordTyp || claudeTyp === '') {
+            // Gleicher Typ (oder kein Typ von Claude) — Profil-Text bleibt, kein Re-Render
+            console.log('[NerveLauncher] pip_token_done Slot0 ignoriert — Keyword-Match dominiert (typ:', state.slot0LastKeywordTyp, ', delta:', msSinceKeyword, 'ms)');
+            // D-13 und D-02 trotzdem ausfuehren (kein Render-Impact)
+            if (d.result && typeof d.result.skript_position === 'number') {
+              _updateTeleprompterPosition(d.result.skript_position);
+            }
+            return;
+          }
+          // Anderer Typ: Claude hat neue Erkenntnis — normaler Render-Pfad
+          console.log('[NerveLauncher] pip_token_done Slot0: Claude-Typ "' + claudeTyp + '" ueberschreibt Keyword-Typ "' + keywordTyp + '"');
+        }
+      }
+
       // Render formatted result
       _renderSlotResult(slot, d.result || {});
       // D-13: update teleprompter position if skript_position present
@@ -1288,6 +1321,48 @@
 
     state.socket.on('dg_error', function (d) {
       console.error('[NerveLauncher] Deepgram error:', d);
+    });
+
+    // ── Auto-Einwand Keyword Match (Phase 06.2) ──────────────────────────────
+    // Backend emitiert dieses Event <150ms nach Deepgram-Interim-Treffer.
+    // Slot 0 wird SOFORT mit dem Profil-Gegenargument belegt (kein Claude-Roundtrip).
+    state.socket.on('keyword_einwand_match', function (d) {
+      if (!d) return;
+      if (state.micMuted) {
+        console.log('[NerveLauncher] keyword match ignoriert — mic muted');
+        return;
+      }
+      var t0 = performance.now();
+
+      var typ = d.typ || (d.profile_einwand && (d.profile_einwand.kurzlabel || d.profile_einwand.kategorie)) || 'Einwand';
+      var pe = d.profile_einwand || {};
+      var ga = (pe.gegenargument_1 || pe.gegenargument || '').trim();
+      if (!ga) return;  // kein Profil-Gegenargument -> kein Render
+
+      console.log('[NerveLauncher] keyword einwand match:', typ);
+
+      // Slot 0: laufenden Haiku-Stream abbrechen (falls aktiv) und direkt rendern
+      state.pipSlots[0].streaming = false;
+      state.pipSlots[0].text = '';
+      state.pipSlots[0].rawText = false;
+      var body0 = pipEl('pip-slot-body-0');
+      var container0 = pipEl('pip-slot-0');
+      if (body0) body0.classList.remove('pip-streaming');
+      if (container0) container0.classList.remove('pip-slot-streaming');
+
+      // Render via bestehenden Einwand-Render-Pfad (Profile-Swap in _renderSlotResult)
+      var fake = { einwand: true, typ: typ, gegenargument_1: ga };
+      _renderSlotResult(0, fake);
+
+      // EWB-Button hervorheben (aehnlich wie bei manual-click)
+      _highlightEwbButton(typ);
+
+      // State-Marker: pip_token_done soll diesen Slot-0-Render NICHT ueberschreiben
+      // wenn Claude denselben typ innerhalb 3s liefert (Profil-Text bleibt autoritativ)
+      state.slot0LastKeywordTyp = typ;
+      state.slot0LastKeywordAt = Date.now();
+
+      console.log('[Latency] Slot0 render took', (performance.now() - t0).toFixed(1), 'ms');
     });
   }
 
