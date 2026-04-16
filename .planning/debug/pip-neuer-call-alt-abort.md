@@ -1,11 +1,11 @@
 ---
 slug: pip-neuer-call-alt-abort
-status: resolved
+status: investigating
 trigger: "BUG-11 Live-Assistent bricht bei jedem 2. 'Neuer Call' nach 1-2s ab"
 created: 2026-04-16
 updated: 2026-04-16
-reopened: 2026-04-16 — f2fe4f6 pagehide-Guard hat das Problem NICHT behoben
-resolved: 2026-04-16 — BUG-11b fix (commit 2d44119)
+reopened: 2026-04-16 (Runde 3) — 2d44119 NICHT ausreichend; User fordert architektonischen Fix statt Symptom-Flickerei
+prior_fixes: [f2fe4f6 pagehide-guard, 2d44119 pipWindow-null-first + _stopTimer-guard + console.trace]
 ---
 
 # Debug Session: PiP "Neuer Call" — alternierender Abort nach 1-2s
@@ -30,7 +30,47 @@ resolved: 2026-04-16 — BUG-11b fix (commit 2d44119)
 - Deploy: `bash ./deploy.sh`
 - Live: https://getnerve.app
 
-## NEUE EVIDENCE (2026-04-16 nachmittags, nach f2fe4f6-Deploy)
+## NEUE SYMPTOME (Runde 3 — nach 2d44119-Deploy, 2026-04-16)
+
+User berichtet **3 verwandte Symptome**, Arbeitshypothese: **alle Nachwirkungen eines unvollstaendigen Post-Call-Cleanups**:
+
+1. **Timer-DOM leak:** Header-Uhr zeigt ~1s nach Call-Ende noch Endzeit des vorherigen Calls, springt dann auf 00:00
+2. **Slot-1-DOM leak:** Unteres EWB-Antwortfeld zeigt manchmal noch die Claude-Variante aus dem vorherigen Call
+3. **BUG-11 persistiert:** Jeder 2. Call bricht nach 1-2s ab (auch nach 2d44119)
+
+## ARCHITEKTUR-FIX-VORGABE (User-Entscheidung)
+
+NICHT Symptome einzeln flicken. Stattdessen:
+
+**Neue Funktion `_resetLiveState()`** — einmal sauber definieren was zum Live-UI-State gehoert, in einer Funktion sammeln, nach Call-Ende aufrufen UND beim Call-Start nochmal (belt-and-suspenders).
+
+**Scope von `_resetLiveState()`:**
+- Timer stoppen UND DOM auf 00:00 setzen (nicht nur state.timerInterval clearen)
+- Slot 0 + Slot 1 body-Text zuruecksetzen (auf "Warte auf Gespraechsinhalt..." Default)
+- Slot-Labels auf ANTWORT A / B zuruecksetzen falls geaendert
+- state.pipSlots[0].text, state.pipSlots[1].text, streaming-Flags, result — alles clearen
+- EWB-Buttons: pip-ewb-ai-selected Klasse entfernen, Flashing-Klasse entfernen
+- Teleprompter active-Index reset
+- state.micStarted, micMuted, analyser-Refs clearen falls nicht schon durch _stopMic
+
+**NICHT anfassen (wichtig!):**
+- `state.lastConvId` — fuer Details-Link im Postcall noetig
+- Server-side Call-Log (Transkript, EWB-Events, conversation DB-Row)
+- Postcall-Analyse / Coach-Auswertung / Fine-Tuning-Material
+- Alles ausserhalb der PiP-Live-UI
+
+**Belt-and-suspenders-Pattern:**
+- `endCall()` ruft `_resetLiveState()` NACH _stopTimer+_stopMic (also bevor die Postcall-Section eingeblendet wird)
+- `_showPipLive()` ruft `_resetLiveState()` AM ANFANG — garantiert dass Call N+1 aus Clean State startet egal was vorher passiert ist
+
+**Hypothese:** Wenn _resetLiveState() sauber implementiert ist, verschwindet BUG-11 automatisch, weil die Race-Condition-Grundlage (stale Timer/Handler/DOM) wegfaellt.
+
+## Current Focus (Runde 3)
+
+- **hypothesis:** Root-Cause fuer alle 3 Symptome: Post-Call-Flow blendet Postcall-Section ein ohne Live-UI-Zustand zu resetten. Stale DOM/Timer/Slot-Content bleibt liegen. Beim naechsten `open()` kollidiert das mit dem Fresh-Start-Code — Race-Conditions mit verschobenen Timings produzieren den alternierenden BUG-11.
+- **test:** gsd-debugger baut `_resetLiveState()` als zentrale Cleanup-Funktion, integriert an 2 Call-Sites (endCall + _showPipLive), entfernt ggf. redundante Teil-Resets die jetzt in _resetLiveState gebuendelt sind. Regression-Check gegen BUG-13 (Postcall-Section bleibt nicht stehen).
+- **expecting:** Timer auf 00:00 sofort nach Beenden, beide Slots leer im Postcall, Call-2/3/4 laeuft zuverlaessig.
+- **next_action:** gsd-debugger spawnen mit expliziter Architektur-Vorgabe (siehe oben).
 
 ### Console-Logs vergleichen:
 
