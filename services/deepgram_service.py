@@ -4,6 +4,7 @@ from datetime import datetime
 from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
 from config import DEEPGRAM_API_KEY, SAMPLE_RATE, MERGE_WINDOW_S
 import services.live_session as ls
+import time as _time_mod
 
 # ── Per-session Deepgram connections ──────────────────────────────────────────
 _deepgram_sessions = {}   # {sid: connection}
@@ -100,6 +101,51 @@ def _make_on_message(sid):
             else:
                 sio.emit('transcript', {'type': 'interim', 'text': text},
                          room=sid)
+
+                # ── BUG-10-LAT Wave 2: Keyword-Match auf Interim-Transcript ──────
+                try:
+                    with ls.state_lock:
+                        _muted = ls.state.get('mic_muted', False)
+                    if _muted:
+                        return
+                    _profile_name, _profile_daten = ls.get_active_profile()
+                    einwaende = (_profile_daten.get('einwaende') or []) if isinstance(_profile_daten, dict) else []
+                    if not einwaende:
+                        return
+                    matcher = ls.get_matcher(sid)
+                    match = matcher.match_with_dedup(text, einwaende)
+                    if not match:
+                        return
+
+                    # Slot 0: Sofort-Render via Socket-Event
+                    _label = match.get('matched_label', '')
+                    _pe = match.get('profile_einwand') or {}
+                    sio.emit('keyword_einwand_match', {
+                        'keyword':           match['keyword'],
+                        'typ':               _label,
+                        'profile_einwand':   _pe,
+                        'transcript_snippet': text[:200],
+                    }, room=sid)
+                    print(f"[KeywordMatch] sid={sid} keyword={match['keyword']} label={_label} text={text[:60]!r}")
+
+                    # Slot 1: parallele Haiku-Variante, shared busy_until via ls.state
+                    with ls.state_lock:
+                        _busy = ls.state.get('slot1_variant_busy_until', 0)
+                    _now = _time_mod.monotonic()
+                    if _now >= _busy:
+                        with ls.state_lock:
+                            ls.state['slot1_variant_busy_until'] = _now + 6
+                        with ls.buffer_lock:
+                            _kontext = " ".join(ls.analysiert_bisher[-20:])
+                        from services.claude_service import streame_auto_variante
+                        sio.start_background_task(
+                            streame_auto_variante,
+                            text, einwaende, _kontext, sid, 1
+                        )
+                    else:
+                        print(f"[KeywordMatch] Slot-1 busy — skip (busy_until={_busy:.1f}, now={_now:.1f})")
+                except Exception as _kw_err:
+                    print(f"[KeywordMatch] error sid={sid}: {_kw_err}")
         except Exception as e:
             print(f"[DG] Fehler: {e}")
     return on_message
@@ -119,12 +165,24 @@ def _make_on_error(sid):
     return on_error
 
 
+def _make_on_utterance_end(sid):
+    def on_utterance_end(self, utterance_end, **kwargs):
+        try:
+            matcher = ls.get_matcher(sid)
+            matcher.reset_all()
+            print(f"[KeywordMatch] utterance-end reset sid={sid}")
+        except Exception as e:
+            print(f"[KeywordMatch] utterance-end reset error sid={sid}: {e}")
+    return on_utterance_end
+
+
 def _open_deepgram_connection(sid, mode='meeting'):
     client = DeepgramClient(DEEPGRAM_API_KEY)
     connection = client.listen.websocket.v("1")
     connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid))
     connection.on(LiveTranscriptionEvents.Open, _make_on_open(sid))
     connection.on(LiveTranscriptionEvents.Error, _make_on_error(sid))
+    connection.on(LiveTranscriptionEvents.UtteranceEnd, _make_on_utterance_end(sid))
     is_meeting = (mode == 'meeting')
     options_kwargs = dict(
         model="nova-2",
@@ -252,6 +310,7 @@ def register_audio_handlers(sio):
         _sid = request.sid if sid is None else sid
         print(f"[DG] stop_live_session event received (sid={_sid})")
         _close_deepgram_connection(_sid)
+        ls.drop_matcher(_sid)
 
     _first_chunk_logged = set()  # Track which sids have logged their first chunk
 
@@ -280,6 +339,16 @@ def register_audio_handlers(sio):
         print(f"[DG] socket.io disconnect event (sid={_sid})")
         _first_chunk_logged.discard(_sid)
         _close_deepgram_connection(_sid)
+        ls.drop_matcher(_sid)
+
+    @sio.on('mute_mic')
+    def handle_mute_mic(data=None, sid=None):
+        from flask import request
+        _sid = request.sid if sid is None else sid
+        muted = bool(data.get('muted', True)) if isinstance(data, dict) else True
+        with ls.state_lock:
+            ls.state['mic_muted'] = muted
+        print(f"[DG] mute_mic sid={_sid} muted={muted}")
 
     # 06.1-r2 r4: Dual-Slot Manual EWB
     # - Slot 0 wird client-side aus profile.einwaende instant gerendert (null Latenz)
