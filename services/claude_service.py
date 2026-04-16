@@ -744,6 +744,86 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         return {}
 
 
+def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: str, slot: int = 1) -> dict:
+    """BUG-10 r3: Parallele Auto-Variante — startet SOFORT ohne auf Typ-Detection zu warten.
+    Haiku bekommt den rohen Kunden-Satz + Profil-Einwaende-Liste als Kontext und baut
+    eine knappe Gegenargument-Variante. Laeuft parallel zu analysiere_mit_claude_streaming
+    in Slot 0; beide streams beenden ~gleichzeitig (max Latenz ~2-2.5s statt 4s).
+    """
+    from extensions import socketio as sio
+
+    # Profil-Einwaende als kompakte Referenz fuer Haiku aufbereiten
+    _profile_lines = []
+    for _e in (einwaende or [])[:10]:
+        if isinstance(_e, dict):
+            _lbl = (_e.get('kurzlabel') or _e.get('kategorie') or _e.get('typ') or _e.get('einwand') or '').strip()
+            _ga = (_e.get('gegenargument_1') or _e.get('gegenargument') or '').strip()
+            if _lbl and _ga:
+                _profile_lines.append(f"- {_lbl}: {_ga[:160]}")
+    _profile_block = "\n".join(_profile_lines) if _profile_lines else "(keine hinterlegten Einwaende)"
+
+    user_msg = f"""Kunde hat gerade gesagt:
+"{neuer_text}"
+
+Bisheriger Gespraechsverlauf:
+{kontext if kontext else "(Call gerade gestartet)"}
+
+Hinterlegte Einwand-Gegenargumente (als Orientierung, nicht woertlich kopieren):
+{_profile_block}
+
+Falls der Kunde einen Einwand geaeussert hat: Baue eine KURZE (2-3 Saetze) kontextbezogene
+Gegenargument-Variante — greif konkret das Gesagte auf, authentisch und direkt.
+
+Falls kein Einwand: Formuliere eine knappe gespraechsfuehrende Reaktion / naechste Frage
+(1-2 Saetze) die den Rapport-Aufbau weitertraegt.
+
+Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
+"""
+
+    print(f"[PiP-AutoVar] ENTRY sid={sid} slot={slot} text={neuer_text[:60]!r}")
+    sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
+    full_text = ''
+    try:
+        with claude_client.messages.stream(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=200,
+            system="Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter.",
+            messages=[{'role': 'user', 'content': user_msg}]
+        ) as stream:
+            for token in stream.text_stream:
+                full_text += token
+                sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
+        cleaned = full_text.strip()
+        result = {'einwand': True, 'typ': 'AUTO', 'gegenargument_1': cleaned}
+        sio.emit('pip_token_done', {'slot': slot, 'result': result, 'raw_text': True}, room=sid)
+        print(f"[PiP-AutoVar] DONE sid={sid} slot={slot} chars={len(cleaned)}")
+        try:
+            from services.cost_tracker import log_api_cost
+            final_msg = stream.get_final_message()
+            u = getattr(final_msg, 'usage', None)
+            if u is not None:
+                in_tok = getattr(u, 'input_tokens', 0) or 0
+                out_tok = getattr(u, 'output_tokens', 0) or 0
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=in_tok/1000.0, unit_type='per_1k_input_tokens',
+                             context_tag='pip_autovar')
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             units=out_tok/1000.0, unit_type='per_1k_output_tokens',
+                             context_tag='pip_autovar')
+        except Exception as _e:
+            print(f"[CostHook] pip_autovar skipped: {_e}")
+        return result
+    except Exception as e:
+        print(f"[PiP-AutoVar] Fehler sid={sid} slot={slot}: {e}")
+        err_msg = str(e).lower()
+        if '529' in err_msg or 'overloaded' in err_msg:
+            friendly = 'KI aktuell ausgelastet — Standard-Antwort oben nutzen.'
+        else:
+            friendly = 'Variante nicht verfuegbar.'
+        sio.emit('pip_stream_error', {'slot': slot, 'error': friendly}, room=sid)
+        return {}
+
+
 def streame_manual_ewb_variante(typ: str, profile_einwand: dict, kontext: str, sid: str, slot: int = 1) -> dict:
     """06.1-r2 r4: Manual-EWB Slot-1 Variante.
     Berater hat EWB-Button 'typ' geklickt. Slot 0 zeigt bereits das Profil-Gegenargument
@@ -926,39 +1006,33 @@ def analyse_loop():
             with ls.state_lock:
                 active_sid = ls.state.get('active_sid')
             if active_sid:
-                # BUG-10 r2: Auto-Einwand = Dual-Slot mit PARALLELEN Streams.
-                # Slot 0 streamt Detection (Haiku JSON). Sobald early-detect
-                # "einwand":true + "typ" erkennt, feuert Callback und spawnt Slot-1-
-                # Variante PARALLEL — beide Streams laufen gleichzeitig fertig, statt
-                # seriell (war ~4s, ist jetzt ~2-2.5s).
+                # BUG-10 r3: Maximale Parallelitaet + Anti-Overlap.
+                # (a) Detection (Slot 0) UND Variante (Slot 1) starten beide sofort.
+                #     Variante wartet NICHT mehr auf Typ-Detection — sie bekommt den
+                #     Transcript direkt und generiert kontextuelle Gegenargument-Antwort.
+                # (b) Guard gegen Doppel-Spawn: Wenn Slot 1 bereits streamt, skip —
+                #     verhindert dass Iteration N+1 das Slot-1-Stream von N mid-stream
+                #     durch neues pip_stream_start ersetzt.
                 slot_id = 0
                 analyse_loop._last_slot = slot_id
                 analyse_loop._last_slot_time = _time_mod.monotonic()
 
-                def _on_einwand_detected(detected_typ):
-                    try:
-                        _profile_daten = ls.get_active_profile() or {}
-                        _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
-                        _profile_einwand = {}
-                        _typL = detected_typ.lower().strip()
-                        for _e in _einwaende:
-                            if isinstance(_e, dict):
-                                _c1 = (_e.get('kurzlabel') or '').lower().strip()
-                                _c2 = (_e.get('kategorie') or '').lower().strip()
-                                _c3 = (_e.get('typ') or '').lower().strip()
-                                if _typL and _typL in (_c1, _c2, _c3):
-                                    _profile_einwand = _e
-                                    break
-                        sio.start_background_task(
-                            streame_manual_ewb_variante,
-                            detected_typ, _profile_einwand, kontext, active_sid, 1
-                        )
-                    except Exception as _ev:
-                        print(f"[Claude-1] Parallel variante spawn error: {_ev}")
+                _variant_busy_until = getattr(analyse_loop, '_variant_busy_until', 0)
+                _now = _time_mod.monotonic()
+                if _now >= _variant_busy_until:
+                    # Slot 1 frei — parallele Variante starten
+                    analyse_loop._variant_busy_until = _now + 6  # reserviert fuer 6s (Stream-Dauer + Buffer)
+                    _profile_daten = ls.get_active_profile() or {}
+                    _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
+                    sio.start_background_task(
+                        streame_auto_variante,
+                        neuer_text, _einwaende, kontext, active_sid, 1
+                    )
+                else:
+                    print(f"[Claude-1] Slot-1-variant skip — bereits busy (busy_until={_variant_busy_until:.1f}, now={_now:.1f})")
 
                 ergebnis = analysiere_mit_claude_streaming(
-                    neuer_text, kontext, active_sid, slot_id,
-                    on_einwand_detected=_on_einwand_detected
+                    neuer_text, kontext, active_sid, slot_id
                 )
             else:
                 ergebnis  = analysiere_mit_claude(neuer_text, kontext)
