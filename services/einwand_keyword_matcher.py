@@ -143,7 +143,7 @@ def _match_profile_einwand(keyword: str, profile_einwaende: list) -> Optional[di
         for field in ('kurzlabel', 'kategorie', 'typ'):
             val = pe.get(field)
             if val and str(val).strip().lower() in aliases:
-                return {'profile_einwand': pe, 'matched_label': field}
+                return {'profile_einwand': pe, 'matched_label': str(val).strip()}
 
     return None
 

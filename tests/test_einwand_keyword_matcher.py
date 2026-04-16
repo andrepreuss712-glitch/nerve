@@ -273,7 +273,7 @@ class TestProfilGegenargument:
         }]
         result = match_keyword("Das ist zu teuer", einwaende)
         assert result is not None
-        assert result['matched_label'] == 'kurzlabel'
+        assert result['matched_label'] == 'Preis'
 
     def test_profil_match_typ_wenn_kein_kurzlabel(self):
         """Fallback auf typ wenn kurzlabel und kategorie nicht matchen."""
