@@ -925,15 +925,24 @@
     _startTimer();
 
     // On PiP close: move content back
+    // BUG-11 FIX: pagehide fires async after pipWindow.close() and can race against
+    // the next call already being started. Guard: only stop mic if state.pipWindow
+    // still points to THIS window. If _cleanup()/nextCall() already ran,
+    // state.pipWindow is null or points to the new call's window -- skip mic teardown.
     pipWindow.addEventListener('pagehide', function () {
       var el = pipWindow.document.getElementById('pip-live-window');
       if (el) {
         el.style.display = 'none';
         document.body.appendChild(el);
       }
-      state.pipWindow = null;
-      if (state.micStarted) {
-        _stopMic();
+      // Only clean up mic/state if this pagehide is for the currently-active PiP.
+      // If state.pipWindow !== pipWindow, _cleanup() already ran (nextCall path) or
+      // a new call is already live -- touching mic state here would abort the new call.
+      if (state.pipWindow === pipWindow) {
+        state.pipWindow = null;
+        if (state.micStarted) {
+          _stopMic();
+        }
       }
     });
   }
