@@ -1307,6 +1307,26 @@
     var argument = r.gegenargument_1 || r.gegenargument || (inner && (inner.gegenargument_1 || inner.gegenargument)) || '';
     var text = r.text || (inner && inner.text) || '';
 
+    // BUG-10: Fuer Slot 0 bei erkanntem Einwand das PROFIL-gegenargument bevorzugen
+    // (exakter Text aus profile.einwaende statt Haiku-formuliert) — gibt dem Berater
+    // die autorisierte Antwort. Slot 1 bleibt die Haiku-Kontext-Variante unberuehrt.
+    if (slot === 0 && isEinwand && typ) {
+      var typL = String(typ).toLowerCase().trim();
+      var prof = (state.profileDaten && state.profileDaten.einwaende) || [];
+      for (var pi = 0; pi < prof.length; pi++) {
+        var pe = prof[pi];
+        if (!pe || typeof pe !== 'object') continue;
+        var cat1 = (pe.kurzlabel || '').toLowerCase().trim();
+        var cat2 = (pe.kategorie || '').toLowerCase().trim();
+        var cat3 = (pe.typ || '').toLowerCase().trim();
+        if (cat1 === typL || cat2 === typL || cat3 === typL) {
+          var profileGA = (pe.gegenargument_1 || pe.gegenargument || '').trim();
+          if (profileGA) argument = profileGA;
+          break;
+        }
+      }
+    }
+
     // Wenn kein nutzbares Feld vorliegt: faellt der Slot in den "Warte..."-Default statt JSON anzuzeigen
     if (!argument && !text && !isEinwand) {
       body.textContent = 'Warte auf Gespr\u00e4chsinhalt\u2026';

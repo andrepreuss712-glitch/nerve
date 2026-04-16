@@ -908,18 +908,37 @@ def analyse_loop():
             with ls.state_lock:
                 active_sid = ls.state.get('active_sid')
             if active_sid:
-                _last_slot = getattr(analyse_loop, '_last_slot', 1)
-                _last_slot_time = getattr(analyse_loop, '_last_slot_time', 0)
-                now = _time_mod.monotonic()
-                if _last_slot == 0 and (now - _last_slot_time) < 5:
-                    # Slot 0 was recently assigned -- use slot 1 for parallel answer
-                    slot_id = 1
-                else:
-                    # Default: use slot 0
-                    slot_id = 0
+                # BUG-10: Auto-Einwand-Erkennung = Dual-Slot wie Button-Klick.
+                # Slot 0 bekommt den Haiku-Detection-Stream (Frontend ueberschreibt mit
+                # Profil-gegenargument falls Match), Slot 1 bekommt die Haiku-Kontext-
+                # Variante analog zu manual_ewb. Kein alternierendes Slot-Swapping mehr.
+                slot_id = 0
                 analyse_loop._last_slot = slot_id
-                analyse_loop._last_slot_time = now
+                analyse_loop._last_slot_time = _time_mod.monotonic()
                 ergebnis = analysiere_mit_claude_streaming(neuer_text, kontext, active_sid, slot_id)
+                # Bei erkanntem Einwand: Kontext-Variante nach Slot 1 streamen.
+                if isinstance(ergebnis, dict) and ergebnis.get('einwand'):
+                    try:
+                        _typ = (ergebnis.get('typ') or '').strip()
+                        if _typ:
+                            _profile_daten = ls.get_active_profile() or {}
+                            _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
+                            _profile_einwand = {}
+                            _typL = _typ.lower()
+                            for _e in _einwaende:
+                                if isinstance(_e, dict):
+                                    _c1 = (_e.get('kurzlabel') or '').lower().strip()
+                                    _c2 = (_e.get('kategorie') or '').lower().strip()
+                                    _c3 = (_e.get('typ') or '').lower().strip()
+                                    if _typL in (_c1, _c2, _c3) and _typL:
+                                        _profile_einwand = _e
+                                        break
+                            sio.start_background_task(
+                                streame_manual_ewb_variante,
+                                _typ, _profile_einwand, kontext, active_sid, 1
+                            )
+                    except Exception as _ev:
+                        print(f"[Claude-1] Auto-variante spawn skipped: {_ev}")
             else:
                 ergebnis  = analysiere_mit_claude(neuer_text, kontext)
             latency_e = round(time.monotonic() - t_start, 2)
