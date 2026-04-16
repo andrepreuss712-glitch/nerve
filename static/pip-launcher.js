@@ -985,17 +985,16 @@
 
       var nextBtn = t.closest('#nlp-btn-next-call');
       if (nextBtn) {
-        // BUG-11 r5 DEBUG: log what actually triggered the nextCall match
-        console.log('[NerveLauncher] nextBtn match — ev.target:', {
-          tagName: t && t.tagName,
-          id: t && t.id,
-          className: t && (typeof t.className === 'string' ? t.className : t.className.baseVal),
-          isTrusted: ev.isTrusted,
-          type: ev.type,
-          postcallDisplay: (pipEl('nlp-section-postcall') || {}).style && pipEl('nlp-section-postcall').style.display,
-          liveSectionDisplay: (pipEl('pip-section-live') || {}).style && pipEl('pip-section-live').style.display,
-          path: (ev.composedPath ? ev.composedPath().slice(0,8).map(function(n){return n.id||n.tagName||n.nodeName;}) : null)
-        });
+        // BUG-11 r5 SAFETY: Nur akzeptieren wenn Postcall-Section wirklich sichtbar ist.
+        // Defense-in-depth falls eine stale endCall-Response die Section waehrend eines
+        // laufenden Calls unsichtbar ueber die Live-UI legt (der Haupt-Fix sitzt im
+        // endCall-fetch-handler per callGen-Guard).
+        var postcallEl = pipEl('nlp-section-postcall');
+        if (!postcallEl || postcallEl.style.display === 'none' || state.micStarted) {
+          console.log('[NerveLauncher] nextBtn match ignoriert — Postcall nicht aktiv oder Call laeuft');
+          ev.preventDefault();
+          return;
+        }
         ev.preventDefault();
         nextCall();
         return;
@@ -1581,6 +1580,12 @@
     // Postcall-Content wird im bestehenden Fenster zentriert.
     _showPostcallLoading();
 
+    // BUG-11 r5 ROOT CAUSE: endCall fetch kann spaet resolven waehrend bereits ein
+    // neuer Call laeuft. Dann wuerde _showPostcall die Postcall-Section ueber die
+    // Live-UI legen, der User klickt "Naechster Call" aus altem Postcall und killt
+    // so den aktiven Call. Capture-Generation beim Fetch-Start, abbrechen wenn
+    // inzwischen ein neuer Call gestartet ist (micStarted wieder true).
+    var endCallGen = (state.callGen = (state.callGen || 0) + 1);
     fetch('/api/beenden', {
       method: 'POST',
       credentials: 'include',
@@ -1592,6 +1597,10 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
+        if (state.callGen !== endCallGen || state.micStarted) {
+          console.log('[NerveLauncher] Beenden response stale (neue Session laeuft) — verworfen');
+          return;
+        }
         if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); _showPostcallEmpty(); return; }
         state.lastConvId = data.conv_id || null;
         if (data.postcall) {
@@ -1601,6 +1610,10 @@
         }
       })
       .catch(function (err) {
+        if (state.callGen !== endCallGen || state.micStarted) {
+          console.log('[NerveLauncher] Beenden fetch error ignoriert — neue Session laeuft');
+          return;
+        }
         console.error('[NerveLauncher] Beenden fetch error:', err);
         _showPostcallEmpty();
       });
@@ -1711,7 +1724,9 @@
   function nextCall() {
     // BUG-11b FIX: null state.pipWindow BEFORE calling .close() so the pagehide
     // guard (state.pipWindow === pipWindow) always evaluates false for the old window.
-    // This closes the sync-pagehide race that survived f2fe4f6.
+    // BUG-11 r5: callGen++ invalidiert auch noch ausstehende endCall-fetches, deren
+    // .then()-Handler wuerden sonst _showPostcall in die Live-UI der neuen Session blasen.
+    state.callGen = (state.callGen || 0) + 1;
     var oldWin = state.pipWindow;
     state.pipWindow = null;
     if (oldWin && !oldWin.closed) oldWin.close();
