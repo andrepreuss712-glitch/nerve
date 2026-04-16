@@ -744,7 +744,16 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         return {}
 
 
-def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: str, slot: int = 1) -> dict:
+def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: str, slot: int = 1, trigger: str = "analyse_loop") -> dict:
+    # ── Shared-Lock Design ────────────────────────────────────────────────────
+    # Der Anti-Overlap-Guard fuer Slot 1 laeuft ueber ls.state['slot1_variant_busy_until']
+    # (geschuetzt durch ls.state_lock). BEIDE automatischen Caller nutzen DENSELBEN Key:
+    #   - Keyword-Pipe (deepgram_service.py): trigger="keyword"
+    #   - analyse_loop (claude_service.py):   trigger="analyse_loop"
+    # Wer zuerst feuert, setzt busy_until = now + 6s. Der andere trifft busy und skippt.
+    # UNABHAENGIG davon: streame_manual_ewb_variante (Button-Klick-Pfad) nutzt diesen Lock
+    # NICHT — er ist by design unabhaengig, damit Berater-Button nie geblockt wird.
+    # ──────────────────────────────────────────────────────────────────────────
     """BUG-10 r3: Parallele Auto-Variante — startet SOFORT ohne auf Typ-Detection zu warten.
     Haiku bekommt den rohen Kunden-Satz + Profil-Einwaende-Liste als Kontext und baut
     eine knappe Gegenargument-Variante. Laeuft parallel zu analysiere_mit_claude_streaming
@@ -780,7 +789,7 @@ Falls kein Einwand: Formuliere eine knappe gespraechsfuehrende Reaktion / naechs
 Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
 """
 
-    print(f"[PiP-AutoVar] ENTRY sid={sid} slot={slot} text={neuer_text[:60]!r}")
+    print(f"[PiP-AutoVar] ENTRY trigger={trigger} sid={sid} slot={slot} text={neuer_text[:60]!r}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
     full_text = ''
     try:
@@ -830,6 +839,10 @@ def streame_manual_ewb_variante(typ: str, profile_einwand: dict, kontext: str, s
     instant (client-side). Hier streamen wir eine KONTEXTBEZOGENE Variante in Slot 1:
     Haiku bekommt Profil-Standard + Gespraechsverlauf, baut eine knappe Adaption.
     Emits pip_stream_start (mit raw_text:true), pip_token (plain text), pip_token_done.
+
+    UNABHAENGIG von streame_auto_variante: dieser Pfad prueft/setzt
+    ls.state['slot1_variant_busy_until'] NICHT — Button-Klick soll nie durch den
+    automatischen Anti-Overlap-Guard geblockt werden. By design unabhaengig.
     """
     from extensions import socketio as sio
     standard_ga = ''
@@ -1029,7 +1042,7 @@ def analyse_loop():
                     _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
                     sio.start_background_task(
                         streame_auto_variante,
-                        neuer_text, _einwaende, kontext, active_sid, 1
+                        neuer_text, _einwaende, kontext, active_sid, 1, "analyse_loop"
                     )
                 else:
                     print(f"[Claude-1] Slot-1-variant skip — bereits busy (busy_until={_variant_busy_until:.1f}, now={_now:.1f})")

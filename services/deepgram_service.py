@@ -140,7 +140,7 @@ def _make_on_message(sid):
                         from services.claude_service import streame_auto_variante
                         sio.start_background_task(
                             streame_auto_variante,
-                            text, einwaende, _kontext, sid, 1
+                            text, einwaende, _kontext, sid, 1, "keyword"
                         )
                     else:
                         print(f"[KeywordMatch] Slot-1 busy — skip (busy_until={_busy:.1f}, now={_now:.1f})")
