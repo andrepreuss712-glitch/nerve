@@ -30,8 +30,8 @@ from typing import Optional
 DEFAULT_KEYWORDS: dict[str, str] = {
     'keine_zeit': (
         r'\b(keine?\s+zeit'
-        r'|gerade\s+kei[nm]e?\s+zeit'
-        r'|kei[nm]e?\s+zeit\s+hab'
+        r'|gerade\s+kein(e[nms]?)?\s+zeit'
+        r'|kein(e[nms]?)?\s+zeit\s+hab'
         r'|gerade\s+stress)\b'
     ),
     'zu_teuer': (
