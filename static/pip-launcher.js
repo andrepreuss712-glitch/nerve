@@ -984,7 +984,22 @@
       }
 
       var nextBtn = t.closest('#nlp-btn-next-call');
-      if (nextBtn) { ev.preventDefault(); nextCall(); return; }
+      if (nextBtn) {
+        // BUG-11 r5 DEBUG: log what actually triggered the nextCall match
+        console.log('[NerveLauncher] nextBtn match — ev.target:', {
+          tagName: t && t.tagName,
+          id: t && t.id,
+          className: t && (typeof t.className === 'string' ? t.className : t.className.baseVal),
+          isTrusted: ev.isTrusted,
+          type: ev.type,
+          postcallDisplay: (pipEl('nlp-section-postcall') || {}).style && pipEl('nlp-section-postcall').style.display,
+          liveSectionDisplay: (pipEl('pip-section-live') || {}).style && pipEl('pip-section-live').style.display,
+          path: (ev.composedPath ? ev.composedPath().slice(0,8).map(function(n){return n.id||n.tagName||n.nodeName;}) : null)
+        });
+        ev.preventDefault();
+        nextCall();
+        return;
+      }
 
       var detailsBtn = t.closest('#nlp-btn-details');
       if (detailsBtn) { ev.preventDefault(); showDetails(); return; }
