@@ -661,10 +661,16 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     return _parse_json(msg.content[0].text.strip())
 
 
-def analysiere_mit_claude_streaming(neuer_text: str, kontext: str, sid: str, slot_id: int) -> dict:
+def analysiere_mit_claude_streaming(neuer_text: str, kontext: str, sid: str, slot_id: int, on_einwand_detected=None) -> dict:
     """PiP-only streaming variant. Emits pip_token events to specific sid room.
-    Returns final parsed result dict (same shape as analysiere_mit_claude). Phase 06 D-08, D-09."""
+    Returns final parsed result dict (same shape as analysiere_mit_claude). Phase 06 D-08, D-09.
+
+    BUG-10 r2: on_einwand_detected(typ) callback wird EARLY im Stream gefeuert, sobald
+    der JSON-Parser "einwand":true und "typ":"..." findet — ermoeglicht paralleles
+    Slot-1-Variante-Streaming waehrend Slot 0 noch fertig formuliert.
+    """
     from extensions import socketio as sio
+    import re as _re
 
     user_msg = f"""Bisheriger Gesprächskontext (zur Orientierung, letzte Aussagen):
 {kontext if kontext else "(Kein vorheriger Kontext)"}
@@ -672,14 +678,12 @@ def analysiere_mit_claude_streaming(neuer_text: str, kontext: str, sid: str, slo
 Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
 {neuer_text}"""
 
-    # 06.1-r2: Instrumentation fuer manual_ewb Debug — ohne diese prints haben wir
-    # im Produktions-Log nur den Handler-Entry aber keine Sicht auf was in der Thread-
-    # Ausfuehrung passiert (Claude-Call, Stream, Emit).
     print(f"[PiP-Stream] ENTRY sid={sid} slot={slot_id} text={neuer_text[:60]!r}")
     sio.emit('pip_stream_start', {'slot': slot_id}, room=sid)
     print(f"[PiP-Stream] emit start OK (sid={sid} slot={slot_id})")
     full_text = ''
     token_count = 0
+    _callback_fired = False
     try:
         with claude_client.messages.stream(
             model='claude-haiku-4-5-20251001',
@@ -691,6 +695,20 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
                 full_text += token
                 token_count += 1
                 sio.emit('pip_token', {'slot': slot_id, 'token': token}, room=sid)
+                # BUG-10 r2: Early-detect einwand+typ ueber Regex auf das akkumulierte
+                # JSON — sobald beide Felder lesbar sind, Callback feuern. Ermoeglicht
+                # dem Caller Slot-1-Variante parallel zu spawnen.
+                if on_einwand_detected and not _callback_fired:
+                    m_ew = _re.search(r'"einwand"\s*:\s*(true|false)', full_text)
+                    m_typ = _re.search(r'"typ"\s*:\s*"([^"]+)"', full_text)
+                    if m_ew and m_typ and m_ew.group(1).lower() == 'true':
+                        _callback_fired = True
+                        _typ_early = m_typ.group(1).strip()
+                        try:
+                            on_einwand_detected(_typ_early)
+                            print(f"[PiP-Stream] early einwand detect sid={sid} typ={_typ_early!r}")
+                        except Exception as _cb_err:
+                            print(f"[PiP-Stream] on_einwand_detected callback error: {_cb_err}")
         print(f"[PiP-Stream] stream done sid={sid} slot={slot_id} tokens={token_count} chars={len(full_text)}")
         parsed = _parse_json(full_text)
         sio.emit('pip_token_done', {'slot': slot_id, 'result': parsed}, room=sid)
@@ -908,37 +926,40 @@ def analyse_loop():
             with ls.state_lock:
                 active_sid = ls.state.get('active_sid')
             if active_sid:
-                # BUG-10: Auto-Einwand-Erkennung = Dual-Slot wie Button-Klick.
-                # Slot 0 bekommt den Haiku-Detection-Stream (Frontend ueberschreibt mit
-                # Profil-gegenargument falls Match), Slot 1 bekommt die Haiku-Kontext-
-                # Variante analog zu manual_ewb. Kein alternierendes Slot-Swapping mehr.
+                # BUG-10 r2: Auto-Einwand = Dual-Slot mit PARALLELEN Streams.
+                # Slot 0 streamt Detection (Haiku JSON). Sobald early-detect
+                # "einwand":true + "typ" erkennt, feuert Callback und spawnt Slot-1-
+                # Variante PARALLEL — beide Streams laufen gleichzeitig fertig, statt
+                # seriell (war ~4s, ist jetzt ~2-2.5s).
                 slot_id = 0
                 analyse_loop._last_slot = slot_id
                 analyse_loop._last_slot_time = _time_mod.monotonic()
-                ergebnis = analysiere_mit_claude_streaming(neuer_text, kontext, active_sid, slot_id)
-                # Bei erkanntem Einwand: Kontext-Variante nach Slot 1 streamen.
-                if isinstance(ergebnis, dict) and ergebnis.get('einwand'):
+
+                def _on_einwand_detected(detected_typ):
                     try:
-                        _typ = (ergebnis.get('typ') or '').strip()
-                        if _typ:
-                            _profile_daten = ls.get_active_profile() or {}
-                            _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
-                            _profile_einwand = {}
-                            _typL = _typ.lower()
-                            for _e in _einwaende:
-                                if isinstance(_e, dict):
-                                    _c1 = (_e.get('kurzlabel') or '').lower().strip()
-                                    _c2 = (_e.get('kategorie') or '').lower().strip()
-                                    _c3 = (_e.get('typ') or '').lower().strip()
-                                    if _typL in (_c1, _c2, _c3) and _typL:
-                                        _profile_einwand = _e
-                                        break
-                            sio.start_background_task(
-                                streame_manual_ewb_variante,
-                                _typ, _profile_einwand, kontext, active_sid, 1
-                            )
+                        _profile_daten = ls.get_active_profile() or {}
+                        _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
+                        _profile_einwand = {}
+                        _typL = detected_typ.lower().strip()
+                        for _e in _einwaende:
+                            if isinstance(_e, dict):
+                                _c1 = (_e.get('kurzlabel') or '').lower().strip()
+                                _c2 = (_e.get('kategorie') or '').lower().strip()
+                                _c3 = (_e.get('typ') or '').lower().strip()
+                                if _typL and _typL in (_c1, _c2, _c3):
+                                    _profile_einwand = _e
+                                    break
+                        sio.start_background_task(
+                            streame_manual_ewb_variante,
+                            detected_typ, _profile_einwand, kontext, active_sid, 1
+                        )
                     except Exception as _ev:
-                        print(f"[Claude-1] Auto-variante spawn skipped: {_ev}")
+                        print(f"[Claude-1] Parallel variante spawn error: {_ev}")
+
+                ergebnis = analysiere_mit_claude_streaming(
+                    neuer_text, kontext, active_sid, slot_id,
+                    on_einwand_detected=_on_einwand_detected
+                )
             else:
                 ergebnis  = analysiere_mit_claude(neuer_text, kontext)
             latency_e = round(time.monotonic() - t_start, 2)
