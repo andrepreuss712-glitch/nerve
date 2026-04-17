@@ -657,3 +657,11 @@ Plans:
 
 Plans:
 - [x] 06.3-01-PLAN.md — analyse_loop Slot-0/Slot-1 Entkopplung + ANALYSE_INTERVALL auf 4s
+
+### Phase 06.4: Headset-Pflicht-Modal Cold Call DSGVO-Hardening (INSERTED)
+
+**Goal:** Einmal-pro-Session-Modal beim ersten Cold-Call-Start: User bestätigt Headset-Nutzung und Einzel-Stimm-Verarbeitung. Ohne Bestätigung startet kein Call. sessionStorage-Flag (verfällt bei Tab-Close). Meeting-Modus unberührt. DSGVO-Compliance (§ 201 StGB Stimmverarbeitungsgrenze).
+**Requirements:** POLISH-16
+**Depends on:** Phase 06.3
+**Launch-relevant:** true
+**Plans:** 0/0 plans
