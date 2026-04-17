@@ -1901,9 +1901,9 @@ async function openPipWindow() {
   pipContent.style.height = '100%';
   pipWindow.document.body.appendChild(pipContent);
 
-  // Load Lucide in PiP window
+  // Load Lucide in PiP window (POLISH-19: lokal statt CDN)
   var lucideScript = pipWindow.document.createElement('script');
-  lucideScript.src = 'https://unpkg.com/lucide@latest';
+  lucideScript.src = '/static/vendor/lucide.min.js';
   lucideScript.onload = function() { pipWindow.lucide.createIcons(); };
   pipWindow.document.head.appendChild(lucideScript);
 

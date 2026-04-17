@@ -854,9 +854,11 @@
   function _ensureSocketIO(cb) {
     if (typeof io !== 'undefined') { cb(); return; }
     var script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js';
+    // Phase 06.6 / POLISH-19: Lokal gehostet statt CDN (DSGVO: keine Third-Party-Requests).
+    // Version 4.7.2 ist byte-identisch zum frueheren cdnjs-Load.
+    script.src = '/static/vendor/socket.io.min.js';
     script.onload = function () { cb(); };
-    script.onerror = function () { console.error('[NerveLauncher] Socket.IO CDN load failed'); };
+    script.onerror = function () { console.error('[NerveLauncher] Socket.IO local load failed'); };
     document.head.appendChild(script);
   }
 
@@ -1073,9 +1075,9 @@
       pipWindow.document.body.appendChild(liveWin);
     }
 
-    // Load Lucide in PiP
+    // Load Lucide in PiP (POLISH-19: lokal statt CDN)
     var lucide = pipWindow.document.createElement('script');
-    lucide.src = 'https://unpkg.com/lucide@latest';
+    lucide.src = '/static/vendor/lucide.min.js';
     lucide.onload = function () {
       if (pipWindow.lucide) pipWindow.lucide.createIcons();
     };
