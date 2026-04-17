@@ -1006,56 +1006,16 @@ def analyse_loop():
         with ls.state_lock:
             ls.state['aktiv'] = True
         try:
-            # Phase 06: Use streaming for PiP sessions (D-08, D-09)
-            # D-03 dual-slot assignment logic:
-            #   - Default: stream to slot 0
-            #   - If slot 0 was used recently (within 5s) and is still "fresh",
-            #     use slot 1 for the new stream (alternative/parallel answer)
-            #   - This implements D-03: "Bei zweitem Einwand waehrend Streaming:
-            #     Slot 1 wird fertig gestreamt, Slot 2 beantwortet neue Frage"
-            #   - Topic switch detection (D-03 "Themenwechsel = beide ersetzen"):
-            #     handled on the frontend via replace_all flag in pip_stream_start
-            import time as _time_mod
             with ls.state_lock:
                 active_sid = ls.state.get('active_sid')
             if active_sid:
-                # BUG-10 r3: Maximale Parallelitaet + Anti-Overlap.
-                # (a) Detection (Slot 0) UND Variante (Slot 1) starten beide sofort.
-                #     Variante wartet NICHT mehr auf Typ-Detection — sie bekommt den
-                #     Transcript direkt und generiert kontextuelle Gegenargument-Antwort.
-                # (b) Guard gegen Doppel-Spawn: Wenn Slot 1 bereits streamt, skip —
-                #     verhindert dass Iteration N+1 das Slot-1-Stream von N mid-stream
-                #     durch neues pip_stream_start ersetzt.
-                slot_id = 0
-                analyse_loop._last_slot = slot_id
-                analyse_loop._last_slot_time = _time_mod.monotonic()
-
-                # BUG-10-LAT Wave 2: shared busy_until via ls.state (vereint mit Keyword-Pipe)
-                with ls.state_lock:
-                    _variant_busy_until = ls.state.get('slot1_variant_busy_until', 0)
-                _now = _time_mod.monotonic()
-                if _now >= _variant_busy_until:
-                    # Slot 1 frei — parallele Variante starten
-                    with ls.state_lock:
-                        ls.state['slot1_variant_busy_until'] = _now + 6  # reserviert fuer 6s
-                    # get_active_profile() returns tuple (name, daten) — unpack it
-                    try:
-                        _profile_name, _profile_daten = ls.get_active_profile()
-                    except Exception:
-                        _profile_daten = {}
-                    _einwaende = _profile_daten.get('einwaende') or [] if isinstance(_profile_daten, dict) else []
-                    sio.start_background_task(
-                        streame_auto_variante,
-                        neuer_text, _einwaende, kontext, active_sid, 1, "analyse_loop"
-                    )
-                else:
-                    print(f"[Claude-1] Slot-1-variant skip — bereits busy (busy_until={_variant_busy_until:.1f}, now={_now:.1f})")
-
-                ergebnis = analysiere_mit_claude_streaming(
-                    neuer_text, kontext, active_sid, slot_id
-                )
+                # Phase 06.3: analyse_loop no longer renders into PiP slots.
+                # Keyword-Matcher (06.2) is sole primary for Slot 0 + Slot 1.
+                # Non-streaming call preserves ergebnis for FT-events, Kaufbereitschaft,
+                # Phase-Classifier, Cold-Call-Inference, Active-Hint-Orchestration.
+                ergebnis = analysiere_mit_claude(neuer_text, kontext)
             else:
-                ergebnis  = analysiere_mit_claude(neuer_text, kontext)
+                ergebnis = analysiere_mit_claude(neuer_text, kontext)
             latency_e = round(time.monotonic() - t_start, 2)
             print(f"[Claude-1] Ergebnis (Latenz {latency_e}s): {ergebnis}")
             ts = datetime.now().strftime('%H:%M:%S')
