@@ -1328,20 +1328,6 @@ def coaching_loop():
                         'ts': ts, 'type': 'tipp', 'text': tipp, 'kategorie': kategorie,
                     })
 
-            # Phase 06: Also stream coaching to PiP slot 1 if active
-            with ls.state_lock:
-                _pip_sid = ls.state.get('active_sid')
-            if _pip_sid:
-                sio.emit('pip_token_done', {
-                    'slot': 1,
-                    'result': {
-                        'notiz': tipp,
-                        'phase_hinweis': None,
-                        'kaufbereitschaft': None,
-                        'kb_trend': None,
-                        'frage_vorschlag': None,
-                    }
-                }, room=_pip_sid)
             sio.emit('coaching', {
                 'tipp': tipp, 'painpoint': painpoint,
                 'kategorie': kategorie, 'ts': ts,
