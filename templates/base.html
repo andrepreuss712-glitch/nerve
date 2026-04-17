@@ -312,7 +312,53 @@
 .launcher-briefing-html li{margin-bottom:4px}
 .launcher-briefing-html strong{color:#000000}
 .launcher-opener-preview{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:12px;font-size:13px;color:var(--page-text-color);line-height:1.5;max-height:100px;overflow-y:auto;white-space:pre-wrap}
+/* ── Headset-Pflicht-Modal ── */
+.headset-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:920;display:none;
+  align-items:center;justify-content:center}
+.headset-overlay.open{display:flex}
+.headset-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:12px;padding:28px;
+  max-width:500px;width:90%;display:flex;flex-direction:column;gap:16px}
+.headset-title{font-size:16px;font-weight:700;color:var(--page-text-color);margin:0}
+.headset-body{font-size:14px;color:var(--page-text-secondary);line-height:1.65;margin:0}
+.headset-check-row{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.headset-check-row input[type="checkbox"]{margin-top:3px;accent-color:var(--btn-primary-bg-from);width:18px;height:18px;flex-shrink:0}
+.headset-check-label{font-size:13px;color:var(--page-text-color);line-height:1.5;user-select:none}
+.headset-actions{display:flex;gap:10px;justify-content:flex-end}
+.headset-btn{border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:opacity .15s}
+.headset-btn:hover{opacity:.85}
+.headset-btn:focus-visible{outline:2px solid var(--btn-primary-bg-from);outline-offset:2px}
+.headset-btn-confirm{background:linear-gradient(135deg,var(--btn-primary-bg-from),var(--btn-primary-bg-to));
+  color:var(--btn-primary-text)}
+.headset-btn-confirm:disabled{opacity:.4;cursor:not-allowed}
+.headset-btn-cancel{background:var(--glass-bg);border:1px solid var(--glass-border);
+  color:var(--page-text-secondary)}
+.headset-footer-link{font-size:11px;color:var(--page-text-muted);text-decoration:underline;
+  cursor:pointer;align-self:flex-start;background:none;border:none;padding:0;font-family:inherit}
+.headset-footer-link:hover{color:var(--page-text-secondary)}
+.headset-legal-hint{font-size:12px;color:var(--page-text-muted);line-height:1.5;
+  background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:12px 14px;
+  display:none;margin-top:-8px}
+.headset-legal-hint.open{display:block}
 </style>
+
+<!-- ── Headset-Pflicht-Modal (DSGVO § 201 StGB) ── -->
+<div class="headset-overlay" id="headset-overlay" role="dialog" aria-modal="true" aria-labelledby="headset-title">
+  <div class="headset-box">
+    <h2 class="headset-title" id="headset-title">Kurz einchecken bevor's losgeht</h2>
+    <p class="headset-body">NERVE hoert im Cold Call nur dich — nicht deinen Gespraechspartner. Damit das sauber bleibt, brauchst du ein Headset. Ueber Lautsprecher wuerde dein Laptop-Mic die andere Stimme mit aufnehmen, und genau das wollen wir beide nicht.</p>
+    <label class="headset-check-row">
+      <input type="checkbox" id="headset-checkbox">
+      <span class="headset-check-label">Ich telefoniere ueber ein Headset und bestaetige, dass NERVE nur meine eigene Stimme verarbeitet.</span>
+    </label>
+    <div class="headset-actions">
+      <button class="headset-btn headset-btn-cancel" id="headset-cancel" type="button">Abbrechen</button>
+      <button class="headset-btn headset-btn-confirm" id="headset-confirm" type="button" disabled>Los geht's</button>
+    </div>
+    <button class="headset-footer-link" id="headset-why-link" type="button">Warum wir das fragen</button>
+    <div class="headset-legal-hint" id="headset-legal-hint">Nach § 201 StGB ist die Aufnahme nicht-oeffentlicher Gespraeche ohne Einwilligung strafbar. NERVE verarbeitet im Cold Call ausschliesslich deine Stimme — das Headset stellt sicher, dass keine Fremdstimme ueber das Laptop-Mic erfasst wird.</div>
+  </div>
+</div>
 
 <!-- PiP Launcher Setup Modal (shell — pip-launcher.js populates #launcherContent) -->
 <div id="launcherModal" class="nav-live-overlay">
