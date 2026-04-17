@@ -666,9 +666,119 @@
     if (opTa && opTa.style.display !== 'none') state._editedOpenerText = opTa.value;
   }
 
+  // ── Headset-Pflicht-Modal (DSGVO § 201 StGB) ───────────────────────────────
+  function _showHeadsetModal(callback) {
+    var overlay = document.getElementById('headset-overlay');
+    var checkbox = document.getElementById('headset-checkbox');
+    var confirmBtn = document.getElementById('headset-confirm');
+    var cancelBtn = document.getElementById('headset-cancel');
+    var whyLink = document.getElementById('headset-why-link');
+    var legalHint = document.getElementById('headset-legal-hint');
+    if (!overlay || !checkbox || !confirmBtn || !cancelBtn) return;
+
+    // Reset state
+    checkbox.checked = false;
+    confirmBtn.disabled = true;
+    legalHint.classList.remove('open');
+
+    // Open modal
+    overlay.classList.add('open');
+
+    // Store previous focus to restore later
+    var previousFocus = document.activeElement;
+
+    // Focus checkbox on open
+    setTimeout(function () { checkbox.focus(); }, 50);
+
+    // Focusable elements for trap
+    var focusables = [checkbox, cancelBtn, confirmBtn, whyLink];
+
+    // ── Event handlers (stored for cleanup) ──
+    function onCheckboxChange() {
+      confirmBtn.disabled = !checkbox.checked;
+    }
+
+    function closeModal() {
+      overlay.classList.remove('open');
+      // Remove all listeners
+      checkbox.removeEventListener('change', onCheckboxChange);
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+      whyLink.removeEventListener('click', onWhyClick);
+      document.removeEventListener('keydown', onKeydown);
+      // Restore focus
+      if (previousFocus && previousFocus.focus) {
+        try { previousFocus.focus(); } catch (e) {}
+      }
+    }
+
+    function onConfirm() {
+      try { sessionStorage.setItem('headsetConfirmed', 'true'); } catch (e) {}
+      closeModal();
+      callback();
+    }
+
+    function onCancel() {
+      closeModal();
+      // No callback — call does NOT start
+    }
+
+    function onWhyClick() {
+      legalHint.classList.toggle('open');
+    }
+
+    function onKeydown(e) {
+      // Escape = Cancel
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+        return;
+      }
+      // Enter = Confirm (only when checkbox checked)
+      if (e.key === 'Enter' && checkbox.checked) {
+        e.preventDefault();
+        onConfirm();
+        return;
+      }
+      // Focus trap
+      if (e.key === 'Tab') {
+        var idx = -1;
+        for (var i = 0; i < focusables.length; i++) {
+          if (focusables[i] === document.activeElement) { idx = i; break; }
+        }
+        if (e.shiftKey) {
+          if (idx <= 0) {
+            e.preventDefault();
+            focusables[focusables.length - 1].focus();
+          }
+        } else {
+          if (idx >= focusables.length - 1 || idx === -1) {
+            e.preventDefault();
+            focusables[0].focus();
+          }
+        }
+      }
+    }
+
+    // Wire listeners
+    checkbox.addEventListener('change', onCheckboxChange);
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+    whyLink.addEventListener('click', onWhyClick);
+    document.addEventListener('keydown', onKeydown);
+  }
+
   // ── Start Call ─────────────────────────────────────────────────────────────
   // CRITICAL: called from click handler (user gesture for getUserMedia + PiP)
   function startCall(setProfile) {
+    // ── Headset-Pflicht-Gate (Cold Call only, per D-01/POLISH-16) ──
+    if (state.mode === 'cold_call' && !sessionStorage.getItem('headsetConfirmed')) {
+      _showHeadsetModal(function () {
+        startCall(setProfile);
+      });
+      return;
+    }
+
     close();
 
     // Set profile server-side if changed (fire and forget)
