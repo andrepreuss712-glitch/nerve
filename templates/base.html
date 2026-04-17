@@ -132,7 +132,8 @@
         </div>
       </div>
       <div class="popup-divider"></div>
-      <a href="/logout" class="popup-item popup-item-logout">Abmelden</a>
+      <a href="/logout" class="popup-item popup-item-logout"
+         onclick="try{sessionStorage.removeItem('headsetConfirmed')}catch(e){}">Abmelden</a>
     </div>
   </div>
   {% endif %}
