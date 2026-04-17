@@ -173,41 +173,6 @@
     };
     document.getElementById('lnr-card-meeting').onclick = function () {
       state.mode = 'meeting';
-      // Show consent step inline before precall/skript
-      renderConsentStep();
-    };
-  }
-
-  // ── Meeting Consent (inline, replaces modal content temporarily) ───────────
-  function renderConsentStep() {
-    var c = content();
-    if (!c) return;
-    c.innerHTML = [
-      '<div class="launcher-step">',
-      '<div class="nav-consent-title">Einwilligung des Gespraechspartners</div>',
-      '<div class="nav-consent-pflicht">Pflicht — laut vorlesen</div>',
-      '<div class="nav-consent-script">',
-      '&#8222;Ist es okay wenn eine KI mithoert damit wir die Qualitaet unseres Service verbessern koennen?&#8220;',
-      '</div>',
-      '<div class="nav-consent-tipp">Tipp: &#8222;Dabei werden keine vollen Aufzeichnungen gemacht, nur Stichpunkte.&#8220;</div>',
-      '<div class="nav-consent-actions">',
-      '<button class="nav-consent-btn nav-consent-reject" id="lnr-consent-reject">Abgelehnt</button>',
-      '<button class="nav-consent-btn nav-consent-accept" id="lnr-consent-accept">Stattgegeben</button>',
-      '</div>',
-      '</div>'
-    ].join('');
-
-    document.getElementById('lnr-consent-reject').onclick = function () {
-      // Fall back to cold call
-      state.mode = 'cold_call';
-      if (state.precallVerfuegbar) {
-        state.step = 2;
-      } else {
-        state.step = 5;
-      }
-      renderStep();
-    };
-    document.getElementById('lnr-consent-accept').onclick = function () {
       if (state.precallVerfuegbar) {
         state.step = 2;
       } else {
