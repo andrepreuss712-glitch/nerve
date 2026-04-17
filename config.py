@@ -31,7 +31,7 @@ MAX_SESSION_HOURS = int(os.environ.get('MAX_SESSION_HOURS', 8))
 
 SAMPLE_RATE       = 16000
 CHUNK_SIZE        = 1024
-ANALYSE_INTERVALL = 2
+ANALYSE_INTERVALL = 4  # Phase 06.3: raised from 2s — analyse_loop is intelligence-only now, fewer calls = less 529 risk + lower cost
 MERGE_WINDOW_S    = 0.3
 SPEAKER_DEBOUNCE_S = 3.0
 
