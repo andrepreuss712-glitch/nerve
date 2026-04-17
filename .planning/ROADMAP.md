@@ -668,3 +668,14 @@ Plans:
 
 Plans:
 - [x] 06.4-01-PLAN.md — Headset-Modal HTML/CSS + Call-Gate-Logik + Logout-Cleanup
+
+### Phase 06.5: Meeting-Modus Flow-Umbau — Consent als Modal beim Call-Start (INSERTED)
+
+**Goal:** Meeting-Modus bekommt denselben Launcher-Flow wie Cold Call (Profil -> PreCall -> Skript/Opener). Inline-Consent-Screen wird entfernt. Consent erscheint stattdessen als Modal (analog Headset-Modal aus Phase 06.4) beim Klick auf "Call starten". "Stattgegeben" startet Meeting-Call (ohne Headset-Check, da Consent beide Stimmen rechtlich abdeckt). "Abgelehnt" schaltet auf Cold-Call-Modus mit regulaerem Headset-Gate. "Abbrechen" laesst User auf Step 5. Consent-Text aus state.profileDaten.consent_text ueberschreibbar mit [Name]-Platzhalter aus precallFormData.person. state.consentDone einmal pro Session. Alter PiP-Consent-Screen komplett ausgebaut.
+**Requirements:** POLISH-16
+**Depends on:** Phase 06.4
+**Launch-relevant:** true
+**Plans:** 0/0 plans complete
+
+Plans:
+- (not yet planned)
