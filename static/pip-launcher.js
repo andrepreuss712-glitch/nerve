@@ -818,6 +818,22 @@
       return;
     }
 
+    // ── Consent-Gate (Meeting only, per Phase 06.5 / POLISH-16 follow-up) ──
+    if (state.mode === 'meeting' && !state.consentDone) {
+      _showConsentModal(function (result) {
+        if (result === 'accepted') {
+          state.consentDone = true;
+          startCall(setProfile);
+        } else if (result === 'rejected') {
+          state.mode = 'cold_call';
+          state.consentDone = true;
+          startCall(setProfile);
+        }
+        // result === 'cancelled' -> do nothing, user stays on Step 5
+      });
+      return;
+    }
+
     close();
 
     // Set profile server-side if changed (fire and forget)
