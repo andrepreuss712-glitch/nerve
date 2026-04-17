@@ -1807,12 +1807,14 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
+        console.log('[NerveLauncher DEBUG] /api/beenden response arrived. data.conv_id =', data.conv_id, 'data.ok =', data.ok, 'state.callGen =', state.callGen, 'endCallGen =', endCallGen, 'state.micStarted =', state.micStarted);
         if (state.callGen !== endCallGen || state.micStarted) {
-          console.log('[NerveLauncher] Beenden response stale (neue Session laeuft) — verworfen');
+          console.log('[NerveLauncher DEBUG] >>> STALE BRANCH GRIFF — state.lastConvId wird NICHT gesetzt');
           return;
         }
         if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); _showPostcallEmpty(); return; }
         state.lastConvId = data.conv_id || null;
+        console.log('[NerveLauncher DEBUG] state.lastConvId just set to:', state.lastConvId);
         if (data.postcall) {
           _showPostcall(data.postcall);
         } else {
