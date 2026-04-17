@@ -1422,14 +1422,11 @@
       if (container) container.classList.remove('pip-slot-streaming');
     });
 
-    // Coaching via streaming now (not separate event) — but keep listener for backward compat
-    state.socket.on('coaching', function (d) {
-      if (!d) return;
-      var tipp = d.tipp || d.text || '';
-      if (tipp && !state.pipSlots[1].streaming) {
-        _showProactiveTipp(1, tipp);
-      }
-    });
+    // Coaching-Listener entfernt (Phase 06.6). Backend emittet den Event nicht mehr
+    // und die Live-Anzeige im PiP war kontraproduktiv — Coaching-Tipps wurden ueber
+    // die EWB-Antwort in Slot 1 geschrieben ("TIPP"-Label ueberschrieb "ANTWORT A").
+    // Coaching-Daten bleiben fuer Post-Call-Scoring erhalten (conversation_log +
+    // ft_assistant_events DB-Write server-seitig).
 
     state.socket.on('disconnect', function () {
       console.log('[NerveLauncher] Socket disconnected');

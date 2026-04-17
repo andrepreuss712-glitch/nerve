@@ -1328,10 +1328,14 @@ def coaching_loop():
                         'ts': ts, 'type': 'tipp', 'text': tipp, 'kategorie': kategorie,
                     })
 
-            sio.emit('coaching', {
-                'tipp': tipp, 'painpoint': painpoint,
-                'kategorie': kategorie, 'ts': ts,
-            })
+            # ── Coaching-WebSocket-Emit entfernt (Phase 06.6 / RULE-01-Erweiterung) ──
+            # Der coaching-Channel landete im Frontend via _showProactiveTipp auf Slot 1
+            # und hat die EWB-Antwort nach Stream-Ende ueberschrieben. Coaching-Daten
+            # bleiben vollstaendig erhalten fuer Post-Call-Scoring: conversation_log
+            # (oben), _write_ft_assistant_event (unten) und der [Claude-2]-Log-Print.
+            # Live-Anzeige waehrend des Calls war kontraproduktiv — der Berater kann
+            # nicht gleichzeitig lesen und zuhoeren.
+
             # ── FT logging hook (Phase 04.7.1) ────────────────────────────────
             try:
                 _coach_text_parts = []
