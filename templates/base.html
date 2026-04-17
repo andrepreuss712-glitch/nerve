@@ -340,6 +340,29 @@
   background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:12px 14px;
   display:none;margin-top:-8px}
 .headset-legal-hint.open{display:block}
+/* ── Consent-Modal (Meeting-Modus DSGVO Einwilligung) ── */
+.consent-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10100;display:none;
+  align-items:center;justify-content:center}
+.consent-overlay.open{display:flex}
+.consent-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:12px;padding:28px;
+  max-width:520px;width:90%;display:flex;flex-direction:column;gap:14px}
+.consent-title{font-size:16px;font-weight:700;color:var(--page-text-color);margin:0}
+.consent-pflicht{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--btn-primary-bg-from);margin:0}
+.consent-script{font-size:14px;color:var(--page-text-color);line-height:1.65;margin:0;
+  background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:14px 16px;
+  font-style:italic}
+.consent-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.consent-btn{border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:opacity .15s}
+.consent-btn:hover{opacity:.85}
+.consent-btn:focus-visible{outline:2px solid var(--btn-primary-bg-from);outline-offset:2px}
+.consent-btn-accept{background:linear-gradient(135deg,var(--btn-primary-bg-from),var(--btn-primary-bg-to));
+  color:var(--btn-primary-text)}
+.consent-btn-reject{background:var(--glass-bg);border:1px solid var(--glass-border);
+  color:var(--page-text-secondary)}
+.consent-btn-cancel{background:transparent;border:1px solid var(--glass-border);
+  color:var(--page-text-muted)}
 </style>
 
 <!-- ── Headset-Pflicht-Modal (DSGVO § 201 StGB) ── -->
@@ -357,6 +380,20 @@
     </div>
     <button class="headset-footer-link" id="headset-why-link" type="button">Warum wir das fragen</button>
     <div class="headset-legal-hint" id="headset-legal-hint">Nach § 201 StGB ist die Aufnahme nicht-oeffentlicher Gespraeche ohne Einwilligung strafbar. NERVE verarbeitet im Cold Call ausschliesslich deine Stimme — das Headset stellt sicher, dass keine Fremdstimme ueber das Laptop-Mic erfasst wird.</div>
+  </div>
+</div>
+
+<!-- ── Consent-Modal (Meeting-Modus Einwilligung des Gespraechspartners) ── -->
+<div class="consent-overlay" id="consent-overlay" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+  <div class="consent-box">
+    <h2 class="consent-title" id="consent-title">Einwilligung des Gespraechspartners</h2>
+    <p class="consent-pflicht">Bitte laut vorlesen</p>
+    <p class="consent-script" id="consent-script"></p>
+    <div class="consent-actions">
+      <button class="consent-btn consent-btn-cancel" id="consent-btn-cancel" type="button">Abbrechen</button>
+      <button class="consent-btn consent-btn-reject" id="consent-btn-reject" type="button">Abgelehnt</button>
+      <button class="consent-btn consent-btn-accept" id="consent-btn-accept" type="button">Stattgegeben</button>
+    </div>
   </div>
 </div>
 

@@ -623,6 +623,80 @@
     overlay.onclick = function (e) { if (e.target === overlay) overlay.remove(); };
   }
 
+  // ── Consent-Modal (Meeting-Modus DSGVO Einwilligung) ──────────────────────
+  var CONSENT_DEFAULT_TEXT = 'Kurz vorab \u2014 ich lasse mich gerade von einem Assistenzsystem unterstuetzen, das unser Gespraech mitliest und mir hilft, keine Audioaufnahme. Passt das fuer Sie?';
+
+  function _showConsentModal(callback) {
+    var overlay = document.getElementById('consent-overlay');
+    var scriptEl = document.getElementById('consent-script');
+    var acceptBtn = document.getElementById('consent-btn-accept');
+    var rejectBtn = document.getElementById('consent-btn-reject');
+    var cancelBtn = document.getElementById('consent-btn-cancel');
+    if (!overlay || !scriptEl || !acceptBtn || !rejectBtn || !cancelBtn) return;
+
+    // Resolve script text: profileDaten.consent_text > default
+    var text = (state.profileDaten && state.profileDaten.consent_text)
+      ? state.profileDaten.consent_text
+      : CONSENT_DEFAULT_TEXT;
+    // Replace [Name] token with precallFormData.person if available
+    if (state.precallFormData && state.precallFormData.person) {
+      text = text.replace('[Name]', state.precallFormData.person);
+    }
+    scriptEl.textContent = text;
+
+    overlay.classList.add('open');
+
+    var previousFocus = document.activeElement;
+    setTimeout(function () { acceptBtn.focus(); }, 50);
+
+    var focusables = [cancelBtn, rejectBtn, acceptBtn];
+
+    function closeModal() {
+      overlay.classList.remove('open');
+      acceptBtn.removeEventListener('click', onAccept);
+      rejectBtn.removeEventListener('click', onReject);
+      cancelBtn.removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onKeydown);
+      if (previousFocus && previousFocus.focus) {
+        try { previousFocus.focus(); } catch (e) {}
+      }
+    }
+
+    function onAccept() { closeModal(); callback('accepted'); }
+    function onReject() { closeModal(); callback('rejected'); }
+    function onCancel() { closeModal(); callback('cancelled'); }
+
+    function onKeydown(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+        return;
+      }
+      if (e.key === 'Tab') {
+        var idx = -1;
+        for (var i = 0; i < focusables.length; i++) {
+          if (focusables[i] === document.activeElement) { idx = i; break; }
+        }
+        if (e.shiftKey) {
+          if (idx <= 0) {
+            e.preventDefault();
+            focusables[focusables.length - 1].focus();
+          }
+        } else {
+          if (idx >= focusables.length - 1 || idx === -1) {
+            e.preventDefault();
+            focusables[0].focus();
+          }
+        }
+      }
+    }
+
+    acceptBtn.addEventListener('click', onAccept);
+    rejectBtn.addEventListener('click', onReject);
+    cancelBtn.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKeydown);
+  }
+
   function _collectEditedTexts() {
     // If user edited inline, store the edited text for the session
     var skTa = document.getElementById('lnr-skript-textarea');
