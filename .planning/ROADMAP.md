@@ -653,7 +653,7 @@ Plans:
 **Goal:** Den 529 overloaded_error beim EWB-Vorlesen strukturell unterbinden. Keyword-Matcher (Phase 06.2) wird alleiniger Primary fuer Live-EWB-Slots. analyse_loop behaelt Intelligence-Funktionen (FT-Events, Kaufbereitschaft, Phase-Classifier, Coaching-Hints), verliert aber jeden UI-Render-Pfad in Slot 0 und Slot 1. Akzeptanz: 0 Anthropic-529-Fehler bei 3x EWB-Vorlesen, kein trigger=analyse_loop in PiP-AutoVar Logs.
 **Requirements:** BUG-10-529
 **Depends on:** Phase 06.2
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 06.3-01-PLAN.md — analyse_loop Slot-0/Slot-1 Entkopplung + ANALYSE_INTERVALL auf 4s
+- [x] 06.3-01-PLAN.md — analyse_loop Slot-0/Slot-1 Entkopplung + ANALYSE_INTERVALL auf 4s

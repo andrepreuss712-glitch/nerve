@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: idle
-stopped_at: Completed 06.2-04-PLAN.md
-last_updated: "2026-04-16T14:00:00.000Z"
-last_activity: 2026-04-16
+status: verifying
+stopped_at: Completed 06.3-01-PLAN.md
+last_updated: "2026-04-17T08:27:23.333Z"
+last_activity: 2026-04-17
 progress:
-  total_phases: 33
-  completed_phases: 23
-  total_plans: 126
-  completed_plans: 116
+  total_phases: 34
+  completed_phases: 24
+  total_plans: 127
+  completed_plans: 117
   percent: 92
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 06.2 — auto-einwand-latenz-architektur
+**Current focus:** Phase 06.3 — analyse-loop-entkoppeln-von-live-slots
 
 ## Current Position
 
-Phase: 06.2 (auto-einwand-latenz-architektur) — COMPLETE
-Plan: 4 of 4 (alle abgeschlossen)
-Status: Phase abgeschlossen
-Last activity: 2026-04-16
+Phase: 06.3 (analyse-loop-entkoppeln-von-live-slots) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-04-17
 
 **Next:** Naechste Phase planen
 
@@ -143,6 +143,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.2 P01 | 183 | 3 tasks | 2 files |
 | Phase 06.2 P02 | 139 | 5 tasks | 3 files |
 | Phase 06.2 P03 | 240 | 4 tasks | 1 files |
+| Phase 06.3-analyse-loop-entkoppeln-von-live-slots P01 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -331,6 +332,9 @@ Recent decisions affecting current work:
 - [Phase 06.2]: Lock-Unifikation aus Wave 4 in Plan 02 vorgezogen: analyse_loop._variant_busy_until vollstaendig durch ls.state ersetzt
 - [Phase 06.2]: slot0LastKeywordTyp 3s-Fenster: gleicher typ -> pip_token_done ueberschreibt nicht
 - [Phase 06.2]: mute_mic emit NACH state-Toggle, damit Wert korrekt an Backend
+- [Phase 06.3]: D-08: Fallback-Variante (a) — non-streaming analysiere_mit_claude for PiP sessions, minimal regression surface
+- [Phase 06.3]: D-10: ANALYSE_INTERVALL raised to 4s — intelligence-only loop, not latency-sensitive, halves API call volume
+- [Phase 06.3]: D-11: _last_slot/_last_slot_time removed — confirmed write-only dead code
 
 ### Roadmap Evolution
 
@@ -383,6 +387,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-16T14:15:00.000Z
-Stopped at: Phase 06.2 komplett — HANDOFF.json mit 06.3 followup + Launch-Prio-Queue
-Resume file: .planning/HANDOFF.json, .planning/phases/06.2-auto-einwand-latenz-architektur/.continue-here.md
+Last session: 2026-04-17T08:27:23.328Z
+Stopped at: Completed 06.3-01-PLAN.md
+Resume file: None
