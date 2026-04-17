@@ -675,7 +675,7 @@ Plans:
 **Requirements:** POLISH-16
 **Depends on:** Phase 06.4
 **Launch-relevant:** true
-**Plans:** 0/0 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
-- (not yet planned)
+- [x] 06.5-01-PLAN.md — Meeting-Card direct-flow + Consent-Modal (HTML/CSS/JS) + startCall consent-gate + alten pip-section-consent komplett ausbauen

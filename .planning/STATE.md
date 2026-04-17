@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06.4-01-PLAN.md
-last_updated: "2026-04-17T10:36:02.448Z"
+stopped_at: Completed 06.5-01-PLAN.md
+last_updated: "2026-04-17T12:51:47.106Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 35
-  completed_phases: 25
-  total_plans: 128
-  completed_plans: 118
+  total_phases: 36
+  completed_phases: 26
+  total_plans: 129
+  completed_plans: 119
   percent: 92
 ---
 
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 06.4 — headset-pflicht-modal-cold-call-dsgvo-hardening
+**Current focus:** Phase 06.5 — meeting-consent-modal
 
 ## Current Position
 
-Phase: 06.4 (headset-pflicht-modal-cold-call-dsgvo-hardening) — EXECUTING
+Phase: 06.5 (meeting-consent-modal) — EXECUTING
 Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-04-17
@@ -146,6 +146,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.2 P03 | 240 | 4 tasks | 1 files |
 | Phase 06.3-analyse-loop-entkoppeln-von-live-slots P01 | 8 | 2 tasks | 2 files |
 | Phase 06.4 P01 | 2min | 2 tasks | 3 files |
+| Phase 06.5 P01 | 5min | 4 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -338,6 +339,10 @@ Recent decisions affecting current work:
 - [Phase 06.3]: D-10: ANALYSE_INTERVALL raised to 4s — intelligence-only loop, not latency-sensitive, halves API call volume
 - [Phase 06.3]: D-11: _last_slot/_last_slot_time removed — confirmed write-only dead code
 - [Phase 06.4]: sessionStorage for headset flag (resets on tab close for DSGVO)
+- [Phase 06.5]: Consent-Modal-Callback dreistufig (accepted/rejected/cancelled) — rejected setzt mode='cold_call' + consentDone=true, rekursiver startCall greift Headset-Gate
+- [Phase 06.5]: state.consentDone statt sessionStorage — Flag lebt in Launcher-Instanz, wird via _cleanup() resettet (nicht wie Headset der sessionStorage ueberlebt)
+- [Phase 06.5]: Consent-Gate steht in startCall() NACH Headset-Gate, VOR close() — bei 'Abbrechen' bleibt Launcher auf Step 5 sichtbar
+- [Phase 06.5]: Default-Text em-dash als \u2014 Unicode-Escape (POLISH-12 Encoding-Regel, keine nativen Umlaute)
 
 ### Roadmap Evolution
 
@@ -390,6 +395,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-17T10:36:02.443Z
-Stopped at: Completed 06.4-01-PLAN.md
+Last session: 2026-04-17T12:51:30.411Z
+Stopped at: Completed 06.5-01-PLAN.md
 Resume file: None
