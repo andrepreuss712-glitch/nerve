@@ -1270,6 +1270,15 @@ def _load_user():
     finally:
         db.close()
 
+# ── Favicon stub (POLISH-17) ──────────────────────────────────────────────────
+# Browser requesten /favicon.ico automatisch — ohne Datei/Route schlug es in einen
+# 500er mit Traceback um, weil die Exception am errorhandler unten landete.
+# 204 No Content beendet den Request sauber und verhindert Console-/Log-Noise.
+# TODO: Echtes NERVE-Icon in static/favicon.ico ablegen und hier via send_from_directory servieren.
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
+
 # ── Global JSON Error Handler ─────────────────────────────────────────────────
 # Returns full traceback as JSON for API endpoints instead of HTML 500 page
 import traceback as _tb
