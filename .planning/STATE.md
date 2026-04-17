@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06.3-01-PLAN.md
-last_updated: "2026-04-17T08:34:45.858Z"
+stopped_at: Completed 06.4-01-PLAN.md
+last_updated: "2026-04-17T10:36:02.448Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 34
-  completed_phases: 24
-  total_plans: 127
-  completed_plans: 117
+  total_phases: 35
+  completed_phases: 25
+  total_plans: 128
+  completed_plans: 118
   percent: 92
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 06.3 — analyse-loop-entkoppeln-von-live-slots
+**Current focus:** Phase 06.4 — headset-pflicht-modal-cold-call-dsgvo-hardening
 
 ## Current Position
 
-Phase: 06.3
-Plan: Not started
+Phase: 06.4 (headset-pflicht-modal-cold-call-dsgvo-hardening) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-04-17
 
@@ -145,6 +145,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.2 P02 | 139 | 5 tasks | 3 files |
 | Phase 06.2 P03 | 240 | 4 tasks | 1 files |
 | Phase 06.3-analyse-loop-entkoppeln-von-live-slots P01 | 8 | 2 tasks | 2 files |
+| Phase 06.4 P01 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -336,6 +337,7 @@ Recent decisions affecting current work:
 - [Phase 06.3]: D-08: Fallback-Variante (a) — non-streaming analysiere_mit_claude for PiP sessions, minimal regression surface
 - [Phase 06.3]: D-10: ANALYSE_INTERVALL raised to 4s — intelligence-only loop, not latency-sensitive, halves API call volume
 - [Phase 06.3]: D-11: _last_slot/_last_slot_time removed — confirmed write-only dead code
+- [Phase 06.4]: sessionStorage for headset flag (resets on tab close for DSGVO)
 
 ### Roadmap Evolution
 
@@ -388,6 +390,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-17T08:27:23.328Z
-Stopped at: Completed 06.3-01-PLAN.md
+Last session: 2026-04-17T10:36:02.443Z
+Stopped at: Completed 06.4-01-PLAN.md
 Resume file: None
