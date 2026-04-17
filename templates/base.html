@@ -260,8 +260,12 @@
 .pip-resize-handle:hover{opacity:0.8}
 .pip-btn-next-call{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
 .pip-btn-next-call:hover{opacity:.85}
-.pip-btn-details{background:#1C2333;border:1px solid #2a3548;border-radius:8px;color:#e8ecf4;padding:10px 16px;font-size:13px;cursor:pointer;flex:1;transition:border-color .2s}
-.pip-btn-details:hover{border-color:#00D4AA}
+.pip-btn-details{background:#1C2333;border:1px solid #2a3548;border-radius:8px;color:#e8ecf4;padding:10px 16px;font-size:13px;cursor:pointer;flex:1;transition:border-color .2s,opacity .2s}
+.pip-btn-details:hover:not(:disabled){border-color:#00D4AA}
+.pip-btn-details:disabled{opacity:.45;cursor:not-allowed;border-color:#2a3548}
+/* POLISH-23: Spinner statt "…" wenn Auswertung noch lädt */
+@keyframes pip-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.pip-score-spinner{width:44px;height:44px;border:4px solid rgba(0,212,170,0.15);border-top-color:#00D4AA;border-radius:50%;animation:pip-spin 0.9s linear infinite;margin:6px auto 0}
 /* 06.1-r2 DESIGN-6: Beenden als kleiner roter Pill im Header — gleiche Hoehe wie .pip-mode-badge */
 .pip-btn-beenden{background:transparent;border:1px solid rgba(248,113,113,0.5);border-radius:9999px;color:#f87171;padding:2px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s}
 .pip-btn-beenden:hover{background:rgba(248,113,113,0.12);border-color:#f87171}

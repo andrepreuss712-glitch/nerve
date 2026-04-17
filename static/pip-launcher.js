@@ -1807,14 +1807,12 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        console.log('[NerveLauncher DEBUG] /api/beenden response arrived. data.conv_id =', data.conv_id, 'data.ok =', data.ok, 'state.callGen =', state.callGen, 'endCallGen =', endCallGen, 'state.micStarted =', state.micStarted);
         if (state.callGen !== endCallGen || state.micStarted) {
-          console.log('[NerveLauncher DEBUG] >>> STALE BRANCH GRIFF — state.lastConvId wird NICHT gesetzt');
+          console.log('[NerveLauncher] Beenden response stale (neue Session laeuft) — verworfen');
           return;
         }
         if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); _showPostcallEmpty(); return; }
         state.lastConvId = data.conv_id || null;
-        console.log('[NerveLauncher DEBUG] state.lastConvId just set to:', state.lastConvId);
         if (data.postcall) {
           _showPostcall(data.postcall);
         } else {
@@ -1887,11 +1885,15 @@
 
   function _showPostcallLoading() {
     _showPostcallRaw('\u2026', []);
-    var labelEl = pipEl('nlp-postcall-score');
-    // Label unterhalb auf "Wird ausgewertet..." setzen indem wir die PostcallLabel-Div
-    // temporaer ueberschreiben — simpler Hack via tags-Bereich.
+    // POLISH-23: Score-Bereich zeigt rotierenden Spinner statt statisches "…"
+    var scoreEl = pipEl('nlp-postcall-score');
+    if (scoreEl) scoreEl.innerHTML = '<div class="pip-score-spinner" aria-label="Auswertung wird erstellt"></div>';
     var tagsEl = pipEl('nlp-postcall-tags');
     if (tagsEl) tagsEl.innerHTML = '<span class="pip-postcall-loading">Call wird ausgewertet\u2026</span>';
+    // POLISH-23: Auswertung-Button disabled solange keine conv_id aus /api/beenden-Response da ist.
+    // Verhindert dass User auf /logs-Fallback navigiert weil state.lastConvId noch null.
+    var detailsBtn = pipEl('nlp-btn-details');
+    if (detailsBtn) { detailsBtn.disabled = true; detailsBtn.style.display = ''; }
   }
 
   function _showPostcallEmpty() {
@@ -1921,8 +1923,12 @@
     var scoreEl = pipEl('nlp-postcall-score');
     if (scoreEl) { scoreEl.style.display = ''; scoreEl.textContent = scoreText; }
     // Details-Button in Filled-State wieder einblenden (Empty-State hatte ihn versteckt)
+    // POLISH-23: plus enablen sobald echter Score da ist (disabled-state aus _showPostcallLoading aufheben)
     var detailsBtn = pipEl('nlp-btn-details');
-    if (detailsBtn && scoreText && scoreText !== '\u2026') detailsBtn.style.display = '';
+    if (detailsBtn && scoreText && scoreText !== '\u2026') {
+      detailsBtn.style.display = '';
+      detailsBtn.disabled = false;
+    }
 
     var tagsEl = pipEl('nlp-postcall-tags');
     if (tagsEl) {
@@ -1947,8 +1953,6 @@
   }
 
   function showDetails() {
-    // TEMP DEBUG (POLISH-23 Diagnose): zeige aktuellen convId-Wert zum Click-Zeitpunkt
-    console.log('[NerveLauncher DEBUG] showDetails called. state.lastConvId =', state.lastConvId, 'typeof:', typeof state.lastConvId);
     // BUG-11b FIX: same null-first approach as nextCall()
     var oldWin = state.pipWindow;
     state.pipWindow = null;
@@ -1957,9 +1961,7 @@
     // _cleanup() setzt state.lastConvId = null, weshalb die Weiterleitung
     // immer auf /logs (statt /logs/{id}) landete (Regression von BUG-11).
     var convId = state.lastConvId;
-    console.log('[NerveLauncher DEBUG] var convId set to:', convId, '— calling _cleanup next');
     _cleanup();
-    console.log('[NerveLauncher DEBUG] after _cleanup, will navigate to:', convId ? ('/session/' + convId) : '/logs');
     if (convId) {
       // POLISH-23 FIX: Route heisst '/session/<id>', NICHT '/logs/<id>' —
       // letztere existiert in routes/logs_routes.py gar nicht. Der alte
