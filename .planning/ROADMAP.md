@@ -647,3 +647,10 @@ Plans:
 - [x] 06.2-02-PLAN.md — Backend-Pipeline (Deepgram-Interim-Hook + Match + Socket-Emit + parallel Auto-Variante spawn + UtteranceEnd-Reset + Mute-Guard)
 - [x] 06.2-03-PLAN.md — Frontend-Handler (keyword_einwand_match Instant-Render + pip_token_done-Respekt + mute_mic-Emit + Timing-Logs)
 - [x] 06.2-04-PLAN.md — Shared busy_until-Lock (Keyword + analyse_loop teilen Guard → kein Doppel-Spawn, Button-Pfad unabhängig)
+
+### Phase 06.3: analyse_loop entkoppeln von Live-Slots (INSERTED)
+
+**Goal:** Den 529 overloaded_error beim EWB-Vorlesen strukturell unterbinden. Keyword-Matcher (Phase 06.2) wird alleiniger Primary fuer Live-EWB-Slots. analyse_loop behaelt Intelligence-Funktionen (FT-Events, Kaufbereitschaft, Phase-Classifier, Coaching-Hints), verliert aber jeden UI-Render-Pfad in Slot 0 und Slot 1. Akzeptanz: 0 Anthropic-529-Fehler bei 3x EWB-Vorlesen, kein trigger=analyse_loop in PiP-AutoVar Logs.
+**Requirements:** BUG-10-529
+**Depends on:** Phase 06.2
+**Plans:** 0 plans
