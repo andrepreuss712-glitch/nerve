@@ -6,7 +6,7 @@
 <title>NERVE — Sales Intelligence{% block title %}{% endblock %}</title>
 <script>document.documentElement.setAttribute('data-theme','dark')</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}?v={{ config.get('CSS_VERSION', '1') }}">
-<script src="https://unpkg.com/lucide@latest"></script>
+<script src="{{ url_for('static', filename='vendor/lucide.min.js') }}"></script>
 <style>{% block extra_style %}{% endblock %}</style>
 {% block head_extra %}{% endblock %}
 </head>
