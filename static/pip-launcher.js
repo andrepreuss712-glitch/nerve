@@ -1945,6 +1945,8 @@
   }
 
   function showDetails() {
+    // TEMP DEBUG (POLISH-23 Diagnose): zeige aktuellen convId-Wert zum Click-Zeitpunkt
+    console.log('[NerveLauncher DEBUG] showDetails called. state.lastConvId =', state.lastConvId, 'typeof:', typeof state.lastConvId);
     // BUG-11b FIX: same null-first approach as nextCall()
     var oldWin = state.pipWindow;
     state.pipWindow = null;
@@ -1953,7 +1955,9 @@
     // _cleanup() setzt state.lastConvId = null, weshalb die Weiterleitung
     // immer auf /logs (statt /logs/{id}) landete (Regression von BUG-11).
     var convId = state.lastConvId;
+    console.log('[NerveLauncher DEBUG] var convId set to:', convId, '— calling _cleanup next');
     _cleanup();
+    console.log('[NerveLauncher DEBUG] after _cleanup, will navigate to:', convId ? ('/session/' + convId) : '/logs');
     if (convId) {
       // POLISH-23 FIX: Route heisst '/session/<id>', NICHT '/logs/<id>' —
       // letztere existiert in routes/logs_routes.py gar nicht. Der alte
