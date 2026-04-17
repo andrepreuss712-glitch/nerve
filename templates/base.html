@@ -232,17 +232,6 @@
 .tp-block{padding:12px 16px;border-left:4px solid transparent;border-radius:0 8px 8px 0;font-size:14px;line-height:1.5;color:rgba(26,26,26,0.4);cursor:pointer;transition:opacity 200ms,border-color 200ms,color 200ms,background 200ms}
 .tp-block-active{border-left-color:#00D4AA;color:#1a1a1a;background:rgba(0,212,170,0.08)}
 .tp-empty{padding:24px 16px;text-align:center;color:#6B7280;font-size:13px}
-/* Consent Screen */
-.pip-consent-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:24px}
-.pip-consent-inner{display:flex;flex-direction:column;gap:12px;width:100%;max-width:400px}
-.pip-consent-heading{font-size:14px;font-weight:700;color:#e8ecf4}
-.pip-consent-subtext{font-size:12px;font-weight:700;color:rgba(255,255,255,0.5)}
-.pip-consent-textbox{background:rgba(255,255,255,0.05);border-radius:8px;padding:12px 16px;font-size:14px;font-weight:400;line-height:1.6;color:rgba(255,255,255,0.7)}
-.pip-consent-buttons{display:flex;flex-direction:column;gap:8px;margin-top:16px}
-.pip-consent-btn{border:none;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s;width:100%;text-align:center}
-.pip-consent-btn:hover{opacity:0.85}
-.pip-consent-btn-accept{background:#00D4AA;color:#06060a}
-.pip-consent-btn-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171}
 /* 06.1-r2 CLEANUP: Opacity-Slider entfernt (Browser-Limitation — PiP-Doc kann nicht echt transparent ueber CRM) */
 .pip-header-right{display:flex;align-items:center;gap:10px}
 /* D-13: Mic-Indikator — 4 Balken, klickbar als Mute-Toggle */
@@ -425,21 +414,6 @@
       </button>
       <!-- 06.1-r2 DESIGN-6: Beenden als kleiner roter Pill im Header (spart Footer-Zeile) -->
       <button type="button" class="pip-btn-beenden" id="nlp-btn-beenden" style="display:none">Beenden</button>
-    </div>
-  </div>
-
-  <!-- Consent Section (D-05: shown for meeting mode before live, full height) -->
-  <div id="pip-section-consent" style="display:none" class="pip-consent-screen">
-    <div class="pip-consent-inner">
-      <div class="pip-consent-heading">Hinweis an Kunden vorlesen</div>
-      <div class="pip-consent-subtext">Lesen Sie dem Kunden den folgenden Text vor:</div>
-      <div class="pip-consent-textbox" id="pip-consent-text">
-        Herr/Frau [Name], kurzer Hinweis — ich mache mir während unseres Gesprächs digitale Notizen. Ist das für Sie in Ordnung?
-      </div>
-      <div class="pip-consent-buttons">
-        <button class="pip-consent-btn pip-consent-btn-accept" id="pip-consent-accept">Stattgegeben — Meeting-Modus starten</button>
-        <button class="pip-consent-btn pip-consent-btn-reject" id="pip-consent-reject">Abgelehnt — Weiter als Cold Call</button>
-      </div>
     </div>
   </div>
 

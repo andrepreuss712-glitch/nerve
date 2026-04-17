@@ -1180,58 +1180,11 @@
     var badge = pipEl('nlp-mode-badge');
     if (badge) badge.textContent = state.mode === 'meeting' ? 'Meeting' : 'Cold Call';
 
-    // D-05/D-07: Show consent screen for meeting mode, skip for cold_call
-    if (state.mode === 'meeting' && !state.consentDone) {
-      _showPipConsent();
-    } else {
-      _showPipLive();
-    }
+    // Phase 06.5: Consent ist jetzt Launcher-Gate (vor Call-Start). PiP startet immer direkt im Live-View.
+    _showPipLive();
 
     // Render EWB buttons
     _renderEwbButtons();
-  }
-
-  function _showPipConsent() {
-    var consentSection = pipEl('pip-section-consent');
-    var liveSection = pipEl('pip-section-live');
-    var beendenBtn = pipEl('nlp-btn-beenden');
-    if (consentSection) consentSection.style.display = 'flex';
-    if (liveSection) liveSection.style.display = 'none';
-    if (beendenBtn) beendenBtn.style.display = 'none';
-
-    // D-06: Load consent text from profile (or use default)
-    var consentText = (state.profileDaten && state.profileDaten.consent_text)
-      ? state.profileDaten.consent_text
-      : 'Herr/Frau [Name], kurzer Hinweis \u2014 ich mache mir w\u00e4hrend unseres Gespr\u00e4chs digitale Notizen. Ist das f\u00fcr Sie in Ordnung?';
-    // Replace [Name] with kundendaten name if available
-    if (state.precallFormData && state.precallFormData.person) {
-      consentText = consentText.replace('[Name]', state.precallFormData.person);
-    }
-    var textEl = pipEl('pip-consent-text');
-    if (textEl) textEl.textContent = consentText;
-
-    // Wire consent buttons
-    var acceptBtn = pipEl('pip-consent-accept');
-    var rejectBtn = pipEl('pip-consent-reject');
-    if (acceptBtn) {
-      acceptBtn.onclick = function () {
-        state.consentDone = true;
-        // Stay in meeting mode
-        _showPipLive();
-      };
-    }
-    if (rejectBtn) {
-      rejectBtn.onclick = function () {
-        state.consentDone = true;
-        state.mode = 'cold_call'; // D-05: fallback to cold_call
-        // Update mode badge
-        var b = pipEl('nlp-mode-badge');
-        if (b) b.textContent = 'Cold Call';
-        // Notify backend of mode change
-        if (state.socket) state.socket.emit('update_mode', { mode: 'cold_call' });
-        _showPipLive();
-      };
-    }
   }
 
   function _showPipLive() {
@@ -1239,14 +1192,12 @@
     // called _resetLiveState(), this guarantees a clean start for call N+1 regardless
     // of how we arrived here (nextCall, consent-accept path, etc.).
     _resetLiveState();
-    var consentSection = pipEl('pip-section-consent');
     var liveSection = pipEl('pip-section-live');
     var beendenBtn = pipEl('nlp-btn-beenden');
     // 06.1-r2 BUG-13: Postcall-Section explizit verstecken — verhindert dass die
     // alte "Kein Gespraech erkannt"-View auf dem neuen Call liegen bleibt.
     var postcallSection = pipEl('nlp-section-postcall');
     if (postcallSection) postcallSection.style.display = 'none';
-    if (consentSection) consentSection.style.display = 'none';
     if (liveSection) liveSection.style.display = 'flex';
     if (beendenBtn) beendenBtn.style.display = 'inline-block';
     // 06.1-r2 BUG-13: Header wieder einblenden (Beenden wurde in _showPostcallRaw versteckt).
@@ -1959,7 +1910,7 @@
     var postcallSection = pipEl('nlp-section-postcall');
     if (postcallSection) postcallSection.style.display = 'flex';
     // Hide live controls
-    ['nlp-btn-beenden', 'nlp-ewb-row', 'pip-section-live', 'pip-section-consent'].forEach(function (id) {
+    ['nlp-btn-beenden', 'nlp-ewb-row', 'pip-section-live'].forEach(function (id) {
       var el = pipEl(id);
       if (el) el.style.display = 'none';
     });
