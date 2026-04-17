@@ -664,4 +664,7 @@ Plans:
 **Requirements:** POLISH-16
 **Depends on:** Phase 06.3
 **Launch-relevant:** true
-**Plans:** 0/0 plans
+**Plans:** 0/1 plans
+
+Plans:
+- [ ] 06.4-01-PLAN.md — Headset-Modal HTML/CSS + Call-Gate-Logik + Logout-Cleanup
