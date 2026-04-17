@@ -1955,7 +1955,11 @@
     var convId = state.lastConvId;
     _cleanup();
     if (convId) {
-      window.location.href = '/logs/' + convId;
+      // POLISH-23 FIX: Route heisst '/session/<id>', NICHT '/logs/<id>' —
+      // letztere existiert in routes/logs_routes.py gar nicht. Der alte
+      // BUG-08-Fix hat nur die convId-Storage gefixt, aber weiter auf die
+      // falsche URL gezeigt. Session-Detail liegt in routes/dashboard.py.
+      window.location.href = '/session/' + convId;
     } else {
       window.location.href = '/logs';
     }
