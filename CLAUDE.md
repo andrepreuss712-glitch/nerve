@@ -102,20 +102,43 @@ NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertrie
 
 ## Deutsche Umlaute & UTF-8 (WICHTIG)
 Die App ist durchgehend UTF-8 (`<meta charset="UTF-8">` in allen Templates,
-`encoding='utf-8'` bei Datei-I/O). **Verwende IMMER echte deutsche Umlaute
-(ä, ö, ü, ß) in Templates, JS-Strings und User-facing-Texten.**
+`encoding='utf-8'` bei Datei-I/O). Zwei Regeln — Zielgruppe bestimmt Kontext:
 
-- ✅ RICHTIG: `"Gespräch wird ausgewertet…"` · `"Zurück"` · `"Für Sie"`
-- ❌ FALSCH: `"Gespraech wird ausgewertet..."` · `"Zurueck"` · `"Fuer Sie"`
+### ✅ Echte Umlaute (ä, ö, ü, ß) — in USER-FACING-TEXT
+Alles was der User im Browser sichtbar liest, schreibt, hört:
+- HTML-Content zwischen Tags: `<div>Gespräch wird ausgewertet…</div>`
+- Labels, Buttons, Überschriften: `<button>Zurück</button>`
+- Placeholder, Tooltips, Alt-Texte: `placeholder="Für Sie"`
+- JS-Strings die User sehen: `alert('Einwände: 3')`
+- data-search/data-tip-Attribute (User-facing im HTML)
+- Flash-Messages, Error-Messages
+- Default-String-Konstanten für User-Output (z.B. `CONSENT_DEFAULT_TEXT`)
 
-ASCII-Ersatz (ae/oe/ue/ss) ist **ausschliesslich erlaubt** in:
-- Plan-Dokumenten / Markdown zur Lesbarkeit (`.planning/phases/*.md`)
-- Source-Kommentaren wenn ASCII-only policy sinnvoll ist
-- NIEMALS in Produktionscode, HTML-Templates, JS-Strings oder User-facing-Strings
+### ❌ ASCII-Pflicht (ae/oe/ue/ss) — in CODE-IDENTIFIERN
+Alles was als Bezeichner im Code gelesen/aufgelöst wird — auch wenn dort
+Text steht der wie Deutsch aussieht. Identifier sind:
+- **Python-Attribute / DB-Spalten**: `ConversationLog.einwaende_gesamt`
+- **Dict-Keys**: `{'einwaende': [...], 'gespraech_id': 42}`
+- **Jinja2-Expressions**: `{% if log.einwaende > 0 %}`, `{{ conv.einwaende_ok }}`
+  (Jinja löst auf Python-Attribute auf — Umlaut-Attribut existiert nicht)
+- **JS-Variable-Namen**: `let einwaende = 0` (nicht `let einwände`)
+- **JS-Object-Keys** die als JSON ans Backend gehen: `{spezial_einwaende: […]}`
+- **JS-Object-Property-Access** auf Backend-Response: `data.einwaende`
+- **HTML-ID/class-Attribute**: `id="sc-einwaende"` (JS-Selektoren erwarten ASCII)
+- **CSS-Selektoren/-Klassen**: `.einwand-card` (nie `.einwände-card`)
+- **URL-Slugs, Route-Namen**: `/api/einwaende/list`
 
-Historisch wurde ASCII-Ersatz aus angeblichem "Encoding-Bug" verwendet — das
-ist Cargo-Cult. Es gab nie ein echtes Encoding-Problem; das Projekt ist
-sauber UTF-8. Siehe POLISH-12 in [[02 Projekte/NERVE Finaler Polish Pass]].
+### Plan-Docs & Kommentare
+In `.planning/phases/*.md` und reinen Code-Kommentaren ist ASCII-Ersatz
+zur Lesbarkeit erlaubt aber nicht zwingend. Beide sind OK.
+
+### Historie
+Früher wurde pauschal ASCII-Ersatz aus angeblichem "Encoding-Bug" verwendet —
+das ist Cargo-Cult. Es gab nie ein echtes Encoding-Problem; das Projekt ist
+sauber UTF-8. Der Fehler am 2026-04-18 war die gegenläufige Überreaktion:
+blindes Ersetzen auch in Code-Identifiern. Regel ist deshalb **zweischneidig**:
+User-Text mit Umlauten, Code-Identifier ohne. Siehe POLISH-12 und Phase 07
+in [[02 Projekte/NERVE Finaler Polish Pass]].
 ## Error Handling
 - Try-except with explicit error swallowing: `except Exception: pass`
 - Try-finally blocks ensure resource cleanup (DB sessions):
