@@ -1994,11 +1994,23 @@
     // Weniger Einwände ueber Zeit = vorausschauendes Argumentieren erkennbar.
     var einwTotal = (pc.einwaende || []).length;
     var einwStr = einwTotal > 0 ? String(einwTotal) : '–';
-    // POLISH-22 v5: Redeanteil als 2-Spalten-Layout (Vertriebler / Kunde)
+    // POLISH-22 v5+v6: Redeanteil als 2-Spalten-Layout (Vertriebler / Kunde)
+    // Cold Call: NERVE hoert per Design nur den Berater — Backend zaehlt die Wörter aber
+    // nur wenn Speaker-Diarization 'Berater'/'Kunde' zuweist. Im Cold Call bleibt das leer.
+    // Setze daher im Cold Call einen fixen 100/0-Split (Vertriebler=100%, Kunde=0%),
+    // damit die Kachel nicht sinnlos '–' zeigt. Meeting nutzt echte Zählung.
+    var isColdCall = (state.mode === 'cold_call');
     var total = (pc.berater_words || 0) + (pc.kunde_words || 0);
-    var redeB = total > 0 ? Math.round((pc.berater_words || 0) / total * 100) : 0;
-    var redeK = total > 0 ? (100 - redeB) : 0;
-    var hasRede = total > 0;
+    var redeB, redeK, hasRede;
+    if (isColdCall) {
+      redeB = 100;
+      redeK = 0;
+      hasRede = true;
+    } else {
+      redeB = total > 0 ? Math.round((pc.berater_words || 0) / total * 100) : 0;
+      redeK = total > 0 ? (100 - redeB) : 0;
+      hasRede = total > 0;
+    }
     // Skript-Abdeckung
     var skript = (pc.skript_abdeckung || {}).gesamt_prozent || 0;
     var skriptStr = skript > 0 ? skript + '%' : '–';
