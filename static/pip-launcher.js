@@ -1989,16 +1989,16 @@
     var mins = Math.floor(dauer / 60);
     var secs = dauer % 60;
     var dauerStr = mins + ':' + (secs < 10 ? '0' + secs : secs);
-    // Einwände behandelt / gesamt
-    var gaDetails = pc.ga_details || [];
-    var behandelt = gaDetails.filter(function (x) { return x && x.erfolgreich === true; }).length;
+    // POLISH-22 v5: Einwände gesamt (nicht mehr X/Y)
+    // Rationale: Anzahl der Einwände im Gespräch als Overview-KPI.
+    // Weniger Einwände ueber Zeit = vorausschauendes Argumentieren erkennbar.
     var einwTotal = (pc.einwaende || []).length;
-    var einwStr = einwTotal > 0 ? behandelt + ' / ' + einwTotal : '–';
-    var einwAccent = einwTotal > 0 && (behandelt / einwTotal) >= 0.7;
-    // Redeanteil (Berater %)
+    var einwStr = einwTotal > 0 ? String(einwTotal) : '–';
+    // POLISH-22 v5: Redeanteil als 2-Spalten-Layout (Vertriebler / Kunde)
     var total = (pc.berater_words || 0) + (pc.kunde_words || 0);
-    var rede = total > 0 ? Math.round((pc.berater_words || 0) / total * 100) : 0;
-    var redeStr = rede > 0 ? rede + ' / ' + (100 - rede) : '–';
+    var redeB = total > 0 ? Math.round((pc.berater_words || 0) / total * 100) : 0;
+    var redeK = total > 0 ? (100 - redeB) : 0;
+    var hasRede = total > 0;
     // Skript-Abdeckung
     var skript = (pc.skript_abdeckung || {}).gesamt_prozent || 0;
     var skriptStr = skript > 0 ? skript + '%' : '–';
@@ -2006,8 +2006,14 @@
 
     el.innerHTML = [
       '<div class="pip-quickstat"><div class="pip-quickstat-value">' + escHtml(dauerStr) + '</div><div class="pip-quickstat-label">Dauer</div></div>',
-      '<div class="pip-quickstat"><div class="pip-quickstat-value' + (einwAccent ? ' accent' : '') + '">' + escHtml(einwStr) + '</div><div class="pip-quickstat-label">Einwände behandelt</div></div>',
-      '<div class="pip-quickstat"><div class="pip-quickstat-value">' + escHtml(redeStr) + '</div><div class="pip-quickstat-label">Rede Berater / Kunde</div></div>',
+      '<div class="pip-quickstat"><div class="pip-quickstat-value">' + escHtml(einwStr) + '</div><div class="pip-quickstat-label">Einwände</div></div>',
+      '<div class="pip-quickstat pip-quickstat-split">'
+        + '<div class="pip-quickstat-label pip-quickstat-label-top">Redeanteil</div>'
+        + '<div class="pip-quickstat-split-row">'
+          + '<div class="pip-quickstat-split-col"><div class="pip-quickstat-value">' + (hasRede ? redeB + '%' : '–') + '</div><div class="pip-quickstat-sublabel">Vertriebler</div></div>'
+          + '<div class="pip-quickstat-split-col"><div class="pip-quickstat-value">' + (hasRede ? redeK + '%' : '–') + '</div><div class="pip-quickstat-sublabel">Kunde</div></div>'
+        + '</div>'
+      + '</div>',
       '<div class="pip-quickstat"><div class="pip-quickstat-value' + (skriptAccent ? ' accent' : '') + '">' + escHtml(skriptStr) + '</div><div class="pip-quickstat-label">Skript-Abdeckung</div></div>'
     ].join('');
   }
