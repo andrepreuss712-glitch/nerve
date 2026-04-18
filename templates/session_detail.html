@@ -121,12 +121,16 @@
   </section>
 
   {# ── Section 4: Einwand-Timeline ──────────────────────────────── #}
+  {# Fix C (07.1 UAT-R1): Count-Header zeigt einwaende_gesamt (echte Session-Zahl). #}
+  {# events-Liste enthaelt alle ObjectionEvent-Records (ungefiltert) — nicht-erfolgreiche als --danger Badge. #}
+  {% set tl_count = conv.einwaende_gesamt or 0 %}
+  {% set events_count = events | length %}
   <section class="n-session-detail-card">
-    <h2 class="n-session-detail-card-title">Einwand-Timeline ({{ events | length }})</h2>
+    <h2 class="n-session-detail-card-title">Einwand-Timeline ({{ tl_count if tl_count > events_count else events_count }})</h2>
     {% if events %}
       <ul class="n-session-detail-timeline">
         {% for ev in events %}
-          <li class="n-session-detail-timeline-row">
+          <li class="n-session-detail-timeline-row {% if not ev.success %}n-session-detail-timeline-row--danger{% endif %}">
             <span class="n-label">#{{ loop.index }}</span>
             <div>
               <div class="n-session-detail-timeline-typ">{{ ev.einwand_typ }}</div>
@@ -138,6 +142,18 @@
           </li>
         {% endfor %}
       </ul>
+      {# Fix C: Hinweis wenn Events-Zahl kleiner als einwaende_gesamt — z.B. erkannter Einwand ohne EWB-Klick #}
+      {% if tl_count > events_count %}
+        <p class="n-session-detail-timeline-hint">
+          Hinweis: {{ tl_count }} Einwände erkannt, {{ events_count }} mit EWB-Button behandelt.
+          Die übrigen wurden erkannt, aber ohne Button-Klick beantwortet.
+        </p>
+      {% endif %}
+    {% elif tl_count > 0 %}
+      <div class="n-session-detail-empty">
+        <h3>{{ tl_count }} Einwand{% if tl_count != 1 %}e{% endif %} erkannt — keine EWB-Buttons genutzt</h3>
+        <p>Der Analyse-Loop hat {{ tl_count }} Einwand{% if tl_count != 1 %}e{% endif %} erkannt, aber du hast keinen EWB-Button im Live-Assistent angeklickt. Im Training kannst du die Reaktion üben.</p>
+      </div>
     {% else %}
       <div class="n-session-detail-empty">
         <h3>Keine Einwände behandelt</h3>

@@ -1935,6 +1935,18 @@ input[type="range"].perf-slider::-moz-range-thumb {
   border-bottom: 1px solid var(--glass-border);
 }
 .n-session-detail-timeline-row:last-child { border-bottom: none; }
+/* Fix C (07.1 UAT-R1): nicht-erfolgreiche Events visuell markieren */
+.n-session-detail-timeline-row--danger {
+  border-left: 3px solid var(--danger, #DC2626);
+  padding-left: 10px;
+  background: rgba(220,38,38,0.03);
+}
+.n-session-detail-timeline-hint {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-muted, #6B7280);
+  font-style: italic;
+}
 
 .n-session-detail-phase-strip {
   display: flex;
