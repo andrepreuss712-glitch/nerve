@@ -669,7 +669,7 @@ def _derive_practice_recommendations(db, conv, events):
             recs.append({
                 'icon': 'alert-circle',
                 'observation': f'Gesamt-Score unter 50 ({conv.kb_end or 0}/100)',
-                'explanation': 'Allgemeine Schwaeche erkannt. Wiederhole ein aehnliches Szenario.',
+                'explanation': 'Allgemeine Schwäche erkannt. Wiederhole ein ähnliches Szenario.',
                 'training_focus': 'training:generic_weakness',
                 'training_url': '/training',
                 'cross_context': None,
@@ -685,7 +685,7 @@ def _derive_practice_recommendations(db, conv, events):
                 recs.append({
                     'icon': 'target',
                     'observation': 'Kunde hat aufgelegt (Stimmung -5)',
-                    'explanation': 'Wiederhole mit dem gleichen Persoenlichkeitstyp und fang Stimmungs-Drop frueher ab.',
+                    'explanation': 'Wiederhole mit dem gleichen Persönlichkeitstyp und fang Stimmungs-Drop früher ab.',
                     'training_focus': focus,
                     'training_url': '/training',
                     'cross_context': None,
@@ -700,7 +700,7 @@ def _derive_practice_recommendations(db, conv, events):
                 recs.append({
                     'icon': 'alert-circle',
                     'observation': f'Einwand "{ev.einwand_typ}" nicht erfolgreich behandelt',
-                    'explanation': 'Im echten Call ist dieser Einwand haeufig — uebe die Antwort.',
+                    'explanation': 'Im echten Call ist dieser Einwand häufig — übe die Antwort.',
                     'training_focus': f'objections:{ev.einwand_typ}',
                     'training_url': '/training',
                     'cross_context': _cross_context_objections_training(db, conv.user_id, ev.einwand_typ),
@@ -717,7 +717,7 @@ def _derive_practice_recommendations(db, conv, events):
                     recs.append({
                         'icon': 'trending-down',
                         'observation': f'Stimmung fiel um {max_wert - min_wert} Punkte',
-                        'explanation': 'Die Kundin wurde deutlich negativer. Uebe Stimmungs-Management.',
+                        'explanation': 'Die Kundin wurde deutlich negativer. Übe Stimmungs-Management.',
                         'training_focus': 'training:mood_management',
                         'training_url': '/training',
                         'cross_context': None,
@@ -745,7 +745,7 @@ def _derive_practice_recommendations(db, conv, events):
             recs.append({
                 'icon': 'trending-down',
                 'observation': f'Kaufbereitschaft Ende: {conv.kb_end}/100',
-                'explanation': 'Der Kunde ist am Ende skeptischer als gesund. Uebe Qualifizierungs-Fragen.',
+                'explanation': 'Der Kunde ist am Ende skeptischer als gesund. Übe Qualifizierungs-Fragen.',
                 'training_focus': 'kb:drop',
                 'training_url': '/training',
                 'cross_context': None,
@@ -783,7 +783,7 @@ def _derive_practice_recommendations(db, conv, events):
             recs.append({
                 'icon': 'alert-circle',
                 'observation': f'Skript nur zu {int(conv.skript_abdeckung or 0)}% abgedeckt',
-                'explanation': 'Die wichtigen Bausteine deines Skripts sind nicht gefallen. Uebe den Opener.',
+                'explanation': 'Die wichtigen Bausteine deines Skripts sind nicht gefallen. Übe den Opener.',
                 'training_focus': 'skript:opener',
                 'training_url': '/training',
                 'cross_context': None,
