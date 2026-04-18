@@ -281,7 +281,20 @@
 .pip-tag-neutral{background:rgba(107,114,128,0.12);color:#6B7280}
 .pip-tag-red{background:rgba(248,113,113,0.15);color:#F87171}
 .pip-postcall-kundendaten{font-size:11px;color:#6B7280;margin-top:8px}
-.pip-postcall-actions{display:flex;gap:10px;margin-top:16px;width:100%;max-width:280px}
+.pip-postcall-actions{display:flex;gap:10px;margin-top:14px;width:100%;max-width:280px}
+/* POLISH-22: PiP-Quick-Scoring Erweiterung (Trend + Sparkline + QuickStats) */
+.pip-postcall-trend{font-size:12px;color:#6B7280;margin-top:2px;display:flex;align-items:center;gap:4px;min-height:16px}
+.pip-postcall-trend.up{color:#00D4AA;font-weight:600}
+.pip-postcall-trend.down{color:#F87171;font-weight:600}
+.pip-postcall-sparkline{width:100%;max-width:260px;height:48px;margin-top:10px;display:flex;align-items:center;justify-content:center}
+.pip-postcall-sparkline svg{width:100%;height:100%;display:block}
+.pip-postcall-sparkline-empty{font-size:10px;color:#9CA3AF;font-style:italic}
+.pip-sparkline-label{font-size:10px;color:#9CA3AF;margin-top:2px;display:flex;justify-content:space-between;width:100%;max-width:260px}
+.pip-postcall-quickstats{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;max-width:260px;margin-top:10px}
+.pip-quickstat{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.pip-quickstat-value{font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.1}
+.pip-quickstat-value.accent{color:#00D4AA}
+.pip-quickstat-label{font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:0.03em;text-align:center}
 /* Launcher modal step styles */
 .launcher-step{width:100%;display:flex;flex-direction:column;gap:16px}
 .launcher-form-input{width:100%;padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none}
@@ -458,10 +471,13 @@
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 2L2 10M10 6L6 10M10 10L10 10" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round"/></svg>
   </div>
 
-  <!-- Postcall section (UNCHANGED from existing — shown after call ends) -->
-  <div id="nlp-section-postcall" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:16px">
+  <!-- Postcall section — POLISH-22 Redesign: Score + Trend + Sparkline + QuickStats + Tags -->
+  <div id="nlp-section-postcall" style="display:none;flex-direction:column;align-items:center;justify-content:flex-start;height:100%;padding:14px 16px;gap:4px;overflow-y:auto">
     <div class="pip-postcall-score" id="nlp-postcall-score">--</div>
     <div class="pip-postcall-label">Call Score</div>
+    <div class="pip-postcall-trend" id="nlp-postcall-trend"></div>
+    <div class="pip-postcall-sparkline" id="nlp-postcall-sparkline"></div>
+    <div class="pip-postcall-quickstats" id="nlp-postcall-quickstats"></div>
     <div class="pip-postcall-tags" id="nlp-postcall-tags"></div>
     <div class="pip-postcall-kundendaten" id="nlp-postcall-kundendaten"></div>
     <div class="pip-postcall-actions">

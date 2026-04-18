@@ -570,6 +570,54 @@ def api_keepalive():
     return jsonify({'ok': True})
 
 
+def _calc_call_score(conv):
+    """Server-seitige Spiegelung der client-seitigen _calcScore()-Formel in pip-launcher.js.
+    Gewichtung: kb_end 40%, behandeltRate 30%, redeScore 20%, skript 10%."""
+    kb = conv.kb_end if conv.kb_end is not None else 30
+    einw_total = conv.einwaende_gesamt or 0
+    einw_ok = conv.einwaende_behandelt or 0
+    behandelt_rate = (einw_ok / einw_total) if einw_total > 0 else 0.5
+    redeanteil = conv.redeanteil_avg if conv.redeanteil_avg is not None else 50
+    rede_score = max(0, 100 - abs(redeanteil - 40) * 2)
+    skript = conv.skript_abdeckung or 0
+    return min(100, max(0, round(kb * 0.4 + behandelt_rate * 100 * 0.3 + rede_score * 0.2 + skript * 0.1)))
+
+
+@app_routes_bp.route('/api/postcall/trend')
+@login_required
+def api_postcall_trend():
+    """POLISH-22: Durchschnitts-Score der letzten N Calls desselben Users als Trend-Baseline
+    fuer den PiP-Quick-Scoring-Screen ('+5% vs Schnitt letzte 5').
+
+    Query-Param: n (optional, default 5, max 20)
+    Response: {'ok': True, 'avg_score': <0-100 | null>, 'sample_size': <int>, 'n_requested': <int>}
+    """
+    from database.models import ConversationLog
+    try:
+        n = int(request.args.get('n', 5))
+    except (TypeError, ValueError):
+        n = 5
+    n = max(1, min(20, n))
+
+    db = get_session()
+    try:
+        recent = (
+            db.query(ConversationLog)
+              .filter(ConversationLog.user_id == g.user.id)
+              .filter(ConversationLog.typ == 'live')
+              .order_by(ConversationLog.created_at.desc())
+              .limit(n)
+              .all()
+        )
+        if not recent:
+            return jsonify({'ok': True, 'avg_score': None, 'sample_size': 0, 'n_requested': n})
+        scores = [_calc_call_score(c) for c in recent]
+        avg = round(sum(scores) / len(scores))
+        return jsonify({'ok': True, 'avg_score': avg, 'sample_size': len(scores), 'n_requested': n})
+    finally:
+        db.close()
+
+
 @app_routes_bp.route('/api/set_profile', methods=['POST'])
 @login_required
 def api_set_profile():

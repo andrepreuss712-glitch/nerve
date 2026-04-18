@@ -1881,6 +1881,100 @@
     var score = _calcScore(postcall);
     var tags = _buildTags(postcall);
     _showPostcallRaw(score + '%', tags);
+    // POLISH-22: Trend + Sparkline + QuickStats zusätzlich rendern
+    _renderQuickStats(postcall);
+    _renderSparkline(postcall);
+    _fetchAndRenderTrend(score);
+  }
+
+  // ── POLISH-22: Sparkline + QuickStats + Trend ─────────────────────────────
+  function _renderSparkline(postcall) {
+    var el = pipEl('nlp-postcall-sparkline');
+    if (!el) return;
+    var kbVerlauf = (postcall && postcall.kb_verlauf) || [];
+    if (kbVerlauf.length < 2) {
+      el.innerHTML = '<span class="pip-postcall-sparkline-empty">Kaufbereitschafts-Verlauf nicht verfügbar</span>';
+      return;
+    }
+    var W = 260, H = 48, PAD_X = 4, PAD_Y = 6;
+    var values = kbVerlauf.map(function (p) { return typeof p === 'object' ? (p.wert || 0) : p; });
+    var minV = Math.min.apply(null, values);
+    var maxV = Math.max.apply(null, values);
+    var range = Math.max(1, maxV - minV);
+    var startV = values[0];
+    var endV = values[values.length - 1];
+    var pts = values.map(function (v, i) {
+      var x = PAD_X + (i / (values.length - 1)) * (W - PAD_X * 2);
+      var y = H - PAD_Y - ((v - minV) / range) * (H - PAD_Y * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    var lastX = PAD_X + (W - PAD_X * 2);
+    var lastY = H - PAD_Y - ((endV - minV) / range) * (H - PAD_Y * 2);
+    var svg = [
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-label="Kaufbereitschafts-Verlauf">',
+      '<polyline points="' + pts + '" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
+      '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="3" fill="#00D4AA"/>',
+      '</svg>'
+    ].join('');
+    el.innerHTML = svg + '<div class="pip-sparkline-label"><span>Start ' + startV + '%</span><span>Ende ' + endV + '%</span></div>';
+  }
+
+  function _renderQuickStats(postcall) {
+    var el = pipEl('nlp-postcall-quickstats');
+    if (!el) return;
+    var pc = postcall || {};
+    // Dauer
+    var dauer = pc.dauer_sek || 0;
+    var mins = Math.floor(dauer / 60);
+    var secs = dauer % 60;
+    var dauerStr = mins + ':' + (secs < 10 ? '0' + secs : secs);
+    // Einwände behandelt / gesamt
+    var gaDetails = pc.ga_details || [];
+    var behandelt = gaDetails.filter(function (x) { return x && x.erfolgreich === true; }).length;
+    var einwTotal = (pc.einwaende || []).length;
+    var einwStr = einwTotal > 0 ? behandelt + ' / ' + einwTotal : '–';
+    var einwAccent = einwTotal > 0 && (behandelt / einwTotal) >= 0.7;
+    // Redeanteil (Berater %)
+    var total = (pc.berater_words || 0) + (pc.kunde_words || 0);
+    var rede = total > 0 ? Math.round((pc.berater_words || 0) / total * 100) : 0;
+    var redeStr = rede > 0 ? rede + ' / ' + (100 - rede) : '–';
+    // Skript-Abdeckung
+    var skript = (pc.skript_abdeckung || {}).gesamt_prozent || 0;
+    var skriptStr = skript > 0 ? skript + '%' : '–';
+    var skriptAccent = skript >= 80;
+
+    el.innerHTML = [
+      '<div class="pip-quickstat"><div class="pip-quickstat-value">' + escHtml(dauerStr) + '</div><div class="pip-quickstat-label">Dauer</div></div>',
+      '<div class="pip-quickstat"><div class="pip-quickstat-value' + (einwAccent ? ' accent' : '') + '">' + escHtml(einwStr) + '</div><div class="pip-quickstat-label">Einwände behandelt</div></div>',
+      '<div class="pip-quickstat"><div class="pip-quickstat-value">' + escHtml(redeStr) + '</div><div class="pip-quickstat-label">Rede Berater / Kunde</div></div>',
+      '<div class="pip-quickstat"><div class="pip-quickstat-value' + (skriptAccent ? ' accent' : '') + '">' + escHtml(skriptStr) + '</div><div class="pip-quickstat-label">Skript-Abdeckung</div></div>'
+    ].join('');
+  }
+
+  function _fetchAndRenderTrend(currentScore) {
+    var el = pipEl('nlp-postcall-trend');
+    if (!el) return;
+    el.className = 'pip-postcall-trend';
+    el.textContent = '';
+    fetch('/api/postcall/trend?n=5', { credentials: 'include' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.ok) return;
+        if (!data.sample_size || data.avg_score === null || data.avg_score === undefined) {
+          el.textContent = 'Erster Call-Score';
+          return;
+        }
+        var diff = currentScore - data.avg_score;
+        var sign = diff > 0 ? '▲ +' : (diff < 0 ? '▼ ' : '● ');
+        var absDiff = Math.abs(diff);
+        var label = data.sample_size === 1 ? 'vs letzter Call' : 'vs Schnitt letzte ' + data.sample_size;
+        el.textContent = sign + absDiff + '% ' + label;
+        if (diff > 0) el.className = 'pip-postcall-trend up';
+        else if (diff < 0) el.className = 'pip-postcall-trend down';
+      })
+      .catch(function () {
+        el.textContent = '';
+      });
   }
 
   function _showPostcallLoading() {
@@ -1890,6 +1984,13 @@
     if (scoreEl) scoreEl.innerHTML = '<div class="pip-score-spinner" aria-label="Auswertung wird erstellt"></div>';
     var tagsEl = pipEl('nlp-postcall-tags');
     if (tagsEl) tagsEl.innerHTML = '<span class="pip-postcall-loading">Call wird ausgewertet\u2026</span>';
+    // POLISH-22: Zusätzliche Elemente im Loading leer halten
+    var trendEl = pipEl('nlp-postcall-trend');
+    if (trendEl) { trendEl.textContent = ''; trendEl.className = 'pip-postcall-trend'; }
+    var sparkEl = pipEl('nlp-postcall-sparkline');
+    if (sparkEl) sparkEl.innerHTML = '';
+    var qsEl = pipEl('nlp-postcall-quickstats');
+    if (qsEl) qsEl.innerHTML = '';
     // POLISH-23: Auswertung-Button disabled solange keine conv_id aus /api/beenden-Response da ist.
     // Verhindert dass User auf /logs-Fallback navigiert weil state.lastConvId noch null.
     var detailsBtn = pipEl('nlp-btn-details');
@@ -1903,7 +2004,14 @@
     var labelEls = pipEl('nlp-section-postcall');
     // Ersetze den Score-Bereich durch einen Empty-State
     var tagsEl = pipEl('nlp-postcall-tags');
-    if (tagsEl) tagsEl.innerHTML = '<div class="pip-postcall-empty">Kein Gespr\u00e4ch erkannt.<br>Direkt n\u00e4chsten Call starten?</div>';
+    if (tagsEl) tagsEl.innerHTML = '<div class="pip-postcall-empty">Kein Gespräch erkannt.<br>Direkt nächsten Call starten?</div>';
+    // POLISH-22: Zusätzliche Elemente im Empty leer halten
+    var trendEl = pipEl('nlp-postcall-trend');
+    if (trendEl) { trendEl.textContent = ''; trendEl.className = 'pip-postcall-trend'; }
+    var sparkEl = pipEl('nlp-postcall-sparkline');
+    if (sparkEl) sparkEl.innerHTML = '';
+    var qsEl = pipEl('nlp-postcall-quickstats');
+    if (qsEl) qsEl.innerHTML = '';
     // Details-Button im Empty-State ausblenden (nichts zu zeigen)
     var detailsBtn = pipEl('nlp-btn-details');
     if (detailsBtn) detailsBtn.style.display = 'none';
