@@ -233,7 +233,7 @@
   .typ-vorwand{background:rgba(107,114,128,0.1);color:#00D4AA}
   .badge-vorwand{background:rgba(107,114,128,0.08);border:1px solid rgba(107,114,128,0.3);color:#00D4AA;font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:10px;text-transform:uppercase}
   .badge-einwand{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);color:#f87171;font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:10px;text-transform:uppercase}
-  .intensitaet{font-size:11px;color:var(--page-text-muted)}
+  .intensität{font-size:11px;color:var(--page-text-muted)}
   .card-label{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--page-text-secondary);text-transform:uppercase;margin-bottom:3px}
   .einwand-text{font-size:13px;color:var(--page-text-secondary);font-style:italic;line-height:1.5}
   .argument-text{font-size:14px;color:var(--page-text-color);line-height:1.65}
@@ -261,7 +261,7 @@
   .coaching-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
   .coaching-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:2px 8px;border-radius:20px;flex-shrink:0}
   .badge-frage{background:rgba(107,114,128,0.1);color:#6B7280}.badge-signal{background:rgba(0,212,170,0.08);color:#00D4AA}
-  .badge-redeanteil{background:rgba(107,114,128,0.1);color:#6B7280}.badge-uebergang{background:rgba(74,222,128,0.08);color:#4ade80}
+  .badge-redeanteil{background:rgba(107,114,128,0.1);color:#6B7280}.badge-übergang{background:rgba(74,222,128,0.08);color:#4ade80}
   .badge-lob{background:rgba(74,222,128,0.08);color:#4ade80}.badge-pain{background:rgba(107,114,128,0.1);color:#6B7280}
   .coaching-time{font-size:10px;color:var(--page-text-muted);flex-shrink:0}
   .coaching-text{font-size:13px;line-height:1.55}
@@ -407,7 +407,7 @@
     border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;
     font-family:inherit;text-decoration:none;display:inline-block}
   .crm-mailto-btn:hover{background:rgba(255,255,255,0.06);color:var(--page-text-color)}
-  .naechste-schritte-list{display:flex;flex-direction:column;gap:6px}
+  .nächste-schritte-list{display:flex;flex-direction:column;gap:6px}
   .ns-item{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--page-text-secondary)}
   .ns-check{width:16px;height:16px;border:1.5px solid rgba(255,255,255,0.15);border-radius:3px;flex-shrink:0;
     cursor:pointer;margin-top:1px;display:flex;align-items:center;justify-content:center;
@@ -677,9 +677,9 @@
     </div>
     <div class="precall-actions">
       <button class="btn-recherche" id="btnRecherche" onclick="startPrecallResearch()">Recherche starten</button>
-      <button class="btn-skip" onclick="skipPrecall()">Ueberspringen</button>
+      <button class="btn-skip" onclick="skipPrecall()">Überspringen</button>
     </div>
-    <div class="precall-loading" id="precallLoading">Recherche laeuft... (~30 Sekunden)</div>
+    <div class="precall-loading" id="precallLoading">Recherche läuft... (~30 Sekunden)</div>
     <div class="precall-error" id="precallError"></div>
   </div>
   {% endif %}
@@ -849,11 +849,11 @@
     <div class="quick-actions-bar">
       <button class="qa-btn" onclick="quickAction('frage')">❓ Frage</button>
       <button class="qa-btn" onclick="quickAction('einwand')">🛡️ Einwand</button>
-      <button class="qa-btn" onclick="quickAction('uebergang')">🔄 Übergang</button>
+      <button class="qa-btn" onclick="quickAction('übergang')">🔄 Übergang</button>
       <button class="qa-btn" onclick="quickAction('abschluss')">🏁 Abschluss</button>
     </div>
     <div class="ewb-bar" id="ewbBar">
-      <!-- Populated by JS from profile einwaende or DACH fallback -->
+      <!-- Populated by JS from profile einwände or DACH fallback -->
     </div>
     <div class="panel panel-coaching">
       <div class="panel-header"><span>💡</span> Berater-Hinweise &amp; Painpoints</div>
@@ -950,7 +950,7 @@
   <div class="kp-qa-row">
     <button class="kp-qa" onclick="kpQuickAction('frage')">❓ Frage</button>
     <button class="kp-qa" onclick="kpQuickAction('einwand')">🛡️ Einwand</button>
-    <button class="kp-qa" onclick="kpQuickAction('uebergang')">🔄 Übergang</button>
+    <button class="kp-qa" onclick="kpQuickAction('übergang')">🔄 Übergang</button>
     <button class="kp-qa" onclick="kpQuickAction('abschluss')">🏁 Abschluss</button>
   </div>
   <!-- EWB buttons in compact mode (populated by JS renderEwbButtons) -->
@@ -1016,7 +1016,7 @@
         <div class="pip-tip-text" id="pip-coaching-text">Warte auf Coaching-Tipp...</div>
       </div>
       <div class="pip-panel" id="pip-panel-ewb" style="display:none">
-        <div class="pip-tip-text" id="pip-ewb-text">EWB-Vorschlaege werden geladen...</div>
+        <div class="pip-tip-text" id="pip-ewb-text">EWB-Vorschläge werden geladen...</div>
       </div>
     </div>
 
@@ -1030,7 +1030,7 @@
 
     <!-- PiP fallback warning (hidden by default, shown if no Document PiP support) -->
     <div id="pip-fallback-warning" style="display:none;padding:8px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:6px;font-size:12px;color:#f87171;text-align:center;margin:8px">
-      PiP nicht unterstuetzt. Chrome 116+ erforderlich.
+      PiP nicht unterstützt. Chrome 116+ erforderlich.
     </div>
   </div>
 
@@ -1041,7 +1041,7 @@
     <div class="pip-postcall-tags" id="pip-postcall-tags"></div>
     <div class="pip-postcall-kundendaten" id="pip-postcall-kundendaten"></div>
     <div class="pip-postcall-actions">
-      <button class="pip-btn-next-call" onclick="pipNextCall()">Naechster Call</button>
+      <button class="pip-btn-next-call" onclick="pipNextCall()">Nächster Call</button>
       <button class="pip-btn-details" onclick="pipShowDetails()">Details</button>
     </div>
   </div>
@@ -1055,7 +1055,7 @@
     <div class="quick-actions">
       <button class="qa-btn" onclick="quickAction('frage')">❓ Frage</button>
       <button class="qa-btn" onclick="quickAction('einwand')">🛡️ Einwand</button>
-      <button class="qa-btn" onclick="quickAction('uebergang')">🔄 Übergang</button>
+      <button class="qa-btn" onclick="quickAction('übergang')">🔄 Übergang</button>
       <button class="qa-btn" onclick="quickAction('abschluss')">🏁 Abschluss</button>
     </div>
     <textarea class="frage-input" id="frageInput" placeholder='z.B. "Was soll ich jetzt fragen?" oder "Wie reagiere ich auf diesen Einwand?"'></textarea>
@@ -1153,12 +1153,12 @@
       <!-- Nächste Schritte -->
       <div class="postcall-section postcall-section-full" id="pc-stepsSection" style="display:none">
         <div class="ps-title">Nächste Schritte</div>
-        <div class="naechste-schritte-list" id="pc-stepsList"></div>
+        <div class="nächste-schritte-list" id="pc-stepsList"></div>
       </div>
 
-      <!-- ── Lernkarten-Vorschlaege (D-01, D-06) ──────────────────────────── -->
+      <!-- ── Lernkarten-Vorschläge (D-01, D-06) ──────────────────────────── -->
       <div id="pc-lernkarten" style="display:none;margin-top:24px">
-        <h3 style="color:#E8B040;font-size:15px;margin-bottom:12px">&#127919; Lernkarten-Vorschlaege</h3>
+        <h3 style="color:#E8B040;font-size:15px;margin-bottom:12px">&#127919; Lernkarten-Vorschläge</h3>
         <div id="pc-lk-loading" style="text-align:center;color:var(--page-text-secondary);padding:16px">
           Lernkarten werden generiert...
         </div>
@@ -1218,7 +1218,7 @@
   </div>
 </div>
 <script>
-  try { window._profileEinwaende = JSON.parse({{ ((active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"') | safe }}); } catch(e) { window._profileEinwaende = {}; }
+  try { window._profileEinwände = JSON.parse({{ ((active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"') | safe }}); } catch(e) { window._profileEinwände = {}; }
   try { window._profileData = JSON.parse({{ ((active_profile.daten | tojson) if active_profile and active_profile.daten else '"{}"') | safe }}); } catch(e) { window._profileData = {}; }
   window.sessionMode = null; // set by mode overlay via selectMode()
   window._allProfiles = {{ profiles_for_pip | tojson | safe }};

@@ -9,7 +9,7 @@ const socket = io({
 });
 const tr     = document.getElementById('tr');
 const ai     = document.getElementById('ai');
-let words = 0, einwaende = 0, analysen = 0;
+let words = 0, einwände = 0, analysen = 0;
 let interim = null;
 let paused  = false;
 
@@ -118,7 +118,7 @@ function _showPrecallOrActivate() {
     // Hide mode cards, show precall panel
     document.querySelector('.mode-cards').style.display = 'none';
     document.querySelector('.mode-overlay-title').textContent = 'PreCall Intelligence';
-    document.querySelector('.mode-overlay-subtitle').textContent = 'Optional: Recherchiere die Firma vor dem Gespraech.';
+    document.querySelector('.mode-overlay-subtitle').textContent = 'Optional: Recherchiere die Firma vor dem Gespräch.';
     panel.style.display = 'block';
   } else {
     activateSession();
@@ -238,17 +238,17 @@ function renderEwbButtons() {
   const kpBar  = document.getElementById('kp-ewbBar');
   if (!bar && !kpBar) return;
 
-  // Get einwaende from profile or fallback
-  let einwaende = DACH_FALLBACK_EINWAENDE;
+  // Get einwände from profile or fallback
+  let einwände = DACH_FALLBACK_EINWAENDE;
   try {
-    const pd = window._profileEinwaende || {};
-    if (pd.einwaende && pd.einwaende.length > 0) {
-      einwaende = pd.einwaende.map(e => e.typ || e.name || e).filter(Boolean);
+    const pd = window._profileEinwände || {};
+    if (pd.einwände && pd.einwände.length > 0) {
+      einwände = pd.einwände.map(e => e.typ || e.name || e).filter(Boolean);
     }
   } catch(e) {}
-  if (!einwaende.length) einwaende = DACH_FALLBACK_EINWAENDE;
+  if (!einwände.length) einwände = DACH_FALLBACK_EINWAENDE;
 
-  const html = einwaende.map(typ =>
+  const html = einwände.map(typ =>
     `<button class="ewb-btn" onclick="triggerEwb('${escHtml(typ)}')" title="Einwand: ${escHtml(typ)}">\uD83D\uDEE1\uFE0F ${escHtml(typ)}</button>`
   ).join('');
 
@@ -440,7 +440,7 @@ async function flipRowRole(btn) {
       if(einwandTyp&&einwandTyp!=='Kein Einwand'&&einwandTyp!=='Zurückgezogen'){
         fetch('/api/log_correction',{
           method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({type:'zurueckgezogen',einwand_typ:einwandTyp,line_id:lineId})
+          body:JSON.stringify({type:'zurückgezogen',einwand_typ:einwandTyp,line_id:lineId})
         }).catch(e=>console.error('[LOG_ZURUCK]',e));
       }
       card.classList.add('withdrawn');
@@ -526,7 +526,7 @@ const recentSegments = [];
 
 // ── Coaching Panel ────────────────────────────────────────────────────────────
 const coachingScroll=document.getElementById('coaching-scroll');
-const katLabel={frage:'Frage fehlt',signal:'Kaufsignal',redeanteil:'Redeanteil',uebergang:'Übergang',lob:'Lob'};
+const katLabel={frage:'Frage fehlt',signal:'Kaufsignal',redeanteil:'Redeanteil',übergang:'Übergang',lob:'Lob'};
 const tipCards=[];
 
 function voigeTipp(card){
@@ -657,7 +657,7 @@ async function beenden(){
     ai.innerHTML='<div class="msg final" style="border-color:#1a1a2e;color:#333350">Warte auf Gesprächsinhalt …</div>';
     coachingScroll.innerHTML='<div style="font-size:12px;color:#2a2500;padding:4px 0">Wartet auf Gesprächsinhalt …</div>';
     entferneSpinner();
-    words=0;einwaende=0;analysen=0;letzteVersion=0;interim=null;tipCards.length=0;
+    words=0;einwände=0;analysen=0;letzteVersion=0;interim=null;tipCards.length=0;
     speech.beraterWords=0;speech.kundeWords=0;speech.beraterSegments=0;speech.startTime=null;
     document.getElementById('wc').textContent='0';
     document.getElementById('ec').textContent='0';
@@ -733,12 +733,12 @@ function zeigeKarte(d, lineId){
     card.className='ai-card kein-einwand';
     card.innerHTML=`<div class="card-top"><span class="einwand-typ typ-kein">Kein Einwand</span><span class="card-time">${now}</span></div><div class="einwand-text">${escHtml(d.notiz||'Kein klarer Einwand erkennbar.')}</div>`;
   } else {
-    einwaende++;document.getElementById('ec').textContent=einwaende;
+    einwände++;document.getElementById('ec').textContent=einwände;
     const isVersteckt = (d.typ||'').toLowerCase().includes('versteckt');
     const isVorwand   = d.ist_vorwand === true;
-    const stufe  = isVersteckt ? 'versteckt' : (d.intensitaet==='hoch'?'einwand-hoch':'einwand');
-    const typCls = isVersteckt ? 'typ-versteckt' : (isVorwand?'typ-vorwand':(d.intensitaet==='hoch'?'typ-hoch':'typ-mittel'));
-    const intLabel= isVersteckt ? '🟠 Versteckt' : (d.intensitaet==='hoch'?'🔴 Hoch':'🟡 Mittel');
+    const stufe  = isVersteckt ? 'versteckt' : (d.intensität==='hoch'?'einwand-hoch':'einwand');
+    const typCls = isVersteckt ? 'typ-versteckt' : (isVorwand?'typ-vorwand':(d.intensität==='hoch'?'typ-hoch':'typ-mittel'));
+    const intLabel= isVersteckt ? '🟠 Versteckt' : (d.intensität==='hoch'?'🔴 Hoch':'🟡 Mittel');
     const vorwandBadge = isVorwand
       ? `<span class="badge-vorwand">⚠ Vorwand</span>`
       : `<span class="badge-einwand">Einwand</span>`;
@@ -752,7 +752,7 @@ function zeigeKarte(d, lineId){
       <div class="card-top">
         ${vorwandBadge}
         <span class="einwand-typ ${typCls}">${escHtml(d.typ)}</span>
-        <span class="intensitaet">${intLabel}</span>
+        <span class="intensität">${intLabel}</span>
         <span class="card-time">${now}</span>
       </div>
       <div><div class="card-label">Erkannter Einwand</div><div class="einwand-text">"${escHtml(d.einwand_zitat)}"</div></div>
@@ -832,7 +832,7 @@ function logGenutzt(cardId, option, einwandTyp){
   fetch('/api/log_gegenargument_wahl', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({gewaehlte_option: option, kb_aktuell: kb, einwand_typ: einwandTyp})
+    body: JSON.stringify({gewählte_option: option, kb_aktuell: kb, einwand_typ: einwandTyp})
   }).catch(()=>{});
 }
 
@@ -841,7 +841,7 @@ function quickAction(typ){
   const prompts = {
     frage:     'Welche offene Frage sollte ich dem Kunden jetzt stellen basierend auf dem bisherigen Gespräch?',
     einwand:   'Der Kunde hat gerade einen Einwand gebracht. Wie kann ich ihn entkräften?',
-    uebergang: 'Wie kann ich jetzt natürlich zum nächsten Gesprächsthema überleiten?',
+    übergang: 'Wie kann ich jetzt natürlich zum nächsten Gesprächsthema überleiten?',
     abschluss: 'Wie kann ich das Gespräch jetzt in Richtung Abschluss lenken?',
   };
   const inp = document.getElementById('frageInput');
@@ -872,7 +872,7 @@ async function sendeFrageAnKI(){
   antwortDiv.innerHTML='<div style="color:#8866cc;font-size:13px;font-style:italic;padding:8px 0">Claude denkt…</div>';
   try{
     // Detect typ from quick-action prompts
-    const _qa_typ = ['frage','einwand','uebergang','abschluss'].find(t =>
+    const _qa_typ = ['frage','einwand','übergang','abschluss'].find(t =>
       frage.toLowerCase().includes(t)) || 'frage';
     const res=await fetch('/api/frage',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -934,10 +934,10 @@ function zeigePostcall(d, filename){
 
   // Einwände
   const einList=document.getElementById('pc-einList');einList.innerHTML='';
-  document.getElementById('pc-einCount').textContent=(d.einwaende||[]).length;
-  (d.einwaende||[]).forEach(e=>{
+  document.getElementById('pc-einCount').textContent=(d.einwände||[]).length;
+  (d.einwände||[]).forEach(e=>{
     const row=document.createElement('div');row.className='einwand-row';
-    const col=e.intensitaet==='hoch'?'#e05c5c':'#f0a05a';
+    const col=e.intensität==='hoch'?'#e05c5c':'#f0a05a';
     row.innerHTML=`<span class="einwand-badge-small" style="background:${col}20;color:${col}">${escHtml(e.typ)}</span><span style="font-size:12px;color:#8888aa">${escHtml(e.zitat||'').slice(0,50)}</span>`;
     einList.appendChild(row);
   });
@@ -1031,10 +1031,10 @@ function zeigePostcall(d, filename){
   // Nächste Schritte
   const stepsSection = document.getElementById('pc-stepsSection');
   const stepsList = document.getElementById('pc-stepsList');
-  if (d.naechste_schritte && d.naechste_schritte.length && stepsSection) {
+  if (d.nächste_schritte && d.nächste_schritte.length && stepsSection) {
     stepsSection.style.display = '';
     stepsList.innerHTML = '';
-    d.naechste_schritte.forEach(s => {
+    d.nächste_schritte.forEach(s => {
       const div = document.createElement('div');
       div.className = 'ns-item';
       div.innerHTML = `<div class="ns-check" onclick="toggleNsCheck(this)"></div><span class="ns-text">${escHtml(s)}</span>`;
@@ -1091,7 +1091,7 @@ async function loadPostcallInsights(d){
     const res=await fetch('/api/postcall_insights',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        einwaende:d.einwaende||[],painpoints:d.painpoints||[],
+        einwände:d.einwände||[],painpoints:d.painpoints||[],
         kb_start:d.kb_start||30,kb_end:d.kb_end||30
       })
     });
@@ -1122,7 +1122,7 @@ async function loadPostcallAnalysis(d) {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         conv_id: window._lastConvId,
-        einwaende: d.einwaende || [], painpoints: d.painpoints || [],
+        einwände: d.einwände || [], painpoints: d.painpoints || [],
         kb_start: d.kb_start || 30, kb_end: d.kb_end || 30,
         redeanteil_berater: rb, redeanteil_kunde: 100 - rb,
         dauer_sek: d.dauer_sek || 0,
@@ -1133,11 +1133,11 @@ async function loadPostcallAnalysis(d) {
     });
     const json = await res.json();
     loading.style.display = 'none';
-    if (!json.vorschlaege || json.vorschlaege.length === 0) {
-      list.innerHTML = '<div style="color:var(--page-text-secondary);font-size:13px">Keine Vorschlaege fuer diesen Call.</div>';
+    if (!json.vorschläge || json.vorschläge.length === 0) {
+      list.innerHTML = '<div style="color:var(--page-text-secondary);font-size:13px">Keine Vorschläge fuer diesen Call.</div>';
       return;
     }
-    renderLernkartenVorschlaege(json.vorschlaege, list);
+    renderLernkartenVorschläge(json.vorschläge, list);
   } catch (e) {
     console.error('[Coach] PostCall analysis error:', e);
     loading.style.display = 'none';
@@ -1145,9 +1145,9 @@ async function loadPostcallAnalysis(d) {
   }
 }
 
-function renderLernkartenVorschlaege(vorschlaege, container) {
+function renderLernkartenVorschläge(vorschläge, container) {
   // Track current alternative index per suggestion
-  const altState = vorschlaege.map(() => ({ idx: 0 }));  // 0=original, 1=alt1, 2=alt2
+  const altState = vorschläge.map(() => ({ idx: 0 }));  // 0=original, 1=alt1, 2=alt2
 
   function getTextForState(v, state) {
     if (state.idx === 0) return v.original_suggestion;
@@ -1157,7 +1157,7 @@ function renderLernkartenVorschlaege(vorschlaege, container) {
 
   function renderCards() {
     container.innerHTML = '';
-    vorschlaege.forEach((v, i) => {
+    vorschläge.forEach((v, i) => {
       const currentText = getTextForState(v, altState[i]);
       const cardEl = document.createElement('div');
       cardEl.className = 'n-lk-suggestion';
@@ -1181,7 +1181,7 @@ function renderLernkartenVorschlaege(vorschlaege, container) {
   }
 
   // Make these accessible globally for onclick handlers
-  window._lkVorschlaege = vorschlaege;
+  window._lkVorschläge = vorschläge;
   window._lkAltState = altState;
   window._lkRenderCards = renderCards;
 
@@ -1373,7 +1373,7 @@ function updateKompaktEinwand(d){
   }else{
     const isVorwand=d.ist_vorwand===true;
     const label=isVorwand?'⚠ Vorwand':'⚡ Einwand';
-    const col=d.intensitaet==='hoch'?'#e05c5c':'#f0a05a';
+    const col=d.intensität==='hoch'?'#e05c5c':'#f0a05a';
     el.style.color=col;
     const ga1=d.gegenargument_1||d.gegenargument||'';
     el.textContent=`${label} · ${d.typ||'?'} — ${d.einwand_zitat||''}\n${ga1}`;
@@ -1684,7 +1684,7 @@ function pipBeendenCall() {
     if (typeof stopSessionTimer === 'function') stopSessionTimer();
 
     // Reset counters (same as main beenden)
-    words = 0; einwaende = 0; analysen = 0;
+    words = 0; einwände = 0; analysen = 0;
 
     // Store conv_id for Details button
     window._lastConvId = data.conv_id || null;
@@ -1722,10 +1722,10 @@ function calcPipScore(postcall) {
   var total = (postcall.berater_words || 0) + (postcall.kunde_words || 0);
   var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
 
-  // Calculate einwaende_behandelt from ga_details (no backend change needed)
+  // Calculate einwände_behandelt from ga_details (no backend change needed)
   var gaDetails = postcall.ga_details || [];
   var einwandeBehandelt = gaDetails.filter(function(x) { return x && x.erfolgreich === true; }).length;
-  var einwandeTotal = (postcall.einwaende || []).length;
+  var einwandeTotal = (postcall.einwände || []).length;
   var behandeltRate = einwandeTotal > 0 ? einwandeBehandelt / einwandeTotal : 0.5;
 
   var skript = (postcall.skript_abdeckung || {}).gesamt_prozent || 0;
@@ -1746,14 +1746,14 @@ function buildHighlightTags(postcall) {
   var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
   var gaDetails = postcall.ga_details || [];
   var einwandeBehandelt = gaDetails.filter(function(x) { return x && x.erfolgreich === true; }).length;
-  var einwandeTotal = (postcall.einwaende || []).length;
+  var einwandeTotal = (postcall.einwände || []).length;
   var behandeltRate = einwandeTotal > 0 ? einwandeBehandelt / einwandeTotal : -1;
   var dauer = postcall.dauer_sek || 0;
 
   // Positive tags (teal)
   if (kb >= 70) tags.push({ text: 'Starke Kaufbereitschaft', color: 'teal' });
   if (kb - kbStart >= 20) tags.push({ text: 'KB deutlich gestiegen', color: 'teal' });
-  if (behandeltRate >= 0.8 && einwandeTotal > 0) tags.push({ text: 'Einwaende gemeistert', color: 'teal' });
+  if (behandeltRate >= 0.8 && einwandeTotal > 0) tags.push({ text: 'Einwände gemeistert', color: 'teal' });
 
   // Warning tags (yellow)
   if (redeanteil > 65) tags.push({ text: 'Redeanteil zu hoch', color: 'neutral' });
@@ -1761,7 +1761,7 @@ function buildHighlightTags(postcall) {
   if (dauer > 0 && dauer < 120) tags.push({ text: 'Sehr kurzer Call', color: 'neutral' });
 
   // Negative tags (red)
-  if (behandeltRate >= 0 && behandeltRate < 0.4 && einwandeTotal > 0) tags.push({ text: 'Einwaende offen', color: 'red' });
+  if (behandeltRate >= 0 && behandeltRate < 0.4 && einwandeTotal > 0) tags.push({ text: 'Einwände offen', color: 'red' });
 
   // Limit to 3 tags: prefer 1-2 positive + 0-1 negative
   var positive = tags.filter(function(t) { return t.color === 'teal'; });
@@ -2033,15 +2033,15 @@ function renderPipEwbButtons(aiTop2) {
   var row = getPipElement('pip-ewb-row');
   if (!row) return;
 
-  var einwaende = [];
-  if (window._profileEinwaende && window._profileEinwaende.einwaende) {
-    einwaende = window._profileEinwaende.einwaende.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
+  var einwände = [];
+  if (window._profileEinwände && window._profileEinwände.einwände) {
+    einwände = window._profileEinwände.einwände.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
   }
-  if (!einwaende.length) {
-    einwaende = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
+  if (!einwände.length) {
+    einwände = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
   }
 
-  var top2 = aiTop2 || einwaende.slice(0, 2);
+  var top2 = aiTop2 || einwände.slice(0, 2);
   var btnClass = aiTop2 ? 'pip-ewb-btn pip-ewb-ai-selected' : 'pip-ewb-btn';
   var html = top2.map(function(typ) {
     return '<button class="' + btnClass + '" onclick="triggerEwb(\'' + typ.replace(/'/g, "\\'") + '\')">' + escHtml(typ) + '</button>';
@@ -2067,19 +2067,19 @@ function togglePipEwbExpand() {
     return;
   }
 
-  var einwaende = [];
-  if (window._profileEinwaende && window._profileEinwaende.einwaende) {
-    einwaende = window._profileEinwaende.einwaende.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
+  var einwände = [];
+  if (window._profileEinwände && window._profileEinwände.einwände) {
+    einwände = window._profileEinwände.einwände.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
   }
-  if (!einwaende.length) {
-    einwaende = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
+  if (!einwände.length) {
+    einwände = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
   }
 
   var expandDiv = (window._pipWindow && !window._pipWindow.closed)
     ? window._pipWindow.document.createElement('div')
     : document.createElement('div');
   expandDiv.className = 'pip-ewb-expanded';
-  einwaende.forEach(function(typ) {
+  einwände.forEach(function(typ) {
     var btn = expandDiv.ownerDocument.createElement('button');
     btn.className = 'pip-ewb-btn';
     btn.textContent = typ;

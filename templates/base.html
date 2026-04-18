@@ -192,7 +192,7 @@
 .pip-live-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#F8FAFC}
 /* 06.1-r2 LAYOUT-1/3: PiP 900px — Teleprompter 50%, EWB auto, KI-Zone nimmt Rest (gestapelt) */
 .pip-ki-zone{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 12px 10px}
-/* 06.1-r2 DESIGN-8: NERVE Coach Header — Brand ueber beiden Slots, statt A/B-Labels */
+/* 06.1-r2 DESIGN-8: NERVE Coach Header — Brand über beiden Slots, statt A/B-Labels */
 .pip-ki-header{display:flex;align-items:center;gap:8px;padding:4px 2px 8px;color:#1a1a1a}
 .pip-ki-n{width:20px;height:20px;border:1.5px solid #00D4AA;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-size:12px;font-weight:900;color:#00D4AA;flex-shrink:0}
 .pip-ki-brand{font-size:13px;font-weight:700;letter-spacing:0.02em;color:#1a1a1a}
@@ -206,18 +206,18 @@
 .pip-slot-label{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#6B7280;margin-bottom:6px}
 /* D-08: dunkler Text auf hellem Slot */
 .pip-slot-body{font-size:14px;font-weight:400;line-height:1.5;color:#1a1a1a;flex:1;overflow-wrap:break-word;word-break:break-word}
-/* D-07: Streaming-Cursor teal blinkend (unveraendert) */
+/* D-07: Streaming-Cursor teal blinkend (unverändert) */
 .pip-slot-body.pip-streaming::after{content:'\258C';animation:pip-cursor-blink 0.7s step-end infinite;color:#00D4AA;margin-left:2px}
 @keyframes pip-cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
 .pip-slot-result{margin-top:8px}
 .pip-slot-typ-badge{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;margin-bottom:4px}
 /* Zone-Divider dezent auf hellem Grund */
 .pip-zone-divider{height:1px;background:rgba(0,0,0,0.08);flex:none}
-/* 06.1-r2 LAYOUT-4: Teleprompter 40% (~344px) — KI-Zone bekommt mehr Platz fuer gestapelte Slots */
+/* 06.1-r2 LAYOUT-4: Teleprompter 40% (~344px) — KI-Zone bekommt mehr Platz für gestapelte Slots */
 .pip-teleprompter{flex:0 0 40%;padding:12px 16px;overflow-y:auto;background:transparent;color:#1a1a1a}
-/* 06.1-r2 LAYOUT-2: EWB als zusammenhaengende Leiste — keine Pills, keine Gaps */
+/* 06.1-r2 LAYOUT-2: EWB als zusammenhängende Leiste — keine Pills, keine Gaps */
 .pip-ewb-row{flex:0 0 auto;display:flex;align-items:stretch;gap:0;padding:0;border-top:1px solid #E2E8F0;border-bottom:1px solid #E2E8F0;overflow:hidden}
-/* BUG-2: konsistente schlanke 4px-Scrollbar fuer Slots + Teleprompter (heller Body) */
+/* BUG-2: konsistente schlanke 4px-Scrollbar für Slots + Teleprompter (heller Body) */
 .pip-ki-slot::-webkit-scrollbar,
 .pip-teleprompter::-webkit-scrollbar{width:4px}
 .pip-ki-slot::-webkit-scrollbar-track,
@@ -227,11 +227,11 @@
 /* Firefox */
 .pip-ki-slot{scrollbar-width:thin;scrollbar-color:rgba(0,0,0,0.15) transparent}
 .pip-teleprompter{scrollbar-width:thin;scrollbar-color:rgba(0,0,0,0.15) transparent}
-/* D-06: Teleprompter-Bloecke auf hellem Grund */
+/* D-06: Teleprompter-Blöcke auf hellem Grund */
 .tp-block{padding:12px 16px;border-left:4px solid transparent;border-radius:0 8px 8px 0;font-size:14px;line-height:1.5;color:rgba(26,26,26,0.4);cursor:pointer;transition:opacity 200ms,border-color 200ms,color 200ms,background 200ms}
 .tp-block-active{border-left-color:#00D4AA;color:#1a1a1a;background:rgba(0,212,170,0.08)}
 .tp-empty{padding:24px 16px;text-align:center;color:#6B7280;font-size:13px}
-/* 06.1-r2 CLEANUP: Opacity-Slider entfernt (Browser-Limitation — PiP-Doc kann nicht echt transparent ueber CRM) */
+/* 06.1-r2 CLEANUP: Opacity-Slider entfernt (Browser-Limitation — PiP-Doc kann nicht echt transparent über CRM) */
 .pip-header-right{display:flex;align-items:center;gap:10px}
 /* D-13: Mic-Indikator — 4 Balken, klickbar als Mute-Toggle */
 .pip-mic-indicator{display:inline-flex;align-items:flex-end;gap:3px;height:24px;padding:2px 6px;background:transparent;border:none;cursor:pointer;border-radius:4px;color:#00D4AA;transition:background 150ms,opacity 200ms}
@@ -249,7 +249,7 @@
 .pip-ewb-btn{background:#FFFFFF;border:none;border-right:1px solid #E2E8F0;color:#1a1a1a;border-radius:0;padding:8px 6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;flex:1 1 0;min-width:0;min-height:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background 300ms ease-out,color 300ms ease-out}
 .pip-ewb-btn:last-child{border-right:none}
 .pip-ewb-btn:hover{background:rgba(0,212,170,0.08);color:#00D4AA}
-/* 06.1-r2 DESIGN-7: Klick-Flash teal — JS toggelt .pip-ewb-flashing fuer 400ms */
+/* 06.1-r2 DESIGN-7: Klick-Flash teal — JS toggelt .pip-ewb-flashing für 400ms */
 .pip-ewb-btn.pip-ewb-flashing{background:#00D4AA;color:#ffffff;transition:none}
 /* 06.1-r2 DESIGN-10: Selected-State jetzt teal (nicht gelb) — signalisiert 'aktiver Einwand' */
 .pip-ewb-ai-selected{background:rgba(0,212,170,0.14);color:#00877F;font-weight:700}
@@ -259,13 +259,14 @@
 .pip-resize-handle:hover{opacity:0.8}
 .pip-btn-next-call{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
 .pip-btn-next-call:hover{opacity:.85}
-.pip-btn-details{background:#1C2333;border:1px solid #2a3548;border-radius:8px;color:#e8ecf4;padding:10px 16px;font-size:13px;cursor:pointer;flex:1;transition:border-color .2s,opacity .2s}
-.pip-btn-details:hover:not(:disabled){border-color:#00D4AA}
-.pip-btn-details:disabled{opacity:.45;cursor:not-allowed;border-color:#2a3548}
+/* Phase 07: Auswertung-Button auf MAIN DESIGN (weiss/grau/teal) statt dark. */
+.pip-btn-details{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;color:#1a1a1a;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:border-color .2s,opacity .2s,color .2s}
+.pip-btn-details:hover:not(:disabled){border-color:#00D4AA;color:#00D4AA}
+.pip-btn-details:disabled{opacity:.45;cursor:not-allowed;border-color:#E2E8F0}
 /* POLISH-23: Spinner statt "…" wenn Auswertung noch lädt */
 @keyframes pip-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .pip-score-spinner{width:44px;height:44px;border:4px solid rgba(0,212,170,0.15);border-top-color:#00D4AA;border-radius:50%;animation:pip-spin 0.9s linear infinite;margin:6px auto 0}
-/* 06.1-r2 DESIGN-6: Beenden als kleiner roter Pill im Header — gleiche Hoehe wie .pip-mode-badge */
+/* 06.1-r2 DESIGN-6: Beenden als kleiner roter Pill im Header — gleiche Höhe wie .pip-mode-badge */
 .pip-btn-beenden{background:transparent;border:1px solid rgba(248,113,113,0.5);border-radius:9999px;color:#f87171;padding:2px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s}
 .pip-btn-beenden:hover{background:rgba(248,113,113,0.12);border-color:#f87171}
 /* 06.1-r2 DESIGN-9: Kompakterer Postcall — Score bleibt dominant, aber Section ist luftiger */
@@ -279,7 +280,7 @@
 /* Phase 07: .pip-tag-yellow ersetzt durch .pip-tag-neutral (Grau) — MAIN DESIGN kein Gelb mehr. */
 .pip-tag-neutral{background:rgba(107,114,128,0.12);color:#6B7280}
 .pip-tag-red{background:rgba(248,113,113,0.15);color:#F87171}
-.pip-postcall-kundendaten{font-size:11px;color:#555e70;margin-top:8px}
+.pip-postcall-kundendaten{font-size:11px;color:#6B7280;margin-top:8px}
 .pip-postcall-actions{display:flex;gap:10px;margin-top:16px;width:100%;max-width:280px}
 /* Launcher modal step styles */
 .launcher-step{width:100%;display:flex;flex-direction:column;gap:16px}
@@ -362,24 +363,24 @@
 <div class="headset-overlay" id="headset-overlay" role="dialog" aria-modal="true" aria-labelledby="headset-title">
   <div class="headset-box">
     <h2 class="headset-title" id="headset-title">Kurz einchecken bevor's losgeht</h2>
-    <p class="headset-body">NERVE hoert im Cold Call nur dich — nicht deinen Gespraechspartner. Damit das sauber bleibt, brauchst du ein Headset. Ueber Lautsprecher wuerde dein Laptop-Mic die andere Stimme mit aufnehmen, und genau das wollen wir beide nicht.</p>
+    <p class="headset-body">NERVE hört im Cold Call nur dich — nicht deinen Gesprächspartner. Damit das sauber bleibt, brauchst du ein Headset. Über Lautsprecher würde dein Laptop-Mic die andere Stimme mit aufnehmen, und genau das wollen wir beide nicht.</p>
     <label class="headset-check-row">
       <input type="checkbox" id="headset-checkbox">
-      <span class="headset-check-label">Ich telefoniere ueber ein Headset und bestaetige, dass NERVE nur meine eigene Stimme verarbeitet.</span>
+      <span class="headset-check-label">Ich telefoniere über ein Headset und bestätige, dass NERVE nur meine eigene Stimme verarbeitet.</span>
     </label>
     <div class="headset-actions">
       <button class="headset-btn headset-btn-cancel" id="headset-cancel" type="button">Abbrechen</button>
       <button class="headset-btn headset-btn-confirm" id="headset-confirm" type="button" disabled>Los geht's</button>
     </div>
     <button class="headset-footer-link" id="headset-why-link" type="button">Warum wir das fragen</button>
-    <div class="headset-legal-hint" id="headset-legal-hint">Nach § 201 StGB ist die Aufnahme nicht-oeffentlicher Gespraeche ohne Einwilligung strafbar. NERVE verarbeitet im Cold Call ausschliesslich deine Stimme — das Headset stellt sicher, dass keine Fremdstimme ueber das Laptop-Mic erfasst wird.</div>
+    <div class="headset-legal-hint" id="headset-legal-hint">Nach § 201 StGB ist die Aufnahme nicht-öffentlicher Gespräche ohne Einwilligung strafbar. NERVE verarbeitet im Cold Call ausschließlich deine Stimme — das Headset stellt sicher, dass keine Fremdstimme über das Laptop-Mic erfasst wird.</div>
   </div>
 </div>
 
-<!-- ── Consent-Modal (Meeting-Modus Einwilligung des Gespraechspartners) ── -->
+<!-- ── Consent-Modal (Meeting-Modus Einwilligung des Gesprächspartners) ── -->
 <div class="consent-overlay" id="consent-overlay" role="dialog" aria-modal="true" aria-labelledby="consent-title">
   <div class="consent-box">
-    <h2 class="consent-title" id="consent-title">Einwilligung des Gespraechspartners</h2>
+    <h2 class="consent-title" id="consent-title">Einwilligung des Gesprächspartners</h2>
     <p class="consent-pflicht">Bitte laut vorlesen</p>
     <p class="consent-script" id="consent-script"></p>
     <div class="consent-actions">
@@ -393,7 +394,7 @@
 <!-- PiP Launcher Setup Modal (shell — pip-launcher.js populates #launcherContent) -->
 <div id="launcherModal" class="nav-live-overlay">
   <div class="nav-live-box" style="max-width:640px" id="launcherModalBox">
-    <button class="nav-live-close" id="launcherClose" title="Schliessen">&times;</button>
+    <button class="nav-live-close" id="launcherClose" title="Schließen">&times;</button>
     <div id="launcherContent" style="width:100%"></div>
   </div>
 </div>
@@ -437,7 +438,7 @@
     <!-- Divider -->
     <div class="pip-zone-divider"></div>
 
-    <!-- 06.1-r2 DESIGN-12: NERVE Coach Header entfernt — mehr Platz fuer Antworten. -->
+    <!-- 06.1-r2 DESIGN-12: NERVE Coach Header entfernt — mehr Platz für Antworten. -->
     <div class="pip-ki-zone" id="pip-ki-zone">
       <div class="pip-ki-slots">
         <div class="pip-ki-slot" id="pip-slot-0">

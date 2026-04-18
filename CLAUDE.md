@@ -99,6 +99,23 @@ NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertrie
 - Code follows basic PEP 8 conventions informally
 - Relative imports used: `from database.db import get_session`
 - No alias shortcuts like `@` or custom mappings detected
+
+## Deutsche Umlaute & UTF-8 (WICHTIG)
+Die App ist durchgehend UTF-8 (`<meta charset="UTF-8">` in allen Templates,
+`encoding='utf-8'` bei Datei-I/O). **Verwende IMMER echte deutsche Umlaute
+(ä, ö, ü, ß) in Templates, JS-Strings und User-facing-Texten.**
+
+- ✅ RICHTIG: `"Gespräch wird ausgewertet…"` · `"Zurück"` · `"Für Sie"`
+- ❌ FALSCH: `"Gespraech wird ausgewertet..."` · `"Zurueck"` · `"Fuer Sie"`
+
+ASCII-Ersatz (ae/oe/ue/ss) ist **ausschliesslich erlaubt** in:
+- Plan-Dokumenten / Markdown zur Lesbarkeit (`.planning/phases/*.md`)
+- Source-Kommentaren wenn ASCII-only policy sinnvoll ist
+- NIEMALS in Produktionscode, HTML-Templates, JS-Strings oder User-facing-Strings
+
+Historisch wurde ASCII-Ersatz aus angeblichem "Encoding-Bug" verwendet — das
+ist Cargo-Cult. Es gab nie ein echtes Encoding-Problem; das Projekt ist
+sauber UTF-8. Siehe POLISH-12 in [[02 Projekte/NERVE Finaler Polish Pass]].
 ## Error Handling
 - Try-except with explicit error swallowing: `except Exception: pass`
 - Try-finally blocks ensure resource cleanup (DB sessions):

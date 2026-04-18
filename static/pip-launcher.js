@@ -135,8 +135,8 @@
     if (!c) return;
     c.innerHTML = [
       '<div class="launcher-step">',
-      '<div class="nav-live-title">Gespraechsmodus waehlen</div>',
-      '<div class="nav-live-sub">Waehle den passenden Modus. Der Modus kann waehrend des Calls nicht gewechselt werden.</div>',
+      '<div class="nav-live-title">Gesprächsmodus wählen</div>',
+      '<div class="nav-live-sub">Wähle den passenden Modus. Der Modus kann während des Calls nicht gewechselt werden.</div>',
       '<div class="nav-live-cards">',
       '<div class="nav-live-card" id="lnr-card-cold">',
       '<div class="nav-live-card-icon">',
@@ -156,7 +156,7 @@
       '<path d="M15 22C17 21 19 21 20 21C21 21 23 21 25 22" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round"/>',
       '</svg></div>',
       '<div class="nav-live-card-title">Meeting</div>',
-      '<div class="nav-live-card-desc">Volle Analyse beider Sprecher.<br>Einwilligung des Gespraechspartners erforderlich.<br>Automatische Einwanderkennung + EWB.</div>',
+      '<div class="nav-live-card-desc">Volle Analyse beider Sprecher.<br>Einwilligung des Gesprächspartners erforderlich.<br>Automatische Einwanderkennung + EWB.</div>',
       '</div>',
       '</div>',
       '</div>'
@@ -190,15 +190,15 @@
       '<div class="launcher-step">',
       '<div class="nav-live-title">PreCall-Analyse</div>',
       '<div class="launcher-hint">',
-      'Wird empfohlen, damit die KI besser auf Einwaende eingehen kann. ',
+      'Wird empfohlen, damit die KI besser auf Einwände eingehen kann. ',
       'Du gibst den Firmennamen ein und NERVE recherchiert Kontext automatisch.',
       '</div>',
       '<div class="launcher-actions" style="flex-direction:column;gap:10px">',
       '<button class="launcher-btn-primary" id="lnr-precall-yes" style="width:100%">Zur PreCall-Analyse</button>',
-      '<button class="launcher-btn-ghost" id="lnr-precall-skip" style="width:100%">Ueberspringen und zur Opener/Skript-Auswahl</button>',
+      '<button class="launcher-btn-ghost" id="lnr-precall-skip" style="width:100%">Überspringen und zur Opener/Skript-Auswahl</button>',
       '</div>',
       '<div class="launcher-actions" style="justify-content:flex-start">',
-      '<button class="launcher-btn-ghost" id="lnr-step2-back">&#8592; Zurueck</button>',
+      '<button class="launcher-btn-ghost" id="lnr-step2-back">&#8592; Zurück</button>',
       '</div>',
       '</div>'
     ].join('');
@@ -231,13 +231,13 @@
       '<input type="text" class="launcher-form-input" id="lnr-person" placeholder="Ansprechpartner (optional)" maxlength="200" value="' + escHtml(saved.person || '') + '">',
       '<textarea class="launcher-form-input" id="lnr-optinfo" placeholder="Optionale Infos (optional)" maxlength="500" rows="2" style="resize:none">' + escHtml(saved.optinfo || '') + '</textarea>',
       '<div id="lnr-precall-loading" style="display:none">',
-      '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:8px">Recherche laeuft... (~30 Sekunden)</div>',
+      '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:8px">Recherche läuft... (~30 Sekunden)</div>',
       '<div class="launcher-loading-bar"><div class="launcher-loading-bar-inner"></div></div>',
       '</div>',
       '<div id="lnr-precall-error" style="display:none;color:#f87171;font-size:13px"></div>',
       '<div class="launcher-actions">',
-      '<button class="launcher-btn-ghost" id="lnr-step3-back">&#8592; Zurueck</button>',
-      '<button class="launcher-btn-ghost" id="lnr-step3-skip">Ueberspringen</button>',
+      '<button class="launcher-btn-ghost" id="lnr-step3-back">&#8592; Zurück</button>',
+      '<button class="launcher-btn-ghost" id="lnr-step3-skip">Überspringen</button>',
       '<button class="launcher-btn-primary" id="lnr-step3-run">Analyse durchfuehren</button>',
       '</div>',
       '</div>'
@@ -251,7 +251,7 @@
     document.getElementById('lnr-step3-skip').onclick = function () {
       saveFormData();
       // Confirmation
-      if (!confirm('Sind Sie sicher, dass Sie die PreCall-Analyse ueberspringen moechten?')) return;
+      if (!confirm('Sind Sie sicher, dass Sie die PreCall-Analyse überspringen moechten?')) return;
       state.precallBriefing = null;
       state.step = 5;
       renderStep();
@@ -284,7 +284,7 @@
     var runBtn = document.getElementById('lnr-step3-run');
     if (loading) loading.style.display = 'block';
     if (errEl2) errEl2.style.display = 'none';
-    if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Laeuft...'; }
+    if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Läuft...'; }
 
     var ort = (document.getElementById('lnr-ort') || {}).value || '';
     var person = (document.getElementById('lnr-person') || {}).value || '';
@@ -357,9 +357,9 @@
       found
         ? '<div class="launcher-briefing-html" id="lnr-briefing-view">' + mdToHtml(briefingText) + '</div>'
           + '<textarea class="launcher-briefing" id="lnr-briefing-edit" style="display:none">' + escHtml(briefingText) + '</textarea>'
-        : '<div style="color:var(--page-text-muted);font-size:13px;padding:12px 0">Fuer diese Firma konnten keine oeffentlichen Informationen gefunden werden. Du kannst trotzdem fortfahren.</div>',
+        : '<div style="color:var(--page-text-muted);font-size:13px;padding:12px 0">Für diese Firma konnten keine öffentlichen Informationen gefunden werden. Du kannst trotzdem fortfahren.</div>',
       '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
-      '<button class="launcher-btn-ghost" id="lnr-step4-back">&#8592; Zurueck</button>',
+      '<button class="launcher-btn-ghost" id="lnr-step4-back">&#8592; Zurück</button>',
       found ? '<button class="launcher-btn-ghost" id="lnr-step4-edit">Ergebnis anpassen</button>' : '',
       '<button class="launcher-btn-ghost" id="lnr-step4-new">Neue Analyse</button>',
       '<button class="launcher-btn-primary" id="lnr-step4-accept">Ergebnis uebernehmen &#8594;</button>',
@@ -439,7 +439,7 @@
 
     c.innerHTML = [
       '<div class="launcher-step">',
-      '<div class="nav-live-title">Skript & Opener waehlen</div>',
+      '<div class="nav-live-title">Skript & Opener wählen</div>',
 
       // Profil
       state.profiles.length > 0
@@ -450,7 +450,7 @@
       state.skripte.length > 0
         ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Skript</label><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
         : '',
-      '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto' + (skriptPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (skriptPreview || (state.skripte.length > 0 ? 'Skript auswaehlen fuer Vorschau' : '')) + '</div>',
+      '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto' + (skriptPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (skriptPreview || (state.skripte.length > 0 ? 'Skript auswählen fuer Vorschau' : '')) + '</div>',
       '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4"></textarea>',
       state.skripte.length > 0
         ? '<button type="button" id="lnr-skript-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
@@ -461,15 +461,15 @@
         ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
         : '',
       '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (openerPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">'
-        + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswaehlen fuer Vorschau' : (legacyOpener ? escHtml(legacyOpener) : 'Kein Opener hinterlegt'))) + '</div>',
+        + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswählen fuer Vorschau' : (legacyOpener ? escHtml(legacyOpener) : 'Kein Opener hinterlegt'))) + '</div>',
       '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>',
       (state.openerItems.length > 0 || legacyOpener)
         ? '<button type="button" id="lnr-opener-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
         : '',
 
       '<div class="launcher-actions">',
-      '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurueck</button>',
-      '<button class="launcher-btn-ghost" id="lnr-step5-skip">Ueberspringen</button>',
+      '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurück</button>',
+      '<button class="launcher-btn-ghost" id="lnr-step5-skip">Überspringen</button>',
       '<button class="launcher-btn-primary" id="lnr-step5-start">Call starten &#9654;</button>',
       '</div>',
       '</div>'
@@ -504,7 +504,7 @@
         var preview = document.getElementById('lnr-skript-preview');
         if (preview) {
           var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
-          preview.textContent = sk ? sk.inhalt : 'Skript auswaehlen fuer Vorschau';
+          preview.textContent = sk ? sk.inhalt : 'Skript auswählen fuer Vorschau';
           preview.style.fontStyle = sk ? 'normal' : 'italic';
           preview.style.color = sk ? '' : 'var(--page-text-muted)';
         }
@@ -519,7 +519,7 @@
         var preview = document.getElementById('lnr-opener-preview');
         if (preview) {
           var op = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
-          preview.textContent = op ? op.inhalt : 'Opener auswaehlen fuer Vorschau';
+          preview.textContent = op ? op.inhalt : 'Opener auswählen fuer Vorschau';
           preview.style.fontStyle = op ? 'normal' : 'italic';
           preview.style.color = op ? '' : 'var(--page-text-muted)';
         }
@@ -558,7 +558,7 @@
       if (ta.style.display === 'none') {
         // Switch to edit mode — populate textarea with current preview text
         var currentText = preview ? preview.textContent : '';
-        if (currentText && currentText !== 'Skript auswaehlen fuer Vorschau' && currentText !== 'Opener auswaehlen fuer Vorschau' && currentText !== 'Kein Opener hinterlegt') {
+        if (currentText && currentText !== 'Skript auswählen fuer Vorschau' && currentText !== 'Opener auswählen fuer Vorschau' && currentText !== 'Kein Opener hinterlegt') {
           ta.value = currentText;
         }
         if (preview) preview.style.display = 'none';
@@ -599,8 +599,8 @@
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center';
     overlay.innerHTML = '<div style="background:var(--page-bg,#fff);border:1px solid var(--glass-border);border-radius:12px;padding:24px;max-width:400px;width:90%;text-align:center">'
-      + '<div style="font-size:15px;font-weight:700;margin-bottom:12px">' + label + ' auch im Profil aendern?</div>'
-      + '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:16px">Die Aenderung gilt sonst nur fuer diesen Call.</div>'
+      + '<div style="font-size:15px;font-weight:700;margin-bottom:12px">' + label + ' auch im Profil ändern?</div>'
+      + '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:16px">Die Änderung gilt sonst nur fuer diesen Call.</div>'
       + '<div style="display:flex;gap:10px;justify-content:center">'
       + '<button id="lnr-save-no" style="padding:8px 20px;border:1px solid var(--glass-border);border-radius:8px;background:none;color:var(--page-text-color);cursor:pointer;font-size:13px">Nur dieser Call</button>'
       + '<button id="lnr-save-yes" style="padding:8px 20px;border:none;border-radius:8px;background:#00D4AA;color:#06060a;cursor:pointer;font-weight:700;font-size:13px">Im Profil speichern</button>'
@@ -624,7 +624,7 @@
   }
 
   // ── Consent-Modal (Meeting-Modus DSGVO Einwilligung) ──────────────────────
-  var CONSENT_DEFAULT_TEXT = 'Kurz vorab \u2014 ich lasse mich gerade von einem Assistenzsystem unterstuetzen, das unser Gespraech mitliest und mir hilft, keine Audioaufnahme. Passt das fuer Sie?';
+  var CONSENT_DEFAULT_TEXT = 'Kurz vorab \u2014 ich lasse mich gerade von einem Assistenzsystem unterstützen, das unser Gespräch mitliest und mir hilft, keine Audioaufnahme. Passt das fuer Sie?';
 
   function _showConsentModal(callback) {
     var overlay = document.getElementById('consent-overlay');
@@ -941,7 +941,7 @@
       var briefingText = (state.precallBriefing && state.precallBriefing.text) ? state.precallBriefing.text : null;
       // Get skript content for backend teleprompter context
       var skriptInhalt = '';
-      var skriptBloecke = [];
+      var skriptBlöcke = [];
       if (state._editedSkriptText) {
         skriptInhalt = state._editedSkriptText;
       } else if (state.selectedSkriptId && state.skripte.length > 0) {
@@ -949,7 +949,7 @@
         if (sk && sk.inhalt) skriptInhalt = sk.inhalt;
       }
       if (skriptInhalt) {
-        skriptBloecke = skriptInhalt.split(/\n\n+/).filter(function (b) { return b.trim(); });
+        skriptBlöcke = skriptInhalt.split(/\n\n+/).filter(function (b) { return b.trim(); });
       }
       // D-03: Opener als Block 0, damit KI-Position-Erkennung (skript_position) Phase 0 = Opener kennt
       var openerFuerKi = '';
@@ -960,13 +960,13 @@
       } else if (state.profileDaten && state.profileDaten.opener) {
         openerFuerKi = state.profileDaten.opener;
       }
-      if (openerFuerKi) skriptBloecke = [openerFuerKi].concat(skriptBloecke);
+      if (openerFuerKi) skriptBlöcke = [openerFuerKi].concat(skriptBlöcke);
 
       state.socket.emit('start_live_session', {
         mode: state.mode || 'cold_call',
         precall_briefing: briefingText,
         skript_inhalt: skriptInhalt || null,
-        skript_bloecke: skriptBloecke.length > 0 ? skriptBloecke : null
+        skript_bloecke: skriptBlöcke.length > 0 ? skriptBlöcke : null
       });
       console.log('[NerveLauncher] Mic started, mode:', state.mode);
     } catch (err) {
@@ -1015,7 +1015,7 @@
     var nowMuted = tracks[0].enabled;  // wenn aktuell enabled → wir muten
     tracks.forEach(function (t) { t.enabled = !nowMuted; });
     state.micMuted = nowMuted;
-    // 06.2: Backend ueber Mute-Zustand informieren, damit Keyword-Matcher pausiert
+    // 06.2: Backend über Mute-Zustand informieren, damit Keyword-Matcher pausiert
     if (state.socket && state.socket.connected) {
       state.socket.emit('mute_mic', { muted: !!state.micMuted });
     }
@@ -1157,12 +1157,12 @@
       var nextBtn = t.closest('#nlp-btn-next-call');
       if (nextBtn) {
         // BUG-11 r5 SAFETY: Nur akzeptieren wenn Postcall-Section wirklich sichtbar ist.
-        // Defense-in-depth falls eine stale endCall-Response die Section waehrend eines
-        // laufenden Calls unsichtbar ueber die Live-UI legt (der Haupt-Fix sitzt im
+        // Defense-in-depth falls eine stale endCall-Response die Section während eines
+        // laufenden Calls unsichtbar über die Live-UI legt (der Haupt-Fix sitzt im
         // endCall-fetch-handler per callGen-Guard).
         var postcallEl = pipEl('nlp-section-postcall');
         if (!postcallEl || postcallEl.style.display === 'none' || state.micStarted) {
-          console.log('[NerveLauncher] nextBtn match ignoriert — Postcall nicht aktiv oder Call laeuft');
+          console.log('[NerveLauncher] nextBtn match ignoriert — Postcall nicht aktiv oder Call läuft');
           ev.preventDefault();
           return;
         }
@@ -1197,7 +1197,7 @@
     var liveSection = pipEl('pip-section-live');
     var beendenBtn = pipEl('nlp-btn-beenden');
     // 06.1-r2 BUG-13: Postcall-Section explizit verstecken — verhindert dass die
-    // alte "Kein Gespraech erkannt"-View auf dem neuen Call liegen bleibt.
+    // alte "Kein Gespräch erkannt"-View auf dem neuen Call liegen bleibt.
     var postcallSection = pipEl('nlp-section-postcall');
     if (postcallSection) postcallSection.style.display = 'none';
     if (liveSection) liveSection.style.display = 'flex';
@@ -1205,15 +1205,15 @@
     // 06.1-r2 BUG-13: Header wieder einblenden (Beenden wurde in _showPostcallRaw versteckt).
     var pipHeader = pipEl('pip-header');
     if (pipHeader) pipHeader.style.display = '';
-    // Score-Display zuruecksetzen falls Empty-State das :none gesetzt hat
+    // Score-Display zurücksetzen falls Empty-State das :none gesetzt hat
     var scoreEl = pipEl('nlp-postcall-score');
     if (scoreEl) scoreEl.style.display = '';
     var detailsBtn = pipEl('nlp-btn-details');
     if (detailsBtn) detailsBtn.style.display = '';
 
     // BUG-A FIX: _showPostcallRaw() setzt nlp-ewb-row display:none.
-    // _renderEwbButtons() setzt nur innerHTML, nicht display — hier zuruecksetzen
-    // damit die EWB-Leiste im naechsten Call sichtbar ist.
+    // _renderEwbButtons() setzt nur innerHTML, nicht display — hier zurücksetzen
+    // damit die EWB-Leiste im nächsten Call sichtbar ist.
     var ewbRow = pipEl('nlp-ewb-row');
     if (ewbRow) ewbRow.style.display = '';
 
@@ -1222,7 +1222,7 @@
     if (micBtnShow) micBtnShow.style.display = 'inline-flex';
 
     // D-03: Opener wandert in den Teleprompter als Block 0 — Slot A bleibt leer fuer erste KI-Antwort
-    // (keine Slot-0-Zuweisung mehr; beide Slots starten mit "Warte auf Gespraechsinhalt..." Default-Markup)
+    // (keine Slot-0-Zuweisung mehr; beide Slots starten mit "Warte auf Gesprächsinhalt..." Default-Markup)
 
     // Initialize teleprompter (D-11, D-12)
     _initTeleprompter();
@@ -1231,17 +1231,17 @@
   function _renderEwbButtons() {
     var row = pipEl('nlp-ewb-row');
     if (!row) return;
-    var einwaende = (state.profileDaten && state.profileDaten.einwaende) ? state.profileDaten.einwaende : [];
-    if (!einwaende.length) { row.innerHTML = ''; return; }
+    var einwände = (state.profileDaten && state.profileDaten.einwände) ? state.profileDaten.einwände : [];
+    if (!einwände.length) { row.innerHTML = ''; return; }
     // 06.1-r2 BUG-14c final: Button-Label = kurzlabel ODER kategorie (nur diese zwei).
     // Kein Truncation, kein name/einwand-Fallback. Dedup per Label (case-insensitive) —
-    // mehrere Einwaende ohne kurzlabel mit gleicher Kategorie kollabieren bewusst zu
+    // mehrere Einwände ohne kurzlabel mit gleicher Kategorie kollabieren bewusst zu
     // einem Button (Fix: kurzlabel im Profil pflegen fuer distinkte Buttons).
     // data-typ = Label, matched gegen dieselbe Chain in _triggerEwb + Backend.
     var seen = {};
     var items = [];
-    for (var i = 0; i < einwaende.length && items.length < 5; i++) {
-      var e = einwaende[i];
+    for (var i = 0; i < einwände.length && items.length < 5; i++) {
+      var e = einwände[i];
       var label;
       if (typeof e === 'string') {
         label = e.trim();
@@ -1258,20 +1258,20 @@
       return '<button type="button" class="pip-ewb-btn" data-typ="' + escHtml(label) + '">' + escHtml(label) + '</button>';
     }).join('');
     row.innerHTML = html;
-    // Klicks werden ueber Event-Delegation im pip-Document gefangen (_wirePipButtons).
+    // Klicks werden über Event-Delegation im pip-Document gefangen (_wirePipButtons).
   }
 
   function _triggerEwb(typ, btn) {
-    // 06.1-r2 r3: Manual-EWB = deterministisch aus profile.einwaende rendern.
+    // 06.1-r2 r3: Manual-EWB = deterministisch aus profile.einwände rendern.
     // Keine Claude-Call-Latenz, keine leeren Slots wenn Claude einwand=False meldet.
     // Backend bekommt 'manual_ewb' nur noch fuer Klick-Tracking (postcall-Analytics).
     console.log('[NerveLauncher] EWB trigger:', typ);
-    var einwaende = (state.profileDaten && state.profileDaten.einwaende) || [];
+    var einwände = (state.profileDaten && state.profileDaten.einwände) || [];
     var match = null;
     var typL = (typ || '').toLowerCase().trim();
     // 06.1-r2 BUG-14c: Match gegen kurzlabel ODER kategorie — gleiche Chain wie _renderEwbButtons.
-    for (var i = 0; i < einwaende.length; i++) {
-      var e = einwaende[i];
+    for (var i = 0; i < einwände.length; i++) {
+      var e = einwände[i];
       if (typeof e === 'string') { if (e.toLowerCase() === typL) { match = { kategorie: e }; break; } continue; }
       var label = (e.kurzlabel || e.short_label || e.kategorie || '').toLowerCase().trim();
       if (label === typL) { match = e; break; }
@@ -1387,7 +1387,7 @@
           if (claudeTyp === keywordTyp || claudeTyp === '') {
             // Gleicher Typ (oder kein Typ von Claude) — Profil-Text bleibt, kein Re-Render
             console.log('[NerveLauncher] pip_token_done Slot0 ignoriert — Keyword-Match dominiert (typ:', state.slot0LastKeywordTyp, ', delta:', msSinceKeyword, 'ms)');
-            // D-13 und D-02 trotzdem ausfuehren (kein Render-Impact)
+            // D-13 und D-02 trotzdem ausführen (kein Render-Impact)
             if (d.result && typeof d.result.skript_position === 'number') {
               _updateTeleprompterPosition(d.result.skript_position);
             }
@@ -1425,7 +1425,7 @@
     });
 
     // Coaching-Listener entfernt (Phase 06.6). Backend emittet den Event nicht mehr
-    // und die Live-Anzeige im PiP war kontraproduktiv — Coaching-Tipps wurden ueber
+    // und die Live-Anzeige im PiP war kontraproduktiv — Coaching-Tipps wurden über
     // die EWB-Antwort in Slot 1 geschrieben ("TIPP"-Label ueberschrieb "ANTWORT A").
     // Coaching-Daten bleiben fuer Post-Call-Scoring erhalten (conversation_log +
     // ft_assistant_events DB-Write server-seitig).
@@ -1469,7 +1469,7 @@
       var fake = { einwand: true, typ: typ, gegenargument_1: ga };
       _renderSlotResult(0, fake);
 
-      // EWB-Button hervorheben (aehnlich wie bei manual-click)
+      // EWB-Button hervorheben (ähnlich wie bei manual-click)
       _highlightEwbButton(typ);
 
       // State-Marker: pip_token_done soll diesen Slot-0-Render NICHT ueberschreiben
@@ -1490,19 +1490,19 @@
     // ({einwand, gegenargument_1}, {poin:{einwand,text}}, {text}, ...).
     // Wir extrahieren in normalisierte Felder, damit nie rohes JSON zum User kommt.
     var r = result || {};
-    // Unwrap {poin:{...}} / {point:{...}} — Haiku nutzt diese Schluessel in Round-2 Tests
+    // Unwrap {poin:{...}} / {point:{...}} — Haiku nutzt diese Schlüssel in Round-2 Tests
     var inner = r.poin || r.point || null;
     var isEinwand = !!(r.einwand || (inner && inner.einwand));
     var typ = r.typ || (inner && inner.typ) || '';
     var argument = r.gegenargument_1 || r.gegenargument || (inner && (inner.gegenargument_1 || inner.gegenargument)) || '';
     var text = r.text || (inner && inner.text) || '';
 
-    // BUG-10: Fuer Slot 0 bei erkanntem Einwand das PROFIL-gegenargument bevorzugen
-    // (exakter Text aus profile.einwaende statt Haiku-formuliert) — gibt dem Berater
+    // BUG-10: Für Slot 0 bei erkanntem Einwand das PROFIL-gegenargument bevorzugen
+    // (exakter Text aus profile.einwände statt Haiku-formuliert) — gibt dem Berater
     // die autorisierte Antwort. Slot 1 bleibt die Haiku-Kontext-Variante unberuehrt.
     if (slot === 0 && isEinwand && typ) {
       var typL = String(typ).toLowerCase().trim();
-      var prof = (state.profileDaten && state.profileDaten.einwaende) || [];
+      var prof = (state.profileDaten && state.profileDaten.einwände) || [];
       for (var pi = 0; pi < prof.length; pi++) {
         var pe = prof[pi];
         if (!pe || typeof pe !== 'object') continue;
@@ -1533,7 +1533,7 @@
       body.textContent = argument || text;
       _highlightEwbButton(typ);
     } else {
-      // Kein Einwand: nur Text/Gegenargument, Label zurueck auf Antwort-Slot
+      // Kein Einwand: nur Text/Gegenargument, Label zurück auf Antwort-Slot
       if (label && (label.textContent === '' || /^\s*$/.test(label.textContent))) {
         label.textContent = slot === 0 ? 'ANTWORT A' : 'ANTWORT B';
       }
@@ -1561,7 +1561,7 @@
   }
 
   function _showProactiveContent(slot, result) {
-    // D-02: Between einwaende, show contextual tips
+    // D-02: Between einwände, show contextual tips
     if (result.phase) {
       _showProactiveTipp(slot, 'Phase wechselt: ' + result.phase);
       var label = pipEl('pip-slot-label-' + slot);
@@ -1786,13 +1786,13 @@
     // 06.1-r2 BUG-9: UI SOFORT umschalten mit Loading-Skeleton. Backend-Response
     // fuellt Score/Tags nachtraeglich.
     // BUG-15b: KEIN resizeTo auf Postcall — Chrome merkt sich die zuletzt gesetzte
-    // PiP-Groesse und ignoriert spaetere requestWindow-Hints. PiP bleibt bei 480x900,
+    // PiP-Größe und ignoriert spätere requestWindow-Hints. PiP bleibt bei 480x900,
     // Postcall-Content wird im bestehenden Fenster zentriert.
     _showPostcallLoading();
 
-    // BUG-11 r5 ROOT CAUSE: endCall fetch kann spaet resolven waehrend bereits ein
-    // neuer Call laeuft. Dann wuerde _showPostcall die Postcall-Section ueber die
-    // Live-UI legen, der User klickt "Naechster Call" aus altem Postcall und killt
+    // BUG-11 r5 ROOT CAUSE: endCall fetch kann spaet resolven während bereits ein
+    // neuer Call läuft. Dann würde _showPostcall die Postcall-Section über die
+    // Live-UI legen, der User klickt "Nächster Call" aus altem Postcall und killt
     // so den aktiven Call. Capture-Generation beim Fetch-Start, abbrechen wenn
     // inzwischen ein neuer Call gestartet ist (micStarted wieder true).
     var endCallGen = (state.callGen = (state.callGen || 0) + 1);
@@ -1808,7 +1808,7 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (state.callGen !== endCallGen || state.micStarted) {
-          console.log('[NerveLauncher] Beenden response stale (neue Session laeuft) — verworfen');
+          console.log('[NerveLauncher] Beenden response stale (neue Session läuft) — verworfen');
           return;
         }
         if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); _showPostcallEmpty(); return; }
@@ -1821,7 +1821,7 @@
       })
       .catch(function (err) {
         if (state.callGen !== endCallGen || state.micStarted) {
-          console.log('[NerveLauncher] Beenden fetch error ignoriert — neue Session laeuft');
+          console.log('[NerveLauncher] Beenden fetch error ignoriert — neue Session läuft');
           return;
         }
         console.error('[NerveLauncher] Beenden fetch error:', err);
@@ -1836,7 +1836,7 @@
     var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
     var gaDetails = postcall.ga_details || [];
     var behandelt = gaDetails.filter(function (x) { return x && x.erfolgreich === true; }).length;
-    var einwTotal = (postcall.einwaende || []).length;
+    var einwTotal = (postcall.einwände || []).length;
     var behandeltRate = einwTotal > 0 ? behandelt / einwTotal : 0.5;
     var skript = (postcall.skript_abdeckung || {}).gesamt_prozent || 0;
     var redeScore = Math.max(0, 100 - Math.abs(redeanteil - 40) * 2);
@@ -1851,16 +1851,16 @@
     var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
     var gaDetails = postcall.ga_details || [];
     var behandelt = gaDetails.filter(function (x) { return x && x.erfolgreich === true; }).length;
-    var einwTotal = (postcall.einwaende || []).length;
+    var einwTotal = (postcall.einwände || []).length;
     var behandeltRate = einwTotal > 0 ? behandelt / einwTotal : -1;
     var dauer = postcall.dauer_sek || 0;
     if (kb >= 70) tags.push({ text: 'Starke Kaufbereitschaft', color: 'teal' });
     if (kb - kbStart >= 20) tags.push({ text: 'KB deutlich gestiegen', color: 'teal' });
-    if (behandeltRate >= 0.8 && einwTotal > 0) tags.push({ text: 'Einwaende gemeistert', color: 'teal' });
+    if (behandeltRate >= 0.8 && einwTotal > 0) tags.push({ text: 'Einwände gemeistert', color: 'teal' });
     if (redeanteil > 65) tags.push({ text: 'Redeanteil zu hoch', color: 'neutral' });
     if (redeanteil > 0 && redeanteil < 25) tags.push({ text: 'Zu wenig gesprochen', color: 'neutral' });
     if (dauer > 0 && dauer < 120) tags.push({ text: 'Sehr kurzer Call', color: 'neutral' });
-    if (behandeltRate >= 0 && behandeltRate < 0.4 && einwTotal > 0) tags.push({ text: 'Einwaende offen', color: 'red' });
+    if (behandeltRate >= 0 && behandeltRate < 0.4 && einwTotal > 0) tags.push({ text: 'Einwände offen', color: 'red' });
     var pos = tags.filter(function (t) { return t.color === 'teal'; });
     var neg = tags.filter(function (t) { return t.color !== 'teal'; });
     var result = pos.slice(0, 2);
@@ -1869,11 +1869,11 @@
   }
 
   function _showPostcall(postcall) {
-    // 06.1-r2 BUG-10: Leerer Call (keine Woerter, keine Einwaende) -> kein Score, stattdessen
-    // "Kein Gespraech erkannt" — 45% fuer leere Calls verwirrt nur.
+    // 06.1-r2 BUG-10: Leerer Call (keine Wörter, keine Einwände) -> kein Score, stattdessen
+    // "Kein Gespräch erkannt" — 45% fuer leere Calls verwirrt nur.
     var berater = (postcall && postcall.berater_words) || 0;
     var kunde = (postcall && postcall.kunde_words) || 0;
-    var einwTotal = ((postcall && postcall.einwaende) || []).length;
+    var einwTotal = ((postcall && postcall.einwände) || []).length;
     if (berater === 0 && kunde === 0 && einwTotal === 0) {
       _showPostcallEmpty();
       return;
@@ -1943,7 +1943,7 @@
     // BUG-11b FIX: null state.pipWindow BEFORE calling .close() so the pagehide
     // guard (state.pipWindow === pipWindow) always evaluates false for the old window.
     // BUG-11 r5: callGen++ invalidiert auch noch ausstehende endCall-fetches, deren
-    // .then()-Handler wuerden sonst _showPostcall in die Live-UI der neuen Session blasen.
+    // .then()-Handler würden sonst _showPostcall in die Live-UI der neuen Session blasen.
     state.callGen = (state.callGen || 0) + 1;
     var oldWin = state.pipWindow;
     state.pipWindow = null;

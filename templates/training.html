@@ -601,7 +601,7 @@
             <div class="t-empty-state">Lade Phrasen...</div>
           </div>
           <div class="t-phrases-pagination" id="t-phrases-pagination" style="display:none">
-            <button id="t-phrases-prev" disabled>Zurueck</button>
+            <button id="t-phrases-prev" disabled>Zurück</button>
             <span class="t-stat-label" id="t-phrases-page-info"></span>
             <button id="t-phrases-next">Weiter</button>
           </div>
@@ -772,7 +772,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Spezial-Einwände (einer pro Zeile)</label>
-      <textarea id="sc-einwaende" class="form-input" rows="3"
+      <textarea id="sc-einwände" class="form-input" rows="3"
         placeholder="Wir haben bereits einen Anbieter&#10;Budget ist eingefroren&#10;Kein Interesse"></textarea>
     </div>
     <div class="form-group">
@@ -2090,7 +2090,7 @@ function onScenarioChange() {
 }
 
 function openScenarioModal() {
-  ['sc-name','sc-beschreibung','sc-situation','sc-verhalten','sc-einwaende'].forEach(id => {
+  ['sc-name','sc-beschreibung','sc-situation','sc-verhalten','sc-einwände'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -2106,14 +2106,14 @@ function closeScenarioModal() {
 async function saveScenario() {
   const name = (document.getElementById('sc-name').value || '').trim();
   if (!name) { alert('Bitte einen Namen eingeben.'); return; }
-  const einwTxt  = (document.getElementById('sc-einwaende').value || '').trim();
-  const einwaende = einwTxt ? einwTxt.split('\n').map(l => l.trim()).filter(Boolean) : [];
+  const einwTxt  = (document.getElementById('sc-einwände').value || '').trim();
+  const einwände = einwTxt ? einwTxt.split('\n').map(l => l.trim()).filter(Boolean) : [];
   const payload = {
     name,
     beschreibung:    document.getElementById('sc-beschreibung').value || '',
     kunde_situation: document.getElementById('sc-situation').value    || '',
     kunde_verhalten: document.getElementById('sc-verhalten').value    || '',
-    spezial_einwaende: einwaende,
+    spezial_einwände: einwände,
     schwierigkeit:   document.getElementById('sc-schwierigkeit').value || 'mittel',
   };
   try {

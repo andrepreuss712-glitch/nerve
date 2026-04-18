@@ -21,8 +21,8 @@
         <td>{{ s.session_mode or '&mdash;' }}</td>
         <td>{{ s.started_at.strftime('%Y-%m-%d %H:%M') if s.started_at else '&mdash;' }}</td>
         <td>{{ s.dauer_sekunden or 0 }}s</td>
-        <td>{{ s.einwaende_total or 0 }}</td>
-        <td>{{ s.einwaende_ok or 0 }}</td>
+        <td>{{ s.einwände_total or 0 }}</td>
+        <td>{{ s.einwände_ok or 0 }}</td>
         <td>{{ s.result or '&mdash;' }}</td>
         <td><a class="n-btn n-btn-ghost" href="{{ url_for('dashboard.session_detail', sid=s.id) }}">Details</a></td>
       </tr>
