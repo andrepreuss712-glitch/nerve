@@ -659,7 +659,10 @@ def analytics_page():
 @dashboard_bp.route('/session/<int:sid>')
 @login_required
 def session_detail(sid):
-    from database.models import ConversationLog as CL, ObjectionEvent
+    from database.models import ConversationLog as CL, ObjectionEvent, PersonalityType
+    from routes.app_routes import _calc_call_score, _derive_practice_recommendations
+    import json as _json
+
     db = get_session()
     try:
         conv = db.query(CL).filter(
@@ -668,10 +671,76 @@ def session_detail(sid):
         ).first()
         if not conv:
             abort(404)
+
         events = db.query(ObjectionEvent).filter(
             ObjectionEvent.conversation_log_id == sid,
-        ).all()
-        return render_template('session_detail.html', conv=conv, events=events)
+        ).order_by(ObjectionEvent.id.asc()).all()
+
+        # Phase 07.1: personality pre-resolve (kein relationship() am Model, PATTERNS 4.9)
+        pt = None
+        if conv.personality_type_id:
+            pt = db.query(PersonalityType).filter_by(id=conv.personality_type_id).first()
+
+        # Phase 07.1 (W-06): score_total typ-aware
+        #  - Live: _calc_call_score (Gesamt-Score, 4 Komponenten)
+        #  - Training: kb_end Fallback (kein _calc_call_score fuer Training)
+        conv_typ = (conv.typ or 'live')
+        if conv_typ == 'live':
+            score_total = _calc_call_score(conv)
+        else:
+            score_total = conv.kb_end or 0
+
+        # Phase 07.1 (W-06): Trend-Avg NUR fuer Live-Sessions berechnen.
+        # Training-Sessions rendern KEIN Trend-Badge (sparse Datenlage,
+        # _calc_call_score nicht fuer Training definiert).
+        trend_avg = None
+        if conv_typ == 'live':
+            recent = (db.query(CL)
+                        .filter(CL.user_id == g.user.id)
+                        .filter(CL.typ == 'live')
+                        .filter(CL.id != conv.id)
+                        .order_by(CL.created_at.desc())
+                        .limit(5).all())
+            trend_avg = round(sum(_calc_call_score(c) for c in recent) / len(recent)) if recent else None
+
+        # Phase 07.1: chart_data_json typ-diskriminierend
+        if conv_typ == 'training':
+            chart_data_json = conv.stimmung_history or '[]'
+        else:
+            chart_data_json = conv.kb_verlauf or '[]'
+
+        # Phase 07.1: schwierigkeit_label aus phasen_details parsen (RESEARCH Q2 Option A)
+        schwierigkeit_label = '—'
+        if conv_typ == 'training' and conv.phasen_details:
+            try:
+                pd = _json.loads(conv.phasen_details)
+                raw = (pd.get('schwierigkeit') if isinstance(pd, dict) else None) or ''
+                mapping = {
+                    'leicht':   'Einsteiger',
+                    'mittel':   'Fortgeschritten',
+                    'schwer':   'Experte',
+                    'einsteiger': 'Einsteiger',
+                    'fortgeschritten': 'Fortgeschritten',
+                    'experte':  'Experte',
+                }
+                schwierigkeit_label = mapping.get(str(raw).lower(), '—')
+            except Exception:
+                schwierigkeit_label = '—'
+
+        # Phase 07.1: Recommendations
+        recommendations = _derive_practice_recommendations(db, conv, events)
+
+        return render_template(
+            'session_detail.html',
+            conv=conv,
+            events=events,
+            pt=pt,
+            trend_avg=trend_avg,
+            chart_data_json=chart_data_json,
+            schwierigkeit_label=schwierigkeit_label,
+            recommendations=recommendations,
+            score_total=score_total,            # W-06: Gesamt-Score fuer Score-Hero
+        )
     finally:
         db.close()
 

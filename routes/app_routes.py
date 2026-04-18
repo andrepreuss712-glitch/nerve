@@ -584,6 +584,209 @@ def _calc_call_score(conv):
     return min(100, max(0, round(kb * 0.4 + behandelt_rate * 100 * 0.3 + rede_score * 0.2 + skript * 0.1)))
 
 
+# ========================================================================
+# Phase 07.1: POLISH-24 Practice Recommendations Helper
+# ========================================================================
+
+def _cross_context_objections_live(db, user_id, einwand_typ):
+    """Live-Session -> wie oft/gut im Training mit diesem Einwand?
+    Returns: {sessions: int, avg_score: float|None, focus_match: str}
+    Filter: typ='training', letzte 14 Tage, einwand_typ match.
+    Score basiert auf kb_end (Training), NICHT sterne (SC-1 — Training setzt sterne NICHT).
+    Root-Entity: OE explizit via select_from() (W-01 — query mit Aggregaten + JOIN).
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    from database.models import ConversationLog as CL, ObjectionEvent as OE
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=14)
+        row = (db.query(
+                    func.count(func.distinct(CL.id)).label('n'),
+                    func.avg(CL.kb_end).label('avg_score'),
+                )
+                .select_from(OE)                              # W-01: Root explizit
+                .join(CL, CL.id == OE.conversation_log_id)
+                .filter(CL.user_id == user_id)
+                .filter(CL.typ == 'training')
+                .filter(CL.created_at >= cutoff)
+                .filter(OE.einwand_typ == einwand_typ)
+                .first())
+        n = int(row.n or 0) if row else 0
+        avg_score = float(row.avg_score) if (row and row.avg_score is not None) else None
+        return {'sessions': n, 'avg_score': avg_score, 'focus_match': einwand_typ}
+    except Exception as exc:
+        print(f"[07.1] cross_context_objections_live failed: {exc}")
+        return None
+
+
+def _cross_context_objections_training(db, user_id, einwand_typ):
+    """Training-Session -> wie oft/erfolgreich im Live-Call mit diesem Einwand?
+    Returns: {sessions: int, n_success: int, focus_match: str}
+    Filter: typ='live', letzte 14 Tage.
+    Root-Entity: OE explizit via select_from() (W-01).
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, case
+    from database.models import ConversationLog as CL, ObjectionEvent as OE
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=14)
+        # Rule 1 fix: ObjectionEvent-Column heisst `success`, nicht `erfolgreich`
+        rows = (db.query(OE.success)
+                .select_from(OE)                              # W-01: Root explizit
+                .join(CL, CL.id == OE.conversation_log_id)
+                .filter(CL.user_id == user_id)
+                .filter(CL.typ == 'live')
+                .filter(CL.created_at >= cutoff)
+                .filter(OE.einwand_typ == einwand_typ)
+                .all())
+        n = len(rows)
+        n_success = sum(1 for r in rows if r.success)
+        return {'sessions': n, 'n_success': n_success, 'focus_match': einwand_typ}
+    except Exception as exc:
+        print(f"[07.1] cross_context_objections_training failed: {exc}")
+        return None
+
+
+def _derive_practice_recommendations(db, conv, events):
+    """POLISH-24 R3 — typ+mode-aware practice recommendations.
+    Returns: List[Dict] mit max 3 Eintraegen, sortiert nach Prioritaet.
+
+    Keys pro Eintrag:
+      icon: 'target' | 'alert-circle' | 'trending-down'
+      observation: str (14px/600 konkrete Zahl + Beobachtung)
+      explanation: str (14px/400 ein Satz)
+      training_focus: str (ASCII-Slug)
+      training_url: str (heute immer '/training')
+      cross_context: dict | None (nur bei objection-Recommendations)
+    """
+    recs = []
+    typ = getattr(conv, 'typ', 'live') or 'live'
+
+    # ── Training-spezifische Regeln ────────────────────────────────
+    if typ == 'training':
+        # Regel 1: kb_end < 50 -> generic weakness
+        if (conv.kb_end or 0) < 50:
+            recs.append({
+                'icon': 'alert-circle',
+                'observation': f'Gesamt-Score unter 50 ({conv.kb_end or 0}/100)',
+                'explanation': 'Allgemeine Schwaeche erkannt. Wiederhole ein aehnliches Szenario.',
+                'training_focus': 'training:generic_weakness',
+                'training_url': '/training',
+                'cross_context': None,
+            })
+
+        # Regel 2: Kunde hat aufgelegt (stimmung[-1] == -5)
+        try:
+            import json as _json_local
+            hist = _json_local.loads(conv.stimmung_history or '[]')
+            if hist and hist[-1].get('wert') == -5:
+                pt_id = getattr(conv, 'personality_type_id', None)
+                focus = f'training:personality_{pt_id}' if pt_id else 'training:mood_management'
+                recs.append({
+                    'icon': 'target',
+                    'observation': 'Kunde hat aufgelegt (Stimmung -5)',
+                    'explanation': 'Wiederhole mit dem gleichen Persoenlichkeitstyp und fang Stimmungs-Drop frueher ab.',
+                    'training_focus': focus,
+                    'training_url': '/training',
+                    'cross_context': None,
+                })
+        except Exception:
+            pass
+
+        # Regel 3: Einwaende mit niedriger Behandlungs-Rate (Training -> Live cross)
+        # Rule 1 fix: ObjectionEvent-Column heisst `success`, nicht `erfolgreich`
+        for ev in (events or [])[:3]:
+            if not getattr(ev, 'success', True):
+                recs.append({
+                    'icon': 'alert-circle',
+                    'observation': f'Einwand "{ev.einwand_typ}" nicht erfolgreich behandelt',
+                    'explanation': 'Im echten Call ist dieser Einwand haeufig — uebe die Antwort.',
+                    'training_focus': f'objections:{ev.einwand_typ}',
+                    'training_url': '/training',
+                    'cross_context': _cross_context_objections_training(db, conv.user_id, ev.einwand_typ),
+                })
+
+        # Regel 4: Stimmungs-Verschlechterung (Drop >= 3 Punkte ueber Verlauf)
+        try:
+            import json as _json_local
+            hist = _json_local.loads(conv.stimmung_history or '[]')
+            if len(hist) >= 2:
+                max_wert = max((h.get('wert', 0) for h in hist), default=0)
+                min_wert = min((h.get('wert', 0) for h in hist), default=0)
+                if (max_wert - min_wert) >= 3 and len(recs) < 3:
+                    recs.append({
+                        'icon': 'trending-down',
+                        'observation': f'Stimmung fiel um {max_wert - min_wert} Punkte',
+                        'explanation': 'Die Kundin wurde deutlich negativer. Uebe Stimmungs-Management.',
+                        'training_focus': 'training:mood_management',
+                        'training_url': '/training',
+                        'cross_context': None,
+                    })
+        except Exception:
+            pass
+
+    # ── Live-Regeln (cold_call + meeting) ──────────────────────────
+    else:
+        # Regel 1: Nicht behandelte Einwaende
+        # Rule 1 fix: ObjectionEvent-Column heisst `success`, nicht `erfolgreich`
+        not_handled = [ev for ev in (events or []) if not getattr(ev, 'success', True)]
+        for ev in not_handled[:3]:
+            recs.append({
+                'icon': 'target',
+                'observation': f'Einwand "{ev.einwand_typ}" nicht behandelt',
+                'explanation': 'Im Training kannst du die Antwort mit weniger Druck festigen.',
+                'training_focus': f'objections:{ev.einwand_typ}',
+                'training_url': '/training',
+                'cross_context': _cross_context_objections_live(db, conv.user_id, ev.einwand_typ),
+            })
+
+        # Regel 2: kb_end < 40 -> drop
+        if (conv.kb_end is not None) and conv.kb_end < 40 and len(recs) < 3:
+            recs.append({
+                'icon': 'trending-down',
+                'observation': f'Kaufbereitschaft Ende: {conv.kb_end}/100',
+                'explanation': 'Der Kunde ist am Ende skeptischer als gesund. Uebe Qualifizierungs-Fragen.',
+                'training_focus': 'kb:drop',
+                'training_url': '/training',
+                'cross_context': None,
+            })
+
+        # Regel 3: Redeanteil zu hoch / zu niedrig (Optimum ~40%)
+        rede = conv.redeanteil_avg
+        if rede is not None and len(recs) < 3:
+            if rede > 65:
+                recs.append({
+                    'icon': 'alert-circle',
+                    'observation': f'Du redest {int(rede)}% — zu viel',
+                    'explanation': 'Gute Berater reden ca. 40%. Uebe aktives Zuhoeren und offene Fragen.',
+                    'training_focus': 'redeanteil:too_high',
+                    'training_url': '/training',
+                    'cross_context': None,
+                })
+            elif rede < 25:
+                recs.append({
+                    'icon': 'alert-circle',
+                    'observation': f'Du redest nur {int(rede)}% — zu wenig',
+                    'explanation': 'Fuehre das Gespraech aktiver. Stelle gezielte Fragen und setze Impulse.',
+                    'training_focus': 'redeanteil:too_low',
+                    'training_url': '/training',
+                    'cross_context': None,
+                })
+
+        # Regel 4: Skript-Abdeckung < 40%
+        if (conv.skript_abdeckung or 0) < 40 and len(recs) < 3:
+            recs.append({
+                'icon': 'alert-circle',
+                'observation': f'Skript nur zu {int(conv.skript_abdeckung or 0)}% abgedeckt',
+                'explanation': 'Die wichtigen Bausteine deines Skripts sind nicht gefallen. Uebe den Opener.',
+                'training_focus': 'skript:opener',
+                'training_url': '/training',
+                'cross_context': None,
+            })
+
+    return recs[:3]
+
+
 @app_routes_bp.route('/api/postcall/trend')
 @login_required
 def api_postcall_trend():
