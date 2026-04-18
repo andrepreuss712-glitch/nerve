@@ -9,7 +9,7 @@ const socket = io({
 });
 const tr     = document.getElementById('tr');
 const ai     = document.getElementById('ai');
-let words = 0, einwände = 0, analysen = 0;
+let words = 0, einwaende = 0, analysen = 0;
 let interim = null;
 let paused  = false;
 
@@ -238,17 +238,17 @@ function renderEwbButtons() {
   const kpBar  = document.getElementById('kp-ewbBar');
   if (!bar && !kpBar) return;
 
-  // Get einwände from profile or fallback
-  let einwände = DACH_FALLBACK_EINWAENDE;
+  // Get einwaende from profile or fallback
+  let einwaende = DACH_FALLBACK_EINWAENDE;
   try {
     const pd = window._profileEinwände || {};
-    if (pd.einwände && pd.einwände.length > 0) {
-      einwände = pd.einwände.map(e => e.typ || e.name || e).filter(Boolean);
+    if (pd.einwaende && pd.einwaende.length > 0) {
+      einwaende = pd.einwaende.map(e => e.typ || e.name || e).filter(Boolean);
     }
   } catch(e) {}
-  if (!einwände.length) einwände = DACH_FALLBACK_EINWAENDE;
+  if (!einwaende.length) einwaende = DACH_FALLBACK_EINWAENDE;
 
-  const html = einwände.map(typ =>
+  const html = einwaende.map(typ =>
     `<button class="ewb-btn" onclick="triggerEwb('${escHtml(typ)}')" title="Einwand: ${escHtml(typ)}">\uD83D\uDEE1\uFE0F ${escHtml(typ)}</button>`
   ).join('');
 
@@ -657,7 +657,7 @@ async function beenden(){
     ai.innerHTML='<div class="msg final" style="border-color:#1a1a2e;color:#333350">Warte auf Gesprächsinhalt …</div>';
     coachingScroll.innerHTML='<div style="font-size:12px;color:#2a2500;padding:4px 0">Wartet auf Gesprächsinhalt …</div>';
     entferneSpinner();
-    words=0;einwände=0;analysen=0;letzteVersion=0;interim=null;tipCards.length=0;
+    words=0;einwaende=0;analysen=0;letzteVersion=0;interim=null;tipCards.length=0;
     speech.beraterWords=0;speech.kundeWords=0;speech.beraterSegments=0;speech.startTime=null;
     document.getElementById('wc').textContent='0';
     document.getElementById('ec').textContent='0';
@@ -733,7 +733,7 @@ function zeigeKarte(d, lineId){
     card.className='ai-card kein-einwand';
     card.innerHTML=`<div class="card-top"><span class="einwand-typ typ-kein">Kein Einwand</span><span class="card-time">${now}</span></div><div class="einwand-text">${escHtml(d.notiz||'Kein klarer Einwand erkennbar.')}</div>`;
   } else {
-    einwände++;document.getElementById('ec').textContent=einwände;
+    einwaende++;document.getElementById('ec').textContent=einwaende;
     const isVersteckt = (d.typ||'').toLowerCase().includes('versteckt');
     const isVorwand   = d.ist_vorwand === true;
     const stufe  = isVersteckt ? 'versteckt' : (d.intensität==='hoch'?'einwand-hoch':'einwand');
@@ -934,8 +934,8 @@ function zeigePostcall(d, filename){
 
   // Einwände
   const einList=document.getElementById('pc-einList');einList.innerHTML='';
-  document.getElementById('pc-einCount').textContent=(d.einwände||[]).length;
-  (d.einwände||[]).forEach(e=>{
+  document.getElementById('pc-einCount').textContent=(d.einwaende||[]).length;
+  (d.einwaende||[]).forEach(e=>{
     const row=document.createElement('div');row.className='einwand-row';
     const col=e.intensität==='hoch'?'#e05c5c':'#f0a05a';
     row.innerHTML=`<span class="einwand-badge-small" style="background:${col}20;color:${col}">${escHtml(e.typ)}</span><span style="font-size:12px;color:#8888aa">${escHtml(e.zitat||'').slice(0,50)}</span>`;
@@ -1091,7 +1091,7 @@ async function loadPostcallInsights(d){
     const res=await fetch('/api/postcall_insights',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        einwände:d.einwände||[],painpoints:d.painpoints||[],
+        einwaende:d.einwaende||[],painpoints:d.painpoints||[],
         kb_start:d.kb_start||30,kb_end:d.kb_end||30
       })
     });
@@ -1122,7 +1122,7 @@ async function loadPostcallAnalysis(d) {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         conv_id: window._lastConvId,
-        einwände: d.einwände || [], painpoints: d.painpoints || [],
+        einwaende: d.einwaende || [], painpoints: d.painpoints || [],
         kb_start: d.kb_start || 30, kb_end: d.kb_end || 30,
         redeanteil_berater: rb, redeanteil_kunde: 100 - rb,
         dauer_sek: d.dauer_sek || 0,
@@ -1684,7 +1684,7 @@ function pipBeendenCall() {
     if (typeof stopSessionTimer === 'function') stopSessionTimer();
 
     // Reset counters (same as main beenden)
-    words = 0; einwände = 0; analysen = 0;
+    words = 0; einwaende = 0; analysen = 0;
 
     // Store conv_id for Details button
     window._lastConvId = data.conv_id || null;
@@ -1722,10 +1722,10 @@ function calcPipScore(postcall) {
   var total = (postcall.berater_words || 0) + (postcall.kunde_words || 0);
   var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
 
-  // Calculate einwände_behandelt from ga_details (no backend change needed)
+  // Calculate einwaende_behandelt from ga_details (no backend change needed)
   var gaDetails = postcall.ga_details || [];
   var einwandeBehandelt = gaDetails.filter(function(x) { return x && x.erfolgreich === true; }).length;
-  var einwandeTotal = (postcall.einwände || []).length;
+  var einwandeTotal = (postcall.einwaende || []).length;
   var behandeltRate = einwandeTotal > 0 ? einwandeBehandelt / einwandeTotal : 0.5;
 
   var skript = (postcall.skript_abdeckung || {}).gesamt_prozent || 0;
@@ -1746,7 +1746,7 @@ function buildHighlightTags(postcall) {
   var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
   var gaDetails = postcall.ga_details || [];
   var einwandeBehandelt = gaDetails.filter(function(x) { return x && x.erfolgreich === true; }).length;
-  var einwandeTotal = (postcall.einwände || []).length;
+  var einwandeTotal = (postcall.einwaende || []).length;
   var behandeltRate = einwandeTotal > 0 ? einwandeBehandelt / einwandeTotal : -1;
   var dauer = postcall.dauer_sek || 0;
 
@@ -2033,15 +2033,15 @@ function renderPipEwbButtons(aiTop2) {
   var row = getPipElement('pip-ewb-row');
   if (!row) return;
 
-  var einwände = [];
-  if (window._profileEinwände && window._profileEinwände.einwände) {
-    einwände = window._profileEinwände.einwände.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
+  var einwaende = [];
+  if (window._profileEinwände && window._profileEinwände.einwaende) {
+    einwaende = window._profileEinwände.einwaende.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
   }
-  if (!einwände.length) {
-    einwände = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
+  if (!einwaende.length) {
+    einwaende = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
   }
 
-  var top2 = aiTop2 || einwände.slice(0, 2);
+  var top2 = aiTop2 || einwaende.slice(0, 2);
   var btnClass = aiTop2 ? 'pip-ewb-btn pip-ewb-ai-selected' : 'pip-ewb-btn';
   var html = top2.map(function(typ) {
     return '<button class="' + btnClass + '" onclick="triggerEwb(\'' + typ.replace(/'/g, "\\'") + '\')">' + escHtml(typ) + '</button>';
@@ -2067,19 +2067,19 @@ function togglePipEwbExpand() {
     return;
   }
 
-  var einwände = [];
-  if (window._profileEinwände && window._profileEinwände.einwände) {
-    einwände = window._profileEinwände.einwände.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
+  var einwaende = [];
+  if (window._profileEinwände && window._profileEinwände.einwaende) {
+    einwaende = window._profileEinwände.einwaende.map(function(e) { return e.typ || e.name || e; }).filter(Boolean);
   }
-  if (!einwände.length) {
-    einwände = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
+  if (!einwaende.length) {
+    einwaende = typeof DACH_FALLBACK_EINWAENDE !== 'undefined' ? DACH_FALLBACK_EINWAENDE : ['Zu teuer', 'Kein Interesse', 'Kein Budget', 'Haben wir schon', 'Keine Zeit'];
   }
 
   var expandDiv = (window._pipWindow && !window._pipWindow.closed)
     ? window._pipWindow.document.createElement('div')
     : document.createElement('div');
   expandDiv.className = 'pip-ewb-expanded';
-  einwände.forEach(function(typ) {
+  einwaende.forEach(function(typ) {
     var btn = expandDiv.ownerDocument.createElement('button');
     btn.className = 'pip-ewb-btn';
     btn.textContent = typ;

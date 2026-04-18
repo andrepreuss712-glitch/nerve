@@ -1231,8 +1231,8 @@
   function _renderEwbButtons() {
     var row = pipEl('nlp-ewb-row');
     if (!row) return;
-    var einwände = (state.profileDaten && state.profileDaten.einwände) ? state.profileDaten.einwände : [];
-    if (!einwände.length) { row.innerHTML = ''; return; }
+    var einwaende = (state.profileDaten && state.profileDaten.einwaende) ? state.profileDaten.einwaende : [];
+    if (!einwaende.length) { row.innerHTML = ''; return; }
     // 06.1-r2 BUG-14c final: Button-Label = kurzlabel ODER kategorie (nur diese zwei).
     // Kein Truncation, kein name/einwand-Fallback. Dedup per Label (case-insensitive) —
     // mehrere Einwände ohne kurzlabel mit gleicher Kategorie kollabieren bewusst zu
@@ -1240,8 +1240,8 @@
     // data-typ = Label, matched gegen dieselbe Chain in _triggerEwb + Backend.
     var seen = {};
     var items = [];
-    for (var i = 0; i < einwände.length && items.length < 5; i++) {
-      var e = einwände[i];
+    for (var i = 0; i < einwaende.length && items.length < 5; i++) {
+      var e = einwaende[i];
       var label;
       if (typeof e === 'string') {
         label = e.trim();
@@ -1262,16 +1262,16 @@
   }
 
   function _triggerEwb(typ, btn) {
-    // 06.1-r2 r3: Manual-EWB = deterministisch aus profile.einwände rendern.
+    // 06.1-r2 r3: Manual-EWB = deterministisch aus profile.einwaende rendern.
     // Keine Claude-Call-Latenz, keine leeren Slots wenn Claude einwand=False meldet.
     // Backend bekommt 'manual_ewb' nur noch fuer Klick-Tracking (postcall-Analytics).
     console.log('[NerveLauncher] EWB trigger:', typ);
-    var einwände = (state.profileDaten && state.profileDaten.einwände) || [];
+    var einwaende = (state.profileDaten && state.profileDaten.einwaende) || [];
     var match = null;
     var typL = (typ || '').toLowerCase().trim();
     // 06.1-r2 BUG-14c: Match gegen kurzlabel ODER kategorie — gleiche Chain wie _renderEwbButtons.
-    for (var i = 0; i < einwände.length; i++) {
-      var e = einwände[i];
+    for (var i = 0; i < einwaende.length; i++) {
+      var e = einwaende[i];
       if (typeof e === 'string') { if (e.toLowerCase() === typL) { match = { kategorie: e }; break; } continue; }
       var label = (e.kurzlabel || e.short_label || e.kategorie || '').toLowerCase().trim();
       if (label === typL) { match = e; break; }
@@ -1498,11 +1498,11 @@
     var text = r.text || (inner && inner.text) || '';
 
     // BUG-10: Für Slot 0 bei erkanntem Einwand das PROFIL-gegenargument bevorzugen
-    // (exakter Text aus profile.einwände statt Haiku-formuliert) — gibt dem Berater
+    // (exakter Text aus profile.einwaende statt Haiku-formuliert) — gibt dem Berater
     // die autorisierte Antwort. Slot 1 bleibt die Haiku-Kontext-Variante unberuehrt.
     if (slot === 0 && isEinwand && typ) {
       var typL = String(typ).toLowerCase().trim();
-      var prof = (state.profileDaten && state.profileDaten.einwände) || [];
+      var prof = (state.profileDaten && state.profileDaten.einwaende) || [];
       for (var pi = 0; pi < prof.length; pi++) {
         var pe = prof[pi];
         if (!pe || typeof pe !== 'object') continue;
@@ -1561,7 +1561,7 @@
   }
 
   function _showProactiveContent(slot, result) {
-    // D-02: Between einwände, show contextual tips
+    // D-02: Between einwaende, show contextual tips
     if (result.phase) {
       _showProactiveTipp(slot, 'Phase wechselt: ' + result.phase);
       var label = pipEl('pip-slot-label-' + slot);
@@ -1836,7 +1836,7 @@
     var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
     var gaDetails = postcall.ga_details || [];
     var behandelt = gaDetails.filter(function (x) { return x && x.erfolgreich === true; }).length;
-    var einwTotal = (postcall.einwände || []).length;
+    var einwTotal = (postcall.einwaende || []).length;
     var behandeltRate = einwTotal > 0 ? behandelt / einwTotal : 0.5;
     var skript = (postcall.skript_abdeckung || {}).gesamt_prozent || 0;
     var redeScore = Math.max(0, 100 - Math.abs(redeanteil - 40) * 2);
@@ -1851,7 +1851,7 @@
     var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
     var gaDetails = postcall.ga_details || [];
     var behandelt = gaDetails.filter(function (x) { return x && x.erfolgreich === true; }).length;
-    var einwTotal = (postcall.einwände || []).length;
+    var einwTotal = (postcall.einwaende || []).length;
     var behandeltRate = einwTotal > 0 ? behandelt / einwTotal : -1;
     var dauer = postcall.dauer_sek || 0;
     if (kb >= 70) tags.push({ text: 'Starke Kaufbereitschaft', color: 'teal' });
@@ -1873,7 +1873,7 @@
     // "Kein Gespräch erkannt" — 45% fuer leere Calls verwirrt nur.
     var berater = (postcall && postcall.berater_words) || 0;
     var kunde = (postcall && postcall.kunde_words) || 0;
-    var einwTotal = ((postcall && postcall.einwände) || []).length;
+    var einwTotal = ((postcall && postcall.einwaende) || []).length;
     if (berater === 0 && kunde === 0 && einwTotal === 0) {
       _showPostcallEmpty();
       return;

@@ -534,7 +534,7 @@ async function selectBranche(branche, el) {
     });
     const data = await res.json();
     if (data.ok) {
-      result.innerHTML = `✓ Profil "<strong>${data.name}</strong>" wurde erstellt mit ${data.einwände} Einwänden und ${data.phasen} Gesprächsphasen.`;
+      result.innerHTML = `✓ Profil "<strong>${data.name}</strong>" wurde erstellt mit ${data.einwaende} Einwänden und ${data.phasen} Gesprächsphasen.`;
       profileCreated = true;
     }
   } catch(e) {
