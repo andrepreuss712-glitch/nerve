@@ -1887,36 +1887,97 @@
     _fetchAndRenderTrend(score);
   }
 
-  // ── POLISH-22: Sparkline + QuickStats + Trend ─────────────────────────────
+  // ── POLISH-22 v2: Kaufbereitschafts-Chart mit Achsen + Gitterlinien ─────
   function _renderSparkline(postcall) {
     var el = pipEl('nlp-postcall-sparkline');
     if (!el) return;
     var kbVerlauf = (postcall && postcall.kb_verlauf) || [];
     if (kbVerlauf.length < 2) {
-      el.innerHTML = '<span class="pip-postcall-sparkline-empty">Kaufbereitschafts-Verlauf nicht verfügbar</span>';
+      el.innerHTML = '<div class="pip-postcall-sparkline-title">Kaufbereitschafts-Verlauf</div>'
+        + '<div class="pip-postcall-sparkline-empty">Nicht genug Datenpunkte für Verlauf</div>';
       return;
     }
-    var W = 260, H = 48, PAD_X = 4, PAD_Y = 6;
-    var values = kbVerlauf.map(function (p) { return typeof p === 'object' ? (p.wert || 0) : p; });
-    var minV = Math.min.apply(null, values);
-    var maxV = Math.max.apply(null, values);
-    var range = Math.max(1, maxV - minV);
+    // Datenpunkte als {t_sec, wert} normalisieren
+    var dauerSek = (postcall && postcall.dauer_sek) || 0;
+    var points = kbVerlauf.map(function (p, i) {
+      if (typeof p === 'object') {
+        // p.t kann z.B. ISO-Timestamp, Sekunden, oder irgendwas sein — wir nutzen den Index als Fallback fuer die X-Position
+        var tSec;
+        if (typeof p.t === 'number') tSec = p.t;
+        else tSec = (i / (kbVerlauf.length - 1)) * Math.max(1, dauerSek);
+        return { t: tSec, wert: p.wert || 0 };
+      }
+      return { t: (i / (kbVerlauf.length - 1)) * Math.max(1, dauerSek), wert: p };
+    });
+    var values = points.map(function (p) { return p.wert; });
     var startV = values[0];
     var endV = values[values.length - 1];
-    var pts = values.map(function (v, i) {
-      var x = PAD_X + (i / (values.length - 1)) * (W - PAD_X * 2);
-      var y = H - PAD_Y - ((v - minV) / range) * (H - PAD_Y * 2);
-      return x.toFixed(1) + ',' + y.toFixed(1);
+
+    // SVG-Geometrie: viewBox 300x110, innerer Chart-Bereich begrenzt von Padding
+    var W = 300, H = 110;
+    var PAD_L = 26;  // Y-Achsen-Labels
+    var PAD_R = 8;
+    var PAD_T = 8;
+    var PAD_B = 20;  // X-Achsen-Labels
+    var innerW = W - PAD_L - PAD_R;
+    var innerH = H - PAD_T - PAD_B;
+
+    // Y-Achse fix 0..100% (Kaufbereitschaft ist immer in %)
+    function yPos(v) { return PAD_T + (1 - v / 100) * innerH; }
+    // X-Achse: erste -> letzte X-Position im Inner-Bereich
+    var tMax = points[points.length - 1].t;
+    var tMin = points[0].t;
+    var tRange = Math.max(1, tMax - tMin);
+    function xPos(t) { return PAD_L + ((t - tMin) / tRange) * innerW; }
+
+    // Chart-Punkte (Linie)
+    var linePts = points.map(function (p) {
+      return xPos(p.t).toFixed(1) + ',' + yPos(p.wert).toFixed(1);
     }).join(' ');
-    var lastX = PAD_X + (W - PAD_X * 2);
-    var lastY = H - PAD_Y - ((endV - minV) / range) * (H - PAD_Y * 2);
+    // Area-Fill: Line + nach unten zur 0%-Linie + zurueck zum Start
+    var areaPath = 'M ' + xPos(points[0].t).toFixed(1) + ',' + yPos(0).toFixed(1)
+      + ' L ' + points.map(function (p) {
+          return xPos(p.t).toFixed(1) + ',' + yPos(p.wert).toFixed(1);
+        }).join(' L ')
+      + ' L ' + xPos(points[points.length - 1].t).toFixed(1) + ',' + yPos(0).toFixed(1)
+      + ' Z';
+    var lastX = xPos(points[points.length - 1].t);
+    var lastY = yPos(endV);
+
+    // X-Achsen-Zeitlabels (Start, Mitte, Ende) — dauer_sek in mm:ss format
+    function fmtTime(sec) {
+      sec = Math.max(0, Math.round(sec));
+      var m = Math.floor(sec / 60), s = sec % 60;
+      return m + ':' + (s < 10 ? '0' + s : s);
+    }
+    var xLabelStart = fmtTime(tMin);
+    var xLabelMid = fmtTime((tMin + tMax) / 2);
+    var xLabelEnd = fmtTime(tMax);
+
     var svg = [
-      '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-label="Kaufbereitschafts-Verlauf">',
-      '<polyline points="' + pts + '" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
-      '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="3" fill="#00D4AA"/>',
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" aria-label="Kaufbereitschafts-Verlauf" role="img">',
+      // Gitterlinien horizontal bei 0%, 50%, 100%
+      '<line class="pip-sparkline-grid" x1="' + PAD_L + '" y1="' + yPos(100).toFixed(1) + '" x2="' + (W - PAD_R) + '" y2="' + yPos(100).toFixed(1) + '"/>',
+      '<line class="pip-sparkline-grid" x1="' + PAD_L + '" y1="' + yPos(50).toFixed(1) + '" x2="' + (W - PAD_R) + '" y2="' + yPos(50).toFixed(1) + '"/>',
+      '<line class="pip-sparkline-grid" x1="' + PAD_L + '" y1="' + yPos(0).toFixed(1) + '" x2="' + (W - PAD_R) + '" y2="' + yPos(0).toFixed(1) + '"/>',
+      // Y-Achsen-Labels
+      '<text class="pip-sparkline-axis-text" x="' + (PAD_L - 4) + '" y="' + (yPos(100) + 3) + '" text-anchor="end">100%</text>',
+      '<text class="pip-sparkline-axis-text" x="' + (PAD_L - 4) + '" y="' + (yPos(50) + 3) + '" text-anchor="end">50%</text>',
+      '<text class="pip-sparkline-axis-text" x="' + (PAD_L - 4) + '" y="' + (yPos(0) + 3) + '" text-anchor="end">0%</text>',
+      // Area-Fill unter der Linie (soft teal)
+      '<path d="' + areaPath + '" fill="rgba(0,212,170,0.12)" stroke="none"/>',
+      // Kurve
+      '<polyline points="' + linePts + '" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
+      // Endpoint-Marker
+      '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="3.5" fill="#00D4AA" stroke="#FFFFFF" stroke-width="1.5"/>',
+      // X-Achsen-Labels
+      '<text class="pip-sparkline-axis-text" x="' + xPos(tMin) + '" y="' + (H - 6) + '" text-anchor="start">' + xLabelStart + '</text>',
+      '<text class="pip-sparkline-axis-text" x="' + (PAD_L + innerW / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + xLabelMid + '</text>',
+      '<text class="pip-sparkline-axis-text" x="' + xPos(tMax) + '" y="' + (H - 6) + '" text-anchor="end">' + xLabelEnd + '</text>',
       '</svg>'
     ].join('');
-    el.innerHTML = svg + '<div class="pip-sparkline-label"><span>Start ' + startV + '%</span><span>Ende ' + endV + '%</span></div>';
+    el.innerHTML = '<div class="pip-postcall-sparkline-title">Kaufbereitschaft im Verlauf</div>'
+      + '<div class="pip-postcall-sparkline-chart">' + svg + '</div>';
   }
 
   function _renderQuickStats(postcall) {

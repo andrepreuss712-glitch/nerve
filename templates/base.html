@@ -259,10 +259,10 @@
 .pip-resize-handle:hover{opacity:0.8}
 .pip-btn-next-call{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
 .pip-btn-next-call:hover{opacity:.85}
-/* Phase 07: Auswertung-Button auf MAIN DESIGN (weiss/grau/teal) statt dark. */
-.pip-btn-details{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;color:#1a1a1a;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:border-color .2s,opacity .2s,color .2s}
-.pip-btn-details:hover:not(:disabled){border-color:#00D4AA;color:#00D4AA}
-.pip-btn-details:disabled{opacity:.45;cursor:not-allowed;border-color:#E2E8F0}
+/* POLISH-22 v2: Auswertung-Button als Primary-CTA in Teal (gleich wie Nächster Call). */
+.pip-btn-details{background:#00D4AA;border:none;border-radius:8px;color:#0D1117;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;flex:1;transition:opacity .2s}
+.pip-btn-details:hover:not(:disabled){opacity:.85}
+.pip-btn-details:disabled{opacity:.4;cursor:not-allowed}
 /* POLISH-23: Spinner statt "…" wenn Auswertung noch lädt */
 @keyframes pip-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .pip-score-spinner{width:44px;height:44px;border:4px solid rgba(0,212,170,0.15);border-top-color:#00D4AA;border-radius:50%;animation:pip-spin 0.9s linear infinite;margin:6px auto 0}
@@ -279,17 +279,22 @@
 .pip-tag-teal{background:rgba(0,212,170,0.15);color:#00D4AA}
 /* Phase 07: .pip-tag-yellow ersetzt durch .pip-tag-neutral (Grau) — MAIN DESIGN kein Gelb mehr. */
 .pip-tag-neutral{background:rgba(107,114,128,0.12);color:#6B7280}
-.pip-tag-red{background:rgba(248,113,113,0.15);color:#F87171}
+/* POLISH-22 v2: 'red'-Tags auf Teal-Solid mit schwarzer Schrift — User-Vorgabe (kein Rot fuer normale Hinweise, nur fuer destructive). */
+.pip-tag-red{background:#00D4AA;color:#0D1117;font-weight:600}
 .pip-postcall-kundendaten{font-size:11px;color:#6B7280;margin-top:8px}
 .pip-postcall-actions{display:flex;gap:10px;margin-top:14px;width:100%;max-width:280px}
 /* POLISH-22: PiP-Quick-Scoring Erweiterung (Trend + Sparkline + QuickStats) */
 .pip-postcall-trend{font-size:12px;color:#6B7280;margin-top:2px;display:flex;align-items:center;gap:4px;min-height:16px}
 .pip-postcall-trend.up{color:#00D4AA;font-weight:600}
 .pip-postcall-trend.down{color:#F87171;font-weight:600}
-.pip-postcall-sparkline{width:100%;max-width:260px;height:48px;margin-top:10px;display:flex;align-items:center;justify-content:center}
-.pip-postcall-sparkline svg{width:100%;height:100%;display:block}
-.pip-postcall-sparkline-empty{font-size:10px;color:#9CA3AF;font-style:italic}
-.pip-sparkline-label{font-size:10px;color:#9CA3AF;margin-top:2px;display:flex;justify-content:space-between;width:100%;max-width:260px}
+/* POLISH-22 v2: Sparkline wird vollwertiges Chart mit Kachel, Achsen, mehr Flaeche */
+.pip-postcall-sparkline{width:100%;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:10px 8px 6px;margin-top:12px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px}
+.pip-postcall-sparkline-title{font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em;padding:0 4px 4px;font-weight:600}
+.pip-postcall-sparkline-chart{width:100%;height:110px;display:block}
+.pip-postcall-sparkline svg{width:100%;height:100%;display:block;overflow:visible}
+.pip-postcall-sparkline-empty{font-size:11px;color:#9CA3AF;font-style:italic;padding:40px 10px;text-align:center}
+.pip-sparkline-axis-text{font-size:9px;fill:#9CA3AF;font-family:var(--page-font,inherit)}
+.pip-sparkline-grid{stroke:#F0F2F5;stroke-width:1;stroke-dasharray:2,3}
 .pip-postcall-quickstats{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;max-width:260px;margin-top:10px}
 .pip-quickstat{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:2px}
 .pip-quickstat-value{font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.1}

@@ -249,6 +249,14 @@ def register_audio_handlers(sio):
 
         # Store precall briefing in live session state
         import services.live_session as ls
+        # POLISH-22 Bugfix: session_start_time beim Call-Start setzen (nicht erst beim
+        # reset_session am Call-Ende). Vorher blieb der Timer auf dem time.monotonic()
+        # des letzten Call-Endes oder None, und dauer_sek wurde zu 0 oder falsch gross.
+        import time as _time
+        with ls.speech_lock:
+            ls.session_start_time = _time.monotonic()
+            ls.berater_words = 0
+            ls.kunde_words = 0
         # Store active_sid for PiP streaming room targeting (Phase 06)
         with ls.state_lock:
             ls.state['active_sid'] = _sid
