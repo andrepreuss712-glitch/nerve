@@ -47,18 +47,9 @@
   --btn-primary-glow-hover: 0 8px 30px rgba(0,212,170,0.25);
   --btn-primary-shine:    rgba(255,255,255,0.15);
 
-  /* ═══════════════════════════════════════
-     BUTTON ACCENT / KI (.n-btn-accent)
-     ═══════════════════════════════════════ */
-  --btn-accent-bg-from:   #d4a853;
-  --btn-accent-bg-to:     #e8c476;
-  --btn-accent-text:      #0D1117;
-  --btn-accent-radius:    9999px;
-  --btn-accent-padding:   12px 28px;
-  --btn-accent-size:      14px;
-  --btn-accent-weight:    600;
-  --btn-accent-glow:      0 0 20px rgba(212,168,83,0.15);
-  --btn-accent-glow-hover:0 8px 30px rgba(212,168,83,0.25);
+  /* Phase 07: .n-btn-accent entfernt (Gold-Token) — tote Klasse, nirgends
+     im HTML verwendet. MAIN DESIGN nutzt ausschliesslich Teal-Primary,
+     Ghost und Rot (nur destructive). Keine Zweitfarbe mehr noetig. */
 
   /* ═══════════════════════════════════════
      BUTTON GHOST (.n-btn-ghost)
@@ -146,14 +137,14 @@
   --badge-spacing:        0.5px;
   --badge-primary-bg:     rgba(0,212,170,0.08);
   --badge-primary-text:   #00D4AA;
-  --badge-accent-bg:      rgba(212,168,83,0.08);
-  --badge-accent-text:    #d4a853;
+  --badge-accent-bg:      rgba(107,114,128,0.08);
+  --badge-accent-text:    #6B7280;
   --badge-secondary-bg:   rgba(167,139,250,0.08);
   --badge-secondary-text: #a78bfa;
   --badge-success-bg:     rgba(0,212,170,0.08);
   --badge-success-text:   #00D4AA;
-  --badge-warning-bg:     rgba(251,191,36,0.08);
-  --badge-warning-text:   #fbbf24;
+  --badge-warning-bg:     rgba(107,114,128,0.08);
+  --badge-warning-text:   #6B7280;
   --badge-danger-bg:      rgba(248,113,113,0.08);
   --badge-danger-text:    #f87171;
   --badge-info-bg:        rgba(96,165,250,0.08);
@@ -198,7 +189,7 @@
   --session-score-weight: 600;
   --session-score-font:   'JetBrains Mono', monospace;
   --session-score-high:   #00D4AA;
-  --session-score-mid:    #fbbf24;
+  --session-score-mid:    #6B7280;
   --session-score-low:    #f87171;
   --session-title-size:   13px;
   --session-title-weight: 600;
@@ -225,11 +216,11 @@
   --metric-fill-success-from: #16a34a;
   --metric-fill-success-to:   #4ade80;
   --metric-fill-warning-from: #d97706;
-  --metric-fill-warning-to:   #fbbf24;
+  --metric-fill-warning-to:   #6B7280;
   --metric-fill-secondary-from:#7c3aed;
   --metric-fill-secondary-to:  #a78bfa;
   --metric-fill-accent-from:   #b8872e;
-  --metric-fill-accent-to:     #d4a853;
+  --metric-fill-accent-to:     #6B7280;
   --metric-spacing:       16px;
 
   /* ═══════════════════════════════════════
@@ -254,32 +245,32 @@
   /* ═══════════════════════════════════════
      AI PANEL (.n-ai-panel)
      ═══════════════════════════════════════ */
-  --ai-bg-from:           rgba(212,168,83,0.06);
+  --ai-bg-from:           rgba(107,114,128,0.06);
   --ai-bg-to:             rgba(255,255,255,0.04);
-  --ai-border:            rgba(212,168,83,0.2);
+  --ai-border:            rgba(107,114,128,0.2);
   --ai-radius:            20px;
   --ai-padding:           24px;
   --ai-blur:              40px;
-  --ai-glow:              0 0 40px rgba(212,168,83,0.15);
-  --ai-shine:             rgba(212,168,83,0.4);
-  --ai-label-bg-from:     #d4a853;
-  --ai-label-bg-to:       #e8c476;
+  --ai-glow:              0 0 40px rgba(107,114,128,0.15);
+  --ai-shine:             rgba(107,114,128,0.4);
+  --ai-label-bg-from:     #6B7280;
+  --ai-label-bg-to:       #6B7280;
   --ai-label-text:        #0D1117;
   --ai-label-size:        10px;
   --ai-label-weight:      700;
   --ai-label-radius:      9999px;
   --ai-label-padding:     4px 14px;
   --ai-label-spacing:     2px;
-  --ai-label-glow:        0 2px 12px rgba(212,168,83,0.15);
+  --ai-label-glow:        0 2px 12px rgba(107,114,128,0.15);
   --ai-context-color:     #4a5068;
   --ai-context-size:      10px;
   --ai-text-color:        #8b92a5;
   --ai-text-size:         14px;
-  --ai-highlight-color:   #d4a853;
+  --ai-highlight-color:   #6B7280;
   --ai-highlight-weight:  700;
-  --ai-pill-bg:           rgba(212,168,83,0.08);
-  --ai-pill-border:       rgba(212,168,83,0.15);
-  --ai-pill-text:         #d4a853;
+  --ai-pill-bg:           rgba(107,114,128,0.08);
+  --ai-pill-border:       rgba(107,114,128,0.15);
+  --ai-pill-text:         #6B7280;
   --ai-pill-size:         10px;
   --ai-pill-radius:       9999px;
   --ai-pill-padding:      4px 14px;
@@ -396,8 +387,7 @@ a{color:inherit;text-decoration:none}
 .n-btn-primary::before{background:linear-gradient(180deg,var(--btn-primary-shine),transparent);}
 .n-btn-primary:hover{transform:translateY(-2px);box-shadow:var(--btn-primary-glow-hover);}
 
-.n-btn-accent{background:linear-gradient(135deg,var(--btn-accent-bg-from),var(--btn-accent-bg-to));color:var(--btn-accent-text);border-radius:var(--btn-accent-radius);padding:var(--btn-accent-padding);font-size:var(--btn-accent-size);font-weight:var(--btn-accent-weight);font-family:var(--page-font);box-shadow:var(--btn-accent-glow);}
-.n-btn-accent:hover{transform:translateY(-2px);box-shadow:var(--btn-accent-glow-hover);}
+/* Phase 07: .n-btn-accent (Gold) entfernt — MAIN DESIGN kennt nur Teal-Primary/Ghost/Rot(destructive). */
 
 .n-btn-ghost{background:var(--btn-ghost-bg);color:var(--btn-ghost-text);border:1px solid var(--btn-ghost-border);border-radius:var(--btn-ghost-radius);padding:var(--btn-ghost-padding);font-size:var(--btn-ghost-size);font-weight:var(--btn-ghost-weight);font-family:var(--page-font);backdrop-filter:blur(10px);}
 .n-btn-ghost::before{background:linear-gradient(180deg,rgba(255,255,255,0.04),transparent);}
@@ -518,9 +508,9 @@ a{color:inherit;text-decoration:none}
 .text-secondary{color:var(--page-text-secondary);}
 .text-muted{color:var(--page-text-muted);}
 .text-success{color:#00D4AA;}
-.text-warning{color:#fbbf24;}
+.text-warning{color:#6B7280;}
 .text-danger{color:#f87171;}
-.text-accent{color:#d4a853;}
+.text-accent{color:#6B7280;}
 .font-mono{font-family:var(--page-font-mono);}
 
 
@@ -1031,9 +1021,9 @@ body.kompakt .help-fab,body.live-active .help-fab{display:none}
 .t-heatmap-tile--gruen .t-heatmap-tile-name { color: #059669; }
 
 .t-heatmap-tile--gelb {
-  background: rgba(245,158,11,0.12);
-  border-color: rgba(245,158,11,0.3);
-  color: #F59E0B;
+  background: rgba(107,114,128,0.12);
+  border-color: rgba(107,114,128,0.3);
+  color: #6B7280;
 }
 .t-heatmap-tile--gelb .t-heatmap-tile-name { color: #B45309; }
 
@@ -1505,7 +1495,7 @@ input[type="range"].perf-slider::-moz-range-thumb {
 .db2-trend-up      { color: #00D4AA; }
 .db2-trend-down    { color: #F85149; }
 .db2-trend-neutral { color: #6b7280; }
-.db2-streak-fire   { color: #F59E0B; }
+.db2-streak-fire   { color: #6B7280; }
 
 /* ── Shared Card ─────────────────────────────────────────────── */
 .db2-card {

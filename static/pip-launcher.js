@@ -1543,11 +1543,11 @@
 
   function _getTypBadgeStyle(typ) {
     var colors = {
-      'Preis': 'background:rgba(212,168,83,0.15);color:#d4a853',
+      'Preis': 'background:rgba(107,114,128,0.15);color:#6B7280',
       'Kein Bedarf': 'background:rgba(248,113,113,0.15);color:#f87171',
       'Vertrauen': 'background:rgba(96,165,250,0.15);color:#60a5fa',
       'Konkurrenz': 'background:rgba(168,85,247,0.15);color:#a855f7',
-      'Timing': 'background:rgba(251,191,36,0.15);color:#fbbf24'
+      'Timing': 'background:rgba(107,114,128,0.15);color:#6B7280'
     };
     return (colors[typ] || 'background:rgba(255,255,255,0.1);color:#c5c9d4') + ';font-size:11px;padding:2px 8px;border-radius:9999px';
   }
@@ -1857,9 +1857,9 @@
     if (kb >= 70) tags.push({ text: 'Starke Kaufbereitschaft', color: 'teal' });
     if (kb - kbStart >= 20) tags.push({ text: 'KB deutlich gestiegen', color: 'teal' });
     if (behandeltRate >= 0.8 && einwTotal > 0) tags.push({ text: 'Einwaende gemeistert', color: 'teal' });
-    if (redeanteil > 65) tags.push({ text: 'Redeanteil zu hoch', color: 'yellow' });
-    if (redeanteil > 0 && redeanteil < 25) tags.push({ text: 'Zu wenig gesprochen', color: 'yellow' });
-    if (dauer > 0 && dauer < 120) tags.push({ text: 'Sehr kurzer Call', color: 'yellow' });
+    if (redeanteil > 65) tags.push({ text: 'Redeanteil zu hoch', color: 'neutral' });
+    if (redeanteil > 0 && redeanteil < 25) tags.push({ text: 'Zu wenig gesprochen', color: 'neutral' });
+    if (dauer > 0 && dauer < 120) tags.push({ text: 'Sehr kurzer Call', color: 'neutral' });
     if (behandeltRate >= 0 && behandeltRate < 0.4 && einwTotal > 0) tags.push({ text: 'Einwaende offen', color: 'red' });
     var pos = tags.filter(function (t) { return t.color === 'teal'; });
     var neg = tags.filter(function (t) { return t.color !== 'teal'; });

@@ -1660,7 +1660,7 @@ function pipBeendenCall() {
     var scoreEl = getPipElement('pip-postcall-score');
     if (scoreEl) scoreEl.textContent = '--';
     var tagsEl = getPipElement('pip-postcall-tags');
-    if (tagsEl) tagsEl.innerHTML = '<span class="pip-tag pip-tag-yellow">Kein Gespraech erkannt</span>';
+    if (tagsEl) tagsEl.innerHTML = '<span class="pip-tag pip-tag-neutral">Kein Gespräch erkannt</span>';
     return;
   }
 
@@ -1756,9 +1756,9 @@ function buildHighlightTags(postcall) {
   if (behandeltRate >= 0.8 && einwandeTotal > 0) tags.push({ text: 'Einwaende gemeistert', color: 'teal' });
 
   // Warning tags (yellow)
-  if (redeanteil > 65) tags.push({ text: 'Redeanteil zu hoch', color: 'yellow' });
-  if (redeanteil > 0 && redeanteil < 25) tags.push({ text: 'Zu wenig gesprochen', color: 'yellow' });
-  if (dauer > 0 && dauer < 120) tags.push({ text: 'Sehr kurzer Call', color: 'yellow' });
+  if (redeanteil > 65) tags.push({ text: 'Redeanteil zu hoch', color: 'neutral' });
+  if (redeanteil > 0 && redeanteil < 25) tags.push({ text: 'Zu wenig gesprochen', color: 'neutral' });
+  if (dauer > 0 && dauer < 120) tags.push({ text: 'Sehr kurzer Call', color: 'neutral' });
 
   // Negative tags (red)
   if (behandeltRate >= 0 && behandeltRate < 0.4 && einwandeTotal > 0) tags.push({ text: 'Einwaende offen', color: 'red' });

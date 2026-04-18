@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="de" data-theme="dark">
+<html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NERVE — Sales Intelligence{% block title %}{% endblock %}</title>
-<script>document.documentElement.setAttribute('data-theme','dark')</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}?v={{ config.get('CSS_VERSION', '1') }}">
 <script src="{{ url_for('static', filename='vendor/lucide.min.js') }}"></script>
 <style>{% block extra_style %}{% endblock %}</style>
@@ -277,7 +276,8 @@
 .pip-postcall-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;justify-content:center}
 .pip-tag{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:500}
 .pip-tag-teal{background:rgba(0,212,170,0.15);color:#00D4AA}
-.pip-tag-yellow{background:rgba(245,158,11,0.15);color:#F59E0B}
+/* Phase 07: .pip-tag-yellow ersetzt durch .pip-tag-neutral (Grau) — MAIN DESIGN kein Gelb mehr. */
+.pip-tag-neutral{background:rgba(107,114,128,0.12);color:#6B7280}
 .pip-tag-red{background:rgba(248,113,113,0.15);color:#F87171}
 .pip-postcall-kundendaten{font-size:11px;color:#555e70;margin-top:8px}
 .pip-postcall-actions{display:flex;gap:10px;margin-top:16px;width:100%;max-width:280px}

@@ -133,7 +133,7 @@
           </div>
         </div>
         <div id="perf-hint" class="db2-hint-bar" style="display:none"></div>
-        <div id="perf-nodeal" style="display:none;margin-top:12px;padding:10px 14px;background:#FFF8F0;border-radius:8px;border-left:3px solid #F59E0B;font-size:12px;color:#92400E">
+        <div id="perf-nodeal" style="display:none;margin-top:12px;padding:10px 14px;background:var(--glass-bg);border-radius:8px;border-left:3px solid var(--glass-border);font-size:12px;color:var(--page-text-secondary)">
           Kein Deal-Wert hinterlegt — <a href="#" onclick="openDealWertModal();return false" style="color:#00D4AA;font-weight:600">jetzt eintragen</a> um Umsatz zu berechnen.
         </div>
       </div>
@@ -508,7 +508,7 @@ function renderObjections(d) {
   var html = '';
   list.forEach(function(item) {
     var pct  = item.success_rate;
-    var color = pct >= 70 ? '#00D4AA' : (pct >= 40 ? '#F59E0B' : '#F85149');
+    var color = pct >= 70 ? '#00D4AA' : (pct >= 40 ? '#6B7280' : '#F85149');
     html += '<div style="margin-bottom:10px">';
     html +=   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
     html +=     '<span style="font-size:13px;color:#1a1a1a">' + esc(item.name) + '</span>';
@@ -724,7 +724,7 @@ function renderSessions(d) {
   var typeCls   = { cold_call: 'db2-badge-cold', meeting: 'db2-badge-meeting', training: 'db2-badge-training' };
   var html = '';
   sessions.forEach(function(s) {
-    var scoreColor = s.score >= 70 ? '#00D4AA' : (s.score >= 40 ? '#F59E0B' : '#F85149');
+    var scoreColor = s.score >= 70 ? '#00D4AA' : (s.score >= 40 ? '#6B7280' : '#F85149');
     html += '<div class="db2-session-row">';
     html +=   '<span class="db2-session-date">'  + esc(s.date_str) + '</span>';
     html +=   '<span class="db2-badge ' + (typeCls[s.session_type] || 'db2-badge-cold') + '">' + (typeLabel[s.session_type] || s.session_type) + '</span>';
