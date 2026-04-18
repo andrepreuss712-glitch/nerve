@@ -22,7 +22,8 @@
       {% endif %}
       <span>{{ conv.created_at.strftime('%d.%m.%Y %H:%M') if conv.created_at else '—' }}</span>
       <span>Dauer: {{ (conv.dauer_sekunden // 60) if conv.dauer_sekunden else 0 }}:{{ '%02d' | format((conv.dauer_sekunden % 60) if conv.dauer_sekunden else 0) }} min</span>
-      <span>Result: {{ conv.kb_end if conv.kb_end is not none else '—' }}/100</span>
+      {# Fix B (07.1 UAT-R1): kb_end_effective = letzter kb_verlauf-Punkt (konsistent mit Chart-Ende). #}
+      <span>Result: {{ kb_end_effective if kb_end_effective is not none else '—' }}/100</span>
     </div>
   </header>
 
@@ -68,7 +69,8 @@
         </div>
       {% else %}
         {# Live Breakdown — kb_end 40%, behandelt 30%, rede 20%, skript 10% #}
-        {% set kb_pct = conv.kb_end if conv.kb_end is not none else 0 %}
+        {# Fix B (07.1 UAT-R1): kb_end_effective = letzter kb_verlauf-Punkt (konsistent mit Chart-Ende). #}
+        {% set kb_pct = kb_end_effective if kb_end_effective is not none else 0 %}
         {% set einw_total = conv.einwaende_gesamt or 0 %}
         {% set einw_ok = conv.einwaende_behandelt or 0 %}
         {% set behandelt_pct = ((einw_ok / einw_total) * 100) | round(0, 'floor') if einw_total > 0 else 0 %}

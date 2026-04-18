@@ -685,10 +685,36 @@ def session_detail(sid):
         #  - Live: _calc_call_score (Gesamt-Score, 4 Komponenten)
         #  - Training: kb_end Fallback (kein _calc_call_score fuer Training)
         conv_typ = (conv.typ or 'live')
+
+        # Fix B (07.1 UAT-R1): kb_end konsistent aus kb_verlauf-Endpunkt ableiten,
+        # falls Verlauf vorhanden — sonst weicht Score-Hero vom Chart-Ende ab.
+        # kb_verlauf-Shape: [{ts: "HH:MM:SS", wert: 0-100}]
+        kb_end_effective = conv.kb_end
+        try:
+            if conv.kb_verlauf:
+                _verl = _json.loads(conv.kb_verlauf)
+                if isinstance(_verl, list) and _verl:
+                    _last = _verl[-1]
+                    if isinstance(_last, dict) and 'wert' in _last:
+                        kb_end_effective = _last.get('wert')
+        except Exception:
+            # Fallback auf conv.kb_end bei kaputtem JSON — nicht blocken
+            kb_end_effective = conv.kb_end
+        if kb_end_effective is None:
+            kb_end_effective = 0
+
         if conv_typ == 'live':
-            score_total = _calc_call_score(conv)
+            # Score mit dem effektiven kb_end berechnen (mini-Shim um _calc_call_score
+            # ohne zweite Helper-Variante): temporaer conv.kb_end setzen, Score holen,
+            # urspruenglichen Wert zurueckschreiben — Session-Lifecycle bleibt read-only.
+            _orig_kb = conv.kb_end
+            try:
+                conv.kb_end = kb_end_effective
+                score_total = _calc_call_score(conv)
+            finally:
+                conv.kb_end = _orig_kb
         else:
-            score_total = conv.kb_end or 0
+            score_total = kb_end_effective
 
         # Phase 07.1 (W-06): Trend-Avg NUR fuer Live-Sessions berechnen.
         # Training-Sessions rendern KEIN Trend-Badge (sparse Datenlage,
@@ -740,6 +766,7 @@ def session_detail(sid):
             schwierigkeit_label=schwierigkeit_label,
             recommendations=recommendations,
             score_total=score_total,            # W-06: Gesamt-Score fuer Score-Hero
+            kb_end_effective=kb_end_effective,  # Fix B (UAT-R1): = letzter kb_verlauf-Punkt falls vorhanden
         )
     finally:
         db.close()
