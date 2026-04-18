@@ -279,6 +279,8 @@ class ConversationLog(Base):
     stimmung_history         = Column(Text, nullable=True)  # JSON list
     # Phase 04.13: PreCall Intelligence
     precall_briefing         = Column(Text, nullable=True)     # generated call briefing (per D-03: only briefing text, no raw search data)
+    # Phase 07.1: Kaufbereitschafts-Verlauf fuer Live-Session-Chart
+    kb_verlauf               = Column(Text, nullable=True)     # JSON list [{ts: "HH:MM:SS", wert: 0-100}]
 
 
 class Phrase(Base):

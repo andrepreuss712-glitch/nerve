@@ -422,6 +422,7 @@ def api_beenden():
             typ='live',
             session_mode=session_mode,
             precall_briefing=precall_briefing,
+            kb_verlauf=_json.dumps(kb_verlauf, ensure_ascii=False),   # Phase 07.1
         )
         db_conv.add(conv)
         db_conv.commit()

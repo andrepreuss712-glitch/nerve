@@ -320,6 +320,16 @@ def _migrate():
                 print(f"[DB] Migration: added conversation_logs.{col}")
             except Exception:
                 pass
+        # ── Phase 07.1: kb_verlauf fuer Live-Session-Chart ────────────────────
+        for col, typedef in [
+            ('kb_verlauf', 'TEXT'),
+        ]:
+            try:
+                conn.execute(text(f'ALTER TABLE conversation_logs ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added conversation_logs.{col}")
+            except Exception:
+                pass
         # ── Phase 04.13: PreCall Intelligence ────────────────────────────────
         for col, typedef in [
             ('precall_briefing', 'TEXT'),
