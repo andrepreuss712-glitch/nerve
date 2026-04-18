@@ -752,13 +752,18 @@ def _derive_practice_recommendations(db, conv, events):
             })
 
         # Regel 3: Redeanteil zu hoch / zu niedrig (Optimum ~40%)
+        # Fix D (07.1 UAT-R1): OBS-02 — Cold Call has no speaker diarization,
+        # berater_words bleibt 0 -> redeanteil_avg=0.0 triggert faelschlich 'rede aktiver'.
+        # Redeanteil-Regel nur fuer Sessions mit echter Speaker-Trennung (meeting, training).
         rede = conv.redeanteil_avg
-        if rede is not None and len(recs) < 3:
+        _mode = getattr(conv, 'session_mode', None)
+        _has_diarization = (_mode != 'cold_call')
+        if rede is not None and _has_diarization and len(recs) < 3:
             if rede > 65:
                 recs.append({
                     'icon': 'alert-circle',
                     'observation': f'Du redest {int(rede)}% — zu viel',
-                    'explanation': 'Gute Berater reden ca. 40%. Uebe aktives Zuhoeren und offene Fragen.',
+                    'explanation': 'Gute Berater reden ca. 40%. Übe aktives Zuhören und offene Fragen.',
                     'training_focus': 'redeanteil:too_high',
                     'training_url': '/training',
                     'cross_context': None,
@@ -767,7 +772,7 @@ def _derive_practice_recommendations(db, conv, events):
                 recs.append({
                     'icon': 'alert-circle',
                     'observation': f'Du redest nur {int(rede)}% — zu wenig',
-                    'explanation': 'Fuehre das Gespraech aktiver. Stelle gezielte Fragen und setze Impulse.',
+                    'explanation': 'Führe das Gespräch aktiver. Stelle gezielte Fragen und setze Impulse.',
                     'training_focus': 'redeanteil:too_low',
                     'training_url': '/training',
                     'cross_context': None,
