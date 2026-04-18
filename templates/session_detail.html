@@ -1,42 +1,378 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block content %}
-<div class="n-page">
-  <a class="n-btn n-btn-ghost" href="{{ url_for('dashboard.analytics_page') }}">&#8592; Zur&uuml;ck zur History</a>
-  <h1 class="n-h1">Session #{{ conv.id }}</h1>
-  <div class="n-grid">
-    <div class="n-card"><div class="n-label">Modus</div><div class="n-val">{{ conv.session_mode or '&mdash;' }}</div></div>
-    <div class="n-card"><div class="n-label">Start</div><div class="n-val">{{ conv.started_at }}</div></div>
-    <div class="n-card"><div class="n-label">Ende</div><div class="n-val">{{ conv.ended_at or '&mdash;' }}</div></div>
-    <div class="n-card"><div class="n-label">Dauer</div><div class="n-val">{{ conv.dauer_sekunden or 0 }}s</div></div>
-    <div class="n-card"><div class="n-label">Einw&auml;nde gesamt</div><div class="n-val">{{ conv.einwaende_total or 0 }}</div></div>
-    <div class="n-card"><div class="n-label">Erfolgreich</div><div class="n-val">{{ conv.einwaende_ok or 0 }}</div></div>
-    <div class="n-card"><div class="n-label">Result</div><div class="n-val">{{ conv.result or '&mdash;' }}</div></div>
-    <div class="n-card"><div class="n-label">Typ</div><div class="n-val">{{ conv.typ or '&mdash;' }}</div></div>
-  </div>
+<main class="n-session-detail-page">
 
-  <h2 class="n-h2" style="margin-top:28px">Einwand-Ereignisse ({{ events|length }})</h2>
-  <table class="n-table">
-    <thead><tr><th>Zeit</th><th>Einwand-Typ</th><th>Erfolg</th></tr></thead>
-    <tbody>
-      {% for e in events %}
-      <tr>
-        <td>{{ e.created_at.strftime('%H:%M:%S') if e.created_at else '&mdash;' }}</td>
-        <td>{{ e.einwand_typ }}</td>
-        <td>{% if e.success %}Ja{% else %}Nein{% endif %}</td>
-      </tr>
+  {# ── Section 1: Header ─────────────────────────────────────────── #}
+  <header class="n-session-detail-header {% if conv.typ == 'training' %}n-session-detail-header--training{% endif %}">
+    <a class="n-btn n-btn-ghost" href="{{ url_for('dashboard.analytics_page') }}">← Zurück zur History</a>
+    <h1 class="n-session-detail-card-title n-session-detail-card-title--spaced">Session #{{ conv.id }}</h1>
+    <div class="n-session-detail-meta">
+      {% if conv.typ == 'training' %}
+        <div class="n-badge n-badge-neutral">Training</div>
+        {% if pt %}
+          <div class="n-badge n-badge-neutral">
+            {% if pt.icon %}{{ pt.icon }} {% endif %}{{ pt.name }}
+          </div>
+        {% endif %}
+        <div class="n-badge n-badge-neutral">{{ schwierigkeit_label }}</div>
       {% else %}
-      <tr><td colspan="3">Keine EWB-Klicks erfasst.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-<style>
-.n-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
-.n-card{background:#1C2333;border:1.5px solid #2D3748;border-radius:10px;padding:14px}
-.n-label{color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
-.n-val{color:#fff;font-size:20px;font-weight:600;margin-top:4px}
-.n-table{width:100%;border-collapse:collapse;background:#1C2333;color:#fff;border-radius:10px;overflow:hidden;margin-top:12px}
-.n-table th,.n-table td{padding:10px 12px;border-bottom:1px solid #2D3748;text-align:left}
-.n-table thead{background:#0D1117;color:#00D4AA}
-</style>
+        <div class="n-badge {% if conv.session_mode == 'cold_call' %}n-badge-primary{% else %}n-badge-neutral{% endif %}">
+          {% if conv.session_mode == 'cold_call' %}Cold Call{% elif conv.session_mode == 'meeting' %}Meeting{% else %}—{% endif %}
+        </div>
+      {% endif %}
+      <span>{{ conv.created_at.strftime('%d.%m.%Y %H:%M') if conv.created_at else '—' }}</span>
+      <span>Dauer: {{ (conv.dauer_sekunden // 60) if conv.dauer_sekunden else 0 }}:{{ '%02d' | format((conv.dauer_sekunden % 60) if conv.dauer_sekunden else 0) }} min</span>
+      <span>Result: {{ conv.kb_end if conv.kb_end is not none else '—' }}/100</span>
+    </div>
+  </header>
+
+  {# ── Section 2: Score-Hero (W-06: score_total aus Plan 01) ────── #}
+  {% set score = score_total %}
+  {% set score_class = 'n-session-detail-score--high' if score >= 70 else ('n-session-detail-score--mid' if score >= 60 else 'n-session-detail-score--low') %}
+  <section class="n-session-detail-hero" aria-label="Gesamt-Score">
+    <div>
+      <div class="n-label">Gesamt-Score</div>
+      <div class="n-session-detail-score {{ score_class }}">{{ score }}</div>
+      {# W-06: Trend-Badge nur Live (trend_avg ist None fuer Training, zusaetzlich typ-Gate) #}
+      {% if trend_avg is not none and conv.typ != 'training' %}
+        {% set delta = score - trend_avg %}
+        <div class="n-badge {% if delta > 0 %}n-badge-primary{% elif delta < 0 %}n-badge-danger{% else %}n-badge-neutral{% endif %} n-session-detail-trend-badge--spaced">
+          {% if delta > 0 %}+{{ delta }} vs Schnitt letzte 5{% elif delta < 0 %}{{ delta }} vs Schnitt letzte 5{% else %}Schnitt letzte 5{% endif %}
+        </div>
+      {% endif %}
+    </div>
+    <div class="n-session-detail-breakdown">
+      {% if conv.typ == 'training' %}
+        {# Training Breakdown — SC-1: kb_end statt sterne, W-05: skript minibar hidden bei em-dash #}
+        {% set rede_pct = conv.redeanteil_avg if conv.redeanteil_avg is not none else 0 %}
+        {% set einw_total = conv.einwaende_gesamt or 0 %}
+        {% set einw_ok = conv.einwaende_behandelt or 0 %}
+        {% set behandelt_pct = ((einw_ok / einw_total) * 100) | round(0, 'floor') if einw_total > 0 else 0 %}
+        <div class="n-session-detail-breakdown-row">
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Gesamt-Score</span><span>{{ score }} / 100</span></div>
+          <div class="n-session-detail-minibar"><span style="--w: {{ score }}%"></span></div>
+        </div>
+        <div class="n-session-detail-breakdown-row">
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Einwände behandelt</span><span>{{ einw_ok }} / {{ einw_total }}</span></div>
+          <div class="n-session-detail-minibar"><span style="--w: {{ behandelt_pct }}%"></span></div>
+        </div>
+        <div class="n-session-detail-breakdown-row">
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Stimmung Ende</span><span>{{ '—' if not conv.stimmung_history else 'siehe Chart' }}</span></div>
+          {# W-05 + B-01: Minibar visibility:hidden; span laesst --w weg, CSS-Fallback 0% greift #}
+          <div class="n-session-detail-minibar n-session-detail-minibar--hidden"><span></span></div>
+        </div>
+        <div class="n-session-detail-breakdown-row">
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Skript-Abdeckung</span><span>—</span></div>
+          {# W-05 + B-01: wie oben — keine statischen Inline-Styles, Hidden via Klasse #}
+          <div class="n-session-detail-minibar n-session-detail-minibar--hidden"><span></span></div>
+        </div>
+      {% else %}
+        {# Live Breakdown — kb_end 40%, behandelt 30%, rede 20%, skript 10% #}
+        {% set kb_pct = conv.kb_end if conv.kb_end is not none else 0 %}
+        {% set einw_total = conv.einwaende_gesamt or 0 %}
+        {% set einw_ok = conv.einwaende_behandelt or 0 %}
+        {% set behandelt_pct = ((einw_ok / einw_total) * 100) | round(0, 'floor') if einw_total > 0 else 0 %}
+        {% set rede_avg = conv.redeanteil_avg if conv.redeanteil_avg is not none else 0 %}
+        {% set skript_pct = conv.skript_abdeckung if conv.skript_abdeckung is not none else 0 %}
+        <div class="n-session-detail-breakdown-row">
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Kaufbereitschaft Ende (40%)</span><span>{{ kb_pct }} / 100</span></div>
+          <div class="n-session-detail-minibar"><span style="--w: {{ kb_pct }}%"></span></div>
+        </div>
+        <div class="n-session-detail-breakdown-row">
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Einwände behandelt (30%)</span><span>{{ einw_ok }} / {{ einw_total }}</span></div>
+          <div class="n-session-detail-minibar"><span style="--w: {{ behandelt_pct }}%"></span></div>
+        </div>
+        <div class="n-session-detail-breakdown-row">
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Redeanteil (20%)</span><span>{{ rede_avg | round(0, 'floor') }}%</span></div>
+          <div class="n-session-detail-minibar"><span style="--w: {{ rede_avg }}%"></span></div>
+        </div>
+        <div class="n-session-detail-breakdown-row">
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Skript-Abdeckung (10%)</span><span>{{ skript_pct | round(0, 'floor') }}%</span></div>
+          <div class="n-session-detail-minibar"><span style="--w: {{ skript_pct }}%"></span></div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {# ── Section 3: Chart (kb_verlauf oder stimmung_history) ──────── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">
+      {% if conv.typ == 'training' %}Stimmungs-Verlauf{% else %}Kaufbereitschafts-Verlauf{% endif %}
+    </h2>
+    {% if chart_data_json and chart_data_json != '[]' %}
+      <div class="n-session-detail-chart-wrap">
+        <canvas id="{% if conv.typ == 'training' %}sd-stimmung-chart{% else %}sd-kb-verlauf{% endif %}"></canvas>
+      </div>
+      <script type="application/json" id="sd-chart-data">{{ chart_data_json | safe }}</script>
+    {% else %}
+      <div class="n-session-detail-empty">
+        {% if conv.typ == 'training' %}
+          <h3>Keine Stimmung-Daten in dieser Session</h3>
+          <p>Stimmungsdaten werden ab Phase 04.9 erfasst. Neue Training-Sessions zeigen den Verlauf hier automatisch.</p>
+        {% else %}
+          <h3>Noch keine Verlaufsdaten</h3>
+          <p>Dieser Call wurde vor der Verlaufs-Erfassung geführt. Neue Calls zeigen den Kaufbereitschafts-Verlauf hier automatisch.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 4: Einwand-Timeline ──────────────────────────────── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">Einwand-Timeline ({{ events | length }})</h2>
+    {% if events %}
+      <ul class="n-session-detail-timeline">
+        {% for ev in events %}
+          <li class="n-session-detail-timeline-row">
+            <span class="n-label">#{{ loop.index }}</span>
+            <div>
+              <div class="n-session-detail-timeline-typ">{{ ev.einwand_typ }}</div>
+              {% if ev.option_gewaehlt %}<div class="n-session-detail-timeline-option">{{ ev.option_gewaehlt }}</div>{% endif %}
+            </div>
+            <div class="n-badge {% if ev.success %}n-badge-success{% else %}n-badge-danger{% endif %}">
+              {% if ev.success %}Erfolgreich{% else %}Nicht behandelt{% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="n-session-detail-empty">
+        <h3>Keine Einwände behandelt</h3>
+        <p>In dieser Session hat der Kunde keine Einwände geäußert oder es wurden keine EWB-Buttons verwendet.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 5: Phasen-Strip ──────────────────────────────────── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">Phasen-Verlauf</h2>
+    {% set phasen = [] %}
+    {% if conv.phasen_details %}
+      {% set phasen_raw = conv.phasen_details | fromjson if conv.phasen_details else [] %}
+      {% if phasen_raw is iterable and phasen_raw is not mapping %}
+        {% set phasen = phasen_raw %}
+      {% endif %}
+    {% endif %}
+    {% if phasen %}
+      <div class="n-session-detail-phase-strip">
+        {% for ph in phasen %}
+          {% set ph_typ = (ph.typ or ph.name or 'discovery') | lower %}
+          {% set ph_class = 'n-session-detail-phase--' ~ (ph_typ if ph_typ in ['opener', 'discovery', 'argument', 'close'] else 'discovery') %}
+          <div class="n-session-detail-phase-segment {{ ph_class }}" style="--flex: {{ ph.dauer or 1 }}">
+            {{ ph.name or ph.typ or 'Phase' }}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="n-session-detail-empty">
+        <h3>Keine Phasen erfasst</h3>
+        <p>Für diese Session wurden keine Phasen-Daten gespeichert.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 6: Skript-Abdeckung ──────────────────────────────── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">Skript-Abdeckung</h2>
+    {% if conv.typ == 'training' %}
+      <div class="n-session-detail-empty">
+        <h3>Training-Session — kein Skript getrackt</h3>
+        <p>Training-Sessions verwenden kein Skript. Der Verlauf wird über Phasen-Fortschritt gemessen.</p>
+      </div>
+    {% elif conv.skript_abdeckung is not none %}
+      {% set skript_pct = conv.skript_abdeckung %}
+      <div class="n-session-detail-progress"><span style="--w: {{ skript_pct }}%"></span></div>
+      <p class="n-session-detail-skript-pct-label">{{ skript_pct | round(0, 'floor') }}% abgedeckt</p>
+    {% else %}
+      <div class="n-session-detail-empty">
+        <h3>Kein Skript hinterlegt</h3>
+        <p>Dieser Call hat kein Skript gelesen. Aktive Skripte erscheinen hier mit Abdeckungs-Anteil pro Block.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 7: Painpoints (W-04: numerische Reihenfolge) ────── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">Painpoints</h2>
+    {% set pp_list = conv.painpoints_details | fromjson if conv.painpoints_details else [] %}
+    {% if pp_list %}
+      <ul class="n-session-detail-recommendation-list">
+        {% for pp in pp_list %}
+          <li class="n-session-detail-painpoint-item">
+            <div>{{ pp.text }}</div>
+            {% if pp.ts %}<div class="n-session-detail-painpoint-ts">{{ pp.ts }}</div>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="n-session-detail-empty">
+        <h3>Keine Painpoints erfasst</h3>
+        <p>Der Analyse-Loop hat in diesem Gespräch keine expliziten Schmerzpunkte erkannt.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 8: PreCall-Briefing (Collapsible) — W-04: vor Section 9 ── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">PreCall-Briefing</h2>
+    {% if conv.precall_briefing %}
+      <details class="n-session-detail-collapsible" id="sd-precall-details">
+        <summary>PreCall-Briefing einblenden</summary>
+        <div class="n-session-detail-precall-body">{{ conv.precall_briefing }}</div>
+      </details>
+    {% else %}
+      <div class="n-session-detail-empty">
+        <h3>Kein PreCall-Briefing erstellt</h3>
+        <p>Für diesen Call wurde kein PreCall-Briefing generiert. Briefings entstehen automatisch, wenn PreCall-Formular ausgefüllt wird.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 9: Was du üben solltest (W-04: jetzt NACH 7 + 8) ─── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">Was du üben solltest</h2>
+    {% if recommendations %}
+      <ul class="n-session-detail-recommendation-list">
+        {% for rec in recommendations %}
+          <li class="n-session-detail-recommendation">
+            <div class="n-session-detail-recommendation-header">
+              <i class="n-session-detail-recommendation-icon" data-lucide="{{ rec.icon }}"></i>
+              <span class="n-session-detail-recommendation-observation">{{ rec.observation }}</span>
+            </div>
+            <div class="n-session-detail-recommendation-explanation">{{ rec.explanation }}</div>
+            {% if rec.cross_context %}
+              {% set cc = rec.cross_context %}
+              {% if conv.typ == 'live' %}
+                {% if cc.sessions == 0 %}
+                  <div class="n-session-detail-recommendation-cross-context n-session-detail-recommendation-cross-context--danger">
+                    <i data-lucide="history" class="n-session-detail-icon-sm"></i> Noch nie im Training geübt
+                  </div>
+                {% elif cc.avg_score is not none and cc.avg_score >= 70 and cc.sessions >= 3 %}
+                  <div class="n-session-detail-recommendation-cross-context n-session-detail-recommendation-cross-context--success">
+                    <i data-lucide="history" class="n-session-detail-icon-sm"></i> Zuletzt im Training: Ø {{ cc.avg_score | round(0, 'floor') }}/100 aus {{ cc.sessions }} Sessions
+                  </div>
+                {% else %}
+                  <div class="n-session-detail-recommendation-cross-context">
+                    <i data-lucide="history" class="n-session-detail-icon-sm"></i> Im Training: {{ cc.sessions }} Session{% if cc.sessions != 1 %}s{% endif %}
+                  </div>
+                {% endif %}
+              {% else %}
+                {% if cc.sessions == 0 %}
+                  <div class="n-session-detail-recommendation-cross-context n-session-detail-recommendation-cross-context--danger">
+                    <i data-lucide="history" class="n-session-detail-icon-sm"></i> Noch nie im echten Call begegnet
+                  </div>
+                {% else %}
+                  <div class="n-session-detail-recommendation-cross-context">
+                    <i data-lucide="history" class="n-session-detail-icon-sm"></i> Im echten Call: {{ cc.sessions }}× versucht, {{ cc.n_success }}× behandelt
+                  </div>
+                {% endif %}
+              {% endif %}
+            {% endif %}
+            <a class="n-session-detail-recommendation-cta" href="{{ rec.training_url }}">
+              <i data-lucide="play-circle" class="n-session-detail-icon-sm"></i> Im Training üben
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="n-session-detail-empty">
+        <p>Super Call — keine Schwachstellen erkannt. Du kannst die gleiche Art von Gesprächen weiter im Training üben.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 10: Gesprächs-Analyse (Future) ───────────────────── #}
+  <section class="n-session-detail-card n-session-detail-card--future">
+    <h2 class="n-session-detail-card-title">Gesprächs-Analyse</h2>
+    <div class="n-session-detail-empty-future">
+      <i data-lucide="message-square-text" class="n-session-detail-icon-xl"></i>
+      <h3 class="n-session-detail-card-title--spaced">Gesprächs-Analyse folgt</h3>
+      <p class="n-session-detail-future-text">NERVE speichert aktuell keine Gesprächsinhalte — aus DSGVO-Gründen. Nach Phase 4.19 (Transkript-Persistierung) analysiert die KI einzelne Sätze und markiert was gut lief und was besser formuliert werden sollte.</p>
+      <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.19</div>
+    </div>
+  </section>
+
+  {# ── Section 11: Lernkarten (Future) ──────────────────────────── #}
+  <section class="n-session-detail-card n-session-detail-card--future">
+    <h2 class="n-session-detail-card-title">Lernkarten</h2>
+    <div class="n-session-detail-empty-future">
+      <i data-lucide="book-open" class="n-session-detail-icon-xl"></i>
+      <h3 class="n-session-detail-card-title--spaced">Lernkarten folgen</h3>
+      <p class="n-session-detail-future-text">Das Coach-Modul schlägt nach jedem Call max. 3 konkrete Sätze vor, die du als Lernkarte speichern kannst. Lernkarten werden vor jedem neuen Call geladen und erinnern dich im richtigen Moment.</p>
+      <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.11</div>
+    </div>
+  </section>
+
+</main>
+
+{# ── Chart.js + Init (Chart.js NICHT in base.html — PATTERNS 4.4) ── #}
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script>
+(function(){
+  var el = document.getElementById('sd-chart-data');
+  if (!el) return;
+  var raw;
+  try { raw = JSON.parse(el.textContent); } catch(e) { return; }
+  if (!raw || !raw.length) return;
+
+  var isTraining = {{ 'true' if conv.typ == 'training' else 'false' }};
+  var canvasId = isTraining ? 'sd-stimmung-chart' : 'sd-kb-verlauf';
+  var canvas = document.getElementById(canvasId);
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  var labels, values, yMin, yMax, yCallback;
+  if (isTraining) {
+    labels = raw.map(function(e){ return 'Turn ' + e.turn; });
+    values = raw.map(function(e){ return e.wert; });
+    yMin = -5; yMax = 5;
+    yCallback = function(v){ return v > 0 ? '+' + v : v; };
+  } else {
+    labels = raw.map(function(e){ return e.ts || ''; });
+    values = raw.map(function(e){ return e.wert; });
+    yMin = 0; yMax = 100;
+    yCallback = function(v){ return v; };
+  }
+
+  try {
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          borderColor: '#00D4AA',
+          backgroundColor: 'rgba(0,212,170,0.08)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: '#00D4AA'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            ticks: { color: '#6B7280', font: { family: 'Inter', size: 12 } },
+            grid:  { color: 'rgba(0,0,0,0.06)' }
+          },
+          y: {
+            min: yMin, max: yMax,
+            ticks: { color: '#6B7280', font: { family: 'Inter', size: 12 }, callback: yCallback, stepSize: isTraining ? 1 : undefined },
+            grid:  { color: 'rgba(0,0,0,0.06)' }
+          }
+        }
+      }
+    });
+  } catch (err) {
+    console.warn('[07.1] Chart init failed:', err);
+    canvas.outerHTML = '<div class="n-session-detail-empty"><p>Verlauf konnte nicht geladen werden. Bitte erneut versuchen — falls das Problem bleibt, melde dich.</p></div>';
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+})();
+</script>
 {% endblock %}
