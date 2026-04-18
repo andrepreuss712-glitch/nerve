@@ -74,20 +74,21 @@
         {% set behandelt_pct = ((einw_ok / einw_total) * 100) | round(0, 'floor') if einw_total > 0 else 0 %}
         {% set rede_avg = conv.redeanteil_avg if conv.redeanteil_avg is not none else 0 %}
         {% set skript_pct = conv.skript_abdeckung if conv.skript_abdeckung is not none else 0 %}
+        {# Fix A (07.1 UAT-R1): Gewichtungs-% aus Label entfernt — als dezenter title-Tooltip am n-label. #}
         <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Kaufbereitschaft Ende (40%)</span><span>{{ kb_pct }} / 100</span></div>
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label" title="Gewichtung 40% im Gesamt-Score">Kaufbereitschaft Ende</span><span>{{ kb_pct }} / 100</span></div>
           <div class="n-session-detail-minibar"><span style="--w: {{ kb_pct }}%"></span></div>
         </div>
         <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Einwände behandelt (30%)</span><span>{{ einw_ok }} / {{ einw_total }}</span></div>
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label" title="Gewichtung 30% im Gesamt-Score">Einwände behandelt</span><span>{{ einw_ok }} / {{ einw_total }}</span></div>
           <div class="n-session-detail-minibar"><span style="--w: {{ behandelt_pct }}%"></span></div>
         </div>
         <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Redeanteil (20%)</span><span>{{ rede_avg | round(0, 'floor') }}%</span></div>
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label" title="Gewichtung 20% im Gesamt-Score">Redeanteil</span><span>{{ rede_avg | round(0, 'floor') }}%</span></div>
           <div class="n-session-detail-minibar"><span style="--w: {{ rede_avg }}%"></span></div>
         </div>
         <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Skript-Abdeckung (10%)</span><span>{{ skript_pct | round(0, 'floor') }}%</span></div>
+          <div class="n-session-detail-breakdown-row-inner"><span class="n-label" title="Gewichtung 10% im Gesamt-Score">Skript-Abdeckung</span><span>{{ skript_pct | round(0, 'floor') }}%</span></div>
           <div class="n-session-detail-minibar"><span style="--w: {{ skript_pct }}%"></span></div>
         </div>
       {% endif %}
