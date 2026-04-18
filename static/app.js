@@ -1134,7 +1134,7 @@ async function loadPostcallAnalysis(d) {
     const json = await res.json();
     loading.style.display = 'none';
     if (!json.vorschläge || json.vorschläge.length === 0) {
-      list.innerHTML = '<div style="color:var(--page-text-secondary);font-size:13px">Keine Vorschläge fuer diesen Call.</div>';
+      list.innerHTML = '<div style="color:var(--page-text-secondary);font-size:13px">Keine Vorschläge für diesen Call.</div>';
       return;
     }
     renderLernkartenVorschläge(json.vorschläge, list);

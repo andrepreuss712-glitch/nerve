@@ -144,7 +144,7 @@
       '<path d="M13 8C13 8 11 8 10 10C9 12 8 15 10 18C12 21 14 23 16 25C18 27 20 29 23 31C26 33 29 32 31 31C33 30 33 28 33 28L29 24C29 24 27 25 26 25C25 25 24 24 22 22C20 20 19 19 19 18C19 17 20 15 20 15L16 11C16 11 15 8 13 8Z" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
       '</svg></div>',
       '<div class="nav-live-card-title">Cold Call</div>',
-      '<div class="nav-live-card-desc">Nur deine Stimme wird analysiert.<br>Kein Kunden-Audio verarbeitet.<br>EWB-Buttons fuer manuelle Einwand-Trigger.</div>',
+      '<div class="nav-live-card-desc">Nur deine Stimme wird analysiert.<br>Kein Kunden-Audio verarbeitet.<br>EWB-Buttons für manuelle Einwand-Trigger.</div>',
       '</div>',
       '<div class="nav-live-card" id="lnr-card-meeting">',
       '<div class="nav-live-card-icon">',
@@ -238,7 +238,7 @@
       '<div class="launcher-actions">',
       '<button class="launcher-btn-ghost" id="lnr-step3-back">&#8592; Zurück</button>',
       '<button class="launcher-btn-ghost" id="lnr-step3-skip">Überspringen</button>',
-      '<button class="launcher-btn-primary" id="lnr-step3-run">Analyse durchfuehren</button>',
+      '<button class="launcher-btn-primary" id="lnr-step3-run">Analyse durchführen</button>',
       '</div>',
       '</div>'
     ].join('');
@@ -251,7 +251,7 @@
     document.getElementById('lnr-step3-skip').onclick = function () {
       saveFormData();
       // Confirmation
-      if (!confirm('Sind Sie sicher, dass Sie die PreCall-Analyse überspringen moechten?')) return;
+      if (!confirm('Sind Sie sicher, dass Sie die PreCall-Analyse überspringen möchten?')) return;
       state.precallBriefing = null;
       state.step = 5;
       renderStep();
@@ -319,7 +319,7 @@
       })
       .then(function (data) {
         if (loading) loading.style.display = 'none';
-        if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchfuehren'; }
+        if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchführen'; }
         if (data.error) {
           var errMsg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
           if (errEl2) { errEl2.textContent = errMsg; errEl2.style.display = 'block'; }
@@ -337,7 +337,7 @@
       })
       .catch(function (err) {
         if (loading) loading.style.display = 'none';
-        if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchfuehren'; }
+        if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchführen'; }
         var msg = (err && err.message) ? err.message : String(err);
         if (errEl2) { errEl2.textContent = msg; errEl2.style.display = 'block'; }
       });
@@ -450,7 +450,7 @@
       state.skripte.length > 0
         ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Skript</label><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
         : '',
-      '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto' + (skriptPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (skriptPreview || (state.skripte.length > 0 ? 'Skript auswählen fuer Vorschau' : '')) + '</div>',
+      '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto' + (skriptPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (skriptPreview || (state.skripte.length > 0 ? 'Skript auswählen für Vorschau' : '')) + '</div>',
       '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4"></textarea>',
       state.skripte.length > 0
         ? '<button type="button" id="lnr-skript-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
@@ -461,7 +461,7 @@
         ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
         : '',
       '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (openerPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">'
-        + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswählen fuer Vorschau' : (legacyOpener ? escHtml(legacyOpener) : 'Kein Opener hinterlegt'))) + '</div>',
+        + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswählen für Vorschau' : (legacyOpener ? escHtml(legacyOpener) : 'Kein Opener hinterlegt'))) + '</div>',
       '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>',
       (state.openerItems.length > 0 || legacyOpener)
         ? '<button type="button" id="lnr-opener-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
@@ -504,7 +504,7 @@
         var preview = document.getElementById('lnr-skript-preview');
         if (preview) {
           var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
-          preview.textContent = sk ? sk.inhalt : 'Skript auswählen fuer Vorschau';
+          preview.textContent = sk ? sk.inhalt : 'Skript auswählen für Vorschau';
           preview.style.fontStyle = sk ? 'normal' : 'italic';
           preview.style.color = sk ? '' : 'var(--page-text-muted)';
         }
@@ -519,7 +519,7 @@
         var preview = document.getElementById('lnr-opener-preview');
         if (preview) {
           var op = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
-          preview.textContent = op ? op.inhalt : 'Opener auswählen fuer Vorschau';
+          preview.textContent = op ? op.inhalt : 'Opener auswählen für Vorschau';
           preview.style.fontStyle = op ? 'normal' : 'italic';
           preview.style.color = op ? '' : 'var(--page-text-muted)';
         }
@@ -558,7 +558,7 @@
       if (ta.style.display === 'none') {
         // Switch to edit mode — populate textarea with current preview text
         var currentText = preview ? preview.textContent : '';
-        if (currentText && currentText !== 'Skript auswählen fuer Vorschau' && currentText !== 'Opener auswählen fuer Vorschau' && currentText !== 'Kein Opener hinterlegt') {
+        if (currentText && currentText !== 'Skript auswählen für Vorschau' && currentText !== 'Opener auswählen für Vorschau' && currentText !== 'Kein Opener hinterlegt') {
           ta.value = currentText;
         }
         if (preview) preview.style.display = 'none';
@@ -600,7 +600,7 @@
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center';
     overlay.innerHTML = '<div style="background:var(--page-bg,#fff);border:1px solid var(--glass-border);border-radius:12px;padding:24px;max-width:400px;width:90%;text-align:center">'
       + '<div style="font-size:15px;font-weight:700;margin-bottom:12px">' + label + ' auch im Profil ändern?</div>'
-      + '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:16px">Die Änderung gilt sonst nur fuer diesen Call.</div>'
+      + '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:16px">Die Änderung gilt sonst nur für diesen Call.</div>'
       + '<div style="display:flex;gap:10px;justify-content:center">'
       + '<button id="lnr-save-no" style="padding:8px 20px;border:1px solid var(--glass-border);border-radius:8px;background:none;color:var(--page-text-color);cursor:pointer;font-size:13px">Nur dieser Call</button>'
       + '<button id="lnr-save-yes" style="padding:8px 20px;border:none;border-radius:8px;background:#00D4AA;color:#06060a;cursor:pointer;font-weight:700;font-size:13px">Im Profil speichern</button>'
@@ -624,7 +624,7 @@
   }
 
   // ── Consent-Modal (Meeting-Modus DSGVO Einwilligung) ──────────────────────
-  var CONSENT_DEFAULT_TEXT = 'Kurz vorab \u2014 ich lasse mich gerade von einem Assistenzsystem unterstützen, das unser Gespräch mitliest und mir hilft, keine Audioaufnahme. Passt das fuer Sie?';
+  var CONSENT_DEFAULT_TEXT = 'Kurz vorab \u2014 ich lasse mich gerade von einem Assistenzsystem unterstützen, das unser Gespräch mitliest und mir hilft, keine Audioaufnahme. Passt das für Sie?';
 
   function _showConsentModal(callback) {
     var overlay = document.getElementById('consent-overlay');
@@ -855,7 +855,7 @@
     if (typeof io !== 'undefined') { cb(); return; }
     var script = document.createElement('script');
     // Phase 06.6 / POLISH-19: Lokal gehostet statt CDN (DSGVO: keine Third-Party-Requests).
-    // Version 4.7.2 ist byte-identisch zum frueheren cdnjs-Load.
+    // Version 4.7.2 ist byte-identisch zum früheren cdnjs-Load.
     script.src = '/static/vendor/socket.io.min.js';
     script.onload = function () { cb(); };
     script.onerror = function () { console.error('[NerveLauncher] Socket.IO local load failed'); };
@@ -927,7 +927,7 @@
       };
       source.connect(workletNode);
       workletNode.connect(audioCtx.destination);
-      // D-16: AnalyserNode parallel zum Worklet — fuer Mic-Level-Bars, stoert Worklet-Streaming nicht
+      // D-16: AnalyserNode parallel zum Worklet — für Mic-Level-Bars, stoert Worklet-Streaming nicht
       var analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.7;
@@ -1120,7 +1120,7 @@
 
   function _wirePipButtons(pipWindow) {
     // 06.1-r2 round3: EVENT-DELEGATION am pip-Document-Level — bulletproof gegen
-    // alle DOM-Re-Renders und PiP-Context-Quirks. EIN Listener faengt alle Klicks
+    // alle DOM-Re-Renders und PiP-Context-Quirks. EIN Listener fängt alle Klicks
     // auf Beenden und EWB-Buttons per .closest()-Matching.
     pipWindow.document.addEventListener('click', function (ev) {
       var t = ev.target;
@@ -1221,7 +1221,7 @@
     var micBtnShow = pipEl('pip-mic-indicator');
     if (micBtnShow) micBtnShow.style.display = 'inline-flex';
 
-    // D-03: Opener wandert in den Teleprompter als Block 0 — Slot A bleibt leer fuer erste KI-Antwort
+    // D-03: Opener wandert in den Teleprompter als Block 0 — Slot A bleibt leer für erste KI-Antwort
     // (keine Slot-0-Zuweisung mehr; beide Slots starten mit "Warte auf Gesprächsinhalt..." Default-Markup)
 
     // Initialize teleprompter (D-11, D-12)
@@ -1236,7 +1236,7 @@
     // 06.1-r2 BUG-14c final: Button-Label = kurzlabel ODER kategorie (nur diese zwei).
     // Kein Truncation, kein name/einwand-Fallback. Dedup per Label (case-insensitive) —
     // mehrere Einwände ohne kurzlabel mit gleicher Kategorie kollabieren bewusst zu
-    // einem Button (Fix: kurzlabel im Profil pflegen fuer distinkte Buttons).
+    // einem Button (Fix: kurzlabel im Profil pflegen für distinkte Buttons).
     // data-typ = Label, matched gegen dieselbe Chain in _triggerEwb + Backend.
     var seen = {};
     var items = [];
@@ -1264,7 +1264,7 @@
   function _triggerEwb(typ, btn) {
     // 06.1-r2 r3: Manual-EWB = deterministisch aus profile.einwaende rendern.
     // Keine Claude-Call-Latenz, keine leeren Slots wenn Claude einwand=False meldet.
-    // Backend bekommt 'manual_ewb' nur noch fuer Klick-Tracking (postcall-Analytics).
+    // Backend bekommt 'manual_ewb' nur noch für Klick-Tracking (postcall-Analytics).
     console.log('[NerveLauncher] EWB trigger:', typ);
     var einwaende = (state.profileDaten && state.profileDaten.einwaende) || [];
     var match = null;
@@ -1291,7 +1291,7 @@
       slot1Body.textContent = 'Variante wird gebaut\u2026';
       slot1Body.classList.add('pip-streaming');
     }
-    // Klick + Variante-Request ans Backend. Backend loggt Klick (ewb_clicks fuer
+    // Klick + Variante-Request ans Backend. Backend loggt Klick (ewb_clicks für
     // postcall-Analytics) UND streamt kontextbezogene Haiku-Variante in Slot 1.
     if (state.socket && state.socket.connected) {
       state.socket.emit('manual_ewb', { text: typ, line_id: 'ewb_pip_' + Date.now(), slot: 1 });
@@ -1312,7 +1312,7 @@
     state.socket.on('pip_stream_start', function (d) {
       if (!d) return;
       var slot = d.slot || 0;
-      // 06.2: Latenz-Log fuer Slot 1 (erstes Token nach keyword_einwand_match)
+      // 06.2: Latenz-Log für Slot 1 (erstes Token nach keyword_einwand_match)
       if (slot === 1 && state.slot0LastKeywordAt) {
         var slot1Delta = Date.now() - state.slot0LastKeywordAt;
         console.log('[Latency] Slot1 first token', slot1Delta, 'ms after keyword_einwand_match');
@@ -1375,7 +1375,7 @@
       if (body) body.classList.remove('pip-streaming');
       if (container) container.classList.remove('pip-slot-streaming');
 
-      // 06.2: Keyword-Match-Schutz fuer Slot 0.
+      // 06.2: Keyword-Match-Schutz für Slot 0.
       // Wenn keyword_einwand_match bereits innerhalb der letzten 3s Slot 0 gerendert hat
       // UND Claude denselben Einwand-Typ erkennt, bleibt der Profil-Text stehen.
       // Bei abweichendem Typ: normale Render-Logik (Claude korrigiert Keyword-Falscherkennung).
@@ -1427,7 +1427,7 @@
     // Coaching-Listener entfernt (Phase 06.6). Backend emittet den Event nicht mehr
     // und die Live-Anzeige im PiP war kontraproduktiv — Coaching-Tipps wurden über
     // die EWB-Antwort in Slot 1 geschrieben ("TIPP"-Label ueberschrieb "ANTWORT A").
-    // Coaching-Daten bleiben fuer Post-Call-Scoring erhalten (conversation_log +
+    // Coaching-Daten bleiben für Post-Call-Scoring erhalten (conversation_log +
     // ft_assistant_events DB-Write server-seitig).
 
     state.socket.on('disconnect', function () {
@@ -1517,7 +1517,7 @@
       }
     }
 
-    // Wenn kein nutzbares Feld vorliegt: faellt der Slot in den "Warte..."-Default statt JSON anzuzeigen
+    // Wenn kein nutzbares Feld vorliegt: fällt der Slot in den "Warte..."-Default statt JSON anzuzeigen
     if (!argument && !text && !isEinwand) {
       body.textContent = 'Warte auf Gespr\u00e4chsinhalt\u2026';
       return;
@@ -1607,7 +1607,7 @@
       return;
     }
 
-    // D-03: Opener als erster Teleprompter-Block (Phase 0 = Opener fuer KI-Position-Erkennung)
+    // D-03: Opener als erster Teleprompter-Block (Phase 0 = Opener für KI-Position-Erkennung)
     var openerText = '';
     if (state._editedOpenerText) {
       openerText = state._editedOpenerText;
@@ -1784,13 +1784,13 @@
     _resetLiveState();
 
     // 06.1-r2 BUG-9: UI SOFORT umschalten mit Loading-Skeleton. Backend-Response
-    // fuellt Score/Tags nachtraeglich.
+    // füllt Score/Tags nachträglich.
     // BUG-15b: KEIN resizeTo auf Postcall — Chrome merkt sich die zuletzt gesetzte
     // PiP-Größe und ignoriert spätere requestWindow-Hints. PiP bleibt bei 480x900,
     // Postcall-Content wird im bestehenden Fenster zentriert.
     _showPostcallLoading();
 
-    // BUG-11 r5 ROOT CAUSE: endCall fetch kann spaet resolven während bereits ein
+    // BUG-11 r5 ROOT CAUSE: endCall fetch kann spät resolven während bereits ein
     // neuer Call läuft. Dann würde _showPostcall die Postcall-Section über die
     // Live-UI legen, der User klickt "Nächster Call" aus altem Postcall und killt
     // so den aktiven Call. Capture-Generation beim Fetch-Start, abbrechen wenn
@@ -1870,7 +1870,7 @@
 
   function _showPostcall(postcall) {
     // 06.1-r2 BUG-10: Leerer Call (keine Wörter, keine Einwände) -> kein Score, stattdessen
-    // "Kein Gespräch erkannt" — 45% fuer leere Calls verwirrt nur.
+    // "Kein Gespräch erkannt" — 45% für leere Calls verwirrt nur.
     var berater = (postcall && postcall.berater_words) || 0;
     var kunde = (postcall && postcall.kunde_words) || 0;
     var einwTotal = ((postcall && postcall.einwaende) || []).length;
@@ -1963,7 +1963,7 @@
     var convId = state.lastConvId;
     _cleanup();
     if (convId) {
-      // POLISH-23 FIX: Route heisst '/session/<id>', NICHT '/logs/<id>' —
+      // POLISH-23 FIX: Route heißt '/session/<id>', NICHT '/logs/<id>' —
       // letztere existiert in routes/logs_routes.py gar nicht. Der alte
       // BUG-08-Fix hat nur die convId-Storage gefixt, aber weiter auf die
       // falsche URL gezeigt. Session-Detail liegt in routes/dashboard.py.

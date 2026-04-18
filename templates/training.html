@@ -377,7 +377,7 @@
         <div class="t-section-label"><span class="t-step-num">2</span> Schwierigkeit</div>
         <div class="t-diff-grid" id="t-diff-section" style="grid-template-columns:repeat(3, 1fr);">
           {% for key, diff in schwierigkeiten.items() %}
-          {% if key != 'sekretaerin' %}
+          {% if key != 'sekretärin' %}
           <div class="t-diff-card n-glass {% if key == 'mittel' %}t-diff-active{% endif %}"
                data-key="{{ key }}" onclick="selectDiff('{{ key }}')">
             <div class="t-diff-icon">
@@ -431,7 +431,7 @@
             <div class="t-diff-label">Direktgespräch</div>
             <div class="t-diff-desc">Direkt zum Entscheider durchgestellt.</div>
           </div>
-          <div class="t-diff-card n-glass" data-anruftyp="sekretaerin" onclick="selectAnrufTyp('sekretaerin')">
+          <div class="t-diff-card n-glass" data-anruftyp="sekretärin" onclick="selectAnrufTyp('sekretärin')">
             <div class="t-diff-icon">
               <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="14" cy="13" r="4" stroke="#8B5CF6" stroke-width="2"/>
@@ -444,11 +444,11 @@
             <div class="t-diff-desc">Erst die Sekretärin überwinden, dann den Entscheider überzeugen.</div>
           </div>
         </div>
-        <!-- Sekretaerin-Typ Sub-Selection (shown when sekretaerin selected) -->
+        <!-- Sekretärin-Typ Sub-Selection (shown when sekretärin selected) -->
         <div id="t-sektyp-cards" style="display:none; margin-top:16px;">
           <div class="t-section-label" style="font-size:13px;">Sekretärin-Typ</div>
           <div class="t-diff-grid" style="grid-template-columns: repeat(3, 1fr);">
-            {% for key, sek in sekretaerin_types.items() %}
+            {% for key, sek in sekretärin_types.items() %}
             <div class="t-diff-card n-glass {% if loop.first %}t-diff-active{% endif %}"
                  data-sektyp="{{ key }}" onclick="selectSekTyp('{{ key }}', this)">
               <div class="t-diff-icon" style="font-size:24px;">{{ sek.icon }}</div>
@@ -802,7 +802,7 @@ let tUI             = (TRAINING_LANGUAGES[currentLanguage] || TRAINING_LANGUAGES
 let selectedScenario= null;
 let selectedDiff    = 'mittel';
 let trainingModus   = 'guided';   // 'free' | 'guided'
-let selectedAnrufTyp = 'direkt';   // 'direkt' | 'sekretaerin'
+let selectedAnrufTyp = 'direkt';   // 'direkt' | 'sekretärin'
 let selectedSekTyp   = 'blockerin'; // 'blockerin' | 'helferin' | 'abwimmlerin'
 let selectedPersonalityTypeId = null;
 let generatedPersonality = null;  // holds temp generated data before save
@@ -843,8 +843,8 @@ function selectAnrufTyp(typ) {
   document.querySelectorAll('#t-anruftyp-section > .t-diff-grid > .t-diff-card').forEach(c => c.classList.remove('t-diff-active'));
   const card = document.querySelector('.t-diff-card[data-anruftyp="' + typ + '"]');
   if (card) card.classList.add('t-diff-active');
-  // Show/hide sekretaerin type sub-cards
-  document.getElementById('t-sektyp-cards').style.display = (typ === 'sekretaerin') ? '' : 'none';
+  // Show/hide sekretärin type sub-cards
+  document.getElementById('t-sektyp-cards').style.display = (typ === 'sekretärin') ? '' : 'none';
 }
 
 function selectSekTyp(key, el) {
@@ -1003,7 +1003,7 @@ async function startTraining() {
       modus:        trainingModus,
       einwand_typ:  _quickEinwand,
       anruf_typ:    selectedAnrufTyp,
-      sekretaerin_typ: selectedSekTyp,
+      sekretärin_typ: selectedSekTyp,
     };
     if (selectedPersonalityTypeId) {
       startPayload.personality_type_id = selectedPersonalityTypeId;
@@ -1059,7 +1059,7 @@ async function startTraining() {
       chefName:      data.persona.chef_name,
       chefPosition:  data.persona.chef_position,
       sekName:       data.persona.sek_name,
-      hatSek:        data.hat_sekretaerin,
+      hatSek:        data.hat_sekretärin,
     };
     apiPhase = data.phase;
 
@@ -1113,8 +1113,8 @@ function initChat(data) {
   const helpBtn2 = document.getElementById('t-helpBtn');
   if (helpBtn2) helpBtn2.textContent = tUI.hilfe_btn || '💡 Was soll ich sagen?';
 
-  const role = data.hat_sekretaerin ? (tUI.phase_sek || 'Sekretärin') : (tUI.phase_kunde || 'Kunde');
-  const name = data.hat_sekretaerin ? sessionMeta.sekName : sessionMeta.chefName;
+  const role = data.hat_sekretärin ? (tUI.phase_sek || 'Sekretärin') : (tUI.phase_kunde || 'Kunde');
+  const name = data.hat_sekretärin ? sessionMeta.sekName : sessionMeta.chefName;
   addInMsg(data.kunde_text, data.kunde_audio, role, name);
 
   // D-07: show mood indicator on start only for Einsteiger (leicht)
@@ -1129,7 +1129,7 @@ function updateChatHeader() {
   const who = document.getElementById('t-chatWho');
   const sub = document.getElementById('t-chatSub');
   if (!who) return;
-  if (apiPhase === 'sekretaerin') {
+  if (apiPhase === 'sekretärin') {
     who.textContent = sessionMeta.sekName  || (tUI.phase_sek || 'Sekretärin');
     sub.textContent = (tUI.phase_sek || 'Sekretariat') + ' · ' + sessionMeta.firma;
   } else {
@@ -1262,8 +1262,8 @@ async function sendToKI(text) {
       addSysMsg((tUI.durchgestellt || '✓ Durchgestellt zu') + ' ' + sessionMeta.chefName);
       addInMsg(data.chef_text, data.chef_audio, tUI.phase_kunde || 'Kunde', sessionMeta.chefName);
     } else {
-      const role = (apiPhase === 'sekretaerin') ? (tUI.phase_sek || 'Sekretärin') : (tUI.phase_kunde || 'Kunde');
-      const name = (apiPhase === 'sekretaerin') ? sessionMeta.sekName : sessionMeta.chefName;
+      const role = (apiPhase === 'sekretärin') ? (tUI.phase_sek || 'Sekretärin') : (tUI.phase_kunde || 'Kunde');
+      const name = (apiPhase === 'sekretärin') ? sessionMeta.sekName : sessionMeta.chefName;
       addInMsg(data.kunde_text, data.kunde_audio, role, name);
     }
 
@@ -1549,12 +1549,12 @@ function buildScoring(data) {
     '</div>';
   }).join('');
 
-  const staerkenHtml = (s.staerken || []).map(x =>
+  const stärkenHtml = (s.stärken || []).map(x =>
     '<div class="t-bullet"><span>✅</span><span>' + escH(x) + '</span></div>').join('');
   const verbHtml = (s.verbesserungen || []).map(x =>
     '<div class="t-bullet"><span>⚠️</span><span>' + escH(x) + '</span></div>').join('');
 
-  const sekTag = data.sekretaerin_ueberwunden
+  const sekTag = data.sekretärin_ueberwunden
     ? '<span class="t-score-tag gold">✓ Sekretärin</span>' : '';
 
   // ── Modus motivation block ─────────────────────────────────────────────────
@@ -1653,7 +1653,7 @@ function buildScoring(data) {
     '<div id="t-mood-chart-container" class="t-score-box" style="display:none;"><div class="t-score-box-title">Stimmungsverlauf</div><div style="position:relative;height:180px;"><canvas id="t-mood-chart"></canvas></div></div>' +
     '<div id="t-wendepunkte-detail" style="display:none; margin-bottom:24px;"></div>' +
     (catsHtml ? '<div class="t-cats">' + catsHtml + '</div>' : '') +
-    (staerkenHtml ? '<div class="t-score-box"><div class="t-score-box-title">Stärken</div>' + staerkenHtml + '</div>' : '') +
+    (stärkenHtml ? '<div class="t-score-box"><div class="t-score-box-title">Stärken</div>' + stärkenHtml + '</div>' : '') +
     (verbHtml ? '<div class="t-score-box"><div class="t-score-box-title">Verbesserungspotenzial</div>' + verbHtml + '</div>' : '') +
     (s.zusammenfassung ? '<div class="t-summary">' + escH(s.zusammenfassung) + '</div>' : '') +
     livePreviewHtml +
@@ -1896,13 +1896,13 @@ async function handleAufgelegt(data) {
     grund: data.hangup_reason || 'Kunde hat aufgelegt',
     dauer: document.getElementById('t-timer') ? document.getElementById('t-timer').textContent : '---',
     turns: data.turn_count || 0,
-    hat_sekretaerin: data.hat_sekretaerin || false,
+    hat_sekretärin: data.hat_sekretärin || false,
     sek_ueberwunden: data.sek_ueberwunden || false,
   });
 }
 
 function showHangupPopup(stats) {
-  const title = (stats.hat_sekretaerin && !stats.sek_ueberwunden)
+  const title = (stats.hat_sekretärin && !stats.sek_ueberwunden)
     ? 'Sekretärin hat abgeblockt'
     : 'Anruf beendet';
   document.getElementById('t-hangup-title').textContent = title;
@@ -1910,7 +1910,7 @@ function showHangupPopup(stats) {
   html += '<div><span style="color:#A0AEC0;">Grund:</span> ' + escH(stats.grund) + '</div>';
   html += '<div><span style="color:#A0AEC0;">Dauer:</span> ' + escH(stats.dauer) + '</div>';
   html += '<div><span style="color:#A0AEC0;">Nachrichten:</span> ' + stats.turns + '</div>';
-  if (stats.hat_sekretaerin) {
+  if (stats.hat_sekretärin) {
     html += '<div><span style="color:#A0AEC0;">Sekretärin überwunden:</span> ' +
       (stats.sek_ueberwunden ? '<span style="color:#22C55E;">Ja</span>' : '<span style="color:#EF4444;">Nein</span>') + '</div>';
   }
@@ -2018,7 +2018,7 @@ function renderScenarioDropdown(list) {
     { key: 'leicht',      label: 'Leicht' },
     { key: 'mittel',      label: 'Mittel' },
     { key: 'schwer',      label: 'Schwer' },
-    { key: 'sekretaerin', label: 'Sekretärin + Chef' },
+    { key: 'sekretärin', label: 'Sekretärin + Chef' },
   ];
   const byDiff = {};
   list.forEach(s => {
