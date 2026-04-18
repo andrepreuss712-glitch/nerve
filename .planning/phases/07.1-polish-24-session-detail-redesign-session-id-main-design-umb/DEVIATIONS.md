@@ -1,0 +1,120 @@
+# Phase 07.1 — Deviations
+
+Diese Datei dokumentiert Abweichungen vom Plan, die während Phase-07.1-Ausführung
+auftraten. Quelle: automatische Rule-1/2/3-Fixes + UAT-Round-1-Findings.
+
+---
+
+## UAT Round 1 Findings (2026-04-18)
+
+Wave 3 Smoke-Test auf https://getnerve.app lieferte 6 launch-blockende Bugs. Alle
+atomar (1 Commit/Bug) gefixt auf `main`, dann CSS_VERSION-Bump + Re-Deploy + UAT-R2.
+
+### A — Score-Breakdown-Labels verwirrend
+
+- **Finding:** "Kaufbereitschaft Ende (40%)" las sich wie Metrik, nicht Gewichtung.
+- **Rule:** Rule 2 — Missing usability correctness (UX-Verständlichkeit).
+- **Fix:** Entfernte Gewichtungs-% aus Label-Text; Gewichtung als dezenter
+  `title="Gewichtung X% im Gesamt-Score"`-Tooltip am `.n-label`. Kein Extra-Icon,
+  kein Layout-Shift.
+- **Files:** `templates/session_detail.html` (Section 2 Live-Breakdown, 4 Rows)
+- **Commit:** `d359dc3`
+
+### B — kb_end (20) ≠ letzter kb_verlauf-Punkt (~31)
+
+- **Finding:** Score-Hero zeigte `conv.kb_end=20`, Chart-Endpunkt war `~31`. User
+  sah Widerspruch zwischen zwei "Ende"-Werten.
+- **Rule:** Rule 1 — Data-consistency bug.
+- **Fix:** In `routes/dashboard.py` `session_detail` `kb_end_effective` aus
+  letztem `kb_verlauf[-1].wert` abgeleitet (Fallback: `conv.kb_end`). Temporäres
+  Setzen von `conv.kb_end = kb_end_effective` für `_calc_call_score`-Aufruf,
+  Original danach restauriert. Template-Context um `kb_end_effective` erweitert;
+  Section 1 Meta ("Result:") und Section 2 Live-Breakdown (`kb_pct`) nutzen jetzt
+  den effektiven Wert.
+- **Files:** `routes/dashboard.py`, `templates/session_detail.html`
+- **Commit:** `8aec4af`
+
+### C — Einwand-Timeline zeigt Empty-State (0) trotz einwaende_gesamt=1
+
+- **Finding:** `events | length == 0` obwohl `conv.einwaende_gesamt == 1` — User
+  sah "Einwand-Timeline (0)" und komplett-leeren Empty-State, obwohl KI einen
+  Einwand erkannt hatte.
+- **Root cause:** `ObjectionEvent` wird NUR bei EWB-Button-Klick persistiert
+  (`routes/app_routes.py:437`, aus `ls.state['ewb_clicks']`). `einwaende_gesamt`
+  kommt aus Claude-Analyse-Counter und ist unabhängig vom Button-State. Wenn
+  Einwand erkannt aber kein Button geklickt → Delta.
+- **Rule:** Rule 2 — Missing information (User sah nicht, dass Einwand erkannt wurde).
+- **Fix:** Keine Query-Änderung (Query war schon ungefiltert). Template:
+  - Count-Header zeigt `max(einwaende_gesamt, events|length)`
+  - Zweiter Empty-State für "einwaende_gesamt > 0 aber keine Events" mit
+    erklärendem Text ("erkannt, aber ohne Button-Klick beantwortet")
+  - Hint-Paragraph wenn Delta vorhanden
+  - `n-session-detail-timeline-row--danger` CSS-Modifier für `success=False`-Events
+    (left-border rot, leichter roter Hintergrund)
+- **Files:** `templates/session_detail.html` (Section 4), `static/nerve.css` (2 neue CSS-Klassen)
+- **Commit:** `4e42fb7`
+
+### D — Redeanteil 0.0% Trigger bei Cold Call (OBS-02)
+
+- **Finding:** Cold-Call-Sessions zeigten "Du redest nur 0% — zu wenig"
+  Recommendation, obwohl Cold Call keine Speaker-Diarization hat (berater_words=0,
+  kunde_words=0 → redeanteil_avg=0.0).
+- **Rule:** Rule 1 — False-positive recommendation bug.
+- **Fix:** In `_derive_practice_recommendations` Redeanteil-Regel geblockt wenn
+  `session_mode == 'cold_call'`. Gate via `_has_diarization = (_mode != 'cold_call')`.
+  Kommentar "OBS-02" im Code für Traceability.
+- **Files:** `routes/app_routes.py` (`_derive_practice_recommendations`, Regel 3 Live-Branch)
+- **Commit:** `b505cae`
+
+### E — Chart-Achsen unbeschriftet
+
+- **Finding:** Chart.js-Diagramme zeigten nur Tick-Werte ohne Achsen-Titel. User
+  musste raten was Y-Achse bedeutet.
+- **Rule:** Rule 2 — Missing accessibility/orientation info.
+- **Fix:** `scales.x.title` + `scales.y.title` mit Chart.js `title`-Config
+  ergänzt, styled wie Tick-Color (#6B7280, Inter 12px 600w):
+  - Live-Chart: Y = "Kaufbereitschaft (%)", X = "Zeit (Sekunden)"
+  - Training-Chart: Y = "Stimmung", X = "Turn"
+  (X-Label für Training ist "Turn" statt "Zeit (Sekunden)" weil `labels = 'Turn '+e.turn`
+  gemapped wird — semantisch korrekter als Sekunden.)
+- **Files:** `templates/session_detail.html` (Chart.js-Init-Block)
+- **Commit:** `b0e2837`
+
+### F — Umlauten-Bug in _derive_practice_recommendations
+
+- **Finding:** ASCII-Escapes (`Uebe`, `Fuehre`, `Gespraech`, `aehnlich`,
+  `Persoenlichkeit`, `frueher`, `haeufig`, `Schwaeche`, `Zuhoeren`) in
+  User-facing `observation`/`explanation`-Strings.
+- **Rule:** Rule 1 + CLAUDE.md Umlauten-Regel — User-facing Text MUSS echte Umlaute
+  nutzen; nur Code-Identifier (`training_focus`, `training_url`, dict-keys) bleiben
+  ASCII.
+- **Fix:** Alle 8 User-facing-Strings in `_derive_practice_recommendations` auf
+  echte Umlaute (Übe, Führe, Gespräch, ähnlich, Persönlichkeit, früher, häufig,
+  Schwäche, Zuhören). Dict-keys/Focus-Slugs/URL bleiben ASCII. Verifiziert mit
+  `inspect.getsource` + Assertions (alle Umlaute vorhanden, keine Escapes mehr).
+  Datei bleibt UTF-8 ohne BOM, Python-Import clean.
+- **Files:** `routes/app_routes.py` (`_derive_practice_recommendations`)
+- **Commit:** `1a01ff1`
+
+---
+
+## Abschluss (2026-04-18)
+
+Alle 6 UAT-R1-Findings atomar committet + CSS_VERSION auf `20260418-3` gebumpt
+für Browser-Cache-Invalidation. Re-Deploy via `bash deploy.sh` vorbereitet für
+UAT Round 2.
+
+**Commit-Chain (UAT-R1):**
+
+| # | Commit   | Finding                                                         |
+| - | -------- | --------------------------------------------------------------- |
+| A | `d359dc3` | remove weight-% from score-breakdown labels                    |
+| B | `8aec4af` | derive kb_end from kb_verlauf last point for consistency       |
+| C | `4e42fb7` | show all ObjectionEvents in timeline, mark failed as danger    |
+| D | `b505cae` | skip Redeanteil trigger for cold_call (OBS-02)                 |
+| E | `b0e2837` | add axis titles to kb/stimmung charts                          |
+| F | `1a01ff1` | fix umlaut escapes in practice-recommendations strings         |
+| — | (next)   | bump CSS_VERSION to 20260418-3 + document UAT-R1 fixes         |
+
+STATE.md / ROADMAP.md werden vom Orchestrator nach UAT-R2-Abschluss aktualisiert.
+SUMMARY `07.1-03-SUMMARY.md` wird vom Orchestrator amendiert.
