@@ -633,8 +633,6 @@ Plans:
 - [x] 06.1-03-PLAN.md — Mic-Indikator (D-13 bis D-16: 4 audio-level bars, WebAudio AnalyserNode, green/grey states, click-to-mute via track.enabled)
 - [x] 06.1-04-PLAN.md — Slider-Redesign (D-17 bis D-19: 140px iOS-style mit teal filled portion, touch hit-area, localStorage-clamp)
 
----
-
 ### Phase 06.2: Auto-Einwand-Erkennung Latenz-Architektur (INSERTED — BUG-10 Teil 2)
 
 **Goal:** Gefühlte Latenz bei Auto-Einwand-Erkennung von 2-2.5s auf <1s reduzieren. Lokaler Keyword-Klassifikator auf Deepgram-Interim-Transcripts rendert Slot 0 mit Profil-Antwort in <300ms (keine API-Latenz). Parallel startet Haiku-Variante für Slot 1 mit erstem Token in <1s. USP "KI erkennt Einwand automatisch" wird im Cold-Call benutzbar.
@@ -679,3 +677,31 @@ Plans:
 
 Plans:
 - [x] 06.5-01-PLAN.md — Meeting-Card direct-flow + Consent-Modal (HTML/CSS/JS) + startCall consent-gate + alten pip-section-consent komplett ausbauen
+
+### Phase 7: MAIN DESIGN — App-weite Design-Konsolidierung
+
+**Goal:** App-weite Design-Konsolidierung auf MAIN DESIGN: weisse Kacheln, schwarze Schrift, teal Akzent (#00D4AA), kein Gelb/Gold, Header-Schwarz nur im PiP, 1.5px Borders via `var(--n-border)` in nerve.css. Bulk-Migration Gelb/Gold -> Grau/Teal ueber 50+ Touchpoints. `data-theme` Dead-Code entfernt (kein Theme-Switch mehr). PiP auf light-Modus umgestellt. `.n-btn-accent` entfernt (teal als Primary). nerve.css Farb-Tokens (`--n-border`, `--n-accent`, ...) als Single Source of Truth. Umlaut-Regel kodifiziert: User-Text mit echten Umlauten, Code-Identifier ASCII (siehe CLAUDE.md) — /logs-Regression deswegen eingefangen.
+**Requirements:** POLISH (Main Design Konsolidierung)
+**Depends on:** Phase 06.5
+**Launch-relevant:** true
+**Plans:** N/A (retro-documented — direkt ohne GSD-Phase umgesetzt)
+**Completed:** 2026-04-18 (UAT green, 6 Commits, Daily Note 2026-04-18.md)
+
+Plans:
+- [x] (retro) Bulk-sed Gelb/Gold -> Grau/Teal ueber 50+ Touchpoints
+- [x] (retro) data-theme Dead-Code entfernt
+- [x] (retro) PiP light-Modus, Header-Schwarz nur im PiP
+- [x] (retro) .n-btn-accent entfernt, teal als Primary konsolidiert
+- [x] (retro) Umlaut-Regression-Fix + CLAUDE.md-Regel
+- [x] (retro) nerve.css Farb-Tokens als Single Source of Truth
+
+### Phase 07.1: POLISH-24 — Session-Detail-Redesign /session/<id> (INSERTED)
+
+**Goal:** Details-Seite `/session/<id>` komplett auf MAIN DESIGN umbauen (weisse Kacheln, 1.5px Borders, teal Akzent, keine Inline-Styles, `.n-session-detail-*` Klassenfamilie in nerve.css). 8 Sektionen von oben nach unten: (1) Header mit Session-ID/Modus-Badge/Datum/Dauer/Result, (2) Score-Hero mit Breakdown (kb_end 40% / behandelt-Rate 30% / redeScore 20% / skript 10%) + Trend vs Schnitt letzte 5, (3) Kaufbereitschafts-Verlauf als Chart.js-Chart mit X/Y-Achsen, (4) Einwand-Timeline chronologisch mit gewaehlter Option + erfolgreich-Badge, (5) Phasen-Visualisierung als horizontaler Strip ueber Call-Dauer, (6) Skript-Abdeckung Progress-Bar mit Block-Breakdown, (7) Painpoints-Liste (wenn vorhanden), (8) PreCall-Briefing collapsible (wenn vorhanden). Inkl. DB-Migration: Spalte `kb_verlauf TEXT` in `conversation_logs`, `/api/beenden` persistiert kb_verlauf als JSON. NICHT drin: Transkript (Phase 4.19), Lernkarten, Audio. Empty-States bei sparse Sessions. CSS_VERSION bumpen. Mobile-responsive. Zurueck-Navigation zu `/logs`.
+**Requirements:** POLISH-24
+**Depends on:** Phase 7
+**Launch-relevant:** true
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 07.1 to break down)
