@@ -339,17 +339,23 @@
   var canvas = document.getElementById(canvasId);
   if (!canvas || typeof Chart === 'undefined') return;
 
-  var labels, values, yMin, yMax, yCallback;
+  var labels, values, yMin, yMax, yCallback, yTitle, xTitle;
   if (isTraining) {
     labels = raw.map(function(e){ return 'Turn ' + e.turn; });
     values = raw.map(function(e){ return e.wert; });
     yMin = -5; yMax = 5;
     yCallback = function(v){ return v > 0 ? '+' + v : v; };
+    // Fix E (07.1 UAT-R1): Achsen-Titel fuer Training-Chart
+    yTitle = 'Stimmung';
+    xTitle = 'Turn';
   } else {
     labels = raw.map(function(e){ return e.ts || ''; });
     values = raw.map(function(e){ return e.wert; });
     yMin = 0; yMax = 100;
     yCallback = function(v){ return v; };
+    // Fix E (07.1 UAT-R1): Achsen-Titel fuer Live-Chart
+    yTitle = 'Kaufbereitschaft (%)';
+    xTitle = 'Zeit (Sekunden)';
   }
 
   try {
@@ -373,11 +379,15 @@
         plugins: { legend: { display: false } },
         scales: {
           x: {
+            // Fix E (07.1 UAT-R1): X-Achsen-Titel
+            title: { display: true, text: xTitle, color: '#6B7280', font: { family: 'Inter', size: 12, weight: '600' } },
             ticks: { color: '#6B7280', font: { family: 'Inter', size: 12 } },
             grid:  { color: 'rgba(0,0,0,0.06)' }
           },
           y: {
             min: yMin, max: yMax,
+            // Fix E (07.1 UAT-R1): Y-Achsen-Titel
+            title: { display: true, text: yTitle, color: '#6B7280', font: { family: 'Inter', size: 12, weight: '600' } },
             ticks: { color: '#6B7280', font: { family: 'Inter', size: 12 }, callback: yCallback, stepSize: isTraining ? 1 : undefined },
             grid:  { color: 'rgba(0,0,0,0.06)' }
           }
