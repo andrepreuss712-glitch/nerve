@@ -18,7 +18,7 @@
 .nerve-fb-card h3{margin:0 0 12px;color:#00D4AA}
 .nerve-fb-card label{display:block;margin:10px 0 6px;font-size:13px;color:#cbd5e1}
 .nerve-fb-card select,.nerve-fb-card textarea,.nerve-fb-card input[type=file]{
-  width:100%;padding:10px;border-radius:8px;border:1px solid #2D3748;
+  width:100%;padding:10px;border-radius:8px;border:1.5px solid #2D3748;
   background:#0D1117;color:#fff;box-sizing:border-box;font-family:inherit}
 .nerve-fb-card textarea{min-height:110px;resize:vertical}
 .nerve-fb-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}

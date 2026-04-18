@@ -13,14 +13,14 @@
 .tab-pane{display:none}
 .tab-pane.active{display:block}
 /* Cards */
-.settings-card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:22px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.settings-card{background:#FFFFFF;border:1.5px solid #E2E8F0;border-radius:12px;padding:22px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 .settings-card-title{font-size:14px;font-weight:700;margin-bottom:16px}
 /* Form */
 .form-group{margin-bottom:16px}
 .form-label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;
   color:#1a1a1a;text-transform:uppercase;margin-bottom:6px}
 .form-input,.form-select,.form-textarea{width:100%;background:#FFFFFF;
-  border:1px solid #E2E8F0;border-radius:8px;color:#1a1a1a;font-size:13px;
+  border:1.5px solid #E2E8F0;border-radius:8px;color:#1a1a1a;font-size:13px;
   padding:9px 12px;outline:none;font-family:inherit;transition:border-color .15s}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#00D4AA}
 .form-textarea{resize:vertical;min-height:80px;line-height:1.5}
@@ -35,7 +35,7 @@
 .toggle-desc{font-size:12px;color:#6B7280;margin-top:2px}
 .toggle{position:relative;width:36px;height:20px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0;position:absolute}
-.toggle-track{position:absolute;inset:0;background:#E2E8F0;border:1px solid #CBD5E1;
+.toggle-track{position:absolute;inset:0;background:#E2E8F0;border:1.5px solid #CBD5E1;
   border-radius:20px;cursor:pointer;transition:all .2s}
 .toggle input:checked + .toggle-track{background:#00D4AA;border-color:#00D4AA}
 .toggle-knob{position:absolute;top:3px;left:3px;width:12px;height:12px;background:#9CA3AF;
@@ -84,7 +84,7 @@
   display:flex;align-items:center;justify-content:center;opacity:0;
   pointer-events:none;transition:opacity .3s}
 .modal-overlay.open{opacity:1;pointer-events:all}
-.modal-box{background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid #00D4AA;
+.modal-box{background:#FFFFFF;border:1.5px solid #E2E8F0;border-top:3px solid #00D4AA;
   border-radius:12px;padding:28px;max-width:460px;width:90%;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
 .modal-title{font-size:18px;font-weight:700;margin-bottom:12px;color:#1a1a1a}
 .modal-text{font-size:14px;color:#374151;line-height:1.6;margin-bottom:18px}
@@ -94,7 +94,7 @@
 .btn-confirm-cancel{background:#e05c5c;color:#fff;border:none;border-radius:8px;
   padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 /* Success / info boxes */
-.info-box{background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:8px;
+.info-box{background:rgba(0,212,170,.06);border:1.5px solid rgba(0,212,170,.2);border-radius:8px;
   padding:12px 16px;font-size:13px;color:#374151;line-height:1.5;margin-top:12px}
 .info-box strong{color:#00D4AA}
 {% endblock %}
@@ -180,7 +180,7 @@
             Standard (professionell)
           </button>
           <button class="btn btn-sm" id="btn-stil-custom"
-            style="background:{% if g.user.dashboard_stil %}#00D4AA;color:#0D1117{% else %}#F0F2F5;color:#6B7280;border:1px solid #E2E8F0{% endif %}">
+            style="background:{% if g.user.dashboard_stil %}#00D4AA;color:#0D1117{% else %}#F0F2F5;color:#6B7280;border:1.5px solid #E2E8F0{% endif %}">
             Mein Stil
           </button>
         </div>
@@ -242,7 +242,7 @@
           {% if usage %}{{ usage.plan_name }}{% else %}{{ (g.org.plan_typ or 'Solo') | title }}{% endif %}
         </span>
         {% if g.org.is_early_access %}
-        <span style="background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+        <span style="background:rgba(0,212,170,.1);border:1.5px solid rgba(0,212,170,.2);
           color:#00D4AA;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700">EARLY ACCESS</span>
         {% endif %}
       </div>

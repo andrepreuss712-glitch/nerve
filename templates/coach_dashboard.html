@@ -3,14 +3,14 @@
 
 {% block extra_style %}
 .firma-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:8px}
-.firma-card{background:#0c0c18;border:1px solid #1a1a2e;border-radius:12px;padding:20px;
+.firma-card{background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:12px;padding:20px;
   cursor:pointer;transition:border-color .15s,transform .1s;display:flex;flex-direction:column;gap:10px}
 .firma-card:hover{border-color:#E8B040;transform:translateY(-2px)}
 .firma-card-name{font-size:15px;font-weight:700;color:#f0ebe0}
 .firma-card-meta{font-size:12px;color:#6b6b80;display:flex;gap:14px}
 .firma-card-meta span{display:flex;align-items:center;gap:5px}
 .firma-card-plan{font-size:10px;font-weight:700;letter-spacing:.06em;
-  padding:2px 8px;border-radius:20px;background:#1a1428;color:#9898d8;border:1px solid #303058;
+  padding:2px 8px;border-radius:20px;background:#1a1428;color:#9898d8;border:1.5px solid #303058;
   align-self:flex-start}
 .neue-firma-btn{display:flex;align-items:center;justify-content:center;gap:8px;
   background:#0c0c18;border:2px dashed #2e2e48;border-radius:12px;padding:20px;
@@ -22,13 +22,13 @@
 .co-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
   display:flex;align-items:center;justify-content:center;display:none}
 .co-modal-bg.open{display:flex}
-.co-modal{background:#0c0c18;border:1px solid #2e2e48;border-radius:14px;
+.co-modal{background:#0c0c18;border:1.5px solid #2e2e48;border-radius:14px;
   padding:28px;width:min(480px,90vw);max-height:90vh;overflow-y:auto}
 .co-modal-title{font-size:17px;font-weight:700;margin-bottom:20px}
 .co-modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
 
 /* Invite link box */
-.invite-box{background:#0e0e1a;border:1px solid #2e2e48;border-radius:8px;
+.invite-box{background:#0e0e1a;border:1.5px solid #2e2e48;border-radius:8px;
   padding:10px 14px;font-size:12px;color:#9898d8;word-break:break-all;
   cursor:pointer;transition:border-color .15s;margin-top:12px}
 .invite-box:hover{border-color:#E8B040}

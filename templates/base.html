@@ -160,7 +160,7 @@
 <style>
 .nav-live-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;display:none}
 .nav-live-overlay.open{display:flex}
-.nav-live-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:520px;width:90%;display:flex;flex-direction:column;align-items:center;gap:20px}
+.nav-live-box{background:var(--page-bg);border:1.5px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:520px;width:90%;display:flex;flex-direction:column;align-items:center;gap:20px}
 .nav-live-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:36px;line-height:1;color:var(--page-text-muted);cursor:pointer;padding:2px 8px;border-radius:6px;font-family:inherit;transition:color .15s,background .15s}
 .nav-live-close:hover{color:var(--page-text-color);background:var(--glass-bg)}
 .nav-live-title{font-size:22px;font-weight:800;color:var(--page-text-color);letter-spacing:.02em;text-align:center}
@@ -172,20 +172,20 @@
 .nav-live-card-title{font-size:17px;font-weight:700;color:var(--page-text-color);margin-bottom:6px}
 .nav-live-card-desc{font-size:12px;color:var(--page-text-muted);line-height:1.6}
 /* Consent + action buttons */
-.nav-consent-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:480px;width:90%;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.nav-consent-box{background:var(--page-bg);border:1.5px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:480px;width:90%;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
 .nav-consent-title{font-size:17px;font-weight:700;color:var(--page-text-color)}
 .nav-consent-pflicht{font-size:12px;font-weight:800;color:#f87171;letter-spacing:.05em;text-transform:uppercase}
-.nav-consent-script{background:rgba(248,113,113,0.22);border:1px solid rgba(248,113,113,0.5);border-radius:8px;padding:16px;font-size:15px;font-weight:700;color:var(--page-text-color);line-height:1.6;font-style:italic;width:100%;box-sizing:border-box}
-.nav-consent-tipp{background:rgba(0,212,170,0.22);border:1px solid rgba(0,212,170,0.5);border-radius:20px;padding:8px 16px;font-size:13px;color:var(--page-text-color);line-height:1.5;font-style:italic}
+.nav-consent-script{background:rgba(248,113,113,0.22);border:1.5px solid rgba(248,113,113,0.5);border-radius:8px;padding:16px;font-size:15px;font-weight:700;color:var(--page-text-color);line-height:1.6;font-style:italic;width:100%;box-sizing:border-box}
+.nav-consent-tipp{background:rgba(0,212,170,0.22);border:1.5px solid rgba(0,212,170,0.5);border-radius:20px;padding:8px 16px;font-size:13px;color:var(--page-text-color);line-height:1.5;font-style:italic}
 .nav-consent-actions{display:flex;gap:10px;justify-content:flex-end;width:100%;margin-top:4px}
 .nav-consent-btn{border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
 .nav-consent-btn:hover{opacity:.8}
 .nav-consent-accept{background:#00D4AA;color:#0D1117}
-.nav-consent-reject{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171}
+.nav-consent-reject{background:rgba(248,113,113,0.08);border:1.5px solid rgba(248,113,113,0.25);color:#f87171}
 /* PiP CSS */
 /* D-04: Header explizit dunkel (nicht var(--page-bg)) damit Header auch auf hellem Body dunkel bleibt */
 .pip-header{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.08);background:#0D1117}
-.pip-mode-badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;border:1px solid #00D4AA;color:#00D4AA}
+.pip-mode-badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;border:1.5px solid #00D4AA;color:#00D4AA}
 .pip-timer{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#00D4AA}
 /* ── Phase 06.1: Split Layout Rotation + Light Body ── */
 /* 06.1-r2 CLEANUP: Slider raus, solide slate-50 Body */
@@ -197,7 +197,7 @@
 .pip-ki-n{width:20px;height:20px;border:1.5px solid #00D4AA;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-size:12px;font-weight:900;color:#00D4AA;flex-shrink:0}
 .pip-ki-brand{font-size:13px;font-weight:700;letter-spacing:0.02em;color:#1a1a1a}
 /* 06.1-r2 LAYOUT-1: Slots vertikal gestapelt — ein Card-Look mit 1px-Trennlinie in der Mitte */
-.pip-ki-slots{display:flex;flex-direction:column;flex:1;min-height:0;border:1px solid #E2E8F0;border-radius:12px;background:#FFFFFF;overflow:hidden}
+.pip-ki-slots{display:flex;flex-direction:column;flex:1;min-height:0;border:1.5px solid #E2E8F0;border-radius:12px;background:#FFFFFF;overflow:hidden}
 .pip-ki-slot{flex:1 1 0;padding:12px;background:transparent;display:flex;flex-direction:column;min-width:0;min-height:0;overflow-y:auto}
 .pip-ki-slot + .pip-ki-slot{border-top:1px solid #E2E8F0}
 /* DESIGN-8: Per-Slot-Labels raus */
@@ -267,7 +267,7 @@
 @keyframes pip-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .pip-score-spinner{width:44px;height:44px;border:4px solid rgba(0,212,170,0.15);border-top-color:#00D4AA;border-radius:50%;animation:pip-spin 0.9s linear infinite;margin:6px auto 0}
 /* 06.1-r2 DESIGN-6: Beenden als kleiner roter Pill im Header — gleiche Höhe wie .pip-mode-badge */
-.pip-btn-beenden{background:transparent;border:1px solid rgba(248,113,113,0.5);border-radius:9999px;color:#f87171;padding:2px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s}
+.pip-btn-beenden{background:transparent;border:1.5px solid rgba(248,113,113,0.5);border-radius:9999px;color:#f87171;padding:2px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s}
 .pip-btn-beenden:hover{background:rgba(248,113,113,0.12);border-color:#f87171}
 /* 06.1-r2 DESIGN-9: Kompakterer Postcall — Score bleibt dominant, aber Section ist luftiger */
 .pip-postcall-score{font-size:56px;font-weight:700;color:#00D4AA;line-height:1;letter-spacing:-0.02em}
@@ -312,33 +312,33 @@
 .pip-quickstat-sublabel{font-size:9px;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.03em;line-height:1.2}
 /* Launcher modal step styles */
 .launcher-step{width:100%;display:flex;flex-direction:column;gap:16px}
-.launcher-form-input{width:100%;padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none}
+.launcher-form-input{width:100%;padding:10px 14px;border:1.5px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none}
 .launcher-form-input:focus{border-color:#00D4AA}
 .launcher-form-input::placeholder{color:var(--page-text-muted)}
-.launcher-select{width:100%;padding:10px 14px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none}
+.launcher-select{width:100%;padding:10px 14px;border:1.5px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none}
 .launcher-select:focus{border-color:#00D4AA}
-.launcher-hint{background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--page-text-muted);line-height:1.5}
+.launcher-hint{background:rgba(0,212,170,0.08);border:1.5px solid rgba(0,212,170,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--page-text-muted);line-height:1.5}
 .launcher-actions{display:flex;gap:10px;justify-content:flex-end;width:100%;flex-wrap:wrap}
 .launcher-btn-primary{background:#00D4AA;color:#0D1117;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
 .launcher-btn-primary:hover{opacity:.85}
-.launcher-btn-ghost{background:transparent;border:1px solid var(--glass-border);border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--page-text-muted);cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s}
+.launcher-btn-ghost{background:transparent;border:1.5px solid var(--glass-border);border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--page-text-muted);cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s}
 .launcher-btn-ghost:hover{border-color:#00D4AA;color:var(--page-text-color)}
 .launcher-loading-bar{width:100%;height:4px;background:var(--glass-border);border-radius:2px;overflow:hidden}
 .launcher-loading-bar-inner{height:100%;background:#00D4AA;border-radius:2px;animation:launcherSlide 1.5s ease-in-out infinite}
 @keyframes launcherSlide{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
-.launcher-briefing{width:100%;padding:12px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;min-height:120px;max-height:400px;overflow-y:auto;font-family:inherit;resize:none;box-sizing:border-box}
-.launcher-briefing-html{width:100%;padding:16px;border:1px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;max-height:400px;overflow-y:auto;box-sizing:border-box}
+.launcher-briefing{width:100%;padding:12px;border:1.5px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;min-height:120px;max-height:400px;overflow-y:auto;font-family:inherit;resize:none;box-sizing:border-box}
+.launcher-briefing-html{width:100%;padding:16px;border:1.5px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;max-height:400px;overflow-y:auto;box-sizing:border-box}
 .launcher-briefing-html h2{font-size:15px;font-weight:700;margin:12px 0 6px;color:#00D4AA}
 .launcher-briefing-html h2:first-child{margin-top:0}
 .launcher-briefing-html ul{margin:4px 0 8px;padding-left:20px}
 .launcher-briefing-html li{margin-bottom:4px}
 .launcher-briefing-html strong{color:#000000}
-.launcher-opener-preview{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:12px;font-size:13px;color:var(--page-text-color);line-height:1.5;max-height:100px;overflow-y:auto;white-space:pre-wrap}
+.launcher-opener-preview{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:8px;padding:12px;font-size:13px;color:var(--page-text-color);line-height:1.5;max-height:100px;overflow-y:auto;white-space:pre-wrap}
 /* ── Headset-Pflicht-Modal ── */
 .headset-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10100;display:none;
   align-items:center;justify-content:center}
 .headset-overlay.open{display:flex}
-.headset-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:12px;padding:28px;
+.headset-box{background:var(--page-bg);border:1.5px solid var(--glass-border);border-radius:12px;padding:28px;
   max-width:500px;width:90%;display:flex;flex-direction:column;gap:16px}
 .headset-title{font-size:16px;font-weight:700;color:var(--page-text-color);margin:0}
 .headset-body{font-size:14px;color:var(--page-text-secondary);line-height:1.65;margin:0}
@@ -353,26 +353,26 @@
 .headset-btn-confirm{background:linear-gradient(135deg,var(--btn-primary-bg-from),var(--btn-primary-bg-to));
   color:var(--btn-primary-text)}
 .headset-btn-confirm:disabled{opacity:.4;cursor:not-allowed}
-.headset-btn-cancel{background:var(--glass-bg);border:1px solid var(--glass-border);
+.headset-btn-cancel{background:var(--glass-bg);border:1.5px solid var(--glass-border);
   color:var(--page-text-secondary)}
 .headset-footer-link{font-size:11px;color:var(--page-text-muted);text-decoration:underline;
   cursor:pointer;align-self:flex-start;background:none;border:none;padding:0;font-family:inherit}
 .headset-footer-link:hover{color:var(--page-text-secondary)}
 .headset-legal-hint{font-size:12px;color:var(--page-text-muted);line-height:1.5;
-  background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:12px 14px;
+  background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:8px;padding:12px 14px;
   display:none;margin-top:-8px}
 .headset-legal-hint.open{display:block}
 /* ── Consent-Modal (Meeting-Modus DSGVO Einwilligung) ── */
 .consent-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10100;display:none;
   align-items:center;justify-content:center}
 .consent-overlay.open{display:flex}
-.consent-box{background:var(--page-bg);border:1px solid var(--glass-border);border-radius:12px;padding:28px;
+.consent-box{background:var(--page-bg);border:1.5px solid var(--glass-border);border-radius:12px;padding:28px;
   max-width:520px;width:90%;display:flex;flex-direction:column;gap:14px}
 .consent-title{font-size:16px;font-weight:700;color:var(--page-text-color);margin:0}
 .consent-pflicht{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
   color:var(--btn-primary-bg-from);margin:0}
 .consent-script{font-size:14px;color:var(--page-text-color);line-height:1.65;margin:0;
-  background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:14px 16px;
+  background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:8px;padding:14px 16px;
   font-style:italic}
 .consent-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 .consent-btn{border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;
@@ -381,9 +381,9 @@
 .consent-btn:focus-visible{outline:2px solid var(--btn-primary-bg-from);outline-offset:2px}
 .consent-btn-accept{background:linear-gradient(135deg,var(--btn-primary-bg-from),var(--btn-primary-bg-to));
   color:var(--btn-primary-text)}
-.consent-btn-reject{background:var(--glass-bg);border:1px solid var(--glass-border);
+.consent-btn-reject{background:var(--glass-bg);border:1.5px solid var(--glass-border);
   color:var(--page-text-secondary)}
-.consent-btn-cancel{background:transparent;border:1px solid var(--glass-border);
+.consent-btn-cancel{background:transparent;border:1.5px solid var(--glass-border);
   color:var(--page-text-muted)}
 </style>
 
@@ -481,9 +481,9 @@
     </div>
   </div>
 
-  <!-- Resize Handle — POLISH-22 v6: Spitze direkt in der unten-links-Ecke -->
+  <!-- Resize Handle — POLISH-22 v7: 90° CCW gedreht fuer passende unten-links-Ecke -->
   <div class="pip-resize-handle" title="Fenstergröße anpassen">
-    <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M1 15 L15 1 M1 11 L11 1 M1 7 L7 1" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round"/></svg>
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M1 1 L15 15 M5 1 L15 11 M9 1 L15 7" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round"/></svg>
   </div>
 
   <!-- Postcall section — POLISH-22 v3: Vertikal zentriert, symmetrisches Padding -->

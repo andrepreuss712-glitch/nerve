@@ -977,7 +977,7 @@ function zeigePostcall(d, filename){
       const col = abgedeckt ? '#E8B040' : '#333350';
       const wrapper = document.createElement('div');
       wrapper.style.cssText = 'margin-bottom:6px';
-      let inner = `<div style="display:flex;align-items:center;gap:5px;font-size:12px;background:#0c0c18;border:1px solid ${abgedeckt?'#1e2e28':'#1a1a28'};border-radius:6px;padding:4px 9px">
+      let inner = `<div style="display:flex;align-items:center;gap:5px;font-size:12px;background:#0c0c18;border:1.5px solid ${abgedeckt?'#1e2e28':'#1a1a28'};border-radius:6px;padding:4px 9px">
         <span style="color:${col};font-size:13px">${abgedeckt?'✓':'○'}</span>
         <span style="color:${abgedeckt?'#c0c0d5':'#444466'}">${escHtml(name)}</span>
         ${p.total ? `<span style="margin-left:auto;font-size:10px;color:#6b6b80">${p.done||0}/${p.total} (${pct}%)</span>` : ''}
@@ -1166,7 +1166,7 @@ function renderLernkartenVorschläge(vorschläge, container) {
         <div style="font-size:14px;color:var(--page-text-primary);margin-bottom:4px" id="lk-text-${i}">"${currentText}"</div>
         <div style="font-size:12px;color:var(--page-text-secondary);margin-bottom:12px">${v.lernziel || ''}</div>
         <div id="lk-input-${i}" style="display:none;margin-bottom:12px">
-          <textarea id="lk-textarea-${i}" style="width:100%;min-height:60px;background:#0D1117;border:1px solid #2D3748;border-radius:6px;color:var(--page-text-primary);padding:8px;font-size:13px" placeholder="Dein eigener Satz..."></textarea>
+          <textarea id="lk-textarea-${i}" style="width:100%;min-height:60px;background:#0D1117;border:1.5px solid #2D3748;border-radius:6px;color:var(--page-text-primary);padding:8px;font-size:13px" placeholder="Dein eigener Satz..."></textarea>
           <div id="lk-feedback-${i}" style="font-size:12px;margin-top:4px"></div>
           <button class="n-btn n-btn-primary" style="font-size:12px;padding:6px 14px;margin-top:6px" onclick="submitSelbstEingeben(${i})">Satz pruefen &amp; speichern</button>
         </div>

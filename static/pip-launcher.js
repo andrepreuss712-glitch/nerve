@@ -598,11 +598,11 @@
     // Create overlay
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center';
-    overlay.innerHTML = '<div style="background:var(--page-bg,#fff);border:1px solid var(--glass-border);border-radius:12px;padding:24px;max-width:400px;width:90%;text-align:center">'
+    overlay.innerHTML = '<div style="background:var(--page-bg,#fff);border:1.5px solid var(--glass-border);border-radius:12px;padding:24px;max-width:400px;width:90%;text-align:center">'
       + '<div style="font-size:15px;font-weight:700;margin-bottom:12px">' + label + ' auch im Profil ändern?</div>'
       + '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:16px">Die Änderung gilt sonst nur für diesen Call.</div>'
       + '<div style="display:flex;gap:10px;justify-content:center">'
-      + '<button id="lnr-save-no" style="padding:8px 20px;border:1px solid var(--glass-border);border-radius:8px;background:none;color:var(--page-text-color);cursor:pointer;font-size:13px">Nur dieser Call</button>'
+      + '<button id="lnr-save-no" style="padding:8px 20px;border:1.5px solid var(--glass-border);border-radius:8px;background:none;color:var(--page-text-color);cursor:pointer;font-size:13px">Nur dieser Call</button>'
       + '<button id="lnr-save-yes" style="padding:8px 20px;border:none;border-radius:8px;background:#00D4AA;color:#06060a;cursor:pointer;font-weight:700;font-size:13px">Im Profil speichern</button>'
       + '</div></div>';
     document.body.appendChild(overlay);
