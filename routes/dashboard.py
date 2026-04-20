@@ -13,6 +13,23 @@ from services.live_session import LOG_DIR
 dashboard_bp = Blueprint('dashboard', __name__)
 
 
+def _parse_kunden_meta(pt_name):
+    """Extract kunden_name + kunden_alter from PersonalityType.name (Phase 07.2 Wave 1).
+
+    Pattern: 'Markus Wendland, 48' -> ('Markus Wendland', '48')
+    Archetype: 'Beschaeftigter Chef' -> (None, None)
+    Empty / None input -> (None, None)
+
+    Returns: (name:str|None, alter:str|None)
+    """
+    if not pt_name:
+        return (None, None)
+    m = re.match(r'^(.+?),\s*(\d+)$', pt_name.strip())
+    if not m:
+        return (None, None)
+    return (m.group(1).strip(), m.group(2).strip())
+
+
 def _dedupe_painpoints(painpoints):
     """UAT-R2 I / UAT-R3 I-bis: Dedupe near-duplicate painpoints (SequenceMatcher > 0.60, keep first).
 
@@ -801,6 +818,52 @@ def session_detail(sid):
             except Exception:
                 schwierigkeit_label = None
 
+        # Phase 07.2 Wave 1: schwierigkeit_raw als raw-Key fuer "Nochmal trainieren"-URL (Plan 03).
+        # schwierigkeit_label ist User-facing Mapping ("Einsteiger"), schwierigkeit_raw der
+        # raw-Key ("leicht"). Nur setzen wenn schwierigkeit_label erfolgreich geparst wurde —
+        # dann ist Konsistenz garantiert. Whitelist auf 3 Werte (T-07.2-04b Tampering-Mitigation).
+        schwierigkeit_raw = None
+        if schwierigkeit_label is not None and conv.phasen_details:
+            try:
+                pd2 = _json.loads(conv.phasen_details)
+                raw2 = (pd2.get('schwierigkeit') if isinstance(pd2, dict) else None) or ''
+                raw2_lower = str(raw2).lower()
+                if raw2_lower in ('leicht', 'mittel', 'schwer'):
+                    schwierigkeit_raw = raw2_lower
+            except Exception:
+                schwierigkeit_raw = None
+
+        # Phase 07.2 Wave 1: Scoring-Listen aus phasen_details extrahieren (Training only).
+        # Template rendert Sektionen 12 (Wendepunkt), 13 (6 Einzel-Scores), 14 (Verbesserungen)
+        # aus diesen Listen. isinstance-Guards + silent-except gegen manipulierte JSON-Payloads
+        # (T-07.2-02 Tampering-Mitigation).
+        scoring_kategorien = []
+        scoring_wendepunkte_detail = []
+        scoring_verbesserungen = []
+        if conv_typ == 'training' and conv.phasen_details:
+            try:
+                pd = _json.loads(conv.phasen_details)
+                if isinstance(pd, dict):
+                    _cat = pd.get('kategorien')
+                    if isinstance(_cat, list):
+                        scoring_kategorien = _cat
+                    _wp = pd.get('wendepunkte_detail')
+                    if isinstance(_wp, list):
+                        scoring_wendepunkte_detail = _wp
+                    _vb = pd.get('verbesserungen')
+                    if isinstance(_vb, list):
+                        scoring_verbesserungen = _vb
+            except Exception:
+                # Silent fallback auf leere Listen (Template rendert Empty-State)
+                pass
+
+        # Phase 07.2 Wave 1: Kunden-Metadaten aus PersonalityType.name parsen (Training only).
+        # Pattern "Vorname Nachname, Alter" -> (name, alter); Archetype-Name -> (None, None).
+        kunden_name = None
+        kunden_alter = None
+        if conv_typ == 'training' and pt:
+            kunden_name, kunden_alter = _parse_kunden_meta(pt.name)
+
         # Phase 07.1: Recommendations
         recommendations = _derive_practice_recommendations(db, conv, events)
 
@@ -830,6 +893,13 @@ def session_detail(sid):
             score_total=score_total,            # W-06: Gesamt-Score fuer Score-Hero
             kb_end_effective=kb_end_effective,  # Fix B (UAT-R1): = letzter kb_verlauf-Punkt falls vorhanden
             painpoints=painpoints,              # UAT-R2 I / UAT-R3 I-bis: dedupliziert (SequenceMatcher > 0.60)
+            # Phase 07.2 Wave 1: Scoring-Konsolidierung Context-Keys
+            scoring_kategorien=scoring_kategorien,                  # Sektion 13: 6 Einzel-Scores (Training only)
+            scoring_wendepunkte_detail=scoring_wendepunkte_detail,  # Sektion 12: Wendepunkt-Analyse (Training only)
+            scoring_verbesserungen=scoring_verbesserungen,          # Sektion 14: Verbesserungspotenzial (Training only)
+            kunden_name=kunden_name,                                # Header-Subtext: "Vorname Nachname"
+            kunden_alter=kunden_alter,                              # Header-Subtext: Alter-String
+            schwierigkeit_raw=schwierigkeit_raw,                    # Plan 03 "Nochmal trainieren"-URL raw-Key
         )
     finally:
         db.close()
