@@ -662,13 +662,32 @@ def _derive_practice_recommendations(db, conv, events):
     recs = []
     typ = getattr(conv, 'typ', 'live') or 'live'
 
+    # UAT-R2 G: sync with template Fix B — kb_verlauf is source of truth when present
+    # Der Helper liest hier den effektiven kb_end analog zur Fallback-Logik in
+    # routes/dashboard.py (session_detail) und im Template. Ohne diesen Shim sähe der
+    # User im Chart/Score z.B. 30, aber in der Recommendation-Card "Kaufbereitschaft
+    # Ende: 20/100" (alter DB-Wert).
+    kb_end_effective = conv.kb_end
+    try:
+        import json as _json_kb
+        if conv.kb_verlauf:
+            _verl = _json_kb.loads(conv.kb_verlauf)
+            if isinstance(_verl, list) and _verl:
+                _last = _verl[-1]
+                if isinstance(_last, dict) and 'wert' in _last:
+                    kb_end_effective = _last.get('wert')
+    except Exception:
+        kb_end_effective = conv.kb_end
+    if kb_end_effective is None:
+        kb_end_effective = 0
+
     # ── Training-spezifische Regeln ────────────────────────────────
     if typ == 'training':
         # Regel 1: kb_end < 50 -> generic weakness
-        if (conv.kb_end or 0) < 50:
+        if kb_end_effective < 50:
             recs.append({
                 'icon': 'alert-circle',
-                'observation': f'Gesamt-Score unter 50 ({conv.kb_end or 0}/100)',
+                'observation': f'Gesamt-Score unter 50 ({kb_end_effective}/100)',
                 'explanation': 'Allgemeine Schwäche erkannt. Wiederhole ein ähnliches Szenario.',
                 'training_focus': 'training:generic_weakness',
                 'training_url': '/training',
@@ -741,10 +760,11 @@ def _derive_practice_recommendations(db, conv, events):
             })
 
         # Regel 2: kb_end < 40 -> drop
-        if (conv.kb_end is not None) and conv.kb_end < 40 and len(recs) < 3:
+        # UAT-R2 G: nutzt kb_end_effective (= kb_verlauf[-1] falls vorhanden)
+        if kb_end_effective < 40 and len(recs) < 3:
             recs.append({
                 'icon': 'trending-down',
-                'observation': f'Kaufbereitschaft Ende: {conv.kb_end}/100',
+                'observation': f'Kaufbereitschaft Ende: {kb_end_effective}/100',
                 'explanation': 'Der Kunde ist am Ende skeptischer als gesund. Übe Qualifizierungs-Fragen.',
                 'training_focus': 'kb:drop',
                 'training_url': '/training',
