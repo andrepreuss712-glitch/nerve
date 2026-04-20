@@ -19,6 +19,11 @@
         {% if schwierigkeit_label %}
           <div class="n-badge n-badge-neutral">{{ schwierigkeit_label }}</div>
         {% endif %}
+        {# NEU 07.2 (Wave 2 Schritt E): Kunden-Subtext — nur wenn pt.name Pattern "Name, Alter" matcht.
+           Wave 1 liefert kunden_name=None fuer Archetype-Namen, wir rendern dann nichts. #}
+        {% if kunden_name %}
+          <span class="n-session-detail-kunden-subtext">{{ kunden_name }}{% if kunden_alter %}, {{ kunden_alter }}{% endif %}</span>
+        {% endif %}
       {% else %}
         <div class="n-badge {% if conv.session_mode == 'cold_call' %}n-badge-primary{% else %}n-badge-neutral{% endif %}">
           {% if conv.session_mode == 'cold_call' %}Cold Call{% elif conv.session_mode == 'meeting' %}Meeting{% else %}—{% endif %}
@@ -48,31 +53,11 @@
       {% endif %}
     </div>
     <div class="n-session-detail-breakdown">
-      {% if conv.typ == 'training' %}
-        {# Training Breakdown — SC-1: kb_end statt sterne, W-05: skript minibar hidden bei em-dash #}
-        {% set rede_pct = conv.redeanteil_avg if conv.redeanteil_avg is not none else 0 %}
-        {% set einw_total = conv.einwaende_gesamt or 0 %}
-        {% set einw_ok = conv.einwaende_behandelt or 0 %}
-        {% set behandelt_pct = ((einw_ok / einw_total) * 100) | round(0, 'floor') if einw_total > 0 else 0 %}
-        <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Gesamt-Score</span><span>{{ score }} / 100</span></div>
-          <div class="n-session-detail-minibar"><span style="--w: {{ score }}%"></span></div>
-        </div>
-        <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Einwände behandelt</span><span>{{ einw_ok }} / {{ einw_total }}</span></div>
-          <div class="n-session-detail-minibar"><span style="--w: {{ behandelt_pct }}%"></span></div>
-        </div>
-        <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Stimmung Ende</span><span>{{ '—' if not conv.stimmung_history else 'siehe Chart' }}</span></div>
-          {# W-05 + B-01: Minibar visibility:hidden; span laesst --w weg, CSS-Fallback 0% greift #}
-          <div class="n-session-detail-minibar n-session-detail-minibar--hidden"><span></span></div>
-        </div>
-        <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label">Skript-Abdeckung</span><span>—</span></div>
-          {# W-05 + B-01: wie oben — keine statischen Inline-Styles, Hidden via Klasse #}
-          <div class="n-session-detail-minibar n-session-detail-minibar--hidden"><span></span></div>
-        </div>
-      {% else %}
+      {# POLISH-34-Resolve (07.2 Wave 2 Schritt F): Training-Hero-Breakdown (4 Rows)
+         entfernt — Sektion 13 "Einzel-Bewertungen" (weiter unten) ersetzt die 4 Rows
+         durch ausfuehrliche 6-Kategorie-Darstellung. Training-Hero zeigt nur noch
+         Score + Trend-Badge. Live-Breakdown unten UNVERAENDERT. #}
+      {% if conv.typ == 'live' %}
         {# Live Breakdown — kb_end 40%, behandelt 30%, rede 20%, skript 10% #}
         {# Fix B (07.1 UAT-R1): kb_end_effective = letzter kb_verlauf-Punkt (konsistent mit Chart-Ende). #}
         {% set kb_pct = kb_end_effective if kb_end_effective is not none else 0 %}
@@ -309,16 +294,8 @@
     {% endif %}
   </section>
 
-  {# ── Section 10: Gesprächs-Analyse (Future) ───────────────────── #}
-  <section class="n-session-detail-card n-session-detail-card--future">
-    <h2 class="n-session-detail-card-title">Gesprächs-Analyse</h2>
-    <div class="n-session-detail-empty-future">
-      <i data-lucide="message-square-text" class="n-session-detail-icon-xl"></i>
-      <h3 class="n-session-detail-card-title--spaced">Gesprächs-Analyse folgt</h3>
-      <p class="n-session-detail-future-text">NERVE speichert aktuell keine Gesprächsinhalte — aus DSGVO-Gründen. Nach Phase 4.19 (Transkript-Persistierung) analysiert die KI einzelne Sätze und markiert was gut lief und was besser formuliert werden sollte.</p>
-      <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.19</div>
-    </div>
-  </section>
+  {# 07.2 Wave 2 Schritt A: ehemalige Sektion 10 (Gespraechs-Analyse-Future-Card) ENTFERNT —
+     aufgeloest durch neue Sektion 12 Wendepunkt-Analyse (konkret statt abstrakt). #}
 
   {# ── Section 11: Lernkarten (Future) ──────────────────────────── #}
   <section class="n-session-detail-card n-session-detail-card--future">
@@ -329,6 +306,118 @@
       <p class="n-session-detail-future-text">Das Coach-Modul schlägt nach jedem Call max. 3 konkrete Sätze vor, die du als Lernkarte speichern kannst. Lernkarten werden vor jedem neuen Call geladen und erinnern dich im richtigen Moment.</p>
       <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.11</div>
     </div>
+  </section>
+
+  {# ── Section 12: Wendepunkt-Analyse (NEU 07.2 Wave 2 Schritt B, ersetzt ehemalige Sektion 10) ── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">Wendepunkt-Analyse</h2>
+    {% if conv.typ == 'training' and scoring_wendepunkte_detail %}
+      <ul class="n-session-detail-wendepunkt-list">
+        {% for w in scoring_wendepunkte_detail %}
+          <li class="n-session-detail-wendepunkt-card">
+            {% if w.turn is defined %}
+              <div class="n-label n-session-detail-wendepunkt-turn-label">Turn {{ w.turn }}</div>
+            {% endif %}
+            <div class="n-label">Du hast gesagt:</div>
+            <div class="n-session-detail-wendepunkt-quote">"{{ w.berater_sagt }}"</div>
+            <div class="n-label">Problem:</div>
+            <div class="n-session-detail-wendepunkt-problem">{{ w.was_schief }}</div>
+            <div class="n-label">Besser wäre:</div>
+            <div class="n-session-detail-wendepunkt-better">"{{ w.alternativ }}"</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif conv.typ == 'training' %}
+      {# Training ohne Wendepunkt-Daten — z.B. alte Sessions vor Phase 04.10.1 #}
+      <div class="n-session-detail-empty">
+        <h3>Keine Wendepunkte erfasst</h3>
+        <p>Für diese Training-Session wurden keine Wendepunkt-Details gespeichert. Aktuelle Trainings mit Stimmungs-Tracking zeigen Wendepunkte hier automatisch.</p>
+      </div>
+    {% else %}
+      {# Live Cold Call / Meeting — Phase-4.19-Empty-State #}
+      <div class="n-session-detail-empty-future">
+        <i data-lucide="message-square-text" class="n-session-detail-icon-xl"></i>
+        <h3 class="n-session-detail-card-title--spaced">Wendepunkt-Analyse folgt</h3>
+        <p class="n-session-detail-future-text">Die Wendepunkt-Analyse für Live-Sessions kommt mit Phase 4.19 (Transkript-Persistierung). Der Analyse-Loop markiert dann einzelne Sätze, die den Gesprächsverlauf kritisch beeinflusst haben.</p>
+        <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.19</div>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 13: Einzel-Bewertungen (NEU 07.2 Wave 2 Schritt C, ersetzt Training-Hero-Breakdown) ── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">Einzel-Bewertungen</h2>
+    {% if conv.typ == 'training' and scoring_kategorien %}
+      <ul class="n-session-detail-einzel-score-list">
+        {% for kat in scoring_kategorien %}
+          <li class="n-session-detail-einzel-score-item">
+            <div class="n-session-detail-einzel-score-top">
+              <span class="n-label">{{ kat.name }}</span>
+              <span>{{ kat.score | default(0) }}/10</span>
+            </div>
+            <div class="n-session-detail-minibar"><span style="--w: {{ ((kat.score or 0) * 10) }}%"></span></div>
+            {% if kat.feedback %}
+              <div class="n-session-detail-einzel-score-feedback">{{ kat.feedback }}</div>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif conv.typ == 'training' %}
+      <div class="n-session-detail-empty">
+        <h3>Keine Einzel-Bewertungen</h3>
+        <p>Für diese Training-Session wurden keine Kategorien-Scores gespeichert.</p>
+      </div>
+    {% else %}
+      {# Live — komplett Empty-State mit 4.19-Hinweis (vermeidet POLISH-34-Dopplung mit Score-Hero) #}
+      <div class="n-session-detail-empty-future">
+        <i data-lucide="bar-chart-3" class="n-session-detail-icon-xl"></i>
+        <h3 class="n-session-detail-card-title--spaced">Einzel-Bewertungen folgen</h3>
+        <p class="n-session-detail-future-text">Detaillierte Einzel-Bewertungen (Gesprächseröffnung, Bedarfsanalyse, Einwandbehandlung, Gesprächsführung, Abschluss, Beziehungsaufbau) werden ab Phase 4.19 (Transkript-Persistierung) verfügbar. Aktuell siehst du den Gesamt-Score und seine 4 Komponenten in Sektion 2.</p>
+        <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.19</div>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── Section 14: Verbesserungspotenzial (NEU 07.2 Wave 2 Schritt D) ── #}
+  <section class="n-session-detail-card">
+    <h2 class="n-session-detail-card-title">Verbesserungspotenzial</h2>
+    {% if conv.typ == 'training' and scoring_verbesserungen %}
+      {# Scoring-Fail-Sentinel-Detection (routes/training.py:636-641):
+         Wenn generate_scoring() exceptionet, persistiert der Handler
+         verbesserungen=['Scoring konnte nicht generiert werden'] —
+         das ist SYSTEM-ERROR, KEIN legitimer User-Tipp. #}
+      {% set _is_scoring_fail = (scoring_verbesserungen | length == 1) and ('konnte nicht generiert werden' in (scoring_verbesserungen[0] | lower)) %}
+      {% if _is_scoring_fail %}
+        <div class="n-session-detail-empty">
+          <h3>Auswertung nicht verfügbar</h3>
+          <p>Die KI-basierte Auswertung dieser Training-Session ist fehlgeschlagen. Das bedeutet leider auch, dass Wendepunkte und Einzel-Bewertungen nicht verfügbar sind. Neue Trainings zeigen diese Sektionen wie gewohnt.</p>
+        </div>
+      {% else %}
+        <ul class="n-session-detail-improvement-list">
+          {% for v in scoring_verbesserungen | unique %}
+            <li class="n-session-detail-improvement-item">
+              <i data-lucide="alert-triangle" class="n-session-detail-improvement-icon n-session-detail-icon-sm"></i>
+              <span>{{ v }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% elif conv.typ == 'live' and recommendations %}
+      {# Live: recommendations aus _derive_practice_recommendations (Mix heute-abgeleitet + 4.19-future) #}
+      <ul class="n-session-detail-improvement-list">
+        {% for r in recommendations %}
+          <li class="n-session-detail-improvement-item">
+            <i data-lucide="alert-triangle" class="n-session-detail-improvement-icon n-session-detail-icon-sm"></i>
+            <span>{{ r.explanation }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="n-session-detail-empty">
+        <h3>Kein Verbesserungspotenzial identifiziert</h3>
+        <p>Für diese Session wurden keine konkreten Handlungstipps generiert.</p>
+      </div>
+    {% endif %}
   </section>
 
 </main>
