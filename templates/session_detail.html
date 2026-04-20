@@ -211,9 +211,12 @@
   </section>
 
   {# ── Section 7: Painpoints (W-04: numerische Reihenfolge) ────── #}
+  {# UAT-R2 I: pp_list kommt jetzt aus Route-Handler (painpoints), dedupliziert
+     via SequenceMatcher > 0.75. Fallback auf conv.painpoints_details | fromjson
+     falls Variable nicht gesetzt (Legacy-Pfad). #}
   <section class="n-session-detail-card">
     <h2 class="n-session-detail-card-title">Painpoints</h2>
-    {% set pp_list = conv.painpoints_details | fromjson if conv.painpoints_details else [] %}
+    {% set pp_list = painpoints if painpoints is defined else (conv.painpoints_details | fromjson if conv.painpoints_details else []) %}
     {% if pp_list %}
       <ul class="n-session-detail-recommendation-list">
         {% for pp in pp_list %}

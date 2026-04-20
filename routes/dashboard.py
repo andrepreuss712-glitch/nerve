@@ -3,6 +3,7 @@ import re
 import json
 import hashlib
 from datetime import datetime, timedelta, date
+from difflib import SequenceMatcher
 from flask import Blueprint, render_template, redirect, url_for, g, session as flask_session, jsonify, request, abort
 from routes.auth import login_required
 from database.db import get_session
@@ -10,6 +11,33 @@ from database.models import Profile, User as UserModel, ConversationLog, Organis
 from services.live_session import LOG_DIR
 
 dashboard_bp = Blueprint('dashboard', __name__)
+
+
+def _dedupe_painpoints(painpoints):
+    """UAT-R2 I: Dedupe near-duplicate painpoints (SequenceMatcher > 0.75, keep first).
+
+    Backend-Dedupe vermeidet dass zwei fast-identische Painpoints (vom Analyse-Loop
+    doppelt erzeugt) in Section 7 des Session-Details nebeneinander stehen.
+
+    Painpoint-Shape (aus ConversationLog.painpoints_details JSON):
+      [{text: str, ts: str|None}, ...]
+    """
+    if not painpoints:
+        return painpoints
+    result = []
+    for p in painpoints:
+        if not isinstance(p, dict):
+            continue
+        text = (p.get('text') or p.get('beschreibung') or '').strip().lower()
+        if not text:
+            continue
+        is_dup = any(
+            SequenceMatcher(None, text, (r.get('text') or r.get('beschreibung') or '').strip().lower()).ratio() > 0.75
+            for r in result
+        )
+        if not is_dup:
+            result.append(p)
+    return result
 
 
 def _parse_log_meta(fname, fpath):
@@ -756,6 +784,19 @@ def session_detail(sid):
         # Phase 07.1: Recommendations
         recommendations = _derive_practice_recommendations(db, conv, events)
 
+        # UAT-R2 I: Painpoints im Backend dedupen, damit Template clean bleibt.
+        # Backend erzeugt gelegentlich fast-identische Painpoints (z.B. leichte
+        # Umformulierung desselben Schmerzpunkts) — SequenceMatcher > 0.75 => Dup.
+        _pp_raw = []
+        try:
+            if conv.painpoints_details:
+                _pp_parsed = _json.loads(conv.painpoints_details)
+                if isinstance(_pp_parsed, list):
+                    _pp_raw = _pp_parsed
+        except Exception:
+            _pp_raw = []
+        painpoints = _dedupe_painpoints(_pp_raw)
+
         return render_template(
             'session_detail.html',
             conv=conv,
@@ -767,6 +808,7 @@ def session_detail(sid):
             recommendations=recommendations,
             score_total=score_total,            # W-06: Gesamt-Score fuer Score-Hero
             kb_end_effective=kb_end_effective,  # Fix B (UAT-R1): = letzter kb_verlauf-Punkt falls vorhanden
+            painpoints=painpoints,              # UAT-R2 I: dedupliziert (SequenceMatcher > 0.75)
         )
     finally:
         db.close()
