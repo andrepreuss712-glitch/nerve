@@ -25,7 +25,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
 app.config['SECRET_KEY']           = SECRET_KEY
 app.config['SESSION_PERMANENT']    = True
-app.config['CSS_VERSION']          = '20260420-3'
+app.config['CSS_VERSION']          = '20260420-4'
 app.config['MAX_CONTENT_LENGTH']   = 5 * 1024 * 1024  # 5 MB feedback uploads
 
 if SECRET_KEY == 'dev-secret-change-me' and not os.environ.get('FLASK_DEBUG'):
