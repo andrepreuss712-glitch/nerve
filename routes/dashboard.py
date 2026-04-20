@@ -753,18 +753,27 @@ def session_detail(sid):
         else:
             score_total = kb_end_effective
 
-        # Phase 07.1 (W-06): Trend-Avg NUR fuer Live-Sessions berechnen.
-        # Training-Sessions rendern KEIN Trend-Badge (sparse Datenlage,
-        # _calc_call_score nicht fuer Training definiert).
+        # Phase 07.1 (W-06): Trend-Avg typ-diskriminierend.
+        # Live    -> _calc_call_score ueber letzte 5 typ='live'.
+        # Training-> kb_end ueber letzte 5 typ='training' (kein _calc_call_score
+        #            fuer Training definiert; Score-Hero nutzt ebenfalls kb_end).
+        # Wave 4 / POLISH-33: Training-Trend-Badge wieder aktiv — Template-Gate
+        # 'conv.typ != training' entfaellt parallel.
         trend_avg = None
-        if conv_typ == 'live':
-            recent = (db.query(CL)
-                        .filter(CL.user_id == g.user.id)
-                        .filter(CL.typ == 'live')
-                        .filter(CL.id != conv.id)
-                        .order_by(CL.created_at.desc())
-                        .limit(5).all())
-            trend_avg = round(sum(_calc_call_score(c) for c in recent) / len(recent)) if recent else None
+        recent = (db.query(CL)
+                    .filter(CL.user_id == g.user.id)
+                    .filter(CL.typ == conv_typ)
+                    .filter(CL.id != conv.id)
+                    .order_by(CL.created_at.desc())
+                    .limit(5).all())
+        if recent:
+            if conv_typ == 'live':
+                trend_avg = round(sum(_calc_call_score(c) for c in recent) / len(recent))
+            else:
+                # Training-Schnitt ueber kb_end (None-tolerant, None->0 behandeln
+                # damit eine einzelne leere kb_end keine Division-Error-Kette ausloest)
+                _vals = [(c.kb_end if c.kb_end is not None else 0) for c in recent]
+                trend_avg = round(sum(_vals) / len(_vals)) if _vals else None
 
         # Phase 07.1: chart_data_json typ-diskriminierend
         if conv_typ == 'training':

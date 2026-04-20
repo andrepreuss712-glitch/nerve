@@ -38,8 +38,9 @@
     <div>
       <div class="n-label">Gesamt-Score</div>
       <div class="n-session-detail-score {{ score_class }}">{{ score }}</div>
-      {# W-06: Trend-Badge nur Live (trend_avg ist None fuer Training, zusaetzlich typ-Gate) #}
-      {% if trend_avg is not none and conv.typ != 'training' %}
+      {# Wave 4 / POLISH-33: Trend-Badge typ-agnostisch — Route liefert trend_avg
+         auch fuer Training (Schnitt ueber kb_end letzte 5 typ='training'). #}
+      {% if trend_avg is not none %}
         {% set delta = score - trend_avg %}
         <div class="n-badge {% if delta > 0 %}n-badge-primary{% elif delta < 0 %}n-badge-danger{% else %}n-badge-neutral{% endif %} n-session-detail-trend-badge--spaced">
           {% if delta > 0 %}+{{ delta }} vs Schnitt letzte 5{% elif delta < 0 %}{{ delta }} vs Schnitt letzte 5{% else %}Schnitt letzte 5{% endif %}
