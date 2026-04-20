@@ -689,6 +689,12 @@ def training_end():
     try:
         db_log = get_session()
         from database.models import ConversationLog as CLog, Phrase as PhraseModel
+        # POLISH-32 (Wave 4): phasen_details enthaelt zusaetzlich zum scoring auch
+        # 'schwierigkeit' (leicht/mittel/schwer) — session_detail.html rendert
+        # diesen Wert als Header-Badge (Mapping via Route). Keine neue DB-Spalte,
+        # scoring + schwierigkeit koexistieren im selben JSON-Dict.
+        _phasen_payload = dict(scoring) if isinstance(scoring, dict) else {}
+        _phasen_payload['schwierigkeit'] = session.get('schwierigkeit', 'mittel')
         log_entry = CLog(
             user_id              = g.user.id,
             org_id               = g.org.id,
@@ -702,7 +708,7 @@ def training_end():
             einwaende_gesamt     = len(wendepunkt_saetze),
             einwaende_behandelt  = len([ws for ws in wendepunkt_saetze if ws.get('text')]),
             gegenargument_details= ga_details,
-            phasen_details       = json.dumps(scoring),
+            phasen_details       = json.dumps(_phasen_payload, ensure_ascii=False),
             typ                  = 'training',
             session_mode         = session.get('modus', 'guided'),
         )

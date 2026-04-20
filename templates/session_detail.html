@@ -14,7 +14,11 @@
             {% if pt.icon %}{{ pt.icon }} {% endif %}{{ pt.name }}
           </div>
         {% endif %}
-        <div class="n-badge n-badge-neutral">{{ schwierigkeit_label }}</div>
+        {# Wave 4 / POLISH-32: Badge nur rendern wenn echter Wert da ist —
+           kein em-dash-Placeholder mehr (Route liefert None statt '—'). #}
+        {% if schwierigkeit_label %}
+          <div class="n-badge n-badge-neutral">{{ schwierigkeit_label }}</div>
+        {% endif %}
       {% else %}
         <div class="n-badge {% if conv.session_mode == 'cold_call' %}n-badge-primary{% else %}n-badge-neutral{% endif %}">
           {% if conv.session_mode == 'cold_call' %}Cold Call{% elif conv.session_mode == 'meeting' %}Meeting{% else %}—{% endif %}

@@ -773,7 +773,9 @@ def session_detail(sid):
             chart_data_json = conv.kb_verlauf or '[]'
 
         # Phase 07.1: schwierigkeit_label aus phasen_details parsen (RESEARCH Q2 Option A)
-        schwierigkeit_label = '—'
+        # Wave 4 / POLISH-32: Default-Wert None statt '—' — Template blendet Badge
+        # komplett aus wenn None (kein em-dash-Placeholder mehr im Header).
+        schwierigkeit_label = None
         if conv_typ == 'training' and conv.phasen_details:
             try:
                 pd = _json.loads(conv.phasen_details)
@@ -786,9 +788,9 @@ def session_detail(sid):
                     'fortgeschritten': 'Fortgeschritten',
                     'experte':  'Experte',
                 }
-                schwierigkeit_label = mapping.get(str(raw).lower(), '—')
+                schwierigkeit_label = mapping.get(str(raw).lower()) or None
             except Exception:
-                schwierigkeit_label = '—'
+                schwierigkeit_label = None
 
         # Phase 07.1: Recommendations
         recommendations = _derive_practice_recommendations(db, conv, events)
