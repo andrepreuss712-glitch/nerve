@@ -118,3 +118,82 @@ UAT Round 2.
 
 STATE.md / ROADMAP.md werden vom Orchestrator nach UAT-R2-Abschluss aktualisiert.
 SUMMARY `07.1-03-SUMMARY.md` wird vom Orchestrator amendiert.
+
+---
+
+## UAT Round 2 Findings (2026-04-18)
+
+Re-Test von Session #110 auf https://getnerve.app nach UAT-R1-Deploy lieferte
+4 weitere Bugs. Alle atomar (1 Commit/Bug) auf `main`, dann CSS_VERSION-Bump +
+Re-Deploy für UAT Round 3.
+
+### G — kb_end-Sync in _derive_practice_recommendations unvollständig
+
+- **Finding:** Template/Chart zeigten synchron kb_end=30 (aus kb_verlauf[-1]),
+  Recommendation-Card zeigte weiterhin "Kaufbereitschaft Ende: 20/100" (alter
+  DB-Wert). UAT-R1 Fix B war nur halb — Helper las `conv.kb_end` direkt.
+- **Rule:** Rule 1 — Data-consistency bug (Follow-up zu Fix B).
+- **Fix:** In `_derive_practice_recommendations` `kb_end_effective` analog zur
+  Fallback-Logik in `routes/dashboard.py` und Template berechnen:
+  `kb_verlauf[-1].wert` wenn vorhanden, sonst `conv.kb_end`, sonst `0`.
+  Alle 3 Verwendungen (Training Regel 1 Guard+Observation, Live Regel 2
+  Guard+Observation) nutzen den effektiven Wert.
+- **Files:** `routes/app_routes.py` (`_derive_practice_recommendations`)
+- **Commit:** `84216bf`
+
+### H — Recommendation-String "skeptischer als gesund" sprachlich kaputt
+
+- **Finding:** Text "Der Kunde ist am Ende skeptischer als gesund. Übe
+  Qualifizierungs-Fragen." — Skepsis ist keine Gesundheits-Skala, Metapher
+  unsinnig und unprofessionell.
+- **Rule:** Rule 2 — Copy/UX correctness.
+- **Fix:** Ersetzt durch "Der Kunde ist am Ende ungewöhnlich skeptisch. Übe
+  Qualifizierungs-Fragen, um früh Vertrauen aufzubauen." — klare Beobachtung
+  + konkreter Trainings-CTA. Umlaute echt (CLAUDE.md User-facing-Regel).
+- **Files:** `routes/app_routes.py` (`_derive_practice_recommendations`,
+  Live-Branch Regel 2)
+- **Commit:** `01b63d0`
+
+### I — Painpoint-Dedupe (Sektion 7)
+
+- **Finding:** Zwei fast-identische Painpoints landeten in Section 7, weil
+  der Backend-Analyse-Loop sie doppelt erzeugte (leichte Umformulierung
+  desselben Schmerzpunkts).
+- **Rule:** Rule 2 — Missing correctness (dedupe fehlt am Persistence-Rand).
+- **Fix:** Neuer Helper `_dedupe_painpoints` in `routes/dashboard.py` nutzt
+  `difflib.SequenceMatcher` — Ratio > 0.75 gegen bereits gesehene Einträge
+  = Duplikat. Route dedupe't vor `render_template`, übergibt Liste als
+  `painpoints`-Variable. Template nutzt die neue Variable mit Fallback auf
+  `conv.painpoints_details | fromjson` für Legacy-Pfad-Kompatibilität.
+- **Files:** `routes/dashboard.py` (Helper + session_detail),
+  `templates/session_detail.html` (Section 7)
+- **Commit:** `ea56a15`
+
+### J — Phasen-Verlauf Empty-State Text erweitern
+
+- **Finding:** Empty-State für Phasen-Verlauf erklärte nicht, warum kurze
+  Test-Calls keine Phasen zeigen.
+- **Rule:** Rule 2 — Missing orientation info (UX).
+- **Fix:** Zweiter Paragraph im Empty-State: "Phasen-Erkennung greift erst
+  ab etwa 60 Sekunden Gesprächsdauer. Bei kurzen Test-Calls bleibt diese
+  Sektion leer." Reine Copy-Änderung.
+- **Files:** `templates/session_detail.html` (Section 5 Phasen-Strip)
+- **Commit:** `2f5b547`
+
+---
+
+## Abschluss UAT-R2 (2026-04-18)
+
+Alle 4 UAT-R2-Findings atomar committet + CSS_VERSION auf `20260420-1`
+gebumpt für Browser-Cache-Invalidation. Re-Deploy via `bash deploy.sh`
+vorbereitet für UAT Round 3.
+
+**Commit-Chain (UAT-R2):**
+
+| # | Commit    | Finding                                                         |
+| - | --------- | --------------------------------------------------------------- |
+| G | `84216bf` | sync kb_end in recommendations helper with kb_verlauf fallback  |
+| H | `01b63d0` | rewrite skepsis recommendation copy                             |
+| I | `ea56a15` | dedupe near-duplicate painpoints via SequenceMatcher            |
+| J | `2f5b547` | extend Phasen-Strip empty-state copy                            |
+| — | (next)    | bump CSS_VERSION to 20260420-1 + document UAT-R2 fixes          |
