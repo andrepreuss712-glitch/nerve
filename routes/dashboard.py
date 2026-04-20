@@ -14,10 +14,19 @@ dashboard_bp = Blueprint('dashboard', __name__)
 
 
 def _dedupe_painpoints(painpoints):
-    """UAT-R2 I: Dedupe near-duplicate painpoints (SequenceMatcher > 0.75, keep first).
+    """UAT-R2 I / UAT-R3 I-bis: Dedupe near-duplicate painpoints (SequenceMatcher > 0.60, keep first).
 
     Backend-Dedupe vermeidet dass zwei fast-identische Painpoints (vom Analyse-Loop
     doppelt erzeugt) in Section 7 des Session-Details nebeneinander stehen.
+
+    Threshold-History:
+      UAT-R2 (0.75): zu strikt — User sah weiterhin Near-Duplikate wie
+        "Vertriebler wissen im Moment eines Einwands nicht, was sie sagen sollen"
+        vs "Vertriebler haben im Moment des Einwands keine Antwort parat"
+        (gemessener Ratio: 0.656 — rutschte durch den 0.75-Filter).
+      UAT-R3 (0.60): faengt obiges Beispielpaar ab, bleibt aber deutlich ueber
+        0.50, um False-Positives bei inhaltlich verschiedenen Painpoints zum
+        selben Thema zu vermeiden.
 
     Painpoint-Shape (aus ConversationLog.painpoints_details JSON):
       [{text: str, ts: str|None}, ...]
@@ -32,7 +41,7 @@ def _dedupe_painpoints(painpoints):
         if not text:
             continue
         is_dup = any(
-            SequenceMatcher(None, text, (r.get('text') or r.get('beschreibung') or '').strip().lower()).ratio() > 0.75
+            SequenceMatcher(None, text, (r.get('text') or r.get('beschreibung') or '').strip().lower()).ratio() > 0.60
             for r in result
         )
         if not is_dup:
@@ -784,9 +793,10 @@ def session_detail(sid):
         # Phase 07.1: Recommendations
         recommendations = _derive_practice_recommendations(db, conv, events)
 
-        # UAT-R2 I: Painpoints im Backend dedupen, damit Template clean bleibt.
-        # Backend erzeugt gelegentlich fast-identische Painpoints (z.B. leichte
-        # Umformulierung desselben Schmerzpunkts) — SequenceMatcher > 0.75 => Dup.
+        # UAT-R2 I / UAT-R3 I-bis: Painpoints im Backend dedupen, damit Template
+        # clean bleibt. Backend erzeugt gelegentlich fast-identische Painpoints
+        # (z.B. leichte Umformulierung desselben Schmerzpunkts) — SequenceMatcher
+        # > 0.60 => Dup. (UAT-R2 startete mit 0.75, war zu strikt — siehe Helper.)
         _pp_raw = []
         try:
             if conv.painpoints_details:
@@ -808,7 +818,7 @@ def session_detail(sid):
             recommendations=recommendations,
             score_total=score_total,            # W-06: Gesamt-Score fuer Score-Hero
             kb_end_effective=kb_end_effective,  # Fix B (UAT-R1): = letzter kb_verlauf-Punkt falls vorhanden
-            painpoints=painpoints,              # UAT-R2 I: dedupliziert (SequenceMatcher > 0.75)
+            painpoints=painpoints,              # UAT-R2 I / UAT-R3 I-bis: dedupliziert (SequenceMatcher > 0.60)
         )
     finally:
         db.close()
