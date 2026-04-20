@@ -928,6 +928,83 @@ REGELN:
     return text.strip()
 
 
+def _repair_scoring_json(raw: str) -> str:
+    """Best-effort JSON repair for Claude Sonnet scoring responses.
+
+    Handles three common failure modes observed in production:
+    1. Markdown code fences (```json ... ```): strip them.
+    2. Trailing commas before closing brackets: remove them.
+    3. Truncation due to max_tokens (response ends mid-string or mid-object):
+       close open string, then close open arrays and objects in the right order.
+    """
+    s = raw.strip()
+
+    # 1) Strip markdown code fences if present
+    if s.startswith('```'):
+        # find first newline after ``` and last ``` before end
+        first_nl = s.find('\n')
+        if first_nl != -1:
+            s = s[first_nl + 1:]
+        if s.rstrip().endswith('```'):
+            s = s.rstrip()[:-3].rstrip()
+
+    # 2) Remove trailing commas before closing brackets/braces
+    s = re.sub(r',(\s*[\}\]])', r'\1', s)
+
+    # 3) Bracket-balance repair: count unclosed string/array/object, close them.
+    #    Walk character by character, respecting string escapes.
+    in_string   = False
+    escape      = False
+    stack       = []  # stack of '{' or '['
+    last_valid  = len(s)
+
+    for i, ch in enumerate(s):
+        if escape:
+            escape = False
+            continue
+        if ch == '\\' and in_string:
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == '{' or ch == '[':
+            stack.append(ch)
+        elif ch == '}':
+            if stack and stack[-1] == '{':
+                stack.pop()
+            else:
+                # Mismatched — truncate here to avoid downstream crash
+                last_valid = i
+                break
+        elif ch == ']':
+            if stack and stack[-1] == '[':
+                stack.pop()
+            else:
+                last_valid = i
+                break
+
+    s = s[:last_valid]
+
+    # Close open string if any
+    if in_string:
+        s += '"'
+
+    # Remove a trailing incomplete key/value (": <nothing>" or ",") before closing
+    s = re.sub(r'[,:]\s*$', '', s)
+    # Remove trailing comma introduced by truncation inside objects/arrays
+    s = re.sub(r',(\s*)$', r'\1', s)
+
+    # Close remaining stacks in reverse order
+    while stack:
+        opener = stack.pop()
+        s += '}' if opener == '{' else ']'
+
+    return s
+
+
 def generate_scoring(conversation_history: list, profile_data: dict,
                      schwierigkeit: str, sekretaerin_ueberwunden: bool,
                      sprache: str = 'de', modus: str = 'guided',
@@ -946,6 +1023,9 @@ def generate_scoring(conversation_history: list, profile_data: dict,
     sek_json = ', {"name": "Sekretärin", "score": 7, "feedback": "1 Satz"}' if sekretaerin_ueberwunden else ''
 
     # ── 6. Beziehungsaufbau category (D-14) — only when stimmung_history is present ──
+    # NOTE: These are plain strings (not f-strings), so single braces are literal.
+    # Using `{{...}}` here was a bug — it produced literal double braces in the final prompt
+    # because the outer f-string does not re-escape already-interpolated values.
     beziehung_kategorie = ""
     beziehung_json = ""
     stimmung_kontext = ""
@@ -957,11 +1037,11 @@ Stimmungsverlauf des Kunden waehrend des Gespraechs:
 {json.dumps(stimmung_history, ensure_ascii=False)}
 """
         beziehung_kategorie = "\n6. Beziehungsaufbau — Hat der Berater die Stimmung des Kunden positiv beeinflusst? Hat er Rapport aufgebaut? (1-10)"
-        beziehung_json = ', {{"name": "Beziehungsaufbau", "score": 6, "feedback": "1 Satz"}}'
+        beziehung_json = ', {"name": "Beziehungsaufbau", "score": 6, "feedback": "1 Satz"}'
         wendepunkte_prompt = "\nIdentifiziere die 1-3 kritischen Wendepunkte im Gespraech wo die Stimmung signifikant gefallen ist. Fuer jeden Wendepunkt: was hat der Berater gesagt, was war das Problem, und was haette er stattdessen sagen sollen."
         wendepunkte_json_example = """,
   "wendepunkte_detail": [
-    {{"turn": 3, "berater_sagt": "Was der Berater gesagt hat", "was_schief": "Was schiefging", "alternativ": "Was er haette sagen sollen"}}
+    {"turn": 3, "berater_sagt": "Was der Berater gesagt hat", "was_schief": "Was schiefging", "alternativ": "Was er haette sagen sollen"}
   ]"""
 
     if modus == 'free':
@@ -986,7 +1066,7 @@ Bewerte in diesen Kategorien (jeweils 1-10):
 {wendepunkte_prompt}
 Extrahiere ausserdem die 1-3 besten Saetze des Beraters, die einen Einwand erfolgreich entkraeftet haben (Wendepunkt-Saetze). Wenn keine erkennbar sind, gib ein leeres Array zurueck.
 
-Antworte NUR als valides JSON:
+Antworte NUR als valides JSON (keine Markdown-Code-Fences, kein Text davor oder danach):
 {{
   "gesamt_score": 0,
   "kategorien": [
@@ -1006,20 +1086,39 @@ Antworte NUR als valides JSON:
 
 {lang['prompt_sprache']}"""
 
+    # max_tokens raised 1500 -> 3000: scoring with stimmung_history + wendepunkte_detail
+    # can exceed 1500 tokens for longer conversations, which caused mid-JSON truncation
+    # (json.JSONDecodeError "Expecting ',' delimiter" around char 4030).
     response = claude_client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1500,
+        max_tokens=3000,
         messages=[{"role": "user", "content": prompt}]
     )
-    text   = response.content[0].text.strip()
-    start  = text.find('{')
-    end    = text.rfind('}') + 1
+    text        = response.content[0].text.strip()
+    stop_reason = getattr(response, 'stop_reason', 'unknown')
+    start       = text.find('{')
+    end         = text.rfind('}') + 1
     if start == -1 or end <= start:
+        print(f"[Training] Scoring: no JSON braces (stop_reason={stop_reason}, len={len(text)}): {text[:200]}")
         raise ValueError(f"No JSON braces in Claude response: {text[:100]}")
+
+    candidate = text[start:end]
     try:
-        result = json.loads(text[start:end])
+        result = json.loads(candidate)
     except (json.JSONDecodeError, ValueError) as e:
-        raise ValueError(f"Scoring JSON parse failed: {e}") from e
+        # Attempt repair (trailing commas, markdown fences, truncation)
+        print(f"[Training] Scoring: primary parse failed ({e}), attempting repair "
+              f"(stop_reason={stop_reason}, len={len(text)})")
+        try:
+            repaired = _repair_scoring_json(candidate)
+            result = json.loads(repaired)
+            print(f"[Training] Scoring: repair succeeded after primary parse failure")
+        except (json.JSONDecodeError, ValueError) as e2:
+            # Log full raw response to stderr for diagnostics, then re-raise
+            print(f"[Training] Scoring: repair also failed ({e2}). "
+                  f"Raw response (stop_reason={stop_reason}, len={len(text)}): "
+                  f"{text!r}")
+            raise ValueError(f"Scoring JSON parse failed: {e}") from e
 
     # ── Basis-Punkte (D-16) ────────────────────────────────────────────────────
     gesamt = result.get('gesamt_score', 0)
