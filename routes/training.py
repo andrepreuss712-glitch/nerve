@@ -686,6 +686,13 @@ def training_end():
         if ws.get('einwand_typ') and ws.get('text')
     ])
 
+    # Phase 07.2 Wave 1: log_id fuer Wave-3-Redirect auf /session/<id>.
+    # Default None falls DB-Persistierung fehlschlaegt — Frontend faellt dann
+    # auf bestehenden Scoring-Overlay-Flow zurueck. Wird nach db_log.commit()
+    # gesetzt, solange log_entry.id noch aus der Session lesbar ist
+    # (CLAUDE.md-Pattern: "Read ALL needed attributes BEFORE db.close()").
+    _log_id = None
+
     try:
         db_log = get_session()
         from database.models import ConversationLog as CLog, Phrase as PhraseModel
@@ -750,6 +757,10 @@ def training_end():
 
         db_log.commit()
 
+        # Phase 07.2 Wave 1: log_id hier lesen — log_entry ist nach commit gefluscht,
+        # log_entry.id ist garantiert gesetzt. Vor db_log.close() lesen (CLAUDE.md).
+        _log_id = log_entry.id
+
         # ── Phase 04.12: Integration Engine — Post-Training Events + Muster (D-03) ──
         try:
             from services.integration_engine import run_posttraining_engine
@@ -796,6 +807,11 @@ def training_end():
             db_pts.close()
     except Exception as ex:
         print(f"[Points] Training-Punkte Fehler: {ex}")
+
+    # Phase 07.2 Wave 1: log_id fuer Wave-3-Redirect auf /session/<id> anhaengen.
+    # None moeglich falls DB-Persistierung oben fehlgeschlagen ist — Frontend
+    # erkennt das und faellt auf bestehenden Overlay-Pfad zurueck.
+    result['log_id'] = _log_id
 
     return jsonify(result)
 
