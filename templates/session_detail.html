@@ -6,6 +6,18 @@
   <header class="n-session-detail-header {% if conv.typ == 'training' %}n-session-detail-header--training{% endif %}">
     <a class="n-btn n-btn-ghost" href="{{ url_for('dashboard.analytics_page') }}">← Zurück zur History</a>
     <h1 class="n-session-detail-card-title n-session-detail-card-title--spaced">Session #{{ conv.id }}</h1>
+
+    {# NEU 07.2 Wave 3: Action-Button "Nochmal trainieren" — nur fuer Training-Sessions.
+       URL enthaelt personality_type_id + schwierigkeit_raw (Wave-1-Context) als Pre-Selection.
+       scenario_id NICHT (nicht persistiert, Research Pitfall 4). modus NICHT (nicht ableitbar). #}
+    {% if conv.typ == 'training' %}
+      <a class="n-btn n-btn-primary n-session-detail-repeat-btn"
+         href="{{ url_for('training.training_page') }}{% set qparams = [] %}{% if conv.personality_type_id %}{% set _ = qparams.append('personality_type_id=' ~ conv.personality_type_id) %}{% endif %}{% if schwierigkeit_raw %}{% set _ = qparams.append('schwierigkeit=' ~ schwierigkeit_raw) %}{% endif %}{% if qparams %}?{{ qparams | join('&') }}{% endif %}">
+        <i data-lucide="play-circle" class="n-session-detail-icon-sm"></i>
+        Nochmal trainieren
+      </a>
+    {% endif %}
+
     <div class="n-session-detail-meta">
       {% if conv.typ == 'training' %}
         <div class="n-badge n-badge-neutral">Training</div>

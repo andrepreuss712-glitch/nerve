@@ -2283,6 +2283,25 @@ input[type="range"].perf-slider::-moz-range-thumb {
   margin-left: 4px;
 }
 
+/* -- Phase 07.2 Wave 3: "Nochmal trainieren"-Action-Button ---------- */
+
+.n-session-detail-repeat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  /* Rest kommt aus .n-btn / .n-btn-primary — keine neuen Farben */
+}
+
+/* Responsive: Button unter Titel wrappen auf Mobile */
+@media (max-width: 640px) {
+  .n-session-detail-repeat-btn {
+    margin-left: 0;
+    margin-top: 8px;
+    align-self: flex-start;
+  }
+}
+
 @media (max-width: 768px) {
   .n-session-detail-hero { grid-template-columns: 1fr; padding: 16px; }
   .n-session-detail-card { padding: 16px; }
