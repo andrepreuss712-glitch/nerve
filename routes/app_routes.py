@@ -809,7 +809,20 @@ def _derive_practice_recommendations(db, conv, events):
                 'cross_context': None,
             })
 
-    return recs[:3]
+    # UAT-R2 B1: Dedupe by explanation — same generic Live-Rule 1 text wurde bis zu
+    # 3x ausgegeben, wenn 3 Einwaende unbehandelt waren. Wir behalten den ersten
+    # Eintrag pro explanation-String (Order-preserving), damit Sektion 14
+    # keine sichtbaren Doubletten mehr zeigt. observation bleibt einwand-spezifisch
+    # im ersten Eintrag erhalten.
+    _seen = set()
+    _deduped = []
+    for r in recs:
+        _key = r.get('explanation')
+        if _key in _seen:
+            continue
+        _seen.add(_key)
+        _deduped.append(r)
+    return _deduped[:3]
 
 
 @app_routes_bp.route('/api/postcall/trend')
