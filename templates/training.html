@@ -107,40 +107,7 @@
 .t-send-btn:disabled{opacity:.35;cursor:default}
 .t-status-bar{font-size:11px;color:var(--page-text-muted);min-height:15px;font-style:italic}
 
-/* ── Phase 4: Scoring ── */
-.t-scoring-scroll{flex:1;overflow-y:auto;min-height:0}
-.t-scoring-scroll::-webkit-scrollbar{width:4px}
-.t-scoring-scroll::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:2px}
-.t-scoring-inner{padding:24px 20px;display:flex;flex-direction:column;gap:18px;
-  max-width:680px;margin:0 auto}
-.t-score-header{display:flex;align-items:center;gap:20px;padding-bottom:16px;
-  border-bottom:1px solid var(--glass-border)}
-.t-score-circle text{font-family:'JetBrains Mono',monospace}
-.t-score-meta{display:flex;flex-direction:column;gap:5px}
-.t-score-title{font-size:22px;font-weight:800}
-.t-score-profile{font-size:13px;color:var(--page-text-muted)}
-.t-score-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-.t-score-tag{font-size:11px;color:var(--page-text-muted);background:var(--glass-bg);border:1.5px solid var(--glass-border);
-  border-radius:20px;padding:2px 9px}
-.t-score-tag.gold{color:#6B7280;border-color:rgba(107,114,128,0.3);background:rgba(107,114,128,0.05)}
-
-.t-cats{display:flex;flex-direction:column;gap:8px}
-.t-cat{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:10px;padding:12px 14px}
-.t-cat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.t-cat-name{font-size:12px;font-weight:700}
-.t-cat-score{font-size:13px;font-weight:800;color:#00D4AA}
-.t-cat-bar-wrap{height:5px;background:var(--glass-border);border-radius:3px;overflow:hidden;margin-bottom:5px}
-.t-cat-bar{height:100%;border-radius:3px;transition:width .6s}
-.t-cat-fb{font-size:12px;color:var(--page-text-muted);line-height:1.4}
-
-.t-score-box{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:10px;padding:14px 16px}
-.t-score-box-title{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--page-text-muted);
-  text-transform:uppercase;margin-bottom:10px}
-.t-bullet{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.5;margin-bottom:5px}
-.t-bullet:last-child{margin-bottom:0}
-.t-summary{background:rgba(107,114,128,0.04);border:1.5px solid rgba(107,114,128,0.2);border-radius:8px;
-  padding:13px 15px;font-size:13px;color:#6B7280;line-height:1.6;font-style:italic}
-.t-scoring-actions{display:flex;gap:10px;justify-content:center;padding-bottom:4px}
+/* Phase 4 (Scoring) Styles ENTFERNT in 07.2 Wave 3 — Overlay weg, Session-Detail uebernimmt. */
 
 /* ── Training-Modus selector ── */
 .t-modus-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px}
@@ -159,35 +126,7 @@
 /* ── Hilfe-Counter ── */
 .t-hilfe-counter{font-size:10px;color:var(--page-text-muted);font-weight:600;margin-left:6px}
 
-/* ── Modus-Result (Scoring) ── */
-.t-modus-result{background:rgba(107,114,128,0.04);border:1.5px solid rgba(107,114,128,0.2);border-radius:10px;
-  padding:14px 16px;display:flex;flex-direction:column;gap:5px}
-.t-modus-result-title{font-size:14px;font-weight:800;color:#6B7280}
-.t-modus-result-msg{font-size:13px;color:#6B7280;line-height:1.5;opacity:.8}
-.t-modus-result-pts{font-size:12px;color:var(--page-text-muted);font-weight:600;margin-top:3px}
-
-/* ── Live-Preview (Scoring) ── */
-.t-live-preview{background:rgba(0,212,170,0.03);border:1.5px solid rgba(0,212,170,0.12);border-radius:12px;
-  padding:18px;display:flex;flex-direction:column;gap:14px}
-.t-lp-header{font-size:13px;font-weight:800;color:var(--page-text-color)}
-.t-lp-header span{color:#00D4AA}
-.t-lp-moment{background:var(--glass-bg);border-left:3px solid #00D4AA;border-radius:0 8px 8px 0;
-  padding:12px 14px;display:flex;flex-direction:column;gap:7px}
-.t-lp-trigger{font-size:11px;color:var(--page-text-muted);font-weight:600;margin-bottom:2px}
-.t-lp-badge{display:inline-block;background:rgba(0,212,170,0.08);border:1.5px solid rgba(0,212,170,0.2);
-  color:#00D4AA;font-size:10px;font-weight:800;letter-spacing:.06em;
-  padding:2px 9px;border-radius:20px;text-transform:uppercase}
-.t-lp-arg{font-size:13px;color:var(--page-text-color);line-height:1.6;font-style:italic}
-.t-lp-tip{font-size:12px;color:var(--page-text-secondary);line-height:1.5}
-.t-lp-pain{font-size:12px;color:#e07030;line-height:1.5;font-style:italic}
-.t-lp-summary{font-size:13px;color:var(--page-text-secondary);line-height:1.6;border-top:1px solid var(--glass-border);
-  padding-top:12px}
-.t-lp-cta{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:8px;
-  padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.t-lp-cta-text{font-size:13px;color:var(--page-text-secondary);font-weight:600}
-.t-lp-cta-btn{background:#00D4AA;color:var(--page-bg);border:none;border-radius:7px;
-  padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;
-  white-space:nowrap;letter-spacing:.03em;text-decoration:none}
+/* Modus-Result + Live-Preview Styles ENTFERNT in 07.2 Wave 3 — Scoring-Overlay weg. */
 
 /* ── Kundentyp cards (matches t-diff-card / n-glass system) ── */
 .t-typ-card {
@@ -681,16 +620,18 @@
   </div>
 </div>
 
-<!-- ── Phase 4: Scoring ───────────────────────────────────────────────────── -->
-<div id="t-scoring" class="t-overlay t-hidden">
-  <div class="t-scoring-scroll">
-    <div class="t-scoring-inner" id="t-scoringInner">
-      <div style="text-align:center;color:#6B7280;font-style:italic;padding:40px 0">
-        Auswertung wird erstellt…
-      </div>
-    </div>
-  </div>
-</div>
+{# ── Phase 4: Scoring ENTFERNT (07.2 Wave 3, Option A) ─────────────────────
+   Das Post-Call-Scoring-Overlay wurde komplett ausgebaut. Nach /training/end
+   redirected confirmEndTraining() auf /session/<log_id>. Siehe:
+   - templates/session_detail.html (Sektionen 12/13/14, Wave 2)
+   - routes/training.py training_end() (log_id in Response, Wave 1)
+   - .planning/phases/07.2-scoring-konsolidierung-inserted/07.2-CONTEXT.md (Option A)
+
+   DEFERRED-FEATURES (NICHT migriert, Re-Introduction-Pointer fuer kuenftige Phasen):
+   - personality_revealed: Experte-Mode-Hidden-Personality-Reveal nach Call (D-05)
+   - live_preview: Haiku-Call "Was NERVE live geholfen haette"
+   - generatedPersonality Save-Prompt: "Diese Persoenlichkeit merken?"
+   Tracked als POLISH-35 / POLISH-36 / POLISH-37 in ROADMAP.md Deferred-Section. #}
 
 <!-- ── Hangup Overlay ─────────────────────────────────────────────────────── -->
 <div id="t-hangup-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(220,38,38,0.3); z-index:1000; pointer-events:none;"></div>
@@ -1442,13 +1383,11 @@ async function endTraining() {
   // Guard: no real conversation detected
   const userMsgCount = document.querySelectorAll('#t-messages .t-msg-out').length;
   if (trainingSecs < 10 || userMsgCount === 0) {
-    showPhase('scoring');
-    document.getElementById('t-scoring').innerHTML =
-      '<div class="n-glass" style="padding:32px;text-align:center;margin:40px auto;max-width:500px">' +
-        '<h3 style="color:var(--page-text-color);margin-bottom:12px">Kein Gespräch erkannt</h3>' +
-        '<p style="color:var(--page-text-secondary)">Starte ein neues Training, um eine Auswertung zu erhalten.</p>' +
-        '<button class="btn btn-primary" onclick="showPhase(\'setup\')" style="margin-top:16px">Neues Training</button>' +
-      '</div>';
+    // 07.2 Wave 3: Overlay-Flow entfernt — statt Scoring-Overlay zurueck zum Setup
+    // mit kurzem Hinweis. Kein /training/end-Call, kein Redirect (keine Session
+    // persistiert bei <10s/0 Messages).
+    alert('Kein Gespräch erkannt. Starte ein neues Training, um eine Auswertung zu erhalten.');
+    resetTraining();
     return;
   }
   document.getElementById('t-confirmEndModal').classList.remove('t-hidden');
@@ -1480,44 +1419,26 @@ async function confirmEndTraining() {
       body: JSON.stringify({hilfe_count: hilfeCount}),
     });
     const data = await res.json();
-    clearInterval(loadInterval);
-    if (loadOverlay) loadOverlay.style.display = 'none';
-    if (!data.ok) { alert('Fehler bei der Auswertung'); setWaiting(false); return; }
-    buildScoring(data);
-    showPhase('scoring');
-    // D-15: Render mood curve chart
-    renderMoodChart(data.stimmung_history);
-    // D-17: Render Wendepunkt-Analyse block
-    renderWendepunkteDetail((data.scoring || {}).wendepunkte_detail);
-    // D-05: personality reveal for Experte mode
-    if (data.personality_revealed) {
-      const reveal = data.personality_revealed;
-      const revealDiv = document.createElement('div');
-      revealDiv.style.cssText = 'margin-bottom:20px; padding:16px; background:var(--glass-bg); border:1.5px solid #00D4AA; border-radius:12px; text-align:center;';
-      revealDiv.innerHTML =
-        '<div style="font-size:10px; color:#A0AEC0; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Dein Kunde war:</div>' +
-        '<div style="font-size:36px; margin-bottom:8px;">' + escH(reveal.icon || '') + '</div>' +
-        '<div style="font-size:18px; color:#E2E8F0; font-weight:600;">' + escH(reveal.name) + '</div>' +
-        '<div style="font-size:13px; color:#A0AEC0; margin-top:4px;">' + escH(reveal.kurzbeschreibung || '') + '</div>';
-      const scoringInner = document.getElementById('t-scoringInner');
-      if (scoringInner) scoringInner.insertBefore(revealDiv, scoringInner.firstChild);
+    if (!data.ok) {
+      clearInterval(loadInterval);
+      if (loadOverlay) loadOverlay.style.display = 'none';
+      alert('Fehler bei der Auswertung');
+      setWaiting(false);
+      return;
     }
-    // D-03: save prompt for generated personalities
-    if (generatedPersonality && !selectedPersonalityTypeId) {
-      const saveDiv = document.createElement('div');
-      saveDiv.id = 't-save-personality-div';
-      saveDiv.style.cssText = 'margin-top:20px; padding:16px; background:var(--glass-bg); border:1.5px solid var(--glass-border); border-radius:12px;';
-      saveDiv.innerHTML =
-        '<h4 style="color:#00D4AA; margin:0 0 8px;">Kunden speichern?</h4>' +
-        '<p style="color:#A0AEC0; font-size:13px; margin:0 0 12px;">' + escH(generatedPersonality.name) + ' für spätere Trainings speichern?</p>' +
-        '<input id="t-save-comment" placeholder="Kommentar (optional)" ' +
-               'style="width:100%; padding:8px; background:var(--page-bg); border:1.5px solid var(--glass-border); border-radius:6px; margin-bottom:8px; box-sizing:border-box;">' +
-        '<div style="display:flex; gap:8px;">' +
-          '<button onclick="saveGeneratedPersonality()" style="background:#00D4AA; color:#0D1117; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">Speichern</button>' +
-          '<button onclick="document.getElementById(\'t-save-personality-div\').remove()" style="background:transparent; border:1.5px solid #4A5568; color:#A0AEC0; padding:8px 16px; border-radius:6px; cursor:pointer;">Verwerfen</button>' +
-        '</div>';
-      const scoringInner = document.getElementById('t-scoringInner');
-      if (scoringInner) scoringInner.appendChild(saveDiv);
+    // ── 07.2 Wave 3: Overlay-Flow entfernt (Option A). Redirect auf Session-Detail
+    // statt Overlay-Render. Deferred-Features (personality_revealed, live_preview,
+    // save-personality-prompt) sind als POLISH-35/-36/-37 getrackt — siehe Inline-
+    // Kommentar weiter oben im HTML-Block.
+    // Loader bleibt sichtbar bis Browser navigiert (gewuenscht: UX fuer User,
+    // der Session-Detail-Page laedt). clearInterval/loadOverlay.hide bleiben dem
+    // Error-Branch ueberlassen.
+    if (data.log_id) {
+      window.location.href = '/session/' + data.log_id;
+    } else {
+      // Fallback (shouldn't happen — Wave 1 Task 1.2 garantiert log_id)
+      console.error('[End] missing log_id in /training/end response — fallback to /analytics');
+      window.location.href = '/analytics';
     }
   } catch(e) {
     clearInterval(loadInterval);
@@ -1526,255 +1447,6 @@ async function confirmEndTraining() {
     setWaiting(false);
     console.error('[End]', e);
   }
-}
-
-function buildScoring(data) {
-  const s    = data.scoring || {};
-  const score= s.gesamt_score || 0;
-  const r    = 44;
-  const circ = +(2 * Math.PI * r).toFixed(2);
-  const offs = +(circ * (1 - score / 100)).toFixed(2);
-  const col  = score >= 70 ? '#00D4AA' : score >= 50 ? '#6B7280' : '#e05c5c';
-
-  const catsHtml = (s.kategorien || []).map(c => {
-    const bc = c.score >= 7 ? '#00D4AA' : c.score >= 5 ? '#6B7280' : '#e05c5c';
-    return '<div class="t-cat">' +
-      '<div class="t-cat-top">' +
-        '<span class="t-cat-name">' + escH(c.name) + '</span>' +
-        '<span class="t-cat-score">' + c.score + '/10</span>' +
-      '</div>' +
-      '<div class="t-cat-bar-wrap"><div class="t-cat-bar" style="width:' + (c.score * 10) + '%;background:' + bc + '"></div></div>' +
-      '<div class="t-cat-fb">' + escH(c.feedback || '') + '</div>' +
-    '</div>';
-  }).join('');
-
-  const stärkenHtml = (s.stärken || []).map(x =>
-    '<div class="t-bullet"><span>✅</span><span>' + escH(x) + '</span></div>').join('');
-  const verbHtml = (s.verbesserungen || []).map(x =>
-    '<div class="t-bullet"><span>⚠️</span><span>' + escH(x) + '</span></div>').join('');
-
-  const sekTag = data.sekretärin_ueberwunden
-    ? '<span class="t-score-tag gold">✓ Sekretärin</span>' : '';
-
-  // ── Modus motivation block ─────────────────────────────────────────────────
-  const modus      = data.modus || 'guided';
-  const hCount     = data.hilfe_count || 0;
-  const ptsEarned  = data.punkte_verdient || 0;
-  const penalty    = Math.min(hCount * 5, 30);
-  let modusHtml;
-  if (modus === 'free') {
-    modusHtml = '<div class="t-modus-result">' +
-      '<div class="t-modus-result-title">🏆 Freies Training — ohne Hilfe</div>' +
-      '<div class="t-modus-result-msg">Du hast das komplett allein geschafft. Respekt.</div>' +
-      '<div class="t-modus-result-pts">+50% Bonuspunkte: ' + ptsEarned + ' Punkte verdient</div>' +
-    '</div>';
-  } else if (hCount === 0) {
-    modusHtml = '<div class="t-modus-result">' +
-      '<div class="t-modus-result-title">💪 Keine Hilfe genutzt!</div>' +
-      '<div class="t-modus-result-msg">Du hast den Hilfe-Button kein einziges Mal gebraucht. Bereit für das freie Training?</div>' +
-      '<div class="t-modus-result-pts">' + ptsEarned + ' Punkte verdient</div>' +
-    '</div>';
-  } else if (hCount <= 2) {
-    modusHtml = '<div class="t-modus-result">' +
-      '<div class="t-modus-result-title">💡 Fast ohne Hilfe — nur ' + hCount + 'x genutzt</div>' +
-      '<div class="t-modus-result-msg">Du brauchst kaum noch Unterstützung. Nächstes Mal: Probier den freien Modus.</div>' +
-      '<div class="t-modus-result-pts">' + ptsEarned + ' Punkte verdient (−' + penalty + ' für Hilfe)</div>' +
-    '</div>';
-  } else {
-    modusHtml = '<div class="t-modus-result">' +
-      '<div class="t-modus-result-title">💡 ' + hCount + 'x Hilfe genutzt</div>' +
-      '<div class="t-modus-result-msg">Kein Problem — dafür ist sie da. Versuch beim nächsten Mal mit weniger auszukommen.</div>' +
-      '<div class="t-modus-result-pts">' + ptsEarned + ' Punkte verdient (−' + penalty + ' für Hilfe)</div>' +
-    '</div>';
-  }
-
-  // ── Live preview block ──────────────────────────────────────────────────────
-  let livePreviewHtml = '';
-  const lp = data.live_preview;
-  if (lp && lp.momente && lp.momente.length) {
-    const momente = lp.momente.slice(0, 4).map(m => {
-      const ppHtml = m.painpoint
-        ? '<div class="t-lp-pain">📌 PAINPOINT: ' + escH(m.painpoint) + '</div>'
-        : '';
-      return '<div class="t-lp-moment">' +
-        '<div class="t-lp-trigger">Kunde: <em>"' + escH(m.kunde_sagte || '') + '"</em></div>' +
-        '<div><span class="t-lp-badge">⚡ ' + escH(m.einwand_typ || 'Einwand') + '</span></div>' +
-        '<div class="t-lp-arg">"' + escH(m.gegenargument || '') + '"</div>' +
-        (m.coaching_tipp ? '<div class="t-lp-tip">💡 ' + escH(m.coaching_tipp) + '</div>' : '') +
-        ppHtml +
-      '</div>';
-    }).join('');
-
-    const freeIntro = modus === 'free'
-      ? '<div style="font-size:12px;color:#6B7280;margin-bottom:2px">Du hast das ohne Hilfe gemeistert. Aber schau was NERVE zusätzlich erkannt hätte:</div>'
-      : '';
-
-    const ctaHtml = (PLAN_TYP === 'training')
-      ? '<div class="t-lp-cta">' +
-          '<span class="t-lp-cta-text">Willst du das im echten Gespräch?</span>' +
-          '<a class="t-lp-cta-btn" href="/live">⚡ Live-Modus testen →</a>' +
-        '</div>'
-      : '';
-
-    livePreviewHtml =
-      '<div class="t-live-preview">' +
-        '<div class="t-lp-header">⚡ Was <span>NERVE</span> dir im echten Gespräch gezeigt hätte</div>' +
-        freeIntro +
-        momente +
-        (lp.zusammenfassung ? '<div class="t-lp-summary">' + escH(lp.zusammenfassung) + '</div>' : '') +
-        ctaHtml +
-      '</div>';
-  }
-
-  document.getElementById('t-scoringInner').innerHTML =
-    '<div class="t-score-header">' +
-      '<svg class="t-score-circle" width="110" height="110" viewBox="0 0 110 110">' +
-        '<circle cx="55" cy="55" r="' + r + '" stroke="#E2E8F0" stroke-width="8" fill="none"/>' +
-        '<circle cx="55" cy="55" r="' + r + '" stroke="' + col + '" stroke-width="8" fill="none"' +
-          ' stroke-linecap="round"' +
-          ' stroke-dasharray="' + circ + '"' +
-          ' stroke-dashoffset="' + offs + '"' +
-          ' transform="rotate(-90 55 55)"/>' +
-        '<text x="55" y="51" text-anchor="middle" fill="#1a1a1a" font-size="22" font-weight="900">' + score + '</text>' +
-        '<text x="55" y="67" text-anchor="middle" fill="#6B7280" font-size="11">/100</text>' +
-      '</svg>' +
-      '<div class="t-score-meta">' +
-        '<div class="t-score-title">📊 Auswertung</div>' +
-        '<div class="t-score-profile">' + escH(data.profile_name || '') + ' · ' + escH(data.schwierigkeit || '') + '</div>' +
-        '<div class="t-score-tags">' +
-          '<span class="t-score-tag">' + data.dauer_min + ' Min</span>' +
-          '<span class="t-score-tag">' + data.turns + ' Runden</span>' +
-          sekTag +
-        '</div>' +
-      '</div>' +
-    '</div>' +
-    modusHtml +
-    '<div id="t-mood-chart-container" class="t-score-box" style="display:none;"><div class="t-score-box-title">Stimmungsverlauf</div><div style="position:relative;height:180px;"><canvas id="t-mood-chart"></canvas></div></div>' +
-    '<div id="t-wendepunkte-detail" style="display:none; margin-bottom:24px;"></div>' +
-    (catsHtml ? '<div class="t-cats">' + catsHtml + '</div>' : '') +
-    (stärkenHtml ? '<div class="t-score-box"><div class="t-score-box-title">Stärken</div>' + stärkenHtml + '</div>' : '') +
-    (verbHtml ? '<div class="t-score-box"><div class="t-score-box-title">Verbesserungspotenzial</div>' + verbHtml + '</div>' : '') +
-    (s.zusammenfassung ? '<div class="t-summary">' + escH(s.zusammenfassung) + '</div>' : '') +
-    livePreviewHtml +
-    '<div class="t-scoring-actions">' +
-      '<button class="btn btn-secondary" onclick="resetTraining()">🔄 Nochmal trainieren</button>' +
-      '<button class="btn btn-primary" onclick="showPhase(\'setup\')">✕ Schließen</button>' +
-    '</div>';
-}
-
-// ── Mood curve chart (D-15) ────────────────────────────────────────────────────
-function renderMoodChart(stimmungHistory) {
-    if (!stimmungHistory || stimmungHistory.length === 0) {
-        const c = document.getElementById('t-mood-chart-container');
-        if (c) c.style.display = 'none';
-        return;
-    }
-    document.getElementById('t-mood-chart-container').style.display = 'block';
-
-    // Destroy existing chart if re-rendering (Pitfall 5)
-    const existing = Chart.getChart('t-mood-chart');
-    if (existing) existing.destroy();
-
-    const ctx = document.getElementById('t-mood-chart').getContext('2d');
-
-    // Find wendepunkte (mood drops of >= 2 in negative direction)
-    const wendepunkte = [];
-    for (let i = 1; i < stimmungHistory.length; i++) {
-        const delta = stimmungHistory[i].wert - stimmungHistory[i-1].wert;
-        if (delta <= -2) wendepunkte.push(i);
-    }
-
-    // Point colors: red for wendepunkte, teal for others
-    const pointColors = stimmungHistory.map((_, i) =>
-        wendepunkte.includes(i) ? '#FC8181' : '#00D4AA'
-    );
-    const pointRadii = stimmungHistory.map((_, i) =>
-        wendepunkte.includes(i) ? 8 : 4
-    );
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: stimmungHistory.map((e, i) => 'Runde ' + (i + 1)),
-            datasets: [{
-                label: 'Kundenstimmung',
-                data: stimmungHistory.map(e => e.wert),
-                borderColor: '#00D4AA',
-                backgroundColor: 'rgba(0, 212, 170, 0.1)',
-                tension: 0.3,
-                pointRadius: pointRadii,
-                pointBackgroundColor: pointColors,
-                pointBorderColor: pointColors,
-                fill: true,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            const val = ctx.parsed.y;
-                            return 'Stimmung: ' + (val > 0 ? '+' : '') + val;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    min: -5,
-                    max: 5,
-                    ticks: {
-                        stepSize: 1,
-                        color: '#A0AEC0',
-                        callback: function(v) { return v > 0 ? '+' + v : v; }
-                    },
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                },
-                x: {
-                    ticks: { color: '#A0AEC0' },
-                    grid: { display: false }
-                }
-            }
-        }
-    });
-}
-
-// ── Wendepunkt-Analyse block (D-17) ───────────────────────────────────────────
-function renderWendepunkteDetail(wendepunkte) {
-    const container = document.getElementById('t-wendepunkte-detail');
-    if (!container) return;
-    if (!wendepunkte || wendepunkte.length === 0) {
-        container.style.display = 'none';
-        return;
-    }
-    container.style.display = 'block';
-    container.innerHTML =
-        '<h4 style="color:#FC8181; margin:0 0 16px; font-size:16px; display:flex; align-items:center; gap:8px;">' +
-            '<span style="font-size:20px;">&#x1F4A1;</span> Wendepunkt-Analyse' +
-        '</h4>' +
-        wendepunkte.map(function(w, i) {
-            return '<div style="background:var(--glass-bg); border:1.5px solid var(--glass-border); border-left:3px solid #FC8181; border-radius:0 12px 12px 0; padding:16px; margin-bottom:12px;">' +
-                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
-                    '<span style="color:#FC8181; font-size:12px; font-weight:600;">Wendepunkt ' + (i+1) + '</span>' +
-                    (w.turn ? '<span style="color:#A0AEC0; font-size:11px;">Runde ' + w.turn + '</span>' : '') +
-                '</div>' +
-                '<div style="margin-bottom:8px;">' +
-                    '<div style="color:#A0AEC0; font-size:11px; margin-bottom:2px;">Du hast gesagt:</div>' +
-                    '<div style="color:#E2E8F0; font-size:13px; font-style:italic;">"' + escH(w.berater_sagt || '') + '"</div>' +
-                '</div>' +
-                '<div style="margin-bottom:8px;">' +
-                    '<div style="color:#FC8181; font-size:11px; margin-bottom:2px;">Problem:</div>' +
-                    '<div style="color:#E2E8F0; font-size:13px;">' + escH(w.was_schief || '') + '</div>' +
-                '</div>' +
-                '<div>' +
-                    '<div style="color:#48BB78; font-size:11px; margin-bottom:2px;">Besser waere:</div>' +
-                    '<div style="color:#48BB78; font-size:13px; font-weight:500;">"' + escH(w.alternativ || '') + '"</div>' +
-                '</div>' +
-            '</div>';
-        }).join('');
 }
 
 function resetTraining() {
@@ -1801,7 +1473,9 @@ function resetTraining() {
 
 // ── Phase Navigation ────────────────────────────────────────────────────────────
 function showPhase(phase) {
-  ['t-setup','t-einwahl','t-chat','t-scoring'].forEach(id => {
+  // 07.2 Wave 3: Scoring-Phase entfernt — Overlay aufgeloest (Option A), Redirect
+  // auf Session-Detail uebernimmt die Auswertung.
+  ['t-setup','t-einwahl','t-chat'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('t-hidden', id !== 't-' + phase);
   });
@@ -1956,31 +1630,9 @@ function showStatus(t) {
 }
 
 // ── Save Generated Personality ──────────────────────────────────────────────────
-async function saveGeneratedPersonality() {
-  if (!generatedPersonality) return;
-  const kommentar = (document.getElementById('t-save-comment') || {}).value || '';
-  try {
-    const res = await fetch('/api/training/personalities/save', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        name:             generatedPersonality.name,
-        icon:             generatedPersonality.icon,
-        kurzbeschreibung: generatedPersonality.kurzbeschreibung,
-        attribute:        generatedPersonality.attribute,
-        kommentar:        kommentar
-      })
-    });
-    const data = await res.json();
-    if (data.id) {
-      selectedPersonalityTypeId = data.id;
-      const saveDiv = document.getElementById('t-save-personality-div');
-      if (saveDiv) saveDiv.innerHTML = '<p style="color:#00D4AA;">&#x2713; Gespeichert!</p>';
-    }
-  } catch(e) {
-    console.error('[Training] Save personality failed:', e);
-  }
-}
+// ENTFERNT in 07.2 Wave 3: saveGeneratedPersonality() war nur aus dem Post-Call-
+// Scoring-Overlay (Save-Prompt-Div) aufrufbar. Overlay ist weg — Funktion damit
+// orphaned. Re-Introduction zusammen mit dem Save-Prompt unter POLISH-37 (ROADMAP).
 
 // ── Szenarien ────────────────────────────────────────────────────────────────
 async function loadScenarios() {
