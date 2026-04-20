@@ -714,5 +714,5 @@ Plans:
 **Requirements:** POLISH-32 (implicit), plus neue Anforderung Scoring-Konsolidierung
 **Depends on:** Phase 07.1
 **Launch-relevant:** true
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 

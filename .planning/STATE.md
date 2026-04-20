@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07.2-01-PLAN.md
-last_updated: "2026-04-20T12:52:54.960Z"
+stopped_at: Completed 07.2-02-PLAN.md
+last_updated: "2026-04-20T13:46:49.662Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 39
   completed_phases: 26
   total_plans: 136
-  completed_plans: 122
+  completed_plans: 123
   percent: 90
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 07.2 (scoring-konsolidierung-inserted) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-20
 
@@ -149,6 +149,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.4 P01 | 2min | 2 tasks | 3 files |
 | Phase 06.5 P01 | 5min | 4 tasks | 2 files |
 | Phase 07.2 P01 | 3 | 2 tasks | 2 files |
+| Phase 07.2 P02 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -349,6 +350,9 @@ Recent decisions affecting current work:
 - [Phase 07.2]: [Phase 07.2-01]: schwierigkeit_raw whitelist-gated to leicht|mittel|schwer only (T-07.2-04b Tampering-Mitigation for Plan-03-URL)
 - [Phase 07.2]: [Phase 07.2-01]: _log_id=None default before try-block — robust against DB-persist failure; frontend detects None and falls back to overlay-flow
 - [Phase 07.2]: [Phase 07.2-01]: result['log_id']=_log_id as dict-assignment not jsonify-unpack — avoids scoring-dict collision risk if generate_scoring() later adds log_id
+- [Phase 07.2]: [Phase 07.2-02]: Training-Hero-Breakdown removed via positive typ=='live' branch (Schritt F Zweite Form) — semantically clearer than Training-Negation, no dead code
+- [Phase 07.2]: [Phase 07.2-02]: Scoring-Fail-Sentinel detection in Sektion 14 case-insensitive (|lower) — tolerates future wording changes in routes/training.py fallback
+- [Phase 07.2]: [Phase 07.2-02]: All 14 new CSS rules use var(--*) tokens exclusively — no new hex colors, no yellow/gold regression, insertion between .n-session-detail-future-text and @media block
 
 ### Roadmap Evolution
 
@@ -403,6 +407,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-20T12:52:45.061Z
-Stopped at: Completed 07.2-01-PLAN.md
+Last session: 2026-04-20T13:46:49.653Z
+Stopped at: Completed 07.2-02-PLAN.md
 Resume file: None
