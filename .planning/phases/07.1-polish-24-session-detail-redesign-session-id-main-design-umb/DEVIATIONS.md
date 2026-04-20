@@ -268,3 +268,102 @@ für UAT Round 4.
 | K     | `f238fa1` | fix Umlaut-Identifier Training crash + systematic scan           |
 | I-bis | `48af46c` | lower painpoint dedupe threshold 0.75 -> 0.60                    |
 | —     | (next)    | bump CSS_VERSION to 20260420-2 + document UAT-R3 fixes           |
+
+---
+
+## UAT Round 4 / Wave 4 Findings (2026-04-18)
+
+Hauptscope POLISH-24 (Session-Detail-Redesign) nach UAT-R3 approved. Drei Nacharbeiten
+(Training-Header-Badges, Training-Trend-Badge, errorhandler-Passthrough) blieben offen
+und werden als Wave 4 atomar auf `main` gefixt, dann CSS_VERSION-Bump + Re-Deploy +
+UAT-R5 (final).
+
+### POLISH-32 — Training-Header zeigt Persoenlichkeits-Typ + Schwierigkeit als Badges
+
+- **Finding:** Training-Session-Detail-Header (Session #113) zeigte nur "Training"
+  + em-dash. `personality_type`-Badge (falls vorhanden) + `schwierigkeit`-Badge
+  fehlten komplett.
+- **Root cause (zweiteilig):**
+  1. `routes/training.py:705` persistierte `phasen_details = json.dumps(scoring)`
+     — reines Scoring-Dict OHNE `schwierigkeit`. Die `session_detail`-Route
+     parste `phasen_details.schwierigkeit`, fand nie einen Wert, lieferte
+     `schwierigkeit_label='—'`.
+  2. Template rendete Badge unconditional mit em-dash-Platzhalter bei leerem Wert.
+- **Rule:** Rule 1 — Data-completeness bug (fehlende Persistierung) +
+  Rule 2 — UX-Korrektheit (em-dash-Platzhalter statt ausgeblendet).
+- **Fix:**
+  - `routes/training.py`: `phasen_details`-Payload um `'schwierigkeit'`-Key
+    erweitert (Copy von scoring-Dict + session['schwierigkeit'], JSON-serialisiert
+    mit `ensure_ascii=False`). Keine neue DB-Spalte — JSON koexistiert.
+  - `routes/dashboard.py` `session_detail`: `schwierigkeit_label`-Default `None`
+    statt `'—'`; Mapping-Lookup liefert `None` wenn Key unbekannt oder leer.
+  - `templates/session_detail.html`: Badge-Block in `{% if schwierigkeit_label %}`
+    gewrappt — kein em-dash-Platzhalter mehr.
+- **Files:** `routes/training.py`, `routes/dashboard.py`, `templates/session_detail.html`
+- **Commit:** `2fbb7ca`
+- **Impact:** Neue Training-Sessions zeigen 3 Badges (Training + Persoenlichkeit +
+  Schwierigkeit). Alte Sessions ohne persistierte `schwierigkeit` zeigen nur die
+  Badges, fuer die Daten vorliegen (kein em-dash).
+
+### POLISH-33 — Training-Trend-Badge fehlt im Score-Hero
+
+- **Finding:** Cold-Call-Sessions zeigten im Score-Hero "+X vs Schnitt letzte 5".
+  Training-Sessions (Session #113) hatten KEINE Trend-Badge.
+- **Root cause:** `routes/dashboard.py` `session_detail` hatte explizites Gate
+  `if conv_typ == 'live'` um den Trend-Query — `trend_avg` blieb fuer Training
+  immer `None`. Zusaetzlich Template-Gate `conv.typ != 'training'` als doppelte
+  Sperre.
+- **Rule:** Rule 2 — Missing feature-parity (User-Erwartung: beide Session-Typen
+  zeigen Trend-Indikator).
+- **Fix:** Trend-Query typ-diskriminierend gemacht:
+  - **Live:** `_calc_call_score`-Mittel ueber letzte 5 `typ='live'` Sessions
+    (unveraendert).
+  - **Training:** `kb_end`-Mittel ueber letzte 5 `typ='training'` Sessions
+    (None-tolerant, None->0). Passt zum Score-Hero-Wert fuer Training
+    (`score_total = kb_end_effective`).
+  - Template-Gate `conv.typ != 'training'` entfernt — reines `trend_avg is not none`.
+- **Files:** `routes/dashboard.py`, `templates/session_detail.html`
+- **Commit:** `c61d7a1`
+- **Impact:** Training-Trend-Badge rendert wenn User >=1 historische Training-Session
+  hat. Cold-Call-Verhalten unveraendert.
+
+### POLISH-21 — @app.errorhandler(Exception) schluckt HTTPException
+
+- **Finding:** Aufruf nicht-existenter URLs (z.B. `/unknown-route`) landete im
+  generic 500-Handler mit Python-Traceback im Browser statt in Flasks normaler
+  404-Page. Bei UAT 2x blockierend + Security-Leak (Server-Code sichtbar).
+- **Root cause:** `app.py:1309` `@app.errorhandler(Exception)` fing auch
+  `werkzeug.exceptions.HTTPException` (404/403/405/...) — die tragen bereits
+  einen korrekten Statuscode und sollen von Flask normal gerendert werden, nicht
+  als 500er mit Traceback.
+- **Rule:** Rule 1 — Bug (falsche Behandlung korrekter HTTPExceptions) +
+  Rule 2 — Security correctness (Server-Code-Leak).
+- **Fix:**
+  - `from werkzeug.exceptions import HTTPException as _HTTPException` am
+    errorhandler-Block (konsistent mit bestehendem lokalem Import-Stil).
+  - Erste Zeile im Handler: `if isinstance(e, _HTTPException): return e` —
+    vor jeglichem Traceback-Rendering/Logging, damit Flask die normale
+    404/403/405/...-Page liefert.
+- **Files:** `app.py`
+- **Commit:** `19b2570`
+- **Impact:** `/this-route-does-not-exist-xyz` liefert jetzt echte 404 statt
+  500+Traceback. Kein Server-Code-Leak mehr.
+
+### POLISH-34 — Gesamt-Score-Dopplung (DEFERRED zu Phase 07.2)
+
+- **Finding:** Score-Hero + Breakdown-Row zeigen `Gesamt-Score` doppelt.
+- **Entscheidung:** NICHT in Wave 4 fixen. Gehoert zur Scoring-Konsolidierung
+  in Phase 07.2 (kompletter Redesign der Score-Architektur: ein kanonischer
+  Score-Pfad Live vs. Training, Komponentenauswahl, Gewichtungs-Matrix).
+- **Begruendung:** Ein kosmetischer Hide-der-Dopplung waere technische Schuld,
+  weil die darunter-liegende Score-Semantik (zwei Werte mit gleichem Label)
+  erhalten bliebe. 07.2 raeumt das strukturell auf.
+
+**Commit-Chain (Wave 4):**
+
+| #          | Commit    | Finding                                                        |
+| ---------- | --------- | -------------------------------------------------------------- |
+| POLISH-32  | `2fbb7ca` | training header shows personality + difficulty badges          |
+| POLISH-33  | `c61d7a1` | add training-specific trend badge via typ-aware avg            |
+| POLISH-21  | `19b2570` | pass HTTPException through generic errorhandler                |
+| —          | (next)    | bump CSS_VERSION to 20260420-3 + document Wave 4 fixes         |
