@@ -765,7 +765,7 @@ def _derive_practice_recommendations(db, conv, events):
             recs.append({
                 'icon': 'trending-down',
                 'observation': f'Kaufbereitschaft Ende: {kb_end_effective}/100',
-                'explanation': 'Der Kunde ist am Ende skeptischer als gesund. Übe Qualifizierungs-Fragen.',
+                'explanation': 'Der Kunde ist am Ende ungewöhnlich skeptisch. Übe Qualifizierungs-Fragen, um früh Vertrauen aufzubauen.',
                 'training_focus': 'kb:drop',
                 'training_url': '/training',
                 'cross_context': None,
