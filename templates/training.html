@@ -377,7 +377,7 @@
         <div class="t-section-label"><span class="t-step-num">2</span> Schwierigkeit</div>
         <div class="t-diff-grid" id="t-diff-section" style="grid-template-columns:repeat(3, 1fr);">
           {% for key, diff in schwierigkeiten.items() %}
-          {% if key != 'sekretärin' %}
+          {# UAT-R3 K: removed dead filter `if key != 'sekretärin'` (Umlaut-literal, obsolete — SCHWIERIGKEITEN has no such key) #}
           <div class="t-diff-card n-glass {% if key == 'mittel' %}t-diff-active{% endif %}"
                data-key="{{ key }}" onclick="selectDiff('{{ key }}')">
             <div class="t-diff-icon">
@@ -389,7 +389,6 @@
             <div class="t-diff-label">{{ diff.label }}</div>
             <div class="t-diff-desc">{{ diff.beschreibung }}</div>
           </div>
-          {% endif %}
           {% endfor %}
         </div>
       </div>
@@ -448,7 +447,7 @@
         <div id="t-sektyp-cards" style="display:none; margin-top:16px;">
           <div class="t-section-label" style="font-size:13px;">Sekretärin-Typ</div>
           <div class="t-diff-grid" style="grid-template-columns: repeat(3, 1fr);">
-            {% for key, sek in sekretärin_types.items() %}
+            {% for key, sek in sekretaerin_types.items() %}
             <div class="t-diff-card n-glass {% if loop.first %}t-diff-active{% endif %}"
                  data-sektyp="{{ key }}" onclick="selectSekTyp('{{ key }}', this)">
               <div class="t-diff-icon" style="font-size:24px;">{{ sek.icon }}</div>
