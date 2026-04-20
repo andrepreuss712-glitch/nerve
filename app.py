@@ -1293,6 +1293,7 @@ def favicon():
 # Returns full traceback as JSON for API endpoints instead of HTML 500 page
 import traceback as _tb
 from flask import request as _request
+from werkzeug.exceptions import HTTPException as _HTTPException
 
 @app.errorhandler(500)
 def _handle_500(e):
@@ -1308,6 +1309,13 @@ def _handle_500(e):
 
 @app.errorhandler(Exception)
 def _handle_exception(e):
+    # Wave 4 / POLISH-21: HTTPException-Passthrough MUSS als erste Zeile stehen,
+    # bevor Logging/Traceback-Rendering. Werkzeug-HTTPExceptions (404, 403, 405 …)
+    # tragen ihren Statuscode selbst und sollen Flasks normales Rendering bekommen —
+    # sonst landen 404er im generischen 500-Handler mit Traceback im Browser
+    # (Security-Leak: Server-Code sichtbar).
+    if isinstance(e, _HTTPException):
+        return e
     tb_str = _tb.format_exc()
     print(tb_str)
     if (_request.content_type and 'json' in _request.content_type) or _request.headers.get('X-Requested-With') == 'XMLHttpRequest':
