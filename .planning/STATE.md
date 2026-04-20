@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07.2-02-PLAN.md
-last_updated: "2026-04-20T13:46:49.662Z"
+stopped_at: Completed 07.2-03-PLAN.md
+last_updated: "2026-04-20T14:14:49.118Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 39
   completed_phases: 26
   total_plans: 136
-  completed_plans: 123
-  percent: 90
+  completed_plans: 124
+  percent: 91
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 07.2 (scoring-konsolidierung-inserted) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-04-20
 
@@ -150,6 +150,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.5 P01 | 5min | 4 tasks | 2 files |
 | Phase 07.2 P01 | 3 | 2 tasks | 2 files |
 | Phase 07.2 P02 | 4min | 2 tasks | 2 files |
+| Phase 07.2 P03 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -353,6 +354,10 @@ Recent decisions affecting current work:
 - [Phase 07.2]: [Phase 07.2-02]: Training-Hero-Breakdown removed via positive typ=='live' branch (Schritt F Zweite Form) — semantically clearer than Training-Negation, no dead code
 - [Phase 07.2]: [Phase 07.2-02]: Scoring-Fail-Sentinel detection in Sektion 14 case-insensitive (|lower) — tolerates future wording changes in routes/training.py fallback
 - [Phase 07.2]: [Phase 07.2-02]: All 14 new CSS rules use var(--*) tokens exclusively — no new hex colors, no yellow/gold regression, insertion between .n-session-detail-future-text and @media block
+- [Phase 07.2]: [Phase 07.2-03]: Redirect-Fallback /analytics (not /logs) — /logs route does not exist; analytics_page is the history page (Rule-1 auto-fix)
+- [Phase 07.2]: [Phase 07.2-03]: endTraining() no-conversation-guard refactored to alert+resetTraining instead of showPhase('scoring')+#t-scoring.innerHTML (Rule-3: original guard depended on now-removed DOM)
+- [Phase 07.2]: [Phase 07.2-03]: saveGeneratedPersonality() orphan removed — only caller was save-personality-div inside removed scoring overlay. Re-introduction under POLISH-37 (Rule-1 dead-code)
+- [Phase 07.2]: [Phase 07.2-03]: Button URL uses Jinja qparams-list-join idiom (not direct string concat) — avoids trailing-& edge cases for 0/1/2 param combinations
 
 ### Roadmap Evolution
 
@@ -407,6 +412,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-20T13:46:49.653Z
-Stopped at: Completed 07.2-02-PLAN.md
+Last session: 2026-04-20T14:14:37.421Z
+Stopped at: Completed 07.2-03-PLAN.md
 Resume file: None
