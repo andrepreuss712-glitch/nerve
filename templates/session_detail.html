@@ -158,8 +158,11 @@
       {% endif %}
     {% elif tl_count > 0 %}
       <div class="n-session-detail-empty">
-        <h3>{{ tl_count }} Einwand{% if tl_count != 1 %}e{% endif %} erkannt — keine EWB-Buttons genutzt</h3>
-        <p>Der Analyse-Loop hat {{ tl_count }} Einwand{% if tl_count != 1 %}e{% endif %} erkannt, aber du hast keinen EWB-Button im Live-Assistent angeklickt. Im Training kannst du die Reaktion üben.</p>
+        {# UAT-R1 Fix 2: Plural von "Einwand" ist "Einwände" (mit Umlaut) — nicht "Einwande".
+           Frueher: Einwand{% if tl_count != 1 %}e{% endif %} -> "Einwande" bei Plural (falsch).
+           Neu: Explizite Fallunterscheidung Singular/Plural (CLAUDE.md User-Text-Regel). #}
+        <h3>{{ tl_count }} {% if tl_count == 1 %}Einwand{% else %}Einwände{% endif %} erkannt — keine EWB-Buttons genutzt</h3>
+        <p>Der Analyse-Loop hat {{ tl_count }} {% if tl_count == 1 %}Einwand{% else %}Einwände{% endif %} erkannt, aber du hast keinen EWB-Button im Live-Assistent angeklickt. Im Training kannst du die Reaktion üben.</p>
       </div>
     {% else %}
       <div class="n-session-detail-empty">
