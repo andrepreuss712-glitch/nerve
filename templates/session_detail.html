@@ -21,9 +21,12 @@
     <div class="n-session-detail-meta">
       {% if conv.typ == 'training' %}
         <div class="n-badge n-badge-neutral">Training</div>
-        {% if pt %}
+        {# UAT-R1 Fix 1: Kunden-Badge rendert sowohl fuer SAVED (pt) als auch UNSAVED
+           Custom-Personas (Route liefert kunden_display_name aus phasen_details).
+           Fallback-Reihenfolge: pt.name -> phasen_details.custom_persona_name -> kein Badge. #}
+        {% if kunden_display_name %}
           <div class="n-badge n-badge-neutral">
-            {% if pt.icon %}{{ pt.icon }} {% endif %}{{ pt.name }}
+            {% if kunden_display_icon %}{{ kunden_display_icon }} {% endif %}{{ kunden_display_name }}
           </div>
         {% endif %}
         {# Wave 4 / POLISH-32: Badge nur rendern wenn echter Wert da ist —
@@ -31,8 +34,10 @@
         {% if schwierigkeit_label %}
           <div class="n-badge n-badge-neutral">{{ schwierigkeit_label }}</div>
         {% endif %}
-        {# NEU 07.2 (Wave 2 Schritt E): Kunden-Subtext — nur wenn pt.name Pattern "Name, Alter" matcht.
-           Wave 1 liefert kunden_name=None fuer Archetype-Namen, wir rendern dann nichts. #}
+        {# NEU 07.2 (Wave 2 Schritt E): Kunden-Subtext — nur wenn Name Pattern "Name, Alter" matcht.
+           Wave 1 liefert kunden_name=None fuer Archetype-Namen, wir rendern dann nichts.
+           UAT-R1 Fix 1: Funktioniert jetzt auch fuer UNSAVED Custom-Personas via
+           phasen_details.custom_persona_name (routes/dashboard.py liest custom-Fallback). #}
         {% if kunden_name %}
           <span class="n-session-detail-kunden-subtext">{{ kunden_name }}{% if kunden_alter %}, {{ kunden_alter }}{% endif %}</span>
         {% endif %}

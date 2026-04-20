@@ -859,10 +859,35 @@ def session_detail(sid):
 
         # Phase 07.2 Wave 1: Kunden-Metadaten aus PersonalityType.name parsen (Training only).
         # Pattern "Vorname Nachname, Alter" -> (name, alter); Archetype-Name -> (None, None).
+        # Phase 07.2 UAT-R1 Fix 1: Fallback auf phasen_details.custom_persona_name, wenn
+        # die Training-Session mit einer UNSAVED Custom-Persona (generated_personality) lief.
+        # In dem Fall ist personality_type_id=NULL (kein pt-Datensatz), aber training_end()
+        # persistiert den Custom-Namen in phasen_details. Wir bauen zusaetzlich einen
+        # Display-Badge (kunden_display_name / kunden_display_icon), damit das Template
+        # bei Custom-Kunden mindestens den Namen prominent zeigen kann.
         kunden_name = None
         kunden_alter = None
-        if conv_typ == 'training' and pt:
-            kunden_name, kunden_alter = _parse_kunden_meta(pt.name)
+        kunden_display_name = None
+        kunden_display_icon = None
+        if conv_typ == 'training':
+            if pt:
+                kunden_name, kunden_alter = _parse_kunden_meta(pt.name)
+                kunden_display_name = pt.name
+                kunden_display_icon = pt.icon or None
+            elif conv.phasen_details:
+                try:
+                    _pd_cp = _json.loads(conv.phasen_details)
+                    if isinstance(_pd_cp, dict):
+                        _cp_name_raw = _pd_cp.get('custom_persona_name')
+                        if isinstance(_cp_name_raw, str) and _cp_name_raw.strip():
+                            kunden_name, kunden_alter = _parse_kunden_meta(_cp_name_raw)
+                            kunden_display_name = _cp_name_raw.strip()
+                            _cp_icon_raw = _pd_cp.get('custom_persona_icon')
+                            if isinstance(_cp_icon_raw, str) and _cp_icon_raw.strip():
+                                kunden_display_icon = _cp_icon_raw.strip()
+                except Exception:
+                    # Silent fallback — None/None belassen
+                    pass
 
         # Phase 07.1: Recommendations
         recommendations = _derive_practice_recommendations(db, conv, events)
@@ -899,6 +924,8 @@ def session_detail(sid):
             scoring_verbesserungen=scoring_verbesserungen,          # Sektion 14: Verbesserungspotenzial (Training only)
             kunden_name=kunden_name,                                # Header-Subtext: "Vorname Nachname"
             kunden_alter=kunden_alter,                              # Header-Subtext: Alter-String
+            kunden_display_name=kunden_display_name,                # UAT-R1 Fix 1: Custom-Kunden-Badge-Text (pt.name ODER custom_persona_name)
+            kunden_display_icon=kunden_display_icon,                # UAT-R1 Fix 1: Custom-Kunden-Badge-Icon
             schwierigkeit_raw=schwierigkeit_raw,                    # Plan 03 "Nochmal trainieren"-URL raw-Key
         )
     finally:

@@ -702,6 +702,18 @@ def training_end():
         # scoring + schwierigkeit koexistieren im selben JSON-Dict.
         _phasen_payload = dict(scoring) if isinstance(scoring, dict) else {}
         _phasen_payload['schwierigkeit'] = session.get('schwierigkeit', 'mittel')
+        # Phase 07.2 UAT-R1 Fix 1: Custom-Persona-Meta (unsaved generated_personality)
+        # persistieren — wenn kein personality_type_id gesetzt ist, liegt der Custom-Name
+        # nur in session['personality_data']. Ohne diese Persistenz kann session_detail.html
+        # den Kunden-Subtext bei Custom-Kunden nicht rendern (pt ist dann None).
+        # Key-Namespace 'custom_persona_*' vermeidet Kollision mit scoring-Keys.
+        if not session.get('personality_type_id') and isinstance(session.get('personality_data'), dict):
+            _pd = session['personality_data']
+            _cp_name = (_pd.get('name') or '').strip()
+            if _cp_name:
+                _phasen_payload['custom_persona_name'] = _cp_name[:200]
+                _phasen_payload['custom_persona_icon'] = (_pd.get('icon') or '')[:10]
+                _phasen_payload['custom_persona_kurzbeschreibung'] = (_pd.get('kurzbeschreibung') or '')[:300]
         log_entry = CLog(
             user_id              = g.user.id,
             org_id               = g.org.id,
