@@ -701,7 +701,18 @@ Plans:
 **Requirements:** POLISH-24
 **Depends on:** Phase 7
 **Launch-relevant:** true
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 07.1 to break down)
+- [x] 07.1-01-backend-db-helper-PLAN.md — Wave 1: kb_verlauf Migration + ORM Column + /api/beenden Persistenz + _derive_practice_recommendations Helper + session_detail Route-Erweiterung
+- [x] 07.1-02-frontend-template-css-PLAN.md — Wave 2: session_detail.html Komplett-Rewrite (11 Sektionen, typ-diskriminierend, Chart.js) + nerve.css .n-session-detail-* Klassenfamilie (21+ Klassen)
+- [x] 07.1-03-polish-deploy-PLAN.md — Wave 3: CSS_VERSION bump + deploy.sh + Browser-Smoke-Tests fuer alle 3 Session-Typen + Cross-Context-Badge-Verifikation (UAT-R5 approved 2026-04-20, 22+ commits, POLISH-34 deferred zu 07.2)
+
+### Phase 07.2: Scoring-Konsolidierung (INSERTED)
+
+**Goal:** Aus zwei parallelen Scoring-UIs (Training-Post-Call-Overlay + Session-Detail-Seite) wird EINE Auswertungs-Seite. User landet IMMER auf `/session/<id>` nach Call-Ende, egal ob Training/Cold Call/Meeting. Selbe 11 Sektionen aus Phase 07.1 PLUS drei neue Sektionen unten: (12) Wendepunkt-Analyse mit max 3-5 Karten (Du hast gesagt / Problem / Besser waere), (13) 6 Einzel-Scores mit Progress-Bars (Gespraechseroeffnung, Bedarfsanalyse, Einwandbehandlung, Gespraechsfuehrung, Abschluss, Beziehungsaufbau), (14) Verbesserungspotenzial-Liste mit 3-5 Bullet-Points. Header-Unterschied: Live=Cold-Call/Meeting-Badge, Training=Persoenlichkeitstyp+Schwierigkeit+Kunden-Name+Alter als Badge-Gruppe (loest POLISH-32 mit). Training-Post-Call-Overlay entfernt, direkter Redirect auf /session/<id>, "Nochmal trainieren"-Button wandert in Action-Button oben rechts. Live-Session: Sektionen mit Empty-State + Phase-4.19-Hinweis wo Daten fehlen (Wendepunkte brauchen Transkript-Persistierung). Training-Session: alle Sektionen aktiv, Daten aus ConversationLog (Wiederverwendung der Felder die heute im Overlay gerendert werden).
+**Requirements:** POLISH-32 (implicit), plus neue Anforderung Scoring-Konsolidierung
+**Depends on:** Phase 07.1
+**Launch-relevant:** true
+**Plans:** tbd — Research-First (Feldnamen fuer Kunden-Metadaten + Wendepunkt-Daten + 6 Einzel-Scores verifizieren)
+
