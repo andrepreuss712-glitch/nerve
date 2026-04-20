@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: ready-to-execute
-stopped_at: Phase 07.1 complete (UAT-R5 approved 2026-04-20)
-last_updated: "2026-04-20T09:30:00.000Z"
-last_activity: 2026-04-20 -- Phase 07.1 abgeschlossen, Phase 07.2 geplant
+status: executing
+stopped_at: Completed 07.2-01-PLAN.md
+last_updated: "2026-04-20T12:52:54.960Z"
+last_activity: 2026-04-20
 progress:
   total_phases: 39
-  completed_phases: 27
+  completed_phases: 26
   total_plans: 136
   completed_plans: 122
   percent: 90
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 07.2 — scoring-konsolidierung (geplant, bereit zur Ausfuehrung)
+**Current focus:** Phase 07.2 — scoring-konsolidierung-inserted
 
 ## Current Position
 
-Phase: 07.2 (scoring-konsolidierung-inserted) — READY TO EXECUTE
-Plan: 0 of 4 (Plaene erstellt, Checker-Edits appliziert)
-Status: Phase 07.1 complete — Phase 07.2 ready
-Last activity: 2026-04-20 -- Phase 07.1 UAT-R5 approved + verified, Phase 07.2 planning complete
+Phase: 07.2 (scoring-konsolidierung-inserted) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-20
 
 **Next:** /clear + /gsd-execute-phase 07.2
 
@@ -148,6 +148,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 06.3-analyse-loop-entkoppeln-von-live-slots P01 | 8 | 2 tasks | 2 files |
 | Phase 06.4 P01 | 2min | 2 tasks | 3 files |
 | Phase 06.5 P01 | 5min | 4 tasks | 2 files |
+| Phase 07.2 P01 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -344,6 +345,10 @@ Recent decisions affecting current work:
 - [Phase 06.5]: state.consentDone statt sessionStorage — Flag lebt in Launcher-Instanz, wird via _cleanup() resettet (nicht wie Headset der sessionStorage ueberlebt)
 - [Phase 06.5]: Consent-Gate steht in startCall() NACH Headset-Gate, VOR close() — bei 'Abbrechen' bleibt Launcher auf Step 5 sichtbar
 - [Phase 06.5]: Default-Text em-dash als \u2014 Unicode-Escape (POLISH-12 Encoding-Regel, keine nativen Umlaute)
+- [Phase 07.2]: [Phase 07.2-01]: _parse_kunden_meta uses module-level import re (dashboard.py line 2) — no new import needed
+- [Phase 07.2]: [Phase 07.2-01]: schwierigkeit_raw whitelist-gated to leicht|mittel|schwer only (T-07.2-04b Tampering-Mitigation for Plan-03-URL)
+- [Phase 07.2]: [Phase 07.2-01]: _log_id=None default before try-block — robust against DB-persist failure; frontend detects None and falls back to overlay-flow
+- [Phase 07.2]: [Phase 07.2-01]: result['log_id']=_log_id as dict-assignment not jsonify-unpack — avoids scoring-dict collision risk if generate_scoring() later adds log_id
 
 ### Roadmap Evolution
 
@@ -398,6 +403,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-18T12:00:23.264Z
-Stopped at: Phase 07.1 UI-SPEC R3 approved
-Resume file: .planning/phases/07.1-polish-24-session-detail-redesign-session-id-main-design-umb/07.1-UI-SPEC.md
+Last session: 2026-04-20T12:52:45.061Z
+Stopped at: Completed 07.2-01-PLAN.md
+Resume file: None
