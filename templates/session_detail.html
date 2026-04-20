@@ -317,16 +317,9 @@
   {# 07.2 Wave 2 Schritt A: ehemalige Sektion 10 (Gespraechs-Analyse-Future-Card) ENTFERNT —
      aufgeloest durch neue Sektion 12 Wendepunkt-Analyse (konkret statt abstrakt). #}
 
-  {# ── Section 11: Lernkarten (Future) ──────────────────────────── #}
-  <section class="n-session-detail-card n-session-detail-card--future">
-    <h2 class="n-session-detail-card-title">Lernkarten</h2>
-    <div class="n-session-detail-empty-future">
-      <i data-lucide="book-open" class="n-session-detail-icon-xl"></i>
-      <h3 class="n-session-detail-card-title--spaced">Lernkarten folgen</h3>
-      <p class="n-session-detail-future-text">Das Coach-Modul schlägt nach jedem Call max. 3 konkrete Sätze vor, die du als Lernkarte speichern kannst. Lernkarten werden vor jedem neuen Call geladen und erinnern dich im richtigen Moment.</p>
-      <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.11</div>
-    </div>
-  </section>
+  {# UAT-R1 Fix 3: Sektion 11 (Lernkarten-Future) wurde ANS ENDE (nach Sektion 14) verschoben —
+     Reihenfolge ist jetzt: 1-9, 12, 13, 14, 11. Begruendung: Future-Card soll nicht zwischen
+     konkrete Trainings-Auswertung (12/13/14) geraten. #}
 
   {# ── Section 12: Wendepunkt-Analyse (NEU 07.2 Wave 2 Schritt B, ersetzt ehemalige Sektion 10) ── #}
   <section class="n-session-detail-card">
@@ -438,6 +431,17 @@
         <p>Für diese Session wurden keine konkreten Handlungstipps generiert.</p>
       </div>
     {% endif %}
+  </section>
+
+  {# ── Section 11: Lernkarten (Future) — UAT-R1 Fix 3: ans Ende verschoben (nach Sektion 14). ── #}
+  <section class="n-session-detail-card n-session-detail-card--future">
+    <h2 class="n-session-detail-card-title">Lernkarten</h2>
+    <div class="n-session-detail-empty-future">
+      <i data-lucide="book-open" class="n-session-detail-icon-xl"></i>
+      <h3 class="n-session-detail-card-title--spaced">Lernkarten folgen</h3>
+      <p class="n-session-detail-future-text">Das Coach-Modul schlägt nach jedem Call max. 3 konkrete Sätze vor, die du als Lernkarte speichern kannst. Lernkarten werden vor jedem neuen Call geladen und erinnern dich im richtigen Moment.</p>
+      <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.11</div>
+    </div>
   </section>
 
 </main>
