@@ -197,3 +197,74 @@ vorbereitet für UAT Round 3.
 | I | `ea56a15` | dedupe near-duplicate painpoints via SequenceMatcher            |
 | J | `2f5b547` | extend Phasen-Strip empty-state copy                            |
 | — | (next)    | bump CSS_VERSION to 20260420-1 + document UAT-R2 fixes          |
+
+---
+
+## UAT Round 3 Findings (2026-04-18)
+
+Re-Test nach UAT-R2-Deploy lieferte einen BLOCKER (Training-Seite komplett
+500) plus Painpoint-Dedupe-Threshold zu strikt. Atomar auf `main` gefixt,
+CSS_VERSION-Bump, Re-Deploy fuer UAT Round 4.
+
+### K — BLOCKER: Training-Seite 500 wegen Umlaut-Identifier-Mismatch
+
+- **Finding:** `/training` warf `jinja2.exceptions.UndefinedError:
+  'sekretärin_types' is undefined` — der gesamte "Im Training üben"-Button
+  aus POLISH-24 war tot.
+- **Root cause:** `templates/training.html:451` nutzte die Jinja-Variable
+  `sekretärin_types` (mit Umlaut), aber `routes/training.py:60` übergibt
+  den Context als `sekretaerin_types` (ASCII, wie es `services/training_
+  service.py` mit `SEKRETAERIN_TYPES` definiert). Jinja versuchte eine
+  Python-Variable mit Umlaut aufzulösen — gibt's nicht.
+- **Rule:** Rule 1 — Bug + Rule 2 — CLAUDE.md-Regel-Bruch ("ASCII-Pflicht
+  für Code-Identifier, echte Umlaute nur in User-facing Text").
+- **Fix:**
+  1. `templates/training.html:451` — `sekretärin_types` -> `sekretaerin_types`.
+  2. `templates/training.html:380` — toter Filter `{% if key != 'sekretärin' %}`
+     entfernt (SCHWIERIGKEITEN hat keinen solchen Key, Check war ALWAYS
+     true). Durch Jinja-Kommentar ersetzt, der die Entfernung dokumentiert.
+- **Preventive scan:** Grep über alle `templates/*.html` nach Umlaut-
+  Identifiern in Jinja `{{ }}` / `{% %}`-Expressions (außerhalb von
+  String-Literals). Ergebnis:
+  - `training.html:451` — sekretärin_types    -> FIXED
+  - `training.html:380` — 'sekretärin' Literal -> REMOVED (dead)
+  - `base.html:110`    — Sprach-Label-Literals -> OK (user-facing Text)
+  - `app.html:1221` + `static/app.js` x5 — `window._profileEinwände`
+    Identifier mit Umlaut: Konvention-Bruch, aber KEIN Runtime-Bug
+    (Definition + alle 5 Read-Zugriffe konsistent). Live-kritischer Pfad
+    -> Deferred als D-1 in `deferred-items.md` (P2).
+- **Files:** `templates/training.html`
+- **Commit:** `f238fa1`
+
+### I-bis — Painpoint-Dedupe-Threshold zu strikt
+
+- **Finding:** User sah weiterhin Near-Duplicate-Painpoints in Section 7,
+  obwohl UAT-R2 I den `_dedupe_painpoints`-Helper mit SequenceMatcher > 0.75
+  eingeführt hatte. Beispielpaar:
+  - "Vertriebler wissen im Moment eines Einwands nicht, was sie sagen sollen"
+  - "Vertriebler haben im Moment des Einwands keine Antwort parat"
+  Gemessener Ratio: **0.656** — rutschte knapp durch den 0.75-Filter.
+- **Rule:** Rule 2 — Threshold-Tuning (UX-Korrektheit, Follow-up zu UAT-R2 I).
+- **Fix:** Threshold `> 0.75` -> `> 0.60` in `routes/dashboard.py`
+  `_dedupe_painpoints`. 0.60 fängt das Beispielpaar ab, bleibt aber
+  deutlich über 0.50 (sonst False-Positives bei inhaltlich verschiedenen
+  Painpoints zum selben Thema). Docstring um Threshold-History +
+  konkretes Ratio-Beispiel erweitert, Inline-Kommentare synchronisiert.
+- **Files:** `routes/dashboard.py`
+- **Commit:** `48af46c`
+
+---
+
+## Abschluss UAT-R3 (2026-04-18)
+
+K + I-bis atomar committet + CSS_VERSION auf `20260420-2` gebumpt für
+Browser-Cache-Invalidation. Re-Deploy via `bash deploy.sh` vorbereitet
+für UAT Round 4.
+
+**Commit-Chain (UAT-R3):**
+
+| #     | Commit    | Finding                                                          |
+| ----- | --------- | ---------------------------------------------------------------- |
+| K     | `f238fa1` | fix Umlaut-Identifier Training crash + systematic scan           |
+| I-bis | `48af46c` | lower painpoint dedupe threshold 0.75 -> 0.60                    |
+| —     | (next)    | bump CSS_VERSION to 20260420-2 + document UAT-R3 fixes           |
