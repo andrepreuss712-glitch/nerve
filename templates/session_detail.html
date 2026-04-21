@@ -251,7 +251,7 @@
     {% if conv.precall_briefing %}
       <details open class="n-session-detail-collapsible" id="sd-precall-details">
         <summary>Briefing ein-/ausblenden</summary>
-        <div class="n-session-detail-precall-body">{{ conv.precall_briefing }}</div>
+        <div class="n-session-detail-precall-body">{{ conv.precall_briefing | markdown | safe }}</div>
       </details>
     {% else %}
       <div class="n-session-detail-empty">

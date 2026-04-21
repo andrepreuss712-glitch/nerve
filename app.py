@@ -25,7 +25,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
 app.config['SECRET_KEY']           = SECRET_KEY
 app.config['SESSION_PERMANENT']    = True
-app.config['CSS_VERSION']          = '20260420-5'
+app.config['CSS_VERSION']          = '20260421-1'
 app.config['MAX_CONTENT_LENGTH']   = 5 * 1024 * 1024  # 5 MB feedback uploads
 
 if SECRET_KEY == 'dev-secret-change-me' and not os.environ.get('FLASK_DEBUG'):
@@ -54,6 +54,15 @@ def de_currency_filter(value):
     return formatted.replace(',', '§').replace('.', ',').replace('§', '.') + ' €'
 
 app.jinja_env.filters['de_currency'] = de_currency_filter
+
+# POLISH-52: Markdown-Rendering für PreCall-Briefing (AI-generierter Text mit
+# ##Headlines, **bold**, Bullet-Listen). Template nutzt `{{ text | markdown | safe }}`.
+import markdown as _markdown
+def markdown_filter(value):
+    if not value:
+        return ''
+    return _markdown.markdown(value, extensions=['extra', 'sane_lists'])
+app.jinja_env.filters['markdown'] = markdown_filter
 
 # 06.1-r2: Cache-Bust fuer Static-Files — Template ruft static_mtime('pip-launcher.js')
 # auf, bekommt die mtime als Integer zurueck, Browser holt bei Aenderung neu.

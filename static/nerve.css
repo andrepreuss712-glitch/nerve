@@ -2151,10 +2151,53 @@ input[type="range"].perf-slider::-moz-range-thumb {
   justify-content: space-between;
 }
 .n-session-detail-precall-body {
-  white-space: pre-wrap;
   color: var(--page-text-color);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+/* POLISH-52: gerenderte Markdown-Elemente im PreCall-Briefing */
+.n-session-detail-precall-body h1,
+.n-session-detail-precall-body h2,
+.n-session-detail-precall-body h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--page-text-color);
+  margin: 16px 0 8px;
+}
+.n-session-detail-precall-body h1:first-child,
+.n-session-detail-precall-body h2:first-child,
+.n-session-detail-precall-body h3:first-child {
+  margin-top: 0;
+}
+.n-session-detail-precall-body p {
+  margin: 0 0 10px;
+}
+.n-session-detail-precall-body strong {
+  font-weight: 600;
+  color: var(--page-text-color);
+}
+.n-session-detail-precall-body em {
+  font-style: italic;
+  color: var(--page-text-secondary);
+}
+.n-session-detail-precall-body ul,
+.n-session-detail-precall-body ol {
+  margin: 8px 0 12px;
+  padding-left: 20px;
+}
+.n-session-detail-precall-body li {
+  margin: 4px 0;
+}
+.n-session-detail-precall-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  padding: 2px 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+}
+.n-session-detail-precall-body a {
+  color: #00D4AA;
+  text-decoration: underline;
 }
 .n-session-detail-trend-badge--spaced {
   margin-top: 8px;
