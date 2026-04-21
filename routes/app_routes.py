@@ -487,6 +487,60 @@ def api_beenden():
         except Exception as _reconcile_err:
             print(f"[POLISH-38] counter reconcile fehlgeschlagen (conv.id={conv.id}): {_reconcile_err}")
 
+        # POLISH-54: Merge ObjectionEvent-Rows in postcall['einwaende'] so dass Cold-Call
+        # (kein Analyse-Loop seit Phase 06.3) nicht "-" in der Postcall-Kachel zeigt.
+        # Analog zu POLISH-38-Reconcile oben: DB ist Single Source of Truth.
+        # Additiv: existierende einwaende_liste (aus log_entries, Meeting-Analyse-Loop)
+        # bleibt erhalten, ObjectionEvent-Rows werden gemergt mit Dedup (typ+ts-Bucket).
+        # CRM (oben) und run_postcall_engine (unten) lesen die LOKALE einwaende_liste-
+        # Variable - nicht postcall['einwaende'] - und sind daher regression-sicher.
+        try:
+            _oe_rows = (
+                db_conv.query(ObjectionEvent)
+                .filter(ObjectionEvent.conversation_log_id == conv.id)
+                .order_by(ObjectionEvent.created_at.asc())
+                .all()
+            )
+            if _oe_rows:
+                from datetime import datetime as _dt_polish54
+                def _ts_bucket(iso_str):
+                    if not iso_str:
+                        return None
+                    try:
+                        s = iso_str.replace('Z', '+00:00') if iso_str.endswith('Z') else iso_str
+                        dt = _dt_polish54.fromisoformat(s)
+                        return int(dt.timestamp() // 5) * 5
+                    except Exception:
+                        return None
+                _seen = set()
+                for _ex in (postcall.get('einwaende') or []):
+                    _typ_ex = (_ex.get('typ') or '').lower()
+                    if _typ_ex:
+                        _seen.add((_typ_ex, _ts_bucket(_ex.get('ts') or '')))
+                _new_entries = []
+                _merged_from_oe = 0
+                for _oe in _oe_rows:
+                    _typ = (_oe.einwand_typ or '').strip()
+                    if not _typ:
+                        continue
+                    _iso = _oe.created_at.isoformat() if _oe.created_at else ''
+                    _key = (_typ.lower(), _ts_bucket(_iso))
+                    if _key in _seen:
+                        continue
+                    _seen.add(_key)
+                    _new_entries.append({
+                        'typ': _typ,
+                        'zitat': '',
+                        'intensitaet': 'mittel',
+                        'ts': _iso,
+                    })
+                    _merged_from_oe += 1
+                if _new_entries:
+                    postcall['einwaende'] = list(postcall.get('einwaende') or []) + _new_entries
+                    print(f"[POLISH-54] einwaende merged from ObjectionEvent conv.id={conv.id} added={_merged_from_oe} total={len(postcall['einwaende'])}")
+        except Exception as _polish54_err:
+            print(f"[POLISH-54] merge ObjectionEvent->postcall.einwaende fehlgeschlagen (conv.id={conv.id}): {_polish54_err}")
+
         # FT logging: update ft_call_sessions with aggregates (Phase 04.7.1)
         try:
             from database.models import FtCallSession
