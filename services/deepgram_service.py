@@ -165,6 +165,21 @@ def _make_on_error(sid):
     return on_error
 
 
+def _make_on_close(sid):
+    # POLISH-48: Close-Handler — macht serverseitige Deepgram-Schliessungen sichtbar.
+    # Vorher: wenn Deepgram die WS wegen invalid params / idle-timeout / quota silent
+    # schloss, wurde der Close-Event zwar emitted aber von keinem Handler verarbeitet.
+    # Symptom: Session bleibt stumm, kein Log. Jetzt: print + socket-event.
+    def on_close(self, close, **kwargs):
+        from extensions import socketio as sio
+        print(f"[DG] Close (sid={sid}): {close}")
+        try:
+            sio.emit('dg_close', {'info': str(close)}, room=sid)
+        except Exception:
+            pass
+    return on_close
+
+
 def _make_on_utterance_end(sid):
     def on_utterance_end(self, utterance_end, **kwargs):
         # 06.2-r1: Kein matcher.reset_all() hier — Feedback-Loop-Schutz:
@@ -183,12 +198,21 @@ def _open_deepgram_connection(sid, mode='meeting'):
     connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid))
     connection.on(LiveTranscriptionEvents.Open, _make_on_open(sid))
     connection.on(LiveTranscriptionEvents.Error, _make_on_error(sid))
+    connection.on(LiveTranscriptionEvents.Close, _make_on_close(sid))
     connection.on(LiveTranscriptionEvents.UtteranceEnd, _make_on_utterance_end(sid))
     is_meeting = (mode == 'meeting')
+    # POLISH-48: smart_format=True auch in Meeting-Mode. Der alte Kommentar
+    # ("disable smart_format — preserves word-level speaker attributes") war eine
+    # Fehleinschaetzung: laut Deepgram-SDK response.py ist `ListenWSWord.speaker`
+    # ein eigenes Feld, unabhaengig von `punctuated_word`. diarize=True liefert
+    # speaker trotz smart_format=True. Die Kombination smart_format=False +
+    # punctuate=True + diarize=True + utterance_end_ms="1000" war nicht
+    # runtime-verifiziert (Phase 04.2-03 Verification-Doku: "Runtime verification
+    # still required") und erzeugte in der Praxis keine Transcripts.
     options_kwargs = dict(
         model="nova-2",
         language="de",
-        smart_format=not is_meeting,   # disable smart_format in meeting mode — preserves word-level speaker attributes
+        smart_format=True,
         interim_results=True,
         endpointing=900,
         punctuate=True,
@@ -199,7 +223,7 @@ def _open_deepgram_connection(sid, mode='meeting'):
     if is_meeting:
         options_kwargs['utterance_end_ms'] = "1000"
     options = LiveOptions(**options_kwargs)
-    print(f"[DG] LiveOptions: model=nova-2, diarize={is_meeting}, smart_format={not is_meeting}")
+    print(f"[DG] LiveOptions: model=nova-2, diarize={is_meeting}, smart_format=True")
     connection.start(options)
     with _sessions_lock:
         _deepgram_sessions[sid] = connection
@@ -321,15 +345,20 @@ def register_audio_handlers(sio):
         _close_deepgram_connection(_sid)
         ls.drop_matcher(_sid)
 
-    _first_chunk_logged = set()  # Track which sids have logged their first chunk
+    # POLISH-48: Chunk-Counter statt one-shot-Logs. Vorher `_first_chunk_logged`
+    # loggte nur den ersten Chunk pro sid — was User-Observation "nur ein Chunk"
+    # zu einem Red Herring machte. Jetzt: Log ersten Chunk + dann every 100th
+    # (ca. alle 10s bei 100ms-Frames), damit realer Audio-Flow sichtbar ist.
+    _chunk_counts = {}  # {sid: int}
 
     @sio.on('audio_chunk')
     def handle_audio_chunk(data, sid=None):
         from flask import request
         _sid = request.sid if sid is None else sid
-        if _sid not in _first_chunk_logged:
-            _first_chunk_logged.add(_sid)
-            print(f"[DG] audio_chunk received (sid={_sid}, bytes={len(data)}, type={type(data).__name__})")
+        cnt = _chunk_counts.get(_sid, 0) + 1
+        _chunk_counts[_sid] = cnt
+        if cnt == 1 or cnt % 100 == 0:
+            print(f"[DG] audio_chunk #{cnt} (sid={_sid}, bytes={len(data)}, type={type(data).__name__})")
         with ls.pause_lock:
             if ls.is_paused:
                 return
@@ -346,7 +375,7 @@ def register_audio_handlers(sio):
         from flask import request
         _sid = request.sid if sid is None else sid
         print(f"[DG] socket.io disconnect event (sid={_sid})")
-        _first_chunk_logged.discard(_sid)
+        _chunk_counts.pop(_sid, None)
         _close_deepgram_connection(_sid)
         ls.drop_matcher(_sid)
 
