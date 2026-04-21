@@ -461,6 +461,32 @@ def api_beenden():
         if ewb_clicks:
             db_conv.commit()
 
+        # POLISH-38 (Haupt-Fix): Re-aggregate counters from ObjectionEvent (authoritative source).
+        # cf38589 set einwaende_gesamt=len(ewb_clicks) initially - defensive fallback.
+        # Here we overwrite with the DB-truth: einwaende_behandelt becomes SUM(success)
+        # from the just-committed ObjectionEvent rows (POLISH-29: "EWB-Button gedrueckt
+        # = behandelt", success-Flag aus POLISH-38.1 spiegelt erfolgreichen Haiku-Spawn).
+        # Defence-in-depth: works even if ewb_clicks list had stale state.
+        try:
+            from sqlalchemy import func as _sqlfunc, case as _sqlcase
+            _agg = (
+                db_conv.query(
+                    _sqlfunc.count(ObjectionEvent.id),
+                    _sqlfunc.sum(_sqlcase((ObjectionEvent.success == True, 1), else_=0)),
+                )
+                .filter(ObjectionEvent.conversation_log_id == conv.id)
+                .one()
+            )
+            _total = int(_agg[0] or 0)
+            _ok = int(_agg[1] or 0)
+            if _total > 0 and (conv.einwaende_gesamt != _total or conv.einwaende_behandelt != _ok):
+                conv.einwaende_gesamt = _total
+                conv.einwaende_behandelt = _ok
+                db_conv.commit()
+                print(f"[POLISH-38] counters reconciled conv.id={conv.id} gesamt={_total} behandelt={_ok}")
+        except Exception as _reconcile_err:
+            print(f"[POLISH-38] counter reconcile fehlgeschlagen (conv.id={conv.id}): {_reconcile_err}")
+
         # FT logging: update ft_call_sessions with aggregates (Phase 04.7.1)
         try:
             from database.models import FtCallSession
