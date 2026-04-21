@@ -57,11 +57,20 @@ app.jinja_env.filters['de_currency'] = de_currency_filter
 
 # POLISH-52: Markdown-Rendering für PreCall-Briefing (AI-generierter Text mit
 # ##Headlines, **bold**, Bullet-Listen). Template nutzt `{{ text | markdown | safe }}`.
+# LB-01 (2026-04-21): bleach-Sanitizer gegen XSS via PreCall-Input
+# (User-Felder firmenname/branche/ansprechpartner/optinfo -> Haiku -> Briefing
+# koennten <img onerror=...> enthalten). Nur Allowlist-Tags erlaubt.
 import markdown as _markdown
+import bleach
+_ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li',
+                 'h1', 'h2', 'h3', 'h4', 'blockquote', 'a']
+_ALLOWED_ATTRS = {'a': ['href', 'title']}
 def markdown_filter(value):
     if not value:
         return ''
-    return _markdown.markdown(value, extensions=['extra', 'sane_lists'])
+    rendered = _markdown.markdown(value, extensions=['extra', 'sane_lists'])
+    return bleach.clean(rendered, tags=_ALLOWED_TAGS, attributes=_ALLOWED_ATTRS,
+                        strip=True, protocols=['http', 'https', 'mailto'])
 app.jinja_env.filters['markdown'] = markdown_filter
 
 # 06.1-r2: Cache-Bust fuer Static-Files — Template ruft static_mtime('pip-launcher.js')
