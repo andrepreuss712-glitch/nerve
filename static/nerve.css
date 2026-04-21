@@ -2100,11 +2100,29 @@ input[type="range"].perf-slider::-moz-range-thumb {
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  color: var(--page-text-color);
-  padding: 8px 0;
+  color: #00D4AA;
+  padding: 8px 12px;
   list-style: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 120ms ease, color 120ms ease;
+}
+.n-session-detail-collapsible summary:hover {
+  background: rgba(0,212,170,0.08);
 }
 .n-session-detail-collapsible summary::-webkit-details-marker { display: none; }
+.n-session-detail-collapsible summary::after {
+  content: "▶";
+  font-size: 10px;
+  color: #00D4AA;
+  margin-left: auto;
+  transition: transform 150ms ease;
+}
+.n-session-detail-collapsible[open] summary::after {
+  transform: rotate(90deg);
+}
 .n-session-detail-collapsible[open] summary { margin-bottom: 12px; }
 
 .n-session-detail-grid {
