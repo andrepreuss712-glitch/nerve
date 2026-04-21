@@ -26,12 +26,18 @@ from typing import Optional
 #
 # Umlaut-Toleranz: (ü|ue), (ä|ae), (ö|oe) damit sowohl native Umlaute
 # als auch ae/ue/oe-Fallbacks erkannt werden.
+#
+# POLISH-46 Flexions-Fix:
+#   kein(?:e[mnrs]?)? deckt alle 6 deutschen Flexions-Formen ab:
+#   kein, keine, keinem, keinen, keiner, keines.
+#   Verwendet fuer 'keine_zeit' (Nicht-'gerade'-Fall) und 'kein_interesse'.
+#   Zusaetzlich 'bedarf' als Synonym fuer 'interesse' eingefuegt
+#   und 'brauch(en|e)?' als verbaler Kein-Bedarf-Ausdruck.
 
 DEFAULT_KEYWORDS: dict[str, str] = {
     'keine_zeit': (
-        r'\b(keine?\s+zeit'
-        r'|gerade\s+kein(e[nms]?)?\s+zeit'
-        r'|kein(e[nms]?)?\s+zeit\s+hab'
+        r'\b(kein(?:e[mnrs]?)?\s+zeit'
+        r'|kein(?:e[mnrs]?)?\s+zeit\s+hab'
         r'|gerade\s+stress)\b'
     ),
     'zu_teuer': (
@@ -41,9 +47,10 @@ DEFAULT_KEYWORDS: dict[str, str] = {
         r'|kein\s+budget)\b'
     ),
     'kein_interesse': (
-        r'\b(kein(e)?\s+interesse'
+        r'\b(kein(?:e[mnrs]?)?\s+(?:interesse|bedarf)'
         r'|nicht\s+interessiert'
-        r'|interessiert\s+mich\s+nicht)\b'
+        r'|interessiert\s+mich\s+nicht'
+        r'|brauch(?:en|e)?\s+(?:wir\s+|ich\s+|das\s+)?nicht)\b'
     ),
     'ueberlegen': (
         r'\b(muss\s+(noch\s+)?(dar)?(\u00fc|ue)berlegen'

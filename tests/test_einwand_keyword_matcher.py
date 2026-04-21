@@ -7,6 +7,8 @@ Abdeckung:
  - Positiv-Tests fuer jeden Keyword-Typ
  - False-Positive-Schutz (kein versehentlicher Match)
  - Umlaut + ae/ue/oe-Varianten
+ - POLISH-46 Flexion: keinen/keiner/keinem/keines (alle 6 kein-Formen)
+ - POLISH-46 Bedarf: kein_interesse triggert auf "Bedarf"-Varianten
  - Dedup-Guard: zweiter identischer Match wird unterdrueckt
  - reset_keyword(): nach Reset wieder positiv
  - reset_all(): loescht kompletten State
@@ -205,6 +207,73 @@ class TestKeywordPositivMatches:
         assert result['keyword'] == 'kompliziert'
 
 
+# ── POLISH-46: Deutsch-Flexion-Tests ─────────────────────────────────────────
+# Alle 6 Flexions-Formen von "kein" (kein/keine/keinem/keinen/keiner/keines)
+# muessen matchen. Vorher: nur kein/keine — darum haben "keinen Bedarf" und
+# "keiner Zeit" systematisch durchgerutscht.
+
+class TestPolish46FlexionKein:
+    """Testfaelle aus User-Sessions #121/122/123."""
+
+    # kein_interesse — Bedarf als Synonym + volle Flexion
+    def test_kein_interesse_keinen_bedarf(self):
+        """User-Reproduce: 'Sie haben keinen Bedarf' (Session #122)."""
+        result = match_keyword("Sie haben keinen Bedarf", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'kein_interesse'
+
+    def test_kein_interesse_keinen_bedarf_capitalized(self):
+        """Satzanfang: 'Keinen Bedarf'."""
+        result = match_keyword("Keinen Bedarf", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'kein_interesse'
+
+    def test_kein_interesse_kein_bedarf_nennform(self):
+        result = match_keyword("kein Bedarf", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'kein_interesse'
+
+    def test_kein_interesse_keiner_bedarf(self):
+        result = match_keyword("Keiner Bedarf dafuer", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'kein_interesse'
+
+    def test_kein_interesse_brauchen_wir_nicht(self):
+        """Verbale Negation: 'brauchen wir nicht'."""
+        result = match_keyword("Das brauchen wir nicht", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'kein_interesse'
+
+    def test_kein_interesse_brauche_ich_nicht(self):
+        result = match_keyword("Brauche ich nicht", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'kein_interesse'
+
+    def test_kein_interesse_brauch_nicht_colloquial(self):
+        """Umgangssprachliche Kurzform: 'brauch nicht'."""
+        result = match_keyword("Brauch das nicht", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'kein_interesse'
+
+    # keine_zeit — volle Flexion auch ohne 'gerade'-Prefix
+    def test_keine_zeit_keinen_zeit_ohne_gerade(self):
+        """User-Reproduce: 'haben keinen Zeit' ohne 'gerade' (Session #123)."""
+        result = match_keyword("Ich habe keinen Zeit fuer sowas", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'keine_zeit'
+
+    def test_keine_zeit_keiner_zeit(self):
+        result = match_keyword("Habe keiner Zeit", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'keine_zeit'
+
+    def test_keine_zeit_haben_keine_zeit_capitalized(self):
+        """Satzanfang: 'Haben keine Zeit dafür' (User-Reproduce)."""
+        result = match_keyword("Haben keine Zeit dafuer", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'keine_zeit'
+
+
 # ── False-Positive-Tests ─────────────────────────────────────────────────────
 
 class TestFalsePositiveSchutz:
@@ -241,6 +310,13 @@ class TestFalsePositiveSchutz:
         # Wenn match, dann skeptisch
         if result:
             assert result['keyword'] == 'skeptisch'
+
+    def test_kein_budget_bleibt_zu_teuer_nicht_interesse(self):
+        """POLISH-46 Regression: 'kein Budget' muss weiterhin zu_teuer triggern,
+        nicht versehentlich kein_interesse (da kein_interesse nun 'kein*' + 'bedarf' hat)."""
+        result = match_keyword("Wir haben kein Budget dafuer", PROFIL_EINWAENDE)
+        assert result is not None
+        assert result['keyword'] == 'zu_teuer'
 
 
 # ── Profil-Gegenargument-Tests ───────────────────────────────────────────────
