@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEEPGRAM_API_KEY  = os.environ.get('DEEPGRAM_API_KEY', '')
+# POLISH-49: DSGVO-Pflicht — EU-Endpoint als Default. Wenn .env kein DEEPGRAM_HOST
+# setzt, bleibt NERVE trotzdem auf api.eu.deepgram.com (robustness-first).
+DEEPGRAM_HOST     = os.environ.get('DEEPGRAM_HOST', 'api.eu.deepgram.com')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
 SECRET_KEY        = os.environ.get('SECRET_KEY', 'dev-secret-change-me')

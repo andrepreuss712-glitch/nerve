@@ -1,8 +1,8 @@
 import threading
 import time
 from datetime import datetime
-from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
-from config import DEEPGRAM_API_KEY, SAMPLE_RATE, MERGE_WINDOW_S
+from deepgram import DeepgramClient, DeepgramClientOptions, LiveTranscriptionEvents, LiveOptions
+from config import DEEPGRAM_API_KEY, DEEPGRAM_HOST, SAMPLE_RATE, MERGE_WINDOW_S
 import services.live_session as ls
 import time as _time_mod
 
@@ -193,7 +193,12 @@ def _make_on_utterance_end(sid):
 
 
 def _open_deepgram_connection(sid, mode='meeting'):
-    client = DeepgramClient(DEEPGRAM_API_KEY)
+    # POLISH-49: EU-Host-Override für DSGVO-konforme Audio-Verarbeitung.
+    # Standardmäßig `api.eu.deepgram.com` (siehe config.py Default).
+    client = DeepgramClient(
+        DEEPGRAM_API_KEY,
+        config=DeepgramClientOptions(url=f"https://{DEEPGRAM_HOST}"),
+    )
     connection = client.listen.websocket.v("1")
     connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid))
     connection.on(LiveTranscriptionEvents.Open, _make_on_open(sid))
