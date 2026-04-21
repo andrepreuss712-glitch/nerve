@@ -137,6 +137,14 @@
   </div>
   {% endif %}
 </nav>
+{% if not g.user %}
+<script>
+  // POLISH-45: Headset-Confirm-State pro Login-Session neu anfordern (DSGVO).
+  // Feuert auf allen logged-out-Pages — deckt ALLE Logout-Pfade ab
+  // (manuell, /logout?auto=1, Session-Timeout, direkt-URL-Nav).
+  try { sessionStorage.removeItem('headsetConfirmed'); } catch (e) {}
+</script>
+{% endif %}
 
 <div class="g-content">
   {% with messages = get_flashed_messages(with_categories=true) %}
