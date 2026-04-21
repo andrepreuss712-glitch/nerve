@@ -42,6 +42,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - ✓ Onboarding (5 Schritte) — existing
 - ✓ Early Access Warteliste mit Referral-System — existing
 - ✓ Rebranding SalesNerve → NERVE abgeschlossen (v0.9.1) — existing
+- ✓ Einheitliche Auswertungs-Seite: Training/Cold-Call/Meeting landen auf /session/<id> mit 13 Sektionen (11 Standard + Wendepunkt-Analyse + Einzel-Bewertungen + Verbesserungspotenzial), Training-Overlay entfernt, Nochmal-trainieren-Button, POLISH-32 Persönlichkeit-Badge + POLISH-34 Score-Dopplung — validated Phase 07.2 (3 UATs approved)
 
 ### Active
 
@@ -133,7 +134,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-13 after Phase 04.12 (Gesamt-Integration) completion — learning_events table, integration engine with pattern detection, training recommendations in PostCall overlay + dashboard, extended weekly reports with training data*
+*Last updated: 2026-04-21 after Phase 07.2 (Scoring-Konsolidierung) completion — single /session/<id> Auswertungs-Seite for Training/Cold-Call/Meeting, Sektionen 12/13/14 (Wendepunkt/Einzel-Bewertungen/Verbesserungen), Training-Post-Call-Overlay removed, POLISH-32 + POLISH-34 resolved*
 
 ## Phase Completion Notes
 
