@@ -1869,12 +1869,26 @@
   }
 
   function _showPostcall(postcall) {
-    // 06.1-r2 BUG-10: Leerer Call (keine Wörter, keine Einwände) -> kein Score, stattdessen
-    // "Kein Gespräch erkannt" — 45% für leere Calls verwirrt nur.
+    // POLISH-41: Guard prüft MEHRERE "conversation happened"-Signale, nicht nur
+    // berater/kunde/einwaende. In Cold Call fehlt Speaker-Diarization strukturell
+    // (berater_words=0, kunde_words=0 by design — Phase 07.1 DEVIATIONS OBS-02),
+    // und Claude-detektierte einwaende weichen häufig von EWB-Klicks ab
+    // (POLISH-43). Empty-State darf nur feuern, wenn ALLE Signale leer sind.
+    // 06.1-r2 BUG-10-Rationale ("45% für leere Calls verwirrt") bleibt
+    // für echte Empty-Calls (User beendet sofort) erhalten.
     var berater = (postcall && postcall.berater_words) || 0;
     var kunde = (postcall && postcall.kunde_words) || 0;
     var einwTotal = ((postcall && postcall.einwaende) || []).length;
-    if (berater === 0 && kunde === 0 && einwTotal === 0) {
+    var painTotal = ((postcall && postcall.painpoints) || []).length;
+    var kaufTotal = ((postcall && postcall.kaufsignale) || []).length;
+    var gaTotal = ((postcall && postcall.ga_details) || []).length;
+    var kbTotal = ((postcall && postcall.kb_verlauf) || []).length;
+    var hasConversation = (
+      berater > 0 || kunde > 0 ||
+      einwTotal > 0 || painTotal > 0 || kaufTotal > 0 ||
+      gaTotal > 0 || kbTotal > 0
+    );
+    if (!hasConversation) {
       _showPostcallEmpty();
       return;
     }
