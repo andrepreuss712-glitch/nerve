@@ -256,12 +256,25 @@ def api_log():
 def api_beenden():
     req_data = request.get_json(silent=True) or {}
     session_mode = req_data.get('session_mode', 'meeting')
+    # POLISH-40: Accept string, dict-with-.text (Frontend sends whole briefing
+    # object from pip-launcher.js), or fall back to live_session.state which is
+    # populated at start_live_session via deepgram_service.
     precall_briefing = req_data.get('precall_briefing', None)
-    if precall_briefing is not None:
-        if not isinstance(precall_briefing, str):
+    if isinstance(precall_briefing, dict):
+        precall_briefing = precall_briefing.get('text') or None
+    if not isinstance(precall_briefing, str) or not precall_briefing.strip():
+        # Fall back to runtime state (set in services/deepgram_service.py)
+        try:
+            with ls.state_lock:
+                state_pb = ls.state.get('precall_briefing')
+            if isinstance(state_pb, str) and state_pb.strip():
+                precall_briefing = state_pb
+            else:
+                precall_briefing = None
+        except Exception:
             precall_briefing = None
-        elif len(precall_briefing) > 2000:
-            precall_briefing = precall_briefing[:2000]
+    if isinstance(precall_briefing, str) and len(precall_briefing) > 2000:
+        precall_briefing = precall_briefing[:2000]
     profile_name = ''
     apid = flask_session.get('active_profile_id')
     if apid:
