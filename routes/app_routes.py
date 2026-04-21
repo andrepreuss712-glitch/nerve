@@ -383,6 +383,11 @@ def api_beenden():
     # ── In DB speichern ───────────────────────────────────────────────────────
     import json as _json
     from database.models import ConversationLog
+    # POLISH-38: einwaende_gesamt = len(ewb_clicks) (User-Definition POLISH-29:
+    # "EWB-Button gedrueckt = behandelt"). Read here so it's available before
+    # ConversationLog-Insert (moved up from line ~435).
+    with ls.state_lock:
+        ewb_clicks = list(ls.state.get('ewb_clicks', []))
     saved_conv_id = None
     stats = _stats
     kb_min_val = min((v['wert'] for v in kb_verlauf), default=30)
@@ -401,7 +406,7 @@ def api_beenden():
             ended_at=datetime.now(),
             dauer_sekunden=int(postcall.get('dauer_sek', 0)),
             segmente_gesamt=len([e for e in log_entries if e['type'] == 'transcript']),
-            einwaende_gesamt=len(einwaende_liste),
+            einwaende_gesamt=len(ewb_clicks),  # POLISH-38: count EWB-clicks, not AI-detected (POLISH-29 user definition)
             einwaende_behandelt=len([x for x in ga_details if x.get('erfolgreich') is True]),
             einwaende_fehlgeschlagen=len([x for x in ga_details if x.get('erfolgreich') is False]),
             einwaende_ignoriert=len([x for x in ga_details if x.get('gewaehlte_option') is None]),
@@ -430,9 +435,8 @@ def api_beenden():
         print(f"[DB] Gespräch gespeichert: conv.id={conv.id}")
 
         # ── ObjectionEvents: granulare EWB-Klicks persistieren (Plan 03) ──────────
+        # POLISH-38: ewb_clicks bereits weiter oben gelesen (vor ConversationLog-Insert).
         from database.models import ObjectionEvent
-        with ls.state_lock:
-            ewb_clicks = list(ls.state.get('ewb_clicks', []))
         for click in ewb_clicks:
             db_conv.add(ObjectionEvent(
                 user_id=g.user.id,
