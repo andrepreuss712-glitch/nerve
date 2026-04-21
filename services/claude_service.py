@@ -1119,8 +1119,8 @@ def analyse_loop():
                                 ls.state['_phase_cycle_at_last_change'] = _phase_cycle_counter
                                 print(f"[phase_classify] {cur_phase}→{new_phase} ({_PHASE_NAMES.get(new_phase,'')}) conf={new_conf:.2f} grund={raw.get('grund','')}")
                             ls.state['phase_confidence'] = new_conf
-                        # POLISH-39: propagate AI phase-change to phasen_log so
-                        # ConversationLog.phasen_details JSON is populated.
+                        # POLISH-39 + POLISH-42: propagate AI phase-change to phasen_log (for
+                        # ConversationLog.phasen_details) and covered_phases (for skript_abdeckung).
                         # Done outside state_lock to avoid nested-lock stalls.
                         if phase_did_change:
                             try:
@@ -1140,6 +1140,18 @@ def analyse_loop():
                                         'source':        'ai_classifier',
                                         'confidence':    round(float(new_conf), 2),
                                     })
+                                # POLISH-42: map AI-phase (1-6) -> profile-phase index (0-based),
+                                # capped to profile's actual phase count so skript_abdeckung
+                                # can't overflow when profile has <6 phases.
+                                try:
+                                    _pid, _pdata = ls.get_active_profile()
+                                    _ph_list = _pdata.get('phasen', []) if _pdata else []
+                                    if _ph_list:
+                                        _idx = max(0, min(int(new_phase) - 1, len(_ph_list) - 1))
+                                        with ls.covered_phases_lock:
+                                            ls.covered_phases.add(_idx)
+                                except Exception as _ce:
+                                    print(f"[phase_classify] covered_phases propagate error: {_ce}")
                             except Exception as _pe:
                                 print(f"[phase_classify] phasen_log propagate error: {_pe}")
                     # ── Phase 04.8 P03: Cold-call inference (coldcall mode only) ──
