@@ -14,8 +14,12 @@ tatsaechlichen ObjectionEvents. Dieses Script korrigiert sie.
 Idempotent: nur Write wenn Counter != aggregierte Werte.
 
 Usage:
-    python scripts/migrate_polish_38_counters.py          # Produktions-Run
-    python scripts/migrate_polish_38_counters.py --dry    # Dry-Run (zeigt nur was geaendert wuerde)
+    python scripts/migrate_polish_38_counters.py --dry-run                # Dry-Run (zeigt nur was geaendert wuerde)
+    python scripts/migrate_polish_38_counters.py --confirm-production     # Produktions-Run (scharf)
+
+LB-02 (2026-04-21): --dry-run via argparse (zuvor '--dry' in sys.argv
+-> operator folgt Doc, schreibt in Prod). Zusaetzlich verpflichtender
+--confirm-production Safeguard fuer scharfe Laeufe ohne Dry-Run.
 """
 import sys
 import os
@@ -77,5 +81,25 @@ def main(dry_run: bool = False) -> int:
 
 
 if __name__ == '__main__':
-    dry = '--dry' in sys.argv
-    sys.exit(main(dry_run=dry))
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Reconcile ConversationLog counters from ObjectionEvent (POLISH-38)."
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help="Zeigt intendierte Aenderungen, schreibt NICHT in die DB.",
+    )
+    parser.add_argument(
+        '--confirm-production',
+        action='store_true',
+        help="Pflicht fuer Produktions-Lauf (ohne --dry-run). Schuetzt vor versehentlichem Schreiben.",
+    )
+    args = parser.parse_args()
+
+    if not args.dry_run and not args.confirm_production:
+        print("[migrate] FEHLER: Produktions-Lauf braucht --confirm-production flag.")
+        print("[migrate] Tipp: Erst mit --dry-run pruefen, dann mit --confirm-production scharf laufen lassen.")
+        sys.exit(2)
+
+    sys.exit(main(dry_run=args.dry_run))
