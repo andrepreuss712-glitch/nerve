@@ -137,6 +137,41 @@
 
 ---
 
+### POLISH-45 — Headset-Modal-Reset (15-Min-Fix)
+
+- **Severity:** medium (UX-Polish, User-Flow)
+- **Entdeckt:** Phase 07.4 Debug-Cluster-UAT (2026-04-21)
+- **Symptom:** Headset-Modal (Phase 06.4 DSGVO-Hardening) persistiert User-Wahl über Session-Grenze hinweg. Wenn der User bei einer Session "Headset bestätigt" klickt und später ohne Headset eine neue Session startet, wird das Modal nicht erneut gezeigt — gefährdet DSGVO-Compliance-Nachweis.
+- **Vermutete Root-Cause:** LocalStorage-Key oder Session-Cookie behält Headset-Confirm-State und wird bei neuem `/live`-Aufruf nicht zurückgesetzt. Sollte pro Session (nicht pro Browser-Installation) neu bestätigt werden.
+- **Fix-Skizze:** Headset-Confirm-State bei `/live`-Route-Start clearen (z.B. `localStorage.removeItem('headset_confirmed')` oder Session-scoped State in `sessionStorage`). Alternativ Server-Side per-Session-Flag.
+- **Fix-Aufwand:** ~15 Min (Frontend-One-Liner + Test).
+- **Scope:** separate kleine Phase (POLISH-38-Teilfix + POLISH-45 bundled) nach Phase 07.4.
+
+---
+
+### POLISH-38.1 — Teilfix: success-Flag bei manual_ewb (10-Min-Fix, Ergänzung zu POLISH-38)
+
+- **Severity:** low (Metrik-Präzision)
+- **Entdeckt:** Phase 07.4 Debug-Cluster-UAT (2026-04-21)
+- **Parent:** POLISH-38 Counter-Fix in Commit `cf38589` behob `einwaende_gesamt` (zählt jetzt `len(ewb_clicks)`). Offen bleibt: `manual_ewb`-Events (User-Klick ohne Claude-Auto-Detection) haben aktuell kein `success`-Flag — Metriken "erfolgreich behandelt" können nicht zwischen EWB-Klick (counted) und tatsächlich erfolgreicher Behandlung (via Claude-Scoring) diskriminieren.
+- **Vermutete Root-Cause:** `ObjectionEvent.success` wird beim manual_ewb-Insert nicht gesetzt (Default vermutlich NULL). Post-Call-Scoring-Heuristik kann daher nur "versucht behandelt" tracken, nicht "erfolgreich".
+- **Fix-Skizze:** In `routes/app_routes.py` beim manual_ewb-Insert `success=None` explizit setzen oder per Claude-Re-Evaluation im Post-Call-Flow setzen.
+- **Fix-Aufwand:** ~10 Min.
+- **Scope:** bundled mit POLISH-45 in einer kleinen Follow-up-Phase.
+
+---
+
+### POLISH-53 — EWB-Feed-Redesign (Phase-07.5-Kandidat)
+
+- **Severity:** medium (UX, löst Slot-Dominanz-Problem)
+- **Entdeckt:** Phase 07.4 Debug-Cluster-UAT (2026-04-21)
+- **Symptom:** Aktueller EWB-Bereich hat nur 2 Slots die bei neuen Einwänden die alten Einwände überschreiben. User verlieren kontext bei schnellen Gesprächen mit vielen Einwänden. "Slot-Dominanz" — die zuerst angezeigten Einwände verdrängen sich gegenseitig ohne History.
+- **Redesign-Idee:** Scrollbarer EWB-Feed statt 2-Slot-Overwrite — aktive + bereits behandelte Einwände in chronologischer Liste. Löst Slot-Dominanz, gibt User historischen Kontext über das Gespräch.
+- **Scope-Impact:** nicht-trivial — neue Komponenten-Architektur, UX-Spec-Runde, Template + CSS + JS-State-Management. Gehört als **Phase 07.5** separat geplant (nicht Teil von 07.4).
+- **Planung:** via `/gsd-plan-phase 07.5` sobald 07.4-Follow-up abgeschlossen.
+
+---
+
 ## Referenzen
 
 - Phase 07.2 UAT-R2 Cold-Call-Checkpoint: 2026-04-20, Session #117 als Test-Referenz
@@ -144,3 +179,4 @@
 - B1 aus UAT-R2 (Sektion 14 Dubletten) wurde in Phase 07.2 inline gefixt (Commit `e040ee7`)
 - POLISH-35, POLISH-36, POLISH-37 bleiben deferred aus Phase 07.1 (siehe ROADMAP.md Zeile 711-717)
 - POLISH-44 Fix-Scope ausdrücklich Phase 08 (Content-Pass), nicht Phase 07.2
+- Phase 07.4 Debug-Cluster (2026-04-21): POLISH-48/41/49/38/40/39/42/51/52/46 resolved + deploy-verified in Session #124. POLISH-45/-38.1/-53 als Follow-ups herausgelöst.
