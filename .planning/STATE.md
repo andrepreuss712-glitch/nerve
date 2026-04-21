@@ -4,7 +4,7 @@ milestone: v0.9.4
 milestone_name: milestone
 status: verifying
 stopped_at: "Completed 07.2-04-PLAN.md (UAT-approved: Training + Cold-Call + Meeting, all 4 Plans in Phase 07.2 done, phase verification pending)"
-last_updated: "2026-04-21T09:27:38.264Z"
+last_updated: "2026-04-21T14:00:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 39
@@ -402,6 +402,7 @@ Recent decisions affecting current work:
 | 260401-qr4 | Fix sidebar user avatar visibility and light/dark mode toggle | 2026-04-01 | 972cd94 | [260401-qr4-fix-sidebar-user-avatar-visibility-and-l](./quick/260401-qr4-fix-sidebar-user-avatar-visibility-and-l/) |
 | 260421-kwm | POLISH-45 headset-confirm-state clear on logout + POLISH-38.1 manual_ewb success flag | 2026-04-21 | e9acc10 + 585f567 | [260421-kwm-polish-45-polish-38-1-nachzug-headset-mo](./quick/260421-kwm-polish-45-polish-38-1-nachzug-headset-mo/) |
 | 260421-lpx | POLISH-38 Haupt-Fix: re-aggregate einwaende_gesamt/behandelt from ObjectionEvent + migration | 2026-04-21 | 451c909 + 29c8b71 | [260421-lpx-polish-38-haupt-bug-einwaende-gesamt-cou](./quick/260421-lpx-polish-38-haupt-bug-einwaende-gesamt-cou/) |
+| 260421-mwy | POLISH-54: aggregate einwaende_liste from ObjectionEvent for cold-call postcall | 2026-04-21 | 497350d | [260421-mwy-polish-54-einwaende-liste-aus-objectione](./quick/260421-mwy-polish-54-einwaende-liste-aus-objectione/) |
 
 ## What's Done
 
@@ -423,6 +424,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-21T13:30:00Z
-Stopped at: Completed quick-task 260421-lpx (POLISH-38 Haupt-Bug counter reconciliation + migration, pushed to origin/main)
+Last session: 2026-04-21T14:00:00Z
+Stopped at: Completed quick-task 260421-mwy (POLISH-54 einwaende_liste aggregation from ObjectionEvent for cold-call postcall, pushed to origin/main)
 Resume file: None
