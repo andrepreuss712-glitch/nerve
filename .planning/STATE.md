@@ -400,6 +400,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260401-qr4 | Fix sidebar user avatar visibility and light/dark mode toggle | 2026-04-01 | 972cd94 | [260401-qr4-fix-sidebar-user-avatar-visibility-and-l](./quick/260401-qr4-fix-sidebar-user-avatar-visibility-and-l/) |
+| 260421-kwm | POLISH-45 headset-confirm-state clear on logout + POLISH-38.1 manual_ewb success flag | 2026-04-21 | e9acc10 + 585f567 | [260421-kwm-polish-45-polish-38-1-nachzug-headset-mo](./quick/260421-kwm-polish-45-polish-38-1-nachzug-headset-mo/) |
 
 ## What's Done
 
@@ -421,6 +422,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-21T10:15:00.000Z
-Stopped at: Completed 07.2-04-PLAN.md (UAT-approved: Training + Cold-Call + Meeting, all 4 Plans in Phase 07.2 done, phase verification pending)
+Last session: 2026-04-21T13:11:39Z
+Stopped at: Completed quick-task 260421-kwm (POLISH-45 + POLISH-38.1 nachzug, pushed to origin/main)
 Resume file: None
