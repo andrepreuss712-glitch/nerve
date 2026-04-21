@@ -1110,7 +1110,8 @@ def analyse_loop():
                             cycles_since_change=cycles_since_change,
                         )
                         with ls.state_lock:
-                            if new_phase != cur_phase:
+                            phase_did_change = (new_phase != cur_phase)
+                            if phase_did_change:
                                 ls.state['current_phase'] = new_phase
                                 ls.state['current_phase_name'] = _PHASE_NAMES.get(new_phase, '')
                                 ls.state['phase_changed_at'] = datetime.utcnow().isoformat()
@@ -1118,6 +1119,29 @@ def analyse_loop():
                                 ls.state['_phase_cycle_at_last_change'] = _phase_cycle_counter
                                 print(f"[phase_classify] {cur_phase}→{new_phase} ({_PHASE_NAMES.get(new_phase,'')}) conf={new_conf:.2f} grund={raw.get('grund','')}")
                             ls.state['phase_confidence'] = new_conf
+                        # POLISH-39: propagate AI phase-change to phasen_log so
+                        # ConversationLog.phasen_details JSON is populated.
+                        # Done outside state_lock to avoid nested-lock stalls.
+                        if phase_did_change:
+                            try:
+                                old_phase_name = _PHASE_NAMES.get(cur_phase, str(cur_phase))
+                                new_phase_name = _PHASE_NAMES.get(new_phase, str(new_phase))
+                                ts = datetime.now().strftime('%H:%M:%S')
+                                with ls.buffer_lock:
+                                    seg_count = len(ls.analysiert_bisher)
+                                with ls.phasen_log_lock:
+                                    ls.phasen_log.append({
+                                        'ts':            ts,
+                                        'name':          new_phase_name,  # Template uses ph.name
+                                        'typ':           new_phase_name.lower(),
+                                        'von_phase':     old_phase_name,
+                                        'nach_phase':    new_phase_name,
+                                        'segment_count': seg_count,
+                                        'source':        'ai_classifier',
+                                        'confidence':    round(float(new_conf), 2),
+                                    })
+                            except Exception as _pe:
+                                print(f"[phase_classify] phasen_log propagate error: {_pe}")
                     # ── Phase 04.8 P03: Cold-call inference (coldcall mode only) ──
                     try:
                         from services.ki_logik import infer_cold_call_context
