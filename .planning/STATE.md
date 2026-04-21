@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07.2-03-PLAN.md
-last_updated: "2026-04-20T14:14:49.118Z"
-last_activity: 2026-04-20
+stopped_at: Completed 07.2-04-PLAN.md
+last_updated: "2026-04-21T10:15:00.000Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 39
   completed_phases: 26
   total_plans: 136
-  completed_plans: 124
-  percent: 91
+  completed_plans: 125
+  percent: 92
 ---
 
 # Project State
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 07.2 (scoring-konsolidierung-inserted) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-04-20
+Phase: 07.2 (scoring-konsolidierung-inserted) — ALL 4 PLANS COMPLETE (phase verification pending)
+Plan: 4 of 4 complete (UAT-approved 2026-04-21 via Training + Cold-Call + Meeting UAT)
+Status: Phase awaiting orchestrator verification
+Last activity: 2026-04-21
 
-**Next:** /clear + /gsd-execute-phase 07.2
+**Next:** Orchestrator runs phase verification for 07.2, then git push origin main
 
-Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓)
+Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 all plans ✓)
 
 ## Performance Metrics
 
@@ -151,6 +151,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 07.2 P01 | 3 | 2 tasks | 2 files |
 | Phase 07.2 P02 | 4min | 2 tasks | 2 files |
 | Phase 07.2 P03 | 20min | 2 tasks | 3 files |
+| Phase 07.2 P04 | 60min | 5 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -358,6 +359,13 @@ Recent decisions affecting current work:
 - [Phase 07.2]: [Phase 07.2-03]: endTraining() no-conversation-guard refactored to alert+resetTraining instead of showPhase('scoring')+#t-scoring.innerHTML (Rule-3: original guard depended on now-removed DOM)
 - [Phase 07.2]: [Phase 07.2-03]: saveGeneratedPersonality() orphan removed — only caller was save-personality-div inside removed scoring overlay. Re-introduction under POLISH-37 (Rule-1 dead-code)
 - [Phase 07.2]: [Phase 07.2-03]: Button URL uses Jinja qparams-list-join idiom (not direct string concat) — avoids trailing-& edge cases for 0/1/2 param combinations
+- [Phase 07.2]: [Phase 07.2-04]: CSS_VERSION bumped twice in one plan — '20260420-4' (initial Task 4.1) + '20260420-5' (precautionary after UAT-R1 fixes, even though fixes were HTML-only) — accepts cheap cache-invalidation to avoid mixed-state browser renders
+- [Phase 07.2]: [Phase 07.2-04]: Custom-Persona-Kunden-Subtext via phasen_details JSON-Keys 'custom_persona_*' — no DB migration; kollisionsfrei zu Scoring-Keys; Fallback-Pfad in session_detail() setzt kunden_display_name/_icon zusaetzlich zu Wave-1-Keys
+- [Phase 07.2]: [Phase 07.2-04]: Umlaut-Plural 'Einwände' via explicit Jinja if/else (not inline {% if %}e{% endif %}) — CLAUDE.md user-text rule; Inline-Pluralisierung kann Umlaut-Wechsel strukturell nicht abbilden
+- [Phase 07.2]: [Phase 07.2-04]: _derive_practice_recommendations() order-preserving dedupe by explanation-key before recs[:3]-Trim — defense-in-depth im Training- UND Live-Branch, fixt Cold-Call-B1-Case (3 identische Bullets bei 3 unbehandelten Einwaenden)
+- [Phase 07.2]: [Phase 07.2-04]: UAT-R2 B2-B5 out-of-scope -> Backlog POLISH-38/-39/-40/-41 — 07.2-Scope ist Scoring-UI-Konsolidierung, nicht Live-Persistenz-Plumbing; pre-existing Bugs vor 07.2
+- [Phase 07.2]: [Phase 07.2-04]: 3 Deploy-Runs statt 1 (R1/R2/R3) — analog 07.1 DEVIATIONS-Workflow mit Fix-Commits auf main + CSS-Bump + Re-Deploy + Re-UAT; de facto 2 UAT-Runden (besser als 07.1 mit 5)
+- [Phase 07.2]: [Phase 07.2-04]: POLISH-29 refined als Produkt-Entscheidung: 'EWB-Button gedrueckt = Einwand behandelt' — verbindliche Standard-Definition fuer alle Metriken/Labels; Referenz fuer POLISH-38-Fix
 
 ### Roadmap Evolution
 
@@ -412,6 +420,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-20T14:14:37.421Z
-Stopped at: Completed 07.2-03-PLAN.md
+Last session: 2026-04-21T10:15:00.000Z
+Stopped at: Completed 07.2-04-PLAN.md (UAT-approved: Training + Cold-Call + Meeting, all 4 Plans in Phase 07.2 done, phase verification pending)
 Resume file: None
