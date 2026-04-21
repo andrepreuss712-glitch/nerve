@@ -401,6 +401,7 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 260401-qr4 | Fix sidebar user avatar visibility and light/dark mode toggle | 2026-04-01 | 972cd94 | [260401-qr4-fix-sidebar-user-avatar-visibility-and-l](./quick/260401-qr4-fix-sidebar-user-avatar-visibility-and-l/) |
 | 260421-kwm | POLISH-45 headset-confirm-state clear on logout + POLISH-38.1 manual_ewb success flag | 2026-04-21 | e9acc10 + 585f567 | [260421-kwm-polish-45-polish-38-1-nachzug-headset-mo](./quick/260421-kwm-polish-45-polish-38-1-nachzug-headset-mo/) |
+| 260421-lpx | POLISH-38 Haupt-Fix: re-aggregate einwaende_gesamt/behandelt from ObjectionEvent + migration | 2026-04-21 | 451c909 + 29c8b71 | [260421-lpx-polish-38-haupt-bug-einwaende-gesamt-cou](./quick/260421-lpx-polish-38-haupt-bug-einwaende-gesamt-cou/) |
 
 ## What's Done
 
@@ -422,6 +423,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-21T13:11:39Z
-Stopped at: Completed quick-task 260421-kwm (POLISH-45 + POLISH-38.1 nachzug, pushed to origin/main)
+Last session: 2026-04-21T13:30:00Z
+Stopped at: Completed quick-task 260421-lpx (POLISH-38 Haupt-Bug counter reconciliation + migration, pushed to origin/main)
 Resume file: None
