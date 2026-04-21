@@ -408,10 +408,6 @@ def register_audio_handlers(sio):
             return
         print(f"[PiP] manual_ewb (sid={_sid}): {typ[:80]}")
         import services.live_session as ls
-        try:
-            ls.record_ewb_click(typ, success=False)
-        except Exception as e:
-            print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
 
         # Profil + Kontext fuer Haiku-Variante aufbereiten.
         # get_active_profile() returns tuple (name, daten) — unpack it.
@@ -445,4 +441,15 @@ def register_audio_handlers(sio):
                 except Exception:
                     pass
 
-        sio.start_background_task(_run)
+        # POLISH-38.1: success=True bei erfolgreichem Spawn (User erhaelt Gegenargument,
+        # EWB-Klick = Einwand behandelt per POLISH-29). success=False nur bei Spawn-Error.
+        _ewb_success = True
+        try:
+            sio.start_background_task(_run)
+        except Exception as _spawn_err:
+            _ewb_success = False
+            print(f"[PiP] manual_ewb spawn error (sid={_sid}): {_spawn_err}")
+        try:
+            ls.record_ewb_click(typ, success=_ewb_success)
+        except Exception as e:
+            print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
