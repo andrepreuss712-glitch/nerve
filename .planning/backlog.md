@@ -113,6 +113,30 @@
 
 ---
 
+### POLISH-49 — `DEEPGRAM_HOST` Environment-Variable wird nicht gelesen (DSGVO-EU-Region inaktiv)
+
+- **Severity:** **critical** (Launch-Blocker für DACH/DSGVO-Compliance)
+- **Entdeckt:** Debug-Session POLISH-48 (2026-04-21), Bonus-Finding im `services/deepgram_service.py`-Review
+- **Symptom:** `.env.example` deklariert `DEEPGRAM_HOST=api.eu.deepgram.com` (EU-Endpoint für DSGVO-konforme Audio-Verarbeitung), aber der Code liest diese Variable nirgends. `DeepgramClient(DEEPGRAM_API_KEY)` in `services/deepgram_service.py:181` wird ohne Host-Override instanziiert → Default-Host ist `api.deepgram.com` (US-Endpoints).
+- **Impact:** **DSGVO-Architektur-Bruch.** NERVE sendet aktuell alle Live-Audio-Chunks an US-Endpoints, obwohl CLAUDE.md-Constraint explizit fordert: "DSGVO: Pflicht von Tag 1 — Server in Deutschland (Hetzner), kein wörtliches Mitschneiden default." Muss vor Launch gefixt werden — sonst Datenschutz-Verstoss bei jeder Live-Session.
+- **Betrifft:** `config.py` (Env-Variable laden), `services/deepgram_service.py:181` (ClientOptions mit `url="https://api.eu.deepgram.com"` instanziieren), `.env` (Deploy-Key setzen auf Hetzner-VPS).
+- **Fix-Skizze:** In `config.py`: `DEEPGRAM_HOST = os.getenv("DEEPGRAM_HOST", "api.eu.deepgram.com")`. In `deepgram_service.py`: `DeepgramClient(DEEPGRAM_API_KEY, config=DeepgramClientOptions(url=f"https://{DEEPGRAM_HOST}"))`. Deploy auf VPS mit `DEEPGRAM_HOST=api.eu.deepgram.com` in `.env`. Runtime-verify: Netzwerk-Check zeigt Requests an `eu`-Host.
+- **Cross-Reference:** Deepgram-SDK `DeepgramClientOptions(url=...)` Pattern siehe SDK v3.10.0.
+
+---
+
+### POLISH-50 — Client-Side Audio-Chunk Start-Race (audio_chunk emittet vor start_live_session)
+
+- **Severity:** low (wenige Frames betroffen, mode-unabhängig)
+- **Entdeckt:** Debug-Session POLISH-48 (2026-04-21), Bonus-Finding in `static/pip-launcher.js:877-965`
+- **Symptom:** In `_startAudio()` wird der AudioWorklet angelegt (Zeile 923) und emittet sofort `audio_chunk`-Frames. DANACH erst, am Ende von `_startAudio()` (Zeile 965), wird `start_live_session` emittet. Wenige Worklet-Frames zwischen Setup (L920-929) und `start_live_session`-Emit (L965) werden vom Server silent dropped, weil `_deepgram_sessions.get(_sid)` noch `None` zurückgibt.
+- **Impact:** Minimaler Audio-Verlust am Session-Start (wenige Millisekunden, typischerweise Stille oder Atem). Nicht user-wahrnehmbar, aber unsauber.
+- **Betrifft:** `static/pip-launcher.js:877-965`, `static/app.js:55-57`, Server-Side `handle_audio_chunk` in `services/deepgram_service.py`.
+- **Fix-Skizze:** Entweder (a) `start_live_session` VOR der Worklet-Instanziierung emittet und auf Ack warten, oder (b) Server-Side die ersten N Chunks nach `start_live_session` buffern bis Deepgram-Connection ready ist. Option (a) ist sauberer.
+- **Gilt für alle Modi** (Cold Call + Meeting) — nicht mode-spezifisch.
+
+---
+
 ## Referenzen
 
 - Phase 07.2 UAT-R2 Cold-Call-Checkpoint: 2026-04-20, Session #117 als Test-Referenz
