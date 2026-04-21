@@ -249,8 +249,8 @@
   <section class="n-session-detail-card">
     <h2 class="n-session-detail-card-title">PreCall-Briefing</h2>
     {% if conv.precall_briefing %}
-      <details class="n-session-detail-collapsible" id="sd-precall-details">
-        <summary>PreCall-Briefing einblenden</summary>
+      <details open class="n-session-detail-collapsible" id="sd-precall-details">
+        <summary>Briefing ein-/ausblenden</summary>
         <div class="n-session-detail-precall-body">{{ conv.precall_briefing }}</div>
       </details>
     {% else %}
