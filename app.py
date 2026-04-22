@@ -511,13 +511,104 @@ def _migrate():
             except Exception:
                 pass
         # Phase 06: consent_text column on profiles
+        # NOTE: uses inner engine.connect() with shadowed 'conn' var — older Phase-06 pattern.
+        # Phase 08 restores outer conn by re-opening the context after this block.
         try:
-            with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE profiles ADD COLUMN consent_text TEXT"))
-                conn.commit()
+            with engine.connect() as _p06_conn:
+                _p06_conn.execute(text("ALTER TABLE profiles ADD COLUMN consent_text TEXT"))
+                _p06_conn.commit()
             print("[DB] Migration: added profiles.consent_text")
         except Exception:
             pass  # Column already exists
+        # ── Phase 08: Pre-Migration DB-Backup vor destruktiver D-02-Migration ──────
+        try:
+            import shutil
+            import os as _os_bk
+            _db_path = 'database/nerve.db'
+            _backup_path = 'database/nerve.db.bak_pre_v08_01'
+            if _os_bk.path.exists(_db_path) and not _os_bk.path.exists(_backup_path):
+                shutil.copy(_db_path, _backup_path)
+                print(f"[DB] Phase 08 backup created: {_backup_path}")
+        except Exception as e:
+            print(f"[DB] Phase 08 backup skipped (non-fatal): {e}")
+        # ── Phase 08 D-01: objection_events.success → NULLABLE (Table-Rebuild) ─────
+        try:
+            rows = conn.execute(text("PRAGMA table_info(objection_events)")).fetchall()
+            # r = (cid, name, type, notnull, dflt_value, pk)
+            success_is_notnull = any(r[1] == 'success' and r[3] == 1 for r in rows)
+            if success_is_notnull:
+                conn.execute(text("""
+                    CREATE TABLE objection_events_new (
+                        id INTEGER PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        org_id INTEGER,
+                        conversation_log_id INTEGER NOT NULL,
+                        einwand_typ VARCHAR(100) NOT NULL,
+                        success BOOLEAN,
+                        created_at DATETIME NOT NULL,
+                        FOREIGN KEY(user_id) REFERENCES users(id),
+                        FOREIGN KEY(org_id) REFERENCES organisations(id),
+                        FOREIGN KEY(conversation_log_id) REFERENCES conversation_logs(id)
+                    )
+                """))
+                conn.execute(text("INSERT INTO objection_events_new SELECT * FROM objection_events"))
+                conn.execute(text("DROP TABLE objection_events"))
+                conn.execute(text("ALTER TABLE objection_events_new RENAME TO objection_events"))
+                conn.commit()
+                print("[DB] Migration v08_01: objection_events.success -> NULLABLE (table rebuilt)")
+        except Exception as e:
+            print(f"[DB] Phase 08 objection_events rebuild skipped: {e}")
+        # ── Phase 08 D-02: Reset POLISH-38.1 Alt-Daten auf NULL (DESTRUKTIV) ───────
+        # Cutoff = 2026-04-22 00:00:00 UTC (POLISH-38.1 Commit 585f567 war 2026-04-21 15:11 +0200).
+        # Marker-Row in audit_log zur Nachvollziehbarkeit.
+        try:
+            result = conn.execute(text("""
+                UPDATE objection_events SET success = NULL
+                WHERE created_at < '2026-04-22 00:00:00'
+            """))
+            reset_count = result.rowcount if hasattr(result, 'rowcount') else -1
+            conn.commit()
+            print(f"[DB] Migration v08_01: Reset {reset_count} POLISH-38.1 success-Werte auf NULL")
+            # Marker in audit_log — idempotent (INSERT nur wenn noch nicht vorhanden).
+            # Rule 2: ohne Idempotenz waechst audit_log bei jedem App-Neustart — nicht akzeptabel.
+            try:
+                import json as _json_mig
+                existing_marker = conn.execute(text(
+                    "SELECT COUNT(*) FROM audit_log WHERE action = 'migration_v08_01_reset_success_polish38_1'"
+                )).scalar()
+                if existing_marker == 0:
+                    conn.execute(text("""
+                        INSERT INTO audit_log (user_id, action, target_type, target_id, details, created_at)
+                        VALUES (NULL, 'migration_v08_01_reset_success_polish38_1', 'objection_events', NULL, :det, CURRENT_TIMESTAMP)
+                    """), {'det': _json_mig.dumps({'reset_count': reset_count, 'cutoff_utc': '2026-04-22 00:00:00'})})
+                    conn.commit()
+                    print("[DB] Migration v08_01: audit_log marker inserted")
+            except Exception as _me:
+                print(f"[DB] audit_log marker insert skipped: {_me}")
+        except Exception as e:
+            print(f"[DB] Phase 08 success reset skipped: {e}")
+        # ── Phase 08 D-14: conversation_logs.anrede (PreCall Du/Sie Override) ──────
+        for col, typedef in [('anrede', 'VARCHAR(10)')]:
+            try:
+                conn.execute(text(f'ALTER TABLE conversation_logs ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added conversation_logs.{col}")
+            except Exception:
+                pass
+        # ── Phase 08 D-26: prompt_versions.is_default + backfill is_active → default ──
+        try:
+            conn.execute(text("ALTER TABLE prompt_versions ADD COLUMN is_default BOOLEAN DEFAULT 0"))
+            conn.commit()
+            print("[DB] Migration: added prompt_versions.is_default")
+        except Exception:
+            pass
+        try:
+            # Backfill: bestehende is_active=1 Rows bekommen is_default=1 (single-variant-semantik bleibt erhalten)
+            conn.execute(text("UPDATE prompt_versions SET is_default = 1 WHERE is_active = 1"))
+            conn.commit()
+            print("[DB] Migration v08: prompt_versions.is_default backfilled from is_active=1")
+        except Exception:
+            pass
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')

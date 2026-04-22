@@ -7,4 +7,7 @@ database/nerve.db
 /nerve.db
 *.db-shm
 *.db-wal
+# Phase 08: DB-Backups vor destruktiven Migrations (T-08-01-04 Info-Disclosure-Mitigation)
+database/*.bak*
+database/*.bak_pre_v*
 tests/tts_samples/
