@@ -954,32 +954,37 @@ setVal('vi_branche_kontext', basis.branche_kontext || '');
 
 **6 von 8 Annahmen sind LOW-RISK / auditable in <5min via SQL-Query.** Die Planner-Phase sollte mit A1 (genauer Timestamp) + A3 + A4 (COUNT(*) queries auf Prod) starten.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Cutoff-Timestamp für D-02 Alt-Daten-Reset.**
    - Was we know: POLISH-38.1 completed 2026-04-21 (STATE.md Quick Task 260421-kwm).
    - What's unclear: Exakter UTC-Timestamp des Deploys.
    - Recommendation: Planner setzt Cutoff = `2026-04-22 00:00:00 UTC` konservativ, oder holt git-log vom POLISH-38.1-Commit (`585f567` laut STATE.md).
+   - **RESOLVED:** Plan 01 Task 2 Block A nutzt `2026-04-22 00:00:00 UTC` als Cutoff (konservativ nach POLISH-38.1-Deploy). Commit `585f567` bestätigt 2026-04-21 15:11 +0200. Audit-log-Marker `migration_v08_01_reset_success_polish38_1`.
 
 2. **Deprecation-Strategie für `get_active_prompt_version()` (legacy).**
    - Was we know: Neue `resolve_prompt_version()` ersetzt für EWB-Modul.
    - What's unclear: Sollen 4 andere Module (`assistant_live` etc.) auch migrieren oder Legacy bleiben?
    - Recommendation: In Phase 08 nur EWB migrieren. Legacy-Module bleiben bis Phase 08.5 / separatem Refactor.
+   - **RESOLVED:** Plan 03 migriert NUR das EWB-Modul auf `resolve_prompt_version()`. Die 4 Legacy-Module (`assistant_live`, `coaching_*`, `painpoint_extractor`, `signal_classifier`) nutzen weiterhin `get_active_prompt_version()` + `_ACTIVE_PROMPT_CACHE`. Minimal-Scope, dokumentiert in Plan 03 Summary.
 
 3. **Beispiel-Profil-Modal-Content-Source.**
    - Was we know: D-19 fordert "komplett ausgefülltes Demo-Profil", D-20 verbietet NERVE/André/echte-Firmen-Inhalte.
    - What's unclear: Komplett neu erfinden oder existing `NERVE_DEMO_PROFILE_JSON` (app.py line 697) anonymisiert nutzen?
    - Recommendation: Komplett neu erfinden. Das NERVE-Demo-Profil ist branded und verletzt D-20.
+   - **RESOLVED:** Plan 04 erfindet komplett neuen fiktiven Demo-Profil-Content mit Platzhaltern ("Firma XY", "Anna S.", "Branche Maschinenbau") per D-20 Anti-Pattern-Regel. Kein Reuse von `NERVE_DEMO_PROFILE_JSON`.
 
 4. **Test-Szenarien B "Profil-reich": welches Profil?**
    - Was we know: D-34 "Voll ausgefülltes Profil inkl. `branche_kontext` + `eigene_formulierungen`" für Scenario B.
    - What's unclear: Existierendes User-Profil (André privat) oder neues Test-Fixture-Profil.
    - Recommendation: Neues Test-Profil `profile_08_varianz_test` mit erstellt_von=NULL (System-Profile-Pattern), seed-baren via `_migrate()` INSERT OR IGNORE.
+   - **RESOLVED:** Plan 06 `_seed_ewb_scenarios` seedet System-Scenarios `[P08-A/B/C]` in `training_scenarios` mit `erstellt_von=NULL` (System-Pattern). Kein User-Profil-Referenz, rein Scenario-basiert.
 
 5. **Varianz-Gate bezogen auf `conversation_logs.gesamt_score` — Column existiert?**
    - Was we know: CONTEXT D-28 nennt `gesamt_score`, Models.py hat keinen `gesamt_score`-Column.
    - What's unclear: Ist das ein alias für `kb_end` (Kaufbereitschafts-End-Score, models.py line 251) oder für ein Post-Call-generiertes Score-Feld?
    - Recommendation: Planner klärt mit User — mostly likely `kb_end` oder `generate_scoring()`-Output aus `training_service.py`. Wenn die Column nicht existiert: Phase 08 hat ein Extra-Task "Score-Feld definieren".
+   - **RESOLVED:** `kb_end` IST die persistierte Form von `scoring.gesamt_score`. Verifiziert in `routes/training.py:726` (`kb_end=scoring.get('gesamt_score', 0)`) und `services/integration_engine.py:217-218`. CONTEXT D-28 spricht konzeptionell von `gesamt_score`, die Column heißt aber `kb_end`. **Keine neue Column nötig.** Plan 06 Varianz-Gate nutzt `kb_end` (= persistierter `gesamt_score`).
 
 ## Environment Availability
 
