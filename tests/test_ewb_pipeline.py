@@ -48,10 +48,15 @@ def _bind(monkeypatch, db_session):
     monkeypatch.setattr('database.db.SessionLocal', lambda: _Fake(db_session))
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def _empty_active_profile(monkeypatch):
-    """Default: no active profile → build_profile_context returns '' and
-    build_ewb_prompt falls back to manual Anrede-Constraint."""
+    """Opt-in: no active profile → build_profile_context returns '' and
+    build_ewb_prompt falls back to manual Anrede-Constraint.
+
+    Used only by build_ewb_prompt tests. NOT autouse — would break app-import
+    for _seed_ewb_v2 tests because routes/app_routes does
+    `from services.live_session import LOG_DIR` at import time.
+    """
     class _LSMock:
         state = {}
 
@@ -64,7 +69,7 @@ def _empty_active_profile(monkeypatch):
 
 # ─── 1. v1-legacy assembly ──────────────────────────────────────────────────
 
-def test_build_ewb_prompt_v1_legacy(db_session, monkeypatch):
+def test_build_ewb_prompt_v1_legacy(db_session, monkeypatch, _empty_active_profile):
     _seed_ewb_variants(db_session)
     _bind(monkeypatch, db_session)
     out = ep.build_ewb_prompt(profile_data={}, anrede='Sie',
@@ -75,7 +80,8 @@ def test_build_ewb_prompt_v1_legacy(db_session, monkeypatch):
 
 # ─── 2. v2-modular Baustein-Struktur ────────────────────────────────────────
 
-def test_build_ewb_prompt_v2_modular_bausteine(db_session, monkeypatch):
+def test_build_ewb_prompt_v2_modular_bausteine(db_session, monkeypatch,
+                                                _empty_active_profile):
     _seed_ewb_variants(db_session)
     _bind(monkeypatch, db_session)
     out = ep.build_ewb_prompt(profile_data={}, anrede='Du',
@@ -87,7 +93,7 @@ def test_build_ewb_prompt_v2_modular_bausteine(db_session, monkeypatch):
 
 # ─── 3. Anrede='Du' → D-15 Constraint ───────────────────────────────────────
 
-def test_build_ewb_prompt_anrede_du(db_session, monkeypatch):
+def test_build_ewb_prompt_anrede_du(db_session, monkeypatch, _empty_active_profile):
     _seed_ewb_variants(db_session)
     _bind(monkeypatch, db_session)
     out = ep.build_ewb_prompt(anrede='Du', version='v1-legacy')
@@ -97,7 +103,8 @@ def test_build_ewb_prompt_anrede_du(db_session, monkeypatch):
 
 # ─── 4. Unknown version → Fallback zu _FALLBACK_V1_PROMPT ──────────────────
 
-def test_build_ewb_prompt_fallback_unknown_version(db_session, monkeypatch):
+def test_build_ewb_prompt_fallback_unknown_version(db_session, monkeypatch,
+                                                    _empty_active_profile):
     _seed_ewb_variants(db_session)
     _bind(monkeypatch, db_session)
     out = ep.build_ewb_prompt(anrede='Sie', version='nonexistent')
