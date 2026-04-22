@@ -408,6 +408,14 @@ def api_beenden():
     kb_start_val = kb_verlauf[0]['wert'] if kb_verlauf else 30
     skript_pct = postcall.get('skript_abdeckung', {}).get('gesamt_prozent', 0)
     started = datetime.now()  # approximation — real start tracked via session_start_time
+    # Phase 08 D-14: session_anrede aus ls.state lesen (gesetzt in deepgram_service.py
+    # handle_start_live_session bei whitelist-Werten 'Du'|'Sie'). None wenn nicht gesetzt
+    # → ConversationLog.anrede bleibt NULL → build_profile_context nutzt Profile-Default.
+    try:
+        with ls.state_lock:
+            _session_anrede = ls.state.get('session_anrede')
+    except Exception:
+        _session_anrede = None
     db_conv = get_session()
     try:
         conv = ConversationLog(
@@ -441,6 +449,7 @@ def api_beenden():
             session_mode=session_mode,
             precall_briefing=precall_briefing,
             kb_verlauf=_json.dumps(kb_verlauf, ensure_ascii=False),   # Phase 07.1
+            anrede=_session_anrede,  # Phase 08 D-14: Du/Sie oder None
         )
         db_conv.add(conv)
         db_conv.commit()
@@ -1397,3 +1406,46 @@ def api_precall_research():
             return jsonify({'error': error}), 400
         return jsonify({'error': error}), 502
     return jsonify({'briefing': briefing})
+
+
+# ── Phase 08 D-04: POLISH-55 3-State EWB-Rating-API ────────────────────────
+@app_routes_bp.route('/api/ewb/<int:event_id>/rate', methods=['POST'])
+@login_required
+def api_ewb_rate(event_id):
+    """3-State-Rating: success in {True, False, None}. Ownership via ConversationLog.user_id.
+
+    Phase 08 D-04: Kein Submit-Button — jeder Click speichert sofort.
+    D-05 konsumiert dies: WHERE success IS NOT NULL fuer A/B-Auswertung.
+
+    Phase 08 W-1: Strict type-check via isinstance(value, bool).
+    Python-Equality akzeptiert sonst integer 1 als True und integer 0 als False
+    (1 in (True, False, None) == True). isinstance(value, bool) schliesst
+    numeric 1/0 explizit aus — kritisch fuer Daten-Integritaet.
+    """
+    from database.models import ObjectionEvent, ConversationLog
+    _MISSING = object()
+    data = request.get_json(silent=True) or {}
+    value = data.get('success', _MISSING)
+    if value is _MISSING:
+        return jsonify({'error': 'missing_success_key',
+                        'expected': [True, False, None]}), 400
+    if not (isinstance(value, bool) or value is None):
+        return jsonify({'error': 'invalid_success_value',
+                        'expected': [True, False, None]}), 400
+    db = get_session()
+    try:
+        ev = db.query(ObjectionEvent).filter_by(id=event_id).first()
+        if not ev:
+            return jsonify({'error': 'not_found'}), 404
+        # Ownership check — event muss zu einem ConversationLog von g.user.id gehoeren
+        conv = db.query(ConversationLog).filter_by(
+            id=ev.conversation_log_id, user_id=g.user.id
+        ).first()
+        if not conv:
+            return jsonify({'error': 'forbidden'}), 403
+        ev.success = value
+        db.commit()
+        print(f"[POLISH-55] event_id={event_id} success={value} by user_id={g.user.id}")
+        return jsonify({'ok': True, 'success': value})
+    finally:
+        db.close()

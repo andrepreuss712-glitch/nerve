@@ -84,7 +84,9 @@ def test_rate_success_true(client, db_from_client):
         content_type='application/json',
     )
     assert r.status_code == 200, r.data
-    # Reload ev from DB
+    # expire_all() forces a refresh from DB — route wrote via a separate Session
+    # on the same shared engine, so test-session's cached ev is stale.
+    db.expire_all()
     reloaded = db.query(ObjectionEvent).filter_by(id=ev_id).first()
     assert reloaded.success is True
 
@@ -101,6 +103,7 @@ def test_rate_success_false(client, db_from_client):
         content_type='application/json',
     )
     assert r.status_code == 200
+    db.expire_all()
     reloaded = db.query(ObjectionEvent).filter_by(id=ev_id).first()
     assert reloaded.success is False
 
@@ -118,6 +121,7 @@ def test_rate_success_null(client, db_from_client):
         content_type='application/json',
     )
     assert r.status_code == 200
+    db.expire_all()
     reloaded = db.query(ObjectionEvent).filter_by(id=ev_id).first()
     assert reloaded.success is None
 
@@ -159,6 +163,7 @@ def test_rate_integer_rejected(client, db_from_client):
     )
     assert r.status_code == 400, f'integer 0 must be rejected, got {r.status_code}'
     # DB muss unveraendert sein:
+    db.expire_all()
     reloaded = db.query(ObjectionEvent).filter_by(id=ev_id).first()
     assert reloaded.success is None, 'success column must not be mutated on rejected input'
 
