@@ -110,6 +110,21 @@ def test_invalidate_resolver_cache_clears_both():
     assert pp._VARIANTS_CACHE == {}
 
 
+# ─── Helper: install live_session mock (robust gegen Full-Suite-Mode) ───────
+# Python's `import services.live_session as X` resolves the submodule via the
+# attribute `live_session` on the `services` package — NOT via sys.modules
+# lookup. If another test (e.g. via `import app`) has previously triggered
+# `import services.live_session`, the `services` package caches the real module
+# as its attribute. A bare `setitem(sys.modules, ...)` would NOT override that
+# attribute, so the mock would be bypassed. We therefore patch BOTH:
+#   - sys.modules entry (for importlib.import_module and some import paths)
+#   - services package attribute (for `import services.live_session as X`)
+def _install_ls_mock(monkeypatch, mock):
+    import services as _services_pkg
+    monkeypatch.setitem(sys.modules, 'services.live_session', mock)
+    monkeypatch.setattr(_services_pkg, 'live_session', mock, raising=False)
+
+
 # ─── 6. build_profile_context: empty-profile fallback ───────────────────────
 
 def test_build_profile_context_no_active_profile(monkeypatch):
@@ -121,7 +136,7 @@ def test_build_profile_context_no_active_profile(monkeypatch):
         def get_active_profile():
             return (None, None)
 
-    monkeypatch.setitem(sys.modules, 'services.live_session', _LSMock)
+    _install_ls_mock(monkeypatch, _LSMock)
     assert pp.build_profile_context(user_id=1) == ''
 
 
@@ -149,7 +164,7 @@ def test_build_profile_context_includes_phase_08_fields(monkeypatch):
                 'ki': {'ton': 'Direkt/Klartext'},
             })
 
-    monkeypatch.setitem(sys.modules, 'services.live_session', _LSMock)
+    _install_ls_mock(monkeypatch, _LSMock)
     out = pp.build_profile_context(user_id=1)
     assert 'Firma XY' in out
     assert 'Testprodukt' in out
@@ -168,7 +183,7 @@ def test_build_profile_context_anrede_session_override_wins(monkeypatch):
         def get_active_profile():
             return (1, {'basis': {}, 'ki': {'ansprache': 'Sie'}})
 
-    monkeypatch.setitem(sys.modules, 'services.live_session', _LSMock)
+    _install_ls_mock(monkeypatch, _LSMock)
     out = pp.build_profile_context(user_id=1)
     assert 'Anrede: Du.' in out
     assert 'Wechsle NIEMALS' in out

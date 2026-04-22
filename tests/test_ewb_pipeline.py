@@ -56,6 +56,16 @@ def _empty_active_profile(monkeypatch):
     Used only by build_ewb_prompt tests. NOT autouse — would break app-import
     for _seed_ewb_v2 tests because routes/app_routes does
     `from services.live_session import LOG_DIR` at import time.
+
+    NOTE: Python's `import services.live_session as X` resolves the submodule
+    via the attribute `live_session` on the `services` package — NOT via
+    sys.modules. If another test previously triggered `import app` (which
+    transitively imports services.live_session), the `services` package
+    caches the real module as its attribute. A bare `setitem(sys.modules, ...)`
+    does NOT override that attribute. We therefore patch BOTH:
+      - sys.modules entry
+      - services package attribute
+    so the mock is honoured regardless of suite order.
     """
     class _LSMock:
         state = {}
@@ -64,7 +74,9 @@ def _empty_active_profile(monkeypatch):
         def get_active_profile():
             return (None, None)
 
+    import services as _services_pkg
     monkeypatch.setitem(sys.modules, 'services.live_session', _LSMock)
+    monkeypatch.setattr(_services_pkg, 'live_session', _LSMock, raising=False)
 
 
 # ─── 1. v1-legacy assembly ──────────────────────────────────────────────────
