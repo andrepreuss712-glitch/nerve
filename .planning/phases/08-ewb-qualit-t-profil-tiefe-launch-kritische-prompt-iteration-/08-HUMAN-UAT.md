@@ -1,5 +1,5 @@
 ---
-status: partial
+status: pending
 phase: 08-ewb-qualit-t-profil-tiefe-launch-kritische-prompt-iteration-
 source: [08-VERIFICATION.md]
 started: 2026-04-22T00:00:00Z
