@@ -15,6 +15,8 @@ Group=www-data
 WorkingDirectory=/opt/nerve/app
 
 # Environment — secrets live in /etc/nerve/.env (not in repo)
+# Phase 08: Optional PROMPT_EWB_VERSION_OVERRIDE fuer A/B-Override (siehe .env.example)
+# Leer = A/B-Routing aktiv; gesetzt = forciert alle User auf angegebene Variante.
 EnvironmentFile=/etc/nerve/.env
 
 # gunicorn with gthread worker class (required for Flask-SocketIO threading mode)
