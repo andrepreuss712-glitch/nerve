@@ -618,6 +618,16 @@ Plans:
 - [x] 06-02-PLAN.md — Backend Streaming (claude_service.py WebSocket streaming, skript_position detection, proactive coaching)
 - [x] 06-03-PLAN.md — Frontend JS: pip-launcher.js streaming handlers, dual-slot state machine, consent flow, teleprompter, opacity, proactive fill
 
+### Phase 8: EWB-Qualität & Profil-Tiefe — Launch-kritische Prompt-Iteration, 6 neue Profil-Felder für Authentizität/Branche/Sie-Du, POLISH-55 Behandelt-Semantik-Messinfrastruktur, A/B-Test-Framework für Prompt-Versions, Quality-Gates (80% sofort-vorlesbar, Score-Varianz <±15). Launch-kritisch: blockiert Early-Access-Go-Live wenn EWB-Qualität nicht messbar. Vorbereitet Phase 08.5 (Q&A) + 07.5 (EWB-Feed-Redesign).
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 8 to break down)
+
 ---
 
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
