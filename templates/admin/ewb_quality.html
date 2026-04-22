@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}NERVE Admin — EWB-Quality Dashboard{% endblock %}
+{% block content %}
+<style>
+  .ewb-admin { max-width: 1040px; margin: 2rem auto; padding: 0 1.5rem; }
+  .ewb-admin h1 { margin-bottom: 0.25rem; }
+  .ewb-admin .subtitle { color: #6B7280; margin: 0 0 1rem 0; }
+  .ewb-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
+    padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
+  }
+  .ewb-card h2 { margin-top: 0; margin-bottom: 0.25rem; font-size: 1.15rem; }
+  .ewb-table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+  .ewb-table th, .ewb-table td {
+    padding: 0.55rem 0.75rem; text-align: left;
+    border-bottom: 1px solid #E5E7EB; font-size: 0.95rem;
+  }
+  .ewb-table th { background: #F9FAFB; font-weight: 600; color: #374151; }
+  .ewb-muted { color: #6B7280; font-style: italic; }
+  .ewb-metric-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  .ewb-metric {
+    flex: 1; min-width: 180px; padding: 1rem 1.25rem;
+    border-radius: 8px; background: #F9FAFB;
+    border-left: 4px solid #00D4AA;
+  }
+  .ewb-metric--pass { border-left-color: #10B981; background: #ECFDF5; }
+  .ewb-metric--fail { border-left-color: #EF4444; background: #FEF2F2; }
+  .ewb-metric-value { font-size: 1.75rem; font-weight: 700; color: #111827; }
+  .ewb-metric-label { font-size: 0.85rem; color: #6B7280; margin-top: 0.25rem; }
+  .ewb-hint { font-size: 0.85rem; color: #6B7280; margin-top: 0.75rem; }
+  .ewb-nav-link {
+    display: inline-block; margin-top: 0.5rem;
+    padding: 0.5rem 1rem; border-radius: 6px;
+    background: #00D4AA; color: #fff; text-decoration: none;
+  }
+  .ewb-nav-link:hover { background: #00A98E; }
+</style>
+
+<div class="ewb-admin">
+  <h1>Phase 08 — EWB-Quality Dashboard</h1>
+  <p class="subtitle">Pre-Launch Quality-Gate-Messung: A/B-Varianten, Score-Gate, Varianz.</p>
+
+  <section class="ewb-card">
+    <h2>A/B-Auswertung Prompt-Varianten (D-22)</h2>
+    <p class="subtitle">Erfolgs-Rate pro prompt_version über 3-stufigen JOIN (success IS NOT NULL).</p>
+    <table class="ewb-table">
+      <thead>
+        <tr><th>Variante</th><th>N (geratete EWBs)</th><th>Success-Rate</th></tr>
+      </thead>
+      <tbody>
+      {% for row in ab_rows %}
+        <tr>
+          <td><code>{{ row.version }}</code></td>
+          <td>{{ row.n }}</td>
+          <td>{{ "%.1f%%"|format(row.success_rate * 100) }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3" class="ewb-muted">
+          Noch keine Ratings mit <code>success IS NOT NULL</code> vorhanden.
+          Nutze das <a href="{{ url_for('admin_ewb.ewb_rating_template') }}">Rating-Tool</a>
+          um Einwandbehandlungen zu bewerten.
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="ewb-card">
+    <h2>Quality-Score Gate (D-27)</h2>
+    <p class="subtitle">
+      Score = (klingt_wie_mensch + 2·keine_halluzination + trifft_einwand) / 4 × 100
+    </p>
+    <p class="subtitle">Gate: mindestens 80% der Ratings haben Score ≥ 80.</p>
+    <div class="ewb-metric-row">
+      <div class="ewb-metric">
+        <div class="ewb-metric-value">{{ total_ratings }}</div>
+        <div class="ewb-metric-label">EWBs total gerated</div>
+      </div>
+      <div class="ewb-metric">
+        <div class="ewb-metric-value">{{ high_score_count }}</div>
+        <div class="ewb-metric-label">Score ≥ 80</div>
+      </div>
+      <div class="ewb-metric {% if total_ratings and pct_high >= 80 %}ewb-metric--pass{% elif total_ratings %}ewb-metric--fail{% endif %}">
+        <div class="ewb-metric-value">{{ "%.1f%%"|format(pct_high) }}</div>
+        <div class="ewb-metric-label">
+          {% if total_ratings == 0 %}
+            Keine Ratings vorhanden
+          {% elif pct_high >= 80 %}
+            PASS (≥ 80%)
+          {% else %}
+            Unter 80% — Gate nicht erfüllt
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ewb-card">
+    <h2>Varianz-Range (D-28)</h2>
+    <p class="subtitle">
+      Range max-min über kb_end der gerated Sessions (persistierter Gesamt-Score).
+    </p>
+    <div class="ewb-metric-row">
+      <div class="ewb-metric {% if total_ratings and varianz_range < 30 %}ewb-metric--pass{% elif total_ratings %}ewb-metric--fail{% endif %}">
+        <div class="ewb-metric-value">{{ varianz_range }}</div>
+        <div class="ewb-metric-label">
+          {% if total_ratings == 0 %}
+            Noch keine rated Sessions
+          {% elif varianz_range < 30 %}
+            PASS (&lt; 30)
+          {% else %}
+            Zu hoch — Outlier prüfen
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <p class="ewb-hint">
+      Hinweis D-29: Bei Range 28-32 manuell prüfen ob eine Outlier-Session entfernt werden darf.
+    </p>
+  </section>
+
+  <section class="ewb-card">
+    <a href="{{ url_for('admin_ewb.ewb_rating_template') }}" class="ewb-nav-link">
+      → Zum Rating-Tool (EWBs bewerten)
+    </a>
+  </section>
+</div>
+{% endblock %}

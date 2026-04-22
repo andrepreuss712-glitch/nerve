@@ -1555,9 +1555,12 @@ from routes.oauth          import oauth_bp, init_oauth
 from routes.feedback       import feedback_bp
 from routes.admin_dashboard import admin_dashboard_bp
 from routes.learning       import learning_bp
+# Phase 08 Plan 06:
+from routes.admin_ewb      import admin_ewb_bp
 
 app.register_blueprint(feedback_bp)
 app.register_blueprint(admin_dashboard_bp)
+app.register_blueprint(admin_ewb_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(orgs_bp)
 app.register_blueprint(profiles_bp)

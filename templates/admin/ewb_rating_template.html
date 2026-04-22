@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}NERVE Admin — EWB Rating-Tool{% endblock %}
+{% block content %}
+<style>
+  .ewb-rate-admin { max-width: 1280px; margin: 2rem auto; padding: 0 1.5rem; }
+  .ewb-rate-admin h1 { margin-bottom: 0.25rem; }
+  .ewb-rate-admin .subtitle { color: #6B7280; margin: 0 0 1rem 0; }
+  .ewb-rate-admin .legend {
+    background: #F9FAFB; padding: 0.75rem 1rem; border-radius: 6px;
+    border-left: 3px solid #00D4AA; margin-bottom: 1rem; font-size: 0.9rem;
+    color: #374151;
+  }
+  .ewb-rate-admin .legend strong { color: #111827; }
+  .n-rating-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .n-rating-table th, .n-rating-table td {
+    padding: 0.55rem 0.6rem; border-bottom: 1px solid #E5E7EB; vertical-align: top;
+    text-align: left;
+  }
+  .n-rating-table th { background: #F9FAFB; font-weight: 600; color: #374151; font-size: 0.82rem; }
+  .n-rating-table td.rating-cell { text-align: center; white-space: nowrap; }
+  .n-rating-table td.rating-cell label {
+    display: inline-block; margin: 0 0.35rem; cursor: pointer; font-size: 0.85rem;
+  }
+  .n-rating-table tr[data-conv] { transition: background-color 0.25s; }
+  .n-rating-table tr[data-conv].save-ok { background: #D1FAE5; }
+  .n-rating-table tr[data-conv].save-err { background: #FEE2E2; }
+  .n-rating-table small { color: #6B7280; font-size: 0.78rem; }
+  .muted { color: #6B7280; font-style: italic; text-align: center; padding: 2rem; }
+  .back-link {
+    display: inline-block; margin-bottom: 1rem;
+    color: #6B7280; text-decoration: none; font-size: 0.9rem;
+  }
+  .back-link:hover { color: #00D4AA; }
+</style>
+
+<div class="ewb-rate-admin">
+  <a href="{{ url_for('admin_ewb.ewb_quality') }}" class="back-link">← Zurück zum Quality-Dashboard</a>
+  <h1>Phase 08 — EWB Rating-Tool</h1>
+  <p class="subtitle">
+    Bewerte jede Einwandbehandlung mit 3 binären Kriterien. Der Save erfolgt automatisch,
+    sobald alle 3 Kriterien (Ja/Nein) einer Zeile gesetzt sind.
+  </p>
+
+  <div class="legend">
+    <strong>klingt_wie_mensch:</strong> Liest sich die Antwort wie ein echter Mensch
+    (nicht nach generischer KI, keine Standardfloskeln)?<br>
+    <strong>keine_halluzination:</strong> Nichts erfunden — alle genannten Fakten,
+    Zahlen, Branchenbezüge stimmen?<br>
+    <strong>trifft_einwand:</strong> Beantwortet die Antwort den tatsächlich
+    geäußerten Einwand (nicht einen verwandten)?
+  </div>
+
+  <table class="n-rating-table">
+    <thead>
+      <tr>
+        <th>Session</th>
+        <th>Einwand-Typ</th>
+        <th>Erfolg-Rating</th>
+        <th>klingt_wie_mensch</th>
+        <th>keine_halluzination</th>
+        <th>trifft_einwand</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for ev in events %}
+      <tr data-conv="{{ ev.conv_id }}" data-key="{{ ev.einwand_typ }}">
+        <td>
+          <a href="{{ url_for('dashboard.session_detail', sid=ev.conv_id) }}"
+             target="_blank" rel="noopener">
+            #{{ ev.conv_id }}
+          </a><br>
+          <small>
+            {{ ev.session_mode or '-' }}
+            {% if ev.created_at %} · {{ ev.created_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+          </small>
+        </td>
+        <td><code>{{ ev.einwand_typ }}</code></td>
+        <td>
+          {% if ev.success == True %}<small>Erfolg</small>
+          {% elif ev.success == False %}<small>Kein Erfolg</small>
+          {% else %}<small>offen</small>{% endif %}
+        </td>
+        <td class="rating-cell">
+          <label><input type="radio" name="klingt_{{ loop.index }}" data-crit="klingt_wie_mensch" data-val="true"
+            {% if ev.klingt_wie_mensch == True %}checked{% endif %}> Ja</label>
+          <label><input type="radio" name="klingt_{{ loop.index }}" data-crit="klingt_wie_mensch" data-val="false"
+            {% if ev.klingt_wie_mensch == False %}checked{% endif %}> Nein</label>
+        </td>
+        <td class="rating-cell">
+          <label><input type="radio" name="halluzi_{{ loop.index }}" data-crit="keine_halluzination" data-val="true"
+            {% if ev.keine_halluzination == True %}checked{% endif %}> Ja</label>
+          <label><input type="radio" name="halluzi_{{ loop.index }}" data-crit="keine_halluzination" data-val="false"
+            {% if ev.keine_halluzination == False %}checked{% endif %}> Nein</label>
+        </td>
+        <td class="rating-cell">
+          <label><input type="radio" name="trifft_{{ loop.index }}" data-crit="trifft_einwand" data-val="true"
+            {% if ev.trifft_einwand == True %}checked{% endif %}> Ja</label>
+          <label><input type="radio" name="trifft_{{ loop.index }}" data-crit="trifft_einwand" data-val="false"
+            {% if ev.trifft_einwand == False %}checked{% endif %}> Nein</label>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">Keine ObjectionEvents in der DB gefunden.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function() {
+  function rowState(row) {
+    const state = {};
+    row.querySelectorAll('input[type=radio]:checked').forEach(function(r) {
+      state[r.dataset.crit] = (r.dataset.val === 'true');
+    });
+    return state;
+  }
+
+  async function saveRow(row) {
+    const st = rowState(row);
+    if (!('klingt_wie_mensch' in st && 'keine_halluzination' in st && 'trifft_einwand' in st)) {
+      return;  // noch nicht alle 3 Kriterien gesetzt
+    }
+    const convId = row.dataset.conv;
+    const key = row.dataset.key;
+    try {
+      const r = await fetch('/admin/ewb/rating-template/' + convId + '/'
+                             + encodeURIComponent(key) + '/rate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(st),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()));
+      row.classList.add('save-ok');
+      setTimeout(function() { row.classList.remove('save-ok'); }, 600);
+      console.log('[EWB-Rating] saved', convId, key, st);
+    } catch (e) {
+      row.classList.add('save-err');
+      setTimeout(function() { row.classList.remove('save-err'); }, 1200);
+      alert('Save failed: ' + e.message);
+      console.error('[EWB-Rating] save failed', e);
+    }
+  }
+
+  document.querySelectorAll('tr[data-conv]').forEach(function(row) {
+    row.querySelectorAll('input[type=radio]').forEach(function(inp) {
+      inp.addEventListener('change', function() { saveRow(row); });
+    });
+  });
+})();
+</script>
+{% endblock %}
