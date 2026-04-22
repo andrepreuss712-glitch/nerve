@@ -281,6 +281,8 @@ class ConversationLog(Base):
     precall_briefing         = Column(Text, nullable=True)     # generated call briefing (per D-03: only briefing text, no raw search data)
     # Phase 07.1: Kaufbereitschafts-Verlauf fuer Live-Session-Chart
     kb_verlauf               = Column(Text, nullable=True)     # JSON list [{ts: "HH:MM:SS", wert: 0-100}]
+    # Phase 08 D-14: PreCall-Anrede-Override (Du/Sie pro Session). Fallback: Profile.daten.ki.ansprache.
+    anrede                   = Column(String(10), nullable=True)
 
 
 class Phrase(Base):
@@ -346,7 +348,8 @@ class ObjectionEvent(Base):
     org_id              = Column(Integer, ForeignKey('organisations.id'), nullable=True)
     conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=False)
     einwand_typ         = Column(String(100), nullable=False)
-    success             = Column(Boolean, default=False, nullable=False)
+    # Phase 08 D-01: 3-state (TRUE=Erfolg, FALSE=Kein Erfolg, NULL=Uebersprungen/Unbekannt)
+    success             = Column(Boolean, default=None, nullable=True)
     created_at          = Column(DateTime, default=utcnow, nullable=False)
 
 
@@ -471,6 +474,9 @@ class PromptVersion(Base):
     prompt_text = Column(Text, nullable=False)
     changelog   = Column(Text)
     is_active   = Column(Boolean, default=False, nullable=False)
+    # Phase 08 D-26: A/B-Default-Fallback (wenn get_active_prompt_version() single-lookup macht).
+    # Bei 2+ aktiven Varianten pro module: exakt 1 Row hat is_default=True.
+    is_default  = Column(Boolean, default=False, nullable=False)
     created_at  = Column(DateTime, default=utcnow)
 
 
