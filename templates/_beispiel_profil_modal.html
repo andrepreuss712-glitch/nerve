@@ -1,0 +1,80 @@
+{#
+  templates/_beispiel_profil_modal.html — Phase 08 D-19.
+  Read-Only-Modal mit komplettem fiktivem Beispiel-Profil.
+  D-20 Content-Regel: KEINE NERVE/Andre/echte-Firmen. Alles fiktiv.
+
+  Includes: {% include '_beispiel_profil_modal.html' %} innerhalb des block content.
+  Triggern mit: openBeispiel(); Schliessen: closeBeispiel() / Outside-Click / X.
+#}
+<div class="beispiel-overlay" id="beispielOverlay" style="display:none"
+     onclick="if(event.target===this)closeBeispiel()"
+     role="dialog" aria-labelledby="beispielTitle" aria-modal="true">
+  <div class="beispiel-box">
+    <div class="beispiel-header">
+      <div id="beispielTitle" class="beispiel-title">Beispiel-Profil: Anna S. (Firma XY GmbH)</div>
+      <button type="button" class="beispiel-close" onclick="closeBeispiel()" aria-label="Schliessen">&times;</button>
+    </div>
+    <div class="beispiel-content">
+      <section>
+        <h3>Basis</h3>
+        <p><strong>Unternehmen:</strong> Firma XY GmbH</p>
+        <p><strong>Produkt:</strong> Branchensoftware für mittelständische Maschinenbauer</p>
+        <p><strong>Preismodell:</strong> 12 Monate Laufzeit, ab 850 EUR/Monat pro Lizenz</p>
+        <p><strong>USPs:</strong> 1) Deutsche Server, 2) eigene Implementierungsberatung, 3) Schulung inklusive</p>
+      </section>
+      <section>
+        <h3>Branche + Kontext</h3>
+        <p><strong>Branche:</strong> Maschinenbau</p>
+        <p><strong>Branchen-Kontext:</strong> Mittelstand mit 50-300 MA. Typisches Pain: veraltete Excel-Prozesse in der Produktion, keine Echtzeit-Sicht auf Auftragsbestand. Häufiger Einwand: „Wir haben schon eine Lösung" — meist ein altes ERP das niemand mehr aktiv pflegt.</p>
+      </section>
+      <section>
+        <h3>Eigene Formulierungen</h3>
+        <ul>
+          <li>„Darf ich fragen, was Sie aktuell einsetzen?"</li>
+          <li>„Was stört Sie da am meisten?"</li>
+          <li>„Haben Sie da eine konkrete Zahl?"</li>
+        </ul>
+      </section>
+      <section>
+        <h3>Beweise</h3>
+        <ul>
+          <li>Firma Z GmbH (40 MA, Maschinenbau): nach 3 Monaten 15% schnellere Auftragsabwicklung</li>
+          <li>Kundenzitat: „Das erste Mal, dass wir wirklich sehen wo wir stehen."</li>
+          <li>Durchschnittlicher ROI bei unseren Kunden: 2,3x innerhalb 12 Monaten</li>
+        </ul>
+      </section>
+      <section>
+        <h3>Stil (Ton)</h3>
+        <p><strong>Direkt/Klartext</strong> — kurze Sätze, wenige Füllworte, direkt zur Sache.</p>
+      </section>
+      <section>
+        <h3>Spezielle Anweisungen an NERVE</h3>
+        <p>Immer siezen. Fachbegriffe aus Maschinenbau-Jargon erlaubt (Werkzeugmaschine, CAD, CNC). Keine Anglizismen wie „Solution" — stattdessen „Lösung".</p>
+      </section>
+      <section>
+        <h3>Einwände + Gegenargumente (Auszug)</h3>
+        <ul>
+          <li><strong>„Zu teuer":</strong> „Verstehe. Rechnen wir mal: Sie zahlen heute wie viel für Excel-Lizenzen plus die Stunden, die Ihr Team mit Fehler-Korrekturen verbringt? Firma Z hat das erste Mal berechnet — 480 EUR pro Woche für Fehler-Korrekturen. Wir würden das auf unter 100 EUR senken."</li>
+          <li><strong>„Haben schon was Ähnliches":</strong> „Darf ich fragen, was Sie einsetzen? Und wann wurde das zuletzt aktualisiert?"</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</div>
+<script>
+function closeBeispiel() {
+  const el = document.getElementById('beispielOverlay');
+  if (el) el.style.display = 'none';
+}
+function openBeispiel() {
+  const el = document.getElementById('beispielOverlay');
+  if (el) el.style.display = 'flex';
+}
+// ESC-Taste schliesst Modal (nice-to-have, kostet ~3 Zeilen)
+document.addEventListener('keydown', function(ev) {
+  if (ev.key === 'Escape') {
+    const el = document.getElementById('beispielOverlay');
+    if (el && el.style.display !== 'none') closeBeispiel();
+  }
+});
+</script>

@@ -1,0 +1,26 @@
+{#
+  templates/_tooltip.html — Phase 08 D-16 3-Block-Tooltip-Pattern.
+
+  Usage in einem Template:
+    {% import '_tooltip.html' as tooltip %}
+    <label>Feldname {{ tooltip.tip3(
+      'Was rein soll — 1-2 Saetze',
+      'Beispiel — kurz, konkret, fiktive Platzhalter',
+      'Nicht verwechseln mit: Feld A, Feld B'
+    ) }}</label>
+
+  Content-Regel (D-20): NUR fiktive Platzhalter (Firma XY, Anna S., Branche Maschinenbau).
+  KEINE NERVE-spezifischen, Andre-persoenlichen oder echte-Firmen-Beispiele.
+
+  Accessibility: i-Button hat tabindex/role/aria-label, Groesse via CSS >=16px (D-18).
+  Display-JS im Consumer-Template liest data-tip-was/-bsp/-nvm und baut drei .tip-block Divs.
+#}
+{% macro tip3(was_rein, beispiel, nicht_verwechseln) -%}
+<i class="tip-icon"
+   data-tip-was="{{ was_rein|e }}"
+   data-tip-bsp="{{ beispiel|e }}"
+   data-tip-nvm="{{ nicht_verwechseln|e }}"
+   tabindex="0"
+   role="button"
+   aria-label="Hilfe zu diesem Feld">?</i>
+{%- endmacro %}

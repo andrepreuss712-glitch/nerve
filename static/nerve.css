@@ -2369,3 +2369,114 @@ input[type="range"].perf-slider::-moz-range-thumb {
   .n-session-detail-meta { gap: 8px; }
   .n-session-detail-chart-wrap { height: 220px; }
 }
+
+/* ── Phase 08 D-18: Tooltip-Icon >=16px ────────────────────────────── */
+/* Ueberschreibt das alte inline .tip-icon (14px) in profile_editor.html,
+   weil nerve.css nach dem Inline-<style>-Block geladen wird (base.html). */
+.tip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px; min-width: 16px;
+  margin-left: 6px;
+  border: 1px solid var(--n-border, #2D3748);
+  border-radius: 50%;
+  background: #F3F4F6;
+  color: #1C2333;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+  user-select: none;
+  vertical-align: middle;
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: background-color .12s, color .12s, border-color .12s;
+}
+.tip-icon:hover,
+.tip-icon:focus {
+  background: var(--n-accent, #00D4AA);
+  color: #0D1117;
+  outline: none;
+  border-color: var(--n-accent, #00D4AA);
+}
+
+/* Tooltip-Container (global singleton) — 3-Block-Pattern (D-16).
+   #g-tip existiert bereits in profile_editor.html Inline-CSS fuer den
+   Legacy-Mode — diese Regeln erweitern/ueberschreiben fuer 3-Block-Display. */
+#g-tip {
+  position: fixed;
+  display: none;
+  z-index: 9999;
+  pointer-events: none;
+  max-width: 360px;
+}
+#g-tip-inner {
+  background: #0D1117;
+  color: #E4E4E7;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  white-space: normal;
+  border: 1px solid var(--n-border, #2D3748);
+}
+#g-tip .tip-block { margin-bottom: 8px; }
+#g-tip .tip-block:last-child { margin-bottom: 0; }
+#g-tip .tip-block strong { color: var(--n-accent, #00D4AA); }
+
+/* ── Phase 08 D-19: Beispiel-Profil-Modal ──────────────────────────── */
+.beispiel-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 9998;
+  display: flex; align-items: center; justify-content: center;
+}
+.beispiel-box {
+  background: #FFFFFF;
+  max-width: 760px;
+  max-height: 86vh;
+  width: 90%;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  display: flex; flex-direction: column;
+}
+.beispiel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; border-bottom: 1px solid var(--n-border, #E5E7EB);
+}
+.beispiel-title { font-weight: 600; font-size: 16px; color: #111827; }
+.beispiel-close {
+  background: transparent; border: 0; font-size: 24px; line-height: 1;
+  cursor: pointer; color: #6B7280; padding: 0 4px;
+}
+.beispiel-close:hover { color: #111827; }
+.beispiel-content {
+  padding: 20px; overflow-y: auto; flex: 1; color: #1F2937; font-size: 14px; line-height: 1.55;
+}
+.beispiel-content section { margin-bottom: 20px; }
+.beispiel-content section h3 {
+  font-size: 14px; font-weight: 700; color: var(--n-accent, #00D4AA);
+  margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.beispiel-content ul { margin: 6px 0 0 20px; padding: 0; }
+.beispiel-content li { margin-bottom: 4px; }
+.beispiel-content p { margin: 4px 0; }
+
+/* Link-Trigger im Editor */
+.beispiel-link {
+  display: inline-block;
+  color: var(--n-accent, #00D4AA);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+.beispiel-link:hover { color: #009b7b; }
+.beispiel-link:focus { outline: 2px solid var(--n-accent, #00D4AA); outline-offset: 2px; }
