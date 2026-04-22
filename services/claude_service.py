@@ -4,6 +4,13 @@ from datetime import datetime
 import anthropic
 from config import ANTHROPIC_API_KEY, ANALYSE_INTERVALL, KATEGORIE_LABEL
 
+# Phase 08: EWB-Pipeline (A/B-Routing + Baustein-Struktur)
+# Nur der ewb-Modul-Pfad nutzt diese neue Pipeline. Die 4 anderen Module
+# (assistant_live, coaching_live, objection_trigger, api_frage, training_persona)
+# bleiben bewusst auf _ACTIVE_PROMPT_CACHE + _build_system_prompt (Legacy).
+from services.prompt_pipeline import resolve_prompt_version
+from services.ewb_pipeline import build_ewb_prompt
+
 claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 SYSTEM_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent der während eines Gesprächs mitläuft und Einwände erkennt.
@@ -636,10 +643,30 @@ def analysiere_mit_claude(neuer_text: str, kontext: str) -> dict:
 
 Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
 {neuer_text}"""
+    # ── Phase 08 EWB-Pipeline Integration ──────────────────────────────────────
+    # Statt Legacy _build_system_prompt() routen wir ueber resolve_prompt_version
+    # (A/B-Router mit ENV-Override) + build_ewb_prompt (Baustein-Struktur).
+    # user_id aus ls.state (W-6): deepgram_service.handle_start_live_session
+    # setzt ls.state['user_id'] bei Call-Start. Fallback auf 0 wenn leer —
+    # resolve_prompt_version wechselt dann auf variants[0] (deterministisch
+    # v1-legacy als sicherer Default), KEIN silent-Fallback auf _build_system_prompt
+    # weil das inkonsistente A/B-Zuordnung verursachen wuerde.
+    import services.live_session as ls
+    _user_id = (ls.state.get('user_id') if hasattr(ls, 'state') else None) or 0
+    if not _user_id:
+        print("[Phase08] WARN: ls.state['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
+    _ewb_version = resolve_prompt_version('ewb', _user_id)
+    _anrede = (ls.state.get('session_anrede') if hasattr(ls, 'state') else None) or 'Sie'
+    _system_prompt = build_ewb_prompt(
+        profile_data=None,
+        anrede=_anrede,
+        version=_ewb_version,
+        user_id=_user_id,
+    )
     msg = claude_client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=400,
-        system=_build_system_prompt(),
+        system=_system_prompt,
         messages=[{"role": "user", "content": user_msg}]
     )
     # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
@@ -684,11 +711,26 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     full_text = ''
     token_count = 0
     _callback_fired = False
+    # ── Phase 08 EWB-Pipeline Integration ──────────────────────────────────────
+    # Streaming-Variante nutzt dieselbe Pipeline wie analysiere_mit_claude.
+    # Siehe dortigen Kommentar fuer W-6-user_id-Wiring + Fallback-Logik.
+    import services.live_session as ls
+    _user_id = (ls.state.get('user_id') if hasattr(ls, 'state') else None) or 0
+    if not _user_id:
+        print("[Phase08] WARN: ls.state['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
+    _ewb_version = resolve_prompt_version('ewb', _user_id)
+    _anrede = (ls.state.get('session_anrede') if hasattr(ls, 'state') else None) or 'Sie'
+    _system_prompt = build_ewb_prompt(
+        profile_data=None,
+        anrede=_anrede,
+        version=_ewb_version,
+        user_id=_user_id,
+    )
     try:
         with claude_client.messages.stream(
             model='claude-haiku-4-5-20251001',
             max_tokens=400,
-            system=_build_system_prompt(),
+            system=_system_prompt,
             messages=[{'role': 'user', 'content': user_msg}]
         ) as stream:
             for token in stream.text_stream:
