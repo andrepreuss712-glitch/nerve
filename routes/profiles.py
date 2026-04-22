@@ -8,6 +8,26 @@ from services.audit import log_action
 
 profiles_bp = Blueprint('profiles', __name__, url_prefix='/profiles')
 
+# ── Phase 08 D-09: branche Enum-Whitelist ─────────────────────────────────────
+# Gilt fuer alle Mutations (wizard_create, neu, bearbeiten) — Freitext-Werte
+# werden auf 'sonstiges' gemappt, UI-Select garantiert Whitelist-Konformitaet.
+VALID_BRANCHE = {
+    'saas_b2b', 'maschinenbau', 'versicherung', 'finanzprodukte',
+    'immobilien', 'coaching', 'beratung', 'sonstiges', ''
+}
+
+
+def _normalize_branche(raw: str) -> str:
+    """Whitelist-check + Fallback 'sonstiges' statt 400.
+
+    Leerer Input bleibt leer (= nicht gesetzt). Jeder Nicht-Enum-Wert wird
+    konservativ auf 'sonstiges' gemappt. Kein Crash, keine Data-Loss.
+    """
+    v = (raw or '').strip()
+    if v and v not in VALID_BRANCHE:
+        return 'sonstiges'
+    return v
+
 
 def _rolle():
     return flask_session.get('rolle', 'member')
@@ -46,7 +66,8 @@ def neu():
             p = Profile(
                 org_id=g.org.id,
                 name=request.form.get('name', '').strip(),
-                branche=request.form.get('branche', '').strip(),
+                # Phase 08 D-09: gleiche Whitelist-Logik wie in bearbeiten()
+                branche=_normalize_branche(request.form.get('branche', '')),
                 daten=daten_json,
                 erstellt_von=g.user.id,
             )
@@ -71,7 +92,9 @@ def wizard_page():
 def wizard_create():
     """Guided wizard: creates profile from form data, redirects to dashboard."""
     firma = request.form.get('firma', '').strip()
-    branche = request.form.get('branche', '').strip()
+    # Phase 08 D-09: Wizard schreibt ebenfalls gegen Enum-Whitelist (Wizard-UI
+    # kann immer noch Legacy-Freitext liefern bis Wizard-Plan nachzieht).
+    branche = _normalize_branche(request.form.get('branche', ''))
     rolle = request.form.get('rolle', '').strip()
     produkt = request.form.get('produkt', '').strip()
     zielkunden = request.form.get('zielkunden', '').strip()
@@ -137,7 +160,8 @@ def bearbeiten(pid):
             except Exception:
                 daten_json = p.daten or '{}'
             p.name    = request.form.get('name', p.name).strip()
-            p.branche = request.form.get('branche', p.branche or '').strip()
+            # Phase 08 D-09: branche gegen VALID_BRANCHE whitelisten. Fallback 'sonstiges'.
+            p.branche = _normalize_branche(request.form.get('branche', p.branche or ''))
             p.daten   = daten_json
             p.consent_text = request.form.get('consent_text', p.consent_text or '').strip() or None
             db.commit()

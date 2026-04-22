@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% import '_tooltip.html' as tooltip %}
 {% block title %} – {{ 'Profil bearbeiten' if profile else 'Neues Profil' }}{% endblock %}
 
 {% block extra_style %}
@@ -265,8 +266,8 @@
     <button type="button" class="back-link" onclick="window.location='/profiles'">← Profile</button>
     <input id="vi_name" class="topbar-name" placeholder="Profilname *" required
       value="{{ profile.name if profile else '' }}">
-    <input id="vi_branche" class="topbar-branche" placeholder="Branche"
-      value="{{ profile.branche if profile else '' }}">
+    <a href="#" class="beispiel-link" onclick="openBeispiel();return false"
+       aria-label="Beispiel-Profil anzeigen">Sieh dir ein ausgefülltes Beispiel an</a>
     <button type="button" class="save-btn" onclick="buildAndSubmit()">Speichern</button>
   </div>
 
@@ -326,6 +327,59 @@
         <div class="fg">
           <label class="fl">Konsequenz wenn Kunde nicht kauft <i class="tip-icon" data-tip="Was verliert der Kunde konkret wenn er heute Nein sagt? Das ist dein stärkstes Argument.">?</i></label>
           <textarea class="fta" id="vi_konsequenz" style="min-height:56px" placeholder="Was passiert wenn der Kunde NICHT kauft? z.B. Problem bleibt bestehen, Kosten steigen weiter…"></textarea>
+        </div>
+
+        <!-- Phase 08 D-09: Branche Enum-Select (ersetzt Freitext) -->
+        <div class="fg">
+          <label class="fl">Branche {{ tooltip.tip3(
+            'Die Haupt-Branche in der du verkaufst. Wähle den nächsten Wert aus der Liste — kein Freitext.',
+            'Maschinenbau, wenn du Software für produzierende Mittelständler verkaufst. SaaS B2B, wenn dein Produkt selbst reine Cloud-Software ist.',
+            'Branchen-Kontext (tiefe Pain-Points und Jargon) / Unternehmen (dein eigenes Unternehmen) / Zielgruppe (Ansprechpartner-Profil)'
+          ) }}</label>
+          <select class="fs" id="vi_branche_select">
+            <option value="">-- Bitte wählen --</option>
+            <option value="saas_b2b">SaaS B2B</option>
+            <option value="maschinenbau">Maschinenbau</option>
+            <option value="versicherung">Versicherung</option>
+            <option value="finanzprodukte">Finanzprodukte</option>
+            <option value="immobilien">Immobilien</option>
+            <option value="coaching">Coaching</option>
+            <option value="beratung">Beratung</option>
+            <option value="sonstiges">Sonstiges</option>
+          </select>
+        </div>
+
+        <!-- Phase 08 D-11: branche_kontext Textarea -->
+        <div class="fg">
+          <label class="fl">Branchen-Kontext {{ tooltip.tip3(
+            'Jargon, typische Pain-Points, was in der Branche funktioniert vs. nicht. Hilft NERVE deine Einwände präziser zu beantworten.',
+            'Mittelstand 50-300 MA. Typisches Pain: veraltete Excel-Prozesse. Häufiger Einwand: „Wir haben schon was." — meist ein altes ERP das niemand pflegt.',
+            'Branche (nur Enum-Wert) / Zielgruppe (Ansprechpartner-Profil) / Unternehmen (dein eigenes Unternehmen)'
+          ) }}</label>
+          <textarea class="fta" id="vi_branche_kontext" style="min-height:60px"
+                    placeholder="Jargon, Pain-Points, typische Einwände der Branche …"></textarea>
+        </div>
+
+        <!-- Phase 08 D-07: eigene_formulierungen Textarea (multi-line, Enter=neue Zeile) -->
+        <div class="fg">
+          <label class="fl">Eigene Formulierungen {{ tooltip.tip3(
+            'Sätze die du im Call wortwörtlich sagst. Claude imitiert deinen Stil statt generisches Vertriebs-Sprech. Eine Formulierung pro Zeile.',
+            'Darf ich fragen, was Sie aktuell einsetzen?\nWas stört Sie da am meisten?\nHaben Sie da eine konkrete Zahl?',
+            'Stil / Ton (allgemeine Art zu sprechen) / Gegenargumente (einwaende-spezifisch) / Spezielle Anweisungen (Do/Dont-Regeln)'
+          ) }}</label>
+          <textarea class="fta" id="vi_eigene_formulierungen" style="min-height:84px"
+                    placeholder="Eine Formulierung pro Zeile …"></textarea>
+        </div>
+
+        <!-- Phase 08 D-08: beweise Textarea (multi-line) -->
+        <div class="fg">
+          <label class="fl">Beweise {{ tooltip.tip3(
+            'Zahlen, Kundenzitate, Fallstudien die Claude im Baustein „Beweis" einsetzt. Eine pro Zeile.',
+            'Firma Z: 15% mehr Abschlüsse in 3 Monaten.\nKundenzitat: „Das erste Mal, dass wir sehen wo wir stehen."\n2,3x ROI im Durchschnitt.',
+            'USPs (eigene Produkt-Vorteile) / Konsequenz (was passiert ohne Produkt) / Branchen-Kontext (Pain-Points der Branche)'
+          ) }}</label>
+          <textarea class="fta" id="vi_beweise" style="min-height:84px"
+                    placeholder="Eine pro Zeile — Zahlen, Zitate, Fallstudien …"></textarea>
         </div>
       </div>
 
@@ -548,11 +602,25 @@
       <!-- ⑫ KI-Anweisungen -->
       <div class="sec" id="sec-ki">
         <div class="sec-title"><span class="sec-title-num">13</span>KI-Anweisungen</div>
+        <!-- Phase 08 D-10: ton Select mit Flex-Escape 'eigener_stil' -->
+        <div class="fg">
+          <label class="fl">Stil (Ton) {{ tooltip.tip3(
+            'Wie soll NERVE sprechen? Das ist ein allgemeiner Stil, der sich auf ALLE Antworten auswirkt.',
+            'Direkt/Klartext = kurze Sätze, wenig Füllworte. Beratend/Sanft = empathisch, viele Fragen. Eigener Stil = frei formuliert.',
+            'Techniken aktiv (konkrete Methoden) / Spezielle Anweisungen an NERVE (Do/Dont-Regeln) / Eigene Formulierungen (ganze Sätze)'
+          ) }}</label>
+          <select class="fs" id="vi_ton_select" onchange="toggleTonFlex()">
+            <option value="">-- Bitte wählen --</option>
+            <option value="Direkt/Klartext">Direkt/Klartext</option>
+            <option value="Beratend/Sanft">Beratend/Sanft</option>
+            <option value="Enthusiastisch/Begeistert">Enthusiastisch/Begeistert</option>
+            <option value="Analytisch/Zahlenorientiert">Analytisch/Zahlenorientiert</option>
+            <option value="eigener_stil">Eigener Stil …</option>
+          </select>
+          <input type="text" class="fi" id="vi_ton_flex" style="display:none;margin-top:6px"
+                 placeholder="Beschreibe deinen eigenen Stil …" />
+        </div>
         <div class="frow frow-2">
-          <div class="fg">
-            <label class="fl">Ton <i class="tip-icon" data-tip="Wie soll NERVE klingen? z.B. Direkt, menschlich, auf Augenhöhe.">?</i></label>
-            <input class="fi" id="vi_ton" placeholder="z.B. direkt und bodenständig / empathisch und ruhig / professionell und sachlich">
-          </div>
           <div class="fg">
             <label class="fl">Ansprache <i class="tip-icon" data-tip="Duzt oder siezt du deine Kunden?">?</i></label>
             <div class="radio-row">
@@ -578,9 +646,15 @@
             </select>
           </div>
         </div>
+        <!-- Phase 08 D-12: zusatz Label-Aenderung, DB-Key bleibt 'zusatz' -->
         <div class="fg">
-          <label class="fl">Zusätzliche Anweisungen <i class="tip-icon" data-tip="Alles was NERVE noch wissen soll — Besonderheiten, Einschränkungen, Kontext.">?</i></label>
-          <textarea class="fta" id="vi_zusatz" placeholder="Spezielle Anweisungen für NERVE, z.B. Nie über Wettbewerber lästern / Immer konkrete Zahlen nennen / Duze den Kunden"></textarea>
+          <label class="fl">Spezielle Anweisungen an NERVE {{ tooltip.tip3(
+            'Konkrete Regeln für den KI-Assistenten. Do/Dont. Jargon-Erlaubnis, Tabu-Wörter, Anrede-Ausnahmen.',
+            'Immer siezen. Fachbegriffe aus Maschinenbau-Jargon erlaubt. Keine Anglizismen — stattdessen deutsche Begriffe.',
+            'Techniken verboten (Methoden-Blacklist) / Stil / Ton (allgemeiner Sprachstil) / Eigene Formulierungen (ganze Sätze für Claude)'
+          ) }}</label>
+          <textarea class="fta" id="vi_zusatz" style="min-height:72px"
+                    placeholder="Regeln, Do / Dont, Jargon-Erlaubnis …"></textarea>
         </div>
       </div>
 
@@ -602,6 +676,9 @@
 
 <!-- Global tooltip -->
 <div id="g-tip"><div id="g-tip-inner"></div></div>
+
+<!-- Phase 08 D-19: Read-Only Beispiel-Profil-Modal -->
+{% include '_beispiel_profil_modal.html' %}
 
 <script>
 const DATEN = {{ daten | tojson | safe }};
@@ -626,15 +703,39 @@ function ti(text){
   return `<i class="tip-icon" data-tip="${esc(text)}">?</i>`;
 }
 
-/* ── Tooltip ───────────────────────────────────────────────────────── */
+/* ── Tooltip (Phase 08 D-16: dual-mode 3-block + legacy 1-liner) ────── */
 (function(){
   const tip=document.getElementById('g-tip');
   const inner=document.getElementById('g-tip-inner');
-  document.addEventListener('mouseover', e=>{
-    const icon=e.target.closest('.tip-icon');
-    if(!icon){ tip.style.display='none'; return; }
-    inner.textContent=icon.dataset.tip||'';
-    // Position off-screen first to measure height
+
+  function renderTooltip(icon){
+    inner.innerHTML = '';
+    if (icon.dataset.tipWas || icon.dataset.tipBsp || icon.dataset.tipNvm) {
+      // 3-Block-Modus (Phase 08 D-16)
+      const sections = [
+        {label: 'Was rein soll', value: icon.dataset.tipWas || ''},
+        {label: 'Beispiel', value: icon.dataset.tipBsp || ''},
+        {label: 'Nicht verwechseln mit', value: icon.dataset.tipNvm || ''},
+      ];
+      sections.forEach(s => {
+        if (!s.value) return;
+        const block = document.createElement('div');
+        block.className = 'tip-block';
+        const strong = document.createElement('strong');
+        strong.textContent = s.label + ': ';
+        block.appendChild(strong);
+        const span = document.createElement('span');
+        span.textContent = s.value;
+        block.appendChild(span);
+        inner.appendChild(block);
+      });
+    } else {
+      // Legacy 1-Satz-Fallback (alte ti() Aufrufe via data-tip)
+      inner.textContent = icon.dataset.tip || '';
+    }
+  }
+
+  function positionTooltip(icon){
     tip.style.display='block';
     tip.style.visibility='hidden';
     tip.style.left='-9999px'; tip.style.top='-9999px';
@@ -649,8 +750,26 @@ function ti(text){
       tip.style.left=left+'px'; tip.style.top=top+'px';
       tip.style.visibility='visible';
     });
+  }
+
+  document.addEventListener('mouseover', e=>{
+    const icon=e.target.closest('.tip-icon');
+    if(!icon){ tip.style.display='none'; return; }
+    renderTooltip(icon);
+    positionTooltip(icon);
   });
   document.addEventListener('mouseout', e=>{
+    if(!e.relatedTarget||!e.relatedTarget.closest('.tip-icon'))
+      tip.style.display='none';
+  });
+  // Keyboard-accessible via focus/blur (D-18 Accessibility)
+  document.addEventListener('focusin', e=>{
+    const icon=e.target.closest('.tip-icon');
+    if(!icon) return;
+    renderTooltip(icon);
+    positionTooltip(icon);
+  });
+  document.addEventListener('focusout', e=>{
     if(!e.relatedTarget||!e.relatedTarget.closest('.tip-icon'))
       tip.style.display='none';
   });
@@ -950,7 +1069,23 @@ function buildAndSubmit(){
   const name=document.getElementById('vi_name').value.trim();
   if(!name){ alert('Profilname ist Pflichtfeld.'); document.getElementById('vi_name').focus(); return; }
   document.getElementById('f_name').value=name;
-  document.getElementById('f_branche').value=document.getElementById('vi_branche').value.trim();
+
+  // Phase 08 D-09: branche kommt aus Enum-Select (kein Freitext mehr)
+  document.getElementById('f_branche').value=document.getElementById('vi_branche_select').value;
+
+  // Phase 08 D-10: ton Select mit Flex-Escape 'eigener_stil'
+  //   - Normaler Enum-Wert: Select-value landet 1:1 in daten.ki.ton
+  //   - 'eigener_stil' (Sentinel): Select triggert Flex-Input, dessen .trim() ist der finale ton-Wert
+  //   - Flex-Input leer UND Sentinel gewaehlt: ton=='' (leerer String, NICHT 'eigener_stil')
+  //     — dadurch persistiert die Sentinel-Konstante nie als echte Profil-Daten (W-8 buildAndSubmit-Branch-Coverage)
+  let tonValue;
+  const tonSel = document.getElementById('vi_ton_select').value;
+  if (tonSel === 'eigener_stil') {
+    tonValue = document.getElementById('vi_ton_flex').value.trim();
+  } else {
+    tonValue = tonSel;
+  }
+
   const daten={
     basis:{
       unternehmen:document.getElementById('vi_unternehmen').value.trim(),
@@ -958,6 +1093,17 @@ function buildAndSubmit(){
       preismodell:document.getElementById('vi_preis').value.trim(),
       usps:getTags('usps-tags'),
       konsequenz:document.getElementById('vi_konsequenz').value.trim(),
+      // Phase 08 D-07: eigene_formulierungen als Array (split by newline, trim, filter-empty)
+      eigene_formulierungen:
+          document.getElementById('vi_eigene_formulierungen').value
+              .split('\n').map(s => s.trim()).filter(Boolean),
+      // Phase 08 D-08: beweise als Array (same pattern)
+      beweise:
+          document.getElementById('vi_beweise').value
+              .split('\n').map(s => s.trim()).filter(Boolean),
+      // Phase 08 D-11: branche_kontext als String
+      branche_kontext:
+          document.getElementById('vi_branche_kontext').value.trim(),
     },
     opener: document.getElementById('vi_opener').value.trim(),
     erlaubnis: document.getElementById('vi_erlaubnis').value.trim(),
@@ -995,7 +1141,7 @@ function buildAndSubmit(){
     },
     uebergaenge:getUebergaenge(),
     ki:{
-      ton:document.getElementById('vi_ton').value.trim(),
+      ton: tonValue,
       ansprache:document.querySelector('input[name="ki_ansprache"]:checked')?.value||'Du',
       antwortlaenge:document.getElementById('vi_antwortlaenge').value,
       sensitivitaet:document.getElementById('vi_sensitivitaet').value,
@@ -1005,6 +1151,16 @@ function buildAndSubmit(){
   document.getElementById('daten_json').value=JSON.stringify(daten);
   document.getElementById('editorForm').submit();
 }
+
+/* Phase 08 D-10: ton-Flex-Escape Toggle (Select -> Free-text-Input) */
+function toggleTonFlex() {
+  const sel = document.getElementById('vi_ton_select');
+  const flex = document.getElementById('vi_ton_flex');
+  if (sel && flex) {
+    flex.style.display = (sel.value === 'eigener_stil') ? 'block' : 'none';
+  }
+}
+window.toggleTonFlex = toggleTonFlex;
 
 /* ── CRUD List Helper (Skripte / Opener) ───────────────────────────── */
 var PROFILE_ID = {{ profile.id if profile else 'null' }};
@@ -1080,6 +1236,9 @@ function crudList(containerId, endpoint, label) {
 }
 
 /* ── Init ──────────────────────────────────────────────────────────── */
+// Phase 08 D-09: branche lebt auf Profile-Row (nicht in daten.basis) — aus Jinja-Context:
+const PROFILE_BRANCHE = "{{ profile.branche|default('', true)|e }}";
+
 function init(){
   const isNew=DATEN.basis!==undefined;
   if(isNew){
@@ -1089,6 +1248,10 @@ function init(){
     setVal('vi_preis',b.preismodell);
     setVal('vi_konsequenz',b.konsequenz);
     (b.usps||[]).forEach(t=>addTag('usps-tags',t));
+    // Phase 08 D-07 / D-08 / D-11: neue Basis-Felder populate
+    setVal('vi_eigene_formulierungen', (b.eigene_formulierungen||[]).join('\n'));
+    setVal('vi_beweise', (b.beweise||[]).join('\n'));
+    setVal('vi_branche_kontext', b.branche_kontext||'');
     setVal('vi_opener', DATEN.opener);
     setVal('vi_erlaubnis', DATEN.erlaubnis);
     setVal('vi_pitch', DATEN.pitch);
@@ -1139,7 +1302,37 @@ function init(){
     }));
   }
   const ki=DATEN.ki||{};
-  setVal('vi_ton',ki.ton);
+
+  // Phase 08 D-09: branche Enum-Select populate (Profile-Row-Column, nicht daten.basis)
+  const brancheSelect = document.getElementById('vi_branche_select');
+  if (brancheSelect && PROFILE_BRANCHE) {
+    // Wenn der gespeicherte Wert nicht in Enum-Liste existiert, bleibt '' (= "Bitte waehlen")
+    // — Server-side VALID_BRANCHE validiert beim POST, Fallback 'sonstiges'.
+    const validOpt = [...brancheSelect.options].some(o => o.value === PROFILE_BRANCHE);
+    brancheSelect.value = validOpt ? PROFILE_BRANCHE : '';
+  }
+
+  // Phase 08 D-10: ton Select + Flex-Escape populate
+  const KNOWN_TONS = ['Direkt/Klartext','Beratend/Sanft',
+                      'Enthusiastisch/Begeistert','Analytisch/Zahlenorientiert'];
+  const tonSelect = document.getElementById('vi_ton_select');
+  const tonFlex   = document.getElementById('vi_ton_flex');
+  const currentTon = (ki.ton || '').toString();
+  if (tonSelect && tonFlex) {
+    if (KNOWN_TONS.indexOf(currentTon) >= 0) {
+      tonSelect.value = currentTon;
+      tonFlex.style.display = 'none';
+    } else if (currentTon) {
+      // Alt-Werte oder Free-Text: Flex-Escape
+      tonSelect.value = 'eigener_stil';
+      tonFlex.value = currentTon;
+      tonFlex.style.display = 'block';
+    } else {
+      tonSelect.value = '';
+      tonFlex.style.display = 'none';
+    }
+  }
+
   if(ki.ansprache==='Sie') document.getElementById('ki_sie').checked=true;
   else document.getElementById('ki_du').checked=true;
   setSelect('vi_antwortlaenge',ki.antwortlaenge||'2-3 Sätze');
