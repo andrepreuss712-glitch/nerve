@@ -353,6 +353,35 @@ class ObjectionEvent(Base):
     created_at          = Column(DateTime, default=utcnow, nullable=False)
 
 
+class EwbRating(Base):
+    """Phase 08 D-30/D-35: Manuelle EWB-Quality-Ratings von Andre (solo pre-launch).
+
+    3 binaere Sub-Kriterien pro EWB: klingt_wie_mensch, keine_halluzination, trifft_einwand.
+    Quality-Score-Formel (D-27): (klingt + 2*halluzi + trifft) / 4 * 100.
+    Eindeutig pro (conversation_log_id, einwand_typ_key) -- 1 Rating pro EWB in einer Session.
+    """
+    __tablename__ = 'ewb_ratings'
+    __table_args__ = (
+        UniqueConstraint('conversation_log_id', 'einwand_typ_key',
+                         name='uq_ewb_rating_per_conv_ewb'),
+    )
+    id                  = Column(Integer, primary_key=True)
+    conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=False)
+    einwand_typ_key     = Column(String(100), nullable=False)  # matched gegen ObjectionEvent.einwand_typ
+    klingt_wie_mensch   = Column(Boolean, nullable=False)
+    keine_halluzination = Column(Boolean, nullable=False)
+    trifft_einwand      = Column(Boolean, nullable=False)
+    rater_id            = Column(Integer, ForeignKey('users.id'), nullable=False)
+    rated_at            = Column(DateTime, default=utcnow, nullable=False)
+
+    @property
+    def quality_score(self) -> float:
+        """D-27 Formel: (klingt + 2*halluzi + trifft) / 4 * 100 -> Skala 0-100."""
+        return ((int(bool(self.klingt_wie_mensch))
+                 + 2 * int(bool(self.keine_halluzination))
+                 + int(bool(self.trifft_einwand))) / 4.0) * 100
+
+
 class Feedback(Base):
     __tablename__ = 'feedback'
     id                = Column(Integer, primary_key=True)

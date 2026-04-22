@@ -609,6 +609,33 @@ def _migrate():
             print("[DB] Migration v08: prompt_versions.is_default backfilled from is_active=1")
         except Exception:
             pass
+        # ── Phase 08 Plan 06: ewb_ratings Tabelle ─────────────────────────
+        # SQLAlchemy's Base.metadata.create_all() erzeugt die Tabelle ueber das
+        # EwbRating-Model. Dieser Block ist Fallback-DDL fuer den Fall dass
+        # create_all() beim App-Startup nicht alle neuen Models abdeckt (z.B.
+        # bei Deploy-Reihenfolge Import vor Create). Idempotent via IF NOT EXISTS.
+        try:
+            rows = conn.execute(text("PRAGMA table_info(ewb_ratings)")).fetchall()
+            if not rows:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS ewb_ratings (
+                        id INTEGER PRIMARY KEY,
+                        conversation_log_id INTEGER NOT NULL,
+                        einwand_typ_key VARCHAR(100) NOT NULL,
+                        klingt_wie_mensch BOOLEAN NOT NULL,
+                        keine_halluzination BOOLEAN NOT NULL,
+                        trifft_einwand BOOLEAN NOT NULL,
+                        rater_id INTEGER NOT NULL,
+                        rated_at DATETIME NOT NULL,
+                        UNIQUE(conversation_log_id, einwand_typ_key),
+                        FOREIGN KEY(conversation_log_id) REFERENCES conversation_logs(id),
+                        FOREIGN KEY(rater_id) REFERENCES users(id)
+                    )
+                """))
+                conn.commit()
+                print("[DB] Phase 08 Plan 06: ewb_ratings table created (fallback DDL)")
+        except Exception as e:
+            print(f"[DB] Phase 08 ewb_ratings create skipped: {e}")
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
@@ -815,6 +842,105 @@ try:
     _seed_ewb_v2()
 except Exception as e:
     print(f"[DB] _seed_ewb_v2 failed (non-fatal): {e}")
+
+
+def _seed_ewb_scenarios(db=None):
+    """Phase 08 Plan 06 D-34: Seed 3 Varianz-Test-Szenarien A/B/C als System-Training-Scenarios.
+
+    Scenario A "Easy":          Standard-Einwand "Zu teuer" bei einfachem SaaS-Profil.
+    Scenario B "Profil-reich":  Voll ausgefuelltes Profil mit branche_kontext + Bedarfs-Einwand.
+    Scenario C "Edge-Case":     Multi-Einwand-Sequenz "Zu teuer" -> "Haben schon was".
+
+    Idempotent via name-based existing-row-check.
+    Rufbar vom App-Startup (owns=True) oder aus Tests mit injizierter Session.
+    erstellt_von=NULL markiert System-Scenarios (Phase 04.9-Pattern).
+    """
+    from database.db import SessionLocal
+    from database.models import TrainingScenario, Organisation
+    import json as _json_seed
+
+    scenarios = [
+        {
+            'name': '[P08-A] Varianz-Test Easy: Zu teuer',
+            'beschreibung': ('Phase 08 Varianz-Test Scenario A. Standard-Einwand "Zu teuer" '
+                             'gegen einen einfachen SaaS-Verkauf. Testet Baseline-Konsistenz '
+                             'der EWB-Antworten ueber 5 Repeats.'),
+            'kunde_situation': ('IT-Leiter eines KMU (40 Mitarbeiter) prueft eine SaaS-Loesung. '
+                                'Budget ist knapp, Entscheidung steht kurz bevor.'),
+            'kunde_verhalten': ('Skeptisch beim Preis. Will konkrete Kosten-Nutzen-Argumentation. '
+                                'Vergleicht mit Wettbewerber-Angebot.'),
+            'spezial_einwaende': ['Zu teuer'],
+            'schwierigkeit': 'leicht',
+        },
+        {
+            'name': '[P08-B] Varianz-Test Profil-reich: Bedarfs-Frage',
+            'beschreibung': ('Phase 08 Varianz-Test Scenario B. Voll ausgefuelltes Profil mit '
+                             'branche_kontext + eigene_formulierungen + beweise. '
+                             'Testet ob tiefer Profil-Input konsistent in Antworten greift.'),
+            'kunde_situation': ('Vertriebsleiter B2B-Software-Unternehmen. Aktuelle Tools funktionieren, '
+                                'aber Team-Adoption stagniert. Hat bereits Alternativen evaluiert.'),
+            'kunde_verhalten': ('Hinterfragt den Bedarf, zeigt aber Interesse an konkreten ROI-Zahlen. '
+                                'Fragt nach Erfahrungswerten aus aehnlichen Branchen.'),
+            'spezial_einwaende': ['Bedarf unklar', 'Zu teuer'],
+            'schwierigkeit': 'mittel',
+        },
+        {
+            'name': '[P08-C] Varianz-Test Edge-Case: Multi-Einwand-Sequenz',
+            'beschreibung': ('Phase 08 Varianz-Test Scenario C. Multi-Einwand: "Zu teuer" '
+                             'gefolgt von "Haben schon was Aehnliches". Testet Stabilitaet '
+                             'der EWB-Pipeline bei Einwand-Kette ohne Kontext-Drift.'),
+            'kunde_situation': ('Geschaeftsfuehrer Mittelstand. Nutzt Wettbewerber-Loesung seit 3 Jahren. '
+                                'Prueft Wechsel, aber Migration-Kosten schrecken.'),
+            'kunde_verhalten': ('Bringt schnell Einwand-Kette: erst Preis, dann Status-Quo-Bias. '
+                                'Will gleichzeitig ueberzeugt werden dass Wechsel sich lohnt.'),
+            'spezial_einwaende': ['Zu teuer', 'Haben schon was'],
+            'schwierigkeit': 'schwer',
+        },
+    ]
+
+    owns = db is None
+    if owns:
+        db = SessionLocal()
+    try:
+        # Hole erste Org (System-Scenarios haben erstellt_von=NULL, brauchen aber
+        # org_id wegen NOT NULL-Constraint — Pattern aus Phase 04.9
+        # _seed_system_training_scenarios Zeile 1280).
+        first_org = db.query(Organisation).order_by(Organisation.id.asc()).first()
+        if not first_org:
+            print("[DB] Phase 08 _seed_ewb_scenarios skipped: no Organisation yet")
+            return
+
+        inserted = 0
+        for s in scenarios:
+            exists = db.query(TrainingScenario).filter_by(name=s['name']).first()
+            if exists:
+                continue
+            ts = TrainingScenario(
+                name=s['name'],
+                beschreibung=s['beschreibung'],
+                kunde_situation=s['kunde_situation'],
+                kunde_verhalten=s['kunde_verhalten'],
+                spezial_einwaende=_json_seed.dumps(s['spezial_einwaende'], ensure_ascii=False),
+                schwierigkeit=s['schwierigkeit'],
+                org_id=first_org.id,
+                erstellt_von=None,  # System-Scenario (Phase 04.9-Marker)
+            )
+            db.add(ts)
+            inserted += 1
+        db.commit()
+        if inserted:
+            print(f"[DB] Phase 08 Seed: {inserted}/3 varianz-test scenarios (A/B/C) inserted")
+        else:
+            print("[DB] Phase 08 Seed: 3 varianz-test scenarios (A/B/C) already present")
+    finally:
+        if owns:
+            db.close()
+
+
+try:
+    _seed_ewb_scenarios()
+except Exception as e:
+    print(f"[DB] _seed_ewb_scenarios failed (non-fatal): {e}")
 
 # ── Audit-Log Immutable Trigger (Defense-in-Depth, nach create_all + migrate) ─
 try:
