@@ -129,22 +129,38 @@
 
   {# ── Section 4: Einwand-Timeline ──────────────────────────────── #}
   {# Fix C (07.1 UAT-R1): Count-Header zeigt einwaende_gesamt (echte Session-Zahl). #}
-  {# events-Liste enthaelt alle ObjectionEvent-Records (ungefiltert) — nicht-erfolgreiche als --danger Badge. #}
+  {# events-Liste enthaelt alle ObjectionEvent-Records (ungefiltert). #}
+  {# Phase 08 D-03/D-04: Timeline-Row ersetzt statischen Badge durch 3-Button-Rating. #}
   {% set tl_count = conv.einwaende_gesamt or 0 %}
   {% set events_count = events | length %}
   <section class="n-session-detail-card">
     <h2 class="n-session-detail-card-title">Einwand-Timeline ({{ tl_count if tl_count > events_count else events_count }})</h2>
     {% if events %}
+      {# Phase 08 D-03: Benefit-Framing (WORTWOERTLICH) — nur wenn Events da sind. #}
+      <div class="n-session-detail-info n-session-detail-rating-intro">
+        <strong>Hilf uns, dir zu helfen.</strong>
+        Wie empfandest du die Einwandbehandlung — welcher der folgenden EWBs hatte Erfolg?
+        Basierend auf deinen Antworten kann NERVE dir in Zukunft besser bei der EWB helfen.
+      </div>
       <ul class="n-session-detail-timeline">
         {% for ev in events %}
-          <li class="n-session-detail-timeline-row {% if not ev.success %}n-session-detail-timeline-row--danger{% endif %}">
+          <li class="n-session-detail-timeline-row" data-event-id="{{ ev.id }}">
             <span class="n-label">#{{ loop.index }}</span>
             <div>
               <div class="n-session-detail-timeline-typ">{{ ev.einwand_typ }}</div>
               {% if ev.option_gewaehlt %}<div class="n-session-detail-timeline-option">{{ ev.option_gewaehlt }}</div>{% endif %}
             </div>
-            <div class="n-badge {% if ev.success %}n-badge-success{% else %}n-badge-danger{% endif %}">
-              {% if ev.success %}Erfolgreich{% else %}Nicht behandelt{% endif %}
+            {# Phase 08 D-04: 3-Button-Rating. Klick speichert sofort (kein Submit). #}
+            <div class="n-ewb-rating-group" data-event-id="{{ ev.id }}" role="radiogroup" aria-label="EWB-Rating">
+              <button type="button" class="n-ewb-btn{% if ev.success == True %} n-ewb-btn--active n-ewb-btn--success{% endif %}"
+                      data-value="true" onclick="rateEwb({{ ev.id }}, true, this)"
+                      aria-pressed="{% if ev.success == True %}true{% else %}false{% endif %}">Erfolg</button>
+              <button type="button" class="n-ewb-btn{% if ev.success == False %} n-ewb-btn--active n-ewb-btn--danger{% endif %}"
+                      data-value="false" onclick="rateEwb({{ ev.id }}, false, this)"
+                      aria-pressed="{% if ev.success == False %}true{% else %}false{% endif %}">Kein Erfolg</button>
+              <button type="button" class="n-ewb-btn{% if ev.success is none %} n-ewb-btn--active n-ewb-btn--neutral{% endif %}"
+                      data-value="null" onclick="rateEwb({{ ev.id }}, null, this)"
+                      aria-pressed="{% if ev.success is none %}true{% else %}false{% endif %}">Überspringen</button>
             </div>
           </li>
         {% endfor %}
@@ -445,6 +461,41 @@
   </section>
 
 </main>
+
+{# ── Phase 08 D-04: rateEwb() — 3-Button-Rating via /api/ewb/<id>/rate ── #}
+<script>
+async function rateEwb(eventId, value, btn) {
+  try {
+    const response = await fetch('/api/ewb/' + eventId + '/rate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({success: value}),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error('HTTP ' + response.status + ': ' + text);
+    }
+    // UI-Update: aktiviere geklickten Button, deaktiviere Siblings
+    const group = btn.closest('.n-ewb-rating-group');
+    if (group) {
+      group.querySelectorAll('.n-ewb-btn').forEach(function(b) {
+        b.classList.remove('n-ewb-btn--active',
+                           'n-ewb-btn--success', 'n-ewb-btn--danger',
+                           'n-ewb-btn--neutral');
+        b.setAttribute('aria-pressed', 'false');
+      });
+      btn.classList.add('n-ewb-btn--active');
+      if (value === true)  btn.classList.add('n-ewb-btn--success');
+      if (value === false) btn.classList.add('n-ewb-btn--danger');
+      if (value === null)  btn.classList.add('n-ewb-btn--neutral');
+      btn.setAttribute('aria-pressed', 'true');
+    }
+  } catch (e) {
+    alert('Rating konnte nicht gespeichert werden: ' + e.message);
+    console.error('[POLISH-55] rateEwb failed', e);
+  }
+}
+</script>
 
 {# ── Chart.js + Init (Chart.js NICHT in base.html — PATTERNS 4.4) ── #}
 <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>

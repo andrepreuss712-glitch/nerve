@@ -222,6 +222,8 @@
     var c = content();
     if (!c) return;
     var saved = state.precallFormData || {};
+    // Phase 08 D-14: Anrede-Vorauswahl (Default 'Sie'). 2-Button-Wahl unten in der Form.
+    var savedAnrede = (state.precallFormData && state.precallFormData.anrede) || 'Sie';
     c.innerHTML = [
       '<div class="launcher-step">',
       '<div class="nav-live-title">Firmenrecherche</div>',
@@ -235,6 +237,13 @@
       '<div class="launcher-loading-bar"><div class="launcher-loading-bar-inner"></div></div>',
       '</div>',
       '<div id="lnr-precall-error" style="display:none;color:#f87171;font-size:13px"></div>',
+      // ── Phase 08 D-14: Anrede-Wahl Du/Sie (vor launcher-actions) ──
+      '<div class="launcher-form-label" style="margin-top:10px;font-size:13px;color:var(--page-text-muted)">Wie soll der Assistent dich ansprechen?</div>',
+      '<div class="launcher-anrede-row">',
+      '<button type="button" class="launcher-anrede-btn' + (savedAnrede === 'Du' ? ' active' : '') + '" data-val="Du" onclick="window.NerveLauncher._setAnrede(\'Du\')">Du</button>',
+      '<button type="button" class="launcher-anrede-btn' + (savedAnrede === 'Sie' ? ' active' : '') + '" data-val="Sie" onclick="window.NerveLauncher._setAnrede(\'Sie\')">Sie</button>',
+      '</div>',
+      // ── Ende Phase 08 D-14 Block ──
       '<div class="launcher-actions">',
       '<button class="launcher-btn-ghost" id="lnr-step3-back">&#8592; Zurück</button>',
       '<button class="launcher-btn-ghost" id="lnr-step3-skip">Überspringen</button>',
@@ -242,6 +251,10 @@
       '</div>',
       '</div>'
     ].join('');
+    // Phase 08 D-14: ensure state.precallFormData.anrede is persisted
+    // even if user never clicks (default to saved 'Sie').
+    state.precallFormData = state.precallFormData || {};
+    if (!state.precallFormData.anrede) state.precallFormData.anrede = savedAnrede;
 
     document.getElementById('lnr-step3-back').onclick = function () {
       saveFormData();
@@ -262,12 +275,15 @@
   }
 
   function saveFormData() {
+    // Phase 08 D-14: preserve anrede across step-back navigation.
+    var prevAnrede = (state.precallFormData && state.precallFormData.anrede) || 'Sie';
     state.precallFormData = {
       firma: (document.getElementById('lnr-firma') || {}).value || '',
       ort: (document.getElementById('lnr-ort') || {}).value || '',
       person: (document.getElementById('lnr-person') || {}).value || '',
       branche: (document.getElementById('lnr-branche') || {}).value || '',
-      optinfo: (document.getElementById('lnr-optinfo') || {}).value || ''
+      optinfo: (document.getElementById('lnr-optinfo') || {}).value || '',
+      anrede: prevAnrede
     };
   }
 
@@ -962,11 +978,15 @@
       }
       if (openerFuerKi) skriptBlöcke = [openerFuerKi].concat(skriptBlöcke);
 
+      // Phase 08 D-14: Anrede aus precallFormData (Default 'Sie') im session-start-payload.
+      // Backend-Whitelist {'Du', 'Sie'} filtert ungueltige Werte server-side.
+      var anredeForSession = (state.precallFormData && state.precallFormData.anrede === 'Du') ? 'Du' : 'Sie';
       state.socket.emit('start_live_session', {
         mode: state.mode || 'cold_call',
         precall_briefing: briefingText,
         skript_inhalt: skriptInhalt || null,
-        skript_bloecke: skriptBlöcke.length > 0 ? skriptBlöcke : null
+        skript_bloecke: skriptBlöcke.length > 0 ? skriptBlöcke : null,
+        anrede: anredeForSession
       });
       console.log('[NerveLauncher] Mic started, mode:', state.mode);
     } catch (err) {
@@ -2195,11 +2215,29 @@
     if (state.teleprompterOverrideTimer) { clearTimeout(state.teleprompterOverrideTimer); state.teleprompterOverrideTimer = null; }
   }
 
+  // ── Phase 08 D-14: _setAnrede helper (whitelist Du/Sie) ──────────────────
+  function _setAnrede(anrede) {
+    if (anrede !== 'Du' && anrede !== 'Sie') return;
+    state.precallFormData = state.precallFormData || {};
+    state.precallFormData.anrede = anrede;
+    // Toggle active class across both buttons in the PiP window OR main doc.
+    try {
+      var docs = [document];
+      if (state.pipWindow && state.pipWindow.document) docs.push(state.pipWindow.document);
+      docs.forEach(function(d) {
+        d.querySelectorAll('.launcher-anrede-btn').forEach(function(b) {
+          b.classList.toggle('active', b.dataset.val === anrede);
+        });
+      });
+    } catch (e) { /* DOM query failed — silently ignore */ }
+  }
+
   // ── Public API ─────────────────────────────────────────────────────────────
   window.NerveLauncher = {
     open: open,
     close: close,
-    isActive: function () { return state.micStarted; }
+    isActive: function () { return state.micStarted; },
+    _setAnrede: _setAnrede
   };
 
 })();

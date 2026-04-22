@@ -225,34 +225,37 @@ def test_rate_without_login_redirects(client, db_from_client):
 
 # ── Anrede-Override Tests ────────────────────────────────────────────────
 
-def test_anrede_whitelist_du():
-    """Whitelist akzeptiert 'Du'."""
+@pytest.fixture(autouse=True)
+def _cleanup_session_anrede():
+    """Autouse fixture: ensure ls.state['session_anrede'] is always clean
+    before AND after each test in this module. Prevents cross-test leakage
+    into test_ewb_pipeline.py which reads session_anrede via build_profile_context.
+    """
     import threading
     import services.live_session as ls
     if not hasattr(ls, 'state_lock'):
         ls.state_lock = threading.Lock()
     with ls.state_lock:
         ls.state.pop('session_anrede', None)
+    yield
+    with ls.state_lock:
+        ls.state.pop('session_anrede', None)
+
+
+def test_anrede_whitelist_du():
+    """Whitelist akzeptiert 'Du'."""
+    import services.live_session as ls
     # Simulation: session-start mit anrede='Du'
     anrede_raw = 'Du'
     if anrede_raw in ('Du', 'Sie'):
         with ls.state_lock:
             ls.state['session_anrede'] = anrede_raw
-    try:
-        assert ls.state.get('session_anrede') == 'Du'
-    finally:
-        with ls.state_lock:
-            ls.state.pop('session_anrede', None)
+    assert ls.state.get('session_anrede') == 'Du'
 
 
 def test_anrede_whitelist_rejects_invalid():
     """'Hallo; drop table' oder anderes → wird NICHT in ls.state geschrieben."""
-    import threading
     import services.live_session as ls
-    if not hasattr(ls, 'state_lock'):
-        ls.state_lock = threading.Lock()
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
     anrede_raw = 'Hallo; drop table'  # attempt prompt injection
     if anrede_raw in ('Du', 'Sie'):
         with ls.state_lock:

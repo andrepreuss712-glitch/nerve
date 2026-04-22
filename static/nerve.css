@@ -2479,4 +2479,81 @@ input[type="range"].perf-slider::-moz-range-thumb {
   font-family: inherit;
 }
 .beispiel-link:hover { color: #009b7b; }
+
+/* ── Phase 08 D-03: Benefit-Framing Info-Block ────────────────────────── */
+.n-session-detail-rating-intro {
+  background: #F9FAFB;
+  border: 1px solid var(--n-border, #E5E7EB);
+  border-left: 3px solid var(--n-accent, #00D4AA);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  color: #1F2937;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.n-session-detail-rating-intro strong {
+  color: #111827;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ── Phase 08 D-04: 3-Button-Rating (EWB-Timeline) ───────────────────── */
+.n-ewb-rating-group {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.n-ewb-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--n-border, #D1D5DB);
+  background: #FFFFFF;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.n-ewb-btn:hover {
+  border-color: var(--n-accent, #00D4AA);
+  color: var(--n-accent, #00D4AA);
+}
+.n-ewb-btn:focus {
+  outline: 2px solid var(--n-accent, #00D4AA);
+  outline-offset: 2px;
+}
+.n-ewb-btn--active { font-weight: 600; }
+.n-ewb-btn--success { background: #D1FAE5; border-color: #10B981; color: #065F46; }
+.n-ewb-btn--danger  { background: #FEE2E2; border-color: #EF4444; color: #7F1D1D; }
+.n-ewb-btn--neutral { background: #E5E7EB; border-color: #6B7280; color: #374151; }
+
+/* ── Phase 08 D-14: Launcher Anrede-Row (Du/Sie) ─────────────────────── */
+.launcher-anrede-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+.launcher-anrede-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1.5px solid var(--n-border, #D1D5DB);
+  background: #FFFFFF;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.launcher-anrede-btn:hover {
+  border-color: var(--n-accent, #00D4AA);
+}
+.launcher-anrede-btn.active {
+  background: var(--n-accent, #00D4AA);
+  border-color: var(--n-accent, #00D4AA);
+  color: #0D1117;
+  font-weight: 600;
+}
 .beispiel-link:focus { outline: 2px solid var(--n-accent, #00D4AA); outline-offset: 2px; }
