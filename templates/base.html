@@ -63,6 +63,14 @@
     <i data-lucide="users" class="nav-icon-lucide"></i>
     <span class="n-nav-label">CRM</span>
   </a>
+  <a class="n-nav-item {% if request.path.startswith('/admin/ewb/rating-template') %}n-nav-item-active{% endif %}" href="/admin/ewb/rating-template" title="EWB bewerten">
+    <i data-lucide="clipboard-check" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">EWB bewerten</span>
+  </a>
+  <a class="n-nav-item {% if request.path.startswith('/admin/ewb/quality') %}n-nav-item-active{% endif %}" href="/admin/ewb/quality" title="EWB Qualität">
+    <i data-lucide="activity" class="nav-icon-lucide"></i>
+    <span class="n-nav-label">EWB Qualität</span>
+  </a>
   {% endif %}
   <div style="flex:1"></div>
   <!-- Hidden legacy nav items (D-31: kept in DOM, not deleted) -->
