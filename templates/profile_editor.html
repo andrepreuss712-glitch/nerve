@@ -332,9 +332,9 @@
         <!-- Phase 08 D-09: Branche Enum-Select (ersetzt Freitext) -->
         <div class="fg">
           <label class="fl">Branche {{ tooltip.tip3(
-            'Die Haupt-Branche in der du verkaufst. Wähle den nächsten Wert aus der Liste — kein Freitext.',
+            'Die Haupt-Branche in der du verkaufst. Wähle den passenden Wert aus der Liste — kein Freitext.',
             'Maschinenbau, wenn du Software für produzierende Mittelständler verkaufst. SaaS B2B, wenn dein Produkt selbst reine Cloud-Software ist.',
-            'Branchen-Kontext (tiefe Pain-Points und Jargon) / Unternehmen (dein eigenes Unternehmen) / Zielgruppe (Ansprechpartner-Profil)'
+            'Branchen-Kontext (Schmerzpunkte und typische Fachbegriffe deiner Kunden) / Unternehmen (dein eigenes Unternehmen) / Zielgruppe (wen du im Kundengespräch erreichst)'
           ) }}</label>
           <select class="fs" id="vi_branche_select">
             <option value="">-- Bitte wählen --</option>
@@ -352,20 +352,20 @@
         <!-- Phase 08 D-11: branche_kontext Textarea -->
         <div class="fg">
           <label class="fl">Branchen-Kontext {{ tooltip.tip3(
-            'Jargon, typische Pain-Points, was in der Branche funktioniert vs. nicht. Hilft NERVE deine Einwände präziser zu beantworten.',
-            'Mittelstand 50-300 MA. Typisches Pain: veraltete Excel-Prozesse. Häufiger Einwand: „Wir haben schon was." — meist ein altes ERP das niemand pflegt.',
-            'Branche (nur Enum-Wert) / Zielgruppe (Ansprechpartner-Profil) / Unternehmen (dein eigenes Unternehmen)'
+            'Typische Fachbegriffe, Schmerzpunkte deiner Kunden, was in der Branche funktioniert und was nicht. Hilft NERVE deine Einwände präziser zu beantworten.',
+            'Mittelstand mit 50 bis 300 Mitarbeitern. Typisches Problem: veraltete Excel-Prozesse. Häufiger Einwand: „Wir haben schon was." — meist ein altes ERP-System (zentrale Unternehmenssoftware), das niemand mehr pflegt.',
+            'Branche (nur ein vorgegebener Wert aus der Liste) / Zielgruppe (wen du im Kundengespräch erreichst) / Unternehmen (dein eigenes Unternehmen)'
           ) }}</label>
           <textarea class="fta" id="vi_branche_kontext" style="min-height:60px"
-                    placeholder="Jargon, Pain-Points, typische Einwände der Branche …"></textarea>
+                    placeholder="Fachbegriffe, Schmerzpunkte, typische Einwände der Branche …"></textarea>
         </div>
 
         <!-- Phase 08 D-07: eigene_formulierungen Textarea (multi-line, Enter=neue Zeile) -->
         <div class="fg">
           <label class="fl">Eigene Formulierungen {{ tooltip.tip3(
-            'Sätze die du im Call wortwörtlich sagst. Claude imitiert deinen Stil statt generisches Vertriebs-Sprech. Eine Formulierung pro Zeile.',
+            'Sätze die du im Gespräch wortwörtlich sagst. NERVE übernimmt deinen Stil, statt generische Vertriebs-Floskeln zu verwenden. Eine Formulierung pro Zeile.',
             'Darf ich fragen, was Sie aktuell einsetzen?\nWas stört Sie da am meisten?\nHaben Sie da eine konkrete Zahl?',
-            'Stil / Ton (allgemeine Art zu sprechen) / Gegenargumente (einwaende-spezifisch) / Spezielle Anweisungen (Do/Dont-Regeln)'
+            'Stil / Ton (deine allgemeine Art zu sprechen) / Gegenargumente (Antworten auf einzelne Einwände) / Spezielle Anweisungen (Erlaubt/Verboten-Regeln für NERVE)'
           ) }}</label>
           <textarea class="fta" id="vi_eigene_formulierungen" style="min-height:84px"
                     placeholder="Eine Formulierung pro Zeile …"></textarea>
@@ -374,9 +374,9 @@
         <!-- Phase 08 D-08: beweise Textarea (multi-line) -->
         <div class="fg">
           <label class="fl">Beweise {{ tooltip.tip3(
-            'Zahlen, Kundenzitate, Fallstudien die Claude im Baustein „Beweis" einsetzt. Eine pro Zeile.',
+            'Zahlen, Kundenzitate, Fallstudien die NERVE als Beweis in der Antwort einsetzt. Eine pro Zeile.',
             'Firma Z: 3 Tage schnellere Auftragsabwicklung nach 6 Monaten.\nKundenzitat: „Das erste Mal, dass wir sehen wo wir stehen."\nDurchschnitt: 15.000 EUR Ersparnis pro Quartal.',
-            'USPs (eigene Produkt-Vorteile) / Konsequenz (was passiert ohne Produkt) / Branchen-Kontext (Pain-Points der Branche)'
+            'Alleinstellungsmerkmale (eigene Produkt-Vorteile) / Konsequenz (was passiert wenn der Kunde nicht kauft) / Branchen-Kontext (typische Schmerzpunkte der Kunden)'
           ) }}</label>
           <textarea class="fta" id="vi_beweise" style="min-height:84px"
                     placeholder="Eine pro Zeile — Zahlen, Zitate, Fallstudien …"></textarea>
@@ -607,7 +607,7 @@
           <label class="fl">Stil (Ton) {{ tooltip.tip3(
             'Wie soll NERVE sprechen? Das ist ein allgemeiner Stil, der sich auf ALLE Antworten auswirkt.',
             'Direkt/Klartext = kurze Sätze, wenig Füllworte. Beratend/Sanft = empathisch, viele Fragen. Eigener Stil = frei formuliert.',
-            'Techniken aktiv (konkrete Methoden) / Spezielle Anweisungen an NERVE (Do/Dont-Regeln) / Eigene Formulierungen (ganze Sätze)'
+            'Techniken aktiv (konkrete Verkaufsmethoden) / Spezielle Anweisungen an NERVE (Erlaubt/Verboten-Regeln) / Eigene Formulierungen (ganze Sätze)'
           ) }}</label>
           <select class="fs" id="vi_ton_select" onchange="toggleTonFlex()">
             <option value="">-- Bitte wählen --</option>
@@ -649,9 +649,9 @@
         <!-- Phase 08 D-12: zusatz Label-Aenderung, DB-Key bleibt 'zusatz' -->
         <div class="fg">
           <label class="fl">Spezielle Anweisungen an NERVE {{ tooltip.tip3(
-            'Konkrete Regeln für den KI-Assistenten. Do/Dont. Jargon-Erlaubnis, Tabu-Wörter, Anrede-Ausnahmen.',
-            'Immer siezen. Fachbegriffe aus Maschinenbau-Jargon erlaubt. Keine Anglizismen — stattdessen deutsche Begriffe.',
-            'Techniken verboten (Methoden-Blacklist) / Stil / Ton (allgemeiner Sprachstil) / Eigene Formulierungen (ganze Sätze für Claude)'
+            'Konkrete Regeln für die KI. Was ist erlaubt, was ist verboten. Erlaubte Fachbegriffe, Tabu-Wörter, Anrede-Ausnahmen.',
+            'Immer siezen. Fachbegriffe aus dem Maschinenbau erlaubt. Keine englischen Begriffe — stattdessen deutsche Wörter verwenden.',
+            'Techniken verboten (Verbotsliste für Verkaufsmethoden) / Stil / Ton (allgemeiner Sprachstil) / Eigene Formulierungen (ganze Sätze für NERVE)'
           ) }}</label>
           <textarea class="fta" id="vi_zusatz" style="min-height:72px"
                     placeholder="Regeln, Do / Dont, Jargon-Erlaubnis …"></textarea>

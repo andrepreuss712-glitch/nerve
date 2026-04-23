@@ -63,6 +63,18 @@ Phase 08 liefert drei zusammenhängende Outcomes vor Launch:
 - **D-20: KRITISCHE CONTENT-REGEL** Keine NERVE-spezifischen, André-persönlichen oder echten-Firmen-Beispiele in Tooltips. Nur neutral/generisch mit fiktiven Platzhaltern ("Firma XY", "Anna S.", "Branche Maschinenbau"). Bei Stil-Bandbreite: mehrere Beispiele über verschiedene Stile zeigen.
   - **Anti-Pattern (nicht machen):** "Guck mal, du kennst das — im 10. Call..." (= André-Ton), "87% unserer Kunden..." (= NERVE-Stat), "Sparkasse Iserlohn nutzt..." (= echte Firma).
   - **Richtig:** "Darf ich fragen, was Sie aktuell einsetzen?" / "Die Firma XY hat nach 3 Monaten 15% mehr Abschlüsse gefahren."
+  - **D-20b: LAIEN-TAUGLICHKEIT (ergänzt 2026-04-23 nach Browser-Smoke-Finding).** Zielgruppe sind Vertriebler aus Software/Maschinen/Versicherung/Vermögen/Immobilien — NICHT aus Tech. Jeder Tooltip muss ohne Google oder Tech-Vorwissen verständlich sein. Verbotene Begriffe mit Ersetzungen:
+    - "Claude" → "NERVE" oder "die KI"
+    - "Enum-Wert" → "vorgegebener Wert aus der Liste"
+    - "Pain-Points" → "Schmerzpunkte" oder "typische Probleme der Kunden"
+    - "USPs" → "Alleinstellungsmerkmale" oder "eigene Vorteile"
+    - "Do/Dont" → "Erlaubt/Verboten"
+    - "Blacklist" → "Verbotsliste"
+    - "einwaende-spezifisch" (DB-Key-Stil) → "auf einzelne Einwände bezogen"
+    - "Baustein «Beweis»" (interne Architektur) → "als Beweis in der Antwort"
+    - Abkürzungen ausschreiben: "MA" → "Mitarbeiter", "ERP" → "ERP-System (zentrale Unternehmenssoftware)". "CRM"/"B2B" in eindeutigem Select-Kontext OK.
+  - **Persona-Test beim Schreiben:** Nach jedem Tooltip fragen "Versteht ein Versicherungsvertriebler ohne Tech-Background das auf Anhieb?". Wenn unklar → vereinfachen.
+  - **Geltungsbereich:** Gilt für Phase 08.5, 07.5 und alle Folgephasen mit User-facing Content. Tooltip-Drafts gegen diese Liste greppen bevor sie an Claudian-Review (D-21) gehen.
 - **D-21: Launch-Gate** Claudian-Review-Pass (~30 Min) auf alle Tooltips mit Anti-Pattern-Liste. Kein Tooltip geht live ohne diesen Check. Review-Verantwortung: Claudian (Vault-Instanz) nach erstem Draft durch Claude Code.
 
 ### A/B-Test-Infrastruktur (Discuss-Finding a)
