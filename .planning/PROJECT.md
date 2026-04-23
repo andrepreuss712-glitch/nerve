@@ -43,6 +43,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - ✓ Early Access Warteliste mit Referral-System — existing
 - ✓ Rebranding SalesNerve → NERVE abgeschlossen (v0.9.1) — existing
 - ✓ Einheitliche Auswertungs-Seite: Training/Cold-Call/Meeting landen auf /session/<id> mit 13 Sektionen (11 Standard + Wendepunkt-Analyse + Einzel-Bewertungen + Verbesserungspotenzial), Training-Overlay entfernt, Nochmal-trainieren-Button, POLISH-32 Persönlichkeit-Badge + POLISH-34 Score-Dopplung — validated Phase 07.2 (3 UATs approved)
+- ✓ EWB-Qualität & Profil-Tiefe (Phase 08, UAT approved 2026-04-23): v2-modular EWB-Pipeline live, A/B-Routing prompt_versions, 6 neue Profil-Felder (branche/branche_kontext/eigene_formulierungen/beweise/ton/zusatz) + 3-Block-Tooltip-System, PreCall-Anrede Du/Sie, 3-State-Rating-UI, EwbRating-Tabelle, Admin-EWB-Quality-Dashboard + Rating-Template-Page mit antwort_text-Spalte, Login-Redirect-next-Param global, CR-01/CR-02 Thread-Safety + Anrede-Whitelist — validated Phase 08 (waves 1-6 + gap-fix + hotfixes)
 
 ### Active
 

@@ -1,9 +1,12 @@
 ---
-status: pending
+status: code_complete_wave7_deferred
 phase: 08-ewb-qualit-t-profil-tiefe-launch-kritische-prompt-iteration-
 source: [08-VERIFICATION.md]
 started: 2026-04-22T00:00:00Z
-updated: 2026-04-22T00:00:00Z
+updated: 2026-04-23T00:00:00Z
+uat_approved: 2026-04-23
+wave7_deferred: true
+wave7_reason: Training-Pipeline nutzt noch v1 (nicht v2-modular aus Phase 08). Wave 7 nach Phase 08.5, wenn Training auf v2-modular läuft — erst dann liefern die Quality-Gate-Daten ehrliche Metriken.
 ---
 
 ## Current Test
