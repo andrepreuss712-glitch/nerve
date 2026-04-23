@@ -1224,6 +1224,7 @@ function buildAndSubmit(){
     }
   };
   document.getElementById('daten_json').value=JSON.stringify(daten);
+  _isDirty = false;
   document.getElementById('editorForm').submit();
 }
 
