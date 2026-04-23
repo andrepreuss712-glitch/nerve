@@ -609,6 +609,14 @@ def _migrate():
             print("[DB] Migration v08: prompt_versions.is_default backfilled from is_active=1")
         except Exception:
             pass
+        # ── Phase 08.X: objection_events.antwort_text + einwand_text ────────
+        for col, typedef in [('antwort_text', 'TEXT'), ('einwand_text', 'TEXT')]:
+            try:
+                conn.execute(text(f'ALTER TABLE objection_events ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added objection_events.{col}")
+            except Exception:
+                pass
         # ── Phase 08 Plan 06: ewb_ratings Tabelle ─────────────────────────
         # SQLAlchemy's Base.metadata.create_all() erzeugt die Tabelle ueber das
         # EwbRating-Model. Dieser Block ist Fallback-DDL fuer den Fall dass

@@ -351,6 +351,9 @@ class ObjectionEvent(Base):
     # Phase 08 D-01: 3-state (TRUE=Erfolg, FALSE=Kein Erfolg, NULL=Uebersprungen/Unbekannt)
     success             = Column(Boolean, default=None, nullable=True)
     created_at          = Column(DateTime, default=utcnow, nullable=False)
+    # Phase 08.X: Persistierter Claude-Response-Text für Rating-Page
+    antwort_text        = Column(Text, nullable=True)
+    einwand_text        = Column(Text, nullable=True)
 
 
 class EwbRating(Base):
