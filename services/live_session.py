@@ -108,7 +108,7 @@ state = {
     'line_id':          None,
     'kaufbereitschaft': 30,
     'ewb_top2':         None,  # List of 2 EWB type strings, AI-ranked
-    'ewb_clicks':       [],    # Liste von dicts: {'einwand_typ': str, 'success': bool, 'ts': iso}
+    'ewb_clicks':       [],    # Liste von dicts: {'einwand_typ': str, 'success': bool, 'ts': iso, 'antwort_text': str|None, 'einwand_text': str|None}
     # ── Phase 04.8: Conversation Phase Model (6-phase auto-detected) ──
     'current_phase':        1,
     'current_phase_name':   'Opener',
@@ -403,15 +403,19 @@ def reset_session():
         })
 
 
-def record_ewb_click(einwand_typ: str, success: bool = False):
+def record_ewb_click(einwand_typ: str, success: bool = False,
+                     antwort_text: str = None, einwand_text: str = None):
     """Erfasst einen EWB-Button-Klick im Session-State (thread-safe)."""
     import datetime as _dt
+    entry = {
+        'einwand_typ':  einwand_typ,
+        'success':      bool(success),
+        'ts':           _dt.datetime.utcnow().isoformat(),
+        'antwort_text': antwort_text or None,
+        'einwand_text': einwand_text or None,
+    }
     with state_lock:
-        state.setdefault('ewb_clicks', []).append({
-            'einwand_typ': einwand_typ,
-            'success':     bool(success),
-            'ts':          _dt.datetime.utcnow().isoformat(),
-        })
+        state.setdefault('ewb_clicks', []).append(entry)
 
 
 def get_speech_stats() -> dict:

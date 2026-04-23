@@ -446,23 +446,31 @@ def register_audio_handlers(sio):
 
         def _run():
             try:
-                streame_manual_ewb_variante(typ, profile_einwand or {}, kontext, _sid, slot=1)
+                result = streame_manual_ewb_variante(typ, profile_einwand or {}, kontext, _sid, slot=1)
+                _antwort = (result.get('gegenargument_1') or '').strip() or None
+                try:
+                    ls.record_ewb_click(typ, success=True,
+                                        antwort_text=_antwort, einwand_text=typ)
+                except Exception as e:
+                    print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
             except Exception as ex:
                 print(f"[PiP] manual_ewb variante error (sid={_sid}): {ex}")
+                try:
+                    ls.record_ewb_click(typ, success=False, einwand_text=typ)
+                except Exception as e:
+                    print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
                 try:
                     sio.emit('pip_stream_error', {'slot': 1, 'error': str(ex)}, room=_sid)
                 except Exception:
                     pass
 
-        # POLISH-38.1: success=True bei erfolgreichem Spawn (User erhaelt Gegenargument,
-        # EWB-Klick = Einwand behandelt per POLISH-29). success=False nur bei Spawn-Error.
-        _ewb_success = True
+        # POLISH-38.1: record_ewb_click happens inside _run after streaming completes
+        # so antwort_text is available. Spawn-error is handled separately below.
         try:
             sio.start_background_task(_run)
         except Exception as _spawn_err:
-            _ewb_success = False
             print(f"[PiP] manual_ewb spawn error (sid={_sid}): {_spawn_err}")
-        try:
-            ls.record_ewb_click(typ, success=_ewb_success)
-        except Exception as e:
-            print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
+            try:
+                ls.record_ewb_click(typ, success=False, einwand_text=typ)
+            except Exception as e:
+                print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")

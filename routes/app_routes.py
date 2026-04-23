@@ -466,6 +466,8 @@ def api_beenden():
                 conversation_log_id=conv.id,
                 einwand_typ=click['einwand_typ'],
                 success=click['success'],
+                antwort_text=click.get('antwort_text'),
+                einwand_text=click.get('einwand_text'),
             ))
         if ewb_clicks:
             db_conv.commit()
@@ -1221,7 +1223,8 @@ def api_ewb_trigger():
             })
         # Granulares EWB-Klick-Tracking fuer objection_events (Plan 03)
         from services.live_session import record_ewb_click
-        record_ewb_click(einwand_typ=einwand_typ, success=False)
+        record_ewb_click(einwand_typ=einwand_typ, success=False,
+                         antwort_text=antwort, einwand_text=einwand_typ)
 
         # FT logging: ft_objection_events (Phase 04.7.1)
         try:
