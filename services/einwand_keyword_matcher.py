@@ -19,6 +19,22 @@ import threading
 import time
 from typing import Optional
 
+# ── Live-Session State Reference ─────────────────────────────────────────────
+# Lazy-import to avoid circular deps. Used only in match_with_dedup success path
+# to set kw_fired_for_line flag (D-02 Phase 08.5 — prevents qa_pipeline double-fire).
+ls_module = None  # overwritten at runtime by _get_ls()
+
+def _get_ls():
+    """Lazy-init live_session module reference. MUST NOT raise."""
+    global ls_module
+    if ls_module is None:
+        try:
+            import services.live_session as _ls
+            ls_module = _ls
+        except Exception:
+            pass
+    return ls_module
+
 # ── Keyword-Regex-Datenbank ──────────────────────────────────────────────────
 # Jeder Schluessel ist ein semantischer Einwand-Typ.
 # Regex matcht Wort-Boundaries, case-insensitive (re.IGNORECASE).
@@ -224,6 +240,20 @@ class EinwandKeywordMatcher:
             if now - last < self._dedup_window:
                 return None
             self._last_seen[keyword] = now
+
+        # ── Phase 08.5 D-02: Set kw_fired_for_line flag ──────────────────────
+        # Tells analyse_loop that this utterance was already handled by the
+        # Keyword-Matcher — prevents qa_pipeline double-fire (529-loop guard).
+        try:
+            _ls = _get_ls()
+            if _ls and hasattr(_ls, 'state') and hasattr(_ls, 'state_lock'):
+                with _ls.state_lock:
+                    current_line = _ls.state.get('line_id')
+                    if current_line is not None:
+                        _ls.state['kw_fired_for_line'] = current_line
+                        print(f"[KW] kw_fired_for_line set to {current_line}")
+        except Exception as _kw_e:
+            print(f"[KW] kw_fired_for_line set skip: {_kw_e}")
 
         return match
 

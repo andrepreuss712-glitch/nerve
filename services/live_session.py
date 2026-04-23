@@ -131,6 +131,9 @@ state = {
     # ── Phase 06.2 Wave 2: Keyword-Match busy-guard + mic-mute ──
     'slot1_variant_busy_until': 0.0,  # monotonic timestamp — shared lock between keyword-pipe and analyse_loop
     'mic_muted': False,               # set via 'mute_mic' socket event
+    # ── Phase 08.5: QA-Pipeline state ──
+    'active_profile_id': None,        # set in set_active_profile_with_id() at session start
+    'kw_fired_for_line': None,        # D-02: line_id of last keyword-matcher hit; qa_pipeline skips when equal to line_id
 }
 
 # ── Conversation Log ──────────────────────────────────────────────────────────
@@ -186,11 +189,15 @@ active_profile_data = {}
 active_profile_name = ''
 
 
-def set_active_profile(name: str, daten: dict):
+def set_active_profile(name: str, daten: dict, profile_id: int = None):
     global active_profile_data, active_profile_name
     with active_profile_lock:
         active_profile_name = name or ''
         active_profile_data = daten if isinstance(daten, dict) else {}
+    # Phase 08.5: store profile_id in state so qa_pipeline dispatch can load FAQs
+    if profile_id is not None:
+        with state_lock:
+            state['active_profile_id'] = profile_id
 
 
 def get_active_profile():

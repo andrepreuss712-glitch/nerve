@@ -193,7 +193,7 @@ def aktivieren(pid):
             daten = json.loads(p.daten) if p.daten else {}
         except Exception:
             daten = {}
-        ls_mod.set_active_profile(p.name, daten)
+        ls_mod.set_active_profile(p.name, daten, profile_id=p.id)
         u = db.get(UserModel, g.user.id)
         if u:
             u.active_profile_id = p.id

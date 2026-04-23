@@ -112,7 +112,8 @@ def live():
                 active_profile_daten = _json3.loads(active_profile.daten) if isinstance(active_profile.daten, str) else active_profile.daten
             except Exception:
                 active_profile_daten = {}
-        ls.set_active_profile(active_profile.name if active_profile else '', ad)
+        ls.set_active_profile(active_profile.name if active_profile else '', ad,
+                              profile_id=active_profile.id if active_profile else None)
         ls.load_learning_cards(g.user.id)
         # Phase 04.13: PreCall Intelligence availability flag
         from services.precall_service import ist_verfuegbar
@@ -984,7 +985,7 @@ def api_set_profile():
             daten = _json.loads(p.daten) if p.daten else {}
         except Exception:
             daten = {}
-        ls.set_active_profile(p.name, daten)
+        ls.set_active_profile(p.name, daten, profile_id=p.id)
         ls.load_learning_cards(g.user.id)
         u = db.get(UserModel, g.user.id)
         if u:

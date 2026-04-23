@@ -1256,7 +1256,7 @@ def _load_initial_profile():
         if not profile or not profile.daten:
             return
         daten = json.loads(profile.daten)
-        ls_mod.set_active_profile(profile.name, daten)
+        ls_mod.set_active_profile(profile.name, daten, profile_id=profile.id)
         print(f"[Init] Aktives Profil geladen: {profile.name}")
     except Exception as e:
         print(f"[Init] _load_initial_profile Fehler: {e}")

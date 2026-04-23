@@ -1070,6 +1070,10 @@ def analyse_loop():
                 ergebnis = analysiere_mit_claude(neuer_text, kontext)
             else:
                 ergebnis = analysiere_mit_claude(neuer_text, kontext)
+            # ── Phase 08.5: Universal Response Loop ──────────────────────────
+            # Classifies utterance via qa_pipeline when kw_fired_for_line != line_id
+            # (D-02 guard). Emits qa_slot1 or qa_soft_hint to active session.
+            _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio)
             latency_e = round(time.monotonic() - t_start, 2)
             print(f"[Claude-1] Ergebnis (Latenz {latency_e}s): {ergebnis}")
             ts = datetime.now().strftime('%H:%M:%S')
@@ -1322,6 +1326,211 @@ def analyse_loop():
                 ls.state['aktiv']            = False
                 ls.state['version']         += 1
                 ls.state['kaufbereitschaft'] = kb_aktuell
+
+
+# ── Phase 08.5: QA-Pipeline Dispatch Helpers ─────────────────────────────────
+# Extracted as module-level functions so analyse_loop stays readable and tests
+# can target them directly.
+
+def _qa_load_tabu(active_profile_id, profile_daten=None):
+    """Load tabu_begriffe list for the active profile. MUST NOT raise.
+    Returns [] on any error. Tries profile daten dict first (already loaded),
+    falls back to DB query if profile_daten is None.
+    """
+    try:
+        # Fast path: use already-loaded profile data from live_session module
+        if profile_daten and isinstance(profile_daten, dict):
+            basis = profile_daten.get('basis', {})
+            if isinstance(basis, dict):
+                tabu = basis.get('tabu_begriffe', [])
+            else:
+                tabu = profile_daten.get('tabu_begriffe', [])
+            if isinstance(tabu, list):
+                return tabu
+        # Slow path: DB query (when profile_daten not provided)
+        if active_profile_id:
+            from database.db import SessionLocal
+            from database.models import Profile
+            import json as _json
+            _db = SessionLocal()
+            try:
+                _p = _db.query(Profile).filter_by(id=active_profile_id).first()
+                if _p and _p.daten:
+                    _pdata = _json.loads(_p.daten) if isinstance(_p.daten, str) else (_p.daten or {})
+                    _basis = _pdata.get('basis', {})
+                    if isinstance(_basis, dict):
+                        tabu = _basis.get('tabu_begriffe', [])
+                    else:
+                        tabu = _pdata.get('tabu_begriffe', [])
+                    if isinstance(tabu, list):
+                        return tabu
+            finally:
+                _db.close()
+    except Exception as _e:
+        print(f"[QA-INT] _qa_load_tabu skip: {_e}")
+    return []
+
+
+def _qa_load_faqs(active_profile_id):
+    """Load profile_faqs list for the active profile from DB. MUST NOT raise.
+    Returns [] on any error.
+    """
+    if not active_profile_id:
+        return []
+    try:
+        from database.db import SessionLocal
+        from database.models import ProfileFaq
+        _db = SessionLocal()
+        try:
+            _rows = _db.query(ProfileFaq).filter_by(profile_id=active_profile_id).all()
+            return [
+                {'id': r.id, 'frage_muster': r.frage_muster,
+                 'antwort': r.antwort, 'kategorie': r.kategorie}
+                for r in _rows
+            ]
+        finally:
+            _db.close()
+    except Exception as _e:
+        print(f"[QA-INT] _qa_load_faqs skip: {_e}")
+    return []
+
+
+def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio):
+    """Phase 08.5: Classify utterance and dispatch to qa_pipeline.
+
+    Called from analyse_loop after the Phase 06.3 comment block.
+    Guards:
+      - D-02: Skip when kw_fired_for_line == current line_id (Keyword-Matcher already fired)
+      - Phase 06.2 Slot-1 mutex: Skip when slot1_variant_busy_until in future
+
+    Emits:
+      - qa_slot1      — full response text for Slot 1
+      - qa_soft_hint  — D-04 LOCKED text for low-confidence / tabu / empty paths
+
+    MUST NOT raise into the calling loop.
+    """
+    import time as _time
+    try:
+        with ls.state_lock:
+            _kw_fired_for = ls.state.get('kw_fired_for_line')
+            _user_id = ls.state.get('user_id') or 0
+            _anrede = ls.state.get('session_anrede') or 'Sie'
+            _slot1_busy_until = ls.state.get('slot1_variant_busy_until', 0.0)
+            _active_sid = ls.state.get('active_sid')
+            _active_profile_id = ls.state.get('active_profile_id')
+
+        # D-02: Keyword-Matcher already fired for this utterance → skip
+        if _kw_fired_for == line_id:
+            print(f"[QA-INT] D-02 skip: kw_fired_for_line={_kw_fired_for} == line_id={line_id}")
+            return
+
+        # Phase 06.2 Slot-1 mutex: Slot 1 busy from keyword-match → skip
+        if _time.monotonic() < _slot1_busy_until:
+            print(f"[QA-INT] slot1 busy skip (busy_until={_slot1_busy_until:.1f})")
+            return
+
+        # No active session → skip (no point emitting to nobody)
+        if not _active_sid:
+            return
+
+        from services.qa_pipeline import (
+            classify_utterance, generate_qa_response,
+            match_faq, apply_tabu_filter
+        )
+        from config import CLASSIFIER_CONFIDENCE_THRESHOLD
+
+        # Load profile data for context (already in memory via live_session)
+        import services.live_session as _ls_ref
+        try:
+            _profile_name, _profile_daten = _ls_ref.get_active_profile()
+        except Exception:
+            _profile_daten = {}
+
+        _tabu_begriffe = _qa_load_tabu(_active_profile_id, _profile_daten)
+
+        _qa_result = classify_utterance(neuer_text, kontext, _user_id)
+        _kat = _qa_result.get('kategorie', 'smalltalk_none')
+        _conf = _qa_result.get('confidence', 0.0)
+        print(f"[QA-INT] classify kategorie={_kat} conf={_conf:.2f} line={line_id}")
+
+        def _emit_soft_hint(reason=''):
+            """Emit D-04 LOCKED soft-hint text to active session."""
+            try:
+                sio.emit('qa_soft_hint', {
+                    'text': 'Neuer Einwand \u2014 noch kein Vorschlag',
+                    'reason': reason,
+                }, room=_active_sid)
+                print(f"[QA-INT] soft_hint emitted reason={reason}")
+            except Exception as _e:
+                print(f"[QA-INT] emit soft_hint skip: {_e}")
+
+        def _emit_qa_slot1(text):
+            try:
+                sio.emit('qa_slot1', {'text': text}, room=_active_sid)
+                # Mark Slot 1 busy for ~8s (Phase 06.2 mutex pattern)
+                with ls.state_lock:
+                    ls.state['slot1_variant_busy_until'] = _time.monotonic() + 8.0
+                print(f"[QA-INT] qa_slot1 emitted len={len(text)}")
+            except Exception as _e:
+                print(f"[QA-INT] emit qa_slot1 skip: {_e}")
+
+        if _kat == 'einwand_unknown':
+            if _conf < CLASSIFIER_CONFIDENCE_THRESHOLD:
+                _emit_soft_hint(reason='low_confidence')
+            else:
+                _antwort = generate_qa_response(
+                    neuer_text, 'einwand_unknown', {}, _anrede, '', _user_id
+                )
+                if not _antwort:
+                    _emit_soft_hint(reason='empty_response')
+                elif apply_tabu_filter(_antwort, _tabu_begriffe):
+                    _emit_soft_hint(reason='tabu_filtered')
+                    print(f"[QA-INT] response tabu-filtered len={len(_antwort)}")
+                else:
+                    _emit_qa_slot1(_antwort)
+
+        elif _kat == 'frage':
+            _faqs = _qa_load_faqs(_active_profile_id)
+            _matched_faq = match_faq(neuer_text, _faqs, threshold=0.75) if _faqs else None
+
+            if _matched_faq:
+                _faq_antwort = _matched_faq.get('antwort', '')
+                if apply_tabu_filter(_faq_antwort, _tabu_begriffe):
+                    _emit_soft_hint(reason='tabu_filtered_faq')
+                else:
+                    _emit_qa_slot1(_faq_antwort)
+                    # Increment FAQ used_count (best-effort)
+                    try:
+                        from database.db import SessionLocal as _SL
+                        from database.models import ProfileFaq as _PF
+                        _db2 = _SL()
+                        try:
+                            _row = _db2.query(_PF).filter_by(id=_matched_faq['id']).first()
+                            if _row:
+                                _row.used_count = (_row.used_count or 0) + 1
+                                _db2.commit()
+                        finally:
+                            _db2.close()
+                    except Exception as _uc_e:
+                        print(f"[QA-INT] used_count inc skip: {_uc_e}")
+            else:
+                # No FAQ match → fall back to generated response
+                if _conf < CLASSIFIER_CONFIDENCE_THRESHOLD:
+                    _emit_soft_hint(reason='no_faq_low_conf')
+                else:
+                    _antwort = generate_qa_response(
+                        neuer_text, 'frage', {}, _anrede, '', _user_id
+                    )
+                    if not _antwort:
+                        _emit_soft_hint(reason='no_faq_empty')
+                    elif apply_tabu_filter(_antwort, _tabu_begriffe):
+                        _emit_soft_hint(reason='no_faq_tabu')
+                    else:
+                        _emit_qa_slot1(_antwort)
+        # smalltalk_none / einwand_known → no action (Slot bleibt wie es ist)
+
+    except Exception as _qa_int_e:
+        print(f"[QA-INT] _qa_pipeline_dispatch failed: {_qa_int_e}")
 
 
 def coaching_loop():
