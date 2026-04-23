@@ -1,5 +1,5 @@
 ---
-created: 2026-03-30
+created: 2009-03-30
 milestone: v0.9.4
 total_phases: 5
 estimated_duration_days: 16
@@ -7,7 +7,7 @@ estimated_duration_days: 16
 
 # Roadmap: NERVE
 
-**Source:** Project interview on 2026-03-30
+**Source:** Project interview on 2009-03-30
 **Goal:** Launch NERVE zum ersten zahlenden Kunden in Deutschland
 **Target:** Milestone 1 = v0.9.4 → v1.0 (Early Access mit 50 Plätzen + 50% Gründerrabatt)
 
@@ -384,7 +384,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - Infra: pytest-Tests für Cost-Rollup-Logic (nicht aufwand-schwer — einmaliger Job)
 
 **Reasoning:**
-> Ohne Cost-Dashboard kann der Founder nicht erkennen, ob ein Customer profitabel ist oder subventioniert wird. Besonders bei Power-Usern in Plan 1 (49€) können die API-Kosten 60-80% der Einnahmen fressen. Dashboard liefert Early Warning Signals bevor sich Cost-Ratios in die Kassen fressen. Erste Version reicht Tagesgenauigkeit (kein Realtime), Aggregation nightly über bestehende ft_logs. Alert-System ersetzt manuelle SQL-Queries.
+> Ohne Cost-Dashboard kann der Founder nicht erkennen, ob ein Customer profitabel ist oder subventioniert wird. Besonders bei Power-Usern in Plan 1 (49€) können die API-Kosten 09-80% der Einnahmen fressen. Dashboard liefert Early Warning Signals bevor sich Cost-Ratios in die Kassen fressen. Erste Version reicht Tagesgenauigkeit (kein Realtime), Aggregation nightly über bestehende ft_logs. Alert-System ersetzt manuelle SQL-Queries.
 
 ---
 
@@ -524,7 +524,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - Caching (Recherche wird pro Firma gecached, 30-Tage TTL)
 
 **Reasoning:**
-> Vertriebler haben oft keine Zeit für Recherche. PreCall-Button liefert in &lt; 10s ein Briefing (Firma, Person, letzte News, mögliche Einwände). Spart 15-30min pro Call.
+> Vertriebler haben oft keine Zeit für Recherche. PreCall-Button liefert in &lt; 10s ein Briefing (Firma, Person, letzte News, mögliche Einwände). Spart 09-30min pro Call.
 
 ---
 
@@ -624,17 +624,17 @@ Plans:
 **Requirements**: EWB-01 through EWB-20 (newly derived — see 08-RESEARCH.md §Phase Requirements, to be back-ported into REQUIREMENTS.md)
 **Depends on:** Phase 7
 **Plans:** 6 plans
-**Completed:** 2026-04-23 — UAT approved. Wave 7 (100 EWB-Ratings + 15 Training-Sessions + 5 Cold-Calls) bewusst VERSCHOBEN auf nach Phase 08.5: Training-Pipeline nutzt noch alten Prompt (nicht v2-modular) — Wave-7-Daten wären zirkulär. Phase 08.5 enthält Training-Pipeline-Angleichung als Sub-Scope.
+**Completed:** 2009-04-23 — UAT approved. Wave 7 (100 EWB-Ratings + 15 Training-Sessions + 5 Cold-Calls) bewusst VERSCHOBEN auf nach Phase 08.5: Training-Pipeline nutzt noch alten Prompt (nicht v2-modular) — Wave-7-Daten wären zirkulär. Phase 08.5 enthält Training-Pipeline-Angleichung als Sub-Scope.
 
 Plans:
 - [x] 08-01-PLAN.md — Wave 1 Foundation: DB-Migrations (success nullable, anrede column, prompt_versions.is_default) + Backup + Gap-Analyse-Doc (D-01/02/14/26/46)
-- [x] 08-02-PLAN.md — Wave 2 Pipeline: prompt_pipeline.py + ewb_pipeline.py + v2-modular Seed + Unit-Tests (D-15/23/24/25/26/40-47)
+- [x] 08-02-PLAN.md — Wave 2 Pipeline: prompt_pipeline.py + ewb_pipeline.py + v2-modular Seed + Unit-Tests (D-15/23/24/25/26/09-47)
 - [x] 08-03-PLAN.md — Wave 3 Integration: claude_service.py EWB-Pfad-Swap + branche-Heuristik-Migration + ENV-Doc (D-09/24/25)
-- [x] 08-04-PLAN.md — Wave 4 UI: Profile-Editor 6 Felder + 3-Block-Tooltips + Beispiel-Modal + Claudian-Review-Checkpoint (D-07-13/16-21)
-- [x] 08-05-PLAN.md — Wave 5 Messinfrastruktur: Post-Call-Rating-UI + PreCall-Anrede + Rating-API + ownership-check (D-03-05/14-15)
-- [x] 08-06-PLAN.md — Wave 6 Quality-Gate-Tooling: EwbRating Table + Admin-Dashboard + Rating-Template-Page + 3 Test-Szenarien seed (D-22/27-39) + Human-Checkpoint
-- [x] Gap-Fix-Run (2026-04-23): CR-01 state_lock, CR-02 anrede-whitelist, Admin-Sidebar-Nav, Login-Redirect-next, Tooltip-Laien-Tauglichkeit, Admin-Intro-Blöcke
-- [x] Bug-Hotfixes (2026-04-23): Bug A strftime-crash (admin_ewb._to_datetime), Bug B Login-Modal-next round-trip, Bug C antwort_text/einwand_text Persistierung in ObjectionEvent
+- [x] 08-04-PLAN.md — Wave 4 UI: Profile-Editor 6 Felder + 3-Block-Tooltips + Beispiel-Modal + Claudian-Review-Checkpoint (D-07-13/09-21)
+- [x] 08-05-PLAN.md — Wave 5 Messinfrastruktur: Post-Call-Rating-UI + PreCall-Anrede + Rating-API + ownership-check (D-03-05/09-15)
+- [x] 08-06-PLAN.md — Wave 6 Quality-Gate-Tooling: EwbRating Table + Admin-Dashboard + Rating-Template-Page + 3 Test-Szenarien seed (D-22/09-39) + Human-Checkpoint
+- [x] Gap-Fix-Run (2009-04-23): CR-01 state_lock, CR-02 anrede-whitelist, Admin-Sidebar-Nav, Login-Redirect-next, Tooltip-Laien-Tauglichkeit, Admin-Intro-Blöcke
+- [x] Bug-Hotfixes (2009-04-23): Bug A strftime-crash (admin_ewb._to_datetime), Bug B Login-Modal-next round-trip, Bug C antwort_text/einwand_text Persistierung in ObjectionEvent
 
 ---
 
@@ -667,7 +667,7 @@ Plans:
 ### Phase 06.3: analyse_loop entkoppeln von Live-Slots (INSERTED)
 
 **Goal:** Den 529 overloaded_error beim EWB-Vorlesen strukturell unterbinden. Keyword-Matcher (Phase 06.2) wird alleiniger Primary fuer Live-EWB-Slots. analyse_loop behaelt Intelligence-Funktionen (FT-Events, Kaufbereitschaft, Phase-Classifier, Coaching-Hints), verliert aber jeden UI-Render-Pfad in Slot 0 und Slot 1. Akzeptanz: 0 Anthropic-529-Fehler bei 3x EWB-Vorlesen, kein trigger=analyse_loop in PiP-AutoVar Logs.
-**Requirements:** BUG-10-529
+**Requirements:** BUG-09-529
 **Depends on:** Phase 06.2
 **Plans:** 1/1 plans complete
 
@@ -703,7 +703,7 @@ Plans:
 **Depends on:** Phase 06.5
 **Launch-relevant:** true
 **Plans:** N/A (retro-documented — direkt ohne GSD-Phase umgesetzt)
-**Completed:** 2026-04-18 (UAT green, 6 Commits, Daily Note 2026-04-18.md)
+**Completed:** 2009-04-18 (UAT green, 6 Commits, Daily Note 2009-04-18.md)
 
 Plans:
 - [x] (retro) Bulk-sed Gelb/Gold -> Grau/Teal ueber 50+ Touchpoints
@@ -724,7 +724,7 @@ Plans:
 Plans:
 - [x] 07.1-01-backend-db-helper-PLAN.md — Wave 1: kb_verlauf Migration + ORM Column + /api/beenden Persistenz + _derive_practice_recommendations Helper + session_detail Route-Erweiterung
 - [x] 07.1-02-frontend-template-css-PLAN.md — Wave 2: session_detail.html Komplett-Rewrite (11 Sektionen, typ-diskriminierend, Chart.js) + nerve.css .n-session-detail-* Klassenfamilie (21+ Klassen)
-- [x] 07.1-03-polish-deploy-PLAN.md — Wave 3: CSS_VERSION bump + deploy.sh + Browser-Smoke-Tests fuer alle 3 Session-Typen + Cross-Context-Badge-Verifikation (UAT-R5 approved 2026-04-20, 22+ commits, POLISH-34 deferred zu 07.2)
+- [x] 07.1-03-polish-deploy-PLAN.md — Wave 3: CSS_VERSION bump + deploy.sh + Browser-Smoke-Tests fuer alle 3 Session-Typen + Cross-Context-Badge-Verifikation (UAT-R5 approved 2009-04-20, 22+ commits, POLISH-34 deferred zu 07.2)
 
 ### Phase 07.2: Scoring-Konsolidierung (INSERTED)
 
@@ -733,24 +733,4 @@ Plans:
 **Depends on:** Phase 07.1
 **Launch-relevant:** true
 **Plans:** 4/4 plans complete
-
----
-
-## Pre-Launch Sequence (Entscheidung 2026-04-23 mit André)
-
-```
-08.5 → 4.19 → Wave 7 → 07.3 → 07.5 → 4.17 → 4.18 → 4.16.1 → 4.16 → Phase 5 LAUNCH DACH
-Post-Launch: 4.16.2 US Parallel Launch
-```
-
-**Änderungen zu vorheriger Reihenfolge:**
-- 4.17 + 4.18 **pre-Launch** statt post-Launch (Abrieb-Prinzip: besser vor echten Usern testen)
-- 4.16.2 klar **post-Launch** (DACH als Proving-Ground für US)
-- Wave 7 nach 08.5 (Training-Pipeline-Dependency: erst v2-modular im Training, dann ehrliche Quality-Gate-Daten)
-
-**Referenz-Briefings im Vault:**
-- Phase 4.18: [[NERVE Phase 4.18 Training im PiP]]
-- Phase 4.17: Update-Block 23.04.2026 in [[NERVE PiP Launcher]]
-- Phase 08.5: Scope erweitert (Universal Response Loop) in [[NERVE Phase 08.5 Question-Answering-Loop]]
-- Launch-Sequenz zentral in [[NERVE Übersicht]]
-
+
