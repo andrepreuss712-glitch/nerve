@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 import anthropic
 from config import ANTHROPIC_API_KEY, ELEVENLABS_API_KEY
+from services.prompt_pipeline import resolve_prompt_version, log_pipeline_event
 
 claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -668,6 +669,56 @@ Antworte IMMER als valides JSON (kein Text davor oder danach):
   "letzte_chance": false
 }}
 """
+
+
+# ══ Phase 08.5: v2-modular Training-Prompt Pipeline ═══════════════════════════
+# All training prompts routed through prompt_versions table for A/B testing
+# and fine-tuning traceability. Fallbacks retain existing hardcoded strings
+# so a missing DB row does NOT break training (same pattern as ewb_pipeline).
+
+# Inline scoring prompt is extracted here as a static fallback template.
+# The actual f-string interpolation happens at call-site inside generate_scoring().
+_SCORING_FALLBACK_TEMPLATE = (
+    "Du bist ein Bewertungs-Experte fuer Verkaufstrainings. "
+    "Analysiere den folgenden Gespraechsverlauf und gib ein Scoring als JSON zurueck. "
+    "Der Gespraechsverlauf ist ein Dialog zwischen einem Vertriebler und einem simulierten Kunden. "
+    "Bewerte auf einer Skala von 0-10 fuer jede Dimension. "
+    "Antworte NUR als JSON-Objekt."
+)
+
+_TRAINING_FALLBACKS = {
+    'training_kunde':    KUNDEN_PROMPT_TEMPLATE,
+    'training_sek':      SEKRETAERIN_PROMPT,
+    'training_stimmung': PERSONALITY_MOOD_PROMPT_SUFFIX,
+    'training_scoring':  _SCORING_FALLBACK_TEMPLATE,
+}
+
+
+def _load_training_prompt_template(module: str, version: str) -> str:
+    """Load prompt_text from prompt_versions for (module, version, is_active=1).
+    Fallback to _TRAINING_FALLBACKS[module] on miss, DB error, or empty text.
+    Placeholder seeds ('Placeholder v1') are treated as a miss → fallback to constant.
+    MUST NOT raise.
+    """
+    try:
+        from database.db import SessionLocal
+        from database.models import PromptVersion
+        db = SessionLocal()
+        try:
+            row = (db.query(PromptVersion)
+                   .filter_by(module=module, version=version, is_active=True)
+                   .first())
+            if row and row.prompt_text and not row.prompt_text.startswith('Placeholder v1'):
+                return row.prompt_text
+            if row and row.prompt_text and row.prompt_text.startswith('Placeholder v1'):
+                print(f"[Training] placeholder seed detected module={module} — using constant fallback")
+            else:
+                print(f"[Training] template miss module={module} version={version} — using fallback")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[Training] template load failed module={module} version={version}: {e}")
+    return _TRAINING_FALLBACKS.get(module, '')
 
 
 def build_personality_prompt(profile_data: dict, personality_data: dict,

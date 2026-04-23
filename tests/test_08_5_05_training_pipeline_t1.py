@@ -135,14 +135,16 @@ def test_placeholder_seed_falls_back_to_constant(monkeypatch):
 
 def test_prompt_pipeline_imports_wired():
     """Test 8: resolve_prompt_version and log_pipeline_event are importable from training_service scope."""
-    import training_service_module_import  # will raise ImportError if not wired
-    # Indirect: verify they appear in the module's namespace via grep on source
+    # Verify they appear in the module's source (i.e., the import was added)
     import inspect
     import services.training_service as ts
     src = inspect.getsource(ts)
     assert 'from services.prompt_pipeline import resolve_prompt_version, log_pipeline_event' in src, (
         "Import of resolve_prompt_version + log_pipeline_event not found in training_service.py"
     )
+    # Also verify they are actually callable after import
+    assert callable(ts.resolve_prompt_version)
+    assert callable(ts.log_pipeline_event)
 
 
 # Allow direct run
