@@ -350,6 +350,9 @@ def reset_session():
         state['precall_briefing'] = None
         state['slot1_variant_busy_until'] = 0.0
         state['mic_muted'] = False
+        # WR-04: Phase 08.5 state keys — reset to avoid stale D-02 guard hits in next session
+        state['kw_fired_for_line'] = None
+        state['active_profile_id'] = None  # re-set by set_active_profile_with_id at session start
     with _line_id_lock:
         _line_id_counter = 0
     with _log_sp_lock:
