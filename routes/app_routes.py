@@ -11,6 +11,7 @@ app_routes_bp = Blueprint('app_routes', __name__)
 
 # Per-user polling version tracking (avoids cross-user state in single global)
 _letzte_gemeldete_version = {}  # user_id -> last_version
+_MAX_VERSION_CACHE = 500        # safety cap — clear whole dict if exceeded
 
 API_FRAGE_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent. Der Berater hat live eine Frage gestellt.
 {profile_ctx}
@@ -155,6 +156,8 @@ def api_ergebnis():
     payload['speech_stats'] = ls.get_speech_stats()
     last_v = _letzte_gemeldete_version.get(uid, 0)
     if payload['version'] > last_v:
+        if len(_letzte_gemeldete_version) > _MAX_VERSION_CACHE:
+            _letzte_gemeldete_version.clear()
         _letzte_gemeldete_version[uid] = payload['version']
         print(f"[API] Neues Ergebnis v{payload['version']} (line {payload['line_id']}) an Browser")
     return jsonify(payload)
@@ -670,6 +673,10 @@ def api_beenden():
         pass
 
     reset_session()
+    # CR-02: clear stale version counter so first poll after session start logs correctly
+    uid_end = getattr(g, 'user', None) and g.user.id
+    if uid_end:
+        _letzte_gemeldete_version.pop(uid_end, None)
     print("[Beenden] State zurückgesetzt.")
     return jsonify({'ok': True, 'filename': filename, 'postcall': postcall, 'conv_id': saved_conv_id})
 
