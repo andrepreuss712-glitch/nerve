@@ -802,6 +802,15 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal('loginMo
 })();
 
 // ── Login ─────────────────────────────────────────────────────────────────────
+// Open-redirect protection: nur relative Pfade akzeptieren, keine externen URLs.
+function safeNextParam(){
+  const raw=new URLSearchParams(location.search).get('next');
+  if(!raw||typeof raw!=='string')return null;
+  if(!raw.startsWith('/'))return null;
+  if(raw.startsWith('//')||raw.startsWith('/\\'))return null;
+  if(raw.includes('\r')||raw.includes('\n'))return null;
+  return raw;
+}
 async function submitLogin(){
   const email=document.getElementById('l-email').value.trim();
   const pw=document.getElementById('l-pw').value;
@@ -813,7 +822,11 @@ async function submitLogin(){
   try{
     const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,passwort:pw})});
     const data=await res.json();
-    if(data.ok){window.location=data.coach?'/coach/':'/dashboard';}
+    if(data.ok){
+      const nxt=safeNextParam();
+      if(nxt){window.location=nxt;}
+      else{window.location=data.coach?'/coach/':'/dashboard';}
+    }
     else{errEl.textContent=data.error||'Fehler.';errEl.classList.add('show');btn.disabled=false;btn.textContent='Einloggen';}
   }catch(e){errEl.textContent='Verbindungsfehler.';errEl.classList.add('show');btn.disabled=false;btn.textContent='Einloggen';}
 }

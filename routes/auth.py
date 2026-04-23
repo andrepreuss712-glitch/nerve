@@ -12,18 +12,45 @@ from services.audit import log_action
 auth_bp = Blueprint('auth', __name__)
 
 
+def safe_next(raw):
+    """Validate a next-URL for open-redirect protection.
+
+    Accepts ONLY same-origin relative paths starting with a single '/'.
+    Rejects protocol-relative paths ('//evil.com'), absolute URLs
+    ('http://…'), and backslash-escaped variants. Returns the cleaned
+    path or None if invalid.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    if not raw.startswith('/'):
+        return None
+    if raw.startswith('//') or raw.startswith('/\\'):
+        return None
+    if '\r' in raw or '\n' in raw:
+        return None
+    return raw
+
+
+def _login_redirect_with_next():
+    """Redirect to /login while preserving the current request path as ?next=."""
+    nxt = safe_next(request.full_path if request.query_string else request.path)
+    if nxt and nxt != '/login':
+        return redirect(url_for('auth.login', next=nxt))
+    return redirect(url_for('auth.login'))
+
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('auth.login'))
+            return _login_redirect_with_next()
         # Attach user to g — read all needed attributes BEFORE db.close()
         db = get_session()
         try:
             user = db.get(User, session['user_id'])
             if not user or not user.aktiv:
                 session.clear()
-                return redirect(url_for('auth.login'))
+                return _login_redirect_with_next()
             g.user = user
             g.org  = db.get(Organisation, user.org_id)
             # Read onboarding flag inside session so it's available after close
@@ -39,10 +66,15 @@ def login_required(f):
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    # Preserve next-param from query string so the landing modal can forward it.
+    nxt = safe_next(request.args.get('next'))
     if 'user_id' in session:
-        return redirect(url_for('dashboard.index'))
-    # Redirect GET to landing page (login is now a modal)
-    return redirect('/?modal=login')
+        return redirect(nxt) if nxt else redirect(url_for('dashboard.index'))
+    target = '/?modal=login'
+    if nxt:
+        from urllib.parse import quote
+        target = f'/?modal=login&next={quote(nxt, safe="/")}'
+    return redirect(target)
 
 
 def _login_user(db, user):
