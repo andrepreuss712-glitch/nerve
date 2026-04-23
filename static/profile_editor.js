@@ -92,19 +92,21 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       }).catch(function (e) { console.warn('[FAQ] update failed', e); });
-    } else {
-      // Create new row
+    } else if (!row.getAttribute('data-faq-creating')) {
+      // Create new row — guard against concurrent blur events causing duplicates
+      row.setAttribute('data-faq-creating', '1');
       fetch('/profiles/api/profile/' + pid + '/faqs', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
         .then(function (data) {
           if (data && data.id) row.setAttribute('data-faq-id', String(data.id));
         })
-        .catch(function (e) { console.warn('[FAQ] create failed', e); });
+        .catch(function (e) { console.warn('[FAQ] create failed', e); })
+        .finally(function () { row.removeAttribute('data-faq-creating'); });
     }
   }
 
