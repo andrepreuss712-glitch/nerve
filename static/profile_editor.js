@@ -46,7 +46,7 @@
     var pid = getProfileId();
     if (!pid || !faqsContainer) return;
     faqsContainer.innerHTML = '';
-    fetch('/api/profile/' + pid + '/faqs', { credentials: 'same-origin' })
+    fetch('/profiles/api/profile/' + pid + '/faqs', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         (data.faqs || []).forEach(renderFaqRow);
@@ -74,7 +74,7 @@
 
     if (id) {
       // Update existing row
-      fetch('/api/profile/faqs/' + id, {
+      fetch('/profiles/api/profile/faqs/' + id, {
         method: 'PUT',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
@@ -82,7 +82,7 @@
       }).catch(function (e) { console.warn('[FAQ] update failed', e); });
     } else {
       // Create new row
-      fetch('/api/profile/' + pid + '/faqs', {
+      fetch('/profiles/api/profile/' + pid + '/faqs', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
@@ -100,7 +100,7 @@
     var id = row.getAttribute('data-faq-id');
     if (!id) { row.remove(); return; }
     if (!confirm('FAQ wirklich löschen?')) return;
-    fetch('/api/profile/faqs/' + id, {
+    fetch('/profiles/api/profile/faqs/' + id, {
       method: 'DELETE',
       credentials: 'same-origin',
     })
@@ -144,7 +144,7 @@
     var pid = getProfileId();
     if (!pid) return;
     if (tabuHidden) tabuHidden.value = JSON.stringify(tabuList);
-    fetch('/api/profile/' + pid + '/tabu', {
+    fetch('/profiles/api/profile/' + pid + '/tabu', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
