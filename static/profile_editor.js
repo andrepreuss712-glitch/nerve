@@ -66,8 +66,20 @@
       antwort: antwortEl.value.trim(),
       kategorie: kategorieEl.value,
     };
+    // Show/hide incomplete hint on the row
+    var hint = row.querySelector('.faq-hint');
+    if (!hint) {
+      hint = document.createElement('span');
+      hint.className = 'faq-hint';
+      hint.style.cssText = 'font-size:11px;color:#e05c5c;margin-left:6px;';
+      row.appendChild(hint);
+    }
     // Require both frage and antwort before persisting
-    if (!payload.frage_muster || !payload.antwort) return;
+    if (!payload.frage_muster || !payload.antwort) {
+      hint.textContent = 'Kundenfrage und Antwort ausfüllen';
+      return;
+    }
+    hint.textContent = '';
 
     var pid = getProfileId();
     if (!pid) return;
