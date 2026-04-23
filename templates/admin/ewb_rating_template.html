@@ -26,6 +26,10 @@
   }
   .n-rating-table th { background: #F9FAFB; font-weight: 600; color: #374151; font-size: 0.82rem; }
   .n-rating-table td.rating-cell { text-align: center; white-space: nowrap; }
+  .antwort-cell { max-width: 320px; }
+  .antwort-cell .antwort-text { font-size: 0.85rem; color: #111827; line-height: 1.4; }
+  .antwort-cell .antwort-null { font-size: 0.82rem; color: #9CA3AF; font-style: italic; }
+  .antwort-cell .einwand-label { font-size: 0.78rem; color: #6B7280; margin-top: 0.2rem; }
   .n-rating-table td.rating-cell label {
     display: inline-block; margin: 0 0.35rem; cursor: pointer; font-size: 0.85rem;
   }
@@ -74,6 +78,7 @@
       <tr>
         <th>Session</th>
         <th>Einwand-Typ</th>
+        <th>NERVE-Antwort</th>
         <th>Erfolg-Rating</th>
         <th>Klingt wie ein Mensch</th>
         <th>Nichts erfunden</th>
@@ -94,6 +99,16 @@
           </small>
         </td>
         <td><code>{{ ev.einwand_typ }}</code></td>
+        <td class="antwort-cell">
+          {% if ev.antwort_text %}
+            <div class="antwort-text">{{ ev.antwort_text }}</div>
+            {% if ev.einwand_text and ev.einwand_text != ev.einwand_typ %}
+              <div class="einwand-label">Einwand: {{ ev.einwand_text }}</div>
+            {% endif %}
+          {% else %}
+            <span class="antwort-null">— Text nicht verfügbar (Session vor Fix)</span>
+          {% endif %}
+        </td>
         <td>
           {% if ev.success == True %}<small>Erfolg</small>
           {% elif ev.success == False %}<small>Kein Erfolg</small>
@@ -119,7 +134,7 @@
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="6" class="muted">Keine ObjectionEvents in der DB gefunden.</td></tr>
+      <tr><td colspan="7" class="muted">Keine ObjectionEvents in der DB gefunden.</td></tr>
     {% endfor %}
     </tbody>
   </table>

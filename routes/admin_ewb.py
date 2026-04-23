@@ -133,6 +133,8 @@ def ewb_rating_template():
                    oe.einwand_typ         AS einwand_typ,
                    oe.success             AS success,
                    oe.conversation_log_id AS conv_id,
+                   oe.antwort_text        AS antwort_text,
+                   oe.einwand_text        AS einwand_text,
                    cl.session_mode        AS session_mode,
                    cl.created_at          AS created_at,
                    r.klingt_wie_mensch    AS klingt_wie_mensch,
@@ -152,11 +154,13 @@ def ewb_rating_template():
                 'einwand_typ': row[1],
                 'success': row[2],
                 'conv_id': row[3],
-                'session_mode': row[4],
-                'created_at': _to_datetime(row[5]),
-                'klingt_wie_mensch': row[6],
-                'keine_halluzination': row[7],
-                'trifft_einwand': row[8],
+                'antwort_text': row[4],
+                'einwand_text': row[5],
+                'session_mode': row[6],
+                'created_at': _to_datetime(row[7]),
+                'klingt_wie_mensch': row[8],
+                'keine_halluzination': row[9],
+                'trifft_einwand': row[10],
             }
             for row in q
         ]
