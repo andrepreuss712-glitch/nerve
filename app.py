@@ -644,6 +644,77 @@ def _migrate():
                 print("[DB] Phase 08 Plan 06: ewb_ratings table created (fallback DDL)")
         except Exception as e:
             print(f"[DB] Phase 08 ewb_ratings create skipped: {e}")
+        # ── Phase 08.5: profile_faqs table ───────────────────────────────────────
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS profile_faqs (
+                    id INTEGER PRIMARY KEY,
+                    profile_id INTEGER NOT NULL REFERENCES profiles(id),
+                    frage_muster TEXT NOT NULL,
+                    antwort TEXT NOT NULL,
+                    kategorie VARCHAR(100),
+                    created_at DATETIME,
+                    used_count INTEGER DEFAULT 0 NOT NULL
+                )
+            """))
+            conn.commit()
+            print("[DB] Migration: created profile_faqs table")
+        except Exception as _e:
+            print(f"[DB] Migration: profile_faqs skip ({_e})")
+
+        # ── Phase 08.5: ft_qa_events table ───────────────────────────────────────
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS ft_qa_events (
+                    id INTEGER PRIMARY KEY,
+                    ft_session_id INTEGER NOT NULL REFERENCES ft_call_sessions(id),
+                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    market VARCHAR(10) NOT NULL DEFAULT 'dach',
+                    language VARCHAR(10) NOT NULL DEFAULT 'de',
+                    timestamp_ms INTEGER NOT NULL,
+                    utterance_text TEXT,
+                    kategorie VARCHAR(50) NOT NULL,
+                    confidence FLOAT,
+                    faq_matched BOOLEAN DEFAULT 0,
+                    faq_id INTEGER REFERENCES profile_faqs(id),
+                    antwort_text TEXT,
+                    tabu_gefiltert BOOLEAN DEFAULT 0,
+                    prompt_version VARCHAR(50) NOT NULL,
+                    model_used VARCHAR(100) NOT NULL,
+                    created_at DATETIME
+                )
+            """))
+            conn.commit()
+            print("[DB] Migration: created ft_qa_events table")
+        except Exception as _e:
+            print(f"[DB] Migration: ft_qa_events skip ({_e})")
+
+        # ── Phase 08.5: Seed prompt_versions for new modules ─────────────────────
+        _phase085_seeds = [
+            ('classifier',
+             'Du bist ein Echtzeit-Klassifikator fuer Verkaufsgespraeche. Analysiere die letzte Kunden-Aeusserung und klassifiziere in EINE Kategorie: einwand_unknown | frage | smalltalk_none | einwand_known. Antworte NUR als JSON: {"kategorie": "...", "confidence": 0.00, "einwand_zitat": null}. Bei Unsicherheit zwischen einwand_unknown und frage hat frage Vorrang. Wenn der Sprecher einen fertigen Vertriebs-Satz vorliest: smalltalk_none.'),
+            ('qa_response',
+             'Du beantwortest unbekannte Einwaende oder offene Fragen eines Kunden im Verkaufsgespraech. Anrede: {anrede}. Nutze den Profil-Kontext: {profile_context}. Antworte in maximal 45 Woertern. Niemals apologetisch. Niemals halluzinieren — wenn Daten fehlen, lieber allgemein formulieren.'),
+            ('training_kunde',
+             'Placeholder v1 — fallback zu KUNDEN_PROMPT_TEMPLATE in training_service.py via _load_training_prompt_template Miss-Logik.'),
+            ('training_scoring',
+             'Placeholder v1 — fallback zu inline scoring prompt in training_service.py generate_scoring().'),
+            ('training_stimmung',
+             'Placeholder v1 — fallback zu PERSONALITY_MOOD_PROMPT_SUFFIX in training_service.py.'),
+        ]
+        for _module, _prompt in _phase085_seeds:
+            try:
+                conn.execute(text("""
+                    INSERT OR IGNORE INTO prompt_versions
+                        (version, module, prompt_text, changelog, is_active, is_default, created_at)
+                    VALUES
+                        ('v1', :module, :prompt, 'Phase 08.5 initial seed', 1, 1, datetime('now'))
+                """), {'module': _module, 'prompt': _prompt})
+                conn.commit()
+            except Exception as _e:
+                print(f"[DB] Migration: prompt_versions seed {_module} skip ({_e})")
+        print("[DB] Migration: seeded prompt_versions for phase 08.5 modules (classifier, qa_response, training_kunde, training_scoring, training_stimmung)")
+
         # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
         import os as _os
         old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')

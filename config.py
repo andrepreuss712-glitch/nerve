@@ -35,6 +35,14 @@ MAX_SESSION_HOURS = int(os.environ.get('MAX_SESSION_HOURS', 8))
 SAMPLE_RATE       = 16000
 CHUNK_SIZE        = 1024
 ANALYSE_INTERVALL = 4  # Phase 06.3: raised from 2s — analyse_loop is intelligence-only now, fewer calls = less 529 risk + lower cost
+
+# ── Phase 08.5: Klassifikator-Confidence-Schwelle (D-03) ─────────────────────
+# Default 0.80. Unter diesem Wert: keine Antwort-Generation, Soft-Hint statt Antwort.
+# Env-Var erlaubt Justierung ohne Code-Deploy (Admin-Panel-UI post-Launch).
+CLASSIFIER_CONFIDENCE_THRESHOLD = float(
+    os.environ.get('CLASSIFIER_CONFIDENCE_THRESHOLD', '0.80')
+)
+
 MERGE_WINDOW_S    = 0.3
 SPEAKER_DEBOUNCE_S = 3.0
 
