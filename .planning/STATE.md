@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08.5-04-PLAN.md
-last_updated: "2026-04-23T14:33:58.025Z"
+stopped_at: Completed 08.5-05-PLAN.md
+last_updated: "2026-04-23T14:40:48.502Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 41
   completed_phases: 28
   total_plans: 148
-  completed_plans: 135
-  percent: 91
+  completed_plans: 136
+  percent: 92
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.5 (universal-response-loop-launch-kritische-erweiterung-des-liv) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Next phase: 08.5 (Universal Response Loop)
 Last activity: 2026-04-23
 
@@ -157,6 +157,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.5 P02 | 4 | 2 tasks | 3 files |
 | Phase 08.5 P03 | 15 | 2 tasks | 8 files |
 | Phase 08.5 P04 | 5 | 2 tasks | 2 files |
+| Phase 08.5 P05 | 4 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -381,6 +382,8 @@ Recent decisions affecting current work:
 - [Phase 08.5]: savedAnrede5 preset into precallFormData.anrede at renderStep5 entry — anredeForSession payload wiring unchanged
 - [Phase 08.5]: lastSessionAnrede persisted in _cleanup() before state reset — stored in both state and localStorage
 - [Phase 08.5]: Single-script auto-select: skripte.length===1 pre-selects but renderStep5() NOT skipped (D-10 edge case)
+- [Phase 08.5]: generate_response/generate_response_with_mood: version resolved for FT logging only, not prompt override — callers pre-build system_prompt via build_customer_prompt/build_personality_prompt, signatures unchanged
+- [Phase 08.5]: user_id=0 default in all 3 training prompt call sites — per-user A/B routing for training deferred until user_id threaded through from routes/training.py
 
 ### Roadmap Evolution
 
@@ -440,6 +443,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T14:33:58.018Z
-Stopped at: Completed 08.5-04-PLAN.md
+Last session: 2026-04-23T14:40:48.494Z
+Stopped at: Completed 08.5-05-PLAN.md
 Resume file: None
