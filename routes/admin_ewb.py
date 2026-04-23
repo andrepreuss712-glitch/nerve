@@ -28,6 +28,29 @@ admin_ewb_bp = Blueprint(
 )
 
 
+def _to_datetime(value):
+    """Coerce a SQLite raw-SQL timestamp to a datetime.
+
+    SQLAlchemy's `text()` queries bypass the ORM's type conversion, so DATETIME
+    columns come back as ISO strings ('2026-04-23 12:00:00' or with 'T' and
+    microseconds). Templates call .strftime() on these — strings crash.
+    """
+    if value is None or isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        s = value.replace('T', ' ')
+        for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'):
+            try:
+                return datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
 @admin_ewb_bp.route('/quality')
 @login_required
 @superadmin_required
@@ -130,7 +153,7 @@ def ewb_rating_template():
                 'success': row[2],
                 'conv_id': row[3],
                 'session_mode': row[4],
-                'created_at': row[5],
+                'created_at': _to_datetime(row[5]),
                 'klingt_wie_mensch': row[6],
                 'keine_halluzination': row[7],
                 'trifft_einwand': row[8],
