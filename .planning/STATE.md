@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08.5-02-PLAN.md
-last_updated: "2026-04-23T14:21:13.911Z"
+stopped_at: Completed 08.5-03-PLAN.md
+last_updated: "2026-04-23T14:29:37.417Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 41
   completed_phases: 28
   total_plans: 148
-  completed_plans: 133
-  percent: 90
+  completed_plans: 134
+  percent: 91
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.5 (universal-response-loop-launch-kritische-erweiterung-des-liv) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Next phase: 08.5 (Universal Response Loop)
 Last activity: 2026-04-23
 
@@ -155,6 +155,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 07.2 P04 | 60min | 5 tasks | 5 files |
 | Phase 08.5 P01 | 2 | 2 tasks | 5 files |
 | Phase 08.5 P02 | 4 | 2 tasks | 3 files |
+| Phase 08.5 P03 | 15 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -374,6 +375,8 @@ Recent decisions affecting current work:
 - [Phase 08.5]: sentence-transformers>=2.7.0 minimum version for paraphrase-multilingual-MiniLM-L12-v2 DACH multilingual FAQ matching
 - [Phase 08.5]: _parse_json EXISTS in services/claude_service.py at line 463 — imported directly in classify_utterance, no inline substitute needed
 - [Phase 08.5]: sentence_transformers not installed in dev env — test stub injected via sys.modules.setdefault before import; CI works without model download
+- [Phase 08.5]: active_profile_id added to ls.state + set_active_profile extended with profile_id param — all 4 call sites updated
+- [Phase 08.5]: _qa_pipeline_dispatch extracted as module-level helper in claude_service.py — analyse_loop calls it in single line; enables TDD without threading setup
 
 ### Roadmap Evolution
 
@@ -433,6 +436,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T14:21:13.903Z
-Stopped at: Completed 08.5-02-PLAN.md
+Last session: 2026-04-23T14:29:37.409Z
+Stopped at: Completed 08.5-03-PLAN.md
 Resume file: None
