@@ -261,9 +261,11 @@ def match_faq(utterance: str, faqs: list, threshold: float = 0.75) -> Optional[d
             print("[QA] match_faq: embedding model unavailable, returning None")
             return None
         from sentence_transformers import util
-        faq_texts = [f.get('frage_muster', '') for f in faqs if f.get('frage_muster')]
-        if not faq_texts:
+        # WR-05: build parallel filtered list so best_idx indexes the same list as faq_texts
+        filtered_faqs = [f for f in faqs if f.get('frage_muster')]
+        if not filtered_faqs:
             return None
+        faq_texts = [f['frage_muster'] for f in filtered_faqs]
         q_emb = model.encode(utterance, convert_to_tensor=True)
         f_embs = model.encode(faq_texts, convert_to_tensor=True)
         scores = util.cos_sim(q_emb, f_embs)[0]
@@ -271,7 +273,7 @@ def match_faq(utterance: str, faqs: list, threshold: float = 0.75) -> Optional[d
         best_score = float(scores[best_idx])
         print(f"[QA] match_faq best_score={best_score:.3f} threshold={threshold}")
         if best_score >= threshold:
-            return faqs[best_idx]
+            return filtered_faqs[best_idx]
     except Exception as e:
         print(f"[QA] match_faq failed: {e}")
     return None
