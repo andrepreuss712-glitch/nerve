@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 08.5-05-PLAN.md
-last_updated: "2026-04-23T14:40:48.502Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 08.5-06-PLAN.md (at human checkpoint — awaiting UI review)
+last_updated: "2026-04-23T14:46:55.231Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 41
-  completed_phases: 28
+  completed_phases: 29
   total_plans: 148
-  completed_plans: 136
-  percent: 92
+  completed_plans: 137
+  percent: 93
 ---
 
 # Project State
@@ -158,6 +158,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.5 P03 | 15 | 2 tasks | 8 files |
 | Phase 08.5 P04 | 5 | 2 tasks | 2 files |
 | Phase 08.5 P05 | 4 | 2 tasks | 1 files |
+| Phase 08.5 P06 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -384,6 +385,9 @@ Recent decisions affecting current work:
 - [Phase 08.5]: Single-script auto-select: skripte.length===1 pre-selects but renderStep5() NOT skipped (D-10 edge case)
 - [Phase 08.5]: generate_response/generate_response_with_mood: version resolved for FT logging only, not prompt override — callers pre-build system_prompt via build_customer_prompt/build_personality_prompt, signatures unchanged
 - [Phase 08.5]: user_id=0 default in all 3 training prompt call sites — per-user A/B routing for training deferred until user_id threaded through from routes/training.py
+- [Phase 08.5]: tabu_begriffe stored in profile.daten['basis']['tabu_begriffe'] — canonical location for Plan 03 read path
+- [Phase 08.5]: PROFILE_ID already exposed by inline script in profile_editor.html — no change needed for profile_editor.js
+- [Phase 08.5]: Raw fetch used in profile_editor.js — no shared apiClient helper exists in this codebase
 
 ### Roadmap Evolution
 
@@ -443,6 +447,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T14:40:48.494Z
-Stopped at: Completed 08.5-05-PLAN.md
+Last session: 2026-04-23T14:46:55.224Z
+Stopped at: Completed 08.5-06-PLAN.md (at human checkpoint — awaiting UI review)
 Resume file: None
