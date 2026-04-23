@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: executing
-stopped_at: Phase 08.5 context gathered
-last_updated: "2026-04-23T13:11:27.928Z"
-last_activity: 2026-04-23 -- Phase 08 UAT-approved, Wave 7 deferred to post-08.5
+status: Ready to execute
+stopped_at: Completed 08.5-01-PLAN.md
+last_updated: "2026-04-23T14:14:34.720Z"
+last_activity: 2026-04-23
 progress:
   total_phases: 41
   completed_phases: 28
-  total_plans: 142
-  completed_plans: 131
-  percent: 92
+  total_plans: 148
+  completed_plans: 132
+  percent: 89
 ---
 
 # Project State
@@ -21,13 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.5 — Universal Response Loop (Q&A + EWB erweitert)
+**Current focus:** Phase 08.5 — universal-response-loop-launch-kritische-erweiterung-des-liv
 
 ## Current Position
 
-Phase: 08 — COMPLETE (2026-04-23, UAT approved)
+Phase: 08.5 (universal-response-loop-launch-kritische-erweiterung-des-liv) — EXECUTING
+Plan: 2 of 6
 Next phase: 08.5 (Universal Response Loop)
-Last activity: 2026-04-23 -- Phase 08 UAT-approved, Wave 7 deferred to post-08.5
+Last activity: 2026-04-23
 
 **Next:** `/gsd-discuss-phase 08.5`
 
@@ -152,6 +153,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 07.2 P02 | 4min | 2 tasks | 2 files |
 | Phase 07.2 P03 | 20min | 2 tasks | 3 files |
 | Phase 07.2 P04 | 60min | 5 tasks | 5 files |
+| Phase 08.5 P01 | 2 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -366,6 +368,9 @@ Recent decisions affecting current work:
 - [Phase 07.2]: [Phase 07.2-04]: UAT-R2 B2-B5 out-of-scope -> Backlog POLISH-38/-39/-40/-41 — 07.2-Scope ist Scoring-UI-Konsolidierung, nicht Live-Persistenz-Plumbing; pre-existing Bugs vor 07.2
 - [Phase 07.2]: [Phase 07.2-04]: 3 Deploy-Runs statt 1 (R1/R2/R3) — analog 07.1 DEVIATIONS-Workflow mit Fix-Commits auf main + CSS-Bump + Re-Deploy + Re-UAT; de facto 2 UAT-Runden (besser als 07.1 mit 5)
 - [Phase 07.2]: [Phase 07.2-04]: POLISH-29 refined als Produkt-Entscheidung: 'EWB-Button gedrueckt = Einwand behandelt' — verbindliche Standard-Definition fuer alle Metriken/Labels; Referenz fuer POLISH-38-Fix
+- [Phase 08.5]: is_default column exists in prompt_versions — Wave 2 seeds can use it safely without column list adjustment
+- [Phase 08.5]: tabu_begriffe stored in profiles.daten JSON (not DB column) per D-15 — consistent with eigene_formulierungen/beweise pattern from Phase 08
+- [Phase 08.5]: sentence-transformers>=2.7.0 minimum version for paraphrase-multilingual-MiniLM-L12-v2 DACH multilingual FAQ matching
 
 ### Roadmap Evolution
 
@@ -425,6 +430,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T13:11:27.922Z
-Stopped at: Phase 08.5 context gathered
-Resume file: .planning/phases/08.5-universal-response-loop-launch-kritische-erweiterung-des-liv/08.5-CONTEXT.md
+Last session: 2026-04-23T14:14:34.711Z
+Stopped at: Completed 08.5-01-PLAN.md
+Resume file: None
