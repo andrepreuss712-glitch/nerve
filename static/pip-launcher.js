@@ -4,10 +4,15 @@
 (function () {
   'use strict';
 
+  // ── lastSessionAnrede: persisted across calls via localStorage (D-10) ─────
+  var _lastSessionAnradeInit = null;
+  try { _lastSessionAnradeInit = localStorage.getItem('nerve_last_anrede') || null; } catch (_) {}
+
   // ── State ──────────────────────────────────────────────────────────────────
   var state = {
     step: 1,              // 1=mode, 2=precall-option, 3=precall-form, 4=precall-result, 5=skript, 6=live
     mode: null,           // 'cold_call' | 'meeting'
+    lastSessionAnrede: _lastSessionAnradeInit,
     profiles: [],
     activeProfileId: null,
     profileDaten: {},
@@ -222,8 +227,6 @@
     var c = content();
     if (!c) return;
     var saved = state.precallFormData || {};
-    // Phase 08 D-14: Anrede-Vorauswahl (Default 'Sie'). 2-Button-Wahl unten in der Form.
-    var savedAnrede = (state.precallFormData && state.precallFormData.anrede) || 'Sie';
     c.innerHTML = [
       '<div class="launcher-step">',
       '<div class="nav-live-title">Firmenrecherche</div>',
@@ -237,13 +240,7 @@
       '<div class="launcher-loading-bar"><div class="launcher-loading-bar-inner"></div></div>',
       '</div>',
       '<div id="lnr-precall-error" style="display:none;color:#f87171;font-size:13px"></div>',
-      // ── Phase 08 D-14: Anrede-Wahl Du/Sie (vor launcher-actions) ──
-      '<div class="launcher-form-label" style="margin-top:10px;font-size:13px;color:var(--page-text-muted)">Wie soll der Assistent dich ansprechen?</div>',
-      '<div class="launcher-anrede-row">',
-      '<button type="button" class="launcher-anrede-btn' + (savedAnrede === 'Du' ? ' active' : '') + '" data-val="Du" onclick="window.NerveLauncher._setAnrede(\'Du\')">Du</button>',
-      '<button type="button" class="launcher-anrede-btn' + (savedAnrede === 'Sie' ? ' active' : '') + '" data-val="Sie" onclick="window.NerveLauncher._setAnrede(\'Sie\')">Sie</button>',
-      '</div>',
-      // ── Ende Phase 08 D-14 Block ──
+      // ── Phase 08.5 D-09: Anrede-Wahl wurde in Step 5 verschoben ──
       '<div class="launcher-actions">',
       '<button class="launcher-btn-ghost" id="lnr-step3-back">&#8592; Zurück</button>',
       '<button class="launcher-btn-ghost" id="lnr-step3-skip">Überspringen</button>',
@@ -251,10 +248,6 @@
       '</div>',
       '</div>'
     ].join('');
-    // Phase 08 D-14: ensure state.precallFormData.anrede is persisted
-    // even if user never clicks (default to saved 'Sie').
-    state.precallFormData = state.precallFormData || {};
-    if (!state.precallFormData.anrede) state.precallFormData.anrede = savedAnrede;
 
     document.getElementById('lnr-step3-back').onclick = function () {
       saveFormData();
@@ -422,6 +415,19 @@
     var c = content();
     if (!c) return;
 
+    // Phase 08.5 D-10: Anrede-Vorauswahl — last call > profile default > 'Sie'
+    var savedAnrede5 = state.lastSessionAnrede
+                    || (state.profileDaten && state.profileDaten.ki && state.profileDaten.ki.ansprache)
+                    || 'Sie';
+    // Preset anrede so anredeForSession has a valid value even if user never clicks
+    if (!state.precallFormData) state.precallFormData = {};
+    if (!state.precallFormData.anrede) state.precallFormData.anrede = savedAnrede5;
+
+    // Phase 08.5 D-10 edge-case: single-script → auto-select but keep Step 5 visible (mandatory Anrede)
+    if (state.skripte.length === 1 && !state.selectedSkriptId) {
+      state.selectedSkriptId = state.skripte[0].id;
+    }
+
     var profileOptions = state.profiles.map(function (p) {
       var sel = p.id === state.activeProfileId ? ' selected' : '';
       return '<option value="' + p.id + '"' + sel + '>' + escHtml(p.name) + '</option>';
@@ -483,6 +489,12 @@
         ? '<button type="button" id="lnr-opener-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
         : '',
 
+      // Phase 08.5 D-10: Anrede-Pflichtfeld (vor launcher-actions)
+      '<div class="launcher-form-label" style="margin-top:12px;font-size:13px;color:var(--page-text-muted)">Anrede im Gespräch *</div>',
+      '<div class="launcher-anrede-row" id="lnr-anrede-row5">',
+      '<button type="button" class="launcher-anrede-btn' + (savedAnrede5 === 'Du' ? ' active' : '') + '" data-val="Du" onclick="window.NerveLauncher._setAnrede(\'Du\')">Du</button>',
+      '<button type="button" class="launcher-anrede-btn' + (savedAnrede5 === 'Sie' ? ' active' : '') + '" data-val="Sie" onclick="window.NerveLauncher._setAnrede(\'Sie\')">Sie</button>',
+      '</div>',
       '<div class="launcher-actions">',
       '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurück</button>',
       '<button class="launcher-btn-ghost" id="lnr-step5-skip">Überspringen</button>',
@@ -2243,6 +2255,12 @@
     _stopTimer();
     if (state.micStarted) _stopMic();
     if (state.socket) { state.socket.disconnect(); state.socket = null; }
+    // Phase 08.5 D-10: persist last Anrede for next call (sticky UX)
+    var lastAnrede = state.precallFormData && state.precallFormData.anrede;
+    if (lastAnrede === 'Du' || lastAnrede === 'Sie') {
+      state.lastSessionAnrede = lastAnrede;
+      try { localStorage.setItem('nerve_last_anrede', lastAnrede); } catch (_) {}
+    }
     state.micStarted = false;
     state.pipWindow = null;
     state.sessionSeconds = 0;
