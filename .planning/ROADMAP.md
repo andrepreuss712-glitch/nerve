@@ -638,6 +638,21 @@ Plans:
 
 ---
 
+### Phase 08.5: Universal Response Loop — Launch-kritische Erweiterung des Live-Loops. Claude klassifiziert jede Kundenäußerung in 4 Kategorien (einwand_known / einwand_unknown / frage / smalltalk-none). Unbekannte Einwände (POLISH-56) und offene Fragen werden aus Profil-Daten beantwortet, nie halluzinieren. Integriert: Anrede-UX-Umzug aus PreCall in Skript-Auswahl, Training-Pipeline-Angleichung auf v2-modular (Voraussetzung für Wave 7), FAQ-Feld + Exclusion-Liste. Nutzt Phase 08 prompt_pipeline.py. Aufwand 30-36h. Pre-Launch, löst POLISH-56. (INSERTED)
+
+**Goal:** NERVE reagiert live auf alle Kundenäußerungen — bekannte Einwände (Keyword, bleibt), unbekannte Einwände (Claude-klassifiziert + Antwort aus Profil-Daten), offene Fragen (FAQ-Match). Inkl. Anrede-UX-Umzug aus PreCall in Skript-Auswahl (D-08 bis D-12), Training-Pipeline komplett v2-modular auf prompt_versions (D-07), FAQ-Tabelle + Tabu-Begriffe im Profil-Editor (D-13, D-15). Löst POLISH-56.
+**Requirements**: D-01, D-02, D-03, D-04, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16
+**Depends on:** Phase 8
+**Plans:** 6 plans
+
+Plans:
+- [ ] 08.5-01-PLAN.md — Wave 1 DB+Config Foundation: ProfileFaq + FtQaEvent ORM, _migrate() CREATE TABLE, prompt_versions seeds, CLASSIFIER_CONFIDENCE_THRESHOLD, sentence-transformers dependency
+- [ ] 08.5-02-PLAN.md — Wave 2 qa_pipeline.py: classify_utterance + generate_qa_response + match_faq (sentence-transformers local) + apply_tabu_filter + unit tests
+- [ ] 08.5-03-PLAN.md — Wave 3 claude_service integration: kw_fired_for_line guard (D-02 prevents 529-loop regression), analyse_loop dispatcher, confidence gate, tabu filter, Socket.IO qa_slot1/qa_soft_hint, frontend Soft-Hint render
+- [ ] 08.5-04-PLAN.md — Wave 3 Anrede-UX Umzug: PreCall → Skript-Auswahl step, single-script edge case, profile editor ki_ansprache relabeled as Vorauswahl
+- [ ] 08.5-05-PLAN.md — Wave 3 Training-Pipeline v2-modular: 4 training modules (kunde/sek/scoring/stimmung) routed via prompt_versions + prompt_version-Tag logging
+- [ ] 08.5-06-PLAN.md — Wave 3 FAQ-UI + Tabu-Begriffe: profile editor FAQ CRUD + tabu tag input, 5 org-isolated API endpoints
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
@@ -733,4 +748,4 @@ Plans:
 **Depends on:** Phase 07.1
 **Launch-relevant:** true
 **Plans:** 4/4 plans complete
-
+
