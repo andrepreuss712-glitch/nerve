@@ -168,6 +168,8 @@ def bearbeiten(pid):
             log_action(db, g.user.id, g.org.id, 'profile_update',
                        target_type='profile', target_id=p.id,
                        details={'name': p.name}, request=request)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'ok': True, 'name': p.name})
             flash('Profil gespeichert.', 'success')
             return redirect(url_for('profiles.liste'))
         try:

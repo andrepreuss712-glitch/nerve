@@ -1224,8 +1224,21 @@ function buildAndSubmit(){
     }
   };
   document.getElementById('daten_json').value=JSON.stringify(daten);
-  _isDirty = false;
-  document.getElementById('editorForm').submit();
+  const fd=new FormData(document.getElementById('editorForm'));
+  _isDirty=false;
+  fetch(window.location.pathname,{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body:fd,credentials:'same-origin'})
+    .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
+    .then(function(){_showToast('Profil gespeichert.','success');})
+    .catch(function(){_isDirty=true;_showToast('Fehler beim Speichern — bitte nochmal versuchen.','error');});
+}
+function _showToast(msg,type){
+  var t=document.getElementById('pe-toast');
+  if(!t){t=document.createElement('div');t.id='pe-toast';t.style.cssText='position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s';document.body.appendChild(t);}
+  t.textContent=msg;
+  t.className=type==='success'?'flash-success':'flash-error';
+  t.style.opacity='1';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(function(){t.style.opacity='0';},3000);
 }
 
 /* Phase 08 D-10: ton-Flex-Escape Toggle (Select -> Free-text-Input) */
