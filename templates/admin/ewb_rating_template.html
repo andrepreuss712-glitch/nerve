@@ -11,6 +11,14 @@
     color: #374151;
   }
   .ewb-rate-admin .legend strong { color: #111827; }
+  .ewb-intro {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
+    padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;
+  }
+  .ewb-intro section h2 { margin: 0 0 0.4rem 0; font-size: 1rem; color: #111827; }
+  .ewb-intro section p { margin: 0; font-size: 0.9rem; color: #374151; line-height: 1.45; }
+  @media (max-width: 720px) { .ewb-intro { grid-template-columns: 1fr; } }
   .n-rating-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   .n-rating-table th, .n-rating-table td {
     padding: 0.55rem 0.6rem; border-bottom: 1px solid #E5E7EB; vertical-align: top;
@@ -35,19 +43,30 @@
 
 <div class="ewb-rate-admin">
   <a href="{{ url_for('admin_ewb.ewb_quality') }}" class="back-link">← Zurück zum Quality-Dashboard</a>
-  <h1>Phase 08 — EWB Rating-Tool</h1>
-  <p class="subtitle">
-    Bewerte jede Einwandbehandlung mit 3 binären Kriterien. Der Save erfolgt automatisch,
-    sobald alle 3 Kriterien (Ja/Nein) einer Zeile gesetzt sind.
-  </p>
+  <h1>EWB bewerten</h1>
+
+  <div class="ewb-intro">
+    <section>
+      <h2>Was du hier machst</h2>
+      <p>Du bewertest Antworten, die NERVE auf Einwände gegeben hat. Pro Antwort kreuzt du drei Kriterien mit Ja oder Nein an: Klingt wie ein Mensch / Nichts erfunden / Trifft den Einwand.</p>
+    </section>
+    <section>
+      <h2>Warum das wichtig ist</h2>
+      <p>Vor dem Launch wollen wir mindestens 80 % der NERVE-Antworten als vorlesbar bestätigt haben. Deine Bewertung ist das Signal — ohne diese Seite lässt sich die Prompt-Qualität nicht messen.</p>
+    </section>
+    <section>
+      <h2>Nächster Schritt</h2>
+      <p>Scrolle durch die Liste. Pro Antwort ca. 10 Sekunden. Wenn du unsicher bist: Zeile einfach leer lassen und weitergehen — unvollständige Zeilen werden nicht gespeichert.</p>
+    </section>
+  </div>
 
   <div class="legend">
-    <strong>klingt_wie_mensch:</strong> Liest sich die Antwort wie ein echter Mensch
-    (nicht nach generischer KI, keine Standardfloskeln)?<br>
-    <strong>keine_halluzination:</strong> Nichts erfunden — alle genannten Fakten,
-    Zahlen, Branchenbezüge stimmen?<br>
-    <strong>trifft_einwand:</strong> Beantwortet die Antwort den tatsächlich
-    geäußerten Einwand (nicht einen verwandten)?
+    <strong>Klingt wie ein Mensch:</strong> Liest sich die Antwort wie ein echter Mensch
+    (nicht wie generische KI, keine Standardfloskeln)?<br>
+    <strong>Nichts erfunden:</strong> Alle genannten Fakten,
+    Zahlen und Branchenbezüge stimmen — nichts hat die KI frei dazugedichtet?<br>
+    <strong>Trifft den Einwand:</strong> Beantwortet die Antwort den tatsächlich
+    geäußerten Einwand (und nicht einen verwandten)?
   </div>
 
   <table class="n-rating-table">
@@ -56,9 +75,9 @@
         <th>Session</th>
         <th>Einwand-Typ</th>
         <th>Erfolg-Rating</th>
-        <th>klingt_wie_mensch</th>
-        <th>keine_halluzination</th>
-        <th>trifft_einwand</th>
+        <th>Klingt wie ein Mensch</th>
+        <th>Nichts erfunden</th>
+        <th>Trifft den Einwand</th>
       </tr>
     </thead>
     <tbody>

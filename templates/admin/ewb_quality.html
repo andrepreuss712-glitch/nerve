@@ -34,11 +34,33 @@
     background: #00D4AA; color: #fff; text-decoration: none;
   }
   .ewb-nav-link:hover { background: #00A98E; }
+  .ewb-intro {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
+    padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;
+  }
+  .ewb-intro section h2 { margin: 0 0 0.4rem 0; font-size: 1rem; color: #111827; }
+  .ewb-intro section p { margin: 0; font-size: 0.9rem; color: #374151; line-height: 1.45; }
+  @media (max-width: 720px) { .ewb-intro { grid-template-columns: 1fr; } }
 </style>
 
 <div class="ewb-admin">
-  <h1>Phase 08 — EWB-Quality Dashboard</h1>
-  <p class="subtitle">Pre-Launch Quality-Gate-Messung: A/B-Varianten, Score-Gate, Varianz.</p>
+  <h1>EWB Qualität</h1>
+
+  <div class="ewb-intro">
+    <section>
+      <h2>Was du hier siehst</h2>
+      <p>Die Qualität der Einwand-Antworten von NERVE — basierend auf deinen Bewertungen (über die Seite „EWB bewerten") und dem Feedback der Nutzer nach ihren Anrufen.</p>
+    </section>
+    <section>
+      <h2>Wann du hier reinschaust</h2>
+      <p>Einmal vor dem Launch, um zu bestätigen, dass Phase 08 funktioniert (Ziel: mindestens 80 % vorlesbar). Nach dem Launch wöchentlich für den A/B-Vergleich zwischen verschiedenen Antwort-Varianten.</p>
+    </section>
+    <section>
+      <h2>Nächster Schritt</h2>
+      <p>Wenn die Zahlen nicht passen: zurück zu „EWB bewerten" und Problemfälle identifizieren. Wenn eine Variante klar gewinnt: als Standard setzen (kommt als Admin-Funktion in einer späteren Phase).</p>
+    </section>
+  </div>
 
   <section class="ewb-card">
     <h2>A/B-Auswertung Prompt-Varianten (D-22)</h2>
