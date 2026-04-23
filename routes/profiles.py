@@ -386,3 +386,182 @@ def opener_loeschen(pid, oid):
         return jsonify({'ok': True})
     finally:
         db.close()
+
+
+# ══ Phase 08.5: FAQ CRUD + tabu_begriffe ══════════════════════════════════════
+
+_FAQ_KATEGORIEN = {'Technik', 'Preis', 'Referenzen', 'DSGVO', 'Produkt', 'Sonstiges'}
+_MAX_FRAGE_LEN = 2000
+_MAX_ANTWORT_LEN = 2000
+_MAX_TABU_ITEM_LEN = 80
+_MAX_TABU_COUNT = 50
+
+
+def _require_own_profile(profile_id):
+    """Return (Profile, db_session) if user owns it, else (None, db_session).
+    Org-isolation: profile.org_id must match g.org.id.
+    """
+    db = get_session()
+    p = db.query(Profile).filter_by(id=profile_id).first()
+    if not p:
+        return None, db
+    if not hasattr(g, 'org') or g.org is None or p.org_id != g.org.id:
+        return None, db
+    return p, db
+
+
+@profiles_bp.route('/api/profile/<int:profile_id>/faqs', methods=['GET'])
+@login_required
+def api_faqs_list(profile_id):
+    from database.models import ProfileFaq
+    p, db = _require_own_profile(profile_id)
+    try:
+        if p is None:
+            return jsonify({'error': 'not_found'}), 404
+        rows = db.query(ProfileFaq).filter_by(profile_id=p.id).order_by(ProfileFaq.id.desc()).all()
+        return jsonify({
+            'faqs': [
+                {
+                    'id': r.id,
+                    'frage_muster': r.frage_muster or '',
+                    'antwort': r.antwort or '',
+                    'kategorie': r.kategorie or 'Sonstiges',
+                    'used_count': r.used_count or 0,
+                }
+                for r in rows
+            ]
+        })
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/api/profile/<int:profile_id>/faqs', methods=['POST'])
+@login_required
+def api_faqs_create(profile_id):
+    from database.models import ProfileFaq
+    data = request.get_json(silent=True) or {}
+    frage = (data.get('frage_muster') or '').strip()
+    antwort = (data.get('antwort') or '').strip()
+    kategorie = (data.get('kategorie') or 'Sonstiges').strip()
+    if not frage or not antwort:
+        return jsonify({'error': 'frage_muster and antwort required'}), 400
+    if len(frage) > _MAX_FRAGE_LEN or len(antwort) > _MAX_ANTWORT_LEN:
+        return jsonify({'error': 'field too long'}), 400
+    if kategorie not in _FAQ_KATEGORIEN:
+        return jsonify({'error': 'invalid kategorie'}), 400
+    p, db = _require_own_profile(profile_id)
+    try:
+        if p is None:
+            return jsonify({'error': 'not_found'}), 404
+        row = ProfileFaq(
+            profile_id=p.id,
+            frage_muster=frage,
+            antwort=antwort,
+            kategorie=kategorie,
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        return jsonify({'id': row.id, 'used_count': row.used_count or 0}), 201
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/api/profile/faqs/<int:faq_id>', methods=['PUT'])
+@login_required
+def api_faqs_update(faq_id):
+    from database.models import ProfileFaq
+    data = request.get_json(silent=True) or {}
+    db = get_session()
+    try:
+        row = db.query(ProfileFaq).filter_by(id=faq_id).first()
+        if not row:
+            return jsonify({'error': 'not_found'}), 404
+        p = db.query(Profile).filter_by(id=row.profile_id).first()
+        if not p or not hasattr(g, 'org') or g.org is None or p.org_id != g.org.id:
+            return jsonify({'error': 'forbidden'}), 403
+
+        if 'frage_muster' in data:
+            f = (data['frage_muster'] or '').strip()
+            if not f or len(f) > _MAX_FRAGE_LEN:
+                return jsonify({'error': 'invalid frage_muster'}), 400
+            row.frage_muster = f
+        if 'antwort' in data:
+            a = (data['antwort'] or '').strip()
+            if not a or len(a) > _MAX_ANTWORT_LEN:
+                return jsonify({'error': 'invalid antwort'}), 400
+            row.antwort = a
+        if 'kategorie' in data:
+            k = (data['kategorie'] or '').strip()
+            if k not in _FAQ_KATEGORIEN:
+                return jsonify({'error': 'invalid kategorie'}), 400
+            row.kategorie = k
+
+        db.commit()
+        return jsonify({'ok': True})
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/api/profile/faqs/<int:faq_id>', methods=['DELETE'])
+@login_required
+def api_faqs_delete(faq_id):
+    from database.models import ProfileFaq
+    db = get_session()
+    try:
+        row = db.query(ProfileFaq).filter_by(id=faq_id).first()
+        if not row:
+            return jsonify({'error': 'not_found'}), 404
+        p = db.query(Profile).filter_by(id=row.profile_id).first()
+        if not p or not hasattr(g, 'org') or g.org is None or p.org_id != g.org.id:
+            return jsonify({'error': 'forbidden'}), 403
+        db.delete(row)
+        db.commit()
+        return jsonify({'ok': True})
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/api/profile/<int:profile_id>/tabu', methods=['POST'])
+@login_required
+def api_tabu_update(profile_id):
+    import json as _json
+    data = request.get_json(silent=True) or {}
+    begriffe = data.get('tabu_begriffe', [])
+    if not isinstance(begriffe, list):
+        return jsonify({'error': 'tabu_begriffe must be list'}), 400
+    # Sanitize: strip, dedupe, length/count limits
+    clean = []
+    seen = set()
+    for b in begriffe:
+        if not isinstance(b, str):
+            continue
+        s = b.strip()
+        if not s or len(s) > _MAX_TABU_ITEM_LEN:
+            continue
+        low = s.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        clean.append(s)
+        if len(clean) >= _MAX_TABU_COUNT:
+            break
+
+    p, db = _require_own_profile(profile_id)
+    try:
+        if p is None:
+            return jsonify({'error': 'not_found'}), 404
+        try:
+            pdata = _json.loads(p.daten) if p.daten else {}
+        except Exception:
+            pdata = {}
+        if not isinstance(pdata, dict):
+            pdata = {}
+        basis = pdata.get('basis') if isinstance(pdata.get('basis'), dict) else {}
+        basis['tabu_begriffe'] = clean
+        pdata['basis'] = basis
+        p.daten = _json.dumps(pdata, ensure_ascii=False)
+        db.commit()
+        return jsonify({'ok': True, 'count': len(clean)})
+    finally:
+        db.close()
