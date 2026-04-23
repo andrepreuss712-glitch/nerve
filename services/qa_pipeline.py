@@ -246,9 +246,34 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         return ""
 
 
-# ── Public: match_faq (stub — Task 2 fills in full implementation) ────────
+# ── Public: match_faq ────────────────────────────────────────────────────
 def match_faq(utterance: str, faqs: list, threshold: float = 0.75) -> Optional[dict]:
-    """Placeholder — full implementation in Task 2."""
+    """Semantic FAQ-Match via sentence-transformers (local inference, DSGVO-safe).
+    faqs: list of dicts with at least 'frage_muster' key (also 'id', 'antwort', 'kategorie').
+    Returns matching faq dict oder None wenn kein Match ueber threshold.
+    MUST NOT raise.
+    """
+    if not faqs or not utterance or not utterance.strip():
+        return None
+    try:
+        model = _get_embedding_model()
+        if model is None:
+            print("[QA] match_faq: embedding model unavailable, returning None")
+            return None
+        from sentence_transformers import util
+        faq_texts = [f.get('frage_muster', '') for f in faqs if f.get('frage_muster')]
+        if not faq_texts:
+            return None
+        q_emb = model.encode(utterance, convert_to_tensor=True)
+        f_embs = model.encode(faq_texts, convert_to_tensor=True)
+        scores = util.cos_sim(q_emb, f_embs)[0]
+        best_idx = int(scores.argmax())
+        best_score = float(scores[best_idx])
+        print(f"[QA] match_faq best_score={best_score:.3f} threshold={threshold}")
+        if best_score >= threshold:
+            return faqs[best_idx]
+    except Exception as e:
+        print(f"[QA] match_faq failed: {e}")
     return None
 
 
