@@ -1499,6 +1499,50 @@
 
       console.log('[Latency] Slot0 render took', (performance.now() - t0).toFixed(1), 'ms');
     });
+
+    // ── Phase 08.5: Universal Response Loop events ──────────────────────────
+    // qa_slot1: full Haiku-generated response for Slot 1 (unknown objection / FAQ)
+    state.socket.on('qa_slot1', function (d) {
+      try {
+        var txt = (d && d.text) ? String(d.text) : '';
+        if (!txt) return;
+        var body = pipEl('pip-slot-body-1');
+        if (body) {
+          // textContent only — XSS-safe (T-08.5-03-03)
+          body.textContent = txt;
+          body.classList.remove('pip-streaming');
+          var container = pipEl('pip-slot-1');
+          if (container) container.classList.remove('pip-slot-streaming');
+          var label = pipEl('pip-slot-label-1');
+          if (label) label.textContent = 'ANTWORT';
+          console.log('[QA] qa_slot1 rendered len=' + txt.length);
+        }
+      } catch (e) {
+        console.warn('[QA] qa_slot1 handler error', e);
+      }
+    });
+
+    // qa_soft_hint: low-confidence / tabu-filtered hint (D-04 LOCKED text)
+    state.socket.on('qa_soft_hint', function (d) {
+      try {
+        var hintText = (d && d.text) ? String(d.text) : 'Neuer Einwand \u2014 noch kein Vorschlag';
+        var body = pipEl('pip-slot-body-1');
+        if (body) {
+          // createElement + textContent — XSS-safe (T-08.5-03-03)
+          body.textContent = '';
+          var span = document.createElement('span');
+          span.className = 'slot-soft-hint';
+          span.textContent = hintText;
+          body.appendChild(span);
+          body.classList.remove('pip-streaming');
+          var container = pipEl('pip-slot-1');
+          if (container) container.classList.remove('pip-slot-streaming');
+          console.log('[QA] qa_soft_hint rendered reason=' + (d && d.reason));
+        }
+      } catch (e) {
+        console.warn('[QA] qa_soft_hint handler error', e);
+      }
+    });
   }
 
   function _renderSlotResult(slot, result) {

@@ -2557,3 +2557,13 @@ input[type="range"].perf-slider::-moz-range-thumb {
   font-weight: 600;
 }
 .beispiel-link:focus { outline: 2px solid var(--n-accent, #00D4AA); outline-offset: 2px; }
+
+/* ── Phase 08.5: Low-confidence Soft-Hint in Slot 1 (D-04 LOCKED) ─────── */
+.slot-soft-hint {
+  display: block;
+  color: var(--page-text-muted, #999);
+  font-size: 0.75rem;
+  margin-top: 4px;
+  font-style: normal;
+  line-height: 1.3;
+}
