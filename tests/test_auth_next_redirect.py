@@ -95,3 +95,94 @@ def test_unauth_protected_url_rejects_crlf_injection_in_path(client):
     # safe_next is the last line of defense if that ever regresses.
     # Covered by test_safe_next_rejects_crlf.
     pass
+
+
+# ── api/login next round-trip (Bug B fix, 2026-04-23) ────────────────────────
+
+def _make_test_user(client, email='test@nerve.local', password='secret12345'):
+    """Helper: create a minimal user + org in the test DB."""
+    from werkzeug.security import generate_password_hash
+    from database.models import User, Organisation
+    db = client._test_session
+    org = Organisation(name='TestOrg', plan='starter')
+    db.add(org)
+    db.flush()
+    user = User(
+        org_id=org.id,
+        email=email,
+        passwort_hash=generate_password_hash(password),
+        rolle='owner',
+        aktiv=True,
+    )
+    db.add(user)
+    db.commit()
+    return user
+
+
+def test_api_login_echoes_valid_next_in_response(client):
+    """POST /api/login with next=/admin/ewb/quality → response includes next."""
+    _make_test_user(client)
+    resp = client.post(
+        '/api/login',
+        json={'email': 'test@nerve.local', 'passwort': 'secret12345',
+              'next': '/admin/ewb/quality'},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data.get('next') == '/admin/ewb/quality'
+
+
+def test_api_login_drops_open_redirect_next(client):
+    """POST /api/login with next=//evil.com → response omits next (rejected by safe_next)."""
+    _make_test_user(client)
+    resp = client.post(
+        '/api/login',
+        json={'email': 'test@nerve.local', 'passwort': 'secret12345',
+              'next': '//evil.com/phish'},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert 'next' not in data
+
+
+def test_api_login_without_next_preserves_legacy_shape(client):
+    """POST /api/login without next → response has ok+coach, no next key."""
+    _make_test_user(client)
+    resp = client.post(
+        '/api/login',
+        json={'email': 'test@nerve.local', 'passwort': 'secret12345'},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert 'coach' in data
+    assert 'next' not in data
+
+
+def test_api_login_bad_creds_ignores_next(client):
+    """POST /api/login with wrong password and next → 401, no next leak."""
+    _make_test_user(client)
+    resp = client.post(
+        '/api/login',
+        json={'email': 'test@nerve.local', 'passwort': 'wrong-password',
+              'next': '/admin/ewb/quality'},
+    )
+    assert resp.status_code == 401
+    data = resp.get_json()
+    assert data['ok'] is False
+    assert 'next' not in data
+
+
+def test_api_login_rejects_crlf_in_next(client):
+    """Defense-in-depth: CRLF in next must not reach response."""
+    _make_test_user(client)
+    resp = client.post(
+        '/api/login',
+        json={'email': 'test@nerve.local', 'passwort': 'secret12345',
+              'next': '/foo\r\nX-Evil: 1'},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert 'next' not in data

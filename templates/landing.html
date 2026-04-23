@@ -803,14 +803,18 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal('loginMo
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 // Open-redirect protection: nur relative Pfade akzeptieren, keine externen URLs.
-function safeNextParam(){
-  const raw=new URLSearchParams(location.search).get('next');
+function safeNextParam(raw){
+  if(raw===undefined)raw=new URLSearchParams(location.search).get('next');
   if(!raw||typeof raw!=='string')return null;
   if(!raw.startsWith('/'))return null;
   if(raw.startsWith('//')||raw.startsWith('/\\'))return null;
   if(raw.includes('\r')||raw.includes('\n'))return null;
   return raw;
 }
+// Capture next-param ONCE at page load. URL may later change (history API,
+// modal-open with different hash, etc.) — the value we had at landing time
+// is the intent. Also transmitted to server for defense-in-depth validation.
+const PENDING_NEXT = safeNextParam();
 async function submitLogin(){
   const email=document.getElementById('l-email').value.trim();
   const pw=document.getElementById('l-pw').value;
@@ -820,10 +824,13 @@ async function submitLogin(){
   if(!email||!pw){errEl.textContent='Bitte alle Felder ausfüllen.';errEl.classList.add('show');return;}
   btn.disabled=true;btn.textContent='Einloggen…';
   try{
-    const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,passwort:pw})});
+    const body={email,passwort:pw};
+    if(PENDING_NEXT)body.next=PENDING_NEXT;
+    const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
     if(data.ok){
-      const nxt=safeNextParam();
+      // Prefer server-validated next (defense-in-depth); fall back to client capture.
+      const nxt=safeNextParam(data.next)||PENDING_NEXT;
       if(nxt){window.location=nxt;}
       else{window.location=data.coach?'/coach/':'/dashboard';}
     }

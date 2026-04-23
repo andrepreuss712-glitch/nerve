@@ -171,12 +171,16 @@ def api_login():
     data     = request.get_json(force=True)
     email    = data.get('email', '').strip().lower()
     passwort = data.get('passwort', '')
+    nxt      = safe_next(data.get('next'))  # server-side open-redirect guard
     if not email or not passwort:
         return jsonify({'ok': False, 'error': 'E-Mail und Passwort erforderlich.'}), 400
     user_info, err = _do_login(email, passwort)
     if err:
         return jsonify({'ok': False, 'error': err}), 401
-    return jsonify({'ok': True, 'coach': user_info['is_coach']})
+    resp = {'ok': True, 'coach': user_info['is_coach']}
+    if nxt:
+        resp['next'] = nxt
+    return jsonify(resp)
 
 
 @auth_bp.route('/api/register', methods=['POST'])
