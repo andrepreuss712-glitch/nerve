@@ -1179,6 +1179,8 @@ function buildAndSubmit(){
       // Phase 08 D-11: branche_kontext als String
       branche_kontext:
           document.getElementById('vi_branche_kontext').value.trim(),
+      // Phase 08.5 D-15: tabu_begriffe aus hidden input (synced by saveTabu())
+      tabu_begriffe:(function(){try{var v=document.getElementById('vi_tabu_begriffe');return v&&v.value?JSON.parse(v.value):[];}catch(e){return [];}}()),
     },
     opener: document.getElementById('vi_opener').value.trim(),
     erlaubnis: document.getElementById('vi_erlaubnis').value.trim(),
