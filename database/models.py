@@ -141,6 +141,19 @@ class ProfileSkript(Base):
     created_at  = Column(DateTime, default=utcnow)
 
 
+# ── Phase 08.5: FAQ-Feld pro Profil (D-13) ───────────────────────────────────
+
+class ProfileFaq(Base):
+    __tablename__ = 'profile_faqs'
+    id           = Column(Integer, primary_key=True)
+    profile_id   = Column(Integer, ForeignKey('profiles.id'), nullable=False)
+    frage_muster = Column(Text, nullable=False)
+    antwort      = Column(Text, nullable=False)
+    kategorie    = Column(String(100), nullable=True)   # Technik/Preis/Referenzen/DSGVO/Produkt/Sonstiges
+    created_at   = Column(DateTime, default=utcnow)
+    used_count   = Column(Integer, default=0, nullable=False)
+
+
 class ProfileOpener(Base):
     __tablename__ = 'profile_opener'
     id          = Column(Integer, primary_key=True)
@@ -493,6 +506,28 @@ class FtObjectionEvent(Base):
     model_used             = Column(String(100), nullable=False)
     prompt_version         = Column(String(50), nullable=False)
     created_at             = Column(DateTime, default=utcnow)
+
+
+# ── Phase 08.5: FT-Logging fuer QA-Events (D-13) ─────────────────────────────
+
+class FtQaEvent(Base):
+    __tablename__ = 'ft_qa_events'
+    id             = Column(Integer, primary_key=True)
+    ft_session_id  = Column(Integer, ForeignKey('ft_call_sessions.id'), nullable=False)
+    user_id        = Column(Integer, ForeignKey('users.id'), nullable=False)
+    market         = Column(String(10), nullable=False, default='dach')
+    language       = Column(String(10), nullable=False, default='de')
+    timestamp_ms   = Column(Integer, nullable=False)
+    utterance_text = Column(Text, nullable=True)
+    kategorie      = Column(String(50), nullable=False)   # einwand_unknown/frage/smalltalk_none
+    confidence     = Column(Float, nullable=True)
+    faq_matched    = Column(Boolean, default=False)
+    faq_id         = Column(Integer, ForeignKey('profile_faqs.id'), nullable=True)
+    antwort_text   = Column(Text, nullable=True)
+    tabu_gefiltert = Column(Boolean, default=False)
+    prompt_version = Column(String(50), nullable=False)
+    model_used     = Column(String(100), nullable=False)
+    created_at     = Column(DateTime, default=utcnow)
 
 
 class PromptVersion(Base):
