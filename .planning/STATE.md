@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: executing
-stopped_at: context exhaustion at 90% (2026-04-23)
-last_updated: "2026-04-23T12:17:51.149Z"
+stopped_at: Phase 08.5 context gathered
+last_updated: "2026-04-23T13:11:27.928Z"
 last_activity: 2026-04-23 -- Phase 08 UAT-approved, Wave 7 deferred to post-08.5
 progress:
-  total_phases: 40
+  total_phases: 41
   completed_phases: 28
   total_plans: 142
   completed_plans: 131
@@ -369,7 +369,7 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
-- Phase 09 added: Universal Response Loop — Launch-kritische Erweiterung des Live-Loops. Claude klassifiziert jede Kundenäußerung in 4 Kategorien (einwand_known/einwand_unknown/frage/smalltalk-none). Unbekannte Einwände + Fragen aus Profil-Daten beantwortet, nie halluziniert. FAQ-Feld + Exclusion-Liste, Anrede-UX-Umzug, Training-Pipeline v2-modular. Löst POLISH-56. Aufwand 30-36h.
+- Phase 08.5 inserted after Phase 08: Universal Response Loop — Launch-kritische Erweiterung des Live-Loops. Claude klassifiziert jede Kundenäußerung in 4 Kategorien (einwand_known/einwand_unknown/frage/smalltalk-none). Unbekannte Einwände + Fragen aus Profil-Daten beantwortet, nie halluziniert. FAQ-Feld + Exclusion-Liste, Anrede-UX-Umzug, Training-Pipeline v2-modular. Löst POLISH-56. Aufwand 30-36h. (INSERTED)
 - Phase 08 added: EWB-Qualität & Profil-Tiefe (Launch-kritisch) — 6 neue Profil-Felder, POLISH-55 Behandelt-Semantik, A/B-Prompt-Framework, Quality-Gates. Vorbereitet Phase 08.5 (Q&A) + 07.5 (EWB-Feed-Redesign).
 - Phase 03.1 inserted after Phase 03: Frontend Redesign (INSERTED) — app-page redesign before payments
 - Phase 04.1 inserted after Phase 04: Live-Mikrofon Fix: PyAudio → Browser getUserMedia (URGENT) — Phase 4 paused (Gewerbeschein blocker), mic fix inserted as 4.1
@@ -425,6 +425,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T12:07:35.408Z
-Stopped at: context exhaustion at 90% (2026-04-23)
-Resume file: None
+Last session: 2026-04-23T13:11:27.922Z
+Stopped at: Phase 08.5 context gathered
+Resume file: .planning/phases/08.5-universal-response-loop-launch-kritische-erweiterung-des-liv/08.5-CONTEXT.md
