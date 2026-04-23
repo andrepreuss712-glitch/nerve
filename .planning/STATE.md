@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08.5-01-PLAN.md
-last_updated: "2026-04-23T14:14:34.720Z"
+stopped_at: Completed 08.5-02-PLAN.md
+last_updated: "2026-04-23T14:21:13.911Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 41
   completed_phases: 28
   total_plans: 148
-  completed_plans: 132
-  percent: 89
+  completed_plans: 133
+  percent: 90
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.5 (universal-response-loop-launch-kritische-erweiterung-des-liv) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Next phase: 08.5 (Universal Response Loop)
 Last activity: 2026-04-23
 
@@ -154,6 +154,7 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 07.2 P03 | 20min | 2 tasks | 3 files |
 | Phase 07.2 P04 | 60min | 5 tasks | 5 files |
 | Phase 08.5 P01 | 2 | 2 tasks | 5 files |
+| Phase 08.5 P02 | 4 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -371,6 +372,8 @@ Recent decisions affecting current work:
 - [Phase 08.5]: is_default column exists in prompt_versions — Wave 2 seeds can use it safely without column list adjustment
 - [Phase 08.5]: tabu_begriffe stored in profiles.daten JSON (not DB column) per D-15 — consistent with eigene_formulierungen/beweise pattern from Phase 08
 - [Phase 08.5]: sentence-transformers>=2.7.0 minimum version for paraphrase-multilingual-MiniLM-L12-v2 DACH multilingual FAQ matching
+- [Phase 08.5]: _parse_json EXISTS in services/claude_service.py at line 463 — imported directly in classify_utterance, no inline substitute needed
+- [Phase 08.5]: sentence_transformers not installed in dev env — test stub injected via sys.modules.setdefault before import; CI works without model download
 
 ### Roadmap Evolution
 
@@ -430,6 +433,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T14:14:34.711Z
-Stopped at: Completed 08.5-01-PLAN.md
+Last session: 2026-04-23T14:21:13.903Z
+Stopped at: Completed 08.5-02-PLAN.md
 Resume file: None
