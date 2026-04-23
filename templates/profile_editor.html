@@ -299,6 +299,10 @@
         <span class="sec-num">12</span>Übergang-Ziele</a>
       <a class="sec-link" data-target="sec-ki" onclick="goSec('sec-ki')">
         <span class="sec-num">13</span>KI-Anweisungen</a>
+      <a class="sec-link" data-target="sec-faqs" onclick="goSec('sec-faqs')">
+        <span class="sec-num">14</span>FAQ-Datenbank</a>
+      <a class="sec-link" data-target="sec-tabu" onclick="goSec('sec-tabu')">
+        <span class="sec-num">15</span>Tabu-Begriffe</a>
     </div>
 
     <div class="editor-main" id="editorMain">
@@ -663,6 +667,69 @@
         </div>
       </div>
 
+      <!-- ⑭ Phase 08.5: FAQ-Datenbank (D-13) ─────────────────────────────────── -->
+      <div class="sec" id="sec-faqs">
+        <div class="sec-title"><span class="sec-title-num">14</span>FAQ-Datenbank
+          <span class="tip-icon" data-tip="Wenn ein Kunde eine dieser Fragen stellt, schlägt NERVE die hinterlegte Antwort vor. Die Antwort wird direkt im Gespräch vorgeschlagen — ohne KI-Umformulierung." tabindex="0">?</span>
+        </div>
+        <p style="font-size:12px;color:var(--page-text-muted);margin-bottom:16px">
+          Trage die Fragen ein, die Ihre Kunden häufig stellen, und die gewünschten Antworten. NERVE erkennt die Frage automatisch und schlägt die passende Antwort vor.
+        </p>
+
+        <div id="profile-faqs-list" class="profile-faqs-list"></div>
+
+        <button type="button" class="btn-add" id="btn-faq-add">+ Frage hinzufügen</button>
+
+        <!-- Template (hidden) for rendering a single FAQ row -->
+        <template id="tpl-faq-row">
+          <div class="faq-row block" data-faq-id="">
+            <div class="faq-fields">
+              <div class="frow frow-2" style="margin-bottom:10px">
+                <div class="fg" style="margin:0">
+                  <label class="fl">Frage / Muster</label>
+                  <textarea class="faq-frage fta" rows="2" maxlength="2000" placeholder="z.B. Wie lange dauert die Einführung?"></textarea>
+                </div>
+                <div class="fg" style="margin:0">
+                  <label class="fl">Antwort</label>
+                  <textarea class="faq-antwort fta" rows="2" maxlength="2000" placeholder="z.B. Die typische Einführung dauert 4–6 Wochen."></textarea>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <div class="fg" style="margin:0;flex:1;min-width:160px">
+                  <label class="fl">Kategorie</label>
+                  <select class="faq-kategorie fs">
+                    <option value="Technik">Technik</option>
+                    <option value="Preis">Preis</option>
+                    <option value="Referenzen">Referenzen</option>
+                    <option value="DSGVO">DSGVO</option>
+                    <option value="Produkt">Produkt</option>
+                    <option value="Sonstiges" selected>Sonstiges</option>
+                  </select>
+                </div>
+                <div class="faq-meta" style="display:flex;align-items:center;gap:12px;margin-top:18px">
+                  <span class="faq-used-count" title="Wie oft wurde diese Antwort im Gespräch vorgeschlagen" style="font-size:12px;color:var(--page-text-muted)">0×</span>
+                  <button type="button" class="btn-rm faq-delete">Löschen</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- ⑮ Phase 08.5: Tabu-Begriffe (D-15) ──────────────────────────────────── -->
+      <div class="sec" id="sec-tabu">
+        <div class="sec-title"><span class="sec-title-num">15</span>Tabu-Begriffe
+          <span class="tip-icon" data-tip="Begriffe, die NERVE im Gespräch niemals verwenden darf. Zum Beispiel Namen von Wettbewerbern, Preise vor einer Demo, oder Aussagen, die rechtlich heikel sind." tabindex="0">?</span>
+        </div>
+        <p style="font-size:12px;color:var(--page-text-muted);margin-bottom:12px">
+          Wörter oder Namen, die NERVE im Gespräch niemals verwenden darf. Begriff eingeben und Enter drücken zum Hinzufügen.
+        </p>
+
+        <div id="tabu-tags-container" class="tag-container" aria-live="polite" style="margin-bottom:8px;cursor:text" onclick="document.getElementById('tabu-tag-input').focus()"></div>
+        <input type="text" class="fi" id="tabu-tag-input" placeholder="Begriff eingeben + Enter" maxlength="80" style="max-width:360px">
+        <input type="hidden" id="vi_tabu_begriffe" name="tabu_begriffe" value="[]">
+      </div>
+
       <div style="height:40px"></div>
 
       <!-- Phase 06: Consent-Text (D-06) -->
@@ -691,7 +758,10 @@ const EW_KATEGORIEN = ['Kosten/Preis','Zeit/Aufschub','Vertrauen','Komplexität'
   'Kein Bedarf','Angst/Risiko','Vergleich','Entscheidungsträger','Abbruch'];
 const ALL_SECS = ['sec-basis','sec-zielgruppe','sec-schmerzen','sec-phasen',
   'sec-einwaende','sec-fragen','sec-kaufsignale','sec-nogos',
-  'sec-wettbewerb','sec-techniken','sec-uebergaenge','sec-ki'];
+  'sec-wettbewerb','sec-techniken','sec-uebergaenge','sec-ki',
+  'sec-faqs','sec-tabu'];
+// Phase 08.5: expose profile daten for tabu loading in profile_editor.js
+window.PROFILE_DATEN = {{ daten | tojson | safe }};
 
 /* ── Utilities ─────────────────────────────────────────────────────── */
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1402,6 +1472,9 @@ document.querySelectorAll('.g-sidebar a[href]').forEach(function(a) {
 // Mark clean after successful save (form submit)
 document.getElementById('editorForm').addEventListener('submit', function() { _isDirty = false; });
 </script>
+
+<!-- Phase 08.5: FAQ CRUD + Tabu-Begriffe -->
+<script src="{{ url_for('static', filename='profile_editor.js') }}"></script>
 
 <div class="unsaved-overlay" id="unsaved-overlay">
   <div class="unsaved-box">
