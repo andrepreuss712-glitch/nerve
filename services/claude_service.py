@@ -461,9 +461,16 @@ def _build_coaching_prompt() -> str:
 
 
 def _parse_json(raw: str) -> dict:
+    if not raw:
+        return {}
     start = raw.find('{')
     end   = raw.rfind('}') + 1
-    return json.loads(raw[start:end])
+    if start == -1 or end == 0 or start >= end:
+        return {}
+    try:
+        return json.loads(raw[start:end])
+    except json.JSONDecodeError:
+        return {}
 
 
 # ── Phase-Classifier (Phase 04.8 P02, D-01) ──────────────────────────────────
