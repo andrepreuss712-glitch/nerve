@@ -292,13 +292,15 @@ def register_audio_handlers(sio):
 
         # ── Phase 08 D-14: PreCall-Anrede-Override in ls.state persistieren ───
         # Whitelist {'Du', 'Sie'} schuetzt vor Prompt-Injection (T-08-05-01).
-        # Ungueltige Werte oder None → Key wird NICHT gesetzt,
-        # build_profile_context faellt dann auf Profile-Default oder 'Sie' zurueck.
+        # CR-02: Raw-Input wird zuerst via strip().title() normalisiert, damit
+        # 'du', ' Du', 'DU' als 'Du' erkannt werden. Ungueltige Werte bleiben
+        # rejected — build_profile_context faellt auf Profile-Default oder 'Sie'.
         anrede_raw = (data or {}).get('anrede') if isinstance(data, dict) else None
-        if anrede_raw in ('Du', 'Sie'):
+        anrede_norm = anrede_raw.strip().title() if isinstance(anrede_raw, str) else None
+        if anrede_norm in ('Du', 'Sie'):
             with ls.state_lock:
-                ls.state['session_anrede'] = anrede_raw
-            print(f"[Phase08] session_anrede={anrede_raw} set from PreCall")
+                ls.state['session_anrede'] = anrede_norm
+            print(f"[Phase08] session_anrede={anrede_norm} set from PreCall (raw={anrede_raw!r})")
 
         if precall_briefing and isinstance(precall_briefing, str):
             if len(precall_briefing) > 2000:

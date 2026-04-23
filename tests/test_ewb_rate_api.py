@@ -242,24 +242,79 @@ def _cleanup_session_anrede():
         ls.state.pop('session_anrede', None)
 
 
-def test_anrede_whitelist_du():
-    """Whitelist akzeptiert 'Du'."""
+def _apply_anrede_whitelist(anrede_raw):
+    """Mirror production logic from services/deepgram_service.py (CR-02)."""
     import services.live_session as ls
-    # Simulation: session-start mit anrede='Du'
-    anrede_raw = 'Du'
-    if anrede_raw in ('Du', 'Sie'):
+    anrede_norm = anrede_raw.strip().title() if isinstance(anrede_raw, str) else None
+    if anrede_norm in ('Du', 'Sie'):
         with ls.state_lock:
-            ls.state['session_anrede'] = anrede_raw
+            ls.state['session_anrede'] = anrede_norm
+        return anrede_norm
+    return None
+
+
+def test_anrede_whitelist_du():
+    """Whitelist akzeptiert 'Du' exakt."""
+    import services.live_session as ls
+    with ls.state_lock:
+        ls.state.pop('session_anrede', None)
+    _apply_anrede_whitelist('Du')
     assert ls.state.get('session_anrede') == 'Du'
+
+
+def test_anrede_whitelist_accepts_lowercase():
+    """CR-02: 'du' wird als 'Du' normalisiert und akzeptiert."""
+    import services.live_session as ls
+    with ls.state_lock:
+        ls.state.pop('session_anrede', None)
+    _apply_anrede_whitelist('du')
+    assert ls.state.get('session_anrede') == 'Du'
+
+
+def test_anrede_whitelist_accepts_whitespace():
+    """CR-02: ' Du' (mit Whitespace) wird normalisiert und akzeptiert."""
+    import services.live_session as ls
+    with ls.state_lock:
+        ls.state.pop('session_anrede', None)
+    _apply_anrede_whitelist(' Du ')
+    assert ls.state.get('session_anrede') == 'Du'
+
+
+def test_anrede_whitelist_accepts_uppercase():
+    """CR-02: 'DU' wird als 'Du' normalisiert und akzeptiert."""
+    import services.live_session as ls
+    with ls.state_lock:
+        ls.state.pop('session_anrede', None)
+    _apply_anrede_whitelist('DU')
+    assert ls.state.get('session_anrede') == 'Du'
+
+
+def test_anrede_whitelist_accepts_sie_lowercase():
+    """CR-02: 'sie' wird als 'Sie' normalisiert und akzeptiert."""
+    import services.live_session as ls
+    with ls.state_lock:
+        ls.state.pop('session_anrede', None)
+    _apply_anrede_whitelist('sie')
+    assert ls.state.get('session_anrede') == 'Sie'
 
 
 def test_anrede_whitelist_rejects_invalid():
     """'Hallo; drop table' oder anderes → wird NICHT in ls.state geschrieben."""
     import services.live_session as ls
-    anrede_raw = 'Hallo; drop table'  # attempt prompt injection
-    if anrede_raw in ('Du', 'Sie'):
-        with ls.state_lock:
-            ls.state['session_anrede'] = anrede_raw
+    with ls.state_lock:
+        ls.state.pop('session_anrede', None)
+    _apply_anrede_whitelist('Hallo; drop table')  # attempt prompt injection
+    assert ls.state.get('session_anrede') is None
+
+
+def test_anrede_whitelist_rejects_partial_match():
+    """CR-02: 'Duo' oder 'Sieb' fallen trotz Normalisierung raus."""
+    import services.live_session as ls
+    with ls.state_lock:
+        ls.state.pop('session_anrede', None)
+    _apply_anrede_whitelist('Duo')
+    assert ls.state.get('session_anrede') is None
+    _apply_anrede_whitelist('sieb')
     assert ls.state.get('session_anrede') is None
 
 
