@@ -622,10 +622,15 @@
         </div>
         <div class="frow frow-2">
           <div class="fg">
-            <label class="fl">Ansprache <i class="tip-icon" data-tip="Duzt oder siezt du deine Kunden?">?</i></label>
+            <label class="fl">Ansprache (Vorauswahl)
+              <span class="fl-hint" title="Dies ist nur die Vorauswahl für neue Anrufe. Die endgültige Wahl erfolgt beim Start des Gesprächs im Skript-Auswahl-Schritt."> (i)</span>
+            </label>
             <div class="radio-row">
               <label><input type="radio" name="ki_ansprache" value="Du" id="ki_du"> Du</label>
               <label><input type="radio" name="ki_ansprache" value="Sie" id="ki_sie"> Sie</label>
+            </div>
+            <div class="fl-desc" style="font-size:12px;color:var(--page-text-muted,#888);margin-top:4px;">
+              Wird beim Start jedes Anrufs vorausgewählt. Sie können die Anrede pro Gespräch im Skript-Auswahl-Schritt ändern.
             </div>
           </div>
           <div class="fg">
