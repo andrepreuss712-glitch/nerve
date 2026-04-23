@@ -796,6 +796,15 @@ GESPRÄCHSREGELN:
 
 
 def generate_response(conversation_history: list, system_prompt: str) -> str:
+    # Phase 08.5 v2-modular: resolve prompt version for FT traceability.
+    # system_prompt is pre-built by caller (build_customer_prompt/build_sekretaerin_prompt).
+    # We detect mode from the system prompt to pick the right module for logging.
+    # user_id defaults to 0 (D-07 Step F: per-user A/B routing deferred until user_id threading added).
+    _module = 'training_sek' if '[DURCHGESTELLT]' in system_prompt or 'SEKRETÄRIN' in system_prompt else 'training_kunde'
+    _version = resolve_prompt_version(_module, 0)
+    # Load template to confirm the version that would be served (for FT tagging parity)
+    _load_training_prompt_template(_module, _version)
+
     messages = []
     for msg in conversation_history:
         role = "assistant" if msg['speaker'] == 'kunde' else "user"
@@ -814,6 +823,16 @@ def generate_response(conversation_history: list, system_prompt: str) -> str:
     # Strip any markdown formatting that slipped through
     text = re.sub(r'\*\*[A-ZÄÖÜ]+:?\*\*\s*', '', text)
     text = text.replace('**', '').replace('*', '')
+
+    # Log FT event with prompt_version tag
+    try:
+        log_pipeline_event('training', _module, {
+            'prompt_version': _version,
+            'model': 'haiku-4-5',
+        })
+    except Exception as _e:
+        print(f"[Training] log_pipeline_event skipped: {_e}")
+
     return text
 
 
@@ -829,6 +848,16 @@ def generate_response_with_mood(
     Used for personality-driven training (Phase 04.9). The original generate_response()
     remains for sekretaerin mode which does not need mood tracking.
     """
+    # Phase 08.5 v2-modular: resolve prompt versions for FT traceability.
+    # system_prompt is pre-built by caller (build_personality_prompt).
+    # We resolve both training_kunde + training_stimmung versions for FT tagging.
+    # user_id defaults to 0 (D-07 Step F: per-user A/B routing deferred until user_id threading added).
+    _kunde_version = resolve_prompt_version('training_kunde', 0)
+    _stimmung_version = resolve_prompt_version('training_stimmung', 0)
+    # Load templates to confirm versions served (for FT tagging parity)
+    _load_training_prompt_template('training_kunde', _kunde_version)
+    _load_training_prompt_template('training_stimmung', _stimmung_version)
+
     messages = []
     for msg in conversation_history:
         role = "assistant" if msg['speaker'] == 'kunde' else "user"
@@ -867,6 +896,15 @@ def generate_response_with_mood(
         }
         # Clamp mood to valid range
         result['neue_stimmung'] = max(-5, min(5, result['neue_stimmung']))
+        # Log FT event with prompt_version tags
+        try:
+            log_pipeline_event('training', 'training_stimmung', {
+                'prompt_version': _stimmung_version,
+                'kunde_version': _kunde_version,
+                'model': 'haiku-4-5',
+            })
+        except Exception as _e:
+            print(f"[Training] log_pipeline_event mood skipped: {_e}")
         return result
     except (json.JSONDecodeError, ValueError, TypeError) as e:
         print(f"[Training] Mood JSON parse error: {e}, falling back to plain text")
@@ -1061,6 +1099,12 @@ def generate_scoring(conversation_history: list, profile_data: dict,
                      sprache: str = 'de', modus: str = 'guided',
                      hilfe_count: int = 0,
                      stimmung_history: list = None) -> dict:
+    # Phase 08.5 v2-modular: resolve prompt version for FT traceability.
+    # user_id defaults to 0 (D-07 Step F: per-user A/B routing deferred until user_id threading added).
+    _scoring_version = resolve_prompt_version('training_scoring', 0)
+    # Load template — if a non-placeholder row exists in DB, it will be used as system preamble;
+    # otherwise the inline f-string prompt below serves as the content (fallback retained).
+    _scoring_preamble = _load_training_prompt_template('training_scoring', _scoring_version)
     lang      = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
     gespraech = "\n".join(
         f"[{'Berater' if m['speaker'] == 'berater' else m.get('rolle', 'Kunde')}] {m['text']}"
@@ -1175,6 +1219,15 @@ Antworte NUR als valides JSON (keine Markdown-Code-Fences, kein Text davor oder 
     gesamt = result.get('gesamt_score', 0)
     bonus  = max(0, gesamt - 50)  # bonus for scores above 50
     result['punkte'] = 10 + bonus  # 10 base points + score bonus
+
+    # Log FT event with prompt_version tag
+    try:
+        log_pipeline_event('training', 'training_scoring', {
+            'prompt_version': _scoring_version,
+            'model': 'sonnet-4-6',
+        })
+    except Exception as _e:
+        print(f"[Training] log_pipeline_event scoring skipped: {_e}")
 
     return result
 
