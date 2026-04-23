@@ -652,11 +652,17 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     # v1-legacy als sicherer Default), KEIN silent-Fallback auf _build_system_prompt
     # weil das inkonsistente A/B-Zuordnung verursachen wuerde.
     import services.live_session as ls
-    _user_id = (ls.state.get('user_id') if hasattr(ls, 'state') else None) or 0
+    # CR-01: reads under state_lock — deepgram_service writes session_anrede/user_id under same lock
+    if hasattr(ls, 'state') and hasattr(ls, 'state_lock'):
+        with ls.state_lock:
+            _user_id = ls.state.get('user_id') or 0
+            _anrede = ls.state.get('session_anrede') or 'Sie'
+    else:
+        _user_id = 0
+        _anrede = 'Sie'
     if not _user_id:
         print("[Phase08] WARN: ls.state['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
     _ewb_version = resolve_prompt_version('ewb', _user_id)
-    _anrede = (ls.state.get('session_anrede') if hasattr(ls, 'state') else None) or 'Sie'
     _system_prompt = build_ewb_prompt(
         profile_data=None,
         anrede=_anrede,
@@ -715,11 +721,17 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     # Streaming-Variante nutzt dieselbe Pipeline wie analysiere_mit_claude.
     # Siehe dortigen Kommentar fuer W-6-user_id-Wiring + Fallback-Logik.
     import services.live_session as ls
-    _user_id = (ls.state.get('user_id') if hasattr(ls, 'state') else None) or 0
+    # CR-01: reads under state_lock (streaming variant — same pattern as analysiere_mit_claude)
+    if hasattr(ls, 'state') and hasattr(ls, 'state_lock'):
+        with ls.state_lock:
+            _user_id = ls.state.get('user_id') or 0
+            _anrede = ls.state.get('session_anrede') or 'Sie'
+    else:
+        _user_id = 0
+        _anrede = 'Sie'
     if not _user_id:
         print("[Phase08] WARN: ls.state['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
     _ewb_version = resolve_prompt_version('ewb', _user_id)
-    _anrede = (ls.state.get('session_anrede') if hasattr(ls, 'state') else None) or 'Sie'
     _system_prompt = build_ewb_prompt(
         profile_data=None,
         anrede=_anrede,

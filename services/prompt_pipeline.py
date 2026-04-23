@@ -192,12 +192,21 @@ def build_profile_context(user_id: int, mode: str = 'cold_call') -> str:
 
 
 def _resolve_anrede(ls: Any, ki: dict) -> str:
-    """Anrede priority: session_anrede > ki.ansprache > 'Sie' (D-14 + D-15)."""
+    """Anrede priority: session_anrede > ki.ansprache > 'Sie' (D-14 + D-15).
+
+    Reads `ls.state['session_anrede']` under `ls.state_lock` — deepgram_service
+    writes it under the same lock (CR-01 thread-safety).
+    """
     try:
         session_anrede = None
         state = getattr(ls, 'state', None)
+        lock = getattr(ls, 'state_lock', None)
         if isinstance(state, dict):
-            session_anrede = state.get('session_anrede')
+            if lock is not None:
+                with lock:
+                    session_anrede = state.get('session_anrede')
+            else:
+                session_anrede = state.get('session_anrede')
         if session_anrede:
             return session_anrede
     except Exception:
