@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, g, session as flask_session, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, g, session as flask_session
 from routes.auth import login_required
 from database.db import get_session
 from database.models import User, Organisation
