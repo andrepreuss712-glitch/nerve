@@ -128,6 +128,35 @@
     });
   }
 
+  // ── Phase 08.5 Nachbesserung (260424-fo0): 13 Default-Paare (mirror services/profile_migration.py) ──
+  var TABU_DEFAULT_PAIRS = [
+    { begriff: 'Kosten',      alternative: 'Investition' },
+    { begriff: 'Problem',     alternative: 'Herausforderung' },
+    { begriff: 'günstig',     alternative: 'effizient' },
+    { begriff: 'billig',      alternative: 'preis-attraktiv' },
+    { begriff: 'Risiko',      alternative: 'Absicherung' },
+    { begriff: 'Schwäche',    alternative: 'Entwicklungspotenzial' },
+    { begriff: 'Nachteil',    alternative: 'Unterschied' },
+    { begriff: 'verkaufen',   alternative: 'helfen' },
+    { begriff: 'müssen',      alternative: 'können' },
+    { begriff: 'alt',         alternative: 'etabliert' },
+    { begriff: 'kompliziert', alternative: 'strukturiert' },
+    { begriff: 'verlieren',   alternative: 'absichern' },
+    { begriff: 'Konkurrenz',  alternative: 'Mitbewerber' },
+  ];
+
+  // Helper: case-insensitive lookup of a default Alternative by Begriff.
+  function findDefaultAlternative(begriff) {
+    if (!begriff) return '';
+    var needle = begriff.trim().toLowerCase();
+    for (var i = 0; i < TABU_DEFAULT_PAIRS.length; i++) {
+      if (TABU_DEFAULT_PAIRS[i].begriff.toLowerCase() === needle) {
+        return TABU_DEFAULT_PAIRS[i].alternative;
+      }
+    }
+    return '';
+  }
+
   // ── Tabu-Begriffe 2-column UI ─────────────────────────────────────────────
   // Phase 08.5 Korrektur 2: Tag-chip-input replaced by 2-column rows
   // (Begriff + Alternative + Delete). Save button disabled while any row
@@ -256,6 +285,59 @@
     tabuHidden.value = JSON.stringify(pairs);
   }
 
+  // ── mergeDefaultPairs: dedupe-merge 13 defaults into existing in-memory rows ──
+  // Stats: added (new row), completed (empty alt filled with default), already (begriff matched and alt already had user value)
+  function mergeDefaultPairs() {
+    if (!tabuRowsContainer) return;
+    var rows = tabuRowsContainer.querySelectorAll('.tabu-row');
+
+    // Build index of existing begriffe (case-insensitive) → row element
+    var existing = {};
+    rows.forEach(function (row) {
+      var bEl = row.querySelector('.tabu-begriff');
+      if (!bEl) return;
+      var key = (bEl.value || '').trim().toLowerCase();
+      if (key) existing[key] = row;
+    });
+
+    var added = 0, completed = 0, already = 0;
+
+    TABU_DEFAULT_PAIRS.forEach(function (pair) {
+      var key = pair.begriff.toLowerCase();
+      var row = existing[key];
+      if (row) {
+        var altEl = row.querySelector('.tabu-alternative');
+        if (!altEl) return;
+        var currentAlt = (altEl.value || '').trim();
+        if (!currentAlt && pair.alternative) {
+          altEl.value = pair.alternative;
+          completed++;
+        } else {
+          already++;
+        }
+      } else {
+        renderTabuRow({ begriff: pair.begriff, alternative: pair.alternative });
+        added++;
+      }
+    });
+
+    syncTabuHidden();
+    validateTabuRows();
+
+    // Feedback message
+    var fb = document.getElementById('tabu-seed-feedback');
+    if (fb) {
+      var parts = [];
+      if (added)     parts.push(added + ' hinzugefügt');
+      if (completed) parts.push(completed + ' ergänzt');
+      if (already)   parts.push(already + ' schon vollständig');
+      fb.textContent = parts.length ? parts.join(', ') : '0 Änderungen';
+      // Clear after 6s
+      if (fb._fbTimer) clearTimeout(fb._fbTimer);
+      fb._fbTimer = setTimeout(function () { fb.textContent = ''; }, 6000);
+    }
+  }
+
   // ── saveTabuToServer: POST list-of-objects to API ─────────────────────────
   function saveTabuToServer() {
     var pid = getProfileId();
@@ -318,6 +400,14 @@
       // but if user adds without filling → will be ignored on save)
       validateTabuRows();
       syncTabuHidden();
+    });
+  }
+
+  // ── tabu-seed-btn click ───────────────────────────────────────────────────
+  var tabuSeedBtn = document.getElementById('tabu-seed-btn');
+  if (tabuSeedBtn) {
+    tabuSeedBtn.addEventListener('click', function () {
+      mergeDefaultPairs();
     });
   }
 
