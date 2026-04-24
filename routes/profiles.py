@@ -5,6 +5,7 @@ from database.db import get_session
 from database.models import Profile, User as UserModel, ProfileSkript, ProfileOpener
 from routes.auth import login_required
 from services.audit import log_action
+from services.profile_migration import migrate_tabu_begriffe
 
 profiles_bp = Blueprint('profiles', __name__, url_prefix='/profiles')
 
@@ -176,6 +177,8 @@ def bearbeiten(pid):
             daten = json.loads(p.daten) if p.daten else {}
         except Exception:
             daten = {}
+        # Phase 08.5 Korrektur 1: migrate tabu_begriffe to list-of-objects on editor load
+        daten = migrate_tabu_begriffe(daten)
         return render_template('profile_editor.html', profile=p, daten=daten)
     finally:
         db.close()
@@ -527,26 +530,31 @@ def api_faqs_delete(faq_id):
 @profiles_bp.route('/api/profile/<int:profile_id>/tabu', methods=['POST'])
 @login_required
 def api_tabu_update(profile_id):
+    """Accept list-of-objects {begriff, alternative}. Silently ignore incomplete entries.
+
+    Request:  {"tabu_begriffe": [{"begriff": "...", "alternative": "..."}, ...]}
+    Response: {"ok": True, "saved": N, "ignored": [...]}
+    """
     import json as _json
     data = request.get_json(silent=True) or {}
     begriffe = data.get('tabu_begriffe', [])
     if not isinstance(begriffe, list):
         return jsonify({'error': 'tabu_begriffe must be list'}), 400
-    # Sanitize: strip, dedupe, length/count limits
-    clean = []
-    seen = set()
-    for b in begriffe:
-        if not isinstance(b, str):
+
+    # Validate each entry: both fields must be non-empty strings
+    valid: list[dict] = []
+    ignored: list[dict] = []
+    for entry in begriffe[:_MAX_TABU_COUNT * 2]:  # guard against huge payloads
+        if not isinstance(entry, dict):
+            ignored.append(entry)
             continue
-        s = b.strip()
-        if not s or len(s) > _MAX_TABU_ITEM_LEN:
-            continue
-        low = s.lower()
-        if low in seen:
-            continue
-        seen.add(low)
-        clean.append(s)
-        if len(clean) >= _MAX_TABU_COUNT:
+        b = str(entry.get('begriff') or '').strip()
+        a = str(entry.get('alternative') or '').strip()
+        if b and a:
+            valid.append({'begriff': b, 'alternative': a})
+        else:
+            ignored.append(entry)
+        if len(valid) >= _MAX_TABU_COUNT:
             break
 
     p, db = _require_own_profile(profile_id)
@@ -559,11 +567,11 @@ def api_tabu_update(profile_id):
             pdata = {}
         if not isinstance(pdata, dict):
             pdata = {}
-        basis = pdata.get('basis') if isinstance(pdata.get('basis'), dict) else {}
-        basis['tabu_begriffe'] = clean
-        pdata['basis'] = basis
+        if not isinstance(pdata.get('basis'), dict):
+            pdata['basis'] = {}
+        pdata['basis']['tabu_begriffe'] = valid
         p.daten = _json.dumps(pdata, ensure_ascii=False)
         db.commit()
-        return jsonify({'ok': True, 'count': len(clean)})
+        return jsonify({'ok': True, 'saved': len(valid), 'ignored': ignored})
     finally:
         db.close()
