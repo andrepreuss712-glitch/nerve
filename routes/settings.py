@@ -155,7 +155,7 @@ def settings_theme():
 def settings_language():
     data = request.get_json(silent=True) or {}
     lang = data.get('language', 'de')
-    allowed = ['de', 'en', 'fr', 'es', 'it', 'pt', 'nl', 'pl', 'cs', 'tr']
+    allowed = ['de', 'en']
     if lang not in allowed:
         lang = 'de'
     db = get_session()
