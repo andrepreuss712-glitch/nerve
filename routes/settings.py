@@ -157,7 +157,7 @@ def settings_language():
     lang = data.get('language', 'de')
     allowed = ['de', 'en']
     if lang not in allowed:
-        lang = 'de'
+        return jsonify({'error': 'Ungültige Sprache'}), 400
     db = get_session()
     try:
         user = db.query(User).get(g.user.id)
