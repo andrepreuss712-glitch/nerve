@@ -165,9 +165,22 @@ def build_tabu_instruction(profile: dict) -> str:
         if not complete:
             return ''
 
+        pairs_joined = ', '.join(complete)
         return (
-            'WICHTIG: Bei folgenden Wörtern nutze bevorzugt die Alternative '
-            'anstelle des Tabu-Begriffs:\n' + ', '.join(complete)
+            f'TABU-ALTERNATIVEN \u2014 kontext-abh\u00e4ngig anwenden:\n\n'
+            f'Nutze bevorzugt die Alternative WENN es um UNSER Angebot geht\n'
+            f'(Preis, Feature, Vorteil):\n'
+            f'[{pairs_joined}]\n\n'
+            f'BEHALTE das Tabu-Wort BEWUSST wenn:\n'
+            f'- Es um Schaden/Verlust beim Kunden geht\n'
+            f'  (z.B. "Was kostet Sie ein verlorener Deal?")\n'
+            f'- Der Satz bewusst Problem-Awareness beim Kunden erzeugt\n'
+            f'- Das User-eigene Gegenargument das Tabu-Wort bereits bewusst einsetzt\n\n'
+            f'Default bei Unklarheit: Alternative nutzen.\n\n'
+            f'Respekt vor User-Gegenargumenten: Wenn das User-Profil-Gegenargument ein\n'
+            f'Tabu-Wort enth\u00e4lt, ist das meist bewusst gesetzt. Respektiere diese\n'
+            f'Formulierung. Paraphrasiere NUR wenn wirklich n\u00f6tig und \u00e4ndere NIE\n'
+            f'bewusst gesetzte Tabu-W\u00f6rter im User-Gegenargument.'
         )
     except Exception as e:
         print(f"[QA] build_tabu_instruction failed: {e}")
