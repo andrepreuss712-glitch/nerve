@@ -187,23 +187,97 @@ def build_tabu_instruction(profile: dict) -> str:
         return ''
 
 
-# ── Public: apply_tabu_safety_net ────────────────────────────────────────────
-def apply_tabu_safety_net(text: str, tabu_pairs: list) -> str:
-    """Post-generation defensive substitution. Regex word-boundary replace.
+# ── Public: build_protected_words ────────────────────────────────────────────
+def build_protected_words(profile: dict, tabu_begriffe: list) -> set:
+    """Returns lowercased set of Tabu-Begriffe that appear in any
+    User-Gegenargument within the profile. These words were deliberately
+    placed by the user (e.g. "Was kostet Sie ein verlorener Deal?") and
+    MUST NOT be substituted by the safety-net.
 
-    For each complete pair (both fields non-empty):
-      replaces all word-boundary occurrences of Begriff with Alternative.
-    Case-insensitive. Returns modified text.
+    MUST NOT raise — returns empty set on any error.
+
+    Profile shape: reads profile.daten.einwaende[]. For each einwand,
+    extracts text from 'gegenargument' / 'gegenargument_1' / 'text'
+    (mirrors services.einwand_keyword_matcher._profile_gegenargument
+    fallback chain).
+    """
+    protected: set = set()
+    try:
+        if not tabu_begriffe:
+            return protected
+        daten = profile.get('daten') if isinstance(profile, dict) else None
+        if not isinstance(daten, dict):
+            daten = profile if isinstance(profile, dict) else {}
+        einwaende = daten.get('einwaende') or []
+        if not isinstance(einwaende, list):
+            return protected
+
+        # Collect all user-counter-argument texts
+        texts_lower: list[str] = []
+        for e in einwaende:
+            if not isinstance(e, dict):
+                continue
+            for field in ('gegenargument', 'gegenargument_1', 'text'):
+                v = e.get(field)
+                if isinstance(v, str) and v.strip():
+                    texts_lower.append(v.lower())
+
+        if not texts_lower:
+            return protected
+
+        for p in tabu_begriffe:
+            if isinstance(p, dict):
+                b = str(p.get('begriff') or '').strip()
+            elif isinstance(p, str):
+                b = p.strip()
+            else:
+                continue
+            if not b:
+                continue
+            b_low = b.lower()
+            # Stem-prefix match: check if any word in the Gegenargument starts
+            # with the Begriff (handles German inflections: "Kosten" matches
+            # "kostet", "kosten", "kostete" etc.).
+            # Use the full Begriff as prefix anchor with word-boundary start.
+            stem = b_low[:-1] if len(b_low) > 3 else b_low
+            pattern = re.compile(rf'\b{re.escape(stem)}')
+            for t in texts_lower:
+                if pattern.search(t):
+                    protected.add(b_low)
+                    break
+    except Exception as e:
+        print(f"[QA] build_protected_words failed: {e}")
+    return protected
+
+
+# ── Public: apply_tabu_safety_net ────────────────────────────────────────────
+def apply_tabu_safety_net(text: str, tabu_pairs: list,
+                          protected_words: set | None = None) -> str:
+    """Post-generation defensive substitution with protected-words gate.
+
+    For each complete pair (begriff, alternative):
+      - if begriff.lower() is in protected_words: skip (user deliberately
+        placed this word in a Gegenargument — respect it)
+      - else: replace all word-boundary occurrences of Begriff with
+        Alternative (case-insensitive) — existing behavior.
+
+    Backward compatible: protected_words defaults to None -> behaves as before.
     """
     if not tabu_pairs or not text:
         return text
+    pw = protected_words or set()
     for p in tabu_pairs:
         if not isinstance(p, dict):
             continue
         b = str(p.get('begriff') or '').strip()
         a = str(p.get('alternative') or '').strip()
-        if b and a:
-            text = re.sub(rf'\b{re.escape(b)}\b', a, text, flags=re.IGNORECASE)
+        if not (b and a):
+            continue
+        if b.lower() in pw:
+            # User deliberately placed this Tabu-Wort in a Gegenargument
+            # -> do not substitute.
+            continue
+        text = re.sub(rf'\b{re.escape(b)}\b', a, text, flags=re.IGNORECASE)
     return text
 
 
@@ -361,7 +435,8 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         else:
             # High-confidence: apply safety-net substitution
             if text:
-                text = apply_tabu_safety_net(text, tabu_pairs)
+                protected = build_protected_words(profile_data, tabu_pairs)
+                text = apply_tabu_safety_net(text, tabu_pairs, protected)
             if not text:
                 text = _FALLBACK_RUECKFRAGE
 
