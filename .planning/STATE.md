@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Phase complete — ready for verification
-stopped_at: Completed 08.5-06-PLAN.md
-last_updated: "2026-04-24T08:29:28.652Z"
-last_activity: 2026-04-24 - Completed quick task 260424-ekk: Phase 08.5 Post-Execute-Refinement (Tabu Alternativen + Profil-Editor Sektion 15 + Low-Confidence Rueckfrage)
+stopped_at: Completed 08.6-01-PLAN.md
+last_updated: "2026-04-24T17:38:42Z"
+last_activity: 2026-04-24 - Completed 08.6-01: Block A Quick-Wins (8 launch-blocker fixes — LB-5/6/12/13, CORS, imports, Theme-400, Language-Restrict)
 progress:
   total_phases: 41
   completed_phases: 29
   total_plans: 148
-  completed_plans: 137
+  completed_plans: 138
   percent: 93
 ---
 
@@ -167,6 +167,10 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.6-01]: settings_theme silent coercion replaced with HTTP 400 — invalid enum values rejected, not coerced
+- [Phase 08.6-01]: settings_language allowed list shrunk to ['de', 'en'] — fr/es/it/pt/nl/pl/cs/tr have no app content
+- [Phase 08.6-01]: ROI KPI card hidden via inline style (not deleted) — preserves JS reference to id=perf-roi for future implementation
+- [Phase 08.6-01]: LB-12 column names fixed without DB migration — real columns were always einwaende_gesamt/einwaende_behandelt, only the admin view references were wrong
 - Roadmap: LEGAL-04 placed in Phase 3 (infrastructure config, not legal document)
 - Roadmap: Phase 1 (BIZ) and Phase 2 (PROD) run in parallel — both are independent tracks
 - Roadmap: LEGAL-01 through LEGAL-03 grouped with PAY in Phase 4 (both are hard launch blockers, activated together)
@@ -391,6 +395,7 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 08.6 inserted after Phase 08.5: Stabilisierung Block A Quick-Wins (URGENT) — 8 triviale Launch-Blocker-Fixes in < 30 min: LB-5/LB-6 State-Writer, LB-12 Ghost-Columns, LB-13 ROI-Card, CORS-Domain, unused Imports, Theme-400, Language-Restrict. Quelle: MASTER-AUDIT v2 Block A.
 - Phase 08.5 inserted after Phase 08: Universal Response Loop — Launch-kritische Erweiterung des Live-Loops. Claude klassifiziert jede Kundenäußerung in 4 Kategorien (einwand_known/einwand_unknown/frage/smalltalk-none). Unbekannte Einwände + Fragen aus Profil-Daten beantwortet, nie halluziniert. FAQ-Feld + Exclusion-Liste, Anrede-UX-Umzug, Training-Pipeline v2-modular. Löst POLISH-56. Aufwand 30-36h. (INSERTED)
 - Phase 08 added: EWB-Qualität & Profil-Tiefe (Launch-kritisch) — 6 neue Profil-Felder, POLISH-55 Behandelt-Semantik, A/B-Prompt-Framework, Quality-Gates. Vorbereitet Phase 08.5 (Q&A) + 07.5 (EWB-Feed-Redesign).
 - Phase 03.1 inserted after Phase 03: Frontend Redesign (INSERTED) — app-page redesign before payments
