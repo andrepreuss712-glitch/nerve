@@ -10,7 +10,7 @@ DEEPGRAM_HOST     = os.environ.get('DEEPGRAM_HOST', 'api.eu.deepgram.com')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
 SECRET_KEY        = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
-CORS_ORIGIN       = os.environ.get('CORS_ORIGIN', '*' if os.environ.get('FLASK_DEBUG') else 'https://nerve.app')
+CORS_ORIGIN       = os.environ.get('CORS_ORIGIN', '*' if os.environ.get('FLASK_DEBUG') else 'https://getnerve.app')
 
 # Stripe
 STRIPE_SECRET_KEY      = os.environ.get('STRIPE_SECRET_KEY', '')
