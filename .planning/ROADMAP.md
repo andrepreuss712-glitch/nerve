@@ -653,6 +653,28 @@ Plans:
 - [x] 08.5-05-PLAN.md — Wave 3 Training-Pipeline v2-modular: 4 training modules (kunde/sek/scoring/stimmung) routed via prompt_versions + prompt_version-Tag logging
 - [x] 08.5-06-PLAN.md — Wave 3 FAQ-UI + Tabu-Begriffe: profile editor FAQ CRUD + tabu tag input, 5 org-isolated API endpoints
 
+### Phase 08.6: Stabilisierung Block A Quick-Wins (INSERTED)
+
+**Goal:** 8 triviale Launch-Blocker und Low-Fixes in < 30 min eliminieren — LB-5/LB-6 State-Writer, LB-12 Ghost-Columns, LB-13 ROI-Card, CORS-Domain, unused Imports, Theme-400, Language-Restrict.
+**Depends on:** Phase 08.5
+**Plans:** 1/1 ✓ Complete
+**Completed:** 2026-04-24
+
+**Items:**
+- LB-5 + LB-6: ls.state['org_id'] + ls.state['mode'] Writer in deepgram_service.py:~351
+- LB-12: Column-Rename einwaende_total→einwaende_gesamt + einwaende_ok→einwaende_behandelt in admin_views.py:96-97 + analytics.html:24-25
+- LB-13: ROI-Card in dashboard.html verstecken (dashboard.py:367-368 Kommentar stehen lassen)
+- config.py CORS_ORIGIN: 'https://nerve.app' → 'https://getnerve.app'
+- routes/settings.py unused imports raus: redirect, url_for
+- routes/organisations.py unused import raus: BillingEvent
+- routes/settings.py settings_theme: Silent-Overwrite → 400
+- routes/settings.py settings_language: allowed auf ['de','en'] reduzieren
+
+**Reasoning:**
+> MASTER-AUDIT v2 Block A — unverzüglich umsetzbar, kein Risiko. Löst LB-5/LB-6/LB-12/LB-13 (4 Launch-Blocker) + 4 LOW/MEDIUM. Jeder Task einzelner atomarer Commit, dann git push.
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
