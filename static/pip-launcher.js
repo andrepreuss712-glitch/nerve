@@ -1513,7 +1513,7 @@
     });
 
     // ── Phase 08.5: Universal Response Loop events ──────────────────────────
-    // qa_slot1: full Haiku-generated response for Slot 1 (unknown objection / FAQ)
+    // qa_slot1: full Haiku-generated response for Slot 1 (unknown objection / FAQ / Rückfrage)
     state.socket.on('qa_slot1', function (d) {
       try {
         var txt = (d && d.text) ? String(d.text) : '';
@@ -1522,11 +1522,17 @@
         if (body) {
           // textContent only — XSS-safe (T-08.5-03-03)
           body.textContent = txt;
+          // Rückfrage visual differentiation (Phase 08.5 Korrektur 3)
+          if (txt.indexOf('Frag nach:') === 0) {
+            body.classList.add('pip-rueckfrage');
+          } else {
+            body.classList.remove('pip-rueckfrage');
+          }
           body.classList.remove('pip-streaming');
           var container = pipEl('pip-slot-1');
           if (container) container.classList.remove('pip-slot-streaming');
           var label = pipEl('pip-slot-label-1');
-          if (label) label.textContent = 'ANTWORT';
+          if (label) label.textContent = txt.indexOf('Frag nach:') === 0 ? 'RÜCKFRAGE' : 'ANTWORT';
           console.log('[QA] qa_slot1 rendered len=' + txt.length);
         }
       } catch (e) {
@@ -1534,22 +1540,26 @@
       }
     });
 
-    // qa_soft_hint: low-confidence / tabu-filtered hint (D-04 LOCKED text)
+    // qa_soft_hint: Phase 08.5 Korrektur 3 — Soft-Hint removed.
+    // Low-confidence now always produces a Rückfrage from the backend.
+    // If legacy event still emitted, render as normal answer (never silent).
     state.socket.on('qa_soft_hint', function (d) {
       try {
-        var hintText = (d && d.text) ? String(d.text) : 'Neuer Einwand \u2014 noch kein Vorschlag';
+        var txt = (d && d.text) ? String(d.text) : '';
+        if (!txt) return; // no text → ignore silently (backend now always sends text)
         var body = pipEl('pip-slot-body-1');
         if (body) {
-          // createElement + textContent — XSS-safe (T-08.5-03-03)
-          body.textContent = '';
-          var span = document.createElement('span');
-          span.className = 'slot-soft-hint';
-          span.textContent = hintText;
-          body.appendChild(span);
+          body.textContent = txt;
+          // Add pip-rueckfrage class for visual differentiation if text is a Rückfrage
+          if (txt.indexOf('Frag nach:') === 0) {
+            body.classList.add('pip-rueckfrage');
+          } else {
+            body.classList.remove('pip-rueckfrage');
+          }
           body.classList.remove('pip-streaming');
           var container = pipEl('pip-slot-1');
           if (container) container.classList.remove('pip-slot-streaming');
-          console.log('[QA] qa_soft_hint rendered reason=' + (d && d.reason));
+          console.log('[QA] qa_soft_hint (Rückfrage) rendered len=' + txt.length);
         }
       } catch (e) {
         console.warn('[QA] qa_soft_hint handler error', e);
