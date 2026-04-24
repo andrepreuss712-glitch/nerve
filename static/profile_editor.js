@@ -238,6 +238,26 @@
     alternativeInput.maxLength = 80;
     alternativeInput.style.cssText = 'flex:1;min-width:0;';
 
+    // Fix B: show 'Vorschlag: X' placeholder when Begriff matches a default and Alternative is empty
+    function applyPlaceholderSuggestion() {
+      var currentBegriff = begriffInput.value || '';
+      var currentAlt = alternativeInput.value || '';
+      if (currentAlt.trim()) {
+        // user has own value — keep generic placeholder (not visible anyway)
+        alternativeInput.placeholder = 'Alternative (stattdessen nutzen)';
+        return;
+      }
+      var suggestion = findDefaultAlternative(currentBegriff);
+      if (suggestion) {
+        alternativeInput.placeholder = 'Vorschlag: ' + suggestion;
+      } else {
+        alternativeInput.placeholder = 'Alternative (stattdessen nutzen)';
+      }
+    }
+
+    // Apply placeholder immediately on render
+    applyPlaceholderSuggestion();
+
     var delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'tabu-del-btn';
@@ -254,9 +274,10 @@
     hintSpan.hidden = true;
     hintSpan.style.cssText = 'font-size:11px;color:#e05c5c;display:block;margin-top:2px;';
 
-    // Wire validation on input
+    // Wire validation on input (also re-evaluate placeholder suggestion)
     [begriffInput, alternativeInput].forEach(function (el) {
       el.addEventListener('input', function () {
+        applyPlaceholderSuggestion();
         validateTabuRows();
         syncTabuHidden();
       });
