@@ -188,6 +188,15 @@ def build_profile_context(user_id: int, mode: str = 'cold_call') -> str:
         f'Wechsle NIEMALS innerhalb einer Antwort zwischen Du und Sie.'
     )
 
+    # ── Phase 08.5 Korrektur 1: Tabu-Instruction-Block ─────────────────────
+    try:
+        from services.qa_pipeline import build_tabu_instruction
+        tabu_block = build_tabu_instruction(pdata)
+        if tabu_block:
+            lines.append(f'\n{tabu_block}')
+    except Exception as _e:
+        print(f"[Pipeline] build_tabu_instruction skipped: {_e}")
+
     return '\n'.join(lines)
 
 

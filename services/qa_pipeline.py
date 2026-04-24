@@ -9,27 +9,40 @@ Exports:
       Kategorien: einwand_unknown | frage | smalltalk_none | einwand_known
       MUST NOT raise — fail-open zu smalltalk_none/0.0.
 
-  - generate_qa_response(utterance, category, profile_data, anrede, version, user_id) -> str
+  - generate_qa_response(utterance, category, profile_data, anrede, confidence,
+                         version, user_id) -> str
       Haiku-Response fuer einwand_unknown oder frage.
-      MUST NOT raise — returns "" on error.
+      confidence >= 0.80  → direct answer (Tabu-Alternatives applied)
+      confidence <  0.80  → Rückfrage-branch, prefix "Frag nach:"
+      NEVER silent, NEVER halluzinated. MUST NOT raise — fallback Rückfrage.
 
   - match_faq(utterance, faqs, threshold=0.75) -> Optional[dict]
       Semantic FAQ match via sentence-transformers (local, DSGVO-safe).
       MUST NOT raise — returns None on error.
 
+  - build_tabu_instruction(profile: dict) -> str
+      Returns system-prompt block for prompt_pipeline. Empty string if no complete pairs.
+
+  - apply_tabu_safety_net(text: str, tabu_pairs: list[dict]) -> str
+      Post-generation defensive substitution. Word-boundary regex replace.
+
   - apply_tabu_filter(text, tabu_begriffe) -> bool
-      Case-insensitive substring match. True = text contains forbidden term.
+      Legacy: Case-insensitive substring match. True = text contains forbidden term.
 
 Haiku-only constraint (CLAUDE.md). Thread-safety: stateless functions;
 embedding model lazy-init with threading.Lock.
 """
 from __future__ import annotations
+import re
 from typing import Optional
 import threading as _threading
 
 from services.prompt_pipeline import (
     build_profile_context, resolve_prompt_version, log_pipeline_event
 )
+
+# ── Confidence threshold (Korrektur 3) ───────────────────────────────────────
+CONFIDENCE_THRESHOLD = 0.80
 
 # ── Fallback prompts (used wenn prompt_versions lookup miss) ─────────────
 _FALLBACK_CLASSIFIER_PROMPT = (
@@ -57,6 +70,22 @@ _FALLBACK_QA_RESPONSE_PROMPT = (
     "- Niemals halluzinieren — wenn Daten fehlen, allgemein formulieren\n"
     "- Antworte NUR als Klartext (keine JSON-Wrapper)"
 )
+
+_SYSTEM_PROMPT_QA = """\
+Analysiere den Einwand. Entscheide:
+1. Wenn Einwand klar ist UND Profil-Daten passen → direkte Antwort aus Profil (mit Tabu-Alternativen).
+2. Wenn Einwand unklar ODER Profil-Daten dünn ODER Klassifikator unsicher → KEINE Antwort erfinden. Stattdessen eine offene Rückfrage vorschlagen die den Kunden zur Konkretisierung zwingt.
+   Format: 'Frag nach: <konkrete Rückfrage>'
+   Beispiele:
+   - 'Frag nach: Wie meinen Sie das genau?'
+   - 'Frag nach: Was müsste passieren damit das für Sie in Frage kommt?'
+   - 'Frag nach: Ist das ein Budget-Thema oder fehlt noch die Überzeugung?'
+3. NIEMALS stumm bleiben. NIEMALS halluzinierte konkrete Behauptungen über Produkt/Firma/Zahlen.
+
+{tabu_block}
+Anrede: {anrede}. Nutze konsequent {anrede}-Form. Max. 45 Wörter."""
+
+_FALLBACK_RUECKFRAGE = "Frag nach: Wie meinen Sie das genau?"
 
 # ── Embedding Model Lazy-Init (sentence-transformers, local, DSGVO-safe) ─
 _MODEL = None
@@ -106,7 +135,66 @@ def _load_qa_template(module: str, version: str) -> str:
     return ""
 
 
-# ── Public: classify_utterance ───────────────────────────────────────────
+# ── Public: build_tabu_instruction ───────────────────────────────────────────
+def build_tabu_instruction(profile: dict) -> str:
+    """Returns system-prompt block for prompt_pipeline. Empty string if no complete pairs.
+
+    Reads profile.daten.basis.tabu_begriffe (list-of-objects shape).
+    Filters to complete pairs only (both Begriff and Alternative non-empty).
+    Returns empty string if no complete pairs → no prompt bloat.
+    """
+    try:
+        daten = profile.get('daten') or {}
+        if not isinstance(daten, dict):
+            # profile_data may be the daten dict directly (caller dependent)
+            daten = profile
+        basis = (daten.get('basis') or {}) if isinstance(daten, dict) else {}
+        tabu = basis.get('tabu_begriffe') or []
+        if not isinstance(tabu, list) or not tabu:
+            return ''
+
+        complete = []
+        for p in tabu:
+            if not isinstance(p, dict):
+                continue
+            b = str(p.get('begriff') or '').strip()
+            a = str(p.get('alternative') or '').strip()
+            if b and a:
+                complete.append(f'{b} \u2192 {a}')
+
+        if not complete:
+            return ''
+
+        return (
+            'WICHTIG: Bei folgenden Wörtern nutze bevorzugt die Alternative '
+            'anstelle des Tabu-Begriffs:\n' + ', '.join(complete)
+        )
+    except Exception as e:
+        print(f"[QA] build_tabu_instruction failed: {e}")
+        return ''
+
+
+# ── Public: apply_tabu_safety_net ────────────────────────────────────────────
+def apply_tabu_safety_net(text: str, tabu_pairs: list) -> str:
+    """Post-generation defensive substitution. Regex word-boundary replace.
+
+    For each complete pair (both fields non-empty):
+      replaces all word-boundary occurrences of Begriff with Alternative.
+    Case-insensitive. Returns modified text.
+    """
+    if not tabu_pairs or not text:
+        return text
+    for p in tabu_pairs:
+        if not isinstance(p, dict):
+            continue
+        b = str(p.get('begriff') or '').strip()
+        a = str(p.get('alternative') or '').strip()
+        if b and a:
+            text = re.sub(rf'\b{re.escape(b)}\b', a, text, flags=re.IGNORECASE)
+    return text
+
+
+# ── Public: classify_utterance ───────────────────────────────────────────────
 def classify_utterance(text: str, kontext: str, user_id: int) -> dict:
     """Haiku-Call: Klassifiziert utterance in 4 Kategorien.
     Returns {"kategorie": str, "confidence": float, "einwand_zitat": str|None}.
@@ -185,25 +273,62 @@ def classify_utterance(text: str, kontext: str, user_id: int) -> dict:
         return fallback
 
 
-# ── Public: generate_qa_response ─────────────────────────────────────────
+# ── Public: generate_qa_response ─────────────────────────────────────────────
 def generate_qa_response(utterance: str, category: str, profile_data: dict,
-                         anrede: str, version: str, user_id: int) -> str:
-    """Haiku-Response fuer einwand_unknown oder frage. MUST NOT raise — returns "" on error."""
+                         anrede: str, confidence: float = 1.0,
+                         version: str = '', user_id: int = 0) -> str:
+    """Haiku-Response fuer einwand_unknown oder frage.
+
+    confidence >= CONFIDENCE_THRESHOLD (0.80) → direct answer (Tabu-Alternatives applied).
+    confidence <  CONFIDENCE_THRESHOLD         → Rückfrage-branch ("Frag nach: ...")
+    NEVER silent, NEVER halluzinated. MUST NOT raise — fallback Rückfrage on any error.
+    """
     if not utterance or category not in ('einwand_unknown', 'frage'):
         return ""
     try:
-        version = version or resolve_prompt_version('qa_response', user_id)
-        template = _load_qa_template('qa_response', version)
-        profile_ctx = build_profile_context(user_id, mode='live') or ""
-        system_prompt = template.format(anrede=(anrede or 'Sie'), profile_context=profile_ctx)
+        # ── Build Tabu instruction block ──────────────────────────────────────
+        tabu_block = build_tabu_instruction(profile_data)
+
+        # ── Get tabu pairs for safety-net ──────────────────────────────────────
+        tabu_pairs: list[dict] = []
+        try:
+            daten = profile_data.get('daten') or profile_data or {}
+            if not isinstance(daten, dict):
+                daten = {}
+            basis = (daten.get('basis') or {}) if isinstance(daten, dict) else {}
+            tabu_raw = basis.get('tabu_begriffe') or []
+            if isinstance(tabu_raw, list):
+                tabu_pairs = tabu_raw
+        except Exception:
+            pass
+
+        # ── Determine branch by confidence ────────────────────────────────────
+        is_low_confidence = float(confidence) < CONFIDENCE_THRESHOLD
+
+        # ── Build system prompt ────────────────────────────────────────────────
+        anrede_str = anrede or 'Sie'
+        system_prompt = _SYSTEM_PROMPT_QA.format(
+            tabu_block=(tabu_block + '\n') if tabu_block else '',
+            anrede=anrede_str,
+        )
+
+        # ── User message ───────────────────────────────────────────────────────
+        kat_hint = "unbekannten Einwand" if category == 'einwand_unknown' else "offene Frage"
+        if is_low_confidence:
+            confidence_hint = (
+                f"\n\nHinweis: Klassifikator-Konfidenz ist niedrig ({confidence:.2f} < {CONFIDENCE_THRESHOLD}). "
+                "Bevorzuge eine klärende Rückfrage ('Frag nach: ...') anstelle einer direkten Antwort."
+            )
+        else:
+            confidence_hint = ''
+
+        user_msg = (
+            f"Kunde hat soeben diesen {kat_hint} geäußert:\n\"{utterance}\"\n"
+            f"Konfidenz: {confidence:.2f}{confidence_hint}\n\n"
+            f"Formuliere eine kurze, konkrete Antwort (max. 45 Wörter)."
+        )
 
         from services.claude_service import claude_client
-
-        kat_hint = "unbekannten Einwand" if category == 'einwand_unknown' else "offene Frage"
-        user_msg = (
-            f"Kunde hat soeben diese {kat_hint} geaeussert:\n\"{utterance}\"\n\n"
-            f"Formuliere eine kurze, konkrete Antwort (max. 45 Woerter)."
-        )
 
         msg = claude_client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -211,14 +336,34 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
             system=system_prompt,
             messages=[{"role": "user", "content": user_msg}]
         )
-        text = msg.content[0].text.strip()
+        text = (msg.content[0].text or '').strip()
+
+        # ── Low-confidence: ensure "Frag nach:" prefix ────────────────────────
+        if is_low_confidence:
+            if not text:
+                text = _FALLBACK_RUECKFRAGE
+            elif not text.startswith('Frag nach:'):
+                # LLM didn't follow instruction → prepend prefix
+                text = f'Frag nach: {text}'
+        else:
+            # High-confidence: apply safety-net substitution
+            if text:
+                text = apply_tabu_safety_net(text, tabu_pairs)
+            if not text:
+                text = _FALLBACK_RUECKFRAGE
+
+        # ── Final never-empty guard ────────────────────────────────────────────
+        if not text:
+            text = _FALLBACK_RUECKFRAGE
 
         # FT-logging
         try:
             log_pipeline_event('qa_response', 'qa', {
                 'model': 'haiku-4-5',
-                'prompt_version': version,
+                'prompt_version': version or 'v1',
                 'category': category,
+                'confidence': confidence,
+                'branch': 'rueckfrage' if is_low_confidence else 'direct',
                 'response_len': len(text),
             })
         except Exception as _e:
@@ -243,7 +388,8 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         return text
     except Exception as e:
         print(f"[QA] generate_qa_response failed: {e}")
-        return ""
+        # Never silent — always return a Rückfrage fallback
+        return _FALLBACK_RUECKFRAGE
 
 
 # ── Public: match_faq ────────────────────────────────────────────────────
@@ -279,16 +425,21 @@ def match_faq(utterance: str, faqs: list, threshold: float = 0.75) -> Optional[d
     return None
 
 
-# ── Public: apply_tabu_filter ────────────────────────────────────────────
+# ── Public: apply_tabu_filter (legacy, kept for backward compat) ─────────────
 def apply_tabu_filter(text: str, tabu_begriffe: list) -> bool:
-    """Returns True wenn Text einen Tabu-Begriff enthaelt (-> Antwort verwerfen).
-    Case-insensitive substring match fuer v1 (D-16)."""
+    """Legacy: Returns True wenn Text einen Tabu-Begriff enthaelt.
+    Case-insensitive substring match. Handles both string and object shapes.
+    Deprecated: use build_tabu_instruction + apply_tabu_safety_net instead."""
     if not tabu_begriffe or not text:
         return False
     text_lower = text.lower()
-    for begriff in tabu_begriffe:
-        if not begriff or not isinstance(begriff, str):
-            continue
-        if begriff.strip() and begriff.lower() in text_lower:
-            return True
+    for begrif in tabu_begriffe:
+        if isinstance(begrif, str):
+            s = begrif.strip()
+            if s and s.lower() in text_lower:
+                return True
+        elif isinstance(begrif, dict):
+            s = str(begrif.get('begriff') or '').strip()
+            if s and s.lower() in text_lower:
+                return True
     return False
