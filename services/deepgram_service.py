@@ -351,6 +351,8 @@ def register_audio_handlers(sio):
                     ls.state['user_id'] = user_id
                     ls.state['market'] = market
                     ls.state['language'] = language
+                    ls.state['org_id'] = u.org_id if u else None
+                    ls.state['mode'] = mode
                 print(f"[FT] ft_call_sessions row created id={ft_session_id} market={market}")
         except Exception as _e:
             print(f"[FT] ft_call_sessions insert failed: {_e}")
