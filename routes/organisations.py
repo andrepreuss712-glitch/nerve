@@ -2,7 +2,7 @@ import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, g
 from werkzeug.security import generate_password_hash
 from database.db import get_session
-from database.models import Organisation, User, Invitation, BillingEvent
+from database.models import Organisation, User, Invitation
 from routes.auth import login_required
 from config import PLANS
 
