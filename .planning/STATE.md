@@ -428,6 +428,7 @@ Recent decisions affecting current work:
 | 260421-mwy | POLISH-54: aggregate einwaende_liste from ObjectionEvent for cold-call postcall | 2026-04-21 | 497350d | [260421-mwy-polish-54-einwaende-liste-aus-objectione](./quick/260421-mwy-polish-54-einwaende-liste-aus-objectione/) |
 | 260424-ekk | Phase 08.5 Post-Execute-Refinement: Tabu Alternativen + Profil-Editor Sektion 15 + Low-Confidence Rueckfrage | 2026-04-24 | 5e2b438 | [260424-ekk-phase-08-5-post-execute-refinement-tabu-](./quick/260424-ekk-phase-08-5-post-execute-refinement-tabu-/) |
 | 260424-fo0 | Phase 08.5 Nachbesserung: Standard-Paare einfuegen Button + Auto-Vorschlag Placeholder in Sektion 15 | 2026-04-24 | 5d6478c | [260424-fo0-phase-08-5-nachbesserung-standard-paare-](./quick/260424-fo0-phase-08-5-nachbesserung-standard-paare-/) |
+| 260424-h7u | Phase 08.5 Nachschaerfung: Tabu-Filter kontext-bewusst mit protected-words Safety-Net | 2026-04-24 | c059e5d | [260424-h7u-phase-08-5-nachschaerfung-tabu-filter-ko](./quick/260424-h7u-phase-08-5-nachschaerfung-tabu-filter-ko/) |
 
 ## What's Done
 
