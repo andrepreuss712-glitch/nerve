@@ -1,4 +1,4 @@
-// ══ Phase 08.5: FAQ CRUD + Tabu-Begriffe ═══════════════════════════════════
+// ══ Phase 08.5: FAQ CRUD + Tabu-Begriffe (2-column UI) ══════════════════════
 // profile_editor.js — FAQ-Datenbank (sec-faqs) + Tabu-Begriffe (sec-tabu)
 // Loaded after the main inline script in profile_editor.html.
 // Relies on: window.PROFILE_ID (already set by inline script)
@@ -128,91 +128,217 @@
     });
   }
 
-  // ── Tabu-Begriffe ─────────────────────────────────────────────────────────
-  var tabuContainer = document.getElementById('tabu-tags-container');
-  var tabuInput = document.getElementById('tabu-tag-input');
-  var tabuHidden = document.getElementById('vi_tabu_begriffe');
-  var tabuList = [];
+  // ── Tabu-Begriffe 2-column UI ─────────────────────────────────────────────
+  // Phase 08.5 Korrektur 2: Tag-chip-input replaced by 2-column rows
+  // (Begriff + Alternative + Delete). Save button disabled while any row
+  // has exactly one field filled (incomplete state).
 
-  function renderTabuChip(term) {
-    if (!tabuContainer) return;
-    var chip = document.createElement('span');
-    chip.className = 'tag-chip';
-    var textNode = document.createTextNode(term);
-    chip.appendChild(textNode);
-    var x = document.createElement('button');
-    x.type = 'button';
-    x.className = 'tag-rm';
-    x.textContent = '\u00d7';
-    x.setAttribute('aria-label', 'Entfernen');
-    x.addEventListener('click', function () {
-      tabuList = tabuList.filter(function (t) { return t !== term; });
-      chip.remove();
-      saveTabu();
+  var tabuRowsContainer = document.getElementById('tabu-rows');
+  var tabuAddBtn = document.getElementById('tabu-add-btn');
+  var tabuHidden = document.getElementById('vi_tabu_begriffe');
+  var mainSaveBtn = document.getElementById('main-save-btn');
+
+  // ── validateTabuRows: run on every input/change ───────────────────────────
+  function validateTabuRows() {
+    if (!tabuRowsContainer) return;
+    var rows = tabuRowsContainer.querySelectorAll('.tabu-row');
+    var hasIncomplete = false;
+
+    rows.forEach(function (row) {
+      var begriffEl = row.querySelector('.tabu-begriff');
+      var alternativeEl = row.querySelector('.tabu-alternative');
+      var hintEl = row.querySelector('.tabu-hint');
+      if (!begriffEl || !alternativeEl) return;
+
+      var b = begriffEl.value.trim();
+      var a = alternativeEl.value.trim();
+
+      if (hintEl) hintEl.hidden = true;
+
+      if (b && !a) {
+        // Begriff filled, alternative missing
+        if (hintEl) { hintEl.textContent = 'Alternative fehlt'; hintEl.hidden = false; }
+        hasIncomplete = true;
+      } else if (!b && a) {
+        // Alternative filled, Begriff missing
+        if (hintEl) { hintEl.textContent = 'Begriff fehlt'; hintEl.hidden = false; }
+        hasIncomplete = true;
+      }
+      // Both empty → neutral (will be silently ignored on save)
+      // Both filled → valid
     });
-    chip.appendChild(x);
-    tabuContainer.appendChild(chip);
+
+    // Disable/enable main save button
+    if (mainSaveBtn) {
+      if (hasIncomplete) {
+        mainSaveBtn.disabled = true;
+        mainSaveBtn.title = 'Tabu-Zeile unvollständig';
+        mainSaveBtn.style.opacity = '0.45';
+        mainSaveBtn.style.cursor = 'not-allowed';
+      } else {
+        mainSaveBtn.disabled = false;
+        mainSaveBtn.title = '';
+        mainSaveBtn.style.opacity = '';
+        mainSaveBtn.style.cursor = '';
+      }
+    }
+
+    return !hasIncomplete;
   }
 
-  function saveTabu() {
+  // ── renderTabuRow: render one 2-column row ────────────────────────────────
+  function renderTabuRow(pair) {
+    if (!tabuRowsContainer) return;
+    var row = document.createElement('div');
+    row.className = 'tabu-row';
+    row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;';
+
+    var begriffInput = document.createElement('input');
+    begriffInput.type = 'text';
+    begriffInput.className = 'tabu-begriff fi';
+    begriffInput.placeholder = 'Tabu-Begriff';
+    begriffInput.value = (pair && pair.begriff) || '';
+    begriffInput.maxLength = 80;
+    begriffInput.style.cssText = 'flex:1;min-width:0;';
+
+    var alternativeInput = document.createElement('input');
+    alternativeInput.type = 'text';
+    alternativeInput.className = 'tabu-alternative fi';
+    alternativeInput.placeholder = 'Alternative (stattdessen nutzen)';
+    alternativeInput.value = (pair && pair.alternative) || '';
+    alternativeInput.maxLength = 80;
+    alternativeInput.style.cssText = 'flex:1;min-width:0;';
+
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'tabu-del-btn';
+    delBtn.textContent = '\u00d7';
+    delBtn.style.cssText = 'background:transparent;border:none;color:#9CA3AF;cursor:pointer;font-size:18px;padding:4px 6px;line-height:1;flex-shrink:0;';
+    delBtn.addEventListener('click', function () {
+      row.remove();
+      validateTabuRows();
+      syncTabuHidden();
+    });
+
+    var hintSpan = document.createElement('span');
+    hintSpan.className = 'tabu-hint';
+    hintSpan.hidden = true;
+    hintSpan.style.cssText = 'font-size:11px;color:#e05c5c;display:block;margin-top:2px;';
+
+    // Wire validation on input
+    [begriffInput, alternativeInput].forEach(function (el) {
+      el.addEventListener('input', function () {
+        validateTabuRows();
+        syncTabuHidden();
+      });
+    });
+
+    row.appendChild(begriffInput);
+    row.appendChild(alternativeInput);
+    row.appendChild(delBtn);
+    row.appendChild(hintSpan);
+    tabuRowsContainer.appendChild(row);
+  }
+
+  // ── syncTabuHidden: keep hidden input in sync for buildAndSubmit ──────────
+  function syncTabuHidden() {
+    if (!tabuHidden || !tabuRowsContainer) return;
+    var rows = tabuRowsContainer.querySelectorAll('.tabu-row');
+    var pairs = [];
+    rows.forEach(function (row) {
+      var b = (row.querySelector('.tabu-begriff') || {}).value || '';
+      var a = (row.querySelector('.tabu-alternative') || {}).value || '';
+      b = b.trim(); a = a.trim();
+      if (b || a) {
+        pairs.push({ begriff: b, alternative: a });
+      }
+    });
+    tabuHidden.value = JSON.stringify(pairs);
+  }
+
+  // ── saveTabuToServer: POST list-of-objects to API ─────────────────────────
+  function saveTabuToServer() {
     var pid = getProfileId();
-    if (!pid) return;
-    if (tabuHidden) tabuHidden.value = JSON.stringify(tabuList);
+    if (!pid || !tabuRowsContainer) return;
+    var rows = tabuRowsContainer.querySelectorAll('.tabu-row');
+    var pairs = [];
+    rows.forEach(function (row) {
+      var b = (row.querySelector('.tabu-begriff') || {}).value || '';
+      var a = (row.querySelector('.tabu-alternative') || {}).value || '';
+      b = b.trim(); a = a.trim();
+      if (b && a) {
+        pairs.push({ begriff: b, alternative: a });
+      }
+      // completely empty rows are silently ignored (no error)
+    });
     fetch('/profiles/api/profile/' + pid + '/tabu', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tabu_begriffe: tabuList }),
-    }).catch(function (e) { console.warn('[Tabu] save failed', e); });
+      body: JSON.stringify({ tabu_begriffe: pairs }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ignored && data.ignored.length > 0) {
+          console.warn('[Tabu] ' + data.ignored.length + ' unvollständige Zeile(n) ignoriert');
+        }
+      })
+      .catch(function (e) { console.warn('[Tabu] save failed', e); });
   }
 
+  // ── loadTabu: seed from PROFILE_DATEN (already migrated by server) ────────
   function loadTabu() {
-    // Read from window.PROFILE_DATEN.basis.tabu_begriffe if available
+    if (!tabuRowsContainer) return;
+    tabuRowsContainer.innerHTML = '';
+    var pairs = [];
     try {
       if (
         window.PROFILE_DATEN &&
         window.PROFILE_DATEN.basis &&
         Array.isArray(window.PROFILE_DATEN.basis.tabu_begriffe)
       ) {
-        tabuList = window.PROFILE_DATEN.basis.tabu_begriffe.slice();
+        pairs = window.PROFILE_DATEN.basis.tabu_begriffe;
       } else if (tabuHidden && tabuHidden.value) {
         var parsed = JSON.parse(tabuHidden.value);
-        if (Array.isArray(parsed)) tabuList = parsed;
+        if (Array.isArray(parsed)) pairs = parsed;
       }
     } catch (_) {
-      tabuList = [];
+      pairs = [];
     }
-    if (tabuContainer) {
-      tabuContainer.innerHTML = '';
-      tabuList.forEach(renderTabuChip);
-    }
-    if (tabuHidden) tabuHidden.value = JSON.stringify(tabuList);
+    pairs.forEach(function (p) { renderTabuRow(p); });
+    syncTabuHidden();
+    validateTabuRows();
   }
 
-  if (tabuInput) {
-    tabuInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.keyCode === 13) {
-        e.preventDefault();
-        var term = (tabuInput.value || '').trim();
-        if (!term || term.length > 80) { tabuInput.value = ''; return; }
-        var lower = term.toLowerCase();
-        if (tabuList.some(function (t) { return t.toLowerCase() === lower; })) {
-          tabuInput.value = '';
-          return;
-        }
-        if (tabuList.length >= 50) { alert('Max 50 Tabu-Begriffe'); return; }
-        tabuList.push(term);
-        renderTabuChip(term);
-        tabuInput.value = '';
-        saveTabu();
-      }
+  // ── tabu-add-btn click ────────────────────────────────────────────────────
+  if (tabuAddBtn) {
+    tabuAddBtn.addEventListener('click', function () {
+      renderTabuRow({ begriff: '', alternative: '' });
+      // New empty row → save disabled (incomplete, both empty → neutral,
+      // but if user adds without filling → will be ignored on save)
+      validateTabuRows();
+      syncTabuHidden();
     });
+  }
+
+  // ── Override buildAndSubmit to also POST tabu before form save ────────────
+  // Hook into window.buildAndSubmit (defined in profile_editor.html inline script)
+  // by wrapping it after DOMContentLoaded.
+  function wrapBuildAndSubmit() {
+    var originalBuildAndSubmit = window.buildAndSubmit;
+    if (typeof originalBuildAndSubmit !== 'function') return;
+    window.buildAndSubmit = function () {
+      if (!validateTabuRows()) return; // blocked by incomplete rows
+      syncTabuHidden();
+      originalBuildAndSubmit();
+    };
   }
 
   // ── Init on DOMContentLoaded or immediately if already loaded ─────────────
   function init() {
     loadFaqs();
     loadTabu();
+    wrapBuildAndSubmit();
   }
 
   if (document.readyState === 'loading') {

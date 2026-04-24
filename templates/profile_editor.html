@@ -268,7 +268,7 @@
       value="{{ profile.name if profile else '' }}">
     <a href="#" class="beispiel-link" onclick="openBeispiel();return false"
        aria-label="Beispiel-Profil anzeigen">Sieh dir ein ausgefülltes Beispiel an</a>
-    <button type="button" class="save-btn" onclick="buildAndSubmit()">Speichern</button>
+    <button type="button" id="main-save-btn" class="save-btn" onclick="buildAndSubmit()">Speichern</button>
   </div>
 
   <div class="editor-layout">
@@ -716,17 +716,17 @@
         </template>
       </div>
 
-      <!-- ⑮ Phase 08.5: Tabu-Begriffe (D-15) ──────────────────────────────────── -->
+      <!-- ⑮ Phase 08.5 Korrektur 2: Tabu-Begriffe + Alternativen (2-column) ──── -->
       <div class="sec" id="sec-tabu">
-        <div class="sec-title"><span class="sec-title-num">15</span>Tabu-Begriffe
-          <span class="tip-icon" data-tip="Begriffe, die NERVE im Gespräch niemals verwenden darf. Zum Beispiel Namen von Wettbewerbern, Preise vor einer Demo, oder Aussagen, die rechtlich heikel sind." tabindex="0">?</span>
+        <div class="sec-title"><span class="sec-title-num">15</span>Tabu-Begriffe &amp; Alternativen
+          <span class="tip-icon" data-tip="Wörter die du vermeiden willst — und was du stattdessen sagst. NERVE ersetzt automatisch Tabu-Begriffe durch deine Alternative im Gespräch." tabindex="0">?</span>
         </div>
         <p style="font-size:12px;color:var(--page-text-muted);margin-bottom:12px">
-          Wörter oder Namen, die NERVE im Gespräch niemals verwenden darf. Begriff eingeben und Enter drücken zum Hinzufügen.
+          Wörter die du vermeiden willst — und was du stattdessen sagst.
         </p>
 
-        <div id="tabu-tags-container" class="tag-container" aria-live="polite" style="margin-bottom:8px;cursor:text" onclick="document.getElementById('tabu-tag-input').focus()"></div>
-        <input type="text" class="fi" id="tabu-tag-input" placeholder="Begriff eingeben + Enter" maxlength="80" style="max-width:360px">
+        <div id="tabu-rows"></div>
+        <button type="button" id="tabu-add-btn" class="n-btn-ghost" style="margin-top:8px">+ Hinzufügen</button>
         <input type="hidden" id="vi_tabu_begriffe" name="tabu_begriffe" value="[]">
       </div>
 
