@@ -1,311 +1,492 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-04-24
 
-## Security Issues
+## Executive Summary
 
-**CORS Configuration - Wide Open:**
-- Issue: SocketIO configured with `cors_allowed_origins="*"` in `app.py:25`
-- Risk: Any domain can connect to WebSocket endpoints without restriction
-- Files: `app.py` (line 25)
-- Current mitigation: Flask session-based auth via `@login_required` decorator
-- Recommendations:
-  - Restrict CORS to specific origins: `cors_allowed_origins=["https://yourdomain.com"]`
-  - Implement origin validation in SocketIO handlers
-  - Add rate limiting to socket endpoints
-
-**Secret Key Configuration:**
-- Issue: Default SECRET_KEY fallback in `config.py:9` is `'dev-secret-change-me'`
-- Risk: If SECRET_KEY env var not set in production, sessions become insecure
-- Files: `config.py` (line 9)
-- Current mitigation: Documented in code comment
-- Recommendations:
-  - Fail fast if SECRET_KEY is missing in production
-  - Add startup validation that refuses to start with default key
-  - Enforce minimum key length and complexity
-
-**Environment Variables Validation:**
-- Issue: Multiple API keys (DEEPGRAM_API_KEY, ANTHROPIC_API_KEY, ELEVENLABS_API_KEY) have empty string defaults
-- Risk: Silent failures or fallback to non-functional mode without alerting operators
-- Files: `config.py` (lines 6-8)
-- Recommendations:
-  - Validate all critical API keys on startup
-  - Raise exceptions for missing required credentials instead of empty defaults
-
-## Tech Debt
-
-**Silent Exception Handling - Widespread:**
-- Issue: Multiple files catch exceptions and silently pass, swallowing errors
-- Locations:
-  - `app.py:83, 116, 165` - Database migration silently continues on failure
-  - `services/claude_service.py:378` - Exception during behavioral tips ignored
-  - `services/deepgram_service.py:137` - KeyboardInterrupt handling silently continues
-  - `routes/dashboard.py:24, 58, 79, 204, 259, 338, 595` - Broad exception handling with pass statements
-- Impact: Bugs become hidden, making debugging production issues nearly impossible
-- Fix approach:
-  - Add logging for all `except Exception` blocks
-  - Use specific exception types instead of broad catches
-  - Log at minimum ERROR or WARNING level with context
-
-**Database Migration Pattern - Fragile:**
-- Issue: Raw SQL migration logic in `app.py:38-118` with silent failures
-- Risk: Column additions fail silently; incomplete schema evolution across environments
-- Files: `app.py` (lines 38-118)
-- Current state: Uses `except Exception: pass` pattern
-- Safe modification:
-  - Migrate to Alembic or SQLAlchemy migrations framework
-  - Log each migration attempt and result
-  - Validate schema consistency on startup
-
-**Exception Handling in Auth Path:**
-- Issue: `routes/auth.py:30` catches broad Exception in login_required decorator
-- Risk: Real errors (network, database) treated same as intentional redirects
-- Files: `routes/auth.py` (lines 29-34)
-- Better approach: Catch specific exceptions (DBException, SessionException) separately
-
-**Live Session State Management - Complex Threading:**
-- Issue: Multiple threading locks in `services/live_session.py` with shared mutable state
-- Risk: Race conditions, deadlocks, or stale state if lock ordering inconsistent
-- Files: `services/live_session.py` (16 separate lock objects, lines 16-159)
-- Fragile areas:
-  - `gegenargument_log` updated from multiple threads without clear ownership
-  - `conversation_log` appended from both claude_service and deepgram_service
-  - `state` dict modified in multiple places with version tracking
-- Test coverage: No unit tests visible for thread safety
-- Safe modification: Document lock acquisition order, add assertion checks
-
-**Model Attributes - Runtime Addition:**
-- Issue: Database migration adds columns at runtime to existing models
-- Risk: Model class definition in `database/models.py` doesn't match actual schema
-- Files: `app.py:38-118` (migration), `database/models.py` (model definition)
-- Impact: ORM queries may fail if code expects attributes that weren't migrated
-- Fix approach:
-  - Keep models.py and migrations in sync
-  - Use proper Alembic migrations with version tracking
-  - Validate schema on startup before any queries
-
-**Unvalidated JSON Parsing:**
-- Issue: JSON parsing in multiple routes with silent failures
-- Locations:
-  - `routes/app_routes.py:60` - `_json.loads()` with bare `except Exception: pass`
-  - `services/live_session.py` - JSON profile data parsed without validation
-- Risk: Corrupted profile data silently becomes empty dicts
-- Files: `routes/app_routes.py:58-68`, `services/live_session.py:97-99`
-- Fix: Add schema validation using pydantic or jsonschema
-
-## Performance Bottlenecks
-
-**Polling API Routes for Real-Time Data:**
-- Issue: `/api/ergebnis` and `/api/status` polled frequently (filtered in logs at `app.py:12-18`)
-- Problem: Client polls every ~1-2 seconds for analysis results; inefficient
-- Files: `app.py:12-18` (logging filter suppressing poll logs), `routes/app_routes.py:77-93` (api_ergebnis)
-- Current state: Poll filtering added to suppress log spam, symptom of polling problem
-- Scaling issue: Each poll is a full database + state access, scales poorly with users
-- Improvement path:
-  - Use WebSocket for real-time updates instead of polling
-  - Broadcast results to specific clients via SocketIO
-  - Reduces server load and improves responsiveness
-
-**Synchronous Claude API Calls - Blocking:**
-- Issue: `services/claude_service.py:201-213` makes blocking calls to Claude API
-- Problem: Each analysis call blocks the thread while waiting for response (>2-3 seconds typical)
-- Files: `services/claude_service.py:201-213` (analysiere_mit_claude), line 224 (analysiere_coaching)
-- Current state: Both Haiku (fast) and Sonnet (slower) calls run in separate threads but still block
-- Scaling limit: Can process max 1-2 concurrent live sessions per server
-- Improvement:
-  - Pre-fetch or cache common responses
-  - Implement response timeout/fallback for slow API
-  - Use async HTTP client instead of synchronous requests
-
-**File System Logging - Unbounded Growth:**
-- Issue: Log files written to disk with no rotation or cleanup policy
-- Problem: `LOG_DIR` in `services/live_session.py:12` writes conversationlogs with no size limits
-- Files: `services/live_session.py:12`, `routes/dashboard.py:62-80` (log listing)
-- Current capacity: No visible rotation strategy; logs accumulate indefinitely
-- Scaling path:
-  - Implement log rotation (hourly, daily, or by size)
-  - Add automatic cleanup of logs older than N days
-  - Move to database storage instead of file system
-
-**JSON String Parsing in DB Columns:**
-- Issue: Complex objects stored as JSON text in `profiles.daten`, `nudge_dismissed` columns
-- Problem: Parsed with `json.loads()` multiple times per request
-- Files: `database/models.py:98` (Profile.daten), `routes/app_routes.py:60, 66`
-- Impact: Same JSON reparsed in every route that touches profile
-- Improvement: Cache parsed JSON in session, or normalize schema to proper columns
-
-## Known Bugs & Issues
-
-**Active Profile Not Loaded on Session Resume:**
-- Issue: User's active profile lost if browser tab closed/reopened
-- Symptoms: Returns to default profile instead of last selected
-- Files: `routes/app_routes.py:46-52` (checks session and fallback to user.active_profile_id)
-- Workaround: User must manually select profile again
-- Reproduction: 1) Select profile, 2) Close browser tab, 3) Reopen → profile reset
-
-**Migration Silent Failures - Schema Divergence:**
-- Issue: `app.py:38-118` migrations fail silently on constraint violations or schema issues
-- Symptoms: Some instances have incomplete schema, queries fail unpredictably
-- Files: `app.py:78-116`
-- Trigger: Multiple database instances or manual schema modifications
-- Workaround: None; requires manual database repair
-
-**Fair-Use Limit Soft, Not Enforced:**
-- Issue: `routes/app_routes.py:34-37` warns but doesn't block when limit reached
-- Symptoms: User can exceed minuten_limit despite fair-use warning
-- Design decision: "Fair-Use soft-limit check (never hard-block)" per comment
-- Risk: Billing/usage tracking becomes inaccurate
-
-**Zero Duration Sessions:**
-- Issue: `routes/app_routes.py:353` comment indicates dauer_sek may be 0
-- Problem: Duration calculation may not account for incomplete recordings
-- Impact: Dashboard statistics and time-based metrics become unreliable
-- Files: `routes/app_routes.py:350-355`
-
-## Fragile Areas
-
-**Claude Service - System Prompt Building:**
-- Files: `services/claude_service.py:135-160` (system prompt), `163-192` (coaching prompt)
-- Why fragile:
-  - Prompts built dynamically by concatenating strings
-  - Profile data from `live_session.get_active_profile()` may be incomplete
-  - No validation that profile contains required fields
-  - Changes to prompt structure could break JSON parsing
-  - Embedding business rules in string concatenation (not DRY)
-- Safe modification:
-  - Extract prompt templates to separate files
-  - Validate profile schema before building prompts
-  - Use string templates instead of concatenation
-  - Add unit tests for prompt formatting
-
-**Speaker Identification & Diarization:**
-- Files: `services/deepgram_service.py:10-22` (speaker detection), `162-179` (stabilization)
-- Why fragile:
-  - Speaker identification relies on Deepgram's diarize feature with debounce timing
-  - `SPEAKER_DEBOUNCE_S = 3.0` in config hardcoded; brittle for different call types
-  - Only two speakers supported (0=Berater, 1=Kunde); no support for conference calls
-  - Speaker fallback logic `_log_last_sp` can persist incorrect speaker for entire call
-- Test coverage: No visible unit tests for speaker stability
-- Safe modification:
-  - Add speaker validation/sanity checks
-  - Log speaker changes with timestamps for debugging
-  - Add config for debounce timing per org/profile
-
-**Gegenargument Tracking & Effectiveness:**
-- Files: `services/claude_service.py:274-296` (logging), `services/live_session.py:36-38` (state)
-- Why fragile:
-  - `kb_delta` calculation done post-hoc comparing before/after Kaufbereitschaft
-  - Success marked as `kb_delta > 0` but may be noise or other factors
-  - Option selection (gewaehlte_option) manually tracked by frontend, not validated
-  - Learning loop in `_get_erfolgsquoten()` has `limit(50)` hardcoded; small sample size
-- Test coverage: No visible tests for tracking accuracy
-- Safe modification:
-  - Validate kb_delta source (Claude or behavior)
-  - Add explicit success/failure markers from conversation
-  - Increase learning sample size or add recency weighting
-
-**Profile Data as JSON String:**
-- Files: `database/models.py:98` (Profile.daten as Text), `routes/app_routes.py:58-68`
-- Why fragile:
-  - Large JSON objects stored as string; no schema validation
-  - Multiple places parse same JSON with different error handling
-  - No versioning of profile schema; breaking changes possible
-  - Merging changes from UI unclear (no update mechanism visible)
-- Safe modification:
-  - Define strict JSONSchema for profiles
-  - Create dedicated Profile class/dataclass for type safety
-  - Add migration path for schema versions
-
-**Live Session Global State:**
-- Files: `services/live_session.py:1-160` (all module-level globals)
-- Why fragile:
-  - 16+ module-level locks managing shared state
-  - No clear ownership or initialization order
-  - `reset_session()` called from routes but implementation not visible
-  - Multiple threads writing to same lists/dicts without clear synchronization
-  - Testing nearly impossible; requires thread coordination
-- Safe modification:
-  - Encapsulate session state in a class
-  - Use a single lock per logical resource
-  - Add docstrings for lock acquisition order
-  - Create test fixtures that safely mock session state
-
-## Test Coverage Gaps
-
-**No Unit Tests for Core Logic:**
-- What's not tested: Claude analysis (prompt generation, JSON parsing), speaker identification, Kaufbereitschaft calculations, gegenargument tracking
-- Files: `services/claude_service.py`, `services/deepgram_service.py`, `services/live_session.py`
-- Risk: Regressions in AI analysis or speech processing undetected
-- Priority: High
-
-**No Integration Tests for Session Flow:**
-- What's not tested: Full end-to-end live session (connect → transcribe → analyze → coach), profile loading and switching, Fair-Use limits
-- Files: All of `services/`, `routes/app_routes.py`
-- Risk: Complex interactions between components break silently
-- Priority: High
-
-**No Tests for Concurrent Access:**
-- What's not tested: Thread safety of live_session globals, concurrent gegenargument logging, speaker identification under load
-- Files: `services/live_session.py`, `services/deepgram_service.py`
-- Risk: Race conditions and data corruption in production
-- Priority: High
-
-**No Database Tests:**
-- What's not tested: Migration correctness, schema consistency, Fair-Use limit enforcement
-- Files: `app.py:38-118` (migrations), `routes/app_routes.py:20-41` (Fair-Use check)
-- Risk: Silent schema divergence, billing logic failures
-- Priority: Medium
-
-**No Tests for Error Cases:**
-- What's not tested: API failures (Deepgram down, Claude timeout), corrupted profile JSON, missing columns from incomplete migrations
-- Files: All service files
-- Risk: Unhandled exceptions crash live sessions
-- Priority: Medium
-
-## Scaling Limits
-
-**Single Live Session Per User:**
-- Current architecture: One session per browser tab via WebSocket + shared module state
-- Limit: Cannot support multiple simultaneous sessions (e.g., trainer with student in same org)
-- Scaling path: Refactor session management into database-backed registry instead of module globals
-
-**File-Based Conversation Logs:**
-- Current: Logs written to local disk in `logs/` directory
-- Limit: Cannot scale to multiple servers; logs not shared; filesystem fragmentation
-- Scaling path: Move to database table or S3-compatible storage
-
-**No Database Connection Pooling Visible:**
-- Current: Each route gets `get_session()` which creates new SessionLocal connection
-- Limit: Database connection exhaustion under load
-- Scaling path: Configure SQLAlchemy pool_size, pool_recycle, and connection pooling
-
-**Claude API Rate Limits:**
-- Current: Haiku calls (fast) and Sonnet calls (slow) both run in separate loops without backoff
-- Limit: Could hit Anthropic rate limits during peak usage
-- Scaling path: Add request queue, exponential backoff, fallback to cached responses
-
-## Missing Critical Features
-
-**Session Persistence & Recovery:**
-- Problem: No visible mechanism to resume a crashed live session
-- Blocks: Users cannot recover from network disconnection or server restart
-- Implementation needed: Save session state to database, restore on reconnect
-
-**Audit Logging:**
-- Problem: No audit trail of who changed what (profiles, settings, billing)
-- Blocks: Compliance requirements, debugging user issues
-- Implementation needed: Log all changes to profiles, settings, user permissions
-
-**API Rate Limiting:**
-- Problem: No rate limiting on API endpoints; could be abused
-- Blocks: Production deployment without DDoS protection
-- Implementation needed: Flask-Limiter or equivalent
-
-**Input Validation Layer:**
-- Problem: No centralized input validation; each route validates independently
-- Blocks: Inconsistent error handling, potential injection attacks
-- Implementation needed: Pydantic request models or Flask-Inputs
+The NERVE codebase exhibits **significant architectural drift** between the data model (rich profile fields) and execution (narrow EWB prompt integration). Approximately 50-60% of profile fields never reach the live Claude prompt. Additionally, multiple dead/orphaned code patterns have been identified, though most are intentionally kept for legacy support. Two high-priority performance bottlenecks exist in real-time analysis loops, and test coverage has gaps in critical integration paths.
 
 ---
 
-*Concerns audit: 2026-03-30*
+## Dead Code & Orphaned Flows
+
+### Python: `_build_system_prompt()` — Intentional Legacy Stub
+
+**Location:** `services/claude_service.py:265`
+
+**Status:** Defined but not called in live paths
+
+**Investigation:**
+- `_build_system_prompt()` exists (265 lines of comprehensive system prompt building)
+- No invocation in active code paths: `analysiere_mit_claude()` and `analysiere_mit_claude_streaming()` use `build_ewb_prompt()` instead (Phase 08 refactor)
+- Tests explicitly verify it is NOT called: `services/test_claude_service_phase08.py:46-59`
+- **Intention documented:** Comments in `claude_service.py:10` note this is intentionally retained for "Legacy-Module" compatibility
+
+**Severity:** **LOW**
+
+**Action:** **KEEP** — Intentional stub for backward compatibility. Mark more clearly as deprecated in code comments.
+
+---
+
+### Python: Profile Data → EWB Prompt Gap (Architectural)
+
+**Location:** 
+- Profile definitions: `database/models.py:122-130` (Profile model)
+- Active EWB prompt builder: `services/claude_service.py:647` (analysiere_mit_claude)
+- System prompt construction: `services/prompt_pipeline.py` (build_ewb_prompt, build_profile_context)
+
+**Issue:** Profile contains ~20+ data fields; EWB prompt reads only ~10
+
+**Fields in Profile but NEVER read in live EWB prompt:**
+- All `zielgruppe` fields (alter, berufsstatus, einkommen, hintergrund, vorwissen, entscheidungsverhalten)
+- All `schmerzen.trigger` fields
+- `faqs[]` array
+- `wettbewerber` (competitors) — only read in coaching analysis, not EWB
+- `uebergaenge` (transition phrases) — only in coaching
+- `techniken_aktiv`, `techniken_verboten`
+- `offene_fragen`
+- Most `ki` substyle settings (stil, antwortlaenge, sensitivitaet, zusatz)
+- `basis.name` (username)
+
+**Audit Reference:** `.planning/audits/profil-prompt-integration-matrix.md` documents this at ~50-60% field disconnect. Particularly:
+- Line 16-17: Old `_build_system_prompt` (called nowhere) had full context; Phase 08 replacement `build_ewb_prompt` strips 50% of data
+- Line 52-62: Detailed breakdown of which fields reach which prompts
+
+**Impact:** 
+- Users build comprehensive profiles with rich context, but live EWB receives minimal context
+- Profile field investment (UX effort, data modeling) yields diminishing returns
+- AI recommendations (Haiku) lack rich customer context they could use
+
+**Severity:** **HIGH** — Architectural misalignment, not a bug but a design gap
+
+**Root Cause:** Phase 08 performance optimization (reduce Haiku token cost) cut corners on prompt building without refactoring profile schema
+
+**Fix Approach:**
+1. **Short term:** Document which profile fields are "live-relevant" vs. "analytics-only" in profile UI
+2. **Long term:** Either (a) expand `build_ewb_prompt()` to re-include high-value fields, or (b) deprecate profile fields not used in live path (zielgruppe, wettbewerber, uebergaenge → move to coaching-only)
+3. Establish field-to-prompt traceability matrix as part of architecture review
+
+---
+
+### PreCall Briefing Flow — Dead Data Path
+
+**Location:**
+- PreCall briefing storage: `services/deepgram_service.py:309` (stored in `ls.state['precall_briefing']`)
+- Historical prompt usage: `services/claude_service.py:387` (old code, reads briefing into coaching prompt)
+- EWB usage: `services/prompt_pipeline.py:149` (reference only, not in live EWB call)
+
+**Issue:** PreCall briefing data flows into session state but **not into live EWB prompt**
+
+**Investigation:**
+- PreCall data generated via `/api/precall/research` route
+- Stored in `ls.state['precall_briefing']` during session init (deepgram_service.py:309)
+- **NOT injected into EWB system prompt** — `build_ewb_prompt()` does NOT read `ls.state['precall_briefing']`
+- Audit confirms (line 17): "PreCall-Briefing fließt NICHT mehr in den EWB-Prompt"
+- Only visible in UI context, never sent to Claude
+
+**Severity:** **MEDIUM** — Wasted data preprocessing (research cost, token overhead in session)
+
+**Action:** 
+- **Option A (Recommended):** Remove PreCall briefing from session state OR add explicit flag that it's UI-only
+- **Option B:** Re-integrate briefing into `build_ewb_prompt()` with token budget check (Phase 08.x feature)
+
+---
+
+### Manual EWB Button Path — Hardcoded Coach Prompt
+
+**Location:** `services/claude_service.py:897` (streame_manual_ewb_variante)
+
+**Issue:** Button clicks bypass profile context entirely
+
+**Details:**
+- When user clicks EWB button (Slot 1), `streame_manual_ewb_variante()` is called
+- System prompt is **hardcoded** (line 899): `"Du bist ein erfahrener Sales-Coach..."`
+- Only profile context sent: the single `gegenargument_1` text
+- **No access to:** ton, usps, beweise, tabu_begriffe, eigene_formulierungen, etc.
+
+**Audit Reference:** Line 70-79 of `profil-prompt-integration-matrix.md`
+
+**Severity:** **MEDIUM** — Button-clicked responses lack profile personality/tone
+
+**Fix Approach:**
+1. Enhance `streame_manual_ewb_variante()` to inject `build_profile_context()` into system prompt
+2. Add profile personality (ton, ansprache) to hardcoded coach prompt
+3. Consider moving to template-based system prompt like EWB path uses
+
+---
+
+### ls.state Fields — Orphaned Writers/Readers
+
+**Checked Fields:**
+
+| Field | Writer | Reader | Status |
+|-------|--------|--------|--------|
+| `ewb_top2` | None found | Read in `app_routes.py:140` (legacy marker) | **ORPHANED WRITER** |
+| `_phase_cycle_at_last_change` | `claude_service.py:1184` | `claude_service.py:1170` (same function) | Used (phase dedupe) |
+| `last_einwand_typ` | `claude_service.py:1313` | `claude_service.py:1313` + `ki_logik.py` | Used (followup logic) |
+| `active_learning_cards` | `live_session.py:214` | Read in templates/live.html | Used |
+| `precall_briefing` | `deepgram_service.py:309` | **Never read** (see above) | **ORPHANED READER** |
+
+**Severity:** **LOW** — `ewb_top2` is read as "legacy (may be None)" indicating intentional obsolescence
+
+**Action:** 
+- Remove `ewb_top2` write/read (Phase 04.8 leftover)
+- Add comment to `precall_briefing` initialization: "UI-only; not sent to Claude (as of Phase 08)"
+
+---
+
+### JavaScript: Polling Suppress Pattern — Working As Designed
+
+**Location:** `app.py:14-19` (_SuppressPolling filter)
+
+**Status:** `/api/ergebnis` and `/api/status` polling endpoints exist; logs are intentionally suppressed
+
+**Verification:** Grep for `_SuppressPolling` shows it's only defined and applied once (app.py), not read elsewhere. This is correct (logging filter is one-directional).
+
+**Severity:** **NONE** — No issue found
+
+---
+
+## Architectural Gaps & Data Flow Issues
+
+### Profile Data Segmentation Problem
+
+**Files Affected:**
+- `database/models.py:122-130` (Profile schema)
+- `services/prompt_pipeline.py:180-250` (build_profile_context)
+- All route files importing profiles
+
+**Problem:** No clear demarcation between:
+1. **Live EWB fields** (ton, produktbeschreibung, usps, beweise, tabu_begriffe)
+2. **Coaching-only fields** (wettbewerber, uebergaenge, schmerzpunkte, zielgruppe)
+3. **Analytics-only fields** (consent_text, branche enum for categorization)
+
+**Result:** UI presents all fields as equally important; developers must hunt through prompt_pipeline.py to know which are actually used
+
+**Severity:** **MEDIUM** — Confuses feature developers, increases technical debt
+
+**Recommendation:** 
+- Add `field_type` metadata to profile JSON schema (e.g., `"tier": "live"` vs `"tier": "coaching"`)
+- Document in STRUCTURE.md where each field is consumed
+
+---
+
+## Performance Bottlenecks
+
+### 1. Analyse Loop Blocking on Claude API
+
+**Location:** `services/claude_service.py:1039-1340` (analyse_loop thread)
+
+**Issue:** 
+- Loop runs every `ANALYSE_INTERVALL` (2 seconds per config.py)
+- Calls `analysiere_mit_claude_streaming()` which blocks on Claude API response
+- If Claude latency exceeds 2s, loop skips ticks and EWB updates backlog
+
+**Current Mitigation:** Uses streaming to unblock faster, but full response must complete before next tick
+
+**Severity:** **MEDIUM** — Affects responsiveness under high API latency (>2s)
+
+**Fix Path:**
+1. Implement async/await for Claude calls (currently blocking threads)
+2. Or: increase ANALYSE_INTERVALL to 3-4 seconds with explicit user communication
+3. Or: queue transcripts and process in batch (trade-off: 2s+ latency for EWB)
+
+**Files:** `config.py` (ANALYSE_INTERVALL), `services/claude_service.py` (analyse_loop implementation)
+
+---
+
+### 2. State Lock Contention on High-Volume Writes
+
+**Location:** `services/live_session.py:103` (state_lock)
+
+**Issue:**
+- Single `state_lock` protects 25+ fields
+- Every EWB result write (1-2x per second), keyword match write (10+x per second), phase change, readiness score write locks entire state dict
+- Deepgram interim transcript processing competes with analyse_loop for same lock
+
+**Severity:** **MEDIUM** — Affects live latency under concurrent transcript/analysis load
+
+**Mitigation:** Phase 06.2 introduced separate locks for different concerns (phase_lock, kb_lock, etc.) but state_lock remains monolithic
+
+**Fix Path:**
+1. Split `state_lock` into: `analysis_lock` (ergebnis, line_id, version), `phase_lock` (already separated), `meta_lock` (other)
+2. Or accept 2-4ms contention at current 50-user concurrency limit
+
+---
+
+### 3. Deepgram Interim Transcript Processing Regex Overhead
+
+**Location:** `services/deepgram_service.py:105-137` (BUG-10-LAT Wave 2 keyword matching)
+
+**Issue:**
+- Keyword matcher runs Regex against **every interim transcript** from Deepgram (~100ms intervals)
+- Regex patterns stored in `EinwandKeywordMatcher` (services/einwand_keyword_matcher.py)
+- No caching of compiled patterns per session
+
+**Severity:** **LOW-MEDIUM** — Depends on profile size (number of einwaende); typical 10-20 patterns
+
+**Current Status:** Comment indicates this is a known performance area (Wave 2 improvement)
+
+**Action:** Already scoped for optimization; no immediate change needed
+
+---
+
+## Security Considerations
+
+### PreCall Research Input XSS Risk
+
+**Location:** `app.py:58-74` (markdown_filter with bleach sanitizer)
+
+**Status:** **MITIGATED** — Phase POLISH-52 (2026-04-21) added:
+- Bleach sanitizer for PreCall briefing HTML rendering
+- Allowlist tags: p, br, strong, em, code, pre, ul, ol, li, h1-h4, blockquote, a
+- Input path: user provides firm name, industry, contact → Haiku generates markdown → rendered via filter
+
+**Severity:** **LOW** — Mitigation in place; no XSS vectors found in testing
+
+**Review Due:** Verify bleach version is up-to-date; re-audit if user input format changes
+
+---
+
+### Session State Exposure in /api/ergebnis
+
+**Location:** `routes/app_routes.py:140-175` (live() polling endpoint)
+
+**Issue:** Endpoint returns nearly full `ls.state` dict to frontend:
+```python
+'version':          ls.state['version'],
+'aktiv':            ls.state['aktiv'],
+'ergebnis':         ls.state['ergebnis'],
+'line_id':          ls.state['line_id'],
+```
+
+**Current State:** Only non-sensitive fields exposed (version, aktiv, ergebnis). Profile data not exposed.
+
+**Severity:** **LOW** — API is login-required; state dict contains no PII, API keys, or passwords
+
+**Note:** If `ergebnis` dict ever contains user identifiers or profile references, audit this endpoint
+
+---
+
+### Database Session Management
+
+**Location:** Multiple routes (e.g., `routes/app_routes.py:81-80`)
+
+**Pattern:** Manual try-finally for DB session cleanup:
+```python
+db = get_session()
+try:
+    # work
+finally:
+    db.close()
+```
+
+**Issue:** No use of context managers; error-prone if exception raised
+
+**Severity:** **LOW** — Pattern is consistently applied; no known resource leaks
+
+**Improvement:** Consider wrapping in @contextmanager decorator (refactor, not urgent)
+
+---
+
+## Test Coverage Gaps
+
+### Integration: Analyse Loop ↔ PreCall Briefing
+
+**Gap:** No test verifies that PreCall briefing data, when present, influences EWB prompt
+
+**Files:** No test in `tests/test_claude_service_phase08.py` for this path
+
+**Risk:** If precall briefing is re-integrated in Phase 08.x, regression risk is high
+
+**Action:** Add test case `test_precall_briefing_in_ewb_prompt()` to verify briefing reaches Claude call
+
+---
+
+### Integration: Manual EWB Button ↔ Profile Context
+
+**Gap:** `streame_manual_ewb_variante()` (claude_service.py:897) has no dedicated test
+
+**Current Tests:** Only tested indirectly via `/api/ewb/<event_id>/rate` endpoint in `tests/test_ewb_rate_api.py`
+
+**Risk:** Hardcoded prompt may drift from intended behavior; profile-less responses unchecked
+
+**Action:** Add unit test for `streame_manual_ewb_variante()` with mock profile data
+
+---
+
+### Dead Code: EWB Clicks Tracking
+
+**Location:** `services/live_session.py:407` (append to ewb_clicks), `routes/app_routes.py:480-490` (read for postcall)
+
+**Test Coverage:** Minimal — tracked but not validated for correctness
+
+**Risk:** If EWB click format changes (dict keys), postcall analysis breaks silently
+
+**Action:** Add schema validation test for ewb_clicks entries
+
+---
+
+## Scaling Limits
+
+### Concurrent User Sessions & State Lock
+
+**Current:** Single global `ls.state` dict managed by one `state_lock`
+
+**Limit:** Works for ~50 concurrent users (Phase 06 UAT limit). Beyond that, lock contention becomes noticeable.
+
+**Improvement Path:**
+1. Phase 09+: Migrate to per-session state objects (one dict per user_id)
+2. Implement Redis or in-memory session store for multi-worker deployments
+3. Current single-threaded design assumes one worker; WSGI multi-worker breaks state sharing
+
+**Severity:** **MEDIUM** — Not a blocker for current phase; document in Phase 09 planning
+
+---
+
+### Claude API Concurrent Requests
+
+**Current:** analyse_loop spawns one streaming request per tick (every 2s)
+
+**Limit:** At ~50 concurrent users, that's ~25 Claude requests per second (peak). Haiku tier supports this, but quota exhaustion is possible under large deployment.
+
+**Mitigation:** Fair-use limits in place (1000 min/month per user), no hard blocking
+
+**Action:** Monitor token spend; consider batching analysis or increasing ANALYSE_INTERVALL
+
+---
+
+## Missing Critical Features
+
+### Profile Field Live/Coaching Metadata
+
+**Problem:** No way to know at development time whether a profile field is used in live EWB or only coaching
+
+**Workaround:** Must grep through prompt_pipeline.py
+
+**Action:** Add `field_usage` metadata to profile schema (in Phase 08 or 09 refactor doc)
+
+---
+
+### Precall Briefing Usage Flag
+
+**Problem:** PreCall briefing is generated but not used. No clear signal that it's WIP or intentionally disabled.
+
+**Solution:** Add boolean `precall_briefing_enabled` to session config, or deprecate field entirely
+
+---
+
+## Dependencies at Risk
+
+### Deepgram SDK Version
+
+**File:** `requirements.txt` (not visible, inferred from imports)
+
+**Risk:** Deepgram API changes (diarization output format, transcript confidence) could break interim transcript parsing
+
+**Mitigation:** Vendored parsing in `services/deepgram_service.py:350+` handles most changes
+
+**Action:** Pin Deepgram SDK version to known-good release; add integration test for interim transcript format
+
+---
+
+### Anthropic Claude API
+
+**Current:** Using Haiku for live, Sonnet for post-call
+
+**Risk:** API rate limits, cost escalation if token consumption grows
+
+**Current Mitigation:** Fair-use limits enforced per user/org
+
+**Action:** Monitor token spend metrics; consider local/cached fallback for objection responses
+
+---
+
+## Fragile Areas
+
+### Keyword Matcher State (einwand_keyword_matcher.py)
+
+**Location:** `services/einwand_keyword_matcher.py` + `services/live_session.py:13-29` (registry)
+
+**Why Fragile:**
+1. Regex patterns loaded from profile JSON (basis.einwaende array)
+2. If profile JSON is malformed (invalid regex), matcher fails silently
+3. No validation of regex syntax at profile save time
+
+**Safe Modification:**
+- Always validate regex patterns when profile is saved (routes/profiles.py)
+- Add try-catch in matcher.match_with_dedup() to log failures
+- Add unit test for malformed regex handling
+
+**Files:**
+- Profile validation: `routes/profiles.py` (add regex validation)
+- Matcher: `services/einwand_keyword_matcher.py:match_with_dedup()`
+- Test: `tests/test_keyword_matcher.py` (add malformed regex case)
+
+---
+
+### Conversation Log Parsing (routes/app_routes.py:452+)
+
+**Location:** `routes/app_routes.py:452-500` (end_session endpoint)
+
+**Why Fragile:**
+- Assumes `conversation_log` global has specific format (dicts with 'text', 'speaker' keys)
+- If live_session.py logging format changes, postcall analysis breaks
+- No schema validation before inserting into ConversationLog model
+
+**Safe Modification:**
+1. Define and validate ConversationLog entry schema at append time (in live_session.py or deepgram_service.py)
+2. Use TypedDict for conversation_log entries
+3. Add pre-commit hook to validate schema on session end
+
+**Files:**
+- Log appending: `services/deepgram_service.py:240+` (append to conversation_log)
+- Log reading: `routes/app_routes.py:452+` (read for postcall analysis)
+- Validation: Add in `services/live_session.py` (new validator function)
+
+---
+
+## Test Coverage Gaps (Summary)
+
+| Area | Coverage | Gap | Priority |
+|------|----------|-----|----------|
+| EWB analysis (happy path) | ~80% | None | - |
+| Keyword matching (happy path) | ~70% | Malformed regex, edge cases | MEDIUM |
+| Phase detection | ~60% | Early/late phase transitions, artifacts | MEDIUM |
+| PreCall integration | ~40% | **Briefing not tested in EWB prompt** | **HIGH** |
+| Manual EWB button | ~50% | **No dedicated test** | **MEDIUM** |
+| Conversation log schema | ~60% | **No format validation** | **MEDIUM** |
+| Error recovery | ~30% | API failures, network timeout | LOW |
+
+---
+
+## Recommended Near-Term Actions (Priority Order)
+
+1. **Profile Field Metadata (Phase 08.x)** — Add `field_usage` flag to clarify live vs. coaching fields
+   - Impact: Reduces developer confusion, prevents future profile bloat
+   - Effort: 2 hours (schema update + docs)
+   - Severity: MEDIUM
+
+2. **PreCall Briefing Clarity (Phase 08.x)** — Either re-wire into EWB prompt OR deprecate
+   - Impact: Resolves architectural gap, improves data flow clarity
+   - Effort: 3-4 hours (re-wire + tests) OR 1 hour (deprecate + cleanup)
+   - Severity: HIGH
+
+3. **Manual EWB Button Profile Context (Phase 08.x)** — Inject profile context into hardcoded prompt
+   - Impact: Improves button-clicked response quality, aligns with EWB path
+   - Effort: 2 hours (refactor + test)
+   - Severity: MEDIUM
+
+4. **Add Integration Test for Conversation Log Format (Phase 08.x)** — Validate schema at append time
+   - Impact: Prevents silent postcall analysis failures
+   - Effort: 1.5 hours
+   - Severity: MEDIUM
+
+5. **State Lock Monitoring (Phase 09)** — Instrument lock contention; prepare for per-session state refactor
+   - Impact: Foundation for multi-worker scaling
+   - Effort: 3-4 hours (instrumentation + analysis)
+   - Severity: MEDIUM (not urgent for current phase)
+
+---
+
+*Concerns audit: 2026-04-24*

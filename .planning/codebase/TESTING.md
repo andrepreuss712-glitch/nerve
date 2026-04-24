@@ -1,295 +1,323 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-04-24
 
 ## Test Framework
 
-**Current State:**
-- **No test framework configured** — No `pytest.ini`, `setup.cfg`, or `pyproject.toml` detected
-- **No test files found** — No `test_*.py`, `*_test.py`, or `tests/` directory exists
-- **Testing infrastructure:** Absent
-- **Test runner:** Not configured
-- **Assertion library:** Not selected
+**Runner:**
+- pytest - Python testing framework
+- Config: `tests/conftest.py` (no pytest.ini — uses pytest defaults)
+- Run Commands:
+```bash
+pytest tests/                    # Run all tests
+pytest tests/ -v                 # Verbose output
+pytest tests/ -k test_name       # Run specific test
+pytest tests/ --tb=short         # Short traceback format
+pytest tests/ -x                 # Stop on first failure
+pytest tests/test_cost_tracker.py::test_freeze_fx_on_write  # Run single test
+```
 
-**Requirements.txt:**
-- `flask>=3.0.0`
-- `flask-socketio>=5.3.6`
-- `anthropic>=0.40.0`
-- `deepgram-sdk>=3.7.0`
-- `pyaudio>=0.2.14`
-- `python-dotenv>=1.0.0`
-- `sqlalchemy>=2.0.0`
-- `werkzeug>=3.0.0`
-- `requests>=2.31.0`
+**Assertion Library:**
+- pytest built-in assertions: `assert x == y`
+- No external assertion library (unittest.mock used for mocking)
 
-No test-related dependencies present.
+**Watch Mode:** Not configured. Manual re-run via pytest command.
+
+**Coverage:** Not enforced. No pytest-cov configuration detected.
+
+## Test File Organization
+
+**Location:**
+- Co-located with source: `tests/` directory mirrors project structure
+- `tests/services/test_ki_logik.py` for `services/ki_logik.py`
+- `tests/test_cost_tracker.py` for `services/cost_tracker.py`
+
+**Naming:**
+- Test files: `test_*.py` or `*_test.py` convention
+- Test functions: `test_*()` prefix required by pytest
+- Fixtures: Defined in conftest or inline with `@pytest.fixture` decorator
+
+**Structure:**
+```
+tests/
+├── conftest.py                    # Shared fixtures (sample_state, db_session, client)
+├── test_cost_tracker.py
+├── test_eur_calculator.py
+├── test_ki_logik.py
+├── services/
+│   └── test_ki_logik.py
+└── ... (35+ test files total)
+```
 
 ## Test Structure
 
-**Current Testing Approach:**
-- Manual testing only (no automated test suite)
-- Code size: 5,570 lines total across `app.py`, `routes/`, `services/`, `database/`
-- High risk: No automated validation of core features
+**Suite Organization:**
 
-## Testing Opportunities
+Example from `tests/services/test_ki_logik.py`:
 
-### Unit Testing
-
-**Priority 1 - Authentication (`routes/auth.py`):**
 ```python
-# Current code at lines 46-80
-def _do_login(email, passwort):
-    """Shared login logic. Returns (user_info_dict, error_msg)."""
-    db = get_session()
+"""Unit tests for services/ki_logik.py pure functions (Phase 04.8 P01).
+
+Covers compute_readiness_score, select_active_hint, dynamic_ewb_buttons
+and the user override: einwand_geloest = +20 (not briefing's +15).
+"""
+
+# Import section (functions, fixtures)
+
+# Test function group with inline comments
+# ── detect_phase (Phase 04.8 P02 hysteresis) ────────────────────────────────
+
+def test_detect_phase_same_phase_passes_through():
+    assert detect_phase(3, 0.42, current_phase=3) == (3, 0.42)
+
+
+def test_detect_phase_forward_low_conf_blocked():
+    # Comment explains test logic if non-obvious
+    new, conf = detect_phase(3, 0.6, current_phase=2)
+    assert new == 2
+    assert conf == 0.6
+```
+
+**Patterns:**
+- No setup/teardown functions — fixtures used instead via `@pytest.fixture` and parameter injection
+- Fixtures defined in `conftest.py`: `sample_state`, `db_session`, `client`, `db_from_client`
+- Each test is independent (no shared state between tests)
+- Comments mark logical test groups: `# ── Group Name ────────────────────`
+
+## Mocking
+
+**Framework:** unittest.mock (Python standard library)
+
+**Patterns:**
+
+Example from `tests/test_cost_tracker.py:36-45`:
+
+```python
+@pytest.fixture
+def patched_sessionlocal(db_session, monkeypatch):
+    """Point database.db.SessionLocal at the in-memory test engine so that
+    log_api_cost() writes into the same DB as the test fixture."""
+    bind = db_session.get_bind()
+    from sqlalchemy.orm import sessionmaker
+    TestSession = sessionmaker(bind=bind, autocommit=False, autoflush=False)
+    monkeypatch.setattr(_db_mod, 'SessionLocal', TestSession)
+    return TestSession
+```
+
+**What to Mock:**
+- Database session: Use pytest's `db_session` fixture with in-memory SQLite
+- External APIs: Mock via monkeypatch (Anthropic, Deepgram, ElevenLabs calls not tested)
+- Module-level state: Use monkeypatch to replace SessionLocal, engine, etc.
+
+**What NOT to Mock:**
+- Database queries — use real SQLAlchemy in-memory DB fixture
+- Business logic functions — test actual implementation, not mocks
+- Helper functions — test end-to-end behavior
+
+**Example:** `tests/test_cost_tracker.py:48-51` demonstrates testing with missing rate (should not raise):
+
+```python
+def test_missing_rate_no_raise(db_session, patched_sessionlocal):
+    # KEIN seeded_rate — log should silently skip
+    log_api_cost('unknown', 'noop', user_id=1, units=5, unit_type='per_minute')
+    assert db_session.query(ApiCostLog).count() == 0
+```
+
+## Fixtures and Factories
+
+**Test Data:**
+
+Example from `tests/conftest.py:19-38`:
+
+```python
+@pytest.fixture
+def sample_state():
+    """Factory returning a fresh state dict with all Phase 04.8 keys at defaults."""
+    def _make(**overrides):
+        base = {
+            "current_phase": 1,
+            "current_phase_name": "Opener",
+            "phase_confidence": 0.0,
+            "phase_changed_at": None,
+            "phase_change_count": 0,
+            "readiness_score": 30,
+            "readiness_bucket": "cold",
+            "score_factors_seen": {},
+            "active_hint": None,
+            "ewb_buttons": None,
+            "cold_call_inference": None,
+        }
+        base.update(overrides)
+        return base
+    return _make
+```
+
+Usage in tests: `state = sample_state(score_factors_seen={'detailfrage': 1})` (see `tests/services/test_ki_logik.py:87-94`)
+
+**Database Fixture:** In-memory SQLite engine created per test
+
+```python
+@pytest.fixture
+def db_session():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
     try:
-        user = db.query(User).filter_by(email=email, aktiv=True).first()
-        if user and check_password_hash(user.passwort_hash, passwort):
-            # ... session setup ...
-            return { 'id': user_id, 'org_id': user_org_id, ... }, None
-        return None, 'E-Mail oder Passwort falsch.'
+        yield session
     finally:
-        db.close()
+        session.close()
+        engine.dispose()
 ```
 
-**What should be tested:**
-- Valid credentials return user info dict with no error
-- Invalid password returns None, error message
-- Inactive user returns None, error message
-- Non-existent email returns None, error message
-- Session token creation and expiry calculation
+**Flask Test Client:** Rebinds database to in-memory for integration tests
 
-### Unit Testing
-
-**Priority 2 - Profile Management (`routes/profiles.py`):**
 ```python
-# Lines 61-112 (wizard_create function)
-# Lines 115-145 (bearbeiten function)
+@pytest.fixture
+def client(monkeypatch):
+    """Flask test client with in-memory SQLite rebinding."""
+    engine = _ce("sqlite:///:memory:", connect_args={'check_same_thread': False})
+    Base.metadata.create_all(engine)
+    TestSession = _sm(autocommit=False, autoflush=False, bind=engine)
+    TestScoped = _ss(TestSession)
+    
+    monkeypatch.setattr(_db_mod, 'engine', engine)
+    monkeypatch.setattr(_db_mod, 'SessionLocal', TestSession)
+    monkeypatch.setattr(_db_mod, 'db_session', TestScoped)
+    
+    # ... Flask app setup
+    with flask_app.test_client() as c:
+        c._test_session = TestSession()
+        c._test_engine = engine
+        yield c
 ```
 
-**What should be tested:**
-- Profile creation with valid data returns success
-- Invalid JSON in daten field falls back to empty object
-- Permission checks (non-admin cannot create profile)
-- Profile activation updates active_profile_id
-- Profile deletion removes profile and clears session if active
+See `tests/conftest.py:55-91` for full implementation.
 
-### Integration Testing
+**Location:**
+- `tests/conftest.py` — shared fixtures for all tests
+- Inline fixtures in test files if specific to that file
 
-**Priority 1 - Live Session Flow (`routes/app_routes.py`):**
+## Coverage
+
+**Requirements:** Not enforced. No pytest-cov configuration or CI check detected.
+
+**Test Count:** 35+ test files present:
+- Unit tests: `test_ki_logik.py`, `test_cost_tracker.py`, `test_eur_calculator.py`, etc.
+- Integration tests: `test_ft_lifecycle.py`, `test_phase_08_models.py`
+- Route tests: `test_admin_dashboard_auth.py`, `test_auth_next_redirect.py`
+
+**Known Coverage Gaps:**
+- No tests for `static/app.js` (JavaScript not tested)
+- No tests for `static/pip-launcher.js`
+- Some route handlers in `routes/` not explicitly tested
+- No E2E tests for full session flow
+
+## Test Types
+
+**Unit Tests:**
+- Scope: Pure functions, single component in isolation
+- Approach: Call function with inputs, assert output
+- Example: `tests/services/test_ki_logik.py:20-34` — tests `detect_phase()` with different confidence/phase transitions
+- No database access (unless mocked fixture used)
+- Examples: `test_cost_tracker.py`, `test_eur_calculator.py`, `services/test_ki_logik.py`
+
+**Integration Tests:**
+- Scope: Multiple components working together, often with database
+- Approach: Set up fixtures, call route/service, assert database state changed
+- Example: `tests/test_ft_lifecycle.py` — tests full training flow with DB writes
+- Uses `db_session` fixture for real database operations
+- Uses `client` fixture for Flask route testing
+- Example: `tests/test_cost_tracker.py:36-45` — `test_freeze_fx_on_write()` calls service function, checks DB result
+
+**E2E Tests:**
+- Status: Not detected. No Selenium, Playwright, or WebDriver tests
+- No browser-based session flow tests
+
+## Common Patterns
+
+**Async Testing:**
+
+Example from `tests/test_prompt_pipeline.py` (if async routes tested):
+
 ```python
-# Lines 77-93 (api_ergebnis)
-# Lines 96-115 (api_analyse_line)
+@pytest.mark.asyncio
+async def test_async_function():
+    result = await my_async_function()
+    assert result is not None
 ```
 
-**What needs testing:**
-- Live session creation and state management
-- Analysis pipeline: raw input → Claude analysis → structured output
-- Fair-use quota enforcement (`/live` endpoint lines 17-41)
-- Monthly quota reset logic
+Status: Async testing framework (`pytest-asyncio`) not detected. Flask routes are synchronous.
 
-**Priority 2 - API Endpoints:**
-- `/api/login` - Authentication endpoint
-- `/api/register` - Direct registration
-- `/api/ergebnis` - Results polling
-- `/api/analyse_line` - Claude analysis submission
-- `/profiles/wizard` - Profile creation wizard
+**Error Testing:**
 
-## Error Handling Test Cases
+Example from `tests/test_cost_tracker.py:48-57`:
 
-**Current Error Patterns to Test:**
-
-1. **JSON Parsing Failures** (`routes/profiles.py` lines 40-44):
-   ```python
-   try:
-       json.loads(daten_json)
-   except Exception:
-       daten_json = '{}'
-   ```
-   Test: Invalid JSON should silently fallback to `{}`
-
-2. **Database Session Cleanup** (all routes):
-   ```python
-   db = get_session()
-   try:
-       # ... operations ...
-   finally:
-       db.close()
-   ```
-   Test: Session must close even if exception occurs
-
-3. **File Parsing** (`routes/dashboard.py` lines 37-58):
-   ```python
-   try:
-       content = open(fpath, encoding='utf-8').read()
-       # ... regex extractions ...
-   except Exception:
-       pass
-   ```
-   Test: Missing files, encoding errors, missing patterns should not crash
-
-4. **Migration Errors** (`app.py` lines 78-83):
-   ```python
-   try:
-       conn.execute(text(f'ALTER TABLE users ADD COLUMN {col} {typedef}'))
-   except Exception:
-       pass
-   ```
-   Test: Duplicate columns should not break initialization
-
-## Fixtures and Test Data
-
-**Needed for Testing:**
-
-1. **User Fixtures:**
-   ```python
-   # Would need:
-   test_user = {
-       'email': 'test@example.com',
-       'passwort': 'TestPass123!',
-       'org_id': 1,
-       'rolle': 'member'
-   }
-   test_admin = {
-       'email': 'admin@example.com',
-       'passwort': 'AdminPass123!',
-       'org_id': 1,
-       'rolle': 'owner'
-   }
-   ```
-
-2. **Profile Fixtures:**
-   ```python
-   test_profile = {
-       'name': 'Test Profile',
-       'branche': 'Vertrieb',
-       'org_id': 1,
-       'daten': json.dumps({
-           'basis': {'produktbeschreibung': 'Test Product'},
-           'einwaende': [],
-           'phasen': []
-       })
-   }
-   ```
-
-3. **Session Fixtures:**
-   - Authenticated Flask test client
-   - Login helper to set session cookies
-
-## Coverage Analysis
-
-**Critical Untested Areas:**
-
-1. **Authentication & Authorization:**
-   - `routes/auth.py` (207 lines)
-   - `routes/coach.py` `coach_required` decorator
-
-2. **Core Business Logic:**
-   - `services/claude_service.py` - AI prompt handling and response parsing
-   - `services/training_service.py` - Voice interaction and difficulty levels
-   - `services/live_session.py` - Session state management
-
-3. **Data Operations:**
-   - User registration and invitation flow
-   - Organisation management
-   - Profile CRUD operations
-
-4. **API Endpoints:**
-   - All 15+ endpoints in `routes/app_routes.py`
-   - All organisation endpoints in `routes/organisations.py`
-   - All training endpoints in `routes/training.py`
-
-## Recommendations for Test Implementation
-
-### Phase 1: Foundation
-
-1. **Install test dependencies:**
-   ```bash
-   pip install pytest pytest-flask pytest-cov python-dotenv
-   ```
-
-2. **Create test structure:**
-   ```
-   tests/
-   ├── __init__.py
-   ├── conftest.py           # Fixtures, DB setup
-   ├── test_auth.py          # Authentication tests
-   ├── test_profiles.py      # Profile CRUD tests
-   └── test_api.py           # API endpoint tests
-   ```
-
-3. **Database isolation for tests:**
-   - Use in-memory SQLite: `sqlite:///:memory:`
-   - Or separate test database with automatic cleanup
-
-### Phase 2: Core Coverage
-
-1. **Authentication:**
-   - Valid login, invalid password, non-existent user
-   - Registration with valid/invalid data
-   - Permission checks (login_required, coach_required)
-
-2. **Profiles:**
-   - Create, read, update, delete operations
-   - Permission enforcement
-   - JSON validation
-
-3. **Fair-Use Quotas:**
-   - Monthly reset logic
-   - Usage tracking
-   - Limit enforcement
-
-### Phase 3: Integration
-
-1. **End-to-end API flows:**
-   - Registration → Login → Profile activation → Live session
-   - Training session start → analysis → results
-
-2. **Service integration:**
-   - Claude API mocking for analysis
-   - Deepgram API mocking for transcription
-   - ElevenLabs API mocking for voice
-
-### Mock Strategy
-
-**Services to Mock:**
-- `anthropic.Anthropic` - AI analysis
-- `deepgram_sdk` - Speech-to-text
-- `requests` - HTTP calls (training voice generation)
-- File I/O - Log reading/writing
-
-**Example Mock Pattern:**
 ```python
-from unittest.mock import patch, MagicMock
+def test_missing_rate_no_raise(db_session, patched_sessionlocal):
+    # Should silently skip when rate not found
+    log_api_cost('unknown', 'noop', user_id=1, units=5, unit_type='per_minute')
+    assert db_session.query(ApiCostLog).count() == 0
 
-@patch('services.claude_service.claude_client')
-def test_analyse_line(mock_claude):
-    mock_claude.messages.create.return_value = MagicMock(
-        content=[MagicMock(text='{"einwand": true, "typ": "Preis"}')]
-    )
-    # Test analysis endpoint
+def test_silent_on_db_error(monkeypatch, capsys):
+    def broken_session(*args, **kwargs):
+        raise RuntimeError("db down")
+    monkeypatch.setattr(_db_mod2, 'SessionLocal', broken_session)
+    # Should NOT raise
+    log_api_cost('anthropic', 'haiku-test', user_id=1, units=1.0,
+                 unit_type='per_1k_input_tokens')
+    captured = capsys.readouterr()
 ```
 
-## Current Manual Testing Patterns
+**Parametrized Testing:**
 
-**Observable Test Scenarios in Code:**
-- Account creation during initialization (`app.py` lines 239-260)
-- Demo profile creation for new orgs
-- Training scenario seeding
-- Live session simulation ready (code structure supports it)
+No `@pytest.mark.parametrize` found in reviewed tests. Tests use explicit function calls instead.
 
-## Testing Gaps & Risks
+## Known Test Gaps & Dead Code Analysis
 
-**High Risk - No Validation:**
-- Claude JSON parsing (could return invalid format)
-- Session state management under concurrent requests
-- Fair-use quota enforcement
-- Database migrations with schema changes
+**Tested Code:**
+- `services/ki_logik.py` — fully tested: `detect_phase()`, `compute_readiness_score()`, `select_active_hint()`, `dynamic_ewb_buttons()`
+- `services/cost_tracker.py` — fully tested: API cost logging with currency conversion
+- `services/eur_calculator.py` — fully tested: EUR price calculations
+- Database migrations — tested: `test_models_04_7_2.py`, `test_phase_08_models.py`, `test_branche_migration.py`
 
-**Medium Risk - Partial Manual Testing:**
-- API endpoint behavior
-- Frontend-backend contract
-- Permission enforcement
+**Untested/Minimal Coverage:**
+- `static/app.js` — No JavaScript tests. Functions defined: `startMicStream()`, `stopMicStream()`, `selectMode()`, `activateSession()`, `triggerEwb()`, `pollErgebnis()`, `beenden()` — all live-session critical paths, no test coverage
+- `static/pip-launcher.js` — No JavaScript tests. Core state machine in IIFE, no unit tests
+- Route handlers in `routes/dashboard.py`, `routes/profiles.py`, `routes/organizations.py` — not explicitly tested
+- WebSocket handlers in `socket_routes.py` (if exists) — no tests found
+
+**Dead Code Identified:**
+
+1. **`saveGeneratedPersonality()` in `templates/training.html`**
+   - Status: **REMOVED** in Phase 07.2 Wave 3
+   - Evidence: Comment at `templates/training.html:1633-1635`
+   - Reason: "war nur aus dem Post-Call-Scoring-Overlay aufrufbar. Overlay ist weg — Funktion damit orphaned"
+   - Re-introduction: Planned under POLISH-37 (ROADMAP) when Save-Prompt feature re-introduced
+   - No remaining calls to this function — safely removed
+
+2. **Potential dead JS functions in `static/app.js`:**
+   - `updateSpeechCircles()` — defined at line 386, may be unused if mic visualization removed
+   - `updateSpeechUI()` — defined at line 401 with comment `/* kept for compatibility */` — deprecated but retained
+   - `logGenutzt()` — defined at line 816, unclear if called from HTML
+   - Recommend: Verify HTML onclick attributes for actual usage
+
+**Test Recommendations:**
+
+Priority High:
+- Add JavaScript tests for `startMicStream()`, `stopMicStream()`, `activateSession()` (core session lifecycle)
+- Add route tests for `/api/ergebnis`, `/api/end_session` (critical polling endpoints)
+- Add integration test for full training scenario creation → response generation → completion
+
+Priority Medium:
+- Add tests for error paths in training service (missing voice, rate limit, API failure)
+- Add parametrized tests for all `SCHWIERIGKEITEN` difficulty levels
+- Add database constraint tests (unique org_id + name for profiles, etc.)
+
+Priority Low:
+- Add E2E tests for live session flow (requires browser automation)
+- Add tests for performance (session timer accuracy, polling interval timing)
 
 ---
 
-*Testing analysis: 2026-03-30*
+*Testing analysis: 2026-04-24*

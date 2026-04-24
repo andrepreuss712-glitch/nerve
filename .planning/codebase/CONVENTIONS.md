@@ -1,195 +1,242 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-03-30
+**Analysis Date:** 2026-04-24
 
 ## Naming Patterns
 
 **Files:**
-- Lowercase with underscores: `claude_service.py`, `live_session.py`, `app_routes.py`
-- Blueprint modules named descriptively: `auth.py`, `dashboard.py`, `training.py`, `coach.py`
-- Database modules: `models.py`, `db.py`
+- Python modules: lowercase with underscores: `claude_service.py`, `live_session.py`, `app_routes.py`
+- Blueprint route files: descriptive lowercase: `auth.py`, `dashboard.py`, `training.py`, `coach.py`
+- Service modules: `[domain]_service.py`: `training_service.py`, `coaching_service.py`, `ki_logik.py`
+- JavaScript files: kebab-case or lowercase: `app.js`, `pip-launcher.js`, `audio-processor.js`
 
-**Functions:**
-- Lowercase with underscores: `_do_login()`, `_parse_log_meta()`, `_get_erfolgsquoten()`
-- Private/internal functions prefixed with single underscore: `_migrate()`, `_parse_log_meta()`, `_fromjson()`
-- Public route handlers: `login()`, `api_login()`, `register()`
-- Verb-first action functions: `analysiere_mit_claude()`, `reset_session()`
+**Python Functions:**
+- Public route handlers: `login()`, `api_login()`, `register()`, `training_page()`
+- Private/internal functions: prefixed with single underscore: `_do_login()`, `_parse_log_meta()`, `_migrate()`, `_ensure_dict()`
+- Verb-first action functions: `analysiere_mit_claude()`, `reset_session()`, `build_customer_prompt()`
+- Service layer returns tuples: `(success_dict, error_msg)` or `(result, error_string)` convention used in `routes/auth.py:80`
+- Example: `routes/auth.py:80` `_login_user()` reads all needed attributes before db.close()
 
-**Variables:**
-- Lowercase with underscores: `user_id`, `passwort_hash`, `active_profile_id`, `erstellt_am`
-- German variable names used extensively for domain concepts: `passwort`, `rolle`, `orgs`, `einwaende`, `gegenargument`
-- Abbreviated in some contexts: `db`, `g`, `u`, `p`, `org`, `inv`
-- Global state prefixed with underscore: `_letzte_gemeldete_version`, `_SuppressPolling`
+**JavaScript Functions:**
+- camelCase for all function names: `startMicStream()`, `stopMicStream()`, `selectMode()`, `activateSession()`
+- Private/internal (module-level IIFE): underscore prefix: `_showPrecallOrActivate()`, `_scenarioMeta`, `_lastEwbKey`
+- Socket.IO handlers: `socket.on('eventname', function)`
+- Event handlers: `onclick="functionName()"` directly in HTML attributes
+- Example from `static/app.js:115`: `function _showPrecallOrActivate()` — underscore marks internal to mode selection logic
 
-**Types/Classes:**
-- PascalCase for models: `User`, `Organisation`, `Profile`, `ConversationLog`, `Session`
-- Suffix with `Model` when shadowing imports: `UserModel`, `OrgModel`, `Profile`
-- Blueprint instances suffixed with `_bp`: `auth_bp`, `dashboard_bp`, `app_routes_bp`
+**Python Variables & Attributes:**
+- German domain terms used throughout: `passwort`, `rolle`, `orgs`, `einwaende`, `gegenargument`, `gespraech_id`
+- Database columns: `einwaende_gesamt`, `conversation_log`, `erstellt_am`, `org_id`, `active_profile_id`
+- Global state prefixed with underscore: `_letzte_gemeldete_version`, `_SuppressPolling`, `_sessions`, `_sessions_lock` (see `routes/training.py:40-41`)
+- Abbreviated sometimes: `db`, `g`, `u`, `p`, `org`, `inv` (request context helpers)
+- Request context via Flask `g` object: `g.user`, `g.org` (loaded in `login_required` decorator, `routes/auth.py:54-55`)
+
+**Classes & Models:**
+- PascalCase: `User`, `Organisation`, `Profile`, `ConversationLog`, `Session`, `TrainingScenario`
+- Suffix with `Model` when shadowing imports: `UserModel`, `OrgModel` (used in `routes/training.py:96`)
+- Blueprint instances: suffix with `_bp`: `auth_bp`, `dashboard_bp`, `app_routes_bp` (see `routes/auth.py:12`)
 
 **Constants:**
-- UPPERCASE for module-level constants: `PLANS`, `SCHWIERIGKEITEN`, `VOICE_POOL_MALE`, `VOICE_POOL_FEMALE`
-- Dict keys in German for business concepts: `'frage'`, `'signal'`, `'redeanteil'`, `'uebergang'`
+- UPPERCASE for module-level constants: `PLANS`, `SCHWIERIGKEITEN`, `VOICE_POOL_MALE`, `VOICE_POOL_FEMALE` (see `services/training_service.py:13-24`)
+- Dict keys in German for business concepts: `'frage'`, `'signal'`, `'redeanteil'`, `'uebergang'` (see `services/claude_service.py:85-88`)
 - Environment prefixed constants: `ANTHROPIC_API_KEY`, `DATABASE_URL`, `MAX_SESSION_HOURS`
+
+**JavaScript Variables:**
+- camelCase: `micStream`, `audioCtx`, `workletNode`, `sessionMode`, `precallBriefingText`
+- State objects in IIFE: `state = {...}` namespace (see `static/pip-launcher.js:12`)
+- Event-based message keys: `'audio_chunk'`, `'start_live_session'`, `'stop_live_session'` (see `static/app.js:57`)
 
 ## Code Style
 
-**Formatting:**
-- No enforced formatter detected. Code uses mixed spacing patterns
-- 4-space indentation (Python standard)
-- Line length varies (80-150 characters observed)
-- Comments use horizontal separator lines: `# ── Section Name ────────────────────`
+**Python:**
+- 4-space indentation (Python standard PEP 8)
+- No enforced formatter detected (no .black, .isort, or .flake8)
+- Line length varies widely (80-150 characters observed)
+- Comments use horizontal separator lines: `# ── Section Name ────────────────────` (see `routes/auth.py:15` onward)
+- Code follows basic PEP 8 conventions informally — no strict enforcement
+- Multi-line imports used: `from flask import (Blueprint, render_template, request, ...)`
 
-**Linting:**
-- No `.eslintrc` or linting configuration found
-- No enforced style checker detected
-- Code follows basic PEP 8 conventions informally
+**JavaScript:**
+- 2-space indentation (observed in `static/app.js`, `static/pip-launcher.js`)
+- No `.eslintrc` or ESLint configuration found
+- No `.prettierrc` or Prettier configuration found
+- Comments use horizontal separators: `// ── Section Name ──────────────────────────────` (see `static/app.js:3, 32, 88, 230`)
+- Single quotes preferred for string literals: `'websocket'`, `'polling'`, `'cold_call'`
+- Strict mode in IIFE: `'use strict';` (see `static/pip-launcher.js:5`)
 
-**Imports Organization:**
+**Imports & Module Organization:**
+- Relative imports used in Python: `from database.db import get_session`, `from services.training_service import ...`
+- No alias shortcuts like `@` or custom path mappings detected
+- Imports grouped: stdlib → third-party → local (see `routes/auth.py:1-10`, `services/training_service.py:1-8`)
+- Explicit imports preferred over star imports: `from database.models import User, Organisation, Profile`
 
-Order observed:
-1. Standard library imports: `json`, `logging`, `threading`, `datetime`
-2. Third-party framework imports: `flask`, `flask_socketio`, `anthropic`, `sqlalchemy`
-3. Local imports: `from config import ...`, `from database import ...`, `from routes import ...`
+## UTF-8 & German Umlaute
 
-**Path Aliases:**
-- Relative imports used: `from database.db import get_session`
-- No alias shortcuts like `@` or custom mappings detected
+**User-Facing Text (HTML/Output):** Use real umlauts ä, ö, ü, ß
+- HTML content: `<div>Gespräch wird ausgewertet…</div>`
+- Labels, buttons, headers: `<button>Zurück</button>`
+- Placeholders, tooltips: `placeholder="Für Sie"`
+- Flash messages, error messages
+- Example: `templates/training.html` contains `"Bitte Firmennamen eingeben"`
 
-Example import structure (`routes/auth.py`):
-```python
-import secrets
-from datetime import datetime, timezone, timedelta
-from functools import wraps
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, g, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-from database.db import get_session
-from database.models import User, Organisation, Session as DbSession, Invitation
-from config import MAX_SESSION_HOURS, PLANS
-```
+**Code Identifiers (Variables, Attributes, Keys):** Use ASCII replacements ae, oe, ue, ss
+- Python attributes: `ConversationLog.einwaende_gesamt` (not `einwände`)
+- Dict keys: `{'einwaende': [...], 'gespraech_id': 42}` (not `{'einwände': ...}`)
+- Jinja2 expressions: `{% if log.einwaende > 0 %}` (not `{% if log.einwände %}`)
+- JavaScript variable names: `let einwaende = 0` (not `let einwände`)
+- HTML IDs/classes: `id="sc-einwaende"` (not `id="sc-einwände"`)
+- URL slugs/routes: `/api/einwaende/list` (not `/api/einwände/list`)
+
+**Rationale:** Python and JS identifiers resolve via ASCII lookup; HTML attributes need JavaScript selectors. Umlauts in these contexts cause encoding confusion in older codebases, though this project is UTF-8 clean.
 
 ## Error Handling
 
-**Patterns:**
-- Try-except with explicit error swallowing: `except Exception: pass`
-- Try-finally blocks ensure resource cleanup (DB sessions):
-  ```python
-  db = get_session()
-  try:
-      # DB operations
-  finally:
-      db.close()
-  ```
-- JSON parsing wrapped in try-except: `json.loads(daten)` → fallback to `{}`
-- Silent failures common in non-critical operations (parsing, migrations)
+**Strategy:** Defensive try-except with silent failures for non-critical operations, explicit logging for critical paths
 
-**Examples:**
-- `routes/auth.py` lines 50-80: Safe session cleanup during login
-- `routes/dashboard.py` lines 37-58: Log file parsing with graceful fallback
-- `routes/profiles.py` lines 40-44: JSON validation with default fallback
-- `app.py` lines 78-83: Database migration with silent failure on duplicate columns
+**Patterns:**
+- Try-except with explicit error swallowing: `except Exception: pass` (common in non-critical parsing)
+- Try-finally blocks ensure resource cleanup — especially database sessions: `db.close()` guaranteed in finally block
+- Example: `routes/auth.py:48-59` — login_required decorator uses try-finally to close DB session
+- JSON parsing wrapped in try-except with fallback: `json.loads(daten)` → fallback to `{}`
+- Example: `routes/training.py:31-38` — `_ensure_dict()` handles double-encoded JSON, None, and type errors gracefully
+- Silent failures in non-critical operations (migrations, parsing): print warning but don't raise
+- Example: `routes/training.py:114-141` — Voice usage check catches all exceptions and logs `[Training] Voice-Check Fehler` but continues
+
+**Database Errors:**
+- Handled at ORM constraint level (NOT NULL, UNIQUE, ForeignKey)
+- Queries wrapped in try-finally to guarantee session cleanup
+- Example: `routes/dashboard.py` uses try-finally around DB session
+
+**API Errors:**
+- Graceful degradation when external APIs fail (Deepgram, Anthropic, ElevenLabs)
+- Silent failure on rate limit or temporary outages — logged with `[API]` prefix
+- Example: `services/claude_service.py` catches anthropic exceptions and returns error tuple
+
+**Authentication:**
+- `login_required` decorator checks session before route execution, redirects to login if invalid
+- User object attached to `g` for request-local access
+- Session stored via Flask `session['user_id']`
 
 ## Logging
 
-**Framework:** `print()` statements
+**Framework:** Print statements to stdout with prefixed context tags
 
 **Patterns:**
-- Prefixed with context tags: `[DB]`, `[Init]`, `[FairUse]`, `[API]`
-- Used during initialization: `print("[DB] Migration: added users.{col}")`
-- Used during runtime state changes: `print(f"[API] Neues Ergebnis v{payload['version']}")`
+- Tag prefixes denote component: `[DB]`, `[Init]`, `[FairUse]`, `[API]`, `[Mic]`, `[Training]`, `[DG]` (Deepgram)
+- Used during initialization: `print("[DB] Migration: added users.{col}")` (see `app.py:81`)
+- Used during runtime state changes: `print(f"[FairUse] Org {_org.id} at {_org.training_sessions_used}/{training_limit} training sessions")`
+- JavaScript logging: `console.log('[Mic] AudioContext state after creation:', audioCtx.state)` (see `static/app.js:45`)
+- No structured logging framework (no Sentry, CloudWatch, ELK stack detected)
+- SQL logging can be enabled via SQLAlchemy config if needed
 
-**Examples from `app.py`:**
-- Line 81: `print(f"[DB] Migration: added users.{col}")`
-- Line 273: `print(f"[Init] Aktives Profil geladen: {profile.name}")`
-- Line 369: `print(f"[DB] Demo-Profil '{name}' erstellt")`
-
-**Werkzeug Logging:**
-- Lines 12-18 in `app.py`: Custom filter to suppress polling endpoint logs
+**Log Locations & Audience:**
+- Development: stdout (visible in terminal/container logs)
+- Production: stdout → captured by deployment platform (Hetzner, Docker, systemd journal)
+- No separate log files tracked (logs are ephemeral per request in stateless deploy)
 
 ## Comments
 
 **When to Comment:**
-- Section separators used extensively: `# ── Section Name ──────────────────────────`
-- Brief inline comments explain non-obvious logic: `# Redirect GET to landing page (login is now a modal)`
-- Comments describe intent, not code: `# Read ALL needed attributes now, before session closes`
-
-**Examples:**
-- `routes/auth.py` line 18: `# Attach user to g — read all needed attributes BEFORE db.close()`
-- `routes/auth.py` line 27: `# Read onboarding flag inside session so it's available after close`
-- `routes/app_routes.py` line 17: `# Fair-Use soft-limit check (never hard-block)`
+- Section separators to mark logical blocks: `# ── Section Name ──────────────────────────`
+- Brief inline comments explain non-obvious logic: `# Redirect GET to landing page (login is now a modal)` (see `routes/auth.py:73`)
+- Comments describe intent, not code: avoid `# Increment x` → do use `# Read all needed attributes BEFORE db.close()`
+- Phase references: `# Phase 04.13: stored briefing for session persistence` (see `static/app.js:18`)
+- Implementation notes: `# Attach user to g — read all needed attributes BEFORE db.close()` (see `routes/auth.py:47`)
 
 **JSDoc/TSDoc:**
 - Not used. Python docstrings minimal or absent
-- Function docstrings used only for non-obvious public functions:
-  ```python
-  def _do_login(email, passwort):
-      """Shared login logic. Returns (user_info_dict, error_msg).
-      All User attribute access happens inside the session before db.close().
-      """
-  ```
+- Function docstrings used only for non-obvious public functions: `safe_next()` in `routes/auth.py:15-21` includes docstring explaining open-redirect protection
+- Most functions lack docstrings — rely on clear naming and code structure
+
+**Dead Code Comments:**
+- Marked with explicit "ENTFERNT" or "orphaned" comment: `// ENTFERNT in 07.2 Wave 3: saveGeneratedPersonality()` (see `templates/training.html:1633`)
+- Includes reason: "war nur aus dem Post-Call-Scoring-Overlay aufrufbar. Overlay ist weg"
+- Known re-introduction plan noted: "Re-Introduction zusammen mit dem Save-Prompt unter POLISH-37"
 
 ## Function Design
 
-**Size:**
-- Most route handlers: 15-40 lines
+**Size Guidelines:**
+- Route handlers: 15-40 lines (most stay under 30)
 - Service functions: 20-60 lines
 - Utility functions: 5-20 lines
+- Example: `routes/auth.py:80-100` `_login_user()` is ~25 lines
 
 **Parameters:**
 - Minimal parameters (usually 1-3 for routes)
-- Request context accessed via Flask `g` object: `g.user`, `g.org`
+- Flask routes use context via `g` object instead of parameters: `g.user`, `g.org`
 - Session accessed via Flask `session` or `flask_session`
+- Database accessed via `get_session()` call within function
 
 **Return Values:**
-- Routes return: `render_template()`, `redirect()`, `jsonify()`, or `Response`
-- Service functions return tuples: `(success_dict, error_msg)` or `(result, error_string)`
-- Direct returns of database objects when needed
+- Routes return: `render_template()`, `redirect()`, `jsonify()`, or `Response` object
+- Service functions return tuples: `(success_dict, error_msg)` or `(result, error_string)` convention
+- Direct returns of database objects when needed: `db.get(User, user_id)` returns ORM object or None
+- JavaScript async functions: return Promises, resolve with JSON data from fetch
+- Example: `routes/training.py:89-175` POST handler returns `jsonify()` with response dict
 
-**Examples:**
-- `routes/auth.py` lines 46-80: `_do_login()` returns tuple of `(user_info_dict, error_msg)`
-- `routes/app_routes.py` lines 14-74: `live()` route builds context dict for template
+**Error Handling in Functions:**
+- Wrap DB operations: `db = get_session(); try: ... finally: db.close()`
+- Return error tuple on validation failure: `(None, "Validation error message")`
+- No exceptions raised for expected errors (validation, missing data) — use error tuple pattern
 
 ## Module Design
 
 **Exports:**
-- Flask blueprints explicitly defined: `auth_bp = Blueprint('auth', __name__)`
-- Service modules export main functions and module-level objects
-- Database `db.py` exports `engine`, `SessionLocal`, `Base`, `get_session()`
+- Flask blueprints explicitly defined: `auth_bp = Blueprint('auth', __name__)` at module top (see `routes/auth.py:12`)
+- Service modules export main functions and module-level objects: `build_customer_prompt()`, `SCHWIERIGKEITEN`, `VOICE_POOL_MALE`
+- Database module separate: `models.py` (schema), `db.py` (connection) → `get_session()`, `engine`, `SessionLocal`, `Base`
+- No barrel files (index.py) found — direct imports from modules preferred
 
-**Barrel Files:**
-- No barrel files (index.py) found
-- Direct imports from modules: `from services.claude_service import analysiere_mit_claude`
-- Blueprints registered explicitly in `app.py`
+**File Organization:**
+- Routes: `routes/` directory — one blueprint per file, domain-organized
+- Services: `services/` directory — business logic, API clients, data processing
+- Database: `database/` directory — `models.py` (SQLAlchemy ORM), `db.py` (session management)
+- Templates: `templates/` directory — Jinja2 HTML
+- Static: `static/` directory — JavaScript, CSS
+- Config: `config.py` at root — environment variables, constants
 
-**Module Patterns:**
-- Service modules contain business logic: `services/claude_service.py`, `services/training_service.py`
-- Routes modules contain Flask route handlers organized by domain
-- Database module separate into `models.py` (schema) and `db.py` (connection)
+**Blueprint Registration:**
+- All blueprints registered in `app.py` explicitly: `app.register_blueprint(auth_bp, url_prefix='/auth')`
+- Service modules contain business logic, routes contain Flask endpoints
+- No middleware or decorators defined at module level (except `@login_required` which wraps route handlers)
 
 ## Database Patterns
 
-**Model Definition:**
-- SQLAlchemy declarative base: `from database.db import Base`
+**ORM Approach:**
+- SQLAlchemy declarative base: `from database.db import Base` (see `database/models.py`)
 - Columns defined with types: `Column(Integer, primary_key=True)`, `Column(String(200), nullable=False)`
 - Foreign keys used: `Column(Integer, ForeignKey('organisations.id'))`
 - Default functions: `Column(DateTime, default=utcnow)` where `utcnow` defined in models
 
 **Session Management:**
-- `get_session()` returns new SessionLocal instance
-- Always wrapped in try-finally: `db.close()` guaranteed
-- No context managers used; manual close required
-- Multiple sequential DB operations chain queries: `db.query().filter().first()`
+- `get_session()` returns new SessionLocal instance — called within route handlers
+- Always wrapped in try-finally: `db.close()` guaranteed (see `routes/training.py:53-64`)
+- No context managers used — manual close required
+- Multiple sequential DB operations chain queries: `db.query(Profile).filter_by(org_id=g.org.id).all()`
 
-**Example Pattern (`routes/profiles.py` lines 21-28):**
-```python
-db = get_session()
-try:
-    profiles = db.query(Profile).filter_by(org_id=g.org.id).order_by(Profile.name).all()
-    active_id = _active_profile_id()
-    return render_template('profiles_list.html', profiles=profiles, active_id=active_id)
-finally:
-    db.close()
-```
+**Constraints & Validation:**
+- NOT NULL, UNIQUE enforced at ORM level
+- Foreign key constraints enforced by SQLAlchemy
+- User input validated in route handlers (email format, length checks)
+- Business logic constraints enforced in service layer before DB write
+
+## Special Patterns Observed
+
+**Locking Pattern (Thread-Safe State):**
+- Global state + threading.Lock for concurrent access: `_sessions = {}; _sessions_lock = threading.Lock()` (see `routes/training.py:40-41`)
+- Example usage: acquire lock before reading/writing shared state in multi-threaded context
+
+**Request Context Pattern (Flask g object):**
+- User loaded into `g.user` in `login_required` decorator
+- Org loaded into `g.org` in same decorator
+- Attributes read from DB BEFORE session closes (see `routes/auth.py:47` comment)
+- Rationale: Flask `g` is request-scoped; if you close DB before returning `g`, attributes aren't accessible later
+
+**Safe URL Pattern (Open Redirect Protection):**
+- `safe_next()` function validates next-URL to same-origin only (see `routes/auth.py:15-31`)
+- Rejects protocol-relative paths (`//evil.com`), absolute URLs (`http://...`), newlines/carriage returns
+- Used in login flow to preserve original request path across redirect
 
 ---
 
-*Convention analysis: 2026-03-30*
+*Convention analysis: 2026-04-24*
