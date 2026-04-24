@@ -93,8 +93,8 @@ class AuditLogAdmin(SecureModelView):
 class ConvLogAdmin(SecureModelView):
     can_edit   = False
     can_delete = False
-    column_list = ('id', 'user_id', 'session_mode', 'dauer_sekunden', 'einwaende_total',
-                   'einwaende_ok', 'started_at', 'ended_at')
+    column_list = ('id', 'user_id', 'session_mode', 'dauer_sekunden', 'einwaende_gesamt',
+                   'einwaende_behandelt', 'started_at', 'ended_at')
     column_filters = ('session_mode', 'user_id')
     column_default_sort = ('id', True)
 
