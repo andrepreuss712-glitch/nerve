@@ -141,7 +141,10 @@ class PlanningListView(BaseView):
         db = get_session()
         try:
             if request.method == 'POST':
-                link_id    = int(request.form.get('id') or 0)
+                try:
+                    link_id = int(request.form.get('id') or 0)
+                except (ValueError, TypeError):
+                    link_id = 0
                 new_status = (request.form.get('status') or '').strip()
                 if link_id and new_status in ('backlog', 'active', 'done'):
                     link = db.query(PlanningFeedbackLink).get(link_id)
