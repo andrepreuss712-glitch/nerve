@@ -139,7 +139,7 @@ def settings_theme():
     data = request.get_json(silent=True) or {}
     theme = data.get('theme', 'dark')
     if theme not in ('light', 'dark'):
-        theme = 'dark'
+        return jsonify({'error': 'Ungültiger Theme-Wert'}), 400
     db = get_session()
     try:
         user = db.query(User).get(g.user.id)
