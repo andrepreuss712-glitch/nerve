@@ -8,7 +8,7 @@ from routes.auth import login_required
 from database.db import get_session
 from database.models import Profile, TrainingScenario, PersonalityType, ConversationLog
 from services.training_service import (
-    build_customer_prompt, build_sekretaerin_prompt,
+    build_customer_prompt,
     build_sekretaerin_type_prompt,
     generate_response, generate_response_with_mood,
     generate_scoring, generate_help_suggestion,
