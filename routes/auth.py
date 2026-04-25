@@ -2,7 +2,7 @@ import os
 import secrets
 from datetime import datetime, timezone, timedelta
 from functools import wraps
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, g, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, g, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_session
 from database.models import User, Organisation, Session as DbSession, Invitation
@@ -53,6 +53,15 @@ def login_required(f):
                 return _login_redirect_with_next()
             g.user = user
             g.org  = db.get(Organisation, user.org_id)
+            # M-AU-1: Org-Scoping-Assertion — verhindert Cross-Org-Datenzugriff bei
+            # inkonsistenter DB-State (z.B. org geloescht, user-org_id verwaist).
+            if g.org is None or g.org.id != user.org_id:
+                current_app.logger.warning(
+                    f"[AUTH] Org mismatch for user {user.id}: "
+                    f"expected {user.org_id}, got {g.org.id if g.org else None}"
+                )
+                session.clear()
+                return _login_redirect_with_next()
             # Read onboarding flag inside session so it's available after close
             onboarding_done = bool(getattr(user, 'onboarding_done', True))
         finally:
@@ -91,6 +100,7 @@ def _login_user(db, user):
     user_is_coach        = bool(user.is_coach) if hasattr(user, 'is_coach') else False
     user_onboarding_done = bool(user.onboarding_done) if hasattr(user, 'onboarding_done') else True
 
+    session.clear()      # H-17: Session-Fixation-Praevention — neue Session-ID vor Key-Writes
     session.permanent    = True
     session['user_id']   = user_id
     session['org_id']    = user_org_id
