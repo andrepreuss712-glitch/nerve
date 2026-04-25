@@ -1177,7 +1177,8 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio):
                 _emit_soft_hint(reason='low_confidence')
             else:
                 _antwort = generate_qa_response(
-                    neuer_text, 'einwand_unknown', {}, _anrede, '', _user_id
+                    neuer_text, 'einwand_unknown', _profile_daten, _anrede,
+                    confidence=float(_conf), user_id=_user_id
                 )
                 if not _antwort:
                     _emit_soft_hint(reason='empty_response')
@@ -1217,7 +1218,8 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio):
                     _emit_soft_hint(reason='no_faq_low_conf')
                 else:
                     _antwort = generate_qa_response(
-                        neuer_text, 'frage', {}, _anrede, '', _user_id
+                        neuer_text, 'frage', _profile_daten, _anrede,
+                        confidence=float(_conf), user_id=_user_id
                     )
                     if not _antwort:
                         _emit_soft_hint(reason='no_faq_empty')
