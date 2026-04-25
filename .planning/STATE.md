@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.8 Plan 05 complete — Phase 08.8 (Block I) vollstaendig abgeschlossen
-stopped_at: Completed 08.8-05-PLAN.md
-last_updated: "2026-04-25T12:00:00Z"
-last_activity: 2026-04-25 - Phase 08.8-05 complete (3 tasks): H-1 log_pipeline_event No-Op-Wrapper (~62 Zeilen) aus prompt_pipeline + qa_pipeline + training_service entfernt, 6 Source-Presence-Tests bereinigt. Phase 08.8 Block I vollstaendig (H-1/H-3/H-4/H-11/H-27/H-28/6-Orphan-Routes/2-Orphan-Templates/ewb_top2 ~581 Zeilen entfernt). pytest 265 passing (pre-existing failures unveraendert).
+status: Phase 08.9 in progress — Plan 01 complete (1/4 plans done)
+stopped_at: Completed 08.9-01-PLAN.md
+last_updated: "2026-04-25T11:21:00Z"
+last_activity: 2026-04-25 - Phase 08.9 Plan 01 complete: LB-11 Onboarding-Redirect reaktiviert, H-31/HSR-2 BRANCHE_TEMPLATES auf basis.*-Schema, DB-Migration Demo-Profile IDs 2/3/4. Pytest 265 passing.
 progress:
   total_phases: 41
   completed_phases: 31
   total_plans: 148
-  completed_plans: 143
-  percent: 96
+  completed_plans: 144
+  percent: 97
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.8 (stabilisierung-block-i-dead-code-prune) — COMPLETE
-Plan: 5 of 5
+Phase: 08.9 (stabilisierung-block-c-schema-drift-cleanup) — IN PROGRESS
+Plan: 1 of 4
 Last activity: 2026-04-25
 
-**Next:** `/gsd-discuss-phase` oder `/gsd-progress` — nächste Phase bestimmen
+**Next:** Execute 08.9-02-PLAN.md (Wizard-Create basis.*-Schema)
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -161,6 +161,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.8 P01 | 264 | 3 tasks | 2 files |
 | Phase 08.8 P02 | 115 | 2 tasks | 3 files |
 | Phase 08.8 P05 | 15 | 3 tasks | 7 files |
+| Phase 08.9 P01 | 4 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.9-01]: LB-11 Onboarding-Redirect in login_required reaktiviert — deaktiviert in 6b57a77 als deploy hardening, kein Safety-Concern, onboarding_done default=True schuetzt bestehende User
+- [Phase 08.9-01]: H-31/HSR-2 BRANCHE_TEMPLATES auf basis.*-Schema (produktbeschreibung/einwaende/phasen unter 'basis'-Key) — konsistent mit qa_pipeline.py basis-Read-Pattern Zeile 374
+- [Phase 08.9-01]: Demo-Profile-Migration idempotent per 'basis' in _daten Check — nur Profile IDs 2/3/4, nur Flat-Schema-Profile werden migriert
 - [Phase 08.8-05]: H-1 log_pipeline_event war dauerhafter No-Op (finetune_logging.py nie erstellt) — gesamter Wrapper + 5 try/except Bloecke + 6 Tests entfernt; FtPipelineEvent-Tabelle existiert nicht, keine DB-Migration noetig
 - [Phase 08.8-05]: Phase 08.8 Block I vollstaendig — ~581 Zeilen Dead-Code entfernt (H-1/H-3/H-4/H-11/H-27/H-28/Orphan-Routes/Orphan-Templates/ewb_top2)
 - [Phase 08.8-04]: ewb_top2 Option A — sofort entfernt aus app.js + app_routes.py + live_session.py; Writer seit Phase 04.8 D-08 entfernt, Wert war immer None
@@ -406,6 +410,7 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 08.9 inserted after Phase 08.8: Stabilisierung Block C Schema-Drift-Cleanup (URGENT) — 5 Tasks: LB-11 Onboarding-Redirect reaktivieren, H-31/HSR-2 BRANCHE_TEMPLATES auf basis.*-Schema, Wizard-Create auf basis.*-Schema, LB-3 QA-Pipeline Komplett-Fix (profile_data aus Live-Session, confidence als float/None, inkl. WR-01/WR-03), H-25 Rollen-Check _rolle() einbauen. Quelle: MASTER-AUDIT v2 Block C.
 - Phase 08.8 inserted after Phase 08.7: Stabilisierung Block I — Dead-Code-Prune (URGENT) — 11 Tasks ~4-6h: H-3/H-4 analysiere_mit_claude_streaming/_build_system_prompt/_get_erfolgsquoten löschen, H-27 Coach-Routes, H-28 Personality-Save, 9 Orphan-Routes, 3 Orphan-Templates, ewb_top2 Cleanup, Legacy-opener Entscheidung, H-1 finetune_logging.py + FtPipelineEvent-Drop (DB-Migration). Quelle: MASTER-AUDIT v2 Block I.
 - Phase 08.7 inserted after Phase 08.6: Stabilisierung Block H — Test-False-Greens raus (URGENT) — 6 Tasks ~4h: inspect.getsource-Tests löschen/umbauen, Migration-Tests auf Fresh-DB, RED-Gate-Tests löschen, tts_comparison.py → scripts/, CLAUDE.md Regel. Pflicht-Vorarbeit für Block I (Dead-Code-Prune). Quelle: MASTER-AUDIT v2 Block H.
 - Phase 08.6 inserted after Phase 08.5: Stabilisierung Block A Quick-Wins (URGENT) — 8 triviale Launch-Blocker-Fixes in < 30 min: LB-5/LB-6 State-Writer, LB-12 Ghost-Columns, LB-13 ROI-Card, CORS-Domain, unused Imports, Theme-400, Language-Restrict. Quelle: MASTER-AUDIT v2 Block A.
@@ -469,6 +474,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-25T00:00:00Z
-Stopped at: Completed 08.8-01-PLAN.md
+Last session: 2026-04-25T11:21:00Z
+Stopped at: Completed 08.9-01-PLAN.md
 Resume file: None

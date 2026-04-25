@@ -712,6 +712,20 @@ Plans:
 
 ---
 
+### Phase 08.9: Stabilisierung Block C Schema-Drift-Cleanup (INSERTED)
+
+**Goal:** Schema-Drift zwischen Onboarding-Wizard, BRANCHE_TEMPLATES und QA-Pipeline beseitigen. 5 atomare Tasks: LB-11 Onboarding-Redirect reaktivieren; H-31/HSR-2 BRANCHE_TEMPLATES auf `basis.*`-Schema umstellen; Wizard-Create-Endpoint auf `basis.*`-Schema angleichen; LB-3 QA-Pipeline Komplett-Fix (profile_data aus Live-Session laden, confidence als float/None, inkl. WR-01/WR-03 Sub-Tasks); H-25 Rollen-Check `_rolle()` einbauen. Pytest-Baseline 265 passing nach jedem Commit.
+**Depends on:** Phase 08.8
+**Status:** In progress — 1/4 plans complete
+
+Plans:
+- [x] 08.9-01-PLAN.md — LB-11 Onboarding-Redirect + H-31/HSR-2 BRANCHE_TEMPLATES basis.*-Schema + DB-Migration Demo-Profile (complete 2026-04-25)
+- [ ] 08.9-02-PLAN.md — Wizard-Create-Endpoint auf basis.*-Schema
+- [ ] 08.9-03-PLAN.md — LB-3/WR-01/WR-03 QA-Pipeline Komplett-Fix
+- [ ] 08.9-04-PLAN.md — H-25 Rollen-Check _rolle() einbauen
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
