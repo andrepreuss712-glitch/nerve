@@ -2,9 +2,10 @@ import json
 import logging
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask
 from flask_socketio import SocketIO
+from werkzeug.middleware.proxy_fix import ProxyFix
 from config import SECRET_KEY, CORS_ORIGIN
 from database.db import engine, get_session
 from database.models import init_db, Organisation, User, Profile, Changelog
@@ -12,13 +13,28 @@ from werkzeug.security import generate_password_hash
 
 # ── Flask App ─────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-# Phase 04.6.1: für korrekte https-Redirect-URIs hinter nginx
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
+# ── Reverse-Proxy-Kompatibilität (Pflicht-Hinweis #5) ─────────────────────────
+# Hetzner VPS: Nginx terminiert SSL vor Gunicorn → Flask sieht HTTP ohne ProxyFix.
+# ProxyFix muss VOR SESSION_COOKIE_SECURE=True stehen — sonst werden Secure-Cookies
+# hinter Nginx dropped weil Flask den Request als HTTP (nicht HTTPS) sieht.
+# x_host=1 BEWUSST WEGGELASSEN: getnerve.app ist eine Fixed-Domain hinter Nginx.
+# x_host würde X-Forwarded-Host vertrauen — Host-Header-Injection-Vektor falls
+# Nginx den Header nicht strikt setzt. Nur x_for + x_proto sind nötig.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.config['SECRET_KEY']           = SECRET_KEY
 app.config['SESSION_PERMANENT']    = True
 app.config['CSS_VERSION']          = '20260421-1'
 app.config['MAX_CONTENT_LENGTH']   = 5 * 1024 * 1024  # 5 MB feedback uploads
+# ── Session-Cookie-Hardening (LB-10) ──────────────────────────────────────────
+# SESSION_COOKIE_SECURE=True nur in Prod (HTTPS). FLASK_DEBUG=true → False (Dev/localhost).
+# HINWEIS: app.debug ist unter gunicorn immer False → env-var statt app.debug prüfen.
+# ProxyFix muss VOR diesem Block aktiv sein — ohne ProxyFix sieht Flask hinter Nginx
+# alle Requests als HTTP, not HTTPS → Secure-Cookies werden dropped.
+_debug = os.environ.get('FLASK_DEBUG', '').strip() not in ('', '0', 'false', 'False')
+app.config['SESSION_COOKIE_SECURE']         = not _debug  # False lokal, True Prod
+app.config['SESSION_COOKIE_HTTPONLY']       = True
+app.config['SESSION_COOKIE_SAMESITE']       = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME']    = timedelta(days=14)
 
 if SECRET_KEY == 'dev-secret-change-me' and not os.environ.get('FLASK_DEBUG'):
     raise RuntimeError('[NERVE] SECRET_KEY is insecure — set SECRET_KEY env var before starting in production')
