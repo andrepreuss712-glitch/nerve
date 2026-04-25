@@ -742,6 +742,24 @@ Plans:
 
 **Reasoning:**
 > MASTER-AUDIT v2 Block B — Flächendeckende Auth-Härtung vor Launch. Cross-AI-Plan-Review mit Gemini + Claude nach Plan-Phase.
+> WICHTIG: Phase 08.11 (Block F) muss VOR Phase 08.10 (Block B) ausgeführt werden — 08.10-Pläne werden nach 08.11-Done neu geplant.
+
+---
+
+### Phase 08.11: Stabilisierung Block F Classic-View-Deprecation (INSERTED)
+
+**Goal:** Classic-View-Deprecation — PiP-only Architektur, ~2500 Zeilen Classic-Code entfernen
+**Depends on:** Phase 08.9
+**Plans:** 1/4 complete
+
+**Items:**
+- [x] Plan 01: Backend-Cleanup Wave 1 — 10 Classic-Routen + /live redirect + app.py cleanup (c05e548)
+- [ ] Plan 02: Frontend-Cleanup Wave 2 — app.js + app.html loeschen
+- [ ] Plan 03: Test + Template Cleanup — test_ft_seed.py + base.html + Link-Updates
+- [ ] Plan 04: pip-launcher legacy opener cleanup
+
+**Reasoning:**
+> MASTER-AUDIT v2 Block F — Classic-View komplett raus (PiP-only). Reihenfolge-Korrektur durch Cross-AI-Review (Gemini): Block F wird VOR Block B (Phase 08.10) ausgeführt, weil F die Routen /api/frage, /api/ewb_trigger und Classic-Socket-Handler entfernt. Würde B (Auth-Härtung, CSRF, Error-Handler) zuerst laufen, würden diese Routen zuerst gehärtet und dann gelöscht = Doppelarbeit. Phase 08.10 (Block B) bleibt mit existierendem Plan erhalten — wird nach Abschluss von 08.11 neu geplant da sich der Code-Stand ändert (~600 Z. app.js gelöscht, Classic-Routen weg). Pflicht-Lektüre für Planner: .planning/audits/MASTER-AUDIT-v2.md Sektion "BLOCK F".
 
 ---
 

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.9 complete — Plan 04 complete (4/4 plans done)
-stopped_at: Completed 08.9-04-PLAN.md
-last_updated: "2026-04-25T11:35:25Z"
-last_activity: 2026-04-25 - Phase 08.9 Plan 04 complete: H-25 _rolle()-Checks in wizard_create+aktivieren+api_faqs_create+api_tabu_update. Pytest 266 passing.
+status: Phase 08.11 in progress — Plan 01 complete, 3 plans remaining
+stopped_at: Completed 08.11-01-PLAN.md — Wave 1 Backend-Cleanup done
+last_updated: "2026-04-25T13:57:00Z"
+last_activity: 2026-04-25 - Phase 08.11 Plan 01 complete: 10 Classic-Routen geloescht, /live redirect, _SuppressPolling + API_FRAGE_PROMPT_BASE entfernt. Commit c05e548. 266 passing (excl. expected test_ft_seed fail).
 progress:
   total_phases: 41
   completed_phases: 32
   total_plans: 148
-  completed_plans: 147
+  completed_plans: 148
   percent: 98
 ---
 
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.8 — stabilisierung-block-i-dead-code-prune — COMPLETE
+**Current focus:** Phase 08.11 — stabilisierung-block-f-classic-view-deprecation — IN PROGRESS
 
 ## Current Position
 
-Phase: 08.9 (stabilisierung-block-c-schema-drift-cleanup) — COMPLETE
-Plan: 4 of 4
+Phase: 08.11 (stabilisierung-block-f-classic-view-deprecation) — IN PROGRESS
+Plan: 1 of 4 COMPLETE
 Last activity: 2026-04-25
 
-**Next:** Phase 08.9 vollstaendig abgeschlossen. Naechste Phase gemaess ROADMAP.
+**Next:** Phase 08.11 Plan 02 — app.js + app.html loeschen (Wave 2).
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -165,6 +165,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.9 P02 | 3 | 1 tasks | 1 files |
 | Phase 08.9 P03 | 4 | 2 tasks | 2 files |
 | Phase 08.9 P04 | 5 | 1 tasks | 1 files |
+| Phase 08.11 P01 | 15 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.11-01]: OBJECTION_TRIGGER_PROMPT_BASE bleibt in app_routes.py — Konstante wird noch fuer objection_trigger Seed-Eintrag in _seed_prompt_versions() benoetigt; HTTP-Route api_ewb_trigger() geloescht, Konstante bleibt
+- [Phase 08.11-01]: /live gibt 302 redirect auf dashboard_bp.dashboard — kein Setup-Code mehr (fair-use, profile load), alles laeuft ueber /api/launcher/init beim PiP-Start
+- [Phase 08.11-01]: _SuppressPolling vollstaendig entfernt — /api/ergebnis (dieser Plan) und /api/status (Block I) beide weg, Filter-Klasse war toter Code
 - [Phase 08.9-04]: H-25 _rolle()-Checks eingebaut — wizard_create (flash+redirect), aktivieren/api_faqs_create/api_tabu_update (jsonify 403). api_faqs_update/delete unveraendert (Org-Isolation genuegt auf FAQ-Ebene)
 - [Phase 08.9-03]: LB-3 _qa_pipeline_dispatch beide generate_qa_response-Aufrufe korrigiert — profile_data={} → _profile_daten, confidence='' → confidence=float(_conf), positional user_id → user_id=_user_id keyword
 - [Phase 08.9-02]: HSR-2 wizard_create() auf basis.*-Schema umgestellt — Flat-Keys firma/produkt/zielkunden/rolle/einwaende ersetzt durch basis.produktbeschreibung/zielkunden/einwaende/phasen + ki.anrede + meta.firma/rolle
@@ -416,6 +420,8 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 08.11 inserted after Phase 08.10: Stabilisierung Block F Classic-View-Deprecation (URGENT) — Reihenfolge-Korrektur durch Cross-AI-Review (Gemini): F muss VOR Block B (08.10) laufen, weil F /api/frage, /api/ewb_trigger und Classic-Socket-Handler entfernt (~600 Z. app.js). 08.10-Pläne werden nach 08.11-Done neu geplant. Pflicht-Lektüre: MASTER-AUDIT-v2.md Sektion "BLOCK F".
+- Phase 08.10 inserted after Phase 08.9: Stabilisierung Block B Auth-Härtung (URGENT) — tbd via /gsd-plan-phase 08.10. Pflicht-Lektüre: MASTER-AUDIT-v2.md Sektion "BLOCK B". Cross-AI-Plan-Review geplant.
 - Phase 08.9 inserted after Phase 08.8: Stabilisierung Block C Schema-Drift-Cleanup (URGENT) — 5 Tasks: LB-11 Onboarding-Redirect reaktivieren, H-31/HSR-2 BRANCHE_TEMPLATES auf basis.*-Schema, Wizard-Create auf basis.*-Schema, LB-3 QA-Pipeline Komplett-Fix (profile_data aus Live-Session, confidence als float/None, inkl. WR-01/WR-03), H-25 Rollen-Check _rolle() einbauen. Quelle: MASTER-AUDIT v2 Block C.
 - Phase 08.8 inserted after Phase 08.7: Stabilisierung Block I — Dead-Code-Prune (URGENT) — 11 Tasks ~4-6h: H-3/H-4 analysiere_mit_claude_streaming/_build_system_prompt/_get_erfolgsquoten löschen, H-27 Coach-Routes, H-28 Personality-Save, 9 Orphan-Routes, 3 Orphan-Templates, ewb_top2 Cleanup, Legacy-opener Entscheidung, H-1 finetune_logging.py + FtPipelineEvent-Drop (DB-Migration). Quelle: MASTER-AUDIT v2 Block I.
 - Phase 08.7 inserted after Phase 08.6: Stabilisierung Block H — Test-False-Greens raus (URGENT) — 6 Tasks ~4h: inspect.getsource-Tests löschen/umbauen, Migration-Tests auf Fresh-DB, RED-Gate-Tests löschen, tts_comparison.py → scripts/, CLAUDE.md Regel. Pflicht-Vorarbeit für Block I (Dead-Code-Prune). Quelle: MASTER-AUDIT v2 Block H.
