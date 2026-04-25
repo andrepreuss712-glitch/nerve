@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.8 Plan 01 complete — verified
-stopped_at: Completed 08.8-01-PLAN.md
-last_updated: "2026-04-25T00:00:00Z"
-last_activity: 2026-04-25 - Phase 08.8-01 complete (3/3 tasks): H-3 analysiere_mit_claude_streaming (102 Zeilen), H-4 _build_system_prompt+_get_erfolgsquoten (195 Zeilen), H-11 if/else-Duplikat entfernt, CONCERNS.md 4s korrigiert. pytest 268 passing.
+status: Phase 08.8 Plan 02 complete — verified
+stopped_at: Completed 08.8-02-PLAN.md
+last_updated: "2026-04-25T10:11:00Z"
+last_activity: 2026-04-25 - Phase 08.8-02 complete (2/2 tasks): H-27 /coach/live_tipp + /coach/api/tipps + coach_tipps Memory-Leak entfernt, H-28 /api/training/personalities/save entfernt. pytest 268 passing.
 progress:
   total_phases: 41
   completed_phases: 31
   total_plans: 148
-  completed_plans: 140
+  completed_plans: 141
   percent: 95
 ---
 
@@ -159,6 +159,8 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.5 P04 | 5 | 2 tasks | 2 files |
 | Phase 08.5 P05 | 4 | 2 tasks | 1 files |
 | Phase 08.5 P06 | 3 | 2 tasks | 3 files |
+| Phase 08.8 P01 | 264 | 3 tasks | 2 files |
+| Phase 08.8 P02 | 115 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -167,6 +169,9 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.8-02]: H-27 live_tipp + api_tipps geloescht nach 0-Frontend-Caller-Verifikation — datetime-Import mitentfernt
+- [Phase 08.8-02]: H-27 coach_tipps unbounded List (Memory-Leak) aus live_session.py entfernt — kein Reset noetig da keine anderen Caller
+- [Phase 08.8-02]: H-28 api_training_personality_save geloescht — Frontend-Caller saveGeneratedPersonality() in 07.2 Wave 3 bereits entfernt
 - [Phase 08.6-01]: settings_theme silent coercion replaced with HTTP 400 — invalid enum values rejected, not coerced
 - [Phase 08.6-01]: settings_language allowed list shrunk to ['de', 'en'] — fr/es/it/pt/nl/pl/cs/tr have no app content
 - [Phase 08.6-01]: ROI KPI card hidden via inline style (not deleted) — preserves JS reference to id=perf-roi for future implementation

@@ -704,7 +704,7 @@ Plans:
 
 Plans:
 - [x] 08.8-01-PLAN.md — Wave 1: H-3 + H-4 + H-11 (analysiere_mit_claude_streaming, _build_system_prompt, _get_erfolgsquoten, if/else-Branch, CONCERNS.md)
-- [ ] 08.8-02-PLAN.md — Wave 2: H-27 Coach-Live-Tipp-Routes + H-28 Personality-Save-Route
+- [x] 08.8-02-PLAN.md — Wave 2: H-27 Coach-Live-Tipp-Routes + H-28 Personality-Save-Route
 - [ ] 08.8-03-PLAN.md — Wave 3: 6 Orphan-Routes (swap_roles, status, skripte, feedback/quick, training/postcall-analysis, training/ping)
 - [ ] 08.8-04-PLAN.md — Wave 4: 2 Orphan-Templates + ewb_top2 Cleanup (F-8/H-36) + opener-Entscheidung
 - [ ] 08.8-05-PLAN.md — Wave 5: H-1 log_pipeline_event/finetune_logging Entfernung (LETZTER)
