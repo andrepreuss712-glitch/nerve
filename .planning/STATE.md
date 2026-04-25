@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.10 IN PROGRESS — Plan 04 complete (Session-Fixation-Fix H-17 + Org-Scoping-Assertion M-AU-1)
-stopped_at: Completed 08.10-04-PLAN.md — session.clear() in _login_user() + current_app.logger.warning Org-Mismatch in login_required()
-last_updated: "2026-04-25T19:30:00Z"
-last_activity: 2026-04-25 - Phase 08.10 Plan 04 complete: session.clear() vor session.permanent=True in _login_user() (H-17), Org-Scoping-Assertion mit current_app.logger.warning in login_required() (M-AU-1). Commit a0c2b32. pytest 266 passing.
+status: Phase 08.10 IN PROGRESS — Plan 05 complete (Brute-Force-Schutz H-20: flask-limiter Rate-Limiting /api/login + /api/register)
+stopped_at: Completed 08.10-05-PLAN.md — flask-limiter Singleton + init_limiter(app) nach ProxyFix+CSRFProtect + @app.errorhandler(429) + @limiter.limit() auf Login/Register
+last_updated: "2026-04-25T21:17:00Z"
+last_activity: 2026-04-25 - Phase 08.10 Plan 05 complete: flask-limiter>=3.5.0 in requirements.txt, services/rate_limiter.py Singleton, init_limiter(app) in app.py (Reihenfolge ProxyFix→CSRFProtect→init_limiter), @app.errorhandler(429) JSON, @limiter.limit("10 per minute") api_login, @limiter.limit("5 per minute") api_register. Commit e9bb631. pytest 266 passing.
 progress:
   total_phases: 41
   completed_phases: 32
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.10 (stabilisierung-block-b-auth-haertung) — IN PROGRESS
-Plan: 4 of 6 COMPLETE
+Plan: 5 of 6 COMPLETE
 Last activity: 2026-04-25
 
-**Next:** Phase 08.10 Plan 05 — Stabilisierung Block B Auth-Haertung (naechster Wave).
+**Next:** Phase 08.10 Plan 06 — Stabilisierung Block B Auth-Haertung (letzter Wave).
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -175,6 +175,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.10-05]: In-Memory-Storage fuer flask-limiter Single-Worker (Gunicorn gthread 1+4) — Counter-Reset bei App-Restart akzeptiert; Redis-Hinweis fuer Block-M-Skalierung in services/rate_limiter.py dokumentiert
+- [Phase 08.10-05]: init_limiter(app) nach CSRFProtect — Reihenfolge ProxyFix→CSRFProtect→init_limiter kritisch fuer korrektes per-IP-Bucketing hinter Nginx
+- [Phase 08.10-05]: Kein globales Limit (default_limits=[]) — nur spezifische Decorators auf Login/Register, keine Kollateral-Limits auf anderen Routen
 - [Phase 08.10-04]: session.clear() in _login_user() VOR session.permanent=True — neue Session-ID bei jedem Login (H-17 Session-Fixation-Praevention)
 - [Phase 08.10-04]: current_app.logger.warning() statt from app import app — circular import guard (routes/auth.py importiert von app.py)
 - [Phase 08.10-04]: if-Variante fuer Org-Mismatch statt assert — sauberer Redirect ohne 500er Stack-Trace; logger.warning() VOR session.clear() fuer Incident-Response
