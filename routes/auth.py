@@ -8,6 +8,7 @@ from database.db import get_session
 from database.models import User, Organisation, Session as DbSession, Invitation
 from config import MAX_SESSION_HOURS, PLANS
 from services.audit import log_action
+from services.rate_limiter import limiter
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -179,6 +180,7 @@ def _create_org_and_user(db, *, email, vorname, nachname, firmenname,
 
 
 @auth_bp.route('/api/login', methods=['POST'])
+@limiter.limit("10 per minute")  # H-20: Brute-Force-Schutz
 def api_login():
     data     = request.get_json(force=True)
     email    = data.get('email', '').strip().lower()
@@ -196,6 +198,7 @@ def api_login():
 
 
 @auth_bp.route('/api/register', methods=['POST'])
+@limiter.limit("5 per minute")  # H-20: Brute-Force-Schutz (weniger Registrierungen als Logins)
 def api_register():
     """Direkt-Registrierung von der Landingpage (ohne Einladungslink)."""
     data       = request.get_json(force=True)

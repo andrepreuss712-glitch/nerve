@@ -11,6 +11,8 @@ from config import SECRET_KEY, CORS_ORIGIN
 from database.db import engine, get_session
 from database.models import init_db, Organisation, User, Profile, Changelog
 from werkzeug.security import generate_password_hash
+from flask import jsonify
+from services.rate_limiter import limiter, init_limiter
 
 # ── Flask App ─────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -48,6 +50,21 @@ socketio = SocketIO(app, cors_allowed_origins=CORS_ORIGIN, async_mode='threading
 # Flask's before_request-Hooks nicht → CSRFProtect's Hook greift nicht (endpoint=None check).
 # Reihenfolge socketio-vor-csrf garantiert SocketIO-WSGI-Level-Interception. (VARIANTE B)
 csrf = CSRFProtect(app)
+
+# ── Brute-Force-Schutz (H-20) ─────────────────────────────────────────────────
+# Reihenfolge KRITISCH: (1) ProxyFix(app.wsgi_app) [Wave 2] →
+#                       (2) CSRFProtect(app) [Wave 3] →
+#                       (3) init_limiter(app) [dieser Block]
+# Ohne ProxyFix gibt get_remote_address 127.0.0.1 fuer alle Requests hinter Nginx —
+# Rate-Limit wird zum globalen Bucket statt per-IP.
+# Future Multi-Worker (Block M): in services/rate_limiter.py storage_uri auf
+# "redis://localhost:6379" umstellen.
+init_limiter(app)
+
+@app.errorhandler(429)
+def _handle_rate_limit(e):
+    """H-20: Konsistentes JSON-Format fuer 429-Responses (analog Plan 01 Error-Normalisierung)."""
+    return jsonify({'ok': False, 'error': 'rate limit exceeded'}), 429
 
 @app.template_filter('fromjson')
 def _fromjson(s):

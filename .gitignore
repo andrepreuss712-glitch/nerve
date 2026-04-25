@@ -11,3 +11,6 @@ database/nerve.db
 database/*.bak*
 database/*.bak_pre_v*
 tests/tts_samples/
+# pip install artifacts (Windows pip notice files created by pip>=24)
+=1.2.0
+=3.5.0
