@@ -49,10 +49,6 @@ coaching_trigger = threading.Event()
 painpoints_lock  = threading.Lock()
 painpoints       = []
 
-# ── Coach-Tipps (Live-Tipps vom Coach an Berater) ─────────────────────────────
-coach_tipps_lock = threading.Lock()
-coach_tipps      = []
-
 # ── Gegenargument-Tracking ────────────────────────────────────────────────────
 gegenargument_log_lock = threading.Lock()
 gegenargument_log      = []

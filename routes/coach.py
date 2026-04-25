@@ -1,6 +1,5 @@
 import json
 import secrets
-from datetime import datetime
 from functools import wraps
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    session, g, jsonify)
@@ -192,59 +191,6 @@ def methodik_uebertragen():
         return jsonify({'ok': True, 'id': new_profile.id})
     finally:
         db.close()
-
-
-# ── Live-Tipp senden ──────────────────────────────────────────────────────────
-
-@coach_bp.route('/live_tipp', methods=['POST'])
-@login_required
-@coach_required
-def live_tipp():
-    """Push a live coaching tip visible to a salesperson during their call."""
-    data    = request.get_json(force=True)
-    org_id  = data.get('org_id')
-    user_id = data.get('user_id')
-    tipp    = (data.get('tipp') or '').strip()
-    if not tipp:
-        return jsonify({'error': 'Tipp fehlt'}), 400
-
-    assignment = None
-    if org_id:
-        db = get_session()
-        try:
-            assignment = db.query(CoachAssignment).filter_by(
-                coach_id=g.user.id, org_id=org_id, aktiv=True).first()
-        finally:
-            db.close()
-    if org_id and not assignment:
-        return jsonify({'error': 'Kein Zugriff'}), 403
-
-    import services.live_session as ls
-    with ls.coach_tipps_lock:
-        ls.coach_tipps.append({
-            'text':       tipp,
-            'ts':         datetime.now().strftime('%H:%M:%S'),
-            'coach_name': g.user.email,
-            'org_id':     org_id,
-            'user_id':    user_id,
-        })
-
-    return jsonify({'ok': True})
-
-
-# ── API: Coach-Tipps abrufen (für Berater im Live-Call) ──────────────────────
-
-@coach_bp.route('/api/tipps')
-@login_required
-def api_tipps():
-    """Return and clear pending coach tips for the current user's org."""
-    import services.live_session as ls
-    with ls.coach_tipps_lock:
-        tipps = [t for t in ls.coach_tipps
-                 if t.get('org_id') == g.org.id or t.get('user_id') == g.user.id]
-        ls.coach_tipps = [t for t in ls.coach_tipps
-                          if t not in tipps]
-    return jsonify({'ok': True, 'tipps': tipps})
 
 
 # ── API: Coach-eigene Profile auflisten ───────────────────────────────────────
