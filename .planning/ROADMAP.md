@@ -750,11 +750,11 @@ Plans:
 
 **Goal:** Classic-View-Deprecation — PiP-only Architektur, ~2500 Zeilen Classic-Code entfernen
 **Depends on:** Phase 08.9
-**Plans:** 1/4 complete
+**Plans:** 2/4 complete
 
 **Items:**
 - [x] Plan 01: Backend-Cleanup Wave 1 — 10 Classic-Routen + /live redirect + app.py cleanup (c05e548)
-- [ ] Plan 02: Frontend-Cleanup Wave 2 — app.js + app.html loeschen
+- [x] Plan 02: Frontend-Cleanup Wave 2 — app.js + app.html geloescht + /live Template-Refs auf NerveLauncher.open() (e89e2bd)
 - [ ] Plan 03: Test + Template Cleanup — test_ft_seed.py + base.html + Link-Updates
 - [ ] Plan 04: pip-launcher legacy opener cleanup
 

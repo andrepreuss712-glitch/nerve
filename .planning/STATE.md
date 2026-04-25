@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.11 in progress — Plan 01 complete, 3 plans remaining
-stopped_at: Completed 08.11-01-PLAN.md — Wave 1 Backend-Cleanup done
-last_updated: "2026-04-25T13:57:00Z"
-last_activity: 2026-04-25 - Phase 08.11 Plan 01 complete: 10 Classic-Routen geloescht, /live redirect, _SuppressPolling + API_FRAGE_PROMPT_BASE entfernt. Commit c05e548. 266 passing (excl. expected test_ft_seed fail).
+status: Phase 08.11 in progress — Plan 02 complete, 2 plans remaining
+stopped_at: Completed 08.11-02-PLAN.md — Wave 2 Frontend-Cleanup done
+last_updated: "2026-04-25T14:07:00Z"
+last_activity: 2026-04-25 - Phase 08.11 Plan 02 complete: app.js + app.html geloescht, alle /live-Refs in 4 Templates auf NerveLauncher.open() umgestellt. Commit e89e2bd. 266 passing (excl. expected test_ft_seed fail).
 progress:
   total_phases: 41
   completed_phases: 32
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.11 (stabilisierung-block-f-classic-view-deprecation) — IN PROGRESS
-Plan: 1 of 4 COMPLETE
+Plan: 2 of 4 COMPLETE
 Last activity: 2026-04-25
 
-**Next:** Phase 08.11 Plan 02 — app.js + app.html loeschen (Wave 2).
+**Next:** Phase 08.11 Plan 03 — test_ft_seed.py reparieren (Wave 3).
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -166,6 +166,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.9 P03 | 4 | 2 tasks | 2 files |
 | Phase 08.9 P04 | 5 | 1 tasks | 1 files |
 | Phase 08.11 P01 | 15 | 3 tasks | 2 files |
+| Phase 08.11 P02 | 6 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -174,6 +175,8 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.11-02]: onboarding.html finish('live') — NerveLauncher ? open() : /dashboard Fallback (Cross-AI Review Override; pip-launcher.js koennte beim Onboarding-Click noch nicht geladen sein)
+- [Phase 08.11-02]: logs_page.html <a>-Tag href=/live — beide Attribute href=javascript:void(0) + onclick=NerveLauncher zusammen gesetzt (Cross-AI Review Override)
 - [Phase 08.11-01]: OBJECTION_TRIGGER_PROMPT_BASE bleibt in app_routes.py — Konstante wird noch fuer objection_trigger Seed-Eintrag in _seed_prompt_versions() benoetigt; HTTP-Route api_ewb_trigger() geloescht, Konstante bleibt
 - [Phase 08.11-01]: /live gibt 302 redirect auf dashboard_bp.dashboard — kein Setup-Code mehr (fair-use, profile load), alles laeuft ueber /api/launcher/init beim PiP-Start
 - [Phase 08.11-01]: _SuppressPolling vollstaendig entfernt — /api/ergebnis (dieser Plan) und /api/status (Block I) beide weg, Filter-Klasse war toter Code
@@ -486,6 +489,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-25T11:35:25Z
-Stopped at: Completed 08.9-04-PLAN.md
+Last session: 2026-04-25T14:07:00Z
+Stopped at: Completed 08.11-02-PLAN.md — Wave 2 Frontend-Cleanup done
 Resume file: None
