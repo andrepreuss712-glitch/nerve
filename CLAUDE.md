@@ -305,6 +305,31 @@ Use these entry points:
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
 
+## Test-Qualitaets-Regel: Integration-Assertion vs. Source-Presence-False-Green
+
+Ein Test ist VALID wenn er Runtime-Verhalten prueft — Verhalten das kaputt gehen
+kann ohne dass der Source-Code sich aendert:
+- **DB-Write/Read:** Query auf echte oder In-Memory-DB, Assertion auf Ergebnis-Row oder Feldwert
+- **Function-Call-Return:** Funktion aufrufen (ggf. mit monkeypatched I/O), Assertion auf Rueckgabewert
+- **State-Mutation:** Zustandsaenderung in Dict/Objekt nach Function-Call pruefen
+- **API-Response:** HTTP-Request oder Socket-Emit, Assertion auf Response-Body oder Status-Code
+- **inspect.signature():** Prueft Runtime-API-Schnittstelle (Parameter-Namen) — OK
+
+Ein Test ist ein SOURCE-PRESENCE-FALSE-GREEN wenn er nur prueft ob Code *existiert*:
+- `inspect.getsource(fn)` + `assert 'string' in src` → LOESCHEN
+- `hasattr(module, 'symbol')` als "Schutz vor Loeschung" → LOESCHEN
+- `open('datei.py').read()` + `assert 'string' in src` → LOESCHEN
+- `subprocess.run(['grep', ...])` auf Quelldateien → LOESCHEN
+- `src.count('funktionsaufruf(')` → LOESCHEN
+
+Source-Presence-Tests geben GREEN solange der Code *existiert* — auch wenn er Dead-Code
+ist, nie aufgerufen wird, oder fehlerhafte Logik hat. Sie blockieren Dead-Code-Prune
+und geben falsche Sicherheit.
+
+Grenzfall: `inspect.getsource` fuer Regex-Muster die Runtime-Constraints sichern
+(z.B. "kein Opus-Model im Live-Loop") sind OK NUR wenn kein Function-Call-Mock
+die Constraint direkt testbar macht. Dokumentiere den Grund mit Kommentar im Test.
+
 ## Git-Regel: Immer pushen
 
 Nach jeder abgeschlossenen GSD-Phase und am Ende jeder Arbeitssession: `git push origin main` ausführen. GitHub muss immer den aktuellen Stand haben.
