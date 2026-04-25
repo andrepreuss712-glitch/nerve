@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.8 Plan 02 complete — verified
-stopped_at: Completed 08.8-02-PLAN.md
-last_updated: "2026-04-25T10:11:00Z"
-last_activity: 2026-04-25 - Phase 08.8-02 complete (2/2 tasks): H-27 /coach/live_tipp + /coach/api/tipps + coach_tipps Memory-Leak entfernt, H-28 /api/training/personalities/save entfernt. pytest 268 passing.
+status: Phase 08.8 Plan 03 complete — verified
+stopped_at: Completed 08.8-03-PLAN.md
+last_updated: "2026-04-25T10:20:00Z"
+last_activity: 2026-04-25 - Phase 08.8-03 complete (2/2 tasks): 6 Orphan-Routes entfernt (swap_roles, api_status, api_skripte, feedback/quick, training/ping, api_training_postcall_analysis). pytest 268 passing.
 progress:
   total_phases: 41
   completed_phases: 31
   total_plans: 148
-  completed_plans: 141
-  percent: 95
+  completed_plans: 142
+  percent: 96
 ---
 
 # Project State
@@ -169,6 +169,8 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.8-03]: swap_roles + api_status + api_skripte aus app_routes.py geloescht — 0 Frontend-Caller verifiziert; api_skripte war Duplikat zu /api/launcher/*
+- [Phase 08.8-03]: api_feedback_quick + training_ping + api_training_postcall_analysis geloescht — 0 Frontend-Caller; /api/postcall_analysis (live) bleibt erhalten
 - [Phase 08.8-02]: H-27 live_tipp + api_tipps geloescht nach 0-Frontend-Caller-Verifikation — datetime-Import mitentfernt
 - [Phase 08.8-02]: H-27 coach_tipps unbounded List (Memory-Leak) aus live_session.py entfernt — kein Reset noetig da keine anderen Caller
 - [Phase 08.8-02]: H-28 api_training_personality_save geloescht — Frontend-Caller saveGeneratedPersonality() in 07.2 Wave 3 bereits entfernt
