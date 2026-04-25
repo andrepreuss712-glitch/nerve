@@ -716,13 +716,13 @@ Plans:
 
 **Goal:** Schema-Drift zwischen Onboarding-Wizard, BRANCHE_TEMPLATES und QA-Pipeline beseitigen. 5 atomare Tasks: LB-11 Onboarding-Redirect reaktivieren; H-31/HSR-2 BRANCHE_TEMPLATES auf `basis.*`-Schema umstellen; Wizard-Create-Endpoint auf `basis.*`-Schema angleichen; LB-3 QA-Pipeline Komplett-Fix (profile_data aus Live-Session laden, confidence als float/None, inkl. WR-01/WR-03 Sub-Tasks); H-25 Rollen-Check `_rolle()` einbauen. Pytest-Baseline 265 passing nach jedem Commit.
 **Depends on:** Phase 08.8
-**Status:** In progress — 1/4 plans complete
+**Status:** Complete — 4/4 plans done (2026-04-25)
 
 Plans:
 - [x] 08.9-01-PLAN.md — LB-11 Onboarding-Redirect + H-31/HSR-2 BRANCHE_TEMPLATES basis.*-Schema + DB-Migration Demo-Profile (complete 2026-04-25)
 - [x] 08.9-02-PLAN.md — Wizard-Create-Endpoint auf basis.*-Schema (complete 2026-04-25)
 - [x] 08.9-03-PLAN.md — LB-3/WR-01/WR-03 QA-Pipeline Komplett-Fix (complete 2026-04-25)
-- [ ] 08.9-04-PLAN.md — H-25 Rollen-Check _rolle() einbauen
+- [x] 08.9-04-PLAN.md — H-25 Rollen-Check _rolle() einbauen (complete 2026-04-25)
 
 ---
 

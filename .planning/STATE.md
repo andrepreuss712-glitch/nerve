@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.9 in progress — Plan 03 complete (3/4 plans done)
-stopped_at: Completed 08.9-03-PLAN.md
-last_updated: "2026-04-25T13:00:00Z"
-last_activity: 2026-04-25 - Phase 08.9 Plan 03 complete: LB-3 _qa_pipeline_dispatch profile_data+confidence+user_id Fix, WR-01 Regressionstest. Pytest 266 passing.
+status: Phase 08.9 complete — Plan 04 complete (4/4 plans done)
+stopped_at: Completed 08.9-04-PLAN.md
+last_updated: "2026-04-25T11:35:25Z"
+last_activity: 2026-04-25 - Phase 08.9 Plan 04 complete: H-25 _rolle()-Checks in wizard_create+aktivieren+api_faqs_create+api_tabu_update. Pytest 266 passing.
 progress:
   total_phases: 41
-  completed_phases: 31
+  completed_phases: 32
   total_plans: 148
-  completed_plans: 146
-  percent: 97
+  completed_plans: 147
+  percent: 98
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.9 (stabilisierung-block-c-schema-drift-cleanup) — IN PROGRESS
-Plan: 3 of 4
+Phase: 08.9 (stabilisierung-block-c-schema-drift-cleanup) — COMPLETE
+Plan: 4 of 4
 Last activity: 2026-04-25
 
-**Next:** Execute 08.9-04-PLAN.md (H-25 Rollen-Check _rolle() einbauen)
+**Next:** Phase 08.9 vollstaendig abgeschlossen. Naechste Phase gemaess ROADMAP.
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -164,6 +164,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.9 P01 | 4 | 3 tasks | 3 files |
 | Phase 08.9 P02 | 3 | 1 tasks | 1 files |
 | Phase 08.9 P03 | 4 | 2 tasks | 2 files |
+| Phase 08.9 P04 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -172,6 +173,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.9-04]: H-25 _rolle()-Checks eingebaut — wizard_create (flash+redirect), aktivieren/api_faqs_create/api_tabu_update (jsonify 403). api_faqs_update/delete unveraendert (Org-Isolation genuegt auf FAQ-Ebene)
 - [Phase 08.9-03]: LB-3 _qa_pipeline_dispatch beide generate_qa_response-Aufrufe korrigiert — profile_data={} → _profile_daten, confidence='' → confidence=float(_conf), positional user_id → user_id=_user_id keyword
 - [Phase 08.9-02]: HSR-2 wizard_create() auf basis.*-Schema umgestellt — Flat-Keys firma/produkt/zielkunden/rolle/einwaende ersetzt durch basis.produktbeschreibung/zielkunden/einwaende/phasen + ki.anrede + meta.firma/rolle
 - [Phase 08.9-01]: LB-11 Onboarding-Redirect in login_required reaktiviert — deaktiviert in 6b57a77 als deploy hardening, kein Safety-Concern, onboarding_done default=True schuetzt bestehende User
@@ -478,6 +480,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-25T13:00:00Z
-Stopped at: Completed 08.9-03-PLAN.md
+Last session: 2026-04-25T11:35:25Z
+Stopped at: Completed 08.9-04-PLAN.md
 Resume file: None
