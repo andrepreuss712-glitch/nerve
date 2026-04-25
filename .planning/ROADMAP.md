@@ -726,6 +726,25 @@ Plans:
 
 ---
 
+### Phase 08.10: Stabilisierung Block B Auth-Härtung (INSERTED)
+
+**Goal:** Flächendeckende Security-Baseline: CSRF-Schutz, Session-Cookie-Hardening, Session-Fixation-Fix, Brute-Force-Schutz, Org-Scoping-Assertion, OAuth oauth_id UNIQUE-Constraint, Microsoft-OAuth Email-Hijacking-Mitigation, zentraler Error-Handler + Frontend-Traceback-Filter, Route-Exception-Leaks beseitigen.
+**Depends on:** Phase 08.9
+**Plans:** 6 plans
+
+Plans:
+- [ ] 08.10-01-PLAN.md — Wave 1: LB-7 Error-Handler Traceback-Leak + H-15 Route-Exception-Leaks + Frontend-Traceback-Filter
+- [ ] 08.10-02-PLAN.md — Wave 2: LB-10 Session-Cookie-Hardening (FLASK_DEBUG-aware)
+- [ ] 08.10-03-PLAN.md — Wave 3: LB-9 CSRF Backend (CSRFProtect+Exempts) + Frontend (X-CSRFToken in allen JS-Files)
+- [ ] 08.10-04-PLAN.md — Wave 4: H-17 Session-Fixation-Fix + M-AU-1 Org-Scoping-Assertion
+- [ ] 08.10-05-PLAN.md — Wave 5: H-20 flask-limiter Brute-Force-Schutz
+- [ ] 08.10-06-PLAN.md — Wave 6: H-21 oauth_id UNIQUE-Constraint + H-18 Microsoft-OAuth Email-Hijacking-Mitigation
+
+**Reasoning:**
+> MASTER-AUDIT v2 Block B — Flächendeckende Auth-Härtung vor Launch. Cross-AI-Plan-Review mit Gemini + Claude nach Plan-Phase.
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
