@@ -21,18 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.5 — universal-response-loop-launch-kritische-erweiterung-des-liv
+**Current focus:** Phase 08.8 — stabilisierung-block-i-dead-code-prune — COMPLETE
 
 ## Current Position
 
-Phase: 08.5 (universal-response-loop-launch-kritische-erweiterung-des-liv) — EXECUTING
-Plan: 6 of 6
-Next phase: 08.5 (Universal Response Loop)
-Last activity: 2026-04-23
+Phase: 08.8 (stabilisierung-block-i-dead-code-prune) — COMPLETE
+Plan: 5 of 5
+Last activity: 2026-04-25
 
-**Next:** `/gsd-discuss-phase 08.5`
+**Next:** `/gsd-discuss-phase` oder `/gsd-progress` — nächste Phase bestimmen
 
-Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 all plans ✓)
+Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
 ## Performance Metrics
 
@@ -453,6 +452,7 @@ Recent decisions affecting current work:
 
 | Phase | Plans | Status |
 |-------|-------|--------|
+| Phase 08.8: Block I Dead-Code-Prune | 5/5 ✓ | Complete 2026-04-25 — ~643 Zeilen entfernt (H-1/H-3/H-4/H-11/H-27/H-28/6 Orphan-Routes/2 Templates/ewb_top2). pytest 265 passing. |
 | Phase 2: Product Fixes | 6/6 ✓ | Complete — all PROD requirements done |
 | Phase 3: Infrastructure & Deployment | 3/3 ✓ | Complete — VPS live on getnerve.app (178.104.82.166), HTTPS, WAL, CORS locked |
 | Phase 3.1: Frontend Redesign | 6/6 ✓ | Complete — nerve.css deployed, all app pages migrated. Visual UAT: 15 issues found. |
