@@ -707,16 +707,22 @@ def _migrate():
                 print(f"[DB] Migration: prompt_versions seed {_module} skip ({_e})")
         print("[DB] Migration: seeded prompt_versions for phase 08.5 modules (classifier, qa_response, training_kunde, training_scoring, training_stimmung)")
 
-        # ── DB file rename: salesnerve.db → nerve.db ──────────────────────────
-        import os as _os
-        old_db = _os.path.join(_os.path.dirname(__file__), 'database', 'salesnerve.db')
-        new_db = _os.path.join(_os.path.dirname(__file__), 'database', 'nerve.db')
-        if _os.path.exists(old_db) and not _os.path.exists(new_db):
-            try:
-                _os.rename(old_db, new_db)
-                print('[DB] Renamed salesnerve.db -> nerve.db')
-            except Exception:
-                pass
+        # ── Phase 08.12: User-Migration für onboarding_done (Block-C-Hotfix) ──
+        # Block C hat LB-11 Onboarding-Redirect reaktiviert. Bestehende User mit
+        # onboarding_done=NULL/False würden im Onboarding-Wizard hängen bleiben.
+        # Idempotente Migration: setzt alle bestehenden User auf onboarding_done=1.
+        # Safe bei mehrfachem Lauf (UPDATE ohne Effekt wenn schon 1).
+        try:
+            from sqlalchemy import text as _text_um
+            _result = conn.execute(_text_um(
+                "UPDATE users SET onboarding_done = 1 "
+                "WHERE onboarding_done IS NULL OR onboarding_done = 0"
+            ))
+            if _result.rowcount > 0:
+                print(f"[DB] Migration 08.12: {_result.rowcount} bestehende User auf onboarding_done=True migriert")
+            conn.commit()
+        except Exception as _e:
+            print(f"[DB] Migration 08.12 onboarding_done: skipped ({_e})")
 
         # ── Phase 08.9: Demo-Profile Flat-Schema → basis.*-Schema Migration ─────
         # 3 Demo-Profile (IDs 2, 3, 4) wurden mit Top-Level 'produkt'/'einwaende'/'phasen'

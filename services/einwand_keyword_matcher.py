@@ -107,7 +107,7 @@ _COMPILED_KEYWORDS: dict[str, re.Pattern] = {
 
 # ── Profil-Match-Aliase ──────────────────────────────────────────────────────
 # Mappt Keyword-Key -> Liste von Aliase fuer (kurzlabel | kategorie | typ).
-# Verifiziert an echten DB-Profilen aus database/salesnerve.db:
+# Verifiziert an echten DB-Profilen aus database/nerve.db:
 #   kategorie real: Preis, Zeit, Bedarf, Vertrauen, Wettbewerb, Entscheider, Datenschutz, Skepsis
 #   typ real (Demo-Profile): Kosten/Preis, Vergleich, Kein Bedarf, Zeit/Aufschub,
 #                            Entscheidungstraeger, Vertrauen
