@@ -92,6 +92,9 @@ def wizard_page():
 @login_required
 def wizard_create():
     """Guided wizard: creates profile from form data, redirects to dashboard."""
+    if _rolle() not in ('owner', 'admin'):
+        flash('Keine Berechtigung.', 'error')
+        return redirect(url_for('profiles.liste'))
     firma = request.form.get('firma', '').strip()
     # Phase 08 D-09: Wizard schreibt ebenfalls gegen Enum-Whitelist (Wizard-UI
     # kann immer noch Legacy-Freitext liefern bis Wizard-Plan nachzieht).
@@ -195,6 +198,8 @@ def bearbeiten(pid):
 @profiles_bp.route('/<int:pid>/activate', methods=['POST'])
 @login_required
 def aktivieren(pid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
     db = get_session()
     try:
         p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
@@ -462,6 +467,8 @@ def api_faqs_create(profile_id):
         return jsonify({'error': 'field too long'}), 400
     if kategorie not in _FAQ_KATEGORIEN:
         return jsonify({'error': 'invalid kategorie'}), 400
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
     p, db = _require_own_profile(profile_id)
     try:
         if p is None:
@@ -565,6 +572,8 @@ def api_tabu_update(profile_id):
         if len(valid) >= _MAX_TABU_COUNT:
             break
 
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
     p, db = _require_own_profile(profile_id)
     try:
         if p is None:
