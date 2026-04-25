@@ -27,7 +27,7 @@ Liefere ein konkretes Gegenargument für den Einwand "{einwand_typ}", passend zu
 def live():
     # Classic-View entfernt (Block F). Redirect auf Dashboard.
     from flask import redirect, url_for
-    return redirect(url_for('dashboard.dashboard'))
+    return redirect(url_for('dashboard.index'))
 
 
 @app_routes_bp.route('/api/beenden', methods=['POST'])
