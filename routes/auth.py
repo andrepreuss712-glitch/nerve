@@ -335,7 +335,7 @@ def confirm_email():
         if user:
             user.email_confirmed = True
             db.commit()
-            flash('E-Mail erfolgreich bestätigt!', 'success')
+            flash('E-Mail erfolgreich bestätigt! Bitte einloggen.', 'success')
         else:
             flash('Ungültiger Bestätigungslink.', 'error')
     except (BadSignature, SignatureExpired):
@@ -345,7 +345,7 @@ def confirm_email():
         flash('Fehler bei der E-Mail-Bestätigung.', 'error')
     finally:
         db.close()
-    return redirect(url_for('dashboard.index'))
+    return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/auth/resend-confirm', methods=['POST'])
