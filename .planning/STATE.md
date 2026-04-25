@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.8 Plan 03 complete — verified
-stopped_at: Completed 08.8-03-PLAN.md
-last_updated: "2026-04-25T10:20:00Z"
-last_activity: 2026-04-25 - Phase 08.8-03 complete (2/2 tasks): 6 Orphan-Routes entfernt (swap_roles, api_status, api_skripte, feedback/quick, training/ping, api_training_postcall_analysis). pytest 268 passing.
+status: Phase 08.8 Plan 04 complete — verified
+stopped_at: Completed 08.8-04-PLAN.md
+last_updated: "2026-04-25T11:00:00Z"
+last_activity: 2026-04-25 - Phase 08.8-04 complete (3 tasks): 2 Orphan-Templates geloescht (login.html + feedback_notification.html), ewb_top2 Dead-Reader entfernt (app.js + app_routes.py + live_session.py), classic-opener auf Block F verschoben. pytest 268 passing.
 progress:
   total_phases: 41
   completed_phases: 31
@@ -169,6 +169,8 @@ Progress: [█████████░] ~92% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.8-04]: ewb_top2 Option A — sofort entfernt aus app.js + app_routes.py + live_session.py; Writer seit Phase 04.8 D-08 entfernt, Wert war immer None
+- [Phase 08.8-04]: classic-opener-block-f — Classic-opener-Branch in app.js nicht angefast, verschoben auf Block F (Classic-Deprecation)
 - [Phase 08.8-03]: swap_roles + api_status + api_skripte aus app_routes.py geloescht — 0 Frontend-Caller verifiziert; api_skripte war Duplikat zu /api/launcher/*
 - [Phase 08.8-03]: api_feedback_quick + training_ping + api_training_postcall_analysis geloescht — 0 Frontend-Caller; /api/postcall_analysis (live) bleibt erhalten
 - [Phase 08.8-02]: H-27 live_tipp + api_tipps geloescht nach 0-Frontend-Caller-Verifikation — datetime-Import mitentfernt
