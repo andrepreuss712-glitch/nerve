@@ -694,6 +694,23 @@ Plans:
 
 ---
 
+### Phase 08.8: Stabilisierung Block I — Dead-Code-Prune (INSERTED)
+
+**Goal:** ~500-800 Zeilen toten Code entfernen. 11 atomare Tasks aus MASTER-AUDIT-v2 Block I — analysiere_mit_claude_streaming, _build_system_prompt, _get_erfolgsquoten löschen (H-3/H-4); Coach-Live-Tipp-Routes entfernen (H-27); Personality-Save-Route entfernen (H-28); 9 Orphan-Routes prunen; 3 Orphan-Templates löschen; ewb_top2-Writer/Reader-Cleanup (F-8/H-36); Legacy-opener vs. openerItems Entscheidung; finetune_logging.py + FtPipelineEvent-Tabelle droppen (H-1, DB-Migration). pytest grün nach jedem Commit.
+**Depends on:** Phase 08.7
+**Status:** Planned — 5 plans
+
+**Plans:** 5 plans
+
+Plans:
+- [ ] 08.8-01-PLAN.md — Wave 1: H-3 + H-4 + H-11 (analysiere_mit_claude_streaming, _build_system_prompt, _get_erfolgsquoten, if/else-Branch, CONCERNS.md)
+- [ ] 08.8-02-PLAN.md — Wave 2: H-27 Coach-Live-Tipp-Routes + H-28 Personality-Save-Route
+- [ ] 08.8-03-PLAN.md — Wave 3: 6 Orphan-Routes (swap_roles, status, skripte, feedback/quick, training/postcall-analysis, training/ping)
+- [ ] 08.8-04-PLAN.md — Wave 4: 2 Orphan-Templates + ewb_top2 Cleanup (F-8/H-36) + opener-Entscheidung
+- [ ] 08.8-05-PLAN.md — Wave 5: H-1 log_pipeline_event/finetune_logging Entfernung (LETZTER)
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
