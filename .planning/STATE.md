@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.10 IN PROGRESS — Plan 03 complete (CSRF-Schutz vollständig LB-9)
-stopped_at: Completed 08.10-03-PLAN.md — CSRFProtect(app) + 3 csrf.exempt() + Meta-Tag base.html + getCsrfToken() in 4 JS-Files
-last_updated: "2026-04-25T19:06:00Z"
-last_activity: 2026-04-25 - Phase 08.10 Plan 03 complete: flask-wtf CSRFProtect(app) nach SocketIO (VARIANTE B), 3 csrf.exempt() (stripe_webhook/google_callback/microsoft_callback), CSRF meta-tag in base.html, getCsrfToken()+X-CSRFToken in pip-launcher.js/profile_editor.js/feedback.js/admin_dashboard.js. Commits dd64f5d + a418878. pytest 266 passing.
+status: Phase 08.10 IN PROGRESS — Plan 04 complete (Session-Fixation-Fix H-17 + Org-Scoping-Assertion M-AU-1)
+stopped_at: Completed 08.10-04-PLAN.md — session.clear() in _login_user() + current_app.logger.warning Org-Mismatch in login_required()
+last_updated: "2026-04-25T19:30:00Z"
+last_activity: 2026-04-25 - Phase 08.10 Plan 04 complete: session.clear() vor session.permanent=True in _login_user() (H-17), Org-Scoping-Assertion mit current_app.logger.warning in login_required() (M-AU-1). Commit a0c2b32. pytest 266 passing.
 progress:
   total_phases: 41
   completed_phases: 32
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.10 (stabilisierung-block-b-auth-haertung) — IN PROGRESS
-Plan: 3 of 6 COMPLETE
+Plan: 4 of 6 COMPLETE
 Last activity: 2026-04-25
 
-**Next:** Phase 08.10 Plan 04 — Stabilisierung Block B Auth-Haertung (naechster Wave).
+**Next:** Phase 08.10 Plan 05 — Stabilisierung Block B Auth-Haertung (naechster Wave).
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -175,6 +175,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.10-04]: session.clear() in _login_user() VOR session.permanent=True — neue Session-ID bei jedem Login (H-17 Session-Fixation-Praevention)
+- [Phase 08.10-04]: current_app.logger.warning() statt from app import app — circular import guard (routes/auth.py importiert von app.py)
+- [Phase 08.10-04]: if-Variante fuer Org-Mismatch statt assert — sauberer Redirect ohne 500er Stack-Trace; logger.warning() VOR session.clear() fuer Incident-Response
 - [Phase 08.10-03]: csrf = CSRFProtect(app) NACH socketio = SocketIO(app, ...) — WSGI-Level-Interception garantiert SocketIO-Exemption automatisch (VARIANTE B, kein expliziter /socket.io-Workaround noetig)
 - [Phase 08.10-03]: 3 csrf.exempt(): stripe_webhook (HMAC-Auth via STRIPE_WEBHOOK_SECRET), google_callback + microsoft_callback (OAuth GET-Callbacks, kein Browser-POST)
 - [Phase 08.10-03]: getCsrfToken() in jedem JS-File separat definiert — Self-contained IIFE-Pattern bleibt erhalten, kein shared module

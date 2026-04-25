@@ -736,7 +736,7 @@ Plans:
 - [x] 08.10-01-PLAN.md — Wave 1: LB-7 Error-Handler Traceback-Leak + H-15 Route-Exception-Leaks + Frontend-Traceback-Filter
 - [x] 08.10-02-PLAN.md — Wave 2: LB-10 Session-Cookie-Hardening (FLASK_DEBUG-aware)
 - [x] 08.10-03-PLAN.md — Wave 3: LB-9 CSRF Backend (CSRFProtect+Exempts) + Frontend (X-CSRFToken in allen JS-Files)
-- [ ] 08.10-04-PLAN.md — Wave 4: H-17 Session-Fixation-Fix + M-AU-1 Org-Scoping-Assertion
+- [x] 08.10-04-PLAN.md — Wave 4: H-17 Session-Fixation-Fix + M-AU-1 Org-Scoping-Assertion
 - [ ] 08.10-05-PLAN.md — Wave 5: H-20 flask-limiter Brute-Force-Schutz
 - [ ] 08.10-06-PLAN.md — Wave 6: H-21 oauth_id UNIQUE-Constraint + H-18 Microsoft-OAuth Email-Hijacking-Mitigation
 
