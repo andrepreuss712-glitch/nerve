@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.11 in progress — Plan 02 complete, 2 plans remaining
-stopped_at: Completed 08.11-02-PLAN.md — Wave 2 Frontend-Cleanup done
-last_updated: "2026-04-25T14:07:00Z"
-last_activity: 2026-04-25 - Phase 08.11 Plan 02 complete: app.js + app.html geloescht, alle /live-Refs in 4 Templates auf NerveLauncher.open() umgestellt. Commit e89e2bd. 266 passing (excl. expected test_ft_seed fail).
+status: Phase 08.11 in progress — Plan 03 complete, 1 plan remaining
+stopped_at: Completed 08.11-03-PLAN.md — Wave 3 Legacy-Opener-Cleanup + test_ft_seed fix done
+last_updated: "2026-04-25T14:14:00Z"
+last_activity: 2026-04-25 - Phase 08.11 Plan 03 complete: legacyOpener aus pip-launcher.js entfernt, test_ft_seed.py auf 4 Module korrigiert. Commits 42a7c29 + 57605d9. test_ft_seed 2 passed.
 progress:
   total_phases: 41
   completed_phases: 32
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.11 (stabilisierung-block-f-classic-view-deprecation) — IN PROGRESS
-Plan: 2 of 4 COMPLETE
+Plan: 3 of 4 COMPLETE
 Last activity: 2026-04-25
 
-**Next:** Phase 08.11 Plan 03 — test_ft_seed.py reparieren (Wave 3).
+**Next:** Phase 08.11 Plan 04 — Wave 4 (letzter Block-F-Abschluss).
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -175,6 +175,8 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.11-03]: legacyOpener / profileDaten.opener vollstaendig entfernt — alle EA-Profile nutzen openerItems direkt seit Phase 04.17. Kein Fallback mehr noetig.
+- [Phase 08.11-03]: test_ft_seed.py auf 4 Module reduziert — api_frage Route in Wave 1 geloescht, Seed-Funktion entfernt
 - [Phase 08.11-02]: onboarding.html finish('live') — NerveLauncher ? open() : /dashboard Fallback (Cross-AI Review Override; pip-launcher.js koennte beim Onboarding-Click noch nicht geladen sein)
 - [Phase 08.11-02]: logs_page.html <a>-Tag href=/live — beide Attribute href=javascript:void(0) + onclick=NerveLauncher zusammen gesetzt (Cross-AI Review Override)
 - [Phase 08.11-01]: OBJECTION_TRIGGER_PROMPT_BASE bleibt in app_routes.py — Konstante wird noch fuer objection_trigger Seed-Eintrag in _seed_prompt_versions() benoetigt; HTTP-Route api_ewb_trigger() geloescht, Konstante bleibt
