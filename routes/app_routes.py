@@ -216,23 +216,6 @@ def api_pause():
     return jsonify({'paused': paused})
 
 
-@app_routes_bp.route('/api/swap_roles', methods=['POST'])
-@login_required
-def api_swap_roles():
-    with ls.roles_lock:
-        ls.roles_swapped = not ls.roles_swapped
-        swapped = ls.roles_swapped
-    print(f"[API] Rollen getauscht: {'Sp0=Kunde/Sp1=Berater' if swapped else 'Sp0=Berater/Sp1=Kunde'}")
-    return jsonify({'swapped': swapped})
-
-
-@app_routes_bp.route('/api/status')
-@login_required
-def api_status():
-    with ls.pause_lock:
-        return jsonify({'paused': ls.is_paused})
-
-
 @app_routes_bp.route('/api/log')
 @login_required
 def api_log():
@@ -1352,32 +1335,6 @@ Max 15 Wörter pro Bullet. Kein Markdown."""
         return jsonify({'ok': True, 'bullets': bullets[:3]})
     except Exception as e:
         return jsonify({'ok': True, 'bullets': ['Keine Insights verfügbar.', '', '']})
-
-
-# ── PreCall Intelligence (Phase 04.13, per D-04: button-triggered) ────────────
-@app_routes_bp.route('/api/skripte')
-@login_required
-def api_skripte():
-    """Return scripts for a given profile_id (for PiP Setup-Step 3 dropdown). Per D-12.
-    Security: JOIN to profiles ensures profile belongs to user's org (T-06-01)."""
-    from database.db import SessionLocal
-    from database.models import ProfileSkript, Profile
-    profile_id = request.args.get('profile_id', type=int)
-    if not profile_id:
-        return jsonify([])
-    db = SessionLocal()
-    try:
-        # T-06-01: org_id check via JOIN -- prevents cross-org script access
-        skripte = (db.query(ProfileSkript)
-                   .join(Profile, ProfileSkript.profile_id == Profile.id)
-                   .filter(Profile.org_id == g.org.id)
-                   .filter(ProfileSkript.profile_id == profile_id)
-                   .order_by(ProfileSkript.sortierung)
-                   .all())
-        result = [{'id': s.id, 'name': s.name, 'inhalt': s.inhalt or ''} for s in skripte]
-    finally:
-        db.close()
-    return jsonify(result)
 
 
 @app_routes_bp.route('/api/precall/research', methods=['POST'])
