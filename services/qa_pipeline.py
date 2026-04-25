@@ -38,7 +38,7 @@ from typing import Optional
 import threading as _threading
 
 from services.prompt_pipeline import (
-    build_profile_context, resolve_prompt_version, log_pipeline_event
+    build_profile_context, resolve_prompt_version
 )
 
 # ── Confidence threshold (Korrektur 3) ───────────────────────────────────────
@@ -326,17 +326,6 @@ def classify_utterance(text: str, kontext: str, user_id: int) -> dict:
 
         result = {"kategorie": kat, "confidence": conf, "einwand_zitat": zitat}
 
-        # FT-logging
-        try:
-            log_pipeline_event('classifier', 'qa', {
-                'model': 'haiku-4-5',
-                'prompt_version': version,
-                'kategorie': kat,
-                'confidence': conf,
-            })
-        except Exception as _e:
-            print(f"[QA] log_pipeline_event classifier skipped: {_e}")
-
         # Cost-hook (analog claude_service.py pattern)
         try:
             from services.cost_tracker import log_api_cost
@@ -443,19 +432,6 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         # ── Final never-empty guard ────────────────────────────────────────────
         if not text:
             text = _FALLBACK_RUECKFRAGE
-
-        # FT-logging
-        try:
-            log_pipeline_event('qa_response', 'qa', {
-                'model': 'haiku-4-5',
-                'prompt_version': version or 'v1',
-                'category': category,
-                'confidence': confidence,
-                'branch': 'rueckfrage' if is_low_confidence else 'direct',
-                'response_len': len(text),
-            })
-        except Exception as _e:
-            print(f"[QA] log_pipeline_event qa_response skipped: {_e}")
 
         # Cost-hook
         try:

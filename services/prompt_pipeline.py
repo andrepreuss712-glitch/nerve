@@ -6,7 +6,6 @@ Phase 08 Shared Prompt-Pipeline-Utilities (wiederverwendbar fuer 08.5).
 Exports:
   - resolve_prompt_version(module, user_id)   → A/B-Routing mit ENV-Override
   - build_profile_context(user_id, mode)      → standardisierter Profil-Kontext-String
-  - log_pipeline_event(event_type, module, data) → modul-agnostisches FT-Logging
   - invalidate_resolver_cache()               → Cache-Clear nach prompt_versions Aenderung
 
 Side-effect-free beim Import: keine I/O, keine DB-Zugriffe.
@@ -222,34 +221,3 @@ def _resolve_anrede(ls: Any, ki: dict) -> str:
         pass
     return ki.get('ansprache') or 'Sie'
 
-
-# ── Modul-agnostisches Logging: log_pipeline_event ─────────────────────────
-
-def log_pipeline_event(event_type: str, module: str, data: dict) -> None:
-    """Write a pipeline-event via the shared finetune logger.
-
-    Wrapper around services.finetune_logging.log_ft_event (if present).
-    Swallows all errors — live-loop must never crash because of a log-write.
-
-    Examples::
-
-        log_pipeline_event('assistant', 'ewb', {'model': 'haiku'})
-        log_pipeline_event('objection', 'ewb', {'einwand_typ': 'Preis'})
-    """
-    try:
-        from services.finetune_logging import log_ft_event  # type: ignore
-    except Exception as e:
-        # Module does not exist (yet) or import fails — not fatal.
-        print(f"[Pipeline] log_pipeline_event unavailable module={module}: {e}")
-        return
-
-    try:
-        log_ft_event(
-            phase=f'phase_08_{event_type}',
-            model=(data or {}).get('model', 'haiku'),
-            module=module,
-            **({k: v for k, v in (data or {}).items() if k != 'model'}),
-        )
-    except Exception as e:
-        print(f"[Pipeline] log_pipeline_event failed module={module}: {e}")
-        # no raise — live-loop safety

@@ -5,7 +5,7 @@ import requests
 from datetime import datetime
 import anthropic
 from config import ANTHROPIC_API_KEY, ELEVENLABS_API_KEY
-from services.prompt_pipeline import resolve_prompt_version, log_pipeline_event
+from services.prompt_pipeline import resolve_prompt_version
 
 claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -824,15 +824,6 @@ def generate_response(conversation_history: list, system_prompt: str) -> str:
     text = re.sub(r'\*\*[A-ZÄÖÜ]+:?\*\*\s*', '', text)
     text = text.replace('**', '').replace('*', '')
 
-    # Log FT event with prompt_version tag
-    try:
-        log_pipeline_event('training', _module, {
-            'prompt_version': _version,
-            'model': 'haiku-4-5',
-        })
-    except Exception as _e:
-        print(f"[Training] log_pipeline_event skipped: {_e}")
-
     return text
 
 
@@ -896,15 +887,6 @@ def generate_response_with_mood(
         }
         # Clamp mood to valid range
         result['neue_stimmung'] = max(-5, min(5, result['neue_stimmung']))
-        # Log FT event with prompt_version tags
-        try:
-            log_pipeline_event('training', 'training_stimmung', {
-                'prompt_version': _stimmung_version,
-                'kunde_version': _kunde_version,
-                'model': 'haiku-4-5',
-            })
-        except Exception as _e:
-            print(f"[Training] log_pipeline_event mood skipped: {_e}")
         return result
     except (json.JSONDecodeError, ValueError, TypeError) as e:
         print(f"[Training] Mood JSON parse error: {e}, falling back to plain text")
@@ -1219,15 +1201,6 @@ Antworte NUR als valides JSON (keine Markdown-Code-Fences, kein Text davor oder 
     gesamt = result.get('gesamt_score', 0)
     bonus  = max(0, gesamt - 50)  # bonus for scores above 50
     result['punkte'] = 10 + bonus  # 10 base points + score bonus
-
-    # Log FT event with prompt_version tag
-    try:
-        log_pipeline_event('training', 'training_scoring', {
-            'prompt_version': _scoring_version,
-            'model': 'sonnet-4-6',
-        })
-    except Exception as _e:
-        print(f"[Training] log_pipeline_event scoring skipped: {_e}")
 
     return result
 
