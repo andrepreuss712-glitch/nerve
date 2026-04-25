@@ -4,6 +4,15 @@
 (function () {
   'use strict';
 
+  // ── sanitizeErrorMsg: Defense-in-Depth — filtert Python-Tracebacks aus Fehlermeldungen ──
+  function sanitizeErrorMsg(msg) {
+    if (!msg) return 'Fehler aufgetreten.';
+    if (msg.includes('Traceback') || msg.includes('File "') || msg.includes('  File ')) {
+      return 'Interner Fehler. Bitte Seite neu laden.';
+    }
+    return msg;
+  }
+
   // ── lastSessionAnrede: persisted across calls via localStorage (D-10) ─────
   var _lastSessionAnradeInit = null;
   try { _lastSessionAnradeInit = localStorage.getItem('nerve_last_anrede') || null; } catch (_) {}
@@ -331,7 +340,7 @@
         if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchführen'; }
         if (data.error) {
           var errMsg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
-          if (errEl2) { errEl2.textContent = errMsg; errEl2.style.display = 'block'; }
+          if (errEl2) { errEl2.textContent = sanitizeErrorMsg(errMsg); errEl2.style.display = 'block'; }
           return;
         }
         if (data.briefing) {
@@ -348,7 +357,7 @@
         if (loading) loading.style.display = 'none';
         if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Analyse durchführen'; }
         var msg = (err && err.message) ? err.message : String(err);
-        if (errEl2) { errEl2.textContent = msg; errEl2.style.display = 'block'; }
+        if (errEl2) { errEl2.textContent = sanitizeErrorMsg(msg); errEl2.style.display = 'block'; }
       });
   }
 
