@@ -42,11 +42,6 @@ _sessions_lock = threading.Lock()
 _CODE_VERSION  = '45b02eb'  # git short hash for deploy verification
 
 
-@training_bp.route('/training/ping')
-def training_ping():
-    return jsonify({'version': _CODE_VERSION, 'ensure_dict': hasattr(_ensure_dict, '__call__')})
-
-
 @training_bp.route('/training')
 @login_required
 def training_page():
