@@ -794,10 +794,6 @@ async function pollErgebnis(){
     }
     if(data.speech_stats) updateSpeechCircles(data.speech_stats);
     updateKompaktMetrics(data.speech_stats||null, data.kaufbereitschaft||null);
-    // Update PiP EWB buttons if AI selection provided
-    if(data.ewb_top2 && Array.isArray(data.ewb_top2) && data.ewb_top2.length >= 2){
-      renderPipEwbButtons(data.ewb_top2);
-    }
     // Phase 04.8: active hint + phase/readiness badges + dynamic EWB
     renderActiveHint(data.active_hint);
     renderPhaseBadge(data.current_phase, data.current_phase_name, data.phase_confidence);

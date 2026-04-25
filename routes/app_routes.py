@@ -142,7 +142,6 @@ def api_ergebnis():
             'ergebnis':         ls.state['ergebnis'],
             'line_id':          ls.state['line_id'],
             'kaufbereitschaft': ls.state.get('kaufbereitschaft', 30),   # legacy alias (P04: mirrors readiness_score)
-            'ewb_top2':         ls.state.get('ewb_top2'),  # legacy (may be None post-04.8)
             # ── Phase 04.8 additions ──
             'current_phase':       ls.state.get('current_phase', 1),
             'current_phase_name':  ls.state.get('current_phase_name', 'Opener'),

@@ -103,7 +103,6 @@ state = {
     'ergebnis':         None,
     'line_id':          None,
     'kaufbereitschaft': 30,
-    'ewb_top2':         None,  # List of 2 EWB type strings, AI-ranked
     'ewb_clicks':       [],    # Liste von dicts: {'einwand_typ': str, 'success': bool, 'ts': iso, 'antwort_text': str|None, 'einwand_text': str|None}
     # ── Phase 04.8: Conversation Phase Model (6-phase auto-detected) ──
     'current_phase':        1,
@@ -329,7 +328,6 @@ def reset_session():
         state['ergebnis']         = None
         state['line_id']          = None
         state['kaufbereitschaft'] = 30
-        state['ewb_top2']         = None
         # ── Phase 04.8 field resets (R3: missing resets cause stale hints) ──
         state['current_phase']       = 1
         state['current_phase_name']  = 'Opener'
