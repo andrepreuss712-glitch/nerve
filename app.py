@@ -808,6 +808,39 @@ def _migrate():
         except Exception as _e:
             print(f"[DB] Migration 08.9 Demo-Profile: {_e}")
 
+        # ── Phase 08.10 H-21: oauth_id UNIQUE-Constraint ─────────────────────────
+        # Partielle UNIQUE-Index auf NOT-NULL-Werte (SQLite: WHERE oauth_id IS NOT NULL).
+        # Idempotent via IF NOT EXISTS. STOPS-Behavior bei Duplicates: sys.exit(1).
+        try:
+            import sys as _sys
+            # 1. Duplicate-Check VOR Constraint-Anlage
+            dup_row = conn.execute(text(
+                "SELECT oauth_id FROM users WHERE oauth_id IS NOT NULL "
+                "GROUP BY oauth_id HAVING COUNT(*) > 1 LIMIT 1"
+            )).fetchone()
+            if dup_row:
+                # H-21: STOPS — Duplicate oauth_ids gefunden. Manuelle Bereinigung nötig vor Deploy.
+                all_dups = conn.execute(text(
+                    "SELECT oauth_id, COUNT(*) as cnt FROM users WHERE oauth_id IS NOT NULL "
+                    "GROUP BY oauth_id HAVING COUNT(*) > 1"
+                )).fetchall()
+                print("[DB] FEHLER: Duplicate oauth_ids gefunden — NERVE stoppt:", file=_sys.stderr)
+                for _row in all_dups:
+                    print(f"  oauth_id={_row[0]}  (count={_row[1]})", file=_sys.stderr)
+                print("[DB] Bitte oauth_id-Duplicates manuell bereinigen, dann neu starten.", file=_sys.stderr)
+                _sys.exit(1)
+            else:
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_oauth_id "
+                    "ON users(oauth_id) WHERE oauth_id IS NOT NULL"
+                ))
+                conn.commit()
+                print("[DB] Migration: uq_users_oauth_id UNIQUE-Index OK")
+        except SystemExit:
+            raise  # sys.exit() nicht abfangen
+        except Exception as _e:
+            print(f"[DB] oauth_id UNIQUE-Index Migration-Fehler: {_e}")
+
 _migrate()
 
 
