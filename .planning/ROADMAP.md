@@ -738,7 +738,7 @@ Plans:
 - [x] 08.10-03-PLAN.md — Wave 3: LB-9 CSRF Backend (CSRFProtect+Exempts) + Frontend (X-CSRFToken in allen JS-Files)
 - [x] 08.10-04-PLAN.md — Wave 4: H-17 Session-Fixation-Fix + M-AU-1 Org-Scoping-Assertion
 - [x] 08.10-05-PLAN.md — Wave 5: H-20 flask-limiter Brute-Force-Schutz
-- [ ] 08.10-06-PLAN.md — Wave 6: H-21 oauth_id UNIQUE-Constraint + H-18 Microsoft-OAuth Email-Hijacking-Mitigation
+- [x] 08.10-06-PLAN.md — Wave 6: H-21 oauth_id UNIQUE-Constraint + H-18 Microsoft-OAuth Email-Hijacking-Mitigation
 
 **Reasoning:**
 > MASTER-AUDIT v2 Block B — Flächendeckende Auth-Härtung vor Launch. Cross-AI-Plan-Review mit Gemini + Claude nach Plan-Phase.
