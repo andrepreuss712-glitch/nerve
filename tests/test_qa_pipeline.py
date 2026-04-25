@@ -197,8 +197,7 @@ class TestGenerateQaResponse(unittest.TestCase):
         with patch('services.qa_pipeline.resolve_prompt_version', return_value='v1'), \
              patch('services.qa_pipeline._load_qa_template',
                    return_value='Anrede: {anrede}. Profil-Kontext:\n{profile_context}'), \
-             patch('services.qa_pipeline.build_profile_context', return_value='Profil-Info'), \
-             patch('services.qa_pipeline.log_pipeline_event'):
+             patch('services.qa_pipeline.build_profile_context', return_value='Profil-Info'):
             mock_msg = MagicMock()
             mock_msg.content = [MagicMock(text='Das ist kein Problem fuer unsere Kunden.')]
             mock_client = MagicMock()

@@ -188,31 +188,3 @@ def test_build_profile_context_anrede_session_override_wins(monkeypatch):
     assert 'Anrede: Du.' in out
     assert 'Wechsle NIEMALS' in out
 
-
-# ─── 9. log_pipeline_event: MUST swallow errors ─────────────────────────────
-
-def test_log_pipeline_event_swallows_errors(monkeypatch):
-    """Live-loop guarantee — log_pipeline_event must never propagate exceptions."""
-    # Install a fake 'services.finetune_logging' module whose log_ft_event raises.
-    import types
-
-    fake_mod = types.ModuleType('services.finetune_logging')
-
-    def _raise(*a, **k):
-        raise RuntimeError('DB down')
-
-    fake_mod.log_ft_event = _raise
-    monkeypatch.setitem(sys.modules, 'services.finetune_logging', fake_mod)
-
-    # Must not raise:
-    pp.log_pipeline_event('assistant', 'ewb', {'model': 'haiku'})
-
-
-# ─── 10. log_pipeline_event: missing sibling module also swallowed ──────────
-
-def test_log_pipeline_event_handles_missing_module(monkeypatch):
-    """If services.finetune_logging does not exist at all, must still swallow."""
-    # Make sure the module is NOT present in sys.modules:
-    monkeypatch.delitem(sys.modules, 'services.finetune_logging', raising=False)
-    # Must not raise:
-    pp.log_pipeline_event('assistant', 'ewb', {'model': 'haiku'})

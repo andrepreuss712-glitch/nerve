@@ -53,8 +53,6 @@ def test_generate_response_mocked_call(monkeypatch):
 
     monkeypatch.setattr(ts, 'claude_client', _FakeClient())
 
-    log_calls = []
-    monkeypatch.setattr(ts, 'log_pipeline_event', lambda *a, **kw: log_calls.append((a, kw)))
     monkeypatch.setattr(ts, 'resolve_prompt_version', lambda module, uid: 'v1')
 
     conversation = [{'speaker': 'berater', 'text': 'Guten Tag'}]
@@ -63,7 +61,6 @@ def test_generate_response_mocked_call(monkeypatch):
 
     assert isinstance(result, str)
     assert len(result) > 0
-    assert len(log_calls) >= 1, "log_pipeline_event was not called from generate_response"
 
 
 def test_generate_response_with_mood_mocked_call(monkeypatch):
@@ -86,8 +83,6 @@ def test_generate_response_with_mood_mocked_call(monkeypatch):
         messages = _FakeMessages()
 
     monkeypatch.setattr(ts, 'claude_client', _FakeClient())
-    log_calls = []
-    monkeypatch.setattr(ts, 'log_pipeline_event', lambda *a, **kw: log_calls.append((a, kw)))
     monkeypatch.setattr(ts, 'resolve_prompt_version', lambda module, uid: 'v1')
 
     conversation = [{'speaker': 'berater', 'text': 'Hallo'}]
@@ -97,7 +92,6 @@ def test_generate_response_with_mood_mocked_call(monkeypatch):
     assert isinstance(result, dict)
     assert 'text' in result
     assert 'neue_stimmung' in result
-    assert len(log_calls) >= 1, "log_pipeline_event was not called from generate_response_with_mood"
 
 
 def test_public_signatures_unchanged():
