@@ -516,23 +516,30 @@ Thema: 3-Schichten-Feature-Fake durch echte Integration beenden.
 
 **Block I damit entsperrt** — H-3 + H-4 sind jetzt frei zum Löschen.
 
-### BLOCK I — Dead-Code-Prune (vor EA empfohlen, ~4-6h)
+### ✅ BLOCK I — Dead-Code-Prune (ABGESCHLOSSEN 2026-04-25, GSD-Phase 08.8)
 
-Thema: Nudelcode-Reduktion nach Block H.
+**Status:** Komplett. ~643 Zeilen Dead-Code weg über 5 Waves. pytest 268 → 265 (3 Source-Presence-Tests in Wave 5 mit gelöscht). 0 Critical Code-Review-Findings.
 
-1. H-3 `analysiere_mit_claude_streaming` (102 Z.) löschen — 15 min
-2. H-4 `_build_system_prompt` + `_get_erfolgsquoten` (195 Z.) löschen — 30 min
-3. H-11 if/else-Branch in analyse_loop + CONCERNS.md-Doku korrigieren — 15 min
-4. H-1 `finetune_logging.py` Entscheidung: **Empfehlung: removen** für EA (1h) — alle log_pipeline_event-Calls entfernen, `FtPipelineEvent`-Tabelle droppen. Später implementieren wenn FT-Training startet.
-5. H-27 `/coach/live_tipp` + `/coach/api/tipps` + ls.coach_tipps entfernen — 30 min
-6. H-28 Personality-Save Entscheidung: **Empfehlung: Route + Feld entfernen** für EA (30 min). POLISH-37 später.
-7. Orphan-Routes: `/api/swap_roles`, `/api/status`, `/api/keepalive`, `/api/skripte`, `/api/my_profiles`, `/api/feedback/quick`, `/api/learning_cards/<id>/regenerate + status`, `/api/phrases`, `/training/ping` entscheiden + prunen — 1h
-8. M-NEW-7 `/api/training/postcall-analysis` Status klären (tot oder live? wenn tot: entfernen inkl. H-5 Redeanteil-Fake) — 30 min
-9. Orphan-Templates `login.html`, `admin/feedback_notification.html`, `_tooltip.html` — 15 min
-10. F-8/H-36 `ewb_top2`-Writer suchen + entfernen (Reader in app.js:798-799 + Response-Key in app_routes.py:145) — 30 min
-11. Legacy-`opener` vs. `openerItems` — Pruning-Entscheidung — 30 min
+1. ✅ H-3 `analysiere_mit_claude_streaming` (102 Z.) gelöscht — Wave 1
+2. ✅ H-4 `_build_system_prompt` + `_get_erfolgsquoten` (195 Z.) gelöscht — Wave 1
+3. ✅ H-11 if/else-Duplikat in analyse_loop + CONCERNS.md ANALYSE_INTERVALL "2s" → "4s" — Wave 1
+4. ✅ H-1 `log_pipeline_event`-Wrapper komplett entfernt (Wrapper + 6 Aufrufstellen + Test-Anpassungen) — Wave 5. **Bestätigt:** `finetune_logging.py` existiert nicht, `FtPipelineEvent` nicht in models.py → keine DB-Migration
+5. ✅ H-27 `/coach/live_tipp` + `/coach/api/tipps` + `coach_tipps`-Memory-Leak — Wave 2
+6. ✅ H-28 Personality-Save-Route entfernt — Wave 2
+7. ✅ **6 Orphan-Routes** geprunt — Wave 3 (`/api/swap_roles`, `/api/status`, `/api/skripte`, `/api/feedback/quick`, `/training/ping`, `/api/training/postcall-analysis`). **4 Routen behalten** weil Cross-Grep aktive Caller fand: `/api/keepalive`, `/coach/api/my_profiles`, `/api/learning_cards/*`, `/api/phrases` (mein Welle-4-Audit war zu eng — nur app.js/pip-launcher.js gescannt)
+8. ✅ M-NEW-7 + **H-5 Redeanteil-Fake erledigt sich automatisch** (postcall-analysis-Route gelöscht, Frontend rief sie nie) — Wave 3
+9. ✅ 2 Orphan-Templates entfernt (`login.html`, `admin/feedback_notification.html`). `_tooltip.html` BEHALTEN (Jinja-Import in profile_editor.html bestätigt) — Wave 4
+10. ✅ F-8/H-36 ewb_top2-Reader entfernt (Option A, sofort) — Wave 4. Writer war seit Phase 04.8 weg, Reader prüfte immer-None
+11. ⏭️ Legacy `opener` vs. `openerItems` — **bewusst auf Block F verschoben** (pip-launcher.js nutzt aktiv beide Pfade als Fallback, halber Prune jetzt würde brechen)
 
-**Gesamt:** ~4-6h. **~500-800 Zeilen weg.** Nudelcode-Oberfläche signifikant reduziert.
+**Code-Review-Findings (3 Warnings, 0 Critical):**
+- **WR-02** (stale Import `build_sekretaerin_prompt` in routes/training.py:11) — wird via `/gsd-code-review-fix 08.8 --only WR-02` nachgereicht
+- **WR-01 + WR-03 → in Block C verschoben:** WR-03 ist **identisch zu LB-3** (`_qa_pipeline_dispatch` übergibt `''` als confidence → ValueError → Fallback). Code Reviewer kannte den Audit-Kontext nicht. Block C löst das Komplett-Thema (profile_data + confidence im ganzen QA-Pfad). WR-01 (Test-Argumente vertauscht) gehört dazu — wenn der Test korrekt argumentiert, fängt er den WR-03-Bug. Beide als Paket mit LB-3 in Block C.
+
+**Plan-Checker-Korrekturen aus Audit (für künftige Audits):**
+- 9 Routen als orphan vermutet → 6 dead, 4 live
+- finetune_logging-DB-Migration als Sorge → unnötig (Tabelle existierte nie)
+- ewb_top2-Cleanup als Risiko → 0-Risiko Dead-Branch
 
 ### BLOCK J — Routes-Härtung + Validation (EA-Launch-empfohlen, ~4-6h)
 
