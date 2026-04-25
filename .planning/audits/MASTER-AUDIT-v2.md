@@ -44,6 +44,19 @@ ersetzt: MASTER-AUDIT.md (v1)
 
 ---
 
+> **⚠️ Update 2026-04-25 nachmittag — Block-Reihenfolge nach Cross-AI-Review:**
+>
+> Gemini-Review von MASTER-AUDIT-v2 hat 5 substanzielle Findings geliefert. Konsequenzen:
+>
+> - **Block F vorgezogen vor B+E** — F löscht /api/frage, /api/ewb_trigger, Classic-Routen. Wenn B (CSRF, Error-Handler) und E (Cost-Tracking) davor liefen, würde Code gehärtet der bald weg ist = Doppelarbeit. F vor B vermeidet das. Plan-Phase 08.10 für Block B existiert, wird nach F-Done re-planned via `/gsd-plan-phase 08.10 --reviews`.
+> - **Block I rückwirkend von 🟢 auf 🟡 korrigiert** — 5 Waves, Cross-Grep-Bedarf, 4 fälsch-orphan-Routen vom Plan-Checker gerettet, Wave-4-Checkpoint = nicht 🟢 trivial.
+> - **H-39 Schema-Validator als Mini-Add zu Block J** (statt erst Block N Pydantic). Profile-Save Sanity-Check (basis-Key-Check) gegen Post-Launch Schema-Drift.
+> - **Mini-Audits in Block M:** nerve_rt-Service-Scan (Welle-Audits haben Real-Time-Service nicht erfasst), `.env.example` Environment-Parity-Check (Clean-Install-Risiko).
+>
+> Live-Stand: [[01 Roadmap]] im Vault. Detaillierte Bewertung der Findings: [[05 Log]] vom 2026-04-25 nachmittag.
+
+---
+
 ## EXECUTIVE SUMMARY — Update gegenüber v1
 
 v1-Befund bestätigt und verschärft: NERVE ist in **deutlich schlechterem Zustand** als die Doku suggeriert. Die vier neuen Welle-3/4/5-Audits haben:
@@ -400,35 +413,47 @@ Die konsolidierte Analyse offenbart 7 Hebel bei denen **eine Entscheidung oder e
 
 **Commits:** Siehe `.planning/phases/08.6-stabilisierung-block-a-quick-wins/` + [[05 Log]] Eintrag 2026-04-24 spätabends.
 
-### BLOCK B — Auth-Härtung (EA-Launch-Pflicht, ~12-15h)
+### ✅ BLOCK B — Auth-Härtung (ABGESCHLOSSEN 2026-04-25 spätabends, GSD-Phase 08.10)
 
-Thema: Security-Baseline die nie gesetzt wurde.
+**Status:** Komplett. 6 Plans in 6 Waves + 2 CR-Fixes, live deployed auf getnerve.app. 23/23 must-haves verified. UAT 3/4/5 PASS, UAT 1/2 DEFERRED (siehe unten). pytest 266 grün.
 
-1. LB-9 CSRF-Protection flächendeckend — 3-4h
-2. LB-10 Session-Cookie-Flags — 15 min
-3. H-17 Session-Fixation uniform (session.clear in _login_user) — 10 min
-4. H-20 flask-limiter für /api/login + /api/register — 2-3h
-5. M-AU-1 Org-Scoping-Assertion — 15 min
-6. H-21 oauth_id UNIQUE-Constraint + Migration — 30 min
-7. H-18 Microsoft-OAuth Email-Hijacking-Mitigation (Option A: Confirmation-Email) — 2-3h
-8. LB-7 zentraler Error-Handler + Frontend-Traceback-Filter — 1-2h
-9. H-15 + M-NEW-5 Route-Exception-Message-Leaks reduzieren — 1h
+**Workflow-Aufwand:** 2 Cross-AI-Plan-Review-Runden mit Gemini Pro (gemini-3-pro), 3 Plan-Iterationen (v1 → v2 mit 8 Findings → v3 mit 5 weiteren Findings + 2 Andre-Decisions Variante B).
 
-**Gesamt:** ~12-15h. Ideal als `/gsd-secure-phase` + Threat-Model.
-**Kandidat für Phase:** "04.x Auth-Launch-Härtung"
+1. ✅ **LB-7 + H-15 + M-NEW-5** Zentraler Error-Handler ohne Traceback-Leak + Route-Exception-Cleanup — Wave 1, Plan 01. 5 Handler in training.py + 1 in app_routes.py (api_analyse_line — api_frage + api_ewb_trigger waren in Phase 08.11 schon gelöscht) + 1 in admin_views.py + 2 in app.py. Frontend sanitizeErrorMsg() in pip-launcher.js.
+2. ✅ **LB-10** Session-Cookie-Hardening + ProxyFix — Wave 2, Plan 02. ProxyFix(x_for=1, x_proto=1) MUSS VOR SESSION_COOKIE_SECURE=True. FLASK_DEBUG-aware Conditional. SameSite=Lax, HttpOnly, 14d Lifetime. **x_host=1 BEWUSST WEGGELASSEN** (fixed Domain getnerve.app, Host-Header-Injection-Vektor vermeiden — aus Cross-AI Round 2).
+3. ✅ **LB-9** CSRF-Schutz vollständig — Wave 3, Plan 03. CSRFProtect(app), 3 csrf.exempt() (stripe_webhook + google_callback + microsoft_callback), Meta-Tag in base.html, getCsrfToken() + X-CSRFToken-Header in 4 JS-Files (pip-launcher.js, profile_editor.js, feedback.js, admin_dashboard.js). **SocketIO-CSRF VARIANTE B** (aus Cross-AI Round 2): SocketIO < CSRFProtect Init-Reihenfolge im Plan-Acceptance-Criteria verriegelt + Notfall-Workaround dokumentiert.
+4. ✅ **H-17 + M-AU-1** Session-Fixation-Fix + Org-Scoping-Assertion — Wave 4, Plan 04. session.clear() in _login_user() VOR session-Key-Writes. current_app.logger.warning() VOR session.clear() bei Org-Mismatch (NICHT `from app import app` — circular import).
+5. ✅ **H-20** Brute-Force-Schutz via flask-limiter — Wave 5, Plan 05. ProxyFix → CSRFProtect → init_limiter Reihenfolge. /api/login 10/min, /api/register 5/min. @app.errorhandler(429) gibt JSON `{ok:false, error:"rate limit exceeded"}`. In-Memory-Storage mit Multi-Worker-Hinweis für Block M (Redis-Migration).
+6. ✅ **H-21 + H-18** oauth_id UNIQUE + Microsoft-OAuth Email-Hijacking-Mitigation — Wave 6, Plan 06. UNIQUE-Index (partial: WHERE oauth_id IS NOT NULL) mit sys.exit(1) STOPS bei Duplicates (stderr-Output, except SystemExit: raise). User.email_confirmed Spalte (default=True für bestehende User). **ECHTER Redirect-Block auf /confirm-email-pending** (Variante B: User-Decision Andre 2026-04-25, kein Telemetry-Halbfix). **/auth/resend-confirm Endpoint IN SCOPE** (rate-limited 3/10min, NOT @login_required, generiert neuen 24h-itsdangerous-Token). confirm_email_pending + confirm_email + resend_confirm BEWUSST OHNE @login_required (Redirect-Loop-Guard im acceptance_criteria via grep).
 
-### BLOCK C — Schema-Drift-Cleanup (EA-Launch-Pflicht, ~6-10h)
+**Code-Review post-Execute:** 2 Criticals
+- **CR-01 (UX):** confirm_email redirected zu dashboard.index → User der Email-Link in anderem Browser öffnet sieht Login-Seite ohne Flash. Fix: `flash(...)` + `redirect(url_for('auth.login'))`. Commit 8ccc274.
+- **CR-02 (Security/TOCTOU):** 1-Request-Window in microsoft_callback wo neuer User mit email_confirmed=True (default) durch H-18-Gate kommt bevor zweite DB-Session False committet. Verifier hatte als "non-blocking" eingestuft → Andre + Claudian haben das ehrlich als ECHTEN Security-Bug klassifiziert (öffnet genau die Lücke die H-18 schließen soll). Fix: `new_user.email_confirmed = False` direkt im _oauth_login_or_create VOR _login_user, atomar mit user-creation committed, zweite db_confirm-Session entfernt. Commit d6dce1a.
 
-Thema: Profile-Schema-Harmonisierung quer durch Wizard/Onboarding/Routes/Editor.
+**UAT-Resultate (Live auf getnerve.app):**
+- ✅ Test 3 CSRF: POST ohne X-CSRFToken → 400, mit Token kommt durch
+- ✅ Test 4 Rate-Limit: 11. Request = 429 mit korrektem JSON-Body, ProxyFix arbeitet (echte Client-IP, nicht 127.0.0.1)
+- ✅ Test 5 Cookie-Härtung: HttpOnly + Secure + SameSite=Lax + Expires 14d, Subdomain app.getnerve.app sauber
+- 🟡 **Test 1+2 DEFERRED:** MS-OAuth Live-Flow + Email-Confirmation. Grund: NERVE-App ist Multi-Tenant Org-only (akzeptiert keine consumer-MS-Accounts), Andre hat keine Geschäfts-MS-Email parat, M365 Dev Free-Tier seit 2024 dicht. Code-Pfad ist verifiziert. Follow-up: erster echter EA-Vertriebler oder manueller Azure AD Free Tenant — siehe HUMAN-UAT.md + Block M Mini-Item.
 
-1. LB-11 Onboarding-Redirect aktivieren (`auth.py:60-62` reaktivieren) — 1-2h
-2. H-31 (HSR-2) `BRANCHE_TEMPLATES` auf `basis.*`-Schema umstellen — 1-3h
-3. Wizard-Create (`profiles.py:wizard_create`) auf `basis.*` angleichen — 1h
-4. LB-3 QA-Pipeline profile_data + confidence-Parameter durchreichen — 1h
-5. H-13 `/api/frage` + `/api/ewb_trigger` auf `basis.produktbeschreibung` lesen (oder bei Block-E-Entscheidung entfernen) — 30 min
-6. H-25 Rollen-Check `_rolle()` für `wizard_create`, `aktivieren`, FAQ-API, Tabu-API — 30 min
+**Hygiene-Item für Block J:** api_login gibt HTTP 400 für falsche Credentials zurück, sollte semantisch HTTP 401 sein. Beobachtet während UAT Test 4. Klein, kein Security-Risiko.
 
-**Gesamt:** ~6-10h. Löst LB-3, LB-11, H-13, H-25, H-31 gleichzeitig + bereitet LB-15/H-39 Pydantic-Schema vor.
+**Cross-AI Hit-Rate Update nach Block B:** 13 substantielle Findings über alle Phasen (5 MASTER-AUDIT + 3 Block F + 5 Block B Round 2). Round 1 für Block B = 8 Findings (alle in v2 adressiert). **Lerneffekt:** Cross-AI hat den TOCTOU NICHT gefangen — gleiche Blindstelle wie Plan-Author und 2. Reviewer. Post-Execute Code-Review hat ihn erwischt. **Cross-AI ist komplementär zu Code-Review, kein Substitut.**
+
+### ✅ BLOCK C — Schema-Drift-Cleanup (ABGESCHLOSSEN 2026-04-25, GSD-Phase 08.9)
+
+**Status:** Komplett. 4 Pläne, 3 Waves, 12/12 Verification, pytest 265 → 266 (+1 für WR-01-Regressions-Test).
+
+1. ✅ **LB-11** Onboarding-Redirect reaktiviert in `auth.py` — Wave 1, Plan 01
+2. ✅ **H-31/HSR-2** Alle 8 BRANCHE_TEMPLATES auf `basis.*`-Schema (`produktbeschreibung` statt `produkt`, konsistent mit qa_pipeline-Read-Pfad). Plus idempotente DB-Migration für 3 Demo-Profile (IDs 2/3/4) mit `if 'basis' in _daten: continue`-Check — Wave 1, Plan 01
+3. ✅ **Wizard-Create** auf `basis.*` (Plan 02): drei Namespaces — `basis` (qa_pipeline-Input), `ki` (Default-Anrede 'Sie'), `meta` (firma + rolle als Metadaten). Verhindert Key-Kollisionen mit qa_pipeline.
+4. ✅ **LB-3 Komplett-Fix** (Plan 03, Kern): `_qa_pipeline_dispatch` (claude_service.py:1179-1181 + 1219-1221) übergibt jetzt `_profile_daten` statt `{}`, `confidence=float(_conf)` (defensive Wrap) statt `''`, `user_id=_user_id` als keyword-Argument statt positionell. Plus **WR-01 Regressions-Test** mit echtem `side_effect`-Capture (Integration-Assertion, nicht Source-Presence). **Kern-Erkenntnis:** `_profile_daten` war seit Phase-08.5 bereits in der Funktion geladen — die buggigen Aufrufe haben es ignoriert. Copy-Paste-Bug, kein fehlendes Lade-Pattern.
+5. ⏭️ **H-13** `/api/frage` + `/api/ewb_trigger` Schema-Fix — **bewusst auf Block F verschoben** (diese Routen sterben mit Classic-Deprecation, kein Fix an Code der bald gelöscht wird).
+6. ✅ **H-25 Rollen-Checks** (Plan 04): 4 Endpunkte gefixt (`wizard_create`, `aktivieren`, `api_faqs_create`, `api_tabu_update`). `api_faqs_update` + `api_faqs_delete` bewusst NICHT angepasst — Org-Isolation auf FAQ-Ebene reicht (begründet im Plan).
+
+**Code-Review-Findings:** WR-02 (deprecated SQLAlchemy 1.x API `db.query(User).get()` in onboarding.py:192) + 2 weitere Warnings + 4 Infos — alle non-critical, via `/gsd-code-review-fix 08.9` nachgereicht.
+
+**Plan-Quality-Beobachtung:** Block C-Pläne deutlich strukturierter als Block I (parallele Wave 1 für Onboarding+Wizard, sequenzielle Wave 2 für LB-3, sequenzielle Wave 3 für H-25). STRIDE-Threat-Tabellen pro Plan, idempotente Migration, klar begründete Skip-Entscheidungen.
 
 ### BLOCK D — DSGVO-Paket (EA-Launch-Pflicht, ~16-20h)
 
@@ -473,19 +498,41 @@ Thema: Billing-Integrität + Caching + Sonnet-Upgrade + Latenz-Messung. Strategi
 
 **Gesamt:** ~14-16h. Löst LB-4, H-9, H-12, H-22, H-29, POLISH-58 (Prompt-Caching), 17 hardcoded-Model-Stellen + Sonnet-Qualitäts-Problem (André-UAT: "Haiku-Sprache unterirdisch, Grammatikfehler").
 
-### BLOCK F — Classic-View-Deprecation (EA-Launch-Pflicht, ~3-5h)
+### ✅ BLOCK F — Classic-View-Deprecation (ABGESCHLOSSEN 2026-04-25 abend, GSD-Phase 08.11)
 
-Thema: **Eine Architekturentscheidung eliminiert 3 HIGH-Findings + 600 Z. Code.**
-**Entscheidung 2026-04-24:** Classic-View komplett raus. PiP-only. Begründung André: "Nutzt niemand, gibt nur Anlass dass später wieder was daran verkoppelt wird und Probleme auslöst."
-2. `/live`-Route redirectet auf PiP-Launcher-Flow — 30 min
-3. Classic-Socket-Handler in app.js entfernen (Z.452-570) — 1h
-4. Polling-Chain + Legacy-EWB-Render entfernen (app.js:780-811, 798-799) — 30 min
-5. `/api/frage`, `/api/ewb_trigger`, `/api/ergebnis`, `/api/swap_roles`, `/api/log_correction`-Classic-Parts im Backend entfernen — 2h
-6. Nutzer-Migration-Doc + UX-Redirect — 30 min
-7. Manual-Test: alle 5 EA-Flows noch intakt — 30 min
+**Status:** Komplett. 4 Waves + 1 Hotfix-Commit. ~2490 Zeilen Code weg (mehr als initial geschätzte ~600 weil Research bestätigt hat: app.js + app.html komplett löschbar).
 
-**Löst:** H-12 Teil, H-13, H-14, H-15-Teil, H-34, H-35, H-36
-**Aufwand:** ~3-5h
+**Cross-AI-Plan-Review:** GEMACHT mit Gemini (laut CLAUDE.md Punkt 7 Default-ON für 🟡 mit substantiellem Code-Removal). 3 valide Findings → als Extra-Hinweise in Execute integriert.
+
+1. ✅ /live-Route redirectet auf /dashboard (Wave 1)
+2. ✅ app.js komplett gelöscht (2121 Z.) — Research-Befund "100% Classic-only" bestätigt (Wave 2)
+3. ✅ app.html komplett gelöscht (1436 Z.) (Wave 2)
+4. ✅ 10 Classic-Routen aus app_routes.py: /api/ergebnis, /api/analyse_line, /api/log_correction, /api/pause, /api/log, /api/set_phase, /api/log_gegenargument_wahl, /api/frage, /api/ewb_trigger, /api/postcall_insights (Wave 1)
+5. ✅ 9 PiP-Routen explizit BEHALTEN — saubere Differenzierung
+6. ✅ 4 Templates angepasst: base.html (nav-condition raus), dashboard.html, logs_page.html, onboarding.html (location.href → NerveLauncher mit Fallback) (Wave 2)
+7. ✅ pip-launcher.js: 6 legacyOpener-Stellen entfernt (Wave 3)
+8. ✅ test_ft_seed.py: 5 → 4 Module (Wave 3)
+9. ✅ API_FRAGE_PROMPT_BASE komplett raus aus app_routes.py + app.py-Import (Wave 1)
+10. ✅ _SuppressPolling-Klasse aus app.py raus (Wave 1)
+11. ✅ OBJECTION_TRIGGER_PROMPT_BASE bleibt (D-05-User-Decision)
+12. ✅ 08.11-SMOKE-TESTS.md mit 5 EA-Flow-Checkliste angelegt (Wave 4)
+
+**Hotfix CR-01 (Code-Review-Critical, sofort gefixt):** Stale `_letzte_gemeldete_version.pop()` in api_beenden — Variable in Wave 1 entfernt, api_beenden hatte noch pop()-Referenz. "Vergessen wo's noch genutzt wird"-Fehler.
+
+**Code-Review-Warning (kein Stopper):** onboarding.html lädt pip-launcher.js nicht → NerveLauncher-Call ist immer no-op, Fallback /dashboard greift IMMER. Bestätigt Gemini's MEDIUM-1-Finding. UX-suboptimal (User landet im Dashboard statt direkt im Launcher), funktional OK. Notiert als Mini-Punkt für späteren UX-Polish.
+
+**Pytest:** 266 → 266 passing (kein Regressions-Test gewonnen oder verloren).
+
+**Erledigt durch Block F (automatisch ohne separaten Fix):**
+- H-12 Teil 1 (5 inline-Anthropic-Clients reduziert auf 3)
+- H-13 (Schema-Drift `pdata.get("produkt")` — Routen weg)
+- H-14 (Duplicate EWB-Logging — Classic weg)
+- H-15-Teil (Error-Response-Leaks in Classic-Routen)
+- H-34 (Classic vs PiP Asymmetrie)
+- H-35 (Polling-Storm bei /api/ergebnis)
+- H-36 (ewb_top2-Reader)
+
+**Manual-Smoke-Test steht noch aus** (5 Flows aus 08.11-SMOKE-TESTS.md). Bei Pass → Block B Re-Plan.
 
 ### BLOCK G — PreCall-Briefing Re-wire (EA-Launch-Pflicht, ~3-4h)
 
