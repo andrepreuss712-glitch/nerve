@@ -629,7 +629,7 @@ async function finish(target) {
   } catch(e) {}
 
   if (target === 'training') window.location.href = '/training';
-  else if (target === 'live') window.location.href = '/live';
+  else if (target === 'live') window.NerveLauncher ? window.NerveLauncher.open() : window.location.href = '/dashboard';
   else window.location.href = '/dashboard';
 }
 
