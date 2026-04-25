@@ -981,38 +981,6 @@ Antworte NUR als valides JSON:
         return jsonify({'error': f'{type(e).__name__}: {str(e)[:200]}'}), 500
 
 
-@training_bp.route('/api/training/personalities/save', methods=['POST'])
-@login_required
-def api_training_personality_save():
-    """Save a generated personality as custom type for the user."""
-    data = request.get_json()
-    if not data or not data.get('name') or not data.get('attribute'):
-        return jsonify({'error': 'Name und Attribute erforderlich'}), 400
-
-    db = get_session()
-    try:
-        pt = PersonalityType(
-            user_id=g.user.id,
-            org_id=g.org.id,
-            is_custom=True,
-            name=data['name'][:100],
-            icon=data.get('icon', '\U0001F464')[:10],
-            kurzbeschreibung=data.get('kurzbeschreibung', '')[:300],
-            attribute=json.dumps(data['attribute'], ensure_ascii=False),
-            kommentar=data.get('kommentar', '')
-        )
-        db.add(pt)
-        db.commit()
-        return jsonify({'id': pt.id, 'name': pt.name})
-    except Exception as e:
-        db.rollback()
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'{type(e).__name__}: {str(e)[:200]}'}), 500
-    finally:
-        db.close()
-
-
 # ── Szenario-Routen ────────────────────────────────────────────────────────────
 
 @training_bp.route('/training/scenarios', methods=['GET'])
