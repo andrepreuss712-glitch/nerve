@@ -125,6 +125,10 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
             oauth_id=oauth_id,
             avatar_url=avatar_url,
         )
+        # H-18: email_confirmed=False atomar mit User-Anlage committen — kein TOCTOU-Fenster.
+        # Muss VOR session.clear() + _login_user stehen damit der Commit email_confirmed=False enthält.
+        if provider == 'microsoft':
+            new_user.email_confirmed = False
         session.clear()
         _login_user(db, new_user)
         log_action(db, new_user.id, getattr(new_user, 'org_id', None), 'login',
@@ -145,26 +149,13 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
                 from services.email_service import send_confirmation_email
                 from config import SECRET_KEY
                 from itsdangerous import URLSafeTimedSerializer
-                # Attribute vorab lesen — new_user könnte nach Session-Close detached sein
-                new_user_id = new_user.id
                 new_user_email = new_user.email
                 new_user_vorname = getattr(new_user, 'vorname', '') or ''
                 confirm_token = URLSafeTimedSerializer(SECRET_KEY, salt='nerve-email-confirm').dumps(new_user_email)
                 confirm_url = url_for('auth.confirm_email', token=confirm_token, _external=True)
-                # H-18: email_confirmed=False VOR Email-Send setzen — ECHTER BLOCK bleibt sauber.
-                # Resend-Endpoint /auth/resend-confirm verhindert dauerhaften Lockout bei Send-Failure.
-                db_confirm = get_session()
-                try:
-                    from database.models import User as _UserM
-                    _uu = db_confirm.get(_UserM, new_user_id)
-                    if _uu:
-                        _uu.email_confirmed = False
-                        db_confirm.commit()
-                finally:
-                    db_confirm.close()
                 send_confirmation_email(new_user_email, confirm_url, new_user_vorname)
             except Exception as _ce:
-                print(f'[OAUTH] Microsoft confirmation mail/flag failed: {_ce}')
+                print(f'[OAUTH] Microsoft confirmation mail failed: {_ce}')
         print(f'[OAuth] {provider} register: new user id={new_user.id}')
         # D-05: diagnostic — log redirect target for new-user path
         # Onboarding redirect disabled — wird in einer späteren Phase neu gebaut
