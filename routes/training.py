@@ -291,7 +291,7 @@ def training_start():
         except Exception as _gen_err:
             import traceback
             traceback.print_exc()
-            return jsonify({'error': f'KI-Antwort fehlgeschlagen: {type(_gen_err).__name__}: {str(_gen_err)[:200]}'}), 500
+            return jsonify({'ok': False, 'error': 'internal'}), 500
 
         # Voice selection: match gender to personality
         if hat_sekretaerin:
@@ -397,10 +397,7 @@ def training_start():
     import traceback
     tb = traceback.format_exc()
     print(tb)
-    # Extract last frame for debugging
-    lines = [l for l in tb.strip().split('\n') if l.strip()]
-    last_frame = ' | '.join(lines[-3:]) if len(lines) >= 3 else tb[-300:]
-    return jsonify({'ok': False, 'error': f'{last_frame[:500]}'}), 500
+    return jsonify({'ok': False, 'error': 'internal'}), 500
 
 
 def _hangup_reason(session):
@@ -598,7 +595,7 @@ def training_help():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'{type(e).__name__}: {str(e)[:200]}'}), 500
+        return jsonify({'ok': False, 'error': 'internal'}), 500
 
 
 @training_bp.route('/training/end', methods=['POST'])
@@ -850,7 +847,8 @@ def training_transcribe():
         transcript = response.results.channels[0].alternatives[0].transcript
         return jsonify({'ok': True, 'text': transcript})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f'[Training] Transcribe-Fehler: {e}')
+        return jsonify({'ok': False, 'error': 'internal'}), 500
 
 
 # ── Personality API Endpoints ──────────────────────────────────────────────────
@@ -973,7 +971,7 @@ Antworte NUR als valides JSON:
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'{type(e).__name__}: {str(e)[:200]}'}), 500
+        return jsonify({'ok': False, 'error': 'internal'}), 500
 
 
 # ── Szenario-Routen ────────────────────────────────────────────────────────────

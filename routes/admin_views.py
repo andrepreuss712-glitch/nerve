@@ -216,7 +216,7 @@ class CrmView(BaseView):
             return jsonify({'ok': True})
         except Exception as e:
             db.rollback()
-            return jsonify({'ok': False, 'error': str(e)}), 500
+            return jsonify({'ok': False, 'error': 'internal'}), 500
         finally:
             db.close()
 

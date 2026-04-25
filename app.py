@@ -1735,14 +1735,10 @@ from werkzeug.exceptions import HTTPException as _HTTPException
 @app.errorhandler(500)
 def _handle_500(e):
     tb_str = _tb.format_exc()
-    print(tb_str)
+    print(tb_str)  # Server-side logging BLEIBT
     if (_request.content_type and 'json' in _request.content_type) or _request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({
-            'ok': False,
-            'error': str(e),
-            'traceback': tb_str[-1000:],
-        }), 500
-    return tb_str, 500, {'Content-Type': 'text/plain'}
+        return jsonify({'ok': False, 'error': 'internal server error'}), 500
+    return '', 500
 
 @app.errorhandler(Exception)
 def _handle_exception(e):
@@ -1754,14 +1750,10 @@ def _handle_exception(e):
     if isinstance(e, _HTTPException):
         return e
     tb_str = _tb.format_exc()
-    print(tb_str)
+    print(tb_str)  # Server-side logging BLEIBT
     if (_request.content_type and 'json' in _request.content_type) or _request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({
-            'ok': False,
-            'error': f'{type(e).__name__}: {str(e)}',
-            'traceback': tb_str[-1000:],
-        }), 500
-    return tb_str, 500, {'Content-Type': 'text/plain'}
+        return jsonify({'ok': False, 'error': 'Internal Server Error'}), 500
+    return '', 500
 
 # ── Flask-Admin (Superadmin only, gated via SecureIndexView) ─────────────────
 from flask_admin import Admin, AdminIndexView, expose
