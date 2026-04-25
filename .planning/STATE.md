@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.11 COMPLETE — alle 4 Plans abgeschlossen, git push origin main erledigt
-stopped_at: Completed 08.11-04-PLAN.md — Wave 4 SMOKE-TESTS.md erstellt + git push origin main
-last_updated: "2026-04-25T14:18:00Z"
-last_activity: 2026-04-25 - Phase 08.11 Plan 04 complete: 08.11-SMOKE-TESTS.md erstellt (5 EA-Flow-Checkboxen), git push origin main Commit 62d50d9. Phase 08.11 vollstaendig abgeschlossen: ~2490 Z. Classic-Code entfernt, pytest 266 passing.
+status: Phase 08.10 IN PROGRESS — Plan 01 complete (Traceback-Leak-Fix + Frontend-Filter)
+stopped_at: Completed 08.10-01-PLAN.md — Traceback-Leaks aus Error-Handlern entfernt, sanitizeErrorMsg() in pip-launcher.js
+last_updated: "2026-04-25T18:55:00Z"
+last_activity: 2026-04-25 - Phase 08.10 Plan 01 complete: Traceback-Leak-Fix in app.py + 3 Route-Files (5 training.py Handler, admin_views.py CRM-Note), sanitizeErrorMsg() in pip-launcher.js. Commits ac3ada6 + e171656. pytest 266 passing.
 progress:
   total_phases: 41
   completed_phases: 32
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.11 — stabilisierung-block-f-classic-view-deprecation — IN PROGRESS
+**Current focus:** Phase 08.10 — stabilisierung-block-b-auth-haertung — IN PROGRESS
 
 ## Current Position
 
-Phase: 08.11 (stabilisierung-block-f-classic-view-deprecation) — COMPLETE
-Plan: 4 of 4 COMPLETE
+Phase: 08.10 (stabilisierung-block-b-auth-haertung) — IN PROGRESS
+Plan: 1 of 6 COMPLETE
 Last activity: 2026-04-25
 
 **Next:** Phase 08.10 — Stabilisierung Block B Auth-Haertung.
@@ -426,6 +426,7 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 08.12 inserted after Phase 08.11: Stabilisierung Cleanup-Hotfix DB-Naming + User-Migration (URGENT) — Post-Deploy-Bugs aus Block-F-Live: salesnerve.db Cleanup, .env-Korrektur, Rename-Code in app.py:710-719 entfernen, Kommentar-Drift fixen, idempotente User-Migration für onboarding_done=False.
 - Phase 08.11 inserted after Phase 08.10: Stabilisierung Block F Classic-View-Deprecation (URGENT) — Reihenfolge-Korrektur durch Cross-AI-Review (Gemini): F muss VOR Block B (08.10) laufen, weil F /api/frage, /api/ewb_trigger und Classic-Socket-Handler entfernt (~600 Z. app.js). 08.10-Pläne werden nach 08.11-Done neu geplant. Pflicht-Lektüre: MASTER-AUDIT-v2.md Sektion "BLOCK F".
 - Phase 08.10 inserted after Phase 08.9: Stabilisierung Block B Auth-Härtung (URGENT) — tbd via /gsd-plan-phase 08.10. Pflicht-Lektüre: MASTER-AUDIT-v2.md Sektion "BLOCK B". Cross-AI-Plan-Review geplant.
 - Phase 08.9 inserted after Phase 08.8: Stabilisierung Block C Schema-Drift-Cleanup (URGENT) — 5 Tasks: LB-11 Onboarding-Redirect reaktivieren, H-31/HSR-2 BRANCHE_TEMPLATES auf basis.*-Schema, Wizard-Create auf basis.*-Schema, LB-3 QA-Pipeline Komplett-Fix (profile_data aus Live-Session, confidence als float/None, inkl. WR-01/WR-03), H-25 Rollen-Check _rolle() einbauen. Quelle: MASTER-AUDIT v2 Block C.

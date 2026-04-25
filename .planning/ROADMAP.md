@@ -733,7 +733,7 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
-- [ ] 08.10-01-PLAN.md — Wave 1: LB-7 Error-Handler Traceback-Leak + H-15 Route-Exception-Leaks + Frontend-Traceback-Filter
+- [x] 08.10-01-PLAN.md — Wave 1: LB-7 Error-Handler Traceback-Leak + H-15 Route-Exception-Leaks + Frontend-Traceback-Filter
 - [ ] 08.10-02-PLAN.md — Wave 2: LB-10 Session-Cookie-Hardening (FLASK_DEBUG-aware)
 - [ ] 08.10-03-PLAN.md — Wave 3: LB-9 CSRF Backend (CSRFProtect+Exempts) + Frontend (X-CSRFToken in allen JS-Files)
 - [ ] 08.10-04-PLAN.md — Wave 4: H-17 Session-Fixation-Fix + M-AU-1 Org-Scoping-Assertion
@@ -760,6 +760,14 @@ Plans:
 
 **Reasoning:**
 > MASTER-AUDIT v2 Block F — Classic-View komplett raus (PiP-only). Reihenfolge-Korrektur durch Cross-AI-Review (Gemini): Block F wird VOR Block B (Phase 08.10) ausgeführt, weil F die Routen /api/frage, /api/ewb_trigger und Classic-Socket-Handler entfernt. Würde B (Auth-Härtung, CSRF, Error-Handler) zuerst laufen, würden diese Routen zuerst gehärtet und dann gelöscht = Doppelarbeit. Phase 08.10 (Block B) bleibt mit existierendem Plan erhalten — wird nach Abschluss von 08.11 neu geplant da sich der Code-Stand ändert (~600 Z. app.js gelöscht, Classic-Routen weg). Pflicht-Lektüre für Planner: .planning/audits/MASTER-AUDIT-v2.md Sektion "BLOCK F".
+
+---
+
+### Phase 08.12: Stabilisierung Cleanup-Hotfix DB-Naming + User-Migration (INSERTED)
+
+**Goal:** Zwei Post-Deploy-Bugs aus Block-F-Live-Deploy beheben: (1) DB-Naming-Cleanup — salesnerve.db löschen, .env korrigieren, Rename-Code in app.py:710-719 entfernen, Kommentar-Drift in services/ + scripts/ fixen. (2) Block-C-User-Migration-Lücke — LB-11 Onboarding-Redirect reaktiviert ohne Migration für bestehende User (onboarding_done=False default) → idempotente Migration in app.py einbauen.
+**Depends on:** Phase 08.11
+**Plans:** 0 plans — not planned yet
 
 ---
 
