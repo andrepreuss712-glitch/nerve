@@ -4,6 +4,12 @@
 (function () {
   'use strict';
 
+  // ── CSRF-Token Helper ─────────────────────────────────────────────────────
+  function getCsrfToken() {
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.getAttribute('content') : '';
+  }
+
   // ── sanitizeErrorMsg: Defense-in-Depth — filtert Python-Tracebacks aus Fehlermeldungen ──
   function sanitizeErrorMsg(msg) {
     if (!msg) return 'Fehler aufgetreten.';
@@ -319,7 +325,7 @@
 
     fetch('/api/precall/research', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
       body: JSON.stringify({
         firmenname: searchName,
         ansprechpartner: person.trim() || null,
@@ -874,7 +880,7 @@
     if (setProfile && state.activeProfileId) {
       fetch('/api/set_profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ profile_id: state.activeProfileId })
       }).catch(function () {});
     }
@@ -1887,7 +1893,7 @@
     fetch('/api/beenden', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
       body: JSON.stringify({
         session_mode: state.mode || 'cold_call',
         precall_briefing: state.precallBriefing

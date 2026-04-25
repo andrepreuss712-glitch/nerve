@@ -1,4 +1,9 @@
 (function(){
+  function getCsrfToken() {
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.getAttribute('content') : '';
+  }
+
   function openModal(){document.getElementById('nerve-fb-modal').classList.add('show');}
   function closeModal(){document.getElementById('nerve-fb-modal').classList.remove('show');}
 
@@ -8,7 +13,7 @@
     var fd = new FormData(form);
     fd.set('context_url', location.pathname + location.search);
     try{
-      var res = await fetch('/api/feedback', {method:'POST', body:fd, credentials:'same-origin'});
+      var res = await fetch('/api/feedback', {method:'POST', body:fd, credentials:'same-origin', headers:{'X-CSRFToken':getCsrfToken()}});
       if(!res.ok){
         var j = await res.json().catch(function(){return{};});
         alert('Feedback fehlgeschlagen: ' + (j.error || res.status));

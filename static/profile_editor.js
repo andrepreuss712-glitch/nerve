@@ -6,6 +6,12 @@
 (function () {
   'use strict';
 
+  // ── CSRF-Token Helper ─────────────────────────────────────────────────────
+  function getCsrfToken() {
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.getAttribute('content') : '';
+  }
+
   function getProfileId() {
     return window.PROFILE_ID || null;
   }
@@ -98,7 +104,7 @@
       fetch('/profiles/api/profile/' + pid + '/faqs', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify(payload),
       })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
@@ -377,7 +383,7 @@
     fetch('/profiles/api/profile/' + pid + '/tabu', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
       body: JSON.stringify({ tabu_begriffe: pairs }),
     })
       .then(function (r) { return r.json(); })

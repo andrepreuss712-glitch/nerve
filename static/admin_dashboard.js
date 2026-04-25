@@ -1,5 +1,12 @@
 // Phase 04.7.2 — Founder Cost Dashboard client-side tab switcher + charts.
 (function() {
+  // ── CSRF-Token Helper ─────────────────────────────────────────────────────
+  function getCsrfToken() {
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.getAttribute('content') : '';
+  }
+  // Expose for future POST calls from this module
+  window._adminGetCsrfToken = getCsrfToken;
   const tabs = document.querySelectorAll('.fcd-tab');
   const panels = document.querySelectorAll('.fcd-panel');
 
