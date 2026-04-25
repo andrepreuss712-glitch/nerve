@@ -165,6 +165,32 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
                 f"Expected qa_slot1 emit, got: {calls}"
             )
 
+    def test_einwand_unknown_passes_profile_data_not_empty(self):
+        """WR-01 Regression: generate_qa_response muss _profile_daten erhalten, nicht {}."""
+        dispatch = self._get_dispatch_fn()
+        ls, sio = _build_qa_dispatch_context(line_id='line-20', kw_fired_for_line=None)
+        captured_calls = []
+        def _capture_gen(*args, **kwargs):
+            captured_calls.append({'args': args, 'kwargs': kwargs})
+            return 'Testantwort'
+
+        with patch('services.qa_pipeline.classify_utterance',
+                   return_value={'kategorie': 'einwand_unknown', 'confidence': 0.95}), \
+             patch('services.qa_pipeline.generate_qa_response',
+                   side_effect=_capture_gen), \
+             patch('services.qa_pipeline.apply_tabu_filter', return_value=False), \
+             patch('services.claude_service._qa_load_tabu', return_value=[]), \
+             patch('services.live_session.get_active_profile',
+                   return_value=('TestProfil', {'basis': {'produktbeschreibung': 'CRM'}})):
+            dispatch('Das ist zu teuer', 'line-20', '', ls, sio)
+
+        self.assertTrue(len(captured_calls) > 0, "generate_qa_response wurde nicht aufgerufen")
+        call_args = captured_calls[0]['args']
+        # 3. Argument muss ein nicht-leeres Dict sein (nicht {})
+        profile_data_arg = call_args[2]
+        self.assertIsInstance(profile_data_arg, dict, "profile_data muss dict sein")
+        self.assertNotEqual(profile_data_arg, {}, "profile_data darf nicht leer sein (WR-01)")
+
     def test_low_confidence_emits_soft_hint(self):
         """Test 7: confidence < CLASSIFIER_CONFIDENCE_THRESHOLD → emit qa_soft_hint with locked text."""
         dispatch = self._get_dispatch_fn()
