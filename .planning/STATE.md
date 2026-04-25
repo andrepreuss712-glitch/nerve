@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.6 complete — verified
-stopped_at: Completed Phase 08.6
-last_updated: "2026-04-24T18:00:00Z"
-last_activity: 2026-04-24 - Phase 08.6 complete (9/9 must-haves verified): 8 Block-A launch-blocker fixes — LB-5/6/12/13, CORS, imports, Theme-400, Language-Restrict
+status: Phase 08.7 complete — verified
+stopped_at: Completed Phase 08.7
+last_updated: "2026-04-25T00:00:00Z"
+last_activity: 2026-04-25 - Phase 08.7 complete (7/7 must-haves verified): Block H — 27 Source-Presence-False-Green-Tests entfernt, H-3/H-4 Dead-Code-Prune unblocked
 progress:
   total_phases: 41
-  completed_phases: 30
+  completed_phases: 31
   total_plans: 148
-  completed_plans: 138
-  percent: 93
+  completed_plans: 139
+  percent: 94
 ---
 
 # Project State

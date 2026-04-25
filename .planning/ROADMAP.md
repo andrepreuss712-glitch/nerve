@@ -679,7 +679,7 @@ Plans:
 
 **Goal:** Test-Suite von Source-Presence-basierten False-Green-Tests befreien, damit Block I (Dead-Code-Prune) danach ohne rote Tests möglich ist. 6 Tasks, ~4h, mechanisch.
 **Depends on:** Phase 08.6
-**Status:** Not planned
+**Status:** Complete — 2026-04-25 ✓
 
 **Tasks (aus MASTER-AUDIT-v2 Block H):**
 1. `tests/test_claude_service_phase08.py` — 7 inspect.getsource-Tests löschen oder auf Mocked-Integration umbauen
