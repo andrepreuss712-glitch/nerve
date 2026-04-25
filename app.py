@@ -10,14 +10,6 @@ from database.db import engine, get_session
 from database.models import init_db, Organisation, User, Profile, Changelog
 from werkzeug.security import generate_password_hash
 
-# ── Suppress polling route logs ───────────────────────────────────────────────
-class _SuppressPolling(logging.Filter):
-    def filter(self, record):
-        msg = record.getMessage()
-        return '/api/ergebnis' not in msg and '/api/status' not in msg
-
-logging.getLogger('werkzeug').addFilter(_SuppressPolling())
-
 # ── Flask App ─────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 # Phase 04.6.1: für korrekte https-Redirect-URIs hinter nginx
@@ -845,19 +837,16 @@ def _seed_prompt_versions(db=None):
         SYSTEM_PROMPT_BASE,
         COACHING_PROMPT_BASE,
     )
-    from routes.app_routes import (
-        OBJECTION_TRIGGER_PROMPT_BASE,
-        API_FRAGE_PROMPT_BASE,
-    )
+    from routes.app_routes import OBJECTION_TRIGGER_PROMPT_BASE
     from services.training_service import TRAINING_PERSONA_PROMPT_BASE
 
     # ewb_ranking module removed in Phase 04.8 (D-08): rank_ewb Haiku call
     # deleted in favor of deterministic phase-based button tables.
+    # api_frage module removed in Phase 08.11 (Block F): Classic-View-Deprecation.
     modules = [
         ('assistant_live',    SYSTEM_PROMPT_BASE),
         ('coaching_live',     COACHING_PROMPT_BASE),
         ('objection_trigger', OBJECTION_TRIGGER_PROMPT_BASE),
-        ('api_frage',         API_FRAGE_PROMPT_BASE),
         ('training_persona',  TRAINING_PERSONA_PROMPT_BASE),
     ]
     owns_session = db is None
