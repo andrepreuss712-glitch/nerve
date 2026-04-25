@@ -726,6 +726,47 @@ def _migrate():
             except Exception:
                 pass
 
+        # ── Phase 08.9: Demo-Profile Flat-Schema → basis.*-Schema Migration ─────
+        # 3 Demo-Profile (IDs 2, 3, 4) wurden mit Top-Level 'produkt'/'einwaende'/'phasen'
+        # erstellt (vor H-31/HSR-2 BRANCHE_TEMPLATES-Umstellung). Migration ist idempotent:
+        # Profile die bereits 'basis'-Key haben, werden nicht angefasst.
+        # Down-Migration nicht noetig: SQLite/Dev-Only-Demo-Daten, kein Produktiv-State.
+        try:
+            import json as _json2
+            from sqlalchemy import text as _text2
+            _profile_rows = conn.execute(_text2("SELECT id, daten FROM profiles WHERE id IN (2, 3, 4)")).fetchall()
+            for _row in _profile_rows:
+                _pid, _daten_str = _row[0], _row[1]
+                if not _daten_str:
+                    continue
+                try:
+                    _daten = _json2.loads(_daten_str)
+                except Exception:
+                    continue
+                if not isinstance(_daten, dict):
+                    continue
+                # Idempotenz-Check: wenn 'basis' bereits vorhanden, ueberspringen
+                if 'basis' in _daten:
+                    continue
+                # Flat-Schema erkannt: 'produkt' oder 'einwaende' auf Top-Level
+                if 'produkt' not in _daten and 'einwaende' not in _daten:
+                    continue
+                # Umstrukturieren
+                _basis = {
+                    'produktbeschreibung': _daten.pop('produkt', ''),
+                    'einwaende': _daten.pop('einwaende', []),
+                    'phasen': _daten.pop('phasen', []),
+                }
+                _daten['basis'] = _basis
+                conn.execute(
+                    _text2("UPDATE profiles SET daten = :daten WHERE id = :pid"),
+                    {'daten': _json2.dumps(_daten, ensure_ascii=False), 'pid': _pid}
+                )
+                conn.commit()
+                print(f"[DB] Migration 08.9: Profil ID {_pid} auf basis.*-Schema migriert")
+        except Exception as _e:
+            print(f"[DB] Migration 08.9 Demo-Profile: {_e}")
+
 _migrate()
 
 
