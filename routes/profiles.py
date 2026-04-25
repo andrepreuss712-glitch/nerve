@@ -113,11 +113,19 @@ def wizard_create():
         einwaende_list.append(eigener_einwand)
 
     daten = json.dumps({
-        'firma': firma,
-        'produkt': produkt,
-        'zielkunden': zielkunden,
-        'rolle': rolle,
-        'einwaende': einwaende_list,
+        'basis': {
+            'produktbeschreibung': produkt,
+            'zielkunden': zielkunden,
+            'einwaende': einwaende_list,
+            'phasen': [],
+        },
+        'ki': {
+            'anrede': 'Sie',
+        },
+        'meta': {
+            'firma': firma,
+            'rolle': rolle,
+        },
     }, ensure_ascii=False)
 
     db = get_session()
