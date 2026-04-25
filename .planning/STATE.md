@@ -395,6 +395,7 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 08.7 inserted after Phase 08.6: Stabilisierung Block H — Test-False-Greens raus (URGENT) — 6 Tasks ~4h: inspect.getsource-Tests löschen/umbauen, Migration-Tests auf Fresh-DB, RED-Gate-Tests löschen, tts_comparison.py → scripts/, CLAUDE.md Regel. Pflicht-Vorarbeit für Block I (Dead-Code-Prune). Quelle: MASTER-AUDIT v2 Block H.
 - Phase 08.6 inserted after Phase 08.5: Stabilisierung Block A Quick-Wins (URGENT) — 8 triviale Launch-Blocker-Fixes in < 30 min: LB-5/LB-6 State-Writer, LB-12 Ghost-Columns, LB-13 ROI-Card, CORS-Domain, unused Imports, Theme-400, Language-Restrict. Quelle: MASTER-AUDIT v2 Block A.
 - Phase 08.5 inserted after Phase 08: Universal Response Loop — Launch-kritische Erweiterung des Live-Loops. Claude klassifiziert jede Kundenäußerung in 4 Kategorien (einwand_known/einwand_unknown/frage/smalltalk-none). Unbekannte Einwände + Fragen aus Profil-Daten beantwortet, nie halluziniert. FAQ-Feld + Exclusion-Liste, Anrede-UX-Umzug, Training-Pipeline v2-modular. Löst POLISH-56. Aufwand 30-36h. (INSERTED)
 - Phase 08 added: EWB-Qualität & Profil-Tiefe (Launch-kritisch) — 6 neue Profil-Felder, POLISH-55 Behandelt-Semantik, A/B-Prompt-Framework, Quality-Gates. Vorbereitet Phase 08.5 (Q&A) + 07.5 (EWB-Feed-Redesign).

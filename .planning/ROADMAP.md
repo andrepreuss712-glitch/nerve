@@ -675,6 +675,25 @@ Plans:
 
 ---
 
+### Phase 08.7: Stabilisierung Block H — Test-False-Greens raus (INSERTED)
+
+**Goal:** Test-Suite von Source-Presence-basierten False-Green-Tests befreien, damit Block I (Dead-Code-Prune) danach ohne rote Tests möglich ist. 6 Tasks, ~4h, mechanisch.
+**Depends on:** Phase 08.6
+**Status:** Not planned
+
+**Tasks (aus MASTER-AUDIT-v2 Block H):**
+1. `tests/test_claude_service_phase08.py` — 7 inspect.getsource-Tests löschen oder auf Mocked-Integration umbauen
+2. `tests/test_08_5_05_training_pipeline_t2.py` — 11/14 Source-Presence-Tests löschen, 3 Core-Tests mit Mock-Client behalten
+3. `tests/test_phase_08_migration.py` — 6 Tests auf Fresh-DB-Migration umbauen ODER nach tests/archive/ verschieben
+4. `tests/test_qa_pipeline_t1.py` — 4 RED-Gate-Tests löschen (RED-Gate ist vorbei)
+5. `tests/tts_comparison.py` → `scripts/` verschieben (ist kein pytest-Test, sondern print-basiertes Vergleichsscript)
+6. `CLAUDE.md` — Regel ergänzen: "Test ist grün nur wenn Integration-Assertion (DB-Write/API-Response/State-Mutation), nicht Source-Presence via inspect.getsource oder hasattr"
+
+**Reasoning:**
+> MASTER-AUDIT v2 Block H — Pflicht-Vorarbeit für Block I (Dead-Code-Prune). Tests die via inspect.getsource/hasattr prüfen ob Code *existiert* schützen aktiv Dead-Code vor dem Prune und blockieren H-3/H-4 Löschung. Jeder Task ein atomarer Commit. pytest-Baseline vor Beginn, pytest nach jedem Task.
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
