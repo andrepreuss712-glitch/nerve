@@ -456,9 +456,6 @@
       var op = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
       if (op) openerPreview = escHtml(op.inhalt);
     }
-    // Fallback: alten Opener aus Profil-JSON verwenden wenn keine Opener-Items existieren
-    var legacyOpener = (state.profileDaten && state.profileDaten.opener) ? state.profileDaten.opener : '';
-
     c.innerHTML = [
       '<div class="launcher-step">',
       '<div class="nav-live-title">Skript & Opener wählen</div>',
@@ -483,9 +480,9 @@
         ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
         : '',
       '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (openerPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">'
-        + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswählen für Vorschau' : (legacyOpener ? escHtml(legacyOpener) : 'Kein Opener hinterlegt'))) + '</div>',
+        + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswählen für Vorschau' : 'Kein Opener hinterlegt')) + '</div>',
       '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>',
-      (state.openerItems.length > 0 || legacyOpener)
+      state.openerItems.length > 0
         ? '<button type="button" id="lnr-opener-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
         : '',
 
@@ -985,8 +982,6 @@
       else if (state.selectedOpenerId && state.openerItems) {
         var selOp2 = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
         if (selOp2) openerFuerKi = selOp2.inhalt;
-      } else if (state.profileDaten && state.profileDaten.opener) {
-        openerFuerKi = state.profileDaten.opener;
       }
       if (openerFuerKi) skriptBlöcke = [openerFuerKi].concat(skriptBlöcke);
 
@@ -1700,8 +1695,6 @@
     } else if (state.selectedOpenerId && state.openerItems && state.openerItems.length > 0) {
       var selOp = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
       if (selOp) openerText = selOp.inhalt;
-    } else if (state.profileDaten && state.profileDaten.opener) {
-      openerText = state.profileDaten.opener;
     }
 
     // Parse blocks by double-newline, prepend opener as block[0]
