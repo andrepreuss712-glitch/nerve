@@ -210,6 +210,10 @@ def create_profile_from_template():
     data = request.get_json(force=True)
     branche = data.get('branche', 'SaaS')
     template = BRANCHE_TEMPLATES.get(branche, BRANCHE_TEMPLATES['Sonstiges'])
+    _basis = template.get('basis', {})
+    if not _basis:
+        # Defensive: template structure broken — log and use empty basis
+        print(f"[Onboarding] create_profile_from_template: no basis in template for branche={branche}")
     db = get_session()
     try:
         profil = Profile(
@@ -221,7 +225,6 @@ def create_profile_from_template():
         )
         db.add(profil)
         db.commit()
-        _basis = template.get('basis', {})
         return jsonify({'ok': True, 'id': profil.id, 'name': profil.name,
                         'einwaende': len(_basis.get('einwaende', [])),
                         'phasen': len(_basis.get('phasen', []))})
