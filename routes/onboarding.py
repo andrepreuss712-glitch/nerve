@@ -189,7 +189,7 @@ def complete():
     data = request.get_json(force=True)
     db = get_session()
     try:
-        user = db.query(User).get(g.user.id)
+        user = db.get(User, g.user.id)
         user.onboarding_done = True
         user.erfahrungslevel = data.get('erfahrungslevel', '')
         user.schmerzpunkt = data.get('schmerzpunkt', '')
