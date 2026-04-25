@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>NERVE — Sales Intelligence{% block title %}{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}?v={{ config.get('CSS_VERSION', '1') }}">
 <script src="{{ url_for('static', filename='vendor/lucide.min.js') }}"></script>

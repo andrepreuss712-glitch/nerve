@@ -5,6 +5,7 @@ import threading
 from datetime import datetime, timedelta
 from flask import Flask
 from flask_socketio import SocketIO
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 from config import SECRET_KEY, CORS_ORIGIN
 from database.db import engine, get_session
@@ -40,6 +41,13 @@ if SECRET_KEY == 'dev-secret-change-me' and not os.environ.get('FLASK_DEBUG'):
     raise RuntimeError('[NERVE] SECRET_KEY is insecure — set SECRET_KEY env var before starting in production')
 
 socketio = SocketIO(app, cors_allowed_origins=CORS_ORIGIN, async_mode='threading')
+
+# ── CSRF-Schutz (LB-9) ────────────────────────────────────────────────────────
+# WICHTIG: csrf = CSRFProtect(app) NACH socketio = SocketIO(app, ...) — Flask-SocketIO
+# registriert seinen WSGI-Handler VOR Flask-Routing; /socket.io/* Requests erreichen
+# Flask's before_request-Hooks nicht → CSRFProtect's Hook greift nicht (endpoint=None check).
+# Reihenfolge socketio-vor-csrf garantiert SocketIO-WSGI-Level-Interception. (VARIANTE B)
+csrf = CSRFProtect(app)
 
 @app.template_filter('fromjson')
 def _fromjson(s):
@@ -1712,6 +1720,16 @@ app.register_blueprint(performance_bp)
 app.register_blueprint(oauth_bp)
 app.register_blueprint(learning_bp)
 init_oauth(app)
+
+# ── CSRF-Exempts für externe Endpoints ────────────────────────────────────────
+# stripe_webhook: Stripe-Server POSTen direkt — kein Browser-Cookie, Stripe signiert via
+# STRIPE_WEBHOOK_SECRET. CSRF-Schutz hier wäre falsch-positiv und würde Webhooks brechen.
+# google_callback / microsoft_callback: OAuth GET-Callbacks — kein Browser-POST, kein CSRF-Risiko.
+from routes.payments import stripe_webhook
+from routes.oauth import google_callback, microsoft_callback
+csrf.exempt(stripe_webhook)
+csrf.exempt(google_callback)
+csrf.exempt(microsoft_callback)
 
 # ── Global before_request: populate g.user for all routes (incl. Flask-Admin) ─
 @app.before_request
