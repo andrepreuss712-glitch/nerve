@@ -448,10 +448,6 @@ def api_beenden():
         pass
 
     reset_session()
-    # CR-02: clear stale version counter so first poll after session start logs correctly
-    uid_end = getattr(g, 'user', None) and g.user.id
-    if uid_end:
-        _letzte_gemeldete_version.pop(uid_end, None)
     print("[Beenden] State zurückgesetzt.")
     return jsonify({'ok': True, 'filename': filename, 'postcall': postcall, 'conv_id': saved_conv_id})
 
