@@ -698,12 +698,12 @@ Plans:
 
 **Goal:** ~500-800 Zeilen toten Code entfernen. 11 atomare Tasks aus MASTER-AUDIT-v2 Block I — analysiere_mit_claude_streaming, _build_system_prompt, _get_erfolgsquoten löschen (H-3/H-4); Coach-Live-Tipp-Routes entfernen (H-27); Personality-Save-Route entfernen (H-28); 9 Orphan-Routes prunen; 3 Orphan-Templates löschen; ewb_top2-Writer/Reader-Cleanup (F-8/H-36); Legacy-opener vs. openerItems Entscheidung; finetune_logging.py + FtPipelineEvent-Tabelle droppen (H-1, DB-Migration). pytest grün nach jedem Commit.
 **Depends on:** Phase 08.7
-**Status:** Planned — 5 plans
+**Status:** In Progress — 1/5 plans complete
 
 **Plans:** 5 plans
 
 Plans:
-- [ ] 08.8-01-PLAN.md — Wave 1: H-3 + H-4 + H-11 (analysiere_mit_claude_streaming, _build_system_prompt, _get_erfolgsquoten, if/else-Branch, CONCERNS.md)
+- [x] 08.8-01-PLAN.md — Wave 1: H-3 + H-4 + H-11 (analysiere_mit_claude_streaming, _build_system_prompt, _get_erfolgsquoten, if/else-Branch, CONCERNS.md)
 - [ ] 08.8-02-PLAN.md — Wave 2: H-27 Coach-Live-Tipp-Routes + H-28 Personality-Save-Route
 - [ ] 08.8-03-PLAN.md — Wave 3: 6 Orphan-Routes (swap_roles, status, skripte, feedback/quick, training/postcall-analysis, training/ping)
 - [ ] 08.8-04-PLAN.md — Wave 4: 2 Orphan-Templates + ewb_top2 Cleanup (F-8/H-36) + opener-Entscheidung

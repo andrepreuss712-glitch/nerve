@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.7 complete — verified
-stopped_at: Completed Phase 08.7
+status: Phase 08.8 Plan 01 complete — verified
+stopped_at: Completed 08.8-01-PLAN.md
 last_updated: "2026-04-25T00:00:00Z"
-last_activity: 2026-04-25 - Phase 08.7 complete (7/7 must-haves verified): Block H — 27 Source-Presence-False-Green-Tests entfernt, H-3/H-4 Dead-Code-Prune unblocked
+last_activity: 2026-04-25 - Phase 08.8-01 complete (3/3 tasks): H-3 analysiere_mit_claude_streaming (102 Zeilen), H-4 _build_system_prompt+_get_erfolgsquoten (195 Zeilen), H-11 if/else-Duplikat entfernt, CONCERNS.md 4s korrigiert. pytest 268 passing.
 progress:
   total_phases: 41
   completed_phases: 31
   total_plans: 148
-  completed_plans: 139
-  percent: 94
+  completed_plans: 140
+  percent: 95
 ---
 
 # Project State
@@ -395,6 +395,7 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 08.8 inserted after Phase 08.7: Stabilisierung Block I — Dead-Code-Prune (URGENT) — 11 Tasks ~4-6h: H-3/H-4 analysiere_mit_claude_streaming/_build_system_prompt/_get_erfolgsquoten löschen, H-27 Coach-Routes, H-28 Personality-Save, 9 Orphan-Routes, 3 Orphan-Templates, ewb_top2 Cleanup, Legacy-opener Entscheidung, H-1 finetune_logging.py + FtPipelineEvent-Drop (DB-Migration). Quelle: MASTER-AUDIT v2 Block I.
 - Phase 08.7 inserted after Phase 08.6: Stabilisierung Block H — Test-False-Greens raus (URGENT) — 6 Tasks ~4h: inspect.getsource-Tests löschen/umbauen, Migration-Tests auf Fresh-DB, RED-Gate-Tests löschen, tts_comparison.py → scripts/, CLAUDE.md Regel. Pflicht-Vorarbeit für Block I (Dead-Code-Prune). Quelle: MASTER-AUDIT v2 Block H.
 - Phase 08.6 inserted after Phase 08.5: Stabilisierung Block A Quick-Wins (URGENT) — 8 triviale Launch-Blocker-Fixes in < 30 min: LB-5/LB-6 State-Writer, LB-12 Ghost-Columns, LB-13 ROI-Card, CORS-Domain, unused Imports, Theme-400, Language-Restrict. Quelle: MASTER-AUDIT v2 Block A.
 - Phase 08.5 inserted after Phase 08: Universal Response Loop — Launch-kritische Erweiterung des Live-Loops. Claude klassifiziert jede Kundenäußerung in 4 Kategorien (einwand_known/einwand_unknown/frage/smalltalk-none). Unbekannte Einwände + Fragen aus Profil-Daten beantwortet, nie halluziniert. FAQ-Feld + Exclusion-Liste, Anrede-UX-Umzug, Training-Pipeline v2-modular. Löst POLISH-56. Aufwand 30-36h. (INSERTED)
@@ -456,6 +457,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T15:02:47.407Z
-Stopped at: Completed 08.5-06-PLAN.md
+Last session: 2026-04-25T00:00:00Z
+Stopped at: Completed 08.8-01-PLAN.md
 Resume file: None
