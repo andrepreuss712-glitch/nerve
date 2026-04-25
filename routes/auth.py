@@ -57,9 +57,11 @@ def login_required(f):
             onboarding_done = bool(getattr(user, 'onboarding_done', True))
         finally:
             db.close()
-        # Onboarding redirect disabled — wird in einer späteren Phase neu gebaut
-        # if not onboarding_done and not request.path.startswith('/onboarding'):
-        #     return redirect(url_for('onboarding.wizard'))
+        # LB-11: Onboarding-Redirect reaktiviert (deaktiviert in 6b57a77 als deploy hardening,
+        # kein Safety-Concern — korrekte Logik, nur voruebergehend pausiert).
+        # onboarding_done default=True (Zeile 57) sorgt dafuer dass bestehende User NICHT umgeleitet werden.
+        if not onboarding_done and not request.path.startswith('/onboarding'):
+            return redirect(url_for('onboarding.wizard'))
         return f(*args, **kwargs)
     return decorated
 
