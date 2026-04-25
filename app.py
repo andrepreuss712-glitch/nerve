@@ -749,7 +749,9 @@ def _migrate():
                 if 'basis' in _daten:
                     continue
                 # Flat-Schema erkannt: 'produkt' oder 'einwaende' auf Top-Level
+                # Keiner der beiden Keys vorhanden — kein Flat-Schema (leer oder unbekanntes Format)
                 if 'produkt' not in _daten and 'einwaende' not in _daten:
+                    print(f"[DB] Migration 08.9: Profil ID {_pid} hat keine Flat-Schema-Keys — uebersprungen")
                     continue
                 # Umstrukturieren
                 _basis = {
