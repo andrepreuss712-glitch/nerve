@@ -7,7 +7,7 @@ from config import ANTHROPIC_API_KEY, ANALYSE_INTERVALL, KATEGORIE_LABEL
 # Phase 08: EWB-Pipeline (A/B-Routing + Baustein-Struktur)
 # Nur der ewb-Modul-Pfad nutzt diese neue Pipeline. Die 4 anderen Module
 # (assistant_live, coaching_live, objection_trigger, api_frage, training_persona)
-# bleiben bewusst auf _ACTIVE_PROMPT_CACHE + _build_system_prompt (Legacy).
+# nutzen _ACTIVE_PROMPT_CACHE + build_ewb_prompt direkt.
 from services.prompt_pipeline import resolve_prompt_version
 from services.ewb_pipeline import build_ewb_prompt
 
@@ -201,204 +201,6 @@ def _write_ft_assistant_event(
     except Exception as e:
         # NEVER raise — analyse_loop/coaching_loop must not crash on FT logging
         print(f"[FT] assistant_event write failed (module={module}): {e}")
-
-
-def _get_erfolgsquoten() -> str:
-    """Lädt Gegenargument-Erfolgsquoten aus der DB und gibt Lern-Kontext zurück."""
-    try:
-        from database.db import get_session
-        from database.models import ConversationLog
-        db = get_session()
-        try:
-            logs = (db.query(ConversationLog)
-                    .filter(ConversationLog.gegenargument_details.isnot(None))
-                    .order_by(ConversationLog.created_at.desc())
-                    .limit(50).all())
-            if len(logs) < 5:
-                return ''
-            typ_stats = {}
-            for log in logs:
-                try:
-                    details = json.loads(log.gegenargument_details)
-                except Exception:
-                    continue
-                for ga in details:
-                    typ = ga.get('einwand_typ', '')
-                    if not typ:
-                        continue
-                    if typ not in typ_stats:
-                        typ_stats[typ] = {'gesamt': 0, 'erfolg': 0, 'option_1': 0, 'option_2': 0}
-                    typ_stats[typ]['gesamt'] += 1
-                    if ga.get('erfolgreich'):
-                        typ_stats[typ]['erfolg'] += 1
-                    if ga.get('gewaehlte_option') == 1:
-                        typ_stats[typ]['option_1'] += 1
-                    elif ga.get('gewaehlte_option') == 2:
-                        typ_stats[typ]['option_2'] += 1
-            if not typ_stats:
-                return ''
-            result_lines = ['\n--- LERNDATEN AUS ECHTEN GESPRÄCHEN ---',
-                            'Basierend auf den letzten Gesprächen:']
-            for typ, stats in sorted(typ_stats.items(), key=lambda x: -x[1]['gesamt']):
-                if stats['gesamt'] < 3:
-                    continue
-                quote = round(stats['erfolg'] / stats['gesamt'] * 100)
-                pref  = '1' if stats['option_1'] >= stats['option_2'] else '2'
-                result_lines.append(
-                    f'- {typ}: Erfolgsquote {quote}%, bevorzugte Option: {pref} '
-                    f'(aus {stats["gesamt"]} Gesprächen)'
-                )
-            if len(result_lines) <= 2:
-                return ''
-            result_lines.append(
-                'Priorisiere Gegenargumente die dem bevorzugten Stil und den '
-                'erfolgreichen Mustern aus echten Gesprächen entsprechen.'
-            )
-            return '\n'.join(result_lines)
-        finally:
-            db.close()
-    except Exception as e:
-        print(f'[Lernloop] Fehler: {e}')
-        return ''
-
-
-def _build_system_prompt() -> str:
-    import services.live_session as ls
-    _, pdata = ls.get_active_profile()
-    if not pdata:
-        return SYSTEM_PROMPT_BASE
-    basis      = pdata.get('basis', {})
-    zielgruppe = pdata.get('zielgruppe', {})
-    schmerzen  = pdata.get('schmerzen', {})
-    einwaende  = pdata.get('einwaende', [])
-    fragen     = pdata.get('fragen', [])
-    nogos      = pdata.get('nogos', [])
-    wettbew    = pdata.get('wettbewerber', [])
-    techniken  = pdata.get('techniken', {})
-    uebergaenge= pdata.get('uebergaenge', [])
-    ki         = pdata.get('ki', {})
-    lines = [SYSTEM_PROMPT_BASE, '\n--- AKTIVES VERKAUFSPROFIL ---']
-    if basis.get('unternehmen'):
-        lines.append(f'Unternehmen: {basis["unternehmen"]}')
-    if basis.get('produktbeschreibung'):
-        lines.append(f'Produkt: {basis["produktbeschreibung"]}')
-    if basis.get('preismodell'):
-        lines.append(f'Preismodell: {basis["preismodell"]}')
-    if basis.get('usps'):
-        lines.append(f'Alleinstellungsmerkmale (USPs): {", ".join(basis["usps"])}')
-    if basis.get('konsequenz'):
-        lines.append(f'Konsequenz wenn Kunde nicht kauft: {basis["konsequenz"]}')
-    zg_parts = []
-    if zielgruppe.get('alter'): zg_parts.append(f'Alter: {zielgruppe["alter"]}')
-    if zielgruppe.get('berufsstatus'): zg_parts.append(f'Beruf: {zielgruppe["berufsstatus"]}')
-    if zielgruppe.get('einkommensniveau'): zg_parts.append(f'Einkommen: {zielgruppe["einkommensniveau"]}')
-    if zielgruppe.get('lebenssituation'): zg_parts.append(f'Lebenssituation: {zielgruppe["lebenssituation"]}')
-    if zielgruppe.get('beruflicher_hintergrund'): zg_parts.append(f'Hintergrund: {", ".join(zielgruppe["beruflicher_hintergrund"])}')
-    if zielgruppe.get('vorwissen'): zg_parts.append(f'Vorwissen: {zielgruppe["vorwissen"]}')
-    if zielgruppe.get('entscheidungsverhalten'): zg_parts.append(f'Entscheidungsverhalten: {", ".join(zielgruppe["entscheidungsverhalten"])}')
-    if zg_parts:
-        lines.append(f'\nZielgruppe: {" | ".join(zg_parts)}')
-    trigger = schmerzen.get('trigger', {})
-    _trigger_map = {
-        'verlust':      ('Verlust',        'Formuliere aus dem Verlust-Winkel — was verliert der Kunde wenn er nicht handelt. Gegenfrage beginnt mit "Was verlieren Sie wenn…"'),
-        'familie':      ('Familie/Soziales','Betone persönlichen und familiären Nutzen. Gegenfrage beginnt mit "Für wen tun Sie das eigentlich…"'),
-        'status':       ('Status',         'Betone Ansehen, Reputation und Wettbewerbsvorsprung. Gegenfrage beginnt mit "Was sagen Ihre Kunden/Kollegen wenn…"'),
-        'zahlen':       ('Zahlen/Fakten',  'Führe konkrete Zahlen, ROI und Fakten an. Gegenfrage lädt zu konkreten Zahlen ein.'),
-        'dringlichkeit':('Dringlichkeit',  'Betone Opportunitätskosten und Zeitdruck. Gegenfrage beginnt mit "Je länger Sie warten…"'),
-        'micro':        ('Micro',          'Mach das Risiko klein — biete einen ersten kleinen Schritt an. Gegenfrage beginnt mit "Was wäre ein erster kleiner Schritt…"'),
-    }
-    sorted_triggers = sorted(
-        [(k, int(trigger.get(k, 0))) for k in _trigger_map if trigger.get(k)],
-        key=lambda x: x[1], reverse=True
-    )
-    active_triggers = [(k, v) for k, v in sorted_triggers if v > 3]
-    if active_triggers:
-        lines.append('\nGegenargument-Stil (basierend auf Kundenprofil):')
-        if len(active_triggers) >= 1:
-            k1, v1 = active_triggers[0]
-            label1, style1 = _trigger_map[k1]
-            lines.append(f'gegenargument_1 → {label1}-Trigger ({v1}/10): {style1}')
-        if len(active_triggers) >= 2:
-            k2, v2 = active_triggers[1]
-            label2, style2 = _trigger_map[k2]
-            lines.append(f'gegenargument_2 → {label2}-Trigger ({v2}/10): {style2}')
-        elif len(active_triggers) == 1:
-            lines.append('gegenargument_2 → alternativer Winkel, sachlich und lösungsorientiert')
-    if einwaende:
-        lines.append('\nProfilspezifische Einwände und Gegenargumente:')
-        for e in einwaende:
-            typ      = e.get('kategorie') or e.get('typ', '')
-            text     = e.get('einwand', '')
-            gegen    = e.get('gegenargument', '')
-            technik  = e.get('technik', '')
-            intens   = e.get('intensitaet', '')
-            varianten= e.get('varianten', [])
-            var_str  = ' / '.join(v for v in (varianten if isinstance(varianten, list) else [varianten]) if v)
-            line = f'- [{typ}]'
-            if text:    line += f' "{text}"'
-            if var_str: line += f' (Varianten: {var_str})'
-            if gegen:   line += f' → {gegen}'
-            if technik: line += f' | Technik: {technik}'
-            if intens:  line += f' | Intensität: {intens}'
-            lines.append(line)
-    if fragen:
-        lines.append('\nHäufige Kundenfragen:')
-        for f in fragen[:5]:
-            if f.get('frage'):
-                lines.append(f'- F: "{f["frage"]}" → A: {f.get("antwort","")}')
-    if wettbew:
-        lines.append('\nWettbewerber:')
-        for w in wettbew:
-            if w.get('name'):
-                lines.append(f'- {w["name"]}: Schwäche: {w.get("schwaeche","")}')
-    if nogos:
-        lines.append('\nDisqualifikationskriterien (No-Gos):')
-        for n in nogos:
-            krit = n.get('kriterium') or n.get('krit', '')
-            if krit:
-                lines.append(f'- {krit}: {n.get("beschreibung","")}')
-    verboten = techniken.get('verboten', [])
-    if verboten:
-        lines.append(f'\nVerbotene Phrasen/Techniken (nie verwenden): {", ".join(verboten)}')
-    aktiv = techniken.get('aktiv', [])
-    if aktiv:
-        lines.append(f'Bevorzugte Verkaufstechniken: {", ".join(aktiv)}')
-    if techniken.get('offene_fragen'):
-        lines.append(f'Offene Fragen Vorlage: {techniken["offene_fragen"]}')
-    if uebergaenge:
-        lines.append('\nGesprächsübergänge:')
-        for u in uebergaenge:
-            if u.get('von') or u.get('nach'):
-                lines.append(f'- {u.get("von","")} → {u.get("nach","")}: "{u.get("bruecke","")}"')
-    if ki.get('ansprache'):
-        lines.append(f'\nKundenansprache: {ki["ansprache"]} (immer einhalten)')
-    if ki.get('antwortlaenge'):
-        lines.append(f'Antwortlänge: {ki["antwortlaenge"]}')
-    if ki.get('sensitivitaet'):
-        lines.append(f'Sensitivität: {ki["sensitivitaet"]}')
-    if ki.get('ton'):
-        lines.append(f'Ton: {ki["ton"]}')
-    if ki.get('zusatz'):
-        lines.append(f'Zusatz-Anweisung: {ki["zusatz"]}')
-    lerndaten = _get_erfolgsquoten()
-    if lerndaten:
-        lines.append(lerndaten)
-    # PreCall-Briefing injizieren (Phase quick-260414)
-    precall_text = ls.state.get('precall_briefing')
-    if precall_text:
-        lines.append('\n## Firmenkontext (aus PreCall-Recherche)')
-        lines.append(precall_text)
-    # Phase 06: skript_position for teleprompter (D-13)
-    with ls.state_lock:
-        aktives_skript = ls.state.get('aktives_skript_inhalt')
-        skript_bloecke = ls.state.get('skript_bloecke', [])
-    if aktives_skript and skript_bloecke:
-        lines.append('\n--- AKTIVES SKRIPT (Teleprompter) ---')
-        lines.append('Der Berater hat folgendes Skript geladen. Erkenne aus dem Gesprächsverlauf, in welchem Block sich der Berater befindet.')
-        for idx, block in enumerate(skript_bloecke):
-            lines.append(f'Block {idx}: {block[:100]}...' if len(block) > 100 else f'Block {idx}: {block}')
-        lines.append('Ergänze in deiner JSON-Antwort: "skript_position": <int> mit dem 0-basierten Index des aktuellen Blocks.')
-    return '\n'.join(lines)
 
 
 def _build_coaching_prompt() -> str:
@@ -651,13 +453,12 @@ def analysiere_mit_claude(neuer_text: str, kontext: str) -> dict:
 Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
 {neuer_text}"""
     # ── Phase 08 EWB-Pipeline Integration ──────────────────────────────────────
-    # Statt Legacy _build_system_prompt() routen wir ueber resolve_prompt_version
-    # (A/B-Router mit ENV-Override) + build_ewb_prompt (Baustein-Struktur).
+    # Routing ueber resolve_prompt_version (A/B-Router mit ENV-Override)
+    # + build_ewb_prompt (Baustein-Struktur).
     # user_id aus ls.state (W-6): deepgram_service.handle_start_live_session
     # setzt ls.state['user_id'] bei Call-Start. Fallback auf 0 wenn leer —
     # resolve_prompt_version wechselt dann auf variants[0] (deterministisch
-    # v1-legacy als sicherer Default), KEIN silent-Fallback auf _build_system_prompt
-    # weil das inkonsistente A/B-Zuordnung verursachen wuerde.
+    # v1-legacy als sicherer Default).
     import services.live_session as ls
     # CR-01: reads under state_lock — deepgram_service writes session_anrede/user_id under same lock
     if hasattr(ls, 'state') and hasattr(ls, 'state_lock'):
