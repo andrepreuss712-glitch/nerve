@@ -701,110 +701,6 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     return _parse_json(msg.content[0].text.strip())
 
 
-def analysiere_mit_claude_streaming(neuer_text: str, kontext: str, sid: str, slot_id: int, on_einwand_detected=None) -> dict:
-    """PiP-only streaming variant. Emits pip_token events to specific sid room.
-    Returns final parsed result dict (same shape as analysiere_mit_claude). Phase 06 D-08, D-09.
-
-    BUG-10 r2: on_einwand_detected(typ) callback wird EARLY im Stream gefeuert, sobald
-    der JSON-Parser "einwand":true und "typ":"..." findet — ermoeglicht paralleles
-    Slot-1-Variante-Streaming waehrend Slot 0 noch fertig formuliert.
-    """
-    from extensions import socketio as sio
-    import re as _re
-
-    user_msg = f"""Bisheriger Gesprächskontext (zur Orientierung, letzte Aussagen):
-{kontext if kontext else "(Kein vorheriger Kontext)"}
-
-Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
-{neuer_text}"""
-
-    print(f"[PiP-Stream] ENTRY sid={sid} slot={slot_id} text={neuer_text[:60]!r}")
-    sio.emit('pip_stream_start', {'slot': slot_id}, room=sid)
-    print(f"[PiP-Stream] emit start OK (sid={sid} slot={slot_id})")
-    full_text = ''
-    token_count = 0
-    _callback_fired = False
-    # ── Phase 08 EWB-Pipeline Integration ──────────────────────────────────────
-    # Streaming-Variante nutzt dieselbe Pipeline wie analysiere_mit_claude.
-    # Siehe dortigen Kommentar fuer W-6-user_id-Wiring + Fallback-Logik.
-    import services.live_session as ls
-    # CR-01: reads under state_lock (streaming variant — same pattern as analysiere_mit_claude)
-    if hasattr(ls, 'state') and hasattr(ls, 'state_lock'):
-        with ls.state_lock:
-            _user_id = ls.state.get('user_id') or 0
-            _anrede = ls.state.get('session_anrede') or 'Sie'
-    else:
-        _user_id = 0
-        _anrede = 'Sie'
-    if not _user_id:
-        print("[Phase08] WARN: ls.state['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
-    _ewb_version = resolve_prompt_version('ewb', _user_id)
-    _system_prompt = build_ewb_prompt(
-        profile_data=None,
-        anrede=_anrede,
-        version=_ewb_version,
-        user_id=_user_id,
-    )
-    try:
-        with claude_client.messages.stream(
-            model='claude-haiku-4-5-20251001',
-            max_tokens=400,
-            system=_system_prompt,
-            messages=[{'role': 'user', 'content': user_msg}]
-        ) as stream:
-            for token in stream.text_stream:
-                full_text += token
-                token_count += 1
-                sio.emit('pip_token', {'slot': slot_id, 'token': token}, room=sid)
-                # BUG-10 r2: Early-detect einwand+typ ueber Regex auf das akkumulierte
-                # JSON — sobald beide Felder lesbar sind, Callback feuern. Ermoeglicht
-                # dem Caller Slot-1-Variante parallel zu spawnen.
-                if on_einwand_detected and not _callback_fired:
-                    m_ew = _re.search(r'"einwand"\s*:\s*(true|false)', full_text)
-                    m_typ = _re.search(r'"typ"\s*:\s*"([^"]+)"', full_text)
-                    if m_ew and m_typ and m_ew.group(1).lower() == 'true':
-                        _callback_fired = True
-                        _typ_early = m_typ.group(1).strip()
-                        try:
-                            on_einwand_detected(_typ_early)
-                            print(f"[PiP-Stream] early einwand detect sid={sid} typ={_typ_early!r}")
-                        except Exception as _cb_err:
-                            print(f"[PiP-Stream] on_einwand_detected callback error: {_cb_err}")
-        print(f"[PiP-Stream] stream done sid={sid} slot={slot_id} tokens={token_count} chars={len(full_text)}")
-        parsed = _parse_json(full_text)
-        sio.emit('pip_token_done', {'slot': slot_id, 'result': parsed}, room=sid)
-        print(f"[PiP-Stream] emit done OK sid={sid} slot={slot_id} einwand={parsed.get('einwand') if isinstance(parsed, dict) else None}")
-        # ── Cost tracking (same pattern as analysiere_mit_claude) ──────────
-        try:
-            from services.cost_tracker import log_api_cost
-            final_msg = stream.get_final_message()
-            u = getattr(final_msg, 'usage', None)
-            if u is not None:
-                in_tok = getattr(u, 'input_tokens', 0) or 0
-                out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
-                             units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='pip_stream')
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
-                             units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='pip_stream')
-        except Exception as _e:
-            print(f'[CostHook] pip_stream skipped: {_e}')
-        # ── FT logging ─────────────────────────────────────────────────────
-        _write_ft_assistant_event(
-            module='pip_stream',
-            hint_type='einwand_streaming',
-            hint_text=full_text[:500],
-            model_used='haiku-4-5',
-            context={'slot_id': slot_id}
-        )
-        return parsed
-    except Exception as e:
-        print(f'[PiP-Stream] Fehler slot={slot_id}: {e}')
-        sio.emit('pip_stream_error', {'slot': slot_id, 'error': str(e)}, room=sid)
-        return {}
-
-
 def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: str, slot: int = 1, trigger: str = "analyse_loop") -> dict:
     # ── Shared-Lock Design ────────────────────────────────────────────────────
     # Der Anti-Overlap-Guard fuer Slot 1 laeuft ueber ls.state['slot1_variant_busy_until']
@@ -817,8 +713,7 @@ def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: s
     # ──────────────────────────────────────────────────────────────────────────
     """BUG-10 r3: Parallele Auto-Variante — startet SOFORT ohne auf Typ-Detection zu warten.
     Haiku bekommt den rohen Kunden-Satz + Profil-Einwaende-Liste als Kontext und baut
-    eine knappe Gegenargument-Variante. Laeuft parallel zu analysiere_mit_claude_streaming
-    in Slot 0; beide streams beenden ~gleichzeitig (max Latenz ~2-2.5s statt 4s).
+    eine knappe Gegenargument-Variante fuer Slot 1 (Slot 0 = analysiere_mit_claude).
     """
     from extensions import socketio as sio
 
