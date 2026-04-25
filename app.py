@@ -841,6 +841,14 @@ def _migrate():
         except Exception as _e:
             print(f"[DB] oauth_id UNIQUE-Index Migration-Fehler: {_e}")
 
+        # ── Phase 08.10 H-18: email_confirmed Column für Microsoft-OAuth Email-Verification ──
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN email_confirmed BOOLEAN DEFAULT 1"))
+            conn.commit()
+            print("[DB] Migration: added users.email_confirmed")
+        except Exception:
+            pass  # Bereits existiert
+
 _migrate()
 
 

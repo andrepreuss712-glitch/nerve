@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:480px;margin:80px auto;text-align:center;">
+  <h2>E-Mail bestätigen</h2>
+  <p>Bitte bestätige deine E-Mail-Adresse. Wir haben dir einen Bestätigungslink geschickt.</p>
+  <p>
+    <small>
+      Kein Link erhalten?
+      <button onclick="
+        fetch('/auth/resend-confirm', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': (document.querySelector('meta[name=csrf-token]') || {}).content || ''
+          }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          alert(d.ok ? 'E-Mail erneut gesendet!' : 'Fehler: ' + d.error);
+        })
+        .catch(function() { alert('Fehler beim Senden. Bitte erneut versuchen.'); });
+      ">Erneut senden</button>
+    </small>
+  </p>
+  <p><a href="/auth/logout">Abmelden</a></p>
+</div>
+{% endblock %}

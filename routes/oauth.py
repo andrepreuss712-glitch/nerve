@@ -136,6 +136,35 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
             send_welcome(new_user.email, getattr(new_user, 'vorname', '') or '')
         except Exception as e:
             print(f'[OAUTH] welcome mail failed: {e}')
+        # H-18: Microsoft-OAuth Email-Hijacking-Mitigation
+        # Nur für Microsoft: Email-Confirmation für neue User senden.
+        # Google hat email_verified=True in JWT — kein Confirmation-Flow nötig.
+        # Bestehende User (existing-user-Pfad oben) sind unberührt.
+        if provider == 'microsoft':
+            try:
+                from services.email_service import send_confirmation_email
+                from config import SECRET_KEY
+                from itsdangerous import URLSafeTimedSerializer
+                # Attribute vorab lesen — new_user könnte nach Session-Close detached sein
+                new_user_id = new_user.id
+                new_user_email = new_user.email
+                new_user_vorname = getattr(new_user, 'vorname', '') or ''
+                confirm_token = URLSafeTimedSerializer(SECRET_KEY, salt='nerve-email-confirm').dumps(new_user_email)
+                confirm_url = url_for('auth.confirm_email', token=confirm_token, _external=True)
+                # H-18: email_confirmed=False VOR Email-Send setzen — ECHTER BLOCK bleibt sauber.
+                # Resend-Endpoint /auth/resend-confirm verhindert dauerhaften Lockout bei Send-Failure.
+                db_confirm = get_session()
+                try:
+                    from database.models import User as _UserM
+                    _uu = db_confirm.get(_UserM, new_user_id)
+                    if _uu:
+                        _uu.email_confirmed = False
+                        db_confirm.commit()
+                finally:
+                    db_confirm.close()
+                send_confirmation_email(new_user_email, confirm_url, new_user_vorname)
+            except Exception as _ce:
+                print(f'[OAUTH] Microsoft confirmation mail/flag failed: {_ce}')
         print(f'[OAuth] {provider} register: new user id={new_user.id}')
         # D-05: diagnostic — log redirect target for new-user path
         # Onboarding redirect disabled — wird in einer späteren Phase neu gebaut

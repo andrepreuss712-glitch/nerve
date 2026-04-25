@@ -113,6 +113,10 @@ class User(Base):
     oauth_provider        = Column(String(50),  nullable=True)  # 'google' | 'microsoft' | None
     oauth_id              = Column(String(200), nullable=True)  # Provider Sub-ID (eindeutig pro Provider)
     avatar_url            = Column(String(500), nullable=True)
+    # H-18: Email-Confirmation-Flag (Microsoft-OAuth Email-Hijacking-Mitigation)
+    # True = bestaetigt oder Email/Google-User. False = Microsoft Neu-User pending.
+    # Default=True: bestehende User gelten automatisch als bestaetigt.
+    email_confirmed       = Column(Boolean, default=True, nullable=True)
     # Phase 04.7.1: Markt-Trennung (FT-Logging)
     market                = Column(String(10), nullable=False, default='dach')
     language              = Column(String(10), nullable=False, default='de')

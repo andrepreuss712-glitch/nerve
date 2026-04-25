@@ -72,6 +72,16 @@ def login_required(f):
         # onboarding_done default=True (Zeile 57) sorgt dafuer dass bestehende User NICHT umgeleitet werden.
         if not onboarding_done and not request.path.startswith('/onboarding'):
             return redirect(url_for('onboarding.wizard'))
+        # H-18: Microsoft-OAuth Email-Confirmation-Gate
+        # Echter Block: Microsoft-User mit email_confirmed=False werden auf
+        # /confirm-email-pending umgeleitet bis email_confirmed=True.
+        # Ausnahmen: /auth/confirm_email (Token-Bestaetigung) und /auth/logout.
+        # BEWUSST: confirm_email_pending + confirm_email + resend_confirm haben KEIN
+        # @login_required — sonst Redirect-Loop.
+        if getattr(g.user, 'email_confirmed', True) is False:
+            if (not request.path.startswith('/auth/confirm_email') and
+                    not request.path.startswith('/auth/logout')):
+                return redirect(url_for('auth.confirm_email_pending'))
         return f(*args, **kwargs)
     return decorated
 
@@ -300,3 +310,70 @@ def logout():
     if auto:
         flash('Du wurdest automatisch ausgeloggt.', 'info')
     return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/auth/confirm-email-pending')
+# BEWUSST ohne @login_required — sonst Redirect-Loop:
+# login_required prueft email_confirmed=False → redirect zu confirm_email_pending →
+# login_required feuert erneut → Endlosschleife.
+def confirm_email_pending():
+    """H-18: Shown to Microsoft-OAuth-User until email_confirmed=True."""
+    return render_template('confirm_email_pending.html'), 200
+
+
+@auth_bp.route('/auth/confirm_email')
+# BEWUSST ohne @login_required — User klickt Link in Email wenn noch nicht eingeloggt.
+def confirm_email():
+    """H-18: Email-Confirmation fuer Microsoft-OAuth-User. Phase 08.10."""
+    from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+    from config import SECRET_KEY
+    token = request.args.get('token', '')
+    db = get_session()
+    try:
+        email = URLSafeTimedSerializer(SECRET_KEY, salt='nerve-email-confirm').loads(token, max_age=86400)
+        user = db.query(User).filter_by(email=email).first()
+        if user:
+            user.email_confirmed = True
+            db.commit()
+            flash('E-Mail erfolgreich bestätigt!', 'success')
+        else:
+            flash('Ungültiger Bestätigungslink.', 'error')
+    except (BadSignature, SignatureExpired):
+        flash('Bestätigungslink ungültig oder abgelaufen.', 'error')
+    except Exception as _e:
+        print(f'[AUTH] confirm_email error: {_e}')
+        flash('Fehler bei der E-Mail-Bestätigung.', 'error')
+    finally:
+        db.close()
+    return redirect(url_for('dashboard.index'))
+
+
+@auth_bp.route('/auth/resend-confirm', methods=['POST'])
+# BEWUSST ohne @login_required — User ist auth'd via Session, aber Gate blockt login_required.
+# Rate-Limit via @limiter.limit("3 per 10 minutes") — limiter aus services.rate_limiter (Wave 5).
+@limiter.limit("3 per 10 minutes")
+def resend_confirm():
+    """H-18 VARIANTE B: Resend Confirmation-Email fuer Microsoft-OAuth-User."""
+    from itsdangerous import URLSafeTimedSerializer
+    from config import SECRET_KEY
+    from services.email_service import send_confirmation_email
+    # User aus Session lesen (session ist verfuegbar auch wenn login_required Gate blockt)
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'ok': False, 'error': 'not authenticated'}), 401
+    db = get_session()
+    try:
+        user = db.get(User, user_id)
+        if not user:
+            return jsonify({'ok': False, 'error': 'user not found'}), 404
+        if getattr(user, 'email_confirmed', True):
+            return jsonify({'ok': False, 'error': 'email already confirmed'}), 400
+        confirm_token = URLSafeTimedSerializer(SECRET_KEY, salt='nerve-email-confirm').dumps(user.email)
+        confirm_url = url_for('auth.confirm_email', token=confirm_token, _external=True)
+        send_confirmation_email(user.email, confirm_url, getattr(user, 'vorname', '') or '')
+        return jsonify({'ok': True})
+    except Exception as _e:
+        print(f'[AUTH] resend_confirm error: {_e}')
+        return jsonify({'ok': False, 'error': 'internal'}), 500
+    finally:
+        db.close()

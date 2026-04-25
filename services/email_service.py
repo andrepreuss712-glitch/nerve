@@ -39,6 +39,23 @@ def send_welcome(to_email, vorname=''):
                   'subject': 'Willkommen bei NERVE', 'html': html})
 
 
+def send_confirmation_email(to_email, confirmation_url, vorname=''):
+    """H-18: Microsoft-OAuth Email-Hijacking-Mitigation.
+    Sendet Bestaetigungs-Email an neue Microsoft-OAuth-User.
+    confirmation_url: signierter Link zum Bestaetigen der Email (itsdangerous).
+    """
+    name = vorname or 'da'
+    html = (
+        f"<p>Hallo {name},</p>"
+        "<p>bitte bestätige deine E-Mail-Adresse für NERVE:</p>"
+        f"<p><a href='{confirmation_url}'>E-Mail bestätigen</a> (Link gültig 24 Stunden)</p>"
+        "<p>Wenn du dich nicht bei NERVE registriert hast, ignoriere diese E-Mail.</p>"
+        "<p>— André, Founder NERVE</p>"
+    )
+    return _send({'from': FROM_SYSTEM, 'to': [to_email],
+                  'subject': 'NERVE — Bitte E-Mail bestätigen', 'html': html})
+
+
 def send_feedback_in_planning(to_email, feedback_text, vorname=''):
     name = vorname or 'da'
     snippet = (feedback_text or '')[:300]
