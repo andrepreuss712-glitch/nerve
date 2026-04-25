@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.10 IN PROGRESS — Plan 02 complete (ProxyFix-Hardening + SESSION_COOKIE_* LB-10)
-stopped_at: Completed 08.10-02-PLAN.md — ProxyFix x_host entfernt, SESSION_COOKIE_SECURE/HTTPONLY/SAMESITE/LIFETIME in app.py eingebaut
-last_updated: "2026-04-25T19:10:00Z"
-last_activity: 2026-04-25 - Phase 08.10 Plan 02 complete: ProxyFix auf x_for+x_proto reduziert (x_host=1 entfernt), timedelta importiert, 4 SESSION_COOKIE_* Config-Lines (FLASK_DEBUG-aware). Commit c7c80f8. pytest 266 passing.
+status: Phase 08.10 IN PROGRESS — Plan 03 complete (CSRF-Schutz vollständig LB-9)
+stopped_at: Completed 08.10-03-PLAN.md — CSRFProtect(app) + 3 csrf.exempt() + Meta-Tag base.html + getCsrfToken() in 4 JS-Files
+last_updated: "2026-04-25T19:06:00Z"
+last_activity: 2026-04-25 - Phase 08.10 Plan 03 complete: flask-wtf CSRFProtect(app) nach SocketIO (VARIANTE B), 3 csrf.exempt() (stripe_webhook/google_callback/microsoft_callback), CSRF meta-tag in base.html, getCsrfToken()+X-CSRFToken in pip-launcher.js/profile_editor.js/feedback.js/admin_dashboard.js. Commits dd64f5d + a418878. pytest 266 passing.
 progress:
   total_phases: 41
   completed_phases: 32
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.10 (stabilisierung-block-b-auth-haertung) — IN PROGRESS
-Plan: 2 of 6 COMPLETE
+Plan: 3 of 6 COMPLETE
 Last activity: 2026-04-25
 
-**Next:** Phase 08.10 Plan 03 — Stabilisierung Block B Auth-Haertung (naechster Wave).
+**Next:** Phase 08.10 Plan 04 — Stabilisierung Block B Auth-Haertung (naechster Wave).
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -175,6 +175,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.10-03]: csrf = CSRFProtect(app) NACH socketio = SocketIO(app, ...) — WSGI-Level-Interception garantiert SocketIO-Exemption automatisch (VARIANTE B, kein expliziter /socket.io-Workaround noetig)
+- [Phase 08.10-03]: 3 csrf.exempt(): stripe_webhook (HMAC-Auth via STRIPE_WEBHOOK_SECRET), google_callback + microsoft_callback (OAuth GET-Callbacks, kein Browser-POST)
+- [Phase 08.10-03]: getCsrfToken() in jedem JS-File separat definiert — Self-contained IIFE-Pattern bleibt erhalten, kein shared module
 - [Phase 08.10-02]: x_host=1 aus ProxyFix entfernt — Host-Header-Injection-Vektor bei Fixed-Domain getnerve.app unnoetig und riskant; nur x_for+x_proto
 - [Phase 08.10-02]: _debug via os.environ.get('FLASK_DEBUG') — app.debug ist unter gunicorn immer False (established pattern Phase 03)
 - [Phase 08.10-02]: SESSION_COOKIE_SECURE=not _debug — False lokal (kein HTTPS), True Prod; HTTPONLY=True, SAMESITE=Lax, LIFETIME=14 Tage (LB-10)
