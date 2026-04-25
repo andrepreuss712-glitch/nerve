@@ -763,16 +763,11 @@ def analyse_loop():
         with ls.state_lock:
             ls.state['aktiv'] = True
         try:
-            with ls.state_lock:
-                active_sid = ls.state.get('active_sid')
-            if active_sid:
-                # Phase 06.3: analyse_loop no longer renders into PiP slots.
-                # Keyword-Matcher (06.2) is sole primary for Slot 0 + Slot 1.
-                # Non-streaming call preserves ergebnis for FT-events, Kaufbereitschaft,
-                # Phase-Classifier, Cold-Call-Inference, Active-Hint-Orchestration.
-                ergebnis = analysiere_mit_claude(neuer_text, kontext)
-            else:
-                ergebnis = analysiere_mit_claude(neuer_text, kontext)
+            # Phase 06.3: analyse_loop no longer renders into PiP slots.
+            # Keyword-Matcher (06.2) is sole primary for Slot 0 + Slot 1.
+            # Non-streaming call preserves ergebnis for FT-events, Kaufbereitschaft,
+            # Phase-Classifier, Cold-Call-Inference, Active-Hint-Orchestration.
+            ergebnis = analysiere_mit_claude(neuer_text, kontext)
             # ── Phase 08.5: Universal Response Loop ──────────────────────────
             # Classifies utterance via qa_pipeline when kw_fired_for_line != line_id
             # (D-02 guard). Emits qa_slot1 or qa_soft_hint to active session.

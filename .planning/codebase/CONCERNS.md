@@ -178,13 +178,13 @@ The NERVE codebase exhibits **significant architectural drift** between the data
 **Location:** `services/claude_service.py:1039-1340` (analyse_loop thread)
 
 **Issue:** 
-- Loop runs every `ANALYSE_INTERVALL` (2 seconds per config.py)
-- Calls `analysiere_mit_claude_streaming()` which blocks on Claude API response
-- If Claude latency exceeds 2s, loop skips ticks and EWB updates backlog
+- Loop runs every `ANALYSE_INTERVALL` (4 seconds per config.py — Phase 06.3: raised from 2s to reduce 529-Risk)
+- Calls `analysiere_mit_claude()` (non-streaming) which blocks on Claude API response
+- If Claude latency exceeds 4s, loop skips ticks and EWB updates backlog
 
-**Current Mitigation:** Uses streaming to unblock faster, but full response must complete before next tick
+**Current Mitigation:** Non-streaming call; 4s interval halves API call volume vs. original 2s
 
-**Severity:** **MEDIUM** — Affects responsiveness under high API latency (>2s)
+**Severity:** **LOW** — Affects responsiveness under high API latency (>4s)
 
 **Fix Path:**
 1. Implement async/await for Claude calls (currently blocking threads)
@@ -346,7 +346,7 @@ finally:
 
 ### Claude API Concurrent Requests
 
-**Current:** analyse_loop spawns one streaming request per tick (every 2s)
+**Current:** analyse_loop spawns one non-streaming request per tick (every 4s — Phase 06.3)
 
 **Limit:** At ~50 concurrent users, that's ~25 Claude requests per second (peak). Haiku tier supports this, but quota exhaustion is possible under large deployment.
 
