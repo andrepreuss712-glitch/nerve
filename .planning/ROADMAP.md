@@ -721,7 +721,7 @@ Plans:
 Plans:
 - [x] 08.9-01-PLAN.md — LB-11 Onboarding-Redirect + H-31/HSR-2 BRANCHE_TEMPLATES basis.*-Schema + DB-Migration Demo-Profile (complete 2026-04-25)
 - [x] 08.9-02-PLAN.md — Wizard-Create-Endpoint auf basis.*-Schema (complete 2026-04-25)
-- [ ] 08.9-03-PLAN.md — LB-3/WR-01/WR-03 QA-Pipeline Komplett-Fix
+- [x] 08.9-03-PLAN.md — LB-3/WR-01/WR-03 QA-Pipeline Komplett-Fix (complete 2026-04-25)
 - [ ] 08.9-04-PLAN.md — H-25 Rollen-Check _rolle() einbauen
 
 ---
