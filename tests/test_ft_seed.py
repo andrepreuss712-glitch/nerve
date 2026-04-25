@@ -7,7 +7,6 @@ EXPECTED_MODULES = [
     'assistant_live',
     'coaching_live',
     'objection_trigger',
-    'api_frage',
     'training_persona',
 ]
 
@@ -27,5 +26,5 @@ def test_seed_idempotent(db_session):
     count_after_first = db_session.query(PromptVersion).count()
     _seed_prompt_versions(db_session)
     count_after_second = db_session.query(PromptVersion).count()
-    assert count_after_first == 5
-    assert count_after_second == 5
+    assert count_after_first == 4
+    assert count_after_second == 4
