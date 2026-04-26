@@ -614,11 +614,11 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
             _cache_hits = getattr(getattr(final_msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
             _cache_writes = getattr(getattr(final_msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
             if _cache_hits > 0:
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
                              context_tag='ewb', call_site='ewb')
             if _cache_writes > 0:
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
                              context_tag='ewb', call_site='ewb')
         except Exception as _e:
@@ -739,11 +739,11 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
             _cache_hits = getattr(getattr(final_msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
             _cache_writes = getattr(getattr(final_msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
             if _cache_hits > 0:
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
                              context_tag='ewb', call_site='ewb')
             if _cache_writes > 0:
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
                              context_tag='ewb', call_site='ewb')
         except Exception as _e:
