@@ -2,12 +2,10 @@
 import json
 import threading
 from datetime import datetime, timezone
-from config import ANTHROPIC_API_KEY
-import anthropic
+import config
+from services.claude_service import claude_client
 
 _analysis_lock = threading.Lock()
-
-_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 POSTCALL_PROMPT = """Du bist ein erfahrener Sales-Coach. Analysiere dieses Verkaufsgespraech und schlage exakt 3 Lernkarten vor.
 
@@ -83,8 +81,8 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
             ga_details=json.dumps(ga_details, ensure_ascii=False)[:2000],
         )
         try:
-            response = _client.messages.create(
-                model="claude-sonnet-4-6",
+            response = claude_client.messages.create(
+                model=config.MODEL_POSTCALL_ANALYSIS,
                 max_tokens=1500,
                 messages=[{"role": "user", "content": prompt_text}]
             )
@@ -93,11 +91,11 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
                 from services.cost_tracker import log_api_cost
                 u = getattr(response, 'usage', None)
                 if u:
-                    log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
+                    log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
                                  units=(getattr(u, 'input_tokens', 0) or 0)/1000.0,
                                  unit_type='per_1k_input_tokens',
                                  context_tag='postcall_coach')
-                    log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
+                    log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
                                  units=(getattr(u, 'output_tokens', 0) or 0)/1000.0,
                                  unit_type='per_1k_output_tokens',
                                  context_tag='postcall_coach')
@@ -145,8 +143,8 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
 def validate_user_text(user_text, lernziel):
     """D-06: KI prueft ob user-eingegebener Satz das Lernziel abdeckt (Haiku)."""
     try:
-        response = _client.messages.create(
-            model="claude-haiku-4-5-20251001",
+        response = claude_client.messages.create(
+            model=config.MODEL_VALIDATE_USER_TEXT,
             max_tokens=200,
             messages=[{"role": "user", "content": f"""Lernziel: {lernziel}
 User-Satz: {user_text}
@@ -316,8 +314,8 @@ Antworte als JSON:
 {{"report_text": "...", "muster": "...", "suggested_card": {{"category": "...", "text": "...", "lernziel": "..."}}}}"""
 
         try:
-            response = _client.messages.create(
-                model="claude-sonnet-4-6",
+            response = claude_client.messages.create(
+                model=config.MODEL_WEEKLY_SUMMARY,
                 max_tokens=800,
                 messages=[{"role": "user", "content": report_prompt}]
             )
@@ -326,11 +324,11 @@ Antworte als JSON:
                 from services.cost_tracker import log_api_cost
                 u = getattr(response, 'usage', None)
                 if u:
-                    log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
+                    log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
                                  units=(getattr(u, 'input_tokens', 0) or 0)/1000.0,
                                  unit_type='per_1k_input_tokens',
                                  context_tag='weekly_coach_report')
-                    log_api_cost('anthropic', 'sonnet-4', user_id=user_id,
+                    log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
                                  units=(getattr(u, 'output_tokens', 0) or 0)/1000.0,
                                  unit_type='per_1k_output_tokens',
                                  context_tag='weekly_coach_report')

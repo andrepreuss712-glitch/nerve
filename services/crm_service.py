@@ -1,8 +1,6 @@
 import json
-import anthropic
-from config import ANTHROPIC_API_KEY
-
-_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+import config
+from services.claude_service import claude_client
 
 
 def generate_crm_export(log_entries, painpoints, einwaende,
@@ -56,8 +54,8 @@ Erstelle als valides JSON:
 
 Nutze Stichpunkte mit "- " Prefix. Antworte NUR mit dem JSON."""
 
-    msg = _client.messages.create(
-        model="claude-haiku-4-5-20251001",
+    msg = claude_client.messages.create(
+        model=config.MODEL_CRM,
         max_tokens=1200,
         messages=[{"role": "user", "content": prompt}]
     )
