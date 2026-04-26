@@ -7,9 +7,10 @@ import services.live_session as ls
 import time as _time_mod
 
 # ── Per-session Deepgram connections ──────────────────────────────────────────
-_deepgram_sessions = {}   # {sid: connection}
-_session_modes = {}       # {sid: 'cold_call'|'meeting'}
-_cost_opened_at = {}      # {sid: float} — Phase 04.7.2 STT-minute tracking
+_deepgram_sessions = {}        # {sid: connection}
+_session_modes = {}            # {sid: 'cold_call'|'meeting'}
+_cost_opened_at = {}           # {sid: float} — Phase 04.7.2 STT-minute tracking (kept for clean dict)
+_stt_seconds_accumulated = {}  # {sid: float} — H-9: echte STT-Sekunden, nicht Socket-Lifetime
 _sessions_lock = threading.Lock()
 
 
@@ -73,6 +74,11 @@ def _make_on_message(sid):
                         'speaker': log_sp if roles_confirmed else None,
                         'text': text, 'data': None,
                     })
+
+                # ── H-9: akkumuliere echte STT-Sekunden ──────────────────────
+                _dur = getattr(getattr(result, 'metadata', None), 'duration', 0.0) or 0.0
+                if _dur > 0:
+                    _stt_seconds_accumulated[sid] = _stt_seconds_accumulated.get(sid, 0.0) + _dur
 
                 if roles_confirmed:
                     sp_name = 'Berater' if speaker == 0 else ('Kunde' if speaker == 1 else 'Sprecher')
@@ -241,17 +247,16 @@ def _close_deepgram_connection(sid):
     with _sessions_lock:
         connection = _deepgram_sessions.pop(sid, None)
         _session_modes.pop(sid, None)
-        opened = _cost_opened_at.pop(sid, None)
-    # ── Phase 04.7.2 Cost-Hook: STT-Minuten ────────────────────────────
+        _cost_opened_at.pop(sid, None)           # Dict sauber halten (H-9: nicht mehr als Basis)
+        stt_sek = _stt_seconds_accumulated.pop(sid, 0.0)  # H-9: echte STT-Sekunden
+    # ── H-9 Cost-Hook: echte STT-Sekunden statt Socket-Lifetime ────────
     try:
         from services.cost_tracker import log_api_cost
-        if opened:
-            seconds = max(0.0, time.time() - opened)
-            minutes = seconds / 60.0
-            if minutes > 0.01:  # keine Artefakt-Rows fuer Sub-Sekunden
-                log_api_cost('deepgram', 'nova-2', user_id=None,
-                             units=minutes, unit_type='per_minute',
-                             session_id=str(sid), context_tag='stt')
+        minutes = stt_sek / 60.0
+        if minutes > 0.01:  # keine Artefakt-Rows fuer Sub-Sekunden
+            log_api_cost('deepgram', 'nova-2', user_id=None,
+                         units=minutes, unit_type='per_minute',
+                         session_id=str(sid), context_tag='stt')
     except Exception as _e:
         print(f"[CostHook] deepgram stt skipped: {_e}")
     # ────────────────────────────────────────────────────────────────────
