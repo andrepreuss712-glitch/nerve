@@ -1025,15 +1025,16 @@ REGELN:
     _latency_ms = int((time.time() - _t0) * 1000)
     try:
         from services.cost_tracker import log_api_cost
+        _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_TRAINING_HELP else 'haiku-4-5'
         _u = getattr(response, 'usage', None)
         if _u:
             _in = getattr(_u, 'input_tokens', 0) or 0
             _out = getattr(_u, 'output_tokens', 0) or 0
-            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+            log_api_cost('anthropic', _cost_model, user_id=user_id,
                          units=_in/1000.0, unit_type='per_1k_input_tokens',
                          context_tag='training_help', latency_ms=_latency_ms,
                          call_site='training_help')
-            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+            log_api_cost('anthropic', _cost_model, user_id=user_id,
                          units=_out/1000.0, unit_type='per_1k_output_tokens',
                          context_tag='training_help', call_site='training_help')
     except Exception as _e:
@@ -1227,15 +1228,16 @@ Antworte NUR als valides JSON (keine Markdown-Code-Fences, kein Text davor oder 
     _latency_ms = int((time.time() - _t0) * 1000)
     try:
         from services.cost_tracker import log_api_cost
+        _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_TRAINING_SCORING else 'haiku-4-5'
         _u = getattr(response, 'usage', None)
         if _u:
             _in = getattr(_u, 'input_tokens', 0) or 0
             _out = getattr(_u, 'output_tokens', 0) or 0
-            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+            log_api_cost('anthropic', _cost_model, user_id=user_id,
                          units=_in/1000.0, unit_type='per_1k_input_tokens',
                          context_tag='training_scoring', latency_ms=_latency_ms,
                          call_site='training_scoring')
-            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+            log_api_cost('anthropic', _cost_model, user_id=user_id,
                          units=_out/1000.0, unit_type='per_1k_output_tokens',
                          context_tag='training_scoring', call_site='training_scoring')
     except Exception as _e:
