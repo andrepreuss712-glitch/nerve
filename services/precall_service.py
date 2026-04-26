@@ -1,6 +1,6 @@
 # ── Phase 04.13: PreCall Intelligence ────────────────────────────────────────
-# Brave Search API + Claude Haiku Briefing fuer Firmen-Recherche vor dem Call.
-# Kein Sonnet (CLAUDE.md Constraint: nur Haiku fuer alles Live).
+# Brave Search API + Claude Briefing fuer Firmen-Recherche vor dem Call.
+# PreCall-Briefing: einmaliger User-Trigger vor dem Anruf — Sonnet korrekt (kein Live-Loop)
 # Keine Rohdaten-Speicherung (D-03 DSGVO).
 
 import re
@@ -173,11 +173,12 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, pr
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_PRECALL else 'haiku-4-5'
+                log_api_cost('anthropic', _cost_model, user_id=user_id,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
                              context_tag='precall', latency_ms=_latency_ms,
                              call_site='precall')
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                log_api_cost('anthropic', _cost_model, user_id=user_id,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='precall', call_site='precall')
         except Exception:
