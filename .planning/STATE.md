@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.13 IN PROGRESS — Plan 01 COMPLETE (foundation), Plan 02-05 ausstehend
-stopped_at: Completed 08.13-01-PLAN.md — Foundation (ApiRate-Seeding, MODEL_*-Konstanten, DB-Migration)
-last_updated: "2026-04-26T00:00:00Z"
-last_activity: 2026-04-26 - Phase 08.13 Plan 01 abgeschlossen: 6 ApiRate-Rows geseedet, 21 MODEL_*-Konstanten + 3 CACHE_*-Booleans in config.py, ApiCostLog um latency_ms/call_site erweitert mit idempotenter DB-Migration und cost_tracker-Signaturerweiterung. 35 Tests GREEN.
+status: Phase 08.13 IN PROGRESS — Plan 02 COMPLETE (client-consolidation), Plan 03-05 ausstehend
+stopped_at: Completed 08.13-02-PLAN.md — Client-Konsolidierung (5 inline clients eliminiert, H-29 Cost-Hook)
+last_updated: "2026-04-26T14:18:41Z"
+last_activity: 2026-04-26 - Phase 08.13 Plan 02 abgeschlossen: 5 inline anthropic.Anthropic()-Clients eliminiert, alle Modules nutzen shared claude_client, 8 model-Strings auf config.MODEL_*-Konstanten, H-29 Cost-Hook in dashboard._generate_weekly_summary. pytest 285+ GREEN.
 progress:
   total_phases: 41
   completed_phases: 32
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.13 (stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade) — IN PROGRESS
-Plan: 1 of 5 COMPLETE
+Plan: 2 of 5 COMPLETE
 Last activity: 2026-04-26
 
-**Next:** Plan 02 (client-consolidation) ausfuehren.
+**Next:** Plan 03 (callsite-migration) ausfuehren.
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -168,6 +168,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.11 P01 | 15 | 3 tasks | 2 files |
 | Phase 08.11 P02 | 6 | 3 tasks | 6 files |
 | Phase 08.13 P01 | 25 | 3 tasks | 6 files |
+| Phase 08.13 P02 | 20 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -176,6 +177,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.13-02]: H-12 Block E abgeschlossen — 5 inline anthropic.Anthropic()-Clients eliminiert, alle Modules nutzen shared claude_client aus claude_service (Connection-Pooling)
+- [Phase 08.13-02]: H-29 Cost-Hook in dashboard._generate_weekly_summary — context_tag=weekly_dashboard, call_site=weekly, getattr(user, 'id', None) fuer sichere user_id-Extraktion
+- [Phase 08.13-02]: training_service.generate_help_suggestion Haiku -> config.MODEL_TRAINING_HELP (Sonnet) per CONTEXT.md
 - [Phase 08.13-01]: MODEL_POSTCALL_INSIGHTS ENV-Key korrigiert (POSTCALL nicht POSTCOLL — Plan-Tippfehler behoben)
 - [Phase 08.13-01]: ApiRate-Seeding idempotent — 6 neue Rows (sonnet-4-5 input/output/cache_read/cache_write, haiku-4-5 cache_read/cache_write); haiku-4-5 input/output waren bereits vorhanden
 - [Phase 08.13-01]: 21 MODEL_*-Konstanten + 3 CACHE_*-Booleans in config.py als os.getenv() mit ENV-Defaults — alle Waves koennen config.MODEL_XYZ nutzen
