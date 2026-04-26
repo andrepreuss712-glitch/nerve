@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.13 IN PROGRESS — Plan 04 COMPLETE (prompt-caching), Plan 05 ausstehend
-stopped_at: Completed 08.13-04-PLAN.md — Prompt-Caching (POLISH-58) fuer EWB + QA + Analyse-Loop mit ENV-Toggle + Threshold + Cache-Token-DB-Logging
-last_updated: "2026-04-26T15:10:00Z"
-last_activity: 2026-04-26 - Phase 08.13 Plan 04 abgeschlossen: Prompt-Caching (cache_control=ephemeral) fuer analysiere_mit_claude + streame_auto_variante + streame_manual_ewb_variante + generate_qa_response. Cache-Token-Rows als per_1k_cache_read_tokens/cache_write_tokens in ApiCostLog (B1-Fix). pytest unveraendert (pre-existing failures identisch).
+status: Phase 08.13 COMPLETE — alle 5 Plaene abgeschlossen (Cost-Tracking + Caching + Sonnet-Upgrade)
+stopped_at: Completed 08.13-05-PLAN.md — H-9 Deepgram STT-Sekunden-Fix, pytest-Gate (295 passing), Smoke-Check (0 Literal-Strings in services/routes), git push origin main
+last_updated: "2026-04-26T14:37:00Z"
+last_activity: 2026-04-26 - Phase 08.13 Plan 05 abgeschlossen: H-9 deepgram_service _stt_seconds_accumulated (echte Audio-Dauer statt Socket-Lifetime), routes/training.py Literal-Fix (Smoke-Check-Fund), pytest 295 passing, git push origin main. Phase 08.13 vollstaendig.
 progress:
   total_phases: 41
-  completed_phases: 32
+  completed_phases: 33
   total_plans: 148
-  completed_plans: 150
+  completed_plans: 151
   percent: 98
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.13 (stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade) — IN PROGRESS
-Plan: 4 of 5 COMPLETE
+Phase: 08.13 (stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade) — COMPLETE
+Plan: 5 of 5 COMPLETE
 Last activity: 2026-04-26
 
-**Next:** Plan 05 (deepgram-verification) ausfuehren.
+**Next:** Phase 08.13 vollstaendig abgeschlossen. Naechste Phase per ROADMAP bestimmen.
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -170,6 +170,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.13 P01 | 25 | 3 tasks | 6 files |
 | Phase 08.13 P02 | 20 | 2 tasks | 5 files |
 | Phase 08.13 P04 | 4min | 2 tasks | 2 files |
+| Phase 08.13 P05 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -178,6 +179,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.13-05]: H-9 Fix: _stt_seconds_accumulated akkumuliert result.metadata.duration per is_final=True — Cost-Hook nutzt echte Audio-Dauer statt Socket-Lifetime (Overcharge-Illusion behoben)
+- [Phase 08.13-05]: T-08.13-11 accept: Race-Condition _stt_seconds_accumulated Deepgram-Thread vs. close-Thread — Worst-Case < 1 Chunk verloren, Billing-Fehler minimal, Lock fuer spaeter
+- [Phase 08.13-05]: routes/training.py Kundentyp-Generator auf config.MODEL_TRAINING_PREVIEW (Haiku) migriert — Smoke-Check-Fund, semantisch korrekt
 - [Phase 08.13-04]: EWB-System-Prompts kuerzer als 16000 Zeichen — Cache bleibt 'off' bis Prompts wachsen; Threshold-Guard korrekt (verhindert sinnlose Cache-Write-Kosten)
 - [Phase 08.13-04]: Cache-Token-Logging EWB model='sonnet-4-5' per Plan-Spec — tatsaechlicher Call nutzt Haiku; Log-String stimmt wenn EWB auf Sonnet umgestellt wird
 - [Phase 08.13-03]: generate_response/generate_response_with_mood KEIN user_id-Parameter (BG-Thread) — Cost-Hook user_id=None akzeptiert
