@@ -45,6 +45,9 @@ from services.prompt_pipeline import (
 # ── Confidence threshold (Korrektur 3) ───────────────────────────────────────
 CONFIDENCE_THRESHOLD = 0.80
 
+# Anthropic minimum: 1024 tokens ≈ 4096 chars
+_CACHE_MIN_CHARS = 4096
+
 # ── Fallback prompts (used wenn prompt_versions lookup miss) ─────────────
 _FALLBACK_CLASSIFIER_PROMPT = (
     "Du bist ein Echtzeit-Klassifikator fuer Verkaufsgespraeche. "
@@ -409,12 +412,13 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         # PITFALL: generate_qa_response() baut System-Prompt aus profile_data — pro User
         # unterschiedlich. Cache-Hit nur session-intern (gleicher User, <= 5 Min TTL).
         # Cross-Session-Cache-Hit ist NICHT erwartet. Normales Design, KEIN Bug.
-        if config.CACHE_QA and len(system_prompt) >= 16000:
+        if config.CACHE_QA and len(system_prompt) >= _CACHE_MIN_CHARS:
             _system = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
         else:
             _system = system_prompt
-        print(f"[Cache-Check] qa system_prompt: {len(system_prompt)} chars, "
-              f"threshold 16000, cache={'on' if config.CACHE_QA and len(system_prompt) >= 16000 else 'off'}")
+        if config.CACHE_QA:
+            print(f"[Cache-Check] qa system_prompt: {len(system_prompt)} chars, "
+                  f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(system_prompt) >= _CACHE_MIN_CHARS else 'off'}")
         # ──────────────────────────────────────────────────────────────────────────
 
         from services.claude_service import claude_client

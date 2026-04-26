@@ -5,6 +5,9 @@ import anthropic
 import config
 from config import ANTHROPIC_API_KEY, ANALYSE_INTERVALL, KATEGORIE_LABEL
 
+# Anthropic minimum: 1024 tokens ≈ 4096 chars
+_CACHE_MIN_CHARS = 4096
+
 # Phase 08: EWB-Pipeline (A/B-Routing + Baustein-Struktur)
 # Nur der ewb-Modul-Pfad nutzt diese neue Pipeline. Die 4 anderen Module
 # (assistant_live, coaching_live, objection_trigger, api_frage, training_persona)
@@ -479,12 +482,13 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         user_id=_user_id,
     )
     # ── Phase 08.13: Prompt-Caching Analyse-Loop (CACHE_ANALYSE=False default) ──
-    if config.CACHE_ANALYSE and len(_system_prompt) >= 16000:
+    if config.CACHE_ANALYSE and len(_system_prompt) >= _CACHE_MIN_CHARS:
         _system = [{"type": "text", "text": _system_prompt, "cache_control": {"type": "ephemeral"}}]
     else:
         _system = _system_prompt  # String, kein Cache
-    print(f"[Cache-Check] analyse system_prompt: {len(_system_prompt)} chars, "
-          f"threshold 16000, cache={'on' if config.CACHE_ANALYSE and len(_system_prompt) >= 16000 else 'off'}")
+    if config.CACHE_ANALYSE:
+        print(f"[Cache-Check] analyse system_prompt: {len(_system_prompt)} chars, "
+              f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(_system_prompt) >= _CACHE_MIN_CHARS else 'off'}")
     # ──────────────────────────────────────────────────────────────────────────
     msg = claude_client.messages.create(
         model=config.MODEL_ANALYSE,
@@ -568,12 +572,13 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
 
     # ── Phase 08.13: Prompt-Caching EWB AutoVar (CACHE_EWB=True default) ─────────
     _ewb_autovar_system = "Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter."
-    if config.CACHE_EWB and len(_ewb_autovar_system) >= 16000:
+    if config.CACHE_EWB and len(_ewb_autovar_system) >= _CACHE_MIN_CHARS:
         _system_autovar = [{"type": "text", "text": _ewb_autovar_system, "cache_control": {"type": "ephemeral"}}]
     else:
         _system_autovar = _ewb_autovar_system
-    print(f"[Cache-Check] ewb system_prompt: {len(_ewb_autovar_system)} chars, "
-          f"threshold 16000, cache={'on' if config.CACHE_EWB and len(_ewb_autovar_system) >= 16000 else 'off'}")
+    if config.CACHE_EWB:
+        print(f"[Cache-Check] ewb system_prompt: {len(_ewb_autovar_system)} chars, "
+              f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(_ewb_autovar_system) >= _CACHE_MIN_CHARS else 'off'}")
     # ──────────────────────────────────────────────────────────────────────────
     print(f"[PiP-AutoVar] ENTRY trigger={trigger} sid={sid} slot={slot} text={neuer_text[:60]!r}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
@@ -668,12 +673,13 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
 
     # ── Phase 08.13: Prompt-Caching EWB Manual (CACHE_EWB=True default) ──────────
     _ewb_manual_system = "Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter, keine Meta-Kommentare."
-    if config.CACHE_EWB and len(_ewb_manual_system) >= 16000:
+    if config.CACHE_EWB and len(_ewb_manual_system) >= _CACHE_MIN_CHARS:
         _system_manual = [{"type": "text", "text": _ewb_manual_system, "cache_control": {"type": "ephemeral"}}]
     else:
         _system_manual = _ewb_manual_system
-    print(f"[Cache-Check] ewb system_prompt: {len(_ewb_manual_system)} chars, "
-          f"threshold 16000, cache={'on' if config.CACHE_EWB and len(_ewb_manual_system) >= 16000 else 'off'}")
+    if config.CACHE_EWB:
+        print(f"[Cache-Check] ewb system_prompt: {len(_ewb_manual_system)} chars, "
+              f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(_ewb_manual_system) >= _CACHE_MIN_CHARS else 'off'}")
     # ──────────────────────────────────────────────────────────────────────────
     print(f"[PiP-Variante] ENTRY sid={sid} slot={slot} typ={typ!r}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
