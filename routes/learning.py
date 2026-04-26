@@ -45,6 +45,8 @@ def api_postcall_analysis():
         )
         return jsonify({'vorschlaege': suggestions})
     except Exception as _e:
+        import traceback
+        traceback.print_exc()
         print(f"[Learning] api_postcall_analysis Fehler: {_e}")
         return jsonify({'ok': False, 'error': 'internal error'}), 500
 
