@@ -2,6 +2,7 @@ import json
 import random
 import re
 import requests
+import time
 from datetime import datetime
 import config
 from config import ELEVENLABS_API_KEY
@@ -812,12 +813,29 @@ def generate_response(conversation_history: list, system_prompt: str) -> str:
     if not messages:
         messages = [{"role": "user", "content": "(Telefon klingelt. Geh ran.)"}]
 
+    _t0 = time.time()
     response = claude_client.messages.create(
         model=config.MODEL_TRAINING_DIALOG,
         max_tokens=400,
         system=system_prompt,
         messages=messages
     )
+    _latency_ms = int((time.time() - _t0) * 1000)
+    try:
+        from services.cost_tracker import log_api_cost
+        _u = getattr(response, 'usage', None)
+        if _u:
+            _in = getattr(_u, 'input_tokens', 0) or 0
+            _out = getattr(_u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=_in/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='training_dialog', latency_ms=_latency_ms,
+                         call_site='training_dialog')
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=_out/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='training_dialog', call_site='training_dialog')
+    except Exception as _e:
+        print(f"[CostHook] training_dialog skipped: {_e}")
     text = response.content[0].text.strip()
     # Strip any markdown formatting that slipped through
     text = re.sub(r'\*\*[A-ZÄÖÜ]+:?\*\*\s*', '', text)
@@ -855,12 +873,29 @@ def generate_response_with_mood(
     if not messages:
         messages = [{"role": "user", "content": "(Telefon klingelt. Geh ran.)"}]
 
+    _t0 = time.time()
     response = claude_client.messages.create(
         model=config.MODEL_TRAINING_DIALOG,
         max_tokens=500,
         system=system_prompt,
         messages=messages
     )
+    _latency_ms = int((time.time() - _t0) * 1000)
+    try:
+        from services.cost_tracker import log_api_cost
+        _u = getattr(response, 'usage', None)
+        if _u:
+            _in = getattr(_u, 'input_tokens', 0) or 0
+            _out = getattr(_u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=_in/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='training_dialog', latency_ms=_latency_ms,
+                         call_site='training_dialog')
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=_out/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='training_dialog', call_site='training_dialog')
+    except Exception as _e:
+        print(f"[CostHook] training_dialog skipped: {_e}")
     text = response.content[0].text.strip()
 
     # Parse JSON from response (same pattern as generate_scoring)
@@ -899,7 +934,7 @@ def generate_response_with_mood(
 
 def generate_help_suggestion(conversation_history: list, profile_data: dict,
                              sprache: str = 'de', berater_name: str = '',
-                             phase: str = 'kunde') -> str:
+                             phase: str = 'kunde', user_id=None) -> str:
     lang     = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
     gespraech = "\n".join(
         f"[{'Berater' if m['speaker'] == 'berater' else 'Kunde'}] {m['text']}"
@@ -981,11 +1016,28 @@ REGELN:
 
 {lang['prompt_sprache']}"""
 
+    _t0 = time.time()
     response = claude_client.messages.create(
         model=config.MODEL_TRAINING_HELP,
         max_tokens=200,
         messages=[{"role": "user", "content": prompt}]
     )
+    _latency_ms = int((time.time() - _t0) * 1000)
+    try:
+        from services.cost_tracker import log_api_cost
+        _u = getattr(response, 'usage', None)
+        if _u:
+            _in = getattr(_u, 'input_tokens', 0) or 0
+            _out = getattr(_u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                         units=_in/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='training_help', latency_ms=_latency_ms,
+                         call_site='training_help')
+            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                         units=_out/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='training_help', call_site='training_help')
+    except Exception as _e:
+        print(f"[CostHook] training_help skipped: {_e}")
     text = response.content[0].text.strip()
     # Strip markdown
     text = re.sub(r'\*\*[A-ZÄÖÜ]+:?\*\*\s*', '', text)
@@ -1079,7 +1131,8 @@ def generate_scoring(conversation_history: list, profile_data: dict,
                      schwierigkeit: str, sekretaerin_ueberwunden: bool,
                      sprache: str = 'de', modus: str = 'guided',
                      hilfe_count: int = 0,
-                     stimmung_history: list = None) -> dict:
+                     stimmung_history: list = None,
+                     user_id=None) -> dict:
     # Phase 08.5 v2-modular: resolve prompt version for FT traceability.
     # user_id defaults to 0 (D-07 Step F: per-user A/B routing deferred until user_id threading added).
     _scoring_version = resolve_prompt_version('training_scoring', 0)
@@ -1165,11 +1218,28 @@ Antworte NUR als valides JSON (keine Markdown-Code-Fences, kein Text davor oder 
     # max_tokens raised 1500 -> 3000: scoring with stimmung_history + wendepunkte_detail
     # can exceed 1500 tokens for longer conversations, which caused mid-JSON truncation
     # (json.JSONDecodeError "Expecting ',' delimiter" around char 4030).
+    _t0 = time.time()
     response = claude_client.messages.create(
         model=config.MODEL_TRAINING_SCORING,
         max_tokens=3000,
         messages=[{"role": "user", "content": prompt}]
     )
+    _latency_ms = int((time.time() - _t0) * 1000)
+    try:
+        from services.cost_tracker import log_api_cost
+        _u = getattr(response, 'usage', None)
+        if _u:
+            _in = getattr(_u, 'input_tokens', 0) or 0
+            _out = getattr(_u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                         units=_in/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='training_scoring', latency_ms=_latency_ms,
+                         call_site='training_scoring')
+            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                         units=_out/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='training_scoring', call_site='training_scoring')
+    except Exception as _e:
+        print(f"[CostHook] training_scoring skipped: {_e}")
     text        = response.content[0].text.strip()
     stop_reason = getattr(response, 'stop_reason', 'unknown')
     start       = text.find('{')
@@ -1204,7 +1274,7 @@ Antworte NUR als valides JSON (keine Markdown-Code-Fences, kein Text davor oder 
     return result
 
 
-def _generate_live_preview(conversation_history: list, profile_data: dict) -> dict:
+def _generate_live_preview(conversation_history: list, profile_data: dict, user_id=None) -> dict:
     """Zeigt was der Live-Assistent im echten Call angezeigt hätte."""
     gespraech = "\n".join(
         f"[{'Berater' if m['speaker'] == 'berater' else 'Kunde'}] {m['text']}"
@@ -1234,11 +1304,28 @@ Gib für die wichtigsten Momente im Gespräch an was du dem Berater LIVE angezei
 
 Finde 2-4 der wichtigsten Momente. Sei konkret — keine generischen Phrasen."""
 
+    _t0 = time.time()
     response = claude_client.messages.create(
         model=config.MODEL_TRAINING_PREVIEW,
         max_tokens=600,
         messages=[{"role": "user", "content": prompt}]
     )
+    _latency_ms = int((time.time() - _t0) * 1000)
+    try:
+        from services.cost_tracker import log_api_cost
+        _u = getattr(response, 'usage', None)
+        if _u:
+            _in = getattr(_u, 'input_tokens', 0) or 0
+            _out = getattr(_u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'haiku-4-5', user_id=user_id,
+                         units=_in/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='training_preview', latency_ms=_latency_ms,
+                         call_site='training_preview')
+            log_api_cost('anthropic', 'haiku-4-5', user_id=user_id,
+                         units=_out/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='training_preview', call_site='training_preview')
+    except Exception as _e:
+        print(f"[CostHook] training_preview skipped: {_e}")
     text  = response.content[0].text.strip()
     start = text.find('{')
     end   = text.rfind('}') + 1

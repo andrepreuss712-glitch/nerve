@@ -1,10 +1,11 @@
 import json
+import time
 import config
 from services.claude_service import claude_client
 
 
 def generate_crm_export(log_entries, painpoints, einwaende,
-                         kb_end, profile_name, dsgvo_modus=True):
+                         kb_end, profile_name, dsgvo_modus=True, user_id=None):
     """
     Generates a CRM note and follow-up email from conversation data.
     Returns dict with keys: crm_notiz, followup_email, naechste_schritte.
@@ -54,11 +55,27 @@ Erstelle als valides JSON:
 
 Nutze Stichpunkte mit "- " Prefix. Antworte NUR mit dem JSON."""
 
+    _t0 = time.time()
     msg = claude_client.messages.create(
         model=config.MODEL_CRM,
         max_tokens=1200,
         messages=[{"role": "user", "content": prompt}]
     )
+    _latency_ms = int((time.time() - _t0) * 1000)
+    try:
+        from services.cost_tracker import log_api_cost
+        _u = getattr(msg, 'usage', None)
+        if _u:
+            _in = getattr(_u, 'input_tokens', 0) or 0
+            _out = getattr(_u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                         units=_in/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='crm', latency_ms=_latency_ms, call_site='crm')
+            log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                         units=_out/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='crm', call_site='crm')
+    except Exception as _e:
+        print(f"[CostHook] crm skipped: {_e}")
     text  = msg.content[0].text.strip()
     start = text.find('{')
     end   = text.rfind('}') + 1

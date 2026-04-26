@@ -27,22 +27,26 @@ def api_postcall_analysis():
     finally:
         db_check.close()
 
-    from services.coaching_service import generate_postcall_analysis
-    suggestions = generate_postcall_analysis(
-        conv_id=conv_id,
-        user_id=g.user.id,
-        einwaende=data.get('einwaende', []),
-        painpoints=data.get('painpoints', []),
-        kb_start=data.get('kb_start', 30),
-        kb_end=data.get('kb_end', 30),
-        redeanteil_berater=data.get('redeanteil_berater', 50),
-        redeanteil_kunde=data.get('redeanteil_kunde', 50),
-        dauer_sek=data.get('dauer_sek', 0),
-        skript_abdeckung=data.get('skript_abdeckung', 0),
-        ga_details=data.get('ga_details', []),
-        kaufsignale=data.get('kaufsignale', []),
-    )
-    return jsonify({'vorschlaege': suggestions})
+    try:
+        from services.coaching_service import generate_postcall_analysis
+        suggestions = generate_postcall_analysis(
+            conv_id=conv_id,
+            user_id=g.user.id,
+            einwaende=data.get('einwaende', []),
+            painpoints=data.get('painpoints', []),
+            kb_start=data.get('kb_start', 30),
+            kb_end=data.get('kb_end', 30),
+            redeanteil_berater=data.get('redeanteil_berater', 50),
+            redeanteil_kunde=data.get('redeanteil_kunde', 50),
+            dauer_sek=data.get('dauer_sek', 0),
+            skript_abdeckung=data.get('skript_abdeckung', 0),
+            ga_details=data.get('ga_details', []),
+            kaufsignale=data.get('kaufsignale', []),
+        )
+        return jsonify({'vorschlaege': suggestions})
+    except Exception as _e:
+        print(f"[Learning] api_postcall_analysis Fehler: {_e}")
+        return jsonify({'ok': False, 'error': 'internal error'}), 500
 
 
 @learning_bp.route('/api/learning_cards', methods=['GET'])

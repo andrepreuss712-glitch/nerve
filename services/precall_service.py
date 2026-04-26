@@ -39,7 +39,7 @@ Regeln:
 """
 
 
-def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None):
+def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None, user_id=None):
     """Web-Recherche + Claude-Briefing fuer eine Firma.
     Returns: (briefing_dict, error_msg) — per existing service tuple pattern.
     """
@@ -77,7 +77,7 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten
             return (None, "Keine Suchergebnisse gefunden")
 
         # 2. Claude Haiku Briefing
-        briefing = _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten)
+        briefing = _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten, user_id=user_id)
         if not briefing:
             return (None, "Briefing-Generierung fehlgeschlagen")
 
@@ -123,7 +123,7 @@ def _brave_search(firmenname, ansprechpartner=None, branche=None):
         return None
 
 
-def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten=None):
+def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten=None, user_id=None):
     """Claude Haiku generates compact briefing from search results."""
     search_text = "\n\n".join([
         f"**{r['title']}**\n{r['description']}\nURL: {r['url']}"
@@ -157,26 +157,29 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, pr
             user_msg += f"\n\nVertriebsprofil des Beraters:\n" + "\n".join(profile_parts)
 
     try:
+        _t0 = time.time()
         msg = claude_client.messages.create(
             model=config.MODEL_PRECALL,
             max_tokens=800,
             system=PRECALL_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_msg}],
         )
+        _latency_ms = int((time.time() - _t0) * 1000)
 
-        # Cost tracking (Phase 04.7.2 pattern)
+        # Cost tracking
         try:
             from services.cost_tracker import log_api_cost
             u = getattr(msg, 'usage', None)
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='precall')
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                             context_tag='precall', latency_ms=_latency_ms,
+                             call_site='precall')
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='precall')
+                             context_tag='precall', call_site='precall')
         except Exception:
             pass
 

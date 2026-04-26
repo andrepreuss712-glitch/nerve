@@ -590,7 +590,8 @@ def training_help():
         phase = session.get('phase', 'kunde')
         vorschlag = generate_help_suggestion(
             session['history'], profile_data, sprache,
-            berater_name=berater_name, phase=phase)
+            berater_name=berater_name, phase=phase,
+            user_id=g.user.id)
         return jsonify({'ok': True, 'vorschlag': vorschlag})
     except Exception as e:
         import traceback
@@ -622,6 +623,7 @@ def training_end():
             modus=modus,
             hilfe_count=hilfe_count,
             stimmung_history=session.get('stimmung_history'),
+            user_id=g.user.id,
         )
     except Exception as e:
         print(f"[Training] Scoring-Fehler: {e}")
@@ -643,7 +645,7 @@ def training_end():
     # Generate live preview (Haiku, fast + cheap)
     live_preview = None
     try:
-        live_preview = _generate_live_preview(session['history'], session['profile_data'])
+        live_preview = _generate_live_preview(session['history'], session['profile_data'], user_id=g.user.id)
     except Exception as e:
         print(f"[Training] Live-Preview Fehler: {e}")
 
