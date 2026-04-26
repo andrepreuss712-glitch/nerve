@@ -36,6 +36,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 import threading as _threading
+import config
 
 from services.prompt_pipeline import (
     build_profile_context, resolve_prompt_version
@@ -303,7 +304,7 @@ def classify_utterance(text: str, kontext: str, user_id: int) -> dict:
         )
 
         msg = claude_client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=config.MODEL_ANALYSE,
             max_tokens=150,
             system=system_prompt,
             messages=[{"role": "user", "content": user_msg}]
@@ -407,7 +408,7 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         from services.claude_service import claude_client
 
         msg = claude_client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=config.MODEL_QA,
             max_tokens=400,
             system=system_prompt,
             messages=[{"role": "user", "content": user_msg}]

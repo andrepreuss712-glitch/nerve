@@ -2,6 +2,7 @@ import json
 import time
 from datetime import datetime
 import anthropic
+import config
 from config import ANTHROPIC_API_KEY, ANALYSE_INTERVALL, KATEGORIE_LABEL
 
 # Phase 08: EWB-Pipeline (A/B-Routing + Baustein-Struktur)
@@ -327,7 +328,7 @@ def classify_phase(transcript_window, current_phase, elapsed_s, mode):
     )
     try:
         resp = claude_client.messages.create(
-            model='claude-haiku-4-5-20251001',
+            model=config.MODEL_PHASE_CLASSIFY,
             max_tokens=60,
             messages=[{'role': 'user', 'content': prompt}],
         )
@@ -399,7 +400,7 @@ def infer_customer_state(seller_transcript, phase):
     prompt = COLDCALL_INFER_PROMPT.format(phase=phase, seller_transcript=formatted)
     try:
         resp = claude_client.messages.create(
-            model='claude-haiku-4-5-20251001',
+            model=config.MODEL_COLDCALL_INFER,
             max_tokens=120,
             messages=[{'role': 'user', 'content': prompt}],
         )
@@ -478,7 +479,7 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         user_id=_user_id,
     )
     msg = claude_client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=config.MODEL_ANALYSE,
         max_tokens=400,
         system=_system_prompt,
         messages=[{"role": "user", "content": user_msg}]
@@ -551,7 +552,7 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
     full_text = ''
     try:
         with claude_client.messages.stream(
-            model='claude-haiku-4-5-20251001',
+            model=config.MODEL_PIP_AUTOVAR,
             max_tokens=200,
             system="Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter.",
             messages=[{'role': 'user', 'content': user_msg}]
@@ -639,7 +640,7 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
         attempts += 1
         try:
             with claude_client.messages.stream(
-                model='claude-haiku-4-5-20251001',
+                model=config.MODEL_PIP_VARIANTE,
                 max_tokens=250,
                 system="Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter, keine Meta-Kommentare.",
                 messages=[{'role': 'user', 'content': user_msg}]
@@ -708,7 +709,7 @@ Aktuelles Gesprächssegment:
 {gespraech}"""
     # Phase 04.8 P07: migrated Sonnet→Haiku per Haiku-only-live constraint
     msg = claude_client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=config.MODEL_COACHING,
         max_tokens=200,
         system=_build_coaching_prompt(),
         messages=[{"role": "user", "content": user_msg}]
@@ -831,7 +832,7 @@ def analyse_loop():
                     module='assistant_live',
                     hint_type=_hint_type,
                     hint_text=_hint_text,
-                    model_used='claude-haiku-4-5-20251001',
+                    model_used=config.MODEL_ANALYSE,
                     context={
                         'transcript_segment': neuer_text,
                         'speaker': 'rep',
@@ -1348,7 +1349,7 @@ def coaching_loop():
                         module='coaching_live',
                         hint_type='coaching',
                         hint_text=_coach_text,
-                        model_used='claude-haiku-4-5-20251001',
+                        model_used=config.MODEL_COACHING,
                         context={
                             'hint_category': 'coaching',
                         },
