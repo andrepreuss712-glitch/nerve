@@ -771,6 +771,23 @@ Plans:
 
 ---
 
+### Phase 08.13: Stabilisierung Block E — Cost-Tracking + Caching + Sonnet-Upgrade (INSERTED)
+
+**Goal:** Billing-Integrität, Prompt-Caching, Sonnet-Qualitätsupgrade und Latenz-Messung in einem einmaligen Durchgang durch alle Claude-Call-Sites. Löst LB-4 (user_id im Cost-Tracker), konsolidiert 3 verbliebene inline-Anthropic-Clients auf `claude_service.claude_client`, implementiert POLISH-58 Prompt-Caching (`cache_control: {type: "ephemeral"}`) für alle Call-Sites mit System-Prompt ≥ 4000 Token (EWB, QA, Analyse-Loop), upgradet User-sichtbare Outputs auf Sonnet 4.5 (EWB-Generation, QA-Response, PostCall-Insights, Weekly-Summary, Training-Help, CRM, PreCall), hält Haiku 4.5 für Analyse-Loop (4s-Polling latenz-kritisch) + Training-Dialog (ElevenLabs-Cost + Realismus), führt ENV-basierte Model-Switchbarkeit pro Call-Site in config.py ein (MODEL_EWB, MODEL_QA, MODEL_ANALYSE, MODEL_OBJECTION etc.), ergänzt ApiCostLog um `latency_ms` + `call_site` Spalten (Schema-Migration), findet + ersetzt alle 17 hardcoded-Model-Stellen durch ENV-Variablen, implementiert H-9 Socket-Lifetime-Messung (Deepgram STT-Sekunden statt Socket-Lifetime), und konsolidiert pro-Request-HTTP-Sessions (H-12 Connection-Pooling). Kombinations-Hebel: Sonnet gecacht ist ~2.7× billiger als Haiku ungecacht für input-schwere Calls (4000-Token System-Prompt).
+**Requirements:** LB-4, POLISH-58, H-9, H-12, H-22, H-29
+**Depends on:** Phase 08.12
+**Launch-relevant:** true
+**Plans:** 5 plans
+
+Plans:
+- [ ] 08.13-01-foundation-PLAN.md — config.py MODEL_*-Konstanten + DB-Migration latency_ms/call_site + cost_tracker-Erweiterung
+- [ ] 08.13-02-client-consolidation-PLAN.md — 5 inline-Anthropic-Clients konsolidieren auf shared claude_client (H-12) + dashboard Cost-Hook (H-29)
+- [ ] 08.13-03-callsite-migration-PLAN.md — alle 21 model-Strings auf config.MODEL_*, training_service/crm Cost-Hooks, H-22 Exception-Handling
+- [ ] 08.13-04-prompt-caching-PLAN.md — POLISH-58: cache_control=ephemeral fuer EWB + QA + Analyse-Loop
+- [ ] 08.13-05-deepgram-verification-PLAN.md — H-9 STT-Sekunden-Fix + pytest Abschluss-Verifikation
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
