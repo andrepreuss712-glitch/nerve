@@ -3,11 +3,10 @@ import random
 import re
 import requests
 from datetime import datetime
-import anthropic
-from config import ANTHROPIC_API_KEY, ELEVENLABS_API_KEY
+import config
+from config import ELEVENLABS_API_KEY
 from services.prompt_pipeline import resolve_prompt_version
-
-claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+from services.claude_service import claude_client
 
 # ── Stimmen-Pools (ElevenLabs Voice IDs) ──────────────────────────────────────
 VOICE_POOL_MALE = [
@@ -814,7 +813,7 @@ def generate_response(conversation_history: list, system_prompt: str) -> str:
         messages = [{"role": "user", "content": "(Telefon klingelt. Geh ran.)"}]
 
     response = claude_client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=config.MODEL_TRAINING_DIALOG,
         max_tokens=400,
         system=system_prompt,
         messages=messages
@@ -857,7 +856,7 @@ def generate_response_with_mood(
         messages = [{"role": "user", "content": "(Telefon klingelt. Geh ran.)"}]
 
     response = claude_client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=config.MODEL_TRAINING_DIALOG,
         max_tokens=500,
         system=system_prompt,
         messages=messages
@@ -983,7 +982,7 @@ REGELN:
 {lang['prompt_sprache']}"""
 
     response = claude_client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=config.MODEL_TRAINING_HELP,
         max_tokens=200,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -1167,7 +1166,7 @@ Antworte NUR als valides JSON (keine Markdown-Code-Fences, kein Text davor oder 
     # can exceed 1500 tokens for longer conversations, which caused mid-JSON truncation
     # (json.JSONDecodeError "Expecting ',' delimiter" around char 4030).
     response = claude_client.messages.create(
-        model="claude-sonnet-4-6",
+        model=config.MODEL_TRAINING_SCORING,
         max_tokens=3000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -1236,7 +1235,7 @@ Gib für die wichtigsten Momente im Gespräch an was du dem Berater LIVE angezei
 Finde 2-4 der wichtigsten Momente. Sei konkret — keine generischen Phrasen."""
 
     response = claude_client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=config.MODEL_TRAINING_PREVIEW,
         max_tokens=600,
         messages=[{"role": "user", "content": prompt}]
     )

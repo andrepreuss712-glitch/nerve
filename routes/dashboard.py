@@ -9,6 +9,8 @@ from routes.auth import login_required
 from database.db import get_session
 from database.models import Profile, User as UserModel, ConversationLog, Organisation
 from services.live_session import LOG_DIR
+import config
+from services.claude_service import claude_client
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -297,8 +299,6 @@ def _generate_weekly_summary(user, stats, logs):
         pass
 
     try:
-        from config import ANTHROPIC_API_KEY
-        import anthropic
         stil = user.dashboard_stil or ''
         name = user.vorname or 'du'
         persoenlich = user.persoenlich or ''
@@ -336,12 +336,25 @@ REGELN:
 - Kein Markdown, keine Sternchen — reiner Text
 - Sprich den User mit seinem Vornamen an
 """
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        msg = client.messages.create(
-            model='claude-haiku-4-5-20251001',
+        msg = claude_client.messages.create(
+            model=config.MODEL_WEEKLY_SUMMARY,
             max_tokens=200,
             messages=[{'role': 'user', 'content': prompt}]
         )
+        try:
+            from services.cost_tracker import log_api_cost
+            _u = getattr(msg, 'usage', None)
+            if _u:
+                _in = getattr(_u, 'input_tokens', 0) or 0
+                _out = getattr(_u, 'output_tokens', 0) or 0
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=getattr(user, 'id', None),
+                             units=_in/1000.0, unit_type='per_1k_input_tokens',
+                             context_tag='weekly_dashboard', call_site='weekly')
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=getattr(user, 'id', None),
+                             units=_out/1000.0, unit_type='per_1k_output_tokens',
+                             context_tag='weekly_dashboard', call_site='weekly')
+        except Exception as _e:
+            print(f"[CostHook] weekly_summary skipped: {_e}")
         text = msg.content[0].text.strip()
         try:
             import os as _os

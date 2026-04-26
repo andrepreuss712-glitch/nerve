@@ -6,10 +6,9 @@
 import re
 import time
 import requests
-import anthropic
-from config import ANTHROPIC_API_KEY, BRAVE_SEARCH_API_KEY
-
-claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+import config
+from config import BRAVE_SEARCH_API_KEY
+from services.claude_service import claude_client
 
 BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
 
@@ -159,7 +158,7 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, pr
 
     try:
         msg = claude_client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=config.MODEL_PRECALL,
             max_tokens=800,
             system=PRECALL_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_msg}],
@@ -172,10 +171,10 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, pr
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
                              context_tag='precall')
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='precall')
         except Exception:
