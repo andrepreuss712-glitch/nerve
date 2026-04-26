@@ -89,13 +89,14 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
             # Cost tracking (D-02: Sonnet)
             try:
                 from services.cost_tracker import log_api_cost
+                _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_POSTCALL_ANALYSIS else 'haiku-4-5'
                 u = getattr(response, 'usage', None)
                 if u:
-                    log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                    log_api_cost('anthropic', _cost_model, user_id=user_id,
                                  units=(getattr(u, 'input_tokens', 0) or 0)/1000.0,
                                  unit_type='per_1k_input_tokens',
                                  context_tag='postcall_coach')
-                    log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                    log_api_cost('anthropic', _cost_model, user_id=user_id,
                                  units=(getattr(u, 'output_tokens', 0) or 0)/1000.0,
                                  unit_type='per_1k_output_tokens',
                                  context_tag='postcall_coach')
@@ -322,13 +323,14 @@ Antworte als JSON:
             # Cost tracking
             try:
                 from services.cost_tracker import log_api_cost
+                _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_WEEKLY_SUMMARY else 'haiku-4-5'
                 u = getattr(response, 'usage', None)
                 if u:
-                    log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                    log_api_cost('anthropic', _cost_model, user_id=user_id,
                                  units=(getattr(u, 'input_tokens', 0) or 0)/1000.0,
                                  unit_type='per_1k_input_tokens',
                                  context_tag='weekly_coach_report')
-                    log_api_cost('anthropic', 'sonnet-4-5', user_id=user_id,
+                    log_api_cost('anthropic', _cost_model, user_id=user_id,
                                  units=(getattr(u, 'output_tokens', 0) or 0)/1000.0,
                                  unit_type='per_1k_output_tokens',
                                  context_tag='weekly_coach_report')
