@@ -78,7 +78,8 @@ def _make_on_message(sid):
                 # ── H-9: akkumuliere echte STT-Sekunden ──────────────────────
                 _dur = getattr(getattr(result, 'metadata', None), 'duration', 0.0) or 0.0
                 if _dur > 0:
-                    _stt_seconds_accumulated[sid] = _stt_seconds_accumulated.get(sid, 0.0) + _dur
+                    with _sessions_lock:
+                        _stt_seconds_accumulated[sid] = _stt_seconds_accumulated.get(sid, 0.0) + _dur
 
                 if roles_confirmed:
                     sp_name = 'Berater' if speaker == 0 else ('Kunde' if speaker == 1 else 'Sprecher')
