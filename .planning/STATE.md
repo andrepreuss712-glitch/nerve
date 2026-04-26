@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.13 IN PROGRESS — Plan 02 COMPLETE (client-consolidation), Plan 03-05 ausstehend
-stopped_at: Completed 08.13-02-PLAN.md — Client-Konsolidierung (5 inline clients eliminiert, H-29 Cost-Hook)
-last_updated: "2026-04-26T14:18:41Z"
-last_activity: 2026-04-26 - Phase 08.13 Plan 02 abgeschlossen: 5 inline anthropic.Anthropic()-Clients eliminiert, alle Modules nutzen shared claude_client, 8 model-Strings auf config.MODEL_*-Konstanten, H-29 Cost-Hook in dashboard._generate_weekly_summary. pytest 285+ GREEN.
+status: Phase 08.13 IN PROGRESS — Plan 03 COMPLETE (callsite-migration), Plan 04-05 ausstehend
+stopped_at: Completed 08.13-03-PLAN.md — Callsite-Migration (model-Strings + Cost-Hooks + user_id + H-22)
+last_updated: "2026-04-26T14:40:00Z"
+last_activity: 2026-04-26 - Phase 08.13 Plan 03 abgeschlossen: alle hardcoded model-Strings in claude_service.py + qa_pipeline.py auf config.MODEL_*, 5 Training-Cost-Hooks + CRM + PreCall Cost-Hooks mit user_id/latency_ms/call_site, H-22 Exception-Handling in learning.py. pytest 301 passed (pre-existing failures unveraendert).
 progress:
   total_phases: 41
   completed_phases: 32
   total_plans: 148
-  completed_plans: 149
+  completed_plans: 150
   percent: 98
 ---
 
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.13 (stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade) — IN PROGRESS
-Plan: 2 of 5 COMPLETE
+Plan: 3 of 5 COMPLETE
 Last activity: 2026-04-26
 
-**Next:** Plan 03 (callsite-migration) ausfuehren.
+**Next:** Plan 04 (prompt-caching) ausfuehren.
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -177,6 +177,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.13-03]: generate_response/generate_response_with_mood KEIN user_id-Parameter (BG-Thread) — Cost-Hook user_id=None akzeptiert
+- [Phase 08.13-03]: GRUPPE A (generate_help_suggestion/generate_scoring/_generate_live_preview) user_id=None Parameter — routes/training.py uebergibt g.user.id
+- [Phase 08.13-03]: H-22 T-08.13-06 mitigiert — api_postcall_analysis except gibt {'ok': False, 'error': 'internal error'} ohne str(e)
 - [Phase 08.13-02]: H-12 Block E abgeschlossen — 5 inline anthropic.Anthropic()-Clients eliminiert, alle Modules nutzen shared claude_client aus claude_service (Connection-Pooling)
 - [Phase 08.13-02]: H-29 Cost-Hook in dashboard._generate_weekly_summary — context_tag=weekly_dashboard, call_site=weekly, getattr(user, 'id', None) fuer sichere user_id-Extraktion
 - [Phase 08.13-02]: training_service.generate_help_suggestion Haiku -> config.MODEL_TRAINING_HELP (Sonnet) per CONTEXT.md

@@ -782,7 +782,7 @@ Plans:
 Plans:
 - [x] 08.13-01-foundation-PLAN.md — config.py MODEL_*-Konstanten + DB-Migration latency_ms/call_site + cost_tracker-Erweiterung
 - [x] 08.13-02-client-consolidation-PLAN.md — 5 inline-Anthropic-Clients konsolidieren auf shared claude_client (H-12) + dashboard Cost-Hook (H-29)
-- [ ] 08.13-03-callsite-migration-PLAN.md — alle 21 model-Strings auf config.MODEL_*, training_service/crm Cost-Hooks, H-22 Exception-Handling
+- [x] 08.13-03-callsite-migration-PLAN.md — alle 21 model-Strings auf config.MODEL_*, training_service/crm Cost-Hooks, H-22 Exception-Handling (3a0fd57 + 85862fb)
 - [ ] 08.13-04-prompt-caching-PLAN.md — POLISH-58: cache_control=ephemeral fuer EWB + QA + Analyse-Loop
 - [ ] 08.13-05-deepgram-verification-PLAN.md — H-9 STT-Sekunden-Fix + pytest Abschluss-Verifikation
 
