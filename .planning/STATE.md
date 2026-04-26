@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.13 IN PROGRESS — Plan 03 COMPLETE (callsite-migration), Plan 04-05 ausstehend
-stopped_at: Completed 08.13-03-PLAN.md — Callsite-Migration (model-Strings + Cost-Hooks + user_id + H-22)
-last_updated: "2026-04-26T14:40:00Z"
-last_activity: 2026-04-26 - Phase 08.13 Plan 03 abgeschlossen: alle hardcoded model-Strings in claude_service.py + qa_pipeline.py auf config.MODEL_*, 5 Training-Cost-Hooks + CRM + PreCall Cost-Hooks mit user_id/latency_ms/call_site, H-22 Exception-Handling in learning.py. pytest 301 passed (pre-existing failures unveraendert).
+status: Phase 08.13 IN PROGRESS — Plan 04 COMPLETE (prompt-caching), Plan 05 ausstehend
+stopped_at: Completed 08.13-04-PLAN.md — Prompt-Caching (POLISH-58) fuer EWB + QA + Analyse-Loop mit ENV-Toggle + Threshold + Cache-Token-DB-Logging
+last_updated: "2026-04-26T15:10:00Z"
+last_activity: 2026-04-26 - Phase 08.13 Plan 04 abgeschlossen: Prompt-Caching (cache_control=ephemeral) fuer analysiere_mit_claude + streame_auto_variante + streame_manual_ewb_variante + generate_qa_response. Cache-Token-Rows als per_1k_cache_read_tokens/cache_write_tokens in ApiCostLog (B1-Fix). pytest unveraendert (pre-existing failures identisch).
 progress:
   total_phases: 41
   completed_phases: 32
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.13 (stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade) — IN PROGRESS
-Plan: 3 of 5 COMPLETE
+Plan: 4 of 5 COMPLETE
 Last activity: 2026-04-26
 
-**Next:** Plan 04 (prompt-caching) ausfuehren.
+**Next:** Plan 05 (deepgram-verification) ausfuehren.
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -169,6 +169,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.11 P02 | 6 | 3 tasks | 6 files |
 | Phase 08.13 P01 | 25 | 3 tasks | 6 files |
 | Phase 08.13 P02 | 20 | 2 tasks | 5 files |
+| Phase 08.13 P04 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -177,6 +178,8 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.13-04]: EWB-System-Prompts kuerzer als 16000 Zeichen — Cache bleibt 'off' bis Prompts wachsen; Threshold-Guard korrekt (verhindert sinnlose Cache-Write-Kosten)
+- [Phase 08.13-04]: Cache-Token-Logging EWB model='sonnet-4-5' per Plan-Spec — tatsaechlicher Call nutzt Haiku; Log-String stimmt wenn EWB auf Sonnet umgestellt wird
 - [Phase 08.13-03]: generate_response/generate_response_with_mood KEIN user_id-Parameter (BG-Thread) — Cost-Hook user_id=None akzeptiert
 - [Phase 08.13-03]: GRUPPE A (generate_help_suggestion/generate_scoring/_generate_live_preview) user_id=None Parameter — routes/training.py uebergibt g.user.id
 - [Phase 08.13-03]: H-22 T-08.13-06 mitigiert — api_postcall_analysis except gibt {'ok': False, 'error': 'internal error'} ohne str(e)
