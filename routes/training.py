@@ -1,6 +1,7 @@
 import json
 import base64
 import threading
+import config
 from datetime import datetime, timedelta, date
 from flask import (Blueprint, render_template, request, jsonify,
                    g, session as flask_session)
@@ -958,7 +959,7 @@ Antworte NUR als valides JSON:
 
     try:
         response = claude_client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=config.MODEL_TRAINING_PREVIEW,
             max_tokens=1200,
             messages=[{"role": "user", "content": prompt}]
         )
