@@ -478,10 +478,18 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         version=_ewb_version,
         user_id=_user_id,
     )
+    # ── Phase 08.13: Prompt-Caching Analyse-Loop (CACHE_ANALYSE=False default) ──
+    if config.CACHE_ANALYSE and len(_system_prompt) >= 16000:
+        _system = [{"type": "text", "text": _system_prompt, "cache_control": {"type": "ephemeral"}}]
+    else:
+        _system = _system_prompt  # String, kein Cache
+    print(f"[Cache-Check] analyse system_prompt: {len(_system_prompt)} chars, "
+          f"threshold 16000, cache={'on' if config.CACHE_ANALYSE and len(_system_prompt) >= 16000 else 'off'}")
+    # ──────────────────────────────────────────────────────────────────────────
     msg = claude_client.messages.create(
         model=config.MODEL_ANALYSE,
         max_tokens=400,
-        system=_system_prompt,
+        system=_system,
         messages=[{"role": "user", "content": user_msg}]
     )
     # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
@@ -497,6 +505,17 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                          context_tag='live_haiku')
+        # Cache-Token-Logging (B1 Review-Finding)
+        _cache_hits = getattr(getattr(msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
+        _cache_writes = getattr(getattr(msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
+        if _cache_hits > 0:
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
+                         context_tag='analyse', call_site='analyse')
+        if _cache_writes > 0:
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
+                         context_tag='analyse', call_site='analyse')
     except Exception as _e:
         print(f"[CostHook] claude live_haiku skipped: {_e}")
     # ────────────────────────────────────────────────────────────────────
@@ -547,6 +566,15 @@ Falls kein Einwand: Formuliere eine knappe gespraechsfuehrende Reaktion / naechs
 Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
 """
 
+    # ── Phase 08.13: Prompt-Caching EWB AutoVar (CACHE_EWB=True default) ─────────
+    _ewb_autovar_system = "Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter."
+    if config.CACHE_EWB and len(_ewb_autovar_system) >= 16000:
+        _system_autovar = [{"type": "text", "text": _ewb_autovar_system, "cache_control": {"type": "ephemeral"}}]
+    else:
+        _system_autovar = _ewb_autovar_system
+    print(f"[Cache-Check] ewb system_prompt: {len(_ewb_autovar_system)} chars, "
+          f"threshold 16000, cache={'on' if config.CACHE_EWB and len(_ewb_autovar_system) >= 16000 else 'off'}")
+    # ──────────────────────────────────────────────────────────────────────────
     print(f"[PiP-AutoVar] ENTRY trigger={trigger} sid={sid} slot={slot} text={neuer_text[:60]!r}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
     full_text = ''
@@ -554,7 +582,7 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
         with claude_client.messages.stream(
             model=config.MODEL_PIP_AUTOVAR,
             max_tokens=200,
-            system="Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter.",
+            system=_system_autovar,
             messages=[{'role': 'user', 'content': user_msg}]
         ) as stream:
             for token in stream.text_stream:
@@ -577,6 +605,17 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='pip_autovar')
+            # Cache-Token-Logging (B1 Review-Finding)
+            _cache_hits = getattr(getattr(final_msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
+            _cache_writes = getattr(getattr(final_msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
+            if _cache_hits > 0:
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                             units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
+                             context_tag='ewb', call_site='ewb')
+            if _cache_writes > 0:
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                             units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
+                             context_tag='ewb', call_site='ewb')
         except Exception as _e:
             print(f"[CostHook] pip_autovar skipped: {_e}")
         return result
@@ -627,6 +666,15 @@ Baue eine KURZE, kontextbezogene Variante des Gegenarguments:
 Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kommentare.
 """
 
+    # ── Phase 08.13: Prompt-Caching EWB Manual (CACHE_EWB=True default) ──────────
+    _ewb_manual_system = "Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter, keine Meta-Kommentare."
+    if config.CACHE_EWB and len(_ewb_manual_system) >= 16000:
+        _system_manual = [{"type": "text", "text": _ewb_manual_system, "cache_control": {"type": "ephemeral"}}]
+    else:
+        _system_manual = _ewb_manual_system
+    print(f"[Cache-Check] ewb system_prompt: {len(_ewb_manual_system)} chars, "
+          f"threshold 16000, cache={'on' if config.CACHE_EWB and len(_ewb_manual_system) >= 16000 else 'off'}")
+    # ──────────────────────────────────────────────────────────────────────────
     print(f"[PiP-Variante] ENTRY sid={sid} slot={slot} typ={typ!r}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
     full_text = ''
@@ -642,7 +690,7 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
             with claude_client.messages.stream(
                 model=config.MODEL_PIP_VARIANTE,
                 max_tokens=250,
-                system="Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter, keine Meta-Kommentare.",
+                system=_system_manual,
                 messages=[{'role': 'user', 'content': user_msg}]
             ) as stream:
                 stream_ctx = stream
@@ -681,6 +729,17 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='pip_variante')
+            # Cache-Token-Logging (B1 Review-Finding)
+            _cache_hits = getattr(getattr(final_msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
+            _cache_writes = getattr(getattr(final_msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
+            if _cache_hits > 0:
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                             units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
+                             context_tag='ewb', call_site='ewb')
+            if _cache_writes > 0:
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                             units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
+                             context_tag='ewb', call_site='ewb')
         except Exception as _e:
             print(f"[CostHook] pip_variante skipped: {_e}")
         return result
