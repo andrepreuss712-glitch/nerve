@@ -405,12 +405,24 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
             f"Formuliere eine kurze, konkrete Antwort (max. 45 Wörter)."
         )
 
+        # ── Phase 08.13: Prompt-Caching QA (CACHE_QA=True default) ───────────────────
+        # PITFALL: generate_qa_response() baut System-Prompt aus profile_data — pro User
+        # unterschiedlich. Cache-Hit nur session-intern (gleicher User, <= 5 Min TTL).
+        # Cross-Session-Cache-Hit ist NICHT erwartet. Normales Design, KEIN Bug.
+        if config.CACHE_QA and len(system_prompt) >= 16000:
+            _system = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
+        else:
+            _system = system_prompt
+        print(f"[Cache-Check] qa system_prompt: {len(system_prompt)} chars, "
+              f"threshold 16000, cache={'on' if config.CACHE_QA and len(system_prompt) >= 16000 else 'off'}")
+        # ──────────────────────────────────────────────────────────────────────────
+
         from services.claude_service import claude_client
 
         msg = claude_client.messages.create(
             model=config.MODEL_QA,
             max_tokens=400,
-            system=system_prompt,
+            system=_system,
             messages=[{"role": "user", "content": user_msg}]
         )
         text = (msg.content[0].text or '').strip()
@@ -447,6 +459,17 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='qa_response')
+            # Cache-Token-Logging (B1 Review-Finding)
+            _cache_hits = getattr(getattr(msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
+            _cache_writes = getattr(getattr(msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
+            if _cache_hits > 0:
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                             units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
+                             context_tag='qa', call_site='qa')
+            if _cache_writes > 0:
+                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                             units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
+                             context_tag='qa', call_site='qa')
         except Exception as _e:
             print(f"[QA] cost-hook qa_response skipped: {_e}")
 
