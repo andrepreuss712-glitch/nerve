@@ -453,25 +453,26 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         # Cost-hook
         try:
             from services.cost_tracker import log_api_cost
+            _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_QA else 'haiku-4-5'
             u = getattr(msg, 'usage', None)
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _cost_model, user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
                              context_tag='qa_response')
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _cost_model, user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='qa_response')
             # Cache-Token-Logging (B1 Review-Finding)
             _cache_hits = getattr(getattr(msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
             _cache_writes = getattr(getattr(msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
             if _cache_hits > 0:
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                log_api_cost('anthropic', _cost_model, user_id=None,
                              units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
                              context_tag='qa', call_site='qa')
             if _cache_writes > 0:
-                log_api_cost('anthropic', 'sonnet-4-5', user_id=None,
+                log_api_cost('anthropic', _cost_model, user_id=None,
                              units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
                              context_tag='qa', call_site='qa')
         except Exception as _e:
