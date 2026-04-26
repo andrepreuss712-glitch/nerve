@@ -848,6 +848,19 @@ def _migrate():
             print("[DB] Migration: added users.email_confirmed")
         except Exception:
             pass  # Bereits existiert
+        # ── Phase 08.13: ApiCostLog Latenz + Call-Site ────────────────────────
+        try:
+            conn.execute(text("ALTER TABLE api_cost_log ADD COLUMN latency_ms INTEGER"))
+            conn.commit()
+            print("[DB] Migration: added api_cost_log.latency_ms")
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE api_cost_log ADD COLUMN call_site VARCHAR(50)"))
+            conn.commit()
+            print("[DB] Migration: added api_cost_log.call_site")
+        except Exception:
+            pass
 
 _migrate()
 

@@ -58,6 +58,8 @@ def log_api_cost(
     org_id: int | None = None,
     session_id: str | None = None,
     context_tag: str | None = None,
+    latency_ms: int | None = None,    # NEU: Phase 08.13
+    call_site: str | None = None,     # NEU: Phase 08.13
 ) -> None:
     """Schreibt api_cost_log Eintrag. Darf NIEMALS raisen.
 
@@ -108,6 +110,8 @@ def log_api_cost(
                 cost_eur=cost_eur,
                 session_id=session_id,
                 context_tag=context_tag,
+                latency_ms=latency_ms,    # NEU: Phase 08.13
+                call_site=call_site,      # NEU: Phase 08.13
             ))
             db.commit()
         finally:

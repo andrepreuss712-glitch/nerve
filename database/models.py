@@ -572,6 +572,8 @@ class ApiCostLog(Base):
     cost_eur = Column(Numeric(12, 6), nullable=False)
     session_id = Column(String(64), nullable=True, index=True)
     context_tag = Column(String(32), nullable=True)
+    latency_ms  = Column(Integer, nullable=True)
+    call_site   = Column(String(50), nullable=True)
 
 
 class ApiRate(Base):
