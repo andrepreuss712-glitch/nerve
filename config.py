@@ -43,6 +43,38 @@ CLASSIFIER_CONFIDENCE_THRESHOLD = float(
     os.environ.get('CLASSIFIER_CONFIDENCE_THRESHOLD', '0.80')
 )
 
+# ── Phase 08.13: MODEL-Konstanten (ENV-overridable, per CONTEXT.md D-01) ──────
+# Sonnet 4.5 fuer User-sichtbare Outputs
+MODEL_EWB               = os.getenv("MODEL_EWB",               "claude-sonnet-4-5")
+MODEL_QA                = os.getenv("MODEL_QA",                "claude-sonnet-4-5")
+MODEL_POSTCALL_INSIGHTS = os.getenv("MODEL_POSTCALL_INSIGHTS",  "claude-sonnet-4-5")
+MODEL_POSTCALL_ANALYSIS = os.getenv("MODEL_POSTCALL_ANALYSIS",  "claude-sonnet-4-5")
+MODEL_WEEKLY_SUMMARY    = os.getenv("MODEL_WEEKLY_SUMMARY",     "claude-sonnet-4-5")
+MODEL_PRECALL           = os.getenv("MODEL_PRECALL",            "claude-sonnet-4-5")
+MODEL_CRM               = os.getenv("MODEL_CRM",               "claude-sonnet-4-5")
+MODEL_TRAINING_HELP     = os.getenv("MODEL_TRAINING_HELP",      "claude-sonnet-4-5")
+MODEL_TRAINING_SCORING  = os.getenv("MODEL_TRAINING_SCORING",   "claude-sonnet-4-5")
+# Haiku 4.5 fuer Latenz/Cost-kritisch — UNVERAENDERLICH per CONTEXT.md
+MODEL_ANALYSE           = os.getenv("MODEL_ANALYSE",           "claude-haiku-4-5-20251001")
+MODEL_TRAINING_DIALOG   = os.getenv("MODEL_TRAINING_DIALOG",   "claude-haiku-4-5-20251001")
+MODEL_PERSONALITY_GEN   = os.getenv("MODEL_PERSONALITY_GEN",   "claude-haiku-4-5-20251001")
+# Weitere Haiku-Stellen aus RESEARCH.md (grep-verifiziert)
+MODEL_PHASE_CLASSIFY    = os.getenv("MODEL_PHASE_CLASSIFY",    "claude-haiku-4-5-20251001")
+MODEL_COLDCALL_INFER    = os.getenv("MODEL_COLDCALL_INFER",    "claude-haiku-4-5-20251001")
+MODEL_PIP_AUTOVAR       = os.getenv("MODEL_PIP_AUTOVAR",       "claude-haiku-4-5-20251001")
+MODEL_PIP_VARIANTE      = os.getenv("MODEL_PIP_VARIANTE",      "claude-haiku-4-5-20251001")
+MODEL_COACHING          = os.getenv("MODEL_COACHING",          "claude-haiku-4-5-20251001")
+MODEL_VALIDATE_USER_TEXT= os.getenv("MODEL_VALIDATE_USER_TEXT","claude-haiku-4-5-20251001")
+MODEL_TRAINING_PREVIEW  = os.getenv("MODEL_TRAINING_PREVIEW",  "claude-haiku-4-5-20251001")
+
+# ── Phase 08.13: CACHE-Toggles (ENV-overridable, per Decision 3) ───────────────
+# CACHE_EWB: EWB-Generation cachen (System-Prompt gross genug — default an)
+# CACHE_QA: QA-Response cachen (System-Prompt gross genug — default an)
+# CACHE_ANALYSE: Analyse-Loop cachen (System-Prompt kuerzer — default AUS)
+CACHE_EWB     = os.getenv("CACHE_EWB",     "true").lower()  == "true"
+CACHE_QA      = os.getenv("CACHE_QA",      "true").lower()  == "true"
+CACHE_ANALYSE = os.getenv("CACHE_ANALYSE", "false").lower() == "true"
+
 MERGE_WINDOW_S    = 0.3
 SPEAKER_DEBOUNCE_S = 3.0
 
