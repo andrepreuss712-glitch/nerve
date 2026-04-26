@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.10 COMPLETE — Plan 06 complete (OAuth-Haertung H-21 UNIQUE-Constraint + H-18 Email-Hijacking-Mitigation VARIANTE B)
-stopped_at: Completed 08.10-06-PLAN.md — H-21 uq_users_oauth_id UNIQUE-Index + sys.exit(1) STOPS; H-18 email_confirmed=False VOR Email-Send + confirm_email_pending + confirm_email + resend_confirm (rate-limited 3/10min) + send_confirmation_email() + itsdangerous>=2.0
-last_updated: "2026-04-25T22:00:00Z"
-last_activity: 2026-04-25 - Phase 08.10 Plan 06 complete: H-21 partielle UNIQUE-Index uq_users_oauth_id (WHERE oauth_id IS NOT NULL) + sys.exit(1) STOPS bei Duplicates; H-18 email_confirmed Column (default=True), send_confirmation_email(), microsoft_callback Neu-User email_confirmed=False VOR Email-Send, Gate in login_required, confirm_email_pending/confirm_email/resend_confirm ohne @login_required. Commits e375735 + 4b07235. pytest 266 passing.
+status: Phase 08.13 IN PROGRESS — Plan 01 COMPLETE (foundation), Plan 02-05 ausstehend
+stopped_at: Completed 08.13-01-PLAN.md — Foundation (ApiRate-Seeding, MODEL_*-Konstanten, DB-Migration)
+last_updated: "2026-04-26T00:00:00Z"
+last_activity: 2026-04-26 - Phase 08.13 Plan 01 abgeschlossen: 6 ApiRate-Rows geseedet, 21 MODEL_*-Konstanten + 3 CACHE_*-Booleans in config.py, ApiCostLog um latency_ms/call_site erweitert mit idempotenter DB-Migration und cost_tracker-Signaturerweiterung. 35 Tests GREEN.
 progress:
   total_phases: 41
   completed_phases: 32
   total_plans: 148
-  completed_plans: 148
+  completed_plans: 149
   percent: 98
 ---
 
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.10 — stabilisierung-block-b-auth-haertung — IN PROGRESS
+**Current focus:** Phase 08.13 — stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade — IN PROGRESS
 
 ## Current Position
 
-Phase: 08.10 (stabilisierung-block-b-auth-haertung) — COMPLETE
-Plan: 6 of 6 COMPLETE
-Last activity: 2026-04-25
+Phase: 08.13 (stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade) — IN PROGRESS
+Plan: 1 of 5 COMPLETE
+Last activity: 2026-04-26
 
-**Next:** Phase 08.10 abgeschlossen. Naechste Phase gemaess ROADMAP.md.
+**Next:** Plan 02 (client-consolidation) ausfuehren.
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -167,6 +167,7 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.9 P04 | 5 | 1 tasks | 1 files |
 | Phase 08.11 P01 | 15 | 3 tasks | 2 files |
 | Phase 08.11 P02 | 6 | 3 tasks | 6 files |
+| Phase 08.13 P01 | 25 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -175,6 +176,10 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.13-01]: MODEL_POSTCALL_INSIGHTS ENV-Key korrigiert (POSTCALL nicht POSTCOLL — Plan-Tippfehler behoben)
+- [Phase 08.13-01]: ApiRate-Seeding idempotent — 6 neue Rows (sonnet-4-5 input/output/cache_read/cache_write, haiku-4-5 cache_read/cache_write); haiku-4-5 input/output waren bereits vorhanden
+- [Phase 08.13-01]: 21 MODEL_*-Konstanten + 3 CACHE_*-Booleans in config.py als os.getenv() mit ENV-Defaults — alle Waves koennen config.MODEL_XYZ nutzen
+- [Phase 08.13-01]: ApiCostLog.latency_ms (Integer nullable) + ApiCostLog.call_site (String(50) nullable) — idempotente ALTER TABLE Migration in app.py _migrate()
 - [Phase 08.10-06]: email_confirmed=False VOR Email-Send committed — ECHTER BLOCK bleibt sauber; Resend-Endpoint /auth/resend-confirm (VARIANTE B) schliesst Lockout-Luecke bei Email-Send-Failure
 - [Phase 08.10-06]: except SystemExit: raise in Migration-Try-Block — sys.exit(1) STOPS-Behavior wird nicht von except Exception abgefangen
 - [Phase 08.10-06]: confirm_email_pending + confirm_email + resend_confirm BEWUSST ohne @login_required — verhindert Redirect-Loop
