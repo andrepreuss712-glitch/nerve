@@ -850,7 +850,7 @@ Plans:
 
 ---
 
-### Phase 08.19: Block N Phase C — Pydantic-Schema-Redesign + Migration (INSERTED)
+### Phase 08.19: Block N Phase C — Pydantic-Schema-Redesign + Migration (INSERTED) ✅ COMPLETE 2026-04-27
 
 **Goal:** Profil-Datenmodell sauber neu definieren — Pydantic v2 ProfileSchema mit 6 neuen Feldern aus 08.18 (zielkunde.unternehmensgroesse / buying_committee / statusquo / zeithorizont, value.roi_argumente, einwaende[].einwand_typ), 7 Felder eliminieren (B2C-Felder alter/einkommensniveau/lebenssituation, schmerzen.trigger, ki.stil, erlaubnis), consent_text als meta.consent_text behalten (DSGVO-relevant fuer Meeting-Modus-Consent-Modal, UI-only-Markierung). Schema-Drift opener/pitch (top-level vs basis.*) bereinigen. Idempotente verlustfreie Migration fuer bestehende Profile in DB (Andre's User + Demo-Profile IDs 2/3/4). Wizard/UI auf neues Schema anpassen. Output: services/profile_schema.py (Pydantic v2) + idempotente _migrate()-Erweiterung + Wizard-UI-Anpassungen + Test alle 4 Profile laden verlustfrei.
 **Komplexitaet:** 🔴 komplex — Schema-Migration ist DB-Risiko, Wizard-UI muss konsistent sein. Cross-AI Pflicht (doppelter Cycle empfehlenswert).
