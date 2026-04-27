@@ -147,6 +147,13 @@ def wizard_create():
         # Kein ProfileOpener-INSERT hier: Wizard hat kein opener/pitch Eingabefeld (Code-Check-Befund)
     }, ensure_ascii=False)
 
+    # WR-01: Validate wizard daten against Pydantic schema before DB write
+    try:
+        ProfileSchema.model_validate(json.loads(daten))
+    except ValidationError:
+        flash("Profil-Daten ungültig — bitte Eingabe prüfen.", 'error')
+        return redirect(url_for('profiles.wizard_page'))
+
     db = get_session()
     try:
         profile = Profile(
