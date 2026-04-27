@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.18 COMPLETE — Sales-Literatur-Synthese + Branchen-Spezifika vollstaendig (2026-04-27)
-stopped_at: Phase 08.18 complete — 2 Research-Dokumente verified (sales-coaching-literatur-synthese.md 502Z, branchen-precall-spezifika.md 326Z). Bereit fuer 08.19 Pydantic-Schema-Redesign.
-last_updated: "2026-04-27T09:00:00Z"
+status: Phase 08.19 IN PROGRESS — Plan 01 complete (ProfileSchema), Plans 02-04 remaining
+stopped_at: Phase 08.19 Plan 01 complete — services/profile_schema.py erstellt (207 Zeilen), 21 TDD-Tests gruen, ProfileSchema + ProfileReadSchema + _migrate_profile_data implementiert. Commit 317c0a2.
+last_updated: "2026-04-27T12:10:00Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 51
   completed_phases: 39
   total_plans: 177
-  completed_plans: 169
+  completed_plans: 170
   percent: 96
 ---
 
@@ -179,6 +179,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.19-01]: UnternehmensgroesseEnum Literal-Werte kanonisch in services/profile_schema.py: '<10', '10-50', '50-250', '250-1000', '1000+' — Plan 04 HTML-Chips muessen exakt matchen (Reviews v2 Enum-Sync-Pflicht)
+- [Phase 08.19-01]: zielgruppe.vorwissen + zielgruppe.entscheidungsverhalten bleiben in zielgruppe.* (claude_service._build_coaching_prompt liest explizit pdata.get('zielgruppe', {}))
+- [Phase 08.19-01]: ProfileSchema Dual-Schema-Pattern: Write extra='forbid' (ValidationError bei unbekannten Feldern), Read extra='ignore' (Drift-Felder ignoriert)
 - [Phase 08.18-03]: precall_service.recherche_firma() benoetigt branche als Pflicht-Parameter — 3-Tier-Routing: Premium (5 Dim.) / Mittel-Tiefe (3 Dim.) / Generisch (Standard)
 - [Phase 08.18-03]: 3 neue Profil-Felder empfohlen fuer 08.19: profil.branche (Pflicht), profil.zielkunden_branche (optional), profil.branchen_fachbegriffe (List[str], optional)
 - [Phase 08.18-03]: Datenquellen-Routing je Branche: Maschinenbau → Northdata/VDMA, IT/SaaS → Crunchbase/LinkedIn/Builtwith, Versicherung → GDV/Northdata/Asscompact
