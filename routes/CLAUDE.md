@@ -53,8 +53,8 @@ Immer Schritt 2 vor dem Schreiben ausfuehren.
 | legal.py           | legal_bp             | 'legal'          |
 | changelog.py       | changelog_bp         | 'changelog'      |
 | waitlist.py        | waitlist_bp          | 'waitlist'       |
-| admin_dashboard.py | admin_dashboard_bp   | (pruefen)        |
-| admin_ewb.py       | admin_ewb_bp         | (pruefen)        |
+| admin_dashboard.py | admin_dashboard_bp   | 'admin_dashboard' |
+| admin_ewb.py       | admin_ewb_bp         | 'admin_ewb'      |
 
 Hinweis: organisations.py nutzt `orgs_bp` mit Blueprint-Name `'orgs'` (nicht 'organisations').
 Fehler-Quelle: url_for('organisations.foo') schlaegt fehl — korrekt ist url_for('orgs.foo').

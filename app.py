@@ -878,12 +878,12 @@ def _migrate():
             with engine.connect() as _conn:
                 for _provider, _model, _unit, _price, _currency in _needed:
                     _exists = _conn.execute(
-                        text("SELECT 1 FROM api_rate WHERE provider=:p AND model=:m AND unit_type=:u"),
+                        text("SELECT 1 FROM api_rates WHERE provider=:p AND model=:m AND unit_type=:u AND active=1"),
                         {'p': _provider, 'm': _model, 'u': _unit}
                     ).fetchone()
                     if not _exists:
                         _conn.execute(
-                            text("INSERT INTO api_rate (provider, model, unit_type, price_per_unit, currency, active, source_url) VALUES (:p,:m,:u,:price,:cur,1,'seed:2026-04-27')"),
+                            text("INSERT INTO api_rates (provider, model, unit_type, price_per_unit, currency, active, source_url) VALUES (:p,:m,:u,:price,:cur,1,'seed:2026-04-27')"),
                             {'p': _provider, 'm': _model, 'u': _unit, 'price': _price, 'cur': _currency}
                         )
                         print(f"[DB] ApiRate seeded: {_model} {_unit}")
