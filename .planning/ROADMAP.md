@@ -839,6 +839,13 @@ Plans:
 **Reasoning:**
 > Audit (08.17) zeigt: ~50-60% der Profil-Felder landen nie in einem Live-Prompt, PreCall-Briefing fließt nicht in EWB. Bevor das Schema (08.19) und die Pipeline (08.20) umgebaut werden, Grundlage schaffen: was sagen Experten was rein muss, und wie muss es strukturiert sein damit es wirkt. Andre-Decision 2026-04-27 abend: ALLES in sinnvoller Reihenfolge im EWB-Prompt, branchenspezifische PreCall-Recherche als Steuerungs-Input fuer den LLM.
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 08.18-01-PLAN.md — Sales-Literatur-Synthese (5 thematische Sektionen + Reihenfolge-Sektion + Schema-Bullets)
+- [ ] 08.18-02-PLAN.md — Branchen-Spezifika Stufe 3a (Verteilungs-Recherche DACH + USA)
+- [ ] 08.18-03-PLAN.md — Branchen-Spezifika Stufe 3b (Tiefen-Cluster-Analyse, haengt von Plan 02 ab)
+
 ---
 
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
