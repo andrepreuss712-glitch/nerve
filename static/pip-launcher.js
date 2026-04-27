@@ -297,9 +297,9 @@
 
   function runPrecall() {
     var firma = (document.getElementById('lnr-firma') || {}).value || '';
-    if (!firma || firma.trim().length < 2) {
+    if (!firma || firma.trim().length < 3) {
       var errEl = document.getElementById('lnr-precall-error');
-      if (errEl) { errEl.textContent = 'Firmenname ist Pflicht (mind. 2 Zeichen).'; errEl.style.display = 'block'; }
+      if (errEl) { errEl.textContent = 'Firmenname ist Pflicht (mind. 3 Zeichen).'; errEl.style.display = 'block'; }
       return;
     }
     saveFormData();
