@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.18 IN PROGRESS — Plan 01 complete (Sales-Literatur-Synthese), Plan 02+03 pending
-stopped_at: Phase 08.18 Plan 01 complete — sales-coaching-literatur-synthese.md erstellt (502 Zeilen, 6 Sektionen)
-last_updated: "2026-04-27T08:41:05Z"
+status: Phase 08.18 IN PROGRESS — Plan 02 complete (Branchen-Verteilungs-Recherche DACH+USA), Plan 03 pending
+stopped_at: Phase 08.18 Plan 02 complete — branchen-precall-spezifika.md erstellt (Top-10 DACH+USA, Premium-Cluster Maschinenbau/IT/Versicherung). Commit 49bc33b.
+last_updated: "2026-04-27T08:46:00Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 51
   completed_phases: 38
   total_plans: 177
-  completed_plans: 167
-  percent: 94
+  completed_plans: 168
+  percent: 95
 ---
 
 # Project State
@@ -179,6 +179,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.18-02]: Premium-Cluster DACH (fuer Plan 03 Tiefen-Recherche): Maschinenbau (~16-18%), IT/SaaS (~12-14%), Versicherung/Finanz (~11-13%) — auf Basis BA KldB 2010 + VDMA/GDV/bitkom
+- [Phase 08.18-02]: Premium-Cluster USA: Technology/SaaS (~15-18%), Financial Services (~12-15%), Healthcare/Pharma (~10-12%) — auf Basis BLS OES May 2023 SOC 41-XXXX
+- [Phase 08.18-02]: USA gleichberechtigt zu DACH in Research (André-Entscheidung) — USA ist echtes Hauptgeschaeft, DACH ist Soft-Launch/Test-Sandbox
 - [Phase 08.18-01]: Reihenfolge build_profile_context: Block 1 Kern (Cache-Anchor), Block 2 Einwand-Repertoire, Block 3 No-Gos, Block 4 Kommunikation — per Anthropic Lost-in-Middle + Sales-Trainer-Konsens
 - [Phase 08.18-01]: EWB-Integration-Ziel nach 08.19/08.20: 21% (10/48) → 62% (30/48) — Literatur-Konsens erfordert einwaende[] + wettbewerber[] + nogos[] + ki.zusatz + statusquo im EWB-Prompt
 - [Phase 08.18-01]: 6 neue Schema-Felder empfohlen: zielkunde.unternehmensgroesse, zielkunde.buying_committee, zielkunde.statusquo, zielkunde.zeithorizont, value.roi_argumente, einwaende[].einwand_typ
