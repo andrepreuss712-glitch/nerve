@@ -788,6 +788,18 @@ Plans:
 
 ---
 
+### Phase 08.14: Claude-Code-Workflow-Polish + Block-E-Lessons-Learned (INSERTED)
+
+**Goal:** Werkzeugschärfung vor Block N: 4 konkrete GSD-Setup-Lücken schließen (ruff-Hook, Context7-MCP, Sub-CLAUDE.md für routes/, Determinismus-Regel 13) + 2 Lessons-Learned aus Block-E-Live-Deploy integrieren (ApiRate-Seeding in _migrate() + Sonnet-Date-Suffix in config.py).
+**Depends on:** Phase 08.13
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08.14-01-PLAN.md — Wave 1: ruff-Hook, Context7-MCP, routes/CLAUDE.md, Regel 13
+- [ ] 08.14-02-PLAN.md — Wave 2: config.py Sonnet-Date-Suffix + app.py ApiRate-Seed
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
