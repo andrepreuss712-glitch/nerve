@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase complete — ready for verification
-stopped_at: context exhaustion at 98% (2026-04-26)
-last_updated: "2026-04-27T05:39:20.515Z"
+status: In progress — Phase 08.14 Plan 02 complete
+stopped_at: Completed 08.14-02-PLAN.md
+last_updated: "2026-04-27T05:42:00Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 50
   completed_phases: 36
   total_plans: 176
-  completed_plans: 164
-  percent: 93
+  completed_plans: 165
+  percent: 94
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.13 — stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade — IN PROGRESS
+**Current focus:** Phase 08.14 — claude-code-workflow-polish-block-e-lessons-learned — IN PROGRESS
 
 ## Current Position
 
-Phase: 08.13 (stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade) — COMPLETE
-Plan: 5 of 5 COMPLETE
+Phase: 08.14 (claude-code-workflow-polish-block-e-lessons-learned) — IN PROGRESS
+Plan: 2 of 2 COMPLETE
 Last activity: 2026-04-27
 
-**Next:** Phase 08.13 vollstaendig abgeschlossen. Naechste Phase per ROADMAP bestimmen.
+**Next:** Phase 08.14 Plan 02 abgeschlossen. ApiRate-Seed + Sonnet-Date-Suffix deployed.
 
 Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -179,6 +179,8 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.14-02]: ApiRate-Seed in _migrate() — 8 Rows sonnet-4-5-20251022 + haiku-4-5-20251001 (input/output/cache_read/cache_write), idempotent per SELECT-vor-INSERT
+- [Phase 08.14-02]: Alle 9 Sonnet-MODEL_*-Konstanten auf claude-sonnet-4-5-20251022 — Date-Suffix verhindert Anthropic-Alias-Drift auf aeltere Modelle; konsistent mit Haiku-Pattern
 - [Phase 08.14-01]: ruff-Hook in settings.local.json (projektlokal) — Hook soll nur fuer salesnerve gelten, nicht global
 - [Phase 08.14-01]: Context7-MCP via claude mcp add statt settings.json — mcpServers ist kein gueltiges settings.json-Schema-Feld; registriert in ~/.claude.json
 - [Phase 08.14-01]: Regel 13: Hook fuer deterministische Aktionen (ruff format), CLAUDE.md-Regel fuer Urteilsvermoegen-Anforderungen
