@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.17 COMPLETE — Profil-Prompt-Integrations-Audit abgeschlossen (2026-04-27)
-stopped_at: Phase 08.17 Plan 01 abgeschlossen — profil-prompt-integration-matrix.md auf post-08.14 Stand aktualisiert
-last_updated: "2026-04-27T09:45:00Z"
+status: Phase 08.18 IN PROGRESS — Plan 01 complete (Sales-Literatur-Synthese), Plan 02+03 pending
+stopped_at: Phase 08.18 Plan 01 complete — sales-coaching-literatur-synthese.md erstellt (502 Zeilen, 6 Sektionen)
+last_updated: "2026-04-27T08:41:05Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 51
   completed_phases: 38
   total_plans: 177
-  completed_plans: 166
+  completed_plans: 167
   percent: 94
 ---
 
@@ -179,6 +179,10 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.18-01]: Reihenfolge build_profile_context: Block 1 Kern (Cache-Anchor), Block 2 Einwand-Repertoire, Block 3 No-Gos, Block 4 Kommunikation — per Anthropic Lost-in-Middle + Sales-Trainer-Konsens
+- [Phase 08.18-01]: EWB-Integration-Ziel nach 08.19/08.20: 21% (10/48) → 62% (30/48) — Literatur-Konsens erfordert einwaende[] + wettbewerber[] + nogos[] + ki.zusatz + statusquo im EWB-Prompt
+- [Phase 08.18-01]: 6 neue Schema-Felder empfohlen: zielkunde.unternehmensgroesse, zielkunde.buying_committee, zielkunde.statusquo, zielkunde.zeithorizont, value.roi_argumente, einwaende[].einwand_typ
+- [Phase 08.18-01]: 7 Felder fuer Elimination: alter/einkommensniveau/lebenssituation (B2C), schmerzen.trigger (Slider ohne Wirkung), ki.stil (Duplikat), erlaubnis (tot), consent_text (UI-only)
 - [Phase 08.17-01]: LB-3 Fix (08.9): technische Parameteruebergabe profile_data korrekt, aber _SYSTEM_PROMPT_QA hat kein {profile_context} Placeholder — Pfad 4 bleibt generisch, Kandidat fuer Phase 08.19
 - [Phase 08.17-01]: 08.13 Block E claude_client-Konsolidierung: system= Kwarg einheitlich in allen API-Calls, Prompt-Assembly-Struktur unveraendert — kein Matrix-Impact
 - [Phase 08.17-01]: Alle 🧟 Zombie-Code-Eintraege → ❌ (sauber): _build_system_prompt seit 08.8 tatsaechlich geloescht (nicht mehr nur unreachable)
@@ -539,6 +543,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-27T05:39:20.508Z
-Stopped at: context exhaustion at 98% (2026-04-26)
+Last session: 2026-04-27T08:41:05Z
+Stopped at: Phase 08.18 Plan 01 complete — sales-coaching-literatur-synthese.md (502 Zeilen, 6 Sektionen A-F, Schema-Bullets). Commit cacd965.
 Resume file: None
