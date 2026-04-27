@@ -206,7 +206,9 @@ def bearbeiten(pid):
             try:
                 _daten_neue = json.loads(daten_json) if daten_json else {}
             except Exception:
-                _daten_neue = {}
+                flash("Profil-Daten konnten nicht gelesen werden — bitte erneut versuchen.", 'error')
+                db.rollback()
+                return redirect(url_for('profiles.bearbeiten', pid=p.id))
 
             # Schritt 2b: Finding 2 — v1->v2 Altlasten-Stripping VOR Write-Validation
             # Entfernt opener/pitch + B2C-Felder bevor extra='forbid' validiert (verhindert false-positive 400)
