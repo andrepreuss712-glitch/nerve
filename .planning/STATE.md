@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: In progress — Phase 08.14 Plan 02 complete
-stopped_at: Completed 08.14-02-PLAN.md
-last_updated: "2026-04-27T05:42:00Z"
+status: Phase 08.14 COMPLETE — ruff-Hook, Context7, routes/CLAUDE.md, Regel 13, ApiRate-Seed, Sonnet-Date-Suffix
+stopped_at: Phase 08.14 verified and complete (2026-04-27)
+last_updated: "2026-04-27T06:30:00Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 50
-  completed_phases: 36
+  completed_phases: 37
   total_plans: 176
   completed_plans: 165
   percent: 94
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.14 — claude-code-workflow-polish-block-e-lessons-learned — IN PROGRESS
+**Current focus:** Phase 08.14 COMPLETE — naechste Phase per ROADMAP bestimmen.
 
 ## Current Position
 
-Phase: 08.14 (claude-code-workflow-polish-block-e-lessons-learned) — IN PROGRESS
+Phase: 08.14 (claude-code-workflow-polish-block-e-lessons-learned) — COMPLETE
 Plan: 2 of 2 COMPLETE
 Last activity: 2026-04-27
 

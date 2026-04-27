@@ -792,11 +792,11 @@ Plans:
 
 **Goal:** Werkzeugschärfung vor Block N: 4 konkrete GSD-Setup-Lücken schließen (ruff-Hook, Context7-MCP, Sub-CLAUDE.md für routes/, Determinismus-Regel 13) + 2 Lessons-Learned aus Block-E-Live-Deploy integrieren (ApiRate-Seeding in _migrate() + Sonnet-Date-Suffix in config.py).
 **Depends on:** Phase 08.13
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed — **COMPLETE (2026-04-27)**
 
 Plans:
 - [x] 08.14-01-PLAN.md — Wave 1: ruff-Hook, Context7-MCP, routes/CLAUDE.md, Regel 13
-- [ ] 08.14-02-PLAN.md — Wave 2: config.py Sonnet-Date-Suffix + app.py ApiRate-Seed
+- [x] 08.14-02-PLAN.md — Wave 2: config.py Sonnet-Date-Suffix + app.py ApiRate-Seed
 
 ---
 
