@@ -337,6 +337,21 @@
 
       <label class="form-label">Zielkunden</label>
       <input type="text" name="zielkunden" class="form-input" placeholder="Ihre Zielkunden (z. B. Mittelstand, IT-Leiter)">
+
+      <!-- Phase 08.19: Unternehmensgroesse Pflicht-Feld (D-03, D-07) -->
+      <!-- Reviews v2 Enum-Sync: onclick-Werte exakt = UnternehmensgroesseEnum Literals aus profile_schema.py -->
+      <label class="form-label">Typische Unternehmensgröße deiner Zielkunden <span style="color:var(--n-accent)">*</span></label>
+      <div class="einwand-grid" id="groesseGrid">
+        <div class="einwand-chip groesse-chip" onclick="selectGroesse(this, '<10')">&lt;10 MA</div>
+        <div class="einwand-chip groesse-chip" onclick="selectGroesse(this, '10-50')">10–50 MA</div>
+        <div class="einwand-chip groesse-chip" onclick="selectGroesse(this, '50-250')">50–250 MA</div>
+        <div class="einwand-chip groesse-chip" onclick="selectGroesse(this, '250-1000')">250–1000 MA</div>
+        <div class="einwand-chip groesse-chip" onclick="selectGroesse(this, '1000+')">1000+ MA</div>
+      </div>
+      <input type="hidden" name="unternehmensgroesse" id="unternehmensgroesseInput">
+      <p style="font-size:0.8rem;color:var(--page-text-secondary);margin-top:16px;">
+        Mehr Profil-Details = besseres Live-Coaching. Du kannst auch später ergänzen unter Profil → Tiefe.
+      </p>
     </div>
 
     <!-- STEP 3: Haeufige Einwaende -->
@@ -380,6 +395,15 @@ function nextStep() {
   if (currentStep === 1 && !document.getElementById('brancheInput').value) {
     alert('Waehle eine Branche um fortzufahren.');
     return;
+  }
+  // Phase 08.19: unternehmensgroesse ist Pflicht-Feld (D-03)
+  if (currentStep === 2) {
+    var _groesse = document.getElementById('unternehmensgroesseInput').value;
+    if (!_groesse) {
+      var _grid = document.getElementById('groesseGrid');
+      if (_grid) _grid.style.boxShadow = '0 0 0 2px var(--n-accent)';
+      return;
+    }
   }
   if (currentStep === totalSteps) return;
   document.getElementById('step-' + currentStep).style.display = 'none';
@@ -435,6 +459,30 @@ function toggleEinwand(el, text) {
   }
   document.getElementById('einwaendeInput').value = JSON.stringify([...selectedEinwaende]);
 }
+
+function selectGroesse(el, value) {
+  document.querySelectorAll('.groesse-chip').forEach(function(c) {
+    c.classList.remove('selected');
+  });
+  el.classList.add('selected');
+  document.getElementById('unternehmensgroesseInput').value = value;
+  // Validation-Highlight entfernen wenn Auswahl getroffen
+  var _grid = document.getElementById('groesseGrid');
+  if (_grid) _grid.style.boxShadow = '';
+}
+
+// Reviews v2: DOM-State-Init — Chip-State restaurieren bei Page-Reload oder Zurueck-Navigation
+function initGroesseChip() {
+  var existing = document.getElementById('unternehmensgroesseInput');
+  if (!existing || !existing.value) return;
+  var val = existing.value;
+  document.querySelectorAll('.groesse-chip').forEach(function(c) {
+    if (c.getAttribute('onclick') && c.getAttribute('onclick').indexOf("'" + val + "'") !== -1) {
+      c.classList.add('selected');
+    }
+  });
+}
+initGroesseChip();
 
 function validateSubmit() {
   const einwaendeVal = document.getElementById('einwaendeInput').value;
