@@ -345,3 +345,24 @@ Nach jeder abgeschlossenen GSD-Phase und am Ende jeder Arbeitssession: `git push
 > Profile not yet configured. Run `/gsd:profile-user` to generate your developer profile.
 > This section is managed by `generate-claude-profile` -- do not edit manually.
 <!-- GSD:profile-end -->
+
+## Routes-spezifische Regeln
+
+Regeln fuer die Arbeit im routes/-Ordner: siehe `routes/CLAUDE.md`
+(url_for-Verifikation, Blueprint-Namen, Fehlerquellen).
+
+## Regel 13: Hook vs. CLAUDE.md — Determinismus-Entscheidung
+
+Bevor eine neue Verhaltensregel in CLAUDE.md geschrieben wird:
+
+- Ist das Verhalten "jedes Mal ohne Ausnahme, unabhaengig vom Kontext"?
+  → **Hook** (settings.json PostToolUse/PreToolUse). Deterministisch, kein Vergessen.
+- Braucht es Urteilsvermögen, Kontext oder Ausnahmen?
+  → **CLAUDE.md-Regel**. Gilt als Guideline, nicht als erzwungene Aktion.
+- Memory-Regel ist halb-zuverlaessig fuer deterministische Aktionen — nicht fuer
+  "immer X tun"-Anforderungen verwenden.
+
+Beispiele:
+- "Nach Python-Edit immer ruff format" → Hook (kein Urteil noetig)
+- "Bei Umlaut-Entscheidung User-Text vs. Code-Identifier unterscheiden" → CLAUDE.md
+- "Immer git push nach Phase" → CLAUDE.md (Ausnahmen: lokale Branches, WIP)
