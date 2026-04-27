@@ -44,16 +44,16 @@ CLASSIFIER_CONFIDENCE_THRESHOLD = float(
 )
 
 # ── Phase 08.13: MODEL-Konstanten (ENV-overridable, per CONTEXT.md D-01) ──────
-# Sonnet 4.5 fuer User-sichtbare Outputs
-MODEL_EWB               = os.getenv("MODEL_EWB",               "claude-sonnet-4-5")
-MODEL_QA                = os.getenv("MODEL_QA",                "claude-sonnet-4-5")
-MODEL_POSTCALL_INSIGHTS = os.getenv("MODEL_POSTCALL_INSIGHTS",  "claude-sonnet-4-5")
-MODEL_POSTCALL_ANALYSIS = os.getenv("MODEL_POSTCALL_ANALYSIS",  "claude-sonnet-4-5")
-MODEL_WEEKLY_SUMMARY    = os.getenv("MODEL_WEEKLY_SUMMARY",     "claude-sonnet-4-5")
-MODEL_PRECALL           = os.getenv("MODEL_PRECALL",            "claude-sonnet-4-5")
-MODEL_CRM               = os.getenv("MODEL_CRM",               "claude-sonnet-4-5")
-MODEL_TRAINING_HELP     = os.getenv("MODEL_TRAINING_HELP",      "claude-sonnet-4-5")
-MODEL_TRAINING_SCORING  = os.getenv("MODEL_TRAINING_SCORING",   "claude-sonnet-4-5")
+# Sonnet 4.5 fuer User-sichtbare Outputs (20251022)
+MODEL_EWB               = os.getenv("MODEL_EWB",               "claude-sonnet-4-5-20251022")
+MODEL_QA                = os.getenv("MODEL_QA",                "claude-sonnet-4-5-20251022")
+MODEL_POSTCALL_INSIGHTS = os.getenv("MODEL_POSTCALL_INSIGHTS",  "claude-sonnet-4-5-20251022")
+MODEL_POSTCALL_ANALYSIS = os.getenv("MODEL_POSTCALL_ANALYSIS",  "claude-sonnet-4-5-20251022")
+MODEL_WEEKLY_SUMMARY    = os.getenv("MODEL_WEEKLY_SUMMARY",     "claude-sonnet-4-5-20251022")
+MODEL_PRECALL           = os.getenv("MODEL_PRECALL",            "claude-sonnet-4-5-20251022")
+MODEL_CRM               = os.getenv("MODEL_CRM",               "claude-sonnet-4-5-20251022")
+MODEL_TRAINING_HELP     = os.getenv("MODEL_TRAINING_HELP",      "claude-sonnet-4-5-20251022")
+MODEL_TRAINING_SCORING  = os.getenv("MODEL_TRAINING_SCORING",   "claude-sonnet-4-5-20251022")
 # Haiku 4.5 fuer Latenz/Cost-kritisch — UNVERAENDERLICH per CONTEXT.md
 MODEL_ANALYSE           = os.getenv("MODEL_ANALYSE",           "claude-haiku-4-5-20251001")
 MODEL_TRAINING_DIALOG   = os.getenv("MODEL_TRAINING_DIALOG",   "claude-haiku-4-5-20251001")
