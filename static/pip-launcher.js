@@ -674,10 +674,14 @@
     var cancelBtn = document.getElementById('consent-btn-cancel');
     if (!overlay || !scriptEl || !acceptBtn || !rejectBtn || !cancelBtn) return;
 
-    // Resolve script text: profileDaten.consent_text > default
-    var text = (state.profileDaten && state.profileDaten.consent_text)
-      ? state.profileDaten.consent_text
-      : CONSENT_DEFAULT_TEXT;
+    // Phase 08.19: D-04 read-path — consent_text jetzt in daten.meta.consent_text
+    // Fallback auf top-level consent_text fuer Profile die noch nicht migriert sind
+    var _meta = state.profileDaten && state.profileDaten.meta;
+    var text = (_meta && _meta.consent_text)
+      ? _meta.consent_text
+      : ((state.profileDaten && state.profileDaten.consent_text)
+          ? state.profileDaten.consent_text
+          : CONSENT_DEFAULT_TEXT);
     // Replace [Name] token with precallFormData.person if available
     if (state.precallFormData && state.precallFormData.person) {
       text = text.replace('[Name]', state.precallFormData.person);
