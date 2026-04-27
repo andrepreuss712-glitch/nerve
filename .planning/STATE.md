@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.19 IN PROGRESS — Plan 03 complete (Read/Write-Pfad), Plan 04 remaining
-stopped_at: Phase 08.19 Plan 03 complete — wizard_create() schema_version=2, bearbeiten() POST migrate-before-validate + ValidationError 400 + consent_text dual-write, precall_service ProfileOpener-Query, pip-launcher D-04. Commits 0bed0a2/4eb2ed5/4675300/ee9fa3c.
-last_updated: "2026-04-27T14:19:00Z"
+status: Phase 08.19 COMPLETE — alle 4 Plaene abgeschlossen (ProfileSchema + Migration + Read/Write-Pfad + Wizard-UI)
+stopped_at: Phase 08.19 Plan 04 complete — Wizard-UI unternehmensgroesse Chip-Select + UI-Hint + Validation + DOM-Init. Commit f2a23f1.
+last_updated: "2026-04-27T14:23:00Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 53
@@ -187,6 +187,9 @@ Recent decisions affecting current work:
 - [Phase 08.19-03]: bearbeiten() POST: _migrate_profile_data() VOR ProfileSchema.model_validate() (Finding 2) — Altlasten-Stripping verhindert false-positive 400 durch extra='forbid'
 - [Phase 08.19-03]: ValidationError -> flash + db.rollback() + redirect HTTP 400 (Finding 3) — kein 500, Blueprint-Name 'profiles', Parameter 'pid'
 - [Phase 08.19-03]: consent_text dual-write NULL -> '' in daten.meta (Finding 4) — DB-Column-Drop in spaeterer Phase nach Stabilitaets-Verifikation
+- [Phase 08.19-04]: Wizard unternehmensgroesse Chip-Select onclick-Werte exakt gleich UnternehmensgroesseEnum Literals — HTML-Entity &lt; nur im sichtbaren Text-Content, NICHT im onclick-String (Reviews v2 Enum-Sync)
+- [Phase 08.19-04]: initGroesseChip() direkt nach Funktionsdefinition aufgerufen (kein DOMContentLoaded-Wrapper noetig da Script am Body-Ende steht)
+- [Phase 08.19-04]: selectGroesse() loescht boxShadow-Highlight bei Auswahl (Deviation Rule 2 — UX-Korrektur)
 - [Phase 08.19-03]: precall_service profile_id=None -> leerer Opener-Block (graceful degradation) — backward-compatible, kein Crash
 - [Phase 08.19-02]: ProfileReadSchema verwendet eigenstaendige Read-Sub-Schemas mit extra=ignore + Any-Typen — echte Produktionsdaten haben Typ-Drift (nogos: List[dict], ki.antwortlaenge, beruflicher_hintergrund: List)
 - [Phase 08.19-02]: schema_version None-safe Guard: (daten.get('schema_version') or 1) >= 2 — get() mit Default ignoriert None-Werte (Key=None), 'or 1' wandelt None in 1 um
