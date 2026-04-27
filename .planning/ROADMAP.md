@@ -823,6 +823,24 @@ Plans:
 
 ---
 
+### Phase 08.18: Block N Phase B — Sales-Literatur-Research + Branchen-Spezifika PreCall (INSERTED)
+
+**Goal:** Drei Recherche-Stränge als Input für Phase 08.19 (Pydantic-Schema-Redesign) und 08.20 (Pipeline-Re-Wire): (1) Sales-Literatur-Synthese (8 EN + 5 DE Autoren) — Profil-Inputs, Frame-Strukturen, Einwand-Muster, No-Gos pro Autor. (2) Branchen-Spezifika fuer PreCall — welcher Recherche-Fokus pro Branche (Maschinenbau/SaaS/Versicherung/Beratung/etc.)? (3) Reihenfolge eines Voll-Profil-Prompts — Sales-Trainer-Konsens + Anthropic Best-Practices (Lost-in-Middle, System-vs-User-Aufteilung).
+**Komplexitaet:** 🟡 mittel — Cross-AI Pflicht (Andre-Decision 2026-04-27)
+**Depends on:** Phase 08.17
+
+**Items:**
+- Sales-Literatur-Synthese: SPIN Selling, Challenger Sale, Sandler, Straight Line, Value Selling, Predictable Revenue, Little Red Book, Pitch Anything (EN); Tim Taxis, Dirk Kreuter, Stephan Heinrich, Martin Limbeck, Hans-Uwe Köhler (DE) — AUSGESCHLOSSEN: Uwe Beyreuther
+- Pro Autor: Profil-Inputs / Frame-Struktur / Einwand-Muster / No-Gos
+- Branchen-Spezifika PreCall: Maschinenbau, SaaS, Versicherung, Beratung, Werkzeug-Verkauf, Field-Sales — pro Branche: typischer PreCall-Vorbereitungs-Bedarf, Datenquellen, Recherche-Fokus
+- Reihenfolge Voll-Profil-Prompt: Sales-Trainer-Konsens + Anthropic Best-Practices (Lost-in-Middle)
+- Output-Dateien: `.planning/research/sales-coaching-literatur-synthese.md` + `.planning/research/branchen-precall-spezifika.md`
+
+**Reasoning:**
+> Audit (08.17) zeigt: ~50-60% der Profil-Felder landen nie in einem Live-Prompt, PreCall-Briefing fließt nicht in EWB. Bevor das Schema (08.19) und die Pipeline (08.20) umgebaut werden, Grundlage schaffen: was sagen Experten was rein muss, und wie muss es strukturiert sein damit es wirkt. Andre-Decision 2026-04-27 abend: ALLES in sinnvoller Reihenfolge im EWB-Prompt, branchenspezifische PreCall-Recherche als Steuerungs-Input fuer den LLM.
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
