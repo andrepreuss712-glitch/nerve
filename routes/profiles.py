@@ -6,6 +6,8 @@ from database.models import Profile, User as UserModel, ProfileSkript, ProfileOp
 from routes.auth import login_required
 from services.audit import log_action
 from services.profile_migration import migrate_tabu_begriffe
+from services.profile_schema import _migrate_profile_data, ProfileSchema
+from pydantic import ValidationError
 
 profiles_bp = Blueprint('profiles', __name__, url_prefix='/profiles')
 
@@ -115,12 +117,24 @@ def wizard_create():
     if eigener_einwand and eigener_einwand not in einwaende_list:
         einwaende_list.append(eigener_einwand)
 
+    # Phase 08.19: schema_version=2 + zielkunde.unternehmensgroesse (D-02, D-03, D-07)
+    # Code-Check-Befund (Reviews v2): Wizard hat KEIN opener/pitch Formular-Feld.
+    # wizard_create() macht KEINEN ProfileOpener-INSERT — keine Opener-Daten vorhanden.
+    # Neue Profile starten ohne Opener-Eintrag (by design).
+    # User ergaenzt Opener via Profil-Editor -> /profiles/<pid>/opener Route.
+    # Graceful degradation: precall_service ohne Opener liefert kein Opener-Block im Briefing.
+    unternehmensgroesse = request.form.get('unternehmensgroesse', '').strip() or None
+
     daten = json.dumps({
+        'schema_version': 2,
         'basis': {
             'produktbeschreibung': produkt,
             'zielkunden': zielkunden,
             'einwaende': einwaende_list,
             'phasen': [],
+        },
+        'zielkunde': {
+            'unternehmensgroesse': unternehmensgroesse,
         },
         'ki': {
             'anrede': 'Sie',
@@ -129,6 +143,8 @@ def wizard_create():
             'firma': firma,
             'rolle': rolle,
         },
+        # opener/pitch werden NICHT in daten gespeichert (D-01) — canonical: ProfileOpener-Tabelle
+        # Kein ProfileOpener-INSERT hier: Wizard hat kein opener/pitch Eingabefeld (Code-Check-Befund)
     }, ensure_ascii=False)
 
     db = get_session()
@@ -188,6 +204,8 @@ def bearbeiten(pid):
             daten = json.loads(p.daten) if p.daten else {}
         except Exception:
             daten = {}
+        # Phase 08.19: Schema v1 -> v2 Migration (idempotent) VOR Tabu-Migration
+        daten = _migrate_profile_data(daten)
         # Phase 08.5 Korrektur 1: migrate tabu_begriffe to list-of-objects on editor load
         daten = migrate_tabu_begriffe(daten)
         return render_template('profile_editor.html', profile=p, daten=daten)
