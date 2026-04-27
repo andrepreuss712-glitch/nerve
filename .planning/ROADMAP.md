@@ -808,7 +808,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 08.17-01-PLAN.md — Audit-Verifikation: profil-prompt-integration-matrix.md gegen post-08.14 Code-Stand aktualisieren
+- [x] 08.17-01-PLAN.md — Audit-Verifikation: profil-prompt-integration-matrix.md gegen post-08.14 Code-Stand aktualisieren (COMPLETE 2026-04-27, commit 82a14f5)
 
 **Items:**
 - Existierenden Audit (`.planning/audits/profil-prompt-integration-matrix.md`, Stand 2026-04-24) gegen aktuellen Code verifizieren

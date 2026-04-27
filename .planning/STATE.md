@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.14 COMPLETE — ruff-Hook, Context7, routes/CLAUDE.md, Regel 13, ApiRate-Seed, Sonnet-Date-Suffix
-stopped_at: Phase 08.14 verified and complete (2026-04-27)
-last_updated: "2026-04-27T06:30:00Z"
+status: Phase 08.17 COMPLETE — Profil-Prompt-Integrations-Audit abgeschlossen (2026-04-27)
+stopped_at: Phase 08.17 Plan 01 abgeschlossen — profil-prompt-integration-matrix.md auf post-08.14 Stand aktualisiert
+last_updated: "2026-04-27T09:45:00Z"
 last_activity: 2026-04-27
 progress:
-  total_phases: 50
-  completed_phases: 37
-  total_plans: 176
-  completed_plans: 165
+  total_phases: 51
+  completed_phases: 38
+  total_plans: 177
+  completed_plans: 166
   percent: 94
 ---
 
@@ -179,6 +179,11 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.17-01]: LB-3 Fix (08.9): technische Parameteruebergabe profile_data korrekt, aber _SYSTEM_PROMPT_QA hat kein {profile_context} Placeholder — Pfad 4 bleibt generisch, Kandidat fuer Phase 08.19
+- [Phase 08.17-01]: 08.13 Block E claude_client-Konsolidierung: system= Kwarg einheitlich in allen API-Calls, Prompt-Assembly-Struktur unveraendert — kein Matrix-Impact
+- [Phase 08.17-01]: Alle 🧟 Zombie-Code-Eintraege → ❌ (sauber): _build_system_prompt seit 08.8 tatsaechlich geloescht (nicht mehr nur unreachable)
+- [Phase 08.17-01]: EWB-Integration-Quote: 10/48 = 21% — unveraendert nach Phasen 08.8-08.14, kein neuer EWB-Profil-Kontext eingefuehrt
+- [Phase 08.17-01]: Andrés Verdacht-Liste: kaufsignale/wettbewerber/uebergaenge/vorwissen/entscheidungsverhalten leben im Coach-Pfad (nicht in EWB) — waren nicht "tot" sondern "EWB-tot"
 - [Phase 08.14-02]: ApiRate-Seed in _migrate() — 8 Rows sonnet-4-5-20251022 + haiku-4-5-20251001 (input/output/cache_read/cache_write), idempotent per SELECT-vor-INSERT
 - [Phase 08.14-02]: Alle 9 Sonnet-MODEL_*-Konstanten auf claude-sonnet-4-5-20251022 — Date-Suffix verhindert Anthropic-Alias-Drift auf aeltere Modelle; konsistent mit Haiku-Pattern
 - [Phase 08.14-01]: ruff-Hook in settings.local.json (projektlokal) — Hook soll nur fuer salesnerve gelten, nicht global
