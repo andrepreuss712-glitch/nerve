@@ -672,7 +672,11 @@
     var acceptBtn = document.getElementById('consent-btn-accept');
     var rejectBtn = document.getElementById('consent-btn-reject');
     var cancelBtn = document.getElementById('consent-btn-cancel');
-    if (!overlay || !scriptEl || !acceptBtn || !rejectBtn || !cancelBtn) return;
+    if (!overlay || !scriptEl || !acceptBtn || !rejectBtn || !cancelBtn) {
+      console.error('[NerveLauncher] Consent modal DOM elements missing');
+      callback('cancelled');
+      return;
+    }
 
     // Phase 08.19: D-04 read-path — consent_text jetzt in daten.meta.consent_text
     // Fallback auf top-level consent_text fuer Profile die noch nicht migriert sind
