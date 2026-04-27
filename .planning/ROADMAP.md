@@ -869,7 +869,13 @@ Plans:
 - PreCall-Briefing-Inject in EWB-Prompt
 - Sonnet-Default fuer EWB-Streaming
 
-**Plans:** 0 plans
+**Plans:** 4 plans
+
+Plans:
+- [ ] 08.19-01-PLAN.md — services/profile_schema.py (Pydantic v2 ProfileSchema + _migrate_profile_data)
+- [ ] 08.19-02-PLAN.md — DB-Level Migration aller Profile auf schema_version=2 + opener/pitch Sync + consent_text dual-write
+- [ ] 08.19-03-PLAN.md — Read/Write-Pfad Integration (wizard_create, bearbeiten, precall_service opener/pitch -> ProfileOpener)
+- [ ] 08.19-04-PLAN.md — Wizard-UI unternehmensgroesse Chip-Select + UI-Hint + Validation
 
 ---
 
