@@ -651,7 +651,7 @@
     document.getElementById('lnr-save-yes').onclick = function () {
       fetch(endpoint, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ inhalt: newText })
       }).catch(function () {});
       // Update local state too
