@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.18 IN PROGRESS — Plan 02 complete (Branchen-Verteilungs-Recherche DACH+USA), Plan 03 pending
-stopped_at: Phase 08.18 Plan 02 complete — branchen-precall-spezifika.md erstellt (Top-10 DACH+USA, Premium-Cluster Maschinenbau/IT/Versicherung). Commit 49bc33b.
-last_updated: "2026-04-27T08:46:00Z"
+status: Phase 08.18 IN PROGRESS — Plan 03 complete (Stufe-3b Tiefen-Cluster: Premium/Mittel-Tiefe/Schema-Empfehlungen), alle Plans abgeschlossen
+stopped_at: Phase 08.18 Plan 03 complete — branchen-precall-spezifika.md vollstaendig (326 Zeilen, 3 Premium-Cluster, 4 Mittel-Tiefen, Schema-Empfehlungen 08.20). Commit 33bb8d5.
+last_updated: "2026-04-27T08:53:16Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 51
   completed_phases: 38
   total_plans: 177
-  completed_plans: 168
+  completed_plans: 169
   percent: 95
 ---
 
@@ -179,6 +179,9 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.18-03]: precall_service.recherche_firma() benoetigt branche als Pflicht-Parameter — 3-Tier-Routing: Premium (5 Dim.) / Mittel-Tiefe (3 Dim.) / Generisch (Standard)
+- [Phase 08.18-03]: 3 neue Profil-Felder empfohlen fuer 08.19: profil.branche (Pflicht), profil.zielkunden_branche (optional), profil.branchen_fachbegriffe (List[str], optional)
+- [Phase 08.18-03]: Datenquellen-Routing je Branche: Maschinenbau → Northdata/VDMA, IT/SaaS → Crunchbase/LinkedIn/Builtwith, Versicherung → GDV/Northdata/Asscompact
 - [Phase 08.18-02]: Premium-Cluster DACH (fuer Plan 03 Tiefen-Recherche): Maschinenbau (~16-18%), IT/SaaS (~12-14%), Versicherung/Finanz (~11-13%) — auf Basis BA KldB 2010 + VDMA/GDV/bitkom
 - [Phase 08.18-02]: Premium-Cluster USA: Technology/SaaS (~15-18%), Financial Services (~12-15%), Healthcare/Pharma (~10-12%) — auf Basis BLS OES May 2023 SOC 41-XXXX
 - [Phase 08.18-02]: USA gleichberechtigt zu DACH in Research (André-Entscheidung) — USA ist echtes Hauptgeschaeft, DACH ist Soft-Launch/Test-Sandbox
@@ -546,6 +549,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-27T08:41:05Z
-Stopped at: Phase 08.18 Plan 01 complete — sales-coaching-literatur-synthese.md (502 Zeilen, 6 Sektionen A-F, Schema-Bullets). Commit cacd965.
+Last session: 2026-04-27T08:53:16Z
+Stopped at: Phase 08.18 Plan 03 complete — branchen-precall-spezifika.md vollstaendig (326 Zeilen, 3 Premium-Cluster, 4 Mittel-Tiefen, Schema-Empfehlungen 08.20). Commit 33bb8d5.
 Resume file: None
