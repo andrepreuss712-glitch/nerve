@@ -135,7 +135,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-25 after Phase 08.7 (Block H — Test-False-Greens raus) completion — 27 Source-Presence-False-Green-Tests entfernt (inspect.getsource/hasattr/file-read), 3 echte Integration-Tests in test_08_5_05_training_pipeline_t2.py behalten, Test-Qualitaets-Regel in CLAUDE.md codifiziert, H-3/H-4 Dead-Code-Prune für Block I unblocked*
+*Last updated: 2026-04-27 after Phase 08.17 (Block N Phase A — Prompt-Integrations-Audit) completion — profil-prompt-integration-matrix.md auf post-08.14 Stand aktualisiert: EWB-Integration-Quote 10/48 = 21%, 4 Verdacht-Felder (kaufsignale, uebergaenge, wettbewerber, vorwissen) leben in Coach-Pfad (Ueberraschung), LB-3 Fix nur technisch (kein inhaltlicher Pfad-4-Gewinn), Foundation fuer Phase 08.18 (Sales-Literatur) + 08.19 (Pydantic-Schema-Redesign) gelegt*
 
 ## Phase Completion Notes
 
