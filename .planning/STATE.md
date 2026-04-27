@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.19 IN PROGRESS — Plan 02 complete (_migrate_profile_json), Plans 03-04 remaining
-stopped_at: Phase 08.19 Plan 02 complete — _migrate_profile_json() implementiert (85 Zeilen), alle 4 Profile auf schema_version=2 migriert, ProfileOpener-Sync, consent_text dual-write. Commit b0d837c.
-last_updated: "2026-04-27T14:30:00Z"
+status: Phase 08.19 IN PROGRESS — Plan 03 complete (Read/Write-Pfad), Plan 04 remaining
+stopped_at: Phase 08.19 Plan 03 complete — wizard_create() schema_version=2, bearbeiten() POST migrate-before-validate + ValidationError 400 + consent_text dual-write, precall_service ProfileOpener-Query, pip-launcher D-04. Commits 0bed0a2/4eb2ed5/4675300/ee9fa3c.
+last_updated: "2026-04-27T14:19:00Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 53
   completed_phases: 39
   total_plans: 184
-  completed_plans: 171
+  completed_plans: 172
   percent: 93
 ---
 
@@ -183,6 +183,11 @@ Recent decisions affecting current work:
 - [Phase 08.19-01]: zielgruppe.vorwissen + zielgruppe.entscheidungsverhalten bleiben in zielgruppe.* (claude_service._build_coaching_prompt liest explizit pdata.get('zielgruppe', {}))
 - [Phase 08.19-01]: ProfileSchema Dual-Schema-Pattern: Write extra='forbid' (ValidationError bei unbekannten Feldern), Read extra='ignore' (Drift-Felder ignoriert)
 - [Phase 08.19-02]: _migrate_profile_json() Aufruf NACH _seed_demo_profiles() — Profile-First-Reihenfolge (Profile muessen existieren bevor migriert werden kann)
+- [Phase 08.19-03]: wizard_create() macht KEINEN ProfileOpener-INSERT — Wizard hat kein opener/pitch Eingabefeld (Code-Check-Befund, by design); neue Profile starten ohne Opener-Eintrag
+- [Phase 08.19-03]: bearbeiten() POST: _migrate_profile_data() VOR ProfileSchema.model_validate() (Finding 2) — Altlasten-Stripping verhindert false-positive 400 durch extra='forbid'
+- [Phase 08.19-03]: ValidationError -> flash + db.rollback() + redirect HTTP 400 (Finding 3) — kein 500, Blueprint-Name 'profiles', Parameter 'pid'
+- [Phase 08.19-03]: consent_text dual-write NULL -> '' in daten.meta (Finding 4) — DB-Column-Drop in spaeterer Phase nach Stabilitaets-Verifikation
+- [Phase 08.19-03]: precall_service profile_id=None -> leerer Opener-Block (graceful degradation) — backward-compatible, kein Crash
 - [Phase 08.19-02]: ProfileReadSchema verwendet eigenstaendige Read-Sub-Schemas mit extra=ignore + Any-Typen — echte Produktionsdaten haben Typ-Drift (nogos: List[dict], ki.antwortlaenge, beruflicher_hintergrund: List)
 - [Phase 08.19-02]: schema_version None-safe Guard: (daten.get('schema_version') or 1) >= 2 — get() mit Default ignoriert None-Werte (Key=None), 'or 1' wandelt None in 1 um
 - [Phase 08.19-02]: BEGIN EXCLUSIVE via conn.execute(text(...)) statt execution_options(isolation_level='EXCLUSIVE') — SQLAlchemy 2.x unterstuetzt EXCLUSIVE nicht als gueltigen Isolation-Level fuer SQLite
@@ -556,6 +561,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-27T14:13:41.575Z
-Stopped at: Phase 08.18 Plan 03 complete — branchen-precall-spezifika.md vollstaendig (326 Zeilen, 3 Premium-Cluster, 4 Mittel-Tiefen, Schema-Empfehlungen 08.20). Commit 33bb8d5.
+Last session: 2026-04-27T14:19:00Z
+Stopped at: Phase 08.19 Plan 03 complete — Read/Write-Pfad auf schema_version=2 umgestellt (routes/profiles.py, services/precall_service.py, static/pip-launcher.js). Commits 0bed0a2/4eb2ed5/4675300/ee9fa3c.
 Resume file: None
