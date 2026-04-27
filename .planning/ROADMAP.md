@@ -850,6 +850,29 @@ Plans:
 
 ---
 
+### Phase 08.19: Block N Phase C — Pydantic-Schema-Redesign + Migration (INSERTED)
+
+**Goal:** Profil-Datenmodell sauber neu definieren — Pydantic v2 ProfileSchema mit 6 neuen Feldern aus 08.18 (zielkunde.unternehmensgroesse / buying_committee / statusquo / zeithorizont, value.roi_argumente, einwaende[].einwand_typ), 7 Felder eliminieren (B2C-Felder alter/einkommensniveau/lebenssituation, schmerzen.trigger, ki.stil, erlaubnis), consent_text als meta.consent_text behalten (DSGVO-relevant fuer Meeting-Modus-Consent-Modal, UI-only-Markierung). Schema-Drift opener/pitch (top-level vs basis.*) bereinigen. Idempotente verlustfreie Migration fuer bestehende Profile in DB (Andre's User + Demo-Profile IDs 2/3/4). Wizard/UI auf neues Schema anpassen. Output: services/profile_schema.py (Pydantic v2) + idempotente _migrate()-Erweiterung + Wizard-UI-Anpassungen + Test alle 4 Profile laden verlustfrei.
+**Komplexitaet:** 🔴 komplex — Schema-Migration ist DB-Risiko, Wizard-UI muss konsistent sein. Cross-AI Pflicht (doppelter Cycle empfehlenswert).
+**Depends on:** Phase 08.18
+
+**Input:**
+- `.planning/research/sales-coaching-literatur-synthese.md` (Sektion E + Schema-Empfehlungen-Bullets)
+- `.planning/research/branchen-precall-spezifika.md` (Schema-Empfehlungen fuer 08.20-Branchen-Steuerung)
+- `.planning/audits/profil-prompt-integration-matrix.md` (Schema-Drift-Findings opener/pitch)
+
+**NICHT in 08.19 (gehoert zu 08.20 Pipeline-Re-Wire):**
+- build_profile_context() Reihenfolge-Refactor
+- System/User-Message-Split
+- Manual-EWB-Button mit Profil-Kontext fuettern
+- _SYSTEM_PROMPT_QA mit {profile_context} erweitern
+- PreCall-Briefing-Inject in EWB-Prompt
+- Sonnet-Default fuer EWB-Streaming
+
+**Plans:** 0 plans
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
