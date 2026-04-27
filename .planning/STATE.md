@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.13 COMPLETE — alle 5 Plaene abgeschlossen (Cost-Tracking + Caching + Sonnet-Upgrade)
-stopped_at: Completed 08.13-05-PLAN.md — H-9 Deepgram STT-Sekunden-Fix, pytest-Gate (295 passing), Smoke-Check (0 Literal-Strings in services/routes), git push origin main
-last_updated: "2026-04-26T14:37:00Z"
-last_activity: 2026-04-26 - Phase 08.13 Plan 05 abgeschlossen: H-9 deepgram_service _stt_seconds_accumulated (echte Audio-Dauer statt Socket-Lifetime), routes/training.py Literal-Fix (Smoke-Check-Fund), pytest 295 passing, git push origin main. Phase 08.13 vollstaendig.
+status: Phase complete — ready for verification
+stopped_at: context exhaustion at 98% (2026-04-26)
+last_updated: "2026-04-27T05:39:20.515Z"
+last_activity: 2026-04-27
 progress:
-  total_phases: 41
-  completed_phases: 33
-  total_plans: 148
-  completed_plans: 151
-  percent: 98
+  total_phases: 50
+  completed_phases: 36
+  total_plans: 176
+  completed_plans: 164
+  percent: 93
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 Phase: 08.13 (stabilisierung-block-e-cost-tracking-caching-sonnet-upgrade) — COMPLETE
 Plan: 5 of 5 COMPLETE
-Last activity: 2026-04-26
+Last activity: 2026-04-27
 
 **Next:** Phase 08.13 vollstaendig abgeschlossen. Naechste Phase per ROADMAP bestimmen.
 
@@ -179,6 +179,10 @@ Progress: [█████████░] ~96% (Phase 2 ✓, Phase 3 ✓, Phase
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 08.14-01]: ruff-Hook in settings.local.json (projektlokal) — Hook soll nur fuer salesnerve gelten, nicht global
+- [Phase 08.14-01]: Context7-MCP via claude mcp add statt settings.json — mcpServers ist kein gueltiges settings.json-Schema-Feld; registriert in ~/.claude.json
+- [Phase 08.14-01]: Regel 13: Hook fuer deterministische Aktionen (ruff format), CLAUDE.md-Regel fuer Urteilsvermoegen-Anforderungen
+- [Phase 08.14-01]: Blueprint-Tabelle in routes/CLAUDE.md verifiziert — organisations.py nutzt orgs_bp='orgs' (nicht 'organisations'); Fehler-Quelle dokumentiert
 - [Phase 08.13-05]: H-9 Fix: _stt_seconds_accumulated akkumuliert result.metadata.duration per is_final=True — Cost-Hook nutzt echte Audio-Dauer statt Socket-Lifetime (Overcharge-Illusion behoben)
 - [Phase 08.13-05]: T-08.13-11 accept: Race-Condition _stt_seconds_accumulated Deepgram-Thread vs. close-Thread — Worst-Case < 1 Chunk verloren, Billing-Fehler minimal, Lock fuer spaeter
 - [Phase 08.13-05]: routes/training.py Kundentyp-Generator auf config.MODEL_TRAINING_PREVIEW (Haiku) migriert — Smoke-Check-Fund, semantisch korrekt
@@ -528,6 +532,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-25T14:07:00Z
-Stopped at: Completed 08.11-02-PLAN.md — Wave 2 Frontend-Cleanup done
+Last session: 2026-04-27T05:39:20.508Z
+Stopped at: context exhaustion at 98% (2026-04-26)
 Resume file: None
