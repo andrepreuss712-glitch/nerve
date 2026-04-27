@@ -862,6 +862,35 @@ def _migrate():
         except Exception:
             pass
 
+        # ── Phase 08.14: ApiRate Seed fuer sonnet-4-5-20251022 + haiku-4-5-20251001 (cache_read/write) ────
+        try:
+            from database.models import ApiRate
+            _needed = [
+                ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_input_tokens',       0.003,   'USD'),
+                ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_output_tokens',      0.015,   'USD'),
+                ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_cache_read_tokens',  0.0003,  'USD'),
+                ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_cache_write_tokens', 0.00375, 'USD'),
+                ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_input_tokens',       0.00025, 'USD'),
+                ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_output_tokens',      0.00125, 'USD'),
+                ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_cache_read_tokens',  0.000025,'USD'),
+                ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_cache_write_tokens', 0.0003,  'USD'),
+            ]
+            with engine.connect() as _conn:
+                for _provider, _model, _unit, _price, _currency in _needed:
+                    _exists = _conn.execute(
+                        text("SELECT 1 FROM api_rate WHERE provider=:p AND model=:m AND unit_type=:u"),
+                        {'p': _provider, 'm': _model, 'u': _unit}
+                    ).fetchone()
+                    if not _exists:
+                        _conn.execute(
+                            text("INSERT INTO api_rate (provider, model, unit_type, price_per_unit, currency, active, source_url) VALUES (:p,:m,:u,:price,:cur,1,'seed:2026-04-27')"),
+                            {'p': _provider, 'm': _model, 'u': _unit, 'price': _price, 'cur': _currency}
+                        )
+                        print(f"[DB] ApiRate seeded: {_model} {_unit}")
+                _conn.commit()
+        except Exception as _e:
+            print(f"[DB] ApiRate seed (08.14) failed (non-fatal): {_e}")
+
 _migrate()
 
 
