@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.19 IN PROGRESS — Plan 01 complete (ProfileSchema), Plans 02-04 remaining
-stopped_at: Phase 08.19 Plan 01 complete — services/profile_schema.py erstellt (207 Zeilen), 21 TDD-Tests gruen, ProfileSchema + ProfileReadSchema + _migrate_profile_data implementiert. Commit 317c0a2.
-last_updated: "2026-04-27T12:10:00Z"
+status: Phase 08.19 IN PROGRESS — Plan 02 complete (_migrate_profile_json), Plans 03-04 remaining
+stopped_at: Phase 08.19 Plan 02 complete — _migrate_profile_json() implementiert (85 Zeilen), alle 4 Profile auf schema_version=2 migriert, ProfileOpener-Sync, consent_text dual-write. Commit b0d837c.
+last_updated: "2026-04-27T14:30:00Z"
 last_activity: 2026-04-27
 progress:
-  total_phases: 51
+  total_phases: 53
   completed_phases: 39
-  total_plans: 177
-  completed_plans: 170
-  percent: 96
+  total_plans: 184
+  completed_plans: 171
+  percent: 93
 ---
 
 # Project State
@@ -182,6 +182,10 @@ Recent decisions affecting current work:
 - [Phase 08.19-01]: UnternehmensgroesseEnum Literal-Werte kanonisch in services/profile_schema.py: '<10', '10-50', '50-250', '250-1000', '1000+' — Plan 04 HTML-Chips muessen exakt matchen (Reviews v2 Enum-Sync-Pflicht)
 - [Phase 08.19-01]: zielgruppe.vorwissen + zielgruppe.entscheidungsverhalten bleiben in zielgruppe.* (claude_service._build_coaching_prompt liest explizit pdata.get('zielgruppe', {}))
 - [Phase 08.19-01]: ProfileSchema Dual-Schema-Pattern: Write extra='forbid' (ValidationError bei unbekannten Feldern), Read extra='ignore' (Drift-Felder ignoriert)
+- [Phase 08.19-02]: _migrate_profile_json() Aufruf NACH _seed_demo_profiles() — Profile-First-Reihenfolge (Profile muessen existieren bevor migriert werden kann)
+- [Phase 08.19-02]: ProfileReadSchema verwendet eigenstaendige Read-Sub-Schemas mit extra=ignore + Any-Typen — echte Produktionsdaten haben Typ-Drift (nogos: List[dict], ki.antwortlaenge, beruflicher_hintergrund: List)
+- [Phase 08.19-02]: schema_version None-safe Guard: (daten.get('schema_version') or 1) >= 2 — get() mit Default ignoriert None-Werte (Key=None), 'or 1' wandelt None in 1 um
+- [Phase 08.19-02]: BEGIN EXCLUSIVE via conn.execute(text(...)) statt execution_options(isolation_level='EXCLUSIVE') — SQLAlchemy 2.x unterstuetzt EXCLUSIVE nicht als gueltigen Isolation-Level fuer SQLite
 - [Phase 08.18-03]: precall_service.recherche_firma() benoetigt branche als Pflicht-Parameter — 3-Tier-Routing: Premium (5 Dim.) / Mittel-Tiefe (3 Dim.) / Generisch (Standard)
 - [Phase 08.18-03]: 3 neue Profil-Felder empfohlen fuer 08.19: profil.branche (Pflicht), profil.zielkunden_branche (optional), profil.branchen_fachbegriffe (List[str], optional)
 - [Phase 08.18-03]: Datenquellen-Routing je Branche: Maschinenbau → Northdata/VDMA, IT/SaaS → Crunchbase/LinkedIn/Builtwith, Versicherung → GDV/Northdata/Asscompact
@@ -552,6 +556,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-27T08:53:16Z
+Last session: 2026-04-27T14:13:41.575Z
 Stopped at: Phase 08.18 Plan 03 complete — branchen-precall-spezifika.md vollstaendig (326 Zeilen, 3 Premium-Cluster, 4 Mittel-Tiefen, Schema-Empfehlungen 08.20). Commit 33bb8d5.
 Resume file: None

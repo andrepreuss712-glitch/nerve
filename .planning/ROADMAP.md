@@ -873,7 +873,7 @@ Plans:
 
 Plans:
 - [x] 08.19-01-PLAN.md — services/profile_schema.py (Pydantic v2 ProfileSchema + _migrate_profile_data) (317c0a2)
-- [ ] 08.19-02-PLAN.md — DB-Level Migration aller Profile auf schema_version=2 + opener/pitch Sync + consent_text dual-write
+- [x] 08.19-02-PLAN.md — DB-Level Migration aller Profile auf schema_version=2 + opener/pitch Sync + consent_text dual-write (b0d837c)
 - [ ] 08.19-03-PLAN.md — Read/Write-Pfad Integration (wizard_create, bearbeiten, precall_service opener/pitch -> ProfileOpener)
 - [ ] 08.19-04-PLAN.md — Wizard-UI unternehmensgroesse Chip-Select + UI-Hint + Validation
 
