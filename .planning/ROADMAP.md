@@ -800,6 +800,29 @@ Plans:
 
 ---
 
+### Phase 08.17: Block N Phase A — Prompt-Integrations-Audit (INSERTED)
+
+**Goal:** Matrix erstellen die zeigt welche Profil-Felder in welchen Prompt-Pfaden tatsaechlich ankommen — feldgenau, pfadgenau. Basiert auf existierendem Audit (2026-04-24) der gegen aktuellen Code-Stand (post-08.14) verifiziert und aktualisiert wird.
+**Komplexitaet:** 🟡 mittel — Cross-AI Pflicht (Andre-Decision 2026-04-27)
+**Depends on:** Phase 08.14
+**Plans:** 1 plan
+
+Plans:
+- [ ] 08.17-01-PLAN.md — Audit-Verifikation: profil-prompt-integration-matrix.md gegen post-08.14 Code-Stand aktualisieren
+
+**Items:**
+- Existierenden Audit (`.planning/audits/profil-prompt-integration-matrix.md`, Stand 2026-04-24) gegen aktuellen Code verifizieren
+- Matrix updaten fuer Aenderungen aus Phasen 08.6-08.14 (Dead-Code-Prune, Classic-View-Deprecation, Prompt-Caching, Model-Konsolidierung)
+- Findings-Liste mit Zahlen (X tot, Y teilweise, Z voll integriert)
+- Top-Ueberraschungen dokumentieren
+- Quellen-Referenzen mit aktuellen Datei:Zeile-Verweisen
+- Audit-Stand-Datum auf 2026-04-27 aktualisieren
+
+**Reasoning:**
+> Phase 08.5-Audit-Befund: ~90% des Profils kommt nicht im Live-PiP an. Audit-Datei existiert bereits (2026-04-24) aber ist vor grossem Cleanup-Block (08.6-08.14) erstellt — muss gegen aktuellen Code verifiziert werden. Foundation fuer Phase 08.18 (Sales-Literatur-Research) + Phase 08.19 (Pydantic-Schema-Redesign).
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
