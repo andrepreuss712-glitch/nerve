@@ -218,6 +218,8 @@ def bearbeiten(pid):
             try:
                 ProfileSchema.model_validate(_daten_neue)
             except ValidationError as _ve:
+                from flask import current_app
+                current_app.logger.error(f"[Profile-Save] ValidationError pid={p.id}: {_ve.errors()}")
                 flash(f"Profil-Daten ungültig ({_ve.error_count()} Fehler) — bitte Eingabe prüfen.", 'error')
                 db.rollback()
                 return redirect(url_for('profiles.bearbeiten', pid=p.id))
