@@ -24,7 +24,7 @@ Reviews v2 — Enum-Sync-Pflicht:
 """
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict
 
 # ── Unternehmensgroesse Enum ────────────────────────────────────────────────
@@ -143,13 +143,93 @@ class ProfileSchema(BaseModel):
     # erlaubnis eliminiert (D-06)
 
 
+# ── Read-Sub-Schemas (extra='ignore' + Any-Typen fuer Drift-Toleranz) ────────
+# Echte Profil-Daten koennen Typ-Drift enthalten (z.B. List statt str, dict statt str).
+# Read-Sub-Schemas sind permissiv: extra='ignore' + Any fuer drift-anfaellige Felder.
+
+class _ZielgruppeReadSchema(BaseModel):
+    """Permissive Read-Variante: beruflicher_hintergrund kann str oder List sein (Drift)."""
+    model_config = ConfigDict(extra='ignore')
+    berufsstatus: str = ''
+    beruflicher_hintergrund: Any = ''    # Drift: war List[str] in alten Profilen
+    vorwissen: str = ''
+    entscheidungsverhalten: Any = []     # Drift: war str in einigen alten Profilen
+
+
+class _KiReadSchema(BaseModel):
+    """Permissive Read-Variante: extra='ignore' fuer antwortlaenge/sensitivitaet etc."""
+    model_config = ConfigDict(extra='ignore')
+    anrede: str = 'Sie'
+    ansprache: str = ''
+    ton: str = ''
+    zusatz: str = ''
+
+
+class _ZielkundeReadSchema(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    unternehmensgroesse: Any = None
+    buying_committee: str = ''
+    statusquo: str = ''
+    zeithorizont: Any = None
+
+
+class _BasisReadSchema(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    unternehmen: str = ''
+    produktbeschreibung: str = ''
+    branche: str = ''
+    branche_kontext: str = ''
+    usps: Any = []
+    preismodell: str = ''
+    konsequenz: str = ''
+    eigene_formulierungen: Any = []
+    beweise: Any = []
+    tabu_begriffe: Any = []
+    zielkunden: str = ''
+    einwaende: Any = []
+    phasen: Any = []
+
+
+class _SchmerzenReadSchema(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    schmerzpunkte: Any = []
+
+
+class _MetaReadSchema(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    firma: str = ''
+    rolle: str = ''
+    consent_text: str = ''
+
+
+class _ValueReadSchema(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+    roi_argumente: Any = []
+
+
 # ── ProfileReadSchema (Read — extra='ignore') ────────────────────────────────
 
-class ProfileReadSchema(ProfileSchema):
+class ProfileReadSchema(BaseModel):
     """Read-Schema: permissive. Ignoriert unbekannte Felder (alte Drift-Felder).
+    Verwendet permissive Sub-Schemas mit extra='ignore' und Any-Typen fuer
+    drift-anfaellige Felder (z.B. nogos: List[dict] statt List[str] in alten Profilen).
     Nur nach _migrate_profile_data() verwenden — Migration bereinigt Felder zuerst.
     """
     model_config = ConfigDict(extra='ignore')
+    schema_version: int = 2
+    basis: _BasisReadSchema = _BasisReadSchema()
+    zielgruppe: _ZielgruppeReadSchema = _ZielgruppeReadSchema()
+    zielkunde: _ZielkundeReadSchema = _ZielkundeReadSchema()
+    value: _ValueReadSchema = _ValueReadSchema()
+    ki: _KiReadSchema = _KiReadSchema()
+    schmerzen: _SchmerzenReadSchema = _SchmerzenReadSchema()
+    meta: _MetaReadSchema = _MetaReadSchema()
+    kaufsignale: Any = []
+    nogos: Any = []              # Drift: war List[dict] in alten Profilen, jetzt List[str]
+    wettbewerber: Any = []
+    uebergaenge: Any = []
+    techniken: Any = {}
+    einwaende_detail: Any = []
 
 
 # ── Idempotente Migration v1 → v2 ────────────────────────────────────────────
@@ -168,7 +248,7 @@ def _migrate_profile_data(daten: dict) -> dict:
     if not isinstance(daten, dict):
         daten = {}
 
-    version = daten.get('schema_version', 1)
+    version = daten.get('schema_version') or 1    # None-safe: None/0 -> 1
     if version >= 2:
         return daten    # bereits migriert — idempotent
 
@@ -200,6 +280,14 @@ def _migrate_profile_data(daten: dict) -> dict:
     # Sync in ProfileOpener-Tabelle erfolgt in app.py _migrate() (DB-Zugriff dort)
     daten.pop('opener', None)
     daten.pop('pitch', None)
+
+    # ── zielkunde anlegen falls fehlend (neue B2B-Felder D-07) ──────────────
+    if 'zielkunde' not in daten:
+        daten['zielkunde'] = {}
+
+    # ── meta anlegen falls fehlend (D-04 consent_text dual-write) ────────────
+    if not isinstance(daten.get('meta'), dict):
+        daten['meta'] = {}
 
     # ── schema_version setzen ─────────────────────────────────────────────────
     daten['schema_version'] = 2

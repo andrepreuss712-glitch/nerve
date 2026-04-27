@@ -1233,6 +1233,110 @@ def _data_migrate():
 
 _data_migrate()
 
+# ── Phase 08.19: JSON-Daten-Migration aller Profile auf schema_version=2 ─────
+def _migrate_profile_json():
+    """Idempotente Migration aller Profile auf Pydantic v2 ProfileSchema (schema_version=2).
+
+    DB-Advisory-Lock verhindert Multi-Worker-Race-Condition beim Gunicorn-Multi-Worker-Start:
+    - SQLite: isolation_level='EXCLUSIVE' (BEGIN EXCLUSIVE) — erste Worker haelt Exclusive-Lock
+    - PostgreSQL: pg_advisory_xact_lock(819) — Lock bis Commit, dann idempotent skip
+    Weitere Worker warten, pruefen schema_version (>= 2) und ueberspringen (idempotent).
+    """
+    import json as _json3
+    from sqlalchemy import text as _text3
+    try:
+        from services.profile_schema import _migrate_profile_data as _mpd
+    except ImportError as e:
+        print(f"[Schema] _migrate_profile_json: import failed: {e}")
+        return
+
+    _db_url = str(engine.url)
+    _is_sqlite = _db_url.startswith('sqlite')
+
+    # DB-Advisory-Lock: Multi-Worker-Safety
+    # SQLite: BEGIN EXCLUSIVE direkt als Statement (execution_options('EXCLUSIVE') nicht unterstuetzt)
+    # PostgreSQL: pg_advisory_xact_lock(819) als erstes Statement in Transaktion
+    with engine.connect() as conn:
+        if _is_sqlite:
+            try:
+                conn.execute(_text3("BEGIN EXCLUSIVE"))
+            except Exception as _e:
+                print(f"[Schema] _migrate_profile_json: BEGIN EXCLUSIVE failed: {_e}")
+                return
+        else:
+            try:
+                conn.execute(_text3("SELECT pg_advisory_xact_lock(819)"))
+            except Exception as _e:
+                print(f"[Schema] _migrate_profile_json: pg_advisory_xact_lock failed: {_e}")
+                return
+
+        try:
+            _rows = conn.execute(_text3("SELECT id, daten, consent_text FROM profiles")).fetchall()
+        except Exception as e:
+            print(f"[Schema] _migrate_profile_json: SELECT failed: {e}")
+            return
+
+        for _row in _rows:
+            _pid, _daten_str, _db_consent = _row[0], _row[1], _row[2]
+            try:
+                _daten = _json3.loads(_daten_str) if _daten_str else {}
+            except Exception:
+                _daten = {}
+
+            # Idempotenz: schema_version >= 2 -> ueberspringen
+            # None-safe: _daten.get() liefert None wenn Key=None — 'or 1' wandelt in 1 um
+            if isinstance(_daten, dict) and (_daten.get('schema_version') or 1) >= 2:
+                continue
+
+            _opener_text = _daten.get('opener', '') if isinstance(_daten, dict) else ''
+            _pitch_text  = _daten.get('pitch', '')  if isinstance(_daten, dict) else ''
+
+            # ProfileOpener-Sync: SELECT-vor-INSERT (idempotent)
+            try:
+                _existing_opener = conn.execute(
+                    _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid"),
+                    {'pid': _pid}
+                ).scalar()
+                if _existing_opener == 0:
+                    if _opener_text:
+                        conn.execute(
+                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung) VALUES (:pid, :name, :inhalt, 0)"),
+                            {'pid': _pid, 'name': 'Opener', 'inhalt': _opener_text}
+                        )
+                        conn.commit()
+                        print(f"[Schema] Profil {_pid}: opener -> ProfileOpener synced")
+                    if _pitch_text:
+                        conn.execute(
+                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung) VALUES (:pid, :name, :inhalt, 1)"),
+                            {'pid': _pid, 'name': 'Pitch', 'inhalt': _pitch_text}
+                        )
+                        conn.commit()
+                        print(f"[Schema] Profil {_pid}: pitch -> ProfileOpener synced")
+            except Exception as _e:
+                print(f"[Schema] Profil {_pid}: ProfileOpener sync failed: {_e}")
+
+            # consent_text dual-write (D-04): NULL explizit als leerer String (Finding 4)
+            if not isinstance(_daten.get('meta'), dict):
+                _daten['meta'] = {}
+            if not _daten['meta'].get('consent_text'):
+                _daten['meta']['consent_text'] = _db_consent or ''
+
+            _daten = _mpd(_daten)
+
+            try:
+                _new_daten_str = _json3.dumps(_daten, ensure_ascii=False)
+                conn.execute(
+                    _text3("UPDATE profiles SET daten=:d WHERE id=:id"),
+                    {'d': _new_daten_str, 'id': _pid}
+                )
+                conn.commit()
+                print(f"[Schema] Profil {_pid}: migriert auf schema_version=2")
+            except Exception as _e:
+                print(f"[Schema] Profil {_pid}: UPDATE failed: {_e}")
+
+# _migrate_profile_json() wird NACH _seed() und _seed_demo_profiles() aufgerufen
+# (Zeile ~1877) — Profile muessen zuerst existieren bevor migriert werden kann.
+
 # ── NERVE Vertrieb Profile ───────────────────────────────────────────────
 NERVE_DEMO_PROFILE_JSON = json.dumps({
     "beschreibung": "NERVE ist ein KI-gestützter Live-Vertriebsassistent der während echten Verkaufsgesprächen live mithört, Einwände in Echtzeit erkennt und dem Berater sofort passende Gegenargumente, Coaching-Tipps und Kaufsignale auf den Bildschirm liefert. Kein Bot der dem Meeting beitritt — unsichtbar im Hintergrund, nur für den Berater sichtbar.",
@@ -1771,6 +1875,7 @@ def _seed_changelog():
 
 _seed()
 _seed_demo_profiles()
+_migrate_profile_json()   # nach Seed: alle Profile existieren, jetzt migrieren
 _seed_training_scenarios()
 _seed_system_training_scenarios()
 _load_initial_profile()
