@@ -9,6 +9,8 @@ import requests
 import config
 from config import BRAVE_SEARCH_API_KEY
 from services.claude_service import claude_client
+from database.db import get_session
+from database.models import ProfileOpener
 
 BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
 
@@ -39,7 +41,7 @@ Regeln:
 """
 
 
-def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None, user_id=None):
+def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None, user_id=None, profile_id=None):
     """Web-Recherche + Claude-Briefing fuer eine Firma.
     Returns: (briefing_dict, error_msg) — per existing service tuple pattern.
     """
@@ -77,7 +79,7 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten
             return (None, "Keine Suchergebnisse gefunden")
 
         # 2. Claude Haiku Briefing
-        briefing = _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten, user_id=user_id)
+        briefing = _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten, user_id=user_id, profile_id=profile_id)
         if not briefing:
             return (None, "Briefing-Generierung fehlgeschlagen")
 
@@ -123,7 +125,7 @@ def _brave_search(firmenname, ansprechpartner=None, branche=None):
         return None
 
 
-def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten=None, user_id=None):
+def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, profil_daten=None, user_id=None, profile_id=None):
     """Claude Haiku generates compact briefing from search results."""
     search_text = "\n\n".join([
         f"**{r['title']}**\n{r['description']}\nURL: {r['url']}"
@@ -147,12 +149,26 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, pr
             profile_parts.append(f"USPs: {', '.join(basis['usps'])}")
         if zg.get('berufsstatus'):
             profile_parts.append(f"Zielgruppe: {zg['berufsstatus']}")
-        opener = profil_daten.get('opener', '')
-        pitch = profil_daten.get('pitch', '')
-        if opener:
-            profile_parts.append(f"Opener: {opener}")
-        if pitch:
-            profile_parts.append(f"Pitch: {pitch}")
+        # Phase 08.19: opener/pitch aus ProfileOpener-Tabelle lesen (D-01)
+        # profil_daten.get('opener') ist nach Migration leer — canonical: profile_opener-Tabelle
+        # Graceful degradation: kein profile_id oder keine Eintraege = kein Opener-Block (kein Crash)
+        # Neue Profile via wizard_create() haben 0 ProfileOpener-Eintraege — das ist by design
+        if profile_id:
+            try:
+                _db = get_session()
+                try:
+                    _opener_rows = _db.query(ProfileOpener).filter_by(
+                        profile_id=profile_id
+                    ).order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+                    for _op_row in _opener_rows:
+                        if _op_row.inhalt:
+                            _label = _op_row.name or 'Opener'
+                            profile_parts.append(f"{_label}: {_op_row.inhalt}")
+                finally:
+                    _db.close()
+            except Exception as _e:
+                print(f"[PreCall] ProfileOpener-Query fuer Profil {profile_id} fehlgeschlagen: {_e}")
+        # Wenn profile_id=None: kein Opener im Briefing (graceful degradation, kein Crash)
         if profile_parts:
             user_msg += f"\n\nVertriebsprofil des Beraters:\n" + "\n".join(profile_parts)
 
