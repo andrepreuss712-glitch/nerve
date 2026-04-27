@@ -156,12 +156,14 @@ class TestProfileSchemaValidation:
         })
         assert ps.schema_version == 2
 
-    def test_write_schema_wirft_bei_unbekannten_feldern(self):
-        """ProfileSchema (Write) mit extra='forbid' wirft bei unbekannten Feldern."""
+    def test_write_schema_ignoriert_unbekannte_felder(self):
+        """ProfileSchema (extra='ignore') ignoriert unbekannte Felder statt ValidationError zu werfen.
+        Realdata-Kalibrierung 2026-04-27: extra='ignore' erlaubt reale Profile-JSONs mit
+        nicht modellierten Feldern (phasen, einwaende, ki.antwortlaenge etc.) zu validieren.
+        """
         from services.profile_schema import ProfileSchema
-        from pydantic import ValidationError
-        with pytest.raises(ValidationError):
-            ProfileSchema(**{'schema_version': 2, 'UNGUELTIG': 'X'})
+        ps = ProfileSchema(**{'schema_version': 2, 'UNGUELTIG': 'X'})
+        assert ps.schema_version == 2
 
     def test_profile_schema_alle_pflicht_felder_vorhanden(self):
         """ProfileSchema hat alle 6 neuen Felder aus D-07."""

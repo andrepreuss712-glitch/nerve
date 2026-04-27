@@ -24,7 +24,7 @@ Reviews v2 — Enum-Sync-Pflicht:
 """
 from __future__ import annotations
 
-from typing import Any, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict
 
 # ── Unternehmensgroesse Enum ────────────────────────────────────────────────
@@ -38,10 +38,10 @@ ZeithorizontEnum = Literal['sofort', '3_monate', '6_monate', 'kein_druck']
 EinwandTypEnum = Literal['echt', 'vorschiebe', 'unbekannt']
 
 
-# ── Sub-Schemas (Write — extra='forbid') ────────────────────────────────────
+# ── Sub-Schemas (extra='ignore' — real data contains unlisted fields) ───────
 
 class BasisSchema(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     unternehmen: str = ''
     produktbeschreibung: str = ''
     branche: str = ''                        # Enum-Whitelist via routes/profiles.py _normalize_branche()
@@ -60,9 +60,9 @@ class BasisSchema(BaseModel):
 
 class ZielgruppeSchema(BaseModel):
     """Training-relevante Felder (gelesen von _build_coaching_prompt). NICHT eliminieren."""
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     berufsstatus: str = ''
-    beruflicher_hintergrund: str = ''
+    beruflicher_hintergrund: Union[str, List[str]] = ''
     vorwissen: str = ''                      # Training-Pfad: claude_service.py Z.229
     entscheidungsverhalten: List[str] = []   # Training-Pfad: claude_service.py Z.230
     # B2C-Felder eliminiert: alter, einkommensniveau, lebenssituation (D-06)
@@ -70,7 +70,7 @@ class ZielgruppeSchema(BaseModel):
 
 class ZielkundeSchema(BaseModel):
     """Neue B2B-Felder aus 08.18-Literatur-Synthese (D-07)."""
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     unternehmensgroesse: Optional[UnternehmensgroesseEnum] = None   # Pflicht-Wizard-Feld
     buying_committee: str = ''                                        # Detail-Editor
     statusquo: str = ''                                              # Detail-Editor (loest schmerzen.trigger ab)
@@ -78,13 +78,13 @@ class ZielkundeSchema(BaseModel):
 
 
 class ValueSchema(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     roi_argumente: List[str] = []    # Detail-Editor (D-07)
 
 
 class EinwandDetailSchema(BaseModel):
     """Erweitertes Einwand-Objekt im Detail-Editor (einwaende[] als Liste von Dicts)."""
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     einwand: str = ''
     varianten: List[str] = []
     gegenargument: str = ''
@@ -96,7 +96,7 @@ class EinwandDetailSchema(BaseModel):
 
 
 class KiSchema(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     anrede: str = 'Sie'
     ansprache: str = ''
     ton: str = ''           # ki.stil eliminiert — Inhalt geht in ki.ton (D-06)
@@ -106,25 +106,26 @@ class KiSchema(BaseModel):
 
 class SchmerzenSchema(BaseModel):
     """schmerzen.trigger eliminiert (D-06). Inhalte wandern in zielkunde.statusquo."""
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     schmerzpunkte: List[dict] = []
     # trigger eliminiert
 
 
 class MetaSchema(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     firma: str = ''
     rolle: str = ''
     consent_text: str = ''    # D-04 dual-write (liest auch aus profiles.consent_text als Fallback)
 
 
-# ── ProfileSchema (Write — extra='forbid') ──────────────────────────────────
+# ── ProfileSchema (extra='ignore') ──────────────────────────────────────────
 
 class ProfileSchema(BaseModel):
-    """Write-Schema: strict. Wird bei wizard_create() und bearbeiten() POST validiert.
-    extra='forbid' wirft ValidationError bei unbekannten Feldern.
+    """Write-Schema: permissive (extra='ignore'). Wird bei wizard_create() und bearbeiten() POST validiert.
+    Realdata-Kalibrierung 2026-04-27: strict='forbid' ist nicht anwendbar solange Schema die
+    realen Profile-Felder nicht vollstaendig abbildet. Strict-Mode kommt in Phase 08.19.1.
     """
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='ignore')
     schema_version: int = 2
     basis: BasisSchema = BasisSchema()
     zielgruppe: ZielgruppeSchema = ZielgruppeSchema()
@@ -134,7 +135,7 @@ class ProfileSchema(BaseModel):
     schmerzen: SchmerzenSchema = SchmerzenSchema()
     meta: MetaSchema = MetaSchema()
     kaufsignale: List[dict] = []
-    nogos: List[str] = []
+    nogos: Union[List[str], List[Dict[str, Any]]] = []
     wettbewerber: List[dict] = []
     uebergaenge: List[dict] = []
     techniken: dict = {}
