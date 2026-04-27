@@ -250,6 +250,7 @@
 
 {% block content %}
 <form id="editorForm" method="post" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="daten_json" id="daten_json">
   <input type="hidden" name="name" id="f_name">
   <input type="hidden" name="branche" id="f_branche">

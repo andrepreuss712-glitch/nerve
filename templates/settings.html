@@ -404,6 +404,7 @@
         Tarif wechseln, Zahlungsmethode ändern oder Rechnungen einsehen — alles über das Stripe Kundenportal.
       </p>
       <form action="/payments/portal" method="POST" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="n-btn n-btn-primary">Abo verwalten</button>
       </form>
     </div>

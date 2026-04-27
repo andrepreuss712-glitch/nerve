@@ -258,6 +258,7 @@
   </div>
 
   <form method="POST" action="{{ url_for('profiles.wizard_create') }}" id="wizardForm" onsubmit="return validateSubmit()">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <!-- STEP 1: Branche & Rolle -->
     <div class="wizard-step" id="step-1">

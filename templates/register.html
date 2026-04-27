@@ -35,6 +35,7 @@
     {% endfor %}
   {% endwith %}
   <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="token" value="{{ token }}">
     <label>E-Mail</label>
     <input type="email" name="email" value="{{ inv.email }}" readonly>

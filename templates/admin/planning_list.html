@@ -12,6 +12,7 @@
       <td>{{ link.created_at }}</td>
       <td>
         <form method="post" style="display:flex;gap:6px">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="id" value="{{ link.id }}">
           <select name="status">
             <option value="backlog" {% if link.planning_status=='backlog' %}selected{% endif %}>backlog</option>

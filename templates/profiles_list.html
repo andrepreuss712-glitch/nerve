@@ -132,6 +132,7 @@ option{background:var(--page-bg)}
       <div class="profile-card-actions">
         {% if not (active_id and p.id == active_id) %}
         <form method="post" action="/profiles/{{ p.id }}/activate" style="margin:0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="n-btn n-btn-primary n-btn-sm" type="submit">Aktivieren</button>
         </form>
         {% endif %}
@@ -139,6 +140,7 @@ option{background:var(--page-bg)}
         <a href="/profiles/{{ p.id }}/edit" class="n-btn n-btn-ghost n-btn-sm">Bearbeiten</a>
         <form method="post" action="/profiles/{{ p.id }}/delete" style="margin:0"
               onsubmit="return confirm('Profil löschen?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="n-btn n-btn-ghost n-btn-sm" type="submit">Löschen</button>
         </form>
         {% endif %}

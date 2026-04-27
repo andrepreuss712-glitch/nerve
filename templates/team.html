@@ -89,11 +89,13 @@
             {% if u.rolle != 'owner' and u.id != session.get('user_id') %}
               {% if u.aktiv %}
               <form method="post" action="/org/user/{{ u.id }}/deactivate" style="margin:0;display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-danger btn-xs" type="submit"
                         onclick="return confirm('User deaktivieren?')">Deaktivieren</button>
               </form>
               {% else %}
               <form method="post" action="/org/user/{{ u.id }}/reactivate" style="margin:0;display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-secondary btn-xs" type="submit">Reaktivieren</button>
               </form>
               {% endif %}
@@ -116,6 +118,7 @@
         {{ inv.erstellt_am.strftime('%d.%m.%Y') if inv.erstellt_am else '' }}
       </span>
       <form method="post" action="/org/invite/{{ inv.id }}/revoke" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn btn-danger btn-xs" type="submit">Widerrufen</button>
       </form>
     </div>
@@ -172,6 +175,7 @@
   <div class="invite-section">
     <div class="invite-title">Mitarbeiter einladen</div>
     <form method="post" action="/org/invite">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="invite-form">
         <input type="email" name="email" class="form-input" placeholder="E-Mail-Adresse" required>
         <button type="submit" class="btn btn-primary">Einladung senden</button>
