@@ -190,8 +190,40 @@ def bearbeiten(pid):
             p.name    = request.form.get('name', p.name).strip()
             # Phase 08 D-09: branche gegen VALID_BRANCHE whitelisten. Fallback 'sonstiges'.
             p.branche = _normalize_branche(request.form.get('branche', p.branche or ''))
-            p.daten   = daten_json
-            p.consent_text = request.form.get('consent_text', p.consent_text or '').strip() or None
+            # Phase 08.19 Reviews v2: consent_text dual-write (D-04) + Finding 2 (migrate before validate) + Finding 3 (ValidationError 400)
+
+            # Schritt 1: neuen consent_text aus Form lesen
+            _new_consent = request.form.get('consent_text', p.consent_text or '').strip() or None
+
+            # Schritt 2: daten_json aus Form parsen (daten_json wurde bereits oben aus request.form gelesen)
+            try:
+                _daten_neue = json.loads(daten_json) if daten_json else {}
+            except Exception:
+                _daten_neue = {}
+
+            # Schritt 2b: Finding 2 — v1->v2 Altlasten-Stripping VOR Write-Validation
+            # Entfernt opener/pitch + B2C-Felder bevor extra='forbid' validiert (verhindert false-positive 400)
+            _daten_neue = _migrate_profile_data(_daten_neue)
+
+            # Schritt 3: Finding 3 — Pydantic Write-Validation, ValidationError -> HTTP 400 (kein 500)
+            try:
+                ProfileSchema.model_validate(_daten_neue)
+            except ValidationError as _ve:
+                flash(f"Profil-Daten ungültig ({_ve.error_count()} Fehler) — bitte Eingabe prüfen.", 'error')
+                db.rollback()
+                return redirect(url_for('profiles.bearbeiten', pid=p.id))
+
+            # Schritt 4: consent_text in daten.meta schreiben (JSON-Side des dual-write)
+            if not isinstance(_daten_neue.get('meta'), dict):
+                _daten_neue['meta'] = {}
+            _daten_neue['meta']['consent_text'] = _new_consent or ''  # NULL -> '' (Finding 4)
+
+            # Schritt 5: aktualisiertes daten-JSON in DB schreiben
+            p.daten = json.dumps(_daten_neue, ensure_ascii=False)
+
+            # Schritt 6: DB-Column setzen (bleibt in 08.19 erhalten — DB-Column-Drop in spaeterer Phase)
+            p.consent_text = _new_consent
+
             db.commit()
             log_action(db, g.user.id, g.org.id, 'profile_update',
                        target_type='profile', target_id=p.id,
