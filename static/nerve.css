@@ -357,6 +357,11 @@
   --sidebar-hover:        rgba(255,255,255,0.06);
   --badge-bg:             rgba(255,255,255,0.04);
   --card-hover:           rgba(255,255,255,0.02);
+
+  /* Semantic state colors — added in 08.19.2 */
+  --success-green:  #22c55e;   /* Save-Toast, Erfolg-Indikatoren */
+  --danger-red:     #EF4444;   /* Delete-Buttons, Fehler-Borders */
+  --info-blue:      #4899c8;   /* btn-add Basis-Farbe */
 }
 
 
