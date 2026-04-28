@@ -2384,11 +2384,11 @@ input[type="range"].perf-slider::-moz-range-thumb {
   justify-content: center;
   width: 16px; height: 16px; min-width: 16px;
   margin-left: 6px;
-  border: 1px solid var(--n-border, #2D3748);
+  border: 1px solid #00D4AA;
   border-radius: 50%;
   background: #F3F4F6;
-  color: #1C2333;
-  font-size: 11px;
+  color: #00D4AA;
+  font-size: 12px;
   font-weight: 700;
   cursor: help;
   user-select: none;
@@ -2400,10 +2400,10 @@ input[type="range"].perf-slider::-moz-range-thumb {
 }
 .tip-icon:hover,
 .tip-icon:focus {
-  background: var(--n-accent, #00D4AA);
+  background: #00D4AA;
   color: #0D1117;
   outline: none;
-  border-color: var(--n-accent, #00D4AA);
+  border-color: #00D4AA;
 }
 
 /* Tooltip-Container (global singleton) — 3-Block-Pattern (D-16).
@@ -2600,7 +2600,7 @@ input[type="range"].perf-slider::-moz-range-thumb {
 .field-desc {
   font-size: 12px;
   font-weight: 400;
-  color: var(--page-text-muted);
+  color: var(--page-text-color);
   line-height: 1.5;
   margin-top: 3px;
   margin-bottom: 5px;
@@ -2608,9 +2608,9 @@ input[type="range"].perf-slider::-moz-range-thumb {
 }
 
 .sec-hint {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--page-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--page-text-color);
   line-height: 1.5;
   margin-bottom: 16px;
   display: block;

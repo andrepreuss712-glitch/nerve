@@ -32,6 +32,20 @@
     var usedEl = row.querySelector('.faq-used-count');
     if (usedEl) usedEl.textContent = (faq.used_count || 0) + '\u00d7';
 
+    // Accordion toggle
+    var hd = row.querySelector('.faq-hd');
+    var lbl = row.querySelector('.faq-lbl');
+    var chev = row.querySelector('.acc-chevron');
+    if (lbl && faq.frage_muster) lbl.textContent = faq.frage_muster.slice(0, 40) || 'Frage';
+    if (hd) {
+      hd.addEventListener('click', function() {
+        var body = row.querySelector('.faq-fields');
+        if (!body) return;
+        var collapsed = body.classList.toggle('collapsed');
+        if (chev) chev.textContent = collapsed ? '\u25b8' : '\u25be';
+      });
+    }
+
     // Autosave on blur/change
     var fields = ['.faq-frage', '.faq-antwort', '.faq-kategorie'];
     fields.forEach(function (sel) {

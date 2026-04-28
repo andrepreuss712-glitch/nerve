@@ -210,17 +210,35 @@
 .urow { display: grid; grid-template-columns: 1fr auto 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; border: 2px solid var(--glass-border-hover); border-radius: 6px; padding: 8px; }
 .u-arrow { color: var(--page-text-muted); font-size: 15px; flex-shrink: 0; }
 
-/* ── CRUD Cards (Skripte / Opener) ───────────────────────────────── */
+/* ── CRUD Cards (Skripte / Opener / Erlaubnis / Pitch) ───────────── */
 .crud-card {
   background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;
-  padding: 10px 14px; display: flex; flex-direction: column; gap: 6px;
+  padding: 0; overflow: hidden;
 }
-.crud-card input { background: transparent; border: none; font-weight: 600; font-size: 13px; color: #1a1a1a; outline: none; font-family: inherit; width: 100%; }
-.crud-card textarea { background: transparent; border: 1px solid transparent; border-radius: 4px; font-size: 12px; color: var(--page-text-secondary); resize: vertical; min-height: 48px; outline: none; padding: 4px 6px; font-family: inherit; width: 100%; }
+.crud-hd {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  cursor: pointer; user-select: none;
+}
+.crud-hd input {
+  background: transparent; border: none; font-weight: 600; font-size: 13px;
+  color: #1a1a1a; outline: none; font-family: inherit; flex: 1; cursor: text;
+}
+.crud-chevron { flex-shrink: 0; color: var(--page-text-muted); font-size: 12px; }
+.crud-body { display: none; padding: 0 14px 10px; display: flex; flex-direction: column; gap: 6px; }
+.crud-body.collapsed { display: none; }
+.crud-card textarea {
+  background: transparent; border: 1px solid transparent; border-radius: 4px;
+  font-size: 12px; color: var(--page-text-secondary); resize: vertical;
+  min-height: 48px; outline: none; padding: 4px 6px; font-family: inherit; width: 100%;
+}
 .crud-card textarea:focus { border-color: #00D4AA; }
 .crud-card .crud-actions { display: flex; justify-content: flex-end; }
 .crud-card .crud-del { background: none; border: none; color: #EF4444; font-size: 11px; cursor: pointer; font-family: inherit; }
 .crud-card .crud-del:hover { text-decoration: underline; }
+
+/* ── Collapsible block bodies (Schmerz / Fragen) ─────────────────── */
+.acc-body { display: grid; gap: 10px; }
+.acc-body.collapsed { display: none; }
 {% endblock %}
 
 {% block content %}
@@ -394,24 +412,17 @@
           </div>
         </div>
         <div class="fg">
-          <label class="fl">Vorwissen <i class="tip-icon" data-tip="Wie gut kennt deine Zielgruppe das Thema bereits?">?</i></label>
-          <div class="radio-row">
-            <label><input type="radio" name="vorwissen" value="gering"> Gering</label>
-            <label><input type="radio" name="vorwissen" value="mittel" checked> Mittel</label>
-            <label><input type="radio" name="vorwissen" value="hoch"> Hoch</label>
-          </div>
-        </div>
-        <div class="fg">
           <label class="fl">Entscheidungsverhalten <i class="tip-icon" data-tip="Entscheidet der Kunde schnell oder braucht er Zeit? Allein oder mit Partner?">?</i></label>
           <div class="tag-container" id="entscheidung-tags" onclick="focusTagInput('entscheidung-tags')">
             <input class="tag-input" placeholder="z.B. braucht Zahlen, entscheidet schnell …" onkeydown="tagKeydown(event,'entscheidung-tags')">
           </div>
         </div>
 
-        <!-- ehemals sec-schmerzen (Slider-Block entfernt per D-03) -->
+        <!-- Painpoints (ehemals sec-schmerzen) -->
+        <div class="sec-title" style="font-size:14px;margin-bottom:6px;margin-top:18px">Painpoints</div>
         <p class="field-desc">Die größten Probleme deiner Kunden — NERVE priorisiert Gegenargumente danach.</p>
         <div id="schmerz-list"></div>
-        <button type="button" class="btn-add" onclick="addSchmerz()">+ Schmerzpunkt hinzufügen</button>
+        <button type="button" class="btn-add" onclick="addSchmerz()">+ Painpoint hinzufügen</button>
       </div>
 
       <!-- ③ Gesprächsleitfaden (enthält ehemalige sec-leitfaden + sec-phasen) -->
@@ -423,27 +434,27 @@
         <p class="sec-hint">Opener, Pitch und Phasen helfen NERVE zu erkennen wo du im Gespräch stehst und was als nächstes kommt.</p>
 
         <div class="fg erlaubnis-entry">
-          <label class="fl">Erlaubnisfrage <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis fuer das Gespraech? Der Satz nach dem Opener.">?</i></label>
+          <label class="fl">Erlaubnisfrage <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis für das Gespräch? Der Satz nach dem Opener.">?</i></label>
           <p class="field-desc">Frage die du nach dem Opener stellst um Gesprächsbereitschaft zu sichern.</p>
           <div id="erlaubnis-list" class="pe-entry-list"></div>
           <button type="button" class="btn-add" id="btn-add-erlaubnis">+ Erlaubnisfrage hinzufügen</button>
         </div>
         <div class="fg pitch-entry">
-          <label class="fl">Pitch <i class="tip-icon" data-tip="Dein Kernpitch in 2-3 Saetzen. Was sagst du wenn der Kunde sagt 'Erzaehlen Sie mal'?">?</i></label>
+          <label class="fl">Pitch <i class="tip-icon" data-tip="Dein Kernpitch in 2-3 Sätzen. Was sagst du wenn der Kunde sagt 'Erzählen Sie mal'?">?</i></label>
           <p class="field-desc">Dein Kern-Pitch — 1-2 Sätze warum dein Produkt relevant ist.</p>
           <div id="pitch-list" class="pe-entry-list"></div>
           <button type="button" class="btn-add" id="btn-add-pitch">+ Pitch hinzufügen</button>
         </div>
         <div class="fg" style="margin-top:18px">
-          <label class="fl">Skripte <i class="tip-icon" data-tip="Erstelle mehrere Gespraechsskripte fuer verschiedene Szenarien. Im Launcher waehlst du vor dem Call das passende aus.">?</i></label>
+          <label class="fl">Skripte <i class="tip-icon" data-tip="Erstelle mehrere Gesprächsskripte für verschiedene Szenarien. Im Launcher wählst du vor dem Call das passende aus.">?</i></label>
           <div id="skripte-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-add" id="btn-add-skripte" style="margin-top:8px">+ Skript hinzufuegen</button>
+          <button type="button" class="btn-add" id="btn-add-skripte" style="margin-top:8px">+ Skript hinzufügen</button>
         </div>
         <div class="fg" style="margin-top:18px">
-          <label class="fl">Opener-Sammlung <i class="tip-icon" data-tip="Sammle verschiedene Opener-Saetze. Im Launcher waehlst du vor dem Call den passenden aus.">?</i></label>
+          <label class="fl">Opener <i class="tip-icon" data-tip="Sammle verschiedene Opener-Sätze. Im Launcher wählst du vor dem Call den passenden aus.">?</i></label>
           <p class="field-desc">Dein bevorzugter Gesprächseinstieg. Mehrere Varianten möglich.</p>
           <div id="opener-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-add" id="btn-add-opener" style="margin-top:8px">+ Opener hinzufuegen</button>
+          <button type="button" class="btn-add" id="btn-add-opener" style="margin-top:8px">+ Opener hinzufügen</button>
         </div>
 
         <!-- ehemals sec-phasen -->
@@ -485,7 +496,7 @@
           <div class="sec-title" style="font-size:14px;margin-bottom:8px">FAQ-Datenbank
             <span class="tip-icon" data-tip="Wenn ein Kunde eine dieser Fragen stellt, schlägt NERVE die hinterlegte Antwort vor. Die Antwort wird direkt im Gespräch vorgeschlagen — ohne KI-Umformulierung." tabindex="0">?</span>
           </div>
-          <p style="font-size:12px;color:var(--page-text-muted);margin-bottom:16px">
+          <p class="field-desc" style="margin-bottom:16px">
             Trage die Fragen ein, die Ihre Kunden häufig stellen, und die gewünschten Antworten. NERVE erkennt die Frage automatisch und schlägt die passende Antwort vor.
           </p>
 
@@ -496,7 +507,11 @@
           <!-- Template (hidden) for rendering a single FAQ row -->
           <template id="tpl-faq-row">
             <div class="faq-row block" data-faq-id="">
-              <div class="faq-fields">
+              <div class="block-hd faq-hd" style="cursor:pointer">
+                <span class="block-lbl faq-lbl">Frage</span>
+                <span class="acc-chevron" style="margin-left:auto;color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
+              </div>
+              <div class="faq-fields acc-body collapsed">
                 <div class="frow frow-2" style="margin-bottom:10px">
                   <div class="fg" style="margin:0">
                     <label class="fl">Kundenfrage</label>
@@ -655,36 +670,14 @@
           <input type="text" class="fi" id="vi_ton_flex" style="display:none;margin-top:6px"
                  placeholder="Beschreibe deinen eigenen Stil …" />
         </div>
-        <div class="frow frow-2">
-          <div class="fg">
-            <label class="fl">Ansprache (Vorauswahl)
-              <span class="fl-hint" title="Dies ist nur die Vorauswahl für neue Anrufe. Die endgültige Wahl erfolgt beim Start des Gesprächs im Skript-Auswahl-Schritt."> (i)</span>
-            </label>
-            <div class="radio-row">
-              <label><input type="radio" name="ki_ansprache" value="Du" id="ki_du"> Du</label>
-              <label><input type="radio" name="ki_ansprache" value="Sie" id="ki_sie"> Sie</label>
-            </div>
-            <div class="fl-desc" style="font-size:12px;color:var(--page-text-muted);margin-top:4px;">
-              Wird beim Start jedes Anrufs vorausgewählt. Sie können die Anrede pro Gespräch im Skript-Auswahl-Schritt ändern.
-            </div>
-          </div>
-          <div class="fg">
-            <label class="fl">Antwortlänge <i class="tip-icon" data-tip="Wie lang sollen die Gegenargumente sein?">?</i></label>
-            <select class="fs" id="vi_antwortlaenge">
-              <option value="1 Satz">1 Satz</option>
-              <option value="2-3 Sätze" selected>2-3 Sätze</option>
-              <option value="3-4 Sätze">3-4 Sätze</option>
-              <option value="4-5 Sätze">4-5 Sätze</option>
-            </select>
-          </div>
-          <div class="fg">
-            <label class="fl">Sensitivität <i class="tip-icon" data-tip="Wie empfindlich soll NERVE auf mögliche Einwände reagieren?">?</i></label>
-            <select class="fs" id="vi_sensitivitaet">
-              <option value="niedrig">Niedrig</option>
-              <option value="mittel" selected>Mittel</option>
-              <option value="hoch">Hoch</option>
-            </select>
-          </div>
+        <div class="fg">
+          <label class="fl">Antwortlänge <i class="tip-icon" data-tip="Wie lang sollen die Gegenargumente sein?">?</i></label>
+          <select class="fs" id="vi_antwortlaenge">
+            <option value="1 Satz">1 Satz</option>
+            <option value="2-3 Sätze" selected>2-3 Sätze</option>
+            <option value="3-4 Sätze">3-4 Sätze</option>
+            <option value="4-5 Sätze">4-5 Sätze</option>
+          </select>
         </div>
         <!-- Phase 08 D-12: zusatz Label-Aenderung, DB-Key bleibt 'zusatz' -->
         <div class="fg">
@@ -701,7 +694,7 @@
         <div class="fg" style="margin-top:16px">
           <label class="fl">Consent-Vorlesetext (Meeting-Modus)</label>
           <textarea id="consent_text" name="consent_text" class="fta" rows="3"
-            placeholder="Herr/Frau [Name], kurzer Hinweis -- ich mache mir waehrend unseres Gespraechs digitale Notizen. Ist das fuer Sie in Ordnung?"
+            placeholder="Herr/Frau [Name], kurzer Hinweis — ich mache mir während unseres Gesprächs digitale Notizen. Ist das für Sie in Ordnung?"
           >{{ profile.consent_text or '' }}</textarea>
           <small style="color:rgba(255,255,255,0.4);font-size:12px">
             Wird im PiP vor Meeting-Calls vorgelesen. [Name] wird automatisch ersetzt. Leer = Standard-Text.
@@ -878,23 +871,35 @@ function getTags(cid){
   return [...document.querySelectorAll(`#${cid} .tag-text`)].map(s=>s.textContent.trim()).filter(Boolean);
 }
 
-/* ── Schmerzpunkte ────────────────────────────────────────────────── */
+/* ── Generic accordion toggle ─────────────────────────────────────── */
+function toggleBlock(block){
+  const body=block.querySelector('.acc-body');
+  if(!body) return;
+  const collapsed=body.classList.toggle('collapsed');
+  const chev=block.querySelector('.acc-chevron');
+  if(chev) chev.textContent=collapsed?'▸':'▾';
+}
+
+/* ── Painpoints ────────────────────────────────────────────────────── */
 function addSchmerz(d={}){
   const c=document.getElementById('schmerz-list');
   const idx=c.children.length+1;
   const b=document.createElement('div');
   b.className='block';
   b.innerHTML=`
-<div class="block-hd">
-  <span class="block-lbl">Schmerzpunkt ${idx}</span>
-  <button type="button" class="btn-rm" onclick="this.closest('.block').remove();renumBlocks('schmerz-list','Schmerzpunkt')">✕</button>
+<div class="block-hd" onclick="toggleBlock(this.parentElement)" style="cursor:pointer">
+  <span class="block-lbl">Painpoint ${idx}</span>
+  <span class="acc-chevron" style="margin-left:auto;color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
+  <button type="button" class="btn-rm" onclick="event.stopPropagation();this.closest('.block').remove();renumBlocks('schmerz-list','Painpoint')">✕</button>
 </div>
+<div class="acc-body collapsed">
 <div class="fg"><label class="fl">Situation ${ti('In welcher konkreten Situation befindet sich der Kunde?')}</label>
   <textarea class="fta" data-sp="situation" style="min-height:52px" placeholder="Konkrete Situation des Kunden …">${esc(d.situation)}</textarea></div>
 <div class="fg"><label class="fl">Emotionaler Kern ${ti('Was ist die eigentliche Angst dahinter?')}</label>
   <input class="fi" data-sp="kern" placeholder="Die eigentliche Angst …" value="${esc(d.kern)}"></div>
 <div class="fg" style="margin:0"><label class="fl">Wie verstärken ${ti('Welche Frage oder welches Argument macht diesen Schmerz spürbar?')}</label>
-  <textarea class="fta" data-sp="verstaerken" style="min-height:52px" placeholder="Frage oder Argument das den Schmerz spürbar macht …">${esc(d.verstaerken)}</textarea></div>`;
+  <textarea class="fta" data-sp="verstaerken" style="min-height:52px" placeholder="Frage oder Argument das den Schmerz spürbar macht …">${esc(d.verstaerken)}</textarea></div>
+</div>`;
   c.appendChild(b);
 }
 function getSchmerzen(){
@@ -959,6 +964,7 @@ function addEinwand(d={}){
 <div class="block-hd" onclick="toggleEW(this.parentElement)" style="cursor:pointer">
   <span class="block-lbl">Einwand ${idx}</span>
   <span class="einwand-preview">${esc(d.kategorie||d.typ||'Kategorie wählen')}</span>
+  <span class="acc-chevron" style="color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
   <button type="button" class="btn-rm" onclick="event.stopPropagation();this.closest('.block').remove();renumEW()">✕</button>
 </div>
 <div class="einwand-body collapsed">
@@ -977,7 +983,11 @@ function addEinwand(d={}){
 </div>`;
   c.appendChild(b);
 }
-function toggleEW(block){ block.querySelector('.einwand-body').classList.toggle('collapsed'); }
+function toggleEW(block){
+  const collapsed=block.querySelector('.einwand-body').classList.toggle('collapsed');
+  const chev=block.querySelector('.acc-chevron');
+  if(chev) chev.textContent=collapsed?'▸':'▾';
+}
 function renumEW(){
   [...document.querySelectorAll('#einwaende-list .block')].forEach((b,i)=>{
     b.querySelector('.block-lbl').textContent='Einwand '+(i+1);
@@ -996,17 +1006,22 @@ function getEinwaende(){
 /* ── Häufige Fragen ────────────────────────────────────────────────── */
 function addFrage(d={}){
   const c=document.getElementById('fragen-list');
+  const idx=c.children.length+1;
   const b=document.createElement('div');
   b.className='block';
   b.innerHTML=`
+<div class="block-hd" onclick="toggleBlock(this.parentElement)" style="cursor:pointer">
+  <span class="block-lbl">Frage ${idx}</span>
+  <span class="acc-chevron" style="margin-left:auto;color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
+  <button type="button" class="btn-rm" onclick="event.stopPropagation();this.closest('.block').remove()">✕</button>
+</div>
+<div class="acc-body collapsed">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
   <div class="fg" style="margin:0"><label class="fl">Frage ${ti('Was fragen Kunden oft — auch wenn es kein Einwand ist.')}</label>
-    <textarea class="fta" data-fq="frage" style="min-height:52px" placeholder="Häufige Kundenfrage …">${esc(d.frage)}</textarea></div>
+    <textarea class="fta" data-fq="frage" style="min-height:52px" placeholder="Häufige Kundenfrage …">${esc(d.frage||'')}</textarea></div>
   <div class="fg" style="margin:0"><label class="fl">Ideale Antwort ${ti('Wie antwortest du am besten darauf?')}</label>
-    <textarea class="fta" data-fq="antwort" style="min-height:52px" placeholder="Mustergültige Antwort …">${esc(d.antwort)}</textarea></div>
+    <textarea class="fta" data-fq="antwort" style="min-height:52px" placeholder="Mustergültige Antwort …">${esc(d.antwort||'')}</textarea></div>
 </div>
-<div style="display:flex;justify-content:flex-end;margin-top:8px">
-  <button type="button" class="btn-rm" onclick="this.closest('.block').remove()">✕ Entfernen</button>
 </div>`;
   c.appendChild(b);
 }
@@ -1146,7 +1161,6 @@ function buildAndSubmit(){
       einkommensniveau:document.getElementById('vi_einkommen').value.trim(),
       lebenssituation:document.getElementById('vi_lebenssituation').value.trim(),
       beruflicher_hintergrund:getTags('hintergrund-tags'),
-      vorwissen:document.querySelector('input[name="vorwissen"]:checked')?.value||'mittel',
       entscheidungsverhalten:getTags('entscheidung-tags'),
     },
     schmerzen:{
@@ -1166,9 +1180,7 @@ function buildAndSubmit(){
     uebergaenge:getUebergaenge(),
     ki:{
       ton: tonValue,
-      ansprache:document.querySelector('input[name="ki_ansprache"]:checked')?.value||'Du',
       antwortlaenge:document.getElementById('vi_antwortlaenge').value,
-      sensitivitaet:document.getElementById('vi_sensitivitaet').value,
       zusatz:document.getElementById('vi_zusatz').value.trim(),
     }
   };
@@ -1216,17 +1228,47 @@ function crudList(containerId, endpoint, label) {
     var card = document.createElement('div');
     card.className = 'crud-card';
     card.dataset.id = item.id;
-    card.innerHTML = [
-      '<input type="text" value="' + item.name.replace(/"/g, '&quot;') + '" placeholder="Name">',
-      '<div class="crud-actions"><button type="button" class="crud-del">Loeschen</button></div>'
-    ].join('');
-    var inhaltTa = document.createElement('textarea');
-    inhaltTa.placeholder = 'Inhalt...';
-    inhaltTa.value = item.inhalt || '';
-    card.insertBefore(inhaltTa, card.querySelector('.crud-actions'));
 
-    var nameInput = card.querySelector('input');
-    var delBtn = card.querySelector('.crud-del');
+    var hd = document.createElement('div');
+    hd.className = 'crud-hd';
+
+    var nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = item.name || '';
+    nameInput.placeholder = 'Name';
+    nameInput.addEventListener('click', function(e){ e.stopPropagation(); });
+
+    var chevron = document.createElement('span');
+    chevron.className = 'crud-chevron';
+    chevron.textContent = '▸';
+
+    hd.appendChild(nameInput);
+    hd.appendChild(chevron);
+    hd.addEventListener('click', function() {
+      var body = card.querySelector('.crud-body');
+      var collapsed = body.classList.toggle('collapsed');
+      chevron.textContent = collapsed ? '▸' : '▾';
+    });
+
+    var body = document.createElement('div');
+    body.className = 'crud-body collapsed';
+
+    var inhaltTa = document.createElement('textarea');
+    inhaltTa.placeholder = 'Inhalt …';
+    inhaltTa.value = item.inhalt || '';
+
+    var actions = document.createElement('div');
+    actions.className = 'crud-actions';
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'crud-del';
+    delBtn.textContent = 'Löschen';
+    actions.appendChild(delBtn);
+
+    body.appendChild(inhaltTa);
+    body.appendChild(actions);
+    card.appendChild(hd);
+    card.appendChild(body);
 
     function save() {
       fetch(endpoint + '/' + item.id, {
@@ -1242,7 +1284,7 @@ function crudList(containerId, endpoint, label) {
     inhaltTa.addEventListener('blur', save);
 
     delBtn.addEventListener('click', function() {
-      if (!confirm('Wirklich loeschen?')) return;
+      if (!confirm('Wirklich löschen?')) return;
       fetch(endpoint + '/' + item.id, {method: 'DELETE', headers: {'X-CSRFToken': _getCsrfToken()}})
         .then(function() { card.remove(); })
         .catch(function() {});
@@ -1275,6 +1317,11 @@ function crudList(containerId, endpoint, label) {
         .then(function(item) {
           var card = renderItem(item);
           container.appendChild(card);
+          // Auto-expand new card
+          var body = card.querySelector('.crud-body');
+          var chev = card.querySelector('.crud-chevron');
+          if (body) body.classList.remove('collapsed');
+          if (chev) chev.textContent = '▾';
           card.querySelector('input').focus();
           var toast = document.querySelector('.save-toast');
           if (toast) { toast.style.display = 'inline'; setTimeout(function(){ toast.style.display = 'none'; }, 2000); }
@@ -1307,8 +1354,6 @@ function init(){
     setVal('vi_einkommen',zg.einkommensniveau);
     setVal('vi_lebenssituation',zg.lebenssituation);
     (zg.beruflicher_hintergrund||[]).forEach(t=>addTag('hintergrund-tags',t));
-    const vw=document.querySelector(`input[name="vorwissen"][value="${zg.vorwissen||'mittel'}"]`);
-    if(vw) vw.checked=true;
     (zg.entscheidungsverhalten||[]).forEach(t=>addTag('entscheidung-tags',t));
     const sch=DATEN.schmerzen||{};
     (sch.schmerzpunkte||[]).forEach(s=>addSchmerz(s));
@@ -1375,10 +1420,7 @@ function init(){
     }
   }
 
-  if(ki.ansprache==='Sie') document.getElementById('ki_sie').checked=true;
-  else document.getElementById('ki_du').checked=true;
   setSelect('vi_antwortlaenge',ki.antwortlaenge||'2-3 Sätze');
-  setSelect('vi_sensitivitaet',ki.sensitivitaet||'mittel');
   setVal('vi_zusatz',ki.zusatz);
 }
 
