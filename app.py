@@ -882,9 +882,11 @@ def _migrate():
                         {'p': _provider, 'm': _model, 'u': _unit}
                     ).fetchone()
                     if not _exists:
+                        from datetime import datetime as _dt
+                        _now = _dt.utcnow()
                         _conn.execute(
-                            text("INSERT INTO api_rates (provider, model, unit_type, price_per_unit, currency, active, source_url) VALUES (:p,:m,:u,:price,:cur,1,'seed:2026-04-27')"),
-                            {'p': _provider, 'm': _model, 'u': _unit, 'price': _price, 'cur': _currency}
+                            text("INSERT INTO api_rates (provider, model, unit_type, price_per_unit, currency, active, source_url, last_checked_at, created_at) VALUES (:p,:m,:u,:price,:cur,1,'seed:2026-04-27',:now,:now)"),
+                            {'p': _provider, 'm': _model, 'u': _unit, 'price': _price, 'cur': _currency, 'now': _now}
                         )
                         print(f"[DB] ApiRate seeded: {_model} {_unit}")
                 _conn.commit()
