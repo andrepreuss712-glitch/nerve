@@ -260,8 +260,6 @@
     <button type="button" class="back-link" onclick="window.location='/profiles'">← Profile</button>
     <input id="vi_name" class="topbar-name" placeholder="Profilname *" required
       value="{{ profile.name if profile else '' }}">
-    <a href="#" class="beispiel-link" onclick="openBeispiel();return false"
-       aria-label="Beispiel-Profil anzeigen">Sieh dir ein ausgefülltes Beispiel an</a>
     <button type="button" id="main-save-btn" class="save-btn" onclick="buildAndSubmit()">Speichern</button>
     <span class="save-toast" style="display:none">✓ Gespeichert</span>
   </div>
