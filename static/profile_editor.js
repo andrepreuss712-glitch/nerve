@@ -332,9 +332,9 @@ function confirmDelete(callback, label) {
 
     var delBtn = document.createElement('button');
     delBtn.type = 'button';
-    delBtn.className = 'tabu-del-btn';
-    delBtn.textContent = '\u00d7';
-    delBtn.style.cssText = 'background:transparent;border:none;color:#9CA3AF;cursor:pointer;font-size:18px;padding:4px 6px;line-height:1;flex-shrink:0;';
+    delBtn.className = 'btn-trash';
+    delBtn.title = 'L\u00f6schen';
+    delBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
     delBtn.addEventListener('click', function () {
       row.remove();
       validateTabuRows();
