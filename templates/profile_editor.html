@@ -501,7 +501,11 @@
             <div class="faq-row block" data-faq-id="">
               <div class="block-hd faq-hd" style="cursor:pointer">
                 <span class="block-lbl faq-lbl">Frage</span>
-                <span class="acc-chevron" style="margin-left:auto;color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
+                <span class="faq-used-count faq-count" title="Wie oft wurde diese Antwort im Gespräch vorgeschlagen" style="margin-left:auto;font-size:11px;color:var(--page-text-muted)">0×</span>
+                <button type="button" class="btn-trash faq-delete" title="Löschen" style="flex-shrink:0">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+                <span class="acc-chevron" style="color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
               </div>
               <div class="faq-fields acc-body collapsed">
                 <div class="frow frow-2" style="margin-bottom:10px">
@@ -525,12 +529,6 @@
                       <option value="Produkt">Produkt</option>
                       <option value="Sonstiges" selected>Sonstiges</option>
                     </select>
-                  </div>
-                  <div class="faq-meta" style="display:flex;align-items:center;gap:12px;margin-top:18px">
-                    <span class="faq-used-count faq-count" title="Wie oft wurde diese Antwort im Gespräch vorgeschlagen">0×</span>
-                    <button type="button" class="btn-trash faq-delete" title="Löschen">
-                      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                    </button>
                   </div>
                 </div>
               </div>
