@@ -4,8 +4,8 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
 stopped_at: Completed 08.19.2-04-PLAN.md (awaiting human-verify checkpoint)
-last_updated: "2026-04-28T11:58:24.687Z"
-last_activity: 2026-04-28
+last_updated: "2026-04-28T14:00:00.000Z"
+last_activity: 2026-04-28 - Completed quick task 260428-c2x: Polish-Cycle 2 Button-Konsolidierung
 progress:
   total_phases: 54
   completed_phases: 41
@@ -555,6 +555,7 @@ Recent decisions affecting current work:
 | 260424-ekk | Phase 08.5 Post-Execute-Refinement: Tabu Alternativen + Profil-Editor Sektion 15 + Low-Confidence Rueckfrage | 2026-04-24 | 5e2b438 | [260424-ekk-phase-08-5-post-execute-refinement-tabu-](./quick/260424-ekk-phase-08-5-post-execute-refinement-tabu-/) |
 | 260424-fo0 | Phase 08.5 Nachbesserung: Standard-Paare einfuegen Button + Auto-Vorschlag Placeholder in Sektion 15 | 2026-04-24 | 5d6478c | [260424-fo0-phase-08-5-nachbesserung-standard-paare-](./quick/260424-fo0-phase-08-5-nachbesserung-standard-paare-/) |
 | 260424-h7u | Phase 08.5 Nachschaerfung: Tabu-Filter kontext-bewusst mit protected-words Safety-Net | 2026-04-24 | c059e5d | [260424-h7u-phase-08-5-nachschaerfung-tabu-filter-ko](./quick/260424-h7u-phase-08-5-nachschaerfung-tabu-filter-ko/) |
+| 260428-c2x | Polish-Cycle 2: Header-Link entfernen + Button-Konsolidierung Primary/Destructive/Secondary + Lucide-trash-2 confirmDelete | 2026-04-28 | b57c0cf | [260428-c2x-polish-cycle-2-button-konsolidierung](./quick/260428-c2x-polish-cycle-2-button-konsolidierung/) |
 
 ## What's Done
 
