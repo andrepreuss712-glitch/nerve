@@ -1876,7 +1876,7 @@ def _seed_changelog():
 
 
 _seed()
-_seed_demo_profiles()
+# _seed_demo_profiles()  # 2026-04-28 deaktiviert (Andre): nutzlose System-Demos aus früher Phase, werden in Phase 08.22 durch echte Branchen-Templates mit Wisdom-Vorbefüllung ersetzt
 _migrate_profile_json()   # nach Seed: alle Profile existieren, jetzt migrieren
 _seed_training_scenarios()
 _seed_system_training_scenarios()
