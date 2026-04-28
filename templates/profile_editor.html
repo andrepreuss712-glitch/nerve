@@ -245,6 +245,7 @@
     <a href="#" class="beispiel-link" onclick="openBeispiel();return false"
        aria-label="Beispiel-Profil anzeigen">Sieh dir ein ausgefülltes Beispiel an</a>
     <button type="button" id="main-save-btn" class="save-btn" onclick="buildAndSubmit()">Speichern</button>
+    <span class="save-toast" style="display:none">✓ Gespeichert</span>
   </div>
 
   <div class="editor-layout">
@@ -422,13 +423,15 @@
           <label class="fl">Opener <i class="tip-icon" data-tip="Dein Eroeffnungssatz am Telefon. So startest du das Gespraech.">?</i></label>
           <textarea class="fta" id="vi_opener" placeholder="z.B. Guten Tag Herr/Frau XY, mein Name ist ... von ... Ich rufe an weil..." style="min-height:72px"></textarea>
         </div>
-        <div class="fg">
-          <label class="fl">Erlaubnis <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis fuer das Gespraech? Der Satz nach dem Opener.">?</i></label>
-          <textarea class="fta" id="vi_erlaubnis" placeholder="z.B. Haben Sie kurz 2 Minuten Zeit? Ich moechte Ihnen zeigen wie..." style="min-height:72px"></textarea>
+        <div class="fg erlaubnis-entry">
+          <label class="fl">Erlaubnisfrage <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis fuer das Gespraech? Der Satz nach dem Opener.">?</i></label>
+          <div id="erlaubnis-list" class="pe-entry-list"></div>
+          <button type="button" class="btn-add" id="btn-add-erlaubnis">+ Erlaubnisfrage hinzufügen</button>
         </div>
-        <div class="fg">
+        <div class="fg pitch-entry">
           <label class="fl">Pitch <i class="tip-icon" data-tip="Dein Kernpitch in 2-3 Saetzen. Was sagst du wenn der Kunde sagt 'Erzaehlen Sie mal'?">?</i></label>
-          <textarea class="fta" id="vi_pitch" placeholder="z.B. Wir helfen Unternehmen wie Ihrem dabei..." style="min-height:96px"></textarea>
+          <div id="pitch-list" class="pe-entry-list"></div>
+          <button type="button" class="btn-add" id="btn-add-pitch">+ Pitch hinzufügen</button>
         </div>
         <div class="fg" style="margin-top:18px">
           <label class="fl">Skripte <i class="tip-icon" data-tip="Erstelle mehrere Gespraechsskripte fuer verschiedene Szenarien. Im Launcher waehlst du vor dem Call das passende aus.">?</i></label>
@@ -1140,8 +1143,6 @@ function buildAndSubmit(){
       tabu_begriffe:(function(){try{var v=document.getElementById('vi_tabu_begriffe');return v&&v.value?JSON.parse(v.value):[];}catch(e){return [];}}()),
     },
     opener: document.getElementById('vi_opener').value.trim(),
-    erlaubnis: document.getElementById('vi_erlaubnis').value.trim(),
-    pitch: document.getElementById('vi_pitch').value.trim(),
     zielgruppe:{
       alter:document.getElementById('vi_alter').value.trim(),
       berufsstatus:document.getElementById('vi_berufsstatus').value.trim(),
@@ -1205,6 +1206,11 @@ window.toggleTonFlex = toggleTonFlex;
 /* ── CRUD List Helper (Skripte / Opener) ───────────────────────────── */
 var PROFILE_ID = {{ profile.id if profile else 'null' }};
 
+function _getCsrfToken() {
+  var m = document.querySelector('meta[name="csrf-token"]');
+  return m ? m.getAttribute('content') : '';
+}
+
 function crudList(containerId, endpoint, label) {
   var container = document.getElementById(containerId);
   if (!container) return;
@@ -1226,9 +1232,11 @@ function crudList(containerId, endpoint, label) {
     function save() {
       fetch(endpoint + '/' + item.id, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': _getCsrfToken()},
         body: JSON.stringify({name: nameInput.value, inhalt: inhaltTa.value})
-      }).catch(function() {});
+      })
+        .then(function(r) { if (r.ok) { var toast = document.querySelector('.save-toast'); if (toast) { toast.style.display = 'inline'; setTimeout(function(){ toast.style.display = 'none'; }, 2000); } } })
+        .catch(function() {});
     }
 
     nameInput.addEventListener('blur', save);
@@ -1236,7 +1244,7 @@ function crudList(containerId, endpoint, label) {
 
     delBtn.addEventListener('click', function() {
       if (!confirm('Wirklich loeschen?')) return;
-      fetch(endpoint + '/' + item.id, {method: 'DELETE'})
+      fetch(endpoint + '/' + item.id, {method: 'DELETE', headers: {'X-CSRFToken': _getCsrfToken()}})
         .then(function() { card.remove(); })
         .catch(function() {});
     });
@@ -1261,7 +1269,7 @@ function crudList(containerId, endpoint, label) {
     addBtn.addEventListener('click', function() {
       fetch(endpoint, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': _getCsrfToken()},
         body: JSON.stringify({name: label + ' ' + (container.children.length + 1), inhalt: ''})
       })
         .then(function(r) { return r.json(); })
@@ -1269,6 +1277,8 @@ function crudList(containerId, endpoint, label) {
           var card = renderItem(item);
           container.appendChild(card);
           card.querySelector('input').focus();
+          var toast = document.querySelector('.save-toast');
+          if (toast) { toast.style.display = 'inline'; setTimeout(function(){ toast.style.display = 'none'; }, 2000); }
         })
         .catch(function() {});
     });
@@ -1293,8 +1303,6 @@ function init(){
     setVal('vi_beweise', (b.beweise||[]).join('\n'));
     setVal('vi_branche_kontext', b.branche_kontext||'');
     setVal('vi_opener', DATEN.opener);
-    setVal('vi_erlaubnis', DATEN.erlaubnis);
-    setVal('vi_pitch', DATEN.pitch);
     const zg=DATEN.zielgruppe||{};
     setVal('vi_alter',zg.alter);
     setVal('vi_berufsstatus',zg.berufsstatus);
@@ -1381,6 +1389,8 @@ init();
 if (PROFILE_ID) {
   crudList('skripte-list', '/profiles/' + PROFILE_ID + '/skripte', 'Skript');
   crudList('opener-list', '/profiles/' + PROFILE_ID + '/opener', 'Opener');
+  crudList('erlaubnis-list', '/profiles/' + PROFILE_ID + '/erlaubnis', 'Erlaubnisfrage');
+  crudList('pitch-list', '/profiles/' + PROFILE_ID + '/pitches', 'Pitch');
 }
 setupScrollSpy();
 
