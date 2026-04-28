@@ -3,6 +3,57 @@
 // Loaded after the main inline script in profile_editor.html.
 // Relies on: window.PROFILE_ID (already set by inline script)
 
+/* ── Confirm-Delete Modal (C2X) ───────────────────────── */
+(function ensureConfirmModal() {
+  if (document.getElementById('confirm-delete-modal')) return;
+  var el = document.createElement('div');
+  el.id = 'confirm-delete-modal';
+  el.innerHTML = [
+    '<div class="confirm-delete-box">',
+    '  <h3>Wirklich löschen?</h3>',
+    '  <p id="confirm-delete-label">Dieser Eintrag wird entfernt.</p>',
+    '  <div class="confirm-delete-actions">',
+    '    <button type="button" class="btn-secondary" id="confirm-delete-cancel">Abbrechen</button>',
+    '    <button type="button" class="btn-destructive" id="confirm-delete-ok">Löschen</button>',
+    '  </div>',
+    '</div>'
+  ].join('');
+  document.body.appendChild(el);
+  document.getElementById('confirm-delete-cancel').addEventListener('click', function () {
+    el.classList.remove('active');
+    el._callback = null;
+  });
+  el.addEventListener('click', function (e) {
+    if (e.target === el) { el.classList.remove('active'); el._callback = null; }
+  });
+})();
+
+/**
+ * Zeigt einen Modal-Confirm-Dialog.
+ * @param {Function} callback  — wird bei Bestätigung aufgerufen
+ * @param {string}   label     — optionaler Beschreibungstext (z.B. "Einwand")
+ */
+function confirmDelete(callback, label) {
+  var modal = document.getElementById('confirm-delete-modal');
+  var labelEl = document.getElementById('confirm-delete-label');
+  if (labelEl && label) {
+    labelEl.textContent = label + ' wird entfernt.';
+  } else if (labelEl) {
+    labelEl.textContent = 'Dieser Eintrag wird entfernt.';
+  }
+  modal._callback = callback;
+  var okBtn = document.getElementById('confirm-delete-ok');
+  // Remove previous listener to avoid stacking
+  var newOk = okBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOk, okBtn);
+  newOk.addEventListener('click', function () {
+    modal.classList.remove('active');
+    if (modal._callback) modal._callback();
+    modal._callback = null;
+  });
+  modal.classList.add('active');
+}
+
 (function () {
   'use strict';
 
@@ -133,13 +184,14 @@
   function deleteFaq(row) {
     var id = row.getAttribute('data-faq-id');
     if (!id) { row.remove(); return; }
-    if (!confirm('FAQ wirklich löschen?')) return;
-    fetch('/profiles/api/profile/faqs/' + id, {
-      method: 'DELETE',
-      credentials: 'same-origin',
-    })
-      .then(function () { row.remove(); })
-      .catch(function (e) { console.warn('[FAQ] delete failed', e); });
+    confirmDelete(function () {
+      fetch('/profiles/api/profile/faqs/' + id, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      })
+        .then(function () { row.remove(); })
+        .catch(function (e) { console.warn('[FAQ] delete failed', e); });
+    }, 'FAQ-Eintrag');
   }
 
   if (faqAddBtn) {

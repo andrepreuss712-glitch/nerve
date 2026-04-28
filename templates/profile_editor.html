@@ -523,7 +523,9 @@
                   </div>
                   <div class="faq-meta" style="display:flex;align-items:center;gap:12px;margin-top:18px">
                     <span class="faq-used-count faq-count" title="Wie oft wurde diese Antwort im Gespräch vorgeschlagen">0×</span>
-                    <button type="button" class="btn-rm faq-delete">Löschen</button>
+                    <button type="button" class="btn-trash faq-delete" title="Löschen">
+                      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -877,7 +879,7 @@ function addSchmerz(d={}){
 <div class="block-hd" onclick="toggleBlock(this.parentElement)" style="cursor:pointer">
   <span class="block-lbl">Painpoint ${idx}</span>
   <span class="acc-chevron" style="margin-left:auto;color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
-  <button type="button" class="btn-rm" onclick="event.stopPropagation();this.closest('.block').remove();renumBlocks('schmerz-list','Painpoint')">✕</button>
+  <button type="button" class="btn-trash" title="Löschen" onclick="event.stopPropagation();(function(btn){confirmDelete(function(){btn.closest('.block').remove();renumBlocks('schmerz-list','Painpoint');},'Painpoint');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
 </div>
 <div class="acc-body collapsed">
 <div class="fg"><label class="fl">Situation ${ti('In welcher konkreten Situation befindet sich der Kunde?')}</label>
@@ -911,7 +913,7 @@ function addPhase(d={}){
 <input class="fi" data-ph="name" placeholder="z.B. Einstieg, Bedarfsanalyse, Closing" value="${esc(d.name)}">
 <input class="fi" data-ph="ziel" placeholder="Was ist das Ziel dieser Phase?" value="${esc(d.ziel||d.beschreibung)}">
 <button type="button" class="btn-ord" onclick="moveBlock(this.closest('.block'),-1)" title="Nach oben">▲</button>
-<button type="button" class="btn-rm" onclick="this.closest('.block').remove();renumPhases()">✕</button>
+<button type="button" class="btn-trash" title="Löschen" onclick="(function(btn){confirmDelete(function(){btn.closest('.block').remove();renumPhases();},'Gesprächsphase');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
 </div>
 <textarea class="fi" data-ph="skript" rows="2" placeholder="Skript-Bullets — eine Zeile = ein Punkt (optional)" style="margin-top:6px;margin-left:44px;width:calc(100% - 44px);resize:vertical;font-size:11px;line-height:1.5">${esc(skriptVal)}</textarea>`;
   c.appendChild(row);
@@ -952,7 +954,7 @@ function addEinwand(d={}){
   <span class="block-lbl">Einwand ${idx}</span>
   <span class="einwand-preview">${esc(d.kategorie||d.typ||'Kategorie wählen')}</span>
   <span class="acc-chevron" style="color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
-  <button type="button" class="btn-rm" onclick="event.stopPropagation();this.closest('.block').remove();renumEW()">✕</button>
+  <button type="button" class="btn-trash" title="Löschen" onclick="event.stopPropagation();(function(btn){confirmDelete(function(){btn.closest('.block').remove();renumEW();},'Einwand');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
 </div>
 <div class="einwand-body collapsed">
   <div class="fg"><label class="fl">Einwand-Text ${ti('Wie sagt der Kunde es wörtlich? z.B. Das ist mir zu teuer.')}</label>
@@ -1000,7 +1002,7 @@ function addFrage(d={}){
 <div class="block-hd" onclick="toggleBlock(this.parentElement)" style="cursor:pointer">
   <span class="block-lbl">Frage ${idx}</span>
   <span class="acc-chevron" style="margin-left:auto;color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
-  <button type="button" class="btn-rm" onclick="event.stopPropagation();this.closest('.block').remove()">✕</button>
+  <button type="button" class="btn-trash" title="Löschen" onclick="event.stopPropagation();(function(btn){confirmDelete(function(){btn.closest('.block').remove();},'Frage');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
 </div>
 <div class="acc-body collapsed">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -1026,7 +1028,7 @@ function addKaufsignal(d={}){
   row.className='drow';
   row.innerHTML=`<input class="fi" data-ks="signal" placeholder="Signal …" value="${esc(d.signal)}">
 <input class="fi" data-ks="beschr" placeholder="Reaktion / wie damit umgehen …" value="${esc(d.beschreibung||d.beschr)}">
-<button type="button" class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+<button type="button" class="btn-trash" title="Löschen" onclick="(function(btn){confirmDelete(function(){btn.parentElement.remove();},'Kaufsignal');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
   c.appendChild(row);
 }
 function getKaufsignale(){
@@ -1043,7 +1045,7 @@ function addNogo(d={}){
   row.className='drow';
   row.innerHTML=`<input class="fi" data-ng="krit" placeholder="Kriterium …" value="${esc(d.kriterium||d.krit)}">
 <input class="fi" data-ng="beschr" placeholder="Warum disqualifiziert das?" value="${esc(d.beschreibung||d.beschr)}">
-<button type="button" class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+<button type="button" class="btn-trash" title="Löschen" onclick="(function(btn){confirmDelete(function(){btn.parentElement.remove();},'No-Go');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
   c.appendChild(row);
 }
 function getNogos(){
@@ -1061,7 +1063,7 @@ function addWettbewerber(d={}){
   row.innerHTML=`<input class="fi" data-wb="name" placeholder="Name …" value="${esc(d.name)}">
 <input class="fi" data-wb="schw" placeholder="Seine Schwäche …" value="${esc(d.schwaeche||d.schw)}">
 <input class="fi" data-wb="vort" placeholder="Unser Vorteil …" value="${esc(d.vorteil||d.vort)}">
-<button type="button" class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+<button type="button" class="btn-trash" title="Löschen" onclick="(function(btn){confirmDelete(function(){btn.parentElement.remove();},'Wettbewerber');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
   c.appendChild(row);
 }
 function getWettbewerber(){
@@ -1081,7 +1083,7 @@ function addUebergang(d={}){
 <span class="u-arrow">→</span>
 <input class="fi" data-ue="nach" placeholder="Nach-Thema …" value="${esc(d.nach)}">
 <input class="fi" data-ue="bruecke" placeholder="Brücken-Formulierung …" value="${esc(d.bruecke||d.beschreibung)}">
-<button type="button" class="btn-rm" onclick="this.parentElement.remove()">✕</button>`;
+<button type="button" class="btn-trash" title="Löschen" onclick="(function(btn){confirmDelete(function(){btn.parentElement.remove();},'Übergang');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
   c.appendChild(row);
 }
 function getUebergaenge(){
@@ -1271,10 +1273,11 @@ function crudList(containerId, endpoint, label) {
     inhaltTa.addEventListener('blur', save);
 
     delBtn.addEventListener('click', function() {
-      if (!confirm('Wirklich löschen?')) return;
-      fetch(endpoint + '/' + item.id, {method: 'DELETE', headers: {'X-CSRFToken': _getCsrfToken()}})
-        .then(function() { card.remove(); })
-        .catch(function() {});
+      confirmDelete(function() {
+        fetch(endpoint + '/' + item.id, {method: 'DELETE', headers: {'X-CSRFToken': _getCsrfToken()}})
+          .then(function() { card.remove(); })
+          .catch(function() {});
+      }, 'Eintrag');
     });
 
     return card;

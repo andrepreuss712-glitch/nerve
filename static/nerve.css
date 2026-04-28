@@ -468,6 +468,78 @@ a{color:inherit;text-decoration:none}
   background: rgba(0,0,0,0.04);
 }
 
+/* ═══════════════════════════════════
+   TRASH ICON BUTTON (C2X)
+   ═══════════════════════════════════ */
+.btn-trash {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--page-text-muted);
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s ease, background 0.2s ease;
+  line-height: 0;
+}
+.btn-trash:hover {
+  color: #EF4444;
+  background: rgba(239,68,68,0.08);
+}
+.btn-trash svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ═══════════════════════════════════
+   CONFIRM DELETE MODAL (C2X)
+   ═══════════════════════════════════ */
+#confirm-delete-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.45);
+  align-items: center;
+  justify-content: center;
+}
+#confirm-delete-modal.active {
+  display: flex;
+}
+.confirm-delete-box {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, rgba(0,0,0,0.1));
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.confirm-delete-box h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--page-text, #1a1a1a);
+}
+.confirm-delete-box p {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: var(--page-text-muted, #6b7280);
+}
+.confirm-delete-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
 /* Phase 07: .n-btn-accent (Gold) entfernt — MAIN DESIGN kennt nur Teal-Primary/Ghost/Rot(destructive). */
 
 .n-btn-ghost{background:var(--btn-ghost-bg);color:var(--btn-ghost-text);border:1.5px solid var(--btn-ghost-border);border-radius:var(--btn-ghost-radius);padding:var(--btn-ghost-padding);font-size:var(--btn-ghost-size);font-weight:var(--btn-ghost-weight);font-family:var(--page-font);backdrop-filter:blur(10px);}
