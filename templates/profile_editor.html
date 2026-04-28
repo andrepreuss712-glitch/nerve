@@ -24,7 +24,7 @@
 }
 .topbar-name:focus { border-color: var(--input-border-focus); }
 .save-btn {
-  background: #00D4AA; color: var(--page-bg); border: none; border-radius: 8px;
+  background: #00D4AA; color: #000000; border: none; border-radius: 8px;
   padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
   font-family: inherit; white-space: nowrap; margin-left: auto;
 }
@@ -206,14 +206,20 @@
 }
 .crud-hd {
   display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-  cursor: pointer; user-select: none;
+  user-select: none; border-bottom: 1px solid #E2E8F0;
 }
 .crud-hd input {
   background: transparent; border: none; font-weight: 600; font-size: 13px;
   color: #1a1a1a; outline: none; font-family: inherit; flex: 1; cursor: text;
 }
-.crud-chevron { flex-shrink: 0; color: var(--page-text-muted); font-size: 12px; }
-.crud-body { display: none; padding: 0 14px 10px; display: flex; flex-direction: column; gap: 6px; }
+.crud-chevron {
+  flex-shrink: 0; background: none; border: none; padding: 0;
+  color: #00D4AA; font-size: 18px; cursor: pointer; line-height: 1;
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 4px; transition: opacity 0.15s;
+}
+.crud-chevron:hover { opacity: 0.75; }
+.crud-body { display: none; padding: 0 14px 10px; display: flex; flex-direction: column; gap: 6px; background: #161B22; }
 .crud-body.collapsed { display: none; }
 .crud-card textarea {
   background: transparent; border: 1px solid transparent; border-radius: 4px;
@@ -409,7 +415,7 @@
         <div class="sec-title" style="font-size:14px;margin-bottom:6px;margin-top:18px">Painpoints</div>
         <p class="field-desc">Die größten Probleme deiner Kunden — NERVE priorisiert Gegenargumente danach.</p>
         <div id="schmerz-list"></div>
-        <button type="button" class="btn-primary" onclick="addSchmerz()">+ Painpoint hinzufügen</button>
+        <button type="button" class="btn-primary btn-add-item" onclick="addSchmerz()">+ Painpoint hinzufügen</button>
       </div>
 
       <!-- ③ Gesprächsleitfaden (enthält ehemalige sec-leitfaden + sec-phasen) -->
@@ -424,24 +430,24 @@
           <label class="fl">Erlaubnisfrage <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis für das Gespräch? Der Satz nach dem Opener.">?</i></label>
           <p class="field-desc">Frage die du nach dem Opener stellst um Gesprächsbereitschaft zu sichern.</p>
           <div id="erlaubnis-list" class="pe-entry-list"></div>
-          <button type="button" class="btn-primary" id="btn-add-erlaubnis">+ Erlaubnisfrage hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" id="btn-add-erlaubnis">+ Erlaubnisfrage hinzufügen</button>
         </div>
         <div class="fg pitch-entry">
           <label class="fl">Pitch <i class="tip-icon" data-tip="Dein Kernpitch in 2-3 Sätzen. Was sagst du wenn der Kunde sagt 'Erzählen Sie mal'?">?</i></label>
           <p class="field-desc">Dein Kern-Pitch — 1-2 Sätze warum dein Produkt relevant ist.</p>
           <div id="pitch-list" class="pe-entry-list"></div>
-          <button type="button" class="btn-primary" id="btn-add-pitch">+ Pitch hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" id="btn-add-pitch">+ Pitch hinzufügen</button>
         </div>
         <div class="fg" style="margin-top:18px">
           <label class="fl">Skripte <i class="tip-icon" data-tip="Erstelle mehrere Gesprächsskripte für verschiedene Szenarien. Im Launcher wählst du vor dem Call das passende aus.">?</i></label>
           <div id="skripte-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-primary" id="btn-add-skripte" style="margin-top:8px">+ Skript hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" id="btn-add-skripte">+ Skript hinzufügen</button>
         </div>
         <div class="fg" style="margin-top:18px">
           <label class="fl">Opener <i class="tip-icon" data-tip="Sammle verschiedene Opener-Sätze. Im Launcher wählst du vor dem Call den passenden aus.">?</i></label>
           <p class="field-desc">Dein bevorzugter Gesprächseinstieg. Mehrere Varianten möglich.</p>
           <div id="opener-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-primary" id="btn-add-opener" style="margin-top:8px">+ Opener hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" id="btn-add-opener">+ Opener hinzufügen</button>
         </div>
 
         <!-- ehemals sec-phasen -->
@@ -454,7 +460,7 @@
           </div>
           <div class="skript-hint">↳ Skript-Bullets (optional) — eine Zeile = ein Teleprompter-Punkt</div>
           <div id="phasen-list"></div>
-          <button type="button" class="btn-primary" onclick="addPhase()">+ Phase hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" onclick="addPhase()">+ Phase hinzufügen</button>
         </div>
       </div>
 
@@ -469,13 +475,13 @@
         <!-- ehemals sec-einwaende -->
         <p class="field-desc">Häufigste Kundeneinwände. NERVE erkennt ähnliche Formulierungen und schlägt Gegenargumente vor.</p>
         <div id="einwaende-list"></div>
-        <button type="button" class="btn-primary" onclick="addEinwand()">+ Einwand hinzufügen</button>
+        <button type="button" class="btn-primary btn-add-item" onclick="addEinwand()">+ Einwand hinzufügen</button>
 
         <!-- ehemals sec-fragen -->
         <div style="margin-top:24px">
           <div class="sec-title" style="font-size:14px;margin-bottom:12px">Häufige Fragen</div>
           <div id="fragen-list"></div>
-          <button type="button" class="btn-primary" onclick="addFrage()">+ Frage hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" onclick="addFrage()">+ Frage hinzufügen</button>
         </div>
 
         <!-- ehemals sec-faqs — ACHTUNG: profile_editor.js hängt an diesen DOM-IDs -->
@@ -489,7 +495,7 @@
 
           <div id="profile-faqs-list" class="profile-faqs-list"></div>
 
-          <button type="button" class="btn-primary" id="btn-faq-add">+ Frage hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" id="btn-faq-add">+ Frage hinzufügen</button>
 
           <!-- Template (hidden) for rendering a single FAQ row -->
           <template id="tpl-faq-row">
@@ -574,7 +580,7 @@
           <span style="width:32px"></span>
         </div>
         <div id="kaufsignale-list"></div>
-        <button type="button" class="btn-primary" onclick="addKaufsignal()">+ Kaufsignal hinzufügen</button>
+        <button type="button" class="btn-primary btn-add-item" onclick="addKaufsignal()">+ Kaufsignal hinzufügen</button>
 
         <!-- ehemals sec-uebergaenge -->
         <div style="margin-top:24px">
@@ -588,7 +594,7 @@
             <span></span>
           </div>
           <div id="uebergaenge-list"></div>
-          <button type="button" class="btn-primary" onclick="addUebergang()">+ Übergang hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" onclick="addUebergang()">+ Übergang hinzufügen</button>
         </div>
 
         <!-- ehemals sec-nogos -->
@@ -600,7 +606,7 @@
             <span style="width:32px"></span>
           </div>
           <div id="nogos-list"></div>
-          <button type="button" class="btn-primary" onclick="addNogo()">+ No-Go hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" onclick="addNogo()">+ No-Go hinzufügen</button>
         </div>
 
         <!-- ehemals sec-wettbewerb -->
@@ -613,7 +619,7 @@
             <span></span>
           </div>
           <div id="wettbewerb-list"></div>
-          <button type="button" class="btn-primary" onclick="addWettbewerber()">+ Wettbewerber hinzufügen</button>
+          <button type="button" class="btn-primary btn-add-item" onclick="addWettbewerber()">+ Wettbewerber hinzufügen</button>
         </div>
 
         <!-- ehemals sec-tabu — profile_editor.js hängt an tabu-rows, tabu-add-btn, tabu-seed-btn -->
@@ -625,7 +631,7 @@
             Wörter die du vermeiden willst — und was du stattdessen sagst.
           </p>
           <div id="tabu-rows"></div>
-          <button type="button" id="tabu-add-btn" class="btn-primary" style="margin-top:8px">+ Hinzufügen</button>
+          <button type="button" id="tabu-add-btn" class="btn-primary btn-add-item">+ Hinzufügen</button>
           <button type="button" id="tabu-seed-btn" class="n-btn-ghost" style="margin-top:8px;margin-left:6px">+ Standard-Paare einfügen</button>
           <span id="tabu-seed-feedback" style="font-size:12px;color:var(--page-text-muted);margin-left:10px" aria-live="polite"></span>
           <input type="hidden" id="vi_tabu_begriffe" name="tabu_begriffe" value="[]">
