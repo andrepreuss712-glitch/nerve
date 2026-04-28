@@ -557,6 +557,7 @@ Recent decisions affecting current work:
 | 260424-h7u | Phase 08.5 Nachschaerfung: Tabu-Filter kontext-bewusst mit protected-words Safety-Net | 2026-04-24 | c059e5d | [260424-h7u-phase-08-5-nachschaerfung-tabu-filter-ko](./quick/260424-h7u-phase-08-5-nachschaerfung-tabu-filter-ko/) |
 | 260428-c2x | Polish-Cycle 2: Header-Link entfernen + Button-Konsolidierung Primary/Destructive/Secondary + Lucide-trash-2 confirmDelete | 2026-04-28 | b57c0cf | [260428-c2x-polish-cycle-2-button-konsolidierung](./quick/260428-c2x-polish-cycle-2-button-konsolidierung/) |
 | 260428-d4r | Polish-Cycle 3: Save-btn schwarz, Vorschläge-disabled, Spacing, Card-Toggle-Isolation, Chevron teal, crud-del→trash, tip-icon, Tabu-x→trash, Visual-Separator | 2026-04-28 | 9d6759d | [260428-d4r-polish-cycle-3-card-toggle-loeschen](./quick/260428-d4r-polish-cycle-3-card-toggle-loeschen/) |
+| 260428-e5s | Polish-Cycle 4: crud-body bg transparent (Cycle-3-Revert), Textarea min-height 100px, Trash in Card-Header, Gesprächsphasen Sub-Label | 2026-04-28 | 451d11e | [260428-e5s-polish-cycle-4-card-body-layout](./quick/260428-e5s-polish-cycle-4-card-body-layout/) |
 
 ## What's Done
 
