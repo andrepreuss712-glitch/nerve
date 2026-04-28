@@ -265,9 +265,40 @@
 
     <div class="editor-main" id="editorMain">
 
-      <!-- ① Basis & Produkt -->
-      <div class="sec" id="sec-basis">
-        <div class="sec-title"><span class="sec-title-num">1</span>Basis & Produkt</div>
+      <!-- ① Branche & Firma -->
+      <div class="sec" id="sec-branche-firma">
+        <div class="sec-header">
+          <span class="sec-title-num">1</span>
+          <h2 class="sec-title">Branche &amp; Firma</h2>
+        </div>
+        <!-- HINT: Plan 04 will add sec-hint here -->
+
+        <!-- Phase 08 D-09: Branche Enum-Select als erstes Feld (D-04) -->
+        <div class="fg">
+          <label class="fl">Branche {{ tooltip.tip3(
+            'Die Haupt-Branche in der du verkaufst. Wähle den passenden Wert aus der Liste — kein Freitext.',
+            'Maschinenbau, wenn du Software für produzierende Mittelständler verkaufst. SaaS B2B, wenn dein Produkt selbst reine Cloud-Software ist.',
+            'Branchen-Kontext (Schmerzpunkte und typische Fachbegriffe deiner Kunden) / Unternehmen (dein eigenes Unternehmen) / Zielgruppe (wen du im Kundengespräch erreichst)'
+          ) }}</label>
+          <select class="fs" id="vi_branche_select">
+            <option value="">-- Bitte wählen --</option>
+            <option value="saas_b2b">SaaS B2B</option>
+            <option value="maschinenbau">Maschinenbau</option>
+            <option value="versicherung">Versicherung</option>
+            <option value="finanzprodukte">Finanzprodukte</option>
+            <option value="immobilien">Immobilien</option>
+            <option value="coaching">Coaching</option>
+            <option value="beratung">Beratung</option>
+            <option value="sonstiges">Sonstiges</option>
+          </select>
+        </div>
+
+        <!-- Wisdom-Stub-Box (D-04) — Vorschläge laden wird aktiv in Phase 08.22 -->
+        <div class="wisdom-stub-box">
+          <p>Wir haben uns die Arbeit gemacht aus verschiedensten Branchen die Best-Practice anhand von Daten auszuwerten und dein Profil damit vorauszufüllen. Du entscheidest selber ob du mit einem leeren oder unseren Daten vorausgefüllten Profil starten willst. Wir empfehlen ein vorausgefülltes Profil. Du kannst trotzdem jederzeit Änderungen an deinem Profil vornehmen.</p>
+          <button type="button" class="wisdom-stub-btn" disabled title="Aktiv ab Phase 08.22">Vorschläge laden</button>
+        </div>
+
         <div class="fg">
           <label class="fl">Unternehmen</label>
           <textarea class="fta" id="vi_unternehmen" placeholder="z.B. Muster GmbH – Wir vertreiben Softwarelösungen für den Mittelstand. Gegründet 2015, 12 Mitarbeiter, Standort Dortmund." style="min-height:72px"></textarea>
@@ -289,26 +320,6 @@
         <div class="fg">
           <label class="fl">Konsequenz wenn Kunde nicht kauft <i class="tip-icon" data-tip="Was verliert der Kunde konkret wenn er heute Nein sagt? Das ist dein stärkstes Argument.">?</i></label>
           <textarea class="fta" id="vi_konsequenz" style="min-height:56px" placeholder="Was passiert wenn der Kunde NICHT kauft? z.B. Problem bleibt bestehen, Kosten steigen weiter…"></textarea>
-        </div>
-
-        <!-- Phase 08 D-09: Branche Enum-Select (ersetzt Freitext) -->
-        <div class="fg">
-          <label class="fl">Branche {{ tooltip.tip3(
-            'Die Haupt-Branche in der du verkaufst. Wähle den passenden Wert aus der Liste — kein Freitext.',
-            'Maschinenbau, wenn du Software für produzierende Mittelständler verkaufst. SaaS B2B, wenn dein Produkt selbst reine Cloud-Software ist.',
-            'Branchen-Kontext (Schmerzpunkte und typische Fachbegriffe deiner Kunden) / Unternehmen (dein eigenes Unternehmen) / Zielgruppe (wen du im Kundengespräch erreichst)'
-          ) }}</label>
-          <select class="fs" id="vi_branche_select">
-            <option value="">-- Bitte wählen --</option>
-            <option value="saas_b2b">SaaS B2B</option>
-            <option value="maschinenbau">Maschinenbau</option>
-            <option value="versicherung">Versicherung</option>
-            <option value="finanzprodukte">Finanzprodukte</option>
-            <option value="immobilien">Immobilien</option>
-            <option value="coaching">Coaching</option>
-            <option value="beratung">Beratung</option>
-            <option value="sonstiges">Sonstiges</option>
-          </select>
         </div>
 
         <!-- Phase 08 D-11: branche_kontext Textarea -->
@@ -345,36 +356,14 @@
         </div>
       </div>
 
-      <!-- ② Gespraechsleitfaden -->
-      <div class="sec" id="sec-leitfaden">
-        <div class="sec-title"><span class="sec-title-num">2</span>Gespraechsleitfaden</div>
-        <div class="fg">
-          <label class="fl">Opener <i class="tip-icon" data-tip="Dein Eroeffnungssatz am Telefon. So startest du das Gespraech.">?</i></label>
-          <textarea class="fta" id="vi_opener" placeholder="z.B. Guten Tag Herr/Frau XY, mein Name ist ... von ... Ich rufe an weil..." style="min-height:72px"></textarea>
+      <!-- ② Zielgruppe (enthält ehemalige sec-zielgruppe + sec-schmerzen ohne Slider) -->
+      <div class="sec" id="sec-zielgruppe-neu">
+        <div class="sec-header">
+          <span class="sec-title-num">2</span>
+          <h2 class="sec-title">Zielgruppe</h2>
         </div>
-        <div class="fg">
-          <label class="fl">Erlaubnis <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis fuer das Gespraech? Der Satz nach dem Opener.">?</i></label>
-          <textarea class="fta" id="vi_erlaubnis" placeholder="z.B. Haben Sie kurz 2 Minuten Zeit? Ich moechte Ihnen zeigen wie..." style="min-height:72px"></textarea>
-        </div>
-        <div class="fg">
-          <label class="fl">Pitch <i class="tip-icon" data-tip="Dein Kernpitch in 2-3 Saetzen. Was sagst du wenn der Kunde sagt 'Erzaehlen Sie mal'?">?</i></label>
-          <textarea class="fta" id="vi_pitch" placeholder="z.B. Wir helfen Unternehmen wie Ihrem dabei..." style="min-height:96px"></textarea>
-        </div>
-        <div class="fg" style="margin-top:18px">
-          <label class="fl">Skripte <i class="tip-icon" data-tip="Erstelle mehrere Gespraechsskripte fuer verschiedene Szenarien. Im Launcher waehlst du vor dem Call das passende aus.">?</i></label>
-          <div id="skripte-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-add" id="btn-add-skripte" style="margin-top:8px">+ Skript hinzufuegen</button>
-        </div>
-        <div class="fg" style="margin-top:18px">
-          <label class="fl">Opener-Sammlung <i class="tip-icon" data-tip="Sammle verschiedene Opener-Saetze. Im Launcher waehlst du vor dem Call den passenden aus.">?</i></label>
-          <div id="opener-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-add" id="btn-add-opener" style="margin-top:8px">+ Opener hinzufuegen</button>
-        </div>
-      </div>
+        <!-- HINT: Plan 04 will add sec-hint here -->
 
-      <!-- ③ Zielgruppe -->
-      <div class="sec" id="sec-zielgruppe">
-        <div class="sec-title"><span class="sec-title-num">3</span>Zielgruppe</div>
         <div class="frow frow-2">
           <div class="fg">
             <label class="fl">Alter <i class="tip-icon" data-tip="Typisches Alter deiner besten Kunden.">?</i></label>
@@ -415,82 +404,158 @@
             <input class="tag-input" placeholder="z.B. braucht Zahlen, entscheidet schnell …" onkeydown="tagKeydown(event,'entscheidung-tags')">
           </div>
         </div>
-      </div>
 
-      <!-- ④ Schmerzpunkte & Trigger -->
-      <div class="sec" id="sec-schmerzen">
-        <div class="sec-title"><span class="sec-title-num">4</span>Schmerzpunkte & Trigger</div>
+        <!-- ehemals sec-schmerzen (Slider-Block entfernt per D-03) -->
         <div id="schmerz-list"></div>
         <button type="button" class="btn-add" onclick="addSchmerz()">+ Schmerzpunkt hinzufügen</button>
+      </div>
 
-        <div style="margin-top:24px;margin-bottom:12px">
-          <label class="fl" style="margin-bottom:0">Emotionale Trigger – Gewichtung (1–10)</label>
+      <!-- ③ Gesprächsleitfaden (enthält ehemalige sec-leitfaden + sec-phasen) -->
+      <div class="sec" id="sec-gespraechsleitfaden">
+        <div class="sec-header">
+          <span class="sec-title-num">3</span>
+          <h2 class="sec-title">Gesprächsleitfaden</h2>
         </div>
-        <div class="trigger-grid">
-          <div class="trigger-row">
-            <span class="trigger-lbl">Verlust-Aversion <i class="tip-icon" data-tip="Wie stark reagiert deine Zielgruppe auf drohende Verluste?">?</i></span>
-            <input type="range" class="t-slider" id="tr_verlust" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
-            <span class="slider-val">5</span>
+        <!-- HINT: Plan 04 will add sec-hint here -->
+
+        <div class="fg">
+          <label class="fl">Opener <i class="tip-icon" data-tip="Dein Eroeffnungssatz am Telefon. So startest du das Gespraech.">?</i></label>
+          <textarea class="fta" id="vi_opener" placeholder="z.B. Guten Tag Herr/Frau XY, mein Name ist ... von ... Ich rufe an weil..." style="min-height:72px"></textarea>
+        </div>
+        <div class="fg">
+          <label class="fl">Erlaubnis <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis fuer das Gespraech? Der Satz nach dem Opener.">?</i></label>
+          <textarea class="fta" id="vi_erlaubnis" placeholder="z.B. Haben Sie kurz 2 Minuten Zeit? Ich moechte Ihnen zeigen wie..." style="min-height:72px"></textarea>
+        </div>
+        <div class="fg">
+          <label class="fl">Pitch <i class="tip-icon" data-tip="Dein Kernpitch in 2-3 Saetzen. Was sagst du wenn der Kunde sagt 'Erzaehlen Sie mal'?">?</i></label>
+          <textarea class="fta" id="vi_pitch" placeholder="z.B. Wir helfen Unternehmen wie Ihrem dabei..." style="min-height:96px"></textarea>
+        </div>
+        <div class="fg" style="margin-top:18px">
+          <label class="fl">Skripte <i class="tip-icon" data-tip="Erstelle mehrere Gespraechsskripte fuer verschiedene Szenarien. Im Launcher waehlst du vor dem Call das passende aus.">?</i></label>
+          <div id="skripte-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          <button type="button" class="btn-add" id="btn-add-skripte" style="margin-top:8px">+ Skript hinzufuegen</button>
+        </div>
+        <div class="fg" style="margin-top:18px">
+          <label class="fl">Opener-Sammlung <i class="tip-icon" data-tip="Sammle verschiedene Opener-Saetze. Im Launcher waehlst du vor dem Call den passenden aus.">?</i></label>
+          <div id="opener-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          <button type="button" class="btn-add" id="btn-add-opener" style="margin-top:8px">+ Opener hinzufuegen</button>
+        </div>
+
+        <!-- ehemals sec-phasen -->
+        <div style="margin-top:24px">
+          <div class="col-header" style="grid-template-columns:36px 1fr 1fr auto auto;display:grid;gap:8px">
+            <span></span>
+            <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Kurzer Name der Phase, z.B. Smalltalk oder Closing.">?</i></span>
+            <span class="fl" style="margin:0">Ziel / Beschreibung <i class="tip-icon" data-tip="Was soll am Ende dieser Phase erreicht sein?">?</i></span>
+            <span></span><span></span>
           </div>
-          <div class="trigger-row">
-            <span class="trigger-lbl">Familie / Verantwortung <i class="tip-icon" data-tip="Wie wichtig ist das Thema Familie als Kaufmotiv?">?</i></span>
-            <input type="range" class="t-slider" id="tr_familie" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
-            <span class="slider-val">5</span>
-          </div>
-          <div class="trigger-row">
-            <span class="trigger-lbl">Status / Anerkennung <i class="tip-icon" data-tip="Wie wichtig ist Status und soziale Anerkennung als Kaufmotiv?">?</i></span>
-            <input type="range" class="t-slider" id="tr_status" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
-            <span class="slider-val">5</span>
-          </div>
-          <div class="trigger-row">
-            <span class="trigger-lbl">Zahlen / Fakten <i class="tip-icon" data-tip="Wie stark überzeugt deine Zielgruppe mit konkreten Zahlen und Fakten?">?</i></span>
-            <input type="range" class="t-slider" id="tr_zahlen" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
-            <span class="slider-val">5</span>
-          </div>
-          <div class="trigger-row">
-            <span class="trigger-lbl">Dringlichkeit <i class="tip-icon" data-tip="Wie stark wirkt Zeitdruck auf deine Zielgruppe?">?</i></span>
-            <input type="range" class="t-slider" id="tr_dringlichkeit" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
-            <span class="slider-val">5</span>
-          </div>
-          <div class="trigger-row">
-            <span class="trigger-lbl">Micro-Commitments <i class="tip-icon" data-tip="Hilft es, den Kunden mit kleinen Zusagen schrittweise zu führen?">?</i></span>
-            <input type="range" class="t-slider" id="tr_micro" min="1" max="10" value="5" oninput="this.nextElementSibling.textContent=this.value">
-            <span class="slider-val">5</span>
-          </div>
+          <div style="font-size:11px;color:var(--page-text-muted);margin:2px 0 6px 44px">↳ Skript-Bullets (optional) — eine Zeile = ein Teleprompter-Punkt</div>
+          <div id="phasen-list"></div>
+          <button type="button" class="btn-add" onclick="addPhase()">+ Phase hinzufügen</button>
         </div>
       </div>
 
-      <!-- ④ Gesprächsphasen -->
-      <div class="sec" id="sec-phasen">
-        <div class="sec-title"><span class="sec-title-num">5</span>Gesprächsphasen</div>
-        <div class="col-header" style="grid-template-columns:36px 1fr 1fr auto auto;display:grid;gap:8px">
-          <span></span>
-          <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Kurzer Name der Phase, z.B. Smalltalk oder Closing.">?</i></span>
-          <span class="fl" style="margin:0">Ziel / Beschreibung <i class="tip-icon" data-tip="Was soll am Ende dieser Phase erreicht sein?">?</i></span>
-          <span></span><span></span>
+      <!-- ④ Einwände & Antworten (enthält ehemalige sec-einwaende + sec-fragen + sec-faqs + sec-techniken) -->
+      <div class="sec" id="sec-einwaende-antworten">
+        <div class="sec-header">
+          <span class="sec-title-num">4</span>
+          <h2 class="sec-title">Einwände &amp; Antworten</h2>
         </div>
-        <div style="font-size:11px;color:var(--page-text-muted);margin:2px 0 6px 44px">↳ Skript-Bullets (optional) — eine Zeile = ein Teleprompter-Punkt</div>
-        <div id="phasen-list"></div>
-        <button type="button" class="btn-add" onclick="addPhase()">+ Phase hinzufügen</button>
-      </div>
+        <!-- HINT: Plan 04 will add sec-hint here -->
 
-      <!-- ⑤ Einwände -->
-      <div class="sec" id="sec-einwaende">
-        <div class="sec-title"><span class="sec-title-num">6</span>Einwände</div>
+        <!-- ehemals sec-einwaende -->
         <div id="einwaende-list"></div>
         <button type="button" class="btn-add" onclick="addEinwand()">+ Einwand hinzufügen</button>
+
+        <!-- ehemals sec-fragen -->
+        <div style="margin-top:24px">
+          <div class="sec-title" style="font-size:14px;margin-bottom:12px">Häufige Fragen</div>
+          <div id="fragen-list"></div>
+          <button type="button" class="btn-add" onclick="addFrage()">+ Frage hinzufügen</button>
+        </div>
+
+        <!-- ehemals sec-faqs — ACHTUNG: profile_editor.js hängt an diesen DOM-IDs -->
+        <div style="margin-top:24px">
+          <div class="sec-title" style="font-size:14px;margin-bottom:8px">FAQ-Datenbank
+            <span class="tip-icon" data-tip="Wenn ein Kunde eine dieser Fragen stellt, schlägt NERVE die hinterlegte Antwort vor. Die Antwort wird direkt im Gespräch vorgeschlagen — ohne KI-Umformulierung." tabindex="0">?</span>
+          </div>
+          <p style="font-size:12px;color:var(--page-text-muted);margin-bottom:16px">
+            Trage die Fragen ein, die Ihre Kunden häufig stellen, und die gewünschten Antworten. NERVE erkennt die Frage automatisch und schlägt die passende Antwort vor.
+          </p>
+
+          <div id="profile-faqs-list" class="profile-faqs-list"></div>
+
+          <button type="button" class="btn-add" id="btn-faq-add">+ Frage hinzufügen</button>
+
+          <!-- Template (hidden) for rendering a single FAQ row -->
+          <template id="tpl-faq-row">
+            <div class="faq-row block" data-faq-id="">
+              <div class="faq-fields">
+                <div class="frow frow-2" style="margin-bottom:10px">
+                  <div class="fg" style="margin:0">
+                    <label class="fl">Kundenfrage</label>
+                    <textarea class="faq-frage fta" rows="2" maxlength="2000" placeholder="z.B. Wie lange dauert die Einführung?"></textarea>
+                  </div>
+                  <div class="fg" style="margin:0">
+                    <label class="fl">Antwort</label>
+                    <textarea class="faq-antwort fta" rows="2" maxlength="2000" placeholder="z.B. Die typische Einführung dauert 4–6 Wochen."></textarea>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                  <div class="fg" style="margin:0;flex:1;min-width:160px">
+                    <label class="fl">Kategorie</label>
+                    <select class="faq-kategorie fs">
+                      <option value="Technik">Technik</option>
+                      <option value="Preis">Preis</option>
+                      <option value="Referenzen">Referenzen</option>
+                      <option value="DSGVO">DSGVO</option>
+                      <option value="Produkt">Produkt</option>
+                      <option value="Sonstiges" selected>Sonstiges</option>
+                    </select>
+                  </div>
+                  <div class="faq-meta" style="display:flex;align-items:center;gap:12px;margin-top:18px">
+                    <span class="faq-used-count" title="Wie oft wurde diese Antwort im Gespräch vorgeschlagen" style="font-size:12px;color:var(--page-text-muted)">0×</span>
+                    <button type="button" class="btn-rm faq-delete">Löschen</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- ehemals sec-techniken -->
+        <div style="margin-top:24px">
+          <div class="sec-title" style="font-size:14px;margin-bottom:12px">Verkaufstechniken</div>
+          <div class="fg">
+            <label class="fl">Aktive Techniken <i class="tip-icon" data-tip="Welche Techniken soll NERVE bevorzugt einsetzen?">?</i></label>
+            <div class="tag-container" id="techniken-aktiv-tags" onclick="focusTagInput('techniken-aktiv-tags')">
+              <input class="tag-input" placeholder="Technik + Enter …" onkeydown="tagKeydown(event,'techniken-aktiv-tags')">
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Verbotene Phrasen <i class="tip-icon" data-tip="Was sollst du nie sagen? NERVE warnt dich wenn du es tust.">?</i></label>
+            <div class="tag-container" id="techniken-verboten-tags" onclick="focusTagInput('techniken-verboten-tags')">
+              <input class="tag-input" placeholder="Verbotene Phrase + Enter …" onkeydown="tagKeydown(event,'techniken-verboten-tags','danger')">
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Offene Fragen Pflicht <i class="tip-icon" data-tip="Welche Fragewörter sollen immer genutzt werden?">?</i></label>
+            <textarea class="fta" id="vi_offene_fragen"
+              placeholder="z.B. Jede Antwort endet mit einer offenen Gegenfrage. Fragewörter: Was, Wie, Wozu … niemals Warum."></textarea>
+          </div>
+        </div>
       </div>
 
-      <!-- ⑥ Häufige Fragen -->
-      <div class="sec" id="sec-fragen">
-        <div class="sec-title"><span class="sec-title-num">7</span>Häufige Fragen</div>
-        <div id="fragen-list"></div>
-        <button type="button" class="btn-add" onclick="addFrage()">+ Frage hinzufügen</button>
-      </div>
+      <!-- ⑤ Live-Coaching-Signale (enthält ehemalige sec-kaufsignale + sec-uebergaenge + sec-nogos + sec-wettbewerb + sec-tabu) -->
+      <div class="sec" id="sec-live-signale">
+        <div class="sec-header">
+          <span class="sec-title-num">5</span>
+          <h2 class="sec-title">Live-Coaching-Signale</h2>
+        </div>
+        <!-- HINT: Plan 04 will add sec-hint here -->
 
-      <!-- ⑦ Kaufsignale -->
-      <div class="sec" id="sec-kaufsignale">
-        <div class="sec-title"><span class="sec-title-num">8</span>Kaufsignale</div>
+        <!-- ehemals sec-kaufsignale -->
+        <div class="sec-title" style="font-size:14px;margin-bottom:12px">Kaufsignale</div>
         <div class="col-header" style="display:flex;gap:8px">
           <span class="fl" style="margin:0;flex:1">Signal <i class="tip-icon" data-tip="Woran erkennst du dass der Kunde kaufbereit ist?">?</i></span>
           <span class="fl" style="margin:0;flex:1">Wie reagieren <i class="tip-icon" data-tip="Was solltest du in diesem Moment tun oder sagen?">?</i></span>
@@ -498,72 +563,70 @@
         </div>
         <div id="kaufsignale-list"></div>
         <button type="button" class="btn-add" onclick="addKaufsignal()">+ Kaufsignal hinzufügen</button>
-      </div>
 
-      <!-- ⑧ No-Go Situationen -->
-      <div class="sec" id="sec-nogos">
-        <div class="sec-title"><span class="sec-title-num">9</span>No-Go Situationen</div>
-        <div class="col-header" style="display:flex;gap:8px">
-          <span class="fl" style="margin:0;flex:1">Kriterium <i class="tip-icon" data-tip="Wann ist jemand definitiv kein passender Kunde?">?</i></span>
-          <span class="fl" style="margin:0;flex:1">Beschreibung <i class="tip-icon" data-tip="Warum disqualifiziert das den Kontakt?">?</i></span>
-          <span style="width:32px"></span>
-        </div>
-        <div id="nogos-list"></div>
-        <button type="button" class="btn-add" onclick="addNogo()">+ No-Go hinzufügen</button>
-      </div>
-
-      <!-- ⑨ Wettbewerber -->
-      <div class="sec" id="sec-wettbewerb">
-        <div class="sec-title"><span class="sec-title-num">10</span>Wettbewerber</div>
-        <div class="col-header" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px">
-          <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Wer ist der Hauptkonkurrent den Kunden oft nennen?">?</i></span>
-          <span class="fl" style="margin:0">Schwäche <i class="tip-icon" data-tip="Was kann der Wettbewerber nicht oder schlechter?">?</i></span>
-          <span class="fl" style="margin:0">Unser Vorteil <i class="tip-icon" data-tip="Was kannst nur du bieten?">?</i></span>
-          <span></span>
-        </div>
-        <div id="wettbewerb-list"></div>
-        <button type="button" class="btn-add" onclick="addWettbewerber()">+ Wettbewerber hinzufügen</button>
-      </div>
-
-      <!-- ⑩ Verkaufstechniken -->
-      <div class="sec" id="sec-techniken">
-        <div class="sec-title"><span class="sec-title-num">11</span>Verkaufstechniken</div>
-        <div class="fg">
-          <label class="fl">Aktive Techniken <i class="tip-icon" data-tip="Welche Techniken soll NERVE bevorzugt einsetzen?">?</i></label>
-          <div class="tag-container" id="techniken-aktiv-tags" onclick="focusTagInput('techniken-aktiv-tags')">
-            <input class="tag-input" placeholder="Technik + Enter …" onkeydown="tagKeydown(event,'techniken-aktiv-tags')">
+        <!-- ehemals sec-uebergaenge -->
+        <div style="margin-top:24px">
+          <div class="sec-title" style="font-size:14px;margin-bottom:12px">Übergang-Ziele</div>
+          <div class="col-header" style="display:grid;grid-template-columns:1fr auto 1fr 1fr auto;gap:8px">
+            <span class="fl" style="margin:0">Von-Thema <i class="tip-icon" data-tip="Von welchem Gesprächsthema kommst du?">?</i></span>
+            <span></span>
+            <span class="fl" style="margin:0">Nach-Thema <i class="tip-icon" data-tip="Wohin willst du das Gespräch lenken?">?</i></span>
+            <span class="fl" style="margin:0">Brücken-Formulierung <i class="tip-icon" data-tip="Welchen Satz nutzt du für den Übergang?">?</i></span>
+            <span></span>
           </div>
+          <div id="uebergaenge-list"></div>
+          <button type="button" class="btn-add" onclick="addUebergang()">+ Übergang hinzufügen</button>
         </div>
-        <div class="fg">
-          <label class="fl">Verbotene Phrasen <i class="tip-icon" data-tip="Was sollst du nie sagen? NERVE warnt dich wenn du es tust.">?</i></label>
-          <div class="tag-container" id="techniken-verboten-tags" onclick="focusTagInput('techniken-verboten-tags')">
-            <input class="tag-input" placeholder="Verbotene Phrase + Enter …" onkeydown="tagKeydown(event,'techniken-verboten-tags','danger')">
+
+        <!-- ehemals sec-nogos -->
+        <div style="margin-top:24px">
+          <div class="sec-title" style="font-size:14px;margin-bottom:12px">No-Go Situationen</div>
+          <div class="col-header" style="display:flex;gap:8px">
+            <span class="fl" style="margin:0;flex:1">Kriterium <i class="tip-icon" data-tip="Wann ist jemand definitiv kein passender Kunde?">?</i></span>
+            <span class="fl" style="margin:0;flex:1">Beschreibung <i class="tip-icon" data-tip="Warum disqualifiziert das den Kontakt?">?</i></span>
+            <span style="width:32px"></span>
           </div>
+          <div id="nogos-list"></div>
+          <button type="button" class="btn-add" onclick="addNogo()">+ No-Go hinzufügen</button>
         </div>
-        <div class="fg">
-          <label class="fl">Offene Fragen Pflicht <i class="tip-icon" data-tip="Welche Fragewörter sollen immer genutzt werden?">?</i></label>
-          <textarea class="fta" id="vi_offene_fragen"
-            placeholder="z.B. Jede Antwort endet mit einer offenen Gegenfrage. Fragewörter: Was, Wie, Wozu … niemals Warum."></textarea>
+
+        <!-- ehemals sec-wettbewerb -->
+        <div style="margin-top:24px">
+          <div class="sec-title" style="font-size:14px;margin-bottom:12px">Wettbewerber</div>
+          <div class="col-header" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px">
+            <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Wer ist der Hauptkonkurrent den Kunden oft nennen?">?</i></span>
+            <span class="fl" style="margin:0">Schwäche <i class="tip-icon" data-tip="Was kann der Wettbewerber nicht oder schlechter?">?</i></span>
+            <span class="fl" style="margin:0">Unser Vorteil <i class="tip-icon" data-tip="Was kannst nur du bieten?">?</i></span>
+            <span></span>
+          </div>
+          <div id="wettbewerb-list"></div>
+          <button type="button" class="btn-add" onclick="addWettbewerber()">+ Wettbewerber hinzufügen</button>
+        </div>
+
+        <!-- ehemals sec-tabu — profile_editor.js hängt an tabu-rows, tabu-add-btn, tabu-seed-btn -->
+        <div style="margin-top:24px">
+          <div class="sec-title" style="font-size:14px;margin-bottom:8px">Tabu-Begriffe &amp; Alternativen
+            <span class="tip-icon" data-tip="Wörter die du vermeiden willst — und was du stattdessen sagst. NERVE ersetzt automatisch Tabu-Begriffe durch deine Alternative im Gespräch." tabindex="0">?</span>
+          </div>
+          <p style="font-size:12px;color:var(--page-text-muted);margin-bottom:12px">
+            Wörter die du vermeiden willst — und was du stattdessen sagst.
+          </p>
+          <div id="tabu-rows"></div>
+          <button type="button" id="tabu-add-btn" class="n-btn-ghost" style="margin-top:8px">+ Hinzufügen</button>
+          <button type="button" id="tabu-seed-btn" class="n-btn-ghost" style="margin-top:8px;margin-left:6px">+ Standard-Paare einfügen</button>
+          <span id="tabu-seed-feedback" style="font-size:12px;color:var(--page-text-muted);margin-left:10px" aria-live="polite"></span>
+          <input type="hidden" id="vi_tabu_begriffe" name="tabu_begriffe" value="[]">
         </div>
       </div>
 
-      <!-- ⑪ Übergang-Ziele -->
-      <div class="sec" id="sec-uebergaenge">
-        <div class="sec-title"><span class="sec-title-num">12</span>Übergang-Ziele</div>
-        <div class="col-header" style="display:grid;grid-template-columns:1fr auto 1fr 1fr auto;gap:8px">
-          <span class="fl" style="margin:0">Von-Thema <i class="tip-icon" data-tip="Von welchem Gesprächsthema kommst du?">?</i></span>
-          <span></span>
-          <span class="fl" style="margin:0">Nach-Thema <i class="tip-icon" data-tip="Wohin willst du das Gespräch lenken?">?</i></span>
-          <span class="fl" style="margin:0">Brücken-Formulierung <i class="tip-icon" data-tip="Welchen Satz nutzt du für den Übergang?">?</i></span>
-          <span></span>
+      <!-- ⑥ KI-Verhalten (ehemals sec-ki) -->
+      <div class="sec" id="sec-ki-verhalten">
+        <div class="sec-header">
+          <span class="sec-title-num">6</span>
+          <h2 class="sec-title">KI-Verhalten</h2>
         </div>
-        <div id="uebergaenge-list"></div>
-        <button type="button" class="btn-add" onclick="addUebergang()">+ Übergang hinzufügen</button>
-      </div>
+        <!-- HINT: Plan 04 will add sec-hint here -->
 
-      <!-- ⑫ KI-Anweisungen -->
-      <div class="sec" id="sec-ki">
-        <div class="sec-title"><span class="sec-title-num">13</span>KI-Anweisungen</div>
         <!-- Phase 08 D-10: ton Select mit Flex-Escape 'eigener_stil' -->
         <div class="fg">
           <label class="fl">Stil (Ton) {{ tooltip.tip3(
@@ -623,85 +686,20 @@
           <textarea class="fta" id="vi_zusatz" style="min-height:72px"
                     placeholder="Regeln, Do / Dont, Jargon-Erlaubnis …"></textarea>
         </div>
-      </div>
 
-      <!-- ⑭ Phase 08.5: FAQ-Datenbank (D-13) ─────────────────────────────────── -->
-      <div class="sec" id="sec-faqs">
-        <div class="sec-title"><span class="sec-title-num">14</span>FAQ-Datenbank
-          <span class="tip-icon" data-tip="Wenn ein Kunde eine dieser Fragen stellt, schlägt NERVE die hinterlegte Antwort vor. Die Antwort wird direkt im Gespräch vorgeschlagen — ohne KI-Umformulierung." tabindex="0">?</span>
+        <!-- Phase 06: Consent-Text (D-06) -->
+        <div class="fg" style="margin-top:16px">
+          <label class="fl">Consent-Vorlesetext (Meeting-Modus)</label>
+          <textarea id="consent_text" name="consent_text" class="fta" rows="3"
+            placeholder="Herr/Frau [Name], kurzer Hinweis -- ich mache mir waehrend unseres Gespraechs digitale Notizen. Ist das fuer Sie in Ordnung?"
+          >{{ profile.consent_text or '' }}</textarea>
+          <small style="color:rgba(255,255,255,0.4);font-size:12px">
+            Wird im PiP vor Meeting-Calls vorgelesen. [Name] wird automatisch ersetzt. Leer = Standard-Text.
+          </small>
         </div>
-        <p style="font-size:12px;color:var(--page-text-muted);margin-bottom:16px">
-          Trage die Fragen ein, die Ihre Kunden häufig stellen, und die gewünschten Antworten. NERVE erkennt die Frage automatisch und schlägt die passende Antwort vor.
-        </p>
-
-        <div id="profile-faqs-list" class="profile-faqs-list"></div>
-
-        <button type="button" class="btn-add" id="btn-faq-add">+ Frage hinzufügen</button>
-
-        <!-- Template (hidden) for rendering a single FAQ row -->
-        <template id="tpl-faq-row">
-          <div class="faq-row block" data-faq-id="">
-            <div class="faq-fields">
-              <div class="frow frow-2" style="margin-bottom:10px">
-                <div class="fg" style="margin:0">
-                  <label class="fl">Kundenfrage</label>
-                  <textarea class="faq-frage fta" rows="2" maxlength="2000" placeholder="z.B. Wie lange dauert die Einführung?"></textarea>
-                </div>
-                <div class="fg" style="margin:0">
-                  <label class="fl">Antwort</label>
-                  <textarea class="faq-antwort fta" rows="2" maxlength="2000" placeholder="z.B. Die typische Einführung dauert 4–6 Wochen."></textarea>
-                </div>
-              </div>
-              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-                <div class="fg" style="margin:0;flex:1;min-width:160px">
-                  <label class="fl">Kategorie</label>
-                  <select class="faq-kategorie fs">
-                    <option value="Technik">Technik</option>
-                    <option value="Preis">Preis</option>
-                    <option value="Referenzen">Referenzen</option>
-                    <option value="DSGVO">DSGVO</option>
-                    <option value="Produkt">Produkt</option>
-                    <option value="Sonstiges" selected>Sonstiges</option>
-                  </select>
-                </div>
-                <div class="faq-meta" style="display:flex;align-items:center;gap:12px;margin-top:18px">
-                  <span class="faq-used-count" title="Wie oft wurde diese Antwort im Gespräch vorgeschlagen" style="font-size:12px;color:var(--page-text-muted)">0×</span>
-                  <button type="button" class="btn-rm faq-delete">Löschen</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <!-- ⑮ Phase 08.5 Korrektur 2: Tabu-Begriffe + Alternativen (2-column) ──── -->
-      <div class="sec" id="sec-tabu">
-        <div class="sec-title"><span class="sec-title-num">15</span>Tabu-Begriffe &amp; Alternativen
-          <span class="tip-icon" data-tip="Wörter die du vermeiden willst — und was du stattdessen sagst. NERVE ersetzt automatisch Tabu-Begriffe durch deine Alternative im Gespräch." tabindex="0">?</span>
-        </div>
-        <p style="font-size:12px;color:var(--page-text-muted);margin-bottom:12px">
-          Wörter die du vermeiden willst — und was du stattdessen sagst.
-        </p>
-
-        <div id="tabu-rows"></div>
-        <button type="button" id="tabu-add-btn" class="n-btn-ghost" style="margin-top:8px">+ Hinzufügen</button>
-        <button type="button" id="tabu-seed-btn" class="n-btn-ghost" style="margin-top:8px;margin-left:6px">+ Standard-Paare einfügen</button>
-        <span id="tabu-seed-feedback" style="font-size:12px;color:var(--page-text-muted);margin-left:10px" aria-live="polite"></span>
-        <input type="hidden" id="vi_tabu_begriffe" name="tabu_begriffe" value="[]">
       </div>
 
       <div style="height:40px"></div>
-
-      <!-- Phase 06: Consent-Text (D-06) -->
-      <div class="fg" style="margin-top:16px">
-        <label class="fl">Consent-Vorlesetext (Meeting-Modus)</label>
-        <textarea id="consent_text" name="consent_text" class="fta" rows="3"
-          placeholder="Herr/Frau [Name], kurzer Hinweis -- ich mache mir waehrend unseres Gespraechs digitale Notizen. Ist das fuer Sie in Ordnung?"
-        >{{ profile.consent_text or '' }}</textarea>
-        <small style="color:rgba(255,255,255,0.4);font-size:12px">
-          Wird im PiP vor Meeting-Calls vorgelesen. [Name] wird automatisch ersetzt. Leer = Standard-Text.
-        </small>
-      </div>
     </div><!-- editor-main -->
   </div><!-- editor-layout -->
 </form>
@@ -1155,14 +1153,6 @@ function buildAndSubmit(){
     },
     schmerzen:{
       schmerzpunkte:getSchmerzen(),
-      trigger:{
-        verlust:+document.getElementById('tr_verlust').value,
-        familie:+document.getElementById('tr_familie').value,
-        status:+document.getElementById('tr_status').value,
-        zahlen:+document.getElementById('tr_zahlen').value,
-        dringlichkeit:+document.getElementById('tr_dringlichkeit').value,
-        micro:+document.getElementById('tr_micro').value,
-      }
     },
     phasen:getPhasen(),
     einwaende:getEinwaende(),
@@ -1316,10 +1306,6 @@ function init(){
     (zg.entscheidungsverhalten||[]).forEach(t=>addTag('entscheidung-tags',t));
     const sch=DATEN.schmerzen||{};
     (sch.schmerzpunkte||[]).forEach(s=>addSchmerz(s));
-    const tr=sch.trigger||{};
-    setSlider('tr_verlust',tr.verlust||5); setSlider('tr_familie',tr.familie||5);
-    setSlider('tr_status',tr.status||5);  setSlider('tr_zahlen',tr.zahlen||5);
-    setSlider('tr_dringlichkeit',tr.dringlichkeit||5); setSlider('tr_micro',tr.micro||5);
     (DATEN.phasen||[]).forEach(p=>addPhase(p));
     (DATEN.einwaende||[]).forEach(e=>addEinwand(e));
     (DATEN.fragen||[]).forEach(f=>addFrage(f));
