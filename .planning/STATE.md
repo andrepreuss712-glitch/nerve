@@ -558,6 +558,7 @@ Recent decisions affecting current work:
 | 260428-c2x | Polish-Cycle 2: Header-Link entfernen + Button-Konsolidierung Primary/Destructive/Secondary + Lucide-trash-2 confirmDelete | 2026-04-28 | b57c0cf | [260428-c2x-polish-cycle-2-button-konsolidierung](./quick/260428-c2x-polish-cycle-2-button-konsolidierung/) |
 | 260428-d4r | Polish-Cycle 3: Save-btn schwarz, Vorschläge-disabled, Spacing, Card-Toggle-Isolation, Chevron teal, crud-del→trash, tip-icon, Tabu-x→trash, Visual-Separator | 2026-04-28 | 9d6759d | [260428-d4r-polish-cycle-3-card-toggle-loeschen](./quick/260428-d4r-polish-cycle-3-card-toggle-loeschen/) |
 | 260428-e5s | Polish-Cycle 4: crud-body bg transparent (Cycle-3-Revert), Textarea min-height 100px, Trash in Card-Header, Gesprächsphasen Sub-Label | 2026-04-28 | 451d11e | [260428-e5s-polish-cycle-4-card-body-layout](./quick/260428-e5s-polish-cycle-4-card-body-layout/) |
+| 260428-f7p | Polish-Cycle 5 KRITISCH: FAQ deleteFaq/updateFaq CSRF-Fix + r.ok-Guards + saveTabuToServer Guard + FAQ-Trash in Card-Header | 2026-04-28 | fcdf456 | [260428-f7p-polish-cycle-5-faq-csrf-fix](./quick/260428-f7p-polish-cycle-5-faq-csrf-fix/) |
 
 ## What's Done
 
