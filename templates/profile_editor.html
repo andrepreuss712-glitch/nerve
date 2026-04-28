@@ -422,10 +422,6 @@
         </div>
         <p class="sec-hint">Opener, Pitch und Phasen helfen NERVE zu erkennen wo du im Gespräch stehst und was als nächstes kommt.</p>
 
-        <div class="fg">
-          <label class="fl">Opener <i class="tip-icon" data-tip="Dein Eroeffnungssatz am Telefon. So startest du das Gespraech.">?</i></label>
-          <textarea class="fta" id="vi_opener" placeholder="z.B. Guten Tag Herr/Frau XY, mein Name ist ... von ... Ich rufe an weil..." style="min-height:72px"></textarea>
-        </div>
         <div class="fg erlaubnis-entry">
           <label class="fl">Erlaubnisfrage <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis fuer das Gespraech? Der Satz nach dem Opener.">?</i></label>
           <p class="field-desc">Frage die du nach dem Opener stellst um Gesprächsbereitschaft zu sichern.</p>
@@ -1144,7 +1140,6 @@ function buildAndSubmit(){
       // Phase 08.5 D-15: tabu_begriffe aus hidden input (synced by saveTabu())
       tabu_begriffe:(function(){try{var v=document.getElementById('vi_tabu_begriffe');return v&&v.value?JSON.parse(v.value):[];}catch(e){return [];}}()),
     },
-    opener: document.getElementById('vi_opener').value.trim(),
     zielgruppe:{
       alter:document.getElementById('vi_alter').value.trim(),
       berufsstatus:document.getElementById('vi_berufsstatus').value.trim(),
@@ -1304,7 +1299,6 @@ function init(){
     setVal('vi_eigene_formulierungen', (b.eigene_formulierungen||[]).join('\n'));
     setVal('vi_beweise', (b.beweise||[]).join('\n'));
     setVal('vi_branche_kontext', b.branche_kontext||'');
-    setVal('vi_opener', DATEN.opener);
     const zg=DATEN.zielgruppe||{};
     setVal('vi_alter',zg.alter);
     setVal('vi_berufsstatus',zg.berufsstatus);
