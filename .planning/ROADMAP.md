@@ -906,6 +906,17 @@ Plans:
 
 ---
 
+### Phase 08.19.3: Block N FAQ-Konsolidierung mit Toggle (INSERTED — 2026-04-28)
+
+**Goal:** Zwei überlappende UI-Sektionen ("Häufige Fragen" aus `daten.fragen` JSON + "FAQ-Datenbank" aus `profile_faqs` DB) zu einer einzigen Sektion konsolidieren. Kern: `mode`-Spalte zu `profile_faqs` + Backfill-Migration + `daten.fragen` → `profile_faqs` Migration mit mode='ki_generated'. Toggle pro FAQ-Card steuert: `literal` (Embedding-Match → wortwörtlicher Auswurf, kein LLM-Call) vs. `ki_generated` (KI generiert Antwort aus Kontext). `match_faq()` Caller filtert mode-aware. `build_profile_context()` inkludiert ALLE FAQs als Q+A-Block (Foundation für 08.20). "Häufige Fragen"-Sektion aus UI entfernen.
+**Komplexität:** 🔴 (Schema-Migration + Backend-Logik + Frontend)
+**Depends on:** Phase 08.19.2
+**Andre-Decision:** 2026-04-28 abend — KI-Antworten als Default, wortwörtlich nur für Compliance-kritische Fragen. Cross-AI Pflicht (Block-N-Decision).
+
+**Plans:**
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
