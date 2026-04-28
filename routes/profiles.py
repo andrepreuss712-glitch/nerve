@@ -691,6 +691,10 @@ _MAX_TABU_COUNT = 50
 def _require_own_profile(profile_id):
     """Return (Profile, db_session) if user owns it, else (None, db_session).
     Org-isolation: profile.org_id must match g.org.id.
+
+    WARNING: Opens a DB session internally and returns it to the caller.
+    The caller MUST close it in a finally block (db.close()), regardless
+    of whether Profile is None or not. Forgetting db.close() leaks the session.
     """
     db = get_session()
     p = db.query(Profile).filter_by(id=profile_id).first()
