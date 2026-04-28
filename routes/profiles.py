@@ -515,7 +515,10 @@ def pitch_erstellen(pid):
                           inhalt=data.get('inhalt', ''), sortierung=max_sort, type='pitch')
         db.add(o)
         db.commit()
-        _pitch_dual_write(db, pid)  # dual-write to Profile.daten['pitch'] (transitional until 08.20)
+        try:
+            _pitch_dual_write(db, pid)  # dual-write to Profile.daten['pitch'] (transitional until 08.20)
+        except Exception as _e:
+            print(f"[Profile] pitch dual-write failed pid={pid}: {_e}")
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung}), 201
     finally:
         db.close()
@@ -542,7 +545,10 @@ def pitch_bearbeiten(pid, oid):
         if 'sortierung' in data:
             o.sortierung = data['sortierung']
         db.commit()
-        _pitch_dual_write(db, pid)  # dual-write to Profile.daten['pitch'] (transitional until 08.20)
+        try:
+            _pitch_dual_write(db, pid)  # dual-write to Profile.daten['pitch'] (transitional until 08.20)
+        except Exception as _e:
+            print(f"[Profile] pitch dual-write failed pid={pid}: {_e}")
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung})
     finally:
         db.close()
@@ -615,7 +621,10 @@ def erlaubnis_erstellen(pid):
                           inhalt=data.get('inhalt', ''), sortierung=max_sort, type='erlaubnis')
         db.add(o)
         db.commit()
-        _erlaubnis_dual_write(db, pid)  # dual-write to Profile.daten['erlaubnis'] (transitional until 08.20)
+        try:
+            _erlaubnis_dual_write(db, pid)  # dual-write to Profile.daten['erlaubnis'] (transitional until 08.20)
+        except Exception as _e:
+            print(f"[Profile] erlaubnis dual-write failed pid={pid}: {_e}")
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung}), 201
     finally:
         db.close()
@@ -642,7 +651,10 @@ def erlaubnis_bearbeiten(pid, oid):
         if 'sortierung' in data:
             o.sortierung = data['sortierung']
         db.commit()
-        _erlaubnis_dual_write(db, pid)  # dual-write to Profile.daten['erlaubnis'] (transitional until 08.20)
+        try:
+            _erlaubnis_dual_write(db, pid)  # dual-write to Profile.daten['erlaubnis'] (transitional until 08.20)
+        except Exception as _e:
+            print(f"[Profile] erlaubnis dual-write failed pid={pid}: {_e}")
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung})
     finally:
         db.close()
