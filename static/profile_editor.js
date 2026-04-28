@@ -89,7 +89,8 @@ function confirmDelete(callback, label) {
     var chev = row.querySelector('.acc-chevron');
     if (lbl && faq.frage_muster) lbl.textContent = faq.frage_muster.slice(0, 40) || 'Frage';
     if (hd) {
-      hd.addEventListener('click', function() {
+      hd.addEventListener('click', function(e) {
+        if (e.target.closest('.faq-delete')) return;
         var body = row.querySelector('.faq-fields');
         if (!body) return;
         var collapsed = body.classList.toggle('collapsed');
@@ -160,9 +161,11 @@ function confirmDelete(callback, label) {
       fetch('/profiles/api/profile/faqs/' + id, {
         method: 'PUT',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify(payload),
-      }).catch(function (e) { console.warn('[FAQ] update failed', e); });
+      })
+        .then(function (r) { if (!r.ok) console.warn('[FAQ] update failed', r.status); })
+        .catch(function (e) { console.warn('[FAQ] update error', e); });
     } else if (!row.getAttribute('data-faq-creating')) {
       // Create new row — guard against concurrent blur events causing duplicates
       row.setAttribute('data-faq-creating', '1');
@@ -188,9 +191,13 @@ function confirmDelete(callback, label) {
       fetch('/profiles/api/profile/faqs/' + id, {
         method: 'DELETE',
         credentials: 'same-origin',
+        headers: { 'X-CSRFToken': getCsrfToken() },
       })
-        .then(function () { row.remove(); })
-        .catch(function (e) { console.warn('[FAQ] delete failed', e); });
+        .then(function (r) {
+          if (r.ok) { row.remove(); }
+          else { console.warn('[FAQ] delete failed', r.status); }
+        })
+        .catch(function (e) { console.warn('[FAQ] delete error', e); });
     }, 'FAQ-Eintrag');
   }
 
@@ -452,7 +459,7 @@ function confirmDelete(callback, label) {
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
       body: JSON.stringify({ tabu_begriffe: pairs }),
     })
-      .then(function (r) { return r.json(); })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function (data) {
         if (data.ignored && data.ignored.length > 0) {
           console.warn('[Tabu] ' + data.ignored.length + ' unvollständige Zeile(n) ignoriert');
