@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08.19.2-03-PLAN.md
-last_updated: "2026-04-28T12:30:00.000Z"
+stopped_at: Completed 08.19.2-04-PLAN.md (awaiting human-verify checkpoint)
+last_updated: "2026-04-28T11:58:24.687Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 54
-  completed_phases: 40
+  completed_phases: 41
   total_plans: 188
-  completed_plans: 176
+  completed_plans: 177
   percent: 94
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.19.2 (profil-editor-ux-design-aufraemung) — IN PROGRESS
-Plan: 3 of 4 COMPLETE
+Plan: 4 of 4 COMPLETE
 Last activity: 2026-04-28
 
 **Next:** Plan 04 — sec-hint Education-Stubs fuer alle 6 Sektionen.
@@ -174,6 +174,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.19.2 P01 | 8min | 2 tasks | 1 files |
 | Phase 08.19.2 P02 | 35 | 4 tasks | 5 files |
 | Phase 08.19.2 P03 | 20min | 2 tasks | 1 files |
+| Phase 08.19.2 P04 | 15min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -505,6 +506,7 @@ Recent decisions affecting current work:
 - [Phase 08.19.2-03]: wizard-banner inline-styles (#22c55e) bleiben erhalten — anderes Element als save-toast, out-of-scope fuer Plan 03
 - [Phase 08.19.2-03]: varianten-Feld aus addEinwand() und getEinwaende() entfernt — konsistent mit D-03 Sub-Feld-Spec (nicht in neuer Reihenfolge aufgefuehrt)
 - [Phase 08.19.2-03]: goSec() war bereits korrekt mit getBoundingClientRect 16px offset (Plan 02) — keine Aenderung noetig
+- [Phase ?]: 08.19.2-04: EWB-Placeholder als span.sec-hint — gleiche CSS-Klasse wie sec-hint, passend als Inline-Hinweis nach Sub-Sektion-Header
 
 ### Roadmap Evolution
 
@@ -575,6 +577,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-28T11:42:24.048Z
-Stopped at: Completed 08.19.2-02-PLAN.md
+Last session: 2026-04-28T11:58:24.681Z
+Stopped at: Completed 08.19.2-04-PLAN.md (awaiting human-verify checkpoint)
 Resume file: None
