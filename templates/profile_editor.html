@@ -1231,19 +1231,22 @@ function crudList(containerId, endpoint, label) {
     nameInput.type = 'text';
     nameInput.value = item.name || '';
     nameInput.placeholder = 'Name';
-    nameInput.addEventListener('click', function(e){ e.stopPropagation(); });
 
-    var chevron = document.createElement('span');
+    var chevron = document.createElement('button');
+    chevron.type = 'button';
     chevron.className = 'crud-chevron';
+    chevron.setAttribute('aria-label', 'Abschnitt ein-/ausklappen');
     chevron.textContent = '▸';
 
-    hd.appendChild(nameInput);
-    hd.appendChild(chevron);
-    hd.addEventListener('click', function() {
+    chevron.addEventListener('click', function(e) {
+      e.stopPropagation();
       var body = card.querySelector('.crud-body');
       var collapsed = body.classList.toggle('collapsed');
       chevron.textContent = collapsed ? '▸' : '▾';
     });
+
+    hd.appendChild(nameInput);
+    hd.appendChild(chevron);
 
     var body = document.createElement('div');
     body.className = 'crud-body collapsed';
