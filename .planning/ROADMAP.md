@@ -879,6 +879,27 @@ Plans:
 
 ---
 
+### Phase 08.19.2: Profil-Editor UX + Design-Aufräumung (INSERTED)
+
+**Goal:** Profil-Editor visuell aufräumen und UX-Konsistenz herstellen — Frontend-only, kein Schema-Change, kein Backend-Touch. Kern-Deliverables: Heading-Hierarchie korrigieren (`.sec-title` von 12px auf 16-18px), Inline-Styles in CSS-Klassen extrahieren (8 Stellen), Hardcoded-Farben durch CSS-Variablen ersetzen, Sektions-Doppelungen auflösen (Häufige Fragen + FAQ-Datenbank → eine Sektion; Gesprächsleitfaden + Gesprächsphasen konsolidieren), Tippfehler-Fix, Einwände-Sub-Felder logisch umsortiert + ausklappbar (default kollabiert, nur Einwandtext sichtbar), `+Skript hinzufügen`-Bug gefixt, Education-Hints Stub (1-2 Sätze pro Sektion welche Wirkung das Feld hat), Branchen-Sektion UI-Skelett stub (Content-ready in 08.22). Andre will sichtbares Resultat vor Schema-Hygiene-Kalibrierung (08.19.1).
+**Komplexität:** 🟡 mittel — Cross-AI Pflicht (Andre-Decision für Block-N-Phasen)
+**Depends on:** Phase 08.19
+
+**Input:**
+- `.planning/research/profil-editor-design-audit-2026-04-28.md` — Audit: Heading-Drift, Farb-Drift, 8 Inline-Style-Stellen, Sektions-Doppelungen, Bug-Liste
+- `.planning/research/profil-editor-ux-best-practices-2026-04-28.md` — UX-Best-Practices: Sidebar-Layout, Reihenfolge-Logik, Inline-Education-Patterns, Visual-Hierarchy
+
+**NICHT in 08.19.2 (gehört zu anderen Phasen):**
+- build_profile_context() Reihenfolge-Refactor (08.20)
+- Kaufsignale / Verkaufstechniken / Übergangsziele in EWB-Prompt (08.20)
+- Branchen-Template-Wizard funktional mit Daten-Vorbefüllung (08.22)
+- Profil-Wizard erster Setup-Flow (08.22)
+- Schema-Realität-Kalibrierung + tote Felder säubern (08.19.1)
+
+**Plans:** TBD
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
