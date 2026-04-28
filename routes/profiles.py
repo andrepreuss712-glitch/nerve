@@ -395,7 +395,7 @@ def opener_liste(pid):
         p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
         if not p:
             return jsonify({'error': 'not found'}), 404
-        items = db.query(ProfileOpener).filter_by(profile_id=pid).order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+        items = db.query(ProfileOpener).filter_by(profile_id=pid, type='opener').order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
         return jsonify([{'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung} for o in items])
     finally:
         db.close()
@@ -412,9 +412,9 @@ def opener_erstellen(pid):
         if not p:
             return jsonify({'error': 'not found'}), 404
         data = request.get_json(force=True)
-        max_sort = db.query(ProfileOpener).filter_by(profile_id=pid).count()
+        max_sort = db.query(ProfileOpener).filter_by(profile_id=pid, type='opener').count()
         o = ProfileOpener(profile_id=pid, name=data.get('name', '').strip() or 'Neuer Opener',
-                          inhalt=data.get('inhalt', ''), sortierung=max_sort)
+                          inhalt=data.get('inhalt', ''), sortierung=max_sort, type='opener')
         db.add(o)
         db.commit()
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung}), 201
@@ -459,6 +459,206 @@ def opener_loeschen(pid, oid):
         if not p:
             return jsonify({'error': 'not found'}), 404
         o = db.query(ProfileOpener).filter_by(id=oid, profile_id=pid).first()
+        if o:
+            db.delete(o)
+            db.commit()
+        return jsonify({'ok': True})
+    finally:
+        db.close()
+
+
+# ── Pitch CRUD ────────────────────────────────────────────────────────────────
+
+def _pitch_dual_write(db, pid):
+    """Dual-write: concatenate all pitch inhalt → Profile.daten['pitch'] (transitional until 08.20)."""
+    import json as _json
+    items = db.query(ProfileOpener).filter_by(profile_id=pid, type='pitch').order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+    concatenated = '\n\n'.join(o.inhalt for o in items if o.inhalt)
+    p = db.query(Profile).filter_by(id=pid).first()
+    if p:
+        try:
+            _daten = _json.loads(p.daten) if p.daten else {}
+        except Exception:
+            _daten = {}
+        _daten['pitch'] = concatenated
+        p.daten = _json.dumps(_daten, ensure_ascii=False)
+        db.commit()
+
+
+@profiles_bp.route('/<int:pid>/pitches')
+@login_required
+def pitch_liste(pid):
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        items = db.query(ProfileOpener).filter_by(profile_id=pid, type='pitch').order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+        return jsonify([{'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung} for o in items])
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/pitches', methods=['POST'])
+@login_required
+def pitch_erstellen(pid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        data = request.get_json(force=True)
+        max_sort = db.query(ProfileOpener).filter_by(profile_id=pid, type='pitch').count()
+        o = ProfileOpener(profile_id=pid, name=data.get('name', '').strip() or 'Neuer Pitch',
+                          inhalt=data.get('inhalt', ''), sortierung=max_sort, type='pitch')
+        db.add(o)
+        db.commit()
+        _pitch_dual_write(db, pid)  # dual-write to Profile.daten['pitch'] (transitional until 08.20)
+        return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung}), 201
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/pitches/<int:oid>', methods=['PUT'])
+@login_required
+def pitch_bearbeiten(pid, oid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        o = db.query(ProfileOpener).filter_by(id=oid, profile_id=pid, type='pitch').first()
+        if not o:
+            return jsonify({'error': 'not found'}), 404
+        data = request.get_json(force=True)
+        if 'name' in data:
+            o.name = data['name'].strip()
+        if 'inhalt' in data:
+            o.inhalt = data['inhalt']
+        if 'sortierung' in data:
+            o.sortierung = data['sortierung']
+        db.commit()
+        _pitch_dual_write(db, pid)  # dual-write to Profile.daten['pitch'] (transitional until 08.20)
+        return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung})
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/pitches/<int:oid>', methods=['DELETE'])
+@login_required
+def pitch_loeschen(pid, oid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        o = db.query(ProfileOpener).filter_by(id=oid, profile_id=pid, type='pitch').first()
+        if o:
+            db.delete(o)
+            db.commit()
+        return jsonify({'ok': True})
+    finally:
+        db.close()
+
+
+# ── Erlaubnis CRUD ────────────────────────────────────────────────────────────
+
+def _erlaubnis_dual_write(db, pid):
+    """Dual-write: concatenate all erlaubnis inhalt → Profile.daten['erlaubnis'] (transitional until 08.20)."""
+    import json as _json
+    items = db.query(ProfileOpener).filter_by(profile_id=pid, type='erlaubnis').order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+    concatenated = '\n\n'.join(o.inhalt for o in items if o.inhalt)
+    p = db.query(Profile).filter_by(id=pid).first()
+    if p:
+        try:
+            _daten = _json.loads(p.daten) if p.daten else {}
+        except Exception:
+            _daten = {}
+        _daten['erlaubnis'] = concatenated
+        p.daten = _json.dumps(_daten, ensure_ascii=False)
+        db.commit()
+
+
+@profiles_bp.route('/<int:pid>/erlaubnis')
+@login_required
+def erlaubnis_liste(pid):
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        items = db.query(ProfileOpener).filter_by(profile_id=pid, type='erlaubnis').order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+        return jsonify([{'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung} for o in items])
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/erlaubnis', methods=['POST'])
+@login_required
+def erlaubnis_erstellen(pid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        data = request.get_json(force=True)
+        max_sort = db.query(ProfileOpener).filter_by(profile_id=pid, type='erlaubnis').count()
+        o = ProfileOpener(profile_id=pid, name=data.get('name', '').strip() or 'Erlaubnisfrage',
+                          inhalt=data.get('inhalt', ''), sortierung=max_sort, type='erlaubnis')
+        db.add(o)
+        db.commit()
+        _erlaubnis_dual_write(db, pid)  # dual-write to Profile.daten['erlaubnis'] (transitional until 08.20)
+        return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung}), 201
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/erlaubnis/<int:oid>', methods=['PUT'])
+@login_required
+def erlaubnis_bearbeiten(pid, oid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        o = db.query(ProfileOpener).filter_by(id=oid, profile_id=pid, type='erlaubnis').first()
+        if not o:
+            return jsonify({'error': 'not found'}), 404
+        data = request.get_json(force=True)
+        if 'name' in data:
+            o.name = data['name'].strip()
+        if 'inhalt' in data:
+            o.inhalt = data['inhalt']
+        if 'sortierung' in data:
+            o.sortierung = data['sortierung']
+        db.commit()
+        _erlaubnis_dual_write(db, pid)  # dual-write to Profile.daten['erlaubnis'] (transitional until 08.20)
+        return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung})
+    finally:
+        db.close()
+
+
+@profiles_bp.route('/<int:pid>/erlaubnis/<int:oid>', methods=['DELETE'])
+@login_required
+def erlaubnis_loeschen(pid, oid):
+    if _rolle() not in ('owner', 'admin'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    db = get_session()
+    try:
+        p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
+        if not p:
+            return jsonify({'error': 'not found'}), 404
+        o = db.query(ProfileOpener).filter_by(id=oid, profile_id=pid, type='erlaubnis').first()
         if o:
             db.delete(o)
             db.commit()

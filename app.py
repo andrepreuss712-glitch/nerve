@@ -1278,6 +1278,22 @@ def _migrate_profile_json():
             print(f"[Schema] _migrate_profile_json: SELECT failed: {e}")
             return
 
+        # ── Step A: Add type column to profile_opener (idempotent) ───────────────
+        try:
+            conn.execute(_text3("ALTER TABLE profile_opener ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'opener'"))
+            conn.commit()
+            print("[DB] Migration: added profile_opener.type")
+        except Exception:
+            pass  # column already exists — idempotent
+
+        # ── Step B: Backfill pitch rows inserted without type (name='Pitch' → type='pitch') ──
+        try:
+            conn.execute(_text3("UPDATE profile_opener SET type='pitch' WHERE name='Pitch' AND type='opener'"))
+            conn.commit()
+            print("[DB] Migration: backfilled profile_opener type='pitch' for Pitch rows")
+        except Exception:
+            pass
+
         for _row in _rows:
             _pid, _daten_str, _db_consent = _row[0], _row[1], _row[2]
             try:
@@ -1302,20 +1318,38 @@ def _migrate_profile_json():
                 if _existing_opener == 0:
                     if _opener_text:
                         conn.execute(
-                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung) VALUES (:pid, :name, :inhalt, 0)"),
+                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type) VALUES (:pid, :name, :inhalt, 0, 'opener')"),
                             {'pid': _pid, 'name': 'Opener', 'inhalt': _opener_text}
                         )
                         conn.commit()
                         print(f"[Schema] Profil {_pid}: opener -> ProfileOpener synced")
                     if _pitch_text:
                         conn.execute(
-                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung) VALUES (:pid, :name, :inhalt, 1)"),
+                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type) VALUES (:pid, :name, :inhalt, 1, 'pitch')"),
                             {'pid': _pid, 'name': 'Pitch', 'inhalt': _pitch_text}
                         )
                         conn.commit()
                         print(f"[Schema] Profil {_pid}: pitch -> ProfileOpener synced")
             except Exception as _e:
                 print(f"[Schema] Profil {_pid}: ProfileOpener sync failed: {_e}")
+
+            # ── Step C: Migrate erlaubnis JSON field → ProfileOpener type='erlaubnis' ──
+            _erlaubnis_text = _daten.get('erlaubnis', '') if isinstance(_daten, dict) else ''
+            if _erlaubnis_text:
+                try:
+                    _existing_erlaubnis = conn.execute(
+                        _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='erlaubnis'"),
+                        {'pid': _pid}
+                    ).scalar()
+                    if _existing_erlaubnis == 0:
+                        conn.execute(
+                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type) VALUES (:pid, :name, :inhalt, 0, 'erlaubnis')"),
+                            {'pid': _pid, 'name': 'Erlaubnisfrage', 'inhalt': _erlaubnis_text}
+                        )
+                        conn.commit()
+                        print(f"[Schema] Profil {_pid}: erlaubnis -> ProfileOpener synced")
+                except Exception as _e:
+                    print(f"[Schema] Profil {_pid}: erlaubnis sync failed: {_e}")
 
             # consent_text dual-write (D-04): NULL explizit als leerer String (Finding 4)
             if not isinstance(_daten.get('meta'), dict):

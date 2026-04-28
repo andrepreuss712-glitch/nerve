@@ -274,13 +274,10 @@ def _migrate_profile_data(daten: dict) -> dict:
             ki['ton'] = stil    # stil-Inhalt in ton uebernehmen wenn ton noch leer
         daten['ki'] = ki
 
-    # ── erlaubnis entfernen ───────────────────────────────────────────────────
-    daten.pop('erlaubnis', None)
-
-    # ── opener/pitch aus daten-JSON entfernen (D-01) ──────────────────────────
+    # ── opener aus daten-JSON entfernen (D-01) ───────────────────────────────
     # Sync in ProfileOpener-Tabelle erfolgt in app.py _migrate() (DB-Zugriff dort)
+    # erlaubnis und pitch werden dual-written zurueck in daten (transitional bis 08.20)
     daten.pop('opener', None)
-    daten.pop('pitch', None)
 
     # ── zielkunde anlegen falls fehlend (neue B2B-Felder D-07) ──────────────
     if 'zielkunde' not in daten:
