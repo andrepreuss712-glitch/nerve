@@ -896,11 +896,11 @@ Plans:
 - Profil-Wizard erster Setup-Flow (08.22)
 - Schema-Realität-Kalibrierung + tote Felder säubern (08.19.1)
 
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 Plans:
-- [ ] 08.19.2-01-PLAN.md — nerve.css: neue CSS-Variablen + Typography-Korrekturen + alle neuen Klassen (Wave 1)
-- [ ] 08.19.2-02-PLAN.md — profile_editor.html: 15 Sektionen -> 6 Gruppen, Sidebar, Slider-Entfernung, Branche Sektion #1 + Wisdom-Stub (Wave 2)
+- [x] 08.19.2-01-PLAN.md — nerve.css: neue CSS-Variablen + Typography-Korrekturen + alle neuen Klassen (Wave 1)
+- [x] 08.19.2-02-PLAN.md — profile_editor.html: 15 Sektionen -> 6 Gruppen, Sidebar, Slider-Entfernung, Branche Sektion #1 + Wisdom-Stub (Wave 2)
 - [ ] 08.19.2-03-PLAN.md — profile_editor.html: CSRF-Fix crudList, Erlaubnisfrage+Pitch Multi-Entry, Accordion default-kollabiert, Inline-Style-Extraktion (Wave 3)
 - [ ] 08.19.2-04-PLAN.md — profile_editor.html: sec-hint Texte, field-desc Hilfstext, EWB-Platzhalter, Human-Verifikation (Wave 4)
 
