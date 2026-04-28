@@ -161,19 +161,8 @@
 
 
 /* ── Dynamic rows ─────────────────────────────────────────────────── */
-.btn-add {
-  background: rgba(72,153,200,0.08); border: 1px solid rgba(72,153,200,0.2); color: #4899c8;
-  border-radius: 6px; padding: 6px 14px; font-size: 11px; font-weight: 700;
-  cursor: pointer; font-family: inherit; margin-top: 8px;
-  transition: border-color .15s;
-}
-.btn-add:hover { border-color: #4899c8; }
-.btn-rm {
-  background: rgba(240,92,92,0.08); border: 1px solid rgba(240,92,92,0.2); color: #e05c5c;
-  border-radius: 5px; padding: 5px 8px; font-size: 12px; cursor: pointer;
-  flex-shrink: 0; font-family: inherit; transition: border-color .15s; line-height: 1;
-}
-.btn-rm:hover { border-color: #e05c5c; }
+/* .btn-add deprecated C2X — replaced by .btn-primary (nerve.css) */
+/* .btn-rm  deprecated C2X — replaced by .btn-trash  (nerve.css) */
 .btn-ord {
   background: #F8FAFC; border: 1px solid #E2E8F0; color: var(--page-text-muted);
   border-radius: 5px; padding: 5px 7px; font-size: 11px; cursor: pointer;
@@ -314,7 +303,7 @@
         <!-- Wisdom-Stub-Box (D-04) — Vorschläge laden wird aktiv in Phase 08.22 -->
         <div class="wisdom-stub-box">
           <p>Wir haben uns die Arbeit gemacht aus verschiedensten Branchen die Best-Practice anhand von Daten auszuwerten und dein Profil damit vorauszufüllen. Du entscheidest selber ob du mit einem leeren oder unseren Daten vorausgefüllten Profil starten willst. Wir empfehlen ein vorausgefülltes Profil. Du kannst trotzdem jederzeit Änderungen an deinem Profil vornehmen.</p>
-          <button type="button" class="wisdom-stub-btn" disabled title="Aktiv ab Phase 08.22">Vorschläge laden</button>
+          <button type="button" class="btn-primary" disabled title="Aktiv ab Phase 08.22">Vorschläge laden</button>
         </div>
 
         <div class="fg">
@@ -420,7 +409,7 @@
         <div class="sec-title" style="font-size:14px;margin-bottom:6px;margin-top:18px">Painpoints</div>
         <p class="field-desc">Die größten Probleme deiner Kunden — NERVE priorisiert Gegenargumente danach.</p>
         <div id="schmerz-list"></div>
-        <button type="button" class="btn-add" onclick="addSchmerz()">+ Painpoint hinzufügen</button>
+        <button type="button" class="btn-primary" onclick="addSchmerz()">+ Painpoint hinzufügen</button>
       </div>
 
       <!-- ③ Gesprächsleitfaden (enthält ehemalige sec-leitfaden + sec-phasen) -->
@@ -435,24 +424,24 @@
           <label class="fl">Erlaubnisfrage <i class="tip-icon" data-tip="Wie holst du dir die Erlaubnis für das Gespräch? Der Satz nach dem Opener.">?</i></label>
           <p class="field-desc">Frage die du nach dem Opener stellst um Gesprächsbereitschaft zu sichern.</p>
           <div id="erlaubnis-list" class="pe-entry-list"></div>
-          <button type="button" class="btn-add" id="btn-add-erlaubnis">+ Erlaubnisfrage hinzufügen</button>
+          <button type="button" class="btn-primary" id="btn-add-erlaubnis">+ Erlaubnisfrage hinzufügen</button>
         </div>
         <div class="fg pitch-entry">
           <label class="fl">Pitch <i class="tip-icon" data-tip="Dein Kernpitch in 2-3 Sätzen. Was sagst du wenn der Kunde sagt 'Erzählen Sie mal'?">?</i></label>
           <p class="field-desc">Dein Kern-Pitch — 1-2 Sätze warum dein Produkt relevant ist.</p>
           <div id="pitch-list" class="pe-entry-list"></div>
-          <button type="button" class="btn-add" id="btn-add-pitch">+ Pitch hinzufügen</button>
+          <button type="button" class="btn-primary" id="btn-add-pitch">+ Pitch hinzufügen</button>
         </div>
         <div class="fg" style="margin-top:18px">
           <label class="fl">Skripte <i class="tip-icon" data-tip="Erstelle mehrere Gesprächsskripte für verschiedene Szenarien. Im Launcher wählst du vor dem Call das passende aus.">?</i></label>
           <div id="skripte-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-add" id="btn-add-skripte" style="margin-top:8px">+ Skript hinzufügen</button>
+          <button type="button" class="btn-primary" id="btn-add-skripte" style="margin-top:8px">+ Skript hinzufügen</button>
         </div>
         <div class="fg" style="margin-top:18px">
           <label class="fl">Opener <i class="tip-icon" data-tip="Sammle verschiedene Opener-Sätze. Im Launcher wählst du vor dem Call den passenden aus.">?</i></label>
           <p class="field-desc">Dein bevorzugter Gesprächseinstieg. Mehrere Varianten möglich.</p>
           <div id="opener-list" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" class="btn-add" id="btn-add-opener" style="margin-top:8px">+ Opener hinzufügen</button>
+          <button type="button" class="btn-primary" id="btn-add-opener" style="margin-top:8px">+ Opener hinzufügen</button>
         </div>
 
         <!-- ehemals sec-phasen -->
@@ -465,7 +454,7 @@
           </div>
           <div class="skript-hint">↳ Skript-Bullets (optional) — eine Zeile = ein Teleprompter-Punkt</div>
           <div id="phasen-list"></div>
-          <button type="button" class="btn-add" onclick="addPhase()">+ Phase hinzufügen</button>
+          <button type="button" class="btn-primary" onclick="addPhase()">+ Phase hinzufügen</button>
         </div>
       </div>
 
@@ -480,13 +469,13 @@
         <!-- ehemals sec-einwaende -->
         <p class="field-desc">Häufigste Kundeneinwände. NERVE erkennt ähnliche Formulierungen und schlägt Gegenargumente vor.</p>
         <div id="einwaende-list"></div>
-        <button type="button" class="btn-add" onclick="addEinwand()">+ Einwand hinzufügen</button>
+        <button type="button" class="btn-primary" onclick="addEinwand()">+ Einwand hinzufügen</button>
 
         <!-- ehemals sec-fragen -->
         <div style="margin-top:24px">
           <div class="sec-title" style="font-size:14px;margin-bottom:12px">Häufige Fragen</div>
           <div id="fragen-list"></div>
-          <button type="button" class="btn-add" onclick="addFrage()">+ Frage hinzufügen</button>
+          <button type="button" class="btn-primary" onclick="addFrage()">+ Frage hinzufügen</button>
         </div>
 
         <!-- ehemals sec-faqs — ACHTUNG: profile_editor.js hängt an diesen DOM-IDs -->
@@ -500,7 +489,7 @@
 
           <div id="profile-faqs-list" class="profile-faqs-list"></div>
 
-          <button type="button" class="btn-add" id="btn-faq-add">+ Frage hinzufügen</button>
+          <button type="button" class="btn-primary" id="btn-faq-add">+ Frage hinzufügen</button>
 
           <!-- Template (hidden) for rendering a single FAQ row -->
           <template id="tpl-faq-row">
@@ -583,7 +572,7 @@
           <span style="width:32px"></span>
         </div>
         <div id="kaufsignale-list"></div>
-        <button type="button" class="btn-add" onclick="addKaufsignal()">+ Kaufsignal hinzufügen</button>
+        <button type="button" class="btn-primary" onclick="addKaufsignal()">+ Kaufsignal hinzufügen</button>
 
         <!-- ehemals sec-uebergaenge -->
         <div style="margin-top:24px">
@@ -597,7 +586,7 @@
             <span></span>
           </div>
           <div id="uebergaenge-list"></div>
-          <button type="button" class="btn-add" onclick="addUebergang()">+ Übergang hinzufügen</button>
+          <button type="button" class="btn-primary" onclick="addUebergang()">+ Übergang hinzufügen</button>
         </div>
 
         <!-- ehemals sec-nogos -->
@@ -609,7 +598,7 @@
             <span style="width:32px"></span>
           </div>
           <div id="nogos-list"></div>
-          <button type="button" class="btn-add" onclick="addNogo()">+ No-Go hinzufügen</button>
+          <button type="button" class="btn-primary" onclick="addNogo()">+ No-Go hinzufügen</button>
         </div>
 
         <!-- ehemals sec-wettbewerb -->
@@ -622,7 +611,7 @@
             <span></span>
           </div>
           <div id="wettbewerb-list"></div>
-          <button type="button" class="btn-add" onclick="addWettbewerber()">+ Wettbewerber hinzufügen</button>
+          <button type="button" class="btn-primary" onclick="addWettbewerber()">+ Wettbewerber hinzufügen</button>
         </div>
 
         <!-- ehemals sec-tabu — profile_editor.js hängt an tabu-rows, tabu-add-btn, tabu-seed-btn -->
@@ -634,7 +623,7 @@
             Wörter die du vermeiden willst — und was du stattdessen sagst.
           </p>
           <div id="tabu-rows"></div>
-          <button type="button" id="tabu-add-btn" class="n-btn-ghost" style="margin-top:8px">+ Hinzufügen</button>
+          <button type="button" id="tabu-add-btn" class="btn-primary" style="margin-top:8px">+ Hinzufügen</button>
           <button type="button" id="tabu-seed-btn" class="n-btn-ghost" style="margin-top:8px;margin-left:6px">+ Standard-Paare einfügen</button>
           <span id="tabu-seed-feedback" style="font-size:12px;color:var(--page-text-muted);margin-left:10px" aria-live="polite"></span>
           <input type="hidden" id="vi_tabu_begriffe" name="tabu_begriffe" value="[]">

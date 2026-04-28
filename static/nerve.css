@@ -394,6 +394,80 @@ a{color:inherit;text-decoration:none}
 .n-btn-primary::before{background:linear-gradient(180deg,var(--btn-primary-shine),transparent);}
 .n-btn-primary:hover{transform:translateY(-2px);box-shadow:var(--btn-primary-glow-hover);}
 
+/* ═══════════════════════════════════════════════════
+   POLISH C2X: Convenience-Aliases für Profil-Editor
+   ═══════════════════════════════════════════════════ */
+
+/* btn-primary: Teal-Pille — identisch mit .n-btn-primary */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--btn-primary-bg-from), var(--btn-primary-bg-to));
+  color: var(--btn-primary-text);
+  border: none;
+  border-radius: var(--btn-primary-radius);
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: var(--btn-primary-weight);
+  font-family: var(--page-font);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: var(--btn-primary-glow);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--btn-primary-glow-hover);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* btn-destructive: grau normal → rot auf hover */
+.btn-destructive {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.04);
+  color: var(--page-text-muted);
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--page-font);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-destructive:hover {
+  background: #EF4444;
+  color: #ffffff;
+  border-color: #EF4444;
+}
+
+/* btn-secondary: outline-Stil */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--page-text-muted);
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--page-font);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-secondary:hover {
+  border-color: var(--page-text-muted);
+  background: rgba(0,0,0,0.04);
+}
+
 /* Phase 07: .n-btn-accent (Gold) entfernt — MAIN DESIGN kennt nur Teal-Primary/Ghost/Rot(destructive). */
 
 .n-btn-ghost{background:var(--btn-ghost-bg);color:var(--btn-ghost-text);border:1.5px solid var(--btn-ghost-border);border-radius:var(--btn-ghost-radius);padding:var(--btn-ghost-padding);font-size:var(--btn-ghost-size);font-weight:var(--btn-ghost-weight);font-family:var(--page-font);backdrop-filter:blur(10px);}
@@ -2674,18 +2748,7 @@ input[type="range"].perf-slider::-moz-range-thumb {
   margin: 0 0 12px 0;
 }
 
-.wisdom-stub-btn {
-  border: 1px solid rgba(0, 212, 170, 0.5);
-  background: transparent;
-  color: var(--input-border-focus);
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 13px;
-  cursor: not-allowed;
-  opacity: 0.6;
-  font-family: inherit;
-  display: inline-block;
-}
+/* .wisdom-stub-btn deprecated C2X — replaced by .btn-primary:disabled */
 
 /* Section number badge — badge micro exception (outside type scale) */
 .sec-title-num {
