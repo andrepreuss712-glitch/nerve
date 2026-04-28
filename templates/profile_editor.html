@@ -207,7 +207,7 @@
 .drow { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
 .drow .fi { flex: 1; }
 .wrow { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
-.urow { display: grid; grid-template-columns: 1fr auto 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.urow { display: grid; grid-template-columns: 1fr auto 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; border: 2px solid var(--glass-border-hover); border-radius: 6px; padding: 8px; }
 .u-arrow { color: var(--page-text-muted); font-size: 15px; flex-shrink: 0; }
 
 /* ── CRUD Cards (Skripte / Opener) ───────────────────────────────── */
@@ -446,13 +446,13 @@
 
         <!-- ehemals sec-phasen -->
         <div style="margin-top:24px">
-          <div class="col-header" style="grid-template-columns:36px 1fr 1fr auto auto;display:grid;gap:8px">
+          <div class="col-header pe-col-grid-skript">
             <span></span>
             <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Kurzer Name der Phase, z.B. Smalltalk oder Closing.">?</i></span>
             <span class="fl" style="margin:0">Ziel / Beschreibung <i class="tip-icon" data-tip="Was soll am Ende dieser Phase erreicht sein?">?</i></span>
             <span></span><span></span>
           </div>
-          <div style="font-size:11px;color:var(--page-text-muted);margin:2px 0 6px 44px">↳ Skript-Bullets (optional) — eine Zeile = ein Teleprompter-Punkt</div>
+          <div class="skript-hint">↳ Skript-Bullets (optional) — eine Zeile = ein Teleprompter-Punkt</div>
           <div id="phasen-list"></div>
           <button type="button" class="btn-add" onclick="addPhase()">+ Phase hinzufügen</button>
         </div>
@@ -517,7 +517,7 @@
                     </select>
                   </div>
                   <div class="faq-meta" style="display:flex;align-items:center;gap:12px;margin-top:18px">
-                    <span class="faq-used-count" title="Wie oft wurde diese Antwort im Gespräch vorgeschlagen" style="font-size:12px;color:var(--page-text-muted)">0×</span>
+                    <span class="faq-used-count faq-count" title="Wie oft wurde diese Antwort im Gespräch vorgeschlagen">0×</span>
                     <button type="button" class="btn-rm faq-delete">Löschen</button>
                   </div>
                 </div>
@@ -596,7 +596,7 @@
         <!-- ehemals sec-wettbewerb -->
         <div style="margin-top:24px">
           <div class="sec-title" style="font-size:14px;margin-bottom:12px">Wettbewerber</div>
-          <div class="col-header" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px">
+          <div class="col-header pe-col-grid-3">
             <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Wer ist der Hauptkonkurrent den Kunden oft nennen?">?</i></span>
             <span class="fl" style="margin:0">Schwäche <i class="tip-icon" data-tip="Was kann der Wettbewerber nicht oder schlechter?">?</i></span>
             <span class="fl" style="margin:0">Unser Vorteil <i class="tip-icon" data-tip="Was kannst nur du bieten?">?</i></span>
@@ -657,7 +657,7 @@
               <label><input type="radio" name="ki_ansprache" value="Du" id="ki_du"> Du</label>
               <label><input type="radio" name="ki_ansprache" value="Sie" id="ki_sie"> Sie</label>
             </div>
-            <div class="fl-desc" style="font-size:12px;color:var(--page-text-muted,#888);margin-top:4px;">
+            <div class="fl-desc" style="font-size:12px;color:var(--page-text-muted);margin-top:4px;">
               Wird beim Start jedes Anrufs vorausgewählt. Sie können die Anrede pro Gespräch im Skript-Auswahl-Schritt ändern.
             </div>
           </div>
@@ -908,7 +908,7 @@ function addPhase(d={}){
   const skriptVal=Array.isArray(d.skript)?d.skript.join('\n'):(d.skript||'');
   row.innerHTML=`
 <div style="display:grid;grid-template-columns:36px 1fr 1fr auto auto;gap:8px;align-items:center">
-<span class="block-lbl" style="font-size:12px;color:#00D4AA;text-align:center">${idx}</span>
+<span class="block-lbl" style="font-size:12px;color:var(--input-border-focus);text-align:center">${idx}</span>
 <input class="fi" data-ph="name" placeholder="z.B. Einstieg, Bedarfsanalyse, Closing" value="${esc(d.name)}">
 <input class="fi" data-ph="ziel" placeholder="Was ist das Ziel dieser Phase?" value="${esc(d.ziel||d.beschreibung)}">
 <button type="button" class="btn-ord" onclick="moveBlock(this.closest('.block'),-1)" title="Nach oben">▲</button>
@@ -954,26 +954,19 @@ function addEinwand(d={}){
   <span class="einwand-preview">${esc(d.kategorie||d.typ||'Kategorie wählen')}</span>
   <button type="button" class="btn-rm" onclick="event.stopPropagation();this.closest('.block').remove();renumEW()">✕</button>
 </div>
-<div class="einwand-body">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div class="fg" style="margin:0"><label class="fl">Kategorie</label>
-      <select class="fs" data-ew="kat" onchange="this.closest('.block').querySelector('.einwand-preview').textContent=this.value">${typen}</select></div>
-    <div class="fg" style="margin:0"><label class="fl">Intensität</label>
-      <select class="fs" data-ew="int">
-        <option value="mittel" ${(d.intensitaet||'mittel')==='mittel'?'selected':''}>Mittel</option>
-        <option value="hoch" ${d.intensitaet==='hoch'?'selected':''}>Hoch</option>
-      </select></div>
-  </div>
-  <div class="fg"><label class="fl">Kurzlabel für PiP-Button ${ti('Max 2-3 Wörter, z.B. "Zu teuer", "Keine Zeit". Wird auf dem EWB-Button im PiP angezeigt. Leer lassen = Kategorie-Fallback.')}</label>
-    <input class="fi" data-ew="kurzlabel" placeholder="z.B. Zu teuer" value="${esc(d.kurzlabel||'')}"></div>
+<div class="einwand-body collapsed">
   <div class="fg"><label class="fl">Einwand-Text ${ti('Wie sagt der Kunde es wörtlich? z.B. Das ist mir zu teuer.')}</label>
     <input class="fi" data-ew="einwand" placeholder="Was sagt der Kunde? z.B. Das ist zu teuer" value="${esc(d.einwand)}"></div>
-  <div class="fg"><label class="fl">Varianten ${ti('Andere Formulierungen desselben Einwands — eine pro Zeile.')}</label>
-    <textarea class="fta" data-ew="varianten" style="min-height:52px" placeholder="z.B. Das liegt über unserem Budget&#10;Können wir das günstiger haben?">${esc(Array.isArray(d.varianten)?d.varianten.join('\n'):d.varianten||'')}</textarea></div>
   <div class="fg"><label class="fl">Gegenargument ${ti('Deine beste Antwort — 2-3 Sätze, endet mit offener Frage.')}</label>
     <textarea class="fta" data-ew="gegen" style="min-height:72px" placeholder="Deine beste Antwort darauf — endet idealerweise mit einer offenen Gegenfrage.">${esc(d.gegenargument||d.gegen)}</textarea></div>
-  <div class="fg" style="margin:0"><label class="fl">Empfohlene Technik ${ti('Welche Verkaufstechnik passt hier? z.B. Brückentechnik.')}</label>
+  <div class="fg"><label class="fl">Empfohlene Technik ${ti('Welche Verkaufstechnik passt hier? z.B. Brückentechnik.')}</label>
     <input class="fi" data-ew="technik" placeholder="z.B. Reframing, Brückentechnik …" value="${esc(d.technik)}"></div>
+  <div class="pe-col-grid-2">
+    <div class="fg" style="margin:0"><label class="fl">Kategorie</label>
+      <select class="fs" data-ew="kat" onchange="this.closest('.block').querySelector('.einwand-preview').textContent=this.value">${typen}</select></div>
+    <div class="fg" style="margin:0"><label class="fl">Kurzlabel für PiP-Button ${ti('Max 2-3 Wörter, z.B. "Zu teuer", "Keine Zeit". Wird auf dem EWB-Button im PiP angezeigt. Leer lassen = Kategorie-Fallback.')}</label>
+      <input class="fi" data-ew="kurzlabel" placeholder="z.B. Zu teuer" value="${esc(d.kurzlabel||'')}"></div>
+  </div>
 </div>`;
   c.appendChild(b);
 }
@@ -986,10 +979,8 @@ function renumEW(){
 function getEinwaende(){
   return [...document.querySelectorAll('#einwaende-list .block')].map(b=>({
     kategorie:b.querySelector('[data-ew="kat"]').value,
-    intensitaet:b.querySelector('[data-ew="int"]').value,
     kurzlabel:b.querySelector('[data-ew="kurzlabel"]').value.trim(),
     einwand:b.querySelector('[data-ew="einwand"]').value.trim(),
-    varianten:b.querySelector('[data-ew="varianten"]').value.trim().split('\n').map(s=>s.trim()).filter(Boolean),
     gegenargument:b.querySelector('[data-ew="gegen"]').value.trim(),
     technik:b.querySelector('[data-ew="technik"]').value.trim(),
   })).filter(e=>e.einwand||e.gegenargument);
