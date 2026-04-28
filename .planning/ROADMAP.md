@@ -913,7 +913,13 @@ Plans:
 **Depends on:** Phase 08.19.2
 **Andre-Decision:** 2026-04-28 abend — KI-Antworten als Default, wortwörtlich nur für Compliance-kritische Fragen. Cross-AI Pflicht (Block-N-Decision).
 
-**Plans:**
+**Plans:** 4 plans
+
+Plans:
+- [ ] 08.19.3-01-PLAN.md — Schema-Migration: profile_faqs.mode Spalte + Backfill + daten.fragen → profile_faqs
+- [ ] 08.19.3-02-PLAN.md — Backend: match_faq() mode-Filter + build_profile_context() FAQ Q+A-Block
+- [ ] 08.19.3-03-PLAN.md — Routen: GET/PUT FAQ-Endpoints mode-aware
+- [ ] 08.19.3-04-PLAN.md — Frontend: sec-fragen entfernen + Toggle-Widget + renderFaqRow() + Human-Verify
 
 ---
 
