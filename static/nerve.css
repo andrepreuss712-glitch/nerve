@@ -2572,3 +2572,145 @@ input[type="range"].perf-slider::-moz-range-thumb {
   font-style: normal;
   line-height: 1.3;
 }
+
+/* ── Profile Editor 08.19.2 ──────────────────────────────────────────── */
+
+/* Typography corrections */
+.sec-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--page-text-color);
+  margin-bottom: 18px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.block-lbl {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--page-text-color);
+}
+
+/* Education inline helpers */
+.field-desc {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--page-text-muted);
+  line-height: 1.5;
+  margin-top: 3px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.sec-hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--page-text-muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+  display: block;
+}
+
+/* Inline-style extractions */
+.save-toast {
+  font-size: 13px;
+  color: var(--success-green);
+}
+
+.skript-hint {
+  font-size: 12px;        /* per UI-SPEC.md Component Inventory */
+  color: var(--page-text-muted);
+  margin: 2px 0 6px 44px;
+}
+
+.faq-count {
+  font-size: 12px;
+  color: var(--page-text-secondary);
+}
+
+.fl-desc {
+  font-size: 12px;
+  color: var(--page-text-muted);
+  margin-top: 4px;
+}
+
+/* Grid variants — extract col-header inline styles */
+.pe-col-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pe-col-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 8px;
+}
+
+.pe-col-grid-skript {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr auto auto;
+  gap: 8px;
+}
+
+/* Wisdom-Prefill-Stub — Branche section #1 */
+.wisdom-stub-box {
+  background: rgba(0, 212, 170, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.wisdom-stub-box p {
+  font-size: 13px;
+  color: var(--page-text-secondary);
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+}
+
+.wisdom-stub-btn {
+  border: 1px solid rgba(0, 212, 170, 0.5);
+  background: transparent;
+  color: var(--input-border-focus);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: not-allowed;
+  opacity: 0.6;
+  font-family: inherit;
+  display: inline-block;
+}
+
+/* Section number badge — badge micro exception (outside type scale) */
+.sec-title-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--input-border-focus);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Multi-entry wrappers — margin-top via class, not inline style (D-08) */
+.erlaubnis-entry,
+.pitch-entry {
+  margin-top: 8px;
+}
+
+/* Multi-entry row helpers for Erlaubnisfrage/Pitch */
+.pe-entry-list { display: flex; flex-direction: column; gap: 6px; }
+.pe-entry-row { display: flex; gap: 6px; align-items: center; }
+.pe-entry-input { flex: 1; }
+.pe-entry-textarea { flex: 1; min-height: 60px; }
+.pe-entry-btn-rm { align-self: flex-start; }
