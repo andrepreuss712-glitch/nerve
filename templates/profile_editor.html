@@ -219,12 +219,12 @@
   border-radius: 4px; transition: opacity 0.15s;
 }
 .crud-chevron:hover { opacity: 0.75; }
-.crud-body { display: none; padding: 0 14px 10px; display: flex; flex-direction: column; gap: 6px; background: #161B22; }
+.crud-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; background: transparent; }
 .crud-body.collapsed { display: none; }
 .crud-card textarea {
   background: transparent; border: 1px solid transparent; border-radius: 4px;
-  font-size: 12px; color: var(--page-text-secondary); resize: vertical;
-  min-height: 48px; outline: none; padding: 4px 6px; font-family: inherit; width: 100%;
+  font-size: 13px; color: var(--page-text-color); resize: vertical;
+  min-height: 100px; outline: none; padding: 6px 8px; font-family: inherit; width: 100%;
 }
 .crud-card textarea:focus { border-color: #00D4AA; }
 .crud-card .crud-actions { display: flex; justify-content: flex-end; }
@@ -450,6 +450,7 @@
 
         <!-- ehemals sec-phasen -->
         <div style="margin-top:24px">
+          <label class="fl">Gesprächsphasen <i class="tip-icon" data-tip="Definiere die Phasen deines Gesprächs — NERVE erkennt daran wo du im Gespräch stehst.">?</i></label>
           <div class="col-header pe-col-grid-skript">
             <span></span>
             <span class="fl" style="margin:0">Name <i class="tip-icon" data-tip="Kurzer Name der Phase, z.B. Smalltalk oder Closing.">?</i></span>
@@ -1243,9 +1244,6 @@ function crudList(containerId, endpoint, label) {
       chevron.textContent = collapsed ? '▸' : '▾';
     });
 
-    hd.appendChild(nameInput);
-    hd.appendChild(chevron);
-
     var body = document.createElement('div');
     body.className = 'crud-body collapsed';
 
@@ -1253,17 +1251,17 @@ function crudList(containerId, endpoint, label) {
     inhaltTa.placeholder = 'Inhalt …';
     inhaltTa.value = item.inhalt || '';
 
-    var actions = document.createElement('div');
-    actions.className = 'crud-actions';
     var delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'btn-trash';
     delBtn.title = 'Löschen';
     delBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
-    actions.appendChild(delBtn);
+
+    hd.appendChild(nameInput);
+    hd.appendChild(chevron);
+    hd.appendChild(delBtn);
 
     body.appendChild(inhaltTa);
-    body.appendChild(actions);
     card.appendChild(hd);
     card.appendChild(body);
 
