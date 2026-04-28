@@ -23,12 +23,6 @@
   padding: 7px 12px; outline: none; font-family: inherit;
 }
 .topbar-name:focus { border-color: var(--input-border-focus); }
-.topbar-branche {
-  max-width: 200px; background: #FFFFFF; border: 1px solid #E2E8F0;
-  border-radius: 7px; color: var(--page-text-secondary); font-size: 13px; padding: 7px 12px;
-  outline: none; font-family: inherit;
-}
-.topbar-branche:focus { border-color: var(--input-border-focus); }
 .save-btn {
   background: #00D4AA; color: var(--page-bg); border: none; border-radius: 8px;
   padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
@@ -89,14 +83,6 @@
 
 /* ── Sections ─────────────────────────────────────────────────────── */
 .sec { margin-bottom: 44px; scroll-margin-top: 16px; }
-.sec-title {
-  font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: #00D4AA; margin-bottom: 18px; padding-bottom: 8px;
-  border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; gap: 8px;
-}
-.sec-title-num {
-  background: rgba(0,212,170,0.08); color: #00D4AA; border-radius: 4px; padding: 1px 6px; font-size: 10px;
-}
 
 /* ── Form ─────────────────────────────────────────────────────────── */
 .fg { margin-bottom: 14px; }
@@ -173,15 +159,6 @@
 }
 .radio-row input[type="radio"] { accent-color: #00D4AA; }
 
-/* ── Sliders ──────────────────────────────────────────────────────── */
-.trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; }
-.trigger-row { display: flex; align-items: center; gap: 10px; }
-.trigger-lbl {
-  font-size: 12px; color: var(--page-text-secondary); min-width: 170px; flex-shrink: 0;
-  display: flex; align-items: center; gap: 4px;
-}
-.t-slider { flex: 1; accent-color: #00D4AA; cursor: pointer; height: 4px; }
-.slider-val { font-size: 13px; font-weight: 700; color: #00D4AA; min-width: 22px; text-align: right; }
 
 /* ── Dynamic rows ─────────────────────────────────────────────────── */
 .btn-add {
@@ -244,8 +221,6 @@
 .crud-card .crud-actions { display: flex; justify-content: flex-end; }
 .crud-card .crud-del { background: none; border: none; color: #EF4444; font-size: 11px; cursor: pointer; font-family: inherit; }
 .crud-card .crud-del:hover { text-decoration: underline; }
-.btn-add { background: none; border: 1px dashed #CBD5E1; border-radius: 7px; color: var(--page-text-muted); font-size: 12px; padding: 6px 14px; cursor: pointer; font-family: inherit; transition: border-color .15s, color .15s; }
-.btn-add:hover { border-color: #00D4AA; color: #00D4AA; }
 {% endblock %}
 
 {% block content %}
@@ -274,36 +249,18 @@
 
   <div class="editor-layout">
     <div class="editor-sidebar" id="editorSidebar">
-      <a class="sec-link active" data-target="sec-basis" onclick="goSec('sec-basis')">
-        <span class="sec-num">1</span>Basis & Produkt</a>
-      <a class="sec-link" data-target="sec-leitfaden" onclick="goSec('sec-leitfaden')">
-        <span class="sec-num">2</span>Gespraechsleitfaden</a>
-      <a class="sec-link" data-target="sec-zielgruppe" onclick="goSec('sec-zielgruppe')">
-        <span class="sec-num">3</span>Zielgruppe</a>
-      <a class="sec-link" data-target="sec-schmerzen" onclick="goSec('sec-schmerzen')">
-        <span class="sec-num">4</span>Schmerzpunkte</a>
-      <a class="sec-link" data-target="sec-phasen" onclick="goSec('sec-phasen')">
-        <span class="sec-num">5</span>Gesprächsphasen</a>
-      <a class="sec-link" data-target="sec-einwaende" onclick="goSec('sec-einwaende')">
-        <span class="sec-num">6</span>Einwände</a>
-      <a class="sec-link" data-target="sec-fragen" onclick="goSec('sec-fragen')">
-        <span class="sec-num">7</span>Häufige Fragen</a>
-      <a class="sec-link" data-target="sec-kaufsignale" onclick="goSec('sec-kaufsignale')">
-        <span class="sec-num">8</span>Kaufsignale</a>
-      <a class="sec-link" data-target="sec-nogos" onclick="goSec('sec-nogos')">
-        <span class="sec-num">9</span>No-Go Situationen</a>
-      <a class="sec-link" data-target="sec-wettbewerb" onclick="goSec('sec-wettbewerb')">
-        <span class="sec-num">10</span>Wettbewerber</a>
-      <a class="sec-link" data-target="sec-techniken" onclick="goSec('sec-techniken')">
-        <span class="sec-num">11</span>Verkaufstechniken</a>
-      <a class="sec-link" data-target="sec-uebergaenge" onclick="goSec('sec-uebergaenge')">
-        <span class="sec-num">12</span>Übergang-Ziele</a>
-      <a class="sec-link" data-target="sec-ki" onclick="goSec('sec-ki')">
-        <span class="sec-num">13</span>KI-Anweisungen</a>
-      <a class="sec-link" data-target="sec-faqs" onclick="goSec('sec-faqs')">
-        <span class="sec-num">14</span>FAQ-Datenbank</a>
-      <a class="sec-link" data-target="sec-tabu" onclick="goSec('sec-tabu')">
-        <span class="sec-num">15</span>Tabu-Begriffe</a>
+      <a class="sec-link active" data-target="sec-branche-firma" onclick="goSec('sec-branche-firma')">
+        <span class="sec-num">1</span>Branche &amp; Firma</a>
+      <a class="sec-link" data-target="sec-zielgruppe-neu" onclick="goSec('sec-zielgruppe-neu')">
+        <span class="sec-num">2</span>Zielgruppe</a>
+      <a class="sec-link" data-target="sec-gespraechsleitfaden" onclick="goSec('sec-gespraechsleitfaden')">
+        <span class="sec-num">3</span>Gesprächsleitfaden</a>
+      <a class="sec-link" data-target="sec-einwaende-antworten" onclick="goSec('sec-einwaende-antworten')">
+        <span class="sec-num">4</span>Einwände &amp; Antworten</a>
+      <a class="sec-link" data-target="sec-live-signale" onclick="goSec('sec-live-signale')">
+        <span class="sec-num">5</span>Live-Coaching-Signale</a>
+      <a class="sec-link" data-target="sec-ki-verhalten" onclick="goSec('sec-ki-verhalten')">
+        <span class="sec-num">6</span>KI-Verhalten</a>
     </div>
 
     <div class="editor-main" id="editorMain">
@@ -759,10 +716,9 @@
 const DATEN = {{ daten | tojson | safe }};
 const EW_KATEGORIEN = ['Kosten/Preis','Zeit/Aufschub','Vertrauen','Komplexität',
   'Kein Bedarf','Angst/Risiko','Vergleich','Entscheidungsträger','Abbruch'];
-const ALL_SECS = ['sec-basis','sec-zielgruppe','sec-schmerzen','sec-phasen',
-  'sec-einwaende','sec-fragen','sec-kaufsignale','sec-nogos',
-  'sec-wettbewerb','sec-techniken','sec-uebergaenge','sec-ki',
-  'sec-faqs','sec-tabu'];
+const ALL_SECS = ['sec-branche-firma','sec-zielgruppe-neu',
+  'sec-gespraechsleitfaden','sec-einwaende-antworten',
+  'sec-live-signale','sec-ki-verhalten'];
 // Phase 08.5: expose profile daten for tabu loading in profile_editor.js
 window.PROFILE_DATEN = {{ daten | tojson | safe }};
 
