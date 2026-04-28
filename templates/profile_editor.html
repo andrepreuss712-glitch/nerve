@@ -1218,12 +1218,14 @@ function crudList(containerId, endpoint, label) {
     card.dataset.id = item.id;
     card.innerHTML = [
       '<input type="text" value="' + item.name.replace(/"/g, '&quot;') + '" placeholder="Name">',
-      '<textarea placeholder="Inhalt...">' + (item.inhalt || '').replace(/</g, '&lt;') + '</textarea>',
       '<div class="crud-actions"><button type="button" class="crud-del">Loeschen</button></div>'
     ].join('');
+    var inhaltTa = document.createElement('textarea');
+    inhaltTa.placeholder = 'Inhalt...';
+    inhaltTa.value = item.inhalt || '';
+    card.insertBefore(inhaltTa, card.querySelector('.crud-actions'));
 
     var nameInput = card.querySelector('input');
-    var inhaltTa = card.querySelector('textarea');
     var delBtn = card.querySelector('.crud-del');
 
     function save() {
