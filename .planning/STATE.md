@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08.19.2-02-PLAN.md
-last_updated: "2026-04-28T11:42:24.054Z"
+stopped_at: Completed 08.19.2-03-PLAN.md
+last_updated: "2026-04-28T12:30:00.000Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 54
   completed_phases: 40
   total_plans: 188
-  completed_plans: 175
-  percent: 93
+  completed_plans: 176
+  percent: 94
 ---
 
 # Project State
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.19.2 (profil-editor-ux-design-aufraemung) — IN PROGRESS
-Plan: 2 of 4 COMPLETE
+Plan: 3 of 4 COMPLETE
 Last activity: 2026-04-28
 
-**Next:** Plan 02 — profile_editor.html Sektion-Konsolidierung + Typografie-Cleanup.
+**Next:** Plan 04 — sec-hint Education-Stubs fuer alle 6 Sektionen.
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -173,6 +173,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.13 P05 | 15min | 2 tasks | 2 files |
 | Phase 08.19.2 P01 | 8min | 2 tasks | 1 files |
 | Phase 08.19.2 P02 | 35 | 4 tasks | 5 files |
+| Phase 08.19.2 P03 | 20min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -500,6 +501,10 @@ Recent decisions affecting current work:
 - [Phase 08.19.2]: Erlaubnis/Pitch bleiben als textarea in sec-gespraechsleitfaden (kein crudList in Phase 08.19.2)
 - [Phase 08.19.2]: Unified ProfileOpener architecture: type-Diskriminator opener/pitch/erlaubnis
 - [Phase 08.19.2]: Dual-write pattern: CRUD-Write -> concatenate all items -> UPDATE Profile.daten (transitional bis 08.20)
+- [Phase 08.19.2-03]: save-toast als span in Topbar eingefuegt (display:none initial) — crudList-success-handler steuert Sichtbarkeit via querySelector
+- [Phase 08.19.2-03]: wizard-banner inline-styles (#22c55e) bleiben erhalten — anderes Element als save-toast, out-of-scope fuer Plan 03
+- [Phase 08.19.2-03]: varianten-Feld aus addEinwand() und getEinwaende() entfernt — konsistent mit D-03 Sub-Feld-Spec (nicht in neuer Reihenfolge aufgefuehrt)
+- [Phase 08.19.2-03]: goSec() war bereits korrekt mit getBoundingClientRect 16px offset (Plan 02) — keine Aenderung noetig
 
 ### Roadmap Evolution
 
