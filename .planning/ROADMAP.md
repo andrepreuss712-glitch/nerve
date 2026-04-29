@@ -879,6 +879,25 @@ Plans:
 
 ---
 
+### Phase 08.19.1: Block N Phase C.1 — Schema-Realität-Kalibrierung + extra='forbid' (INSERTED)
+
+**Goal:** Pydantic-Profil-Schema (services/profile_schema.py) komplett auf die reale Profil-JSON-Struktur aller 6 Production-Profile kalibrieren, dann extra='forbid' (strict-Mode) wieder aktivieren. Aktuell läuft Schema mit extra='ignore' als Hotfix aus 08.19 — das ist Schuldzettel der jetzt zurückgezahlt wird.
+**Komplexität:** 🟡 mittel
+**Depends on:** Phase 08.19 (initial-Schema), Phase 08.19.2 (tote Felder + Sektionen-Polish), Phase 08.19.3 (FAQ-mode-Feld)
+
+**Pflicht-Tasks:**
+1. Echtes Profil-JSON aller 6 Production-Profile als Spec-Input ziehen (SQL-Export aus profiles-Tabelle)
+2. Pro Feld: Type analysieren (String / List / Dict / Union), Pflicht-vs-Optional klären, mit 08.18-Sales-Wisdom-Empfehlungen Sektion E abgleichen
+3. daten.fragen-Key-Removal aus allen 6 Profilen + aus Schema (wurde durch 08.19.3-FAQ-Konsolidierung obsolet — alles liegt jetzt in profile_faqs)
+4. profile_faqs.mode-Feld als Teil des kalibrierten Schemas berücksichtigen (literal vs. ki_generated)
+5. Schema-Update mit allen real existierenden Feldern + den 6 neuen aus 08.18 Sektion E
+6. Migration _migrate_profile_data() erweitern um Type-Konvertierungen wo nötig (z.B. nogos List[Object] standardisieren)
+7. extra='forbid' wieder aktivieren
+8. Test gegen alle 6 Profile dass model_validate(strict=True) durchgeht — Test-Suite-Pflicht
+9. Cross-AI Pflicht (Block-N-Phase + Andre-Decision: alle Block-N-Phasen kriegen Cross-AI)
+
+---
+
 ### Phase 08.19.2: Profil-Editor UX + Design-Aufräumung (INSERTED)
 
 **Goal:** Profil-Editor visuell aufräumen und UX-Konsistenz herstellen — Frontend-only, kein Schema-Change, kein Backend-Touch. Kern-Deliverables: Heading-Hierarchie korrigieren (`.sec-title` von 12px auf 16-18px), Inline-Styles in CSS-Klassen extrahieren (8 Stellen), Hardcoded-Farben durch CSS-Variablen ersetzen, Sektions-Doppelungen auflösen (Häufige Fragen + FAQ-Datenbank → eine Sektion; Gesprächsleitfaden + Gesprächsphasen konsolidieren), Tippfehler-Fix, Einwände-Sub-Felder logisch umsortiert + ausklappbar (default kollabiert, nur Einwandtext sichtbar), `+Skript hinzufügen`-Bug gefixt, Education-Hints Stub (1-2 Sätze pro Sektion welche Wirkung das Feld hat), Branchen-Sektion UI-Skelett stub (Content-ready in 08.22). Andre will sichtbares Resultat vor Schema-Hygiene-Kalibrierung (08.19.1).
