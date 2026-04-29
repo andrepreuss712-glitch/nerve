@@ -15,4 +15,7 @@ tests/tts_samples/
 =1.2.0
 =3.5.0
 # Phase 08.19.1: Production-DB-Dump (Echtdaten — nie in Git)
-.planning/audits/profile-schema-realdata-2026-04-29/
+# Nur .db-Dateien im Audit-Verzeichnis ignorieren; KEY-FINDINGS.md (reine Statistiken) bleibt trackbar
+.planning/audits/profile-schema-realdata-2026-04-29/*.db
+.planning/audits/profile-schema-realdata-2026-04-29/*.db-shm
+.planning/audits/profile-schema-realdata-2026-04-29/*.db-wal
