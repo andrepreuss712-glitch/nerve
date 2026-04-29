@@ -69,10 +69,7 @@ class ZielgruppeSchema(BaseModel):
     vorwissen: str = ''                      # Training-Pfad: claude_service.py Z.229
     entscheidungsverhalten: List[str] = []   # Training-Pfad: claude_service.py Z.230
     # B2C-Felder eliminiert: alter, einkommensniveau, lebenssituation (D-06)
-    # Legacy-Felder aus alten Profilen (vor ZielkundeSchema-Einfuehrung)
-    position: str = ''                       # Legacy: Zielkunden-Position (alt)
-    unternehmen: str = ''                    # Legacy: Zielkunden-Unternehmenstyp (alt)
-    branche: str = ''                        # Legacy: Zielkunden-Branche in zielgruppe (alt)
+    # position/unternehmen/branche entfernt (F3): Dead Fields per Grep-Analyse — nie in Live-Pfaden gelesen
 
 
 class ZielkundeSchema(BaseModel):
@@ -109,7 +106,7 @@ class KiSchema(BaseModel):
     ton: str = ''           # ki.stil eliminiert — Inhalt geht in ki.ton (D-06)
     zusatz: str = ''
     antwortlaenge: str = ''  # Production-Feld: KI-Antwortlaenge-Konfiguration
-    sensitivitaet: str = ''  # Production-Feld: KI-Sensitivitaet-Konfiguration
+    # sensitivitaet entfernt (Phase 08.19.2 Entscheidung — kommt in 08.20 als Lead-Picker zurueck)
     # ki.stil wird in _migrate_profile_data() in ki.ton gemergt
 
 
@@ -152,8 +149,7 @@ class ProfileSchema(BaseModel):
     # Phase 08.19.1 D-01: Editor schreibt einwaende + phasen top-level (nie in basis.*)
     einwaende: List[dict] = []   # war faelschlicherweise in BasisSchema (Dead Field dort)
     phasen: List[dict] = []      # war faelschlicherweise in BasisSchema (Dead Field dort)
-    # Phase 08.19.1: produkt in 2/6 Production-Profilen — KEY-FINDINGS.md; in v4-Migration pruefen ob entfernen oder behalten
-    produkt: Any = None          # Production-Key aus KEY-FINDINGS.md — Phase 08.19.1; in v4-Migration pruefen ob entfernen oder behalten
+    # produkt entfernt (F4): in _migrate_profile_data() in basis.produktbeschreibung gerettet dann gedroppt
     # opener und pitch werden NICHT modelliert (D-01) — canonical: ProfileOpener-Tabelle
     # erlaubnis eliminiert (D-06)
 
@@ -248,7 +244,7 @@ class ProfileReadSchema(BaseModel):
     # Phase 08.19.1 D-01: top-level einwaende + phasen (kanonisch nach v3-Migration)
     einwaende: Any = []
     phasen: Any = []
-    produkt: Any = None          # Production-Key aus KEY-FINDINGS.md — Phase 08.19.1
+    # produkt entfernt (F4) — Migration rettet Inhalt in basis.produktbeschreibung
 
 
 # ── Idempotente Migration v1 → v2 ────────────────────────────────────────────
@@ -320,6 +316,33 @@ def _migrate_profile_data(daten: dict) -> dict:
             daten.pop('fragen', None)
             _audit_parts.append('dropped fragen')
 
+        # F1: ki.sensitivitaet entfernen (Phase 08.19.2 explizit gestrichen — kommt in 08.20 als Lead-Picker zurueck)
+        _ki = daten.get('ki')
+        if isinstance(_ki, dict) and 'sensitivitaet' in _ki:
+            _ki.pop('sensitivitaet', None)
+            daten['ki'] = _ki
+            _audit_parts.append('dropped ki.sensitivitaet')
+
+        # F3: zielgruppe Legacy-Felder entfernen (nie in Live-Pfaden gelesen — Dead Fields per Grep-Analyse)
+        _zielgruppe = daten.get('zielgruppe')
+        if isinstance(_zielgruppe, dict):
+            for _zg_key in ('position', 'unternehmen', 'branche'):
+                if _zg_key in _zielgruppe:
+                    _zielgruppe.pop(_zg_key)
+                    _audit_parts.append(f'dropped zielgruppe.{_zg_key}')
+            daten['zielgruppe'] = _zielgruppe
+
+        # F4: produkt-Merge — in basis.produktbeschreibung retten wenn dort leer, dann immer droppen
+        if 'produkt' in daten:
+            _basis_in_migrate = daten.get('basis') if isinstance(daten.get('basis'), dict) else {}
+            if not _basis_in_migrate.get('produktbeschreibung'):
+                _basis_in_migrate['produktbeschreibung'] = daten['produkt']
+                daten['basis'] = _basis_in_migrate
+                _audit_parts.append('merged produkt -> basis.produktbeschreibung')
+            else:
+                _audit_parts.append('dropped produkt (basis.produktbeschreibung already set)')
+            daten.pop('produkt', None)
+
         # Schritt 2: branche top-level entfernen (lebt auf Profile.branche DB-Column)
         if 'branche' in daten:
             daten.pop('branche', None)
@@ -360,5 +383,26 @@ def _migrate_profile_data(daten: dict) -> dict:
             print(f"[Schema] Profile {_profile_id}: v2->v3 applied — {', '.join(_audit_parts)}")
         else:
             print(f"[Schema] Profile {_profile_id}: v2->v3 applied — no changes needed")
+
+        # D-03: Pflicht-Audit-Event pro Profil (persist in audit_log, nicht nur print)
+        try:
+            import json as _json_audit
+            from database.db import get_session as _get_audit_session
+            from database.models import AuditLog as _AuditLog
+            _audit_db = _get_audit_session()
+            try:
+                _pid_int = int(_profile_id) if str(_profile_id).isdigit() else None
+                _audit_entry = _AuditLog(
+                    action='profile_schema_v2_to_v3',
+                    target_type='profile',
+                    target_id=_pid_int,
+                    details=_json_audit.dumps({'audit_parts': _audit_parts, 'schema_version': 3}),
+                )
+                _audit_db.add(_audit_entry)
+                _audit_db.commit()
+            finally:
+                _audit_db.close()
+        except Exception as _audit_e:
+            pass  # Audit-Fehler darf Migration nie blockieren
 
     return daten
