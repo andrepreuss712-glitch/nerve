@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.19.4 in progress — Plan 01 complete
-stopped_at: "08.19.4-01 complete (2026-04-29)"
-last_updated: "2026-04-29T10:00:00Z"
+status: Phase 08.19.4 in progress — Plan 02 complete
+stopped_at: "08.19.4-02 complete (2026-04-29)"
+last_updated: "2026-04-29T12:00:00Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 56
@@ -26,15 +26,17 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.19.4 (multi-user-profile-session-scoping) — IN PROGRESS
-Plan: 1 of 4 — COMPLETE (2026-04-29, commits 131b44a + dd2acd3)
+Plan: 2 of 4 — COMPLETE (2026-04-29, commits f068e67 + cb80cb3)
 Last activity: 2026-04-29
 
-**Phase 08.19.4 Plan 01 abgeschlossen:** Per-SID Infrastruktur (_per_sid_profile, _session_state, SID-aware API) in live_session.py etabliert. _load_initial_profile() DSGVO-Verstoss aus app.py geloescht (D-04).
-**Next:** Plan 02 — Caller-Migration (set_active_profile -> set_profile_for_sid)
+**Phase 08.19.4 Plan 02 abgeschlossen:** SID-Lifecycle in deepgram_service.py verdrahtet (connect -> init_session_state + set_profile_for_sid; disconnect/stop -> pop_session_state). Public active_profile_data/active_profile_name Globals aus live_session.py entfernt, _legacy_* Compat-Wrapper angelegt.
+**Next:** Plan 03 — Caller-Migration (get_active_profile -> get_profile_for_sid in claude_service, prompt_pipeline, deepgram_service)
 **Decisions made:**
   - D-01: _per_sid_profile dict analog deepgram_service._deepgram_sessions Pattern
   - D-02: _session_state dict mit allen Session-Kontextfeldern pro SID
   - D-04: _load_initial_profile() geloescht (kein Auskommentieren)
+  - D-05: active_profile_data/name public globals entfernt; _legacy_* fuer Plan 03+04 Migration
+  - D-06: setdefault Guard in on_message auf _per_sid_profile korrigiert (_per_sid_transcript existiert nicht)
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
