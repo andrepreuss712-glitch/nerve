@@ -143,29 +143,33 @@ def test_build_profile_context_no_active_profile(monkeypatch):
 # ─── 7. build_profile_context: new Phase-08 fields (D-07/D-08/D-11) ─────────
 
 def test_build_profile_context_includes_phase_08_fields(monkeypatch):
+    _SID = 'test-build-profile-phase08-sid'
+
     class _LSMock:
         state = {}
 
         @staticmethod
-        def get_active_profile():
-            return (1, {
-                'basis': {
-                    'unternehmen': 'Firma XY',
-                    'produktbeschreibung': 'Testprodukt',
-                    'usps': ['U1', 'U2'],
-                    'branche_kontext': 'Maschinenbau-Mittelstand',
-                    'eigene_formulierungen': [
-                        'Darf ich fragen, was Sie einsetzen?'
-                    ],
-                    'beweise': [
-                        'Firma Z: 15% mehr Abschluesse in 3 Monaten'
-                    ],
-                },
-                'ki': {'ton': 'Direkt/Klartext'},
-            })
+        def get_profile_for_sid(sid):
+            if sid == _SID:
+                return (1, {
+                    'basis': {
+                        'unternehmen': 'Firma XY',
+                        'produktbeschreibung': 'Testprodukt',
+                        'usps': ['U1', 'U2'],
+                        'branche_kontext': 'Maschinenbau-Mittelstand',
+                        'eigene_formulierungen': [
+                            'Darf ich fragen, was Sie einsetzen?'
+                        ],
+                        'beweise': [
+                            'Firma Z: 15% mehr Abschluesse in 3 Monaten'
+                        ],
+                    },
+                    'ki': {'ton': 'Direkt/Klartext'},
+                })
+            return ('', {})
 
     _install_ls_mock(monkeypatch, _LSMock)
-    out = pp.build_profile_context(user_id=1)
+    out = pp.build_profile_context(user_id=1, sid=_SID)
     assert 'Firma XY' in out
     assert 'Testprodukt' in out
     assert 'Maschinenbau-Mittelstand' in out
@@ -176,15 +180,19 @@ def test_build_profile_context_includes_phase_08_fields(monkeypatch):
 # ─── 8. Anrede-Resolution: Session > Profile > 'Sie' ────────────────────────
 
 def test_build_profile_context_anrede_session_override_wins(monkeypatch):
+    _SID = 'test-anrede-override-sid'
+
     class _LSMock:
         state = {'session_anrede': 'Du'}
 
         @staticmethod
-        def get_active_profile():
-            return (1, {'basis': {}, 'ki': {'ansprache': 'Sie'}})
+        def get_profile_for_sid(sid):
+            if sid == _SID:
+                return (1, {'basis': {}, 'ki': {'ansprache': 'Sie'}})
+            return ('', {})
 
     _install_ls_mock(monkeypatch, _LSMock)
-    out = pp.build_profile_context(user_id=1)
+    out = pp.build_profile_context(user_id=1, sid=_SID)
     assert 'Anrede: Du.' in out
     assert 'Wechsle NIEMALS' in out
 
