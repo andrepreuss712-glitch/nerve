@@ -2754,6 +2754,27 @@ input[type="range"].perf-slider::-moz-range-thumb {
   color: var(--page-text-color);
 }
 
+/* Truncation-Variante: fuer Header-Labels mit User-Inhalt (FAQ-Frage etc.).
+   Nicht auf .block-lbl global, weil "Painpoint 1"/"Einwand 1"-Nummern-Labels
+   nicht kuerzen sollen. Aktiviert durch Doppelklasse .block-lbl.block-lbl--truncate
+   oder durch konkrete Card-Klasse wie .faq-lbl. */
+.block-lbl--truncate,
+.faq-lbl {
+  flex: 1 1 auto;
+  min-width: 0;          /* damit flex-child ueberhaupt unter ihre intrinsische Breite schrumpfen darf */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Header-Buttons & -Icons (chevron, trash, count) duerfen unter keinen Umstaenden
+   geschrumpft oder umgebrochen werden -- Truncation muss ausschliesslich am Text-Label passieren. */
+.block-hd > .acc-chevron,
+.block-hd > .btn-trash,
+.block-hd > .faq-used-count {
+  flex-shrink: 0;
+}
+
 /* Education inline helpers */
 .field-desc {
   font-size: 12px;
