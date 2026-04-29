@@ -1149,7 +1149,7 @@ def _qa_load_faqs(active_profile_id):
             _rows = _db.query(ProfileFaq).filter_by(profile_id=active_profile_id).all()
             return [
                 {'id': r.id, 'frage_muster': r.frage_muster,
-                 'antwort': r.antwort, 'kategorie': r.kategorie}
+                 'antwort': r.antwort, 'kategorie': r.kategorie, 'mode': r.mode}
                 for r in _rows
             ]
         finally:
@@ -1255,7 +1255,8 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio):
                     _emit_qa_slot1(_antwort)
 
         elif _kat == 'frage':
-            _faqs = _qa_load_faqs(_active_profile_id)
+            _faqs_all = _qa_load_faqs(_active_profile_id)
+            _faqs = [f for f in _faqs_all if f.get('mode') == 'literal']
             _matched_faq = match_faq(neuer_text, _faqs, threshold=0.75) if _faqs else None
 
             if _matched_faq:
