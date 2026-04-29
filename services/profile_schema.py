@@ -9,8 +9,8 @@ Exports:
   - ProfileSchema        — Write-Schema (extra='forbid'), fuer wizard_create / bearbeiten
   - ProfileReadSchema    — Read-Schema  (extra='ignore'), fuer bearbeiten GET + alle Reader
   - _migrate_profile_data(daten: dict) -> dict
-        Idempotent: v1 -> v2 upgrade. Prueft schema_version, entfernt
-        eliminierte Felder, setzt neue Defaults, gibt schema_version=2 zurueck.
+        Idempotent: v1 -> v2 -> v3 upgrade. Prueft schema_version, entfernt
+        eliminierte Felder, setzt neue Defaults, gibt schema_version=3 zurueck.
         v2 -> v3: einwaende/phasen upward-merge aus basis.*, fragen-Key entfernen.
 
 Namespace-Entscheidung (Claude's Discretion per 08.19-CONTEXT.md):
@@ -132,7 +132,7 @@ class ProfileSchema(BaseModel):
     ohne Fehler verifiziert.
     """
     model_config = ConfigDict(extra='forbid')
-    schema_version: int = 2
+    schema_version: int = 3
     basis: BasisSchema = BasisSchema()
     zielgruppe: ZielgruppeSchema = ZielgruppeSchema()
     zielkunde: ZielkundeSchema = ZielkundeSchema()
@@ -197,8 +197,7 @@ class _BasisReadSchema(BaseModel):
     beweise: Any = []
     tabu_begriffe: Any = []
     zielkunden: str = ''
-    einwaende: Any = []
-    phasen: Any = []
+    # einwaende und phasen entfernt — nach v3-Migration ausschliesslich top-level in ProfileReadSchema
 
 
 class _SchmerzenReadSchema(BaseModel):
@@ -227,7 +226,7 @@ class ProfileReadSchema(BaseModel):
     Nur nach _migrate_profile_data() verwenden — Migration bereinigt Felder zuerst.
     """
     model_config = ConfigDict(extra='ignore')
-    schema_version: int = 2
+    schema_version: int = 3
     basis: _BasisReadSchema = _BasisReadSchema()
     zielgruppe: _ZielgruppeReadSchema = _ZielgruppeReadSchema()
     zielkunde: _ZielkundeReadSchema = _ZielkundeReadSchema()
@@ -369,12 +368,8 @@ def _migrate_profile_data(daten: dict) -> dict:
                 _audit_parts.append('upward-merged basis.phasen->phasen')
         basis.pop('phasen', None)
 
-        # basis-Referenz zurueckschreiben (wurde in-place modifiziert)
-        # Leeres basis-Dict BEHALTEN — Sub-Schema-Defaults greifen (kein KeyError)
-        if basis:
-            daten['basis'] = basis
-        elif 'basis' in daten and isinstance(daten['basis'], dict):
-            daten['basis'] = basis  # leeres dict behalten (sub-schema Default greift)
+        # basis-Referenz immer zurueckschreiben — leeres dict ist valid (Sub-Schema-Defaults greifen)
+        daten['basis'] = basis
 
         # Schritt 5: schema_version auf 3 setzen
         daten['schema_version'] = 3
@@ -403,6 +398,7 @@ def _migrate_profile_data(daten: dict) -> dict:
             finally:
                 _audit_db.close()
         except Exception as _audit_e:
-            pass  # Audit-Fehler darf Migration nie blockieren
+            print(f"[Schema] Profile {_profile_id}: audit_log write failed (non-fatal): {_audit_e}")
 
+    daten.pop('_migration_profile_id', None)
     return daten

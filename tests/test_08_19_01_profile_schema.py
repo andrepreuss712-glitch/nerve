@@ -29,7 +29,7 @@ class TestProfileSchemaImport:
     def test_profile_schema_default_instanziierung(self):
         from services.profile_schema import ProfileSchema
         s = ProfileSchema()
-        assert s.schema_version == 2
+        assert s.schema_version == 3
 
     def test_unternehmensgroesse_enum_import(self):
         from services.profile_schema import UnternehmensgroesseEnum
@@ -83,9 +83,8 @@ class TestMigrateProfileData:
         """erlaubnis bleibt als transitional dual-write bis 08.20 (wird nicht entfernt)."""
         from services.profile_schema import _migrate_profile_data
         result = _migrate_profile_data({'erlaubnis': True})
-        # erlaubnis wird NICHT entfernt — transitional bis Phase 08.20
-        # ProfileSchema hat kein erlaubnis-Feld, daher kommt es nie durch model_validate
         assert result.get('schema_version') == 3
+        assert result.get('erlaubnis') == True  # transitional: preserved until Phase 08.20
 
     def test_ki_stil_wird_in_ton_gemergt(self):
         """ki.stil wandert in ki.ton, stil wird entfernt."""
