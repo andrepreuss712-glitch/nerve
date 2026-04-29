@@ -32,6 +32,11 @@ def _get_speaker(result):
 def _make_on_message(sid):
     def on_message(self, result, **kwargs):
         from extensions import socketio as sio
+        # Guard: SID may not be in _per_sid_profile yet if Deepgram fires
+        # before handle_start_live_session completes DB load (race window).
+        # setdefault is a safe no-op if key already exists.
+        with ls._per_sid_lock:
+            ls._per_sid_profile.setdefault(sid, ('', {}))
         try:
             text = result.channel.alternatives[0].transcript
             if not text:
@@ -292,10 +297,6 @@ def register_audio_handlers(sio):
             ls.session_start_time = _time.monotonic()
             ls.berater_words = 0
             ls.kunde_words = 0
-        # Store active_sid for PiP streaming room targeting (Phase 06)
-        with ls.state_lock:
-            ls.state['active_sid'] = _sid
-
         # ── Phase 08 D-14: PreCall-Anrede-Override in ls.state persistieren ───
         # Whitelist {'Du', 'Sie'} schuetzt vor Prompt-Injection (T-08-05-01).
         # CR-02: Raw-Input wird zuerst via strip().title() normalisiert, damit
@@ -363,13 +364,51 @@ def register_audio_handlers(sio):
         except Exception as _e:
             print(f"[FT] ft_call_sessions insert failed: {_e}")
 
+        # ── Phase 08.19.4: Per-SID Profile + Session State Init ──────────────
+        # Loads active profile from DB (User.active_profile_id — D-05 Single Source of Truth).
+        # Idempotent: if SID reconnects before disconnect fires, pop old state first.
+        try:
+            from database.db import SessionLocal as _SL2
+            from database.models import User as _User2, Profile as _Profile2
+            _db2 = _SL2()
+            try:
+                _u2 = _db2.query(_User2).filter_by(id=user_id).first()
+                _profile_id2 = getattr(_u2, 'active_profile_id', None) if _u2 else None
+                _org_id2 = getattr(_u2, 'org_id', None) if _u2 else None
+                _profile_name2 = ''
+                _profile_daten2 = {}
+                if _profile_id2:
+                    _p2 = _db2.query(_Profile2).filter_by(id=_profile_id2).first()
+                    if _p2 and _p2.daten:
+                        import json as _json2
+                        _profile_name2 = _p2.name or ''
+                        _profile_daten2 = _json2.loads(_p2.daten) if isinstance(_p2.daten, str) else {}
+            finally:
+                _db2.close()
+            # Idempotent: pop stale state if SID already exists (reconnect without disconnect)
+            if _sid in ls._session_state:
+                ls.pop_session_state(_sid)
+            ls.init_session_state(
+                _sid,
+                user_id=user_id,
+                org_id=_org_id2 or 0,
+                profile_id=_profile_id2,
+                market=market,
+                language=language,
+                mode=mode,
+            )
+            ls.set_profile_for_sid(_sid, _profile_name2, _profile_daten2)
+            print(f"[08.19.4] SID {_sid}: profile={_profile_name2!r} pid={_profile_id2} org={_org_id2}")
+        except Exception as _pe:
+            print(f"[08.19.4] per-SID init failed for {_sid}: {_pe}")
+
     @sio.on('stop_live_session')
     def handle_stop_live_session(sid=None):
         from flask import request
         _sid = request.sid if sid is None else sid
         print(f"[DG] stop_live_session event received (sid={_sid})")
         _close_deepgram_connection(_sid)
-        ls.drop_matcher(_sid)
+        ls.pop_session_state(_sid)
 
     # POLISH-48: Chunk-Counter statt one-shot-Logs. Vorher `_first_chunk_logged`
     # loggte nur den ersten Chunk pro sid — was User-Observation "nur ein Chunk"
@@ -403,7 +442,7 @@ def register_audio_handlers(sio):
         print(f"[DG] socket.io disconnect event (sid={_sid})")
         _chunk_counts.pop(_sid, None)
         _close_deepgram_connection(_sid)
-        ls.drop_matcher(_sid)
+        ls.pop_session_state(_sid)
 
     @sio.on('mute_mic')
     def handle_mute_mic(data=None, sid=None):
