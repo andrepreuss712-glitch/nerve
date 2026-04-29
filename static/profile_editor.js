@@ -80,6 +80,91 @@ function confirmDelete(callback, label) {
     row.querySelector('.faq-frage').value = faq.frage_muster || '';
     row.querySelector('.faq-antwort').value = faq.antwort || '';
     row.querySelector('.faq-kategorie').value = faq.kategorie || 'Sonstiges';
+
+    // ── Phase 08.19.3 D-15: mode toggle state ────────────────────────────
+    var modeChk = row.querySelector('.faq-mode-toggle');
+    var modeTrack = row.querySelector('.faq-mode-track');
+    var modeThumb = row.querySelector('.faq-mode-thumb');
+    var modeDesc = row.querySelector('.faq-mode-desc');
+    var faqId = row.getAttribute('data-faq-id');
+    var isKi = (faq.mode || 'ki_generated') === 'ki_generated';
+
+    function _setModeVisual(ki) {
+      if (modeTrack) modeTrack.style.background = ki ? '#00D4AA' : '#888';
+      if (modeThumb) modeThumb.style.transform = ki ? 'translateX(18px)' : 'translateX(0)';
+      if (modeDesc) modeDesc.textContent = ki
+        ? 'KI generiert = KI nutzt deine Antwort als Wissen und formuliert situationsabhängig.'
+        : 'Wortwörtlich = KI spielt deine Antwort exakt so aus wenn die Frage erkannt wird.';
+    }
+
+    if (modeChk) {
+      modeChk.checked = isKi;
+      _setModeVisual(isKi);
+
+      // Ghost-toggle guard: disable toggle until FAQ has DB id (prevents PUT on undefined id).
+      // Toggle is re-enabled in persistFaq() POST-success handler after data-faq-id is set.
+      if (!faqId) {
+        modeChk.disabled = true;
+        if (modeTrack) modeTrack.style.opacity = '0.5';
+      }
+
+      // ── D-16: sofortiges PUT beim Toggle-Change mit optimistic revert ─────
+      modeChk.addEventListener('change', function() {
+        var currentFaqId = row.getAttribute('data-faq-id');
+        if (!currentFaqId) return;  // ghost-toggle guard (belt-and-suspenders)
+
+        // Capture old state BEFORE the optimistic update (the state before this change event)
+        var prevChecked = !modeChk.checked;  // old state = inverse of new checked value
+        var newMode = modeChk.checked ? 'ki_generated' : 'literal';
+
+        // Optimistic update: apply visual change immediately
+        _setModeVisual(modeChk.checked);
+
+        // Disable toggle during fetch to prevent rapid-fire + race conditions
+        modeChk.disabled = true;
+        if (modeTrack) modeTrack.style.opacity = '0.5';
+
+        function _revertAndNotify() {
+          // Revert checkbox and visual to previous state
+          modeChk.checked = prevChecked;
+          _setModeVisual(prevChecked);
+          // Show toast — use existing toast function if available, else alert as fallback
+          var _toastFn = (typeof showToast === 'function') ? showToast
+                       : (typeof window.showToast === 'function') ? window.showToast
+                       : null;
+          if (_toastFn) {
+            _toastFn('Speichern fehlgeschlagen — bitte erneut versuchen', 'error');
+          } else {
+            alert('Speichern fehlgeschlagen — bitte erneut versuchen');
+          }
+        }
+
+        fetch('/profiles/api/profile/faqs/' + currentFaqId, {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ mode: newMode })
+        }).then(function(r) {
+          // Re-enable always (success path)
+          modeChk.disabled = false;
+          if (modeTrack) modeTrack.style.opacity = '';
+          if (!r.ok) {
+            console.warn('[FAQ] mode update failed', r.status);
+            _revertAndNotify();
+          }
+        }).catch(function(e) {
+          // Re-enable always (error path)
+          modeChk.disabled = false;
+          if (modeTrack) modeTrack.style.opacity = '';
+          console.warn('[FAQ] mode update error', e);
+          _revertAndNotify();
+        });
+      });
+    }
+
     var usedEl = row.querySelector('.faq-used-count');
     if (usedEl) usedEl.textContent = (faq.used_count || 0) + '\u00d7';
 
@@ -177,7 +262,29 @@ function confirmDelete(callback, label) {
       })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
         .then(function (data) {
-          if (data && data.id) row.setAttribute('data-faq-id', String(data.id));
+          if (data && data.id) {
+            row.setAttribute('data-faq-id', String(data.id));
+            // Ghost-toggle guard: enable toggle now that DB id exists
+            var _tog = row.querySelector('.faq-mode-toggle');
+            var _trk = row.querySelector('.faq-mode-track');
+            if (_tog) {
+              _tog.disabled = false;
+              if (_trk) _trk.style.opacity = '';
+              // If server returned mode, sync toggle state
+              if (data.mode) {
+                _tog.checked = data.mode === 'ki_generated';
+                // _setModeVisual is scoped to renderFaqRow — re-apply via track/thumb directly
+                var _thm = row.querySelector('.faq-mode-thumb');
+                var _dsc = row.querySelector('.faq-mode-desc');
+                var _isKi = data.mode === 'ki_generated';
+                if (_trk) _trk.style.background = _isKi ? '#00D4AA' : '#888';
+                if (_thm) _thm.style.transform = _isKi ? 'translateX(18px)' : 'translateX(0)';
+                if (_dsc) _dsc.textContent = _isKi
+                  ? 'KI generiert = KI nutzt deine Antwort als Wissen und formuliert situationsabhängig.'
+                  : 'Wortwörtlich = KI spielt deine Antwort exakt so aus wenn die Frage erkannt wird.';
+              }
+            }
+          }
         })
         .catch(function (e) { console.warn('[FAQ] create failed', e); })
         .finally(function () { row.removeAttribute('data-faq-creating'); });
