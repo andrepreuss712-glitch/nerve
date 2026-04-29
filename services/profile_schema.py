@@ -248,12 +248,13 @@ class ProfileReadSchema(BaseModel):
 # ── Idempotente Migration v1 → v2 ────────────────────────────────────────────
 
 def _migrate_profile_data(daten: dict) -> dict:
-    """Idempotente Migration: schema_version v1 -> v2.
+    """Idempotente Migration: schema_version v1 -> v2 -> v3.
 
-    Prueft schema_version. Wenn >= 2: unveraendert zurueck.
+    Prueft schema_version. Wenn >= 3: unveraendert zurueck.
     Andernfalls:
-      - Entfernt eliminierte Felder (D-06)
-      - Setzt schema_version = 2
+      v1->v2: Entfernt eliminierte Felder (D-06), setzt schema_version = 2
+      v2->v3: einwaende/phasen upward-merge aus basis.*, fragen+branche entfernen,
+              setzt schema_version = 3 (Phase 08.19.1)
       - Kein DB-Zugriff (opener/pitch-Sync in app.py _migrate())
 
     Modifiziert daten in-place und gibt es zurueck (analog migrate_tabu_begriffe).
@@ -262,7 +263,7 @@ def _migrate_profile_data(daten: dict) -> dict:
         daten = {}
 
     version = daten.get('schema_version') or 1    # None-safe: None/0 -> 1
-    if version >= 2:
+    if version >= 3:
         return daten    # bereits migriert — idempotent
 
     # ── zielgruppe: B2C-Felder entfernen ─────────────────────────────────────
@@ -301,5 +302,57 @@ def _migrate_profile_data(daten: dict) -> dict:
 
     # ── schema_version setzen ─────────────────────────────────────────────────
     daten['schema_version'] = 2
+
+    # ── v2 → v3: Schema-Realitaet-Kalibrierung (Phase 08.19.1) ─────────────────
+    version = daten.get('schema_version') or 1
+    if version < 3:
+        _audit_parts = []
+        _profile_id = daten.get('_migration_profile_id', '?')  # wird von Batch-Migration gesetzt
+
+        # Schritt 1: fragen-Key entfernen (war gesetzt auf [] in 08.19.3, jetzt komplett raus)
+        if 'fragen' in daten:
+            daten.pop('fragen', None)
+            _audit_parts.append('dropped fragen')
+
+        # Schritt 2: branche top-level entfernen (lebt auf Profile.branche DB-Column)
+        if 'branche' in daten:
+            daten.pop('branche', None)
+            _audit_parts.append('dropped branche top-level')
+
+        # Schritt 3: einwaende upward-merge (D-02 Semantik)
+        basis = daten.get('basis') if isinstance(daten.get('basis'), dict) else {}
+        _basis_einwaende = basis.get('einwaende')
+        _top_einwaende = daten.get('einwaende', '__MISSING__')
+        if _top_einwaende == '__MISSING__' or _top_einwaende is None:
+            # Key fehlt oder ist null → basis.* hochziehen
+            if _basis_einwaende is not None:
+                daten['einwaende'] = _basis_einwaende
+                _audit_parts.append('upward-merged basis.einwaende->einwaende')
+        # Key existiert mit [] → basis.* NICHT hochziehen (User-Intent "alles geloescht")
+        basis.pop('einwaende', None)
+
+        # Schritt 4: phasen upward-merge (D-02 Semantik — analog zu einwaende)
+        _basis_phasen = basis.get('phasen')
+        _top_phasen = daten.get('phasen', '__MISSING__')
+        if _top_phasen == '__MISSING__' or _top_phasen is None:
+            if _basis_phasen is not None:
+                daten['phasen'] = _basis_phasen
+                _audit_parts.append('upward-merged basis.phasen->phasen')
+        basis.pop('phasen', None)
+
+        # basis-Referenz zurueckschreiben (wurde in-place modifiziert)
+        # Leeres basis-Dict BEHALTEN — Sub-Schema-Defaults greifen (kein KeyError)
+        if basis:
+            daten['basis'] = basis
+        elif 'basis' in daten and isinstance(daten['basis'], dict):
+            daten['basis'] = basis  # leeres dict behalten (sub-schema Default greift)
+
+        # Schritt 5: schema_version auf 3 setzen
+        daten['schema_version'] = 3
+
+        if _audit_parts:
+            print(f"[Schema] Profile {_profile_id}: v2->v3 applied — {', '.join(_audit_parts)}")
+        else:
+            print(f"[Schema] Profile {_profile_id}: v2->v3 applied — no changes needed")
 
     return daten
