@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: Phase 08.19.3 Plan 03 complete — Plan 04 next
-last_updated: "2026-04-29T08:00:00Z"
-last_activity: 2026-04-29 - Phase 08.19.3 Plan 03 complete (mode-Feld in GET/POST/PUT FAQ-API-Endpoints, routes/profiles.py)
+stopped_at: Phase 08.19.3 Plan 04 complete — phase complete, awaiting human-verify
+last_updated: "2026-04-29T07:13:17Z"
+last_activity: 2026-04-29 - Phase 08.19.3 Plan 04 complete (sec-fragen entfernt, faq-mode-toggle UI + optimistic revert + disabled-during-fetch + ghost-toggle-guard)
 progress:
   total_phases: 54
   completed_phases: 41
   total_plans: 192
-  completed_plans: 180
+  completed_plans: 181
   percent: 94
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.3 (faq-konsolidierung-toggle) — IN PROGRESS
-Plan: 3 of 4 COMPLETE
+Phase: 08.19.3 (faq-konsolidierung-toggle) — COMPLETE
+Plan: 4 of 4 COMPLETE
 Last activity: 2026-04-29
 
-**Next:** Plan 04 — profile_editor.js/html Toggle UI (mode-Toggle-Anzeige + Persistenz).
+**Next:** Phase 08.19.3 complete — git push origin main, then human-verify checkpoint.
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -178,6 +178,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.19.3 P01 | 12min | 2 tasks | 2 files |
 | Phase 08.19.3 P02 | 2min | 2 tasks | 2 files |
 | Phase 08.19.3 P03 | 5min | 1 tasks | 1 files |
+| Phase 08.19.3 P04 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -194,6 +195,10 @@ Recent decisions affecting current work:
 - [Phase 08.19-03]: bearbeiten() POST: _migrate_profile_data() VOR ProfileSchema.model_validate() (Finding 2) — Altlasten-Stripping verhindert false-positive 400 durch extra='forbid'
 - [Phase 08.19-03]: ValidationError -> flash + db.rollback() + redirect HTTP 400 (Finding 3) — kein 500, Blueprint-Name 'profiles', Parameter 'pid'
 - [Phase 08.19-03]: consent_text dual-write NULL -> '' in daten.meta (Finding 4) — DB-Column-Drop in spaeterer Phase nach Stabilitaets-Verifikation
+- [Phase 08.19.3-04]: faq-mode-toggle visual state driven via JS (modeTrack.style.background, modeThumb.style.transform) — no CSS :checked pseudo-selector; avoids CSS specificity conflicts
+- [Phase 08.19.3-04]: prevChecked = !modeChk.checked captured BEFORE _setModeVisual() — change event already has new value, inverse is the pre-change state
+- [Phase 08.19.3-04]: Ghost-toggle reads data-faq-id at change-event time via row.getAttribute() (not closure faqId) — allows toggle to fire after POST-success sets the ID
+- [Phase 08.19.3-04]: No showToast in profile_editor.js — alert() fallback is correct per plan spec
 - [Phase 08.19.3-03]: mode Whitelist ('literal', 'ki_generated') in GET/POST/PUT identisch — SQL-Injection-Mitigation per ORM-Zuweisung (T-08.19.3-09/10/13)
 - [Phase 08.19.3-03]: POST mode default 'ki_generated' via (data.get('mode') or 'ki_generated').strip() — verhindert NOT NULL Constraint-Edge-Cases
 - [Phase 08.19.3-03]: Partial-PUT Pattern: if 'field' in data → validate → assign; mode folgt gleichem Muster wie kategorie
