@@ -5,8 +5,11 @@ All globals and shared state lives here to avoid circular imports.
 import os
 import threading
 import time
+import logging as _logging
 from datetime import datetime
 from config import ANALYSE_INTERVALL, MERGE_WINDOW_S, SPEAKER_DEBOUNCE_S, KATEGORIE_LABEL
+
+_logger = _logging.getLogger(__name__)
 
 # ── Einwand-Keyword-Matcher Registry (Wave 2: BUG-10-LAT) ────────────────────
 # Pro Session eine EinwandKeywordMatcher-Instanz. Lazy-init via get_matcher(sid).
@@ -198,6 +201,73 @@ def set_active_profile(name: str, daten: dict, profile_id: int = None):
 def get_active_profile():
     with active_profile_lock:
         return active_profile_name, dict(active_profile_data)
+
+
+# ── Per-SID State Infrastructure (Phase 08.19.4 — DSGVO) ─────────────────────
+# Replaces single-global pattern. One entry per WebSocket SID.
+# Pattern copied from deepgram_service._deepgram_sessions (same lifecycle).
+# Lock granularity: acquire lock for snapshot only, release before long ops.
+
+# ── Per-SID Profil-Cache (D-01) — analog _deepgram_sessions Pattern ──────────
+_per_sid_profile: dict = {}     # {sid: (name, daten)}
+_per_sid_lock = threading.Lock()
+
+# ── Per-SID Session-State (D-02) ─────────────────────────────────────────────
+_session_state: dict = {}       # {sid: {key: value, ...}}
+_session_state_lock = threading.Lock()
+
+
+def set_profile_for_sid(sid: str, name: str, daten: dict) -> None:
+    """Cache profile for an active WebSocket SID. Analog to _deepgram_sessions."""
+    with _per_sid_lock:
+        _per_sid_profile[sid] = (name or '', daten if isinstance(daten, dict) else {})
+
+
+def get_profile_for_sid(sid: str) -> tuple:
+    """Returns (name, daten) for SID. Returns ('', {}) + warning for unknown SID (D-01)."""
+    with _per_sid_lock:
+        result = _per_sid_profile.get(sid)
+    if result is None:
+        _logger.warning(f"[SID] get_profile_for_sid: unknown SID {sid}")
+        return ('', {})
+    return result
+
+
+def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
+                       market: str = 'dach', language: str = 'de',
+                       mode: str = 'meeting') -> None:
+    """Initialize _session_state[sid] for a new WebSocket connection (D-02)."""
+    with _session_state_lock:
+        _session_state[sid] = {
+            'user_id': user_id,
+            'org_id': org_id,
+            'active_profile_id': profile_id,
+            'kaufbereitschaft': 30,
+            'active_sid': sid,
+            'market': market,
+            'language': language,
+            'mode': mode,
+            'conversation_log': [],
+            'berater_words': 0,
+            'kunde_words': 0,
+            'roles_swapped': False,
+            'covered_phases': set(),
+            'kaufbereitschaft_verlauf': [],  # Tier 3 — same code operation
+            '_bof_count': 0,
+            '_pending_speaker': None,
+            '_confirmed_speaker': None,
+            '_pending_since': None,
+            '_log_last_sp': None,
+        }
+
+
+def pop_session_state(sid: str) -> None:
+    """Remove all per-SID state on disconnect (D-02). Calls drop_matcher internally."""
+    with _session_state_lock:
+        _session_state.pop(sid, None)
+    with _per_sid_lock:
+        _per_sid_profile.pop(sid, None)
+    drop_matcher(sid)
 
 
 def load_learning_cards(user_id):
