@@ -1362,123 +1362,145 @@ def coaching_loop():
     """Call 2 — Berater-Coaching (Haiku, parallel). [04.8 P07: Sonnet→Haiku]"""
     import services.live_session as ls
     from extensions import socketio as sio
-    _bof_count_local = 0  # local ref updated via ls._bof_lock
     while True:
         ls.coaching_trigger.wait(timeout=ANALYSE_INTERVALL)
         ls.coaching_trigger.clear()
         with ls.pause_lock:
             if ls.is_paused:
                 continue
-        with ls.coaching_lock:
-            if not ls.coaching_buffer:
+
+        # Phase 08.19.4 D-03: Iterate over all active SIDs (same pattern as analyse_loop)
+        with ls._session_state_lock:
+            active_sids = list(ls._session_state.keys())
+        if not active_sids:
+            continue
+
+        for sid in active_sids:
+            # Re-check SID still alive
+            with ls._session_state_lock:
+                sid_state = ls._session_state.get(sid)
+            if not sid_state:
                 continue
-            segmente  = list(ls.coaching_buffer)
-            t_start_c = ls.coaching_buffer[0].get('t_start', time.monotonic())
-            ls.coaching_buffer.clear()
 
-        # BOF-Zähler aktualisieren
-        with ls._bof_lock:
-            for s in segmente:
-                if s['speaker'] == 'Berater':
-                    if '?' in s['text']:
-                        ls._bof_count = 0
-                    else:
-                        ls._bof_count += 1
-            bof_snapshot = ls._bof_count
+            with ls.coaching_lock:
+                if not ls.coaching_buffer:
+                    continue
+                segmente  = list(ls.coaching_buffer)
+                t_start_c = ls.coaching_buffer[0].get('t_start', time.monotonic())
+                ls.coaching_buffer.clear()
 
-        kontext = " ".join(ls.analysiert_bisher[-10:])
-        try:
-            result    = analysiere_coaching(segmente, kontext)
-            latency_c = round(time.monotonic() - t_start_c, 2)
-            ts        = datetime.now().strftime('%H:%M:%S')
-            tipp      = result.get('tipp')
-            painpoint = result.get('painpoint')
-            kategorie = result.get('kategorie') or ''
-            kb_delta  = result.get('kb_delta', 0) or 0
+            # BOF-Zaehler per SID (D-02 — aus _session_state[sid])
+            with ls._session_state_lock:
+                sid_state_ref = ls._session_state.get(sid)
+                if sid_state_ref:
+                    for s in segmente:
+                        if s['speaker'] == 'Berater':
+                            if '?' in s['text']:
+                                sid_state_ref['_bof_count'] = 0
+                            else:
+                                sid_state_ref['_bof_count'] = sid_state_ref.get('_bof_count', 0) + 1
+                    bof_snapshot = sid_state_ref.get('_bof_count', 0)
+                else:
+                    bof_snapshot = 0
 
-            # Kaufbereitschaft via Claude-Delta anpassen
-            if isinstance(kb_delta, (int, float)) and kb_delta != 0:
-                ls.update_kaufbereitschaft(int(kb_delta))
-                with ls.kb_lock:
-                    kb_aktuell = ls.kaufbereitschaft
-                with ls.state_lock:
-                    ls.state['kaufbereitschaft'] = kb_aktuell
-
-            if kategorie == 'frage' and bof_snapshot < 2:
-                tipp      = None
-                kategorie = ''
-
-            # ── Verhaltensbasierte Tipps (deterministisch, kein Claude-Call) ──
+            kontext = " ".join(sid_state.get('analysiert_bisher', [])[-10:])
             try:
-                stats = ls.get_speech_stats()
-                if stats['tempo'] > 160 and not tipp:
-                    tipp      = f"Langsamer sprechen — dein Tempo liegt bei {stats['tempo']} WPM."
-                    kategorie = 'redeanteil'
-                elif stats['redeanteil'] > 65 and not tipp:
-                    tipp      = f"Lass den Kunden mehr zu Wort kommen — dein Redeanteil: {stats['redeanteil']}%."
-                    kategorie = 'redeanteil'
-                elif stats.get('monolog', 0) > 30 and not tipp:
-                    tipp      = f"Dein letzter Monolog war {stats['monolog']} Sekunden — stelle eine Frage."
-                    kategorie = 'redeanteil'
-            except Exception:
-                pass
+                result    = analysiere_coaching(segmente, kontext)
+                # SID liveness check after Claude API call
+                with ls._session_state_lock:
+                    if sid not in ls._session_state:
+                        print(f"[coaching_loop] SID {sid} gone — silent drop")
+                        continue
+                latency_c = round(time.monotonic() - t_start_c, 2)
+                ts        = datetime.now().strftime('%H:%M:%S')
+                tipp      = result.get('tipp')
+                painpoint = result.get('painpoint')
+                kategorie = result.get('kategorie') or ''
+                kb_delta  = result.get('kb_delta', 0) or 0
 
-            if not tipp and not painpoint:
-                continue
+                # Kaufbereitschaft via Claude-Delta anpassen
+                if isinstance(kb_delta, (int, float)) and kb_delta != 0:
+                    ls.update_kaufbereitschaft(int(kb_delta))
+                    with ls.kb_lock:
+                        kb_aktuell = ls.kaufbereitschaft
+                    with ls.state_lock:
+                        ls.state['kaufbereitschaft'] = kb_aktuell
 
-            print(f"[Claude-2] tipp={tipp!r}  pain={painpoint!r}  Latenz={latency_c}s")
+                if kategorie == 'frage' and bof_snapshot < 2:
+                    tipp      = None
+                    kategorie = ''
 
-            with ls.log_lock:
-                ls.conversation_log.append({
-                    'ts': ts, 'type': 'latenz_coaching', 'latency': latency_c,
-                })
+                # ── Verhaltensbasierte Tipps (deterministisch, kein Claude-Call) ──
+                try:
+                    stats = ls.get_speech_stats()
+                    if stats['tempo'] > 160 and not tipp:
+                        tipp      = f"Langsamer sprechen — dein Tempo liegt bei {stats['tempo']} WPM."
+                        kategorie = 'redeanteil'
+                    elif stats['redeanteil'] > 65 and not tipp:
+                        tipp      = f"Lass den Kunden mehr zu Wort kommen — dein Redeanteil: {stats['redeanteil']}%."
+                        kategorie = 'redeanteil'
+                    elif stats.get('monolog', 0) > 30 and not tipp:
+                        tipp      = f"Dein letzter Monolog war {stats['monolog']} Sekunden — stelle eine Frage."
+                        kategorie = 'redeanteil'
+                except Exception:
+                    pass
 
-            if painpoint:
-                with ls.painpoints_lock:
-                    if ls.ist_painpoint_duplikat(painpoint, ls.painpoints):
-                        print(f"[Claude-2] Painpoint Duplikat: {painpoint!r}")
-                        painpoint = None
-                    else:
-                        ls.painpoints.append({'ts': ts, 'text': painpoint})
-                if painpoint:
-                    with ls.log_lock:
-                        ls.conversation_log.append({
-                            'ts': ts, 'type': 'painpoint', 'text': painpoint,
-                        })
+                if not tipp and not painpoint:
+                    continue
 
-            if tipp:
+                print(f"[Claude-2] SID={sid} tipp={tipp!r}  pain={painpoint!r}  Latenz={latency_c}s")
+
                 with ls.log_lock:
                     ls.conversation_log.append({
-                        'ts': ts, 'type': 'tipp', 'text': tipp, 'kategorie': kategorie,
+                        'ts': ts, 'type': 'latenz_coaching', 'latency': latency_c,
                     })
 
-            # ── Coaching-WebSocket-Emit entfernt (Phase 06.6 / RULE-01-Erweiterung) ──
-            # Der coaching-Channel landete im Frontend via _showProactiveTipp auf Slot 1
-            # und hat die EWB-Antwort nach Stream-Ende ueberschrieben. Coaching-Daten
-            # bleiben vollstaendig erhalten fuer Post-Call-Scoring: conversation_log
-            # (oben), _write_ft_assistant_event (unten) und der [Claude-2]-Log-Print.
-            # Live-Anzeige waehrend des Calls war kontraproduktiv — der Berater kann
-            # nicht gleichzeitig lesen und zuhoeren.
-
-            # ── FT logging hook (Phase 04.7.1) ────────────────────────────────
-            try:
-                _coach_text_parts = []
-                if tipp:
-                    _coach_text_parts.append(f"tipp: {tipp}")
                 if painpoint:
-                    _coach_text_parts.append(f"painpoint: {painpoint}")
-                _coach_text = ' | '.join(_coach_text_parts)
-                if _coach_text:
-                    _write_ft_assistant_event(
-                        module='coaching_live',
-                        hint_type='coaching',
-                        hint_text=_coach_text,
-                        model_used=config.MODEL_COACHING,
-                        context={
-                            'hint_category': 'coaching',
-                        },
-                    )
-            except Exception as _e:
-                print(f"[FT] coaching_live hook skipped: {_e}")
-        except Exception as e:
-            print(f"[Claude-2] Fehler: {e}")
+                    with ls.painpoints_lock:
+                        if ls.ist_painpoint_duplikat(painpoint, ls.painpoints):
+                            print(f"[Claude-2] Painpoint Duplikat: {painpoint!r}")
+                            painpoint = None
+                        else:
+                            ls.painpoints.append({'ts': ts, 'text': painpoint})
+                    if painpoint:
+                        with ls.log_lock:
+                            ls.conversation_log.append({
+                                'ts': ts, 'type': 'painpoint', 'text': painpoint,
+                            })
+
+                if tipp:
+                    with ls.log_lock:
+                        ls.conversation_log.append({
+                            'ts': ts, 'type': 'tipp', 'text': tipp, 'kategorie': kategorie,
+                        })
+
+                # ── Coaching-WebSocket-Emit entfernt (Phase 06.6 / RULE-01-Erweiterung) ──
+                # Der coaching-Channel landete im Frontend via _showProactiveTipp auf Slot 1
+                # und hat die EWB-Antwort nach Stream-Ende ueberschrieben. Coaching-Daten
+                # bleiben vollstaendig erhalten fuer Post-Call-Scoring: conversation_log
+                # (oben), _write_ft_assistant_event (unten) und der [Claude-2]-Log-Print.
+                # Live-Anzeige waehrend des Calls war kontraproduktiv — der Berater kann
+                # nicht gleichzeitig lesen und zuhoeren.
+
+                # ── FT logging hook (Phase 04.7.1) ────────────────────────────
+                try:
+                    _coach_text_parts = []
+                    if tipp:
+                        _coach_text_parts.append(f"tipp: {tipp}")
+                    if painpoint:
+                        _coach_text_parts.append(f"painpoint: {painpoint}")
+                    _coach_text = ' | '.join(_coach_text_parts)
+                    if _coach_text:
+                        _write_ft_assistant_event(
+                            module='coaching_live',
+                            hint_type='coaching',
+                            hint_text=_coach_text,
+                            model_used=config.MODEL_COACHING,
+                            context={
+                                'hint_category': 'coaching',
+                            },
+                        )
+                except Exception as _e:
+                    print(f"[FT] coaching_live hook skipped: {_e}")
+            except Exception as e:
+                print(f"[Claude-2] SID={sid} Fehler: {e}")

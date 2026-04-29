@@ -108,12 +108,13 @@ def invalidate_resolver_cache() -> None:
 
 # ── Profil-Kontext-Assembly: build_profile_context ─────────────────────────
 
-def build_profile_context(user_id: int, mode: str = 'cold_call') -> str:
+def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None) -> str:
     """Build a standardized profile-context string for system-prompts.
 
-    Reads from services.live_session.get_active_profile() + ls.state for
-    session-overrides. Returns empty string when no active profile (caller
-    is responsible for an Anrede-fallback string).
+    Reads from services.live_session.get_profile_for_sid(sid) (Phase 08.19.4)
+    or get_active_profile() as deprecated fallback for HTTP callers without SID.
+    Returns empty string when no active profile (caller is responsible for an
+    Anrede-fallback string).
 
     Fields included (Phase 08):
       - basis.unternehmen / produktbeschreibung / usps / konsequenz
@@ -132,9 +133,12 @@ def build_profile_context(user_id: int, mode: str = 'cold_call') -> str:
         return ''
 
     try:
-        _, pdata = ls.get_active_profile()
+        if sid:
+            _, pdata = ls.get_profile_for_sid(sid)
+        else:
+            _, pdata = ls.get_active_profile()  # deprecated fallback for HTTP callers
     except Exception as e:
-        print(f"[Pipeline] get_active_profile failed user_id={user_id}: {e}")
+        print(f"[Pipeline] get_profile failed user_id={user_id}: {e}")
         return ''
 
     if not pdata:

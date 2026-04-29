@@ -121,7 +121,7 @@ def _make_on_message(sid):
                         _muted = ls.state.get('mic_muted', False)
                     if _muted:
                         return
-                    _profile_name, _profile_daten = ls.get_active_profile()
+                    _profile_name, _profile_daten = ls.get_profile_for_sid(sid)
                     einwaende = (_profile_daten.get('einwaende') or []) if isinstance(_profile_daten, dict) else []
                     if not einwaende:
                         return
@@ -474,7 +474,7 @@ def register_audio_handlers(sio):
         # get_active_profile() returns tuple (name, daten) — unpack it.
         profile_daten = {}
         try:
-            _pname, profile_daten = ls.get_active_profile()
+            _pname, profile_daten = ls.get_profile_for_sid(_sid)
         except Exception:
             profile_daten = {}
         einwaende = (profile_daten.get('einwaende') or []) if isinstance(profile_daten, dict) else []
