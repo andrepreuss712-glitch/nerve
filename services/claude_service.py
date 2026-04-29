@@ -1224,8 +1224,10 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
             _anrede = ls.state.get('session_anrede') or 'Sie'
             _slot1_busy_until = ls.state.get('slot1_variant_busy_until', 0.0)
         # Per-SID state reads (D-02 Phase 08.19.4)
+        # WR-01: read under _session_state_lock; guard against None (concurrent pop_session_state)
         if sid:
-            _sid_st = (ls._session_state.get(sid) or {})
+            with ls._session_state_lock:
+                _sid_st = ls._session_state.get(sid) or {}
             _user_id = _sid_st.get('user_id') or 0
             _active_sid = sid  # sid IS the active_sid
             _active_profile_id = _sid_st.get('active_profile_id')
