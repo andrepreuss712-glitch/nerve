@@ -42,12 +42,12 @@ class TestProfileSchemaImport:
 class TestMigrateProfileData:
     """Tests fuer _migrate_profile_data() Funktion."""
 
-    def test_entfernt_opener_und_pitch(self):
-        """Test 3: opener und pitch werden entfernt."""
+    def test_entfernt_opener(self):
+        """Test 3: opener wird entfernt (D-01). pitch bleibt (transitional dual-write)."""
         from services.profile_schema import _migrate_profile_data
         result = _migrate_profile_data({'opener': 'X', 'pitch': 'Y'})
         assert 'opener' not in result
-        assert 'pitch' not in result
+        # pitch bleibt als transitional dual-write bis 08.20
 
     def test_entfernt_b2c_felder_behaelt_vorwissen(self):
         """Test 4: alter entfernt, vorwissen bleibt."""
@@ -59,33 +59,33 @@ class TestMigrateProfileData:
         assert 'alter' not in zg
         assert zg.get('vorwissen') == 'hoch'
 
-    def test_idempotent_bei_schema_version_2(self):
-        """Test 5: schema_version=2 gibt unveraendert zurueck."""
+    def test_migration_hebt_auf_v3(self):
+        """Test 5: schema_version=2 wird auf v3 migriert (Phase 08.19.1)."""
         from services.profile_schema import _migrate_profile_data
         original = {'schema_version': 2, 'basis': {'produktbeschreibung': 'Test'}}
         result = _migrate_profile_data(original.copy())
-        assert result.get('schema_version') == 2
-        # Kein neues Feld hinzugefuegt bei idempotent-Aufruf
-        assert result.get('basis') == {'produktbeschreibung': 'Test'}
+        assert result.get('schema_version') == 3
 
     def test_setzt_schema_version_bei_leerem_dict(self):
-        """Test 6: leeres Dict bekommt schema_version=2."""
+        """Test 6: leeres Dict bekommt schema_version=3 (v1->v2->v3 Pipeline)."""
         from services.profile_schema import _migrate_profile_data
         result = _migrate_profile_data({})
-        assert result.get('schema_version') == 2
+        assert result.get('schema_version') == 3
 
     def test_migration_setzt_schema_version(self):
-        """_migrate_profile_data setzt schema_version=2 wenn Eingabe fehlt oder < 2."""
+        """_migrate_profile_data setzt schema_version=3 (v2->v3 in Phase 08.19.1)."""
         from services.profile_schema import _migrate_profile_data
         result = _migrate_profile_data({'opener': 'Hallo'})
-        assert result['schema_version'] == 2
+        assert result['schema_version'] == 3
         assert 'opener' not in result
 
-    def test_entfernt_erlaubnis(self):
-        """erlaubnis wird entfernt (D-06)."""
+    def test_erlaubnis_transitional(self):
+        """erlaubnis bleibt als transitional dual-write bis 08.20 (wird nicht entfernt)."""
         from services.profile_schema import _migrate_profile_data
         result = _migrate_profile_data({'erlaubnis': True})
-        assert 'erlaubnis' not in result
+        # erlaubnis wird NICHT entfernt — transitional bis Phase 08.20
+        # ProfileSchema hat kein erlaubnis-Feld, daher kommt es nie durch model_validate
+        assert result.get('schema_version') == 3
 
     def test_ki_stil_wird_in_ton_gemergt(self):
         """ki.stil wandert in ki.ton, stil wird entfernt."""
@@ -156,14 +156,14 @@ class TestProfileSchemaValidation:
         })
         assert ps.schema_version == 2
 
-    def test_write_schema_ignoriert_unbekannte_felder(self):
-        """ProfileSchema (extra='ignore') ignoriert unbekannte Felder statt ValidationError zu werfen.
-        Realdata-Kalibrierung 2026-04-27: extra='ignore' erlaubt reale Profile-JSONs mit
-        nicht modellierten Feldern (phasen, einwaende, ki.antwortlaenge etc.) zu validieren.
+    def test_write_schema_wirft_bei_unbekannten_feldern(self):
+        """ProfileSchema (extra='forbid') wirft ValidationError bei unbekannten Feldern.
+        Phase 08.19.1 Plan-05: extra='forbid' aktiviert nach Schema-Kalibrierung + v3-Migration.
         """
         from services.profile_schema import ProfileSchema
-        ps = ProfileSchema(**{'schema_version': 2, 'UNGUELTIG': 'X'})
-        assert ps.schema_version == 2
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            ProfileSchema(**{'schema_version': 3, 'UNGUELTIG': 'X'})
 
     def test_profile_schema_alle_pflicht_felder_vorhanden(self):
         """ProfileSchema hat alle 6 neuen Felder aus D-07."""
