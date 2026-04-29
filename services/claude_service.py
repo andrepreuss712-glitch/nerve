@@ -848,7 +848,10 @@ def analyse_loop():
                 line_id    = buf[-1]['line_id']
                 t_start    = buf[0].get('t_start', time.monotonic())
                 kontext    = " ".join(sid_state.get('analysiert_bisher', [])[-20:])
-                sid_state.setdefault('analysiert_bisher', []).extend(e['text'] for e in buf)
+                # WR-02: cap at 200 entries (rolling window) to bound memory per session
+                _existing = sid_state.get('analysiert_bisher', [])
+                _existing.extend(e['text'] for e in buf)
+                sid_state['analysiert_bisher'] = _existing[-200:]
                 ls._per_sid_transcript[sid] = []  # clear consumed entries
 
             # D-09: Inject active learning cards into kontext
