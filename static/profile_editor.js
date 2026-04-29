@@ -173,7 +173,12 @@ function confirmDelete(callback, label) {
     var hd = row.querySelector('.faq-hd');
     var lbl = row.querySelector('.faq-lbl');
     var chev = row.querySelector('.acc-chevron');
-    if (lbl && faq.frage_muster) lbl.textContent = faq.frage_muster.slice(0, 40) || 'Frage';
+    var fullFrage = (faq.frage_muster || '').trim();
+    if (lbl) {
+      lbl.textContent = fullFrage || 'Frage';
+      lbl.title = fullFrage;        // nativer Browser-Tooltip mit vollem Wortlaut bei Hover
+    }
+    if (hd) hd.title = '';            // Tooltip auf Header-Container entfernt — praeziser auf .faq-lbl
     if (hd) {
       hd.addEventListener('click', function(e) {
         if (e.target.closest('.faq-delete')) return;
@@ -238,6 +243,14 @@ function confirmDelete(callback, label) {
       return;
     }
     hint.textContent = '';
+
+    // Header-Preview live aktualisieren (sonst zeigt der eingeklappte Header alten Text bis Reload)
+    var lblLive = row.querySelector('.faq-lbl');
+    if (lblLive) {
+      var liveTxt = (frageEl.value || '').trim();
+      lblLive.textContent = liveTxt || 'Frage';
+      lblLive.title = liveTxt;
+    }
 
     var pid = getProfileId();
     if (!pid) return;
