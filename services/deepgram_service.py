@@ -327,13 +327,15 @@ def register_audio_handlers(sio):
                 ls.state['skript_bloecke'] = bloecke
             print(f"[PiP] Skript geladen ({len(bloecke)} Bloecke)")
 
+        # WR-04: user_id extracted before try-blocks so it's always defined even
+        # if the FT logging block raises before the assignment.
+        from flask import session as flask_session
+        user_id = flask_session.get('user_id')
+
         # FT logging: create ft_call_sessions row (Phase 04.7.1)
         try:
-            from flask import session as flask_session
             from database.db import SessionLocal
             from database.models import FtCallSession, User
-
-            user_id = flask_session.get('user_id')
             if user_id:
                 db = SessionLocal()
                 try:
