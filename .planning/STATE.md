@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.19.4 in progress — Plan 02 complete
-stopped_at: "08.19.4-02 complete (2026-04-29)"
-last_updated: "2026-04-29T12:00:00Z"
+status: Phase 08.19.4 in progress — Plan 03 complete
+stopped_at: "08.19.4-03 complete (2026-04-29)"
+last_updated: "2026-04-29T14:04:09Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 56
@@ -26,17 +26,20 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.19.4 (multi-user-profile-session-scoping) — IN PROGRESS
-Plan: 2 of 4 — COMPLETE (2026-04-29, commits f068e67 + cb80cb3)
+Plan: 3 of 4 — COMPLETE (2026-04-29, commits 3ccd06d + 4bc3522 + cc598e8)
 Last activity: 2026-04-29
 
-**Phase 08.19.4 Plan 02 abgeschlossen:** SID-Lifecycle in deepgram_service.py verdrahtet (connect -> init_session_state + set_profile_for_sid; disconnect/stop -> pop_session_state). Public active_profile_data/active_profile_name Globals aus live_session.py entfernt, _legacy_* Compat-Wrapper angelegt.
-**Next:** Plan 03 — Caller-Migration (get_active_profile -> get_profile_for_sid in claude_service, prompt_pipeline, deepgram_service)
+**Phase 08.19.4 Plan 03 abgeschlossen:** Per-SID _per_sid_transcript Buffer implementiert (D-02 Tier 2 PFLICHT). analyse_loop und coaching_loop iterieren per SID statt globalem State. Alle 7 get_active_profile() Caller migriert. SID-Liveness-Checks nach jedem Claude-API-Call.
+**Next:** Plan 04 — Route-Caller-Migration + Tests (app_routes, profiles, verbleibende Callers)
 **Decisions made:**
   - D-01: _per_sid_profile dict analog deepgram_service._deepgram_sessions Pattern
   - D-02: _session_state dict mit allen Session-Kontextfeldern pro SID
   - D-04: _load_initial_profile() geloescht (kein Auskommentieren)
   - D-05: active_profile_data/name public globals entfernt; _legacy_* fuer Plan 03+04 Migration
   - D-06: setdefault Guard in on_message auf _per_sid_profile korrigiert (_per_sid_transcript existiert nicht)
+  - D-07: analyse_loop/coaching_loop O(N) sequentiell akzeptiert fuer EA (max 50 User) — ThreadPoolExecutor in 08.19.5
+  - D-08: coaching_buffer bleibt global shared in Plan 03 — volle Isolation in Phase 08.19.5
+  - D-09: _bof_count in coaching_loop aus _session_state[sid] gelesen statt Modul-Global
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
