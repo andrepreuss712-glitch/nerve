@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — PLANNED, ready to execute
-Plan: 1 of 5 COMPLETE
+Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — IN PROGRESS
+Plan: 2 of 5 COMPLETE
 Last activity: 2026-04-29
 
-**Next:** /gsd-execute-phase 08.19.1
+**Next:** /gsd-execute-phase 08.19.1 (Plan 03 — _migrate_profile_data v2->v3)
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -195,6 +195,9 @@ Recent decisions affecting current work:
 - [Phase 08.19-03]: bearbeiten() POST: _migrate_profile_data() VOR ProfileSchema.model_validate() (Finding 2) — Altlasten-Stripping verhindert false-positive 400 durch extra='forbid'
 - [Phase 08.19-03]: ValidationError -> flash + db.rollback() + redirect HTTP 400 (Finding 3) — kein 500, Blueprint-Name 'profiles', Parameter 'pid'
 - [Phase 08.19-03]: consent_text dual-write NULL -> '' in daten.meta (Finding 4) — DB-Column-Drop in spaeterer Phase nach Stabilitaets-Verifikation
+- [Phase 08.19.1-02]: einwaende + phasen als List[dict] top-level in ProfileSchema (D-01 Kalibrierung); BasisSchema Dead Fields entfernt; _BasisReadSchema behaelt einwaende/phasen fuer Lese-Kompatibilitaet alter Profile
+- [Phase 08.19.1-02]: produkt: Any = None in ProfileSchema + ProfileReadSchema (2/6 Production-Profile — Entscheidungsregel >= 2 getroffen per KEY-FINDINGS.md)
+- [Phase 08.19.1-02]: 1/6-Profil-Keys als Noise (beschreibung, emotionale_trigger, no_go etc.) — kein Schema-Eintrag; Plan-03 pop()-Schritt bereinigt sie in v2->v3 Migration
 - [Phase 08.19.3-04]: faq-mode-toggle visual state driven via JS (modeTrack.style.background, modeThumb.style.transform) — no CSS :checked pseudo-selector; avoids CSS specificity conflicts
 - [Phase 08.19.3-04]: prevChecked = !modeChk.checked captured BEFORE _setModeVisual() — change event already has new value, inverse is the pre-change state
 - [Phase 08.19.3-04]: Ghost-toggle reads data-faq-id at change-event time via row.getAttribute() (not closure faqId) — allows toggle to fire after POST-success sets the ID
@@ -599,6 +602,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-29T09:48:10.764Z
-Stopped at: Completed 08.19.2-04-PLAN.md (awaiting human-verify checkpoint)
+Last session: 2026-04-29
+Stopped at: Completed 08.19.1-02-PLAN.md
 Resume file: None

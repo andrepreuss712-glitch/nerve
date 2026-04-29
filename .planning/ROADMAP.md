@@ -900,7 +900,7 @@ Plans:
 
 Plans:
 - [x] 08.19.1-01-PLAN.md — Production-Profil-Analyse (Hetzner SSH-Dump + KEY-FINDINGS.md)
-- [ ] 08.19.1-02-PLAN.md — Schema-Kalibrierung (ProfileSchema + BasisSchema Dead-Fields)
+- [x] 08.19.1-02-PLAN.md — Schema-Kalibrierung (ProfileSchema + BasisSchema Dead-Fields)
 - [ ] 08.19.1-03-PLAN.md — _migrate_profile_data() v2->v3 (einwaende/phasen merge, fragen/branche drop)
 - [ ] 08.19.1-04-PLAN.md — DB-Level Batch-Migration alle Profile auf v3 (app.py _migrate())
 - [ ] 08.19.1-05-PLAN.md — extra='forbid' aktivieren + Test-Suite
