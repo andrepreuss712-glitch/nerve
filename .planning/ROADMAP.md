@@ -918,7 +918,7 @@ Plans:
 Plans:
 - [x] 08.19.3-01-PLAN.md — Schema-Migration: profile_faqs.mode Spalte + Backfill + daten.fragen → profile_faqs
 - [x] 08.19.3-02-PLAN.md — Backend: match_faq() mode-Filter + build_profile_context() FAQ Q+A-Block
-- [ ] 08.19.3-03-PLAN.md — Routen: GET/PUT FAQ-Endpoints mode-aware
+- [x] 08.19.3-03-PLAN.md — Routen: GET/PUT FAQ-Endpoints mode-aware
 - [ ] 08.19.3-04-PLAN.md — Frontend: sec-fragen entfernen + Toggle-Widget + renderFaqRow() + Human-Verify
 
 ---

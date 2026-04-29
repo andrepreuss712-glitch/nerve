@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: Phase 08.19.3 Plan 02 complete — Plan 03 next
-last_updated: "2026-04-29T07:32:00Z"
-last_activity: 2026-04-29 - Phase 08.19.3 Plan 02 complete (mode-filter in claude_service.py + FAQ Q+A-Block in prompt_pipeline.py)
+stopped_at: Phase 08.19.3 Plan 03 complete — Plan 04 next
+last_updated: "2026-04-29T08:00:00Z"
+last_activity: 2026-04-29 - Phase 08.19.3 Plan 03 complete (mode-Feld in GET/POST/PUT FAQ-API-Endpoints, routes/profiles.py)
 progress:
   total_phases: 54
   completed_phases: 41
   total_plans: 192
-  completed_plans: 179
+  completed_plans: 180
   percent: 94
 ---
 
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.19.3 (faq-konsolidierung-toggle) — IN PROGRESS
-Plan: 2 of 4 COMPLETE
+Plan: 3 of 4 COMPLETE
 Last activity: 2026-04-29
 
-**Next:** Plan 03 — routes/profiles.py mode-field in API + profile_editor.js/html Toggle.
+**Next:** Plan 04 — profile_editor.js/html Toggle UI (mode-Toggle-Anzeige + Persistenz).
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -177,6 +177,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.19.2 P04 | 15min | 1 tasks | 1 files |
 | Phase 08.19.3 P01 | 12min | 2 tasks | 2 files |
 | Phase 08.19.3 P02 | 2min | 2 tasks | 2 files |
+| Phase 08.19.3 P03 | 5min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -193,6 +194,9 @@ Recent decisions affecting current work:
 - [Phase 08.19-03]: bearbeiten() POST: _migrate_profile_data() VOR ProfileSchema.model_validate() (Finding 2) — Altlasten-Stripping verhindert false-positive 400 durch extra='forbid'
 - [Phase 08.19-03]: ValidationError -> flash + db.rollback() + redirect HTTP 400 (Finding 3) — kein 500, Blueprint-Name 'profiles', Parameter 'pid'
 - [Phase 08.19-03]: consent_text dual-write NULL -> '' in daten.meta (Finding 4) — DB-Column-Drop in spaeterer Phase nach Stabilitaets-Verifikation
+- [Phase 08.19.3-03]: mode Whitelist ('literal', 'ki_generated') in GET/POST/PUT identisch — SQL-Injection-Mitigation per ORM-Zuweisung (T-08.19.3-09/10/13)
+- [Phase 08.19.3-03]: POST mode default 'ki_generated' via (data.get('mode') or 'ki_generated').strip() — verhindert NOT NULL Constraint-Edge-Cases
+- [Phase 08.19.3-03]: Partial-PUT Pattern: if 'field' in data → validate → assign; mode folgt gleichem Muster wie kategorie
 - [Phase 08.19.3-02]: _qa_pipeline_dispatch() filtert _faqs_all auf literal-only vor match_faq() — ki_generated FAQs aus Embedding-Match ausgeschlossen (D-06/D-07/D-08)
 - [Phase 08.19.3-02]: build_profile_context() liest active_profile_id via ls.state['active_profile_id'] (state_lock) — ls.get_active_profile()[0] gibt name zurueck, nicht id (Deviation fix)
 - [Phase 08.19.3-02]: FAQ Q+A-Block in build_profile_context() gecapped auf 20 rows (order_by used_count DESC) — LLM-degradation + Token-Budget-Schutz (D-10)
