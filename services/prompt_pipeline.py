@@ -176,6 +176,34 @@ def build_profile_context(user_id: int, mode: str = 'cold_call') -> str:
         for b in beweise:
             lines.append(f'- {b}')
 
+    # ── Phase 08.19.3 D-09: FAQ Q+A-Block (alle Modi) ────────────────────
+    try:
+        _faq_profile_id = None
+        try:
+            with ls.state_lock:
+                _faq_profile_id = ls.state.get('active_profile_id')
+        except Exception:
+            pass
+        if _faq_profile_id:
+            from database.db import SessionLocal as _SL
+            from database.models import ProfileFaq as _PF
+            _fdb = _SL()
+            try:
+                # Cap: max 20 FAQs to prevent LLM-lost-in-middle degradation and token budget blowout.
+                # Sorted by used_count DESC so most-relevant FAQs are included first.
+                _faqs = _fdb.query(_PF).filter_by(profile_id=_faq_profile_id).order_by(_PF.used_count.desc()).limit(20).all()
+                if len(_faqs) == 20:
+                    print(f"[Pipeline] FAQ-Cap reached for profile {_faq_profile_id} (count 20+)")
+                if _faqs:
+                    lines.append('\nHaeufig gestellte Fragen + Muster-Antworten:')
+                    for _f in _faqs:
+                        lines.append(f'- F: {_f.frage_muster}')
+                        lines.append(f'  A: {_f.antwort}')
+            finally:
+                _fdb.close()
+    except Exception as _faq_e:
+        print(f"[Pipeline] FAQ-Block skip: {_faq_e}")
+
     # ── Ton/Stil (bestehendes Feld) ────────────────────────────────────────
     if ki.get('ton'):
         lines.append(f'\nTon/Stil: {ki["ton"]}')
