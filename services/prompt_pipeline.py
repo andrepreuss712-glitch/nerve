@@ -133,10 +133,9 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
         return ''
 
     try:
-        if sid:
-            _, pdata = ls.get_profile_for_sid(sid)
-        else:
-            _, pdata = ls.get_active_profile()  # deprecated fallback for HTTP callers
+        # D-05: get_active_profile() deprecated fallback entfernt (Phase 08.19.4 Plan 04)
+        # HTTP-Caller ohne SID erhalten leeren Profil-Kontext (korrekt — kein WS-Kontext)
+        _, pdata = ls.get_profile_for_sid(sid) if sid else ('', {})
     except Exception as e:
         print(f"[Pipeline] get_profile failed user_id={user_id}: {e}")
         return ''

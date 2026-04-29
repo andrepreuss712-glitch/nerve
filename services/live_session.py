@@ -181,39 +181,7 @@ _current_monolog_start = None
 covered_phases_lock = threading.Lock()
 covered_phases      = set()
 
-# ── Aktives Profil (DEPRECATED — Phase 08.19.4) ───────────────────────────────
-# Public module globals active_profile_data / active_profile_name removed.
-# All per-SID profile state is now in _per_sid_profile (below).
-# Temporary _legacy_* compat variables remain until Plans 03+04 migrate all callers.
-_legacy_profile_lock = threading.Lock()
-_legacy_profile_data: dict = {}
-_legacy_profile_name: str = ''
-
-
-def set_active_profile(name: str, daten: dict, profile_id: int = None):
-    """DEPRECATED Phase 08.19.4 — will be deleted in Plan 04.
-    Use set_profile_for_sid(sid, name, daten) instead.
-    Kept until all callers migrated in Plans 03+04.
-    """
-    global _legacy_profile_data, _legacy_profile_name
-    _logger.warning("[DEPRECATED] set_active_profile() called — migrate caller to set_profile_for_sid(sid, name, daten)")
-    with _legacy_profile_lock:
-        _legacy_profile_name = name or ''
-        _legacy_profile_data = daten if isinstance(daten, dict) else {}
-    # Phase 08.5: store profile_id in state so qa_pipeline dispatch can load FAQs
-    if profile_id is not None:
-        with state_lock:
-            state['active_profile_id'] = profile_id
-
-
-def get_active_profile():
-    """DEPRECATED Phase 08.19.4 — will be deleted in Plan 04.
-    Use get_profile_for_sid(sid) instead.
-    Kept until all callers migrated in Plans 03+04.
-    """
-    _logger.warning("[DEPRECATED] get_active_profile() called — migrate caller to get_profile_for_sid(sid)")
-    with _legacy_profile_lock:
-        return _legacy_profile_name, dict(_legacy_profile_data)
+# set_active_profile / get_active_profile deleted Phase 08.19.4 D-04/D-05 — use set_profile_for_sid / get_profile_for_sid
 
 
 # ── Per-SID State Infrastructure (Phase 08.19.4 — DSGVO) ─────────────────────

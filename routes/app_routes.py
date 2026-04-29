@@ -93,8 +93,23 @@ def api_beenden():
         if e['type'] == 'tipp' and e.get('kategorie') == 'signal':
             kaufsignale_liste.append({'text': e.get('text', ''), 'ts': e.get('ts', '')})
 
-    # Skript-Abdeckung berechnen
-    _, pdata = ls.get_active_profile()
+    # Skript-Abdeckung berechnen — D-05: DB ist Single Source of Truth, kein ls.get_active_profile()
+    try:
+        from database.db import SessionLocal as _sl
+        from database.models import Profile as _Prof
+        import json as _json
+        _pid = flask_session.get('active_profile_id') or getattr(g.user, 'active_profile_id', None)
+        if _pid:
+            _db = _sl()
+            try:
+                _p = _db.query(_Prof).filter_by(id=_pid).first()
+                pdata = _json.loads(_p.daten) if _p and _p.daten else {}
+            finally:
+                _db.close()
+        else:
+            pdata = {}
+    except Exception:
+        pdata = {}
     phasen_list = pdata.get('phasen', []) if pdata else []
     with ls.covered_phases_lock:
         cp_snapshot = set(ls.covered_phases)
@@ -757,18 +772,18 @@ def api_set_profile():
         p = db.query(ProfileModel).filter_by(id=pid, org_id=g.org.id).first()
         if not p:
             return jsonify({'error': 'not found'}), 404
-        flask_session['active_profile_id'] = p.id
         import json as _json
         try:
             daten = _json.loads(p.daten) if p.daten else {}
         except Exception:
             daten = {}
-        ls.set_active_profile(p.name, daten, profile_id=p.id)
-        ls.load_learning_cards(g.user.id)
+        # D-05: DB ist Single Source of Truth — kein ls.set_active_profile() mehr
         u = db.get(UserModel, g.user.id)
         if u:
             u.active_profile_id = p.id
             db.commit()
+        ls.load_learning_cards(g.user.id)
+        flask_session['active_profile_id'] = p.id  # convenience only — not authoritative (D-05)
         return jsonify({'ok': True, 'name': p.name, 'phasen': daten.get('phasen', [])})
     finally:
         db.close()

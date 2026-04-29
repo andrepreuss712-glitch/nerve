@@ -37,7 +37,12 @@ def _rolle():
 
 
 def _active_profile_id():
-    return flask_session.get('active_profile_id')
+    # D-05: DB ist Single Source of Truth. Cookie ist convenience-only.
+    # g.user.active_profile_id wird vom auth-Decorator aus der DB geladen.
+    try:
+        return getattr(g.user, 'active_profile_id', None) or flask_session.get('active_profile_id')
+    except Exception:
+        return flask_session.get('active_profile_id')
 
 
 @profiles_bp.route('/')
@@ -266,17 +271,12 @@ def aktivieren(pid):
         p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
         if not p:
             return jsonify({'error': 'not found'}), 404
-        flask_session['active_profile_id'] = p.id
-        import services.live_session as ls_mod
-        try:
-            daten = json.loads(p.daten) if p.daten else {}
-        except Exception:
-            daten = {}
-        ls_mod.set_active_profile(p.name, daten, profile_id=p.id)
+        # D-05: DB ist Single Source of Truth — kein ls_mod.set_active_profile() mehr
         u = db.get(UserModel, g.user.id)
         if u:
             u.active_profile_id = p.id
             db.commit()
+        flask_session['active_profile_id'] = p.id  # convenience only — not authoritative (D-05)
         flash(f'Profil "{p.name}" aktiviert.', 'success')
     finally:
         db.close()
@@ -295,6 +295,10 @@ def loeschen(pid):
         if p:
             if flask_session.get('active_profile_id') == pid:
                 flask_session.pop('active_profile_id', None)
+            # D-05 / T-08.19.4-10: Auch DB bereinigen um stale FK-Referenz zu vermeiden
+            u = db.get(UserModel, g.user.id)
+            if u and u.active_profile_id == pid:
+                u.active_profile_id = None
             db.delete(p)
             db.commit()
             flash('Profil gelöscht.', 'success')

@@ -209,11 +209,8 @@ def _write_ft_assistant_event(
 
 def _build_coaching_prompt(sid: str = None) -> str:
     import services.live_session as ls
-    if sid:
-        _, pdata = ls.get_profile_for_sid(sid)
-    else:
-        _logger.warning("[DEPRECATED] _build_coaching_prompt called without sid")
-        _, pdata = ls.get_active_profile()  # fallback during migration
+    # D-05: get_active_profile() deprecated else-Zweig entfernt (Phase 08.19.4 Plan 04)
+    _, pdata = ls.get_profile_for_sid(sid) if sid else ('', {})
     if not pdata:
         return COACHING_PROMPT_BASE
     basis       = pdata.get('basis', {})
@@ -1261,10 +1258,8 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
         # Load profile data for context (already in memory via live_session)
         import services.live_session as _ls_ref
         try:
-            if sid:
-                _profile_name, _profile_daten = _ls_ref.get_profile_for_sid(sid)
-            else:
-                _profile_name, _profile_daten = _ls_ref.get_active_profile()
+            # D-05: get_active_profile() deprecated else-Zweig entfernt (Phase 08.19.4 Plan 04)
+            _profile_name, _profile_daten = _ls_ref.get_profile_for_sid(sid) if sid else ('', {})
         except Exception:
             _profile_daten = {}
 
