@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.19.4 context gathered — ready for planning
-stopped_at: "08.19.4 context gathered (2026-04-29)"
-last_updated: "2026-04-29T00:00:00Z"
+status: Phase 08.19.4 in progress — Plan 01 complete
+stopped_at: "08.19.4-01 complete (2026-04-29)"
+last_updated: "2026-04-29T10:00:00Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 56
   completed_phases: 43
-  total_plans: 197
-  completed_plans: 185
+  total_plans: 201
+  completed_plans: 186
   percent: 94
 ---
 
@@ -25,17 +25,16 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — COMPLETE + Code-Review-Fixes applied
-Plan: 5 of 5 + Review-Fix — ALLE COMPLETE (2026-04-29, gepusht 7ea48e4)
+Phase: 08.19.4 (multi-user-profile-session-scoping) — IN PROGRESS
+Plan: 1 of 4 — COMPLETE (2026-04-29, commits 131b44a + dd2acd3)
 Last activity: 2026-04-29
 
-**Phase 08.19.1 abgeschlossen:** extra='forbid' auf 9 Write-Schemas aktiv, Test-Suite 27/27 gruen, alle 4 lokale Profile validieren.
-**Next:** /gsd-execute-phase naechste Phase nach 08.19.1
-**Code-Review-Fix ausstehend:** audit_log Test-Pollution (TestF1/F3/F4 schreiben in echte audit_log-Tabelle — Mock-Fixture einfuehren)
-**D-03 Follow-up:** audit_log DB-Insert nach Phase 08.19.1 als Code-Review-Fix einplanen (aktuell nur print())
+**Phase 08.19.4 Plan 01 abgeschlossen:** Per-SID Infrastruktur (_per_sid_profile, _session_state, SID-aware API) in live_session.py etabliert. _load_initial_profile() DSGVO-Verstoss aus app.py geloescht (D-04).
+**Next:** Plan 02 — Caller-Migration (set_active_profile -> set_profile_for_sid)
 **Decisions made:**
-  - KiSchema: antwortlaenge + sensitivitaet ergaenzt (Production-Felder Profil 1)
-  - ZielgruppeSchema: position + unternehmen + branche ergaenzt (Legacy-Felder Profil 2-4)
+  - D-01: _per_sid_profile dict analog deepgram_service._deepgram_sessions Pattern
+  - D-02: _session_state dict mit allen Session-Kontextfeldern pro SID
+  - D-04: _load_initial_profile() geloescht (kein Auskommentieren)
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
