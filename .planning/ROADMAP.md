@@ -975,10 +975,14 @@ Plans:
 **Depends on:** Phase 08.19 ✅ (Schema), Phase 08.19.1 ✅ (Strict-Mode), Phase 08.19.4 ✅ (Multi-User-Session-Scoping als Foundation)
 **Andre-Decision (2026-04-27):** EWB wird besser je mehr Daten ankommen — ALLES aus dem Profil in sinnvoller Reihenfolge ins EWB-Prompt, nicht selektiv.
 
-**Plans:** TBD
+**Plans:** 5 plans
 
 Plans:
-- [ ] TBD — Planning via /gsd-plan-phase 08.20
+- [ ] 08.20-01-PLAN.md — Foundation: _per_sid_briefing + branchen_data.py + Schema v3->v4 + einwaende consumer migration
+- [ ] 08.20-02-PLAN.md — build_profile_context() 9-Section Rewrite + BUG-A/BUG-B fixes
+- [ ] 08.20-03-PLAN.md — PreCall branchen-hint inject + _per_sid_briefing write + QA pipeline {profile_context}
+- [ ] 08.20-04-PLAN.md — Manual-EWB Voll-Profil + Sonnet defaults + Circuit-Breaker TTFT
+- [ ] 08.20-05-PLAN.md — Lead-Context UI: Vorwissen-Picker + Du/Sie-Detection + EWB-Preview-Panel
 
 ---
 
