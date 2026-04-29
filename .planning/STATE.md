@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: Phase 08.19.3 Plan 01 complete — Plan 02 next
-last_updated: "2026-04-29T06:49:36Z"
-last_activity: 2026-04-29 - Phase 08.19.3 Plan 01 complete (profile_faqs.mode migration + daten.fragen backfill)
+stopped_at: Phase 08.19.3 Plan 02 complete — Plan 03 next
+last_updated: "2026-04-29T07:32:00Z"
+last_activity: 2026-04-29 - Phase 08.19.3 Plan 02 complete (mode-filter in claude_service.py + FAQ Q+A-Block in prompt_pipeline.py)
 progress:
   total_phases: 54
   completed_phases: 41
   total_plans: 192
-  completed_plans: 178
+  completed_plans: 179
   percent: 94
 ---
 
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.19.3 (faq-konsolidierung-toggle) — IN PROGRESS
-Plan: 1 of 4 COMPLETE
+Plan: 2 of 4 COMPLETE
 Last activity: 2026-04-29
 
-**Next:** Plan 02 — claude_service.py + prompt_pipeline.py mode-filter und FAQ-Block.
+**Next:** Plan 03 — routes/profiles.py mode-field in API + profile_editor.js/html Toggle.
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -176,6 +176,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.19.2 P03 | 20min | 2 tasks | 1 files |
 | Phase 08.19.2 P04 | 15min | 1 tasks | 1 files |
 | Phase 08.19.3 P01 | 12min | 2 tasks | 2 files |
+| Phase 08.19.3 P02 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -192,6 +193,9 @@ Recent decisions affecting current work:
 - [Phase 08.19-03]: bearbeiten() POST: _migrate_profile_data() VOR ProfileSchema.model_validate() (Finding 2) — Altlasten-Stripping verhindert false-positive 400 durch extra='forbid'
 - [Phase 08.19-03]: ValidationError -> flash + db.rollback() + redirect HTTP 400 (Finding 3) — kein 500, Blueprint-Name 'profiles', Parameter 'pid'
 - [Phase 08.19-03]: consent_text dual-write NULL -> '' in daten.meta (Finding 4) — DB-Column-Drop in spaeterer Phase nach Stabilitaets-Verifikation
+- [Phase 08.19.3-02]: _qa_pipeline_dispatch() filtert _faqs_all auf literal-only vor match_faq() — ki_generated FAQs aus Embedding-Match ausgeschlossen (D-06/D-07/D-08)
+- [Phase 08.19.3-02]: build_profile_context() liest active_profile_id via ls.state['active_profile_id'] (state_lock) — ls.get_active_profile()[0] gibt name zurueck, nicht id (Deviation fix)
+- [Phase 08.19.3-02]: FAQ Q+A-Block in build_profile_context() gecapped auf 20 rows (order_by used_count DESC) — LLM-degradation + Token-Budget-Schutz (D-10)
 - [Phase 08.19.3-01]: Block A+B (ALTER TABLE + Backfill) in single try/except — Backfill runs only on first start when ALTER TABLE succeeds (D-16 Toggle-Persistenz-Schutz)
 - [Phase 08.19.3-01]: Advisory-lock id 81930 fuer _migrate_fragen_to_faqs() — keine Kollision mit 819 aus _migrate_profile_json()
 - [Phase 08.19.3-01]: _migrate_fragen_to_faqs() als Top-Level-Funktion vor _migrate()-Aufruf definiert — engine/app.logger zugreifbar ohne circular import
