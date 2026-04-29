@@ -896,10 +896,10 @@ Plans:
 8. Test gegen alle 6 Profile dass model_validate(strict=True) durchgeht — Test-Suite-Pflicht
 9. Cross-AI Pflicht (Block-N-Phase + Andre-Decision: alle Block-N-Phasen kriegen Cross-AI)
 
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 
 Plans:
-- [ ] 08.19.1-01-PLAN.md — Production-Profil-Analyse (Hetzner SSH-Dump + KEY-FINDINGS.md)
+- [x] 08.19.1-01-PLAN.md — Production-Profil-Analyse (Hetzner SSH-Dump + KEY-FINDINGS.md)
 - [ ] 08.19.1-02-PLAN.md — Schema-Kalibrierung (ProfileSchema + BasisSchema Dead-Fields)
 - [ ] 08.19.1-03-PLAN.md — _migrate_profile_data() v2->v3 (einwaende/phasen merge, fragen/branche drop)
 - [ ] 08.19.1-04-PLAN.md — DB-Level Batch-Migration alle Profile auf v3 (app.py _migrate())
