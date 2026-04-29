@@ -14,3 +14,5 @@ tests/tts_samples/
 # pip install artifacts (Windows pip notice files created by pip>=24)
 =1.2.0
 =3.5.0
+# Phase 08.19.1: Production-DB-Dump (Echtdaten — nie in Git)
+.planning/audits/profile-schema-realdata-2026-04-29/
