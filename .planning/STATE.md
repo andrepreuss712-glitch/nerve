@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Phase 08.19.3 context gathered — ready for planning
-last_updated: "2026-04-28T20:00:00.000Z"
-last_activity: 2026-04-28 - Phase 08.19.3 discuss-phase complete (FAQ-Konsolidierung mit Toggle)
+status: In Progress
+stopped_at: Phase 08.19.3 Plan 01 complete — Plan 02 next
+last_updated: "2026-04-29T06:49:36Z"
+last_activity: 2026-04-29 - Phase 08.19.3 Plan 01 complete (profile_faqs.mode migration + daten.fragen backfill)
 progress:
   total_phases: 54
   completed_phases: 41
-  total_plans: 188
-  completed_plans: 177
+  total_plans: 192
+  completed_plans: 178
   percent: 94
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.2 (profil-editor-ux-design-aufraemung) — IN PROGRESS
-Plan: 4 of 4 COMPLETE
-Last activity: 2026-04-28
+Phase: 08.19.3 (faq-konsolidierung-toggle) — IN PROGRESS
+Plan: 1 of 4 COMPLETE
+Last activity: 2026-04-29
 
-**Next:** Plan 04 — sec-hint Education-Stubs fuer alle 6 Sektionen.
+**Next:** Plan 02 — claude_service.py + prompt_pipeline.py mode-filter und FAQ-Block.
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
@@ -175,6 +175,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.19.2 P02 | 35 | 4 tasks | 5 files |
 | Phase 08.19.2 P03 | 20min | 2 tasks | 1 files |
 | Phase 08.19.2 P04 | 15min | 1 tasks | 1 files |
+| Phase 08.19.3 P01 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,9 @@ Recent decisions affecting current work:
 - [Phase 08.19-03]: bearbeiten() POST: _migrate_profile_data() VOR ProfileSchema.model_validate() (Finding 2) — Altlasten-Stripping verhindert false-positive 400 durch extra='forbid'
 - [Phase 08.19-03]: ValidationError -> flash + db.rollback() + redirect HTTP 400 (Finding 3) — kein 500, Blueprint-Name 'profiles', Parameter 'pid'
 - [Phase 08.19-03]: consent_text dual-write NULL -> '' in daten.meta (Finding 4) — DB-Column-Drop in spaeterer Phase nach Stabilitaets-Verifikation
+- [Phase 08.19.3-01]: Block A+B (ALTER TABLE + Backfill) in single try/except — Backfill runs only on first start when ALTER TABLE succeeds (D-16 Toggle-Persistenz-Schutz)
+- [Phase 08.19.3-01]: Advisory-lock id 81930 fuer _migrate_fragen_to_faqs() — keine Kollision mit 819 aus _migrate_profile_json()
+- [Phase 08.19.3-01]: _migrate_fragen_to_faqs() als Top-Level-Funktion vor _migrate()-Aufruf definiert — engine/app.logger zugreifbar ohne circular import
 - [Phase 08.19-04]: Wizard unternehmensgroesse Chip-Select onclick-Werte exakt gleich UnternehmensgroesseEnum Literals — HTML-Entity &lt; nur im sichtbaren Text-Content, NICHT im onclick-String (Reviews v2 Enum-Sync)
 - [Phase 08.19-04]: initGroesseChip() direkt nach Funktionsdefinition aufgerufen (kein DOMContentLoaded-Wrapper noetig da Script am Body-Ende steht)
 - [Phase 08.19-04]: selectGroesse() loescht boxShadow-Highlight bei Auswahl (Deviation Rule 2 — UX-Korrektur)
