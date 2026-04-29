@@ -695,6 +695,20 @@ def _migrate():
         except Exception as _e:
             print(f"[DB] Migration: profile_faqs skip ({_e})")
 
+        # ── Phase 08.19.3 D-01 + D-02: profile_faqs.mode ─────────────────────────
+        try:
+            conn.execute(text("ALTER TABLE profile_faqs ADD COLUMN mode VARCHAR(20) NOT NULL DEFAULT 'ki_generated'"))
+            conn.commit()
+            print("[DB] Migration: added profile_faqs.mode")
+            # D-02: Backfill nur beim Erstlauf (ALTER TABLE erfolgreich = Spalte neu)
+            # Bestehende Rows erhalten mode='literal' (Backwards-Compat bis User umschaltet)
+            conn.execute(text("UPDATE profile_faqs SET mode='literal' WHERE mode='ki_generated'"))
+            conn.commit()
+            print("[DB] Migration: backfilled profile_faqs.mode='literal' for existing rows")
+        except Exception as _e:
+            print(f"[DB] Migration: profile_faqs.mode skip ({_e})")
+            # column already exists — Backfill wurde beim Erstlauf bereits ausgefuehrt
+
         # ── Phase 08.5: ft_qa_events table ───────────────────────────────────────
         try:
             conn.execute(text("""
@@ -892,6 +906,96 @@ def _migrate():
                 _conn.commit()
         except Exception as _e:
             print(f"[DB] ApiRate seed (08.14) failed (non-fatal): {_e}")
+
+        # ── Phase 08.19.3 D-03/D-04/D-05: daten.fragen -> profile_faqs Migration ──
+        _migrate_fragen_to_faqs()
+
+
+def _migrate_fragen_to_faqs():
+    """Idempotente Migration: daten.fragen Eintraege -> profile_faqs rows (mode='ki_generated').
+    D-03: Exact-Match + TRIM Idempotenz-Check.
+    D-04: daten.fragen key auf [] setzen (nicht entfernen).
+    D-05: Laeuft gegen alle Profile (Andre's Profil 6 + System-Profil 7 inkl.).
+    MUST NOT raise — logs expected errors, raises on unexpected.
+    """
+    import json as _json
+    from sqlalchemy import text
+    _is_sqlite = str(engine.url).startswith('sqlite')
+    try:
+        with engine.connect() as _conn:
+            if _is_sqlite:
+                try:
+                    _conn.execute(text("BEGIN EXCLUSIVE"))
+                except Exception as _e:
+                    print(f"[DB] _migrate_fragen_to_faqs: BEGIN EXCLUSIVE failed: {_e}")
+                    return
+            else:
+                try:
+                    _conn.execute(text("SELECT pg_advisory_xact_lock(81930)"))
+                except Exception as _e:
+                    print(f"[DB] _migrate_fragen_to_faqs: pg_advisory_xact_lock failed: {_e}")
+                    return
+
+            # Load all profiles
+            _profiles = _conn.execute(text("SELECT id, daten FROM profiles")).fetchall()
+            _migrated = 0
+            _skipped = 0
+            for _row in _profiles:
+                _pid = _row[0]
+                try:
+                    _daten = _json.loads(_row[1] or '{}')
+                except Exception:
+                    continue
+                _fragen = _daten.get('fragen') or []
+                if not _fragen:
+                    continue
+                _changed = False
+                for _f in _fragen:
+                    _frage = (_f.get('frage') or '').strip() if isinstance(_f, dict) else str(_f).strip()
+                    _antwort = (_f.get('antwort') or '').strip() if isinstance(_f, dict) else ''
+                    if not _frage:
+                        continue
+                    # Idempotenz: Exact Match + TRIM (D-03)
+                    try:
+                        _exists = _conn.execute(
+                            text("SELECT EXISTS(SELECT 1 FROM profile_faqs WHERE profile_id=:pid AND frage_muster=trim(:frage))"),
+                            {'pid': _pid, 'frage': _frage}
+                        ).scalar()
+                    except Exception as _e:
+                        # Known: constraint check failure — log context and continue
+                        print(f"[DB] _migrate_fragen_to_faqs: idempotency check skip (profile_id={_pid}, frage={_frage!r:.40}): {_e}")
+                        _skipped += 1
+                        continue
+                    if _exists:
+                        _skipped += 1
+                        continue
+                    try:
+                        _conn.execute(
+                            text("""INSERT INTO profile_faqs (profile_id, frage_muster, antwort, kategorie, created_at, used_count, mode)
+                                    VALUES (:pid, :frage, :antwort, 'Sonstiges', datetime('now'), 0, 'ki_generated')"""),
+                            {'pid': _pid, 'frage': _frage, 'antwort': _antwort}
+                        )
+                        _migrated += 1
+                        _changed = True
+                    except Exception as _e:
+                        # Known: duplicate insert on re-run — log context and continue
+                        print(f"[DB] _migrate_fragen_to_faqs: insert skip (profile_id={_pid}, frage={_frage!r:.40}): {_e}")
+                        _skipped += 1
+                        continue
+                # D-04: daten.fragen key auf [] setzen (nicht entfernen)
+                if _changed or _fragen:
+                    _daten['fragen'] = []
+                    _conn.execute(
+                        text("UPDATE profiles SET daten=:daten WHERE id=:pid"),
+                        {'daten': _json.dumps(_daten, ensure_ascii=False), 'pid': _pid}
+                    )
+            _conn.commit()
+            print(f"[DB] _migrate_fragen_to_faqs: migrated={_migrated} skipped={_skipped}")
+    except Exception as _e:
+        # Unexpected error in outer advisory-lock body — log and raise so startup log is visible
+        app.logger.error(f"[DB] _migrate_fragen_to_faqs: FAILED at unexpected error: {_e}")
+        raise
+
 
 _migrate()
 
