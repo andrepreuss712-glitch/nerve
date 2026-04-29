@@ -476,13 +476,6 @@
         <div id="einwaende-list"></div>
         <button type="button" class="btn-primary btn-add-item" onclick="addEinwand()">+ Einwand hinzufügen</button>
 
-        <!-- ehemals sec-fragen -->
-        <div style="margin-top:24px">
-          <div class="sec-title" style="font-size:14px;margin-bottom:12px">Häufige Fragen</div>
-          <div id="fragen-list"></div>
-          <button type="button" class="btn-primary btn-add-item" onclick="addFrage()">+ Frage hinzufügen</button>
-        </div>
-
         <!-- ehemals sec-faqs — ACHTUNG: profile_editor.js hängt an diesen DOM-IDs -->
         <div style="margin-top:24px">
           <div class="sec-title" style="font-size:14px;margin-bottom:8px">FAQ-Datenbank
@@ -529,6 +522,20 @@
                       <option value="Produkt">Produkt</option>
                       <option value="Sonstiges" selected>Sonstiges</option>
                     </select>
+                  </div>
+                  <div class="fg faq-mode-wrap" style="margin:0;flex:0 0 auto">
+                    <label class="fl">Antwort-Modus</label>
+                    <label class="faq-mode-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                      <span class="faq-mode-text" style="font-size:12px;color:var(--page-text-muted)">Wortwörtlich</span>
+                      <span class="faq-mode-track" style="position:relative;display:inline-block;width:40px;height:22px;background:var(--page-text-muted,#888);border-radius:11px;transition:background 0.2s">
+                        <input type="checkbox" class="faq-mode-toggle" style="opacity:0;width:0;height:0;position:absolute">
+                        <span class="faq-mode-thumb" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform 0.2s;pointer-events:none"></span>
+                      </span>
+                      <span class="faq-mode-text-ki" style="font-size:12px;color:var(--page-text-muted)">KI generiert</span>
+                    </label>
+                    <p class="field-desc" style="margin:4px 0 0;font-size:11px">
+                      <span class="faq-mode-desc"></span>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -995,35 +1002,6 @@ function getEinwaende(){
   })).filter(e=>e.einwand||e.gegenargument);
 }
 
-/* ── Häufige Fragen ────────────────────────────────────────────────── */
-function addFrage(d={}){
-  const c=document.getElementById('fragen-list');
-  const idx=c.children.length+1;
-  const b=document.createElement('div');
-  b.className='block';
-  b.innerHTML=`
-<div class="block-hd" onclick="toggleBlock(this.parentElement)" style="cursor:pointer">
-  <span class="block-lbl">Frage ${idx}</span>
-  <span class="acc-chevron" style="margin-left:auto;color:var(--page-text-muted);font-size:12px;flex-shrink:0">▸</span>
-  <button type="button" class="btn-trash" title="Löschen" onclick="event.stopPropagation();(function(btn){confirmDelete(function(){btn.closest('.block').remove();},'Frage');})(this)"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
-</div>
-<div class="acc-body collapsed">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-  <div class="fg" style="margin:0"><label class="fl">Frage ${ti('Was fragen Kunden oft — auch wenn es kein Einwand ist.')}</label>
-    <textarea class="fta" data-fq="frage" style="min-height:52px" placeholder="Häufige Kundenfrage …">${esc(d.frage||'')}</textarea></div>
-  <div class="fg" style="margin:0"><label class="fl">Ideale Antwort ${ti('Wie antwortest du am besten darauf?')}</label>
-    <textarea class="fta" data-fq="antwort" style="min-height:52px" placeholder="Mustergültige Antwort …">${esc(d.antwort||'')}</textarea></div>
-</div>
-</div>`;
-  c.appendChild(b);
-}
-function getFragen(){
-  return [...document.querySelectorAll('#fragen-list .block')].map(b=>({
-    frage:b.querySelector('[data-fq="frage"]').value.trim(),
-    antwort:b.querySelector('[data-fq="antwort"]').value.trim(),
-  })).filter(f=>f.frage);
-}
-
 /* ── Kaufsignale ───────────────────────────────────────────────────── */
 function addKaufsignal(d={}){
   const c=document.getElementById('kaufsignale-list');
@@ -1160,7 +1138,6 @@ function buildAndSubmit(){
     },
     phasen:getPhasen(),
     einwaende:getEinwaende(),
-    fragen:getFragen(),
     kaufsignale:getKaufsignale(),
     nogos:getNogos(),
     wettbewerber:getWettbewerber(),
@@ -1353,7 +1330,6 @@ function init(){
     (sch.schmerzpunkte||[]).forEach(s=>addSchmerz(s));
     (DATEN.phasen||[]).forEach(p=>addPhase(p));
     (DATEN.einwaende||[]).forEach(e=>addEinwand(e));
-    (DATEN.fragen||[]).forEach(f=>addFrage(f));
     (DATEN.kaufsignale||[]).forEach(k=>addKaufsignal(k));
     (DATEN.nogos||[]).forEach(n=>addNogo(n));
     (DATEN.wettbewerber||[]).forEach(w=>addWettbewerber(w));
