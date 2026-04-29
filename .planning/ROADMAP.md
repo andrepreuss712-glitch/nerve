@@ -623,7 +623,7 @@ Plans:
 **Goal:** EWB-Pipeline liefert konsistent hohe Qualität (80% sofort-vorlesbar, Varianz-Range <30 über Szenarien A/B/C), A/B-Routing zwischen v1-legacy und v2-modular-Prompt ist live, 6 neue Profil-Felder + 3-Block-Tooltip-System + POLISH-55 3-State-Rating-Infrastruktur bringen die für Early-Access-Launch nötige Mess- und Qualitätsbasis.
 **Requirements**: EWB-01 through EWB-20 (newly derived — see 08-RESEARCH.md §Phase Requirements, to be back-ported into REQUIREMENTS.md)
 **Depends on:** Phase 7
-**Plans:** 6 plans
+**Plans:** 6/6 plans complete
 **Completed:** 2009-04-23 — UAT approved. Wave 7 (100 EWB-Ratings + 15 Training-Sessions + 5 Cold-Calls) bewusst VERSCHOBEN auf nach Phase 08.5: Training-Pipeline nutzt noch alten Prompt (nicht v2-modular) — Wave-7-Daten wären zirkulär. Phase 08.5 enthält Training-Pipeline-Angleichung als Sub-Scope.
 
 Plans:
@@ -958,9 +958,13 @@ Plans:
 **Depends on:** Phase 08.19.1 (Schema sauber)
 **Voraussetzung für:** Phase 08.20 (Pipeline-Re-Wire darf nicht auf kaputter Profile-Lookup-Foundation bauen)
 
-**Plans:** 0/0 plans — context pending
+**Plans:** 4 plans in 3 waves
 
 Plans:
+- [ ] 08.19.4-01-PLAN.md — Per-SID dict infrastructure + _load_initial_profile() deletion
+- [ ] 08.19.4-02-PLAN.md — SID lifecycle hooks in deepgram_service + remove module globals
+- [ ] 08.19.4-03-PLAN.md — Rebuild analyse_loop/coaching_loop + migrate 7 get_active_profile() callers
+- [ ] 08.19.4-04-PLAN.md — D-05 route cleanup + delete deprecated wrappers + DSGVO isolation tests
 
 ---
 
