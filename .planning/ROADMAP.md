@@ -951,6 +951,19 @@ Plans:
 
 ---
 
+### Phase 08.19.4: Multi-User-Profile-Session-Scoping (INSERTED — 2026-04-29)
+
+**Goal:** `services/live_session.py` hat `active_profile_data` + `active_profile_name` als Modul-globalen State — ein Python-Worker = ein einziges aktives Profil für alle gleichzeitig aktiven User. Bei Multi-User-EA-Launch (50 Plätze auf einem Flask-Worker) sieht User B im selben Worker User A's Profil → DSGVO-Cross-Session-Data-Leak + 100% falsch personalisierte EWBs. `_load_initial_profile()` in `app.py` lädt beim Boot Profil 7 (Admin-Org "NERVE Alpha") als globales Default — user-agnostisch. Fix: Profile-Lookup user/session-scoped machen (Flask `g` für HTTP-Pfade, per-Connection-State für WebSocket-Pfade). Alle Caller in `claude_service.py`, `qa_pipeline.py`, EWB-Prompt-Builder, Coach-Pipeline, Training-Module umstellen. DSGVO-Audit aller Modul-Globalen in `live_session.py`.
+**Komplexität:** 🔴 (DSGVO-Pflicht + Architektur + Multi-Threading) — Cross-AI Pflicht. Plan-Phase mit Pro-Modell verifizieren (Gemini-Pro statt Flash) wegen Architektur-Tiefe.
+**Depends on:** Phase 08.19.1 (Schema sauber)
+**Voraussetzung für:** Phase 08.20 (Pipeline-Re-Wire darf nicht auf kaputter Profile-Lookup-Foundation bauen)
+
+**Plans:** 0/0 plans — context pending
+
+Plans:
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
