@@ -125,6 +125,7 @@ function confirmDelete(callback, label) {
         if (modeTrack) modeTrack.style.opacity = '0.5';
 
         function _revertAndNotify() {
+          if (!document.body.contains(row)) return;  // DOM guard: row may have been removed
           // Revert checkbox and visual to previous state
           modeChk.checked = prevChecked;
           _setModeVisual(prevChecked);
