@@ -207,9 +207,13 @@ def _write_ft_assistant_event(
         print(f"[FT] assistant_event write failed (module={module}): {e}")
 
 
-def _build_coaching_prompt() -> str:
+def _build_coaching_prompt(sid: str = None) -> str:
     import services.live_session as ls
-    _, pdata = ls.get_active_profile()
+    if sid:
+        _, pdata = ls.get_profile_for_sid(sid)
+    else:
+        _logger.warning("[DEPRECATED] _build_coaching_prompt called without sid")
+        _, pdata = ls.get_active_profile()  # fallback during migration
     if not pdata:
         return COACHING_PROMPT_BASE
     basis       = pdata.get('basis', {})
@@ -817,288 +821,322 @@ def analyse_loop():
         with ls.pause_lock:
             if ls.is_paused:
                 continue
-        with ls.buffer_lock:
-            if not ls.transcript_buffer:
+
+        # Phase 08.19.4 D-03: Iterate over all active SIDs
+        # O(N) SEQUENTIAL: Claude-Calls laufen sequentiell pro SID — Loop-Zeit waechst linear.
+        # SKALIERUNG: Loop-Cycle-Dauer bei N parallelen Sessions messen.
+        # Schwellwerte (Messung ausstehend):
+        #   N=1: ~1-3s, N=5: ~5-15s (KRITISCH), N=20: >20s (nicht mehr Echtzeit)
+        # Ab N=5 und Cycle-Zeit > 3s: Migration zu ThreadPoolExecutor.
+        # Naechste Phase: Block-M (08.19.5 oder spaeter). Accepted for EA (50 users max).
+        with ls._session_state_lock:
+            active_sids = list(ls._session_state.keys())
+        if not active_sids:
+            continue
+
+        _loop_start = time.monotonic()
+        for sid in active_sids:
+            # Re-check SID still alive (may have disconnected since snapshot)
+            with ls._session_state_lock:
+                sid_state = ls._session_state.get(sid)
+            if not sid_state:
                 continue
-            neuer_text = " ".join(e['text'] for e in ls.transcript_buffer)
-            line_id    = ls.transcript_buffer[-1]['line_id']
-            t_start    = ls.transcript_buffer[0].get('t_start', time.monotonic())
-            kontext    = " ".join(ls.analysiert_bisher[-20:])
-            ls.analysiert_bisher.extend(e['text'] for e in ls.transcript_buffer)
-            ls.transcript_buffer.clear()
-        # D-09: Inject active learning cards into kontext
-        with ls.state_lock:
-            _lk_cards = ls.state.get('active_learning_cards', [])
-        if _lk_cards:
-            _lk_ctx = "\n\n[Aktive Lernkarten des Beraters - bei passender Situation mit lernkarte_match=true markieren]:\n"
-            for _c in _lk_cards[:5]:
-                _lk_ctx += f"- [{_c['category']}] {_c['final_text'][:80]}\n"
-            kontext = kontext + _lk_ctx
-        print(f"[Claude-1] Analysiere (line {line_id}): {neuer_text[:80]}…")
-        with ls.state_lock:
-            ls.state['aktiv'] = True
-        try:
-            # Phase 06.3: analyse_loop no longer renders into PiP slots.
-            # Keyword-Matcher (06.2) is sole primary for Slot 0 + Slot 1.
-            # Non-streaming call preserves ergebnis for FT-events, Kaufbereitschaft,
-            # Phase-Classifier, Cold-Call-Inference, Active-Hint-Orchestration.
-            ergebnis = analysiere_mit_claude(neuer_text, kontext)
-            # ── Phase 08.5: Universal Response Loop ──────────────────────────
-            # Classifies utterance via qa_pipeline when kw_fired_for_line != line_id
-            # (D-02 guard). Emits qa_slot1 or qa_soft_hint to active session.
-            _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio)
-            latency_e = round(time.monotonic() - t_start, 2)
-            print(f"[Claude-1] Ergebnis (Latenz {latency_e}s): {ergebnis}")
-            ts = datetime.now().strftime('%H:%M:%S')
-            # Kaufbereitschaft deterministisch anpassen
-            with ls.kb_lock:
-                kb_vor_einwand = ls.kaufbereitschaft
-            if ergebnis.get('einwand'):
-                delta = -5 if ergebnis.get('intensitaet') == 'hoch' else -3
-                ls.update_kaufbereitschaft(delta)
-            with ls.log_lock:
-                ls.conversation_log.append({
-                    'ts': ts, 'type': 'analyse',
-                    'speaker': None, 'text': neuer_text, 'data': ergebnis,
-                    'latency': latency_e,
-                })
-            with ls.kb_lock:
-                kb_aktuell = ls.kaufbereitschaft
-            # Gegenargument-Tracking
-            if ergebnis.get('einwand'):
-                with ls.gegenargument_log_lock:
-                    # Vorherigen Eintrag mit kb_nachher aktualisieren
-                    if ls.gegenargument_log:
-                        last = ls.gegenargument_log[-1]
-                        if last['kb_nachher'] is None:
-                            last['kb_nachher'] = kb_vor_einwand
-                            last['kb_delta']   = kb_vor_einwand - last['kb_vorher']
-                            last['erfolgreich'] = last['kb_delta'] > 0
-                    # Neuen Eintrag anlegen
-                    ls.gegenargument_log.append({
-                        'ts':               ts,
-                        'einwand_typ':      ergebnis.get('typ', ''),
-                        'einwand_zitat':    ergebnis.get('einwand_zitat', ''),
-                        'ist_vorwand':      ergebnis.get('ist_vorwand', False),
-                        'gegenargument_1':  ergebnis.get('gegenargument_1', ''),
-                        'gegenargument_2':  ergebnis.get('gegenargument_2', ''),
-                        'gewaehlte_option': None,
-                        'kb_vorher':        kb_aktuell,
-                        'kb_nachher':       None,
-                        'kb_delta':         None,
-                        'erfolgreich':      None,
-                    })
+
+            # Read per-SID transcript buffer (D-02 — implemented in Task 1 this plan)
+            with ls._per_sid_transcript_lock:
+                buf = ls._per_sid_transcript.get(sid, [])
+                if not buf:
+                    continue
+                neuer_text = " ".join(e['text'] for e in buf)
+                line_id    = buf[-1]['line_id']
+                t_start    = buf[0].get('t_start', time.monotonic())
+                kontext    = " ".join(sid_state.get('analysiert_bisher', [])[-20:])
+                sid_state.setdefault('analysiert_bisher', []).extend(e['text'] for e in buf)
+                ls._per_sid_transcript[sid] = []  # clear consumed entries
+
+            # D-09: Inject active learning cards into kontext
             with ls.state_lock:
-                ls.state['ergebnis']        = ergebnis
-                ls.state['line_id']         = line_id
-                ls.state['aktiv']           = False
-                ls.state['version']        += 1
-                ls.state['kaufbereitschaft'] = kb_aktuell
-            # ── FT logging hook (Phase 04.7.1) ────────────────────────────────
+                _lk_cards = ls.state.get('active_learning_cards', [])
+            if _lk_cards:
+                _lk_ctx = "\n\n[Aktive Lernkarten des Beraters - bei passender Situation mit lernkarte_match=true markieren]:\n"
+                for _c in _lk_cards[:5]:
+                    _lk_ctx += f"- [{_c['category']}] {_c['final_text'][:80]}\n"
+                kontext = kontext + _lk_ctx
+            print(f"[Claude-1] SID={sid} Analysiere (line {line_id}): {neuer_text[:80]}…")
+            with ls.state_lock:
+                ls.state['aktiv'] = True
             try:
+                # Phase 06.3: analyse_loop no longer renders into PiP slots.
+                # Keyword-Matcher (06.2) is sole primary for Slot 0 + Slot 1.
+                # Non-streaming call preserves ergebnis for FT-events, Kaufbereitschaft,
+                # Phase-Classifier, Cold-Call-Inference, Active-Hint-Orchestration.
+                ergebnis = analysiere_mit_claude(neuer_text, kontext)
+                # SID liveness check after Claude API call
+                with ls._session_state_lock:
+                    if sid not in ls._session_state:
+                        print(f"[analyse_loop] SID {sid} gone during Claude call — silent drop")
+                        continue
+                # ── Phase 08.5: Universal Response Loop ──────────────────────────
+                # Classifies utterance via qa_pipeline when kw_fired_for_line != line_id
+                # (D-02 guard). Emits qa_slot1 or qa_soft_hint to active session.
+                _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid=sid)
+                # SID liveness check after _qa_pipeline_dispatch
+                with ls._session_state_lock:
+                    if sid not in ls._session_state:
+                        print(f"[analyse_loop] SID {sid} gone during qa dispatch — silent drop")
+                        continue
+                latency_e = round(time.monotonic() - t_start, 2)
+                print(f"[Claude-1] SID={sid} Ergebnis (Latenz {latency_e}s): {ergebnis}")
+                ts = datetime.now().strftime('%H:%M:%S')
+                # Kaufbereitschaft deterministisch anpassen
+                with ls.kb_lock:
+                    kb_vor_einwand = ls.kaufbereitschaft
                 if ergebnis.get('einwand'):
-                    _hint_text = (ergebnis.get('gegenargument_1') or '').strip()
-                    _hint_type = ergebnis.get('typ') or 'einwand'
-                else:
-                    _hint_text = ergebnis.get('notiz') or ''
-                    _hint_type = 'kein_einwand'
-                _write_ft_assistant_event(
-                    module='assistant_live',
-                    hint_type=_hint_type,
-                    hint_text=_hint_text,
-                    model_used=config.MODEL_ANALYSE,
-                    context={
-                        'transcript_segment': neuer_text,
-                        'speaker': 'rep',
-                        'conversation_phase': None,
-                        'hint_category': ergebnis.get('typ'),
-                    },
-                )
-            except Exception as _e:
-                print(f"[FT] assistant_live hook skipped: {_e}")
-            # ── Phase 04.8: phase classifier (every 5th cycle) ────────────────
-            _phase_cycle_counter = getattr(analyse_loop, '_phase_cycle_counter', 0) + 1
-            analyse_loop._phase_cycle_counter = _phase_cycle_counter
-            if _phase_cycle_counter % 5 == 0:
+                    delta = -5 if ergebnis.get('intensitaet') == 'hoch' else -3
+                    ls.update_kaufbereitschaft(delta)
+                with ls.log_lock:
+                    ls.conversation_log.append({
+                        'ts': ts, 'type': 'analyse',
+                        'speaker': None, 'text': neuer_text, 'data': ergebnis,
+                        'latency': latency_e,
+                    })
+                with ls.kb_lock:
+                    kb_aktuell = ls.kaufbereitschaft
+                # Gegenargument-Tracking
+                if ergebnis.get('einwand'):
+                    with ls.gegenargument_log_lock:
+                        # Vorherigen Eintrag mit kb_nachher aktualisieren
+                        if ls.gegenargument_log:
+                            last = ls.gegenargument_log[-1]
+                            if last['kb_nachher'] is None:
+                                last['kb_nachher'] = kb_vor_einwand
+                                last['kb_delta']   = kb_vor_einwand - last['kb_vorher']
+                                last['erfolgreich'] = last['kb_delta'] > 0
+                        # Neuen Eintrag anlegen
+                        ls.gegenargument_log.append({
+                            'ts':               ts,
+                            'einwand_typ':      ergebnis.get('typ', ''),
+                            'einwand_zitat':    ergebnis.get('einwand_zitat', ''),
+                            'ist_vorwand':      ergebnis.get('ist_vorwand', False),
+                            'gegenargument_1':  ergebnis.get('gegenargument_1', ''),
+                            'gegenargument_2':  ergebnis.get('gegenargument_2', ''),
+                            'gewaehlte_option': None,
+                            'kb_vorher':        kb_aktuell,
+                            'kb_nachher':       None,
+                            'kb_delta':         None,
+                            'erfolgreich':      None,
+                        })
+                with ls.state_lock:
+                    ls.state['ergebnis']        = ergebnis
+                    ls.state['line_id']         = line_id
+                    ls.state['aktiv']           = False
+                    ls.state['version']        += 1
+                    ls.state['kaufbereitschaft'] = kb_aktuell
+                # ── FT logging hook (Phase 04.7.1) ────────────────────────────
                 try:
-                    from services.ki_logik import detect_phase
-                    with ls.buffer_lock:
-                        transcript_window = list(ls.analysiert_bisher[-10:])
-                    with ls.state_lock:
-                        cur_phase = ls.state.get('current_phase', 1) or 1
-                        phase_change_count = ls.state.get('phase_change_count', 0) or 0
-                        last_change_cycle = ls.state.get('_phase_cycle_at_last_change', 0) or 0
-                        mode = ls.state.get('mode', 'meeting')
-                    elapsed_s = (time.time() - ls.session_start_ts) if hasattr(ls, 'session_start_ts') else 0
-                    raw = classify_phase(transcript_window, cur_phase, elapsed_s, mode)
-                    if raw:
-                        cycles_since_change = _phase_cycle_counter - last_change_cycle
-                        new_phase, new_conf = detect_phase(
-                            raw_phase=raw['phase'],
-                            raw_confidence=raw['confidence'],
-                            current_phase=cur_phase,
-                            phase_change_count=phase_change_count,
-                            cycles_since_change=cycles_since_change,
-                        )
-                        with ls.state_lock:
-                            phase_did_change = (new_phase != cur_phase)
-                            if phase_did_change:
-                                ls.state['current_phase'] = new_phase
-                                ls.state['current_phase_name'] = _PHASE_NAMES.get(new_phase, '')
-                                ls.state['phase_changed_at'] = datetime.utcnow().isoformat()
-                                ls.state['phase_change_count'] = phase_change_count + 1
-                                ls.state['_phase_cycle_at_last_change'] = _phase_cycle_counter
-                                print(f"[phase_classify] {cur_phase}→{new_phase} ({_PHASE_NAMES.get(new_phase,'')}) conf={new_conf:.2f} grund={raw.get('grund','')}")
-                            ls.state['phase_confidence'] = new_conf
-                        # POLISH-39 + POLISH-42: propagate AI phase-change to phasen_log (for
-                        # ConversationLog.phasen_details) and covered_phases (for skript_abdeckung).
-                        # Done outside state_lock to avoid nested-lock stalls.
-                        if phase_did_change:
-                            try:
-                                old_phase_name = _PHASE_NAMES.get(cur_phase, str(cur_phase))
-                                new_phase_name = _PHASE_NAMES.get(new_phase, str(new_phase))
-                                ts = datetime.now().strftime('%H:%M:%S')
-                                with ls.buffer_lock:
-                                    seg_count = len(ls.analysiert_bisher)
-                                with ls.phasen_log_lock:
-                                    ls.phasen_log.append({
-                                        'ts':            ts,
-                                        'name':          new_phase_name,  # Template uses ph.name
-                                        'typ':           new_phase_name.lower(),
-                                        'von_phase':     old_phase_name,
-                                        'nach_phase':    new_phase_name,
-                                        'segment_count': seg_count,
-                                        'source':        'ai_classifier',
-                                        'confidence':    round(float(new_conf), 2),
-                                    })
-                                # POLISH-42: map AI-phase (1-6) -> profile-phase index (0-based),
-                                # capped to profile's actual phase count so skript_abdeckung
-                                # can't overflow when profile has <6 phases.
-                                try:
-                                    _pid, _pdata = ls.get_active_profile()
-                                    _ph_list = _pdata.get('phasen', []) if _pdata else []
-                                    if _ph_list:
-                                        _idx = max(0, min(int(new_phase) - 1, len(_ph_list) - 1))
-                                        with ls.covered_phases_lock:
-                                            ls.covered_phases.add(_idx)
-                                except Exception as _ce:
-                                    print(f"[phase_classify] covered_phases propagate error: {_ce}")
-                            except Exception as _pe:
-                                print(f"[phase_classify] phasen_log propagate error: {_pe}")
-                    # ── Phase 04.8 P03: Cold-call inference (coldcall mode only) ──
+                    if ergebnis.get('einwand'):
+                        _hint_text = (ergebnis.get('gegenargument_1') or '').strip()
+                        _hint_type = ergebnis.get('typ') or 'einwand'
+                    else:
+                        _hint_text = ergebnis.get('notiz') or ''
+                        _hint_type = 'kein_einwand'
+                    _write_ft_assistant_event(
+                        module='assistant_live',
+                        hint_type=_hint_type,
+                        hint_text=_hint_text,
+                        model_used=config.MODEL_ANALYSE,
+                        context={
+                            'transcript_segment': neuer_text,
+                            'speaker': 'rep',
+                            'conversation_phase': None,
+                            'hint_category': ergebnis.get('typ'),
+                        },
+                    )
+                except Exception as _e:
+                    print(f"[FT] assistant_live hook skipped: {_e}")
+                # ── Phase 04.8: phase classifier (every 5th cycle) ────────────
+                _phase_cycle_counter = getattr(analyse_loop, '_phase_cycle_counter', 0) + 1
+                analyse_loop._phase_cycle_counter = _phase_cycle_counter
+                if _phase_cycle_counter % 5 == 0:
                     try:
-                        from services.ki_logik import infer_cold_call_context
+                        from services.ki_logik import detect_phase
+                        with ls.buffer_lock:
+                            transcript_window = list(ls.analysiert_bisher[-10:])
                         with ls.state_lock:
-                            cc_mode = ls.state.get('mode', 'meeting')
-                            cc_phase = ls.state.get('current_phase', 1) or 1
-                        if cc_mode == 'cold_call':
-                            with ls.buffer_lock:
-                                seller_window = list(ls.analysiert_bisher[-6:])
-                            inference = infer_cold_call_context(
-                                seller_window, cc_phase, cc_mode,
-                                haiku_caller=infer_customer_state,
+                            cur_phase = ls.state.get('current_phase', 1) or 1
+                            phase_change_count = ls.state.get('phase_change_count', 0) or 0
+                            last_change_cycle = ls.state.get('_phase_cycle_at_last_change', 0) or 0
+                            mode = ls.state.get('mode', 'meeting')
+                        elapsed_s = (time.time() - ls.session_start_ts) if hasattr(ls, 'session_start_ts') else 0
+                        raw = classify_phase(transcript_window, cur_phase, elapsed_s, mode)
+                        if raw:
+                            cycles_since_change = _phase_cycle_counter - last_change_cycle
+                            new_phase, new_conf = detect_phase(
+                                raw_phase=raw['phase'],
+                                raw_confidence=raw['confidence'],
+                                current_phase=cur_phase,
+                                phase_change_count=phase_change_count,
+                                cycles_since_change=cycles_since_change,
                             )
                             with ls.state_lock:
-                                ls.state['cold_call_inference'] = inference
+                                phase_did_change = (new_phase != cur_phase)
+                                if phase_did_change:
+                                    ls.state['current_phase'] = new_phase
+                                    ls.state['current_phase_name'] = _PHASE_NAMES.get(new_phase, '')
+                                    ls.state['phase_changed_at'] = datetime.utcnow().isoformat()
+                                    ls.state['phase_change_count'] = phase_change_count + 1
+                                    ls.state['_phase_cycle_at_last_change'] = _phase_cycle_counter
+                                    print(f"[phase_classify] {cur_phase}→{new_phase} ({_PHASE_NAMES.get(new_phase,'')}) conf={new_conf:.2f} grund={raw.get('grund','')}")
+                                ls.state['phase_confidence'] = new_conf
+                            # POLISH-39 + POLISH-42: propagate AI phase-change to phasen_log (for
+                            # ConversationLog.phasen_details) and covered_phases (for skript_abdeckung).
+                            # Done outside state_lock to avoid nested-lock stalls.
+                            if phase_did_change:
+                                try:
+                                    old_phase_name = _PHASE_NAMES.get(cur_phase, str(cur_phase))
+                                    new_phase_name = _PHASE_NAMES.get(new_phase, str(new_phase))
+                                    ts = datetime.now().strftime('%H:%M:%S')
+                                    with ls.buffer_lock:
+                                        seg_count = len(ls.analysiert_bisher)
+                                    with ls.phasen_log_lock:
+                                        ls.phasen_log.append({
+                                            'ts':            ts,
+                                            'name':          new_phase_name,  # Template uses ph.name
+                                            'typ':           new_phase_name.lower(),
+                                            'von_phase':     old_phase_name,
+                                            'nach_phase':    new_phase_name,
+                                            'segment_count': seg_count,
+                                            'source':        'ai_classifier',
+                                            'confidence':    round(float(new_conf), 2),
+                                        })
+                                    # POLISH-42: map AI-phase (1-6) -> profile-phase index (0-based),
+                                    # capped to profile's actual phase count so skript_abdeckung
+                                    # can't overflow when profile has <6 phases.
+                                    try:
+                                        _, _pdata = ls.get_profile_for_sid(sid)
+                                        _ph_list = _pdata.get('phasen', []) if _pdata else []
+                                        if _ph_list:
+                                            _idx = max(0, min(int(new_phase) - 1, len(_ph_list) - 1))
+                                            with ls.covered_phases_lock:
+                                                ls.covered_phases.add(_idx)
+                                    except Exception as _ce:
+                                        print(f"[phase_classify] covered_phases propagate error: {_ce}")
+                                except Exception as _pe:
+                                    print(f"[phase_classify] phasen_log propagate error: {_pe}")
+                        # ── Phase 04.8 P03: Cold-call inference (coldcall mode only) ──
+                        try:
+                            from services.ki_logik import infer_cold_call_context
+                            with ls.state_lock:
+                                cc_mode = ls.state.get('mode', 'meeting')
+                                cc_phase = ls.state.get('current_phase', 1) or 1
+                            if cc_mode == 'cold_call':
+                                with ls.buffer_lock:
+                                    seller_window = list(ls.analysiert_bisher[-6:])
+                                inference = infer_cold_call_context(
+                                    seller_window, cc_phase, cc_mode,
+                                    haiku_caller=infer_customer_state,
+                                )
+                                with ls.state_lock:
+                                    ls.state['cold_call_inference'] = inference
+                        except Exception as e:
+                            print(f"[coldcall_infer] loop error: {e}")
                     except Exception as e:
-                        print(f"[coldcall_infer] loop error: {e}")
-                except Exception as e:
-                    print(f"[phase_classify] loop error: {e}")
-            # ── Phase 04.8 P04: Readiness score + active hint orchestration ──
-            try:
-                from services.ki_logik import (
-                    compute_readiness_score,
-                    select_active_hint,
-                    dynamic_ewb_buttons,
-                )
-                with ls.state_lock:
-                    factors = dict(ls.state.get('score_factors_seen') or {})
-                    cur_phase_p4 = ls.state.get('current_phase', 1) or 1
-                    cold_inf = ls.state.get('cold_call_inference')
-                # Tally factors from latest ergebnis (non-destructive — increments only)
-                if ergebnis:
-                    if ergebnis.get('kaufsignal'):
-                        factors['kaufsignal'] = factors.get('kaufsignal', 0) + 1
-                    if ergebnis.get('einwand') and ergebnis.get('einwand_geloest'):
-                        factors['einwand_geloest'] = factors.get('einwand_geloest', 0) + 1
-                    elif ergebnis.get('einwand'):
-                        factors['einwand_offen'] = factors.get('einwand_offen', 0) + 1
-                    for _k in ('detailfrage','budget_erwaehnt','naechster_schritt',
-                               'zustimmung','konkurrenz','zeitdruck_kunde','monosyllabisch'):
-                        if ergebnis.get(_k):
-                            factors[_k] = factors.get(_k, 0) + 1
-                score_p4, bucket_p4 = compute_readiness_score({'score_factors_seen': factors}, [])
-                # Build hint candidates
-                _now_iso = datetime.utcnow().isoformat()
-                candidates = []
-                if ergebnis.get('kritischer_fehler'):
-                    candidates.append({'type':'critical','priority':1,
-                        'text': str(ergebnis.get('kritischer_fehler'))[:120],
-                        'color':'red','source':'analyse_loop','ts': _now_iso})
-                if bucket_p4 == 'closing' and (ergebnis.get('kb_delta') or 0) > 0:
-                    candidates.append({'type':'kaufsignal','priority':2,
-                        'text':'Kaufsignal erkannt — jetzt abschließen',
-                        'color':'gold','source':'readiness_rule','ts': _now_iso})
-                if ergebnis.get('einwand') and ergebnis.get('gegenargument_1'):
-                    candidates.append({'type':'einwand','priority':3,
-                        'text': str(ergebnis.get('gegenargument_1'))[:120],
-                        'color':'orange','source':'analyse_loop','ts': _now_iso})
-                if cold_inf and cold_inf.get('recommended_next'):
-                    candidates.append({'type':'phase','priority':4,
-                        'text': str(cold_inf['recommended_next'])[:120],
-                        'color':'blue','source':'cold_call_infer','ts': _now_iso})
-                if ergebnis.get('tipp'):
-                    candidates.append({'type':'tipp','priority':5,
-                        'text': str(ergebnis.get('tipp'))[:120],
-                        'color':'gray','source':'analyse_loop','ts': _now_iso})
-                active_hint = select_active_hint(candidates)
-                # Dynamic EWB buttons — context-aware (last objection) + phase fallback
+                        print(f"[phase_classify] loop error: {e}")
+                # ── Phase 04.8 P04: Readiness score + active hint orchestration ──
                 try:
-                    if hasattr(ls, 'get_active_profile_ewbs'):
-                        base_buttons = ls.get_active_profile_ewbs()
-                    else:
-                        _pid, _pdata = ls.get_active_profile()
+                    from services.ki_logik import (
+                        compute_readiness_score,
+                        select_active_hint,
+                        dynamic_ewb_buttons,
+                    )
+                    with ls.state_lock:
+                        factors = dict(ls.state.get('score_factors_seen') or {})
+                        cur_phase_p4 = ls.state.get('current_phase', 1) or 1
+                        cold_inf = ls.state.get('cold_call_inference')
+                    # Tally factors from latest ergebnis (non-destructive — increments only)
+                    if ergebnis:
+                        if ergebnis.get('kaufsignal'):
+                            factors['kaufsignal'] = factors.get('kaufsignal', 0) + 1
+                        if ergebnis.get('einwand') and ergebnis.get('einwand_geloest'):
+                            factors['einwand_geloest'] = factors.get('einwand_geloest', 0) + 1
+                        elif ergebnis.get('einwand'):
+                            factors['einwand_offen'] = factors.get('einwand_offen', 0) + 1
+                        for _k in ('detailfrage','budget_erwaehnt','naechster_schritt',
+                                   'zustimmung','konkurrenz','zeitdruck_kunde','monosyllabisch'):
+                            if ergebnis.get(_k):
+                                factors[_k] = factors.get(_k, 0) + 1
+                    score_p4, bucket_p4 = compute_readiness_score({'score_factors_seen': factors}, [])
+                    # Build hint candidates
+                    _now_iso = datetime.utcnow().isoformat()
+                    candidates = []
+                    if ergebnis.get('kritischer_fehler'):
+                        candidates.append({'type':'critical','priority':1,
+                            'text': str(ergebnis.get('kritischer_fehler'))[:120],
+                            'color':'red','source':'analyse_loop','ts': _now_iso})
+                    if bucket_p4 == 'closing' and (ergebnis.get('kb_delta') or 0) > 0:
+                        candidates.append({'type':'kaufsignal','priority':2,
+                            'text':'Kaufsignal erkannt — jetzt abschließen',
+                            'color':'gold','source':'readiness_rule','ts': _now_iso})
+                    if ergebnis.get('einwand') and ergebnis.get('gegenargument_1'):
+                        candidates.append({'type':'einwand','priority':3,
+                            'text': str(ergebnis.get('gegenargument_1'))[:120],
+                            'color':'orange','source':'analyse_loop','ts': _now_iso})
+                    if cold_inf and cold_inf.get('recommended_next'):
+                        candidates.append({'type':'phase','priority':4,
+                            'text': str(cold_inf['recommended_next'])[:120],
+                            'color':'blue','source':'cold_call_infer','ts': _now_iso})
+                    if ergebnis.get('tipp'):
+                        candidates.append({'type':'tipp','priority':5,
+                            'text': str(ergebnis.get('tipp'))[:120],
+                            'color':'gray','source':'analyse_loop','ts': _now_iso})
+                    active_hint = select_active_hint(candidates)
+                    # Dynamic EWB buttons — context-aware (last objection) + phase fallback
+                    try:
+                        if hasattr(ls, 'get_active_profile_ewbs'):
+                            base_buttons = ls.get_active_profile_ewbs()
+                        else:
+                            _, _pdata = ls.get_profile_for_sid(sid)
+                            base_buttons = None
+                            if _pdata:
+                                _eins = _pdata.get('einwaende') or []
+                                base_buttons = [e.get('einwand') or e.get('kategorie') or ''
+                                                for e in _eins if isinstance(e, dict)]
+                                base_buttons = [b for b in base_buttons if b]
+                    except Exception:
                         base_buttons = None
-                        if _pdata:
-                            _eins = _pdata.get('einwaende') or []
-                            base_buttons = [e.get('einwand') or e.get('kategorie') or ''
-                                            for e in _eins if isinstance(e, dict)]
-                            base_buttons = [b for b in base_buttons if b]
-                except Exception:
-                    base_buttons = None
-                # Track last objection type for context-based buttons
-                _last_ewb_typ = None
-                if ergebnis.get('einwand') and ergebnis.get('typ'):
-                    _last_ewb_typ = ergebnis['typ']
-                elif not ergebnis.get('einwand'):
-                    # No new objection — check if there's a recent one in state
+                    # Track last objection type for context-based buttons
+                    _last_ewb_typ = None
+                    if ergebnis.get('einwand') and ergebnis.get('typ'):
+                        _last_ewb_typ = ergebnis['typ']
+                    elif not ergebnis.get('einwand'):
+                        # No new objection — check if there's a recent one in state
+                        with ls.state_lock:
+                            _last_ewb_typ = ls.state.get('last_einwand_typ')
+                    if ergebnis.get('einwand') and ergebnis.get('typ'):
+                        with ls.state_lock:
+                            ls.state['last_einwand_typ'] = ergebnis['typ']
+                    ewb_buttons = dynamic_ewb_buttons(cur_phase_p4, base_buttons,
+                                                      last_einwand_typ=_last_ewb_typ)
                     with ls.state_lock:
-                        _last_ewb_typ = ls.state.get('last_einwand_typ')
-                if ergebnis.get('einwand') and ergebnis.get('typ'):
-                    with ls.state_lock:
-                        ls.state['last_einwand_typ'] = ergebnis['typ']
-                ewb_buttons = dynamic_ewb_buttons(cur_phase_p4, base_buttons,
-                                                  last_einwand_typ=_last_ewb_typ)
-                with ls.state_lock:
-                    ls.state['score_factors_seen'] = factors
-                    ls.state['readiness_score'] = score_p4
-                    ls.state['readiness_bucket'] = bucket_p4
-                    ls.state['kaufbereitschaft'] = score_p4  # legacy mirror (RESEARCH Q2 R2)
-                    ls.state['active_hint'] = active_hint
-                    ls.state['ewb_buttons'] = ewb_buttons
-                ls.kaufbereitschaft = score_p4  # module global mirror
+                        ls.state['score_factors_seen'] = factors
+                        ls.state['readiness_score'] = score_p4
+                        ls.state['readiness_bucket'] = bucket_p4
+                        ls.state['kaufbereitschaft'] = score_p4  # legacy mirror (RESEARCH Q2 R2)
+                        ls.state['active_hint'] = active_hint
+                        ls.state['ewb_buttons'] = ewb_buttons
+                    ls.kaufbereitschaft = score_p4  # module global mirror
+                except Exception as e:
+                    print(f"[readiness/active_hint] loop error: {e}")
             except Exception as e:
-                print(f"[readiness/active_hint] loop error: {e}")
-        except Exception as e:
-            print(f"[Claude-1] Fehler: {e}")
-            with ls.kb_lock:
-                kb_aktuell = ls.kaufbereitschaft
-            with ls.state_lock:
-                ls.state['ergebnis']         = {'einwand': False, 'notiz': f'Fehler: {e}'}
-                ls.state['line_id']          = line_id
-                ls.state['aktiv']            = False
-                ls.state['version']         += 1
-                ls.state['kaufbereitschaft'] = kb_aktuell
+                print(f"[Claude-1] SID={sid} Fehler: {e}")
+                with ls.kb_lock:
+                    kb_aktuell = ls.kaufbereitschaft
+                with ls.state_lock:
+                    ls.state['ergebnis']         = {'einwand': False, 'notiz': f'Fehler: {e}'}
+                    ls.state['line_id']          = line_id
+                    ls.state['aktiv']            = False
+                    ls.state['version']         += 1
+                    ls.state['kaufbereitschaft'] = kb_aktuell
 
 
 # ── Phase 08.5: QA-Pipeline Dispatch Helpers ─────────────────────────────────
@@ -1168,7 +1206,7 @@ def _qa_load_faqs(active_profile_id):
     return []
 
 
-def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio):
+def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None):
     """Phase 08.5: Classify utterance and dispatch to qa_pipeline.
 
     Called from analyse_loop after the Phase 06.3 comment block.
@@ -1186,11 +1224,19 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio):
     try:
         with ls.state_lock:
             _kw_fired_for = ls.state.get('kw_fired_for_line')
-            _user_id = ls.state.get('user_id') or 0
             _anrede = ls.state.get('session_anrede') or 'Sie'
             _slot1_busy_until = ls.state.get('slot1_variant_busy_until', 0.0)
-            _active_sid = ls.state.get('active_sid')
-            _active_profile_id = ls.state.get('active_profile_id')
+        # Per-SID state reads (D-02 Phase 08.19.4)
+        if sid:
+            _sid_st = (ls._session_state.get(sid) or {})
+            _user_id = _sid_st.get('user_id') or 0
+            _active_sid = sid  # sid IS the active_sid
+            _active_profile_id = _sid_st.get('active_profile_id')
+        else:
+            with ls.state_lock:
+                _user_id = ls.state.get('user_id') or 0
+                _active_sid = ls.state.get('active_sid')
+                _active_profile_id = ls.state.get('active_profile_id')
 
         # D-02: Keyword-Matcher already fired for this utterance → skip
         if _kw_fired_for == line_id:
@@ -1215,7 +1261,10 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio):
         # Load profile data for context (already in memory via live_session)
         import services.live_session as _ls_ref
         try:
-            _profile_name, _profile_daten = _ls_ref.get_active_profile()
+            if sid:
+                _profile_name, _profile_daten = _ls_ref.get_profile_for_sid(sid)
+            else:
+                _profile_name, _profile_daten = _ls_ref.get_active_profile()
         except Exception:
             _profile_daten = {}
 
