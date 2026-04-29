@@ -156,6 +156,7 @@ class ProfileFaq(Base):
     kategorie    = Column(String(100), nullable=True)   # Technik/Preis/Referenzen/DSGVO/Produkt/Sonstiges
     created_at   = Column(DateTime, default=utcnow)
     used_count   = Column(Integer, default=0, nullable=False)
+    mode         = Column(String(20), nullable=False, default='ki_generated')
 
 
 class ProfileOpener(Base):
