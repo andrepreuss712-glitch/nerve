@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Checkpoint:human-verify — awaiting user approval
-stopped_at: "08.19.1-05 Tasks 1+2 complete — checkpoint:human-verify Task 3 pending"
-last_updated: "2026-04-29T10:23:34Z"
+status: Phase 08.19.1 COMPLETE — alle 5/5 Plans abgeschlossen
+stopped_at: "08.19.1-05 COMPLETE (checkpoint approved 2026-04-29)"
+last_updated: "2026-04-29T00:00:00Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 56
-  completed_phases: 42
+  completed_phases: 43
   total_plans: 197
-  completed_plans: 184
-  percent: 93
+  completed_plans: 185
+  percent: 94
 ---
 
 # Project State
@@ -21,16 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.19.1 — Schema-Realität-Kalibrierung + extra='forbid' — READY TO EXECUTE (5 plans, 4 waves).
+**Current focus:** Phase 08.19.1 COMPLETE — naechste Phase: /gsd-execute-phase
 
 ## Current Position
 
-Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — CHECKPOINT:HUMAN-VERIFY
-Plan: 5 of 5 — Tasks 1+2 COMPLETE, checkpoint:human-verify Task 3 pending
+Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — COMPLETE
+Plan: 5 of 5 — ALLE COMPLETE (checkpoint approved 2026-04-29)
 Last activity: 2026-04-29
 
-**Awaiting:** User approves checkpoint:human-verify (pytest gruen, Profil-Editor Smoke-Test, extra='forbid' check)
-**After approval:** Phase 08.19.1 COMPLETE — /gsd-execute-phase naechste Phase
+**Phase 08.19.1 abgeschlossen:** extra='forbid' auf 9 Write-Schemas aktiv, Test-Suite 27/27 gruen, alle 4 lokale Profile validieren.
+**Next:** /gsd-execute-phase naechste Phase nach 08.19.1
+**Code-Review-Fix ausstehend:** audit_log Test-Pollution (TestF1/F3/F4 schreiben in echte audit_log-Tabelle — Mock-Fixture einfuehren)
 **D-03 Follow-up:** audit_log DB-Insert nach Phase 08.19.1 als Code-Review-Fix einplanen (aktuell nur print())
 **Decisions made:**
   - KiSchema: antwortlaenge + sensitivitaet ergaenzt (Production-Felder Profil 1)

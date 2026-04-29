@@ -896,14 +896,14 @@ Plans:
 8. Test gegen alle 6 Profile dass model_validate(strict=True) durchgeht — Test-Suite-Pflicht
 9. Cross-AI Pflicht (Block-N-Phase + Andre-Decision: alle Block-N-Phasen kriegen Cross-AI)
 
-**Plans:** 1/5 plans executed
+**Plans:** 5/5 plans complete ✓
 
 Plans:
 - [x] 08.19.1-01-PLAN.md — Production-Profil-Analyse (Hetzner SSH-Dump + KEY-FINDINGS.md)
 - [x] 08.19.1-02-PLAN.md — Schema-Kalibrierung (ProfileSchema + BasisSchema Dead-Fields)
-- [ ] 08.19.1-03-PLAN.md — _migrate_profile_data() v2->v3 (einwaende/phasen merge, fragen/branche drop)
-- [ ] 08.19.1-04-PLAN.md — DB-Level Batch-Migration alle Profile auf v3 (app.py _migrate())
-- [ ] 08.19.1-05-PLAN.md — extra='forbid' aktivieren + Test-Suite
+- [x] 08.19.1-03-PLAN.md — _migrate_profile_data() v2->v3 (einwaende/phasen merge, fragen/branche drop)
+- [x] 08.19.1-04-PLAN.md — DB-Level Batch-Migration alle Profile auf v3 (app.py _migrate()) — checkpoint BESTÄTIGT: alle 4 Profile v3, Idempotency OK. D-03: audit_log nur print(), kein DB-Insert (Code-Review-Fix ausstehend)
+- [x] 08.19.1-05-PLAN.md — extra='forbid' aktivieren + Test-Suite — checkpoint APPROVED 2026-04-29: 27/27 pytest, extra='forbid' enforcement confirmed, alle 4 Profile validieren. Code-Review-Fix ausstehend: audit_log Test-Pollution (TestF1/F3/F4)
 
 ---
 
