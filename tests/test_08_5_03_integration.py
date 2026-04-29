@@ -20,7 +20,7 @@ import threading
 
 def _make_ls_mock(line_id='line-42', user_id=1, anrede='Sie',
                   kw_fired_for_line=None, slot1_busy_until=0.0,
-                  active_profile_id=42):
+                  active_profile_id=42, active_sid='sid-test-123'):
     """Return a minimal ls mock with thread-safe state + state_lock."""
     ls = types.ModuleType('live_session_mock')
     ls.state_lock = threading.Lock()
@@ -31,7 +31,17 @@ def _make_ls_mock(line_id='line-42', user_id=1, anrede='Sie',
         'kw_fired_for_line': kw_fired_for_line,
         'slot1_variant_busy_until': slot1_busy_until,
         'active_profile_id': active_profile_id,
-        'active_sid': 'sid-test-123',
+        'active_sid': active_sid,
+    }
+    # Phase 08.19.4: per-SID state dict (mirrors live_session._session_state)
+    ls._session_state_lock = threading.Lock()
+    ls._session_state = {
+        active_sid: {
+            'user_id': user_id,
+            'org_id': 1,
+            'active_profile_id': active_profile_id,
+            'active_sid': active_sid,
+        }
     }
     return ls
 
@@ -166,7 +176,9 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
             )
 
     def test_einwand_unknown_passes_profile_data_not_empty(self):
-        """WR-01 Regression: generate_qa_response muss _profile_daten erhalten, nicht {}."""
+        """WR-01 Regression: generate_qa_response muss _profile_daten erhalten, nicht {}.
+        Phase 08.19.4: migriert von get_active_profile() auf get_profile_for_sid(sid).
+        """
         dispatch = self._get_dispatch_fn()
         ls, sio = _build_qa_dispatch_context(line_id='line-20', kw_fired_for_line=None)
         captured_calls = []
@@ -180,9 +192,9 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
                    side_effect=_capture_gen), \
              patch('services.qa_pipeline.apply_tabu_filter', return_value=False), \
              patch('services.claude_service._qa_load_tabu', return_value=[]), \
-             patch('services.live_session.get_active_profile',
+             patch('services.live_session.get_profile_for_sid',
                    return_value=('TestProfil', {'basis': {'produktbeschreibung': 'CRM'}})):
-            dispatch('Das ist zu teuer', 'line-20', '', ls, sio)
+            dispatch('Das ist zu teuer', 'line-20', '', ls, sio, sid='sid-test-123')
 
         self.assertTrue(len(captured_calls) > 0, "generate_qa_response wurde nicht aufgerufen")
         call_args = captured_calls[0]['args']
