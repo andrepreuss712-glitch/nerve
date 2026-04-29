@@ -351,6 +351,9 @@ def classify_phase(transcript_window, current_phase, elapsed_s, mode):
         except Exception as _e:
             print(f"[CostHook] claude phase_classify skipped: {_e}")
         # ────────────────────────────────────────────────────────────────────
+        if not resp.content:
+            print(f"[claude] empty content from API (module=phase_classify)")
+            return None
         text = resp.content[0].text.strip()
         # strip markdown fences if present
         if text.startswith('```'):
@@ -423,6 +426,9 @@ def infer_customer_state(seller_transcript, phase):
         except Exception as _e:
             print(f"[CostHook] claude coldcall_infer skipped: {_e}")
         # ────────────────────────────────────────────────────────────────────
+        if not resp.content:
+            print(f"[claude] empty content from API (module=coldcall_infer)")
+            return None
         text = resp.content[0].text.strip()
         if text.startswith('```'):
             text = text.strip('`')
@@ -523,6 +529,9 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     except Exception as _e:
         print(f"[CostHook] claude live_haiku skipped: {_e}")
     # ────────────────────────────────────────────────────────────────────
+    if not msg.content:
+        print(f"[claude] empty content from API (module=analyse)")
+        return {}
     return _parse_json(msg.content[0].text.strip())
 
 
