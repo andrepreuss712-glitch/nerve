@@ -1691,25 +1691,6 @@ def _seed_demo_profile(db):
     db.commit()
     print("[DB] NERVE Vertrieb Profil erstellt und aktiviert.")
 
-def _load_initial_profile():
-    """Setzt das aktive Profil in live_session nach App-Start."""
-    import services.live_session as ls_mod
-    db = get_session()
-    try:
-        org = db.query(Organisation).filter_by(name='NERVE Alpha').first()
-        if not org:
-            return
-        profile = db.query(Profile).filter_by(org_id=org.id, name='NERVE Vertrieb').first()
-        if not profile or not profile.daten:
-            return
-        daten = json.loads(profile.daten)
-        ls_mod.set_active_profile(profile.name, daten, profile_id=profile.id)
-        print(f"[Init] Aktives Profil geladen: {profile.name}")
-    except Exception as e:
-        print(f"[Init] _load_initial_profile Fehler: {e}")
-    finally:
-        db.close()
-
 def _seed_demo_profiles():
     """Legt Demo-Trainingsprofile an falls noch nicht vorhanden."""
     db = get_session()
@@ -2059,7 +2040,9 @@ _seed()
 _migrate_profile_json()   # nach Seed: alle Profile existieren, jetzt migrieren
 _seed_training_scenarios()
 _seed_system_training_scenarios()
-_load_initial_profile()
+# Phase 08.19.4 D-04: _load_initial_profile() geloescht — war DSGVO-Verstoss
+# (hardcoded single-tenant global). Profil wird jetzt pro SID in
+# start_live_session via init_session_state() + set_profile_for_sid() geladen.
 _seed_changelog()
 
 # ── Register blueprints ───────────────────────────────────────────────────────
