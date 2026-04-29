@@ -837,6 +837,8 @@ def api_tabu_update(profile_id):
     Request:  {"tabu_begriffe": [{"begriff": "...", "alternative": "..."}, ...]}
     Response: {"ok": True, "saved": N, "ignored": [...]}
     """
+    if _rolle() not in ('owner', 'admin'):          # role check BEFORE DB open
+        return jsonify({'error': 'Keine Berechtigung'}), 403
     import json as _json
     data = request.get_json(silent=True) or {}
     begriffe = data.get('tabu_begriffe', [])
@@ -859,8 +861,6 @@ def api_tabu_update(profile_id):
         if len(valid) >= _MAX_TABU_COUNT:
             break
 
-    if _rolle() not in ('owner', 'admin'):
-        return jsonify({'error': 'Keine Berechtigung'}), 403
     p, db = _require_own_profile(profile_id)
     try:
         if p is None:
