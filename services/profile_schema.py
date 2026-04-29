@@ -2,13 +2,16 @@
 services/profile_schema.py
 ────────────────────────────────────────────────────────────────────
 Phase 08.19: Pydantic v2 ProfileSchema + idempotente Migration.
+Phase 08.19.1: schema_version v2 -> v3. einwaende + phasen top-level in ProfileSchema,
+  Dead Fields aus BasisSchema entfernt. extra='forbid' wird in Plan-05 aktiviert.
 
 Exports:
-  - ProfileSchema        — Write-Schema (extra='forbid'), fuer wizard_create / bearbeiten
+  - ProfileSchema        — Write-Schema (extra='ignore'), fuer wizard_create / bearbeiten
   - ProfileReadSchema    — Read-Schema  (extra='ignore'), fuer bearbeiten GET + alle Reader
   - _migrate_profile_data(daten: dict) -> dict
         Idempotent: v1 -> v2 upgrade. Prueft schema_version, entfernt
         eliminierte Felder, setzt neue Defaults, gibt schema_version=2 zurueck.
+        v2 -> v3: einwaende/phasen upward-merge aus basis.*, fragen-Key entfernen.
 
 Namespace-Entscheidung (Claude's Discretion per 08.19-CONTEXT.md):
   - zielgruppe.vorwissen + zielgruppe.entscheidungsverhalten bleiben in zielgruppe.*
@@ -54,8 +57,8 @@ class BasisSchema(BaseModel):
     tabu_begriffe: List[dict] = []           # [{text: str, alternativ: str}]
     # Wizard-Feld (Phase 08.9)
     zielkunden: str = ''
-    einwaende: List[str] = []
-    phasen: List[dict] = []
+    # einwaende + phasen wurden in Phase 08.19.1 nach top-level ProfileSchema verschoben
+    # (Editor schreibt seit Phase 08 ausschliesslich top-level — basis.* waren Dead Fields)
 
 
 class ZielgruppeSchema(BaseModel):
@@ -140,6 +143,11 @@ class ProfileSchema(BaseModel):
     uebergaenge: List[dict] = []
     techniken: dict = {}
     einwaende_detail: List[EinwandDetailSchema] = []    # Erweitertes Einwand-Format (Detail-Editor)
+    # Phase 08.19.1 D-01: Editor schreibt einwaende + phasen top-level (nie in basis.*)
+    einwaende: List[dict] = []   # war faelschlicherweise in BasisSchema (Dead Field dort)
+    phasen: List[dict] = []      # war faelschlicherweise in BasisSchema (Dead Field dort)
+    # Phase 08.19.1: produkt in 2/6 Production-Profilen — KEY-FINDINGS.md; in v4-Migration pruefen ob entfernen oder behalten
+    produkt: Any = None          # Production-Key aus KEY-FINDINGS.md — Phase 08.19.1; in v4-Migration pruefen ob entfernen oder behalten
     # opener und pitch werden NICHT modelliert (D-01) — canonical: ProfileOpener-Tabelle
     # erlaubnis eliminiert (D-06)
 
@@ -231,6 +239,10 @@ class ProfileReadSchema(BaseModel):
     uebergaenge: Any = []
     techniken: Any = {}
     einwaende_detail: Any = []
+    # Phase 08.19.1 D-01: top-level einwaende + phasen (kanonisch nach v3-Migration)
+    einwaende: Any = []
+    phasen: Any = []
+    produkt: Any = None          # Production-Key aus KEY-FINDINGS.md — Phase 08.19.1
 
 
 # ── Idempotente Migration v1 → v2 ────────────────────────────────────────────
