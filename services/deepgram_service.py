@@ -105,6 +105,7 @@ def _make_on_message(sid):
                             'roles_confirmed': roles_confirmed,
                             'sp_name':         sp_name,
                             't_start':         time.monotonic(),
+                            'sid':             sid,   # Phase 08.19.4 D-02: route flush to per-SID buffer
                         }
                     t = threading.Timer(MERGE_WINDOW_S, ls._flush_segment, args=[key])
                     t.daemon = True

@@ -229,6 +229,12 @@ _per_sid_lock = threading.Lock()
 _session_state: dict = {}       # {sid: {key: value, ...}}
 _session_state_lock = threading.Lock()
 
+# ── Per-SID Transcript Buffer (D-02 Tier 2 PFLICHT) ──────────────────────────
+# Replaces module-global transcript_buffer. SID written by _flush_segment.
+# analyse_loop reads per-SID instead of the global buffer.
+_per_sid_transcript: dict = {}          # {sid: list[dict]}
+_per_sid_transcript_lock = threading.Lock()
+
 
 def set_profile_for_sid(sid: str, name: str, daten: dict) -> None:
     """Cache profile for an active WebSocket SID. Analog to _deepgram_sessions."""
@@ -280,6 +286,8 @@ def pop_session_state(sid: str) -> None:
         _session_state.pop(sid, None)
     with _per_sid_lock:
         _per_sid_profile.pop(sid, None)
+    with _per_sid_transcript_lock:
+        _per_sid_transcript.pop(sid, None)
     drop_matcher(sid)
 
 
@@ -367,8 +375,16 @@ def _flush_segment(key: str):
             _current_monolog_start = None
 
     if not roles_confirmed or speaker != 0:
-        with buffer_lock:
-            transcript_buffer.append({'text': merged_text, 'line_id': line_id, 't_start': t_start})
+        _flush_sid = pending.get('sid')
+        if _flush_sid:
+            with _per_sid_transcript_lock:
+                _per_sid_transcript.setdefault(_flush_sid, []).append(
+                    {'text': merged_text, 'line_id': line_id, 't_start': t_start}
+                )
+        else:
+            # Fallback: pre-08.19.4 entry without SID (edge case — should not occur post-migration)
+            with buffer_lock:
+                transcript_buffer.append({'text': merged_text, 'line_id': line_id, 't_start': t_start})
         analyse_trigger.set()
 
     with coaching_lock:
