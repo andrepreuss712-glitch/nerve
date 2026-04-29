@@ -21,6 +21,7 @@ from services.profile_schema import (
     ProfileSchema,
     BasisSchema,
     KiSchema,
+    ZielgruppeSchema,
     ProfileReadSchema,
     _migrate_profile_data,
 )
@@ -210,3 +211,71 @@ class TestLocalProfileValidation:
             assert migrated.get('schema_version') == 3, (
                 f"Profil {pid} hat schema_version={migrated.get('schema_version')} nach Migration"
             )
+
+
+# ── D) F1: ki.sensitivitaet entfernen ────────────────────────────────────────
+
+class TestF1KiSensitivitaet:
+    def test_migration_drops_ki_sensitivitaet(self):
+        """ki.sensitivitaet wird in v2->v3 Migration entfernt (Phase 08.19.2 Entscheidung)."""
+        daten = {'schema_version': 2, 'ki': {'sensitivitaet': 'hoch', 'ton': 'sachlich'}}
+        result = _migrate_profile_data(daten)
+        assert 'sensitivitaet' not in result.get('ki', {})
+        assert result.get('ki', {}).get('ton') == 'sachlich'  # ton bleibt
+
+    def test_kischema_rejects_sensitivitaet(self):
+        """KiSchema wirft ValidationError bei sensitivitaet (extra='forbid')."""
+        with pytest.raises(ValidationError):
+            KiSchema.model_validate({'anrede': 'Sie', 'sensitivitaet': 'x'})
+
+
+# ── E) F3: ZielgruppeSchema Legacy-Felder entfernen ──────────────────────────
+
+class TestF3ZielgruппeLegacy:
+    def test_migration_drops_zielgruppe_legacy_keys(self):
+        """zielgruppe.position/unternehmen/branche werden in v2->v3 Migration entfernt."""
+        daten = {
+            'schema_version': 2,
+            'zielgruppe': {'position': 'CEO', 'unternehmen': 'KMU', 'branche': 'IT', 'berufsstatus': 'angestellt'}
+        }
+        result = _migrate_profile_data(daten)
+        zg = result.get('zielgruppe', {})
+        assert 'position' not in zg
+        assert 'unternehmen' not in zg
+        assert 'branche' not in zg
+        assert zg.get('berufsstatus') == 'angestellt'  # berufsstatus bleibt
+
+    def test_zielgruppeschema_rejects_position(self):
+        with pytest.raises(ValidationError):
+            ZielgruppeSchema.model_validate({'position': 'CEO'})
+
+    def test_zielgruppeschema_rejects_unternehmen(self):
+        with pytest.raises(ValidationError):
+            ZielgruppeSchema.model_validate({'unternehmen': 'KMU'})
+
+    def test_zielgruppeschema_rejects_branche(self):
+        with pytest.raises(ValidationError):
+            ZielgruppeSchema.model_validate({'branche': 'IT'})
+
+
+# ── F) F4: ProfileSchema.produkt entfernen + Migration merge ─────────────────
+
+class TestF4Produkt:
+    def test_migration_merges_produkt_when_basis_empty(self):
+        """produkt wird in basis.produktbeschreibung gerettet wenn dort leer."""
+        daten = {'schema_version': 2, 'produkt': 'CRM-Tool', 'basis': {'produktbeschreibung': ''}}
+        result = _migrate_profile_data(daten)
+        assert 'produkt' not in result
+        assert result.get('basis', {}).get('produktbeschreibung') == 'CRM-Tool'
+
+    def test_migration_drops_produkt_when_basis_filled(self):
+        """produkt wird gedroppt (kein Overwrite) wenn basis.produktbeschreibung bereits gesetzt."""
+        daten = {'schema_version': 2, 'produkt': 'X', 'basis': {'produktbeschreibung': 'Y'}}
+        result = _migrate_profile_data(daten)
+        assert 'produkt' not in result
+        assert result.get('basis', {}).get('produktbeschreibung') == 'Y'
+
+    def test_profileschema_rejects_produkt(self):
+        """ProfileSchema wirft ValidationError bei produkt-Key (extra='forbid')."""
+        with pytest.raises(ValidationError):
+            ProfileSchema.model_validate({'schema_version': 3, 'produkt': 'x'})
