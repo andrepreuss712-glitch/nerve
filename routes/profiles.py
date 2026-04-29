@@ -722,6 +722,7 @@ def api_faqs_list(profile_id):
                     'antwort': r.antwort or '',
                     'kategorie': r.kategorie or 'Sonstiges',
                     'used_count': r.used_count or 0,
+                    'mode': r.mode or 'ki_generated',   # D-12: neu
                 }
                 for r in rows
             ]
@@ -744,6 +745,9 @@ def api_faqs_create(profile_id):
         return jsonify({'error': 'field too long'}), 400
     if kategorie not in _FAQ_KATEGORIEN:
         return jsonify({'error': 'invalid kategorie'}), 400
+    mode_val = (data.get('mode') or 'ki_generated').strip()
+    if mode_val not in ('literal', 'ki_generated'):
+        return jsonify({'error': 'invalid mode'}), 400
     if _rolle() not in ('owner', 'admin'):
         return jsonify({'error': 'Keine Berechtigung'}), 403
     p, db = _require_own_profile(profile_id)
@@ -755,11 +759,12 @@ def api_faqs_create(profile_id):
             frage_muster=frage,
             antwort=antwort,
             kategorie=kategorie,
+            mode=mode_val,
         )
         db.add(row)
         db.commit()
         db.refresh(row)
-        return jsonify({'id': row.id, 'used_count': row.used_count or 0}), 201
+        return jsonify({'id': row.id, 'used_count': row.used_count or 0, 'mode': row.mode}), 201
     finally:
         db.close()
 
@@ -793,6 +798,11 @@ def api_faqs_update(faq_id):
             if k not in _FAQ_KATEGORIEN:
                 return jsonify({'error': 'invalid kategorie'}), 400
             row.kategorie = k
+        if 'mode' in data:
+            m = (data['mode'] or '').strip()
+            if m not in ('literal', 'ki_generated'):
+                return jsonify({'error': 'invalid mode'}), 400
+            row.mode = m
 
         db.commit()
         return jsonify({'ok': True})
