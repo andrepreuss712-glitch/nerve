@@ -153,6 +153,109 @@ class TestPerSidProfileIsolation:
             "active_profile_name Module-Global darf nach Phase 08.19.4 nicht existieren"
 
 
+# ── Per-SID Coaching Buffer Isolation (WR-03 — DSGVO) ────────────────────────
+
+class TestPerSidCoachingBufferIsolation:
+    """Runtime-Behavior-Tests fuer per-SID Coaching-Buffer-Isolation (WR-03).
+    Stellt sicher dass coaching_buffer kein Cross-User-Data-Leak ermoeglicht.
+    Alle Tests sind Runtime-Assertions — keine Source-Presence-Checks (CLAUDE.md).
+    """
+
+    def _make_segment(self, text: str) -> dict:
+        return {'text': text, 'speaker': 'Berater', 't_start': 0.0}
+
+    def test_two_sids_independent_coaching_buffers(self):
+        """Coaching-Segment von SID A landet nicht in SID B's Buffer."""
+        sid_a = 'coach-test-sid-a'
+        sid_b = 'coach-test-sid-b'
+        try:
+            ls.init_session_state(sid_a, user_id=1, org_id=1)
+            ls.init_session_state(sid_b, user_id=2, org_id=2)
+
+            # Append a coaching segment to SID A's buffer only
+            with ls._per_sid_coaching_lock:
+                ls._per_sid_coaching_buffer[sid_a].append(self._make_segment('Segment fuer A'))
+
+            # SID B's buffer must still be empty
+            with ls._per_sid_coaching_lock:
+                buf_b = list(ls._per_sid_coaching_buffer.get(sid_b, []))
+
+            assert buf_b == [], \
+                f"SID-B coaching buffer should be empty after write to SID-A, got {buf_b!r}"
+
+            # SID A's buffer has exactly the one segment
+            with ls._per_sid_coaching_lock:
+                buf_a = list(ls._per_sid_coaching_buffer.get(sid_a, []))
+
+            assert len(buf_a) == 1, f"SID-A should have 1 segment, got {len(buf_a)}"
+            assert buf_a[0]['text'] == 'Segment fuer A'
+        finally:
+            ls.pop_session_state(sid_a)
+            ls.pop_session_state(sid_b)
+
+    def test_disconnect_cleanup_coaching(self):
+        """pop_session_state entfernt SID aus _per_sid_coaching_buffer."""
+        sid = 'coach-cleanup-sid'
+        ls.init_session_state(sid, user_id=99, org_id=1)
+
+        with ls._per_sid_coaching_lock:
+            ls._per_sid_coaching_buffer[sid].append(self._make_segment('test'))
+
+        ls.pop_session_state(sid)
+
+        with ls._per_sid_coaching_lock:
+            assert sid not in ls._per_sid_coaching_buffer, \
+                "SID should be removed from _per_sid_coaching_buffer after pop_session_state"
+
+    def test_concurrent_coaching_writes_no_contamination(self):
+        """Zwei Threads schreiben gleichzeitig verschiedene Segmente in verschiedene SID-Buffer — kein Cross-Contamination."""
+        sid_x = 'coach-thread-sid-x'
+        sid_y = 'coach-thread-sid-y'
+        errors = []
+
+        ls.init_session_state(sid_x, user_id=10, org_id=1)
+        ls.init_session_state(sid_y, user_id=20, org_id=2)
+
+        def write_x():
+            for i in range(30):
+                with ls._per_sid_coaching_lock:
+                    ls._per_sid_coaching_buffer.setdefault(sid_x, []).append(
+                        self._make_segment(f'X-seg-{i}')
+                    )
+
+        def write_y():
+            for i in range(30):
+                with ls._per_sid_coaching_lock:
+                    ls._per_sid_coaching_buffer.setdefault(sid_y, []).append(
+                        self._make_segment(f'Y-seg-{i}')
+                    )
+
+        t1 = threading.Thread(target=write_x)
+        t2 = threading.Thread(target=write_y)
+        try:
+            t1.start(); t2.start()
+            t1.join(); t2.join()
+
+            with ls._per_sid_coaching_lock:
+                buf_x = list(ls._per_sid_coaching_buffer.get(sid_x, []))
+                buf_y = list(ls._per_sid_coaching_buffer.get(sid_y, []))
+
+            # Each buffer must contain exactly its own segments
+            for seg in buf_x:
+                if not seg['text'].startswith('X-seg-'):
+                    errors.append(f"X-buffer contaminated: {seg['text']!r}")
+            for seg in buf_y:
+                if not seg['text'].startswith('Y-seg-'):
+                    errors.append(f"Y-buffer contaminated: {seg['text']!r}")
+
+            assert len(buf_x) == 30, f"SID-X should have 30 segments, got {len(buf_x)}"
+            assert len(buf_y) == 30, f"SID-Y should have 30 segments, got {len(buf_y)}"
+            assert not errors, f"Cross-contamination detected: {errors}"
+        finally:
+            ls.pop_session_state(sid_x)
+            ls.pop_session_state(sid_y)
+
+
 # ── Latency Measurement Scaffold (D-03) ──────────────────────────────────────
 # Phase 08.19.4 erfordert Latenz-Dokumentation fuer N=1/5/10/20/50 parallele Sessions.
 # Dieser Scaffold ist KEIN blockierender Test — manuell ausfuehren zur Messung.

@@ -203,6 +203,12 @@ _session_state_lock = threading.Lock()
 _per_sid_transcript: dict = {}          # {sid: list[dict]}
 _per_sid_transcript_lock = threading.Lock()
 
+# ── Per-SID Coaching Buffer (WR-03 — DSGVO: prevents cross-user coaching data leak) ─
+# Replaces module-global coaching_buffer. Same lifecycle as _per_sid_transcript.
+# Producer: _flush_segment appends per SID. Consumer: coaching_loop reads per SID.
+_per_sid_coaching_buffer: dict = {}     # {sid: list[dict]}
+_per_sid_coaching_lock = threading.Lock()
+
 
 def set_profile_for_sid(sid: str, name: str, daten: dict) -> None:
     """Cache profile for an active WebSocket SID. Analog to _deepgram_sessions."""
@@ -246,6 +252,9 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             '_pending_since': None,
             '_log_last_sp': None,
         }
+    # WR-03: init per-SID coaching buffer (separate lock — same lifecycle as transcript)
+    with _per_sid_coaching_lock:
+        _per_sid_coaching_buffer[sid] = []
 
 
 def pop_session_state(sid: str) -> None:
@@ -256,6 +265,9 @@ def pop_session_state(sid: str) -> None:
         _per_sid_profile.pop(sid, None)
     with _per_sid_transcript_lock:
         _per_sid_transcript.pop(sid, None)
+    # WR-03: cleanup per-SID coaching buffer on disconnect
+    with _per_sid_coaching_lock:
+        _per_sid_coaching_buffer.pop(sid, None)
     drop_matcher(sid)
 
 
@@ -355,8 +367,17 @@ def _flush_segment(key: str):
                 transcript_buffer.append({'text': merged_text, 'line_id': line_id, 't_start': t_start})
         analyse_trigger.set()
 
-    with coaching_lock:
-        coaching_buffer.append({'text': merged_text, 'speaker': sp_name, 't_start': t_start})
+    # WR-03: append to per-SID coaching buffer (not module-global) to prevent cross-user leak
+    _flush_sid = pending.get('sid')
+    if _flush_sid:
+        with _per_sid_coaching_lock:
+            _per_sid_coaching_buffer.setdefault(_flush_sid, []).append(
+                {'text': merged_text, 'speaker': sp_name, 't_start': t_start}
+            )
+    else:
+        # Fallback for pre-08.19.4 entries without SID (edge case — should not occur post-migration)
+        with coaching_lock:
+            coaching_buffer.append({'text': merged_text, 'speaker': sp_name, 't_start': t_start})
     coaching_trigger.set()
 
 

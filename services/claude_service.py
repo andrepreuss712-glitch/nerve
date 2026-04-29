@@ -1382,12 +1382,14 @@ def coaching_loop():
             if not sid_state:
                 continue
 
-            with ls.coaching_lock:
-                if not ls.coaching_buffer:
+            # WR-03: read from per-SID coaching buffer (not module-global) to prevent cross-user leak
+            with ls._per_sid_coaching_lock:
+                _sid_cbuf = ls._per_sid_coaching_buffer.get(sid, [])
+                if not _sid_cbuf:
                     continue
-                segmente  = list(ls.coaching_buffer)
-                t_start_c = ls.coaching_buffer[0].get('t_start', time.monotonic())
-                ls.coaching_buffer.clear()
+                segmente  = list(_sid_cbuf)
+                t_start_c = _sid_cbuf[0].get('t_start', time.monotonic())
+                ls._per_sid_coaching_buffer[sid] = []  # drain consumed entries
 
             # BOF-Zaehler per SID (D-02 — aus _session_state[sid])
             with ls._session_state_lock:
