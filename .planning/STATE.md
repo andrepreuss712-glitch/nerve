@@ -5,7 +5,7 @@ milestone_name: milestone
 status: In Progress
 stopped_at: Phase 08.19.3 Plan 04 complete — phase complete, awaiting human-verify
 last_updated: "2026-04-29T07:13:17Z"
-last_activity: 2026-04-29 - Phase 08.19.3 Plan 04 complete (sec-fragen entfernt, faq-mode-toggle UI + optimistic revert + disabled-during-fetch + ghost-toggle-guard)
+last_activity: 2026-04-29 - Completed quick task 260429-dmd: FAQ-Card-Header truncation fix (slice(0,40) entfernt, CSS ellipsis, title-Tooltip)
 progress:
   total_phases: 54
   completed_phases: 41
@@ -576,6 +576,7 @@ Recent decisions affecting current work:
 | 260428-d4r | Polish-Cycle 3: Save-btn schwarz, Vorschläge-disabled, Spacing, Card-Toggle-Isolation, Chevron teal, crud-del→trash, tip-icon, Tabu-x→trash, Visual-Separator | 2026-04-28 | 9d6759d | [260428-d4r-polish-cycle-3-card-toggle-loeschen](./quick/260428-d4r-polish-cycle-3-card-toggle-loeschen/) |
 | 260428-e5s | Polish-Cycle 4: crud-body bg transparent (Cycle-3-Revert), Textarea min-height 100px, Trash in Card-Header, Gesprächsphasen Sub-Label | 2026-04-28 | 451d11e | [260428-e5s-polish-cycle-4-card-body-layout](./quick/260428-e5s-polish-cycle-4-card-body-layout/) |
 | 260428-f7p | Polish-Cycle 5 KRITISCH: FAQ deleteFaq/updateFaq CSRF-Fix + r.ok-Guards + saveTabuToServer Guard + FAQ-Trash in Card-Header | 2026-04-28 | fcdf456 | [260428-f7p-polish-cycle-5-faq-csrf-fix](./quick/260428-f7p-polish-cycle-5-faq-csrf-fix/) |
+| 260429-dmd | Polish 08.19.3: FAQ-Card-Header truncation — JS slice(0,40) entfernt + CSS ellipsis + title-Tooltip | 2026-04-29 | bba802d | [260429-dmd-faq-header-truncation](./quick/260429-dmd-faq-header-truncation/) |
 
 ## What's Done
 
