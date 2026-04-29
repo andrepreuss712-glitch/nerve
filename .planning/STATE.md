@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: Phase 08.19.3 Plan 04 complete — phase complete, awaiting human-verify
-last_updated: "2026-04-29T07:13:17Z"
-last_activity: 2026-04-29 - Completed quick task 260429-dmd: FAQ-Card-Header truncation fix (slice(0,40) entfernt, CSS ellipsis, title-Tooltip)
+stopped_at: Phase 08.19.1 — 5 plans ready, awaiting execution
+last_updated: "2026-04-29T00:00:00Z"
+last_activity: 2026-04-29 - Phase 08.19.1 planned (5 plans, 4 waves) — Schema-Realität-Kalibrierung + extra='forbid'
 progress:
   total_phases: 54
   completed_phases: 41
-  total_plans: 192
+  total_plans: 197
   completed_plans: 181
   percent: 94
 ---
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.19.2 IN PROGRESS — Profil-Editor UX + Design-Aufräumung.
+**Current focus:** Phase 08.19.1 — Schema-Realität-Kalibrierung + extra='forbid' — READY TO EXECUTE (5 plans, 4 waves).
 
 ## Current Position
 
-Phase: 08.19.3 (faq-konsolidierung-toggle) — COMPLETE
-Plan: 4 of 4 COMPLETE
+Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — PLANNED, ready to execute
+Plan: 0 of 5 COMPLETE
 Last activity: 2026-04-29
 
-**Next:** Phase 08.19.3 complete — git push origin main, then human-verify checkpoint.
+**Next:** /gsd-execute-phase 08.19.1
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
