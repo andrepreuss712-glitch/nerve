@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 08.19.1-04-PLAN.md (checkpoint:human-verify pending)
-last_updated: "2026-04-29T09:57:02Z"
+status: Checkpoint:human-verify — awaiting user approval
+stopped_at: "08.19.1-05 Tasks 1+2 complete — checkpoint:human-verify Task 3 pending"
+last_updated: "2026-04-29T10:23:34Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 56
   completed_phases: 42
   total_plans: 197
-  completed_plans: 183
-  percent: 92
+  completed_plans: 184
+  percent: 93
 ---
 
 # Project State
@@ -25,11 +25,16 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — IN PROGRESS
-Plan: 4 of 5 COMPLETE (checkpoint:human-verify pending before Plan 05)
+Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — CHECKPOINT:HUMAN-VERIFY
+Plan: 5 of 5 — Tasks 1+2 COMPLETE, checkpoint:human-verify Task 3 pending
 Last activity: 2026-04-29
 
-**Next:** Verify checkpoint — app start zeigt "[Schema] Batch-Migration v2->v3" und alle Profile haben schema_version=3, dann /gsd-execute-phase 08.19.1 (Plan 05 — extra='forbid' Aktivierung)
+**Awaiting:** User approves checkpoint:human-verify (pytest gruen, Profil-Editor Smoke-Test, extra='forbid' check)
+**After approval:** Phase 08.19.1 COMPLETE — /gsd-execute-phase naechste Phase
+**D-03 Follow-up:** audit_log DB-Insert nach Phase 08.19.1 als Code-Review-Fix einplanen (aktuell nur print())
+**Decisions made:**
+  - KiSchema: antwortlaenge + sensitivitaet ergaenzt (Production-Felder Profil 1)
+  - ZielgruppeSchema: position + unternehmen + branche ergaenzt (Legacy-Felder Profil 2-4)
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
