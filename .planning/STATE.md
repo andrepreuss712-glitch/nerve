@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Phase 08.19.1 COMPLETE — alle 5/5 Plans abgeschlossen
-stopped_at: "08.19.1-05 COMPLETE (checkpoint approved 2026-04-29)"
+status: Phase 08.19.1 COMPLETE + Code-Review-Fixes applied + gepusht
+stopped_at: "08.19.1 code-review-fix + push (2026-04-29)"
 last_updated: "2026-04-29T00:00:00Z"
 last_activity: 2026-04-29
 progress:
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.19.1 COMPLETE — naechste Phase: /gsd-execute-phase
+**Current focus:** Block N abgeschlossen (08.19.1 + Code-Review-Fixes + Push). Naechste Phase: 08.20 Pipeline-Re-Wire (build_profile_context Reihenfolge + alle neuen Schema-Felder in EWB-Prompt).
 
 ## Current Position
 
-Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — COMPLETE
-Plan: 5 of 5 — ALLE COMPLETE (checkpoint approved 2026-04-29)
+Phase: 08.19.1 (schema-realitaet-kalibrierung-extra-forbid) — COMPLETE + Code-Review-Fixes applied
+Plan: 5 of 5 + Review-Fix — ALLE COMPLETE (2026-04-29, gepusht 7ea48e4)
 Last activity: 2026-04-29
 
 **Phase 08.19.1 abgeschlossen:** extra='forbid' auf 9 Write-Schemas aktiv, Test-Suite 27/27 gruen, alle 4 lokale Profile validieren.
