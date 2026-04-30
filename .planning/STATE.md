@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20.2-01 COMPLETE — precall_service.py rebuilt with 3-layer architecture (PRECALL_FIELDS_SYSTEM_PROMPT, _generiere_briefing Schicht-1+2, _generiere_empfehlungen Schicht-3)"
-last_updated: "2026-04-30T13:09:51Z"
+stopped_at: "08.20.2-02 COMPLETE — precall_fields DB column + migration + route wiring (api_precall_research user_id/profile_id/sid, api_beenden precall_fields persistence)"
+last_updated: "2026-04-30T14:05:00Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 57
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.20.2 (precall-briefing-trust-web-search-integration) — IN PROGRESS (1/? Plans)
-Plan: 1 of ? — COMPLETE (2026-04-30, commit 0a8b68e)
+Phase: 08.20.2 (precall-briefing-trust-web-search-integration) — IN PROGRESS (2/? Plans)
+Plan: 2 of ? — COMPLETE (2026-04-30, commits 13d0ce0 + 00e8dd9)
 Last activity: 2026-04-30
 
-**Phase 08.20.2 Plan 01 abgeschlossen:** precall_service.py komplett neu gebaut. PRECALL_FIELDS_SYSTEM_PROMPT mit Confidence-Algorithmus (high/medium/not_found), Quellenranking (PRIMAER/SEKUNDAER/AUSGESCHLOSSEN), 36-Monats-Aktualitaetsschwelle, Few-Shot-Beispiel. _generiere_briefing() gibt strukturiertes JSON {fields, text} zurueck. _generiere_empfehlungen() als separater Schicht-3-Call via build_profile_context(). Cache-Key erweitert auf firmenname_lower + profile_id.
-**Next:** Phase 08.20.2 weiterfuehren (DB-Migration precall_fields, UI PreCall-Modal 3-Layer)
+**Phase 08.20.2 Plan 02 abgeschlossen:** precall_fields TEXT column auf ConversationLog + silent-fail Migration. api_precall_research uebergibt user_id/profile_id/sid an recherche_firma(). api_beenden extrahiert precall_fields dict aus Request, serialisiert als JSON (isinstance-Guard T-08.20.2-06), persistiert zu ConversationLog.precall_fields.
+**Next:** Phase 08.20.2 Plan 03 — PreCall-Modal UI 3-Layer (Schicht-1 structured fields anzeigen)
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
