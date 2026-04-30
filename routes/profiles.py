@@ -130,14 +130,18 @@ def wizard_create():
     # Graceful degradation: precall_service ohne Opener liefert kein Opener-Block im Briefing.
     unternehmensgroesse = request.form.get('unternehmensgroesse', '').strip() or None
 
-    daten = json.dumps({
-        'schema_version': 2,
+    # IR-0820-E fix: write in v3 shape (einwaende top-level, not under basis),
+    # then migrate to v4 (einwaende -> einwaende_detail) before Pydantic validation.
+    # v2 shape with basis.einwaende fails ProfileSchema (BasisSchema extra='forbid').
+    daten_dict = {
+        'schema_version': 3,
         'basis': {
             'produktbeschreibung': produkt,
             'zielkunden': zielkunden,
-            'einwaende': einwaende_list,
-            'phasen': [],
+            # einwaende NOT under basis — removed in v3 schema
         },
+        'einwaende': einwaende_list,   # top-level per v3 schema
+        'phasen': [],
         'zielkunde': {
             'unternehmensgroesse': unternehmensgroesse,
         },
@@ -150,7 +154,10 @@ def wizard_create():
         },
         # opener/pitch werden NICHT in daten gespeichert (D-01) — canonical: ProfileOpener-Tabelle
         # Kein ProfileOpener-INSERT hier: Wizard hat kein opener/pitch Eingabefeld (Code-Check-Befund)
-    }, ensure_ascii=False)
+    }
+    # Advance to v4: converts einwaende -> einwaende_detail
+    daten_dict = _migrate_profile_data(daten_dict)
+    daten = json.dumps(daten_dict, ensure_ascii=False)
 
     # WR-01: Validate wizard daten against Pydantic schema before DB write
     try:
