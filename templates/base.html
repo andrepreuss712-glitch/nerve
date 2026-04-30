@@ -350,6 +350,21 @@
 .launcher-briefing-html ul{margin:4px 0 8px;padding-left:20px}
 .launcher-briefing-html li{margin-bottom:4px}
 .launcher-briefing-html strong{color:#000000}
+/* ── PreCall: Pflichtfeld-Karte (Phase 08.20.2) ── */
+.precall-fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-bottom:12px}
+.precall-field-cell{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:8px;padding:10px 12px;font-size:12px;min-height:52px}
+.precall-field-label{font-size:11px;color:var(--page-text-muted);margin-bottom:2px;display:flex;align-items:center;gap:4px}
+.precall-field-value{font-size:13px;color:var(--page-text-color);font-weight:500;line-height:1.4}
+.confidence-high .precall-field-label{color:#00D4AA}
+.confidence-high .precall-field-icon{color:#00D4AA;font-style:normal}
+.confidence-medium .precall-field-label{color:#F59E0B}
+.confidence-medium .precall-field-icon{color:#F59E0B;font-style:normal}
+.confidence-not-found .precall-field-label{color:var(--page-text-muted)}
+.confidence-not-found .precall-field-icon{color:var(--page-text-muted);font-style:normal}
+.confidence-not-found .precall-field-value{color:var(--page-text-muted);opacity:.6}
+.precall-section-label{font-size:11px;font-weight:600;color:var(--page-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;margin-top:12px}
+.precall-section-label:first-child{margin-top:0}
+@media(max-width:480px){.precall-fields-grid{grid-template-columns:1fr}}
 .launcher-opener-preview{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:8px;padding:12px;font-size:13px;color:var(--page-text-color);line-height:1.5;max-height:100px;overflow-y:auto;white-space:pre-wrap}
 /* ── Headset-Pflicht-Modal ── */
 .headset-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10100;display:none;
