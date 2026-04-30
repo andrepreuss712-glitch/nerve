@@ -358,11 +358,11 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
         lines.append('## KI-Verhalten')
         lines.append(f'Anrede: {anrede}. WICHTIG: Nutze konsequent {anrede}-Form. '
                      f'Wechsle NIEMALS innerhalb einer Antwort zwischen Du und Sie.')
-        for _fld, _label in [('ton', 'Ton'), ('wisdom', 'Wisdom'), ('stil', 'Stil')]:
+        for _fld, _label in [('ton', 'Ton'), ('zusatz', 'Zusatz')]:
             _val = ki.get(_fld)
             if _val:
                 lines.append(f'{_label}: {_val}')
-        if not any(ki.get(f) for f in ('ton', 'wisdom', 'stil')):
+        if not any(ki.get(f) for f in ('ton', 'zusatz')):
             lines.append('(noch nicht ausgefüllt)')
     except Exception as _e:
         print(f"[Pipeline] KI-Verhalten-Block skip: {_e}")
