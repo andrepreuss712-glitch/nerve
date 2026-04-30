@@ -1303,7 +1303,7 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
             else:
                 _antwort = generate_qa_response(
                     neuer_text, 'einwand_unknown', _profile_daten, _anrede,
-                    confidence=float(_conf), user_id=_user_id
+                    confidence=float(_conf), user_id=_user_id, sid=_active_sid
                 )
                 if not _antwort:
                     _emit_soft_hint(reason='empty_response')
@@ -1345,7 +1345,7 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
                 else:
                     _antwort = generate_qa_response(
                         neuer_text, 'frage', _profile_daten, _anrede,
-                        confidence=float(_conf), user_id=_user_id
+                        confidence=float(_conf), user_id=_user_id, sid=_active_sid
                     )
                     if not _antwort:
                         _emit_soft_hint(reason='no_faq_empty')

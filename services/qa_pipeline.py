@@ -76,6 +76,8 @@ _FALLBACK_QA_RESPONSE_PROMPT = (
 )
 
 _SYSTEM_PROMPT_QA = """\
+{profile_context}
+
 Analysiere den Einwand. Entscheide:
 1. Wenn Einwand klar ist UND Profil-Daten passen → direkte Antwort aus Profil (mit Tabu-Alternativen).
 2. Wenn Einwand unklar ODER Profil-Daten dünn ODER Klassifikator unsicher → KEINE Antwort erfinden. Stattdessen eine offene Rückfrage vorschlagen die den Kunden zur Konkretisierung zwingt.
@@ -356,7 +358,8 @@ def classify_utterance(text: str, kontext: str, user_id: int) -> dict:
 # ── Public: generate_qa_response ─────────────────────────────────────────────
 def generate_qa_response(utterance: str, category: str, profile_data: dict,
                          anrede: str, confidence: float = 1.0,
-                         version: str = '', user_id: int = 0) -> str:
+                         version: str = '', user_id: int = 0,
+                         sid: str = None) -> str:
     """Haiku-Response fuer einwand_unknown oder frage.
 
     confidence >= CONFIDENCE_THRESHOLD (0.80) → direct answer (Tabu-Alternatives applied).
@@ -385,9 +388,18 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         # ── Determine branch by confidence ────────────────────────────────────
         is_low_confidence = float(confidence) < CONFIDENCE_THRESHOLD
 
+        # ── Build Voll-Profil context (LB-3-Fix: QA now sees full profile — 08.20 D-01) ──
+        # build_profile_context() reads from _session_state[sid]['_profile_cache'] when sid is set (no DB in hot path)
+        _profile_context = ''
+        try:
+            _profile_context = build_profile_context(user_id=user_id, sid=sid)
+        except Exception as _pce:
+            print(f"[QA] build_profile_context failed (non-fatal): {_pce}")
+
         # ── Build system prompt ────────────────────────────────────────────────
         anrede_str = anrede or 'Sie'
         system_prompt = _SYSTEM_PROMPT_QA.format(
+            profile_context=_profile_context,
             tabu_block=(tabu_block + '\n') if tabu_block else '',
             anrede=anrede_str,
         )

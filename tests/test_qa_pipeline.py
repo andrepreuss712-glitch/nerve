@@ -187,10 +187,18 @@ class TestGenerateQaResponse(unittest.TestCase):
         self.assertEqual(generate_qa_response('x', 'einwand_known', {}, 'Sie', 'v1', 0), '')
 
     def test_fail_closed_on_exception(self):
-        """When downstream raises, returns empty string, does not propagate."""
+        """When build_profile_context raises, error is caught non-fatally.
+        Function continues and returns fallback Rueckfrage (never empty, never propagates).
+        LB-3-Fix (08.20-03): build_profile_context errors are explicitly non-fatal."""
         with patch('services.qa_pipeline.build_profile_context', side_effect=RuntimeError("boom")):
-            result = generate_qa_response('wie teuer?', 'frage', {}, 'Sie', 'v1', 0)
-            self.assertEqual(result, '')
+            result = generate_qa_response(
+                'wie teuer?', 'frage', {}, 'Sie',
+                confidence=1.0, version='', user_id=0
+            )
+            # Non-fatal: function falls through to outer except (no claude_client in test env)
+            # → returns _FALLBACK_RUECKFRAGE, never raises, never empty
+            self.assertIsInstance(result, str)
+            self.assertGreater(len(result), 0)
 
     def test_success_returns_string(self):
         """When Haiku call succeeds, returns non-empty string."""
