@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20 Plan 04 complete — next: Plan 05"
-last_updated: "2026-04-30T07:15:00Z"
+stopped_at: "08.20 ALL 5 PLANS COMPLETE — Phase abgeschlossen, code-review + deploy ausstehend"
+last_updated: "2026-04-30T09:00:00Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 57
-  completed_phases: 44
+  completed_phases: 45
   total_plans: 206
-  completed_plans: 193
+  completed_plans: 194
   percent: 94
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.20 (pipeline-re-wire-voll-profil-ewb-lead-context) — IN PROGRESS
-Plan: 4 of 5 — COMPLETE (2026-04-30, commits 77277fd + d4cde38)
+Phase: 08.20 (pipeline-re-wire-voll-profil-ewb-lead-context) — COMPLETE (5/5 Plans)
+Plan: 5 of 5 — COMPLETE (2026-04-30, commits ba7162c + ca3b3b3)
 Last activity: 2026-04-30
 
-**Phase 08.20 Plan 04 abgeschlossen:** MODEL_PIP_AUTOVAR + MODEL_PIP_VARIANTE auf Sonnet (D-07), rollback comment in config.py, streame_manual_ewb_variante() nutzt build_profile_context(user_id, sid=sid) statt hardcoded 1-Liner, Circuit-Breaker _ewb_ttft_history deque(maxlen=5) + 30s Haiku-Fallback bei 3/5 TTFT-Breach, cost-tracking mit _model_autovar.
-**Next:** Plan 05 — (letzter Plan in Phase 08.20)
+**Phase 08.20 abgeschlossen:** Alle 5 Pläne fertig. Plan 05: D-05 Vorwissen-Picker Step 4b, D-06 Du/Sie PiP Toggle + anrede_switch_detected Keyword-Heuristik (2-Trigger-Threshold), D-08 EWB-Preview-Panel Section 7 + /profiles/api/profile/preview-context Endpoint. setdefault Race Guards in start_live_session + disconnect.
+**Next:** /gsd-code-review → /gsd-code-review-fix → git push → deploy.sh → Production-UAT auf getnerve.app
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
