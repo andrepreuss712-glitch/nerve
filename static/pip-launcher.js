@@ -374,24 +374,63 @@
     var c = content();
     if (!c) return;
     var briefingObj = state.precallBriefing || null;
+    var fields = briefingObj ? (briefingObj.fields || {}) : {};
     var briefingText = briefingObj ? (briefingObj.text || '') : '';
-    var found = !!briefingText;
+    var empfehlungen = briefingObj ? (briefingObj.empfehlungen || '') : '';
+    var hasAnyData = !!(briefingText || Object.keys(fields).length > 0);
+
+    // ── Build Pflichtfeld-Karte (Sektion A) ─────────────────────────
+    var FIELD_LABELS = {
+      geschaeftsfuehrer: 'Geschäftsführer',
+      branche: 'Branche',
+      mitarbeiterzahl: 'Mitarbeiter',
+      hauptprodukt: 'Hauptprodukt'
+    };
+    var CONFIDENCE_ICONS = { high: '✓', medium: '~', not_found: '—' };
+    var REQUIRED_KEYS = ['geschaeftsfuehrer', 'branche', 'mitarbeiterzahl', 'hauptprodukt'];
+
+    function buildFieldCell(key) {
+      var f = fields[key] || { value: 'not_found', source_url: null, confidence: 'not_found' };
+      var conf = f.confidence || 'not_found';
+      var icon = CONFIDENCE_ICONS[conf] || '—';
+      var label = FIELD_LABELS[key] || key;
+      var displayVal = (conf === 'not_found') ? 'Nicht gefunden' : escHtml(String(f.value || ''));
+      return '<div class="precall-field-cell confidence-' + escHtml(conf) + '">' +
+        '<div class="precall-field-label"><i class="precall-field-icon">' + icon + '</i>' + escHtml(label) + '</div>' +
+        '<div class="precall-field-value">' + displayVal + '</div>' +
+        '</div>';
+    }
+
+    var gridHtml = '<div class="precall-fields-grid">' +
+      REQUIRED_KEYS.map(buildFieldCell).join('') +
+      '</div>';
+
+    // ── Build Fließtext (Sektion B) ──────────────────────────────────
+    var textHtml = briefingText
+      ? '<div class="precall-section-label">Analyse</div>' +
+        '<div class="launcher-briefing-html" id="lnr-briefing-view">' + mdToHtml(briefingText) + '</div>' +
+        '<textarea class="launcher-briefing" id="lnr-briefing-edit" style="display:none">' + escHtml(briefingText) + '</textarea>'
+      : '';
+
+    // ── Build Empfehlungen (Sektion C) ───────────────────────────────
+    // mdToHtml sanitizes — safe: mdToHtml() escapes &, <, > before converting markdown
+    var empfHtml = empfehlungen
+      ? '<div class="precall-section-label">Gesprächs-Empfehlungen</div>' +
+        '<div class="launcher-briefing-html">' + mdToHtml(empfehlungen) + '</div>'
+      : '';
 
     c.innerHTML = [
       '<div class="launcher-step">',
-      '<div class="nav-live-title">' + (found ? 'Recherche-Ergebnis' : 'Keine Daten gefunden') + '</div>',
-      found
-        ? '<div class="launcher-briefing-html" id="lnr-briefing-view">' + mdToHtml(briefingText) + '</div>'
-          + '<textarea class="launcher-briefing" id="lnr-briefing-edit" style="display:none">' + escHtml(briefingText) + '</textarea>'
+      '<div class="nav-live-title">' + (hasAnyData ? 'Recherche-Ergebnis' : 'Keine Daten gefunden') + '</div>',
+      hasAnyData
+        ? ('<div class="precall-section-label">Eckdaten</div>' + gridHtml + textHtml + empfHtml)
         : '<div style="color:var(--page-text-muted);font-size:13px;padding:12px 0">Für diese Firma konnten keine öffentlichen Informationen gefunden werden. Du kannst trotzdem fortfahren.</div>',
-      // Issue 4: Disclaimer-Banner — statische Footer nach Briefing-Content
-      found ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:6px;font-size:11px;color:#EF4444;line-height:1.5">⚠️ KI-Recherche kann veraltete oder ungenaue Daten enthalten. Eckdaten (insb. Personennamen &amp; Daten) bitte cross-checken vor Kundenkontakt.</div>' : '',
-      found ? '<div style="margin-top:6px;padding:8px 10px;background:rgba(0,212,170,0.07);border:1px solid rgba(0,212,170,0.2);border-radius:6px;font-size:11px;color:#00D4AA;line-height:1.5">&#128161; Wenn Sie ein CRM verwenden, übertragen Sie die Eckdaten dort für spätere Kontaktaufnahmen.</div>' : '',
+      hasAnyData ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:6px;font-size:11px;color:#EF4444;line-height:1.5">⚠️ KI-Recherche kann veraltete oder ungenaue Daten enthalten. Eckdaten (insb. Personennamen &amp; Daten) bitte cross-checken vor Kundenkontakt.</div>' : '',
       '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
       '<button class="launcher-btn-ghost" id="lnr-step4-back">&#8592; Zurück</button>',
-      found ? '<button class="launcher-btn-ghost" id="lnr-step4-edit">Ergebnis anpassen</button>' : '',
+      (hasAnyData && briefingText) ? '<button class="launcher-btn-ghost" id="lnr-step4-edit">Analyse anpassen</button>' : '',
       '<button class="launcher-btn-ghost" id="lnr-step4-new">Neue Analyse</button>',
-      '<button class="launcher-btn-primary" id="lnr-step4-accept">Ergebnis uebernehmen &#8594;</button>',
+      '<button class="launcher-btn-primary" id="lnr-step4-accept">Ergebnis übernehmen &#8594;</button>',
       '</div>',
       '</div>'
     ].join('');
@@ -406,6 +445,18 @@
       state.step = 3;
       renderStep();
     };
+    var editBtn = document.getElementById('lnr-step4-edit');
+    if (editBtn) {
+      editBtn.onclick = function () {
+        var view = document.getElementById('lnr-briefing-view');
+        var edit = document.getElementById('lnr-briefing-edit');
+        if (!view || !edit) return;
+        var isEditing = edit.style.display !== 'none';
+        view.style.display = isEditing ? '' : 'none';
+        edit.style.display = isEditing ? 'none' : '';
+        editBtn.textContent = isEditing ? 'Analyse anpassen' : 'Vorschau';
+      };
+    }
     document.getElementById('lnr-step4-accept').onclick = function () {
       // Save edited briefing text back into the briefing object
       var ta = document.getElementById('lnr-briefing-edit');
@@ -414,21 +465,6 @@
       state.step = 45;
       renderStep();
     };
-
-    var editBtn = document.getElementById('lnr-step4-edit');
-    if (editBtn) {
-      editBtn.onclick = function () {
-        var view = document.getElementById('lnr-briefing-view');
-        var ta = document.getElementById('lnr-briefing-edit');
-        if (view) view.style.display = 'none';
-        if (ta) {
-          ta.style.display = 'block';
-          ta.style.borderColor = '#00D4AA';
-          ta.focus();
-          editBtn.style.display = 'none';
-        }
-      };
-    }
   }
 
   // ── Step 4b: Vorwissen-Picker (D-05 Phase 08.20) ──────────────────────────
@@ -1968,7 +2004,8 @@
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
       body: JSON.stringify({
         session_mode: state.mode || 'cold_call',
-        precall_briefing: state.precallBriefing
+        precall_briefing: state.precallBriefing,
+        precall_fields: (state.precallBriefing && state.precallBriefing.fields) ? state.precallBriefing.fields : null
       })
     })
       .then(function (r) { return r.json(); })
