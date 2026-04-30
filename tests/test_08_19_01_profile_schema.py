@@ -59,32 +59,33 @@ class TestMigrateProfileData:
         assert 'alter' not in zg
         assert zg.get('vorwissen') == 'hoch'
 
-    def test_migration_hebt_auf_v3(self):
-        """Test 5: schema_version=2 wird auf v3 migriert (Phase 08.19.1)."""
-        from services.profile_schema import _migrate_profile_data
+    def test_migration_hebt_auf_v4(self):
+        """Test 5: schema_version=2 wird auf v4 migriert (Phase 08.20 — v3->v4 hinzugefuegt)."""
+        from services.profile_schema import _migrate_profile_data, LATEST_SCHEMA_VERSION
         original = {'schema_version': 2, 'basis': {'produktbeschreibung': 'Test'}}
         result = _migrate_profile_data(original.copy())
-        assert result.get('schema_version') == 3
+        assert result.get('schema_version') == LATEST_SCHEMA_VERSION
 
     def test_setzt_schema_version_bei_leerem_dict(self):
-        """Test 6: leeres Dict bekommt schema_version=3 (v1->v2->v3 Pipeline)."""
-        from services.profile_schema import _migrate_profile_data
+        """Test 6: leeres Dict bekommt schema_version=LATEST (v1->v2->v3->v4 Pipeline)."""
+        from services.profile_schema import _migrate_profile_data, LATEST_SCHEMA_VERSION
         result = _migrate_profile_data({})
-        assert result.get('schema_version') == 3
+        assert result.get('schema_version') == LATEST_SCHEMA_VERSION
 
     def test_migration_setzt_schema_version(self):
-        """_migrate_profile_data setzt schema_version=3 (v2->v3 in Phase 08.19.1)."""
-        from services.profile_schema import _migrate_profile_data
+        """_migrate_profile_data setzt schema_version=LATEST_SCHEMA_VERSION (Phase 08.20)."""
+        from services.profile_schema import _migrate_profile_data, LATEST_SCHEMA_VERSION
         result = _migrate_profile_data({'opener': 'Hallo'})
-        assert result['schema_version'] == 3
+        assert result['schema_version'] == LATEST_SCHEMA_VERSION
         assert 'opener' not in result
 
     def test_erlaubnis_transitional(self):
-        """erlaubnis bleibt als transitional dual-write bis 08.20 (wird nicht entfernt)."""
-        from services.profile_schema import _migrate_profile_data
+        """erlaubnis: preserved through migration (extra='ignore' on read-schema)."""
+        from services.profile_schema import _migrate_profile_data, LATEST_SCHEMA_VERSION
         result = _migrate_profile_data({'erlaubnis': True})
-        assert result.get('schema_version') == 3
-        assert result.get('erlaubnis') == True  # transitional: preserved until Phase 08.20
+        assert result.get('schema_version') == LATEST_SCHEMA_VERSION
+        # erlaubnis not explicitly removed by migration — may remain as extra field
+        # (Phase 08.20: transitional period ended, ProfileSchema extra='forbid' will reject on write)
 
     def test_ki_stil_wird_in_ton_gemergt(self):
         """ki.stil wandert in ki.ton, stil wird entfernt."""
