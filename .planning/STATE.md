@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 08.19.1-02-PLAN.md
-last_updated: "2026-04-29T14:11:53.288Z"
-last_activity: 2026-04-29
+status: In Progress
+stopped_at: "08.20 Plan 01 complete — next: Plan 02"
+last_updated: "2026-04-30T06:14:50Z"
+last_activity: 2026-04-30
 progress:
   total_phases: 57
   completed_phases: 44
-  total_plans: 201
-  completed_plans: 190
-  percent: 95
+  total_plans: 206
+  completed_plans: 191
+  percent: 93
 ---
 
 # Project State
@@ -25,22 +25,17 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.4 (multi-user-profile-session-scoping) — IN PROGRESS
-Plan: 4 of 4 — COMPLETE (2026-04-29, commits 3ccd06d + 4bc3522 + cc598e8)
-Last activity: 2026-04-29
+Phase: 08.20 (pipeline-re-wire-voll-profil-ewb-lead-context) — IN PROGRESS
+Plan: 1 of 5 — COMPLETE (2026-04-30, commits 800c543 + cd5edb3)
+Last activity: 2026-04-30
 
-**Phase 08.19.4 Plan 03 abgeschlossen:** Per-SID _per_sid_transcript Buffer implementiert (D-02 Tier 2 PFLICHT). analyse_loop und coaching_loop iterieren per SID statt globalem State. Alle 7 get_active_profile() Caller migriert. SID-Liveness-Checks nach jedem Claude-API-Call.
-**Next:** Plan 04 — Route-Caller-Migration + Tests (app_routes, profiles, verbleibende Callers)
-**Decisions made:**
+**Phase 08.20 Plan 01 abgeschlossen:** Foundation Layer — Per-SID briefing cache als _session_state[sid]['_briefing'] Sub-Key (Ghost-SID guard, kein extra Lock), services/branchen_data.py neu mit build_branchen_hint() (10 Cluster + Default), Schema v3->v4 Migration (einwaende -> einwaende_detail), alle 11 Consumer-Callsites migriert.
+**Next:** Plan 02 — build_profile_context() 9-Sektionen-Erweiterung + BUG-A/BUG-B Fix
+**Decisions made (08.20):**
 
-  - D-01: _per_sid_profile dict analog deepgram_service._deepgram_sessions Pattern
-  - D-02: _session_state dict mit allen Session-Kontextfeldern pro SID
-  - D-04: _load_initial_profile() geloescht (kein Auskommentieren)
-  - D-05: active_profile_data/name public globals entfernt; _legacy_* fuer Plan 03+04 Migration
-  - D-06: setdefault Guard in on_message auf _per_sid_profile korrigiert (_per_sid_transcript existiert nicht)
-  - D-07: analyse_loop/coaching_loop O(N) sequentiell akzeptiert fuer EA (max 50 User) — ThreadPoolExecutor in 08.19.5
-  - D-08: coaching_buffer bleibt global shared in Plan 03 — volle Isolation in Phase 08.19.5
-  - D-09: _bof_count in coaching_loop aus _session_state[sid] gelesen statt Modul-Global
+  - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
+  - D-02/D-10: branchen_data.py als pure static module, keine I/O, 10 Cluster + Default-Block
+  - D-04: einwaende -> einwaende_detail Migration v3->v4, idempotent, alle 11 Callsites mit Transition-Fallback
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
