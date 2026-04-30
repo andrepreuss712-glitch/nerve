@@ -73,6 +73,8 @@ def _make_on_message(sid):
                 sio.emit('transcript', {'type': 'final', 'text': text,
                                         'speaker': emit_speaker, 'line_id': line_id},
                          room=sid)
+                # D-06: Du/Sie detection heuristic (2-trigger threshold per utterance)
+                _check_anrede_switch(sio, sid, text, ls)
                 with ls.log_lock:
                     ls.conversation_log.append({
                         'ts': ts, 'type': 'transcript',
@@ -275,11 +277,48 @@ def _close_deepgram_connection(sid):
         print(f"[DG] Session beendet (sid={sid})")
 
 
+# ── Phase 08.20 D-06: Du/Sie Anrede-Detection ────────────────────────────────
+# CLAUDE.md ASCII rule: variable names use ASCII; string content may use real Umlauts.
+# Note: 'weißt du' spelled as 'weisst du' in the list (ASCII-safe for pattern matching).
+_DU_FORMS = [
+    'kannst du', 'hast du', 'bist du', 'machst du', 'willst du',
+    'weisst du', 'denkst du', 'sagst du', 'hoerst du',
+    'siehst du', 'brauchst du', 'kennst du', 'findest du', 'glaubst du',
+]
+
+
+def _check_anrede_switch(sio_ref, sid_ref, transcript_text, ls_module):
+    """Check if transcript contains Du-forms indicating anrede switch. Non-blocking."""
+    try:
+        text_lower = transcript_text.lower()
+        _du_count = sum(1 for form in _DU_FORMS if form in text_lower)
+        if _du_count >= 2:
+            _current_anrede = 'sie'
+            try:
+                with ls_module._session_state_lock:
+                    _current_anrede = ls_module._session_state.get(sid_ref, {}).get('session_anrede', 'sie')
+            except Exception:
+                pass
+            if _current_anrede == 'sie':
+                sio_ref.emit('anrede_switch_detected', {
+                    'detected_form': 'du',
+                    'confidence': round(min(1.0, _du_count / 3.0), 2),
+                    'sid': sid_ref,
+                }, room=sid_ref)
+                print(f"[Anrede-Detection] Du-switch detected: {_du_count} forms in utterance sid={sid_ref}")
+    except Exception as _ae:
+        print(f"[Anrede-Detection] check failed (non-fatal): {_ae}")
+
+
 def register_audio_handlers(sio):
     @sio.on('start_live_session')
     def handle_start_live_session(data=None, sid=None):
         from flask import request
         _sid = request.sid if sid is None else sid
+        # setdefault race guard: prevent KeyError if vorwissen_level or other events arrive
+        # before init_session_state() completes (MEDIUM fix — 08.20 REVIEWS.md)
+        with ls._session_state_lock:
+            ls._session_state.setdefault(_sid, {})
         mode = 'meeting'  # default for backward compatibility
         precall_briefing = None
         if isinstance(data, dict):
@@ -309,6 +348,14 @@ def register_audio_handlers(sio):
             with ls.state_lock:
                 ls.state['session_anrede'] = anrede_norm
             print(f"[Phase08] session_anrede={anrede_norm} set from PreCall (raw={anrede_raw!r})")
+
+        # ── Phase 08.20 D-05: vorwissen_level aus session-start Payload ───────────
+        _vorwissen = (data or {}).get('vorwissen_level') if isinstance(data, dict) else None
+        if _vorwissen in ('niedrig', 'mittel', 'hoch'):
+            with ls._session_state_lock:
+                ls._session_state.setdefault(_sid, {})
+                ls._session_state[_sid]['vorwissen_level'] = _vorwissen
+            print(f"[Vorwissen] initial level={_vorwissen} from session-start payload sid={_sid}")
 
         if precall_briefing and isinstance(precall_briefing, str):
             if len(precall_briefing) > 2000:
@@ -449,10 +496,46 @@ def register_audio_handlers(sio):
     def handle_disconnect(sid=None):
         from flask import request
         _sid = request.sid if sid is None else sid
+        # setdefault race guard: disconnect may fire before start_live_session fully initializes
+        with ls._session_state_lock:
+            ls._session_state.setdefault(_sid, {})
         print(f"[DG] socket.io disconnect event (sid={_sid})")
         _chunk_counts.pop(_sid, None)
         _close_deepgram_connection(_sid)
         ls.pop_session_state(_sid)
+
+    @sio.on('set_anrede')
+    def handle_set_anrede(data):
+        """Update session_anrede for SID on manual Du/Sie toggle (D-06)."""
+        from flask import request
+        sid = request.sid
+        anrede = (data.get('anrede') or 'sie').lower() if isinstance(data, dict) else 'sie'
+        if anrede not in ('du', 'sie'):
+            anrede = 'sie'
+        with ls._session_state_lock:
+            ls._session_state.setdefault(sid, {})
+            ls._session_state[sid]['session_anrede'] = anrede
+        print(f"[Anrede] set_anrede={anrede} sid={sid}")
+
+    @sio.on('set_vorwissen')
+    def handle_set_vorwissen(data):
+        """Update vorwissen_level for SID on Picker interaction (D-05)."""
+        from flask import request
+        sid = request.sid
+        level = data.get('level') if isinstance(data, dict) else None
+        if level not in ('niedrig', 'mittel', 'hoch', None):
+            level = None
+        with ls._session_state_lock:
+            ls._session_state.setdefault(sid, {})
+            ls._session_state[sid]['vorwissen_level'] = level
+        print(f"[Vorwissen] set_vorwissen={level} sid={sid}")
+
+    @sio.on('anrede_switch_rejected')
+    def handle_anrede_switch_rejected(data):
+        """Log rejection for algorithm tuning. No state change. (D-06)."""
+        from flask import request
+        sid = request.sid
+        print(f"[Anrede-Detection] anrede_switch_rejected sid={sid} (tuning log)")
 
     @sio.on('mute_mic')
     def handle_mute_mic(data=None, sid=None):

@@ -883,3 +883,37 @@ def api_tabu_update(profile_id):
         return jsonify({'ok': True, 'saved': len(valid), 'ignored': ignored})
     finally:
         db.close()
+
+
+# ── Phase 08.20 D-08: EWB-Preview-Panel API ──────────────────────────────────
+
+@profiles_bp.route('/api/profile/preview-context', methods=['GET'])
+@login_required
+def api_profile_preview_context():
+    """EWB-Preview-Panel: returns build_profile_context() output for a profile. (D-08)"""
+    profile_id_str = request.args.get('profile_id', '')
+    if not profile_id_str or not profile_id_str.isdigit():
+        return jsonify({'error': 'Kein Profil angegeben'}), 400
+
+    profile_id = int(profile_id_str)
+    db = None
+    try:
+        from database.db import SessionLocal
+        from database.models import Profile
+        db = SessionLocal()
+        profile = db.query(Profile).filter_by(id=profile_id).first()
+        if not profile:
+            return jsonify({'error': 'Zugriff verweigert'}), 403
+        if profile.org_id != g.user.org_id:
+            return jsonify({'error': 'Zugriff verweigert'}), 403
+
+        from services.prompt_pipeline import build_profile_context
+        # sid=None: preview — volatile sections 8+9 show markers (noch nicht erstellt etc.)
+        context = build_profile_context(user_id=g.user.id, sid=None)
+        return jsonify({'context': context})
+    except Exception as _e:
+        print(f"[ProfilePreview] preview-context failed profile_id={profile_id}: {_e}")
+        return jsonify({'error': 'Vorschau konnte nicht erstellt werden'}), 500
+    finally:
+        if db:
+            db.close()
