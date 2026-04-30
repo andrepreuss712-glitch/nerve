@@ -177,7 +177,7 @@
 <style>
 .nav-live-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;display:none}
 .nav-live-overlay.open{display:flex}
-.nav-live-box{background:var(--page-bg);border:1.5px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:520px;width:90%;display:flex;flex-direction:column;align-items:center;gap:20px}
+.nav-live-box{background:var(--page-bg);border:1.5px solid var(--glass-border);border-radius:16px;padding:44px 40px 36px;position:relative;max-width:520px;width:90%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:20px}
 .nav-live-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:36px;line-height:1;color:var(--page-text-muted);cursor:pointer;padding:2px 8px;border-radius:6px;font-family:inherit;transition:color .15s,background .15s}
 .nav-live-close:hover{color:var(--page-text-color);background:var(--glass-bg)}
 .nav-live-title{font-size:22px;font-weight:800;color:var(--page-text-color);letter-spacing:.02em;text-align:center}
@@ -344,7 +344,7 @@
 .launcher-loading-bar-inner{height:100%;background:#00D4AA;border-radius:2px;animation:launcherSlide 1.5s ease-in-out infinite}
 @keyframes launcherSlide{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
 .launcher-briefing{width:100%;padding:12px;border:1.5px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;min-height:120px;max-height:400px;overflow-y:auto;font-family:inherit;resize:none;box-sizing:border-box}
-.launcher-briefing-html{width:100%;padding:16px;border:1.5px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;max-height:400px;overflow-y:auto;box-sizing:border-box}
+.launcher-briefing-html{width:100%;padding:16px;border:1.5px solid var(--glass-border);border-radius:8px;background:var(--glass-bg);color:var(--page-text-color);font-size:13px;line-height:1.6;box-sizing:border-box}
 .launcher-briefing-html h2{font-size:15px;font-weight:700;margin:12px 0 6px;color:#00D4AA}
 .launcher-briefing-html h2:first-child{margin-top:0}
 .launcher-briefing-html ul{margin:4px 0 8px;padding-left:20px}
