@@ -61,8 +61,11 @@ MODEL_PERSONALITY_GEN   = os.getenv("MODEL_PERSONALITY_GEN",   "claude-haiku-4-5
 # Weitere Haiku-Stellen aus RESEARCH.md (grep-verifiziert)
 MODEL_PHASE_CLASSIFY    = os.getenv("MODEL_PHASE_CLASSIFY",    "claude-haiku-4-5-20251001")
 MODEL_COLDCALL_INFER    = os.getenv("MODEL_COLDCALL_INFER",    "claude-haiku-4-5-20251001")
-MODEL_PIP_AUTOVAR       = os.getenv("MODEL_PIP_AUTOVAR",       "claude-haiku-4-5-20251001")
-MODEL_PIP_VARIANTE      = os.getenv("MODEL_PIP_VARIANTE",      "claude-haiku-4-5-20251001")
+# D-07 (LOCKED 2026-04-29): DACH default = Sonnet for EWB streaming (grammar quality).
+# Rollback path (no deploy needed): set ENV MODEL_PIP_AUTOVAR=claude-haiku-4-5-20251001
+# MODEL_ANALYSE stays Haiku — CLAUDE.md absolute constraint: never Sonnet in live analyse_loop.
+MODEL_PIP_AUTOVAR       = os.getenv("MODEL_PIP_AUTOVAR",       "claude-sonnet-4-5-20251022")
+MODEL_PIP_VARIANTE      = os.getenv("MODEL_PIP_VARIANTE",      "claude-sonnet-4-5-20251022")
 MODEL_COACHING          = os.getenv("MODEL_COACHING",          "claude-haiku-4-5-20251001")
 MODEL_VALIDATE_USER_TEXT= os.getenv("MODEL_VALIDATE_USER_TEXT","claude-haiku-4-5-20251001")
 MODEL_TRAINING_PREVIEW  = os.getenv("MODEL_TRAINING_PREVIEW",  "claude-haiku-4-5-20251001")

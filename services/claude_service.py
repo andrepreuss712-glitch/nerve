@@ -682,15 +682,39 @@ Baue eine KURZE, kontextbezogene Variante des Gegenarguments:
 Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kommentare.
 """
 
-    # ── Phase 08.13: Prompt-Caching EWB Manual (CACHE_EWB=True default) ──────────
-    _ewb_manual_system = "Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter, keine Meta-Kommentare."
+    # ── Phase 08.20: _user_id fuer build_profile_context ─────────────────────────
+    try:
+        import services.live_session as _ls_manual
+        with _ls_manual.state_lock:
+            _user_id = _ls_manual.state.get('user_id') or 0
+    except Exception:
+        _user_id = 0
+
+    # ── Phase 08.13/08.20: Prompt-Caching EWB Manual (CACHE_EWB=True default) ───
+    # D-01/08.20: Replace hardcoded system prompt with Voll-Profil context
+    # build_profile_context() reads from _session_state[sid]['_profile_cache'] — no DB in hot path
+    try:
+        from services.prompt_pipeline import build_profile_context as _bpc_manual
+        _ewb_manual_system = _bpc_manual(user_id=_user_id or 0, sid=sid)
+        if not _ewb_manual_system:
+            _ewb_manual_system = (
+                "Du bist NERVE, ein Vertriebs-KI-Assistent im DACH-B2B. "
+                "Liefere EINE sofort vorlesbare Gegenargumentation in 2-3 Saetzen. "
+                "Kein Fachjargon, keine Floskeln. Ende mit Gegenfrage."
+            )
+    except Exception as _bpc_e:
+        print(f"[Manual-EWB] build_profile_context failed, using fallback: {_bpc_e}")
+        _ewb_manual_system = (
+            "Du bist NERVE, ein Vertriebs-KI-Assistent im DACH-B2B. "
+            "Liefere EINE sofort vorlesbare Gegenargumentation in 2-3 Saetzen. "
+            "Kein Fachjargon, keine Floskeln. Ende mit Gegenfrage."
+        )
     if config.CACHE_EWB and len(_ewb_manual_system) >= _CACHE_MIN_CHARS:
         _system_manual = [{"type": "text", "text": _ewb_manual_system, "cache_control": {"type": "ephemeral"}}]
     else:
         _system_manual = _ewb_manual_system
-    if config.CACHE_EWB:
-        print(f"[Cache-Check] ewb system_prompt: {len(_ewb_manual_system)} chars, "
-              f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(_ewb_manual_system) >= _CACHE_MIN_CHARS else 'off'}")
+    print(f"[Cache-Check] manual-ewb: {len(_ewb_manual_system)} chars, "
+          f"cache={'on' if len(_ewb_manual_system) >= _CACHE_MIN_CHARS else 'off'}")
     # ──────────────────────────────────────────────────────────────────────────
     print(f"[PiP-Variante] ENTRY sid={sid} slot={slot} typ={typ!r}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
