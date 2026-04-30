@@ -475,7 +475,7 @@ def _generiere_empfehlungen(sid, firmenname, fields, user_id=None):
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_PRECALL else 'haiku-4-5'
                 log_api_cost('anthropic', _cost_model, user_id=user_id,
-                             units=in_tok/1000.0, unit_type='per_1k_output_tokens',
+                             units=in_tok/1000.0, unit_type='per_1k_input_tokens',
                              context_tag='precall_empf', latency_ms=_latency_ms,
                              call_site='precall_empf')
                 log_api_cost('anthropic', _cost_model, user_id=user_id,
