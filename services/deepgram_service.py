@@ -402,6 +402,13 @@ def register_audio_handlers(sio):
             )
             ls.set_profile_for_sid(_sid, _profile_name2, _profile_daten2)
             print(f"[08.19.4] SID {_sid}: profile={_profile_name2!r} pid={_profile_id2} org={_org_id2}")
+            # HIGH-3 fix: pre-load profile extras (Opener, FAQ) into session cache
+            # build_profile_context() reads from cache — no DB queries in streaming hot path
+            if _profile_id2:
+                try:
+                    ls._load_profile_cache(sid=_sid, user_id=user_id, profile_id=_profile_id2)
+                except Exception as _cache_e:
+                    print(f"[DG] _load_profile_cache failed (non-fatal): {_cache_e}")
         except Exception as _pe:
             print(f"[08.19.4] per-SID init failed for {_sid}: {_pe}")
 

@@ -127,28 +127,52 @@ def _install_ls_mock(monkeypatch, mock):
     monkeypatch.setattr(_services_pkg, 'live_session', mock, raising=False)
 
 
-# ─── 6. build_profile_context: empty-profile fallback ───────────────────────
+# ─── 6. build_profile_context: empty-profile → 9 sections with markers (D-01) ──
 
 def test_build_profile_context_no_active_profile(monkeypatch):
-    """When no active profile is loaded, return empty string (caller adds Anrede-fallback)."""
+    """D-01: Even with no active profile (empty pdata), all 9 section headers must appear
+    with (noch nicht ausgefüllt) markers. Never return empty string — sections are non-negotiable."""
+
     class _LSMock:
         state = {}
+        state_lock = __import__('threading').Lock()
+        _session_state = {}
+        _session_state_lock = __import__('threading').Lock()
+        _per_sid_profile = {}
+        _per_sid_lock = __import__('threading').Lock()
 
         @staticmethod
-        def get_active_profile():
-            return (None, None)
+        def get_profile_for_sid(sid):
+            return ('', {})
+
+        @staticmethod
+        def get_briefing_for_sid(sid):
+            return None
 
     _install_ls_mock(monkeypatch, _LSMock)
-    assert pp.build_profile_context(user_id=1) == ''
+    # sid=None, user_id=0 → no DB fallback triggered (user_id=0 is falsy)
+    out = pp.build_profile_context(user_id=0)
+    # D-01: all 9 section headers must be present even for empty profile
+    for section in ['## Branche', '## Basis', '## Zielkunde', '## Schmerzen',
+                    '## Einwände', '## Phasen', '## KI-Verhalten',
+                    '## PreCall-Briefing', '## Lead-Kontext']:
+        assert section in out, f"Missing section {section!r} even for empty profile"
+    assert '(noch nicht ausgefüllt)' in out
 
 
 # ─── 7. build_profile_context: new Phase-08 fields (D-07/D-08/D-11) ─────────
 
 def test_build_profile_context_includes_phase_08_fields(monkeypatch):
     _SID = 'test-build-profile-phase08-sid'
+    import threading as _t
 
     class _LSMock:
         state = {}
+        state_lock = _t.Lock()
+        _session_state = {_SID: {'user_id': 1, 'org_id': 1, '_briefing': None, '_profile_cache': {}}}
+        _session_state_lock = _t.Lock()
+        _per_sid_profile = {}
+        _per_sid_lock = _t.Lock()
 
         @staticmethod
         def get_profile_for_sid(sid):
@@ -170,6 +194,10 @@ def test_build_profile_context_includes_phase_08_fields(monkeypatch):
                 })
             return ('', {})
 
+        @staticmethod
+        def get_briefing_for_sid(sid):
+            return None
+
     _install_ls_mock(monkeypatch, _LSMock)
     out = pp.build_profile_context(user_id=1, sid=_SID)
     assert 'Firma XY' in out
@@ -183,15 +211,26 @@ def test_build_profile_context_includes_phase_08_fields(monkeypatch):
 
 def test_build_profile_context_anrede_session_override_wins(monkeypatch):
     _SID = 'test-anrede-override-sid'
+    import threading as _t
 
     class _LSMock:
         state = {'session_anrede': 'Du'}
+        state_lock = _t.Lock()
+        _session_state = {_SID: {'user_id': 1, 'org_id': 1, '_briefing': None,
+                                  '_profile_cache': {}, 'session_anrede': 'Du'}}
+        _session_state_lock = _t.Lock()
+        _per_sid_profile = {}
+        _per_sid_lock = _t.Lock()
 
         @staticmethod
         def get_profile_for_sid(sid):
             if sid == _SID:
                 return (1, {'basis': {}, 'ki': {'ansprache': 'Sie'}})
             return ('', {})
+
+        @staticmethod
+        def get_briefing_for_sid(sid):
+            return None
 
     _install_ls_mock(monkeypatch, _LSMock)
     out = pp.build_profile_context(user_id=1, sid=_SID)

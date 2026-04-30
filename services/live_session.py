@@ -301,6 +301,67 @@ def pop_session_state(sid: str) -> None:
     drop_matcher(sid)
 
 
+def _load_profile_cache(sid: str, user_id: int, profile_id: int) -> None:
+    """Load ProfileOpener, User display fields, ProfileFaq into _session_state[sid]['_profile_cache'].
+    Called once at session start by handle_start_live_session. Non-fatal on failure.
+    After this call, build_profile_context() reads from cache only (no DB in hot path — HIGH-3 fix).
+    Note: ProfileOpener uses 'inhalt' field (not 'content'); ProfileFaq uses 'frage_muster'/'antwort'."""
+    try:
+        from database.db import SessionLocal as _SL
+        from database.models import ProfileOpener as _PO
+        _db = _SL()
+        try:
+            # ORDER BY id LIMIT 1 — deterministic, cache-stable (MEDIUM fix)
+            _opener = _db.query(_PO).filter_by(
+                profile_id=profile_id
+            ).order_by(_PO.id).limit(1).first()
+
+            # User display fields
+            _firstname = ''
+            try:
+                from database.models import User as _User
+                _user = _db.query(_User).filter_by(id=user_id).first()
+                _firstname = getattr(_user, 'vorname', None) or ''
+            except Exception:
+                pass
+
+            # ProfileFaq — all FAQs for profile (literal mode if column exists, else all)
+            _faqs = []
+            try:
+                from database.models import ProfileFaq as _FAQ
+                try:
+                    _faq_rows = _db.query(_FAQ).filter_by(
+                        profile_id=profile_id, mode='literal'
+                    ).limit(20).all()
+                except Exception:
+                    # mode column filter may fail on some DB states — load all
+                    _faq_rows = _db.query(_FAQ).filter_by(
+                        profile_id=profile_id
+                    ).limit(20).all()
+                for f in _faq_rows:
+                    _q = getattr(f, 'frage_muster', '') or ''
+                    _a = getattr(f, 'antwort', '') or ''
+                    if _q and _a:
+                        _faqs.append({'q': _q, 'a': _a})
+            except Exception as _faq_e:
+                print(f"[Cache] ProfileFaq load failed (non-fatal): {_faq_e}")
+
+            _cache = {
+                'opener_content': getattr(_opener, 'inhalt', None) if _opener else None,
+                'user_firstname': _firstname,
+                'faqs': _faqs,
+            }
+            with _session_state_lock:
+                if sid in _session_state:
+                    _session_state[sid]['_profile_cache'] = _cache
+                    print(f"[Cache] _profile_cache loaded for sid={sid}: "
+                          f"opener={'yes' if _cache['opener_content'] else 'no'}, faqs={len(_faqs)}")
+        finally:
+            _db.close()
+    except Exception as _e:
+        print(f"[Cache] _load_profile_cache failed for sid={sid} (non-fatal): {_e}")
+
+
 def load_learning_cards(user_id):
     """D-09: Load active learning cards for the current user at session start."""
     try:
