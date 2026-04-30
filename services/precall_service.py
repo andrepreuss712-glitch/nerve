@@ -8,6 +8,7 @@
 import re
 import json
 import time
+import threading
 import requests
 import config
 from config import BRAVE_SEARCH_API_KEY
@@ -18,8 +19,9 @@ from database.models import ProfileOpener
 BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
 
 # ── In-Memory Cache (D-discretion: 5 Min TTL) ───────────────────────────────
-_briefing_cache = {}   # cache_key -> (briefing_dict, timestamp)
-_CACHE_TTL_S = 300     # 5 Minuten
+_briefing_cache = {}              # cache_key -> (briefing_dict, timestamp)
+_cache_lock = threading.Lock()    # guards reads, writes and eviction of _briefing_cache
+_CACHE_TTL_S = 300                # 5 Minuten
 
 # ── Pflichtfelder-Konstanten ─────────────────────────────────────────────────
 REQUIRED_FIELDS = ['geschaeftsfuehrer', 'branche', 'mitarbeiterzahl', 'hauptprodukt']
@@ -166,15 +168,15 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten
         if len(firmenname) < 3 or len(firmenname) > 200:
             return (None, "Firmenname muss zwischen 3 und 200 Zeichen lang sein")
 
-        # Abgelaufene Cache-Eintraege entfernen
-        now = time.time()
-        stale_keys = [k for k, (_, ts) in _briefing_cache.items() if now - ts >= _CACHE_TTL_S]
-        for k in stale_keys:
-            del _briefing_cache[k]
-
-        # Cache pruefen (D-06: key = firmenname_lower + "_" + profile_id)
+        # Abgelaufene Cache-Eintraege entfernen + Cache pruefen (thread-safe)
         cache_key = f"{firmenname.strip().lower()}_{profile_id}"
-        cached = _briefing_cache.get(cache_key)
+        with _cache_lock:
+            now = time.time()
+            stale_keys = [k for k, (_, ts) in _briefing_cache.items() if now - ts >= _CACHE_TTL_S]
+            for k in stale_keys:
+                del _briefing_cache[k]
+            cached = _briefing_cache.get(cache_key)
+
         if cached and (time.time() - cached[1]) < _CACHE_TTL_S:
             print(f"[PreCall] Cache hit: {firmenname}")
             return (cached[0], None)
@@ -215,7 +217,8 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten
         briefing['empfehlungen'] = empfehlungen
 
         # Cache speichern NACH empfehlungen-Setzen — Cache-Hit liefert vollstaendiges 6-Key-Dict
-        _briefing_cache[cache_key] = (briefing, time.time())
+        with _cache_lock:
+            _briefing_cache[cache_key] = (briefing, time.time())
 
         return (briefing, None)
 
