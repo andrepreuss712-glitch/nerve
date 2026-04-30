@@ -578,7 +578,7 @@
       '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto' + (skriptPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (skriptPreview || (state.skripte.length > 0 ? 'Skript auswählen für Vorschau' : '')) + '</div>',
       '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4"></textarea>',
       state.skripte.length > 0
-        ? '<button type="button" id="lnr-skript-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
+        ? '<button type="button" class="launcher-inline-edit-btn" id="lnr-skript-edit-btn">Bearbeiten</button>'
         : '',
 
       // Opener
@@ -589,7 +589,7 @@
         + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswählen für Vorschau' : 'Kein Opener hinterlegt')) + '</div>',
       '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>',
       state.openerItems.length > 0
-        ? '<button type="button" id="lnr-opener-edit-btn" style="font-size:11px;color:#00D4AA;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">Bearbeiten</button>'
+        ? '<button type="button" class="launcher-inline-edit-btn" id="lnr-opener-edit-btn">Bearbeiten</button>'
         : '',
 
       // Phase 08.5 D-10: Anrede-Pflichtfeld (vor launcher-actions)
