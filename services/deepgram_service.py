@@ -361,9 +361,7 @@ def register_audio_handlers(sio):
         if precall_briefing and isinstance(precall_briefing, str):
             if len(precall_briefing) > 2000:
                 precall_briefing = precall_briefing[:2000]
-            with ls.state_lock:
-                ls.state['precall_briefing'] = precall_briefing
-            print(f"[DG] PreCall-Briefing gespeichert ({len(precall_briefing)} Zeichen)")
+            # truncated above — bridged to _session_state[sid] via set_briefing_for_sid after init_session_state
 
         skript_inhalt = data.get('skript_inhalt') if isinstance(data, dict) else None
         if skript_inhalt and isinstance(skript_inhalt, str):
@@ -449,6 +447,11 @@ def register_audio_handlers(sio):
                 mode=mode,
             )
             ls.set_profile_for_sid(_sid, _profile_name2, _profile_daten2)
+            # BUG1 FIX: bridge precall_briefing from socket payload to _session_state[sid]["_briefing"]
+            # Must run AFTER init_session_state (which overwrites _session_state[sid])
+            if precall_briefing and isinstance(precall_briefing, str):
+                ls.set_briefing_for_sid(_sid, precall_briefing)
+                print(f"[DG] PreCall-Briefing bridged to _session_state[sid] ({len(precall_briefing)} Zeichen)")
             print(f"[08.19.4] SID {_sid}: profile={_profile_name2!r} pid={_profile_id2} org={_org_id2}")
             # HIGH-3 fix: pre-load profile extras (Opener, FAQ) into session cache
             # build_profile_context() reads from cache — no DB queries in streaming hot path
