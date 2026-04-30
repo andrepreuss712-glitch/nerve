@@ -487,6 +487,7 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         anrede=_anrede,
         version=_ewb_version,
         user_id=_user_id,
+        sid=None,  # analysiere_mit_claude has no SID context — uses global ls.state path
     )
     # ── Phase 08.13: Prompt-Caching Analyse-Loop (CACHE_ANALYSE=False default) ──
     if config.CACHE_ANALYSE and len(_system_prompt) >= _CACHE_MIN_CHARS:

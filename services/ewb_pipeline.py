@@ -31,7 +31,8 @@ _FALLBACK_V1_PROMPT = (
 def build_ewb_prompt(profile_data: Optional[dict] = None,
                      anrede: str = 'Sie',
                      version: str = 'v1-legacy',
-                     user_id: int = 0) -> str:
+                     user_id: int = 0,
+                     sid: str = None) -> str:
     """Assemble kompletten EWB-System-Prompt fuer Haiku-Call.
 
     Args:
@@ -44,14 +45,16 @@ def build_ewb_prompt(profile_data: Optional[dict] = None,
             'v1-legacy', 'v2-modular' oder beliebig — unbekannte Werte
             fuehren zu Fallback.
         user_id: Session-User (fuer Logging / Router-Integration Plan 03).
+        sid: WebSocket-Session-ID fuer per-SID Profil-Lookup und _profile_cache.
+            BUG-A fix: ohne sid wird per-SID Profil aus 08.19.4 bypassed.
 
     Returns:
         System-Prompt-String fuer Claude.messages.create(system=...).
     """
     template_text = _load_prompt_template(version)
 
-    # Kontext-Block via Shared-Utils (Phase 08 D-40).
-    context_block = build_profile_context(user_id=user_id)
+    # BUG-A fix: pass sid through so build_profile_context uses per-SID profile + cache
+    context_block = build_profile_context(user_id=user_id, sid=sid)
     if not context_block:
         # Fallback fuer Unit-Tests oder leere Session:
         # Anrede-Constraint manuell mit WORTWOERTLICH-Gate D-15.
@@ -62,7 +65,9 @@ def build_ewb_prompt(profile_data: Optional[dict] = None,
 
     parts = [template_text, '\n--- AKTIVES VERKAUFSPROFIL ---', context_block]
     prompt = '\n'.join(parts)
-    print(f"[EWB] v{version} assembled user_id={user_id} len={len(prompt)}")
+    _cache_flag = 'CACHE_ELIGIBLE' if len(context_block) >= 4096 else 'cache_miss'
+    print(f"[EWB] v{version} assembled user_id={user_id} sid={sid} "
+          f"len={len(prompt)} context_len={len(context_block)} {_cache_flag}")
     return prompt
 
 
