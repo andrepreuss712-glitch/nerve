@@ -996,8 +996,8 @@ Plans:
 Plans:
 - [x] 08.20.2-01-PLAN.md — precall_service.py rebuild: PRECALL_FIELDS_SYSTEM_PROMPT, _generiere_briefing() Schicht-1+2, _generiere_empfehlungen() Schicht-3, cache key extension
 - [x] 08.20.2-02-PLAN.md — DB migration (precall_fields column) + route integration (api_precall_research + api_beenden)
-- [ ] 08.20.2-03-PLAN.md — UI 3-layer PreCall modal: confidence card CSS + renderStep4() 3-section rewrite
-- [ ] 08.20.2-04-PLAN.md — Tests: test_precall_schema.py with 5 mock-based Schicht-1 schema tests
+- [x] 08.20.2-03-PLAN.md — UI 3-layer PreCall modal: confidence card CSS + renderStep4() 3-section rewrite
+- [x] 08.20.2-04-PLAN.md — Tests: test_precall_schema.py with 7 mock-based Schicht-1 schema tests (all GREEN, commit 3840b0a)
 
 ---
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20.2-03 COMPLETE — renderStep4() 3-section UI (Pflichtfeld-Karte + Fliesstext + Empfehlungen), confidence CSS, precall_fields in api_beenden"
-last_updated: "2026-04-30T14:35:00Z"
+stopped_at: "08.20.2-04 COMPLETE — 7 mock-based schema contract tests for _generiere_briefing() Schicht-1 output, all GREEN"
+last_updated: "2026-04-30T14:38:00Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 57
   completed_phases: 45
   total_plans: 206
-  completed_plans: 196
+  completed_plans: 197
   percent: 95
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.20.2 (precall-briefing-trust-web-search-integration) — IN PROGRESS (3/? Plans)
-Plan: 3 of ? — COMPLETE (2026-04-30, commits 7fc25d5 + a8f3471)
+Phase: 08.20.2 (precall-briefing-trust-web-search-integration) — IN PROGRESS (4/? Plans)
+Plan: 4 of ? — COMPLETE (2026-04-30, commit 3840b0a)
 Last activity: 2026-04-30
 
-**Phase 08.20.2 Plan 03 abgeschlossen:** renderStep4() rewritten for 3-section PreCall UI — Sektion A Pflichtfeld-Karte (2x2 grid, confidence icons checkmark/~/dash, not_found always visible with "Nicht gefunden"), Sektion B Fliesstext with edit toggle, Sektion C Empfehlungen. CSS added to base.html (.precall-fields-grid, .confidence-high/medium/not-found). api_beenden payload extended with precall_fields key.
-**Next:** Phase 08.20.2 Plan 04 or phase complete — PreCall 3-layer integration done
+**Phase 08.20.2 Plan 04 abgeschlossen:** 7 mock-based schema contract tests for _generiere_briefing() Schicht-1 output — all 7 GREEN. Tests cover: fields dict type, 4 Pflichtfelder always present, exact key structure (no extra keys), not_found enforcement (normalization), optional field exclusion, graceful parse error degradation, top-level return dict keys (firmenname passthrough, quellen_count int). No real API calls — fully mocked via monkeypatch.
+**Next:** Phase 08.20.2 complete or next phase
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
