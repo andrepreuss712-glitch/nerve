@@ -597,6 +597,7 @@ Recent decisions affecting current work:
 | 260428-f7p | Polish-Cycle 5 KRITISCH: FAQ deleteFaq/updateFaq CSRF-Fix + r.ok-Guards + saveTabuToServer Guard + FAQ-Trash in Card-Header | 2026-04-28 | fcdf456 | [260428-f7p-polish-cycle-5-faq-csrf-fix](./quick/260428-f7p-polish-cycle-5-faq-csrf-fix/) |
 | 260429-dmd | Polish 08.19.3: FAQ-Card-Header truncation — JS slice(0,40) entfernt + CSS ellipsis + title-Tooltip | 2026-04-29 | bba802d | [260429-dmd-faq-header-truncation](./quick/260429-dmd-faq-header-truncation/) |
 | 20260430-css | 08.20.2 CSS-Hotfix U1-U3: nav-live-box 90vh scroll, launcher-step overflow guard, launcher-inline-edit-btn | 2026-04-30 | ecf8d41+df20777+67beec0 | [20260430-css-modal-button-hotfix-u1u2u3](./quick/20260430-css-modal-button-hotfix-u1u2u3/) |
+| 20260430-r6r7 | Block-J R6+R7: Vorwissen-Duplikat (step45/renderStep4b) entfernt + Step-5-Zurück zu Step-4 korrigiert | 2026-04-30 | 2613fd3+18487b7 | [20260430-block-j-r6-r7-vorwissen-zurueck](./quick/20260430-block-j-r6-r7-vorwissen-zurueck/) |
 
 ## What's Done
 
