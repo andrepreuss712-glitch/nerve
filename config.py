@@ -44,16 +44,17 @@ CLASSIFIER_CONFIDENCE_THRESHOLD = float(
 )
 
 # ── Phase 08.13: MODEL-Konstanten (ENV-overridable, per CONTEXT.md D-01) ──────
-# Sonnet 4.5 fuer User-sichtbare Outputs (20251022)
-MODEL_EWB               = os.getenv("MODEL_EWB",               "claude-sonnet-4-5-20251022")
-MODEL_QA                = os.getenv("MODEL_QA",                "claude-sonnet-4-5-20251022")
-MODEL_POSTCALL_INSIGHTS = os.getenv("MODEL_POSTCALL_INSIGHTS",  "claude-sonnet-4-5-20251022")
-MODEL_POSTCALL_ANALYSIS = os.getenv("MODEL_POSTCALL_ANALYSIS",  "claude-sonnet-4-5-20251022")
-MODEL_WEEKLY_SUMMARY    = os.getenv("MODEL_WEEKLY_SUMMARY",     "claude-sonnet-4-5-20251022")
-MODEL_PRECALL           = os.getenv("MODEL_PRECALL",            "claude-sonnet-4-5-20251022")
-MODEL_CRM               = os.getenv("MODEL_CRM",               "claude-sonnet-4-5-20251022")
-MODEL_TRAINING_HELP     = os.getenv("MODEL_TRAINING_HELP",      "claude-sonnet-4-5-20251022")
-MODEL_TRAINING_SCORING  = os.getenv("MODEL_TRAINING_SCORING",   "claude-sonnet-4-5-20251022")
+# Sonnet 4.5 fuer User-sichtbare Outputs — Alias ohne Date-Suffix (robuster gegen Date-Drift,
+# siehe Hotfix nach 08.20: 20251022-Suffix existierte nicht → 404 in Production)
+MODEL_EWB               = os.getenv("MODEL_EWB",               "claude-sonnet-4-5")
+MODEL_QA                = os.getenv("MODEL_QA",                "claude-sonnet-4-5")
+MODEL_POSTCALL_INSIGHTS = os.getenv("MODEL_POSTCALL_INSIGHTS",  "claude-sonnet-4-5")
+MODEL_POSTCALL_ANALYSIS = os.getenv("MODEL_POSTCALL_ANALYSIS",  "claude-sonnet-4-5")
+MODEL_WEEKLY_SUMMARY    = os.getenv("MODEL_WEEKLY_SUMMARY",     "claude-sonnet-4-5")
+MODEL_PRECALL           = os.getenv("MODEL_PRECALL",            "claude-sonnet-4-5")
+MODEL_CRM               = os.getenv("MODEL_CRM",               "claude-sonnet-4-5")
+MODEL_TRAINING_HELP     = os.getenv("MODEL_TRAINING_HELP",      "claude-sonnet-4-5")
+MODEL_TRAINING_SCORING  = os.getenv("MODEL_TRAINING_SCORING",   "claude-sonnet-4-5")
 # Haiku 4.5 fuer Latenz/Cost-kritisch — UNVERAENDERLICH per CONTEXT.md
 MODEL_ANALYSE           = os.getenv("MODEL_ANALYSE",           "claude-haiku-4-5-20251001")
 MODEL_TRAINING_DIALOG   = os.getenv("MODEL_TRAINING_DIALOG",   "claude-haiku-4-5-20251001")
@@ -64,8 +65,8 @@ MODEL_COLDCALL_INFER    = os.getenv("MODEL_COLDCALL_INFER",    "claude-haiku-4-5
 # D-07 (LOCKED 2026-04-29): DACH default = Sonnet for EWB streaming (grammar quality).
 # Rollback path (no deploy needed): set ENV MODEL_PIP_AUTOVAR=claude-haiku-4-5-20251001
 # MODEL_ANALYSE stays Haiku — CLAUDE.md absolute constraint: never Sonnet in live analyse_loop.
-MODEL_PIP_AUTOVAR       = os.getenv("MODEL_PIP_AUTOVAR",       "claude-sonnet-4-5-20251022")
-MODEL_PIP_VARIANTE      = os.getenv("MODEL_PIP_VARIANTE",      "claude-sonnet-4-5-20251022")
+MODEL_PIP_AUTOVAR       = os.getenv("MODEL_PIP_AUTOVAR",       "claude-sonnet-4-5")
+MODEL_PIP_VARIANTE      = os.getenv("MODEL_PIP_VARIANTE",      "claude-sonnet-4-5")
 MODEL_COACHING          = os.getenv("MODEL_COACHING",          "claude-haiku-4-5-20251001")
 MODEL_VALIDATE_USER_TEXT= os.getenv("MODEL_VALIDATE_USER_TEXT","claude-haiku-4-5-20251001")
 MODEL_TRAINING_PREVIEW  = os.getenv("MODEL_TRAINING_PREVIEW",  "claude-haiku-4-5-20251001")

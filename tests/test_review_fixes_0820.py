@@ -190,3 +190,65 @@ def test_build_profile_context_accepts_profile_id_param(monkeypatch):
 
     result = pp.build_profile_context(user_id=1, sid=_SID, profile_id=None)
     assert isinstance(result, str), "build_profile_context must return str"
+
+
+# ── Hotfix tests: Bug A / Bug B / Bug C ────────────────────────────────────────
+
+def test_model_constants_no_date_suffix():
+    """Bug A hotfix: all Sonnet MODEL_ constants use alias without date suffix."""
+    import config
+    sonnet_constants = [
+        config.MODEL_EWB, config.MODEL_QA, config.MODEL_POSTCALL_INSIGHTS,
+        config.MODEL_POSTCALL_ANALYSIS, config.MODEL_WEEKLY_SUMMARY,
+        config.MODEL_PRECALL, config.MODEL_CRM, config.MODEL_TRAINING_HELP,
+        config.MODEL_TRAINING_SCORING, config.MODEL_PIP_AUTOVAR,
+        config.MODEL_PIP_VARIANTE,
+    ]
+    for val in sonnet_constants:
+        if 'sonnet' in val:
+            assert '20251022' not in val, (
+                f"Model '{val}' contains invalid date suffix 20251022 — use alias without date"
+            )
+            assert val == 'claude-sonnet-4-5' or not val.endswith(
+                tuple(f"-2025{m:02d}{d:02d}" for m in range(1,13) for d in range(1,32))
+            ), f"Unexpected date suffix in '{val}'"
+
+
+def test_profile_id_extraction_from_edit_url():
+    """Bug B hotfix: profileId regex returns numeric ID, not 'edit'."""
+    import re
+    def extract_profile_id(pathname):
+        m = re.search(r'/profiles/(\d+)', pathname)
+        return (m.group(1) if m else '') or ''
+
+    assert extract_profile_id('/profiles/6/edit') == '6'
+    assert extract_profile_id('/profiles/42/edit') == '42'
+    assert extract_profile_id('/profiles/1') == '1'
+    assert extract_profile_id('/profiles/edit') == ''
+
+
+def test_handle_start_live_session_no_unbound_local_error():
+    """Bug C hotfix: ls used before local import removed — no UnboundLocalError."""
+    import ast, pathlib
+    src = pathlib.Path('services/deepgram_service.py').read_text(encoding='utf-8')
+    tree = ast.parse(src)
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        if node.name != 'handle_start_live_session':
+            continue
+        # Collect all names assigned inside the function (including imports)
+        assigned_names = set()
+        for child in ast.walk(node):
+            if isinstance(child, ast.Import):
+                for alias in child.names:
+                    assigned_names.add(alias.asname or alias.name.split('.')[0])
+            elif isinstance(child, ast.ImportFrom):
+                for alias in child.names:
+                    assigned_names.add(alias.asname or alias.name)
+        # 'ls' must NOT be locally assigned inside handle_start_live_session
+        assert 'ls' not in assigned_names, (
+            "handle_start_live_session has a local 'import ... as ls' which causes "
+            "UnboundLocalError at the setdefault guard (Bug C hotfix)"
+        )

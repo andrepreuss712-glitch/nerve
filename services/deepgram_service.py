@@ -328,7 +328,8 @@ def register_audio_handlers(sio):
         _open_deepgram_connection(_sid, mode=mode)
 
         # Store precall briefing in live session state
-        import services.live_session as ls
+        # (ls imported at module level — do not re-import here, causes UnboundLocalError
+        # before the setdefault guard above which also uses ls)
         # POLISH-22 Bugfix: session_start_time beim Call-Start setzen (nicht erst beim
         # reset_session am Call-Ende). Vorher blieb der Timer auf dem time.monotonic()
         # des letzten Call-Endes oder None, und dauer_sek wurde zu 0 oder falsch gross.

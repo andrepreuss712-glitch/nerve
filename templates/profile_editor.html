@@ -1492,8 +1492,8 @@ function loadEwbPreview() {
   var empty = document.getElementById('ewb-preview-empty');
   var err = document.getElementById('ewb-preview-error');
 
-  // Get profile_id from URL path (last path segment)
-  var profileId = window.location.pathname.split('/').filter(Boolean).pop();
+  // Get profile_id from URL path — regex avoids returning 'edit' for /profiles/6/edit
+  var profileId = (window.location.pathname.match(/\/profiles\/(\d+)/) || [])[1] || '';
 
   btn.disabled = true;
   btn.textContent = 'Wird geladen…';
