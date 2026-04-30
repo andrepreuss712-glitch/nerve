@@ -1001,6 +1001,16 @@ Plans:
 
 ---
 
+### Phase 08.20.3: Briefing-Lebenszyklus + KI-Skript-Verschmelzung (INSERTED — 2026-04-30)
+
+**Goal:** Nach "Ergebnis übernehmen" entscheidet der User aktiv was mit dem PreCall-Briefing passiert — Modus A (nur EWB, default), Modus B (Briefing als PiP-Reiter sichtbar während Call), Modus C (KI verschmilzt Briefing mit gewähltem Skript/Opener), Modus D (Briefing als manuell editierbarer Pseudo-Skript-Slot).
+**Komplexität:** 🔴 komplex
+**Depends on:** Phase 08.20.2 ✅
+
+**Plans:** TBD (post-spec)
+
+---
+
 ### Phase 06.1: PiP UAT-Fixes — Bugs, Farben, Proportionen, Mic-Indikator, Slider (INSERTED)
 
 **Goal:** UAT-Fix-Cycle nach Phase 06: behebt 3 funktionale Bugs (EWB-Labels, Scrollbar, Opener-Relocation), invertiert das Farbschema (heller Body, dunkler Header), rotiert das Split-Layout (Teleprompter 60% oben, EWB 10% mittig, KI 30% unten), vergrößert PiP-Default auf 480×760, fügt 4-Balken Audio-Level-Mic-Indikator mit Click-to-Mute hinzu und redesignt den Transparenz-Slider iOS-style (140px, filled portion).
