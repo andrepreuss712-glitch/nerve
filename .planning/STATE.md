@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20 Plan 01 complete — next: Plan 02"
-last_updated: "2026-04-30T06:14:50Z"
+stopped_at: "08.20 Plan 02 complete — next: Plan 03"
+last_updated: "2026-04-30T06:23:04Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 57
   completed_phases: 44
   total_plans: 206
-  completed_plans: 191
+  completed_plans: 192
   percent: 93
 ---
 
@@ -21,21 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Block N abgeschlossen (08.19.1 + Code-Review-Fixes + Push). Naechste Phase: 08.20 Pipeline-Re-Wire (build_profile_context Reihenfolge + alle neuen Schema-Felder in EWB-Prompt).
+**Current focus:** 08.20 Pipeline-Re-Wire läuft — Plan 02 abgeschlossen (9-Sektionen build_profile_context, _profile_cache, BUG-A/BUG-B Fix).
 
 ## Current Position
 
 Phase: 08.20 (pipeline-re-wire-voll-profil-ewb-lead-context) — IN PROGRESS
-Plan: 1 of 5 — COMPLETE (2026-04-30, commits 800c543 + cd5edb3)
+Plan: 2 of 5 — COMPLETE (2026-04-30, commits d813c8a + 5c8b198 + 79a9ad0)
 Last activity: 2026-04-30
 
-**Phase 08.20 Plan 01 abgeschlossen:** Foundation Layer — Per-SID briefing cache als _session_state[sid]['_briefing'] Sub-Key (Ghost-SID guard, kein extra Lock), services/branchen_data.py neu mit build_branchen_hint() (10 Cluster + Default), Schema v3->v4 Migration (einwaende -> einwaende_detail), alle 11 Consumer-Callsites migriert.
-**Next:** Plan 02 — build_profile_context() 9-Sektionen-Erweiterung + BUG-A/BUG-B Fix
+**Phase 08.20 Plan 02 abgeschlossen:** 9-Sektionen build_profile_context() (D-01), _profile_cache Hot-Path (HIGH-3, 0 DB-Queries < 5ms), _load_profile_cache() in live_session.py, BUG-A (sid in ewb_pipeline), BUG-B (FAQ aus Cache), Cache-Threshold-Log.
+**Next:** Plan 03 — (naechster Plan in Phase 08.20)
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
   - D-02/D-10: branchen_data.py als pure static module, keine I/O, 10 Cluster + Default-Block
   - D-04: einwaende -> einwaende_detail Migration v3->v4, idempotent, alle 11 Callsites mit Transition-Fallback
+  - D-01: build_profile_context() 9-Sektionen Markdown, deterministic, leere Sektionen nie skippen
+  - HIGH-3: _profile_cache warm-path 0 DB-Queries; ProfileOpener field=inhalt (nicht content)
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
