@@ -909,7 +909,8 @@ def api_profile_preview_context():
 
         from services.prompt_pipeline import build_profile_context
         # sid=None: preview — volatile sections 8+9 show markers (noch nicht erstellt etc.)
-        context = build_profile_context(user_id=g.user.id, sid=None)
+        # profile_id passed explicitly so the requested profile is rendered, not the active one (WR-0820-C fix)
+        context = build_profile_context(user_id=g.user.id, sid=None, profile_id=profile_id)
         return jsonify({'context': context})
     except Exception as _e:
         print(f"[ProfilePreview] preview-context failed profile_id={profile_id}: {_e}")

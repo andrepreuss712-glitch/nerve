@@ -108,7 +108,8 @@ def invalidate_resolver_cache() -> None:
 
 # ── Profil-Kontext-Assembly: build_profile_context ─────────────────────────
 
-def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None) -> str:
+def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None,
+                          profile_id: int = None) -> str:
     """Build a 9-section Markdown profile-context string for system-prompts (D-01).
 
     9-section canonical order (LOCKED — cache stability):
@@ -124,6 +125,10 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
 
     HOT PATH (sid + warm _profile_cache):  0 DB queries, < 5ms (HIGH-3 fix).
     FALLBACK (sid=None or cache absent):   lightweight DB query for opener/FAQ.
+
+    profile_id (optional): when provided, loads this specific profile instead of
+      user.active_profile_id. Used by the EWB-Preview API (D-08) to render any
+      profile in the org, not just the active one.
 
     Empty sections: NEVER skipped — rendered with:
       - Fields not filled:  (noch nicht ausgefüllt)
@@ -146,19 +151,23 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
     _, pdata = ls.get_profile_for_sid(sid) if sid else ('', {})
     if not pdata and user_id:
         # Fallback: HTTP paths, preview endpoint, QA without session
+        # If profile_id is provided, load that specific profile (EWB-Preview D-08).
+        # Otherwise fall back to user.active_profile_id.
         try:
             from database.db import SessionLocal as _SL_fb
             from database.models import User as _User_fb, Profile as _Profile_fb
             _db_fb = _SL_fb()
             try:
-                _u_fb = _db_fb.query(_User_fb).filter_by(id=user_id).first()
-                _pid_fb = getattr(_u_fb, 'active_profile_id', None) if _u_fb else None
-                if _pid_fb:
-                    _p_fb = _db_fb.query(_Profile_fb).filter_by(id=_pid_fb).first()
-                    if _p_fb:
-                        import json as _json_fb
-                        _raw = getattr(_p_fb, 'daten', None) or '{}'
-                        pdata = _json_fb.loads(_raw) if isinstance(_raw, str) else (_raw or {})
+                if profile_id:
+                    _p_fb = _db_fb.query(_Profile_fb).filter_by(id=profile_id).first()
+                else:
+                    _u_fb = _db_fb.query(_User_fb).filter_by(id=user_id).first()
+                    _pid_fb = getattr(_u_fb, 'active_profile_id', None) if _u_fb else None
+                    _p_fb = _db_fb.query(_Profile_fb).filter_by(id=_pid_fb).first() if _pid_fb else None
+                if _p_fb:
+                    import json as _json_fb
+                    _raw = getattr(_p_fb, 'daten', None) or '{}'
+                    pdata = _json_fb.loads(_raw) if isinstance(_raw, str) else (_raw or {})
             finally:
                 _db_fb.close()
         except Exception as _fb_e:
@@ -177,6 +186,7 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
     _faqs = _profile_cache.get('faqs', [])
 
     # If cache absent (sid=None or session pre-init), fall back to DB for opener + FAQ
+    # When profile_id is given, use it directly; otherwise resolve via user.active_profile_id.
     # Note: ProfileOpener uses 'inhalt' (not 'content'); no is_active column in this schema.
     if _opener_content is None and user_id:
         try:
@@ -184,8 +194,11 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
             from database.models import User as _User_op, ProfileOpener as _PO_op, ProfileFaq as _FAQ_op
             _db_op = _SL_op()
             try:
-                _u_op = _db_op.query(_User_op).filter_by(id=user_id).first()
-                _pid_op = getattr(_u_op, 'active_profile_id', None) if _u_op else None
+                if profile_id:
+                    _pid_op = profile_id
+                else:
+                    _u_op = _db_op.query(_User_op).filter_by(id=user_id).first()
+                    _pid_op = getattr(_u_op, 'active_profile_id', None) if _u_op else None
                 if _pid_op:
                     # ORDER BY id LIMIT 1 — deterministic, cache-stable (MEDIUM fix)
                     _op_row = _db_op.query(_PO_op).filter_by(
