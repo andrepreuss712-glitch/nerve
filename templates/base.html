@@ -467,6 +467,57 @@
     </div>
   </div>
 
+  <!-- D-06: Du/Sie Toggle (Phase 08.20) -->
+  <div id="pip-anrede-row"
+       style="display:flex;align-items:center;gap:8px;padding:4px 12px;background:#0D1117;border-bottom:1px solid rgba(255,255,255,0.06)">
+    <span style="font-size:11px;color:#6B7280;font-weight:700">Anrede</span>
+    <div style="display:flex;gap:4px">
+      <button id="pip-anrede-du" class="pip-anrede-btn"
+              onclick="pipSetAnrede('du')">Du</button>
+      <button id="pip-anrede-sie" class="pip-anrede-btn active"
+              onclick="pipSetAnrede('sie')">Sie</button>
+    </div>
+    <span id="pip-anrede-badge"
+          style="display:none;font-size:10px;font-weight:700;letter-spacing:0.04em;
+                 background:rgba(0,212,170,0.12);color:#00D4AA;
+                 border-radius:9999px;padding:4px 8px">Erkannt</span>
+  </div>
+  <!-- D-05: Vorwissen Indicator (Phase 08.20) -->
+  <div id="pip-vorwissen-indicator"
+       style="display:flex;align-items:center;gap:8px;padding:4px 12px;background:#0D1117;
+              border-bottom:1px solid rgba(255,255,255,0.06);font-size:11px;color:#6B7280;cursor:pointer"
+       onclick="pipVorwissenEdit()">
+    <span style="color:#00D4AA;font-weight:700" id="pip-vorwissen-label">Weiß nicht</span>
+    <span style="font-size:10px;opacity:0.6">&#9658; ändern</span>
+  </div>
+  <div id="pip-vorwissen-edit" style="display:none;padding:8px 12px;background:#0D1117;border-bottom:1px solid rgba(255,255,255,0.06)">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="pip-vorwissen-pill" data-val="niedrig"
+              onclick="pipSetVorwissen('niedrig')">Wenig</button>
+      <button class="pip-vorwissen-pill" data-val="mittel"
+              onclick="pipSetVorwissen('mittel')">Vertraut</button>
+      <button class="pip-vorwissen-pill" data-val="hoch"
+              onclick="pipSetVorwissen('hoch')">Kennt uns</button>
+      <button class="pip-vorwissen-pill active" data-val="null"
+              onclick="pipSetVorwissen(null)">Weiß nicht</button>
+    </div>
+  </div>
+  <!-- Anrede-Wechsel Toast (D-06) -->
+  <div id="pip-anrede-toast" style="display:none;position:fixed;bottom:24px;right:24px;
+       z-index:9999;background:#1e2330;border:1px solid #00D4AA;border-radius:12px;
+       padding:16px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+    <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">Anrede-Wechsel erkannt</div>
+    <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px">
+      Der Lead hat Sie mit "Du" angesprochen. Wechseln?
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="pip-anrede-btn active" onclick="pipAnredeToastAccept()"
+              style="flex:1">Ja, wechseln</button>
+      <button class="pip-anrede-btn" onclick="pipAnredeToastDismiss()"
+              style="flex:1">Nein, behalten</button>
+    </div>
+  </div>
+
   <!-- Live Section (D-09: Teleprompter 60% oben, EWB 10% Mitte, KI-Slots 30% unten) -->
   <div id="pip-section-live" style="display:none" class="pip-live-split">
     <!-- D-09: Teleprompter oben 60% (dominant) -->

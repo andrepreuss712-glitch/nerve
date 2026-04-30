@@ -2882,3 +2882,38 @@ input[type="range"].perf-slider::-moz-range-thumb {
 .pe-entry-input { flex: 1; }
 .pe-entry-textarea { flex: 1; min-height: 60px; }
 .pe-entry-btn-rm { align-self: flex-start; }
+
+/* ── Phase 08.20 D-05/D-06: Vorwissen-Picker + Du/Sie-Toggle PiP pills ──── */
+.pip-anrede-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #6B7280;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 28px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.pip-anrede-btn.active {
+  border-color: #00D4AA;
+  color: #00D4AA;
+  background: rgba(0,212,170,0.08);
+}
+.pip-vorwissen-pill {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #8b92a5;
+  border-radius: 9999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.pip-vorwissen-pill.active {
+  border-color: #00D4AA;
+  color: #00D4AA;
+  background: rgba(0,212,170,0.08);
+}

@@ -25,9 +25,10 @@
 
   // ── State ──────────────────────────────────────────────────────────────────
   var state = {
-    step: 1,              // 1=mode, 2=precall-option, 3=precall-form, 4=precall-result, 5=skript, 6=live
+    step: 1,              // 1=mode, 2=precall-option, 3=precall-form, 4=precall-result, 45=vorwissen, 5=skript, 6=live
     mode: null,           // 'cold_call' | 'meeting'
     lastSessionAnrede: _lastSessionAnradeInit,
+    vorwissenLevel: null, // D-05: null | 'niedrig' | 'mittel' | 'hoch'
     profiles: [],
     activeProfileId: null,
     profileDaten: {},
@@ -144,6 +145,7 @@
       case 2: renderStep2(); break;
       case 3: renderStep3(); break;
       case 4: renderStep4(); break;
+      case 45: renderStep4b(); break;
       case 5: renderStep5(); break;
       default: renderStep1();
     }
@@ -405,7 +407,8 @@
       // Save edited briefing text back into the briefing object
       var ta = document.getElementById('lnr-briefing-edit');
       if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
-      state.step = 5;
+      // D-05: show Vorwissen-Picker (Step 4b) before proceeding to Step 5
+      state.step = 45;
       renderStep();
     };
 
@@ -423,6 +426,50 @@
         }
       };
     }
+  }
+
+  // ── Step 4b: Vorwissen-Picker (D-05 Phase 08.20) ──────────────────────────
+  function renderStep4b() {
+    var c = content();
+    if (!c) return;
+    c.innerHTML = [
+      '<div class="launcher-step" id="lnr-step-vorwissen">',
+      '<div class="nav-live-title">Wie gut kennt der Lead euer Angebot?</div>',
+      '<div class="launcher-hint">',
+      'Die KI passt ihre Gegenargumente an — je genauer, desto treffsicherer.',
+      '</div>',
+      '<div class="launcher-anrede-row" id="lnr-vorwissen-row" style="gap:8px;flex-wrap:wrap">',
+      '<button type="button" class="launcher-anrede-btn" data-val="niedrig"',
+      '        onclick="window.NerveLauncher._setVorwissen(\'niedrig\')">Wenig Ahnung</button>',
+      '<button type="button" class="launcher-anrede-btn" data-val="mittel"',
+      '        onclick="window.NerveLauncher._setVorwissen(\'mittel\')">Vertraut damit</button>',
+      '<button type="button" class="launcher-anrede-btn" data-val="hoch"',
+      '        onclick="window.NerveLauncher._setVorwissen(\'hoch\')">Kennt uns gut</button>',
+      '<button type="button" class="launcher-anrede-btn active" data-val="null"',
+      '        onclick="window.NerveLauncher._setVorwissen(null)">Weiß nicht</button>',
+      '</div>',
+      '<div class="launcher-actions" style="justify-content:flex-start;margin-top:4px">',
+      '<button class="launcher-btn-ghost" id="lnr-step4b-back">&#8592; Zurück</button>',
+      '<button class="launcher-btn-primary" id="lnr-step4b-next">Weiter &#8594;</button>',
+      '</div>',
+      '</div>'
+    ].join('');
+
+    // Restore active state from saved vorwissenLevel
+    var saved = state.vorwissenLevel;
+    document.querySelectorAll('#lnr-vorwissen-row .launcher-anrede-btn').forEach(function (btn) {
+      btn.classList.remove('active');
+      if (btn.dataset.val === (saved || 'null')) btn.classList.add('active');
+    });
+
+    document.getElementById('lnr-step4b-back').onclick = function () {
+      state.step = 4;
+      renderStep();
+    };
+    document.getElementById('lnr-step4b-next').onclick = function () {
+      state.step = 5;
+      renderStep();
+    };
   }
 
   // ── Step 5: Skript & Opener Selection ─────────────────────────────────────
@@ -1016,7 +1063,8 @@
         precall_briefing: briefingText,
         skript_inhalt: skriptInhalt || null,
         skript_bloecke: skriptBlöcke.length > 0 ? skriptBlöcke : null,
-        anrede: anredeForSession
+        anrede: anredeForSession,
+        vorwissen_level: state.vorwissenLevel || null  // D-05: Vorwissen-Picker value
       });
       console.log('[NerveLauncher] Mic started, mode:', state.mode);
     } catch (err) {
@@ -1486,6 +1534,11 @@
 
     state.socket.on('dg_error', function (d) {
       console.error('[NerveLauncher] Deepgram error:', d);
+    });
+
+    // ── D-06: Anrede-Wechsel-Detection (Phase 08.20) ────────────────────────
+    state.socket.on('anrede_switch_detected', function () {
+      if (window.pipShowAnredeToast) window.pipShowAnredeToast();
     });
 
     // ── Auto-Einwand Keyword Match (Phase 06.2) ──────────────────────────────
@@ -2320,12 +2373,102 @@
     } catch (e) { /* DOM query failed — silently ignore */ }
   }
 
+  // ── Phase 08.20 D-05: _setVorwissen helper ───────────────────────────────
+  function _setVorwissen(val) {
+    var allowed = ['niedrig', 'mittel', 'hoch', null];
+    if (allowed.indexOf(val) === -1) val = null;
+    state.vorwissenLevel = val;
+    // Update active class in current step's pill row
+    try {
+      document.querySelectorAll('#lnr-vorwissen-row .launcher-anrede-btn').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.val === (val || 'null'));
+      });
+    } catch (e) { /* DOM query failed — silently ignore */ }
+  }
+
   // ── Public API ─────────────────────────────────────────────────────────────
   window.NerveLauncher = {
     open: open,
     close: close,
     isActive: function () { return state.micStarted; },
-    _setAnrede: _setAnrede
+    _setAnrede: _setAnrede,
+    _setVorwissen: _setVorwissen
+  };
+
+  // ── Phase 08.20 D-06: PiP Du/Sie toggle + Vorwissen override (global fns) ─
+  // These run in the PiP window context; nerveSio / currentSid are set by pip-launcher.
+  window.pipSetAnrede = function (anrede) {
+    var duBtn = document.getElementById('pip-anrede-du');
+    var sieBtn = document.getElementById('pip-anrede-sie');
+    var badge = document.getElementById('pip-anrede-badge');
+    if (duBtn) duBtn.classList.toggle('active', anrede === 'du');
+    if (sieBtn) sieBtn.classList.toggle('active', anrede === 'sie');
+    if (badge) badge.style.display = 'none';
+    if (window.nerveSio) {
+      window.nerveSio.emit('set_anrede', { anrede: anrede, sid: window.currentSid || '' });
+    }
+  };
+
+  window.pipVorwissenEdit = function () {
+    var indicator = document.getElementById('pip-vorwissen-indicator');
+    var edit = document.getElementById('pip-vorwissen-edit');
+    if (indicator) indicator.style.display = 'none';
+    if (edit) edit.style.display = 'block';
+  };
+
+  window.pipSetVorwissen = function (val) {
+    var labels = { niedrig: 'Wenig', mittel: 'Vertraut', hoch: 'Kennt uns', 'null': 'Weiß nicht' };
+    var labelEl = document.getElementById('pip-vorwissen-label');
+    var edit = document.getElementById('pip-vorwissen-edit');
+    var indicator = document.getElementById('pip-vorwissen-indicator');
+    if (labelEl) labelEl.textContent = labels[val] || 'Weiß nicht';
+    if (edit) edit.style.display = 'none';
+    if (indicator) indicator.style.display = 'flex';
+    document.querySelectorAll('#pip-vorwissen-edit .pip-vorwissen-pill').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.val === (val || 'null'));
+    });
+    if (window.nerveSio) {
+      window.nerveSio.emit('set_vorwissen', { level: val, sid: window.currentSid || '' });
+    }
+  };
+
+  // D-06: Du/Sie detection toast (shown on server anrede_switch_detected event)
+  var _anredeToastActive = false;
+  var _anredeToastDebounceMs = 60000;
+  var _anredeLastToastTime = 0;
+
+  window.pipShowAnredeToast = function () {
+    var now = Date.now();
+    if (_anredeToastActive || (now - _anredeLastToastTime) < _anredeToastDebounceMs) return;
+    _anredeToastActive = true;
+    _anredeLastToastTime = now;
+    var badge = document.getElementById('pip-anrede-badge');
+    if (badge) badge.style.display = 'inline-block';
+    var toast = document.getElementById('pip-anrede-toast');
+    if (toast) toast.style.display = 'block';
+    setTimeout(function () { window.pipAnredeToastDismiss(); }, 15000);
+  };
+
+  window.pipAnredeToastAccept = function () {
+    window.pipSetAnrede('du');
+    _anredeToastActive = false;
+    var toast = document.getElementById('pip-anrede-toast');
+    if (toast) toast.style.display = 'none';
+    setTimeout(function () {
+      var badge = document.getElementById('pip-anrede-badge');
+      if (badge) badge.style.display = 'none';
+    }, 3000);
+  };
+
+  window.pipAnredeToastDismiss = function () {
+    _anredeToastActive = false;
+    var toast = document.getElementById('pip-anrede-toast');
+    if (toast) toast.style.display = 'none';
+    var badge = document.getElementById('pip-anrede-badge');
+    if (badge) badge.style.display = 'none';
+    if (window.nerveSio) {
+      window.nerveSio.emit('anrede_switch_rejected', { sid: window.currentSid || '' });
+    }
   };
 
 })();

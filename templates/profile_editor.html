@@ -271,6 +271,8 @@
         <span class="sec-num">5</span>Live-Coaching-Signale</a>
       <a class="sec-link" data-target="sec-ki-verhalten" onclick="goSec('sec-ki-verhalten')">
         <span class="sec-num">6</span>KI-Verhalten</a>
+      <a class="sec-link" data-target="sec-ki-vorschau" onclick="goSec('sec-ki-vorschau')">
+        <span class="sec-num">7</span>KI-Kontext-Vorschau</a>
     </div>
 
     <div class="editor-main" id="editorMain">
@@ -701,6 +703,34 @@
         </div>
       </div>
 
+      <!-- Section 7: EWB-Preview-Panel (D-08 Phase 08.20) -->
+      <div class="sec" id="sec-ki-vorschau">
+        <div class="sec-title">Was die KI über dieses Profil sieht</div>
+        <p style="font-size:13px;color:#9CA3AF;margin-bottom:16px">
+          Zeigt den vollständigen Kontext, den Claude bei jedem Einwand-Handling erhält.
+          Hilft beim Debugging und Optimieren des Profils.
+        </p>
+        <button id="ewb-preview-btn" class="n-btn-primary" onclick="loadEwbPreview()">
+          Vorschau laden
+        </button>
+        <span id="ewb-preview-loading" style="display:none;margin-left:8px;font-size:12px;color:#9CA3AF">
+          Wird geladen…
+        </span>
+        <div id="ewb-preview-empty" style="margin-top:16px;color:#6B7280;font-size:13px">
+          Klicke "Vorschau laden" um zu sehen, was Claude aus diesem Profil liest.
+        </div>
+        <div id="ewb-preview-output" style="display:none;margin-top:16px">
+          <pre id="ewb-preview-pre"
+               style="background:#0f1117;border:1px solid #1e2330;border-radius:8px;
+                      padding:16px;font-size:11px;color:#9CA3AF;white-space:pre-wrap;
+                      max-height:600px;overflow-y:auto;font-family:monospace"></pre>
+        </div>
+        <div id="ewb-preview-error"
+             style="display:none;margin-top:16px;color:#EF4444;font-size:13px">
+          Vorschau konnte nicht geladen werden. Bitte Seite neu laden.
+        </div>
+      </div>
+
       <div style="height:40px"></div>
     </div><!-- editor-main -->
   </div><!-- editor-layout -->
@@ -718,7 +748,7 @@ const EW_KATEGORIEN = ['Kosten/Preis','Zeit/Aufschub','Vertrauen','Komplexität'
   'Kein Bedarf','Angst/Risiko','Vergleich','Entscheidungsträger','Abbruch'];
 const ALL_SECS = ['sec-branche-firma','sec-zielgruppe-neu',
   'sec-gespraechsleitfaden','sec-einwaende-antworten',
-  'sec-live-signale','sec-ki-verhalten'];
+  'sec-live-signale','sec-ki-verhalten','sec-ki-vorschau'];
 // Phase 08.5: expose profile daten for tabu loading in profile_editor.js
 window.PROFILE_DATEN = {{ daten | tojson | safe }};
 
@@ -1452,6 +1482,44 @@ document.querySelectorAll('.g-sidebar a[href]').forEach(function(a) {
 
 // Mark clean after successful save (form submit)
 document.getElementById('editorForm').addEventListener('submit', function() { _isDirty = false; });
+
+// ── Phase 08.20 D-08: EWB-Preview-Panel (Section 7) ─────────────────────
+function loadEwbPreview() {
+  var btn = document.getElementById('ewb-preview-btn');
+  var loading = document.getElementById('ewb-preview-loading');
+  var output = document.getElementById('ewb-preview-output');
+  var pre = document.getElementById('ewb-preview-pre');
+  var empty = document.getElementById('ewb-preview-empty');
+  var err = document.getElementById('ewb-preview-error');
+
+  // Get profile_id from URL path (last path segment)
+  var profileId = window.location.pathname.split('/').filter(Boolean).pop();
+
+  btn.disabled = true;
+  btn.textContent = 'Wird geladen…';
+  loading.style.display = 'inline';
+  empty.style.display = 'none';
+  err.style.display = 'none';
+
+  fetch('/profiles/api/profile/preview-context?profile_id=' + encodeURIComponent(profileId))
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      pre.textContent = data.context || '(leer)';
+      output.style.display = 'block';
+      btn.textContent = 'Neu laden';
+    })
+    .catch(function() {
+      err.style.display = 'block';
+      btn.textContent = 'Vorschau laden';
+    })
+    .finally(function() {
+      btn.disabled = false;
+      loading.style.display = 'none';
+    });
+}
 </script>
 
 <!-- Phase 08.5: FAQ CRUD + Tabu-Begriffe -->
