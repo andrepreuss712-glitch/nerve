@@ -298,6 +298,8 @@ class ConversationLog(Base):
     stimmung_history         = Column(Text, nullable=True)  # JSON list
     # Phase 04.13: PreCall Intelligence
     precall_briefing         = Column(Text, nullable=True)     # generated call briefing (per D-03: only briefing text, no raw search data)
+    # Phase 08.20.2: Structured Schicht-1 fields (JSON)
+    precall_fields           = Column(Text, nullable=True)     # JSON-serialized Schicht-1 fields dict (per D-03: no raw search data)
     # Phase 07.1: Kaufbereitschafts-Verlauf fuer Live-Session-Chart
     kb_verlauf               = Column(Text, nullable=True)     # JSON list [{ts: "HH:MM:SS", wert: 0-100}]
     # Phase 08 D-14: PreCall-Anrede-Override (Du/Sie pro Session). Fallback: Profile.daten.ki.ansprache.
