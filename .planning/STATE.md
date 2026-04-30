@@ -596,6 +596,7 @@ Recent decisions affecting current work:
 | 260428-e5s | Polish-Cycle 4: crud-body bg transparent (Cycle-3-Revert), Textarea min-height 100px, Trash in Card-Header, Gesprächsphasen Sub-Label | 2026-04-28 | 451d11e | [260428-e5s-polish-cycle-4-card-body-layout](./quick/260428-e5s-polish-cycle-4-card-body-layout/) |
 | 260428-f7p | Polish-Cycle 5 KRITISCH: FAQ deleteFaq/updateFaq CSRF-Fix + r.ok-Guards + saveTabuToServer Guard + FAQ-Trash in Card-Header | 2026-04-28 | fcdf456 | [260428-f7p-polish-cycle-5-faq-csrf-fix](./quick/260428-f7p-polish-cycle-5-faq-csrf-fix/) |
 | 260429-dmd | Polish 08.19.3: FAQ-Card-Header truncation — JS slice(0,40) entfernt + CSS ellipsis + title-Tooltip | 2026-04-29 | bba802d | [260429-dmd-faq-header-truncation](./quick/260429-dmd-faq-header-truncation/) |
+| 20260430-css | 08.20.2 CSS-Hotfix U1-U3: nav-live-box 90vh scroll, launcher-step overflow guard, launcher-inline-edit-btn | 2026-04-30 | ecf8d41+df20777+67beec0 | [20260430-css-modal-button-hotfix-u1u2u3](./quick/20260430-css-modal-button-hotfix-u1u2u3/) |
 
 ## What's Done
 
