@@ -116,8 +116,13 @@
     m.onclick = function (e) { if (e.target === m) close(); };
 
     // Fetch init data then render
-    fetch('/api/launcher/init')
-      .then(function (r) { return r.json(); })
+    fetch('/api/launcher/init', {
+      headers: { 'X-CSRFToken': getCsrfToken() }
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('init failed: ' + r.status);
+        return r.json();
+      })
       .then(function (data) {
         state.profiles = data.profiles || [];
         state.activeProfileId = data.active_profile_id || null;
