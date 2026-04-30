@@ -1,6 +1,8 @@
 """Phase 08 unit tests for services/prompt_pipeline.py."""
 import os
 import sys
+import threading
+import time
 
 import pytest
 
@@ -195,4 +197,184 @@ def test_build_profile_context_anrede_session_override_wins(monkeypatch):
     out = pp.build_profile_context(user_id=1, sid=_SID)
     assert 'Anrede: Du.' in out
     assert 'Wechsle NIEMALS' in out
+
+
+# ─── 9. 9-Sektionen-Output (D-01) ───────────────────────────────────────────
+
+_MOCK_PROFILE_FULL = {
+    'schema_version': 4,
+    'basis': {
+        'unternehmen': 'TestCo GmbH',
+        'produktbeschreibung': 'SaaS-Tool fuer Vertrieb',
+        'branche': 'IT/SaaS',
+        'preismodell': '99 EUR/Monat',
+        'konsequenz': 'Kein Wachstum',
+        'usps': ['Schnell', 'Guenstig'],
+        'eigene_formulierungen': ['Darf ich fragen...'],
+        'beweise': ['Firma Z: +15%'],
+    },
+    'einwaende_detail': [
+        {
+            'einwand': 'Preis zu hoch',
+            'einwand_typ': 'echt',
+            'gegenargument': 'ROI in 6 Monaten',
+            'varianten': [],
+            'technik': '',
+            'intensitaet': 3,
+            'kurzlabel': '',
+            'kategorie': '',
+        }
+    ],
+    'phasen': [{'name': 'Erstgespraech'}, {'name': 'Demo'}],
+    'ki': {'ansprache': 'Sie', 'ton': 'professionell'},
+    'zielkunde': {'unternehmensgroesse': 'KMU'},
+    'schmerzen': {'s1': 'Zu viel manuelle Arbeit'},
+}
+
+_MOCK_CACHE = {
+    'opener_content': 'Guten Tag, ich bin...',
+    'user_firstname': 'Max',
+    'faqs': [{'q': 'Was kostet es?', 'a': '99 EUR/Monat'}],
+}
+
+
+def _make_ls_mock_9sections(sid, profile=None, cache=None, briefing=None):
+    """Create an ls-mock that returns the given profile + _profile_cache for sid."""
+    import types
+    mock = types.SimpleNamespace()
+    mock.state = {}
+    mock.state_lock = threading.Lock()
+    _ss = {sid: {'user_id': 1, 'org_id': 1, '_briefing': briefing,
+                 '_profile_cache': cache or {}}}
+    mock._session_state = _ss
+    mock._session_state_lock = threading.Lock()
+    mock._per_sid_profile = {sid: ('TestCo', profile or {})}
+    mock._per_sid_lock = threading.Lock()
+
+    def _get_profile_for_sid(s):
+        return mock._per_sid_profile.get(s, ('', {}))
+    mock.get_profile_for_sid = _get_profile_for_sid
+
+    def _get_briefing_for_sid(s):
+        with mock._session_state_lock:
+            return mock._session_state.get(s, {}).get('_briefing')
+    mock.get_briefing_for_sid = _get_briefing_for_sid
+
+    def _pop_session_state(s):
+        with mock._session_state_lock:
+            mock._session_state.pop(s, None)
+        with mock._per_sid_lock:
+            mock._per_sid_profile.pop(s, None)
+    mock.pop_session_state = _pop_session_state
+
+    return mock
+
+
+def test_build_profile_context_9sections_present(monkeypatch):
+    """D-01: all 9 ## section headers must be present in fixed order."""
+    _SID = 'test-9sec-sid'
+    ls_mock = _make_ls_mock_9sections(_SID, _MOCK_PROFILE_FULL, _MOCK_CACHE)
+    _install_ls_mock(monkeypatch, ls_mock)
+
+    out = pp.build_profile_context(user_id=1, sid=_SID)
+
+    expected_sections = [
+        '## Branche', '## Basis', '## Zielkunde', '## Schmerzen',
+        '## Einwände', '## Phasen', '## KI-Verhalten',
+        '## PreCall-Briefing', '## Lead-Kontext',
+    ]
+    for section in expected_sections:
+        assert section in out, f"Missing section: {section!r}"
+
+    # Verify order is correct
+    positions = [out.index(s) for s in expected_sections]
+    assert positions == sorted(positions), "Sections out of order"
+
+
+def test_build_profile_context_deterministic(monkeypatch):
+    """D-01: byte-equal output for identical input (determinism required for cache-stability)."""
+    _SID = 'test-determ-sid'
+    ls_mock = _make_ls_mock_9sections(_SID, _MOCK_PROFILE_FULL, _MOCK_CACHE)
+    _install_ls_mock(monkeypatch, ls_mock)
+
+    r1 = pp.build_profile_context(user_id=1, sid=_SID)
+    r2 = pp.build_profile_context(user_id=1, sid=_SID)
+    assert r1 == r2, "build_profile_context must be deterministic (byte-equal for identical input)"
+
+
+def test_build_profile_context_empty_section_not_skipped(monkeypatch):
+    """Empty schmerzen section must render marker, not be silently skipped."""
+    _SID = 'test-empty-schmerzen-sid'
+    profile_no_schmerzen = {
+        'schema_version': 4,
+        'basis': {'unternehmen': 'TestCo'},
+        'ki': {'ansprache': 'Sie'},
+        # schmerzen deliberately absent
+    }
+    ls_mock = _make_ls_mock_9sections(_SID, profile_no_schmerzen, {})
+    _install_ls_mock(monkeypatch, ls_mock)
+
+    out = pp.build_profile_context(user_id=1, sid=_SID)
+    assert '## Schmerzen' in out, "## Schmerzen header must always appear"
+    assert '(noch nicht ausgefüllt)' in out, "Empty section must show marker"
+
+
+def test_build_profile_context_einwaende_format(monkeypatch):
+    """Einwände items must be formatted as '- {einwand} ({einwand_typ}) | {gegenargument}'."""
+    _SID = 'test-einwaende-fmt-sid'
+    ls_mock = _make_ls_mock_9sections(_SID, _MOCK_PROFILE_FULL, _MOCK_CACHE)
+    _install_ls_mock(monkeypatch, ls_mock)
+
+    out = pp.build_profile_context(user_id=1, sid=_SID)
+    assert '- Preis zu hoch (echt) | ROI in 6 Monaten' in out, \
+        "Einwände format must be '- {einwand} ({einwand_typ}) | {gegenargument}'"
+
+
+def test_build_profile_context_precall_briefing_empty_marker(monkeypatch):
+    """## PreCall-Briefing must show '(noch nicht erstellt)' when no briefing set."""
+    _SID = 'test-precall-empty-sid'
+    ls_mock = _make_ls_mock_9sections(_SID, _MOCK_PROFILE_FULL, _MOCK_CACHE, briefing=None)
+    _install_ls_mock(monkeypatch, ls_mock)
+
+    out = pp.build_profile_context(user_id=1, sid=_SID)
+    assert '## PreCall-Briefing' in out
+    assert '(noch nicht erstellt)' in out
+
+
+def test_build_profile_context_warm_cache_latency(monkeypatch):
+    """HIGH-3: build_profile_context() with warm _profile_cache must complete in < 5ms."""
+    import services.live_session as _real_ls
+
+    sid = 'latency-test-sid-08.20'
+    mock_cache = {
+        'opener_content': 'Guten Tag, ich bin...',
+        'user_firstname': 'Max',
+        'faqs': [{'q': 'Was kostet es?', 'a': '99 EUR/Monat'}],
+    }
+
+    with _real_ls._session_state_lock:
+        _real_ls._session_state[sid] = {
+            'user_id': 1, 'org_id': 1,
+            '_briefing': None,
+            '_profile_cache': mock_cache,
+        }
+    with _real_ls._per_sid_lock:
+        _real_ls._per_sid_profile[sid] = ('TestCo', _MOCK_PROFILE_FULL)
+
+    try:
+        # Warm-up (module load, caches)
+        pp.build_profile_context(user_id=1, sid=sid)
+
+        # Timed call — must be < 5ms (hot path: no DB)
+        start = time.perf_counter()
+        result = pp.build_profile_context(user_id=1, sid=sid)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        assert elapsed_ms < 5, \
+            f"Expected < 5ms warm-cache latency, got {elapsed_ms:.1f}ms — DB query in hot path?"
+        assert '## Branche' in result
+        assert '## PreCall-Briefing' in result
+        print(f'test_build_profile_context_warm_cache_latency: PASS ({elapsed_ms:.2f}ms)')
+    finally:
+        _real_ls.pop_session_state(sid)
 
