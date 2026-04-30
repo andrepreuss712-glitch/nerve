@@ -983,6 +983,21 @@ Plans:
 - [x] 08.20-03-PLAN.md — PreCall branchen-hint inject + _per_sid_briefing write + QA pipeline {profile_context}
 - [x] 08.20-04-PLAN.md — Manual-EWB Voll-Profil + Sonnet defaults + Circuit-Breaker TTFT
 - [ ] 08.20-05-PLAN.md — Lead-Context UI: Vorwissen-Picker + Du/Sie-Detection + EWB-Preview-Panel
+---
+
+### Phase 08.20.2: PreCall-Briefing-Trust + Web-Search-Integration (INSERTED — 2026-04-30)
+
+**Goal:** precall_service.py wird von freiem Markdown-Briefing zu dreischichtigem, verifizierbarem Firmen-Recherche-Output umgebaut: Schicht 1 (strukturierte Pflichtfeld-Karte mit per-Feld Confidence + Source-URL), Schicht 2 (gehärteter Fließtext), Schicht 3 (Gesprächs-Empfehlungen als separater Call).
+**Komplexität:** 🟡 mittel
+**Depends on:** Phase 08.20 ✅
+
+**Plans:** 4 plans in 3 waves
+
+Plans:
+- [ ] 08.20.2-01-PLAN.md — precall_service.py rebuild: PRECALL_FIELDS_SYSTEM_PROMPT, _generiere_briefing() Schicht-1+2, _generiere_empfehlungen() Schicht-3, cache key extension
+- [ ] 08.20.2-02-PLAN.md — DB migration (precall_fields column) + route integration (api_precall_research + api_beenden)
+- [ ] 08.20.2-03-PLAN.md — UI 3-layer PreCall modal: confidence card CSS + renderStep4() 3-section rewrite
+- [ ] 08.20.2-04-PLAN.md — Tests: test_precall_schema.py with 5 mock-based Schicht-1 schema tests
 
 ---
 
