@@ -10,7 +10,7 @@ BRANCHE_TEMPLATES = {
     'SaaS': {
         'basis': {
             'produktbeschreibung': 'SaaS-Lösung',
-            'einwaende': [
+            'einwaende_detail': [
                 {'typ': 'Kosten/Preis', 'einwand': 'Das ist zu teuer',
                  'gegenargument': 'Was wäre es euch wert wenn ihr damit 10 Stunden pro Woche spart?'},
                 {'typ': 'Zeit/Aufschub', 'einwand': 'Wir haben gerade andere Prioritäten',
@@ -32,7 +32,7 @@ BRANCHE_TEMPLATES = {
     'Versicherung': {
         'basis': {
             'produktbeschreibung': 'Versicherungslösung',
-            'einwaende': [
+            'einwaende_detail': [
                 {'typ': 'Kosten/Preis', 'einwand': 'Die Beiträge sind mir zu hoch',
                  'gegenargument': 'Was wäre denn eine Summe die du monatlich investieren würdest?'},
                 {'typ': 'Kein Bedarf', 'einwand': 'Ich bin schon abgesichert',
@@ -52,7 +52,7 @@ BRANCHE_TEMPLATES = {
     'Consulting': {
         'basis': {
             'produktbeschreibung': 'Beratungsleistung',
-            'einwaende': [
+            'einwaende_detail': [
                 {'typ': 'Kosten/Preis', 'einwand': 'Das Honorar ist zu hoch',
                  'gegenargument': 'Was wäre der ROI wenn wir euer Problem in 3 Monaten lösen?'},
                 {'typ': 'Zeit/Aufschub', 'einwand': 'Wir starten nächstes Quartal',
@@ -72,7 +72,7 @@ BRANCHE_TEMPLATES = {
     'Recruiting': {
         'basis': {
             'produktbeschreibung': 'Recruiting-Dienstleistung',
-            'einwaende': [
+            'einwaende_detail': [
                 {'typ': 'Kosten/Preis', 'einwand': 'Die Provision ist zu hoch',
                  'gegenargument': 'Was kostet euch eine unbesetzte Stelle pro Monat?'},
                 {'typ': 'Kein Bedarf', 'einwand': 'Wir machen das intern',
@@ -90,7 +90,7 @@ BRANCHE_TEMPLATES = {
     'Immobilien': {
         'basis': {
             'produktbeschreibung': 'Immobiliendienstleistung',
-            'einwaende': [
+            'einwaende_detail': [
                 {'typ': 'Kosten/Preis', 'einwand': 'Die Maklerprovision ist zu hoch',
                  'gegenargument': 'Wie viel Zeit und Aufwand steckt ihr gerade selbst in die Vermarktung?'},
                 {'typ': 'Vertrauen', 'einwand': 'Makler bringen nichts',
@@ -108,7 +108,7 @@ BRANCHE_TEMPLATES = {
     'Agentur': {
         'basis': {
             'produktbeschreibung': 'Agenturleistung',
-            'einwaende': [
+            'einwaende_detail': [
                 {'typ': 'Kosten/Preis', 'einwand': 'Das Monatsbudget ist zu hoch',
                  'gegenargument': 'Welchen Umsatz müssten wir generieren damit sich die Investition lohnt?'},
                 {'typ': 'Vergleich', 'einwand': 'Wir haben schon eine Agentur',
@@ -126,7 +126,7 @@ BRANCHE_TEMPLATES = {
     'Industrie': {
         'basis': {
             'produktbeschreibung': 'Industrielösung',
-            'einwaende': [
+            'einwaende_detail': [
                 {'typ': 'Kosten/Preis', 'einwand': 'Das übersteigt unser Budget',
                  'gegenargument': 'Was kostet euch das Problem das wir lösen pro Jahr?'},
                 {'typ': 'Zeit/Aufschub', 'einwand': 'Wir haben kein Zeitfenster für eine Umstellung',
@@ -144,7 +144,7 @@ BRANCHE_TEMPLATES = {
     'Sonstiges': {
         'basis': {
             'produktbeschreibung': 'Mein Produkt',
-            'einwaende': [
+            'einwaende_detail': [
                 {'typ': 'Kosten/Preis', 'einwand': 'Das ist zu teuer',
                  'gegenargument': 'Was wäre es dir wert wenn du damit dein Ziel erreichst?'},
                 {'typ': 'Zeit/Aufschub', 'einwand': 'Jetzt ist kein guter Zeitpunkt',
@@ -226,7 +226,7 @@ def create_profile_from_template():
         db.add(profil)
         db.commit()
         return jsonify({'ok': True, 'id': profil.id, 'name': profil.name,
-                        'einwaende': len(_basis.get('einwaende', [])),
+                        'einwaende': len(_basis.get('einwaende_detail', [])),
                         'phasen': len(_basis.get('phasen', []))})
     finally:
         db.close()

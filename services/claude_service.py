@@ -1098,7 +1098,7 @@ def analyse_loop():
                             _, _pdata = ls.get_profile_for_sid(sid)
                             base_buttons = None
                             if _pdata:
-                                _eins = _pdata.get('einwaende') or []
+                                _eins = _pdata.get('einwaende_detail') or _pdata.get('einwaende') or []
                                 base_buttons = [e.get('einwand') or e.get('kategorie') or ''
                                                 for e in _eins if isinstance(e, dict)]
                                 base_buttons = [b for b in base_buttons if b]

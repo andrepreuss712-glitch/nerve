@@ -1580,7 +1580,7 @@ NERVE_DEMO_PROFILE_JSON = json.dumps({
         {"name": "Einwand-Behandlung", "beschreibung": "Alle offenen Fragen klären"},
         {"name": "Closing", "beschreibung": "Klare Entscheidung, nächster Schritt"}
     ],
-    "einwaende": [
+    "einwaende_detail": [
         {"typ": "Kosten/Preis", "einwand": "Das ist uns zu teuer",
          "varianten": ["Das liegt über unserem Budget", "Können wir das günstiger bekommen?"],
          "gegenargument": "Verstanden. Was kostet euch aktuell ein Abschluss der nicht gemacht wird weil ein Einwand nicht richtig behandelt wurde? NERVE amortisiert sich oft nach dem ersten zusätzlichen Abschluss. Wie viele Abschlüsse macht dein Team pro Monat?",
@@ -1703,7 +1703,7 @@ def _seed_demo_profiles():
                 "produkt": "Managed IT-Services und Cloud-Lösungen für mittelständische Unternehmen. Monatliche Pauschale ab 499€, inkl. Helpdesk, Monitoring und Backup.",
                 "branche": "IT-Dienstleistung",
                 "zielgruppe": {"position": "Geschäftsführer oder IT-Leiter", "unternehmen": "Mittelstand, 20-200 Mitarbeiter", "branche": "Verschiedene"},
-                "einwaende": [
+                "einwaende_detail": [
                     {"typ": "Kosten/Preis", "einwand": "499€ im Monat ist zu viel", "gegenargument": "Was kostet euch ein Tag Systemausfall? Die meisten unserer Kunden rechnen mit 2.000-5.000€ pro Tag. Wie oft hattet ihr das letztes Jahr?"},
                     {"typ": "Vergleich", "einwand": "Wir haben schon einen IT-Dienstleister", "gegenargument": "Wie zufrieden seid ihr auf einer Skala von 1-10? Was müsste besser laufen?"},
                     {"typ": "Kein Bedarf", "einwand": "Unser interner ITler macht das", "gegenargument": "Was passiert wenn der mal krank ist oder kündigt? Wie schnell könntet ihr das auffangen?"},
@@ -1727,7 +1727,7 @@ def _seed_demo_profiles():
                 "produkt": "Unabhängige Versicherungsberatung für Privatkunden. Schwerpunkt: Berufsunfähigkeit, private Krankenversicherung, Altersvorsorge. Honorar- und provisionsbasiert.",
                 "branche": "Versicherung",
                 "zielgruppe": {"position": "Privatperson oder Selbstständiger", "unternehmen": "", "branche": "Übergreifend"},
-                "einwaende": [
+                "einwaende_detail": [
                     {"typ": "Kosten/Preis", "einwand": "Versicherungen sind mir zu teuer", "gegenargument": "Was wäre dir denn eine vernünftige Absicherung pro Monat wert? Oft geht es schon ab 30€ los."},
                     {"typ": "Kein Bedarf", "einwand": "Ich bin jung und gesund, brauche das nicht", "gegenargument": "Genau jetzt bekommst du die besten Konditionen. Was denkst du was passiert wenn du in 10 Jahren mit Vorerkrankungen anfragst?"},
                     {"typ": "Vertrauen", "einwand": "Versicherungen zahlen eh nie", "gegenargument": "Verstehe die Skepsis. Welche Erfahrung hast du konkret gemacht? Daran können wir anknüpfen."},
@@ -1747,7 +1747,7 @@ def _seed_demo_profiles():
                 "produkt": "Personalvermittlung für Fach- und Führungskräfte im technischen Bereich. Erfolgsbasiert, keine Vorabkosten. Besetzungsquote 87%.",
                 "branche": "Recruiting",
                 "zielgruppe": {"position": "Geschäftsführer, HR-Leiter, Abteilungsleiter", "unternehmen": "Mittelstand und Industrie", "branche": "Technik, Produktion, Engineering"},
-                "einwaende": [
+                "einwaende_detail": [
                     {"typ": "Kosten/Preis", "einwand": "Die Provision ist zu hoch", "gegenargument": "Was kostet euch eine unbesetzte Stelle pro Monat? Die meisten rechnen mit 3.000-8.000€ an entgangenem Umsatz und Mehrbelastung."},
                     {"typ": "Kein Bedarf", "einwand": "Wir machen das über Stellenanzeigen", "gegenargument": "Wie viele Bewerbungen bekommt ihr pro Anzeige? Und wie viele davon sind wirklich qualifiziert?"},
                     {"typ": "Vergleich", "einwand": "Wir arbeiten schon mit einem anderen Personalberater", "gegenargument": "Wie lange ist die Stelle schon offen? Wir arbeiten erst wenn wir liefern — kein Risiko für euch."},

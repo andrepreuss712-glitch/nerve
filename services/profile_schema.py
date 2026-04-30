@@ -264,45 +264,48 @@ def _migrate_profile_data(daten: dict) -> dict:
         daten = {}
 
     version = daten.get('schema_version') or 1    # None-safe: None/0 -> 1
-    if version >= 3:
-        return daten    # bereits migriert — idempotent
+    if version >= 4:
+        return daten    # bereits migriert — idempotent (v4 ist aktuell)
 
-    # ── zielgruppe: B2C-Felder entfernen ─────────────────────────────────────
-    zg = daten.get('zielgruppe', {})
-    if isinstance(zg, dict):
-        for b2c_key in ('alter', 'einkommensniveau', 'lebenssituation'):
-            zg.pop(b2c_key, None)
-        daten['zielgruppe'] = zg
+    # ── v1 → v2: B2C-Feldbereinigung + Basis-Cleanup ─────────────────────────
+    # Nur fuer v1/v2-Profile — v3+ ueberspringen (bereits migriert)
+    if version < 3:
+        # ── zielgruppe: B2C-Felder entfernen ─────────────────────────────────
+        zg = daten.get('zielgruppe', {})
+        if isinstance(zg, dict):
+            for b2c_key in ('alter', 'einkommensniveau', 'lebenssituation'):
+                zg.pop(b2c_key, None)
+            daten['zielgruppe'] = zg
 
-    # ── schmerzen: trigger entfernen (geht in zielkunde.statusquo — Benutzer traegt manuell nach) ─
-    schmerzen = daten.get('schmerzen', {})
-    if isinstance(schmerzen, dict):
-        schmerzen.pop('trigger', None)
-        daten['schmerzen'] = schmerzen
+        # ── schmerzen: trigger entfernen (geht in zielkunde.statusquo — Benutzer traegt manuell nach) ─
+        schmerzen = daten.get('schmerzen', {})
+        if isinstance(schmerzen, dict):
+            schmerzen.pop('trigger', None)
+            daten['schmerzen'] = schmerzen
 
-    # ── ki: stil in ton mergen ────────────────────────────────────────────────
-    ki = daten.get('ki', {})
-    if isinstance(ki, dict):
-        stil = ki.pop('stil', None)
-        if stil and not ki.get('ton'):
-            ki['ton'] = stil    # stil-Inhalt in ton uebernehmen wenn ton noch leer
-        daten['ki'] = ki
+        # ── ki: stil in ton mergen ────────────────────────────────────────────
+        ki = daten.get('ki', {})
+        if isinstance(ki, dict):
+            stil = ki.pop('stil', None)
+            if stil and not ki.get('ton'):
+                ki['ton'] = stil    # stil-Inhalt in ton uebernehmen wenn ton noch leer
+            daten['ki'] = ki
 
-    # ── opener aus daten-JSON entfernen (D-01) ───────────────────────────────
-    # Sync in ProfileOpener-Tabelle erfolgt in app.py _migrate() (DB-Zugriff dort)
-    # erlaubnis und pitch werden dual-written zurueck in daten (transitional bis 08.20)
-    daten.pop('opener', None)
+        # ── opener aus daten-JSON entfernen (D-01) ───────────────────────────
+        # Sync in ProfileOpener-Tabelle erfolgt in app.py _migrate() (DB-Zugriff dort)
+        # erlaubnis und pitch werden dual-written zurueck in daten (transitional bis 08.20)
+        daten.pop('opener', None)
 
-    # ── zielkunde anlegen falls fehlend (neue B2B-Felder D-07) ──────────────
-    if 'zielkunde' not in daten:
-        daten['zielkunde'] = {}
+        # ── zielkunde anlegen falls fehlend (neue B2B-Felder D-07) ──────────
+        if 'zielkunde' not in daten:
+            daten['zielkunde'] = {}
 
-    # ── meta anlegen falls fehlend (D-04 consent_text dual-write) ────────────
-    if not isinstance(daten.get('meta'), dict):
-        daten['meta'] = {}
+        # ── meta anlegen falls fehlend (D-04 consent_text dual-write) ────────
+        if not isinstance(daten.get('meta'), dict):
+            daten['meta'] = {}
 
-    # ── schema_version setzen ─────────────────────────────────────────────────
-    daten['schema_version'] = 2
+        # ── schema_version setzen ─────────────────────────────────────────────
+        daten['schema_version'] = 2
 
     # ── v2 → v3: Schema-Realitaet-Kalibrierung (Phase 08.19.1) ─────────────────
     version = daten.get('schema_version') or 1
@@ -392,6 +395,64 @@ def _migrate_profile_data(daten: dict) -> dict:
                     target_type='profile',
                     target_id=_pid_int,
                     details=_json_audit.dumps({'audit_parts': _audit_parts, 'schema_version': 3}),
+                )
+                _audit_db.add(_audit_entry)
+                _audit_db.commit()
+            finally:
+                _audit_db.close()
+        except Exception as _audit_e:
+            print(f"[Schema] Profile {_profile_id}: audit_log write failed (non-fatal): {_audit_e}")
+
+    # ── v3 → v4: einwaende → einwaende_detail (Phase 08.20 D-04) ───────────────
+    version = daten.get('schema_version') or 1
+    if version < 4:
+        _audit_parts = []
+        _profile_id = daten.get('_migration_profile_id', '?')
+
+        _einwaende = daten.get('einwaende') or []
+        _einwaende_detail = daten.get('einwaende_detail') or []
+
+        if _einwaende and not _einwaende_detail:
+            _migrated = []
+            for _e in _einwaende:
+                if isinstance(_e, dict):
+                    _migrated.append({
+                        'einwand':       _e.get('einwand') or _e.get('text') or '',
+                        'varianten':     _e.get('varianten') or [],
+                        'gegenargument': _e.get('gegenargument') or _e.get('gegenargument_1') or '',
+                        'technik':       _e.get('technik') or '',
+                        'intensitaet':   _e.get('intensitaet') or 3,
+                        'kurzlabel':     _e.get('kurzlabel') or '',
+                        'kategorie':     _e.get('kategorie') or '',
+                        'einwand_typ':   _e.get('einwand_typ') or 'unbekannt',
+                    })
+                elif isinstance(_e, str):
+                    _migrated.append({
+                        'einwand': _e, 'varianten': [], 'gegenargument': '',
+                        'technik': '', 'intensitaet': 3, 'kurzlabel': '',
+                        'kategorie': '', 'einwand_typ': 'unbekannt',
+                    })
+            daten['einwaende_detail'] = _migrated
+            _audit_parts.append(f'migrated einwaende->einwaende_detail ({len(_migrated)} items)')
+
+        daten.pop('einwaende', None)
+        _audit_parts.append('dropped einwaende top-level')
+
+        daten['schema_version'] = 4
+        print(f"[Schema] Profile {_profile_id}: v3->v4 applied — {', '.join(_audit_parts)}")
+
+        try:
+            import json as _json_audit
+            from database.db import get_session as _get_audit_session
+            from database.models import AuditLog as _AuditLog
+            _audit_db = _get_audit_session()
+            try:
+                _pid_int = int(_profile_id) if str(_profile_id).isdigit() else None
+                _audit_entry = _AuditLog(
+                    action='profile_schema_v3_to_v4',
+                    target_type='profile',
+                    target_id=_pid_int,
+                    details=_json_audit.dumps({'audit_parts': _audit_parts, 'schema_version': 4}),
                 )
                 _audit_db.add(_audit_entry)
                 _audit_db.commit()

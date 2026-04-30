@@ -212,7 +212,7 @@ def build_protected_words(profile: dict, tabu_begriffe: list) -> set:
         daten = profile.get('daten') if isinstance(profile, dict) else None
         if not isinstance(daten, dict):
             daten = profile if isinstance(profile, dict) else {}
-        einwaende = daten.get('einwaende') or []
+        einwaende = daten.get('einwaende_detail') or daten.get('einwaende') or []
         if not isinstance(einwaende, list):
             return protected
 

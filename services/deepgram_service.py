@@ -122,7 +122,7 @@ def _make_on_message(sid):
                     if _muted:
                         return
                     _profile_name, _profile_daten = ls.get_profile_for_sid(sid)
-                    einwaende = (_profile_daten.get('einwaende') or []) if isinstance(_profile_daten, dict) else []
+                    einwaende = (_profile_daten.get('einwaende_detail') or _profile_daten.get('einwaende') or []) if isinstance(_profile_daten, dict) else []
                     if not einwaende:
                         return
                     matcher = ls.get_matcher(sid)
@@ -479,7 +479,7 @@ def register_audio_handlers(sio):
             _pname, profile_daten = ls.get_profile_for_sid(_sid)
         except Exception:
             profile_daten = {}
-        einwaende = (profile_daten.get('einwaende') or []) if isinstance(profile_daten, dict) else []
+        einwaende = (profile_daten.get('einwaende_detail') or profile_daten.get('einwaende') or []) if isinstance(profile_daten, dict) else []
         profile_einwand = None
         typL = typ.lower().strip()
         # 06.1-r2 BUG-14c: Match gegen kurzlabel || kategorie (gleiche Chain wie Frontend).

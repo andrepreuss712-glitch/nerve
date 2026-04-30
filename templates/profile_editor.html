@@ -1137,7 +1137,7 @@ function buildAndSubmit(){
       schmerzpunkte:getSchmerzen(),
     },
     phasen:getPhasen(),
-    einwaende:getEinwaende(),
+    einwaende_detail:getEinwaende(),
     kaufsignale:getKaufsignale(),
     nogos:getNogos(),
     wettbewerber:getWettbewerber(),
@@ -1329,7 +1329,7 @@ function init(){
     const sch=DATEN.schmerzen||{};
     (sch.schmerzpunkte||[]).forEach(s=>addSchmerz(s));
     (DATEN.phasen||[]).forEach(p=>addPhase(p));
-    (DATEN.einwaende||[]).forEach(e=>addEinwand(e));
+    (DATEN.einwaende_detail||DATEN.einwaende||[]).forEach(e=>addEinwand(e));
     (DATEN.kaufsignale||[]).forEach(k=>addKaufsignal(k));
     (DATEN.nogos||[]).forEach(n=>addNogo(n));
     (DATEN.wettbewerber||[]).forEach(w=>addWettbewerber(w));
@@ -1346,7 +1346,7 @@ function init(){
     setVal('vi_alter',ozg.alter); setVal('vi_berufsstatus',ozg.beruf);
     (ozg.schmerzpunkte||[]).forEach(s=>addSchmerz({situation:s,kern:'',verstaerken:''}));
     (DATEN.phasen||[]).forEach(p=>addPhase({name:p.name||'',ziel:p.beschreibung||''}));
-    (DATEN.einwaende||[]).forEach(e=>addEinwand({
+    (DATEN.einwaende_detail||DATEN.einwaende||[]).forEach(e=>addEinwand({
       einwand:e.einwand||'',
       varianten:Array.isArray(e.varianten)?e.varianten.join('\n'):e.varianten||'',
       kategorie:e.typ||'Kosten/Preis', gegenargument:e.gegenargument||'',
