@@ -488,9 +488,9 @@
     <span style="font-size:11px;color:#6B7280;font-weight:700">Anrede</span>
     <div style="display:flex;gap:4px">
       <button id="pip-anrede-du" class="pip-anrede-btn"
-              onclick="pipSetAnrede('du')">Du</button>
+              data-anrede="du">Du</button>
       <button id="pip-anrede-sie" class="pip-anrede-btn active"
-              onclick="pipSetAnrede('sie')">Sie</button>
+              data-anrede="sie">Sie</button>
     </div>
     <span id="pip-anrede-badge"
           style="display:none;font-size:10px;font-weight:700;letter-spacing:0.04em;
@@ -501,20 +501,16 @@
   <div id="pip-vorwissen-indicator"
        style="display:flex;align-items:center;gap:8px;padding:4px 12px;background:#0D1117;
               border-bottom:1px solid rgba(255,255,255,0.06);font-size:11px;color:#6B7280;cursor:pointer"
-       onclick="pipVorwissenEdit()">
+       data-vorwissenedit="1">
     <span style="color:#00D4AA;font-weight:700" id="pip-vorwissen-label">Weiß nicht</span>
     <span style="font-size:10px;opacity:0.6">&#9658; ändern</span>
   </div>
   <div id="pip-vorwissen-edit" style="display:none;padding:8px 12px;background:#0D1117;border-bottom:1px solid rgba(255,255,255,0.06)">
     <div style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="pip-vorwissen-pill" data-val="niedrig"
-              onclick="pipSetVorwissen('niedrig')">Wenig</button>
-      <button class="pip-vorwissen-pill" data-val="mittel"
-              onclick="pipSetVorwissen('mittel')">Vertraut</button>
-      <button class="pip-vorwissen-pill" data-val="hoch"
-              onclick="pipSetVorwissen('hoch')">Kennt uns</button>
-      <button class="pip-vorwissen-pill active" data-val="null"
-              onclick="pipSetVorwissen(null)">Weiß nicht</button>
+      <button class="pip-vorwissen-pill" data-val="niedrig">Wenig</button>
+      <button class="pip-vorwissen-pill" data-val="mittel">Vertraut</button>
+      <button class="pip-vorwissen-pill" data-val="hoch">Kennt uns</button>
+      <button class="pip-vorwissen-pill active" data-val="null">Weiß nicht</button>
     </div>
   </div>
   <!-- Anrede-Wechsel Toast (D-06) -->

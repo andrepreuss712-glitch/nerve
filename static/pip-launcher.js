@@ -1323,6 +1323,62 @@
 
       var detailsBtn = t.closest('#nlp-btn-details');
       if (detailsBtn) { ev.preventDefault(); showDetails(); return; }
+
+      // BUG2 FIX: Anrede toggle — data-anrede on pip-anrede-du / pip-anrede-sie
+      // onlick attrs removed from base.html (fired in PiP-window scope without access
+      // to window.pipSetAnrede on main window). Event delegation runs in main-window
+      // closure where state/socket are available.
+      var anredeBtn = t.closest('[data-anrede]');
+      if (anredeBtn) {
+        ev.preventDefault();
+        var anrede = anredeBtn.getAttribute('data-anrede');
+        var duBtn = pipEl('pip-anrede-du');
+        var sieBtn = pipEl('pip-anrede-sie');
+        var badge = pipEl('pip-anrede-badge');
+        if (duBtn) duBtn.classList.toggle('active', anrede === 'du');
+        if (sieBtn) sieBtn.classList.toggle('active', anrede === 'sie');
+        if (badge) badge.style.display = 'none';
+        if (state.socket && state.socket.connected) {
+          state.socket.emit('set_anrede', { anrede: anrede });
+        }
+        console.log('[NerveLauncher] Anrede set:', anrede);
+        return;
+      }
+
+      // BUG2 FIX: Vorwissen indicator click (opens edit panel)
+      var vorwissenEditTrigger = t.closest('[data-vorwissenedit]');
+      if (vorwissenEditTrigger) {
+        ev.preventDefault();
+        var indicator = pipEl('pip-vorwissen-indicator');
+        var edit = pipEl('pip-vorwissen-edit');
+        if (indicator) indicator.style.display = 'none';
+        if (edit) edit.style.display = 'block';
+        console.log('[NerveLauncher] Vorwissen edit opened');
+        return;
+      }
+
+      // BUG2 FIX: Vorwissen pill selection — data-val on .pip-vorwissen-pill
+      var vorwissenPill = t.closest('.pip-vorwissen-pill');
+      if (vorwissenPill) {
+        ev.preventDefault();
+        var val = vorwissenPill.getAttribute('data-val');
+        var labels = { niedrig: 'Wenig', mittel: 'Vertraut', hoch: 'Kennt uns', 'null': 'Weiß nicht' };
+        var labelEl = pipEl('pip-vorwissen-label');
+        var editPanel = pipEl('pip-vorwissen-edit');
+        var indicatorPanel = pipEl('pip-vorwissen-indicator');
+        if (labelEl) labelEl.textContent = labels[val] || 'Weiß nicht';
+        if (editPanel) editPanel.style.display = 'none';
+        if (indicatorPanel) indicatorPanel.style.display = 'flex';
+        var _pipDoc = (state.pipWindow && !state.pipWindow.closed) ? state.pipWindow.document : document;
+        _pipDoc.querySelectorAll('#pip-vorwissen-edit .pip-vorwissen-pill').forEach(function (btn) {
+          btn.classList.toggle('active', btn.dataset.val === (val || 'null'));
+        });
+        if (state.socket && state.socket.connected) {
+          state.socket.emit('set_vorwissen', { level: val === 'null' ? null : val });
+        }
+        console.log('[NerveLauncher] Vorwissen set:', val);
+        return;
+      }
     }, true);  // capture phase — vor allen anderen Handlern
     console.log('[NerveLauncher] PiP click-delegation wired');
   }
