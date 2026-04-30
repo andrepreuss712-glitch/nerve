@@ -910,15 +910,15 @@ def _migrate():
         # ── Phase 08.19.3 D-03/D-04/D-05: daten.fragen -> profile_faqs Migration ──
         _migrate_fragen_to_faqs()
 
-    # ── Phase 08.19.1: Batch-Migration alle Profile v2 -> v3 ──────────────
-    # Idempotent: Profile mit schema_version >= 3 werden uebersprungen.
+    # ── Phase 08.20: Batch-Migration alle Profile -> LATEST_SCHEMA_VERSION (v4) ──
+    # Idempotent: Profile mit schema_version >= LATEST_SCHEMA_VERSION werden uebersprungen.
     # Muss NACH den ALTER TABLE Blocks laufen (kein ALTER TABLE hier — nur daten-JSON).
     # Acceptable at startup for NERVE's current profile count (<=20); revisit if >1000 profiles
     try:
         from database.db import get_session as _get_session
         from database.models import Profile as _Profile
         import json as _json
-        from services.profile_schema import _migrate_profile_data as _mpd
+        from services.profile_schema import _migrate_profile_data as _mpd, LATEST_SCHEMA_VERSION as _LATEST_VER
 
         _db = _get_session()
         try:
@@ -931,7 +931,7 @@ def _migrate():
                 except Exception:
                     _daten = {}
                 _version = _daten.get('schema_version') or 1
-                if _version >= 3:
+                if _version >= _LATEST_VER:
                     _skipped_count += 1
                     continue
                 # Profil-ID fuer Audit-Log in _migrate_profile_data() injizieren
@@ -943,13 +943,13 @@ def _migrate():
                 _migrated_count += 1
             _db.commit()
             if _migrated_count > 0:
-                print(f"[Schema] Batch-Migration v2->v3: {_migrated_count} Profile migriert, {_skipped_count} uebersprungen")
+                print(f"[Schema] Batch-Migration v3->v4: {_migrated_count} Profile migriert, {_skipped_count} uebersprungen")
             else:
-                print(f"[Schema] Batch-Migration v2->v3: alle {_skipped_count} Profile bereits auf v3")
+                print(f"[Schema] Batch-Migration v3->v4: alle {_skipped_count} Profile bereits auf v4")
         finally:
             _db.close()
     except Exception as _e:
-        print(f"[Schema] Batch-Migration v2->v3 FEHLER (nicht kritisch): {_e}")
+        print(f"[Schema] Batch-Migration v3->v4 FEHLER (nicht kritisch): {_e}")
 
 
 def _migrate_fragen_to_faqs():

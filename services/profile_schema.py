@@ -30,6 +30,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict
 
+# ── Schema-Version Konstante ────────────────────────────────────────────────
+# Kanonische Zielversion fuer alle Migrations-Checks (app.py Batch + wizard_create).
+LATEST_SCHEMA_VERSION = 4
+
 # ── Unternehmensgroesse Enum ────────────────────────────────────────────────
 # Reviews v2: Diese Literal-Werte sind kanonisch. Plan 04 UI-Chips muessen exakt matchen.
 UnternehmensgroesseEnum = Literal['<10', '10-50', '50-250', '250-1000', '1000+']
