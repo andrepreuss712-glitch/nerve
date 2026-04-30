@@ -322,7 +322,25 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
         _schmerzen_items = []
         if isinstance(schmerzen, dict):
             for _k, _v in sorted(schmerzen.items()):   # sorted() for determinism
-                if _v:
+                if not _v:
+                    continue
+                if isinstance(_v, list):
+                    for _s in _v:
+                        if not _s:
+                            continue
+                        if isinstance(_s, dict):
+                            _sit  = _s.get('situation') or ''
+                            _kern = _s.get('kern') or ''
+                            _vst  = _s.get('verstaerken') or _s.get('verstärken') or ''
+                            _parts = []
+                            if _sit:  _parts.append(f'**Situation:** {_sit}')
+                            if _kern: _parts.append(f'**Kern:** {_kern}')
+                            if _vst:  _parts.append(f'**Verstärken:** {_vst}')
+                            if _parts:
+                                _schmerzen_items.append('- ' + '\n  '.join(_parts))
+                        else:
+                            _schmerzen_items.append(f'- {_s}')
+                else:
                     _schmerzen_items.append(f'- {_v}')
         elif isinstance(schmerzen, list):
             for _s in schmerzen:

@@ -449,6 +449,30 @@ def test_build_profile_context_branche_from_db_column(monkeypatch):
 
 # ── Issue 2: Schmerzen list-of-dict — no Python dict repr in output ────────────
 
+def test_build_profile_context_schmerzen_dict_with_list_value(monkeypatch):
+    """Block J: schmerzen={'schmerzpunkte': [...list-of-dict...]} must render Markdown,
+    not Python list repr — the dict-branch must delegate list values to dict-item logic."""
+    _SID = 'test-schmerzen-dict-list-sid'
+    profile_dict_list_schmerzen = {
+        'schema_version': 4,
+        'basis': {'unternehmen': 'TestCo'},
+        'ki': {'ansprache': 'Sie'},
+        'schmerzen': {'schmerzpunkte': [
+            {'situation': 'X', 'kern': 'Y', 'verstaerken': 'Z'},
+        ]},
+    }
+    ls_mock = _make_ls_mock_9sections(_SID, profile_dict_list_schmerzen, {})
+    _install_ls_mock(monkeypatch, ls_mock)
+
+    out = pp.build_profile_context(user_id=1, sid=_SID)
+    schmerzen_section = out.split('## Schmerzen')[1].split('##')[0] if '## Schmerzen' in out else ''
+    assert '[{' not in schmerzen_section, "Must not contain Python list repr"
+    assert "{'situation'" not in schmerzen_section, "Must not contain Python dict repr"
+    assert '**Situation:** X' in schmerzen_section, "Situation must render as Markdown"
+    assert '**Kern:** Y' in schmerzen_section, "Kern must render as Markdown"
+    assert '**Verstärken:** Z' in schmerzen_section, "Verstaerken must render as Markdown"
+
+
 def test_build_profile_context_schmerzen_no_dict_repr(monkeypatch):
     """Issue 2: Schmerzen list-of-dict items must render as Markdown, not str(dict)."""
     _SID = 'test-schmerzen-dict-sid'
