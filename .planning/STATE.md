@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20.2-02 COMPLETE — precall_fields DB column + migration + route wiring (api_precall_research user_id/profile_id/sid, api_beenden precall_fields persistence)"
-last_updated: "2026-04-30T14:05:00Z"
+stopped_at: "08.20.2-03 COMPLETE — renderStep4() 3-section UI (Pflichtfeld-Karte + Fliesstext + Empfehlungen), confidence CSS, precall_fields in api_beenden"
+last_updated: "2026-04-30T14:35:00Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 57
   completed_phases: 45
   total_plans: 206
-  completed_plans: 195
+  completed_plans: 196
   percent: 95
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.20.2 (precall-briefing-trust-web-search-integration) — IN PROGRESS (2/? Plans)
-Plan: 2 of ? — COMPLETE (2026-04-30, commits 13d0ce0 + 00e8dd9)
+Phase: 08.20.2 (precall-briefing-trust-web-search-integration) — IN PROGRESS (3/? Plans)
+Plan: 3 of ? — COMPLETE (2026-04-30, commits 7fc25d5 + a8f3471)
 Last activity: 2026-04-30
 
-**Phase 08.20.2 Plan 02 abgeschlossen:** precall_fields TEXT column auf ConversationLog + silent-fail Migration. api_precall_research uebergibt user_id/profile_id/sid an recherche_firma(). api_beenden extrahiert precall_fields dict aus Request, serialisiert als JSON (isinstance-Guard T-08.20.2-06), persistiert zu ConversationLog.precall_fields.
-**Next:** Phase 08.20.2 Plan 03 — PreCall-Modal UI 3-Layer (Schicht-1 structured fields anzeigen)
+**Phase 08.20.2 Plan 03 abgeschlossen:** renderStep4() rewritten for 3-section PreCall UI — Sektion A Pflichtfeld-Karte (2x2 grid, confidence icons checkmark/~/dash, not_found always visible with "Nicht gefunden"), Sektion B Fliesstext with edit toggle, Sektion C Empfehlungen. CSS added to base.html (.precall-fields-grid, .confidence-high/medium/not-found). api_beenden payload extended with precall_fields key.
+**Next:** Phase 08.20.2 Plan 04 or phase complete — PreCall 3-layer integration done
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
