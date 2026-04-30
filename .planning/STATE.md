@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20 Plan 03 complete — next: Plan 04"
-last_updated: "2026-04-30T06:32:00Z"
+stopped_at: "08.20 Plan 04 complete — next: Plan 05"
+last_updated: "2026-04-30T07:15:00Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 57
   completed_phases: 44
   total_plans: 206
-  completed_plans: 192
-  percent: 93
+  completed_plans: 193
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.20 (pipeline-re-wire-voll-profil-ewb-lead-context) — IN PROGRESS
-Plan: 3 of 5 — COMPLETE (2026-04-30, commits 2158909 + f28c729)
+Plan: 4 of 5 — COMPLETE (2026-04-30, commits 77277fd + d4cde38)
 Last activity: 2026-04-30
 
-**Phase 08.20 Plan 03 abgeschlossen:** PreCall branchen-aware via build_branchen_hint() (D-02), Anti-Header-Constraint in PRECALL_SYSTEM_PROMPT (D-03), set_briefing_for_sid() call on success (D-09), {profile_context} placeholder in _SYSTEM_PROMPT_QA, generate_qa_response() sid-Parameter + build_profile_context() Aufruf (LB-3-Fix).
-**Next:** Plan 04 — (naechster Plan in Phase 08.20)
+**Phase 08.20 Plan 04 abgeschlossen:** MODEL_PIP_AUTOVAR + MODEL_PIP_VARIANTE auf Sonnet (D-07), rollback comment in config.py, streame_manual_ewb_variante() nutzt build_profile_context(user_id, sid=sid) statt hardcoded 1-Liner, Circuit-Breaker _ewb_ttft_history deque(maxlen=5) + 30s Haiku-Fallback bei 3/5 TTFT-Breach, cost-tracking mit _model_autovar.
+**Next:** Plan 05 — (letzter Plan in Phase 08.20)
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
@@ -40,6 +40,7 @@ Last activity: 2026-04-30
   - HIGH-3: _profile_cache warm-path 0 DB-Queries; ProfileOpener field=inhalt (nicht content)
   - LB-3-Fix: build_profile_context errors in generate_qa_response non-fatal; QA sieht jetzt Voll-Profil
   - D-02/D-03: branchen hint injection + Anti-Header-Constraint in PreCall system prompt
+  - D-07 LOCKED: MODEL_PIP_AUTOVAR + MODEL_PIP_VARIANTE = claude-sonnet-4-5-20251022; rollback ENV documented in config.py
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
