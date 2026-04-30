@@ -1381,7 +1381,8 @@
   function _renderEwbButtons() {
     var row = pipEl('nlp-ewb-row');
     if (!row) return;
-    var einwaende = (state.profileDaten && state.profileDaten.einwaende) ? state.profileDaten.einwaende : [];
+    // R1-fix: Phase 08.20 schema v4 uses einwaende_detail; fall back to einwaende for v3 profiles.
+    var einwaende = (state.profileDaten && (state.profileDaten.einwaende_detail || state.profileDaten.einwaende)) || [];
     if (!einwaende.length) { row.innerHTML = ''; return; }
     // 06.1-r2 BUG-14c final: Button-Label = kurzlabel ODER kategorie (nur diese zwei).
     // Kein Truncation, kein name/einwand-Fallback. Dedup per Label (case-insensitive) —
@@ -1416,7 +1417,8 @@
     // Keine Claude-Call-Latenz, keine leeren Slots wenn Claude einwand=False meldet.
     // Backend bekommt 'manual_ewb' nur noch für Klick-Tracking (postcall-Analytics).
     console.log('[NerveLauncher] EWB trigger:', typ);
-    var einwaende = (state.profileDaten && state.profileDaten.einwaende) || [];
+    // R1-fix: Phase 08.20 schema v4 uses einwaende_detail; fall back to einwaende for v3 profiles.
+    var einwaende = (state.profileDaten && (state.profileDaten.einwaende_detail || state.profileDaten.einwaende)) || [];
     var match = null;
     var typL = (typ || '').toLowerCase().trim();
     // 06.1-r2 BUG-14c: Match gegen kurzlabel ODER kategorie — gleiche Chain wie _renderEwbButtons.
@@ -2453,37 +2455,41 @@
   // ── Phase 08.20 D-06: PiP Du/Sie toggle + Vorwissen override (global fns) ─
   // These run in the PiP window context; nerveSio / currentSid are set by pip-launcher.
   window.pipSetAnrede = function (anrede) {
-    var duBtn = document.getElementById('pip-anrede-du');
-    var sieBtn = document.getElementById('pip-anrede-sie');
-    var badge = document.getElementById('pip-anrede-badge');
+    // R3-fix: elements live in pipWindow.document after _setupPipWindow moves them -- use pipEl().
+    var duBtn = pipEl('pip-anrede-du');
+    var sieBtn = pipEl('pip-anrede-sie');
+    var badge = pipEl('pip-anrede-badge');
     if (duBtn) duBtn.classList.toggle('active', anrede === 'du');
     if (sieBtn) sieBtn.classList.toggle('active', anrede === 'sie');
     if (badge) badge.style.display = 'none';
-    if (window.nerveSio) {
-      window.nerveSio.emit('set_anrede', { anrede: anrede, sid: window.currentSid || '' });
+    if (state.socket && state.socket.connected) {
+      state.socket.emit('set_anrede', { anrede: anrede });
     }
   };
 
   window.pipVorwissenEdit = function () {
-    var indicator = document.getElementById('pip-vorwissen-indicator');
-    var edit = document.getElementById('pip-vorwissen-edit');
+    // R4-fix: elements live in pipWindow.document after _setupPipWindow -- use pipEl().
+    var indicator = pipEl('pip-vorwissen-indicator');
+    var edit = pipEl('pip-vorwissen-edit');
     if (indicator) indicator.style.display = 'none';
     if (edit) edit.style.display = 'block';
   };
 
   window.pipSetVorwissen = function (val) {
+    // R4-fix: elements live in pipWindow.document after _setupPipWindow -- use pipEl().
     var labels = { niedrig: 'Wenig', mittel: 'Vertraut', hoch: 'Kennt uns', 'null': 'Weiß nicht' };
-    var labelEl = document.getElementById('pip-vorwissen-label');
-    var edit = document.getElementById('pip-vorwissen-edit');
-    var indicator = document.getElementById('pip-vorwissen-indicator');
+    var labelEl = pipEl('pip-vorwissen-label');
+    var edit = pipEl('pip-vorwissen-edit');
+    var indicator = pipEl('pip-vorwissen-indicator');
     if (labelEl) labelEl.textContent = labels[val] || 'Weiß nicht';
     if (edit) edit.style.display = 'none';
     if (indicator) indicator.style.display = 'flex';
-    document.querySelectorAll('#pip-vorwissen-edit .pip-vorwissen-pill').forEach(function (btn) {
+    var _pipDoc = (state.pipWindow && !state.pipWindow.closed) ? state.pipWindow.document : document;
+    _pipDoc.querySelectorAll('#pip-vorwissen-edit .pip-vorwissen-pill').forEach(function (btn) {
       btn.classList.toggle('active', btn.dataset.val === (val || 'null'));
     });
-    if (window.nerveSio) {
-      window.nerveSio.emit('set_vorwissen', { level: val, sid: window.currentSid || '' });
+    if (state.socket && state.socket.connected) {
+      state.socket.emit('set_vorwissen', { level: val });
     }
   };
 
