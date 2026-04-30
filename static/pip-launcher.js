@@ -627,7 +627,13 @@
 
     // Navigation
     document.getElementById('lnr-step5-back').onclick = function () {
-      state.step = state.precallVerfuegbar ? 2 : 1;
+      if (state.precallBriefing) {
+        state.step = 4;
+      } else if (state.precallVerfuegbar) {
+        state.step = 2;
+      } else {
+        state.step = 1;
+      }
       renderStep();
     };
     document.getElementById('lnr-step5-skip').onclick = function () {
