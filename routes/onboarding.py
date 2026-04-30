@@ -11,14 +11,14 @@ BRANCHE_TEMPLATES = {
         'basis': {
             'produktbeschreibung': 'SaaS-Lösung',
             'einwaende_detail': [
-                {'typ': 'Kosten/Preis', 'einwand': 'Das ist zu teuer',
-                 'gegenargument': 'Was wäre es euch wert wenn ihr damit 10 Stunden pro Woche spart?'},
-                {'typ': 'Zeit/Aufschub', 'einwand': 'Wir haben gerade andere Prioritäten',
-                 'gegenargument': 'Verstehe ich. Was steht gerade ganz oben auf eurer Liste?'},
-                {'typ': 'Vergleich', 'einwand': 'Wir nutzen schon ein anderes Tool',
-                 'gegenargument': 'Wie zufrieden seid ihr damit auf einer Skala von 1-10?'},
-                {'typ': 'Kein Bedarf', 'einwand': 'Das brauchen wir nicht',
-                 'gegenargument': 'Wie löst ihr das Thema aktuell?'},
+                {'einwand': 'Das ist zu teuer', 'varianten': [], 'gegenargument': 'Was wäre es euch wert wenn ihr damit 10 Stunden pro Woche spart?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Preis', 'kategorie': 'Kosten/Preis', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Wir haben gerade andere Prioritäten', 'varianten': [], 'gegenargument': 'Verstehe ich. Was steht gerade ganz oben auf eurer Liste?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Prioritäten', 'kategorie': 'Zeit/Aufschub', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Wir nutzen schon ein anderes Tool', 'varianten': [], 'gegenargument': 'Wie zufrieden seid ihr damit auf einer Skala von 1-10?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Vergleich', 'kategorie': 'Vergleich', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Das brauchen wir nicht', 'varianten': [], 'gegenargument': 'Wie löst ihr das Thema aktuell?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Kein Bedarf', 'kategorie': 'Kein Bedarf', 'einwand_typ': 'unbekannt'},
             ],
             'phasen': [
                 {'name': 'Einstieg & Rapport', 'beschreibung': 'Begrüßung, Anknüpfungspunkt finden'},
@@ -33,12 +33,12 @@ BRANCHE_TEMPLATES = {
         'basis': {
             'produktbeschreibung': 'Versicherungslösung',
             'einwaende_detail': [
-                {'typ': 'Kosten/Preis', 'einwand': 'Die Beiträge sind mir zu hoch',
-                 'gegenargument': 'Was wäre denn eine Summe die du monatlich investieren würdest?'},
-                {'typ': 'Kein Bedarf', 'einwand': 'Ich bin schon abgesichert',
-                 'gegenargument': 'Wann hast du zuletzt geprüft ob dein Schutz noch zu deiner Lebenssituation passt?'},
-                {'typ': 'Vertrauen', 'einwand': 'Versicherungen zahlen eh nie',
-                 'gegenargument': 'Was genau hat dich zu dieser Erfahrung gebracht?'},
+                {'einwand': 'Die Beiträge sind mir zu hoch', 'varianten': [], 'gegenargument': 'Was wäre denn eine Summe die du monatlich investieren würdest?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Beiträge', 'kategorie': 'Kosten/Preis', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Ich bin schon abgesichert', 'varianten': [], 'gegenargument': 'Wann hast du zuletzt geprüft ob dein Schutz noch zu deiner Lebenssituation passt?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Abgesichert', 'kategorie': 'Kein Bedarf', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Versicherungen zahlen eh nie', 'varianten': [], 'gegenargument': 'Was genau hat dich zu dieser Erfahrung gebracht?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Vertrauen', 'kategorie': 'Vertrauen', 'einwand_typ': 'unbekannt'},
             ],
             'phasen': [
                 {'name': 'Begrüßung', 'beschreibung': 'Vertrauensaufbau'},
@@ -53,12 +53,12 @@ BRANCHE_TEMPLATES = {
         'basis': {
             'produktbeschreibung': 'Beratungsleistung',
             'einwaende_detail': [
-                {'typ': 'Kosten/Preis', 'einwand': 'Das Honorar ist zu hoch',
-                 'gegenargument': 'Was wäre der ROI wenn wir euer Problem in 3 Monaten lösen?'},
-                {'typ': 'Zeit/Aufschub', 'einwand': 'Wir starten nächstes Quartal',
-                 'gegenargument': 'Was passiert wenn ihr noch 3 Monate wartet?'},
-                {'typ': 'Entscheidungsträger', 'einwand': 'Das muss der Vorstand entscheiden',
-                 'gegenargument': 'Was brauchst du damit du es dem Vorstand empfehlen kannst?'},
+                {'einwand': 'Das Honorar ist zu hoch', 'varianten': [], 'gegenargument': 'Was wäre der ROI wenn wir euer Problem in 3 Monaten lösen?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Honorar', 'kategorie': 'Kosten/Preis', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Wir starten nächstes Quartal', 'varianten': [], 'gegenargument': 'Was passiert wenn ihr noch 3 Monate wartet?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Aufschub', 'kategorie': 'Zeit/Aufschub', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Das muss der Vorstand entscheiden', 'varianten': [], 'gegenargument': 'Was brauchst du damit du es dem Vorstand empfehlen kannst?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Vorstand', 'kategorie': 'Entscheidungsträger', 'einwand_typ': 'unbekannt'},
             ],
             'phasen': [
                 {'name': 'Kennenlernen', 'beschreibung': 'Unternehmen und Herausforderung verstehen'},
@@ -73,10 +73,10 @@ BRANCHE_TEMPLATES = {
         'basis': {
             'produktbeschreibung': 'Recruiting-Dienstleistung',
             'einwaende_detail': [
-                {'typ': 'Kosten/Preis', 'einwand': 'Die Provision ist zu hoch',
-                 'gegenargument': 'Was kostet euch eine unbesetzte Stelle pro Monat?'},
-                {'typ': 'Kein Bedarf', 'einwand': 'Wir machen das intern',
-                 'gegenargument': 'Wie viele offene Stellen habt ihr gerade und seit wann?'},
+                {'einwand': 'Die Provision ist zu hoch', 'varianten': [], 'gegenargument': 'Was kostet euch eine unbesetzte Stelle pro Monat?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Provision', 'kategorie': 'Kosten/Preis', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Wir machen das intern', 'varianten': [], 'gegenargument': 'Wie viele offene Stellen habt ihr gerade und seit wann?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Intern', 'kategorie': 'Kein Bedarf', 'einwand_typ': 'unbekannt'},
             ],
             'phasen': [
                 {'name': 'Einstieg', 'beschreibung': 'Situation im Unternehmen verstehen'},
@@ -91,10 +91,10 @@ BRANCHE_TEMPLATES = {
         'basis': {
             'produktbeschreibung': 'Immobiliendienstleistung',
             'einwaende_detail': [
-                {'typ': 'Kosten/Preis', 'einwand': 'Die Maklerprovision ist zu hoch',
-                 'gegenargument': 'Wie viel Zeit und Aufwand steckt ihr gerade selbst in die Vermarktung?'},
-                {'typ': 'Vertrauen', 'einwand': 'Makler bringen nichts',
-                 'gegenargument': 'Was müsste ein Makler tun damit sich die Provision für euch lohnt?'},
+                {'einwand': 'Die Maklerprovision ist zu hoch', 'varianten': [], 'gegenargument': 'Wie viel Zeit und Aufwand steckt ihr gerade selbst in die Vermarktung?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Provision', 'kategorie': 'Kosten/Preis', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Makler bringen nichts', 'varianten': [], 'gegenargument': 'Was müsste ein Makler tun damit sich die Provision für euch lohnt?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Vertrauen', 'kategorie': 'Vertrauen', 'einwand_typ': 'unbekannt'},
             ],
             'phasen': [
                 {'name': 'Kennenlernen', 'beschreibung': 'Objekt und Eigentümer verstehen'},
@@ -109,10 +109,10 @@ BRANCHE_TEMPLATES = {
         'basis': {
             'produktbeschreibung': 'Agenturleistung',
             'einwaende_detail': [
-                {'typ': 'Kosten/Preis', 'einwand': 'Das Monatsbudget ist zu hoch',
-                 'gegenargument': 'Welchen Umsatz müssten wir generieren damit sich die Investition lohnt?'},
-                {'typ': 'Vergleich', 'einwand': 'Wir haben schon eine Agentur',
-                 'gegenargument': 'Was fehlt euch bei der aktuellen Zusammenarbeit?'},
+                {'einwand': 'Das Monatsbudget ist zu hoch', 'varianten': [], 'gegenargument': 'Welchen Umsatz müssten wir generieren damit sich die Investition lohnt?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Budget', 'kategorie': 'Kosten/Preis', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Wir haben schon eine Agentur', 'varianten': [], 'gegenargument': 'Was fehlt euch bei der aktuellen Zusammenarbeit?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Agentur', 'kategorie': 'Vergleich', 'einwand_typ': 'unbekannt'},
             ],
             'phasen': [
                 {'name': 'Briefing', 'beschreibung': 'Ziele und Herausforderungen'},
@@ -127,10 +127,10 @@ BRANCHE_TEMPLATES = {
         'basis': {
             'produktbeschreibung': 'Industrielösung',
             'einwaende_detail': [
-                {'typ': 'Kosten/Preis', 'einwand': 'Das übersteigt unser Budget',
-                 'gegenargument': 'Was kostet euch das Problem das wir lösen pro Jahr?'},
-                {'typ': 'Zeit/Aufschub', 'einwand': 'Wir haben kein Zeitfenster für eine Umstellung',
-                 'gegenargument': 'Wann wäre ein guter Zeitpunkt — und was passiert bis dahin?'},
+                {'einwand': 'Das übersteigt unser Budget', 'varianten': [], 'gegenargument': 'Was kostet euch das Problem das wir lösen pro Jahr?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Budget', 'kategorie': 'Kosten/Preis', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Wir haben kein Zeitfenster für eine Umstellung', 'varianten': [], 'gegenargument': 'Wann wäre ein guter Zeitpunkt — und was passiert bis dahin?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Zeitfenster', 'kategorie': 'Zeit/Aufschub', 'einwand_typ': 'unbekannt'},
             ],
             'phasen': [
                 {'name': 'Kontaktaufnahme', 'beschreibung': 'Erste Verbindung herstellen'},
@@ -145,10 +145,10 @@ BRANCHE_TEMPLATES = {
         'basis': {
             'produktbeschreibung': 'Mein Produkt',
             'einwaende_detail': [
-                {'typ': 'Kosten/Preis', 'einwand': 'Das ist zu teuer',
-                 'gegenargument': 'Was wäre es dir wert wenn du damit dein Ziel erreichst?'},
-                {'typ': 'Zeit/Aufschub', 'einwand': 'Jetzt ist kein guter Zeitpunkt',
-                 'gegenargument': 'Was muss passieren damit der Zeitpunkt besser wird?'},
+                {'einwand': 'Das ist zu teuer', 'varianten': [], 'gegenargument': 'Was wäre es dir wert wenn du damit dein Ziel erreichst?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Preis', 'kategorie': 'Kosten/Preis', 'einwand_typ': 'unbekannt'},
+                {'einwand': 'Jetzt ist kein guter Zeitpunkt', 'varianten': [], 'gegenargument': 'Was muss passieren damit der Zeitpunkt besser wird?',
+                 'technik': '', 'intensitaet': 3, 'kurzlabel': 'Zeitpunkt', 'kategorie': 'Zeit/Aufschub', 'einwand_typ': 'unbekannt'},
             ],
             'phasen': [
                 {'name': 'Einstieg', 'beschreibung': 'Vertrauen aufbauen'},
