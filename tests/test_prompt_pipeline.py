@@ -417,3 +417,59 @@ def test_build_profile_context_warm_cache_latency(monkeypatch):
     finally:
         _real_ls.pop_session_state(sid)
 
+
+# ── Issue 1: Profile.branche DB-Column via _profile_cache (Phase 08.20 Hotfix) ──
+
+def test_build_profile_context_branche_from_db_column(monkeypatch):
+    """Issue 1: branche from _profile_cache['profile_branche'] wins over daten JSON.
+    After Phase 08.19.1 the branche field lives in Profile.branche (DB column),
+    not in daten['basis']['branche']. build_profile_context must read it from cache."""
+    _SID = 'test-branche-db-col-sid'
+    profile_no_branche_in_json = {
+        'schema_version': 4,
+        'basis': {'unternehmen': 'TestCo'},   # no 'branche' key
+        'ki': {'ansprache': 'Sie'},
+    }
+    cache_with_branche = {
+        'opener_content': None,
+        'user_firstname': '',
+        'faqs': [],
+        'profile_branche': 'IT-Dienstleistung',
+    }
+    ls_mock = _make_ls_mock_9sections(_SID, profile_no_branche_in_json, cache_with_branche)
+    _install_ls_mock(monkeypatch, ls_mock)
+
+    out = pp.build_profile_context(user_id=1, sid=_SID)
+    branche_section = out.split('## Branche')[1].split('##')[0] if '## Branche' in out else ''
+    assert 'IT-Dienstleistung' in branche_section, \
+        "Branche must be read from _profile_cache['profile_branche'] (DB column)"
+    assert '(noch nicht ausgefüllt)' not in branche_section, \
+        "Branche section must not show empty-marker when profile_branche is set"
+
+
+# ── Issue 2: Schmerzen list-of-dict — no Python dict repr in output ────────────
+
+def test_build_profile_context_schmerzen_no_dict_repr(monkeypatch):
+    """Issue 2: Schmerzen list-of-dict items must render as Markdown, not str(dict)."""
+    _SID = 'test-schmerzen-dict-sid'
+    profile_dict_schmerzen = {
+        'schema_version': 4,
+        'basis': {'unternehmen': 'TestCo'},
+        'ki': {'ansprache': 'Sie'},
+        'schmerzen': [
+            {'situation': 'Keine Zeit', 'kern': 'Burnout-Risiko', 'verstaerken': 'Kosten steigen'},
+            {'situation': 'Hohe Fluktuation', 'kern': 'Know-how verloren'},
+        ],
+    }
+    ls_mock = _make_ls_mock_9sections(_SID, profile_dict_schmerzen, {})
+    _install_ls_mock(monkeypatch, ls_mock)
+
+    out = pp.build_profile_context(user_id=1, sid=_SID)
+    schmerzen_section = out.split('## Schmerzen')[1].split('##')[0] if '## Schmerzen' in out else ''
+    assert "[{'" not in schmerzen_section and "{'situation'" not in schmerzen_section, \
+        "Schmerzen must not contain Python dict repr strings"
+    assert 'Keine Zeit' in schmerzen_section, \
+        "Schmerzen situation text must appear in output"
+    assert 'Burnout-Risiko' in schmerzen_section, \
+        "Schmerzen kern text must appear in output"
+

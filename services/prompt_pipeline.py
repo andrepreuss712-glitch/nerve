@@ -184,6 +184,8 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
 
     _opener_content = _profile_cache.get('opener_content')   # None if not loaded
     _faqs = _profile_cache.get('faqs', [])
+    # Issue 1 fix: Profile.branche moved to DB column in Phase 08.19.1 — read from cache
+    _profile_branche = _profile_cache.get('profile_branche') or ''
 
     # If cache absent (sid=None or session pre-init), fall back to DB for opener + FAQ
     # When profile_id is given, use it directly; otherwise resolve via user.active_profile_id.
@@ -216,6 +218,14 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
                                 _faqs.append({'q': _q, 'a': _a})
                     except Exception:
                         pass
+                    # Issue 1 fallback: load Profile.branche if not already in cache
+                    if not _profile_branche:
+                        try:
+                            from database.models import Profile as _Prof_op
+                            _p_br = _db_op.query(_Prof_op).filter_by(id=_pid_op).first()
+                            _profile_branche = getattr(_p_br, 'branche', None) or ''
+                        except Exception:
+                            pass
             finally:
                 _db_op.close()
         except Exception as _op_e:
@@ -233,7 +243,8 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
     # ── Sektion 1: ## Branche ────────────────────────────────────────────────
     try:
         lines.append('## Branche')
-        branche = basis.get('branche') or ''
+        # Issue 1: prefer DB-column (_profile_branche) over daten JSON (08.19.1 migration)
+        branche = _profile_branche or basis.get('branche') or ''
         branche_kontext = basis.get('branche_kontext') or ''
         if branche:
             lines.append(branche)
@@ -314,7 +325,21 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
                 if _v:
                     _schmerzen_items.append(f'- {_v}')
         elif isinstance(schmerzen, list):
-            _schmerzen_items = [f'- {s}' for s in schmerzen if s]
+            for _s in schmerzen:
+                if not _s:
+                    continue
+                if isinstance(_s, dict):
+                    _sit  = _s.get('situation') or ''
+                    _kern = _s.get('kern') or ''
+                    _vst  = _s.get('verstaerken') or _s.get('verstärken') or ''
+                    _parts = []
+                    if _sit:  _parts.append(f'**Situation:** {_sit}')
+                    if _kern: _parts.append(f'**Kern:** {_kern}')
+                    if _vst:  _parts.append(f'**Verstärken:** {_vst}')
+                    if _parts:
+                        _schmerzen_items.append('- ' + '\n  '.join(_parts))
+                else:
+                    _schmerzen_items.append(f'- {_s}')
         if _schmerzen_items:
             lines.extend(_schmerzen_items)
         else:

@@ -1507,7 +1507,13 @@ function loadEwbPreview() {
       return r.json();
     })
     .then(function(data) {
-      pre.textContent = data.context || '(leer)';
+      var raw = data.context || '(leer)';
+      // Issue 2: render Markdown ** bold ** and ## headers instead of raw text
+      var html = raw
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/^## (.+)$/gm, '<span style="color:#00D4AA;font-weight:600">## $1</span>');
+      pre.innerHTML = html;
       output.style.display = 'block';
       btn.textContent = 'Neu laden';
     })

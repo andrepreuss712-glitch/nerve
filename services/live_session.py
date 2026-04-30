@@ -346,10 +346,20 @@ def _load_profile_cache(sid: str, user_id: int, profile_id: int) -> None:
             except Exception as _faq_e:
                 print(f"[Cache] ProfileFaq load failed (non-fatal): {_faq_e}")
 
+            # Profile.branche — DB column (moved from daten JSON in Phase 08.19.1)
+            _profile_branche = ''
+            try:
+                from database.models import Profile as _Prof
+                _p_row = _db.query(_Prof).filter_by(id=profile_id).first()
+                _profile_branche = getattr(_p_row, 'branche', None) or ''
+            except Exception as _br_e:
+                print(f"[Cache] Profile.branche load failed (non-fatal): {_br_e}")
+
             _cache = {
                 'opener_content': getattr(_opener, 'inhalt', None) if _opener else None,
                 'user_firstname': _firstname,
                 'faqs': _faqs,
+                'profile_branche': _profile_branche,
             }
             with _session_state_lock:
                 if sid in _session_state:

@@ -384,6 +384,9 @@
         ? '<div class="launcher-briefing-html" id="lnr-briefing-view">' + mdToHtml(briefingText) + '</div>'
           + '<textarea class="launcher-briefing" id="lnr-briefing-edit" style="display:none">' + escHtml(briefingText) + '</textarea>'
         : '<div style="color:var(--page-text-muted);font-size:13px;padding:12px 0">Für diese Firma konnten keine öffentlichen Informationen gefunden werden. Du kannst trotzdem fortfahren.</div>',
+      // Issue 4: Disclaimer-Banner — statische Footer nach Briefing-Content
+      found ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:6px;font-size:11px;color:#EF4444;line-height:1.5">⚠️ KI-Recherche kann veraltete oder ungenaue Daten enthalten. Eckdaten (insb. Personennamen &amp; Daten) bitte cross-checken vor Kundenkontakt.</div>' : '',
+      found ? '<div style="margin-top:6px;padding:8px 10px;background:rgba(0,212,170,0.07);border:1px solid rgba(0,212,170,0.2);border-radius:6px;font-size:11px;color:#00D4AA;line-height:1.5">&#128161; Wenn Sie ein CRM verwenden, übertragen Sie die Eckdaten dort für spätere Kontaktaufnahmen.</div>' : '',
       '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
       '<button class="launcher-btn-ghost" id="lnr-step4-back">&#8592; Zurück</button>',
       found ? '<button class="launcher-btn-ghost" id="lnr-step4-edit">Ergebnis anpassen</button>' : '',
@@ -553,6 +556,14 @@
       '<div class="launcher-anrede-row" id="lnr-anrede-row5">',
       '<button type="button" class="launcher-anrede-btn' + (savedAnrede5 === 'Du' ? ' active' : '') + '" data-val="Du" onclick="window.NerveLauncher._setAnrede(\'Du\')">Du</button>',
       '<button type="button" class="launcher-anrede-btn' + (savedAnrede5 === 'Sie' ? ' active' : '') + '" data-val="Sie" onclick="window.NerveLauncher._setAnrede(\'Sie\')">Sie</button>',
+      '</div>',
+      // Issue 3: Vorwissen-Picker auch in Step 5 (fallback wenn PreCall übersprungen)
+      '<div class="launcher-form-label" style="margin-top:12px;font-size:13px;color:var(--page-text-muted)">Lead-Vorwissen (optional)</div>',
+      '<div class="launcher-anrede-row" id="lnr-vorwissen-row5" style="gap:8px;flex-wrap:wrap">',
+      '<button type="button" class="launcher-anrede-btn' + (state.vorwissenLevel === 'niedrig' ? ' active' : '') + '" data-val="niedrig" onclick="window.NerveLauncher._setVorwissen(\'niedrig\')">Wenig Ahnung</button>',
+      '<button type="button" class="launcher-anrede-btn' + (state.vorwissenLevel === 'mittel'  ? ' active' : '') + '" data-val="mittel"  onclick="window.NerveLauncher._setVorwissen(\'mittel\')">Vertraut damit</button>',
+      '<button type="button" class="launcher-anrede-btn' + (state.vorwissenLevel === 'hoch'    ? ' active' : '') + '" data-val="hoch"    onclick="window.NerveLauncher._setVorwissen(\'hoch\')">Kennt uns gut</button>',
+      '<button type="button" class="launcher-anrede-btn' + (!state.vorwissenLevel              ? ' active' : '') + '" data-val="null"    onclick="window.NerveLauncher._setVorwissen(null)">Weiß nicht</button>',
       '</div>',
       '<div class="launcher-actions">',
       '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurück</button>',
@@ -2378,12 +2389,14 @@
     var allowed = ['niedrig', 'mittel', 'hoch', null];
     if (allowed.indexOf(val) === -1) val = null;
     state.vorwissenLevel = val;
-    // Update active class in current step's pill row
-    try {
-      document.querySelectorAll('#lnr-vorwissen-row .launcher-anrede-btn').forEach(function (btn) {
-        btn.classList.toggle('active', btn.dataset.val === (val || 'null'));
-      });
-    } catch (e) { /* DOM query failed — silently ignore */ }
+    // Update active class in both step 4b row and step 5 row (Issue 3)
+    ['#lnr-vorwissen-row', '#lnr-vorwissen-row5'].forEach(function (rowSel) {
+      try {
+        document.querySelectorAll(rowSel + ' .launcher-anrede-btn').forEach(function (btn) {
+          btn.classList.toggle('active', btn.dataset.val === (val || 'null'));
+        });
+      } catch (e) { /* DOM query failed — silently ignore */ }
+    });
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
