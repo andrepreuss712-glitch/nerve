@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20 ALL 5 PLANS COMPLETE — Phase abgeschlossen, code-review + deploy ausstehend"
-last_updated: "2026-04-30T09:00:00Z"
+stopped_at: "08.20.2-01 COMPLETE — precall_service.py rebuilt with 3-layer architecture (PRECALL_FIELDS_SYSTEM_PROMPT, _generiere_briefing Schicht-1+2, _generiere_empfehlungen Schicht-3)"
+last_updated: "2026-04-30T13:09:51Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 57
   completed_phases: 45
   total_plans: 206
-  completed_plans: 194
-  percent: 94
+  completed_plans: 195
+  percent: 95
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.20 (pipeline-re-wire-voll-profil-ewb-lead-context) — COMPLETE (5/5 Plans)
-Plan: 5 of 5 — COMPLETE (2026-04-30, commits ba7162c + ca3b3b3)
+Phase: 08.20.2 (precall-briefing-trust-web-search-integration) — IN PROGRESS (1/? Plans)
+Plan: 1 of ? — COMPLETE (2026-04-30, commit 0a8b68e)
 Last activity: 2026-04-30
 
-**Phase 08.20 abgeschlossen:** Alle 5 Pläne fertig. Plan 05: D-05 Vorwissen-Picker Step 4b, D-06 Du/Sie PiP Toggle + anrede_switch_detected Keyword-Heuristik (2-Trigger-Threshold), D-08 EWB-Preview-Panel Section 7 + /profiles/api/profile/preview-context Endpoint. setdefault Race Guards in start_live_session + disconnect.
-**Next:** /gsd-code-review → /gsd-code-review-fix → git push → deploy.sh → Production-UAT auf getnerve.app
+**Phase 08.20.2 Plan 01 abgeschlossen:** precall_service.py komplett neu gebaut. PRECALL_FIELDS_SYSTEM_PROMPT mit Confidence-Algorithmus (high/medium/not_found), Quellenranking (PRIMAER/SEKUNDAER/AUSGESCHLOSSEN), 36-Monats-Aktualitaetsschwelle, Few-Shot-Beispiel. _generiere_briefing() gibt strukturiertes JSON {fields, text} zurueck. _generiere_empfehlungen() als separater Schicht-3-Call via build_profile_context(). Cache-Key erweitert auf firmenname_lower + profile_id.
+**Next:** Phase 08.20.2 weiterfuehren (DB-Migration precall_fields, UI PreCall-Modal 3-Layer)
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
@@ -190,6 +190,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.19.3 P02 | 2min | 2 tasks | 2 files |
 | Phase 08.19.3 P03 | 5min | 1 tasks | 1 files |
 | Phase 08.19.3 P04 | 5min | 2 tasks | 2 files |
+| Phase 08.20.2 P01 | 3min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -202,6 +203,10 @@ Recent decisions affecting current work:
 - [Phase 08.19-01]: zielgruppe.vorwissen + zielgruppe.entscheidungsverhalten bleiben in zielgruppe.* (claude_service._build_coaching_prompt liest explizit pdata.get('zielgruppe', {}))
 - [Phase 08.19-01]: ProfileSchema Dual-Schema-Pattern: Write extra='forbid' (ValidationError bei unbekannten Feldern), Read extra='ignore' (Drift-Felder ignoriert)
 - [Phase 08.19-02]: _migrate_profile_json() Aufruf NACH _seed_demo_profiles() — Profile-First-Reihenfolge (Profile muessen existieren bevor migriert werden kann)
+- [Phase 08.20.2-01]: PRECALL_FIELDS_SYSTEM_PROMPT ersetzt PRECALL_SYSTEM_PROMPT — strukturierter JSON-Output mit per-Feld confidence + source_url (high/medium/not_found)
+- [Phase 08.20.2-01]: Cache-Key erweitert auf firmenname_lower + '_' + str(profile_id) (D-06) — Schicht-3-Empfehlungen refreshen bei Profil-Aenderung
+- [Phase 08.20.2-01]: _generiere_empfehlungen() muss NACH set_briefing_for_sid() aufgerufen werden — build_profile_context() braucht Section 8 fuer Schicht-3-Kontext
+- [Phase 08.20.2-01]: set_briefing_for_sid() bekommt schicht1_summary + newline + newline + text (NICHT empfehlungen)
 - [Phase 08.19-03]: wizard_create() macht KEINEN ProfileOpener-INSERT — Wizard hat kein opener/pitch Eingabefeld (Code-Check-Befund, by design); neue Profile starten ohne Opener-Eintrag
 - [Phase 08.19-03]: bearbeiten() POST: _migrate_profile_data() VOR ProfileSchema.model_validate() (Finding 2) — Altlasten-Stripping verhindert false-positive 400 durch extra='forbid'
 - [Phase 08.19-03]: ValidationError -> flash + db.rollback() + redirect HTTP 400 (Finding 3) — kein 500, Blueprint-Name 'profiles', Parameter 'pid'
@@ -613,6 +618,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-29T14:11:53.281Z
-Stopped at: Completed 08.19.1-02-PLAN.md
+Last session: 2026-04-30T13:09:51Z
+Stopped at: Completed 08.20.2-01-PLAN.md
 Resume file: None
