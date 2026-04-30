@@ -211,8 +211,15 @@ _per_sid_coaching_lock = threading.Lock()
 
 
 def set_profile_for_sid(sid: str, name: str, daten: dict) -> None:
-    """Cache profile for an active WebSocket SID. Analog to _deepgram_sessions."""
+    """Cache profile for an active WebSocket SID. Ghost-SID guard: drops silently if
+    SID no longer active in _session_state (async load completing after disconnect)."""
     with _per_sid_lock:
+        # Ghost-SID guard: check _session_state for SID liveness.
+        # CPython dict __contains__ is GIL-safe; slight TOCTOU window is acceptable —
+        # worst case: write completes then pop_session_state clears it on next line.
+        if sid not in _session_state:
+            _logger.debug(f"[SID] set_profile_for_sid: Ghost SID {sid!r} — dropped")
+            return
         _per_sid_profile[sid] = (name or '', daten if isinstance(daten, dict) else {})
 
 
@@ -224,6 +231,28 @@ def get_profile_for_sid(sid: str) -> tuple:
         _logger.warning(f"[SID] get_profile_for_sid: unknown SID {sid}")
         return ('', {})
     return result
+
+
+# ── Per-SID PreCall-Briefing Cache (D-09 Phase 08.20) ────────────────────────
+# Briefing stored as sub-key of _session_state[sid]['_briefing'] — NOT a separate dict.
+# Uses _session_state_lock (no extra lock needed — eliminates deadlock risk).
+# Ghost-SID guard: if SID not in _session_state, write is silently dropped.
+# Lifecycle: set on PreCall success, auto-cleared when pop_session_state() pops _session_state[sid].
+
+def set_briefing_for_sid(sid: str, briefing_text: str) -> None:
+    """Cache PreCall-Briefing text for an active SID. Ghost-SID guard prevents async
+    race when recherche_firma() completes after user disconnect (HIGH-1 fix)."""
+    with _session_state_lock:
+        if sid not in _session_state:
+            _logger.debug(f"[SID] set_briefing_for_sid: Ghost SID {sid!r} — dropped (post-disconnect race)")
+            return
+        _session_state[sid]['_briefing'] = briefing_text or ''
+
+
+def get_briefing_for_sid(sid: str) -> str | None:
+    """Returns cached briefing text for SID, or None if not set or SID unknown."""
+    with _session_state_lock:
+        return _session_state.get(sid, {}).get('_briefing')
 
 
 def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
@@ -258,9 +287,10 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
 
 
 def pop_session_state(sid: str) -> None:
-    """Remove all per-SID state on disconnect (D-02). Calls drop_matcher internally."""
+    """Remove all per-SID state on disconnect. Briefing is stored as _session_state[sid]['_briefing']
+    and is auto-cleaned when the dict entry is popped — no separate briefing cleanup needed (HIGH-2 fix)."""
     with _session_state_lock:
-        _session_state.pop(sid, None)
+        _session_state.pop(sid, None)   # clears ['_briefing'] sub-key automatically
     with _per_sid_lock:
         _per_sid_profile.pop(sid, None)
     with _per_sid_transcript_lock:
