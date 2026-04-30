@@ -38,10 +38,11 @@ Regeln:
 - Fokus auf vertriebsrelevante Informationen: Groesse, Branche, aktuelle News, Wachstum, Tech-Stack
 - Keine persoenlichen Daten ausser berufliche Rolle des Ansprechpartners
 - Wenn ein Vertriebsprofil mitgegeben wird: Verknuepfe die Firmen-Insights mit dem Produkt/Pitch des Beraters. Zeige auf wo das Produkt zum Bedarf der Firma passen koennte
+- Deine Antwort darf keine ##-Markdown-Header enthalten — nur Fließtext und einfache Bullet-Listen (-).
 """
 
 
-def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None, user_id=None, profile_id=None):
+def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None, user_id=None, profile_id=None, sid: str = None):
     """Web-Recherche + Claude-Briefing fuer eine Firma.
     Returns: (briefing_dict, error_msg) — per existing service tuple pattern.
     """
@@ -85,6 +86,15 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten
 
         # Cache speichern
         _briefing_cache[cache_key] = (briefing, time.time())
+
+        # D-09: Briefing per SID in _session_state cachen (Ghost-SID-Guard in set_briefing_for_sid)
+        if briefing and briefing.get('text') and sid:
+            try:
+                from services.live_session import set_briefing_for_sid
+                set_briefing_for_sid(sid, briefing['text'])
+                print(f"[PreCall] Briefing gecacht fuer SID={sid} ({len(briefing['text'])} chars)")
+            except Exception as _sid_e:
+                print(f"[PreCall] set_briefing_for_sid failed (non-fatal): {_sid_e}")
 
         return (briefing, None)
 
@@ -173,11 +183,19 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, pr
             user_msg += f"\n\nVertriebsprofil des Beraters:\n" + "\n".join(profile_parts)
 
     try:
+        from services.branchen_data import build_branchen_hint as _build_branchen_hint
+        _branchen_hint = _build_branchen_hint(branche or '')
+        _system = PRECALL_SYSTEM_PROMPT + '\n\n' + _branchen_hint
+    except Exception as _bhe:
+        print(f"[PreCall] branchen_hint build failed (non-fatal): {_bhe}")
+        _system = PRECALL_SYSTEM_PROMPT
+
+    try:
         _t0 = time.time()
         msg = claude_client.messages.create(
             model=config.MODEL_PRECALL,
             max_tokens=800,
-            system=PRECALL_SYSTEM_PROMPT,
+            system=_system,
             messages=[{"role": "user", "content": user_msg}],
         )
         _latency_ms = int((time.time() - _t0) * 1000)
