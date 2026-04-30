@@ -365,4 +365,60 @@ Bevor eine neue Verhaltensregel in CLAUDE.md geschrieben wird:
 Beispiele:
 - "Nach Python-Edit immer ruff format" → Hook (kein Urteil noetig)
 - "Bei Umlaut-Entscheidung User-Text vs. Code-Identifier unterscheiden" → CLAUDE.md
+
+## GSD-Workflow-Pflichten — Plan/Execute/Review
+
+> **Pflicht-Sequenz für jeden Plan-/Execute-/Review-Agent.** Diese Regeln sind verbindlich und gelten ZUSÄTZLICH zur "Next Up"-Empfehlung des Plan-Agents. Wenn der Plan-Agent direkt zu Execute springt bei einer 🔴-Phase, ist das ein Bug — Cross-AI-Review kommt dazwischen.
+> **Source-of-Truth für Mechanik (Trigger-Logik, Hit-Rate-Pattern, Fairness-Regel):** `Nerve-Vault/CLAUDE.md` Punkt 7+8.
+
+### Komplexitäts-Marker
+
+Jede Phase ist mit einem Marker klassifiziert (in PLAN.md / SPEC.md sichtbar):
+- 🟢 **trivial** — mechanisch, GSD-Auto-Tempo (Renaming, CSS, String-Updates, mechanische Prunes, Bugfixes mit klarem Root-Cause)
+- 🟡 **mittel** — mehrere Entscheidungen, Multi-File-Edits, kein Architektur-Risiko (Refactors, neue Endpoints, Schema-Anpassungen)
+- 🔴 **komplex** — Architektur/Security/DSGVO/Schema/Multi-Pipeline. Cross-AI Pflicht.
+
+### Pflicht-Workflows
+
+| Trigger | Pflicht-Schritt | Kommando | Wann |
+|---|---|---|---|
+| 🔴 Plan fertig | Cross-AI-Plan-Review **vor** Execute | `/gsd-review --phase X --all` | IMMER bei 🔴, Default-ON bei 🟡 mit substantiellem Code-Removal (>500 Zeilen) ODER >5 Files ODER FE+BE gleichzeitig ODER Migrations-Logik |
+| Cross-AI-Findings da | Replan mit Findings | `/gsd-plan-phase X --reviews` | Wenn Cross-AI ≥1 substantielles Finding (HIGH actionable) liefert |
+| Schema-Phase Plan | Real-Daten-Validation Pflicht | Plan muss Real-Daten-Sample gegen neues Schema testen | Bei Phasen die ein Pydantic/SQLAlchemy/etc.-Schema ändern (Vault-CLAUDE.md Punkt 13) |
+| `url_for(...)`-Strings | Endpoint-Verifikation | `grep "def " routes/X.py` + Live-Test-Request-Context | Bei jedem Plan/Edit mit `url_for('blueprint.function')` (Vault-CLAUDE.md Punkt 9) |
+| Feature-Reaktivierung | Migration-Vollständigkeit prüfen | "Brauchen bestehende Records eine UPDATE-Migration?" | Wenn Plan einen `if` reaktiviert/auskommentiert/aktiviert (Vault-CLAUDE.md Punkt 10) |
+| Execute fertig | Code-Review | `/gsd-code-review` → `/gsd-code-review-fix` | Pflicht bei 🔴, empfohlen bei 🟡 |
+| 🔴 Schema-Bump | LATEST_SCHEMA_VERSION-Konstante prüfen | `services/profile_schema.py` + `app.py`-Skip-Check | Bei jedem Plan der Schema-Version-Bump auslöst (Block-J-Lesson 08.20-Plan-01) |
+
+### Skip-Regel (für Plan-Agent)
+
+- 🟢 trivial: Cross-AI-Review SKIP (Overkill, frisst Momentum)
+- 🟡 mittel ohne Trigger oben: Cross-AI-Review optional (Andre entscheidet pro Phase)
+- 🟡 mittel mit Trigger ODER 🔴 komplex: Cross-AI-Review **PFLICHT vor Execute**
+
+### Was Plan-Agent NICHT tun soll
+
+- Direkt zu `/gsd-execute-phase` springen wenn Phase 🔴 ist
+- Cross-AI-Pflicht als optional darstellen wenn 🔴
+- "Next Up — Execute" empfehlen ohne vorherigen Review-Schritt bei 🔴
+
+### Was Plan-Agent statt dessen empfehlen soll
+
+Bei 🔴-Phase als "Next Up":
+```
+▶ Next Up — Cross-AI Peer Review (PFLICHT bei 🔴)
+
+/clear
+/gsd-review --phase X --all
+```
+
+Erst NACH Review-Findings + Replan kommt Execute als Next Up.
+
+### Cross-AI-Entscheidung im Log dokumentieren
+
+Pro Phase wird in `Nerve-Vault/05 Log.md` festgehalten:
+- Cross-AI gemacht: warum (🔴 / 🟡-Trigger) + Hit-Rate (Anzahl actionable Findings)
+- Cross-AI geskippt: warum (🟢 / 🟡 ohne Trigger) — kurze Begründung
+
+Begründung: Lerneffekt aus Block-N-Phasen — Hit-Rate steigt bei klarem Briefing + Pro-Modell, Skip-Entscheidungen müssen genauso bewusst sein wie Run-Entscheidungen.
 - "Immer git push nach Phase" → CLAUDE.md (Ausnahmen: lokale Branches, WIP)
