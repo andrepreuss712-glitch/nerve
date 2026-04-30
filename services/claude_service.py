@@ -1,5 +1,7 @@
 import json
+import os
 import time
+import threading
 from datetime import datetime
 import anthropic
 import config
@@ -7,6 +9,17 @@ from config import ANTHROPIC_API_KEY, ANALYSE_INTERVALL, KATEGORIE_LABEL
 
 # Anthropic minimum: 1024 tokens ≈ 4096 chars
 _CACHE_MIN_CHARS = 4096
+
+# ── Circuit-Breaker fuer EWB Sonnet TTFT (D-07 Phase 08.20) ──────────────────
+# Tracks TTFT for last 5 EWB auto-variant calls. If 3/5 exceed threshold:
+# fallback to Haiku for 30 seconds (DACH: Sonnet->Haiku, USA: Haiku->Haiku).
+# Rollback: set ENV MODEL_PIP_AUTOVAR=claude-haiku-4-5-20251001 to disable Sonnet entirely.
+import collections as _collections
+_ewb_ttft_history: _collections.deque = _collections.deque(maxlen=5)  # last 5 TTFT values in ms
+_ewb_fallback_until: float = 0.0    # monotonic timestamp — Haiku fallback active until this time
+_ewb_circuit_lock = threading.Lock()
+# CLAUDE.md: MODEL_ANALYSE (analyse_loop) stays Haiku — not touched here.
+# This circuit-breaker only affects MODEL_PIP_AUTOVAR (EWB streaming).
 
 # Phase 08: EWB-Pipeline (A/B-Routing + Baustein-Struktur)
 # Nur der ewb-Modul-Pfad nutzt diese neue Pipeline. Die 4 anderen Module
@@ -591,17 +604,42 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
         print(f"[Cache-Check] ewb system_prompt: {len(_ewb_autovar_system)} chars, "
               f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(_ewb_autovar_system) >= _CACHE_MIN_CHARS else 'off'}")
     # ──────────────────────────────────────────────────────────────────────────
+    # D-07 Circuit-Breaker: check if TTFT fallback is active
+    import time as _time_autovar
+    with _ewb_circuit_lock:
+        _cb_in_fallback = _time_autovar.monotonic() < _ewb_fallback_until
+    _model_autovar = config.MODEL_PIP_AUTOVAR
+    if _cb_in_fallback:
+        _model_autovar = 'claude-haiku-4-5-20251001'  # DACH fallback (CLAUDE.md: Haiku only in fallback)
+        print(f"[CircuitBreaker-EWB] Haiku fallback active sid={sid}")
+
     print(f"[PiP-AutoVar] ENTRY trigger={trigger} sid={sid} slot={slot} text={neuer_text[:60]!r}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
     full_text = ''
+    _first_token_autovar = True
     try:
+        _t_stream_start = _time_autovar.monotonic()
         with claude_client.messages.stream(
-            model=config.MODEL_PIP_AUTOVAR,
+            model=_model_autovar,
             max_tokens=200,
             system=_system_autovar,
             messages=[{'role': 'user', 'content': user_msg}]
         ) as stream:
             for token in stream.text_stream:
+                if _first_token_autovar:
+                    _ttft_ms = (_time_autovar.monotonic() - _t_stream_start) * 1000
+                    _first_token_autovar = False
+                    with _ewb_circuit_lock:
+                        _ewb_ttft_history.append(_ttft_ms)
+                        _threshold_ms = int(os.getenv('EWB_SONNET_FALLBACK_TTFT_MS', '1500'))
+                        _history_snap = list(_ewb_ttft_history)
+                        if len(_history_snap) >= 5:
+                            _above_count = sum(1 for t in _history_snap if t > _threshold_ms)
+                            if _above_count >= 3 and not _cb_in_fallback:
+                                _ewb_fallback_until = _time_autovar.monotonic() + 30.0
+                                print(f"[CircuitBreaker-EWB] TRIGGERED: {_above_count}/5 calls > {_threshold_ms}ms "
+                                      f"(last={_ttft_ms:.0f}ms) — Haiku fallback 30s sid={sid}")
+                    print(f"[EWB-TTFT] {_ttft_ms:.0f}ms model={_model_autovar} sid={sid}")
                 full_text += token
                 sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
         cleaned = full_text.strip()
@@ -615,21 +653,21 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
                              context_tag='pip_autovar')
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='pip_autovar')
             # Cache-Token-Logging (B1 Review-Finding)
             _cache_hits = getattr(getattr(final_msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
             _cache_writes = getattr(getattr(final_msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
             if _cache_hits > 0:
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
                              context_tag='ewb', call_site='ewb')
             if _cache_writes > 0:
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
                              context_tag='ewb', call_site='ewb')
         except Exception as _e:
