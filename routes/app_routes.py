@@ -54,6 +54,15 @@ def api_beenden():
             precall_briefing = None
     if isinstance(precall_briefing, str) and len(precall_briefing) > 2000:
         precall_briefing = precall_briefing[:2000]
+    # Phase 08.20.2: Schicht-1 structured fields (T-08.20.2-06: isinstance check before dumps)
+    precall_fields_raw = req_data.get('precall_fields', None)
+    precall_fields_json = None
+    if isinstance(precall_fields_raw, dict):
+        import json as _json_pf
+        try:
+            precall_fields_json = _json_pf.dumps(precall_fields_raw, ensure_ascii=False)
+        except Exception:
+            precall_fields_json = None
     profile_name = ''
     apid = flask_session.get('active_profile_id')
     if apid:
@@ -242,6 +251,7 @@ def api_beenden():
             typ='live',
             session_mode=session_mode,
             precall_briefing=precall_briefing,
+            precall_fields=precall_fields_json,     # Phase 08.20.2: Schicht-1 JSON
             kb_verlauf=_json.dumps(kb_verlauf, ensure_ascii=False),   # Phase 07.1
             anrede=_session_anrede,  # Phase 08 D-14: Du/Sie oder None
         )
@@ -941,7 +951,17 @@ def api_precall_research():
         finally:
             db_pf.close()
 
-    briefing, error = recherche_firma(firmenname, ansprechpartner, branche, profil_daten=profil_daten)
+    sid = (data.get('sid') or '').strip() or None
+    user_id = g.user.id if g.user else None
+    profile_id = flask_session.get('active_profile_id')
+
+    briefing, error = recherche_firma(
+        firmenname, ansprechpartner, branche,
+        profil_daten=profil_daten,
+        user_id=user_id,
+        profile_id=profile_id,
+        sid=sid,
+    )
     if error:
         # Distinguish client-caused validation errors from upstream failures
         if 'Pflicht' in error or 'Zeichen' in error or 'konfiguriert' in error:
