@@ -150,7 +150,6 @@
       case 2: renderStep2(); break;
       case 3: renderStep3(); break;
       case 4: renderStep4(); break;
-      case 45: renderStep4b(); break;
       case 5: renderStep5(); break;
       default: renderStep1();
     }
@@ -466,51 +465,7 @@
       // Save edited briefing text back into the briefing object
       var ta = document.getElementById('lnr-briefing-edit');
       if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
-      // D-05: show Vorwissen-Picker (Step 4b) before proceeding to Step 5
-      state.step = 45;
-      renderStep();
-    };
-  }
-
-  // ── Step 4b: Vorwissen-Picker (D-05 Phase 08.20) ──────────────────────────
-  function renderStep4b() {
-    var c = content();
-    if (!c) return;
-    c.innerHTML = [
-      '<div class="launcher-step" id="lnr-step-vorwissen">',
-      '<div class="nav-live-title">Wie gut kennt der Lead euer Angebot?</div>',
-      '<div class="launcher-hint">',
-      'Die KI passt ihre Gegenargumente an — je genauer, desto treffsicherer.',
-      '</div>',
-      '<div class="launcher-anrede-row" id="lnr-vorwissen-row" style="gap:8px;flex-wrap:wrap">',
-      '<button type="button" class="launcher-anrede-btn" data-val="niedrig"',
-      '        onclick="window.NerveLauncher._setVorwissen(\'niedrig\')">Wenig Ahnung</button>',
-      '<button type="button" class="launcher-anrede-btn" data-val="mittel"',
-      '        onclick="window.NerveLauncher._setVorwissen(\'mittel\')">Vertraut damit</button>',
-      '<button type="button" class="launcher-anrede-btn" data-val="hoch"',
-      '        onclick="window.NerveLauncher._setVorwissen(\'hoch\')">Kennt uns gut</button>',
-      '<button type="button" class="launcher-anrede-btn active" data-val="null"',
-      '        onclick="window.NerveLauncher._setVorwissen(null)">Weiß nicht</button>',
-      '</div>',
-      '<div class="launcher-actions" style="justify-content:flex-start;margin-top:4px">',
-      '<button class="launcher-btn-ghost" id="lnr-step4b-back">&#8592; Zurück</button>',
-      '<button class="launcher-btn-primary" id="lnr-step4b-next">Weiter &#8594;</button>',
-      '</div>',
-      '</div>'
-    ].join('');
-
-    // Restore active state from saved vorwissenLevel
-    var saved = state.vorwissenLevel;
-    document.querySelectorAll('#lnr-vorwissen-row .launcher-anrede-btn').forEach(function (btn) {
-      btn.classList.remove('active');
-      if (btn.dataset.val === (saved || 'null')) btn.classList.add('active');
-    });
-
-    document.getElementById('lnr-step4b-back').onclick = function () {
-      state.step = 4;
-      renderStep();
-    };
-    document.getElementById('lnr-step4b-next').onclick = function () {
+      // Go directly to Step 5 (Vorwissen picker is already embedded in step 5)
       state.step = 5;
       renderStep();
     };
