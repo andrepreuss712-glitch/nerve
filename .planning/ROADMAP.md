@@ -978,9 +978,9 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 08.20-01-PLAN.md — Foundation: _per_sid_briefing + branchen_data.py + Schema v3->v4 + einwaende consumer migration
-- [ ] 08.20-02-PLAN.md — build_profile_context() 9-Section Rewrite + BUG-A/BUG-B fixes
-- [ ] 08.20-03-PLAN.md — PreCall branchen-hint inject + _per_sid_briefing write + QA pipeline {profile_context}
+- [x] 08.20-01-PLAN.md — Foundation: _per_sid_briefing + branchen_data.py + Schema v3->v4 + einwaende consumer migration
+- [x] 08.20-02-PLAN.md — build_profile_context() 9-Section Rewrite + BUG-A/BUG-B fixes
+- [x] 08.20-03-PLAN.md — PreCall branchen-hint inject + _per_sid_briefing write + QA pipeline {profile_context}
 - [ ] 08.20-04-PLAN.md — Manual-EWB Voll-Profil + Sonnet defaults + Circuit-Breaker TTFT
 - [ ] 08.20-05-PLAN.md — Lead-Context UI: Vorwissen-Picker + Du/Sie-Detection + EWB-Preview-Panel
 

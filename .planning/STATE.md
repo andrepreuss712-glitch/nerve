@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20 Plan 02 complete — next: Plan 03"
-last_updated: "2026-04-30T06:23:04Z"
+stopped_at: "08.20 Plan 03 complete — next: Plan 04"
+last_updated: "2026-04-30T06:32:00Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 57
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.20 (pipeline-re-wire-voll-profil-ewb-lead-context) — IN PROGRESS
-Plan: 2 of 5 — COMPLETE (2026-04-30, commits d813c8a + 5c8b198 + 79a9ad0)
+Plan: 3 of 5 — COMPLETE (2026-04-30, commits 2158909 + f28c729)
 Last activity: 2026-04-30
 
-**Phase 08.20 Plan 02 abgeschlossen:** 9-Sektionen build_profile_context() (D-01), _profile_cache Hot-Path (HIGH-3, 0 DB-Queries < 5ms), _load_profile_cache() in live_session.py, BUG-A (sid in ewb_pipeline), BUG-B (FAQ aus Cache), Cache-Threshold-Log.
-**Next:** Plan 03 — (naechster Plan in Phase 08.20)
+**Phase 08.20 Plan 03 abgeschlossen:** PreCall branchen-aware via build_branchen_hint() (D-02), Anti-Header-Constraint in PRECALL_SYSTEM_PROMPT (D-03), set_briefing_for_sid() call on success (D-09), {profile_context} placeholder in _SYSTEM_PROMPT_QA, generate_qa_response() sid-Parameter + build_profile_context() Aufruf (LB-3-Fix).
+**Next:** Plan 04 — (naechster Plan in Phase 08.20)
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
@@ -38,6 +38,8 @@ Last activity: 2026-04-30
   - D-04: einwaende -> einwaende_detail Migration v3->v4, idempotent, alle 11 Callsites mit Transition-Fallback
   - D-01: build_profile_context() 9-Sektionen Markdown, deterministic, leere Sektionen nie skippen
   - HIGH-3: _profile_cache warm-path 0 DB-Queries; ProfileOpener field=inhalt (nicht content)
+  - LB-3-Fix: build_profile_context errors in generate_qa_response non-fatal; QA sieht jetzt Voll-Profil
+  - D-02/D-03: branchen hint injection + Anti-Header-Constraint in PreCall system prompt
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
