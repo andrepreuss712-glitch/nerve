@@ -1,346 +1,223 @@
 # Architecture
 
-**Analysis Date:** 2026-04-24
+**Analysis Date:** 2026-05-01
 
 ## Pattern Overview
 
-**Overall:** Multi-threaded event-driven architecture with thread-safe shared state, serving real-time sales coaching via WebSocket.
+**Overall:** Multi-tenant Flask SaaS with three parallel background threads, Socket.IO real-time delivery, and Blueprint-based routing
 
 **Key Characteristics:**
-- Three parallel background threads process audio → transcription → AI analysis → coaching recommendations
-- Centralized shared state (`live_session.state`) with thread-safety via locks; all cross-thread communication flows through this dict
-- Flask Blueprint-based modular routing with SocketIO for bidirectional client-server updates
-- Prompt pipeline with A/B routing (via `resolve_prompt_version`) and template-based system prompts
-- Database-backed multi-tenant organization model with role-based access control
-- Session-level context inheritance: transcripts → active profile → Claude prompts → hints
+- Three concurrent background threads handle live session processing: Deepgram STT, Claude analysis loop, coaching delivery
+- All shared live-session state is centralized in `services/live_session.py` using named `threading.Lock()` guards
+- Database-backed multi-tenant isolation: every query is scoped to `org_id`
+- Prompt versioning (A/B routing) via `prompt_versions` DB table; per-user deterministic routing in `services/prompt_pipeline.py`
+- Model split enforced by config constants: Haiku for latency-critical live loop (`MODEL_ANALYSE`, `MODEL_COACHING`), Sonnet for user-visible output (`MODEL_EWB`, `MODEL_POSTCALL_ANALYSIS`, `MODEL_PRECALL`)
 
 ## Layers
 
-**Presentation Layer (Frontend):**
-- Purpose: Serve HTML templates, handle client-side interactivity, display real-time coaching hints via WebSocket
-- Location: `templates/` for Jinja2 templates, `static/` for JavaScript and CSS
-- Contains: Dashboard, live coaching interface, training scenarios, profile management UIs
-- Depends on: Flask route handlers, WebSocket events from socketio
-- Used by: Web browsers via HTTP and WebSocket connections
+**Config:**
+- Purpose: All environment-based settings and application constants
+- Location: `config.py`
+- Contains: API keys, model constants (MODEL_EWB, MODEL_ANALYSE, etc.), DB URL, audio parameters, PLANS dict, KATEGORIE_LABEL, PERSONALIZED_SCRIPTS_CAP
+- Depends on: `.env` via `python-dotenv`
+- Used by: All other layers
 
-**Application/Routes Layer:**
-- Purpose: Expose HTTP endpoints and Socket.IO events for client-server communication; orchestrate business logic
-- Location: `routes/` directory with blueprint modules (auth.py, app_routes.py, profiles.py, training.py, coach.py, etc.)
-- Contains: Login, session control, profile CRUD, live session start/end, dashboard queries, training execution
-- Depends on: Database models, service layer, auth decorators
-- Used by: Frontend JavaScript via HTTP and WebSocket
+**Presentation (Templates + Static):**
+- Purpose: Jinja2 HTML rendering and client-side interactivity
+- Location: `templates/` (Jinja2 HTML), `static/` (CSS, JS, fonts)
+- Contains: `base.html`, `dashboard.html`, `training.html`, `profile_editor.html`, `session_detail.html`, `landing.html`; PiP launcher at `static/pip-launcher.js`; audio capture at `static/audio-processor.js`; `static/nerve.css` (global styles)
+- Depends on: Flask `render_template`, route context dicts, Socket.IO browser client
+- Used by: Web browsers via HTTP and WebSocket
 
-**Business Logic Layer (Services):**
-- Purpose: Core business logic for transcription, AI analysis, coaching, training, and session management
-- Location: `services/` directory
-- Contains:
-  - `claude_service.py` - Prompt building and Claude API calls (analysis, coaching, auto-variante streaming)
-  - `prompt_pipeline.py` - Prompt version routing (A/B via ENV override or user_id % variants)
-  - `ewb_pipeline.py` - EWB-module-specific prompt assembly from templates
-  - `live_session.py` - Global session state, thread-safe locks, helper functions for state updates
-  - `deepgram_service.py` - Real-time speech-to-text transcription pipeline
-  - `training_service.py` - Training scenario logic, persona simulation, LLM-based training conversations
-  - `coaching_service.py` - Coach tips, learning cards, recommendation logic
-  - `precall_service.py` - Pre-call research and briefing text generation
-  - `qa_pipeline.py` - Quality assurance and follow-up question dispatch
-  - `einwand_keyword_matcher.py` - Pattern matching for objection detection via keywords
-  - Other utilities: audit, cost_tracker, crm_service, feedback_service, etc.
-- Depends on: Config, database models, external APIs (Deepgram, Anthropic)
+**Routing (Blueprints):**
+- Purpose: HTTP endpoints organized by domain concern
+- Location: `routes/` directory — 20 blueprint modules
+- Contains: auth, dashboard, profiles, training, coach, orgs, payments, oauth, admin_dashboard, admin_ewb, feedback, onboarding, settings, legal, changelog, logs_routes, performance, learning, waitlist, app_routes
+- Depends on: Service layer, `@login_required` from `routes/auth.py`, `@superadmin_required` from `services/auth_decorators.py`, `g.user` / `g.org` populated by `@app.before_request`
+- Used by: Frontend JS and browsers
+
+**Services (Business Logic):**
+- Purpose: Core domain logic for transcription, AI analysis, coaching, training, precall, profile schema
+- Location: `services/` — 24 modules
+- Key modules:
+  - `services/live_session.py` — all thread-safe shared state, per-SID profile registry
+  - `services/deepgram_service.py` — per-SID Deepgram WebSocket management (`_deepgram_sessions` dict)
+  - `services/claude_service.py` — Anthropic API calls: analyse_loop (Haiku), EWB streaming (Sonnet/Haiku circuit-breaker), coaching
+  - `services/coaching_service.py` — post-call Sonnet analysis, learning card generation
+  - `services/training_service.py` — training dialog via Claude Haiku persona + ElevenLabs TTS
+  - `services/precall_service.py` — Brave Search + Claude 3-layer briefing (fields + text + recommendations), 5-min in-memory cache
+  - `services/prompt_pipeline.py` — A/B prompt version routing, `build_profile_context()` (9-section profile block)
+  - `services/ewb_pipeline.py` — EWB system prompt assembly with profile context
+  - `services/profile_schema.py` — Pydantic v2 schema for Profile JSON, versioned `_migrate_profile_data()`
+  - `services/ki_logik.py` — readiness score computation, 6-phase classification, hint priority
+  - `services/qa_pipeline.py` — classifier + FAQ-match response pipeline (Phase 08.5)
+  - `services/einwand_keyword_matcher.py` — low-latency keyword-based objection detection (bypasses analyse_loop)
+  - `services/integration_engine.py` — post-session training recommendation routing
+  - `services/cost_tracker.py` — per-call API cost logging to `api_cost_log`
+  - `services/rate_limiter.py` — Flask-Limiter (per-IP, in-memory; Redis-upgradeable)
+  - `services/audit.py` — structured writes to `audit_log` for sensitive actions
+- Depends on: `config.py`, `database/`, external APIs (Deepgram, Anthropic, ElevenLabs, Brave, Stripe)
 - Used by: Routes and background threads
 
-**Database Layer:**
-- Purpose: Persist organizational data, user profiles, conversation logs, session metadata
-- Location: `database/db.py` for connection and session management; `database/models.py` for SQLAlchemy ORM models
-- Contains: SQLAlchemy models (Organisation, User, Profile, Session, ConversationLog, TrainingScenario, PromptVersion, FtAssistantEvent, etc.)
-- Depends on: SQLAlchemy ORM, SQLite or configured DATABASE_URL
-- Used by: All route handlers and service layer functions
+**Database:**
+- Purpose: Persistence for all org, user, profile, session, and log data
+- Location: `database/db.py` (engine + session factory), `database/models.py` (ORM models)
+- Contains: SQLAlchemy 2.0 declarative models; WAL mode enabled for SQLite concurrency; `scoped_session` for Flask-Admin; `get_session()` returns plain `SessionLocal()` instances
+- Depends on: SQLAlchemy 2.0, SQLite (default at `database/nerve.db`) or PostgreSQL via `DATABASE_URL`
+- Used by: All route handlers and service layer
 
-**Configuration Layer:**
-- Purpose: Environment-based settings and application constants
-- Location: `config.py` and `.env` file
-- Contains: API keys, database URL, audio parameters (SAMPLE_RATE, CHUNK_SIZE, ANALYSE_INTERVALL, MERGE_WINDOW_S, SPEAKER_DEBOUNCE_S), pricing plans, category labels, phase names
-- Depends on: python-dotenv for environment variable loading
-- Used by: All layers
-
-**Background Processing Threads:**
-- Purpose: Asynchronous processing of audio, transcription, analysis, and coaching
-- Entry points: `analyse_loop()`, `coaching_loop()`, and microphone input handling
-- Pattern: Event-driven with threading.Event triggers, thread-safe access to shared state via locks
-- Details: See Data Flow section below
+**Application Bootstrap (`app.py`):**
+- Purpose: Flask app factory, extension init, all Blueprint registration, startup migrations, DB seeds
+- Location: `app.py` (~2230 lines)
+- Startup sequence: `ProxyFix` → `SocketIO` → `CSRFProtect` → `init_limiter` → `init_db` → `_migrate()` → `_data_migrate()` → `_migrate_profile_json()` → `_migrate_fragen_to_faqs()` → schema batch migration (v4) → `_seed_founder_dashboard_defaults()` → exchange rate scheduler → `_seed_prompt_versions()` → `_seed_ewb_v2()` → `_seed_ewb_scenarios()` → `_seed()` → blueprint imports → blueprint registration → Flask-Admin setup
 
 ## Data Flow
 
-**Live Session Architecture (Thread-Safe State Machine):**
+**Live Call — Real-Time Path:**
+1. Browser captures microphone via `AudioWorkletProcessor` (`static/audio-processor.js`), streams PCM chunks over WebSocket (Socket.IO) to server
+2. Socket.IO `start_live_session` event → `app.py` handler loads active profile via `ls.set_profile_for_sid(sid, ...)`, opens Deepgram WebSocket via `deepgram_service.start_deepgram(sid, mode)`
+3. Deepgram fires `on_message` callback → final transcripts appended to `ls.transcript_buffer` (under `ls.buffer_lock`) and emitted to browser via `socketio.emit('transcript', ..., room=sid)`
+4. Keyword-matcher (`services/einwand_keyword_matcher.py`) fires immediately on each transcript: keyword hit → Haiku EWB call → result emitted via Socket.IO (slot 1 path, `ls.state['kw_fired_for_line']` set to prevent duplicate QA)
+5. `analyse_loop` thread reads `transcript_buffer` every `ANALYSE_INTERVALL` seconds (4s), calls Claude Haiku (`MODEL_ANALYSE`) → JSON with `einwand` / `gegenargument` / score flags → updates `ls.state` (under `ls.state_lock`); browser polls `/api/ergebnis` at ~500ms
+6. Session end: browser POSTs `/api/beenden` → `ConversationLog` persisted → `coaching_service.generate_postcall_analysis()` (Sonnet) + `integration_engine` for training recommendations
 
-Centralized in `live_session.py` with thread-safe locks around all shared state:
+**State Management:**
+- All live-session globals in module-level variables of `services/live_session.py`
+- Per-SID isolation (Phase 08.19.4): `ls._per_sid_profile[sid]` → `(name, daten)` tuple; `ls._session_state[sid]` → per-SID key-value store; both guarded by `ls._per_sid_lock` / `ls._session_state_lock`
+- Global `ls.state` dict (under `ls.state_lock`): `version`, `aktiv`, `ergebnis`, `kaufbereitschaft`, `current_phase`, `readiness_score`, `active_hint`, `ewb_buttons`, `precall_briefing`, `mic_muted`, `kw_fired_for_line`, `slot1_variant_busy_until`
+- Circuit-breaker in `claude_service.py`: `_ewb_ttft_history` deque (last 5); if 3/5 exceed threshold → Haiku fallback for `MODEL_PIP_AUTOVAR` for 30 seconds
 
-```
-┌─────────────────────────────────────────────────────────┐
-│         live_session.state (dict, thread-safe)          │
-│  Protected by live_session.state_lock                   │
-│                                                          │
-│  Core fields:                                            │
-│    • version (int) - Incremented on each analysis       │
-│    • aktiv (bool) - Analysis in progress                │
-│    • ergebnis (dict) - Latest Claude analysis result    │
-│    • line_id (str) - ID of current transcript line      │
-│    • kaufbereitschaft (int) - 5-100, readiness score    │
-│    • current_phase (int 1-6) - Conversation phase       │
-│    • readiness_score/bucket - Phase 04.8 deterministic  │
-│    • active_hint (dict) - Ranked single hint to show    │
-│    • ewb_buttons (list) - Dynamic objection buttons     │
-│    • active_learning_cards (list) - Coach learning      │
-│    • precall_briefing (str) - Research context inject   │
-│    • user_id (int) - Session user, set by deepgram_srv  │
-│    • session_anrede (str) - 'Du'/'Sie', inferred/set    │
-│    • ft_session_id - Finetune logging session ID        │
-│    • kw_fired_for_line (str) - D-02 QA guard           │
-│    • slot1_variant_busy_until (float) - Anti-overlap    │
-│    • mic_muted (bool) - Mute state                      │
-│    • mode (str) - 'cold_call' or 'meeting'             │
-│    • market, language - Locale for finetune logs        │
-└─────────────────────────────────────────────────────────┘
-```
+**PreCall Briefing Path (Phase 08.20):**
+1. User fills precall form (Firmenname, Branche, Ansprechpartner + opt. info) in PiP launcher
+2. Browser POSTs to `/api/precall/personalize`
+3. `precall_service.py`: Brave Search API → raw snippets → Claude structured analysis (3 layers: fields JSON + freetext briefing + recommendations)
+4. Results cached in `_briefing_cache` dict for 5 min (key: `(org_id, profile_id, firma_normalized)`)
+5. Briefing text injected into `ls.state['precall_briefing']` at session start; personalized opener script generated as `ProfileOpener` row with `parent_id=<original_opener_id>`, `is_personalized=True`, `briefing_source_firma=<firma>`
 
-**Three-Thread Processing Pipeline:**
+**Training Path:**
+1. User selects scenario + difficulty + voice gender → browser POSTs to training API
+2. `training_service.py`: builds persona prompt (Claude Haiku, `MODEL_TRAINING_DIALOG`) with scenario data + personality type
+3. ElevenLabs TTS converts AI response to audio; returned as base64 for browser playback
+4. Scoring at session end via `training_service.generate_scoring()` (Sonnet, `MODEL_TRAINING_SCORING`)
 
-1. **STT Thread (Deepgram input handler):**
-   - Captures microphone audio chunks via WebRTC
-   - Sends to Deepgram streaming API
-   - On transcript segment: writes to `transcript_buffer` under `buffer_lock`
-   - Sets `analyse_trigger` event to wake analyse_loop
-   - Keyword matcher runs in this thread (Phase 06.2): checks for objection patterns, writes `kw_fired_for_line` to state
+## Key Abstractions
 
-2. **analyse_loop() Thread (EWB - Einwand Analysis):**
-   - Waits on `analyse_trigger` event (timeout: ANALYSE_INTERVALL = 2s)
-   - Reads `transcript_buffer` under `buffer_lock`, clears it
-   - Builds context from `analysiert_bisher` (last 20 analyzed segments)
-   - **Prompt call:** `analysiere_mit_claude()` or `analysiere_mit_claude_streaming()`
-     - Uses `resolve_prompt_version('ewb', user_id)` to route to A/B variant
-     - Calls `build_ewb_prompt()` with resolved version
-     - Sends to Claude Haiku with profile context + active learning cards
-   - Parses JSON response: einwand (true/false), typ, intensitaet, gegenargument_1/_2, optional score signals
-   - Updates `state['ergebnis']`, `state['version']`, `state['kaufbereitschaft']`
-   - Logs to `conversation_log` and `gegenargument_log`
-   - Phase-classifier runs every 5th cycle via `classify_phase()` (optional)
-   - Readiness-score computation via `compute_readiness_score()` (optional, Phase 04.8)
-   - **QA Dispatch:** Calls `_qa_pipeline_dispatch()` when `kw_fired_for_line != line_id` (D-02 guard)
-   - **FT Logging:** Writes assistant_event via `_write_ft_assistant_event()`
+**Live Session State (`services/live_session.py`):**
+- Purpose: Single mutable shared namespace for one live call, accessed by 3+ concurrent threads
+- Pattern: Module-level variables + named `threading.Lock()` per logical group (`buffer_lock`, `state_lock`, `log_lock`, `coaching_lock`, `kb_lock`, `pause_lock`, etc.)
+- Per-SID profile since Phase 08.19.4: replaces single global active profile; `ls.set_profile_for_sid()` / `ls.get_profile_for_sid()` are the correct accessors
+- Reset via `ls.reset_session()` at session start
 
-3. **coaching_loop() Thread (Live Coaching Tips):**
-   - Waits on `coaching_trigger` event
-   - Reads `coaching_buffer` under `coaching_lock`, clears it
-   - **Prompt call:** `gebrauche_coaching_prompt()` (uses legacy `_build_coaching_prompt()`)
-     - System prompt reads from `active_profile_data` directly, not EWB-pipeline
-     - Sends to Claude Haiku with purchase signals, conversation phases
-   - Parses: tipp (string), kategorie (frage/signal/redeanteil/uebergang/lob), painpoint, kb_delta
-   - Updates `state['kaufbereitschaft']` with kb_delta
-   - Appends to `coaching_buffer` (displayed as coach tips on UI)
-   - Stores painpoints in `painpoints` (dedup via `ist_painpoint_duplikat()`)
+**Profile (Sales Methodology Container):**
+- Purpose: Encapsulates product info, objections, counter-arguments, call phases, buying signals, opener scripts, FAQ entries per customer/product segment
+- Storage: `Profile.daten` column (TEXT/JSON), schema versioned (`LATEST_SCHEMA_VERSION` in `services/profile_schema.py`)
+- Child tables: `profile_skripte` (call scripts), `profile_opener` (openers; `parent_id` for personalized variants, `is_personalized` flag), `profile_faqs` (FAQ with `mode='ki_generated'|'literal'`)
+- Migration: `_migrate_profile_data()` runs batch at startup for all profiles below `LATEST_SCHEMA_VERSION`
 
-**Prompt Building Call Chains:**
+**Prompt Version A/B System:**
+- Purpose: DB-driven prompt management with per-user deterministic routing; no deploy needed to switch variants
+- Location: `services/prompt_pipeline.py::resolve_prompt_version()`, `database/models.py::PromptVersion`
+- Priority order: `ENV PROMPT_{MODULE}_VERSION_OVERRIDE` → cached `(module, user_id)` DB lookup (user_id % len(variants)) → fallback `'unknown'`
+- Modules managed: `ewb`, `assistant_live`, `coaching_live`, `objection_trigger`, `training_persona`, `classifier`, `qa_response`, `training_kunde`, `training_scoring`
 
-**EWB (Einwand-Analyse) Path (ACTIVE in analyse_loop):**
-```
-analyse_loop()
-  ↓
-analysiere_mit_claude() or analysiere_mit_claude_streaming()
-  ├─ resolve_prompt_version('ewb', user_id)  # A/B router (ENV override or user_id % variants)
-  │   └─ returns version string ('v1-legacy', 'v2-modular', or 'unknown')
-  ├─ build_ewb_prompt(profile_data=None, anrede=..., version=..., user_id=...)
-  │   ├─ _load_prompt_template(version)  # Loads from PromptVersion DB, fallback to _FALLBACK_V1_PROMPT
-  │   ├─ build_profile_context(user_id)  # Shared D-40 utilities: basis fields, eigene_formulierungen, beweise, anrede
-  │   └─ combines template + profile context into system prompt
-  └─ claude_client.messages.create(system=_system_prompt, messages=[...])
-```
+**Blueprint Registry:**
+- Pattern: `{name}_bp = Blueprint('{name}', __name__)` registered flat (no URL prefix) in `app.py`
+- Verified name mapping: see `routes/CLAUDE.md` — e.g. `organisations.py` uses `orgs_bp` with name `'orgs'`, not `'organisations'`
+- All 20 blueprints: `auth`, `dashboard`, `app_routes`, `profiles`, `training`, `coach`, `settings`, `orgs`, `payments`, `onboarding`, `oauth`, `feedback`, `learning`, `logs`, `performance`, `legal`, `changelog`, `waitlist`, `admin_dashboard`, `admin_ewb`
 
-**Coaching Path (LEGACY, runs separately in coaching_loop):**
-```
-coaching_loop()
-  ↓
-gebrauche_coaching_prompt()
-  ├─ _build_coaching_prompt()  # Reads active_profile_data directly (NOT via pipeline)
-  │   ├─ Gets basis, zielgruppe, schmerzen, kaufsignale, uebergaenge, wettbewerber, phasen
-  │   └─ Constructs COACHING_PROMPT_BASE + profile fields
-  └─ claude_client.messages.create(system=_system_prompt, messages=[...])
-```
+**Multi-Tenant Isolation:**
+- Every DB query scoped by `org_id` from `g.org.id`
+- Roles on `User.rolle`: `owner` / `admin` / `member`; `User.is_superadmin` for Flask-Admin
+- `User.is_coach` grants access to coach dashboard (`routes/coach.py`)
 
-**Training Path (OFF-MAIN-THREAD, started from routes/training.py):**
-```
-POST /api/training/run_scenario
-  ↓
-start_training_session()
-  ├─ build_customer_prompt(profile_data, schwierigkeit, persona, sprache)
-  ├─ build_sekretaerin_prompt(persona, sprache)
-  ├─ build_personality_prompt(profile_data, personality_data, ...)
-  └─ Each sends to claude_client.messages.create() sequentially (NOT streaming)
-```
-
-**PreCall Briefing Path (Called at session start):**
-```
-POST /api/start_live_session (deepgram_service.py)
-  ↓
-generate_precall_briefing(user_email, profile_name, org_context)
-  ├─ Claude API call with system prompt
-  └─ Result stored in ls.state['precall_briefing']
-  └─ Injected into EWB prompts via build_profile_context() (D-40)
-```
-
-**Dead Code Analysis:**
-- `_build_system_prompt()` in claude_service.py (line 265): **DEAD** — Not called anywhere in live request path
-  - Was used by legacy pipeline before Phase 08 EWB integration
-  - Still used in some unit tests and fallback logic, but NEVER by analyse_loop
-  - analyse_loop exclusively uses `build_ewb_prompt()` via `resolve_prompt_version()` routing
-
-**Key Abstractions:**
-
-**Session State (live_session.state):**
-- Purpose: Single source of truth for current live session, shared across all threads
-- Pattern: Thread-safe dict + lock pattern, event-driven triggers via threading.Event
-- Read: All threads check fields; e.g., analyse_loop reads `user_id`, `session_anrede`, `kw_fired_for_line`
-- Write: Each thread writes to specific fields (see Field Writers/Readers below)
-
-**Active Profile (live_session.active_profile_data):**
-- Purpose: Encapsulate sales methodology, objections, counter-arguments, phases as JSON
-- Examples: `Profile.daten` column stores complete profile JSON
-- Pattern: Profile loaded at session start via `set_active_profile()`, provides context to Claude prompts
-- Structure: Contains `basis` (unternehmen, produktbeschreibung, usps, konsequenz, etc.), `einwaende`, `phasen`, `gegenargumente`, `ki` (ton, ansprache, sensitivitaet), `kaufsignale`, `schmerzen`, `wettbewerber`
-
-**Conversation Log (live_session.conversation_log):**
-- Purpose: Persistent record of a sales conversation with analysis results
-- Pattern: Created per session, updated incrementally by analyse_loop and coaching_loop, finalized at `/api/end_session`
-- Structure: List of dicts with keys: ts, type ('transcript', 'analyse', 'coaching', 'latenz_coaching', 'korrektur', 'painpoint', 'tipp'), speaker, text, data
-
-**Keyword Matcher (live_session.get_matcher(sid)):**
-- Purpose: Session-scoped pattern matching for objection detection (Phase 06.2)
-- Pattern: Lazy-init, dropped at session end via `drop_matcher(sid)`
-- Called from deepgram_service to detect objections in real-time, set `state['kw_fired_for_line']` to trigger QA-pipeline
-
-**Blueprint Organization (Modular Routing):**
-- Examples: `auth_bp`, `app_routes_bp`, `dashboard_bp`, `training_bp`, `coach_bp`, `profiles_bp`
-- Pattern: Each blueprint in separate route file, imported and registered in `app.py`
-- Responsibility separation: auth handles login/logout, profiles handles CRUD, app_routes handles live session control
+**ConversationLog:**
+- Model: `database/models.py::ConversationLog`
+- Key columns: `session_mode` (`cold_call`|`meeting`), `precall_briefing` (TEXT), `precall_fields` (JSON TEXT, Phase 08.20.2), `anrede` (`Du`|`Sie`), `result` (`win`|`loss`|`open`), `market`, `language`
+- Written atomically at session end via `POST /api/beenden`
 
 ## Entry Points
 
-**HTTP Entry Points:**
+**Application Start:**
+- Location: `app.py`
+- Triggers: `gunicorn -k eventlet app:app` (production, Hetzner VPS behind Nginx); `python app.py` (dev)
+- WSGI: `ProxyFix(app.wsgi_app, x_for=1, x_proto=1)` — required for correct IP detection behind Nginx
 
-**`GET /` (app_routes.py):**
-- Location: `routes/app_routes.py`
-- Triggers: Page load or redirect from login
-- Responsibilities: Check auth, route to landing page or `/live`, render template
+**Key HTTP Routes:**
+- `GET /` → landing / login redirect — `routes/auth.py`
+- `GET /dashboard` → session history and analytics — `routes/dashboard.py` (`dashboard_bp`)
+- `GET /training` → training UI — `routes/training.py` (`training_bp`)
+- `GET /profiles` → profile list — `routes/profiles.py` (`profiles_bp`)
+- `GET /onboarding` → onboarding wizard — `routes/onboarding.py` (`onboarding_bp`)
+- `POST /api/beenden` → end live session, persist `ConversationLog` — `routes/app_routes.py` (`app_routes_bp`)
+- `GET /api/ergebnis` → poll latest analysis result (browser polls ~500ms) — `routes/app_routes.py`
+- `POST /api/einwand` → manual EWB trigger — `routes/app_routes.py`
+- `POST /stripe/webhook` → Stripe events, CSRF-exempt — `routes/payments.py` (`payments_bp`)
+- `GET /auth/google/callback`, `GET /auth/microsoft/callback` → OAuth callbacks, CSRF-exempt — `routes/oauth.py` (`oauth_bp`)
+- `GET /admin` → Flask-Admin (superadmin only) — `SecureIndexView` in `app.py`
 
-**`GET /live` (app_routes.py, @login_required):**
-- Location: `routes/app_routes.py`
-- Triggers: User navigates to live coaching interface
-- Responsibilities: Render live.html template with session context, SocketIO client initialization
-
-**`POST /api/start_live_session` (deepgram_service.py):**
-- Location: `routes/app_routes.py` → calls `handle_start_live_session()` from `services/deepgram_service.py`
-- Triggers: User clicks "Start Call" on live interface
-- Responsibilities:
-  - Generate PreCall briefing via Claude (optional)
-  - Initialize live_session state: set user_id, session_anrede, active profile, ft_session_id
-  - Start WebRTC microphone capture and Deepgram streaming
-  - Launch analyse_loop and coaching_loop background threads
-  - Emit `session_started` WebSocket event
-
-**`GET /api/ergebnis` (app_routes.py, polling endpoint):**
-- Location: `routes/app_routes.py`
-- Triggers: Frontend polls every ~500ms
-- Responsibilities: Return current `ls.state` (version, ergebnis, kaufbereitschaft, current_phase, active_hint, etc.)
-
-**`POST /api/end_session` (app_routes.py):**
-- Location: `routes/app_routes.py`
-- Triggers: User clicks "End Call"
-- Responsibilities: Finalize session, persist conversation_log to DB, reset live_session state
-
-**`POST /api/analyse_line` (app_routes.py):**
-- Location: `routes/app_routes.py`
-- Triggers: Manual EWB button click (user selects a response variant)
-- Responsibilities: Record gegenargument selection, update kb tracking, emit UI feedback
-
-**WebSocket Entry Points (Socket.IO):**
-
-- `transcript`: Server emits final transcriptions with speaker label
-- `coaching`: Server emits coaching tips and recommendations
-- `pip_token`: Server emits Claude response tokens during streaming (Phase 06, PiP mode)
-- Client can emit: `start_session`, `end_session`, `mute_mic`, `pause`, `resume`, etc.
-
-**Background Thread Entry Points:**
-
-**`analyse_loop()` (claude_service.py):**
-- Started as daemon thread in `handle_start_live_session()`
-- Runs continuously, waits on `ls.analyse_trigger` event
-- Calls `analysiere_mit_claude()` or `analysiere_mit_claude_streaming()` when transcript buffer has content
-
-**`coaching_loop()` (claude_service.py):**
-- Started as daemon thread in `handle_start_live_session()`
-- Runs continuously, waits on `ls.coaching_trigger` event
-- Calls `gebrauche_coaching_prompt()` when coaching buffer has content
+**Socket.IO Events (defined in `app.py`):**
+- `connect` → join room by SID
+- `start_live_session` → load per-SID profile, open Deepgram WS
+- `audio_chunk` → forward PCM bytes to Deepgram for this SID
+- `stop_live_session` → close Deepgram, clean up per-SID state, call `ls.drop_matcher(sid)`
+- `mute_mic` / `unmute_mic` → toggle `ls.state['mic_muted']`
+- `swap_roles` → toggle `ls.roles_swapped`
+- `disconnect` → cleanup per-SID resources
+- Server emits: `transcript` (final STT result with `speaker`, `line_id`), `coaching`, `analyse_result`
 
 ## Error Handling
 
-**Strategy:** Defensive with silent fallbacks; never crash the live loop or HTTP thread
+**Strategy:** Fail-open for non-critical paths; hard stop only for data integrity violations at startup
 
 **Patterns:**
-
-**Database Errors:** Try-finally blocks close sessions, constraints handled at ORM level
-- `routes/auth.py` lines 46-80: `_do_login()` catches DB errors, returns (None, error_msg)
-- `services/live_session.py` lines 311-413: `reset_session()` catches and silently swallows lock errors
-
-**API Errors (Claude, Deepgram, ElevenLabs):** Try-except with fallback JSON
-- `claude_service.py` lines 679-701: `analysiere_mit_claude()` catches API errors, returns parsed or empty dict
-- `deepgram_service.py`: Handles streaming errors, continues if single chunk fails
-
-**Prompt Loading Errors:** Fallback to _FALLBACK_V1_PROMPT
-- `ewb_pipeline.py` lines 73-89: `_load_prompt_template()` returns fallback if DB miss or error
-- `prompt_pipeline.py` lines 55-97: `_load_active_variants()` returns ['unknown'] if DB fails
-
-**FT Logging Errors:** Never raise, swallow all exceptions
-- `claude_service.py` lines 125-203: `_write_ft_assistant_event()` catches all exceptions, prints to log
-- `prompt_pipeline.py` lines 228-255: `log_pipeline_event()` catches all exceptions, no raise
-
-**Audio Errors:** Graceful degradation, continue without audio
-- `deepgram_service.py`: Handles streaming connection loss, emits error to client
-
-**Authentication:** `login_required` decorator checks session before route execution, redirects to login
-- `services/auth_decorators.py`: Validates user_id in session, attaches to Flask `g` object
-
-**Business Logic:** Explicit None checks, defensive get() with defaults
-- `live_session.py` lines 227-244: `stabilize_speaker()` handles None input, returns confirmed or pending
-- `einwand_keyword_matcher.py`: Pattern matching with fallback to "no match"
+- DB sessions always closed in `try/finally` blocks; `db.close()` is the cleanup mechanism (no context managers used)
+- Migration `ALTER TABLE` blocks use `except Exception: pass` — expected to fail silently on re-run (idempotent)
+- Claude API calls wrapped in try/except; JSON parse failures return `{}` or fallback default text
+- Startup data integrity: duplicate `oauth_id` in `users` → `sys.exit(1)` with diagnostic output
+- Flask error handlers: `@app.errorhandler(500)` and `@app.errorhandler(Exception)` return `{'ok': False, 'error': '...'}` JSON for AJAX/API requests; Werkzeug `HTTPException` passed through unchanged (404, 403, etc.)
+- Rate limit: `@app.errorhandler(429)` returns `{'ok': False, 'error': 'rate limit exceeded'}`
+- Live-loop service functions must not raise (documented in `prompt_pipeline.py` docstring) — any exception falls back to safe defaults silently
 
 ## Cross-Cutting Concerns
 
-**Logging:** Print statements to stdout with `[PREFIX]` tags (development logging)
-- Usage: `[Claude-1]`, `[DG]`, `[AI]`, `[DB]`, `[FT]`, `[EWB]`, `[PiP-Stream]`, `[Phase08]`
-- Severity: Informational only, no exceptions logged by default
-- SQL logging can be enabled via SQLAlchemy config
+**Logging:**
+- `print()` with bracketed context tags: `[DB]`, `[DG]` (Deepgram), `[AI]`, `[Schema]`, `[FX]`, `[Init]`, `[FairUse]`
+- `app.logger.error()` for unexpected errors in migration functions
+- `logging.getLogger(__name__)` in service modules
+- Poll endpoint (`/api/ergebnis`) suppressed from Werkzeug access log via custom `_SuppressPolling` log filter in `app.py`
 
-**Validation:**
-- ORM-level constraints: nullable, unique, ForeignKey
-- Deepgram results validated to contain `transcript` and `speaker` fields
-- Claude responses validated as JSON before parsing via `_parse_json()`
-- User input validated in route handlers: email format for signup, etc.
+**Authentication:**
+- `@login_required` in `routes/auth.py`: checks `session['user_id']`, attaches `g.user` + `g.org`, redirects to login if absent
+- `@app.before_request _load_user()`: populates `g.user` / `g.org` for routes not decorated with `@login_required` (Flask-Admin, static files)
+- Passwords: Werkzeug `generate_password_hash()` / `check_password_hash()`
+- OAuth (Google + Microsoft): state in Flask session for CSRF; Microsoft new users get `email_confirmed=False` flag pending confirmation
+- Session: `SESSION_COOKIE_SECURE` true in prod (env-gated by `FLASK_DEBUG`), `HTTPONLY=True`, `SAMESITE=Lax`, 14-day lifetime
 
-**Authentication & Authorization:**
-- Session-based with Flask session middleware
-- User ID stored in `session['user_id']`, checked by `login_required` decorator
-- User object attached to `g` for request-local access
-- Password hashing via Werkzeug `generate_password_hash()` and `check_password_hash()`
-- Role-based: owner, admin, member on users; organization-based data isolation
-- Routes check `g.user.rolle` for admin/owner-only features
-- All queries filtered by `org_id` to prevent cross-organization data leakage
-- Profile access limited to profiles matching user's `org_id`
+**Authorization:**
+- Role checks inline in route handlers: `g.user.rolle in ('owner', 'admin')`
+- `@superadmin_required` decorator in `services/auth_decorators.py`
+- Flask-Admin `SecureIndexView.is_accessible()` checks `g.user.is_superadmin`
+- Org isolation: all profile/log queries include `filter_by(org_id=g.org.id)`
 
-**Thread Safety:**
-- All shared state protected by locks (state_lock, buffer_lock, coaching_lock, etc.)
-- No global variables without lock protection
-- Event-driven coordination via threading.Event
-- Pattern: acquire lock → read/write → release lock (via `with` statement)
-- Atomicity guaranteed within lock region, but cross-lock operations must be careful (e.g., reading user_id, then accessing profile under separate lock)
+**CSRF:**
+- `flask_wtf.csrf.CSRFProtect(app)` — initialized after `SocketIO` (order matters: SocketIO registers WSGI handler first)
+- Stripe webhook + OAuth callbacks explicitly exempted: `csrf.exempt(stripe_webhook)` etc.
+
+**Prompt Caching (Anthropic):**
+- EWB and QA system prompts use Anthropic prompt caching (`cache_control: {"type": "ephemeral"}`) when prompt length > 4096 chars (`_CACHE_MIN_CHARS`)
+- Toggled per module via `CACHE_EWB` / `CACHE_QA` env vars; `CACHE_ANALYSE=false` by default (analyse_loop prompt too short)
+
+**DSGVO:**
+- Deepgram EU endpoint as default: `DEEPGRAM_HOST=api.eu.deepgram.com` in `config.py`
+- `Organisation.dsgvo_modus` controls transcript storage behavior
+- PreCall raw search results not persisted — only structured briefing output stored
+- PreCall in-memory cache: 5-min TTL, no disk write
+
+**Markdown / XSS Sanitization:**
+- PreCall briefing rendered via `{{ text | markdown | safe }}` Jinja filter (defined in `app.py`)
+- `bleach.clean()` sanitizes rendered HTML to allowlist tags: `p br strong em code pre ul ol li h1–h4 blockquote a`
+- Registered as Jinja filter `markdown` in `app.py` lines 101–107
 
 ---
 
-*Architecture analysis: 2026-04-24*
+*Architecture analysis: 2026-05-01*

@@ -1,323 +1,327 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-04-24
+**Analysis Date:** 2026-05-01
 
 ## Test Framework
 
 **Runner:**
-- pytest - Python testing framework
-- Config: `tests/conftest.py` (no pytest.ini — uses pytest defaults)
-- Run Commands:
-```bash
-pytest tests/                    # Run all tests
-pytest tests/ -v                 # Verbose output
-pytest tests/ -k test_name       # Run specific test
-pytest tests/ --tb=short         # Short traceback format
-pytest tests/ -x                 # Stop on first failure
-pytest tests/test_cost_tracker.py::test_freeze_fx_on_write  # Run single test
-```
+- pytest
+- Config: `pytest.ini` at project root (single setting: `norecursedirs = tests/archive`)
 
 **Assertion Library:**
-- pytest built-in assertions: `assert x == y`
-- No external assertion library (unittest.mock used for mocking)
+- pytest built-in `assert` statements
+- `unittest.TestCase` assertions (`self.assertEqual`, `self.assertIn`, `self.assertTrue`) in older test files that use class-based `unittest.TestCase`
 
-**Watch Mode:** Not configured. Manual re-run via pytest command.
+**Run Commands:**
+```bash
+pytest                          # Run all tests (excludes tests/archive/)
+pytest tests/test_ki_logik.py   # Single file
+pytest -s                       # Show print output (useful for latency scaffolds)
+pytest -k "test_name"           # Run matching tests
+```
 
-**Coverage:** Not enforced. No pytest-cov configuration detected.
+**No coverage enforcement.** No `.coveragerc`, no `--cov` in pytest.ini. Coverage is not measured automatically.
 
 ## Test File Organization
 
-**Location:**
-- Co-located with source: `tests/` directory mirrors project structure
-- `tests/services/test_ki_logik.py` for `services/ki_logik.py`
-- `tests/test_cost_tracker.py` for `services/cost_tracker.py`
+**Location:** All tests in `tests/` at project root (flat, not co-located with source).
 
-**Naming:**
-- Test files: `test_*.py` or `*_test.py` convention
-- Test functions: `test_*()` prefix required by pytest
-- Fixtures: Defined in conftest or inline with `@pytest.fixture` decorator
+**Subdirectories:**
+- `tests/services/` — service-layer unit tests (currently only `test_ki_logik.py`)
+- `tests/fixtures/` — fixture data files (e.g., `stripe_invoice.json`)
+- `tests/archive/` — excluded from pytest run; dead/superseded tests kept for reference
+- `tests/tts_samples/` — audio sample files for TTS tests
 
-**Structure:**
+**Naming convention:** `test_<phase_or_domain>_<description>.py`
+- Phase-tagged: `test_08_5_03_integration.py`, `test_08_13_01_config_constants.py`, `test_08_19_01_profile_schema.py`
+- Domain-tagged: `test_ewb_pipeline.py`, `test_auth_next_redirect.py`, `test_session_scoping.py`
+- Both styles coexist; phase-tagged names are newer
+
+**Scale:** 466 test functions across ~45 active test files (~6,500 lines total).
+
+## Shared Fixtures (`tests/conftest.py`)
+
+Three fixtures are available to all test files without import:
+
+**`sample_state`** — factory fixture for `ki_logik` state dicts:
+```python
+def test_foo(sample_state):
+    state = sample_state(readiness_score=50)   # override specific keys
+    state = sample_state()                      # all defaults
 ```
-tests/
-├── conftest.py                    # Shared fixtures (sample_state, db_session, client)
-├── test_cost_tracker.py
-├── test_eur_calculator.py
-├── test_ki_logik.py
-├── services/
-│   └── test_ki_logik.py
-└── ... (35+ test files total)
+
+**`db_session`** — in-memory SQLite session, schema pre-created:
+```python
+def test_foo(db_session):
+    obj = MyModel(...)
+    db_session.add(obj)
+    db_session.commit()
+    result = db_session.query(MyModel).first()
+    assert result.field == expected
+```
+The fixture yields the session and closes it in `finally` — matches the project's own try/finally DB pattern.
+
+**`client`** — Flask test client with in-memory SQLite:
+```python
+def test_foo(client):
+    resp = client.get('/some/route', follow_redirects=False)
+    assert resp.status_code == 302
+```
+- Rebinds `database.db.engine`, `database.db.SessionLocal`, `database.db.db_session` to in-memory SQLite via `monkeypatch`
+- Sets `TESTING=True`, `WTF_CSRF_ENABLED=False`
+- Exposes `client._test_session` for direct DB writes in test setup
+
+**`db_from_client`** — alias for `client._test_session`:
+```python
+def test_foo(client, db_from_client):
+    user = _make_user(db_from_client, 'test@example.com')
+    with client.session_transaction() as s:
+        s['user_id'] = user.id
+    resp = client.get('/protected/route')
+    assert resp.status_code == 200
 ```
 
 ## Test Structure
 
-**Suite Organization:**
-
-Example from `tests/services/test_ki_logik.py`:
-
+**File-level docstring** (required in newer files):
 ```python
-"""Unit tests for services/ki_logik.py pure functions (Phase 04.8 P01).
-
-Covers compute_readiness_score, select_active_hint, dynamic_ewb_buttons
-and the user override: einwand_geloest = +20 (not briefing's +15).
 """
-
-# Import section (functions, fixtures)
-
-# Test function group with inline comments
-# ── detect_phase (Phase 04.8 P02 hysteresis) ────────────────────────────────
-
-def test_detect_phase_same_phase_passes_through():
-    assert detect_phase(3, 0.42, current_phase=3) == (3, 0.42)
-
-
-def test_detect_phase_forward_low_conf_blocked():
-    # Comment explains test logic if non-obvious
-    new, conf = detect_phase(3, 0.6, current_phase=2)
-    assert new == 2
-    assert conf == 0.6
+tests/test_session_scoping.py
+Phase 08.19.4: DSGVO-Pflicht-Tests — SID-Isolation
+Prueft dass kein Cross-User-State-Contamination moeglich ist.
+Alle Tests sind Runtime-Behavior-Tests (keine Source-Presence-Checks).
+"""
 ```
 
-**Patterns:**
-- No setup/teardown functions — fixtures used instead via `@pytest.fixture` and parameter injection
-- Fixtures defined in `conftest.py`: `sample_state`, `db_session`, `client`, `db_from_client`
-- Each test is independent (no shared state between tests)
-- Comments mark logical test groups: `# ── Group Name ────────────────────`
+**Section separators** inside test files use the same project-wide convention:
+```python
+# ── detect_phase (Phase 04.8 P02 hysteresis) ─────────────────────────────────
+# ── Per-SID Coaching Buffer Isolation (WR-03 — DSGVO) ────────────────────────
+```
+
+**Class-based grouping** for related tests (newer style):
+```python
+class TestPerSidProfileIsolation:
+    def test_two_sids_independent_profiles(self): ...
+    def test_disconnect_cleanup(self): ...
+
+class TestPerSidCoachingBufferIsolation:
+    def test_two_sids_independent_coaching_buffers(self): ...
+```
+
+**Function-based tests** for simple cases (older style, still common):
+```python
+def test_detect_phase_forward_high_conf_advances():
+    new, conf = detect_phase(3, 0.75, current_phase=2)
+    assert new == 3
+    assert conf == 0.75
+```
+
+**Teardown via try/finally for state cleanup:**
+```python
+def test_two_sids_independent_profiles(self):
+    sid_a = 'test-sid-user-a'
+    sid_b = 'test-sid-user-b'
+    try:
+        ls.set_profile_for_sid(sid_a, 'Profil A', {'unternehmen': 'Firma A'})
+        # ... assertions ...
+    finally:
+        _clean_sids(sid_a, sid_b)   # always clean up module-level state
+```
+
+## Test Quality Rule — Integration Assertion vs. Source-Presence False Green
+
+This rule is enforced project-wide (defined in `CLAUDE.md`). It is the single most important testing principle.
+
+**VALID test** — tests runtime behavior that can break without source changes:
+- DB write/read: query on real or in-memory DB, assert on result row or field value
+- Function call return: call function (with monkeypatched I/O), assert on return value
+- State mutation: check dict/object state after function call
+- API response: HTTP request or Socket emit, assert on response body or status code
+- `inspect.signature()`: checks runtime API interface (parameter names) — OK
+
+**SOURCE-PRESENCE FALSE GREEN — delete on sight:**
+- `inspect.getsource(fn)` + `assert 'string' in src`
+- `hasattr(module, 'symbol')` as "protection from deletion"
+- `open('file.py').read()` + `assert 'string' in src`
+- `subprocess.run(['grep', ...])` on source files
+- `src.count('function_call(')` pattern
+
+**Edge case:** `inspect.getsource` for regex patterns enforcing runtime constraints (e.g., "no Opus model in live-loop") is acceptable ONLY if no function-call mock can test the constraint directly. Must be documented with a comment explaining why.
 
 ## Mocking
 
-**Framework:** unittest.mock (Python standard library)
+**Framework:** `unittest.mock` (`MagicMock`, `patch`, `call`)
 
-**Patterns:**
-
-Example from `tests/test_cost_tracker.py:36-45`:
-
+**Standard pattern — patching service dependencies:**
 ```python
-@pytest.fixture
-def patched_sessionlocal(db_session, monkeypatch):
-    """Point database.db.SessionLocal at the in-memory test engine so that
-    log_api_cost() writes into the same DB as the test fixture."""
-    bind = db_session.get_bind()
-    from sqlalchemy.orm import sessionmaker
-    TestSession = sessionmaker(bind=bind, autocommit=False, autoflush=False)
-    monkeypatch.setattr(_db_mod, 'SessionLocal', TestSession)
-    return TestSession
+from unittest.mock import MagicMock, patch
+
+def test_einwand_unknown_high_conf_emits_slot1():
+    with patch('services.qa_pipeline.classify_utterance',
+               return_value={'kategorie': 'einwand_unknown', 'confidence': 0.95}), \
+         patch('services.qa_pipeline.generate_qa_response',
+               return_value='Gute Antwort'), \
+         patch('services.qa_pipeline.apply_tabu_filter', return_value=False), \
+         patch('services.claude_service._qa_load_tabu', return_value=[]):
+        dispatch('text', 'line-10', '', ls_mock, sio_mock)
+        calls = [str(c) for c in sio_mock.emit.call_args_list]
+        assert any('qa_slot1' in c for c in calls)
 ```
 
-**What to Mock:**
-- Database session: Use pytest's `db_session` fixture with in-memory SQLite
-- External APIs: Mock via monkeypatch (Anthropic, Deepgram, ElevenLabs calls not tested)
-- Module-level state: Use monkeypatch to replace SessionLocal, engine, etc.
-
-**What NOT to Mock:**
-- Database queries — use real SQLAlchemy in-memory DB fixture
-- Business logic functions — test actual implementation, not mocks
-- Helper functions — test end-to-end behavior
-
-**Example:** `tests/test_cost_tracker.py:48-51` demonstrates testing with missing rate (should not raise):
-
+**DB injection via monkeypatch (preferred over patch):**
 ```python
-def test_missing_rate_no_raise(db_session, patched_sessionlocal):
-    # KEIN seeded_rate — log should silently skip
-    log_api_cost('unknown', 'noop', user_id=1, units=5, unit_type='per_minute')
-    assert db_session.query(ApiCostLog).count() == 0
+monkeypatch.setattr('database.db.SessionLocal', lambda: _Fake(db_session))
 ```
 
-## Fixtures and Factories
-
-**Test Data:**
-
-Example from `tests/conftest.py:19-38`:
-
+**`_Fake` adapter pattern** — wraps pytest session, no-ops `close()`:
 ```python
-@pytest.fixture
-def sample_state():
-    """Factory returning a fresh state dict with all Phase 04.8 keys at defaults."""
-    def _make(**overrides):
-        base = {
-            "current_phase": 1,
-            "current_phase_name": "Opener",
-            "phase_confidence": 0.0,
-            "phase_changed_at": None,
-            "phase_change_count": 0,
-            "readiness_score": 30,
-            "readiness_bucket": "cold",
-            "score_factors_seen": {},
-            "active_hint": None,
-            "ewb_buttons": None,
-            "cold_call_inference": None,
-        }
-        base.update(overrides)
-        return base
-    return _make
+class _Fake:
+    def __init__(self, real):
+        self._r = real
+    def query(self, *a, **k): return self._r.query(*a, **k)
+    def add(self, *a, **k): return self._r.add(*a, **k)
+    def commit(self): return self._r.commit()
+    def close(self): pass   # do NOT close the shared pytest session
+```
+This pattern appears in `test_ewb_pipeline.py`, `test_prompt_pipeline.py`, and others that test DB-backed services.
+
+**Claude API mock:**
+```python
+def _make_claude_mock(response_text):
+    mock_msg = MagicMock()
+    mock_msg.content = [MagicMock()]
+    mock_msg.content[0].text = response_text
+    mock_msg.usage = None
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_msg
+    return mock_client
 ```
 
-Usage in tests: `state = sample_state(score_factors_seen={'detailfrage': 1})` (see `tests/services/test_ki_logik.py:87-94`)
+**What to mock:**
+- External API calls (Anthropic, Deepgram, ElevenLabs, Stripe)
+- `database.db.SessionLocal` when testing services that open their own sessions
+- `services.live_session` module when testing pipelines (avoid import side-effects)
+- Socket.IO emit: `sio = MagicMock()` then assert `sio.emit.call_args_list`
 
-**Database Fixture:** In-memory SQLite engine created per test
+**What NOT to mock:**
+- In-memory SQLite for DB-layer tests (use `db_session` fixture directly)
+- Pure Python business logic functions (`ki_logik.py`, `profile_schema.py`)
+- The Flask test client's internal routing
 
+## Test Helper Patterns
+
+**Seeding DB records (inline helpers):**
 ```python
-@pytest.fixture
-def db_session():
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    try:
-        yield session
-    finally:
-        session.close()
-        engine.dispose()
+def _make_user(db_session, email='test@test.de'):
+    org = Organisation(name='T', plan='starter')
+    db_session.add(org)
+    db_session.flush()
+    u = User(org_id=org.id, email=email, passwort_hash='x', market='dach')
+    db_session.add(u)
+    db_session.commit()
+    return org, u
+```
+Pattern: always `flush()` before referencing the new object's `id` in a foreign key. Commit after all objects are added.
+
+**Simulating authentication in Flask client tests:**
+```python
+with client.session_transaction() as s:
+    s['user_id'] = user.id
+resp = client.get('/protected/route')
+assert resp.status_code == 200
 ```
 
-**Flask Test Client:** Rebinds database to in-memory for integration tests
-
+**Seeding prompt versions for pipeline tests:**
 ```python
-@pytest.fixture
-def client(monkeypatch):
-    """Flask test client with in-memory SQLite rebinding."""
-    engine = _ce("sqlite:///:memory:", connect_args={'check_same_thread': False})
-    Base.metadata.create_all(engine)
-    TestSession = _sm(autocommit=False, autoflush=False, bind=engine)
-    TestScoped = _ss(TestSession)
-    
-    monkeypatch.setattr(_db_mod, 'engine', engine)
-    monkeypatch.setattr(_db_mod, 'SessionLocal', TestSession)
-    monkeypatch.setattr(_db_mod, 'db_session', TestScoped)
-    
-    # ... Flask app setup
-    with flask_app.test_client() as c:
-        c._test_session = TestSession()
-        c._test_engine = engine
-        yield c
+def _seed_variants(db_session, module='ewb', versions=('v1-legacy', 'v2-modular')):
+    for v in versions:
+        db_session.add(PromptVersion(
+            module=module, version=v, prompt_text=f'text-{v}',
+            is_active=True, is_default=(v == versions[0]),
+            changelog=f'test-{v}',
+        ))
+    db_session.commit()
 ```
 
-See `tests/conftest.py:55-91` for full implementation.
-
-**Location:**
-- `tests/conftest.py` — shared fixtures for all tests
-- Inline fixtures in test files if specific to that file
-
-## Coverage
-
-**Requirements:** Not enforced. No pytest-cov configuration or CI check detected.
-
-**Test Count:** 35+ test files present:
-- Unit tests: `test_ki_logik.py`, `test_cost_tracker.py`, `test_eur_calculator.py`, etc.
-- Integration tests: `test_ft_lifecycle.py`, `test_phase_08_models.py`
-- Route tests: `test_admin_dashboard_auth.py`, `test_auth_next_redirect.py`
-
-**Known Coverage Gaps:**
-- No tests for `static/app.js` (JavaScript not tested)
-- No tests for `static/pip-launcher.js`
-- Some route handlers in `routes/` not explicitly tested
-- No E2E tests for full session flow
-
-## Test Types
-
-**Unit Tests:**
-- Scope: Pure functions, single component in isolation
-- Approach: Call function with inputs, assert output
-- Example: `tests/services/test_ki_logik.py:20-34` — tests `detect_phase()` with different confidence/phase transitions
-- No database access (unless mocked fixture used)
-- Examples: `test_cost_tracker.py`, `test_eur_calculator.py`, `services/test_ki_logik.py`
-
-**Integration Tests:**
-- Scope: Multiple components working together, often with database
-- Approach: Set up fixtures, call route/service, assert database state changed
-- Example: `tests/test_ft_lifecycle.py` — tests full training flow with DB writes
-- Uses `db_session` fixture for real database operations
-- Uses `client` fixture for Flask route testing
-- Example: `tests/test_cost_tracker.py:36-45` — `test_freeze_fx_on_write()` calls service function, checks DB result
-
-**E2E Tests:**
-- Status: Not detected. No Selenium, Playwright, or WebDriver tests
-- No browser-based session flow tests
-
-## Common Patterns
-
-**Async Testing:**
-
-Example from `tests/test_prompt_pipeline.py` (if async routes tested):
-
+**Cleaning module-level state (live_session tests):**
 ```python
-@pytest.mark.asyncio
-async def test_async_function():
-    result = await my_async_function()
-    assert result is not None
+def _clean_sids(*sids):
+    for sid in sids:
+        ls.pop_session_state(sid)
+# Always called in finally block
 ```
 
-Status: Async testing framework (`pytest-asyncio`) not detected. Flask routes are synchronous.
-
-**Error Testing:**
-
-Example from `tests/test_cost_tracker.py:48-57`:
-
+**Latency scaffold (manually run):**
 ```python
-def test_missing_rate_no_raise(db_session, patched_sessionlocal):
-    # Should silently skip when rate not found
-    log_api_cost('unknown', 'noop', user_id=1, units=5, unit_type='per_minute')
-    assert db_session.query(ApiCostLog).count() == 0
-
-def test_silent_on_db_error(monkeypatch, capsys):
-    def broken_session(*args, **kwargs):
-        raise RuntimeError("db down")
-    monkeypatch.setattr(_db_mod2, 'SessionLocal', broken_session)
-    # Should NOT raise
-    log_api_cost('anthropic', 'haiku-test', user_id=1, units=1.0,
-                 unit_type='per_1k_input_tokens')
-    captured = capsys.readouterr()
+@pytest.mark.skip(reason="Manual latency scaffold — run explicitly to measure")
+def test_latency_scaffold_n_sessions():
+    ...
 ```
+Use `pytest.mark.skip` for manual-only tests; they stay in the suite but are skipped in CI.
 
-**Parametrized Testing:**
+## Coverage Areas
 
-No `@pytest.mark.parametrize` found in reviewed tests. Tests use explicit function calls instead.
+**Well-covered:**
 
-## Known Test Gaps & Dead Code Analysis
+| Area | Test File(s) |
+|---|---|
+| KI-Logik pure functions (phase detection, readiness score, hints, EWB buttons) | `tests/services/test_ki_logik.py` |
+| Auth redirect, open-redirect protection, `safe_next()` | `test_auth_next_redirect.py` |
+| Per-SID isolation, DSGVO scoping, thread-safety | `test_session_scoping.py` |
+| Profile schema Pydantic validation + migration v1→v3 | `test_profile_schema_v3.py`, `test_08_19_01_profile_schema.py` |
+| EWB pipeline prompt assembly + seed idempotency | `test_ewb_pipeline.py` |
+| Prompt pipeline (version resolution, caching, env overrides) | `test_prompt_pipeline.py` |
+| QA pipeline (classify, generate, tabu filter) | `test_qa_pipeline.py`, `test_qa_pipeline_rueckfrage.py` |
+| Cost tracker (FX freeze, missing rate, EUR-currency) | `test_cost_tracker.py` |
+| Admin dashboard auth gate (unauthenticated, non-admin 403, superadmin 200) | `test_admin_dashboard_auth.py` |
+| EWB rate API (3-state whitelist, ownership, Anrede override) | `test_ewb_rate_api.py` |
+| Config constants (MODEL_* defaults, CACHE_* booleans) | `test_08_13_01_config_constants.py` |
+| Fine-tuning lifecycle, models, seeds, write hooks | `test_ft_lifecycle.py`, `test_ft_models.py`, `test_ft_seed.py`, `test_ft_write_hooks.py` |
+| Exchange rates, EUR calculator | `test_exchange_rates.py`, `test_eur_calculator.py` |
+| Keyword matcher (match/dedup, kw_fired_for_line state) | `test_einwand_keyword_matcher.py` |
+| analyse_loop dispatcher (kw guard, classify routing, tabu filter, emit paths) | `test_08_5_03_integration.py` |
+| Ghost-SID guard + deadlock stress (live_session) | `test_live_session_ghost_sid.py` |
+| Precall schema | `test_precall_schema.py` |
+| Branche migration | `test_branche_migration.py` |
+| Tabu migration | `test_tabu_migration.py` |
+| A/B stats | `test_ab_stats.py` |
+| Training pipeline (T1, T2) | `test_08_5_05_training_pipeline_t1.py`, `test_08_5_05_training_pipeline_t2.py` |
+| Briefing lifecycle + KI-script personalization routes | `test_08_20_3.py` |
 
-**Tested Code:**
-- `services/ki_logik.py` — fully tested: `detect_phase()`, `compute_readiness_score()`, `select_active_hint()`, `dynamic_ewb_buttons()`
-- `services/cost_tracker.py` — fully tested: API cost logging with currency conversion
-- `services/eur_calculator.py` — fully tested: EUR price calculations
-- Database migrations — tested: `test_models_04_7_2.py`, `test_phase_08_models.py`, `test_branche_migration.py`
+**Coverage Gaps (not covered by automated tests):**
 
-**Untested/Minimal Coverage:**
-- `static/app.js` — No JavaScript tests. Functions defined: `startMicStream()`, `stopMicStream()`, `selectMode()`, `activateSession()`, `triggerEwb()`, `pollErgebnis()`, `beenden()` — all live-session critical paths, no test coverage
-- `static/pip-launcher.js` — No JavaScript tests. Core state machine in IIFE, no unit tests
-- Route handlers in `routes/dashboard.py`, `routes/profiles.py`, `routes/organizations.py` — not explicitly tested
-- WebSocket handlers in `socket_routes.py` (if exists) — no tests found
+| Area | Gap | Risk |
+|---|---|---|
+| `services/deepgram_service.py` | Live session STT start/stop, audio chunk handling | High — no test for Deepgram integration path |
+| `services/live_session.py` — analyse_loop threading | The background analyse_loop itself (threaded) is not tested end-to-end | High — thread coordination bugs invisible |
+| `routes/app_routes.py` `/live` route | Main live interface template rendering, session start flow | Medium |
+| `routes/dashboard.py` | Dashboard data aggregation, log parsing | Medium |
+| `routes/training.py` | Training scenario selection, TTS invocation | Medium |
+| `routes/payments.py` + Stripe webhook | Payment flow, webhook signature validation | High — billing logic untested |
+| `routes/oauth.py` | Google/Microsoft OAuth flow | Medium |
+| `services/coaching_service.py` | Coaching tip generation pipeline | Low (called inside analyse_loop) |
+| `services/crm_service.py` | CRM data extraction from Claude | Low |
+| WebSocket/Socket.IO events | Real-time transcript/coaching emit | High — only mocked in unit tests, no integration |
+| Template rendering correctness | HTML output of Jinja2 templates | Low (manual UAT) |
+| Multi-org data isolation at route level | Cross-org query filtering | Medium — scoping enforced at ORM level, not route-level tested |
 
-**Dead Code Identified:**
+## Test Types in Use
 
-1. **`saveGeneratedPersonality()` in `templates/training.html`**
-   - Status: **REMOVED** in Phase 07.2 Wave 3
-   - Evidence: Comment at `templates/training.html:1633-1635`
-   - Reason: "war nur aus dem Post-Call-Scoring-Overlay aufrufbar. Overlay ist weg — Funktion damit orphaned"
-   - Re-introduction: Planned under POLISH-37 (ROADMAP) when Save-Prompt feature re-introduced
-   - No remaining calls to this function — safely removed
+**Unit tests (pure function):** `tests/services/test_ki_logik.py` — no mocks, no DB, pure assertions on return values. The target pattern for all new business logic.
 
-2. **Potential dead JS functions in `static/app.js`:**
-   - `updateSpeechCircles()` — defined at line 386, may be unused if mic visualization removed
-   - `updateSpeechUI()` — defined at line 401 with comment `/* kept for compatibility */` — deprecated but retained
-   - `logGenutzt()` — defined at line 816, unclear if called from HTML
-   - Recommend: Verify HTML onclick attributes for actual usage
+**Service integration tests (in-memory DB):** Most test files. Use `db_session` fixture to test DB-backed services without Flask context. SessionLocal is monkeypatched to route calls to the test DB.
 
-**Test Recommendations:**
+**Flask integration tests (full request cycle):** Use `client` fixture. Tests hit real Flask routes through the test client, with in-memory SQLite. Auth state simulated via `session_transaction()`. Examples: `test_admin_dashboard_auth.py`, `test_auth_next_redirect.py`.
 
-Priority High:
-- Add JavaScript tests for `startMicStream()`, `stopMicStream()`, `activateSession()` (core session lifecycle)
-- Add route tests for `/api/ergebnis`, `/api/end_session` (critical polling endpoints)
-- Add integration test for full training scenario creation → response generation → completion
+**Thread-safety / concurrency tests:** `test_session_scoping.py`, `test_live_session_ghost_sid.py`. Use `threading.Thread` directly, barrier synchronization, check for cross-contamination after joins.
 
-Priority Medium:
-- Add tests for error paths in training service (missing voice, rate limit, API failure)
-- Add parametrized tests for all `SCHWIERIGKEITEN` difficulty levels
-- Add database constraint tests (unique org_id + name for profiles, etc.)
+**Schema validation tests:** Pydantic-only, no DB required. `test_profile_schema_v3.py` tests `model_validate()` raises/passes. Class-based grouping (`TestExtraForbid`, `TestMigrateV3`).
 
-Priority Low:
-- Add E2E tests for live session flow (requires browser automation)
-- Add tests for performance (session timer accuracy, polling interval timing)
+**Config/constant tests:** `test_08_13_01_config_constants.py`. Reload `config` module fresh per test via `importlib.reload()`, assert constant values.
+
+**E2E tests:** Not present. Manual UAT documented in phase handoff docs.
 
 ---
 
-*Testing analysis: 2026-04-24*
+*Testing analysis: 2026-05-01*
