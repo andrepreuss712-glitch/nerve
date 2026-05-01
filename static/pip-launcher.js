@@ -438,11 +438,24 @@
         ? ('<div class="precall-section-label">Eckdaten</div>' + gridHtml + textHtml + empfHtml)
         : '<div style="color:var(--page-text-muted);font-size:13px;padding:12px 0">Für diese Firma konnten keine öffentlichen Informationen gefunden werden. Du kannst trotzdem fortfahren.</div>',
       hasAnyData ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:6px;font-size:11px;color:#EF4444;line-height:1.5">⚠️ KI-Recherche kann veraltete oder ungenaue Daten enthalten. Eckdaten (insb. Personennamen &amp; Daten) bitte cross-checken vor Kundenkontakt.</div>' : '',
-      '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
+      '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px;margin-top:16px">',
       '<button class="launcher-btn-ghost" id="lnr-step4-back">&#8592; Zurück</button>',
       (hasAnyData && briefingText) ? '<button class="launcher-btn-ghost" id="lnr-step4-edit">Analyse anpassen</button>' : '',
       '<button class="launcher-btn-ghost" id="lnr-step4-new">Neue Analyse</button>',
-      '<button class="launcher-btn-primary" id="lnr-step4-accept">Ergebnis übernehmen &#8594;</button>',
+      // Modus A — Primary (SPEC Req 1)
+      '<button class="launcher-btn-primary" id="lnr-step4-modus-a">',
+      '  ▶ Briefing übernehmen',
+      '  <span style="display:block;font-size:11px;font-weight:normal;opacity:0.8">Briefing fließt automatisch in die EWB-Hilfe ein</span>',
+      '</button>',
+      // Modus B — Ghost
+      '<button class="launcher-btn-ghost" id="lnr-step4-modus-b">',
+      '  📋 Briefing während Call sichtbar lassen',
+      '  <span style="display:block;font-size:11px;opacity:0.7">Ausklappbarer Tab im PiP zum Nachschauen</span>',
+      '</button>',
+      // Modus C — disabled if no openers (SPEC Req 2, D-01 Modus-C-Disabled-Regel)
+      (state.openerItems && state.openerItems.length > 0)
+        ? '<button class="launcher-btn-ghost" id="lnr-step4-modus-c">✨ Skript auf diesen Lead personalisieren<span style="display:block;font-size:11px;opacity:0.7">KI passt einen Opener/Skript an die Lead-Daten an</span></button>'
+        : '<button class="launcher-btn-ghost" id="lnr-step4-modus-c" disabled title="Erst einen Opener im Profil anlegen" style="opacity:0.4;cursor:not-allowed">✨ Skript auf diesen Lead personalisieren<span style="display:block;font-size:11px;opacity:0.7">KI passt einen Opener/Skript an die Lead-Daten an</span></button>',
       '</div>',
       '</div>'
     ].join('');
@@ -469,11 +482,26 @@
         editBtn.textContent = isEditing ? 'Analyse anpassen' : 'Vorschau';
       };
     }
-    document.getElementById('lnr-step4-accept').onclick = function () {
-      // Save edited briefing text back into the briefing object
+    // Phase 08.20.3: 3-Button Modus-Selector — A/B/C
+    document.getElementById('lnr-step4-modus-a').onclick = function () {
       var ta = document.getElementById('lnr-briefing-edit');
       if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
-      // Go directly to Step 5 (Vorwissen picker is already embedded in step 5)
+      state.briefingModus = 'A';
+      state.step = 5;
+      renderStep();
+    };
+    document.getElementById('lnr-step4-modus-b').onclick = function () {
+      var ta = document.getElementById('lnr-briefing-edit');
+      if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
+      state.briefingModus = 'B';
+      state.step = 5;
+      renderStep();
+    };
+    document.getElementById('lnr-step4-modus-c').onclick = function () {
+      if (!state.openerItems || state.openerItems.length === 0) return;  // guard
+      var ta = document.getElementById('lnr-briefing-edit');
+      if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
+      state.briefingModus = 'C';
       state.step = 5;
       renderStep();
     };
