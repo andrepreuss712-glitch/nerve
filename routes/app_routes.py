@@ -1068,8 +1068,11 @@ def api_personalize_skript():
             return jsonify({'error': 'Opener nicht gefunden'}), 400
 
         profile = _db.query(Profile).filter_by(id=profile_id).first()
+        if not profile or profile.org_id != g.org.id:
+            return jsonify({'error': 'Profil nicht gefunden oder kein Zugriff'}), 403
+
         profil_daten = {}
-        if profile and profile.daten:
+        if profile.daten:
             try:
                 import json as _json
                 profil_daten = _json.loads(profile.daten) if isinstance(profile.daten, str) else (profile.daten or {})
@@ -1110,7 +1113,7 @@ def api_personalize_skript_save():
     in pip-launcher.js (Plan 01).
     """
     from database.db import get_session as get_db_session
-    from database.models import ProfileOpener
+    from database.models import ProfileOpener, Profile
     from config import PERSONALIZED_SCRIPTS_CAP
     import datetime
 
@@ -1135,6 +1138,11 @@ def api_personalize_skript_save():
 
     _db = get_db_session()
     try:
+        # Org-isolation check: verify active profile belongs to current org (CR-01)
+        _prof_check = _db.query(Profile).filter_by(id=profile_id, org_id=g.org.id).first()
+        if not _prof_check:
+            return jsonify({'error': 'Zugriff verweigert'}), 403
+
         # Verify original opener belongs to this profile
         original = _db.query(ProfileOpener).filter_by(
             id=opener_id, profile_id=profile_id
