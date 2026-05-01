@@ -9,6 +9,11 @@ from services.audit import log_action
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
+
+class _CapExceeded(Exception):
+    """Sentinel raised inside with _db.begin() to signal cap exceeded without error (WR-02)."""
+
+
 OBJECTION_TRIGGER_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent. Der Kunde hat gerade einen Einwand geäußert.
 {profile_ctx}
 Einwand-Typ: {einwand_typ}
@@ -1158,45 +1163,49 @@ def api_personalize_skript_save():
         if not original:
             return jsonify({'error': 'Opener nicht gefunden'}), 400
 
-        # ── Cap-Check (before atomic block, no DB writes yet) ──────────────
-        # Only check cap when no delete_ids provided (user hasn't confirmed deletion yet)
-        if not delete_ids:
-            personalized_count = _db.query(ProfileOpener).filter_by(
-                profile_id=profile_id, is_personalized=True
-            ).count()
-
-            if personalized_count >= cap:
-                # Cap exceeded — return items list for sub-modal (SPEC Req 9)
-                items_query = _db.query(ProfileOpener).filter_by(
-                    profile_id=profile_id, is_personalized=True
-                ).order_by(ProfileOpener.created_at.asc()).all()
-
-                now = datetime.datetime.utcnow()
-                items_list = []
-                for item in items_query:
-                    weeks_old = 0
-                    if item.created_at:
-                        delta = now - item.created_at
-                        weeks_old = int(delta.days / 7)
-                    items_list.append({
-                        'id': item.id,
-                        'name': item.name or '',
-                        'created_at': str(item.created_at) if item.created_at else '',
-                        'firmenname': (item.name or '')[:20],
-                        'weeks_old': weeks_old,
-                    })
-                return jsonify({'cap_exceeded': True, 'items': items_list})
-
-        # ── Atomic Delete + Insert (Finding B) ────────────────────────────
-        # Wrap ALL deletes + the INSERT in a single transaction.
-        # If INSERT fails after DELETE: automatic rollback — no data loss.
+        # ── Atomic Delete + Insert with Cap-Check (WR-02) ─────────────────
+        # Cap-check and insert are in the SAME transaction with with_for_update()
+        # to prevent concurrent saves both passing cap < N and both inserting.
         today_str = datetime.datetime.utcnow().strftime('%Y-%m-%d')
         firma_display = firmenname or (original.name or 'Lead')[:50]
         new_name = f"{firma_display} — {original.name} (personalisiert, {today_str})"
 
+        cap_exceeded_response = None  # set inside transaction if cap is hit
         new_item_id = None
         try:
             with _db.begin():
+                # Cap-Check inside transaction — with_for_update() acquires row-level
+                # lock on Postgres; no-op on SQLite. Prevents race: two concurrent
+                # requests both read count < cap and both insert (WR-02).
+                if not delete_ids:
+                    personalized_count = _db.query(ProfileOpener).filter_by(
+                        profile_id=profile_id, is_personalized=True
+                    ).with_for_update().count()
+
+                    if personalized_count >= cap:
+                        # Cap exceeded — collect items list for sub-modal (SPEC Req 9)
+                        items_query = _db.query(ProfileOpener).filter_by(
+                            profile_id=profile_id, is_personalized=True
+                        ).order_by(ProfileOpener.created_at.asc()).all()
+
+                        now = datetime.datetime.utcnow()
+                        items_list = []
+                        for item in items_query:
+                            weeks_old = 0
+                            if item.created_at:
+                                delta = now - item.created_at
+                                weeks_old = int(delta.days / 7)
+                            items_list.append({
+                                'id': item.id,
+                                'name': item.name or '',
+                                'created_at': str(item.created_at) if item.created_at else '',
+                                'firmenname': (item.name or '')[:20],
+                                'weeks_old': weeks_old,
+                            })
+                        cap_exceeded_response = items_list
+                        # Exit transaction cleanly without insert
+                        raise _CapExceeded()
+
                 # Delete-Phase (Cap-Befreiung) — only items belonging to this profile
                 for item_id in delete_ids:
                     item = _db.query(ProfileOpener).filter_by(
@@ -1232,10 +1241,15 @@ def api_personalize_skript_save():
             # commit happens automatically at with-block end (no exception)
             # rollback happens automatically on exception inside with-block
 
+        except _CapExceeded:
+            pass  # cap_exceeded_response already set; no error, just skip insert
         except Exception as e:
             raise  # with-block already rolled back; let finally: _db.close() run
 
     finally:
         _db.close()
+
+    if cap_exceeded_response is not None:
+        return jsonify({'cap_exceeded': True, 'items': cap_exceeded_response})
 
     return jsonify({'item_id': new_item_id, 'ok': True})
