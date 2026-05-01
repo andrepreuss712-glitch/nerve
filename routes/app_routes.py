@@ -1048,11 +1048,15 @@ def api_personalize_skript():
     from database.models import ProfileOpener, Profile
 
     data = request.get_json(force=True) or {}
-    opener_id = data.get('opener_id')
     briefing_dict = data.get('briefing') or {}  # passed from frontend state.precallBriefing
 
-    if not opener_id:
-        return jsonify({'error': 'opener_id ist Pflicht'}), 400
+    # WR-03: validate opener_id as positive integer before any DB query
+    try:
+        opener_id = int(data.get('opener_id'))
+        if opener_id <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({'error': 'opener_id muss eine positive Ganzzahl sein'}), 400
 
     user_id = g.user.id if g.user else None
     profile_id = flask_session.get('active_profile_id')
@@ -1118,14 +1122,18 @@ def api_personalize_skript_save():
     import datetime
 
     data = request.get_json(force=True) or {}
-    opener_id = data.get('opener_id')
     personalized_text = (data.get('personalized_text') or '').strip()
     delete_ids = data.get('delete_ids') or []
     # firmenname from request body (sent by _savePersonalizedAndStartCall in Plan 1)
     firmenname = (data.get('firmenname') or '').strip()[:50]
 
-    if not opener_id:
-        return jsonify({'error': 'opener_id ist Pflicht'}), 400
+    # WR-03: validate opener_id as positive integer before any DB query
+    try:
+        opener_id = int(data.get('opener_id'))
+        if opener_id <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({'error': 'opener_id muss eine positive Ganzzahl sein'}), 400
     if not personalized_text:
         return jsonify({'error': 'personalized_text ist Pflicht'}), 400
 
