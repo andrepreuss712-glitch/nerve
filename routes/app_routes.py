@@ -830,9 +830,17 @@ def api_launcher_init():
             skripte = [{'id': s.id, 'name': s.name, 'inhalt': s.inhalt or ''}
                        for s in db.query(ProfileSkript).filter_by(profile_id=active_profile_id)
                        .order_by(ProfileSkript.sortierung, ProfileSkript.id).all()]
-            opener_items = [{'id': o.id, 'name': o.name, 'inhalt': o.inhalt or ''}
-                            for o in db.query(ProfileOpener).filter_by(profile_id=active_profile_id)
-                            .order_by(ProfileOpener.sortierung, ProfileOpener.id).all()]
+            opener_items = [
+                {
+                    'id': o.id,
+                    'name': o.name,
+                    'inhalt': o.inhalt or '',
+                    'is_personalized': bool(o.is_personalized),
+                    'briefing_source_firma': o.briefing_source_firma or '',
+                }
+                for o in db.query(ProfileOpener).filter_by(profile_id=active_profile_id)
+                .order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+            ]
         return jsonify({
             'profiles': profiles,
             'active_profile_id': active_profile_id,
@@ -866,9 +874,17 @@ def api_launcher_profile(pid):
         skripte = [{'id': s.id, 'name': s.name, 'inhalt': s.inhalt or ''}
                    for s in db.query(ProfileSkript).filter_by(profile_id=pid)
                    .order_by(ProfileSkript.sortierung, ProfileSkript.id).all()]
-        opener_items = [{'id': o.id, 'name': o.name, 'inhalt': o.inhalt or ''}
-                        for o in db.query(ProfileOpener).filter_by(profile_id=pid)
-                        .order_by(ProfileOpener.sortierung, ProfileOpener.id).all()]
+        opener_items = [
+            {
+                'id': o.id,
+                'name': o.name,
+                'inhalt': o.inhalt or '',
+                'is_personalized': bool(o.is_personalized),
+                'briefing_source_firma': o.briefing_source_firma or '',
+            }
+            for o in db.query(ProfileOpener).filter_by(profile_id=pid)
+            .order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+        ]
         return jsonify({'id': p.id, 'name': p.name, 'daten': daten, 'skripte': skripte, 'opener': opener_items})
     finally:
         db.close()
