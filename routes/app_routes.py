@@ -1233,8 +1233,7 @@ def api_personalize_skript_save():
             # rollback happens automatically on exception inside with-block
 
         except Exception as e:
-            _db.rollback()  # defensive belt-and-suspenders; with-block already rolled back
-            raise
+            raise  # with-block already rolled back; let finally: _db.close() run
 
     finally:
         _db.close()
