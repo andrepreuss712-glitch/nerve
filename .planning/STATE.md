@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20.3 Plan 01 complete — Step-4-Footer + Pseudo-Steps + Step-5-Dropdown-Grouping committed"
-last_updated: "2026-05-01T08:40:00Z"
+stopped_at: "08.20.3 Plan 02 complete — generate_personalized_skript() + /api/precall/personalize + /api/precall/personalize/save committed"
+last_updated: "2026-05-01T09:10:00Z"
 last_activity: 2026-05-01
 progress:
   total_phases: 57
   completed_phases: 45
   total_plans: 206
-  completed_plans: 199
+  completed_plans: 200
   percent: 97
 ---
 
@@ -25,14 +25,15 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.20.3 (briefing-lebenszyklus-ki-skript-verschmelzung) — IN PROGRESS (4 plans, Wave 2 complete)
-Plan: 3 of 4 — Plan 01 COMPLETE (2026-05-01)
+Phase: 08.20.3 (briefing-lebenszyklus-ki-skript-verschmelzung) — IN PROGRESS (4 plans, Wave 3 complete)
+Plan: 4 of 4 — Plan 02 COMPLETE (2026-05-01)
 Last activity: 2026-05-01
 
 **Phase 08.20.3 Plan 03 abgeschlossen:** DB-Foundation (parent_id, is_personalized, briefing_source_firma), PERSONALIZED_SCRIPTS_CAP config, tests/test_08_20_3.py mit 6 Klassen (23 passed/5 skipped), Profile-Editor Opener Filter-Toggle mit Cap-Status.
 **Phase 08.20.3 Plan 04 abgeschlossen:** PiP #pip-briefing-tab DOM in base.html, 7 Edits in pip-launcher.js (4 state keys, renderStep() pre-check, Briefing Tab show/hide/toggle/auto-collapse, education hint, window.mdToHtml expose). Tests: 4 passed.
 **Phase 08.20.3 Plan 01 abgeschlossen:** renderStep4() 3-Button Modus-Selector (A/B/C), renderStep4b() KI-Ladescreen mit AbortController, renderStep4c() Vorher/Nachher, _savePersonalizedAndStartCall() + _showCapSubModal(), renderStep5() optgroup-Dropdown + Personalisieren-Button. API: is_personalized + briefing_source_firma in opener responses. Tests: 23 passed/5 skipped.
-**Next:** Plan 02 (KI-Backend — precall_service.py generate_personalized_skript() + /api/precall/personalize + /api/precall/personalize/save routes)
+**Phase 08.20.3 Plan 02 abgeschlossen:** generate_personalized_skript() in precall_service.py (Sonnet via MODEL_PRECALL, cost tracking context_tag='personalize_skript', tuple return), POST /api/precall/personalize (KI-only, no DB write), POST /api/precall/personalize/save (atomic with _db.begin(), cap-check, DSGVO-Audit-Log, briefing_source_firma). Tests: 28 passed.
+**Next:** Plan 05 (Call-Flow Integration — briefingModus state konsumieren)
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
