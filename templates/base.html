@@ -484,6 +484,22 @@
     </div>
   </div>
 
+  <!-- pip-launcher.js must remain before any script using window.mdToHtml (Phase 08.20.3 D-04) -->
+  <!-- Phase 08.20.3 Modus-B: Briefing Tab (collapsible, read-only, initial hidden) -->
+  <div id="pip-briefing-tab" style="display:none">
+    <div id="pip-briefing-tab-header"
+         data-briefing-toggle="1"
+         style="cursor:pointer;padding:4px 8px;font-size:12px;user-select:none;border-bottom:1px solid var(--pip-divider, #333)">
+      <span id="pip-briefing-tab-icon">&#9658;</span>
+      Briefing: <span id="pip-briefing-tab-title"></span>
+    </div>
+    <div id="pip-briefing-tab-body"
+         style="max-height:0;overflow:hidden;transition:max-height 200ms ease;padding:0 8px">
+      <div id="pip-briefing-tab-content" style="padding:8px 0;font-size:12px;line-height:1.5">
+      </div>
+    </div>
+  </div>
+
   <!-- D-06: Du/Sie Toggle (Phase 08.20) -->
   <div id="pip-anrede-row"
        style="display:flex;align-items:center;gap:8px;padding:4px 12px;background:#0D1117;border-bottom:1px solid rgba(255,255,255,0.06)">
