@@ -179,7 +179,21 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten
 
         if cached and (time.time() - cached[1]) < _CACHE_TTL_S:
             print(f"[PreCall] Cache hit: {firmenname}")
-            return (cached[0], None)
+            # WR-04: empfehlungen are session-specific (Section 8 of build_profile_context
+            # depends on the live session's sid). On a cache hit we must regenerate Schicht-3
+            # for the current sid so the caller does not receive a stale session's empfehlungen.
+            cached_briefing = dict(cached[0])  # shallow copy — do not mutate cached original
+            if sid:
+                try:
+                    from services.live_session import set_briefing_for_sid
+                    _sid_text = cached_briefing.get('text', '')
+                    set_briefing_for_sid(sid, _sid_text)
+                except Exception:
+                    pass
+            cached_briefing['empfehlungen'] = _generiere_empfehlungen(
+                sid, firmenname, cached_briefing.get('fields', {}), user_id=user_id
+            )
+            return (cached_briefing, None)
 
         # API-Key pruefen
         if not BRAVE_SEARCH_API_KEY:
