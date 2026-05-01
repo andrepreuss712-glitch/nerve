@@ -496,3 +496,94 @@ def _generiere_empfehlungen(sid, firmenname, fields, user_id=None):
 def ist_verfuegbar():
     """Returns True if Brave Search API key is configured."""
     return bool(BRAVE_SEARCH_API_KEY)
+
+
+# ── Phase 08.20.3: KI-Skript-Personalisierung ─────────────────────────────
+
+def generate_personalized_skript(briefing_dict, opener_inhalt, profil_daten,
+                                  user_id=None):
+    """Personalisiert einen Opener/Skript-Text mit Lead-Daten aus dem Briefing.
+
+    Returns (personalisierter_text: str, error_msg: str | None).
+    Tupel-Return: identisch mit recherche_firma() Muster.
+
+    Args:
+        briefing_dict: dict mit 'firmenname', 'text', 'empfehlungen'
+        opener_inhalt: str — Original-Opener-Text
+        profil_daten: dict — Profil-Daten inkl. 'ki'-Key fuer Stil/Ton
+        user_id: int | None — fuer Cost-Tracking
+    """
+    try:
+        firmenname = (briefing_dict or {}).get('firmenname', 'Unbekanntes Unternehmen')
+        briefing_text = (briefing_dict or {}).get('text', '')
+        empfehlungen = (briefing_dict or {}).get('empfehlungen', [])
+        ki_stil = ((profil_daten or {}).get('ki') or {}).get('stil', '')
+        ki_ton = ((profil_daten or {}).get('ki') or {}).get('ton', '')
+
+        # Empfehlungen als kompakter Text
+        emp_text = ''
+        if empfehlungen and isinstance(empfehlungen, list):
+            emp_text = '\n'.join(
+                '- ' + (e.get('text') or e if isinstance(e, str) else str(e))
+                for e in empfehlungen[:5]
+            )
+
+        _system = (
+            'Du bist ein erfahrener B2B-Vertriebscoach. '
+            'Deine Aufgabe: Passe einen Opener/Skript-Text an einen spezifischen Lead an. '
+            'Behalte die Länge und Struktur des Originals bei. '
+            'Integriere die Lead-spezifischen Informationen natürlich. '
+            'Antworte NUR mit dem angepassten Text — keine Erklärungen, keine Überschriften.'
+        )
+        if ki_stil:
+            _system += f'\nStil: {ki_stil}'
+        if ki_ton:
+            _system += f'\nTon: {ki_ton}'
+
+        user_msg = f"""Lead-Informationen:
+Unternehmen: {firmenname}
+
+Briefing:
+{briefing_text}
+"""
+        if emp_text:
+            user_msg += f"\nHandlungsempfehlungen:\n{emp_text}\n"
+
+        user_msg += f"\nOriginal-Opener/Skript:\n{opener_inhalt}\n\nBitte passe diesen Text an den Lead an:"
+
+        _t0 = time.time()
+        msg = claude_client.messages.create(
+            model=config.MODEL_PRECALL,
+            max_tokens=1200,
+            system=_system,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        _latency_ms = int((time.time() - _t0) * 1000)
+
+        personalisierter_text = ''
+        if msg.content and len(msg.content) > 0:
+            personalisierter_text = getattr(msg.content[0], 'text', '') or ''
+
+        # Cost tracking — identisch mit _generiere_briefing() Pattern
+        try:
+            from services.cost_tracker import log_api_cost
+            u = getattr(msg, 'usage', None)
+            if u is not None:
+                in_tok = getattr(u, 'input_tokens', 0) or 0
+                out_tok = getattr(u, 'output_tokens', 0) or 0
+                _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_PRECALL else 'haiku-4-5'
+                log_api_cost('anthropic', _cost_model, user_id=user_id,
+                             units=in_tok / 1000.0, unit_type='per_1k_input_tokens',
+                             context_tag='personalize_skript', latency_ms=_latency_ms,
+                             call_site='personalize_skript')
+                log_api_cost('anthropic', _cost_model, user_id=user_id,
+                             units=out_tok / 1000.0, unit_type='per_1k_output_tokens',
+                             context_tag='personalize_skript', call_site='personalize_skript')
+        except Exception:
+            pass
+
+        return (personalisierter_text, None)
+
+    except Exception as e:
+        print(f"[PreCall] Personalisierung Fehler: {e}")
+        return (None, f"Fehler: {e}")
