@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20.3 Plan 03 complete — DB-Foundation + Profile-Editor Filter Toggle committed"
-last_updated: "2026-05-01T00:00:00Z"
+stopped_at: "08.20.3 Plan 04 complete — PiP Briefing Tab + window.mdToHtml committed"
+last_updated: "2026-05-01T07:55:00Z"
 last_activity: 2026-05-01
 progress:
   total_phases: 57
   completed_phases: 45
   total_plans: 206
-  completed_plans: 198
-  percent: 96
+  completed_plans: 199
+  percent: 97
 ---
 
 # Project State
@@ -26,11 +26,12 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.20.3 (briefing-lebenszyklus-ki-skript-verschmelzung) — IN PROGRESS (4 plans, Wave 1 running)
-Plan: 1 of 4 — Plan 03 COMPLETE (2026-05-01)
+Plan: 2 of 4 — Plan 04 COMPLETE (2026-05-01)
 Last activity: 2026-05-01
 
 **Phase 08.20.3 Plan 03 abgeschlossen:** DB-Foundation (parent_id, is_personalized, briefing_source_firma), PERSONALIZED_SCRIPTS_CAP config, tests/test_08_20_3.py mit 6 Klassen (23 passed/5 skipped), Profile-Editor Opener Filter-Toggle mit Cap-Status.
-**Next:** Plan 04 (PiP Briefing Tab) — Wave 1 parallel zu Plan 03, jetzt ausführen
+**Phase 08.20.3 Plan 04 abgeschlossen:** PiP #pip-briefing-tab DOM in base.html, 7 Edits in pip-launcher.js (4 state keys, renderStep() pre-check, Briefing Tab show/hide/toggle/auto-collapse, education hint, window.mdToHtml expose). Tests: 4 passed.
+**Next:** Plan 05 (Call-Flow Integration — briefingModus setzen, runPrecall() Modus-B Pfad)
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
@@ -44,6 +45,9 @@ Last activity: 2026-05-01
   - 08.20.3-03: SQLite FK L5 — ALTER TABLE uses INTEGER only (no REFERENCES); FK only in SQLAlchemy model
   - 08.20.3-03: PERSONALIZED_SCRIPTS_CAP = 20 default; ENV-overridable via int(os.environ.get(...))
   - 08.20.3-03: opener_liste() backward-compat — plain array for all/standard, {items, cap_status} for personalized
+  - 08.20.3-04: pipEl() exclusiv fuer pip-briefing-tab — kein document.getElementById direkt (L2 compliance)
+  - 08.20.3-04: window.mdToHtml am IIFE-Ende exposed — alle Consumer laden nach pip-launcher.js (Script-Order)
+  - 08.20.3-04: briefingTabExpandedAtStreamStart guard verhindert Re-Expand waehrend Streaming
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 
