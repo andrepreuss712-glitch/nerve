@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20.2-04 COMPLETE — 7 mock-based schema contract tests for _generiere_briefing() Schicht-1 output, all GREEN"
-last_updated: "2026-04-30T14:38:00Z"
-last_activity: 2026-04-30
+stopped_at: "08.20.3 Plan 03 complete — DB-Foundation + Profile-Editor Filter Toggle committed"
+last_updated: "2026-05-01T00:00:00Z"
+last_activity: 2026-05-01
 progress:
   total_phases: 57
   completed_phases: 45
   total_plans: 206
-  completed_plans: 197
-  percent: 95
+  completed_plans: 198
+  percent: 96
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.20.2 (precall-briefing-trust-web-search-integration) — IN PROGRESS (4/? Plans)
-Plan: 4 of ? — COMPLETE (2026-04-30, commit 3840b0a)
-Last activity: 2026-04-30
+Phase: 08.20.3 (briefing-lebenszyklus-ki-skript-verschmelzung) — IN PROGRESS (4 plans, Wave 1 running)
+Plan: 1 of 4 — Plan 03 COMPLETE (2026-05-01)
+Last activity: 2026-05-01
 
-**Phase 08.20.2 Plan 04 abgeschlossen:** 7 mock-based schema contract tests for _generiere_briefing() Schicht-1 output — all 7 GREEN. Tests cover: fields dict type, 4 Pflichtfelder always present, exact key structure (no extra keys), not_found enforcement (normalization), optional field exclusion, graceful parse error degradation, top-level return dict keys (firmenname passthrough, quellen_count int). No real API calls — fully mocked via monkeypatch.
-**Next:** Phase 08.20.2 complete or next phase
+**Phase 08.20.3 Plan 03 abgeschlossen:** DB-Foundation (parent_id, is_personalized, briefing_source_firma), PERSONALIZED_SCRIPTS_CAP config, tests/test_08_20_3.py mit 6 Klassen (23 passed/5 skipped), Profile-Editor Opener Filter-Toggle mit Cap-Status.
+**Next:** Plan 04 (PiP Briefing Tab) — Wave 1 parallel zu Plan 03, jetzt ausführen
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
@@ -41,6 +41,9 @@ Last activity: 2026-04-30
   - LB-3-Fix: build_profile_context errors in generate_qa_response non-fatal; QA sieht jetzt Voll-Profil
   - D-02/D-03: branchen hint injection + Anti-Header-Constraint in PreCall system prompt
   - D-07 LOCKED: MODEL_PIP_AUTOVAR + MODEL_PIP_VARIANTE = claude-sonnet-4-5-20251022; rollback ENV documented in config.py
+  - 08.20.3-03: SQLite FK L5 — ALTER TABLE uses INTEGER only (no REFERENCES); FK only in SQLAlchemy model
+  - 08.20.3-03: PERSONALIZED_SCRIPTS_CAP = 20 default; ENV-overridable via int(os.environ.get(...))
+  - 08.20.3-03: opener_liste() backward-compat — plain array for all/standard, {items, cap_status} for personalized
 
 Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase 3.1 ✓, Phase 04.8.1 ✓, Phase 04.10.1 ✓, Phase 06.2 ✓, Phase 07.2 ✓, Phase 08.5 ✓, Phase 08.6 ✓, Phase 08.7 ✓, Phase 08.8 ✓)
 

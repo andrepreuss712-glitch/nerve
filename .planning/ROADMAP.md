@@ -1010,7 +1010,7 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 08.20.3-03-PLAN.md — DB-Foundation (parent_id + is_personalized Migration, PERSONALIZED_SCRIPTS_CAP, Test-Scaffold)
+- [x] 08.20.3-03-PLAN.md — DB-Foundation (parent_id + is_personalized Migration, PERSONALIZED_SCRIPTS_CAP, Test-Scaffold) ✅ 2026-05-01 (0d6df97, 4bb7714, 15bae1f)
 - [ ] 08.20.3-04-PLAN.md — PiP-Briefing-Tab Modus B + window.mdToHtml + renderStep() Pre-Check
 - [ ] 08.20.3-01-PLAN.md — Step-4-Footer 3-Button Modus-Selector + renderStep4b/4c + Step-5 zweiter Button
 - [ ] 08.20.3-02-PLAN.md — KI-Backend: generate_personalized_skript() + /api/precall/personalize + /save Route
