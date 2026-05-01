@@ -62,7 +62,12 @@
     // D-16: Mic-Indikator state
     micAnalyser: null,
     micLevelRafId: null,
-    micMuted: false
+    micMuted: false,
+    // Phase 08.20.3: Modus-B Briefing Tab state
+    briefingModus: null,                     // 'A' | 'B' | 'C' | null (Phase 08.20.3)
+    briefingTabExpandedAtStreamStart: false, // guard for PiP tab auto-collapse (D-05)
+    _personalizedSkriptText: null,           // KI result buffer for renderStep4c
+    _personalizeAbortController: null        // AbortController for renderStep4b cancel
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -145,6 +150,9 @@
 
   // ── Step Renderer ──────────────────────────────────────────────────────────
   function renderStep() {
+    // Phase 08.20.3: string pseudo-steps — switch() === only matches numbers
+    if (state.step === '4b') { renderStep4b(); return; }
+    if (state.step === '4c') { renderStep4c(); return; }
     switch (state.step) {
       case 1: renderStep1(); break;
       case 2: renderStep2(); break;
@@ -1285,6 +1293,28 @@
       var detailsBtn = t.closest('#nlp-btn-details');
       if (detailsBtn) { ev.preventDefault(); showDetails(); return; }
 
+      // Phase 08.20.3: Briefing Tab toggle
+      if (e.target.closest('[data-briefing-toggle]')) {
+        var tabBody = pipEl('pip-briefing-tab-body');
+        if (tabBody) {
+          var isExpanded = _isBriefingTabExpanded();
+          if (isExpanded) {
+            _collapseBriefingTab();
+          } else {
+            // Cancel education hint timer if still running
+            var tabHeader = pipEl('pip-briefing-tab-header');
+            if (tabHeader && tabHeader._introTimer) {
+              clearTimeout(tabHeader._introTimer);
+              tabHeader._introTimer = null;
+              localStorage.setItem('nerve.seen_briefing_tab_intro', '1');
+            }
+            _expandBriefingTab();
+          }
+        }
+        e.stopPropagation();
+        return;
+      }
+
       // BUG2 FIX: Anrede toggle — data-anrede on pip-anrede-du / pip-anrede-sie
       // onlick attrs removed from base.html (fired in PiP-window scope without access
       // to window.pipSetAnrede on main window). Event delegation runs in main-window
@@ -1354,6 +1384,62 @@
 
     // Render EWB buttons
     _renderEwbButtons();
+
+    // ── Phase 08.20.3: Modus-B Briefing Tab ──────────────────────────────────
+    var briefingTab = pipEl('pip-briefing-tab');
+    if (briefingTab) {
+      if (state.briefingModus === 'B' &&
+          state.precallBriefing &&
+          state.precallBriefing.firmenname) {
+        // Show tab and set title
+        briefingTab.style.display = 'block';
+        var titleEl = pipEl('pip-briefing-tab-title');
+        if (titleEl) titleEl.textContent = state.precallBriefing.firmenname;
+        // Populate content via mdToHtml (XSS-safe)
+        var contentEl = pipEl('pip-briefing-tab-content');
+        if (contentEl) {
+          var briefingHtml = mdToHtml(state.precallBriefing.text || '');
+          contentEl.innerHTML = briefingHtml;
+        }
+        // Education hint: first Modus-B call
+        if (!localStorage.getItem('nerve.seen_briefing_tab_intro')) {
+          setTimeout(function () {
+            _expandBriefingTab();
+            var introTimer = setTimeout(function () {
+              _collapseBriefingTab();
+              localStorage.setItem('nerve.seen_briefing_tab_intro', '1');
+            }, 3000);
+            // Cancel if user interacts with tab within 3s
+            var tabHeader = pipEl('pip-briefing-tab-header');
+            if (tabHeader) {
+              tabHeader._introTimer = introTimer;
+            }
+          }, 500);
+        }
+      } else {
+        briefingTab.style.display = 'none';
+      }
+    }
+  }
+
+  // ── Phase 08.20.3: Briefing Tab toggle helpers ─────────────────────────────
+  function _expandBriefingTab() {
+    var body = pipEl('pip-briefing-tab-body');
+    var icon = pipEl('pip-briefing-tab-icon');
+    if (body) { body.style.maxHeight = '300px'; }
+    if (icon) { icon.textContent = '▼'; }
+  }
+
+  function _collapseBriefingTab() {
+    var body = pipEl('pip-briefing-tab-body');
+    var icon = pipEl('pip-briefing-tab-icon');
+    if (body) { body.style.maxHeight = '0'; }
+    if (icon) { icon.textContent = '▶'; }
+  }
+
+  function _isBriefingTabExpanded() {
+    var body = pipEl('pip-briefing-tab-body');
+    return body ? body.style.maxHeight !== '0' && body.style.maxHeight !== '' : false;
   }
 
   function _showPipLive() {
@@ -1498,6 +1584,8 @@
       state.pipSlots[slot].result = null;
       // 06.1-r2 r4: raw_text-Mode — Plain-Text-Stream (manual_ewb-Variante), kein JSON,
       // pip_token darf die Tokens direkt im Slot anzeigen statt 'Analysiere...'.
+      // Phase 08.20.3: save briefing tab state for auto-collapse guard (D-05)
+      state.briefingTabExpandedAtStreamStart = _isBriefingTabExpanded();
       state.pipSlots[slot].rawText = !!d.raw_text;
       // Update label
       var label = pipEl('pip-slot-label-' + slot);
@@ -1576,6 +1664,11 @@
       // D-02: if no einwand, show proactive content in the OTHER slot
       if (d.result && !d.result.einwand) {
         _showProactiveContent(1 - slot, d.result);
+      }
+      // Phase 08.20.3: auto-collapse briefing tab if it was expanded at stream start
+      if (state.briefingTabExpandedAtStreamStart) {
+        _collapseBriefingTab();
+        state.briefingTabExpandedAtStreamStart = false;
       }
     });
 
@@ -2548,5 +2641,10 @@
       window.nerveSio.emit('anrede_switch_rejected', { sid: window.currentSid || '' });
     }
   };
+
+  // Window-exposed for cross-file usage:
+  //   window.mdToHtml — used by inline scripts for PiP briefing tab (Phase 08.20.3 Modus B)
+  //   window.pipSetAnrede / pipVorwissenEdit / pipSetVorwissen — PiP onclick handlers
+  window.mdToHtml = mdToHtml;
 
 })();
