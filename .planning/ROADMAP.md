@@ -1001,13 +1001,19 @@ Plans:
 
 ---
 
-### Phase 08.20.3: Briefing-Lebenszyklus + KI-Skript-Verschmelzung (INSERTED — 2026-04-30)
+### Phase 08.20.3: Briefing-Lebenszyklus + KI-Skript-Personalisierung (INSERTED — 2026-04-30)
 
-**Goal:** Nach "Ergebnis übernehmen" entscheidet der User aktiv was mit dem PreCall-Briefing passiert — Modus A (nur EWB, default), Modus B (Briefing als PiP-Reiter sichtbar während Call), Modus C (KI verschmilzt Briefing mit gewähltem Skript/Opener), Modus D (Briefing als manuell editierbarer Pseudo-Skript-Slot).
+**Goal:** Nach „Ergebnis übernehmen“ entscheidet der User aktiv was mit dem PreCall-Briefing passiert — Modus A (nur EWB, default), Modus B (Briefing als ausklappbarer PiP-Reiter während Call), Modus C (KI personalisiert gewählten Opener/Skript mit Lead-Daten, speichert dauerhaft als neues ProfileOpener-Item).
 **Komplexität:** 🔴 komplex
 **Depends on:** Phase 08.20.2 ✅
 
-**Plans:** TBD (post-spec)
+**Plans:** 4 plans
+
+Plans:
+- [ ] 08.20.3-03-PLAN.md — DB-Foundation (parent_id + is_personalized Migration, PERSONALIZED_SCRIPTS_CAP, Test-Scaffold)
+- [ ] 08.20.3-04-PLAN.md — PiP-Briefing-Tab Modus B + window.mdToHtml + renderStep() Pre-Check
+- [ ] 08.20.3-01-PLAN.md — Step-4-Footer 3-Button Modus-Selector + renderStep4b/4c + Step-5 zweiter Button
+- [ ] 08.20.3-02-PLAN.md — KI-Backend: generate_personalized_skript() + /api/precall/personalize + /save Route
 
 ---
 
