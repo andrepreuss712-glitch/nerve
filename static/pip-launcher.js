@@ -1646,7 +1646,7 @@
       if (detailsBtn) { ev.preventDefault(); showDetails(); return; }
 
       // Phase 08.20.3: Briefing Tab toggle
-      if (e.target.closest('[data-briefing-toggle]')) {
+      if (ev.target.closest('[data-briefing-toggle]')) {
         var tabBody = pipEl('pip-briefing-tab-body');
         if (tabBody) {
           var isExpanded = _isBriefingTabExpanded();
@@ -1663,7 +1663,7 @@
             _expandBriefingTab();
           }
         }
-        e.stopPropagation();
+        ev.stopPropagation();
         return;
       }
 

@@ -1163,88 +1163,88 @@ def api_personalize_skript_save():
         if not original:
             return jsonify({'error': 'Opener nicht gefunden'}), 400
 
-        # ── Atomic Delete + Insert with Cap-Check (WR-02) ─────────────────
-        # Cap-check and insert are in the SAME transaction with with_for_update()
-        # to prevent concurrent saves both passing cap < N and both inserting.
+        # ── Cap-Check + Delete + Insert (WR-02) ──────────────────────────
+        # with_for_update() acquires row-level lock on Postgres; no-op on SQLite.
+        # Prevents race: two concurrent requests both read count < cap and both insert.
+        # NOTE: No 'with _db.begin()' wrapper here — SQLAlchemy already started an
+        # implicit transaction at the first query above (lines ~1155/1160). Calling
+        # _db.begin() again raises InvalidRequestError. We use explicit commit/rollback.
         today_str = datetime.datetime.utcnow().strftime('%Y-%m-%d')
         firma_display = firmenname or (original.name or 'Lead')[:50]
         new_name = f"{firma_display} — {original.name} (personalisiert, {today_str})"
 
-        cap_exceeded_response = None  # set inside transaction if cap is hit
+        cap_exceeded_response = None  # set if cap is hit
         new_item_id = None
         try:
-            with _db.begin():
-                # Cap-Check inside transaction — with_for_update() acquires row-level
-                # lock on Postgres; no-op on SQLite. Prevents race: two concurrent
-                # requests both read count < cap and both insert (WR-02).
-                if not delete_ids:
-                    personalized_count = _db.query(ProfileOpener).filter_by(
+            # Cap-Check
+            if not delete_ids:
+                personalized_count = _db.query(ProfileOpener).filter_by(
+                    profile_id=profile_id, is_personalized=True
+                ).with_for_update().count()
+
+                if personalized_count >= cap:
+                    # Cap exceeded — collect items list for sub-modal (SPEC Req 9)
+                    items_query = _db.query(ProfileOpener).filter_by(
                         profile_id=profile_id, is_personalized=True
-                    ).with_for_update().count()
+                    ).order_by(ProfileOpener.created_at.asc()).all()
 
-                    if personalized_count >= cap:
-                        # Cap exceeded — collect items list for sub-modal (SPEC Req 9)
-                        items_query = _db.query(ProfileOpener).filter_by(
-                            profile_id=profile_id, is_personalized=True
-                        ).order_by(ProfileOpener.created_at.asc()).all()
+                    now = datetime.datetime.utcnow()
+                    items_list = []
+                    for item in items_query:
+                        weeks_old = 0
+                        if item.created_at:
+                            delta = now - item.created_at
+                            weeks_old = int(delta.days / 7)
+                        items_list.append({
+                            'id': item.id,
+                            'name': item.name or '',
+                            'created_at': str(item.created_at) if item.created_at else '',
+                            'firmenname': (item.name or '')[:20],
+                            'weeks_old': weeks_old,
+                        })
+                    cap_exceeded_response = items_list
+                    # Exit without insert
+                    raise _CapExceeded()
 
-                        now = datetime.datetime.utcnow()
-                        items_list = []
-                        for item in items_query:
-                            weeks_old = 0
-                            if item.created_at:
-                                delta = now - item.created_at
-                                weeks_old = int(delta.days / 7)
-                            items_list.append({
-                                'id': item.id,
-                                'name': item.name or '',
-                                'created_at': str(item.created_at) if item.created_at else '',
-                                'firmenname': (item.name or '')[:20],
-                                'weeks_old': weeks_old,
-                            })
-                        cap_exceeded_response = items_list
-                        # Exit transaction cleanly without insert
-                        raise _CapExceeded()
-
-                # Delete-Phase (Cap-Befreiung) — only items belonging to this profile
-                for item_id in delete_ids:
-                    item = _db.query(ProfileOpener).filter_by(
-                        id=item_id,
-                        profile_id=profile_id,
-                        is_personalized=True  # Schutz: nur personalisierte koennen via Cap-Modal geloescht werden
-                    ).first()
-                    if not item:
-                        raise ValueError(f"Item {item_id} not found or not personalized")
-
-                    # DSGVO-Audit-Log (SPEC Req 10) — before delete so we have the data
-                    firmenname_hint = (item.name or '')[:20]
-                    print(
-                        f"[DSGVO-Audit] User-Aktion: personalisiertes Skript gelöscht zur Cap-Befreiung "
-                        f"(item_id={item.id}, firmenname={firmenname_hint}, erstellt={item.created_at})"
-                    )
-                    _db.delete(item)
-
-                # Insert-Phase (neues personalisiertes Skript — SPEC Req 8)
-                new_opener = ProfileOpener(
+            # Delete-Phase (Cap-Befreiung) — only items belonging to this profile
+            for item_id in delete_ids:
+                item = _db.query(ProfileOpener).filter_by(
+                    id=item_id,
                     profile_id=profile_id,
-                    name=new_name,
-                    inhalt=personalized_text,
-                    sortierung=0,
-                    type=original.type,
-                    parent_id=opener_id,               # parent_id links to original (SPEC Req 8, 11)
-                    is_personalized=True,              # marks as personalized (SPEC Req 8)
-                    briefing_source_firma=firmenname,  # Finding A: enables optgroup grouping in Plan 01
+                    is_personalized=True  # Schutz: nur personalisierte koennen via Cap-Modal geloescht werden
+                ).first()
+                if not item:
+                    raise ValueError(f"Item {item_id} not found or not personalized")
+
+                # DSGVO-Audit-Log (SPEC Req 10) — before delete so we have the data
+                firmenname_hint = (item.name or '')[:20]
+                print(
+                    f"[DSGVO-Audit] User-Aktion: personalisiertes Skript gelöscht zur Cap-Befreiung "
+                    f"(item_id={item.id}, firmenname={firmenname_hint}, erstellt={item.created_at})"
                 )
-                _db.add(new_opener)
-                _db.flush()   # trigger ID generation without committing yet
-                new_item_id = new_opener.id
-            # commit happens automatically at with-block end (no exception)
-            # rollback happens automatically on exception inside with-block
+                _db.delete(item)
+
+            # Insert-Phase (neues personalisiertes Skript — SPEC Req 8)
+            new_opener = ProfileOpener(
+                profile_id=profile_id,
+                name=new_name,
+                inhalt=personalized_text,
+                sortierung=0,
+                type=original.type,
+                parent_id=opener_id,               # parent_id links to original (SPEC Req 8, 11)
+                is_personalized=True,              # marks as personalized (SPEC Req 8)
+                briefing_source_firma=firmenname,  # Finding A: enables optgroup grouping in Plan 01
+            )
+            _db.add(new_opener)
+            _db.flush()   # trigger ID generation without committing yet
+            new_item_id = new_opener.id
+            _db.commit()  # explicit commit (Bug A fix: no with _db.begin() wrapper)
 
         except _CapExceeded:
             pass  # cap_exceeded_response already set; no error, just skip insert
         except Exception as e:
-            raise  # with-block already rolled back; let finally: _db.close() run
+            _db.rollback()
+            raise
 
     finally:
         _db.close()
