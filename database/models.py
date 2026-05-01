@@ -168,6 +168,9 @@ class ProfileOpener(Base):
     sortierung  = Column(Integer, default=0)
     type        = Column(String(20), nullable=False, server_default='opener')
     created_at  = Column(DateTime, default=utcnow)
+    parent_id             = Column(Integer, ForeignKey('profile_opener.id'), nullable=True)
+    is_personalized       = Column(Boolean, default=False, nullable=False)
+    briefing_source_firma = Column(String(200), nullable=True)
 
 
 class Session(Base):

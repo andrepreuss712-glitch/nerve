@@ -401,6 +401,18 @@ def _migrate():
                 print(f"[DB] Migration: added conversation_logs.{col}")
             except Exception:
                 pass
+        # ── Phase 08.20.3: parent_id + is_personalized + briefing_source_firma fuer ProfileOpener ──
+        for col, typedef in [
+            ('parent_id',             'INTEGER'),
+            ('is_personalized',       'BOOLEAN DEFAULT 0'),
+            ('briefing_source_firma', 'VARCHAR(200)'),
+        ]:
+            try:
+                conn.execute(text(f'ALTER TABLE profile_opener ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added profile_opener.{col}")
+            except Exception:
+                pass  # Idempotent: duplicate ALTER TABLE fails silently
         # ── Phase 04.9: Seed 6 system personality types ───────────────────────
         import json as _json
         _personality_seed = [

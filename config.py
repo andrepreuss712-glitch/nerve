@@ -98,3 +98,6 @@ KATEGORIE_LABEL = {
     'uebergang':  'Übergang',
     'lob':        'Lob',
 }
+
+# ── Phase 08.20.3: Cap für personalisierte Skripte ────────────────────────
+PERSONALIZED_SCRIPTS_CAP = int(os.environ.get('PERSONALIZED_SCRIPTS_CAP', 20))
