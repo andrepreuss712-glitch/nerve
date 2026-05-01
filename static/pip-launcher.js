@@ -664,6 +664,11 @@
           if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
           return;
         }
+        // Bug-E fix: save personalized text as the active opener for this call BEFORE clearing it.
+        // state.selectedOpenerId still points to the original item; the new item_id is in data.item_id.
+        // Using _editedOpenerText (highest priority in startCall opener resolution) ensures the
+        // personalized version is used by the live call without needing to refresh openerItems.
+        state._editedOpenerText = state._personalizedSkriptText || "";
         state._personalizedSkriptText = null;
         state._personalizeAbortController = null;
         _collectEditedTexts();
@@ -1791,7 +1796,11 @@
 
   function _isBriefingTabExpanded() {
     var body = pipEl('pip-briefing-tab-body');
-    return body ? body.style.maxHeight !== '0' && body.style.maxHeight !== '' : false;
+    if (!body) return false;
+    var mh = body.style.maxHeight;
+    // Bug-D fix: browsers return '0px' (not '0') for inline style max-height:0.
+    // Without this, first click sees isExpanded=true and collapses (no-op). Needs 2 clicks.
+    return mh !== '' && mh !== '0' && mh !== '0px';
   }
 
   function _showPipLive() {
