@@ -446,6 +446,22 @@
         <div class="fg" style="margin-top:18px">
           <label class="fl">Opener <i class="tip-icon" data-tip="Sammle verschiedene Opener-Sätze. Im Launcher wählst du vor dem Call den passenden aus.">?</i></label>
           <p class="field-desc">Dein bevorzugter Gesprächseinstieg. Mehrere Varianten möglich.</p>
+          <!-- Phase 08.20.3 Finding A2: Filter toggle for opener list -->
+          <div id="opener-filter-toggle" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button type="button" class="btn-filter-opener active" data-filter="all"
+                    style="font-size:12px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-color);background:var(--accent);color:#fff;cursor:pointer">
+              Alle anzeigen
+            </button>
+            <button type="button" class="btn-filter-opener" data-filter="standard"
+                    style="font-size:12px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-color);background:transparent;cursor:pointer">
+              Nur Standard
+            </button>
+            <button type="button" class="btn-filter-opener" data-filter="personalized"
+                    style="font-size:12px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-color);background:transparent;cursor:pointer">
+              Nur personalisiert
+            </button>
+          </div>
+          <div id="opener-cap-status" style="display:none;font-size:12px;color:var(--page-text-muted);margin-bottom:6px"></div>
           <div id="opener-list" style="display:flex;flex-direction:column;gap:8px"></div>
           <button type="button" class="btn-primary btn-add-item" id="btn-add-opener">+ Opener hinzufügen</button>
         </div>
@@ -1332,6 +1348,187 @@ function crudList(containerId, endpoint, label) {
   }
 }
 
+/* ── Phase 08.20.3 Finding A2: Opener Filter Toggle ─────────────────── */
+function _initOpenerListWithFilter(profileId) {
+  var currentFilter = 'all';
+  var endpoint = '/profiles/' + profileId + '/opener';
+
+  function loadOpeners(filter) {
+    currentFilter = filter;
+    var url = endpoint + (filter !== 'all' ? '?filter=' + filter : '');
+    var container = document.getElementById('opener-list');
+    var capStatusEl = document.getElementById('opener-cap-status');
+    if (!container) return;
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        // Handle both response shapes: plain array (all/standard) or {items, cap_status} (personalized)
+        var items = Array.isArray(data) ? data : (data.items || []);
+        var capStatus = Array.isArray(data) ? null : (data.cap_status || null);
+
+        container.innerHTML = '';
+
+        if (items.length === 0) {
+          container.innerHTML = '<div style="font-size:12px;color:var(--page-text-muted);padding:4px 0">' +
+            (filter === 'personalized' ? 'Noch keine personalisierten Opener.' : 'Noch keine Opener.') +
+            '</div>';
+        } else {
+          items.forEach(function(item) {
+            var card = document.createElement('div');
+            card.className = 'crud-card';
+            card.dataset.id = item.id;
+
+            var hd = document.createElement('div');
+            hd.className = 'crud-hd';
+
+            var nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = item.name || '';
+            nameInput.placeholder = 'Name';
+            if (item.is_personalized) {
+              nameInput.readOnly = true;
+              nameInput.style.opacity = '0.7';
+              nameInput.title = 'Personalisiertes Skript — Name ist automatisch generiert';
+            }
+
+            var chevron = document.createElement('button');
+            chevron.type = 'button';
+            chevron.className = 'crud-chevron';
+            chevron.setAttribute('aria-label', 'Abschnitt ein-/ausklappen');
+            chevron.textContent = '▸';
+            chevron.addEventListener('click', function(e) {
+              e.stopPropagation();
+              var body = card.querySelector('.crud-body');
+              var collapsed = body.classList.toggle('collapsed');
+              chevron.textContent = collapsed ? '▸' : '▾';
+            });
+
+            var body = document.createElement('div');
+            body.className = 'crud-body collapsed';
+
+            var inhaltTa = document.createElement('textarea');
+            inhaltTa.placeholder = 'Inhalt …';
+            inhaltTa.value = item.inhalt || '';
+            if (item.is_personalized) {
+              inhaltTa.readOnly = true;
+              inhaltTa.style.opacity = '0.7';
+              inhaltTa.title = 'Personalisiertes Skript — Inhalt nur lesbar. Löschen möglich.';
+            }
+
+            if (item.is_personalized) {
+              var badge = document.createElement('span');
+              badge.style.cssText = 'font-size:10px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle';
+              badge.textContent = '✨ personalisiert';
+              hd.appendChild(badge);
+            }
+
+            var delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'btn-trash';
+            delBtn.title = item.is_personalized ? 'Personalisiertes Skript löschen' : 'Löschen';
+            delBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
+
+            hd.appendChild(nameInput);
+            hd.appendChild(chevron);
+            hd.appendChild(delBtn);
+            body.appendChild(inhaltTa);
+            card.appendChild(hd);
+            card.appendChild(body);
+
+            if (!item.is_personalized) {
+              function makeSave(id) {
+                return function() {
+                  fetch(endpoint + '/' + id, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': _getCsrfToken()},
+                    body: JSON.stringify({name: nameInput.value, inhalt: inhaltTa.value})
+                  })
+                    .then(function(r) {
+                      if (r.ok) {
+                        var toast = document.querySelector('.save-toast');
+                        if (toast) { toast.style.display = 'inline'; setTimeout(function(){ toast.style.display = 'none'; }, 2000); }
+                      }
+                    })
+                    .catch(function() {});
+                };
+              }
+              var saveHandler = makeSave(item.id);
+              nameInput.addEventListener('blur', saveHandler);
+              inhaltTa.addEventListener('blur', saveHandler);
+            }
+
+            delBtn.addEventListener('click', function() {
+              confirmDelete(function() {
+                fetch(endpoint + '/' + item.id, {
+                  method: 'DELETE',
+                  headers: {'X-CSRFToken': _getCsrfToken()}
+                })
+                  .then(function() {
+                    card.remove();
+                    if (currentFilter === 'personalized') {
+                      loadOpeners('personalized');
+                    }
+                  })
+                  .catch(function() {});
+              }, item.is_personalized ? 'Personalisiertes Skript' : 'Opener');
+            });
+
+            container.appendChild(card);
+          });
+        }
+
+        // Cap-Status anzeigen
+        if (capStatusEl) {
+          if (capStatus && filter === 'personalized') {
+            capStatusEl.textContent = 'Cap-Status: ' + capStatus.used + ' von ' + capStatus.cap + ' personalisierten Slots belegt';
+            capStatusEl.style.display = 'block';
+          } else {
+            capStatusEl.style.display = 'none';
+          }
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Filter-Toggle verdrahten
+  var toggleBtns = document.querySelectorAll('.btn-filter-opener');
+  toggleBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      toggleBtns.forEach(function(b) {
+        b.classList.remove('active');
+        b.style.background = 'transparent';
+        b.style.color = '';
+      });
+      btn.classList.add('active');
+      btn.style.background = 'var(--accent)';
+      btn.style.color = '#fff';
+      loadOpeners(btn.dataset.filter);
+    });
+  });
+
+  // Hinzufügen-Button verdrahten
+  var addBtn = document.getElementById('btn-add-opener');
+  if (addBtn) {
+    addBtn.addEventListener('click', function() {
+      var container = document.getElementById('opener-list');
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': _getCsrfToken()},
+        body: JSON.stringify({name: 'Opener ' + ((container ? container.children.length : 0) + 1), inhalt: ''})
+      })
+        .then(function(r) { return r.json(); })
+        .then(function() {
+          loadOpeners(currentFilter);
+        })
+        .catch(function() {});
+    });
+  }
+
+  // Initiales Laden
+  loadOpeners('all');
+}
+
 /* ── Init ──────────────────────────────────────────────────────────── */
 // Phase 08 D-09: branche lebt auf Profile-Row (nicht in daten.basis) — aus Jinja-Context:
 const PROFILE_BRANCHE = "{{ profile.branche|default('', true)|e }}";
@@ -1428,7 +1625,8 @@ init();
 
 if (PROFILE_ID) {
   crudList('skripte-list', '/profiles/' + PROFILE_ID + '/skripte', 'Skript');
-  crudList('opener-list', '/profiles/' + PROFILE_ID + '/opener', 'Opener');
+  // Phase 08.20.3 Finding A2: opener-specific init with filter toggle
+  _initOpenerListWithFilter(PROFILE_ID);
   crudList('erlaubnis-list', '/profiles/' + PROFILE_ID + '/erlaubnis', 'Erlaubnisfrage');
   crudList('pitch-list', '/profiles/' + PROFILE_ID + '/pitches', 'Pitch');
 }

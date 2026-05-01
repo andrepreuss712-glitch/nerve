@@ -406,8 +406,44 @@ def opener_liste(pid):
         p = db.query(Profile).filter_by(id=pid, org_id=g.org.id).first()
         if not p:
             return jsonify({'error': 'not found'}), 404
-        items = db.query(ProfileOpener).filter_by(profile_id=pid, type='opener').order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
-        return jsonify([{'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung} for o in items])
+
+        # Phase 08.20.3 Finding A2: filter param for Profile-Editor toggle
+        filter_mode = request.args.get('filter', 'all')  # 'all' | 'standard' | 'personalized'
+
+        q = db.query(ProfileOpener).filter_by(profile_id=pid, type='opener')
+        if filter_mode == 'standard':
+            q = q.filter(ProfileOpener.is_personalized == False)  # noqa: E712
+        elif filter_mode == 'personalized':
+            q = q.filter(ProfileOpener.is_personalized == True)  # noqa: E712
+
+        items = q.order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
+
+        # Cap-Status for personalized filter
+        if filter_mode == 'personalized':
+            from config import PERSONALIZED_SCRIPTS_CAP
+            cap = max(1, int(PERSONALIZED_SCRIPTS_CAP))
+            total_personalized = db.query(ProfileOpener).filter_by(
+                profile_id=pid, is_personalized=True
+            ).count()
+            cap_status = {'used': total_personalized, 'cap': cap}
+        else:
+            cap_status = None
+
+        result = [
+            {
+                'id': o.id,
+                'name': o.name,
+                'inhalt': o.inhalt or '',
+                'sortierung': o.sortierung,
+                'is_personalized': bool(o.is_personalized),
+                'briefing_source_firma': o.briefing_source_firma or '',
+            }
+            for o in items
+        ]
+
+        if cap_status is not None:
+            return jsonify({'items': result, 'cap_status': cap_status})
+        return jsonify(result)
     finally:
         db.close()
 
