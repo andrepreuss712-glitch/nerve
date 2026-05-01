@@ -1027,3 +1027,200 @@ def api_ewb_rate(event_id):
         return jsonify({'ok': True, 'success': value})
     finally:
         db.close()
+
+
+# ── Phase 08.20.3: KI-Skript-Personalisierung ─────────────────────────────
+
+@app_routes_bp.route('/api/precall/personalize', methods=['POST'])
+@login_required
+def api_personalize_skript():
+    """Endpoint 1: KI-Call only — returns personalized_text. No DB write.
+
+    Cap-check is NOT done here (SPEC L4: cap check must happen AFTER KI call,
+    i.e., in the /save endpoint only after user approves the result).
+
+    Briefing data is passed from the frontend via request JSON body (key 'briefing'),
+    sourced from state.precallBriefing in pip-launcher.js. This avoids reliance on
+    Flask session key availability from Phase 08.20.2.
+    """
+    from services.precall_service import generate_personalized_skript
+    from database.db import get_session as get_db_session
+    from database.models import ProfileOpener, Profile
+
+    data = request.get_json(force=True) or {}
+    opener_id = data.get('opener_id')
+    briefing_dict = data.get('briefing') or {}  # passed from frontend state.precallBriefing
+
+    if not opener_id:
+        return jsonify({'error': 'opener_id ist Pflicht'}), 400
+
+    user_id = g.user.id if g.user else None
+    profile_id = flask_session.get('active_profile_id')
+    if not profile_id:
+        return jsonify({'error': 'Kein aktives Profil'}), 400
+
+    _db = get_db_session()
+    try:
+        opener = _db.query(ProfileOpener).filter_by(
+            id=opener_id, profile_id=profile_id
+        ).first()
+        if not opener:
+            return jsonify({'error': 'Opener nicht gefunden'}), 400
+
+        profile = _db.query(Profile).filter_by(id=profile_id).first()
+        profil_daten = {}
+        if profile and profile.daten:
+            try:
+                import json as _json
+                profil_daten = _json.loads(profile.daten) if isinstance(profile.daten, str) else (profile.daten or {})
+            except Exception:
+                profil_daten = {}
+
+        opener_inhalt = opener.inhalt or ''
+    finally:
+        _db.close()
+
+    personalized_text, error = generate_personalized_skript(
+        briefing_dict=briefing_dict,
+        opener_inhalt=opener_inhalt,
+        profil_daten=profil_daten,
+        user_id=user_id,
+    )
+    if error:
+        return jsonify({'error': error}), 502
+
+    return jsonify({'personalized_text': personalized_text})
+
+
+@app_routes_bp.route('/api/precall/personalize/save', methods=['POST'])
+@login_required
+def api_personalize_skript_save():
+    """Endpoint 2: DB write with Cap-Check. Atomic delete+insert transaction (Finding B).
+
+    Returns {'item_id': int, 'ok': True} on success.
+    Returns {'cap_exceeded': True, 'items': [...]} when cap is hit (no delete_ids given).
+    Accepts optional 'delete_ids' list to free cap slots before saving.
+
+    IMPORTANT (Finding B): All deletes + the INSERT are wrapped in a single
+    `with _db.begin():` transaction. If INSERT fails after DELETE, ALL changes
+    are rolled back. No partial state, no data loss.
+
+    IMPORTANT (Finding A): briefing_source_firma is stored on the new ProfileOpener,
+    sourced from request body 'firmenname'. This enables the Step-5 optgroup grouping
+    in pip-launcher.js (Plan 01).
+    """
+    from database.db import get_session as get_db_session
+    from database.models import ProfileOpener
+    from config import PERSONALIZED_SCRIPTS_CAP
+    import datetime
+
+    data = request.get_json(force=True) or {}
+    opener_id = data.get('opener_id')
+    personalized_text = (data.get('personalized_text') or '').strip()
+    delete_ids = data.get('delete_ids') or []
+    # firmenname from request body (sent by _savePersonalizedAndStartCall in Plan 1)
+    firmenname = (data.get('firmenname') or '').strip()[:50]
+
+    if not opener_id:
+        return jsonify({'error': 'opener_id ist Pflicht'}), 400
+    if not personalized_text:
+        return jsonify({'error': 'personalized_text ist Pflicht'}), 400
+
+    user_id = g.user.id if g.user else None
+    profile_id = flask_session.get('active_profile_id')
+    if not profile_id:
+        return jsonify({'error': 'Kein aktives Profil'}), 400
+
+    cap = max(1, int(PERSONALIZED_SCRIPTS_CAP))  # guard: cap >= 1 (T-08203-03-04)
+
+    _db = get_db_session()
+    try:
+        # Verify original opener belongs to this profile
+        original = _db.query(ProfileOpener).filter_by(
+            id=opener_id, profile_id=profile_id
+        ).first()
+        if not original:
+            return jsonify({'error': 'Opener nicht gefunden'}), 400
+
+        # ── Cap-Check (before atomic block, no DB writes yet) ──────────────
+        # Only check cap when no delete_ids provided (user hasn't confirmed deletion yet)
+        if not delete_ids:
+            personalized_count = _db.query(ProfileOpener).filter_by(
+                profile_id=profile_id, is_personalized=True
+            ).count()
+
+            if personalized_count >= cap:
+                # Cap exceeded — return items list for sub-modal (SPEC Req 9)
+                items_query = _db.query(ProfileOpener).filter_by(
+                    profile_id=profile_id, is_personalized=True
+                ).order_by(ProfileOpener.created_at.asc()).all()
+
+                now = datetime.datetime.utcnow()
+                items_list = []
+                for item in items_query:
+                    weeks_old = 0
+                    if item.created_at:
+                        delta = now - item.created_at
+                        weeks_old = int(delta.days / 7)
+                    items_list.append({
+                        'id': item.id,
+                        'name': item.name or '',
+                        'created_at': str(item.created_at) if item.created_at else '',
+                        'firmenname': (item.name or '')[:20],
+                        'weeks_old': weeks_old,
+                    })
+                return jsonify({'cap_exceeded': True, 'items': items_list})
+
+        # ── Atomic Delete + Insert (Finding B) ────────────────────────────
+        # Wrap ALL deletes + the INSERT in a single transaction.
+        # If INSERT fails after DELETE: automatic rollback — no data loss.
+        today_str = datetime.datetime.utcnow().strftime('%Y-%m-%d')
+        firma_display = firmenname or (original.name or 'Lead')[:50]
+        new_name = f"{firma_display} — {original.name} (personalisiert, {today_str})"
+
+        new_item_id = None
+        try:
+            with _db.begin():
+                # Delete-Phase (Cap-Befreiung) — only items belonging to this profile
+                for item_id in delete_ids:
+                    item = _db.query(ProfileOpener).filter_by(
+                        id=item_id,
+                        profile_id=profile_id,
+                        is_personalized=True  # Schutz: nur personalisierte koennen via Cap-Modal geloescht werden
+                    ).first()
+                    if not item:
+                        raise ValueError(f"Item {item_id} not found or not personalized")
+
+                    # DSGVO-Audit-Log (SPEC Req 10) — before delete so we have the data
+                    firmenname_hint = (item.name or '')[:20]
+                    print(
+                        f"[DSGVO-Audit] User-Aktion: personalisiertes Skript gelöscht zur Cap-Befreiung "
+                        f"(item_id={item.id}, firmenname={firmenname_hint}, erstellt={item.created_at})"
+                    )
+                    _db.delete(item)
+
+                # Insert-Phase (neues personalisiertes Skript — SPEC Req 8)
+                new_opener = ProfileOpener(
+                    profile_id=profile_id,
+                    name=new_name,
+                    inhalt=personalized_text,
+                    sortierung=0,
+                    type=original.type,
+                    parent_id=opener_id,               # parent_id links to original (SPEC Req 8, 11)
+                    is_personalized=True,              # marks as personalized (SPEC Req 8)
+                    briefing_source_firma=firmenname,  # Finding A: enables optgroup grouping in Plan 01
+                )
+                _db.add(new_opener)
+                _db.flush()   # trigger ID generation without committing yet
+                new_item_id = new_opener.id
+            # commit happens automatically at with-block end (no exception)
+            # rollback happens automatically on exception inside with-block
+
+        except Exception as e:
+            _db.rollback()  # defensive belt-and-suspenders; with-block already rolled back
+            raise
+
+    finally:
+        _db.close()
+
+    return jsonify({'item_id': new_item_id, 'ok': True})

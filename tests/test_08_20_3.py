@@ -38,8 +38,8 @@ class TestUIFooter:
         resp = client.post('/api/precall/personalize',
                            json={},
                            content_type='application/json')
-        # Must require opener_id (400 = route exists and validates); 404 = route not yet in Plan 02
-        assert resp.status_code in (400, 401, 404), (
+        # Must require opener_id (400 = route exists and validates); 404 = pre-Plan-02; 302 = login_required redirect
+        assert resp.status_code in (302, 400, 401, 404), (
             f"Route must reject empty opener_id (or 404 pre-Plan-02), got {resp.status_code}")
 
     def test_personalize_route_requires_login(self, client):
