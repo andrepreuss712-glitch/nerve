@@ -507,6 +507,262 @@
     };
   }
 
+  // ── Step 4b: KI-Personalisierungs-Ladescreen ─────────────────────────────
+  function renderStep4b() {
+    var c = content();
+    if (!c) return;
+    if (state._personalizeAbortController) {
+      try { state._personalizeAbortController.abort(); } catch (_) {}
+    }
+    state._personalizeAbortController = new AbortController();
+
+    c.innerHTML = [
+      '<div class="launcher-step">',
+      '<div class="nav-live-title">Skript wird personalisiert…</div>',
+      '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:12px">',
+      'KI passt deinen Opener auf den Lead an (~5–10 Sekunden)',
+      '</div>',
+      '<div class="launcher-loading-bar"><div class="launcher-loading-bar-inner"></div></div>',
+      '<div id="lnr-4b-error" style="display:none;color:#f87171;font-size:13px;margin-top:8px"></div>',
+      '<div class="launcher-actions" style="margin-top:16px">',
+      '<button class="launcher-btn-ghost" id="lnr-step4b-cancel">Abbrechen</button>',
+      '</div>',
+      '</div>'
+    ].join('');
+
+    document.getElementById('lnr-step4b-cancel').onclick = function () {
+      if (state._personalizeAbortController) {
+        try { state._personalizeAbortController.abort(); } catch (_) {}
+      }
+      state._personalizeAbortController = null;
+      state._personalizedSkriptText = null;
+      state.step = 5;
+      renderStep();
+    };
+
+    fetch('/api/precall/personalize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        opener_id: state.selectedOpenerId,
+        briefing: state.precallBriefing || {}
+      }),
+      signal: state._personalizeAbortController.signal
+    })
+      .then(function (r) {
+        if (!r.ok) {
+          return r.text().then(function (t) {
+            try {
+              var j = JSON.parse(t);
+              throw new Error(j.error || 'Server-Fehler (' + r.status + ')');
+            } catch (e) {
+              if (e.message) throw e;
+              throw new Error('Server-Fehler (' + r.status + ')');
+            }
+          });
+        }
+        return r.json();
+      })
+      .then(function (data) {
+        if (data && data.error) {
+          var errEl = document.getElementById('lnr-4b-error');
+          if (errEl) { errEl.textContent = sanitizeErrorMsg(data.error); errEl.style.display = 'block'; }
+          return;
+        }
+        state._personalizedSkriptText = data.personalized_text || '';
+        state._personalizeAbortController = null;
+        state.step = '4c';
+        renderStep();
+      })
+      .catch(function (err) {
+        if (err && err.name === 'AbortError') return;
+        var errEl = document.getElementById('lnr-4b-error');
+        if (errEl) {
+          errEl.textContent = sanitizeErrorMsg((err && err.message) ? err.message : String(err));
+          errEl.style.display = 'block';
+        }
+      });
+  }
+
+  // ── Step 4c: Vorher / Nachher-Vergleich ──────────────────────────────────
+  function renderStep4c() {
+    var c = content();
+    if (!c) return;
+    var opener = state.openerItems && state.openerItems.find(function (o) {
+      return o.id === state.selectedOpenerId;
+    });
+    var originalText = opener ? (opener.inhalt || '') : '';
+    var personalizedText = state._personalizedSkriptText || '';
+
+    c.innerHTML = [
+      '<div class="launcher-step">',
+      '<div class="nav-live-title">Vorher / Nachher</div>',
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">',
+      '  <div style="flex:1;min-width:180px">',
+      '    <div class="precall-section-label">Original</div>',
+      '    <div class="launcher-opener-preview" style="white-space:pre-wrap;font-size:12px;max-height:200px;overflow-y:auto">',
+      escHtml(originalText),
+      '    </div>',
+      '  </div>',
+      '  <div style="flex:1;min-width:180px">',
+      '    <div class="precall-section-label">Personalisiert ✨</div>',
+      '    <div class="launcher-opener-preview" style="white-space:pre-wrap;font-size:12px;max-height:200px;overflow-y:auto">',
+      escHtml(personalizedText),
+      '    </div>',
+      '  </div>',
+      '</div>',
+      '<div id="lnr-4c-save-error" style="display:none;color:#f87171;font-size:13px;margin-bottom:8px"></div>',
+      '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
+      '<button class="launcher-btn-ghost" id="lnr-step4c-original">Original nutzen</button>',
+      '<button class="launcher-btn-primary" id="lnr-step4c-save">Personalisiert nutzen + Call ▶</button>',
+      '</div>',
+      '</div>'
+    ].join('');
+
+    document.getElementById('lnr-step4c-original').onclick = function () {
+      state.briefingModus = 'A';
+      state._personalizedSkriptText = null;
+      state.step = 5;
+      renderStep();
+    };
+
+    document.getElementById('lnr-step4c-save').onclick = function () {
+      _savePersonalizedAndStartCall();
+    };
+  }
+
+  // ── Phase 08.20.3: Save personalized skript + start call ─────────────────
+  function _savePersonalizedAndStartCall() {
+    var saveBtn = document.getElementById('lnr-step4c-save');
+    var errEl = document.getElementById('lnr-4c-save-error');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Speichern…'; }
+
+    fetch('/api/precall/personalize/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        opener_id: state.selectedOpenerId,
+        personalized_text: state._personalizedSkriptText || '',
+        firmenname: (state.precallBriefing && state.precallBriefing.firmenname) || ''
+      })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data && data.cap_exceeded) {
+          _showCapSubModal(data.items || []);
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
+          return;
+        }
+        if (data && data.error) {
+          if (errEl) { errEl.textContent = sanitizeErrorMsg(data.error); errEl.style.display = 'block'; }
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
+          return;
+        }
+        state._personalizedSkriptText = null;
+        state._personalizeAbortController = null;
+        _collectEditedTexts();
+        startCall(true);
+      })
+      .catch(function (err) {
+        if (errEl) {
+          errEl.textContent = sanitizeErrorMsg((err && err.message) ? err.message : 'Fehler beim Speichern');
+          errEl.style.display = 'block';
+        }
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
+      });
+  }
+
+  // ── Phase 08.20.3: Cap Sub-Modal ─────────────────────────────────────────
+  function _showCapSubModal(items) {
+    var c = content();
+    if (!c) return;
+
+    var itemRows = items.map(function (item) {
+      return '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;margin-bottom:6px;cursor:pointer">' +
+        '<input type="checkbox" name="cap-delete-item" value="' + item.id + '" style="margin-top:2px"> ' +
+        escHtml(item.name || '') +
+        ' <span style="opacity:0.6;font-size:11px">(' + escHtml(String(item.weeks_old || 0)) + ' Wochen alt)</span>' +
+        '</label>';
+    }).join('');
+
+    c.innerHTML = [
+      '<div class="launcher-step">',
+      '<div class="nav-live-title">Speicherplatz für personalisierte Skripte voll</div>',
+      '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:12px">',
+      'Du hast bereits die maximale Anzahl personalisierter Skripte erreicht. ',
+      'Bitte wähle ein oder mehrere aus, die du löschen möchtest.',
+      '</div>',
+      '<div id="cap-items-list" style="max-height:240px;overflow-y:auto;margin-bottom:12px">',
+      itemRows,
+      '</div>',
+      '<div id="lnr-cap-error" style="display:none;color:#f87171;font-size:13px;margin-bottom:8px"></div>',
+      '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
+      '<button class="launcher-btn-ghost" id="lnr-cap-cancel">Abbrechen</button>',
+      '<button class="launcher-btn-primary" id="lnr-cap-delete-save">Auswahl löschen + Personalisieren →</button>',
+      '</div>',
+      '</div>'
+    ].join('');
+
+    document.getElementById('lnr-cap-cancel').onclick = function () {
+      state.step = '4c';
+      renderStep();
+    };
+
+    document.getElementById('lnr-cap-delete-save').onclick = function () {
+      var checkboxes = c.querySelectorAll('input[name="cap-delete-item"]:checked');
+      var deleteIds = Array.prototype.slice.call(checkboxes).map(function (cb) {
+        return parseInt(cb.value, 10);
+      });
+      if (deleteIds.length === 0) {
+        var capErrEl = document.getElementById('lnr-cap-error');
+        if (capErrEl) { capErrEl.textContent = 'Bitte mindestens ein Skript auswählen.'; capErrEl.style.display = 'block'; }
+        return;
+      }
+      var delBtn = document.getElementById('lnr-cap-delete-save');
+      if (delBtn) { delBtn.disabled = true; delBtn.textContent = 'Löschen…'; }
+
+      fetch('/api/precall/personalize/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+          opener_id: state.selectedOpenerId,
+          personalized_text: state._personalizedSkriptText || '',
+          firmenname: (state.precallBriefing && state.precallBriefing.firmenname) || '',
+          delete_ids: deleteIds
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.error) {
+            var capErrEl = document.getElementById('lnr-cap-error');
+            if (capErrEl) { capErrEl.textContent = sanitizeErrorMsg(data.error); capErrEl.style.display = 'block'; }
+            if (delBtn) { delBtn.disabled = false; delBtn.textContent = 'Auswahl löschen + Personalisieren →'; }
+            return;
+          }
+          state._personalizedSkriptText = null;
+          _collectEditedTexts();
+          startCall(true);
+        })
+        .catch(function (err) {
+          var capErrEl = document.getElementById('lnr-cap-error');
+          if (capErrEl) {
+            capErrEl.textContent = sanitizeErrorMsg((err && err.message) ? err.message : 'Fehler');
+            capErrEl.style.display = 'block';
+          }
+          if (delBtn) { delBtn.disabled = false; delBtn.textContent = 'Auswahl löschen + Personalisieren →'; }
+        });
+    };
+  }
+
   // ── Step 5: Skript & Opener Selection ─────────────────────────────────────
   function renderStep5() {
     var c = content();
@@ -536,11 +792,64 @@
       return '<option value="' + s.id + '"' + sel + '>' + escHtml(s.name) + '</option>';
     }).join('');
 
-    // Opener-Dropdown
-    var openerOptions = '<option value="">-- Kein Opener --</option>' + state.openerItems.map(function (o) {
-      var sel = o.id === state.selectedOpenerId ? ' selected' : '';
-      return '<option value="' + o.id + '"' + sel + '>' + escHtml(o.name) + '</option>';
-    }).join('');
+    // Phase 08.20.3 Finding A1: optgroup grouping to prevent dropdown clutter
+    var currentFirma = (state.precallBriefing && state.precallBriefing.firmenname) ? state.precallBriefing.firmenname.trim() : '';
+
+    // Partition openerItems into 3 groups
+    var opGroupCurrent = [];   // is_personalized=True AND briefing_source_firma == currentFirma
+    var opGroupStandard = [];  // is_personalized=False (all original/standard items)
+    var opGroupOther = [];     // is_personalized=True AND briefing_source_firma != currentFirma
+
+    (state.openerItems || []).forEach(function (o) {
+      if (o.is_personalized) {
+        if (currentFirma && (o.briefing_source_firma || '').trim() === currentFirma) {
+          opGroupCurrent.push(o);
+        } else {
+          opGroupOther.push(o);
+        }
+      } else {
+        opGroupStandard.push(o);
+      }
+    });
+
+    // Sort opGroupOther by id desc (newer first)
+    opGroupOther.sort(function (a, b) { return b.id - a.id; });
+
+    // Auto-select when exactly 1 item matches current firma
+    if (opGroupCurrent.length === 1 && !state.selectedOpenerId) {
+      state.selectedOpenerId = opGroupCurrent[0].id;
+    }
+
+    function _buildOptions(arr) {
+      return arr.map(function (o) {
+        var sel = (o.id === state.selectedOpenerId) ? ' selected' : '';
+        return '<option value="' + o.id + '"' + sel + '>' + escHtml(o.name) + '</option>';
+      }).join('');
+    }
+
+    // Build the select HTML with optgroups
+    var openerSelectHtml;
+    if (state.openerItems && state.openerItems.length > 0) {
+      var selectInner = '<option value="">-- Kein Opener --</option>';
+      if (currentFirma && opGroupCurrent.length > 0) {
+        selectInner += '<optgroup label="✨ Personalisiert für ' + escHtml(currentFirma) + '">';
+        selectInner += _buildOptions(opGroupCurrent);
+        selectInner += '</optgroup>';
+      }
+      if (opGroupStandard.length > 0) {
+        selectInner += '<optgroup label="📋 Standard-Opener">';
+        selectInner += _buildOptions(opGroupStandard);
+        selectInner += '</optgroup>';
+      }
+      if (opGroupOther.length > 0) {
+        selectInner += '<optgroup label="📦 Andere personalisierte (älter)">';
+        selectInner += _buildOptions(opGroupOther);
+        selectInner += '</optgroup>';
+      }
+      openerSelectHtml = '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + selectInner + '</select>';
+    } else {
+      openerSelectHtml = '';
+    }
 
     // Vorschauen
     var skriptPreview = '';
@@ -572,10 +881,8 @@
         ? '<button type="button" class="launcher-inline-edit-btn" id="lnr-skript-edit-btn">Bearbeiten</button>'
         : '',
 
-      // Opener
-      state.openerItems.length > 0
-        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + openerOptions + '</select>'
-        : '',
+      // Opener (Phase 08.20.3: optgroup select via openerSelectHtml)
+      openerSelectHtml,
       '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (openerPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">'
         + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswählen für Vorschau' : 'Kein Opener hinterlegt')) + '</div>',
       '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>',
@@ -601,6 +908,10 @@
       '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurück</button>',
       '<button class="launcher-btn-ghost" id="lnr-step5-skip">Überspringen</button>',
       '<button class="launcher-btn-primary" id="lnr-step5-start">Call starten &#9654;</button>',
+      // Phase 08.20.3: Modus-C second button (only when openers exist)
+      (state.openerItems && state.openerItems.length > 0)
+        ? '<button class="launcher-btn-ghost" id="lnr-step5-personalize">✨ Personalisieren + Call ▶</button>'
+        : '',
       '</div>',
       '</div>'
     ].join('');
@@ -682,6 +993,19 @@
       _collectEditedTexts();
       startCall(true);
     };
+    // Phase 08.20.3: Modus-C personalize button
+    var personalizeBtn = document.getElementById('lnr-step5-personalize');
+    if (personalizeBtn) {
+      personalizeBtn.onclick = function () {
+        var opSel = document.getElementById('lnr-opener-select');
+        if (opSel && opSel.value) {
+          state.selectedOpenerId = parseInt(opSel.value, 10) || null;
+        }
+        state.briefingModus = 'C';
+        state.step = '4b';
+        renderStep();
+      };
+    }
   }
 
   function _wireInlineEdit(btnId, previewId, textareaId, type) {
