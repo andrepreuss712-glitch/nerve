@@ -531,7 +531,6 @@ def generate_personalized_skript(briefing_dict, opener_inhalt, profil_daten,
         firmenname = (briefing_dict or {}).get('firmenname', 'Unbekanntes Unternehmen')
         briefing_text = (briefing_dict or {}).get('text', '')
         empfehlungen = (briefing_dict or {}).get('empfehlungen', [])
-        ki_stil = ((profil_daten or {}).get('ki') or {}).get('stil', '')
         ki_ton = ((profil_daten or {}).get('ki') or {}).get('ton', '')
 
         # Empfehlungen als kompakter Text
@@ -549,8 +548,6 @@ def generate_personalized_skript(briefing_dict, opener_inhalt, profil_daten,
             'Integriere die Lead-spezifischen Informationen natürlich. '
             'Antworte NUR mit dem angepassten Text — keine Erklärungen, keine Überschriften.'
         )
-        if ki_stil:
-            _system += f'\nStil: {ki_stil}'
         if ki_ton:
             _system += f'\nTon: {ki_ton}'
 
