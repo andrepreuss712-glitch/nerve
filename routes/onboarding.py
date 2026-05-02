@@ -226,7 +226,7 @@ def create_profile_from_template():
         db.add(profil)
         db.commit()
         return jsonify({'ok': True, 'id': profil.id, 'name': profil.name,
-                        'einwaende': len(_basis.get('einwaende_detail', [])),
-                        'phasen': len(_basis.get('phasen', []))})
+                        'einwaende': len(template.get('einwaende_detail', [])),
+                        'phasen': len(template.get('phasen', []))})
     finally:
         db.close()
