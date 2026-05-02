@@ -250,6 +250,7 @@ def _migrate():
             # Phase 04.7.1: Markt-Trennung (FT-Logging)
             ('market',   "VARCHAR(10) NOT NULL DEFAULT 'dach'"),
             ('language', "VARCHAR(10) NOT NULL DEFAULT 'de'"),
+            ('anrede',   'VARCHAR(10)'),   # Phase 08 D-14: Du/Sie override per session
         ]:
             try:
                 conn.execute(text(f'ALTER TABLE conversation_logs ADD COLUMN {col} {typedef}'))
