@@ -15,7 +15,6 @@ from database.models import (
     ConversationLog,
     EwbRating,
     FtCallSession,
-    FtObjectionEvent,
     ObjectionEvent,
     Organisation,
     TrainingScenario,
@@ -148,101 +147,9 @@ def test_seed_ewb_scenarios_system_marker(db_session):
         )
 
 
-# ── A/B-Auswertungs-SQL-Join (Focus Area 3, D-22) ────────────────────
-
-def test_ab_stats_join_success_rate(db_session):
-    """3-stufiger Join liefert korrekte (prompt_version, n, success_rate)."""
-    _, u = _mk_user(db_session)
-    conv = _mk_conv(db_session, u)
-    fcs = FtCallSession(
-        user_id=u.id, conversation_log_id=conv.id,
-        mode='cold_call', market='dach', language='de',
-    )
-    db_session.add(fcs)
-    db_session.flush()
-
-    # 2 ObjectionEvents: 1 success=True, 1 success=False
-    oe1 = ObjectionEvent(
-        user_id=u.id, org_id=u.org_id,
-        conversation_log_id=conv.id,
-        einwand_typ='Zu teuer', success=True,
-    )
-    oe2 = ObjectionEvent(
-        user_id=u.id, org_id=u.org_id,
-        conversation_log_id=conv.id,
-        einwand_typ='Bedarf unklar', success=False,
-    )
-    db_session.add_all([oe1, oe2])
-
-    # 2 FtObjectionEvents mit unterschiedlichen prompt_version
-    ftoe1 = FtObjectionEvent(
-        ft_session_id=fcs.id, user_id=u.id,
-        market='dach', language='de',
-        timestamp_ms=1000, objection_type='Zu teuer',
-        model_used='haiku-4-5', prompt_version='v1-legacy',
-    )
-    ftoe2 = FtObjectionEvent(
-        ft_session_id=fcs.id, user_id=u.id,
-        market='dach', language='de',
-        timestamp_ms=2000, objection_type='Bedarf unklar',
-        model_used='haiku-4-5', prompt_version='v2-modular',
-    )
-    db_session.add_all([ftoe1, ftoe2])
-    db_session.commit()
-
-    # A/B-Query ausfuehren
-    rows = db_session.execute(text("""
-        SELECT ftoe.prompt_version AS v, COUNT(*) AS n,
-               AVG(CASE WHEN oe.success = 1 THEN 1.0 ELSE 0.0 END) AS rate
-        FROM ft_objection_events ftoe
-        JOIN ft_call_sessions fcs ON fcs.id = ftoe.ft_session_id
-        JOIN objection_events oe
-          ON oe.conversation_log_id = fcs.conversation_log_id
-         AND oe.einwand_typ = ftoe.objection_type
-        WHERE oe.success IS NOT NULL
-        GROUP BY ftoe.prompt_version
-        ORDER BY v
-    """)).fetchall()
-    results = {r[0]: (r[1], float(r[2])) for r in rows}
-    assert 'v1-legacy' in results
-    assert 'v2-modular' in results
-    assert results['v1-legacy'] == (1, 1.0), f'v1: {results["v1-legacy"]}'
-    assert results['v2-modular'] == (1, 0.0), f'v2: {results["v2-modular"]}'
-
-
-def test_ab_stats_filters_null_success(db_session):
-    """D-05: WHERE success IS NOT NULL — NULL-Events werden ausgeschlossen."""
-    _, u = _mk_user(db_session)
-    conv = _mk_conv(db_session, u)
-    fcs = FtCallSession(
-        user_id=u.id, conversation_log_id=conv.id,
-        mode='cold_call', market='dach', language='de',
-    )
-    db_session.add(fcs)
-    db_session.flush()
-    oe_null = ObjectionEvent(
-        user_id=u.id, org_id=u.org_id,
-        conversation_log_id=conv.id,
-        einwand_typ='Zu teuer', success=None,
-    )
-    ftoe = FtObjectionEvent(
-        ft_session_id=fcs.id, user_id=u.id,
-        market='dach', language='de',
-        timestamp_ms=1000, objection_type='Zu teuer',
-        model_used='haiku-4-5', prompt_version='v1-legacy',
-    )
-    db_session.add_all([oe_null, ftoe])
-    db_session.commit()
-    rows = db_session.execute(text("""
-        SELECT COUNT(*) FROM ft_objection_events ftoe
-        JOIN ft_call_sessions fcs ON fcs.id = ftoe.ft_session_id
-        JOIN objection_events oe
-          ON oe.conversation_log_id = fcs.conversation_log_id
-         AND oe.einwand_typ = ftoe.objection_type
-        WHERE oe.success IS NOT NULL
-    """)).scalar()
-    assert rows == 0  # alle success=NULL → wegfiltriert
-
+# ── A/B-Auswertungs-SQL-Join (Phase 08.19.5 REQ-05: ft_objection_events removed) ──
+# Tests test_ab_stats_join_success_rate + test_ab_stats_filters_null_success removed:
+# ft_objection_events table dropped, FtObjectionEvent model deleted — no writer ever existed.
 
 # ── Quality-Score-Gate (D-27) ────────────────────────────────────────
 
