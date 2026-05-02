@@ -2184,7 +2184,7 @@
     // die autorisierte Antwort. Slot 1 bleibt die Haiku-Kontext-Variante unberuehrt.
     if (slot === 0 && isEinwand && typ) {
       var typL = String(typ).toLowerCase().trim();
-      var prof = (state.profileDaten && state.profileDaten.einwaende) || [];
+      var prof = (state.profileDaten && (state.profileDaten.einwaende_detail || state.profileDaten.einwaende)) || [];
       for (var pi = 0; pi < prof.length; pi++) {
         var pe = prof[pi];
         if (!pe || typeof pe !== 'object') continue;
