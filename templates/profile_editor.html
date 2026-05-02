@@ -446,20 +446,10 @@
         <div class="fg" style="margin-top:18px">
           <label class="fl">Opener <i class="tip-icon" data-tip="Sammle verschiedene Opener-Sätze. Im Launcher wählst du vor dem Call den passenden aus.">?</i></label>
           <p class="field-desc">Dein bevorzugter Gesprächseinstieg. Mehrere Varianten möglich.</p>
-          <!-- Phase 08.20.3 Finding A2: Filter toggle for opener list -->
           <div id="opener-filter-toggle" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-            <button type="button" class="btn-filter-opener active" data-filter="all"
-                    style="font-size:12px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-color);background:var(--accent);color:#fff;cursor:pointer">
-              Alle anzeigen
-            </button>
-            <button type="button" class="btn-filter-opener" data-filter="standard"
-                    style="font-size:12px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-color);background:transparent;cursor:pointer">
-              Nur Standard
-            </button>
-            <button type="button" class="btn-filter-opener" data-filter="personalized"
-                    style="font-size:12px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-color);background:transparent;cursor:pointer">
-              Nur personalisiert
-            </button>
+            <button type="button" class="n-pill n-pill-active" data-filter="all">Alle anzeigen</button>
+            <button type="button" class="n-pill" data-filter="standard">Nur Standard</button>
+            <button type="button" class="n-pill" data-filter="personalized">Nur personalisiert</button>
           </div>
           <div id="opener-cap-status" style="display:none;font-size:12px;color:var(--page-text-muted);margin-bottom:6px"></div>
           <div id="opener-list" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -737,9 +727,9 @@
         </div>
         <div id="ewb-preview-output" style="display:none;margin-top:16px">
           <pre id="ewb-preview-pre"
-               style="background:#0f1117;border:1px solid #1e2330;border-radius:8px;
-                      padding:16px;font-size:11px;color:#9CA3AF;white-space:pre-wrap;
-                      max-height:600px;overflow-y:auto;font-family:monospace"></pre>
+               style="background:#F8FAFC;border:1px solid var(--glass-border);border-radius:12px;
+                      padding:16px;font-size:11px;color:var(--page-text-secondary);white-space:pre-wrap;
+                      max-height:600px;overflow-y:auto;font-family:'JetBrains Mono',monospace"></pre>
         </div>
         <div id="ewb-preview-error"
              style="display:none;margin-top:16px;color:#EF4444;font-size:13px">
@@ -1492,17 +1482,11 @@ function _initOpenerListWithFilter(profileId) {
   }
 
   // Filter-Toggle verdrahten
-  var toggleBtns = document.querySelectorAll('.btn-filter-opener');
+  var toggleBtns = document.querySelectorAll('#opener-filter-toggle .n-pill');
   toggleBtns.forEach(function(btn) {
     btn.addEventListener('click', function() {
-      toggleBtns.forEach(function(b) {
-        b.classList.remove('active');
-        b.style.background = 'transparent';
-        b.style.color = '';
-      });
-      btn.classList.add('active');
-      btn.style.background = 'var(--accent)';
-      btn.style.color = '#fff';
+      toggleBtns.forEach(function(b) { b.classList.remove('n-pill-active'); });
+      btn.classList.add('n-pill-active');
       loadOpeners(btn.dataset.filter);
     });
   });
