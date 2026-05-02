@@ -21,6 +21,8 @@ class TestPerSidProfileIsolation:
         sid_a = 'test-sid-user-a'
         sid_b = 'test-sid-user-b'
         try:
+            ls.init_session_state(sid_a, user_id=1, org_id=1)
+            ls.init_session_state(sid_b, user_id=2, org_id=1)
             ls.set_profile_for_sid(sid_a, 'Profil A', {'unternehmen': 'Firma A'})
             ls.set_profile_for_sid(sid_b, 'Profil B', {'unternehmen': 'Firma B'})
 
@@ -125,6 +127,8 @@ class TestPerSidProfileIsolation:
                     errors.append(f"SID-Y contaminated: got {name!r}")
 
         try:
+            ls.init_session_state(sid_x, user_id=1, org_id=1)
+            ls.init_session_state(sid_y, user_id=2, org_id=1)
             t1 = threading.Thread(target=write_x)
             t2 = threading.Thread(target=write_y)
             t1.start(); t2.start()
