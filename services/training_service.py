@@ -573,7 +573,7 @@ def build_customer_prompt(profile_data: dict, schwierigkeit: str, persona: dict,
     basis      = profile_data.get('basis', {})
     zielgruppe = profile_data.get('zielgruppe', {})
     schmerzen  = profile_data.get('schmerzen', {})
-    einwaende  = profile_data.get('einwaende', [])
+    einwaende  = profile_data.get('einwaende_detail') or profile_data.get('einwaende') or []
     wettbew    = profile_data.get('wettbewerber', [])
     ki         = profile_data.get('ki', {})
     produkt    = basis.get('produktbeschreibung') or profile_data.get('produkt', 'ein Produkt')
@@ -728,9 +728,10 @@ def build_personality_prompt(profile_data: dict, personality_data: dict,
     lang = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
 
     # Base profile context (reuse existing pattern from build_customer_prompt)
-    produkt = profile_data.get('produkt', 'ein Produkt')
-    branche = profile_data.get('branche', 'B2B')
-    einwaende = profile_data.get('einwaende', [])
+    _basis  = profile_data.get('basis', {})
+    produkt = _basis.get('produktbeschreibung') or profile_data.get('produkt', 'ein Produkt')
+    branche = profile_data.get('branche') or _basis.get('branche') or 'B2B'
+    einwaende = profile_data.get('einwaende_detail') or profile_data.get('einwaende') or []
 
     # Personality-specific behavior
     name = personality_data.get('name', 'Kunde')
@@ -948,9 +949,9 @@ def generate_help_suggestion(conversation_history: list, profile_data: dict,
     if isinstance(ki, str):
         try: ki = json.loads(ki)
         except Exception: ki = {}
-    einwaende= profile_data.get('einwaende', [])
+    einwaende= profile_data.get('einwaende_detail') or profile_data.get('einwaende') or []
     produkt  = basis.get('produktbeschreibung') or profile_data.get('produkt', '')
-    firma    = basis.get('firmenname') or profile_data.get('firma', '')
+    firma    = (profile_data.get('meta') or {}).get('firma', '')
     usps     = basis.get('usps') or profile_data.get('usps', [])
     einw_str = ''
     if einwaende:
