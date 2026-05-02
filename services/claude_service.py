@@ -741,12 +741,8 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
                 "Kein Fachjargon, keine Floskeln. Ende mit Gegenfrage."
             )
     except Exception as _bpc_e:
-        print(f"[Manual-EWB] build_profile_context failed, using fallback: {_bpc_e}")
-        _ewb_manual_system = (
-            "Du bist NERVE, ein Vertriebs-KI-Assistent im DACH-B2B. "
-            "Liefere EINE sofort vorlesbare Gegenargumentation in 2-3 Saetzen. "
-            "Kein Fachjargon, keine Floskeln. Ende mit Gegenfrage."
-        )
+        print(f"[EWB] profile_context error: {_bpc_e}")
+        return {'error': f'profile_context failed: {_bpc_e}', 'gegenargument_1': None}
     if config.CACHE_EWB and len(_ewb_manual_system) >= _CACHE_MIN_CHARS:
         _system_manual = [{"type": "text", "text": _ewb_manual_system, "cache_control": {"type": "ephemeral"}}]
     else:
