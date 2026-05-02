@@ -874,10 +874,6 @@ def analyse_loop():
     while True:
         ls.analyse_trigger.wait(timeout=ANALYSE_INTERVALL)
         ls.analyse_trigger.clear()
-        with ls.pause_lock:
-            if ls.is_paused:
-                continue
-
         # Phase 08.19.4 D-03: Iterate over all active SIDs
         # O(N) SEQUENTIAL: Claude-Calls laufen sequentiell pro SID — Loop-Zeit waechst linear.
         # SKALIERUNG: Loop-Cycle-Dauer bei N parallelen Sessions messen.
@@ -897,6 +893,8 @@ def analyse_loop():
                 sid_state = ls._session_state.get(sid)
             if not sid_state:
                 continue
+            if sid_state.get('state', {}).get('is_paused', False):
+                continue  # per-SID pause — only skip this SID
 
             # Read per-SID transcript buffer (D-02 — implemented in Task 1 this plan)
             with ls._per_sid_transcript_lock:
@@ -1019,8 +1017,7 @@ def analyse_loop():
                 if _phase_cycle_counter % 5 == 0:
                     try:
                         from services.ki_logik import detect_phase
-                        with ls.buffer_lock:
-                            transcript_window = list(ls.analysiert_bisher[-10:])
+                        transcript_window = list(sid_state.get('analysiert_bisher', [])[-10:])
                         with ls.state_lock:
                             cur_phase = ls.state.get('current_phase', 1) or 1
                             phase_change_count = ls.state.get('phase_change_count', 0) or 0
@@ -1055,8 +1052,7 @@ def analyse_loop():
                                     old_phase_name = _PHASE_NAMES.get(cur_phase, str(cur_phase))
                                     new_phase_name = _PHASE_NAMES.get(new_phase, str(new_phase))
                                     ts = datetime.now().strftime('%H:%M:%S')
-                                    with ls.buffer_lock:
-                                        seg_count = len(ls.analysiert_bisher)
+                                    seg_count = len(sid_state.get('analysiert_bisher', []))
                                     with ls.phasen_log_lock:
                                         ls.phasen_log.append({
                                             'ts':            ts,
@@ -1089,8 +1085,7 @@ def analyse_loop():
                                 cc_mode = ls.state.get('mode', 'meeting')
                                 cc_phase = ls.state.get('current_phase', 1) or 1
                             if cc_mode == 'cold_call':
-                                with ls.buffer_lock:
-                                    seller_window = list(ls.analysiert_bisher[-6:])
+                                seller_window = list(sid_state.get('analysiert_bisher', []))[-6:]
                                 inference = infer_cold_call_context(
                                     seller_window, cc_phase, cc_mode,
                                     haiku_caller=infer_customer_state,
@@ -1424,10 +1419,6 @@ def coaching_loop():
     while True:
         ls.coaching_trigger.wait(timeout=ANALYSE_INTERVALL)
         ls.coaching_trigger.clear()
-        with ls.pause_lock:
-            if ls.is_paused:
-                continue
-
         # Phase 08.19.4 D-03: Iterate over all active SIDs (same pattern as analyse_loop)
         with ls._session_state_lock:
             active_sids = list(ls._session_state.keys())
@@ -1440,6 +1431,8 @@ def coaching_loop():
                 sid_state = ls._session_state.get(sid)
             if not sid_state:
                 continue
+            if sid_state.get('state', {}).get('is_paused', False):
+                continue  # per-SID pause — only skip this SID
 
             # WR-03: read from per-SID coaching buffer (not module-global) to prevent cross-user leak
             with ls._per_sid_coaching_lock:
