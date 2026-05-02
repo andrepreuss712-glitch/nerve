@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5 Plan 01 complete — dead code cleanup, /api/session-rating rename, EWB error propagation fix"
-last_updated: "2026-05-02T00:00:00Z"
+stopped_at: "08.19.5 Plan 02 complete — per-SID init_session_state sub-keys, get_sid_paused, deepgram WS auth handler, analysiert_bisher migrated"
+last_updated: "2026-05-02T00:20:00Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 57
   completed_phases: 45
   total_plans: 206
-  completed_plans: 201
+  completed_plans: 202
   percent: 97
 ---
 
@@ -21,13 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** 08.19.5 Wave 1 complete — dead code cleanup, route conflict resolved, EWB error propagation fixed.
+**Current focus:** 08.19.5 Wave 2 Plan 02 complete — per-SID state migration for live_session.py and deepgram_service.py, WS auth handler added.
 
 ## Current Position
 
-Phase: 08.19.5 (per-user-daten-trennung-websocket-auth) — IN PROGRESS (Wave 1 complete)
-Plan: 1 of N — Plan 01 COMPLETE (2026-05-02)
+Phase: 08.19.5 (per-user-daten-trennung-websocket-auth) — IN PROGRESS (Wave 2 Plan 02 complete)
+Plan: 2 of N — Plan 02 COMPLETE (2026-05-02)
 Last activity: 2026-05-02
+
+**Phase 08.19.5 Plan 02 abgeschlossen:** init_session_state() extended with 14 per-SID sub-keys (state{} with is_paused, session_meta{}, phasen_log, analysiert_bisher, etc.). get_sid_paused(sid) added. next_line_id(sid), stabilize_speaker(sid, raw), load_learning_cards(sid, user_id) migrated. _flush_segment() writes speech stats per-SID. deepgram_service.py: is_paused reads replaced with get_sid_paused(), handle_connect() WS auth added (return False for unauth), ls.analysiert_bisher reads (lines ~154, ~587) migrated to per-SID. reset_session() updated with pop+init loop (1 external caller). 3 commits: 0a59780, ea91fa3, 2986c3c.
 
 **Phase 08.19.5 Plan 01 abgeschlossen:** ft_objection_events + ft_qa_events dropped (REQ-05), /api/feedback renamed to /api/session-rating (D-02/REQ-04, CASE A — no FE caller), streame_manual_ewb_variante() propagates build_profile_context errors (REQ-08). test_ab_stats.py cleaned of dead FtObjectionEvent tests. 4 commits: b630cd7, 7f78f41, 31be646, 73d053f.
 
