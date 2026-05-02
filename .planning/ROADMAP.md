@@ -975,10 +975,13 @@ Plans:
 **Depends on:** Phase 08.19.4 (per-SID infrastructure als Foundation — kann parallel laufen wenn 08.19.4 noch offen)
 **Voraussetzung für:** Phase 08.20 Pipeline-Re-Wire (saubere SID-Foundation)
 
-**Plans:** TBD (nach discuss-phase)
+**Plans:** 4 plans in 3 waves
 
 Plans:
-- [ ] TBD
+- [ ] 08.19.5-01-PLAN.md — Wave 1: Dead code cleanup (ft_objection_events reader, models, migration), route rename /api/session-rating, EWB error propagation fix
+- [ ] 08.19.5-02-PLAN.md — Wave 2a: live_session.py init_session_state extension + per-SID helpers + deepgram_service.py is_paused migration + WS auth handler
+- [ ] 08.19.5-03-PLAN.md — Wave 2b: claude_service.py is_paused + analysiert_bisher loop migration (parallel to Plan 02)
+- [ ] 08.19.5-04-PLAN.md — Wave 3: New tests (REQ-06/07/08/01 isolation) + fix 2 pre-existing test_session_scoping failures
 
 ---
 
