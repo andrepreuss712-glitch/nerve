@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.20.3 Plan 02 complete — generate_personalized_skript() + /api/precall/personalize + /api/precall/personalize/save committed"
-last_updated: "2026-05-01T09:10:00Z"
-last_activity: 2026-05-01
+stopped_at: "08.19.5 Plan 01 complete — dead code cleanup, /api/session-rating rename, EWB error propagation fix"
+last_updated: "2026-05-02T00:00:00Z"
+last_activity: 2026-05-02
 progress:
   total_phases: 57
   completed_phases: 45
   total_plans: 206
-  completed_plans: 200
+  completed_plans: 201
   percent: 97
 ---
 
@@ -21,13 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** 08.20 Pipeline-Re-Wire läuft — Plan 02 abgeschlossen (9-Sektionen build_profile_context, _profile_cache, BUG-A/BUG-B Fix).
+**Current focus:** 08.19.5 Wave 1 complete — dead code cleanup, route conflict resolved, EWB error propagation fixed.
 
 ## Current Position
 
-Phase: 08.20.3 (briefing-lebenszyklus-ki-skript-verschmelzung) — IN PROGRESS (4 plans, Wave 3 complete)
-Plan: 4 of 4 — Plan 02 COMPLETE (2026-05-01)
-Last activity: 2026-05-01
+Phase: 08.19.5 (per-user-daten-trennung-websocket-auth) — IN PROGRESS (Wave 1 complete)
+Plan: 1 of N — Plan 01 COMPLETE (2026-05-02)
+Last activity: 2026-05-02
+
+**Phase 08.19.5 Plan 01 abgeschlossen:** ft_objection_events + ft_qa_events dropped (REQ-05), /api/feedback renamed to /api/session-rating (D-02/REQ-04, CASE A — no FE caller), streame_manual_ewb_variante() propagates build_profile_context errors (REQ-08). test_ab_stats.py cleaned of dead FtObjectionEvent tests. 4 commits: b630cd7, 7f78f41, 31be646, 73d053f.
 
 **Phase 08.20.3 Plan 03 abgeschlossen:** DB-Foundation (parent_id, is_personalized, briefing_source_firma), PERSONALIZED_SCRIPTS_CAP config, tests/test_08_20_3.py mit 6 Klassen (23 passed/5 skipped), Profile-Editor Opener Filter-Toggle mit Cap-Status.
 **Phase 08.20.3 Plan 04 abgeschlossen:** PiP #pip-briefing-tab DOM in base.html, 7 Edits in pip-launcher.js (4 state keys, renderStep() pre-check, Briefing Tab show/hide/toggle/auto-collapse, education hint, window.mdToHtml expose). Tests: 4 passed.
