@@ -516,22 +516,6 @@ def opener_loeschen(pid, oid):
 
 # ── Pitch CRUD ────────────────────────────────────────────────────────────────
 
-def _pitch_dual_write(db, pid):
-    """Dual-write: concatenate all pitch inhalt → Profile.daten['pitch'] (transitional until 08.20)."""
-    import json as _json
-    items = db.query(ProfileOpener).filter_by(profile_id=pid, type='pitch').order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
-    concatenated = '\n\n'.join(o.inhalt for o in items if o.inhalt)
-    p = db.query(Profile).filter_by(id=pid).first()
-    if p:
-        try:
-            _daten = _json.loads(p.daten) if p.daten else {}
-        except Exception:
-            _daten = {}
-        _daten['pitch'] = concatenated
-        p.daten = _json.dumps(_daten, ensure_ascii=False)
-        db.commit()
-
-
 @profiles_bp.route('/<int:pid>/pitches')
 @login_required
 def pitch_liste(pid):
@@ -562,10 +546,6 @@ def pitch_erstellen(pid):
                           inhalt=data.get('inhalt', ''), sortierung=max_sort, type='pitch')
         db.add(o)
         db.commit()
-        try:
-            _pitch_dual_write(db, pid)  # dual-write to Profile.daten['pitch'] (transitional until 08.20)
-        except Exception as _e:
-            print(f"[Profile] pitch dual-write FAILED (stale daten.pitch possible) pid={pid}: {_e}")
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung}), 201
     finally:
         db.close()
@@ -592,10 +572,6 @@ def pitch_bearbeiten(pid, oid):
         if 'sortierung' in data:
             o.sortierung = data['sortierung']
         db.commit()
-        try:
-            _pitch_dual_write(db, pid)  # dual-write to Profile.daten['pitch'] (transitional until 08.20)
-        except Exception as _e:
-            print(f"[Profile] pitch dual-write FAILED (stale daten.pitch possible) pid={pid}: {_e}")
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung})
     finally:
         db.close()
@@ -621,22 +597,6 @@ def pitch_loeschen(pid, oid):
 
 
 # ── Erlaubnis CRUD ────────────────────────────────────────────────────────────
-
-def _erlaubnis_dual_write(db, pid):
-    """Dual-write: concatenate all erlaubnis inhalt → Profile.daten['erlaubnis'] (transitional until 08.20)."""
-    import json as _json
-    items = db.query(ProfileOpener).filter_by(profile_id=pid, type='erlaubnis').order_by(ProfileOpener.sortierung, ProfileOpener.id).all()
-    concatenated = '\n\n'.join(o.inhalt for o in items if o.inhalt)
-    p = db.query(Profile).filter_by(id=pid).first()
-    if p:
-        try:
-            _daten = _json.loads(p.daten) if p.daten else {}
-        except Exception:
-            _daten = {}
-        _daten['erlaubnis'] = concatenated
-        p.daten = _json.dumps(_daten, ensure_ascii=False)
-        db.commit()
-
 
 @profiles_bp.route('/<int:pid>/erlaubnis')
 @login_required
@@ -668,10 +628,6 @@ def erlaubnis_erstellen(pid):
                           inhalt=data.get('inhalt', ''), sortierung=max_sort, type='erlaubnis')
         db.add(o)
         db.commit()
-        try:
-            _erlaubnis_dual_write(db, pid)  # dual-write to Profile.daten['erlaubnis'] (transitional until 08.20)
-        except Exception as _e:
-            print(f"[Profile] erlaubnis dual-write failed pid={pid}: {_e}")
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung}), 201
     finally:
         db.close()
@@ -698,10 +654,6 @@ def erlaubnis_bearbeiten(pid, oid):
         if 'sortierung' in data:
             o.sortierung = data['sortierung']
         db.commit()
-        try:
-            _erlaubnis_dual_write(db, pid)  # dual-write to Profile.daten['erlaubnis'] (transitional until 08.20)
-        except Exception as _e:
-            print(f"[Profile] erlaubnis dual-write failed pid={pid}: {_e}")
         return jsonify({'id': o.id, 'name': o.name, 'inhalt': o.inhalt or '', 'sortierung': o.sortierung})
     finally:
         db.close()

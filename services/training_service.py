@@ -534,16 +534,6 @@ def _random_persona(sprache: str = 'de') -> dict:
     }
 
 
-def build_sekretaerin_prompt(persona: dict, sprache: str = 'de') -> str:
-    lang = TRAINING_LANGUAGES.get(sprache, TRAINING_LANGUAGES['de'])
-    base = SEKRETAERIN_PROMPT.format(
-        chef_name=persona['chef_nachname'],
-        firma=persona['firma'],
-        sek_name=persona['sek_name'],
-    )
-    return base + f"\n\n{lang['prompt_sprache']}"
-
-
 def build_sekretaerin_type_prompt(persona: dict, sekretaerin_typ: str,
                                    schwierigkeit: str, sprache: str = 'de') -> str:
     """Build typed secretary prompt with difficulty-based patience modifier."""

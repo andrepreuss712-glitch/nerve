@@ -56,7 +56,8 @@ def test_generate_response_mocked_call(monkeypatch):
     monkeypatch.setattr(ts, 'resolve_prompt_version', lambda module, uid: 'v1')
 
     conversation = [{'speaker': 'berater', 'text': 'Guten Tag'}]
-    system_prompt = ts.build_sekretaerin_prompt({'chef_nachname': 'Test', 'firma': 'TestFirma', 'sek_name': 'Test Sek'})
+    persona = {'chef_nachname': 'Test', 'firma': 'TestFirma', 'sek_name': 'Test Sek'}
+    system_prompt = ts.build_sekretaerin_type_prompt(persona, 'blockerin', 'mittel')
     result = ts.generate_response(conversation, system_prompt)
 
     assert isinstance(result, str)
