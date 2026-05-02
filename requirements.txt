@@ -7,10 +7,10 @@ deepgram-sdk>=3.7.0
 python-dotenv>=1.0.0
 sqlalchemy>=2.0.0
 werkzeug>=3.0.0
-requests>=2.31.0
+requests>=2.32.0
 sentence-transformers>=2.7.0
 stripe>=11.0.0
-authlib>=1.3.0
+authlib>=1.4.0
 flask-admin==2.0.2
 resend==2.27.0
 itsdangerous>=2.0
