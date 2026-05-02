@@ -92,11 +92,21 @@ _merge_pending = {}
 _line_id_counter = 0
 _line_id_lock    = threading.Lock()
 
-def next_line_id() -> str:
-    global _line_id_counter
-    with _line_id_lock:
-        _line_id_counter += 1
-        return str(_line_id_counter)
+def next_line_id(sid: str) -> str:
+    """Returns next sequential line ID for the given SID. Ghost-SID-safe."""
+    with _session_state_lock:
+        if sid not in _session_state:
+            return '0'  # Ghost-SID guard
+        cnt = _session_state[sid].get('_line_id_counter', 0) + 1
+        _session_state[sid]['_line_id_counter'] = cnt
+        return str(cnt)
+
+
+def get_sid_paused(sid: str) -> bool:
+    """Thread-safe read of is_paused for a single SID. Returns False for unknown SIDs."""
+    with _session_state_lock:
+        return _session_state.get(sid, {}).get('state', {}).get('is_paused', False)
+
 
 # ── Analyse-State ─────────────────────────────────────────────────────────────
 state_lock = threading.Lock()
@@ -280,6 +290,69 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             '_confirmed_speaker': None,
             '_pending_since': None,
             '_log_last_sp': None,
+            # D-01: state dict as sub-key (single write path after migration)
+            # NOTE (HIGH-2 coexistence): Services still WRITE to module-level globals
+            # (session_meta, phasen_log, etc.) in this phase. These sub-keys are present
+            # for future cleanup phases. Routes/ callers read from module-level globals.
+            'state': {
+                'version':               0,
+                'aktiv':                 False,
+                'ergebnis':              None,
+                'line_id':               None,
+                'kaufbereitschaft':      30,
+                'ewb_clicks':            [],
+                'current_phase':         1,
+                'current_phase_name':    'Opener',
+                'phase_confidence':      0.0,
+                'phase_changed_at':      None,
+                'phase_change_count':    0,
+                'readiness_score':       30,
+                'readiness_bucket':      'cold',
+                'score_factors_seen':    {},
+                'active_hint':           None,
+                'ewb_buttons':           None,
+                'cold_call_inference':   None,
+                'active_learning_cards': [],
+                'precall_briefing':      None,
+                'slot1_variant_busy_until': 0.0,
+                'mic_muted':             False,
+                'active_profile_id':     profile_id,
+                'kw_fired_for_line':     None,
+                'is_paused':             False,   # REQ-01
+                'ft_session_id':         None,
+                'session_anrede':        None,
+            },
+            # D-04: tracking logs — initialized as per-SID scaffolding for future migration.
+            # NOTE (HIGH-2 coexistence): Services still WRITE to module-level globals
+            # (session_meta, phasen_log, etc.) in this phase. These sub-keys are present
+            # for future cleanup phases. Routes/ callers read from module-level globals.
+            'session_meta': {
+                'profil_name': '', 'profil_branche': '', 'schwierigkeit': None,
+                'start_zeit': None, 'end_zeit': None,
+                'gesamt_segmente': 0, 'gesamt_einwaende': 0,
+                'einwaende_behandelt': 0, 'einwaende_fehlgeschlagen': 0,
+                'einwaende_ignoriert': 0, 'vorwaende_erkannt': 0,
+                'painpoints_gesamt': 0, 'kaufsignale_gesamt': 0,
+                'coaching_tipps_gesamt': 0, 'hilfe_button_genutzt': 0,
+                'quick_actions_genutzt': 0, 'skript_abdeckung_prozent': 0,
+                'redeanteil_durchschnitt': 0, 'tempo_durchschnitt': 0,
+                'laengster_monolog': 0,
+                'kb_start': 30, 'kb_end': 30, 'kb_min': 30, 'kb_max': 30,
+                'sterne_bewertung': None, 'feedback_kommentar': '',
+            },
+            'phasen_log':            [],
+            'gegenargument_log':     [],
+            'hilfe_log':             [],
+            'quick_action_log':      [],
+            'painpoints':            [],
+            # analysiert_bisher is FULLY per-SID (no global write path remains after Plan 03)
+            'analysiert_bisher':     [],
+            '_second_sp_seen':       False,
+            'aktive_phase_idx':      0,
+            'session_start_time':    None,
+            'laengster_monolog_sek': 0.0,
+            '_current_monolog_start': None,
+            '_line_id_counter':      0,
         }
     # WR-03: init per-SID coaching buffer (separate lock — same lifecycle as transcript)
     with _per_sid_coaching_lock:
@@ -372,18 +445,21 @@ def _load_profile_cache(sid: str, user_id: int, profile_id: int) -> None:
         print(f"[Cache] _load_profile_cache failed for sid={sid} (non-fatal): {_e}")
 
 
-def load_learning_cards(user_id):
-    """D-09: Load active learning cards for the current user at session start."""
+def load_learning_cards(sid: str, user_id: int) -> None:
+    """D-09: Load active learning cards per-SID at session start."""
     try:
         from services.coaching_service import get_active_cards
         cards = get_active_cards(user_id)
-        with state_lock:
-            state['active_learning_cards'] = cards[:5]  # max 5 per D-07
-        print(f"[Coach] {len(cards)} aktive Lernkarten geladen")
+        with _session_state_lock:
+            if sid not in _session_state:
+                return  # Ghost-SID guard
+            _session_state[sid]['state']['active_learning_cards'] = cards[:5]
+        print(f"[Coach] {len(cards)} aktive Lernkarten geladen sid={sid}")
     except Exception as e:
-        print(f"[Coach] Lernkarten laden fehlgeschlagen: {e}")
-        with state_lock:
-            state['active_learning_cards'] = []
+        print(f"[Coach] Lernkarten laden fehlgeschlagen sid={sid}: {e}")
+        with _session_state_lock:
+            if sid in _session_state:
+                _session_state[sid]['state']['active_learning_cards'] = []
 
 
 # ── Letztes Post-Call Snapshot ────────────────────────────────────────────────
@@ -391,24 +467,31 @@ last_postcall_lock = threading.Lock()
 last_postcall      = None
 
 
-def stabilize_speaker(raw):
-    global _confirmed_speaker, _pending_speaker, _pending_since
-    with _speaker_lock:
+def stabilize_speaker(sid: str, raw):
+    """Debounced speaker stabilization. Reads/writes per-SID speaker keys."""
+    with _session_state_lock:
+        if sid not in _session_state:
+            return None  # Ghost-SID guard
+        ss = _session_state[sid]
+        confirmed = ss.get('_confirmed_speaker')
+        pending   = ss.get('_pending_speaker')
+        since     = ss.get('_pending_since')
         if raw is None:
-            return _confirmed_speaker
-        if raw == _confirmed_speaker:
-            _pending_speaker = None
-            _pending_since   = None
-            return _confirmed_speaker
-        if raw != _pending_speaker:
-            _pending_speaker = raw
-            _pending_since   = time.monotonic()
-        elapsed = time.monotonic() - _pending_since
+            return confirmed
+        if raw == confirmed:
+            ss['_pending_speaker'] = None
+            ss['_pending_since']   = None
+            return confirmed
+        if raw != pending:
+            ss['_pending_speaker'] = raw
+            ss['_pending_since']   = time.monotonic()
+            since = ss['_pending_since']
+        elapsed = time.monotonic() - since
         if elapsed >= SPEAKER_DEBOUNCE_S:
-            _confirmed_speaker = _pending_speaker
-            _pending_speaker   = None
-            _pending_since     = None
-        return _confirmed_speaker
+            ss['_confirmed_speaker'] = ss['_pending_speaker']
+            ss['_pending_speaker']   = None
+            ss['_pending_since']     = None
+        return ss.get('_confirmed_speaker')
 
 
 def ist_painpoint_duplikat(neu: str, bestehende: list) -> bool:
@@ -442,18 +525,22 @@ def _flush_segment(key: str):
     # Sprachstatistik aktualisieren
     word_count = len(merged_text.split())
     now_m = time.monotonic()
-    global berater_words, kunde_words, laengster_monolog_sek, _current_monolog_start
-    with speech_lock:
-        if sp_name == 'Berater':
-            berater_words += word_count
-            if _current_monolog_start is None:
-                _current_monolog_start = t_start
-            dur = now_m - _current_monolog_start
-            if dur > laengster_monolog_sek:
-                laengster_monolog_sek = dur
-        elif sp_name == 'Kunde':
-            kunde_words += word_count
-            _current_monolog_start = None
+    # NEW (per-SID):
+    _flush_sid = pending.get('sid')
+    if _flush_sid:
+        with _session_state_lock:
+            if _flush_sid in _session_state:
+                _ss = _session_state[_flush_sid]
+                if sp_name == 'Berater':
+                    _ss['berater_words'] = _ss.get('berater_words', 0) + word_count
+                    if _ss.get('_current_monolog_start') is None:
+                        _ss['_current_monolog_start'] = t_start
+                    dur = now_m - _ss['_current_monolog_start']
+                    if dur > _ss.get('laengster_monolog_sek', 0.0):
+                        _ss['laengster_monolog_sek'] = dur
+                elif sp_name == 'Kunde':
+                    _ss['kunde_words'] = _ss.get('kunde_words', 0) + word_count
+                    _ss['_current_monolog_start'] = None
 
     if not roles_confirmed or speaker != 0:
         _flush_sid = pending.get('sid')
