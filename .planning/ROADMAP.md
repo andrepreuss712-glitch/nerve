@@ -968,6 +968,20 @@ Plans:
 
 ---
 
+### Phase 08.19.5: Per-User-Daten-Trennung + WebSocket-Auth (INSERTED — 2026-05-02)
+
+**Goal:** ~25 Modul-Globale in `services/live_session.py` (is_paused, state, transcript_buffer, conversation_log, coaching_buffer, session_meta, speaker-Tracking, BOF-Counter etc.) sind shared across all concurrent users on one Flask worker — DSGVO-Cross-Session-Data-Leak + falsch personalisierte EWBs. Zusätzlich: WebSocket-Verbindungen haben keine Auth-Prüfung im connect-Handler — theoretisch kann jede erratene SID mithören. Phase liefert: (1) Alle verbleibenden Modul-Globalen auf per-SID-Dicts migrieren (Pattern: `_per_sid_*` wie bereits `_per_sid_profile`, `_per_sid_transcript`, `_per_sid_coaching_buffer`), (2) `is_paused` per-SID statt global, (3) WebSocket connect-Handler prüft `session['user_id']` vor Accept, (4) Route-Konflikt `/api/feedback` (zwei Blueprints) auflösen, (5) Tote Tabellen `ft_objection_events` + `ft_qa_events` entfernen, (6) `_load_profile_cache()` Integration-Test + `vorwissen_level`-Chain-Test + `streame_manual_ewb_variante()` Error-Propagation-Fix.
+**Komplexität:** 🔴 (DSGVO-Pflicht + Threading + WebSocket-Auth + Multi-File) — Cross-AI Pflicht vor Execute.
+**Depends on:** Phase 08.19.4 (per-SID infrastructure als Foundation — kann parallel laufen wenn 08.19.4 noch offen)
+**Voraussetzung für:** Phase 08.20 Pipeline-Re-Wire (saubere SID-Foundation)
+
+**Plans:** TBD (nach discuss-phase)
+
+Plans:
+- [ ] TBD
+
+---
+
 ### Phase 08.20: Pipeline-Re-Wire — Voll-Profil-EWB + Lead-Context + branchenspezifische PreCall (INSERTED — 2026-04-29)
 
 **Goal:** Den EWB-Live-Pfad von ~10 genutzten Profil-Feldern (50-60% tot nach 08.17-Audit) auf Voll-Profil-Integration hochrüsten. `build_profile_context()` erhält definierte Sektions-Reihenfolge (Branche → Zielkunde → Schmerzen → Einwände → Phasen → KI-Verhalten → Wisdom). PreCall-Pipeline (`recherche_firma` + `_generiere_briefing`) bekommt Profil als Steuerungs-Input für branchenspezifische Recherche-Strategie. PreCall-Briefing fließt wieder ins EWB-Prompt (war in 08.8 gelöscht). Manual-EWB-Button-Pfad erhält Profil-Kontext (kein hardcoded Coach-Prompt mehr). `_SYSTEM_PROMPT_QA` um `{profile_context}`-Placeholder erweitern (LB-3-Fix). Schema-Drift `opener`/`pitch` (top-level vs. `basis.*`) bereinigen. Sonnet-Switch via ENV für EWB-Streaming bei Voll-Profil-Kontexten als Pflicht (Voll-Profil + Haiku → grammatisch hölzern; Voll-Profil + Sonnet 4.5 → Quality + akzeptable Latenz mit Caching). Caching-Auswirkung verifizieren: Voll-Profil → Cache-Threshold immer überschritten → max. Cache-ROI. Org-Scoping-Verifikation: `build_profile_context()` nutzt SID-Lookup aus 08.19.4 korrekt (User in Org 2 sieht NICHT Profil 7 aus Admin-Org 1). Mini-Adds (alle Pflicht): (8) Vorwissen-Picker im Live-Workflow nach PreCall — Lead-spezifisch (3-stufig), fließt als Lead-Context in EWB-Prompt; (9) Du/Sie-Smart-Switch — Lead-spezifisch + Live-Detection im Transcript; (10) Live-EWB-Prompt-Preview-Panel — kollabierbares Panel pro Profil-Sektion; (12) `einwaende_detail` vs. `einwaende` Koexistenz konsolidieren — Migration auf einheitliches Format.
@@ -1003,9 +1017,10 @@ Plans:
 
 ### Phase 08.20.3: Briefing-Lebenszyklus + KI-Skript-Personalisierung (INSERTED — 2026-04-30)
 
-**Goal:** Nach „Ergebnis übernehmen“ entscheidet der User aktiv was mit dem PreCall-Briefing passiert — Modus A (nur EWB, default), Modus B (Briefing als ausklappbarer PiP-Reiter während Call), Modus C (KI personalisiert gewählten Opener/Skript mit Lead-Daten, speichert dauerhaft als neues ProfileOpener-Item).
+**Goal:** Nach „Ergebnis übernehmen” entscheidet der User aktiv was mit dem PreCall-Briefing passiert — Modus A (nur EWB, default), Modus B (Briefing als ausklappbarer PiP-Reiter während Call), Modus C (KI personalisiert gewählten Opener/Skript mit Lead-Daten, speichert dauerhaft als neues ProfileOpener-Item).
 **Komplexität:** 🔴 komplex
 **Depends on:** Phase 08.20.2 ✅
+**Status:** ⚠️ feature_incomplete — Modus A + Modus B shipped ✅. Modus C (KI-Skript-Personalisierung) nach Block O vorgezogen → Phase 08.20.4. (Andre-Decision 2026-05-01)
 
 **Plans:** 4 plans
 
@@ -1013,7 +1028,17 @@ Plans:
 - [x] 08.20.3-03-PLAN.md — DB-Foundation (parent_id + is_personalized Migration, PERSONALIZED_SCRIPTS_CAP, Test-Scaffold) ✅ 2026-05-01 (0d6df97, 4bb7714, 15bae1f)
 - [x] 08.20.3-04-PLAN.md — PiP-Briefing-Tab Modus B + window.mdToHtml + renderStep() Pre-Check ✅ 2026-05-01 (967b607, 9618caf)
 - [x] 08.20.3-01-PLAN.md — Step-4-Footer 3-Button Modus-Selector + renderStep4b/4c + Step-5 zweiter Button + optgroup-Dropdown ✅ 2026-05-01 (f58d9ea, d7d6b20, 4466448)
-- [ ] 08.20.3-02-PLAN.md — KI-Backend: generate_personalized_skript() + /api/precall/personalize + /save Route
+- [~] 08.20.3-02-PLAN.md — KI-Backend: generate_personalized_skript() + /api/precall/personalize + /save Route → DEFERRED zu Phase 08.20.4 (nach Block O)
+
+---
+
+### Phase 08.20.4: KI-Skript-Personalisierung Modus C — Vollständig (INSERTED — 2026-05-01)
+
+**Goal:** Modus C End-to-End vollständig ausliefern — nach Block O. KI-Personalisierung des gewählten Openers mit Lead-Daten aus PreCall-Briefing, Vorher/Nachher-Vergleich, dauerhafter Speicherung in ProfileOpener (is_personalized=True) und Call-Start mit personalisiertem Opener als aktiver Text.
+**Komplexität:** 🟡 mittel
+**Depends on:** Phase 08.20.3 ✅, Block O ✅
+
+**Plans:** tbd
 
 ---
 
