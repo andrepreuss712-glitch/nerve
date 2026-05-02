@@ -21,9 +21,14 @@ def main():
     args = parser.parse_args()
 
     from database import db as dbmod
-    from database.models import FtAssistantEvent, FtObjectionEvent
+    from database.models import FtAssistantEvent
 
-    Model = FtAssistantEvent if args.table == "assistant" else FtObjectionEvent
+    # ft_objection_events table removed in Phase 08.19.5 (REQ-05)
+    if args.table != "assistant":
+        print(f"[export] table '{args.table}' no longer exists — skipping", file=sys.stderr)
+        return 0
+
+    Model = FtAssistantEvent
 
     db = dbmod.SessionLocal()
     count = 0

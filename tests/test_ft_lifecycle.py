@@ -2,9 +2,11 @@ import json
 import sys
 
 
-def test_ft_objection_insert_and_export(db_session, monkeypatch, tmp_path):
+def test_ft_assistant_insert_and_export(db_session, monkeypatch, tmp_path):
+    # FtObjectionEvent removed in Phase 08.19.5 (REQ-05 — no writer, tables always empty)
+    # Test covers FtAssistantEvent lifecycle only
     from database.models import (
-        Organisation, User, FtCallSession, FtObjectionEvent, FtAssistantEvent,
+        Organisation, User, FtCallSession, FtAssistantEvent,
     )
 
     org = Organisation(name="Test Org")
@@ -28,15 +30,8 @@ def test_ft_objection_insert_and_export(db_session, monkeypatch, tmp_path):
         hint_type="objection", hint_text="test hint",
         model_used="claude-haiku-4-5-20251001", prompt_version="v1.0.0",
     ))
-    db_session.add(FtObjectionEvent(
-        ft_session_id=sess.id, user_id=u.id, market="dach", language="de",
-        timestamp_ms=1, objection_type="kein_bedarf",
-        recommended_response="Antwort",
-        model_used="claude-haiku-4-5-20251001", prompt_version="v1.0.0",
-    ))
     db_session.commit()
 
-    assert db_session.query(FtObjectionEvent).count() == 1
     assert db_session.query(FtAssistantEvent).count() == 1
 
     # Export via script (mock SessionLocal to reuse the in-memory db_session)
@@ -69,16 +64,3 @@ def test_ft_objection_insert_and_export(db_session, monkeypatch, tmp_path):
     rec = json.loads(lines[0])
     assert rec["market"] == "dach"
     assert rec["hint_type"] == "objection"
-
-    # Objection table export
-    out_file2 = tmp_path / "out_obj.jsonl"
-    sys.argv = [
-        "export_ft_jsonl.py", "--market", "dach",
-        "--out", str(out_file2), "--table", "objection",
-    ]
-    rc2 = main()
-    assert rc2 == 0
-    lines2 = out_file2.read_text(encoding="utf-8").strip().splitlines()
-    assert len(lines2) == 1
-    rec2 = json.loads(lines2[0])
-    assert rec2["objection_type"] == "kein_bedarf"

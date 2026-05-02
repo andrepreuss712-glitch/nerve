@@ -5,7 +5,8 @@ def test_tables_created(db_session):
     from database.db import Base
     import database.models  # noqa: F401
     tables = set(Base.metadata.tables.keys())
-    required = {"ft_call_sessions", "ft_assistant_events", "ft_objection_events", "prompt_versions"}
+    # ft_objection_events + ft_qa_events removed in Phase 08.19.5 (REQ-05)
+    required = {"ft_call_sessions", "ft_assistant_events", "prompt_versions"}
     assert required.issubset(tables)
 
 
