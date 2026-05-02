@@ -41,13 +41,12 @@ def _make_on_message(sid):
             text = result.channel.alternatives[0].transcript
             if not text:
                 return
-            with ls.pause_lock:
-                if ls.is_paused:
-                    return
+            if ls.get_sid_paused(sid):
+                return
 
             if result.is_final:
-                speaker = ls.stabilize_speaker(_get_speaker(result))
-                line_id = ls.next_line_id()
+                speaker = ls.stabilize_speaker(sid, _get_speaker(result))
+                line_id = ls.next_line_id(sid)
                 ts      = datetime.now().strftime('%H:%M:%S')
 
                 # Zweiter Sprecher gesehen?
@@ -150,8 +149,7 @@ def _make_on_message(sid):
                     if _now >= _busy:
                         with ls.state_lock:
                             ls.state['slot1_variant_busy_until'] = _now + 6
-                        with ls.buffer_lock:
-                            _kontext = " ".join(ls.analysiert_bisher[-20:])
+                        _kontext = " ".join(ls._session_state.get(sid, {}).get('analysiert_bisher', [])[-20:])
                         from services.claude_service import streame_auto_variante
                         sio.start_background_task(
                             streame_auto_variante,
@@ -311,6 +309,21 @@ def _check_anrede_switch(sio_ref, sid_ref, transcript_text, ls_module):
 
 
 def register_audio_handlers(sio):
+    @sio.on('connect')
+    def handle_connect(sid=None, environ=None, auth=None):
+        from flask import request, session as flask_session
+        _sid = request.sid if sid is None else sid
+        user_id = flask_session.get('user_id')
+        if not user_id:
+            print(f"[WS-Auth] Unauthorized connect rejected: sid={_sid}")
+            return False  # Flask-SocketIO 5.6.1: return False = reject connection
+        # Thin stub — only _user_id registered here.
+        # init_session_state() called on start_live_session event fills all sub-keys.
+        # .setdefault() safely handles SIDs not yet in state — no KeyError risk (MEDIUM-1).
+        with ls._session_state_lock:
+            ls._session_state.setdefault(_sid, {})['_user_id'] = user_id
+        print(f"[WS-Auth] Authenticated connect: sid={_sid} user_id={user_id}")
+
     @sio.on('start_live_session')
     def handle_start_live_session(data=None, sid=None):
         from flask import request
@@ -485,9 +498,8 @@ def register_audio_handlers(sio):
         _chunk_counts[_sid] = cnt
         if cnt == 1 or cnt % 100 == 0:
             print(f"[DG] audio_chunk #{cnt} (sid={_sid}, bytes={len(data)}, type={type(data).__name__})")
-        with ls.pause_lock:
-            if ls.is_paused:
-                return
+        if ls.get_sid_paused(_sid):
+            return
         with _sessions_lock:
             connection = _deepgram_sessions.get(_sid)
         if connection:
@@ -583,8 +595,7 @@ def register_audio_handlers(sio):
                 if label == typL:
                     profile_einwand = e
                     break
-        with ls.buffer_lock:
-            kontext = " ".join(ls.analysiert_bisher[-20:])
+        kontext = " ".join(ls._session_state.get(_sid, {}).get('analysiert_bisher', [])[-20:])
 
         from services.claude_service import streame_manual_ewb_variante
 
