@@ -419,6 +419,8 @@
   color:var(--page-text-secondary)}
 .consent-btn-cancel{background:transparent;border:1.5px solid var(--glass-border);
   color:var(--page-text-muted)}
+.pip-vorwissen-pill,.pip-anrede-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#8b92a5;border-radius:9999px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s}
+.pip-vorwissen-pill.active,.pip-anrede-btn.active{border-color:#00D4AA;color:#00D4AA;background:rgba(0,212,170,0.08)}
 </style>
 
 <!-- ── Headset-Pflicht-Modal (DSGVO § 201 StGB) ── -->
@@ -489,7 +491,7 @@
   <div id="pip-briefing-tab" style="display:none">
     <div id="pip-briefing-tab-header"
          data-briefing-toggle="1"
-         style="cursor:pointer;padding:4px 8px;font-size:12px;user-select:none;border-bottom:1px solid var(--pip-divider, #333)">
+         style="cursor:pointer;padding:4px 8px;font-size:12px;user-select:none;border-bottom:1px solid rgba(255,255,255,0.08)">
       <span id="pip-briefing-tab-icon">&#9658;</span>
       Briefing: <span id="pip-briefing-tab-title"></span>
     </div>
