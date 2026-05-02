@@ -895,9 +895,10 @@ def api_launcher_profile(pid):
         db.close()
 
 
-@app_routes_bp.route('/api/feedback', methods=['POST'])
+@app_routes_bp.route('/api/session-rating', methods=['POST'])
 @login_required
-def api_feedback():
+def api_session_rating():
+    # HIGH-3 pre-check: no FE caller found for /api/feedback at Phase 08.19.5 execution
     from database.models import FeedbackEvent, ConversationLog
     data           = request.get_json(force=True)
     stars          = data.get('stars')

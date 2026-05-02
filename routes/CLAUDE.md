@@ -58,3 +58,8 @@ Immer Schritt 2 vor dem Schreiben ausfuehren.
 
 Hinweis: organisations.py nutzt `orgs_bp` mit Blueprint-Name `'orgs'` (nicht 'organisations').
 Fehler-Quelle: url_for('organisations.foo') schlaegt fehl — korrekt ist url_for('orgs.foo').
+
+## Route-Aenderungen (Phase 08.19.5)
+
+- POST /api/session-rating (app_routes_bp) — post-call star rating (renamed from /api/feedback, D-02)
+- POST /api/feedback (feedback_bp) — bug-report widget (feedback.py, bleibt unveraendert)
