@@ -797,7 +797,9 @@ def api_set_profile():
         if u:
             u.active_profile_id = p.id
             db.commit()
-        ls.load_learning_cards(g.user.id)
+        # load_learning_cards(sid, user_id) requires a WebSocket SID — not available in
+        # this HTTP route. handle_start_live_session already calls load_learning_cards
+        # with the correct SID at session start. Removing this call is safe (Option B).
         flask_session['active_profile_id'] = p.id  # convenience only — not authoritative (D-05)
         return jsonify({'ok': True, 'name': p.name, 'phasen': daten.get('phasen', [])})
     finally:
