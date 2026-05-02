@@ -580,7 +580,13 @@ def update_kaufbereitschaft(delta: int):
 
 
 def reset_session():
-    """Setzt den kompletten Live-State zurück (nach 'Gespräch beenden')."""
+    """Setzt den kompletten Live-State zurück (nach 'Gespräch beenden').
+    Deprecated -- after per-SID migration this is a thin wrapper.
+    Prefer pop_session_state(sid) + init_session_state(sid, ...) directly.
+    Kept for backward compatibility with routes/ callers (Phase 08.19.5).
+    Audit 08.19.5: 1 external caller found -- routes/app_routes.py line 480.
+    Per-SID cleanup: iterates all active SIDs and calls pop+init as well as
+    resetting module-level globals for backward compat with remaining callers."""
     global conversation_log, transcript_buffer, analysiert_bisher, painpoints
     global coaching_buffer, _line_id_counter, _log_last_sp
     global _confirmed_speaker, _pending_speaker, _pending_since, _second_sp_seen
@@ -588,6 +594,16 @@ def reset_session():
     global kaufbereitschaft, kaufbereitschaft_verlauf, aktive_phase_idx
     global berater_words, kunde_words, session_start_time, laengster_monolog_sek, _current_monolog_start
     global gegenargument_log, hilfe_log, quick_action_log, phasen_log
+    # Per-SID cleanup: reset all active SIDs via pop+init (Phase 08.19.5 migration)
+    with _session_state_lock:
+        active = list(_session_state.keys())
+    for _rsid in active:
+        _ss = _session_state.get(_rsid, {})
+        _uid = _ss.get('user_id') or _ss.get('_user_id', 0)
+        _oid = _ss.get('org_id', 0)
+        _pid = _ss.get('active_profile_id')
+        pop_session_state(_rsid)
+        init_session_state(_rsid, user_id=_uid, org_id=_oid, profile_id=_pid)
 
     with log_lock:
         conversation_log.clear()
