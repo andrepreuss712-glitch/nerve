@@ -494,53 +494,6 @@ class FtAssistantEvent(Base):
     created_at            = Column(DateTime, default=utcnow)
 
 
-class FtObjectionEvent(Base):
-    __tablename__ = 'ft_objection_events'
-    id                     = Column(Integer, primary_key=True)
-    ft_session_id          = Column(Integer, ForeignKey('ft_call_sessions.id'), nullable=False)
-    user_id                = Column(Integer, ForeignKey('users.id'), nullable=False)
-    market                 = Column(String(10), nullable=False, default='dach')
-    language               = Column(String(10), nullable=False, default='de')
-    timestamp_ms           = Column(Integer, nullable=False)
-    objection_type         = Column(String(100), nullable=False)
-    conversation_phase     = Column(String(50))
-    readiness_score_before = Column(Integer)
-    context_window         = Column(Text, nullable=True)   # JSON
-    customer_data          = Column(Text, nullable=True)   # JSON
-    ki_classification      = Column(String(50))
-    ki_recommendation      = Column(Text)
-    recommended_response   = Column(Text)
-    recommendation_used    = Column(Boolean, default=False)
-    readiness_score_after  = Column(Integer)
-    objection_resolved     = Column(Boolean)
-    call_outcome           = Column(String(50))
-    model_used             = Column(String(100), nullable=False)
-    prompt_version         = Column(String(50), nullable=False)
-    created_at             = Column(DateTime, default=utcnow)
-
-
-# ── Phase 08.5: FT-Logging fuer QA-Events (D-13) ─────────────────────────────
-
-class FtQaEvent(Base):
-    __tablename__ = 'ft_qa_events'
-    id             = Column(Integer, primary_key=True)
-    ft_session_id  = Column(Integer, ForeignKey('ft_call_sessions.id'), nullable=False)
-    user_id        = Column(Integer, ForeignKey('users.id'), nullable=False)
-    market         = Column(String(10), nullable=False, default='dach')
-    language       = Column(String(10), nullable=False, default='de')
-    timestamp_ms   = Column(Integer, nullable=False)
-    utterance_text = Column(Text, nullable=True)
-    kategorie      = Column(String(50), nullable=False)   # einwand_unknown/frage/smalltalk_none
-    confidence     = Column(Float, nullable=True)
-    faq_matched    = Column(Boolean, default=False)
-    faq_id         = Column(Integer, ForeignKey('profile_faqs.id'), nullable=True)
-    antwort_text   = Column(Text, nullable=True)
-    tabu_gefiltert = Column(Boolean, default=False)
-    prompt_version = Column(String(50), nullable=False)
-    model_used     = Column(String(100), nullable=False)
-    created_at     = Column(DateTime, default=utcnow)
-
-
 class PromptVersion(Base):
     __tablename__ = 'prompt_versions'
     __table_args__ = (

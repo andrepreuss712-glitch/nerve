@@ -758,6 +758,15 @@ def _migrate():
         except Exception as _e:
             print(f"[DB] Migration: ft_qa_events skip ({_e})")
 
+        # ── Phase 08.19.5: Drop dead FT tables (REQ-05) ──────────────────────────
+        try:
+            conn.execute(text("DROP TABLE IF EXISTS ft_objection_events"))
+            conn.execute(text("DROP TABLE IF EXISTS ft_qa_events"))
+            conn.commit()
+            print("[DB] Migration 08.19.5: ft_objection_events + ft_qa_events dropped")
+        except Exception as e:
+            print(f"[DB] Migration 08.19.5 table drop skipped: {e}")
+
         # ── Phase 08.5: Seed prompt_versions for new modules ─────────────────────
         _phase085_seeds = [
             ('classifier',

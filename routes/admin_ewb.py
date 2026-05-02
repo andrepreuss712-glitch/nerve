@@ -59,24 +59,7 @@ def ewb_quality():
     db = get_session()
     try:
         # A/B-Auswertung (D-22, RESEARCH Focus Area 3): 3-stufiger JOIN
-        ab_rows = db.execute(text("""
-            SELECT ftoe.prompt_version AS version,
-                   COUNT(*) AS n,
-                   AVG(CASE WHEN oe.success = 1 THEN 1.0 ELSE 0.0 END) AS success_rate
-            FROM ft_objection_events ftoe
-            JOIN ft_call_sessions fcs ON fcs.id = ftoe.ft_session_id
-            JOIN objection_events oe
-              ON oe.conversation_log_id = fcs.conversation_log_id
-             AND oe.einwand_typ = ftoe.objection_type
-            WHERE oe.success IS NOT NULL
-            GROUP BY ftoe.prompt_version
-            ORDER BY ftoe.prompt_version
-        """)).fetchall()
-        # Rows zu dicts umwandeln fuer robusten Template-Zugriff (row.version, row.n, ...).
-        ab_rows = [
-            {'version': r[0], 'n': r[1], 'success_rate': float(r[2] or 0.0)}
-            for r in ab_rows
-        ]
+        ab_rows = []  # ft_objection_events removed (Phase 08.19.5 REQ-05) — no writer, always was empty
 
         # Quality-Score-Gate (D-27): >= 80% der Ratings haben Score >= 80
         rating_rows = db.query(EwbRating).all()
