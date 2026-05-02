@@ -981,7 +981,7 @@ Plans:
 - [x] 08.19.5-01-PLAN.md — Wave 1: Dead code cleanup (ft_objection_events reader, models, migration), route rename /api/session-rating, EWB error propagation fix (COMPLETE 2026-05-02)
 - [x] 08.19.5-02-PLAN.md — Wave 2a: live_session.py init_session_state extension + per-SID helpers + deepgram_service.py is_paused migration + WS auth handler (COMPLETE 2026-05-02)
 - [x] 08.19.5-03-PLAN.md — Wave 2b: claude_service.py is_paused + analysiert_bisher loop migration (parallel to Plan 02) (COMPLETE 2026-05-02)
-- [ ] 08.19.5-04-PLAN.md — Wave 3: New tests (REQ-06/07/08/01 isolation) + fix 2 pre-existing test_session_scoping failures
+- [x] 08.19.5-04-PLAN.md — Wave 3: New tests (REQ-06/07/08/01 isolation) + fix 2 pre-existing test_session_scoping failures (COMPLETE 2026-05-02)
 
 ---
 
