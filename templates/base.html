@@ -51,9 +51,9 @@
     <i data-lucide="bar-chart-3" class="nav-icon-lucide"></i>
     <span class="n-nav-label">Analytics</span>
   </a>
-  <a class="n-nav-item {% if request.path.startswith('/profiles') %}n-nav-item-active{% endif %}" href="/profiles" title="Profil">
+  <a class="n-nav-item {% if request.path.startswith('/profiles') %}n-nav-item-active{% endif %}" href="/profiles" title="Profile">
     <i data-lucide="user" class="nav-icon-lucide"></i>
-    <span class="n-nav-label">Profil</span>
+    <span class="n-nav-label">Profile</span>
   </a>
   {% if g.user and g.user.is_superadmin %}
   <a class="n-nav-item {% if request.path.startswith('/admin/dashboard') %}n-nav-item-active{% endif %}" href="/admin/dashboard" title="Admin Dashboard">
