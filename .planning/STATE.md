@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5 Plan 04 complete — Wave 3 test suite: 4 new per-SID migration tests (REQ-01/06/07/08), 2 Ghost-SID-Guard fixes in test_session_scoping.py. Phase 08.19.5 COMPLETE."
-last_updated: "2026-05-02T17:49:00Z"
-last_activity: 2026-05-02
+stopped_at: "08.19.5 UAT complete — 6/6 passed, 0 issues. Code review fixes applied (CR-01: load_learning_cards wrong-arity removed, WR-03: anrede migration added). Phase 08.19.5 fully verified."
+last_updated: "2026-05-03T09:20:00Z"
+last_activity: 2026-05-03
 progress:
   total_phases: 57
   completed_phases: 46
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** 08.19.5 COMPLETE — Wave 3 test suite done. 4 new per-SID migration tests (REQ-01/06/07/08) + 2 Ghost-SID-Guard fixes in test_session_scoping.py. Full phase delivered.
+**Current focus:** 08.19.5 VERIFIED — UAT 6/6 passed. Code review fixes applied. Phase fully complete.
 
 ## Current Position
 
-Phase: 08.19.5 (per-user-daten-trennung-websocket-auth) — COMPLETE (all 4 plans done)
+Phase: 08.19.5 (per-user-daten-trennung-websocket-auth) — VERIFIED (UAT 6/6 passed, 0 issues)
 Plan: 4 of 4 — Plan 04 COMPLETE (2026-05-02)
-Last activity: 2026-05-02
+Last activity: 2026-05-03
 
 **Phase 08.19.5 Plan 04 abgeschlossen:** Wave 3 test suite — created tests/test_per_sid_migration.py with 4 Function-Call-Return-Tests (REQ-01 is_paused isolation, REQ-06 _load_profile_cache, REQ-07 vorwissen_level chain, REQ-08 ewb_variante error propagation). Fixed 2 pre-existing failures in test_session_scoping.py by adding init_session_state() before set_profile_for_sid() (Ghost-SID-Guard FINDING-05). 2 commits: 45a152c, 8916a77.
 
