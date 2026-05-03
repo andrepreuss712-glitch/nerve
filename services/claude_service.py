@@ -728,11 +728,11 @@ Baue eine KURZE, kontextbezogene Variante des Gegenarguments:
 Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kommentare.
 """
 
-    # ── Phase 08.20: _user_id fuer build_profile_context ─────────────────────────
+    # ── Phase 08.20: _user_id fuer build_profile_context (per-SID — WR-01) ──────
     try:
         import services.live_session as _ls_manual
-        with _ls_manual.state_lock:
-            _user_id = _ls_manual.state.get('user_id') or 0
+        with _ls_manual._session_state_lock:
+            _user_id = (_ls_manual._session_state.get(sid) or {}).get('user_id') or 0
     except Exception:
         _user_id = 0
 
