@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.2-04 complete — Plan 04 (Session-Row onclick) abgeschlossen"
-last_updated: "2026-05-03T14:00:00.000Z"
+stopped_at: "08.19.5.2-05 complete — Plan 05 (PiP Re-Launch-Flow + Nav-Label-Fix) abgeschlossen"
+last_updated: "2026-05-03T15:00:00.000Z"
 last_activity: 2026-05-03
 progress:
   total_phases: 64
   completed_phases: 49
   total_plans: 219
-  completed_plans: 208
+  completed_plans: 209
   percent: 95
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.2 (ui-audit-akute-hotfixes) — IN PROGRESS (4 of N plans done)
-Plan: 4 — Plan 04 COMPLETE (2026-05-03)
+Phase: 08.19.5.2 (ui-audit-akute-hotfixes) — IN PROGRESS (5 of N plans done)
+Plan: 5 — Plan 05 COMPLETE (2026-05-03)
 Last activity: 2026-05-03
+
+**Phase 08.19.5.2 Plan 05 abgeschlossen:** PiP Re-Launch-Flow + Nav-Label-Fix — Nav-Label "Profil"→"Profile" (base.html:56), localStorage nerve_pip_was_active Flag im pagehide-Handler, Re-Launch-Banner vor </body>, removeItem in _stopMic(). MEDIUM-3 Cross-AI: PiP State-Loss v1 akzeptiert (SPEC Fallback-Acceptance, D-12). 2 Commits: fca5360, 7028259.
 
 **Phase 08.19.5.2 Plan 04 abgeschlossen:** Session-Row onclick-Handler — `db2-session-row`-div in renderSessions() erhaelt onclick="location.href='/session/'+s.id" + style="cursor:pointer". Ein-Zeilen-Fix, Pattern konsistent mit renderRecommendations(). 1 Commit: 2f37d45.
 
