@@ -1577,6 +1577,13 @@
     // still points to THIS window. If _cleanup()/nextCall() already ran,
     // state.pipWindow is null or points to the new call's window -- skip mic teardown.
     pipWindow.addEventListener('pagehide', function () {
+      // PiP Re-Launch Architecture (08.19.5.2 D-12):
+      // window.documentPictureInPicture.requestWindow() erfordert User-Gesture (Chrome-Spec).
+      // "PiP ueberlebt Navigation nahtlos" ist mit dieser API unmoeglich.
+      // Implementierung: localStorage-Flag + Re-Launch-Banner auf Zielseite (v1, SPEC.md Fallback-Acceptance).
+      if (state.micStarted) {
+        try { localStorage.setItem('nerve_pip_was_active', '1'); } catch(e) {}
+      }
       var el = pipWindow.document.getElementById('pip-live-window');
       if (el) {
         el.style.display = 'none';
@@ -2445,6 +2452,7 @@
     if (state.micAnalyser) { try { state.micAnalyser.disconnect(); } catch(e){} state.micAnalyser = null; }
     state.micMuted = false;
     state.micStarted = false;
+    try { localStorage.removeItem('nerve_pip_was_active'); } catch(e) {}
     if (state.socket) state.socket.emit('stop_live_session');
     if (state.workletNode) { state.workletNode.disconnect(); state.workletNode = null; }
     if (state.audioCtx) { state.audioCtx.close(); state.audioCtx = null; }
