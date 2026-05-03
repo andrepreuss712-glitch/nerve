@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: Checkpoint 08.19.5.2-01-PLAN.md — Wave 1 Step 2 (André+Claude Live-Durchgang) ausstehend
-last_updated: "2026-05-03T12:30:00.000Z"
+stopped_at: "08.19.5.2-04 complete — Plan 04 (Session-Row onclick) abgeschlossen"
+last_updated: "2026-05-03T14:00:00.000Z"
 last_activity: 2026-05-03
 progress:
   total_phases: 64
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.1 (per-user-trennung-restposten) — COMPLETE (1 of 1 plans done)
-Plan: 1 of 1 — Plan 01 COMPLETE (2026-05-03)
+Phase: 08.19.5.2 (ui-audit-akute-hotfixes) — IN PROGRESS (4 of N plans done)
+Plan: 4 — Plan 04 COMPLETE (2026-05-03)
 Last activity: 2026-05-03
+
+**Phase 08.19.5.2 Plan 04 abgeschlossen:** Session-Row onclick-Handler — `db2-session-row`-div in renderSessions() erhaelt onclick="location.href='/session/'+s.id" + style="cursor:pointer". Ein-Zeilen-Fix, Pattern konsistent mit renderRecommendations(). 1 Commit: 2f37d45.
 
 **Phase 08.19.5.1 Plan 01 abgeschlossen:** WR-01 + WR-02 nachmigiert — `_write_ft_assistant_event` liest per-SID aus `_session_state[sid]` (kein `ls.state` Global mehr); `analyse_loop` Learning-Cards-Read per-SID isoliert. 2 neue Isolation-Tests in test_per_sid_migration.py. 4 Tests in test_ft_write_hooks.py auf neues sid-API aktualisiert. 10/10 Tests gruen. 3 Commits: 5854598, 5ee13cf, d4c45b3. Decisions: D-01 Return-Early bei sid=None, D-03 einmaliger _session_state_lock Block.
 
