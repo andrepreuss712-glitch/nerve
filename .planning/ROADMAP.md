@@ -1020,7 +1020,13 @@ Plans:
 4. 🟢 UX-Mini: "Profil" → "Profile" Umbenennung in Hauptnavi
 5. Plus alles was Wave 1 als kritisch/mittel findet
 
-**Plans:**
+**Plans:** 4 plans
+
+Plans:
+- [ ] 08.19.5.2-01-PLAN.md — Wave 1: Autonomer UI-Code-Scan + Checkpoint André+Claude Live-Durchgang → Findings-Bericht
+- [ ] 08.19.5.2-02-PLAN.md — Wave 2a: Profil-Wizard Fix (get_json + CSRF + Feldnamen + zielkunden/unternehmensgroesse)
+- [ ] 08.19.5.2-03-PLAN.md — Wave 2b: Dashboard Session-Row onclick + Nav-Label + PiP Re-Launch-Flow
+- [ ] 08.19.5.2-04-PLAN.md — Wave 2c: Wave-1-kritische Findings (Scope nach Checkpoint)
 
 ---
 
