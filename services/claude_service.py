@@ -1293,23 +1293,26 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
     """
     import time as _time
     try:
-        with ls.state_lock:
-            _kw_fired_for = ls.state.get('kw_fired_for_line')
-            _anrede = ls.state.get('session_anrede') or 'Sie'
-            _slot1_busy_until = ls.state.get('slot1_variant_busy_until', 0.0)
-        # Per-SID state reads (D-02 Phase 08.19.4)
-        # WR-01: read under _session_state_lock; guard against None (concurrent pop_session_state)
+        # Per-SID state reads (D-02 Phase 08.19.4 / WR-03 Phase 08.19.5.1)
+        # WR-01/WR-03: read under _session_state_lock; guard against None (concurrent pop_session_state)
         if sid:
             with ls._session_state_lock:
                 _sid_st = ls._session_state.get(sid) or {}
+                _sid_st_state = _sid_st.get('state') or {}
             _user_id = _sid_st.get('user_id') or 0
             _active_sid = sid  # sid IS the active_sid
             _active_profile_id = _sid_st.get('active_profile_id')
+            _kw_fired_for = _sid_st_state.get('kw_fired_for_line')
+            _anrede = _sid_st_state.get('session_anrede') or 'Sie'
+            _slot1_busy_until = _sid_st_state.get('slot1_variant_busy_until', 0.0)
         else:
             with ls.state_lock:
                 _user_id = ls.state.get('user_id') or 0
                 _active_sid = ls.state.get('active_sid')
                 _active_profile_id = ls.state.get('active_profile_id')
+                _kw_fired_for = ls.state.get('kw_fired_for_line')
+                _anrede = ls.state.get('session_anrede') or 'Sie'
+                _slot1_busy_until = ls.state.get('slot1_variant_busy_until', 0.0)
 
         # D-02: Keyword-Matcher already fired for this utterance → skip
         if _kw_fired_for == line_id:
@@ -1360,9 +1363,15 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
         def _emit_qa_slot1(text):
             try:
                 sio.emit('qa_slot1', {'text': text}, room=_active_sid)
-                # Mark Slot 1 busy for ~8s (Phase 06.2 mutex pattern)
-                with ls.state_lock:
-                    ls.state['slot1_variant_busy_until'] = _time.monotonic() + 8.0
+                # Mark Slot 1 busy for ~8s (Phase 06.2 mutex pattern — WR-03 per-SID)
+                if sid:
+                    with ls._session_state_lock:
+                        _s1_target = (ls._session_state.get(sid) or {}).get('state')
+                        if _s1_target is not None:
+                            _s1_target['slot1_variant_busy_until'] = _time.monotonic() + 8.0
+                else:
+                    with ls.state_lock:
+                        ls.state['slot1_variant_busy_until'] = _time.monotonic() + 8.0
                 print(f"[QA-INT] qa_slot1 emitted len={len(text)}")
             except Exception as _e:
                 print(f"[QA-INT] emit qa_slot1 skip: {_e}")
