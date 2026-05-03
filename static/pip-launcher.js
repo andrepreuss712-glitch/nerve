@@ -2888,6 +2888,7 @@
     state.teleprompterActiveIdx = -1;
     state.teleprompterManualOverride = false;
     if (state.teleprompterOverrideTimer) { clearTimeout(state.teleprompterOverrideTimer); state.teleprompterOverrideTimer = null; }
+    try { localStorage.removeItem('nerve_pip_was_active'); } catch(e) {}
   }
 
   // ── Phase 08 D-14: _setAnrede helper (whitelist Du/Sie) ──────────────────

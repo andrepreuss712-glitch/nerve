@@ -141,7 +141,7 @@
       </div>
       <div class="popup-divider"></div>
       <a href="/logout" class="popup-item popup-item-logout"
-         onclick="try{sessionStorage.removeItem('headsetConfirmed')}catch(e){}">Abmelden</a>
+         onclick="try{sessionStorage.removeItem('headsetConfirmed')}catch(e){}; try{localStorage.removeItem('nerve_pip_was_active')}catch(e){}">Abmelden</a>
     </div>
   </div>
   {% endif %}
@@ -800,6 +800,7 @@ function setLanguage(code, e) {
 </div>
 <script src="{{ url_for('static', filename='feedback.js') }}"></script>
 {% endif %}
+{% if g.get('user') %}
 <!-- PiP Re-Launch Banner — sichtbar wenn PiP waehrend Navigation aktiv war -->
 <div id="pip-relaunch-banner" style="display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #00D4AA;border-radius:8px;padding:10px 18px;color:#e0e0e0;font-size:13px;z-index:9999;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4)" onclick="this.style.display='none'; try{localStorage.removeItem('nerve_pip_was_active')}catch(e){}; if(window.NerveLauncher){NerveLauncher.open();}">
   &#9654; Live-Assistent war aktiv — hier klicken zum Fortfahren
@@ -814,5 +815,6 @@ function setLanguage(code, e) {
   } catch(e) {}
 })();
 </script>
+{% endif %}
 </body>
 </html>
