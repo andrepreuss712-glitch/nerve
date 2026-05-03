@@ -145,13 +145,14 @@ def _write_ft_assistant_event(
     hint_text: str,
     model_used: str,
     context: dict | None = None,
+    sid: str | None = None,
 ) -> None:
     """
     Write one row to ft_assistant_events. Called from background threads
     (analyse_loop, coaching_loop). MUST NOT raise — swallows all errors.
 
     Cold-Call DSGVO enforcement: transcript_segment and speaker are
-    hard-set to None when ls.state['mode'] == 'cold_call' (or when mode
+    hard-set to None when mode == 'cold_call' (or when mode
     is missing/unknown — default to cold_call for safety), regardless
     of what the caller passed in.
     """
@@ -161,13 +162,20 @@ def _write_ft_assistant_event(
         from database.db import SessionLocal
         from database.models import FtAssistantEvent
 
-        with ls.state_lock:
-            ft_session_id = ls.state.get('ft_session_id')
-            mode          = ls.state.get('mode') or 'cold_call'
-            user_id       = ls.state.get('user_id')
-            market        = ls.state.get('market') or 'dach'
-            language      = ls.state.get('language') or 'de'
-            readiness     = ls.state.get('kaufbereitschaft')
+        # D-01 (Phase 08.19.5.1): sid=None → skip immediately (no DB write, no global read)
+        if sid is None:
+            print(f'[FT] skip — no sid for module={module}')
+            return
+
+        with ls._session_state_lock:
+            _sid_entry = ls._session_state.get(sid, {})
+            _sid_state = _sid_entry.get('state', {})
+            ft_session_id = _sid_state.get('ft_session_id')
+            mode          = _sid_entry.get('mode') or 'cold_call'
+            user_id       = _sid_entry.get('user_id')
+            market        = _sid_entry.get('market') or 'dach'
+            language      = _sid_entry.get('language') or 'de'
+            readiness     = _sid_state.get('kaufbereitschaft')
 
         if ft_session_id is None or user_id is None:
             # Phase not yet started or anonymous — skip write (no error)
@@ -1008,6 +1016,7 @@ def analyse_loop():
                             'conversation_phase': None,
                             'hint_category': ergebnis.get('typ'),
                         },
+                        sid=sid,
                     )
                 except Exception as _e:
                     print(f"[FT] assistant_live hook skipped: {_e}")
@@ -1553,6 +1562,7 @@ def coaching_loop():
                             context={
                                 'hint_category': 'coaching',
                             },
+                            sid=sid,
                         )
                 except Exception as _e:
                     print(f"[FT] coaching_live hook skipped: {_e}")
