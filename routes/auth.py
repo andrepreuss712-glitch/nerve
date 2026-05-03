@@ -63,15 +63,12 @@ def login_required(f):
                 )
                 session.clear()
                 return _login_redirect_with_next()
-            # Read onboarding flag inside session so it's available after close
-            onboarding_done = bool(getattr(user, 'onboarding_done', True))
         finally:
             db.close()
-        # LB-11: Onboarding-Redirect reaktiviert (deaktiviert in 6b57a77 als deploy hardening,
-        # kein Safety-Concern — korrekte Logik, nur voruebergehend pausiert).
-        # onboarding_done default=True (Zeile 57) sorgt dafuer dass bestehende User NICHT umgeleitet werden.
-        if not onboarding_done and not request.path.startswith('/onboarding'):
-            return redirect(url_for('onboarding.wizard'))
+        # Onboarding 2.0 (08.19.5.2 Andre-Decision 2026-05-03): Gate deaktiviert.
+        # Neue User landen direkt im Dashboard. onboarding.py Routen sind 302-Stubs.
+        # Onboarding 2.0 wird in einer kuenftigen Phase neu konzipiert (kein vergessenes Legacy).
+        # onboarding_done DB-Spalte bleibt als Legacy-Feld unveraendert.
         # H-18: Microsoft-OAuth Email-Confirmation-Gate
         # Echter Block: Microsoft-User mit email_confirmed=False werden auf
         # /confirm-email-pending umgeleitet bis email_confirmed=True.
