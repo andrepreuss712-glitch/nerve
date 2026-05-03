@@ -88,104 +88,12 @@ def neu():
     return render_template('profile_editor.html', profile=None, daten={})
 
 
-@profiles_bp.route('/wizard', methods=['GET'])
-@login_required
-def wizard_page():
-    """3-step profile wizard for new users."""
-    return render_template('profile_wizard.html')
-
-
-@profiles_bp.route('/wizard', methods=['POST'])
+@profiles_bp.route('/wizard', methods=['GET', 'POST'])
 @login_required
 def wizard_create():
-    """Guided wizard: creates profile from form data, redirects to dashboard."""
-    if _rolle() not in ('owner', 'admin'):
-        flash('Keine Berechtigung.', 'error')
-        return redirect(url_for('profiles.liste'))
-    firma = request.form.get('firma', '').strip()
-    # Phase 08 D-09: Wizard schreibt ebenfalls gegen Enum-Whitelist (Wizard-UI
-    # kann immer noch Legacy-Freitext liefern bis Wizard-Plan nachzieht).
-    branche = _normalize_branche(request.form.get('branche', ''))
-    rolle = request.form.get('rolle', '').strip()
-    produkt = request.form.get('produkt', '').strip()
-    zielkunden = request.form.get('zielkunden', '').strip()
-    eigener_einwand = request.form.get('eigener_einwand', '').strip()
-
-    # Parse einwaende from JSON list (hidden input built by JS)
-    einwaende_raw = request.form.get('einwaende', '[]')
-    try:
-        einwaende_list = json.loads(einwaende_raw)
-    except Exception:
-        einwaende_list = []
-
-    # Include free-text objection if provided
-    if eigener_einwand and eigener_einwand not in einwaende_list:
-        einwaende_list.append(eigener_einwand)
-
-    # Phase 08.19: schema_version=2 + zielkunde.unternehmensgroesse (D-02, D-03, D-07)
-    # Code-Check-Befund (Reviews v2): Wizard hat KEIN opener/pitch Formular-Feld.
-    # wizard_create() macht KEINEN ProfileOpener-INSERT — keine Opener-Daten vorhanden.
-    # Neue Profile starten ohne Opener-Eintrag (by design).
-    # User ergaenzt Opener via Profil-Editor -> /profiles/<pid>/opener Route.
-    # Graceful degradation: precall_service ohne Opener liefert kein Opener-Block im Briefing.
-    unternehmensgroesse = request.form.get('unternehmensgroesse', '').strip() or None
-
-    # IR-0820-E fix: write in v3 shape (einwaende top-level, not under basis),
-    # then migrate to v4 (einwaende -> einwaende_detail) before Pydantic validation.
-    # v2 shape with basis.einwaende fails ProfileSchema (BasisSchema extra='forbid').
-    daten_dict = {
-        'schema_version': 3,
-        'basis': {
-            'produktbeschreibung': produkt,
-            'zielkunden': zielkunden,
-            # einwaende NOT under basis — removed in v3 schema
-        },
-        'einwaende': einwaende_list,   # top-level per v3 schema
-        'phasen': [],
-        'zielkunde': {
-            'unternehmensgroesse': unternehmensgroesse,
-        },
-        'ki': {
-            'anrede': 'Sie',
-        },
-        'meta': {
-            'firma': firma,
-            'rolle': rolle,
-        },
-        # opener/pitch werden NICHT in daten gespeichert (D-01) — canonical: ProfileOpener-Tabelle
-        # Kein ProfileOpener-INSERT hier: Wizard hat kein opener/pitch Eingabefeld (Code-Check-Befund)
-    }
-    # Advance to v4: converts einwaende -> einwaende_detail
-    daten_dict = _migrate_profile_data(daten_dict)
-    daten = json.dumps(daten_dict, ensure_ascii=False)
-
-    # WR-01: Validate wizard daten against Pydantic schema before DB write
-    try:
-        ProfileSchema.model_validate(json.loads(daten))
-    except ValidationError:
-        flash("Profil-Daten ungültig — bitte Eingabe prüfen.", 'error')
-        return redirect(url_for('profiles.wizard_page'))
-
-    db = get_session()
-    try:
-        profile = Profile(
-            org_id=g.org.id,
-            name=firma if firma else 'Mein Profil',
-            branche=branche,
-            daten=daten,
-            erstellt_von=g.user.id,
-        )
-        db.add(profile)
-        db.flush()
-        # Set as active profile
-        user = db.query(UserModel).get(g.user.id)
-        if user:
-            user.active_profile_id = profile.id
-        db.commit()
-        flash('Profil erstellt. Willkommen bei NERVE.', 'success')
-        return redirect(url_for('dashboard.index'))
-    finally:
-        db.close()
+    # Profil-Wizard entfernt (Andre-Decision 2026-05-03) — User legt Profile ueber Editor an.
+    # Stub bleibt als 302 fuer eventuelle Bookmarks oder externe Links.
+    return redirect(url_for('profiles.liste'))
 
 
 @profiles_bp.route('/<int:pid>/edit', methods=['GET', 'POST'])
