@@ -3013,27 +3013,10 @@
   // beforeunload bleibt als Fallback fuer Tab-Close / Browser-Zurueck / URL-Eingabe.
   var _pendingNavUrl = null;
 
-  document.addEventListener('click', function(e) {
-    if (!state.micStarted) return;
-    var a = e.target.closest ? e.target.closest('a[href]') : null;
-    if (!a) return;
-    var href = a.getAttribute('href');
-    if (!href || href === '#' || href.startsWith('javascript:')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    _pendingNavUrl = href;
-    var modal = document.getElementById('nerve-nav-guard');
-    if (modal) modal.style.display = 'flex';
-  }, true);
-
-  window._nerveNavConfirm = function() {
-    var url = _pendingNavUrl;
-    _pendingNavUrl = null;
-    var modal = document.getElementById('nerve-nav-guard');
-    if (modal) modal.style.display = 'none';
-    if (state.micStarted) _stopMic();
-    window.location.href = url;
-  };
+  // Click-Interceptor + _nerveNavConfirm entfernt 2026-05-03 abend (Andre-Decision)
+  // — gehoerten zum nerve-nav-guard Modal das wegen Dark-Mode-Inline-Styles entfernt wurde.
+  // Modal mit korrekten Design-Tokens wird in Block O Teil 2 / Folge-Phase neu gebaut.
+  // Bis dahin greift nur der beforeunload-Browser-Standard-Handler unten.
 
   window.addEventListener('beforeunload', function(e) {
     if (state.micStarted) {
