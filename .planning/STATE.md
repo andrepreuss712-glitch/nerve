@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5 UAT complete — 6/6 passed, 0 issues. Code review fixes applied (CR-01: load_learning_cards wrong-arity removed, WR-03: anrede migration added). Phase 08.19.5 fully verified."
-last_updated: "2026-05-03T09:20:00Z"
+stopped_at: "08.19.5.1 planned — 1 plan (Wave 1), verification passed. Ready to execute."
+last_updated: "2026-05-03T00:00:00Z"
 last_activity: 2026-05-03
 progress:
   total_phases: 57
   completed_phases: 46
-  total_plans: 206
+  total_plans: 207
   completed_plans: 203
   percent: 98
 ---
