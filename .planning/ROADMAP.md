@@ -985,6 +985,19 @@ Plans:
 
 ---
 
+### Phase 08.19.5.1: Per-User-Trennung Restposten — WR-01 + WR-02 (INSERTED — 2026-05-03)
+
+**Goal:** WR-01 und WR-02 aus dem Phase-08.19.5-Code-Review nachmigieren: `_write_ft_assistant_event` liest Session-Kontext per-SID statt aus dem Modul-Globalen `ls.state`; `analyse_loop:916` liest `active_learning_cards` per-SID statt global. Danach ist Multi-User-Daten-Trennung 100% abgeschlossen.
+**Status:** COMPLETE (2026-05-03)
+**Verification:** passed (5/5 must-haves)
+
+**Plans:** 1 plan in 1 wave
+
+Plans:
+- [x] 08.19.5.1-01-PLAN.md — Wave 1: WR-01 _write_ft_assistant_event per-SID + WR-02 learning-cards per-SID + tests (COMPLETE 2026-05-03)
+
+---
+
 ### Phase 08.20: Pipeline-Re-Wire — Voll-Profil-EWB + Lead-Context + branchenspezifische PreCall (INSERTED — 2026-04-29)
 
 **Goal:** Den EWB-Live-Pfad von ~10 genutzten Profil-Feldern (50-60% tot nach 08.17-Audit) auf Voll-Profil-Integration hochrüsten. `build_profile_context()` erhält definierte Sektions-Reihenfolge (Branche → Zielkunde → Schmerzen → Einwände → Phasen → KI-Verhalten → Wisdom). PreCall-Pipeline (`recherche_firma` + `_generiere_briefing`) bekommt Profil als Steuerungs-Input für branchenspezifische Recherche-Strategie. PreCall-Briefing fließt wieder ins EWB-Prompt (war in 08.8 gelöscht). Manual-EWB-Button-Pfad erhält Profil-Kontext (kein hardcoded Coach-Prompt mehr). `_SYSTEM_PROMPT_QA` um `{profile_context}`-Placeholder erweitern (LB-3-Fix). Schema-Drift `opener`/`pitch` (top-level vs. `basis.*`) bereinigen. Sonnet-Switch via ENV für EWB-Streaming bei Voll-Profil-Kontexten als Pflicht (Voll-Profil + Haiku → grammatisch hölzern; Voll-Profil + Sonnet 4.5 → Quality + akzeptable Latenz mit Caching). Caching-Auswirkung verifizieren: Voll-Profil → Cache-Threshold immer überschritten → max. Cache-ROI. Org-Scoping-Verifikation: `build_profile_context()` nutzt SID-Lookup aus 08.19.4 korrekt (User in Org 2 sieht NICHT Profil 7 aus Admin-Org 1). Mini-Adds (alle Pflicht): (8) Vorwissen-Picker im Live-Workflow nach PreCall — Lead-spezifisch (3-stufig), fließt als Lead-Context in EWB-Prompt; (9) Du/Sie-Smart-Switch — Lead-spezifisch + Live-Detection im Transcript; (10) Live-EWB-Prompt-Preview-Panel — kollabierbares Panel pro Profil-Sektion; (12) `einwaende_detail` vs. `einwaende` Koexistenz konsolidieren — Migration auf einheitliches Format.

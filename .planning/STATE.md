@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** 08.19.5 VERIFIED — UAT 6/6 passed. Code review fixes applied. Phase fully complete.
+**Current focus:** 08.19.5.1 VERIFIED — WR-01 + WR-02 per-SID migration complete. Multi-User-Daten-Trennung 100% abgeschlossen.
 
 ## Current Position
 
