@@ -998,6 +998,32 @@ Plans:
 
 ---
 
+### Phase 08.19.5.2: UI-Audit + akute Hotfixes (INSERTED — 2026-05-03)
+
+**Goal:** Systematischer UI-Inventur-Durchgang aller Seiten (Wave 1) + Fix der 4 akuten Pre-Launch-Bugs aus 08.19.5-UAT (Wave 2), bevor DSGVO-Härtung (08.19.6) obendrauf gebaut wird.
+**Komplexität:** 🟡 mittel (Multi-File-Edits, Frontend + Backend). PiP-Bug evtl. 🔴.
+**Depends on:** Phase 08.19.5.1 ✅ (Multi-User-Daten-Trennung komplett)
+**Voraussetzung für:** Phase 08.19.6 (DSGVO-Härtung braucht sauberes UI-Fundament — "Dach-vor-Keller")
+
+**Wave 1 — UI-Audit (Claudian + Andre gemeinsam):**
+1. Inventur ALLER Seiten: Dashboard, Profile, Live-Call, Trainings, Coach-Dashboard, Admin-Bereich, Settings, Logs, Changelog, Performance, Onboarding
+2. Pro Seite: was steht drauf, was ist klickbar, was passiert beim Klick, funktioniert der Klick
+3. Discoverability-Check: wie würde ein neuer User Feature X finden? Wenn "gar nicht" → Bug
+4. Tote-Buttons-Check: Buttons/Links die nichts tun
+5. Findings-Bericht: `03 Planung/UI-Audit-Ergebnis-2026-05-XX.md` sortiert nach kritisch / mittel / kosmetisch
+6. Output ist Foundation für Block O Teil 2 (Visual-Polish via Claude Design)
+
+**Wave 2 — Akute Hotfixes (GSD):**
+1. 🔴 Profil-Wizard reparieren — Frontend↔Backend-Drift fixen, CSRF-Token, Feldnamen abgleichen (PRE-LAUNCH-BLOCKER)
+2. 🟡 Sessions im Dashboard klickbar machen — onclick-Handler in dashboard.html (PRE-LAUNCH-BLOCKER)
+3. 🟡/🔴 PiP-Schließ-Bug bei Tab-Wechsel fixen — Picture-in-Picture-Web-API oder Service-Worker
+4. 🟢 UX-Mini: "Profil" → "Profile" Umbenennung in Hauptnavi
+5. Plus alles was Wave 1 als kritisch/mittel findet
+
+**Plans:**
+
+---
+
 ### Phase 08.20: Pipeline-Re-Wire — Voll-Profil-EWB + Lead-Context + branchenspezifische PreCall (INSERTED — 2026-04-29)
 
 **Goal:** Den EWB-Live-Pfad von ~10 genutzten Profil-Feldern (50-60% tot nach 08.17-Audit) auf Voll-Profil-Integration hochrüsten. `build_profile_context()` erhält definierte Sektions-Reihenfolge (Branche → Zielkunde → Schmerzen → Einwände → Phasen → KI-Verhalten → Wisdom). PreCall-Pipeline (`recherche_firma` + `_generiere_briefing`) bekommt Profil als Steuerungs-Input für branchenspezifische Recherche-Strategie. PreCall-Briefing fließt wieder ins EWB-Prompt (war in 08.8 gelöscht). Manual-EWB-Button-Pfad erhält Profil-Kontext (kein hardcoded Coach-Prompt mehr). `_SYSTEM_PROMPT_QA` um `{profile_context}`-Placeholder erweitern (LB-3-Fix). Schema-Drift `opener`/`pitch` (top-level vs. `basis.*`) bereinigen. Sonnet-Switch via ENV für EWB-Streaming bei Voll-Profil-Kontexten als Pflicht (Voll-Profil + Haiku → grammatisch hölzern; Voll-Profil + Sonnet 4.5 → Quality + akzeptable Latenz mit Caching). Caching-Auswirkung verifizieren: Voll-Profil → Cache-Threshold immer überschritten → max. Cache-ROI. Org-Scoping-Verifikation: `build_profile_context()` nutzt SID-Lookup aus 08.19.4 korrekt (User in Org 2 sieht NICHT Profil 7 aus Admin-Org 1). Mini-Adds (alle Pflicht): (8) Vorwissen-Picker im Live-Workflow nach PreCall — Lead-spezifisch (3-stufig), fließt als Lead-Context in EWB-Prompt; (9) Du/Sie-Smart-Switch — Lead-spezifisch + Live-Detection im Transcript; (10) Live-EWB-Prompt-Preview-Panel — kollabierbares Panel pro Profil-Sektion; (12) `einwaende_detail` vs. `einwaende` Koexistenz konsolidieren — Migration auf einheitliches Format.
