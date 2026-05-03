@@ -726,7 +726,7 @@ function renderSessions(d) {
   var html = '';
   sessions.forEach(function(s) {
     var scoreColor = s.score >= 70 ? '#00D4AA' : (s.score >= 40 ? '#6B7280' : '#F85149');
-    html += '<div class="db2-session-row">';
+    html += '<div class="db2-session-row" onclick="location.href=\'/session/' + s.id + '\'" style="cursor:pointer">';
     html +=   '<span class="db2-session-date">'  + esc(s.date_str) + '</span>';
     html +=   '<span class="db2-badge ' + (typeCls[s.session_type] || 'db2-badge-cold') + '">' + (typeLabel[s.session_type] || s.session_type) + '</span>';
     html +=   '<span class="db2-session-score" style="color:' + scoreColor + '">' + (s.score || '—') + '</span>';
