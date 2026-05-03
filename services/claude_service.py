@@ -1027,11 +1027,12 @@ def analyse_loop():
                     try:
                         from services.ki_logik import detect_phase
                         transcript_window = list(sid_state.get('analysiert_bisher', [])[-10:])
-                        with ls.state_lock:
-                            cur_phase = ls.state.get('current_phase', 1) or 1
-                            phase_change_count = ls.state.get('phase_change_count', 0) or 0
-                            last_change_cycle = ls.state.get('_phase_cycle_at_last_change', 0) or 0
-                            mode = ls.state.get('mode', 'meeting')
+                        with ls._session_state_lock:
+                            _sid_phase_st = (ls._session_state.get(sid) or {}).get('state', {})
+                            cur_phase = _sid_phase_st.get('current_phase', 1) or 1
+                            phase_change_count = _sid_phase_st.get('phase_change_count', 0) or 0
+                            last_change_cycle = _sid_phase_st.get('_phase_cycle_at_last_change', 0) or 0
+                            mode = (ls._session_state.get(sid) or {}).get('mode', 'meeting')
                         elapsed_s = (time.time() - ls.session_start_ts) if hasattr(ls, 'session_start_ts') else 0
                         raw = classify_phase(transcript_window, cur_phase, elapsed_s, mode)
                         if raw:
@@ -1043,16 +1044,20 @@ def analyse_loop():
                                 phase_change_count=phase_change_count,
                                 cycles_since_change=cycles_since_change,
                             )
-                            with ls.state_lock:
-                                phase_did_change = (new_phase != cur_phase)
-                                if phase_did_change:
-                                    ls.state['current_phase'] = new_phase
-                                    ls.state['current_phase_name'] = _PHASE_NAMES.get(new_phase, '')
-                                    ls.state['phase_changed_at'] = datetime.utcnow().isoformat()
-                                    ls.state['phase_change_count'] = phase_change_count + 1
-                                    ls.state['_phase_cycle_at_last_change'] = _phase_cycle_counter
-                                    print(f"[phase_classify] {cur_phase}→{new_phase} ({_PHASE_NAMES.get(new_phase,'')}) conf={new_conf:.2f} grund={raw.get('grund','')}")
-                                ls.state['phase_confidence'] = new_conf
+                            with ls._session_state_lock:
+                                _sid_phase_st2 = (ls._session_state.get(sid) or {}).get('state')
+                                if _sid_phase_st2 is not None:
+                                    phase_did_change = (new_phase != cur_phase)
+                                    if phase_did_change:
+                                        _sid_phase_st2['current_phase'] = new_phase
+                                        _sid_phase_st2['current_phase_name'] = _PHASE_NAMES.get(new_phase, '')
+                                        _sid_phase_st2['phase_changed_at'] = datetime.utcnow().isoformat()
+                                        _sid_phase_st2['phase_change_count'] = phase_change_count + 1
+                                        _sid_phase_st2['_phase_cycle_at_last_change'] = _phase_cycle_counter
+                                        print(f"[phase_classify] {cur_phase}→{new_phase} ({_PHASE_NAMES.get(new_phase,'')}) conf={new_conf:.2f} grund={raw.get('grund','')}")
+                                    _sid_phase_st2['phase_confidence'] = new_conf
+                                else:
+                                    phase_did_change = False
                             # POLISH-39 + POLISH-42: propagate AI phase-change to phasen_log (for
                             # ConversationLog.phasen_details) and covered_phases (for skript_abdeckung).
                             # Done outside state_lock to avoid nested-lock stalls.
@@ -1090,17 +1095,20 @@ def analyse_loop():
                         # ── Phase 04.8 P03: Cold-call inference (coldcall mode only) ──
                         try:
                             from services.ki_logik import infer_cold_call_context
-                            with ls.state_lock:
-                                cc_mode = ls.state.get('mode', 'meeting')
-                                cc_phase = ls.state.get('current_phase', 1) or 1
+                            with ls._session_state_lock:
+                                _sid_cc_st = (ls._session_state.get(sid) or {})
+                                cc_mode = _sid_cc_st.get('mode', 'meeting')
+                                cc_phase = (_sid_cc_st.get('state') or {}).get('current_phase', 1) or 1
                             if cc_mode == 'cold_call':
                                 seller_window = list(sid_state.get('analysiert_bisher', []))[-6:]
                                 inference = infer_cold_call_context(
                                     seller_window, cc_phase, cc_mode,
                                     haiku_caller=infer_customer_state,
                                 )
-                                with ls.state_lock:
-                                    ls.state['cold_call_inference'] = inference
+                                with ls._session_state_lock:
+                                    _sid_cc_target = (ls._session_state.get(sid) or {}).get('state')
+                                    if _sid_cc_target is not None:
+                                        _sid_cc_target['cold_call_inference'] = inference
                         except Exception as e:
                             print(f"[coldcall_infer] loop error: {e}")
                     except Exception as e:
