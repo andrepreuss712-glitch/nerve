@@ -919,9 +919,9 @@ def analyse_loop():
                 sid_state['analysiert_bisher'] = _existing[-200:]
                 ls._per_sid_transcript[sid] = []  # clear consumed entries
 
-            # D-09: Inject active learning cards into kontext
-            with ls.state_lock:
-                _lk_cards = ls.state.get('active_learning_cards', [])
+            # D-09: Inject active learning cards into kontext (per-SID — WR-02 Phase 08.19.5.1)
+            with ls._session_state_lock:
+                _lk_cards = ls._session_state.get(sid, {}).get('state', {}).get('active_learning_cards', [])
             if _lk_cards:
                 _lk_ctx = "\n\n[Aktive Lernkarten des Beraters - bei passender Situation mit lernkarte_match=true markieren]:\n"
                 for _c in _lk_cards[:5]:
