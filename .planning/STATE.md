@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.1 planned — 1 plan (Wave 1), verification passed. Ready to execute."
-last_updated: "2026-05-03T00:00:00Z"
+stopped_at: "08.19.5.1 Plan 01 COMPLETE (2026-05-03) — WR-01 + WR-02 nachmigiert, 10/10 tests gruen"
+last_updated: "2026-05-03T10:40:00Z"
 last_activity: 2026-05-03
 progress:
   total_phases: 57
-  completed_phases: 46
+  completed_phases: 47
   total_plans: 207
-  completed_plans: 203
+  completed_plans: 204
   percent: 98
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5 (per-user-daten-trennung-websocket-auth) — VERIFIED (UAT 6/6 passed, 0 issues)
-Plan: 4 of 4 — Plan 04 COMPLETE (2026-05-02)
+Phase: 08.19.5.1 (per-user-trennung-restposten) — COMPLETE (1 of 1 plans done)
+Plan: 1 of 1 — Plan 01 COMPLETE (2026-05-03)
 Last activity: 2026-05-03
+
+**Phase 08.19.5.1 Plan 01 abgeschlossen:** WR-01 + WR-02 nachmigiert — `_write_ft_assistant_event` liest per-SID aus `_session_state[sid]` (kein `ls.state` Global mehr); `analyse_loop` Learning-Cards-Read per-SID isoliert. 2 neue Isolation-Tests in test_per_sid_migration.py. 4 Tests in test_ft_write_hooks.py auf neues sid-API aktualisiert. 10/10 Tests gruen. 3 Commits: 5854598, 5ee13cf, d4c45b3. Decisions: D-01 Return-Early bei sid=None, D-03 einmaliger _session_state_lock Block.
 
 **Phase 08.19.5 Plan 04 abgeschlossen:** Wave 3 test suite — created tests/test_per_sid_migration.py with 4 Function-Call-Return-Tests (REQ-01 is_paused isolation, REQ-06 _load_profile_cache, REQ-07 vorwissen_level chain, REQ-08 ewb_variante error propagation). Fixed 2 pre-existing failures in test_session_scoping.py by adding init_session_state() before set_profile_for_sid() (Ghost-SID-Guard FINDING-05). 2 commits: 45a152c, 8916a77.
 
@@ -42,6 +44,12 @@ Last activity: 2026-05-03
 **Phase 08.20.3 Plan 01 abgeschlossen:** renderStep4() 3-Button Modus-Selector (A/B/C), renderStep4b() KI-Ladescreen mit AbortController, renderStep4c() Vorher/Nachher, _savePersonalizedAndStartCall() + _showCapSubModal(), renderStep5() optgroup-Dropdown + Personalisieren-Button. API: is_personalized + briefing_source_firma in opener responses. Tests: 23 passed/5 skipped.
 **Phase 08.20.3 Plan 02 abgeschlossen:** generate_personalized_skript() in precall_service.py (Sonnet via MODEL_PRECALL, cost tracking context_tag='personalize_skript', tuple return), POST /api/precall/personalize (KI-only, no DB write), POST /api/precall/personalize/save (atomic with _db.begin(), cap-check, DSGVO-Audit-Log, briefing_source_firma). Tests: 28 passed.
 **Next:** Plan 05 (Call-Flow Integration — briefingModus state konsumieren)
+
+**Decisions made (08.19.5.1):**
+
+  - D-01: sid=None -> Return-Early in _write_ft_assistant_event (kein DB-Write, kein Global-Read) — DSGVO-sicher
+  - D-03: Einmaliger _session_state_lock Block fuer alle per-SID Reads in _write_ft_assistant_event (kein Split-Read, kein state_lock mehr in dieser Funktion)
+
 **Decisions made (08.20):**
 
   - D-09: Briefing als _session_state[sid]['_briefing'] Sub-Key (nicht separater Dict) — eliminiert Deadlock-Risiko
