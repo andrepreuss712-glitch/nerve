@@ -26,7 +26,7 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.config['SECRET_KEY']           = SECRET_KEY
 app.config['SESSION_PERMANENT']    = True
-app.config['CSS_VERSION']          = '20260421-1'
+app.config['CSS_VERSION']          = '20260503-1'
 app.config['MAX_CONTENT_LENGTH']   = 5 * 1024 * 1024  # 5 MB feedback uploads
 # ── Session-Cookie-Hardening (LB-10) ──────────────────────────────────────────
 # SESSION_COOKIE_SECURE=True nur in Prod (HTTPS). FLASK_DEBUG=true → False (Dev/localhost).
