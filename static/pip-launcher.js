@@ -2920,7 +2920,8 @@
     close: close,
     isActive: function () { return state.micStarted; },
     _setAnrede: _setAnrede,
-    _setVorwissen: _setVorwissen
+    _setVorwissen: _setVorwissen,
+    stopForNavigation: function () { if (state.micStarted) _stopMic(); }
   };
 
   // ── Phase 08.20 D-06: PiP Du/Sie toggle + Vorwissen override (global fns) ─
@@ -3008,7 +3009,32 @@
   //   window.pipSetAnrede / pipVorwissenEdit / pipSetVorwissen — PiP onclick handlers
   window.mdToHtml = mdToHtml;
 
-  // Confirm-Popup bei Navigation mit aktivem Call (08.19.5.2 Scope-Update)
+  // Nav-Guard: Custom-Modal bei Link-Klick mit aktivem Call (08.19.5.2 Scope-Update)
+  // beforeunload bleibt als Fallback fuer Tab-Close / Browser-Zurueck / URL-Eingabe.
+  var _pendingNavUrl = null;
+
+  document.addEventListener('click', function(e) {
+    if (!state.micStarted) return;
+    var a = e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (!href || href === '#' || href.startsWith('javascript:')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    _pendingNavUrl = href;
+    var modal = document.getElementById('nerve-nav-guard');
+    if (modal) modal.style.display = 'flex';
+  }, true);
+
+  window._nerveNavConfirm = function() {
+    var url = _pendingNavUrl;
+    _pendingNavUrl = null;
+    var modal = document.getElementById('nerve-nav-guard');
+    if (modal) modal.style.display = 'none';
+    if (state.micStarted) _stopMic();
+    window.location.href = url;
+  };
+
   window.addEventListener('beforeunload', function(e) {
     if (state.micStarted) {
       e.preventDefault();
