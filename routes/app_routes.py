@@ -1053,18 +1053,45 @@ def api_personalize_skript():
     """
     from services.precall_service import generate_personalized_skript
     from database.db import get_session as get_db_session
-    from database.models import ProfileOpener, Profile
 
     data = request.get_json(force=True) or {}
-    briefing_dict = data.get('briefing') or {}  # passed from frontend state.precallBriefing
+    briefing_dict = data.get('briefing') or {}
+    call_mode = (data.get('call_mode') or '').strip()  # 'meeting' | 'cold_call' | '' (backwards-compat)
 
-    # WR-03: validate opener_id as positive integer before any DB query
-    try:
-        opener_id = int(data.get('opener_id'))
-        if opener_id <= 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        return jsonify({'error': 'opener_id muss eine positive Ganzzahl sein'}), 400
+    # ── call_mode-Routing ──
+    # Primär: call_mode steuert den Pfad
+    # Fallback (backwards-compat): call_mode leer → skript_id-Präsenz → meeting; sonst cold_call
+    skript_id = None
+    opener_id = None
+
+    if call_mode == 'meeting':
+        try:
+            skript_id = int(data.get('skript_id'))
+            if skript_id <= 0: raise ValueError
+        except (TypeError, ValueError):
+            return jsonify({'error': 'skript_id muss eine positive Ganzzahl sein'}), 400
+    elif call_mode == 'cold_call':
+        try:
+            opener_id = int(data.get('opener_id'))
+            if opener_id <= 0: raise ValueError
+        except (TypeError, ValueError):
+            return jsonify({'error': 'opener_id muss eine positive Ganzzahl sein'}), 400
+    else:
+        # Kein call_mode — Fallback: skript_id hat Vorrang, dann opener_id
+        if data.get('skript_id') is not None:
+            try:
+                skript_id = int(data.get('skript_id'))
+                if skript_id <= 0: raise ValueError
+            except (TypeError, ValueError):
+                return jsonify({'error': 'skript_id muss eine positive Ganzzahl sein'}), 400
+        elif data.get('opener_id') is not None:
+            try:
+                opener_id = int(data.get('opener_id'))
+                if opener_id <= 0: raise ValueError
+            except (TypeError, ValueError):
+                return jsonify({'error': 'opener_id muss eine positive Ganzzahl sein'}), 400
+        else:
+            return jsonify({'error': 'skript_id oder opener_id erforderlich'}), 400
 
     user_id = g.user.id if g.user else None
     profile_id = flask_session.get('active_profile_id')
@@ -1073,12 +1100,8 @@ def api_personalize_skript():
 
     _db = get_db_session()
     try:
-        opener = _db.query(ProfileOpener).filter_by(
-            id=opener_id, profile_id=profile_id
-        ).first()
-        if not opener:
-            return jsonify({'error': 'Opener nicht gefunden'}), 400
-
+        # Org-Isolation-Check via Profile
+        from database.models import Profile
         profile = _db.query(Profile).filter_by(id=profile_id).first()
         if not profile or profile.org_id != g.org.id:
             return jsonify({'error': 'Profil nicht gefunden oder kein Zugriff'}), 403
@@ -1091,13 +1114,29 @@ def api_personalize_skript():
             except Exception:
                 profil_daten = {}
 
-        opener_inhalt = opener.inhalt or ''
+        # ── Modus-abhängiges Item-Loading ──
+        if skript_id:
+            from database.models import ProfileSkript
+            item = _db.query(ProfileSkript).filter_by(
+                id=skript_id, profile_id=profile_id
+            ).first()
+            if not item:
+                return jsonify({'error': 'Skript nicht gefunden'}), 400
+        else:
+            from database.models import ProfileOpener
+            item = _db.query(ProfileOpener).filter_by(
+                id=opener_id, profile_id=profile_id
+            ).first()
+            if not item:
+                return jsonify({'error': 'Opener nicht gefunden'}), 400
+
+        opener_inhalt = item.inhalt or ''  # Parameter-Name bleibt (generate_personalized_skript Signatur)
     finally:
         _db.close()
 
     personalized_text, error = generate_personalized_skript(
         briefing_dict=briefing_dict,
-        opener_inhalt=opener_inhalt,
+        opener_inhalt=opener_inhalt,   # Wert: skript.inhalt (meeting) ODER opener.inhalt (cold_call)
         profil_daten=profil_daten,
         user_id=user_id,
     )
