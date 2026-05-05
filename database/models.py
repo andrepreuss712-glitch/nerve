@@ -143,6 +143,9 @@ class ProfileSkript(Base):
     inhalt      = Column(Text)
     sortierung  = Column(Integer, default=0)
     created_at  = Column(DateTime, default=utcnow)
+    parent_id             = Column(Integer, nullable=True)              # D-04: kein FK-Constraint; zeigt auf Quell-Item (ProfileSkript oder ProfileOpener id)
+    is_personalized       = Column(Boolean, default=False, nullable=False)
+    briefing_source_firma = Column(String(200), nullable=True)
 
 
 # ── Phase 08.5: FAQ-Feld pro Profil (D-13) ───────────────────────────────────
