@@ -767,6 +767,12 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
+          if (data && data.cap_exceeded) {
+            // Race condition: another tab created an item — re-show cap modal with fresh list
+            _showCapSubModal(data.items || []);
+            if (delBtn) { delBtn.disabled = false; delBtn.textContent = 'Auswahl löschen + Personalisieren →'; }
+            return;
+          }
           if (data && data.error) {
             var capErrEl = document.getElementById('lnr-cap-error');
             if (capErrEl) { capErrEl.textContent = sanitizeErrorMsg(data.error); capErrEl.style.display = 'block'; }
