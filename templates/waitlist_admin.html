@@ -105,6 +105,10 @@
 </div>
 
 <script>
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 async function invite(wid) {
   const res = await fetch('/waitlist/invite/' + wid, {method:'POST'});
   const d = await res.json();
@@ -112,10 +116,13 @@ async function invite(wid) {
   const content = document.getElementById('invite-result-content');
   result.classList.add('visible');
   if (d.ok) {
-    content.innerHTML = `✓ Eingeladen: <strong>${d.email}</strong><br>
-      Registrierungslink: <span class="invite-link">${window.location.origin}${d.register_link}</span>
-      <button onclick="navigator.clipboard.writeText('${window.location.origin}${d.register_link}');this.textContent='✓ Kopiert'"
-        class="btn btn-secondary btn-xs" style="margin-left:8px">Kopieren</button>`;
+    const link = window.location.origin + d.register_link;
+    content.innerHTML = '✓ Eingeladen: <strong>' + escHtml(d.email) + '</strong><br>'
+      + 'Registrierungslink: <span class="invite-link">' + escHtml(link) + '</span>'
+      + '<button class="btn btn-secondary btn-xs" style="margin-left:8px" data-copy-link>Kopieren</button>';
+    content.querySelector('[data-copy-link]').onclick = function() {
+      navigator.clipboard.writeText(link).then(function(){ this.textContent = '✓ Kopiert'; }.bind(this));
+    };
     // Update row status
     const row = document.getElementById('row-' + wid);
     if (row) {
