@@ -829,7 +829,7 @@ fetch('/api/notifications').then(function(r){ return r.json(); }).then(function(
   (d.notifications || []).filter(function(n){ return !dismissed.includes(n.id); }).forEach(function(n) {
     var t = document.createElement('div');
     t.className = 'toast';
-    t.innerHTML = '<span class="toast-icon">' + n.icon + '</span><span class="toast-text">' + n.text + '</span><span class="toast-arrow">\u2192</span>';
+    t.innerHTML = '<span class="toast-icon">' + esc(n.icon) + '</span><span class="toast-text">' + esc(n.text) + '</span><span class="toast-arrow">\u2192</span>';
     t.onclick = function() {
       var dis = JSON.parse(localStorage.getItem('nerve_dismissed_notifs') || '[]');
       dis.push(n.id); localStorage.setItem('nerve_dismissed_notifs', JSON.stringify(dis));
