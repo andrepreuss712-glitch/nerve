@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.2-05 complete — Plan 05 (PiP Re-Launch-Flow + Nav-Label-Fix) abgeschlossen"
-last_updated: "2026-05-03T15:00:00.000Z"
-last_activity: 2026-05-03
+stopped_at: "08.19.5.4 Plan 01 COMPLETE — Wave 1 Token-Migration abgeschlossen"
+last_updated: "2026-05-05T01:00:00.000Z"
+last_activity: 2026-05-05
 progress:
   total_phases: 64
   completed_phases: 49
-  total_plans: 219
-  completed_plans: 209
+  total_plans: 221
+  completed_plans: 210
   percent: 95
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.2 (ui-audit-akute-hotfixes) — IN PROGRESS (5 of N plans done)
-Plan: 5 — Plan 05 COMPLETE (2026-05-03)
-Last activity: 2026-05-03
+Phase: 08.19.5.4 (dark-mode-reste-raus-modal-neu) — IN PROGRESS (1 of 2 plans done)
+Plan: 1 — Plan 01 COMPLETE (2026-05-05)
+Last activity: 2026-05-05
+
+**Phase 08.19.5.4 Plan 01 abgeschlossen:** Wave 1 Token-Migration — 10 App-Templates (coach_dashboard, coach_firma, coach_methodik, team, register, changelog, waitlist_admin, kpi_dashboard, dashboard, logs_page) auf nerve.css Design-Tokens migriert. .badge-gray bereinigt. landing.html nach templates/marketing/ verschoben. render_template-Pfade in dashboard.py aktualisiert. 3 Commits: b0b7a77, 4c40ff9, 668f1f8. Decisions: Semantisches Token-Mapping (#0c0c18 body->--page-bg, card->--glass-bg), Chart.js direkte Hex-Farbe (#00D4AA), register.html nerve.css-Link ergaenzt.
 
 **Phase 08.19.5.2 Plan 05 abgeschlossen:** PiP Re-Launch-Flow + Nav-Label-Fix — Nav-Label "Profil"→"Profile" (base.html:56), localStorage nerve_pip_was_active Flag im pagehide-Handler, Re-Launch-Banner vor </body>, removeItem in _stopMic(). MEDIUM-3 Cross-AI: PiP State-Loss v1 akzeptiert (SPEC Fallback-Acceptance, D-12). 2 Commits: fca5360, 7028259.
 
