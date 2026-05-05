@@ -372,13 +372,7 @@ def _calculate_roi(user, logs, org):
     """Schätzt ROI basierend auf echten Gesprächsdaten."""
     if not logs or len(logs) < 5:
         return None
-    DEAL_VALUES = {
-        'SaaS': 5000, 'Versicherung': 2000, 'Consulting': 8000,
-        'Recruiting': 6000, 'Immobilien': 10000, 'Agentur': 4000,
-        'Industrie': 7000, 'IT-Dienstleistung': 4000, 'Sonstiges': 4000,
-    }
-    branche  = 'Sonstiges'
-    avg_deal = DEAL_VALUES.get(branche, 4000)
+    avg_deal = 4000  # TODO: derive from org.branche or user profile
     total_einwaende = sum(l.einwaende_gesamt or 0 for l in logs)
     behandelt       = sum(l.einwaende_behandelt or 0 for l in logs)
     if total_einwaende == 0:
@@ -397,7 +391,7 @@ def _calculate_roi(user, logs, org):
         'geschaetzter_mehrwert':   geschaetzter_mehrwert,
         'plan_kosten':             plan_kosten,
         'roi_faktor':              roi_faktor,
-        'branche':                 branche,
+        'branche':                 'Sonstiges',
         'stark':                   roi_faktor >= 10,
     }
 
