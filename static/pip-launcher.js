@@ -39,6 +39,9 @@
     openerItems: [],
     selectedSkriptId: null,
     selectedOpenerId: null,
+    selectedErlaubnisId: null,  // Andre-Decision: 1 Auswahl pro Reiter, eigene Variable
+    selectedPitchId: null,      // Andre-Decision: 1 Auswahl pro Reiter, eigene Variable
+    activeTab: null,            // D-06: 'opener' | 'erlaubnis' | 'pitch' | 'skript'; null → Default 'opener'
     socket: null,
     micStream: null,
     audioCtx: null,
@@ -767,6 +770,10 @@
         });
     };
   }
+
+  // ── Tab-Switch: Step 5 ────────────────────────────────────────────────────
+  function switchTab5(tab) { state.activeTab = tab; renderStep5(); }
+  window.switchTab5 = switchTab5;
 
   // ── Step 5: Skript & Opener Selection ─────────────────────────────────────
   function renderStep5() {
