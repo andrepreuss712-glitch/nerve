@@ -549,10 +549,11 @@
         'Content-Type': 'application/json',
         'X-CSRFToken': getCsrfToken()
       },
-      body: JSON.stringify({
-        opener_id: state.selectedOpenerId,
-        briefing: state.precallBriefing || {}
-      }),
+      body: JSON.stringify(
+        state.mode === 'meeting'
+          ? { skript_id: state.selectedSkriptId,  call_mode: state.mode, briefing: state.precallBriefing || {} }
+          : { opener_id: state.selectedOpenerId,  call_mode: state.mode || 'cold_call', briefing: state.precallBriefing || {} }
+      ),
       signal: state._personalizeAbortController.signal
     })
       .then(function (r) {
@@ -594,10 +595,15 @@
   function renderStep4c() {
     var c = content();
     if (!c) return;
-    var opener = state.openerItems && state.openerItems.find(function (o) {
-      return o.id === state.selectedOpenerId;
-    });
-    var originalText = opener ? (opener.inhalt || '') : '';
+    // Modus-abhängige Quelle: Meeting → state.skripte; Cold-Call → state.openerItems
+    var originalText = '';
+    if (state.mode === 'meeting') {
+      var skript4c = (state.skripte || []).find(function (s) { return s.id === state.selectedSkriptId; });
+      originalText = skript4c ? (skript4c.inhalt || '') : '';
+    } else {
+      var opener4c = (state.openerItems || []).find(function (o) { return o.id === state.selectedOpenerId; });
+      originalText = opener4c ? (opener4c.inhalt || '') : '';
+    }
     var personalizedText = state._personalizedSkriptText || '';
 
     c.innerHTML = [
@@ -649,11 +655,16 @@
         'Content-Type': 'application/json',
         'X-CSRFToken': getCsrfToken()
       },
-      body: JSON.stringify({
-        opener_id: state.selectedOpenerId,
-        personalized_text: state._personalizedSkriptText || '',
-        firmenname: (state.precallBriefing && state.precallBriefing.firmenname) || ''
-      })
+      body: JSON.stringify(Object.assign(
+        state.mode === 'meeting'
+          ? { skript_id: state.selectedSkriptId }
+          : { opener_id: state.selectedOpenerId },
+        {
+          call_mode: state.mode || 'cold_call',
+          personalized_text: state._personalizedSkriptText || '',
+          firmenname: (state.precallBriefing && state.precallBriefing.firmenname) || ''
+        }
+      ))
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -667,11 +678,12 @@
           if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
           return;
         }
-        // Bug-E fix: save personalized text as the active opener for this call BEFORE clearing it.
-        // state.selectedOpenerId still points to the original item; the new item_id is in data.item_id.
-        // Using _editedOpenerText (highest priority in startCall opener resolution) ensures the
-        // personalized version is used by the live call without needing to refresh openerItems.
-        state._editedOpenerText = state._personalizedSkriptText || "";
+        // Modus-abhängig: Meeting → _editedSkriptText; Cold-Call → _editedOpenerText
+        if (state.mode === 'meeting') {
+          state._editedSkriptText  = state._personalizedSkriptText || "";
+        } else {
+          state._editedOpenerText  = state._personalizedSkriptText || "";
+        }
         state._personalizedSkriptText = null;
         state._personalizeAbortController = null;
         _collectEditedTexts();
@@ -741,12 +753,17 @@
           'Content-Type': 'application/json',
           'X-CSRFToken': getCsrfToken()
         },
-        body: JSON.stringify({
-          opener_id: state.selectedOpenerId,
-          personalized_text: state._personalizedSkriptText || '',
-          firmenname: (state.precallBriefing && state.precallBriefing.firmenname) || '',
-          delete_ids: deleteIds
-        })
+        body: JSON.stringify(Object.assign(
+          state.mode === 'meeting'
+            ? { skript_id: state.selectedSkriptId }
+            : { opener_id: state.selectedOpenerId },
+          {
+            call_mode: state.mode || 'cold_call',
+            personalized_text: state._personalizedSkriptText || '',
+            firmenname: (state.precallBriefing && state.precallBriefing.firmenname) || '',
+            delete_ids: deleteIds
+          }
+        ))
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -755,6 +772,12 @@
             if (capErrEl) { capErrEl.textContent = sanitizeErrorMsg(data.error); capErrEl.style.display = 'block'; }
             if (delBtn) { delBtn.disabled = false; delBtn.textContent = 'Auswahl löschen + Personalisieren →'; }
             return;
+          }
+          // Modus-abhängig: Meeting → _editedSkriptText; Cold-Call → _editedOpenerText
+          if (state.mode === 'meeting') {
+            state._editedSkriptText = state._personalizedSkriptText || "";
+          } else {
+            state._editedOpenerText = state._personalizedSkriptText || "";
           }
           state._personalizedSkriptText = null;
           _collectEditedTexts();
