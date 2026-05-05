@@ -3076,16 +3076,31 @@
 
   // Click-Interceptor: Event-Delegation auf document (DOM-Timing-sicher)
   // Selector D-01 (SPEC gesperrt): '.n-nav-item, a.popup-item-logout'
-  // Bedingung (SPEC gesperrt): state.micStarted === true
+  // Bedingung: state.micStarted truthy (konsistent mit beforeunload-Handler)
+  // capture:true: Listener faeuert in Capture-Phase -- vor element-level onclick-Handlern.
+  // Manueller Fallback: Lucide-SVG-Kind-Elemente koennen closest() zum HTML-Ancestor
+  // in seltenen Browser-Faellen nicht traversieren -- parentElement-Loop als Absicherung.
   document.addEventListener('click', function (e) {
-    if (state.micStarted !== true) return; // Kein aktiver Call — normale Navigation
+    if (!state.micStarted) return; // Kein aktiver Call -- normale Navigation
     var el = e.target.closest('.n-nav-item, a.popup-item-logout');
+    // Fallback: manuelles Traversieren fuer SVG-zu-HTML-Grenzfaelle (Lucide-Icons)
+    if (!el) {
+      var node = e.target;
+      while (node && node !== document) {
+        if (node.matches && node.matches('.n-nav-item, a.popup-item-logout')) {
+          el = node;
+          break;
+        }
+        node = node.parentElement;
+      }
+    }
     if (!el) return;
     var href = el.getAttribute('href');
     if (!href || href === '#' || href.indexOf('javascript:') === 0) return; // Programmatic nav, kein Page-Load
     e.preventDefault();
+    e.stopPropagation();
     _nerveNavOpenModal(href);
-  });
+  }, true); // capture:true -- sichert Prioritaet gegenueber element-level Handlern
 
   window.addEventListener('beforeunload', function(e) {
     if (state.micStarted) {
