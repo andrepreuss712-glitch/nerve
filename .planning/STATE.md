@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.4 Plan 01 COMPLETE — Wave 1 Token-Migration abgeschlossen"
-last_updated: "2026-05-05T01:00:00.000Z"
+stopped_at: "08.19.5.4 Plan 02 COMPLETE — Wave 2 Modal-Neubau abgeschlossen (Phase 08.19.5.4 vollstaendig)"
+last_updated: "2026-05-05T01:20:00.000Z"
 last_activity: 2026-05-05
 progress:
   total_phases: 64
-  completed_phases: 49
+  completed_phases: 50
   total_plans: 221
-  completed_plans: 210
+  completed_plans: 211
   percent: 95
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.4 (dark-mode-reste-raus-modal-neu) — IN PROGRESS (1 of 2 plans done)
-Plan: 1 — Plan 01 COMPLETE (2026-05-05)
+Phase: 08.19.5.4 (dark-mode-reste-raus-modal-neu) — COMPLETE (2 of 2 plans done)
+Plan: 2 — Plan 02 COMPLETE (2026-05-05)
 Last activity: 2026-05-05
+
+**Phase 08.19.5.4 Plan 02 abgeschlossen:** Wave 2 Modal-Neubau — .n-modal-overlay/.n-modal-card/.n-modal-actions CSS-Klassen in nerve.css (Design-Tokens, keine hardcoded Farben). nerveNavModal HTML in base.html vor </body>. window._nerveNavConfirm() als window-Property (global aus onclick erreichbar). Click-Interceptor via Event-Delegation auf document (.closest('.n-nav-item, a.popup-item-logout')). ESC + Overlay-Klick schliessen Modal ohne Navigation. beforeunload unveraendert. 2 Commits: 4cbb385, acea0d3. Decisions: n-btn-ghost/n-btn-danger pre-existing (kein Fallback), Event-Delegation statt querySelectorAll (DOM-Timing-sicher).
 
 **Phase 08.19.5.4 Plan 01 abgeschlossen:** Wave 1 Token-Migration — 10 App-Templates (coach_dashboard, coach_firma, coach_methodik, team, register, changelog, waitlist_admin, kpi_dashboard, dashboard, logs_page) auf nerve.css Design-Tokens migriert. .badge-gray bereinigt. landing.html nach templates/marketing/ verschoben. render_template-Pfade in dashboard.py aktualisiert. 3 Commits: b0b7a77, 4c40ff9, 668f1f8. Decisions: Semantisches Token-Mapping (#0c0c18 body->--page-bg, card->--glass-bg), Chart.js direkte Hex-Farbe (#00D4AA), register.html nerve.css-Link ergaenzt.
 
