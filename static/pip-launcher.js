@@ -775,10 +775,13 @@
   function switchTab5(tab) { state.activeTab = tab; renderStep5(); }
   window.switchTab5 = switchTab5;
 
-  // ── Step 5: Skript & Opener Selection ─────────────────────────────────────
+  // ── Step 5: Gesprächsvorbereitung (4-Tab-UI) ──────────────────────────────
   function renderStep5() {
     var c = content();
     if (!c) return;
+
+    // D-06: Tab-Guard — Default-Tab ist 'opener'
+    if (!state.activeTab) state.activeTab = 'opener';
 
     // Phase 08.5 D-10: Anrede-Vorauswahl — last call > profile default > 'Sie'
     var savedAnrede5 = state.lastSessionAnrede
@@ -789,7 +792,7 @@
     if (!state.precallFormData.anrede) state.precallFormData.anrede = savedAnrede5;
 
     // Phase 08.5 D-10 edge-case: single-script → auto-select but keep Step 5 visible (mandatory Anrede)
-    if (state.skripte.length === 1 && !state.selectedSkriptId) {
+    if ((state.skripte || []).length === 1 && !state.selectedSkriptId) {
       state.selectedSkriptId = state.skripte[0].id;
     }
 
@@ -798,117 +801,120 @@
       return '<option value="' + p.id + '"' + sel + '>' + escHtml(p.name) + '</option>';
     }).join('');
 
-    // Skript-Dropdown
-    var skriptOptions = '<option value="">-- Kein Skript --</option>' + state.skripte.map(function (s) {
-      var sel = s.id === state.selectedSkriptId ? ' selected' : '';
-      return '<option value="' + s.id + '"' + sel + '>' + escHtml(s.name) + '</option>';
-    }).join('');
+    // ── Tab-Nav (D-02: inline onclick) ──
+    var tabNavHtml = '<nav class="fcd-tabs" style="margin-bottom:12px">'
+      + '<button class="fcd-tab' + (state.activeTab === 'opener'    ? ' active' : '') + '" onclick="window.switchTab5(\'opener\')">Opener</button>'
+      + '<button class="fcd-tab' + (state.activeTab === 'erlaubnis' ? ' active' : '') + '" onclick="window.switchTab5(\'erlaubnis\')">Erlaubnisfrage</button>'
+      + '<button class="fcd-tab' + (state.activeTab === 'pitch'     ? ' active' : '') + '" onclick="window.switchTab5(\'pitch\')">Pitch</button>'
+      + '<button class="fcd-tab' + (state.activeTab === 'skript'    ? ' active' : '') + '" onclick="window.switchTab5(\'skript\')">Skript</button>'
+      + '</nav>';
 
-    // Phase 08.20.3 Finding A1: optgroup grouping to prevent dropdown clutter
-    var currentFirma = (state.precallBriefing && state.precallBriefing.firmenname) ? state.precallBriefing.firmenname.trim() : '';
+    // ── Modus-Logik für modus-abhängigen Personalisieren-Button ──
+    // state.mode === 'meeting'   → Button nur im Skript-Tab
+    // state.mode === 'cold_call' → Button nur im Opener-Tab (oder kein mode)
+    var isMeeting = (state.mode === 'meeting');
 
-    // Partition openerItems into 3 groups
-    var opGroupCurrent = [];   // is_personalized=True AND briefing_source_firma == currentFirma
-    var opGroupStandard = [];  // is_personalized=False (all original/standard items)
-    var opGroupOther = [];     // is_personalized=True AND briefing_source_firma != currentFirma
+    // ── Tab-Content ──
+    var tabContentHtml;
 
-    (state.openerItems || []).forEach(function (o) {
-      if (o.is_personalized) {
-        if (currentFirma && (o.briefing_source_firma || '').trim() === currentFirma) {
-          opGroupCurrent.push(o);
-        } else {
-          opGroupOther.push(o);
-        }
+    if (state.activeTab === 'opener') {
+      var openerItems = (state.openerItems || []).filter(function (o) { return o.type === 'opener'; });
+      if (openerItems.length === 0) {
+        tabContentHtml = '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Opener hinterlegt — <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil bearbeiten</a></div>';
       } else {
-        opGroupStandard.push(o);
+        var opSel5 = openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
+        var opOpts = openerItems.map(function (o) {
+          return '<option value="' + o.id + '"' + (o.id === state.selectedOpenerId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
+        }).join('');
+        var opPrev = opSel5 ? escHtml(opSel5.inhalt || '') : '';
+        tabContentHtml =
+          '<select class="launcher-select" id="lnr-opener-select">' + opOpts + '</select>'
+          + '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (opPrev ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (opPrev || 'Opener auswählen für Vorschau') + '</div>'
+          + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>'
+          + '<button type="button" class="launcher-inline-edit-btn" id="lnr-opener-edit-btn">Bearbeiten</button>'
+          // Personalisieren-Button: nur im Opener-Tab wenn Cold-Call-Modus (oder kein Modus)
+          + (!isMeeting ? '<button class="launcher-btn-ghost" id="lnr-step5-personalize">✨ Personalisieren + Call ▶</button>' : '');
       }
-    });
 
-    // Sort opGroupOther by id desc (newer first)
-    opGroupOther.sort(function (a, b) { return b.id - a.id; });
-
-    // Auto-select when exactly 1 item matches current firma
-    if (opGroupCurrent.length === 1 && !state.selectedOpenerId) {
-      state.selectedOpenerId = opGroupCurrent[0].id;
-    }
-
-    function _buildOptions(arr) {
-      return arr.map(function (o) {
-        var sel = (o.id === state.selectedOpenerId) ? ' selected' : '';
-        return '<option value="' + o.id + '"' + sel + '>' + escHtml(o.name) + '</option>';
-      }).join('');
-    }
-
-    // Build the select HTML with optgroups
-    var openerSelectHtml;
-    if (state.openerItems && state.openerItems.length > 0) {
-      var selectInner = '<option value="">-- Kein Opener --</option>';
-      if (currentFirma && opGroupCurrent.length > 0) {
-        selectInner += '<optgroup label="✨ Personalisiert für ' + escHtml(currentFirma) + '">';
-        selectInner += _buildOptions(opGroupCurrent);
-        selectInner += '</optgroup>';
+    } else if (state.activeTab === 'erlaubnis') {
+      var erlaubnisItems = (state.openerItems || []).filter(function (o) { return o.type === 'erlaubnis'; });
+      if (erlaubnisItems.length === 0) {
+        tabContentHtml = '<div style="color:var(--page-text-muted);font-size:13px">Noch keine Erlaubnisfrage hinterlegt — <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil bearbeiten</a></div>';
+      } else {
+        var erlSel5 = erlaubnisItems.find(function (o) { return o.id === state.selectedErlaubnisId; });
+        var erlOpts = erlaubnisItems.map(function (o) {
+          return '<option value="' + o.id + '"' + (o.id === state.selectedErlaubnisId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
+        }).join('');
+        var erlPrev = erlSel5 ? escHtml(erlSel5.inhalt || '') : '';
+        tabContentHtml =
+          '<select class="launcher-select" id="lnr-opener-select">' + erlOpts + '</select>'
+          + '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (erlPrev ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (erlPrev || 'Erlaubnisfrage auswählen für Vorschau') + '</div>'
+          + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>'
+          + '<button type="button" class="launcher-inline-edit-btn" id="lnr-opener-edit-btn">Bearbeiten</button>';
+          // Kein Personalisieren-Button in Erlaubnisfrage-Tab
       }
-      if (opGroupStandard.length > 0) {
-        selectInner += '<optgroup label="📋 Standard-Opener">';
-        selectInner += _buildOptions(opGroupStandard);
-        selectInner += '</optgroup>';
+
+    } else if (state.activeTab === 'pitch') {
+      var pitchItems = (state.openerItems || []).filter(function (o) { return o.type === 'pitch'; });
+      if (pitchItems.length === 0) {
+        tabContentHtml = '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Pitch hinterlegt — <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil bearbeiten</a></div>';
+      } else {
+        var pitchSel5 = pitchItems.find(function (o) { return o.id === state.selectedPitchId; });
+        var pitchOpts = pitchItems.map(function (o) {
+          return '<option value="' + o.id + '"' + (o.id === state.selectedPitchId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
+        }).join('');
+        var pitchPrev = pitchSel5 ? escHtml(pitchSel5.inhalt || '') : '';
+        tabContentHtml =
+          '<select class="launcher-select" id="lnr-opener-select">' + pitchOpts + '</select>'
+          + '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (pitchPrev ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (pitchPrev || 'Pitch auswählen für Vorschau') + '</div>'
+          + '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>'
+          + '<button type="button" class="launcher-inline-edit-btn" id="lnr-opener-edit-btn">Bearbeiten</button>';
+          // Kein Personalisieren-Button in Pitch-Tab
       }
-      if (opGroupOther.length > 0) {
-        selectInner += '<optgroup label="📦 Andere personalisierte (älter)">';
-        selectInner += _buildOptions(opGroupOther);
-        selectInner += '</optgroup>';
+
+    } else {  // 'skript' (default fallback)
+      if ((state.skripte || []).length === 0) {
+        tabContentHtml = '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Skript hinterlegt — <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil bearbeiten</a></div>';
+      } else {
+        var skSel5 = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
+        var skOpts = state.skripte.map(function (s) {
+          return '<option value="' + s.id + '"' + (s.id === state.selectedSkriptId ? ' selected' : '') + '>' + escHtml(s.name) + '</option>';
+        }).join('');
+        var skPrev = skSel5 ? escHtml(skSel5.inhalt || '') : '';
+        tabContentHtml =
+          '<select class="launcher-select" id="lnr-skript-select">' + skOpts + '</select>'
+          + '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap' + (skPrev ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (skPrev || 'Skript auswählen für Vorschau') + '</div>'
+          + '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4"></textarea>'
+          + '<button type="button" class="launcher-inline-edit-btn" id="lnr-skript-edit-btn">Bearbeiten</button>'
+          // Personalisieren-Button: nur im Skript-Tab wenn Meeting-Modus (NEU v3)
+          + (isMeeting ? '<button class="launcher-btn-ghost" id="lnr-step5-personalize">✨ Personalisieren + Call ▶</button>' : '');
       }
-      openerSelectHtml = '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Opener</label><select class="launcher-select" id="lnr-opener-select">' + selectInner + '</select>';
-    } else {
-      openerSelectHtml = '';
     }
 
-    // Vorschauen
-    var skriptPreview = '';
-    if (state.selectedSkriptId) {
-      var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
-      if (sk) skriptPreview = escHtml(sk.inhalt);
-    }
-    var openerPreview = '';
-    if (state.selectedOpenerId) {
-      var op = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
-      if (op) openerPreview = escHtml(op.inhalt);
-    }
+    // ── innerHTML zusammensetzen ──
     c.innerHTML = [
       '<div class="launcher-step">',
-      '<div class="nav-live-title">Skript & Opener wählen</div>',
+      '<div class="nav-live-title">Gesprächsvorbereitung</div>',
 
-      // Profil
+      // Profil-Picker
       state.profiles.length > 0
         ? '<label style="font-size:11px;color:var(--page-text-muted);margin-bottom:2px;display:block">Profil</label><select class="launcher-select" id="lnr-profile-select">' + profileOptions + '</select>'
-        : '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Profil angelegt. <a href="/profiles" style="color:#00D4AA">Profil erstellen</a></div>',
+        : '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Profil angelegt. <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil erstellen</a></div>',
 
-      // Skript
-      state.skripte.length > 0
-        ? '<label style="font-size:11px;color:var(--page-text-muted);margin-top:8px;margin-bottom:2px;display:block">Skript</label><select class="launcher-select" id="lnr-skript-select">' + skriptOptions + '</select>'
-        : '',
-      '<div class="launcher-opener-preview" id="lnr-skript-preview" style="white-space:pre-wrap;max-height:80px;overflow-y:auto' + (skriptPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">' + (skriptPreview || (state.skripte.length > 0 ? 'Skript auswählen für Vorschau' : '')) + '</div>',
-      '<textarea class="launcher-briefing" id="lnr-skript-textarea" style="display:none;margin-top:4px" rows="4"></textarea>',
-      state.skripte.length > 0
-        ? '<button type="button" class="launcher-inline-edit-btn" id="lnr-skript-edit-btn">Bearbeiten</button>'
-        : '',
+      // Tab-Nav
+      tabNavHtml,
 
-      // Opener (Phase 08.20.3: optgroup select via openerSelectHtml)
-      openerSelectHtml,
-      '<div class="launcher-opener-preview" id="lnr-opener-preview" style="white-space:pre-wrap' + (openerPreview ? '' : ';color:var(--page-text-muted);font-style:italic') + '">'
-        + (openerPreview || (state.openerItems.length > 0 ? 'Opener auswählen für Vorschau' : 'Kein Opener hinterlegt')) + '</div>',
-      '<textarea class="launcher-briefing" id="lnr-opener-textarea" style="display:none;margin-top:4px" rows="3"></textarea>',
-      state.openerItems.length > 0
-        ? '<button type="button" class="launcher-inline-edit-btn" id="lnr-opener-edit-btn">Bearbeiten</button>'
-        : '',
+      // Tab-Content
+      tabContentHtml,
 
-      // Phase 08.5 D-10: Anrede-Pflichtfeld (vor launcher-actions)
+      // ── Anrede (immer sichtbar, kein Conditional auf precallBriefing) ── R5
       '<div class="launcher-form-label" style="margin-top:12px;font-size:13px;color:var(--page-text-muted)">Anrede im Gespräch *</div>',
       '<div class="launcher-anrede-row" id="lnr-anrede-row5">',
       '<button type="button" class="launcher-anrede-btn' + (savedAnrede5 === 'Du' ? ' active' : '') + '" data-val="Du" onclick="window.NerveLauncher._setAnrede(\'Du\')">Du</button>',
       '<button type="button" class="launcher-anrede-btn' + (savedAnrede5 === 'Sie' ? ' active' : '') + '" data-val="Sie" onclick="window.NerveLauncher._setAnrede(\'Sie\')">Sie</button>',
       '</div>',
-      // Issue 3: Vorwissen-Picker auch in Step 5 (fallback wenn PreCall übersprungen)
+
+      // ── Vorwissen-Picker (immer sichtbar, kein Conditional auf precallBriefing) ── R5
       '<div class="launcher-form-label" style="margin-top:12px;font-size:13px;color:var(--page-text-muted)">Lead-Vorwissen (optional)</div>',
       '<div class="launcher-anrede-row" id="lnr-vorwissen-row5" style="gap:8px;flex-wrap:wrap">',
       '<button type="button" class="launcher-anrede-btn' + (state.vorwissenLevel === 'niedrig' ? ' active' : '') + '" data-val="niedrig" onclick="window.NerveLauncher._setVorwissen(\'niedrig\')">Wenig Ahnung</button>',
@@ -916,102 +922,126 @@
       '<button type="button" class="launcher-anrede-btn' + (state.vorwissenLevel === 'hoch'    ? ' active' : '') + '" data-val="hoch"    onclick="window.NerveLauncher._setVorwissen(\'hoch\')">Kennt uns gut</button>',
       '<button type="button" class="launcher-anrede-btn' + (!state.vorwissenLevel              ? ' active' : '') + '" data-val="null"    onclick="window.NerveLauncher._setVorwissen(null)">Weiß nicht</button>',
       '</div>',
+
+      // ── Navigation ──
       '<div class="launcher-actions">',
       '<button class="launcher-btn-ghost" id="lnr-step5-back">&#8592; Zurück</button>',
       '<button class="launcher-btn-ghost" id="lnr-step5-skip">Überspringen</button>',
       '<button class="launcher-btn-primary" id="lnr-step5-start">Call starten &#9654;</button>',
-      // Phase 08.20.3: Modus-C second button (only when openers exist)
-      (state.openerItems && state.openerItems.length > 0)
-        ? '<button class="launcher-btn-ghost" id="lnr-step5-personalize">✨ Personalisieren + Call ▶</button>'
-        : '',
       '</div>',
       '</div>'
     ].join('');
 
-    // Profile change: reload Skripte + Opener
-    var profileSel = document.getElementById('lnr-profile-select');
-    if (profileSel) {
-      profileSel.onchange = function () {
-        var pid = parseInt(profileSel.value);
+    // ── Event Wiring nach innerHTML ──
+
+    // Profile-Change (reset activeTab + alle 4 Selection-Variablen beim Profil-Wechsel)
+    var profileSel5 = document.getElementById('lnr-profile-select');
+    if (profileSel5) {
+      profileSel5.onchange = function () {
+        var pid = parseInt(profileSel5.value);
         if (!pid) return;
         fetch('/api/launcher/profile/' + pid)
           .then(function (r) { return r.json(); })
           .then(function (data) {
-            state.activeProfileId = data.id;
-            state.profileDaten = data.daten || {};
-            state.skripte = data.skripte || [];
-            state.openerItems = data.opener || [];
-            state.selectedSkriptId = null;
-            state.selectedOpenerId = null;
+            state.activeProfileId     = data.id;
+            state.profileDaten        = data.daten || {};
+            state.skripte             = data.skripte || [];
+            state.openerItems         = data.opener || [];
+            state.selectedSkriptId    = null;
+            state.selectedOpenerId    = null;
+            state.selectedErlaubnisId = null;
+            state.selectedPitchId     = null;
+            state.activeTab           = null;  // reset to opener-default on profile change
             renderStep5();
           })
           .catch(function () {});
       };
     }
 
-    // Skript change: update preview
-    var skriptSel = document.getElementById('lnr-skript-select');
-    if (skriptSel) {
-      skriptSel.onchange = function () {
-        state.selectedSkriptId = parseInt(skriptSel.value) || null;
-        var preview = document.getElementById('lnr-skript-preview');
-        if (preview) {
-          var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
-          preview.textContent = sk ? sk.inhalt : 'Skript auswählen für Vorschau';
-          preview.style.fontStyle = sk ? 'normal' : 'italic';
-          preview.style.color = sk ? '' : 'var(--page-text-muted)';
-        }
-      };
-    }
-
-    // Opener change: update preview
-    var openerSel = document.getElementById('lnr-opener-select');
-    if (openerSel) {
-      openerSel.onchange = function () {
-        state.selectedOpenerId = parseInt(openerSel.value) || null;
+    // Opener/Erlaubnisfrage/Pitch-Select — Tab-aware: schreibt in tab-spezifische Variable
+    var openerSel5 = document.getElementById('lnr-opener-select');
+    if (openerSel5) {
+      openerSel5.onchange = function () {
+        var id = parseInt(openerSel5.value) || null;
+        if      (state.activeTab === 'opener')   state.selectedOpenerId    = id;
+        else if (state.activeTab === 'erlaubnis') state.selectedErlaubnisId = id;
+        else if (state.activeTab === 'pitch')     state.selectedPitchId     = id;
         var preview = document.getElementById('lnr-opener-preview');
         if (preview) {
-          var op = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
-          preview.textContent = op ? op.inhalt : 'Opener auswählen für Vorschau';
-          preview.style.fontStyle = op ? 'normal' : 'italic';
-          preview.style.color = op ? '' : 'var(--page-text-muted)';
+          var tab   = state.activeTab;
+          var items = (state.openerItems || []).filter(function (o) { return o.type === tab; });
+          var selId = tab === 'erlaubnis' ? state.selectedErlaubnisId
+                    : tab === 'pitch'     ? state.selectedPitchId
+                    :                       state.selectedOpenerId;
+          var op5 = items.find(function (o) { return o.id === selId; });
+          preview.textContent    = op5 ? op5.inhalt : (tab + ' auswählen für Vorschau');
+          preview.style.fontStyle = op5 ? 'normal' : 'italic';
+          preview.style.color     = op5 ? '' : 'var(--page-text-muted)';
         }
       };
     }
 
-    // Inline edit: Skript
-    _wireInlineEdit('lnr-skript-edit-btn', 'lnr-skript-preview', 'lnr-skript-textarea', 'skript');
-    // Inline edit: Opener
-    _wireInlineEdit('lnr-opener-edit-btn', 'lnr-opener-preview', 'lnr-opener-textarea', 'opener');
+    // Skript-Select (nur Skript-Tab)
+    var skriptSel5 = document.getElementById('lnr-skript-select');
+    if (skriptSel5) {
+      skriptSel5.onchange = function () {
+        state.selectedSkriptId = parseInt(skriptSel5.value) || null;
+        var preview = document.getElementById('lnr-skript-preview');
+        if (preview) {
+          var sk5 = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
+          preview.textContent    = sk5 ? sk5.inhalt : 'Skript auswählen für Vorschau';
+          preview.style.fontStyle = sk5 ? 'normal' : 'italic';
+          preview.style.color     = sk5 ? '' : 'var(--page-text-muted)';
+        }
+      };
+    }
 
-    // Navigation
-    document.getElementById('lnr-step5-back').onclick = function () {
-      if (state.precallBriefing) {
-        state.step = 4;
-      } else if (state.precallVerfuegbar) {
-        state.step = 2;
-      } else {
-        state.step = 1;
-      }
-      renderStep();
-    };
-    document.getElementById('lnr-step5-skip').onclick = function () {
-      _collectEditedTexts();
-      startCall(false);
-    };
-    document.getElementById('lnr-step5-start').onclick = function () {
-      var s = document.getElementById('lnr-profile-select');
-      if (s && s.value) state.activeProfileId = parseInt(s.value);
-      _collectEditedTexts();
-      startCall(true);
-    };
-    // Phase 08.20.3: Modus-C personalize button
-    var personalizeBtn = document.getElementById('lnr-step5-personalize');
-    if (personalizeBtn) {
-      personalizeBtn.onclick = function () {
-        var opSel = document.getElementById('lnr-opener-select');
-        if (opSel && opSel.value) {
-          state.selectedOpenerId = parseInt(opSel.value, 10) || null;
+    // Inline-Edit Wiring (je aktiver Tab)
+    if (state.activeTab === 'skript') {
+      _wireInlineEdit('lnr-skript-edit-btn', 'lnr-skript-preview', 'lnr-skript-textarea', 'skript');
+    } else {
+      _wireInlineEdit('lnr-opener-edit-btn', 'lnr-opener-preview', 'lnr-opener-textarea', 'opener');
+    }
+
+    // Navigation: Back
+    var backBtn5 = document.getElementById('lnr-step5-back');
+    if (backBtn5) {
+      backBtn5.onclick = function () {
+        if (state.precallBriefing)        { state.step = 4; }
+        else if (state.precallVerfuegbar) { state.step = 2; }
+        else                              { state.step = 1; }
+        renderStep();
+      };
+    }
+
+    // Navigation: Skip
+    var skipBtn5 = document.getElementById('lnr-step5-skip');
+    if (skipBtn5) {
+      skipBtn5.onclick = function () { _collectEditedTexts(); startCall(false); };
+    }
+
+    // Navigation: Start
+    var startBtn5 = document.getElementById('lnr-step5-start');
+    if (startBtn5) {
+      startBtn5.onclick = function () {
+        var s5 = document.getElementById('lnr-profile-select');
+        if (s5 && s5.value) state.activeProfileId = parseInt(s5.value);
+        _collectEditedTexts();
+        startCall(true);
+      };
+    }
+
+    // Personalisieren-Button (existiert nur wenn modus-passendem Tab aktiv)
+    var personalizeBtn5 = document.getElementById('lnr-step5-personalize');
+    if (personalizeBtn5) {
+      personalizeBtn5.onclick = function () {
+        // Modus-abhängig: Meeting → selectedSkriptId; Cold-Call → selectedOpenerId
+        if (state.mode === 'meeting') {
+          var skSel = document.getElementById('lnr-skript-select');
+          if (skSel && skSel.value) state.selectedSkriptId = parseInt(skSel.value, 10) || null;
+        } else {
+          var opSel = document.getElementById('lnr-opener-select');
+          if (opSel && opSel.value) state.selectedOpenerId = parseInt(opSel.value, 10) || null;
         }
         state.briefingModus = 'C';
         state.step = '4b';
