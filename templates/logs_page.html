@@ -2,17 +2,19 @@
 {% block title %} – Logs{% endblock %}
 
 {% block extra_style %}
-.empty-state{text-align:center;padding:60px 20px;color:#6B7280}
+<!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
+.empty-state{text-align:center;padding:60px 20px;color:var(--page-text-secondary)}
 .empty-icon{font-size:40px;margin-bottom:12px}
 .empty-text{font-size:14px}
 .log-stats{display:flex;gap:16px;align-items:center}
-.log-stat-chip{font-size:11px;color:#6B7280;display:flex;align-items:center;gap:4px}
-.log-stat-chip strong{color:#1a1a1a}
-.log-profil-tag{font-size:11px;background:#F0F2F5;border:1.5px solid #E2E8F0;
-  color:#374151;padding:1px 7px;border-radius:20px;white-space:nowrap}
-.tbl tr:nth-child(odd) td { background: #FFFFFF; }
+.log-stat-chip{font-size:11px;color:var(--page-text-secondary);display:flex;align-items:center;gap:4px}
+.log-stat-chip strong{color:var(--page-text-color)}
+.log-profil-tag{font-size:11px;background:var(--page-bg);border:1.5px solid var(--glass-border);
+  color:var(--page-text-color);padding:1px 7px;border-radius:20px;white-space:nowrap}
+.tbl tr:nth-child(odd) td { background: var(--glass-bg); }
 .tbl tr:nth-child(even) td { background: #F8FAFC; }
-.tbl thead th { background: #F0F2F5; color: #1a1a1a; border-bottom: 1px solid #E2E8F0; }
+.tbl thead th { background: var(--page-bg); color: var(--page-text-color); border-bottom: 1px solid var(--glass-border); }
+.log-meta { color: var(--page-text-secondary); font-variant-numeric: tabular-nums; }
 {% endblock %}
 
 {% block content %}
@@ -51,8 +53,8 @@
             <span style="color:#9CA3AF">–</span>
             {% endif %}
           </td>
-          <td style="color:#6b6b80;font-variant-numeric:tabular-nums">{{ log.dauer }}</td>
-          <td style="color:#6b6b80;text-align:center">{{ log.segmente }}</td>
+          <td class="log-meta">{{ log.dauer }}</td>
+          <td class="log-meta" style="text-align:center">{{ log.segmente }}</td>
           <td>
             {% if log.einwaende > 0 %}
             <span style="color:#f0a05a;font-weight:700">{{ log.einwaende }}</span>

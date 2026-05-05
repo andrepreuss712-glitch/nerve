@@ -2,6 +2,7 @@
 {% block title %} — Dashboard{% endblock %}
 
 {% block content %}
+<!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
 <div class="db2-wrap page-wrap">
 
   <!-- Early Access Banner -->
@@ -281,8 +282,8 @@
       </div>
       <div style="font-size:14px;line-height:1.6;color:var(--page-text-primary);margin-top:12px;white-space:pre-line">{{ weekly_report.report_text }}</div>
       {% if weekly_report.suggested_card %}
-      <div style="margin-top:16px;border:1.5px solid #E8B040;border-radius:8px;padding:12px;background:rgba(232,176,64,0.08)">
-        <div style="font-size:12px;color:#E8B040;margin-bottom:6px">&#127919; Neuer Lernkarten-Vorschlag aus deinem Wochenmuster</div>
+      <div style="margin-top:16px;border:1.5px solid var(--btn-primary-bg-from);border-radius:8px;padding:12px;background:rgba(0,212,170,0.08)">
+        <div style="font-size:12px;color:var(--btn-primary-bg-from);margin-bottom:6px">&#127919; Neuer Lernkarten-Vorschlag aus deinem Wochenmuster</div>
         <div style="font-size:14px;color:var(--page-text-primary)">&ldquo;{{ weekly_report.suggested_card.text }}&rdquo;</div>
       </div>
       {% endif %}
@@ -900,7 +901,7 @@ function lkArchive(cardId) { lkSetStatus(cardId, 'archiviert'); }
   if (ctxTalk) new Chart(ctxTalk, {
     type: 'line', data: {
       labels: raw.labels,
-      datasets: [{ data: raw.redeanteil, borderColor: '#E8B040', backgroundColor: 'rgba(232,176,64,0.1)', fill: true, tension: 0.3, pointRadius: 3 }]
+      datasets: [{ data: raw.redeanteil, borderColor: '#00D4AA', backgroundColor: 'rgba(0,212,170,0.1)', fill: true, tension: 0.3, pointRadius: 3 }]
     }, options: Object.assign({}, chartOpts, { scales: { x: chartOpts.scales.x, y: Object.assign({}, chartOpts.scales.y, { min: 0, max: 100 }) } })
   });
 

@@ -2,17 +2,18 @@
 {% block title %} · Meine Methodik{% endblock %}
 
 {% block extra_style %}
+<!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
 .profile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:8px}
-.m-card{background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:12px;padding:18px 20px;
+.m-card{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:12px;padding:18px 20px;
   display:flex;flex-direction:column;gap:10px}
 .m-card-name{font-size:14px;font-weight:700}
-.m-card-branch{font-size:12px;color:#6b6b80}
+.m-card-branch{font-size:12px;color:var(--page-text-secondary)}
 .m-card-actions{display:flex;gap:8px;flex-wrap:wrap}
 
 .co-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
   display:none;align-items:center;justify-content:center}
 .co-modal-bg.open{display:flex}
-.co-modal{background:#0c0c18;border:1.5px solid #2e2e48;border-radius:14px;
+.co-modal{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:14px;
   padding:28px;width:min(500px,92vw);max-height:90vh;overflow-y:auto}
 .co-modal-title{font-size:17px;font-weight:700;margin-bottom:20px}
 .co-modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
@@ -45,7 +46,7 @@
   <div style="color:#444466;text-align:center;padding:60px">
     <div style="font-size:32px;margin-bottom:12px">📘</div>
     Keine eigenen Profile vorhanden.<br>
-    <a href="/profiles" style="color:#E8B040;text-decoration:underline;font-size:13px">Profile erstellen</a>
+    <a href="/profiles" style="color:var(--btn-primary-bg-from);text-decoration:underline;font-size:13px">Profile erstellen</a>
   </div>
   {% endif %}
 </div>
@@ -54,8 +55,8 @@
 <div class="co-modal-bg" id="uebertragenModal">
   <div class="co-modal">
     <div class="co-modal-title">→ Methodik übertragen</div>
-    <div style="font-size:13px;color:#6b6b80;margin-bottom:16px">
-      Profil: <strong id="ut-profile-name" style="color:#f0ebe0"></strong>
+    <div style="font-size:13px;color:var(--page-text-secondary);margin-bottom:16px">
+      Profil: <strong id="ut-profile-name" style="color:var(--page-text-color)"></strong>
     </div>
     <div class="form-group">
       <label class="form-label">Ziel-Organisation *</label>
@@ -96,7 +97,7 @@ async function doUebertragen(){
       body:JSON.stringify({profile_id:currentProfileId,ziel_org_id:parseInt(orgId)})
     });
     const d = await r.json();
-    if(d.ok){msg.style.color='#E8B040';msg.textContent='✓ Profil erfolgreich übertragen!';}
+    if(d.ok){msg.style.color='#00D4AA';msg.textContent='✓ Profil erfolgreich übertragen!';}
     else{msg.style.color='#e05c5c';msg.textContent=d.error||'Fehler';}
     msg.style.display='';
   }catch(e){msg.style.color='#e05c5c';msg.textContent='Netzwerkfehler';msg.style.display='';}

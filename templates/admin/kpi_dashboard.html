@@ -9,9 +9,12 @@
   <div class="card"><h3>{{ stats.feedback_planning }}</h3><div>In Planung</div></div>
   <div class="card"><h3>{{ stats.audit_week }}</h3><div>Audit-Events (7d)</div></div>
 </div>
-<style>.card{padding:18px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}.card h3{margin:0 0 6px;font-size:28px;color:#00B894}</style>
+<style>
+<!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
+.card{padding:18px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}.card h3{margin:0 0 6px;font-size:28px;color:#00B894}
+</style>
 {% if stats.feedback_new > 0 %}
-  <div style="margin-top:24px;padding:14px;border-radius:10px;background:#fff8e1;border:1px solid #f0c040">
+  <div style="margin-top:24px;padding:14px;border-radius:10px;background:rgba(0,212,170,0.08);border:1px solid var(--btn-primary-bg-from, #00D4AA)">
     <strong>{{ stats.feedback_new }}</strong> neue Feedback-Tickets warten auf dich.
     <a href="{{ url_for('feedback_admin.index_view') }}">Jetzt ansehen &rarr;</a>
   </div>

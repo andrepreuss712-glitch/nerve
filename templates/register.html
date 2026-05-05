@@ -3,25 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <title>NERVE – Registrierung</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}">
 <style>
+  <!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#0c0c18;color:#f0ebe0;font-family:'Segoe UI',sans-serif;
+  body{background:var(--page-bg);color:var(--page-text-color);font-family:'Segoe UI',sans-serif;
     display:flex;align-items:center;justify-content:center;min-height:100vh}
-  .card{background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:12px;
+  .card{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:var(--glass-radius);
     padding:36px 40px;width:100%;max-width:380px}
   .logo{font-size:22px;font-weight:800;margin-bottom:8px;text-align:center}
-  .logo span{color:#E8B040}
-  .org-badge{text-align:center;font-size:12px;color:#6b6b80;margin-bottom:24px}
+  .logo span{color:var(--btn-primary-bg-from)}
+  .org-badge{text-align:center;font-size:12px;color:var(--page-text-secondary);margin-bottom:24px}
   label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;
-    color:#6b6b80;text-transform:uppercase;margin-bottom:6px;margin-top:16px}
-  input{width:100%;background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:6px;
-    color:#f0ebe0;font-size:14px;padding:10px 12px;outline:none}
-  input:focus{border-color:#E8B040}
-  input[readonly]{color:#444466}
-  .btn{width:100%;background:#E8B040;color:#0c0c18;border:none;border-radius:8px;
+    color:var(--page-text-secondary);text-transform:uppercase;margin-bottom:6px;margin-top:16px}
+  input{width:100%;background:var(--input-bg);border:1.5px solid var(--input-border);border-radius:var(--input-radius);
+    color:var(--input-text);font-size:14px;padding:10px 12px;outline:none}
+  input:focus{border-color:var(--input-border-focus)}
+  input[readonly]{color:var(--page-text-muted)}
+  .btn{width:100%;background:var(--btn-primary-bg-from);color:var(--btn-primary-text);border:none;border-radius:var(--btn-primary-radius);
     padding:11px;font-size:14px;font-weight:700;cursor:pointer;margin-top:24px}
   .btn:hover{opacity:.85}
-  .flash{background:#1a0a0a;border:1.5px solid #e05c5c;color:#e05c5c;
+  .flash{background:rgba(248,113,113,0.08);border:1.5px solid rgba(248,113,113,0.3);color:#e05c5c;
     border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:16px}
 </style>
 </head>

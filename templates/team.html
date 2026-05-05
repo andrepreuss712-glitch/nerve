@@ -2,36 +2,37 @@
 {% block title %} – Team{% endblock %}
 
 {% block extra_style %}
-.plan-bar{background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:10px;
+<!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
+.plan-bar{background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:10px;
   padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;
   justify-content:space-between;gap:16px}
-.plan-info{font-size:13px;color:#6b6b80}
-.plan-info strong{color:#f0ebe0}
-.plan-badge{font-size:11px;font-weight:700;background:#1a1428;color:#9898d8;
-  border:1.5px solid #303058;padding:3px 10px;border-radius:20px;text-transform:uppercase}
-.user-role-owner{color:#E8B040;font-weight:700}
-.user-role-admin{color:#f0a500;font-weight:700}
-.user-role-member{color:#6b6b80}
+.plan-info{font-size:13px;color:var(--page-text-secondary)}
+.plan-info strong{color:var(--page-text-color)}
+.plan-badge{font-size:11px;font-weight:700;background:var(--badge-accent-bg);color:var(--page-text-secondary);
+  border:1.5px solid var(--glass-border);padding:3px 10px;border-radius:20px;text-transform:uppercase}
+.user-role-owner{color:var(--btn-primary-bg-from);font-weight:700}
+.user-role-admin{color:var(--btn-primary-bg-from);font-weight:700}
+.user-role-member{color:var(--page-text-secondary)}
 .user-inactive{opacity:.45}
 
 /* Invite modal */
-.invite-section{background:#0d0d14;border:1.5px solid #1a1a2e;border-radius:10px;
+.invite-section{background:var(--page-bg);border:1.5px solid var(--glass-border);border-radius:10px;
   padding:16px 20px;margin-top:20px}
 .invite-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:#6b6b80;margin-bottom:12px}
+  color:var(--page-text-secondary);margin-bottom:12px}
 .invite-form{display:flex;gap:8px;align-items:flex-end}
 .invite-form .form-input{max-width:280px}
 
-.invite-link-box{background:#0a1810;border:1.5px solid #1a5a38;border-radius:8px;
-  padding:10px 14px;margin-top:10px;font-size:12px;color:#E8B040;word-break:break-all;
+.invite-link-box{background:var(--page-bg);border:1.5px solid var(--glass-border);border-radius:8px;
+  padding:10px 14px;margin-top:10px;font-size:12px;color:var(--btn-primary-bg-from);word-break:break-all;
   font-family:monospace}
 
 .pending-section{margin-top:20px}
 .pending-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:#6b6b80;margin-bottom:10px}
+  color:var(--page-text-secondary);margin-bottom:10px}
 .pending-row{display:flex;align-items:center;gap:10px;padding:8px 12px;
-  background:#0c0c18;border:1.5px solid #1a1a2e;border-radius:8px;margin-bottom:6px}
-.pending-email{font-size:13px;color:#b0b0c8;flex:1}
+  background:var(--glass-bg);border:1.5px solid var(--glass-border);border-radius:8px;margin-bottom:6px}
+.pending-email{font-size:13px;color:var(--page-text-color);flex:1}
 {% endblock %}
 
 {% block content %}
@@ -82,7 +83,7 @@
             <span class="badge badge-gray">Inaktiv</span>
             {% endif %}
           </td>
-          <td style="color:#6b6b80;font-size:12px">
+          <td style="color:var(--page-text-secondary);font-size:12px">
             {{ u.erstellt_am.strftime('%d.%m.%Y') if u.erstellt_am else '–' }}
           </td>
           <td>
@@ -114,7 +115,7 @@
     {% for inv in invitations %}
     <div class="pending-row">
       <div class="pending-email">{{ inv.email }}</div>
-      <span style="font-size:11px;color:#444466">
+      <span style="font-size:11px;color:var(--page-text-muted)">
         {{ inv.erstellt_am.strftime('%d.%m.%Y') if inv.erstellt_am else '' }}
       </span>
       <form method="post" action="/org/invite/{{ inv.id }}/revoke" style="margin:0">
@@ -131,8 +132,8 @@
     <div class="invite-title">Datenschutz-Einstellungen</div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
       <div>
-        <div style="font-size:13px;color:#c0c0d5;font-weight:600;margin-bottom:4px">DSGVO-Modus für CRM-Export</div>
-        <div style="font-size:12px;color:#6b6b80;line-height:1.5">
+        <div style="font-size:13px;color:var(--page-text-color);font-weight:600;margin-bottom:4px">DSGVO-Modus für CRM-Export</div>
+        <div style="font-size:12px;color:var(--page-text-secondary);line-height:1.5">
           Wenn aktiv: Keine wörtlichen Kundenzitate im CRM-Export — nur zusammengefasste Notizen.
           Empfohlen für DSGVO-Konformität.
         </div>
@@ -181,7 +182,7 @@
         <button type="submit" class="btn btn-primary">Einladung senden</button>
       </div>
     </form>
-    <div style="font-size:11px;color:#444466;margin-top:8px">
+    <div style="font-size:11px;color:var(--page-text-muted);margin-top:8px">
       Der Einladungslink wird als Flash-Meldung angezeigt.
       {% if plan_info.get('max_users') %}
       Limit: {{ plan_info.max_users }} User ({{ org.plan }}-Plan).
