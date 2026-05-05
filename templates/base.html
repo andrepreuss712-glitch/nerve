@@ -800,6 +800,17 @@ function setLanguage(code, e) {
 </div>
 <script src="{{ url_for('static', filename='feedback.js') }}"></script>
 {% endif %}
-<!-- nerve-nav-guard Modal entfernt 2026-05-03 abend (Andre-Decision) — alter Dark-Mode-Code mit hardcoded Inline-Farben statt Design-Tokens. Wird in Block O Teil 2 / Folge-Phase mit korrekten Design-Tokens neu gebaut. Bis dahin greift nur der window.beforeunload-Browser-Standard-Handler in pip-launcher.js für Tab-Close + Browser-Zurück + URL-Eingabe. -->
+<!-- Nav-Guard-Modal: erscheint wenn Nav-Link bei aktivem Call geklickt wird -->
+<!-- Geöffnet/geschlossen via classList.add/remove('open') durch pip-launcher.js -->
+<div id="nerveNavModal" class="n-modal-overlay">
+  <div class="n-modal-card">
+    <h3>Call läuft noch</h3>
+    <p>Du verlässt gerade eine aktive Session. Möchtest du wirklich navigieren?</p>
+    <div class="n-modal-actions">
+      <button class="n-btn-ghost" onclick="_nerveNavConfirm(false)">Hier bleiben</button>
+      <button class="n-btn-danger" onclick="_nerveNavConfirm(true)">Call beenden &amp; verlassen</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

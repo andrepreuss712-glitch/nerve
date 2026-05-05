@@ -2917,3 +2917,50 @@ input[type="range"].perf-slider::-moz-range-thumb {
   color: #00D4AA;
   background: rgba(0,212,170,0.08);
 }
+
+/* ── Nav-Guard Modal (.n-modal-overlay / .n-modal-card / .n-modal-actions) ── */
+/* Phase 08.19.5.4 — KEINE hardcoded Farben. Ausschliesslich nerve.css Tokens. */
+
+.n-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10100;
+  background: rgba(0, 0, 0, 0.6);
+  align-items: center;
+  justify-content: center;
+}
+
+.n-modal-overlay.open {
+  display: flex;
+}
+
+.n-modal-card {
+  background: var(--glass-bg);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+}
+
+.n-modal-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--page-text-color);
+  margin: 0 0 10px 0;
+}
+
+.n-modal-card p {
+  font-size: 13px;
+  color: var(--page-text-secondary);
+  margin: 0 0 20px 0;
+}
+
+.n-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
