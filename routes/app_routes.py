@@ -1164,23 +1164,47 @@ def api_personalize_skript_save():
     in pip-launcher.js (Plan 01).
     """
     from database.db import get_session as get_db_session
-    from database.models import ProfileOpener, Profile
     from config import PERSONALIZED_SCRIPTS_CAP
     import datetime
 
     data = request.get_json(force=True) or {}
     personalized_text = (data.get('personalized_text') or '').strip()
     delete_ids = data.get('delete_ids') or []
-    # firmenname from request body (sent by _savePersonalizedAndStartCall in Plan 1)
     firmenname = (data.get('firmenname') or '').strip()[:50]
+    call_mode = (data.get('call_mode') or '').strip()  # 'meeting' | 'cold_call' | ''
 
-    # WR-03: validate opener_id as positive integer before any DB query
-    try:
-        opener_id = int(data.get('opener_id'))
-        if opener_id <= 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        return jsonify({'error': 'opener_id muss eine positive Ganzzahl sein'}), 400
+    skript_id = None
+    opener_id = None
+
+    if call_mode == 'meeting':
+        try:
+            skript_id = int(data.get('skript_id'))
+            if skript_id <= 0: raise ValueError
+        except (TypeError, ValueError):
+            return jsonify({'error': 'skript_id muss eine positive Ganzzahl sein'}), 400
+    elif call_mode == 'cold_call':
+        try:
+            opener_id = int(data.get('opener_id'))
+            if opener_id <= 0: raise ValueError
+        except (TypeError, ValueError):
+            return jsonify({'error': 'opener_id muss eine positive Ganzzahl sein'}), 400
+    else:
+        # Kein call_mode — Fallback: skript_id Vorrang, dann opener_id
+        if data.get('skript_id') is not None:
+            try:
+                skript_id = int(data.get('skript_id'))
+                if skript_id <= 0: raise ValueError
+            except (TypeError, ValueError):
+                return jsonify({'error': 'skript_id muss eine positive Ganzzahl sein'}), 400
+        elif data.get('opener_id') is not None:
+            try:
+                opener_id = int(data.get('opener_id'))
+                if opener_id <= 0: raise ValueError
+            except (TypeError, ValueError):
+                return jsonify({'error': 'opener_id muss eine positive Ganzzahl sein'}), 400
+        else:
+            return jsonify({'error': 'skript_id oder opener_id erforderlich'}), 400
+
     if not personalized_text:
         return jsonify({'error': 'personalized_text ist Pflicht'}), 400
 
@@ -1189,28 +1213,39 @@ def api_personalize_skript_save():
     if not profile_id:
         return jsonify({'error': 'Kein aktives Profil'}), 400
 
-    cap = max(1, int(PERSONALIZED_SCRIPTS_CAP))  # guard: cap >= 1 (T-08203-03-04)
+    cap = max(1, int(PERSONALIZED_SCRIPTS_CAP))  # guard: cap >= 1
 
     _db = get_db_session()
     try:
         # Org-isolation check: verify active profile belongs to current org (CR-01)
+        from database.models import Profile
         _prof_check = _db.query(Profile).filter_by(id=profile_id, org_id=g.org.id).first()
         if not _prof_check:
             return jsonify({'error': 'Zugriff verweigert'}), 403
 
-        # Verify original opener belongs to this profile
-        original = _db.query(ProfileOpener).filter_by(
-            id=opener_id, profile_id=profile_id
-        ).first()
-        if not original:
-            return jsonify({'error': 'Opener nicht gefunden'}), 400
+        # Modus-abhängiger Lookup des Original-Items
+        if skript_id:
+            from database.models import ProfileSkript
+            original = _db.query(ProfileSkript).filter_by(
+                id=skript_id, profile_id=profile_id
+            ).first()
+            if not original:
+                return jsonify({'error': 'Skript nicht gefunden'}), 400
+        else:
+            from database.models import ProfileOpener
+            original = _db.query(ProfileOpener).filter_by(
+                id=opener_id, profile_id=profile_id
+            ).first()
+            if not original:
+                return jsonify({'error': 'Opener nicht gefunden'}), 400
+        # ab hier: original.name, original.id — beide Modelle haben diese Felder
 
         # ── Cap-Check + Delete + Insert (WR-02) ──────────────────────────
         # with_for_update() acquires row-level lock on Postgres; no-op on SQLite.
         # Prevents race: two concurrent requests both read count < cap and both insert.
         # NOTE: No 'with _db.begin()' wrapper here — SQLAlchemy already started an
-        # implicit transaction at the first query above (lines ~1155/1160). Calling
-        # _db.begin() again raises InvalidRequestError. We use explicit commit/rollback.
+        # implicit transaction at the first query above. Calling _db.begin() again
+        # raises InvalidRequestError. We use explicit commit/rollback.
         today_str = datetime.datetime.utcnow().strftime('%Y-%m-%d')
         firma_display = firmenname or (original.name or 'Lead')[:50]
         new_name = f"{firma_display} — {original.name} (personalisiert, {today_str})"
@@ -1218,17 +1253,18 @@ def api_personalize_skript_save():
         cap_exceeded_response = None  # set if cap is hit
         new_item_id = None
         try:
-            # Cap-Check
+            # Cap-Check gegen ProfileSkript — in beiden Modi (meeting + cold_call)
+            from database.models import ProfileSkript
             if not delete_ids:
-                personalized_count = _db.query(ProfileOpener).filter_by(
+                personalized_count = _db.query(ProfileSkript).filter_by(
                     profile_id=profile_id, is_personalized=True
                 ).with_for_update().count()
 
                 if personalized_count >= cap:
                     # Cap exceeded — collect items list for sub-modal (SPEC Req 9)
-                    items_query = _db.query(ProfileOpener).filter_by(
+                    items_query = _db.query(ProfileSkript).filter_by(
                         profile_id=profile_id, is_personalized=True
-                    ).order_by(ProfileOpener.created_at.asc()).all()
+                    ).order_by(ProfileSkript.created_at.asc()).all()
 
                     now = datetime.datetime.utcnow()
                     items_list = []
@@ -1245,12 +1281,11 @@ def api_personalize_skript_save():
                             'weeks_old': weeks_old,
                         })
                     cap_exceeded_response = items_list
-                    # Exit without insert
                     raise _CapExceeded()
 
-            # Delete-Phase (Cap-Befreiung) — only items belonging to this profile
+            # Delete-Phase (Cap-Befreiung) — IMMER gegen ProfileSkript
             for item_id in delete_ids:
-                item = _db.query(ProfileOpener).filter_by(
+                item = _db.query(ProfileSkript).filter_by(
                     id=item_id,
                     profile_id=profile_id,
                     is_personalized=True  # Schutz: nur personalisierte koennen via Cap-Modal geloescht werden
@@ -1266,21 +1301,20 @@ def api_personalize_skript_save():
                 )
                 _db.delete(item)
 
-            # Insert-Phase (neues personalisiertes Skript — SPEC Req 8)
-            new_opener = ProfileOpener(
+            # Insert IMMER als ProfileSkript (auch Cold-Call-Pfad — kein ProfileOpener-Insert)
+            new_item = ProfileSkript(
                 profile_id=profile_id,
                 name=new_name,
                 inhalt=personalized_text,
+                parent_id=original.id,          # Quell-Item ID (ProfileSkript oder ProfileOpener)
+                is_personalized=True,
+                briefing_source_firma=firmenname or None,
                 sortierung=0,
-                type=original.type,
-                parent_id=opener_id,               # parent_id links to original (SPEC Req 8, 11)
-                is_personalized=True,              # marks as personalized (SPEC Req 8)
-                briefing_source_firma=firmenname,  # Finding A: enables optgroup grouping in Plan 01
             )
-            _db.add(new_opener)
+            _db.add(new_item)
             _db.flush()   # trigger ID generation without committing yet
-            new_item_id = new_opener.id
-            _db.commit()  # explicit commit (Bug A fix: no with _db.begin() wrapper)
+            new_item_id = new_item.id
+            _db.commit()  # explicit commit
 
         except _CapExceeded:
             pass  # cap_exceeded_response already set; no error, just skip insert
