@@ -1047,6 +1047,23 @@ Plans:
 
 ---
 
+### Phase 08.19.5.6: 4-Reiter-UI für Skript+Opener-Auswahl + Briefing-Skript-Merge (INSERTED — 2026-05-05) 🟡
+
+**Goal:** Das Skript+Opener-Auswahl-Fenster im PiP-Launcher in 4 separate Reiter (Opener / Erlaubnisfrage / Skript / Pitch) aufteilen; Vorwissen-Picker + Du/Sie-Toggle als 5. Sub-Sektion immer verfügbar (nicht nur nach PreCall); PreCall-Briefing-Merge-Target von Opener auf Skript umstellen.
+
+**Depends on:** Phase 08.19.5.4 (UI-Cleanup-Foundation), Phase 08.19 ✅ (ProfileOpener-Schema mit type-Spalte), Phase 08.19.2 ✅ (erlaubnis + pitch Multi-Entry)
+**Komplexität:** 🟡
+**Cross-AI:** Pflicht — Briefing: "prüfe auf Vollständigkeit aller 4 Reiter-Inhalte (kein vergessener Profile-Type), prüfe Briefing-Merge-Target-Switch im Backend, prüfe Konsistenz mit existing nerve.css-Tokens (Anti-Hardcoded-Farben), prüfe ob neue Reiter-UI mit existing consent-overlay-Pattern konsistent ist"
+**CLAUDE.md:** Anti-Hardcoded-Farben-Sektion, Regel 7
+**Andre-Decision (2026-05-05):** Vorgezogen aus Block O Teil 2 — UX-Stelle die André täglich nervt; Pflicht vor 08.20 (Pipeline-Re-Wire) damit 08.20-EWB-Prompt die 4 Profile-Type-Reiter korrekt berücksichtigen kann.
+
+**Plans:** tbd
+
+Plans:
+- [ ] 08.19.5.6-01-PLAN.md — tbd
+
+---
+
 ### Phase 08.20: Pipeline-Re-Wire — Voll-Profil-EWB + Lead-Context + branchenspezifische PreCall (INSERTED — 2026-04-29)
 
 **Goal:** Den EWB-Live-Pfad von ~10 genutzten Profil-Feldern (50-60% tot nach 08.17-Audit) auf Voll-Profil-Integration hochrüsten. `build_profile_context()` erhält definierte Sektions-Reihenfolge (Branche → Zielkunde → Schmerzen → Einwände → Phasen → KI-Verhalten → Wisdom). PreCall-Pipeline (`recherche_firma` + `_generiere_briefing`) bekommt Profil als Steuerungs-Input für branchenspezifische Recherche-Strategie. PreCall-Briefing fließt wieder ins EWB-Prompt (war in 08.8 gelöscht). Manual-EWB-Button-Pfad erhält Profil-Kontext (kein hardcoded Coach-Prompt mehr). `_SYSTEM_PROMPT_QA` um `{profile_context}`-Placeholder erweitern (LB-3-Fix). Schema-Drift `opener`/`pitch` (top-level vs. `basis.*`) bereinigen. Sonnet-Switch via ENV für EWB-Streaming bei Voll-Profil-Kontexten als Pflicht (Voll-Profil + Haiku → grammatisch hölzern; Voll-Profil + Sonnet 4.5 → Quality + akzeptable Latenz mit Caching). Caching-Auswirkung verifizieren: Voll-Profil → Cache-Threshold immer überschritten → max. Cache-ROI. Org-Scoping-Verifikation: `build_profile_context()` nutzt SID-Lookup aus 08.19.4 korrekt (User in Org 2 sieht NICHT Profil 7 aus Admin-Org 1). Mini-Adds (alle Pflicht): (8) Vorwissen-Picker im Live-Workflow nach PreCall — Lead-spezifisch (3-stufig), fließt als Lead-Context in EWB-Prompt; (9) Du/Sie-Smart-Switch — Lead-spezifisch + Live-Detection im Transcript; (10) Live-EWB-Prompt-Preview-Panel — kollabierbares Panel pro Profil-Sektion; (12) `einwaende_detail` vs. `einwaende` Koexistenz konsolidieren — Migration auf einheitliches Format.
