@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.4 Plan 02 COMPLETE — Wave 2 Modal-Neubau abgeschlossen (Phase 08.19.5.4 vollstaendig)"
-last_updated: "2026-05-05T01:20:00.000Z"
+stopped_at: "08.19.5.6 Plan 02 COMPLETE — Backend call_mode-Routing fuer KI-Personalisierung abgeschlossen"
+last_updated: "2026-05-05T10:00:00.000Z"
 last_activity: 2026-05-05
 progress:
   total_phases: 64
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.4 (dark-mode-reste-raus-modal-neu) — COMPLETE (2 of 2 plans done)
+Phase: 08.19.5.6 (4-reiter-ui-skript-opener-auswahl-briefing-skript-merge) — Plan 02 COMPLETE
 Plan: 2 — Plan 02 COMPLETE (2026-05-05)
 Last activity: 2026-05-05
+
+**Phase 08.19.5.6 Plan 02 abgeschlossen:** Backend call_mode-Routing fuer KI-Personalisierung — ProfileSkript + 3 neue Columns (is_personalized, parent_id ohne FK, briefing_source_firma). DB-Migration idempotent in app.py. api_personalize_skript() auf call_mode-Routing umgestellt (meeting->ProfileSkript, cold_call->ProfileOpener, Fallback ohne call_mode). api_personalize_skript_save() Cap-Check + Delete + Insert IMMER gegen ProfileSkript (kein ProfileOpener-Insert mehr). 4 Commits: 0c1221a, dbeec58, 7d8ca8f, 950337b. Decisions: D-04 parent_id ohne FK-Constraint, Cap gegen ProfileSkript in beiden Modi.
 
 **Phase 08.19.5.4 Plan 02 abgeschlossen:** Wave 2 Modal-Neubau — .n-modal-overlay/.n-modal-card/.n-modal-actions CSS-Klassen in nerve.css (Design-Tokens, keine hardcoded Farben). nerveNavModal HTML in base.html vor </body>. window._nerveNavConfirm() als window-Property (global aus onclick erreichbar). Click-Interceptor via Event-Delegation auf document (.closest('.n-nav-item, a.popup-item-logout')). ESC + Overlay-Klick schliessen Modal ohne Navigation. beforeunload unveraendert. 2 Commits: 4cbb385, acea0d3. Decisions: n-btn-ghost/n-btn-danger pre-existing (kein Fallback), Event-Delegation statt querySelectorAll (DOM-Timing-sicher).
 
