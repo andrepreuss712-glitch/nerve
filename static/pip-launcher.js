@@ -964,7 +964,10 @@
         var pid = parseInt(profileSel5.value);
         if (!pid) return;
         fetch('/api/launcher/profile/' + pid)
-          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            if (!r.ok) throw new Error('profile load failed: ' + r.status);
+            return r.json();
+          })
           .then(function (data) {
             state.activeProfileId     = data.id;
             state.profileDaten        = data.daten || {};
@@ -977,7 +980,9 @@
             state.activeTab           = null;  // reset to opener-default on profile change
             renderStep5();
           })
-          .catch(function () {});
+          .catch(function (err) {
+            console.warn('[Launcher] Profil laden fehlgeschlagen:', err);
+          });
       };
     }
 
