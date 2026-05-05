@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.6 Plan 02 COMPLETE — Backend call_mode-Routing fuer KI-Personalisierung abgeschlossen"
-last_updated: "2026-05-05T10:00:00.000Z"
+stopped_at: "08.19.5.6 Plan 01 COMPLETE — Frontend 4-Tab-UI renderStep5() + modus-abhaengige Personalisierung abgeschlossen"
+last_updated: "2026-05-05T17:16:00.000Z"
 last_activity: 2026-05-05
 progress:
   total_phases: 64
   completed_phases: 50
   total_plans: 221
-  completed_plans: 211
-  percent: 95
+  completed_plans: 212
+  percent: 96
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.6 (4-reiter-ui-skript-opener-auswahl-briefing-skript-merge) — Plan 02 COMPLETE
-Plan: 2 — Plan 02 COMPLETE (2026-05-05)
+Phase: 08.19.5.6 (4-reiter-ui-skript-opener-auswahl-briefing-skript-merge) — Plan 01 + 02 COMPLETE
+Plan: 1 — Plan 01 COMPLETE (2026-05-05)
 Last activity: 2026-05-05
+
+**Phase 08.19.5.6 Plan 01 abgeschlossen:** Frontend 4-Tab-UI renderStep5() — state.activeTab + selectedErlaubnisId + selectedPitchId + window.switchTab5(). renderStep5() von flachem Auswahl-UI zu 4-Tab-Layout umgebaut (Opener/Erlaubnisfrage/Pitch/Skript). openerItems-Filterung nach o.type. Leerstand-States pro Tab mit /profiles-Link. Titel "Gesprächsvorbereitung". Vorwissen + Anrede immer sichtbar. Personalisieren-Button modus-abhängig (Cold-Call→Opener-Tab, Meeting→Skript-Tab). renderStep4b/4c/_savePersonalizedAndStartCall/cap-modal alle modus-abhängig umgestellt. _collectEditedTexts() Guard-Fix. OD-01 Pitch/Skript-Priorität via _resolvedTeleprompterSkript. Deviation: fcd-tab CSS in base.html eingefügt. 4 Commits: 6446f4d, 90557dc, 91491d8, 487b806.
 
 **Phase 08.19.5.6 Plan 02 abgeschlossen:** Backend call_mode-Routing fuer KI-Personalisierung — ProfileSkript + 3 neue Columns (is_personalized, parent_id ohne FK, briefing_source_firma). DB-Migration idempotent in app.py. api_personalize_skript() auf call_mode-Routing umgestellt (meeting->ProfileSkript, cold_call->ProfileOpener, Fallback ohne call_mode). api_personalize_skript_save() Cap-Check + Delete + Insert IMMER gegen ProfileSkript (kein ProfileOpener-Insert mehr). 4 Commits: 0c1221a, dbeec58, 7d8ca8f, 950337b. Decisions: D-04 parent_id ohne FK-Constraint, Cap gegen ProfileSkript in beiden Modi.
 
