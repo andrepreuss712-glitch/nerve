@@ -3013,10 +3013,79 @@
   // beforeunload bleibt als Fallback fuer Tab-Close / Browser-Zurueck / URL-Eingabe.
   var _pendingNavUrl = null;
 
-  // Click-Interceptor + _nerveNavConfirm entfernt 2026-05-03 abend (Andre-Decision)
-  // — gehoerten zum nerve-nav-guard Modal das wegen Dark-Mode-Inline-Styles entfernt wurde.
-  // Modal mit korrekten Design-Tokens wird in Block O Teil 2 / Folge-Phase neu gebaut.
-  // Bis dahin greift nur der beforeunload-Browser-Standard-Handler unten.
+  // ── Nav-Guard: Click-Interceptor + Modal-Steuerung (Phase 08.19.5.4) ──────────
+  // Event-Delegation auf document — DOM-Timing-sicher (kein querySelector bei IIFE-Load).
+  // beforeunload bleibt als Fallback fuer Tab-Close / Browser-Zurueck / URL-Eingabe.
+
+  // IIFE-Scope-Hinweis: window._nerveNavConfirm wird auf window zugewiesen damit
+  // onclick="_nerveNavConfirm(false/true)" in base.html aus dem globalen Scope auflösbar ist.
+  // Alle anderen Helfer (_nerveNavOpenModal, _nerveNavCleanupListeners, _nerveNavOnKeydown)
+  // bleiben als IIFE-lokale Variablen — kein window.-Prefix noetig.
+
+  window._nerveNavConfirm = function(confirm) {
+    var overlay = document.getElementById('nerveNavModal');
+    if (confirm === true) {
+      // "Call beenden & verlassen" — Mic stoppen dann navigieren
+      if (overlay) overlay.classList.remove('open');
+      _nerveNavCleanupListeners();
+      _stopMic();
+      if (_pendingNavUrl) {
+        window.location.href = _pendingNavUrl;
+      }
+      _pendingNavUrl = null;
+    } else {
+      // "Hier bleiben" — Modal schliessen, keine Navigation
+      if (overlay) overlay.classList.remove('open');
+      _nerveNavCleanupListeners();
+      _pendingNavUrl = null;
+    }
+  };
+
+  // ESC-Handler (gespeichert fuer removeEventListener)
+  var _nerveNavOnKeydown = null;
+
+  function _nerveNavCleanupListeners() {
+    if (_nerveNavOnKeydown) {
+      document.removeEventListener('keydown', _nerveNavOnKeydown);
+      _nerveNavOnKeydown = null;
+    }
+  }
+
+  function _nerveNavOpenModal(targetUrl) {
+    _pendingNavUrl = targetUrl;
+    var overlay = document.getElementById('nerveNavModal');
+    if (!overlay) return;
+    overlay.classList.add('open');
+
+    // ESC-Taste: schliesst Modal ohne Navigation (== "Hier bleiben")
+    _nerveNavOnKeydown = function (e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        window._nerveNavConfirm(false);
+      }
+    };
+    document.addEventListener('keydown', _nerveNavOnKeydown);
+
+    // Overlay-Klick ausserhalb .n-modal-card: schliesst Modal ohne Navigation
+    overlay.onclick = function (e) {
+      if (e.target === overlay) {
+        window._nerveNavConfirm(false);
+      }
+    };
+  }
+
+  // Click-Interceptor: Event-Delegation auf document (DOM-Timing-sicher)
+  // Selector D-01 (SPEC gesperrt): '.n-nav-item, a.popup-item-logout'
+  // Bedingung (SPEC gesperrt): state.micStarted === true
+  document.addEventListener('click', function (e) {
+    if (state.micStarted !== true) return; // Kein aktiver Call — normale Navigation
+    var el = e.target.closest('.n-nav-item, a.popup-item-logout');
+    if (!el) return;
+    var href = el.getAttribute('href');
+    if (!href || href === '#' || href.indexOf('javascript:') === 0) return; // Programmatic nav, kein Page-Load
+    e.preventDefault();
+    _nerveNavOpenModal(href);
+  });
 
   window.addEventListener('beforeunload', function(e) {
     if (state.micStarted) {
