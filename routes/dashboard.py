@@ -417,13 +417,13 @@ def _update_level(user):
 def root():
     if 'user_id' not in flask_session:
         modal = flask_session.get('open_modal', '')
-        return render_template('landing.html', open_modal=modal)
+        return render_template('marketing/landing.html', open_modal=modal)
     db = get_session()
     try:
         u = db.get(UserModel, flask_session['user_id'])
         if not u or not u.aktiv:
             flask_session.clear()
-            return render_template('landing.html', open_modal='')
+            return render_template('marketing/landing.html', open_modal='')
     finally:
         db.close()
     return redirect(url_for('dashboard.index'))

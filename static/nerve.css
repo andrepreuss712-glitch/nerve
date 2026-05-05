@@ -858,7 +858,7 @@ body.kompakt .help-fab,body.live-active .help-fab{display:none}
 .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;
   padding:2px 8px;border-radius:20px}
 .badge-teal{background:rgba(0,212,170,0.08);color:#00D4AA;border:1.5px solid rgba(0,212,170,0.2)}
-.badge-gray{background:#1a1a2e;color:#6b6b80;border:1.5px solid #2e2e40}
+.badge-gray{background:var(--badge-accent-bg);color:var(--page-text-secondary);border:1.5px solid var(--glass-border)}
 .badge-amber{background:#1e1400;color:#f0a500;border:1.5px solid #3a2800}
 .badge-red{background:#1a0808;color:#e05c5c;border:1.5px solid #3a1414}
 .badge-purple{background:#1a1428;color:#9898d8;border:1.5px solid #303058}
