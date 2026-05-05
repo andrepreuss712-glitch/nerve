@@ -1030,6 +1030,23 @@ Plans:
 
 ---
 
+### Phase 08.19.5.4: Dark-Mode-Reste raus + Modal im neuen Design (INSERTED — 2026-05-05) 🟡
+
+**Goal:** Hardcoded Dark-Mode-Farben aus 8 App-Templates + nerve.css entfernen und durch nerve.css-CSS-Tokens ersetzen; Nav-Bestätigungs-Modal (.n-modal-*) sauber im aktuellen Design neu bauen.
+
+**Depends on:** Phase 08.19.5.2 (UI-Cleanup-Foundation), Phase 08.19.5 (PiP-State-Basis)
+**Komplexität:** 🟡
+**Cross-AI:** Pflicht — Gemini-Briefing explizit mit "prüfe auf hardcoded Farben + Inline-Styles + Design-Token-Konsistenz"
+**CLAUDE.md:** Anti-Hardcoded-Farben-Sektion, Regel 7
+
+**Plans:** 2 plans in 2 waves
+
+Plans:
+- [ ] 08.19.5.4-01-PLAN.md — Wave 1: Dark-Mode-Reste aus 8 Templates + .badge-gray nerve.css-Migration + Pattern-Marker
+- [ ] 08.19.5.4-02-PLAN.md — Wave 2: .n-modal-Klassen in nerve.css + base.html-Template + pip-launcher.js Click-Interceptor
+
+---
+
 ### Phase 08.20: Pipeline-Re-Wire — Voll-Profil-EWB + Lead-Context + branchenspezifische PreCall (INSERTED — 2026-04-29)
 
 **Goal:** Den EWB-Live-Pfad von ~10 genutzten Profil-Feldern (50-60% tot nach 08.17-Audit) auf Voll-Profil-Integration hochrüsten. `build_profile_context()` erhält definierte Sektions-Reihenfolge (Branche → Zielkunde → Schmerzen → Einwände → Phasen → KI-Verhalten → Wisdom). PreCall-Pipeline (`recherche_firma` + `_generiere_briefing`) bekommt Profil als Steuerungs-Input für branchenspezifische Recherche-Strategie. PreCall-Briefing fließt wieder ins EWB-Prompt (war in 08.8 gelöscht). Manual-EWB-Button-Pfad erhält Profil-Kontext (kein hardcoded Coach-Prompt mehr). `_SYSTEM_PROMPT_QA` um `{profile_context}`-Placeholder erweitern (LB-3-Fix). Schema-Drift `opener`/`pitch` (top-level vs. `basis.*`) bereinigen. Sonnet-Switch via ENV für EWB-Streaming bei Voll-Profil-Kontexten als Pflicht (Voll-Profil + Haiku → grammatisch hölzern; Voll-Profil + Sonnet 4.5 → Quality + akzeptable Latenz mit Caching). Caching-Auswirkung verifizieren: Voll-Profil → Cache-Threshold immer überschritten → max. Cache-ROI. Org-Scoping-Verifikation: `build_profile_context()` nutzt SID-Lookup aus 08.19.4 korrekt (User in Org 2 sieht NICHT Profil 7 aus Admin-Org 1). Mini-Adds (alle Pflicht): (8) Vorwissen-Picker im Live-Workflow nach PreCall — Lead-spezifisch (3-stufig), fließt als Lead-Context in EWB-Prompt; (9) Du/Sie-Smart-Switch — Lead-spezifisch + Live-Detection im Transcript; (10) Live-EWB-Prompt-Preview-Panel — kollabierbares Panel pro Profil-Sektion; (12) `einwaende_detail` vs. `einwaende` Koexistenz konsolidieren — Migration auf einheitliches Format.
