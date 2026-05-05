@@ -1030,11 +1030,15 @@
       };
     }
 
-    // Inline-Edit Wiring (je aktiver Tab)
+    // Inline-Edit Wiring (je aktiver Tab) — pass tab-specific itemId to avoid wrong-ID bug
     if (state.activeTab === 'skript') {
       _wireInlineEdit('lnr-skript-edit-btn', 'lnr-skript-preview', 'lnr-skript-textarea', 'skript');
+    } else if (state.activeTab === 'erlaubnis') {
+      _wireInlineEdit('lnr-opener-edit-btn', 'lnr-opener-preview', 'lnr-opener-textarea', 'opener', state.selectedErlaubnisId);
+    } else if (state.activeTab === 'pitch') {
+      _wireInlineEdit('lnr-opener-edit-btn', 'lnr-opener-preview', 'lnr-opener-textarea', 'opener', state.selectedPitchId);
     } else {
-      _wireInlineEdit('lnr-opener-edit-btn', 'lnr-opener-preview', 'lnr-opener-textarea', 'opener');
+      _wireInlineEdit('lnr-opener-edit-btn', 'lnr-opener-preview', 'lnr-opener-textarea', 'opener', state.selectedOpenerId);
     }
 
     // Navigation: Back
@@ -1084,7 +1088,7 @@
     }
   }
 
-  function _wireInlineEdit(btnId, previewId, textareaId, type) {
+  function _wireInlineEdit(btnId, previewId, textareaId, type, overrideItemId) {
     var btn = document.getElementById(btnId);
     if (!btn) return;
     btn.onclick = function () {
@@ -1105,7 +1109,7 @@
       } else {
         // Save edit — ask if profile should be updated
         var newText = ta.value;
-        var itemId = type === 'skript' ? state.selectedSkriptId : state.selectedOpenerId;
+        var itemId = type === 'skript' ? state.selectedSkriptId : (overrideItemId !== undefined ? overrideItemId : state.selectedOpenerId);
         if (preview) {
           preview.textContent = newText;
           preview.style.display = 'block';
