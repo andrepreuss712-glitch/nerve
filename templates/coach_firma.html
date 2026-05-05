@@ -40,7 +40,7 @@
 <div class="page-wrap">
   <div class="page-header">
     <div>
-      <div style="font-size:12px;color:#444466;margin-bottom:4px">
+      <div style="font-size:12px;color:var(--page-text-muted);margin-bottom:4px">
         <a href="/coach/" style="color:var(--page-text-secondary)">Coach-Dashboard</a>
         &nbsp;/&nbsp; {{ org.name }}
       </div>
@@ -130,7 +130,7 @@
       </table>
     </div>
     {% else %}
-    <div style="color:#444466;text-align:center;padding:40px">Noch keine Nutzer in dieser Organisation.</div>
+    <div style="color:var(--page-text-muted);text-align:center;padding:40px">Noch keine Nutzer in dieser Organisation.</div>
     {% endif %}
   </div>
 
@@ -146,13 +146,13 @@
           <div class="profile-card-name">{{ p.name }}</div>
           <div class="profile-card-branch">{{ p.branche or 'Keine Branche angegeben' }}</div>
         </div>
-        <div style="font-size:12px;color:#444466">
+        <div style="font-size:12px;color:var(--page-text-muted)">
           {{ p.erstellt_am.strftime('%d.%m.%Y') if p.erstellt_am else '' }}
         </div>
       </div>
       {% endfor %}
     {% else %}
-    <div style="color:#444466;text-align:center;padding:40px">Noch keine Profile vorhanden.</div>
+    <div style="color:var(--page-text-muted);text-align:center;padding:40px">Noch keine Profile vorhanden.</div>
     {% endif %}
   </div>
 
@@ -180,7 +180,7 @@
       </table>
     </div>
     {% else %}
-    <div style="color:#444466;text-align:center;padding:40px">Noch keine Trainingsszenarien.</div>
+    <div style="color:var(--page-text-muted);text-align:center;padding:40px">Noch keine Trainingsszenarien.</div>
     {% endif %}
   </div>
 </div>
