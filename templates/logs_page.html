@@ -45,28 +45,28 @@
         {% for log in logs %}
         <tr>
           <td>{{ log.datum }}</td>
-          <td style="color:#6B7280">{{ log.uhrzeit }}</td>
+          <td style="color:var(--page-text-secondary)">{{ log.uhrzeit }}</td>
           <td>
             {% if log.profil != '–' %}
             <span class="log-profil-tag">{{ log.profil }}</span>
             {% else %}
-            <span style="color:#9CA3AF">–</span>
+            <span style="color:var(--page-text-muted)">–</span>
             {% endif %}
           </td>
           <td class="log-meta">{{ log.dauer }}</td>
           <td class="log-meta" style="text-align:center">{{ log.segmente }}</td>
           <td>
             {% if log.einwaende > 0 %}
-            <span style="color:#f0a05a;font-weight:700">{{ log.einwaende }}</span>
+            <span style="color:var(--color-warn-orange);font-weight:700">{{ log.einwaende }}</span>
             {% else %}
-            <span style="color:#9CA3AF">0</span>
+            <span style="color:var(--page-text-muted)">0</span>
             {% endif %}
           </td>
           <td>
             {% if log.painpoints > 0 %}
-            <span style="color:#ff8040;font-weight:700">{{ log.painpoints }}</span>
+            <span style="color:var(--color-warn-red);font-weight:700">{{ log.painpoints }}</span>
             {% else %}
-            <span style="color:#9CA3AF">0</span>
+            <span style="color:var(--page-text-muted)">0</span>
             {% endif %}
           </td>
           <td>

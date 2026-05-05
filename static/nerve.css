@@ -157,6 +157,8 @@
   --badge-solid-text:     #0D1117;
   --badge-solid-size:     9px;
   --badge-solid-weight:   700;
+  --color-warn-orange:    #f0a05a;
+  --color-warn-red:       #ff8040;
 
   /* ═══════════════════════════════════════
      NAV ITEM (.n-nav-item)
