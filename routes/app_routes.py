@@ -842,6 +842,7 @@ def api_launcher_init():
                     'id': o.id,
                     'name': o.name,
                     'inhalt': o.inhalt or '',
+                    'type': o.type or 'opener',
                     'is_personalized': bool(o.is_personalized),
                     'briefing_source_firma': o.briefing_source_firma or '',
                 }
@@ -886,6 +887,7 @@ def api_launcher_profile(pid):
                 'id': o.id,
                 'name': o.name,
                 'inhalt': o.inhalt or '',
+                'type': o.type or 'opener',
                 'is_personalized': bool(o.is_personalized),
                 'briefing_source_firma': o.briefing_source_firma or '',
             }
