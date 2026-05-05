@@ -1232,10 +1232,11 @@
 
   function _collectEditedTexts() {
     // If user edited inline, store the edited text for the session
+    // Guard: only store if textarea has a value (Cross-AI-Finding #2 — don't overwrite with empty)
     var skTa = document.getElementById('lnr-skript-textarea');
-    if (skTa && skTa.style.display !== 'none') state._editedSkriptText = skTa.value;
+    if (skTa && skTa.style.display !== 'none' && skTa.value) state._editedSkriptText = skTa.value;
     var opTa = document.getElementById('lnr-opener-textarea');
-    if (opTa && opTa.style.display !== 'none') state._editedOpenerText = opTa.value;
+    if (opTa && opTa.style.display !== 'none' && opTa.value) state._editedOpenerText = opTa.value;
   }
 
   // ── Headset-Pflicht-Modal (DSGVO § 201 StGB) ───────────────────────────────
@@ -1367,6 +1368,19 @@
       return;
     }
 
+    // OD-01 Option A: Pitch/Skript-Priorität für Teleprompter-Übergabe an _openPipAndMic()
+    // selectedSkriptId gesetzt → _openPipAndMic() nutzt eigene Auflösung (state._editedSkriptText > skripte)
+    // nur selectedPitchId gesetzt (kein Skript) → Pitch-Inhalt als Fallback vorberechnen
+    // Ergebnis in state._resolvedTeleprompterSkript — _openPipAndMic() liest es zuerst und löscht es
+    if (!state.selectedSkriptId && state.selectedPitchId) {
+      var selPitch = (state.openerItems || []).find(function (o) { return o.id === state.selectedPitchId; });
+      if (selPitch) {
+        state._resolvedTeleprompterSkript = { id: state.selectedPitchId, inhalt: selPitch.inhalt || '' };
+      }
+    }
+    // wenn selectedSkriptId gesetzt: _resolvedTeleprompterSkript nicht setzen
+    // → _openPipAndMic() nutzt dann seine eigene Auflösung via state._editedSkriptText / selectedSkriptId
+
     close();
 
     // Set profile server-side if changed (fire and forget)
@@ -1475,7 +1489,11 @@
       // Get skript content for backend teleprompter context
       var skriptInhalt = '';
       var skriptBlöcke = [];
-      if (state._editedSkriptText) {
+      // OD-01: Pitch-Fallback-Inhalt aus startCall() (nur wenn kein selectedSkriptId + selectedPitchId gesetzt war)
+      if (state._resolvedTeleprompterSkript) {
+        skriptInhalt = state._resolvedTeleprompterSkript.inhalt || '';
+        state._resolvedTeleprompterSkript = null;
+      } else if (state._editedSkriptText) {
         skriptInhalt = state._editedSkriptText;
       } else if (state.selectedSkriptId && state.skripte.length > 0) {
         var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
