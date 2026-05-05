@@ -414,6 +414,21 @@ def _migrate():
                 print(f"[DB] Migration: added profile_opener.{col}")
             except Exception:
                 pass  # Idempotent: duplicate ALTER TABLE fails silently
+        # ── Phase 08.19.5.6: is_personalized + parent_id + briefing_source_firma fuer ProfileSkript ──
+        for col, typedef in [
+            ('parent_id',             'INTEGER'),
+            ('is_personalized',       'BOOLEAN DEFAULT 0'),
+            ('briefing_source_firma', 'VARCHAR(200)'),
+        ]:
+            try:
+                conn.execute(text(f'ALTER TABLE profile_skripte ADD COLUMN {col} {typedef}'))
+                conn.commit()
+                print(f"[DB] Migration: added profile_skripte.{col}")
+            except Exception as e:
+                if 'duplicate column name' in str(e).lower():
+                    pass  # Spalte bereits vorhanden — idempotente Migration, erwartet
+                else:
+                    raise  # echter Migrations-Bug → sichtbar machen
         # ── Phase 04.9: Seed 6 system personality types ───────────────────────
         import json as _json
         _personality_seed = [
