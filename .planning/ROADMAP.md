@@ -1042,8 +1042,8 @@ Plans:
 **Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] 08.19.5.4-01-PLAN.md — Wave 1: Dark-Mode-Reste aus 8 Templates + .badge-gray nerve.css-Migration + Pattern-Marker
-- [ ] 08.19.5.4-02-PLAN.md — Wave 2: .n-modal-Klassen in nerve.css + base.html-Template + pip-launcher.js Click-Interceptor
+- [ ] 08.19.5.4-01-PLAN.md — Wave 1: Token-Migration 10 Templates (inkl. dashboard, logs_page) + .badge-gray nerve.css-Bereinigung + Pattern-Marker + landing.html nach templates/marketing/ verschieben
+- [ ] 08.19.5.4-02-PLAN.md — Wave 2: .n-modal-CSS-Klassen in nerve.css + Modal-HTML in base.html + Click-Interceptor + _nerveNavConfirm() + ESC/Overlay-Dismiss in pip-launcher.js
 
 ---
 
