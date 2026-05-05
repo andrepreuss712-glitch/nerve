@@ -161,12 +161,13 @@ async function sendeEinladung(){
   }
 }
 function copyInviteLink(el){
-  navigator.clipboard.writeText(el.textContent).then(()=>{
+  var originalText=el.textContent;
+  navigator.clipboard.writeText(originalText).then(()=>{
     el.classList.add('invite-copied');
     el.textContent='✓ Kopiert!';
     setTimeout(()=>{
       el.classList.remove('invite-copied');
-      el.textContent=document.getElementById('inviteLink').dataset.url||el.textContent;
+      el.textContent=originalText;
     },2000);
   });
 }
