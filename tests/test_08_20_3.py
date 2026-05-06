@@ -32,8 +32,7 @@ class TestUIFooter:
 
     def test_modus_a_sets_state_contract(self, client):
         """Modus A flow: after selecting A, no personalization endpoint is hit."""
-        # Modus A requires no backend call — only state.briefingModus = 'A'
-        # Verified by: /api/precall/personalize is NOT called for Modus A
+        # Verified by: /api/precall/personalize is NOT called without briefing context
         # This test verifies the route exists and rejects calls without opener_id
         resp = client.post('/api/precall/personalize',
                            json={},
