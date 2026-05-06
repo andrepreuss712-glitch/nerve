@@ -1064,6 +1064,23 @@ Plans:
 
 ---
 
+### Phase 08.19.5.6.1: 4-Reiter-UI Hotfixes + UX-Polish (INSERTED — 2026-05-06) 🟡
+
+**Goal:** 3 Bugs + 2 UX-Verbesserungen aus Phase 08.19.5.6 UAT beheben: Teleprompter-Sequenz-Bug, unmögliches Abwählen einer Auswahl, leeres Text-Feld beim ersten Tab-Switch; Personalisierungs-Flow zurück zur 4-Reiter-Ansicht; Hilfe-Hinweise pro Reiter.
+
+**Depends on:** Phase 08.19.5.6 ✅ (4-Reiter-UI live deployed)
+**Komplexität:** 🟡
+**Cross-AI:** Pflicht — Briefing: "prüfe ob Teleprompter-Block-Builder alle 4 Reiter-Auswahlen in korrekter Reihenfolge zusammenstellt + ob null-Selection-Pattern konsistent durch alle 4 state-Variablen geleitet wird + ob Personalisierungs-Flow-Refactoring (zurück zur 4-Reiter-Ansicht) mit existing State-Mgmt kompatibel ist"
+**CLAUDE.md:** Anti-Hardcoded-Farben-Sektion, Regel 7
+**Andre-Decision (2026-05-06):** UAT 08.19.5.6 zeigt 10/14 grün — Foundation solide. 3 Bugs + 2 UX-Verbesserungen als dedizierte Hotfix-Phase vor Weitermachen mit 08.20.
+
+**Plans:** tbd
+
+Plans:
+- [ ] 08.19.5.6.1-01-PLAN.md — tbd
+
+---
+
 ### Phase 08.20: Pipeline-Re-Wire — Voll-Profil-EWB + Lead-Context + branchenspezifische PreCall (INSERTED — 2026-04-29)
 
 **Goal:** Den EWB-Live-Pfad von ~10 genutzten Profil-Feldern (50-60% tot nach 08.17-Audit) auf Voll-Profil-Integration hochrüsten. `build_profile_context()` erhält definierte Sektions-Reihenfolge (Branche → Zielkunde → Schmerzen → Einwände → Phasen → KI-Verhalten → Wisdom). PreCall-Pipeline (`recherche_firma` + `_generiere_briefing`) bekommt Profil als Steuerungs-Input für branchenspezifische Recherche-Strategie. PreCall-Briefing fließt wieder ins EWB-Prompt (war in 08.8 gelöscht). Manual-EWB-Button-Pfad erhält Profil-Kontext (kein hardcoded Coach-Prompt mehr). `_SYSTEM_PROMPT_QA` um `{profile_context}`-Placeholder erweitern (LB-3-Fix). Schema-Drift `opener`/`pitch` (top-level vs. `basis.*`) bereinigen. Sonnet-Switch via ENV für EWB-Streaming bei Voll-Profil-Kontexten als Pflicht (Voll-Profil + Haiku → grammatisch hölzern; Voll-Profil + Sonnet 4.5 → Quality + akzeptable Latenz mit Caching). Caching-Auswirkung verifizieren: Voll-Profil → Cache-Threshold immer überschritten → max. Cache-ROI. Org-Scoping-Verifikation: `build_profile_context()` nutzt SID-Lookup aus 08.19.4 korrekt (User in Org 2 sieht NICHT Profil 7 aus Admin-Org 1). Mini-Adds (alle Pflicht): (8) Vorwissen-Picker im Live-Workflow nach PreCall — Lead-spezifisch (3-stufig), fließt als Lead-Context in EWB-Prompt; (9) Du/Sie-Smart-Switch — Lead-spezifisch + Live-Detection im Transcript; (10) Live-EWB-Prompt-Preview-Panel — kollabierbares Panel pro Profil-Sektion; (12) `einwaende_detail` vs. `einwaende` Koexistenz konsolidieren — Migration auf einheitliches Format.
