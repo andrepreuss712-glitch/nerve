@@ -1092,7 +1092,10 @@ Plans:
 **UI-SAFETY-GATE:** --skip-ui (Visual-Polish kommt in Block O Teil 2)
 **Andre-Decision (2026-05-06):** UAT Round 3: 3 Buttons sind Anti-UX. Alle 3 Funktionen sollen immer aktiv sein. Step 4 → 1 Button. Personalisierung lebt in Step 5 (modus-abhängige ✨-Knöpfe pro Reiter).
 
-**Plans:** tbd
+**Plans:** 1 plan
+
+Plans:
+- [ ] 08.19.5.6.2-01-PLAN.md — renderStep4() 3→1 Button + briefingModus entfernen + PiP-Gate + Tests bereinigen
 
 ---
 
