@@ -81,6 +81,10 @@ def neu():
             )
             db.add(p)
             db.commit()
+            # AJAX-aware: return JSON so fetch()-handler gets 200 + parseable body
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'ok': True, 'name': p.name, 'id': p.id,
+                                'edit_url': url_for('profiles.bearbeiten', pid=p.id)})
             flash(f'Profil "{p.name}" erstellt.', 'success')
             return redirect(url_for('profiles.liste'))
         finally:

@@ -1194,7 +1194,7 @@ function buildAndSubmit(){
   _isDirty=false;
   fetch(window.location.pathname,{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body:fd,credentials:'same-origin'})
     .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
-    .then(function(){_showToast('Profil gespeichert.','success');})
+    .then(function(data){if(data.edit_url){window.location.href=data.edit_url;}else{_showToast('Profil gespeichert.','success');}})
     .catch(function(){_isDirty=true;_showToast('Fehler beim Speichern — bitte nochmal versuchen.','error');});
 }
 function _showToast(msg,type){
