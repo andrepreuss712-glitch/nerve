@@ -2509,9 +2509,7 @@
     // inhalt: _editedSkriptText > selectedSkriptId > selectedPitchId (WR-01 fix, s.o.)
     // LOW (Cross-AI-Fix): Defensiv initialisieren — leeres Array wenn inhalt leer/null
     var skriptBlocks = (inhalt && inhalt.trim())
-      ? inhalt.split(/
-
-+/).filter(function (b) { return b.trim(); })
+      ? inhalt.split(/\n+/).filter(function (b) { return b.trim(); })
       : [];
 
     // Blöcke zusammensetzen — robuster gegen undefined
