@@ -519,11 +519,14 @@
     }
     state._personalizeAbortController = new AbortController();
 
+    var isMeeting4b = state.mode === 'meeting';
+    var title4b   = isMeeting4b ? 'Skript wird personalisiert…' : 'Opener wird personalisiert…';
+    var subText4b = isMeeting4b ? 'KI passt dein Skript auf den Lead an (~5–10 Sekunden)' : 'KI passt deinen Opener auf den Lead an (~5–10 Sekunden)';
     c.innerHTML = [
       '<div class="launcher-step">',
-      '<div class="nav-live-title">Skript wird personalisiert…</div>',
+      '<div class="nav-live-title">' + title4b + '</div>',
       '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:12px">',
-      'KI passt deinen Opener auf den Lead an (~5–10 Sekunden)',
+      subText4b,
       '</div>',
       '<div class="launcher-loading-bar"><div class="launcher-loading-bar-inner"></div></div>',
       '<div id="lnr-4b-error" style="display:none;color:#f87171;font-size:13px;margin-top:8px"></div>',
@@ -1040,13 +1043,20 @@
       }
       var previewEl = document.getElementById(previewId);
       if (!previewEl || items.length === 0) return;
-      // Selektiertes Item anzeigen; wenn null → ersten Item als Preview (state bleibt null per D-03)
+      // Selektiertes Item anzeigen; wenn null → Hint-Text italic, NICHT items[0] (D-03)
       var item = selId ? items.find(function (i) { return i.id === selId; }) : null;
-      var displayItem = item || items[0];
-      if (displayItem && displayItem.inhalt) {
-        previewEl.textContent = displayItem.inhalt;
-        previewEl.style.fontStyle = item ? 'normal' : 'italic';
-        previewEl.style.color = item ? '' : 'var(--page-text-muted)';
+      if (item && item.inhalt) {
+        previewEl.textContent = item.inhalt;
+        previewEl.style.fontStyle = 'normal';
+        previewEl.style.color = '';
+      } else {
+        var hint = tab === 'skript'    ? 'Skript auswählen für Vorschau'
+                 : tab === 'erlaubnis' ? 'Erlaubnisfrage auswählen für Vorschau'
+                 : tab === 'pitch'     ? 'Pitch auswählen für Vorschau'
+                 :                       'Opener auswählen für Vorschau';
+        previewEl.textContent = hint;
+        previewEl.style.fontStyle = 'italic';
+        previewEl.style.color = 'var(--page-text-muted)';
       }
     })();
 
@@ -1166,9 +1176,17 @@
         if (state.mode === 'meeting') {
           var skSel = document.getElementById('lnr-skript-select');
           if (skSel && skSel.value) state.selectedSkriptId = parseInt(skSel.value, 10) || null;
+          if (!state.selectedSkriptId) {
+            alert('Bitte erst ein Skript auswählen, bevor du personalisierst.');
+            return;
+          }
         } else {
           var opSel = document.getElementById('lnr-opener-select');
           if (opSel && opSel.value) state.selectedOpenerId = parseInt(opSel.value, 10) || null;
+          if (!state.selectedOpenerId) {
+            alert('Bitte erst einen Opener auswählen, bevor du personalisierst.');
+            return;
+          }
         }
         state.briefingModus = 'C';
         state.step = '4b';
