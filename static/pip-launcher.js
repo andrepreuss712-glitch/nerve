@@ -2418,24 +2418,53 @@
       if (sk && sk.inhalt) inhalt = sk.inhalt;
     }
 
+    // R-01: Opener oder Erlaubnisfrage vorhanden auch ohne Skript/Pitch?
+    var hasOpener = !!(state._editedOpenerText || state.selectedOpenerId);
+    var hasErlaubnis = !!state.selectedErlaubnisId;
+
     if (!inhalt || !inhalt.trim()) {
-      container.innerHTML = '<div class="tp-empty">Kein Skript hinterlegt \u2014 Profil bearbeiten</div>';
-      state.teleprompterBlocks = [];
-      return;
+      // Kein Skript/Pitch — aber Opener oder Erlaubnisfrage können trotzdem gezeigt werden
+      if (!hasOpener && !hasErlaubnis) {
+        container.innerHTML = '<div class="tp-empty">Kein Skript hinterlegt — Profil bearbeiten</div>';
+        state.teleprompterBlocks = [];
+        return;
+      }
+      // Nur Opener/Erlaubnis ohne Skript — weiter mit leerem inhalt, skriptBlocks = []
     }
 
-    // D-03: Opener als erster Teleprompter-Block (Phase 0 = Opener für KI-Position-Erkennung)
+    // R-01: Block-Sequenz [openerText?, erlaubnisText?, skriptOrPitchBlocks?]
+    // Opener (Block 0)
     var openerText = '';
     if (state._editedOpenerText) {
       openerText = state._editedOpenerText;
     } else if (state.selectedOpenerId && state.openerItems && state.openerItems.length > 0) {
       var selOp = state.openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
-      if (selOp) openerText = selOp.inhalt;
+      if (selOp) openerText = selOp.inhalt || '';
     }
 
-    // Parse blocks by double-newline, prepend opener as block[0]
-    var skriptBlocks = inhalt.split(/\n\n+/).filter(function (b) { return b.trim(); });
-    var blocks = openerText ? [openerText].concat(skriptBlocks) : skriptBlocks;
+    // Erlaubnisfrage (Block 1) — R-01: selectedErlaubnisId aus openerItems (type='erlaubnis')
+    var erlaubnisText = '';
+    if (state.selectedErlaubnisId && state.openerItems && state.openerItems.length > 0) {
+      var selErl = state.openerItems.find(function (o) {
+        return o.id === state.selectedErlaubnisId && o.type === 'erlaubnis';
+      });
+      if (selErl) erlaubnisText = selErl.inhalt || '';
+    }
+
+    // Skript-oder-Pitch-Blöcke (OD-01 bleibt erhalten via inhalt-Variable oben)
+    // inhalt ist bereits durch den OD-01-Block am Anfang von _initTeleprompter() aufgelöst:
+    // _editedSkriptText > selectedSkriptId > (Pitch wenn selectedSkriptId null: selectedPitchId)
+    // LOW (Cross-AI-Fix): Defensiv initialisieren — leeres Array wenn inhalt leer/null
+    var skriptBlocks = (inhalt && inhalt.trim())
+      ? inhalt.split(/
+
++/).filter(function (b) { return b.trim(); })
+      : [];
+
+    // Blöcke zusammensetzen — robuster gegen undefined
+    var openerBlocks    = (openerText    && openerText.trim())    ? [openerText.trim()]    : [];
+    var erlaubnisBlocks = (erlaubnisText && erlaubnisText.trim()) ? [erlaubnisText.trim()] : [];
+    var blocks = openerBlocks.concat(erlaubnisBlocks).concat(skriptBlocks);
     state.teleprompterBlocks = blocks;
     state.teleprompterActiveIdx = 0;
 
