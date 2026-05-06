@@ -666,7 +666,7 @@
         }
       ))
     })
-      .then(function (r) { return r.json(); })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (data) {
         if (data && data.cap_exceeded) {
           _showCapSubModal(data.items || []);
@@ -812,7 +812,7 @@
           }
         ))
       })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (data) {
           if (data && data.cap_exceeded) {
             // Race condition: another tab created an item — re-show cap modal with fresh list
@@ -1210,7 +1210,8 @@
 
         // Update local state for this call
         if (type === 'skript') state._editedSkriptText = newText;
-        if (type === 'opener') state._editedOpenerText = newText;
+        // WR-02: Nur setzen wenn wirklich der Opener-Tab aktiv ist (nicht erlaubnis/pitch — die übergeben auch type='opener')
+        if (type === 'opener' && state.activeTab === 'opener') state._editedOpenerText = newText;
 
         // Ask: save to profile too?
         if (itemId) {
@@ -2464,19 +2465,25 @@
       var sk = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
       if (sk && sk.inhalt) inhalt = sk.inhalt;
     }
+    // WR-01: Pitch als Fallback wenn kein Skript selektiert
+    if (!inhalt && !state.selectedSkriptId && state.selectedPitchId) {
+      var selPitch = (state.openerItems || []).find(function (o) { return o.id === state.selectedPitchId; });
+      if (selPitch) inhalt = selPitch.inhalt || '';
+    }
 
     // R-01: Opener oder Erlaubnisfrage vorhanden auch ohne Skript/Pitch?
     var hasOpener = !!(state._editedOpenerText || state.selectedOpenerId);
     var hasErlaubnis = !!state.selectedErlaubnisId;
+    var hasPitch = !!state.selectedPitchId;
 
     if (!inhalt || !inhalt.trim()) {
-      // Kein Skript/Pitch — aber Opener oder Erlaubnisfrage können trotzdem gezeigt werden
-      if (!hasOpener && !hasErlaubnis) {
+      // Kein Skript/Pitch — aber Opener, Erlaubnisfrage oder Pitch können trotzdem gezeigt werden
+      if (!hasOpener && !hasErlaubnis && !hasPitch) {
         container.innerHTML = '<div class="tp-empty">Kein Skript hinterlegt — Profil bearbeiten</div>';
         state.teleprompterBlocks = [];
         return;
       }
-      // Nur Opener/Erlaubnis ohne Skript — weiter mit leerem inhalt, skriptBlocks = []
+      // Nur Opener/Erlaubnis/Pitch ohne Skript — weiter mit leerem inhalt, skriptBlocks = []
     }
 
     // R-01: Block-Sequenz [openerText?, erlaubnisText?, skriptOrPitchBlocks?]
@@ -2499,8 +2506,7 @@
     }
 
     // Skript-oder-Pitch-Blöcke (OD-01 bleibt erhalten via inhalt-Variable oben)
-    // inhalt ist bereits durch den OD-01-Block am Anfang von _initTeleprompter() aufgelöst:
-    // _editedSkriptText > selectedSkriptId > (Pitch wenn selectedSkriptId null: selectedPitchId)
+    // inhalt: _editedSkriptText > selectedSkriptId > selectedPitchId (WR-01 fix, s.o.)
     // LOW (Cross-AI-Fix): Defensiv initialisieren — leeres Array wenn inhalt leer/null
     var skriptBlocks = (inhalt && inhalt.trim())
       ? inhalt.split(/
