@@ -1074,10 +1074,11 @@ Plans:
 **CLAUDE.md:** Anti-Hardcoded-Farben-Sektion, Regel 7
 **Andre-Decision (2026-05-06):** UAT 08.19.5.6 zeigt 10/14 grün — Foundation solide. 3 Bugs + 2 UX-Verbesserungen als dedizierte Hotfix-Phase vor Weitermachen mit 08.20.
 
-**Plans:** tbd
+**Plans:** 2 plans
 
 Plans:
-- [ ] 08.19.5.6.1-01-PLAN.md — tbd
+- [ ] 08.19.5.6.1-01-PLAN.md — Null-Default-Optionen (R-02) + Tab-Switch Preview-Trigger (R-03) + Hint-Box (R-05)
+- [ ] 08.19.5.6.1-02-PLAN.md — Teleprompter Block-Builder Sequenz (R-01) + Personalisierungs-Flow Return (R-04)
 
 ---
 
