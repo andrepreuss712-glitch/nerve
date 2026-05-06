@@ -445,20 +445,7 @@
       '<button class="launcher-btn-ghost" id="lnr-step4-back">&#8592; Zurück</button>',
       (hasAnyData && briefingText) ? '<button class="launcher-btn-ghost" id="lnr-step4-edit">Analyse anpassen</button>' : '',
       '<button class="launcher-btn-ghost" id="lnr-step4-new">Neue Analyse</button>',
-      // Modus A — Primary (SPEC Req 1)
-      '<button class="launcher-btn-primary" id="lnr-step4-modus-a">',
-      '  ▶ Briefing übernehmen',
-      '  <span style="display:block;font-size:11px;font-weight:normal;opacity:0.8">Briefing fließt automatisch in die EWB-Hilfe ein</span>',
-      '</button>',
-      // Modus B — Ghost
-      '<button class="launcher-btn-ghost" id="lnr-step4-modus-b">',
-      '  📋 Briefing während Call sichtbar lassen',
-      '  <span style="display:block;font-size:11px;opacity:0.7">Ausklappbarer Tab im PiP zum Nachschauen</span>',
-      '</button>',
-      // Modus C — disabled if no openers (SPEC Req 2, D-01 Modus-C-Disabled-Regel)
-      (state.openerItems && state.openerItems.length > 0)
-        ? '<button class="launcher-btn-ghost" id="lnr-step4-modus-c">✨ Skript auf diesen Lead personalisieren<span style="display:block;font-size:11px;opacity:0.7">KI passt einen Opener/Skript an die Lead-Daten an</span></button>'
-        : '<button class="launcher-btn-ghost" id="lnr-step4-modus-c" disabled title="Erst einen Opener im Profil anlegen" style="opacity:0.4;cursor:not-allowed">✨ Skript auf diesen Lead personalisieren<span style="display:block;font-size:11px;opacity:0.7">KI passt einen Opener/Skript an die Lead-Daten an</span></button>',
+      '<button class="launcher-btn-primary" id="lnr-step4-confirm">Briefing übernehmen</button>',
       '</div>',
       '</div>'
     ].join('');
@@ -485,26 +472,10 @@
         editBtn.textContent = isEditing ? 'Analyse anpassen' : 'Vorschau';
       };
     }
-    // Phase 08.20.3: 3-Button Modus-Selector — A/B/C
-    document.getElementById('lnr-step4-modus-a').onclick = function () {
+    // Phase 08.19.5.6.2: 1-Button "Briefing übernehmen" — EWB + PiP-Tab automatisch (kein briefingModus)
+    document.getElementById('lnr-step4-confirm').onclick = function () {
       var ta = document.getElementById('lnr-briefing-edit');
-      if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
-      state.briefingModus = 'A';
-      state.step = 5;
-      renderStep();
-    };
-    document.getElementById('lnr-step4-modus-b').onclick = function () {
-      var ta = document.getElementById('lnr-briefing-edit');
-      if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
-      state.briefingModus = 'B';
-      state.step = 5;
-      renderStep();
-    };
-    document.getElementById('lnr-step4-modus-c').onclick = function () {
-      if (!state.openerItems || state.openerItems.length === 0) return;  // guard
-      var ta = document.getElementById('lnr-briefing-edit');
-      if (ta && state.precallBriefing) state.precallBriefing.text = ta.value || state.precallBriefing.text;
-      state.briefingModus = 'C';
+      if (ta && state.precallBriefing) state.precallBriefing.text = ta.value;
       state.step = 5;
       renderStep();
     };
