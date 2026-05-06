@@ -2723,6 +2723,27 @@ input[type="range"].perf-slider::-moz-range-thumb {
 }
 .beispiel-link:focus { outline: 2px solid var(--n-accent, #00D4AA); outline-offset: 2px; }
 
+/* ── R-05: Step-5 Hint-Box — Gesprächsvorbereitung Reihenfolge-Erklärung (Phase 08.19.5.6.1) ── */
+.launcher-hint-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: var(--glass-bg);
+  border: 1.5px solid var(--glass-border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--page-text-secondary);
+  line-height: 1.4;
+}
+.launcher-hint-icon {
+  flex-shrink: 0;
+  color: var(--btn-primary-bg-from);
+  font-size: 14px;
+  margin-top: 1px;
+}
+
 /* ── Phase 08.5: Low-confidence Soft-Hint in Slot 1 (D-04 LOCKED) ─────── */
 .slot-soft-hint {
   display: block;

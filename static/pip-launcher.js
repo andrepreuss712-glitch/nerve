@@ -924,6 +924,14 @@
       }
     }
 
+    // ── R-05: Hint-Box — Gesprächsvorbereitung Reihenfolge-Erklärung ──
+    var hintBoxHtml = '<div class="launcher-hint-box">'
+      + '<span class="launcher-hint-icon">ⓘ</span>'
+      + '<span>Reihenfolge im Teleprompter: <strong>Opener → Erlaubnisfrage → Pitch/Skript</strong>. '
+      + 'Skript hat Vorrang vor Pitch. '
+      + 'Mit „— kein/e …" diesen Teil überspringen.</span>'
+      + '</div>';
+
     // ── innerHTML zusammensetzen ──
     c.innerHTML = [
       '<div class="launcher-step">',
@@ -933,6 +941,9 @@
       state.profiles.length > 0
         ? '<label style="font-size:11px;color:var(--page-text-muted);margin-bottom:2px;display:block">Profil</label><select class="launcher-select" id="lnr-profile-select">' + profileOptions + '</select>'
         : '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Profil angelegt. <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil erstellen</a></div>',
+
+      // R-05: Hint-Box vor Tab-Nav
+      hintBoxHtml,
 
       // Tab-Nav
       tabNavHtml,
@@ -964,6 +975,33 @@
       '</div>',
       '</div>'
     ].join('');
+
+    // ── R-03: Tab-Switch Preview-Trigger — sofort den ersten/selektierten Item-Text anzeigen ──
+    (function () {
+      var tab = state.activeTab;
+      var previewId, items, selId;
+      if (tab === 'skript') {
+        previewId = 'lnr-skript-preview';
+        items = state.skripte || [];
+        selId = state.selectedSkriptId;
+      } else {
+        previewId = 'lnr-opener-preview';
+        items = (state.openerItems || []).filter(function (o) { return o.type === tab; });
+        selId = tab === 'erlaubnis' ? state.selectedErlaubnisId
+              : tab === 'pitch'    ? state.selectedPitchId
+              :                      state.selectedOpenerId;
+      }
+      var previewEl = document.getElementById(previewId);
+      if (!previewEl || items.length === 0) return;
+      // Selektiertes Item anzeigen; wenn null → ersten Item als Preview (state bleibt null per D-03)
+      var item = selId ? items.find(function (i) { return i.id === selId; }) : null;
+      var displayItem = item || items[0];
+      if (displayItem && displayItem.inhalt) {
+        previewEl.textContent = displayItem.inhalt;
+        previewEl.style.fontStyle = item ? 'normal' : 'italic';
+        previewEl.style.color = item ? '' : 'var(--page-text-muted)';
+      }
+    })();
 
     // ── Event Wiring nach innerHTML ──
 
