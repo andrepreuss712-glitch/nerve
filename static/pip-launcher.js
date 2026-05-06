@@ -1911,11 +1911,10 @@
     // Render EWB buttons
     _renderEwbButtons();
 
-    // ── Phase 08.20.3: Modus-B Briefing Tab ──────────────────────────────────
+    // ── Phase 08.19.5.6.2: PiP Briefing Tab (automatisch wenn Briefing vorhanden) ──
     var briefingTab = pipEl('pip-briefing-tab');
     if (briefingTab) {
-      if (state.briefingModus === 'B' &&
-          state.precallBriefing &&
+      if (state.precallBriefing &&
           state.precallBriefing.firmenname) {
         // Show tab and set title
         briefingTab.style.display = 'block';
