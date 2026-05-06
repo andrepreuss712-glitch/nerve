@@ -678,16 +678,63 @@
           if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
           return;
         }
-        // Modus-abhängig: Meeting → _editedSkriptText; Cold-Call → _editedOpenerText
-        if (state.mode === 'meeting') {
-          state._editedSkriptText  = state._personalizedSkriptText || "";
-        } else {
-          state._editedOpenerText  = state._personalizedSkriptText || "";
-        }
+        // R-04: Zurück zu Step-5-4-Reiter-Ansicht statt startCall(true)
+        // _editedText bereinigen (nicht mehr benötigt — personalisierter Text ist jetzt in DB)
         state._personalizedSkriptText = null;
         state._personalizeAbortController = null;
-        _collectEditedTexts();
-        startCall(true);
+
+        // MEDIUM (Cross-AI-Fix): Loading-State anzeigen (saveBtn aus Funktionskopf, ID='lnr-step4c-save')
+        var saveBtnOrigText = saveBtn ? saveBtn.textContent : '';
+        if (saveBtn) { saveBtn.textContent = 'Lädt…'; }
+
+        // Neuestes personalisiertes Item laden und selektieren
+        fetch('/api/launcher/profile/' + state.activeProfileId)
+          .then(function (r) {
+            if (!r.ok) throw new Error('profile load failed: ' + r.status);
+            return r.json();
+          })
+          .then(function (profileData) {
+            // openerItems und skripte aktualisieren
+            state.openerItems = profileData.opener || [];
+            state.skripte     = profileData.skripte || [];
+
+            if (state.mode === 'meeting') {
+              var persSkripte = (profileData.skripte || []).filter(function (s) { return s.is_personalized; });
+              persSkripte.sort(function (a, b) { return b.id - a.id; });
+              // HIGH (Cross-AI-Fix): Null-Guard — leeres Ergebnis = stiller Backend-Fehler (200 OK ohne Item)
+              if (persSkripte.length === 0) {
+                console.error('[Personalize] Reload fand kein personalisiertes Skript — stiller Backend-Fehler?');
+                if (typeof _showToast === 'function') _showToast('Personalisierung gespeichert, aber Reload fehlgeschlagen — bitte Profil neu laden.', 'warning');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = saveBtnOrigText; }
+                return;
+              }
+              state.selectedSkriptId = persSkripte[0].id;
+              state.activeTab = 'skript';
+            } else {
+              var persOpener = (profileData.opener || []).filter(function (o) {
+                return o.type === 'opener' && o.is_personalized;
+              });
+              persOpener.sort(function (a, b) { return b.id - a.id; });
+              // HIGH (Cross-AI-Fix): Null-Guard — analog Meeting-Pfad
+              if (persOpener.length === 0) {
+                console.error('[Personalize] Reload fand keinen personalisierten Opener — stiller Backend-Fehler?');
+                if (typeof _showToast === 'function') _showToast('Personalisierung gespeichert, aber Reload fehlgeschlagen — bitte Profil neu laden.', 'warning');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = saveBtnOrigText; }
+                return;
+              }
+              state.selectedOpenerId = persOpener[0].id;
+              state.activeTab = 'opener';
+            }
+            state.step = 5;
+            renderStep5(); // Button ist nach renderStep5 nicht mehr sichtbar — kein explizites re-enable nötig
+          })
+          .catch(function () {
+            // Fallback: renderStep5() auch ohne Reload — kein startCall(true)
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = saveBtnOrigText; }
+            state.activeTab = state.mode === 'meeting' ? 'skript' : 'opener';
+            state.step = 5;
+            renderStep5();
+          });
       })
       .catch(function (err) {
         if (errEl) {
