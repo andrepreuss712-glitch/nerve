@@ -67,7 +67,6 @@
     micLevelRafId: null,
     micMuted: false,
     // Phase 08.20.3: Modus-B Briefing Tab state
-    briefingModus: null,                     // 'A' | 'B' | 'C' | null (Phase 08.20.3)
     briefingTabExpandedAtStreamStart: false, // guard for PiP tab auto-collapse (D-05)
     _personalizedSkriptText: null,           // KI result buffer for renderStep4c
     _personalizeAbortController: null        // AbortController for renderStep4b cancel
@@ -472,7 +471,7 @@
         editBtn.textContent = isEditing ? 'Analyse anpassen' : 'Vorschau';
       };
     }
-    // Phase 08.19.5.6.2: 1-Button "Briefing übernehmen" — EWB + PiP-Tab automatisch (kein briefingModus)
+    // Phase 08.19.5.6.2: 1-Button "Briefing übernehmen" — EWB + PiP-Tab automatisch
     document.getElementById('lnr-step4-confirm').onclick = function () {
       var ta = document.getElementById('lnr-briefing-edit');
       if (ta && state.precallBriefing) state.precallBriefing.text = ta.value;
@@ -606,7 +605,6 @@
     ].join('');
 
     document.getElementById('lnr-step4c-original').onclick = function () {
-      state.briefingModus = 'A';
       state._personalizedSkriptText = null;
       state.step = 5;
       renderStep();
@@ -1159,7 +1157,6 @@
             return;
           }
         }
-        state.briefingModus = 'C';
         state.step = '4b';
         renderStep();
       };
