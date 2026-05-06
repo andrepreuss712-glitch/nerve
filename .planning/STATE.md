@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.6 Plan 01 COMPLETE — Frontend 4-Tab-UI renderStep5() + modus-abhaengige Personalisierung abgeschlossen"
-last_updated: "2026-05-05T17:16:00.000Z"
-last_activity: 2026-05-05
+stopped_at: "08.19.5.6.1 Plan 01 COMPLETE — R-02 Null-Optionen, R-03 Preview-Trigger, R-05 Hint-Box in renderStep5() abgeschlossen"
+last_updated: "2026-05-06T00:00:00.000Z"
+last_activity: 2026-05-06
 progress:
   total_phases: 64
   completed_phases: 50
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.6 (4-reiter-ui-skript-opener-auswahl-briefing-skript-merge) — Plan 01 + 02 COMPLETE
-Plan: 1 — Plan 01 COMPLETE (2026-05-05)
-Last activity: 2026-05-05
+Phase: 08.19.5.6.1 (4-reiter-ui-hotfixes-ux-polish) — Plan 01 COMPLETE
+Plan: 1 — Plan 01 COMPLETE (2026-05-06)
+Last activity: 2026-05-06
+
+**Phase 08.19.5.6.1 Plan 01 abgeschlossen:** R-02/R-03/R-05 in renderStep5() — Null-Optionen ("— kein Opener —" / "— keine Erlaubnisfrage —" / "— keinen Pitch —" / "— kein Skript —") mit value="" in allen 4 Dropdowns. IIFE Preview-Trigger nach innerHTML-Assign: zeigt items[0].inhalt kursiv wenn selId null (state bleibt unverändert per D-03). Hint-Box permanent über Tab-Nav: Reihenfolge (Opener→Erlaubnisfrage→Pitch/Skript) + Skript-Priorität + Null-Option-Erklärung. nerve.css: .launcher-hint-box + .launcher-hint-icon mit ausschließlich var(--...) Tokens. 2 Commits: 234843d, eaa42c3.
 
 **Phase 08.19.5.6 Plan 01 abgeschlossen:** Frontend 4-Tab-UI renderStep5() — state.activeTab + selectedErlaubnisId + selectedPitchId + window.switchTab5(). renderStep5() von flachem Auswahl-UI zu 4-Tab-Layout umgebaut (Opener/Erlaubnisfrage/Pitch/Skript). openerItems-Filterung nach o.type. Leerstand-States pro Tab mit /profiles-Link. Titel "Gesprächsvorbereitung". Vorwissen + Anrede immer sichtbar. Personalisieren-Button modus-abhängig (Cold-Call→Opener-Tab, Meeting→Skript-Tab). renderStep4b/4c/_savePersonalizedAndStartCall/cap-modal alle modus-abhängig umgestellt. _collectEditedTexts() Guard-Fix. OD-01 Pitch/Skript-Priorität via _resolvedTeleprompterSkript. Deviation: fcd-tab CSS in base.html eingefügt. 4 Commits: 6446f4d, 90557dc, 91491d8, 487b806.
 

@@ -1077,7 +1077,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08.19.5.6.1-01-PLAN.md — Null-Default-Optionen (R-02) + Tab-Switch Preview-Trigger (R-03) + Hint-Box (R-05)
+- [x] 08.19.5.6.1-01-PLAN.md — Null-Default-Optionen (R-02) + Tab-Switch Preview-Trigger (R-03) + Hint-Box (R-05) ✅ 2026-05-06
 - [ ] 08.19.5.6.1-02-PLAN.md — Teleprompter Block-Builder Sequenz (R-01) + Personalisierungs-Flow Return (R-04)
 
 ---
