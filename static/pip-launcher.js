@@ -852,9 +852,10 @@
         tabContentHtml = '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Opener hinterlegt — <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil bearbeiten</a></div>';
       } else {
         var opSel5 = openerItems.find(function (o) { return o.id === state.selectedOpenerId; });
-        var opOpts = openerItems.map(function (o) {
-          return '<option value="' + o.id + '"' + (o.id === state.selectedOpenerId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
-        }).join('');
+        var opOpts = '<option value=""' + (state.selectedOpenerId === null ? ' selected' : '') + '>— kein Opener —</option>'
+          + openerItems.map(function (o) {
+              return '<option value="' + o.id + '"' + (o.id === state.selectedOpenerId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
+            }).join('');
         var opPrev = opSel5 ? escHtml(opSel5.inhalt || '') : '';
         tabContentHtml =
           '<select class="launcher-select" id="lnr-opener-select">' + opOpts + '</select>'
@@ -871,9 +872,10 @@
         tabContentHtml = '<div style="color:var(--page-text-muted);font-size:13px">Noch keine Erlaubnisfrage hinterlegt — <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil bearbeiten</a></div>';
       } else {
         var erlSel5 = erlaubnisItems.find(function (o) { return o.id === state.selectedErlaubnisId; });
-        var erlOpts = erlaubnisItems.map(function (o) {
-          return '<option value="' + o.id + '"' + (o.id === state.selectedErlaubnisId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
-        }).join('');
+        var erlOpts = '<option value=""' + (state.selectedErlaubnisId === null ? ' selected' : '') + '>— keine Erlaubnisfrage —</option>'
+          + erlaubnisItems.map(function (o) {
+              return '<option value="' + o.id + '"' + (o.id === state.selectedErlaubnisId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
+            }).join('');
         var erlPrev = erlSel5 ? escHtml(erlSel5.inhalt || '') : '';
         tabContentHtml =
           '<select class="launcher-select" id="lnr-opener-select">' + erlOpts + '</select>'
@@ -889,9 +891,10 @@
         tabContentHtml = '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Pitch hinterlegt — <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil bearbeiten</a></div>';
       } else {
         var pitchSel5 = pitchItems.find(function (o) { return o.id === state.selectedPitchId; });
-        var pitchOpts = pitchItems.map(function (o) {
-          return '<option value="' + o.id + '"' + (o.id === state.selectedPitchId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
-        }).join('');
+        var pitchOpts = '<option value=""' + (state.selectedPitchId === null ? ' selected' : '') + '>— keinen Pitch —</option>'
+          + pitchItems.map(function (o) {
+              return '<option value="' + o.id + '"' + (o.id === state.selectedPitchId ? ' selected' : '') + '>' + escHtml(o.name) + '</option>';
+            }).join('');
         var pitchPrev = pitchSel5 ? escHtml(pitchSel5.inhalt || '') : '';
         tabContentHtml =
           '<select class="launcher-select" id="lnr-opener-select">' + pitchOpts + '</select>'
@@ -906,9 +909,10 @@
         tabContentHtml = '<div style="color:var(--page-text-muted);font-size:13px">Noch kein Skript hinterlegt — <a href="/profiles" style="color:var(--btn-primary-bg-from)">Profil bearbeiten</a></div>';
       } else {
         var skSel5 = state.skripte.find(function (s) { return s.id === state.selectedSkriptId; });
-        var skOpts = state.skripte.map(function (s) {
-          return '<option value="' + s.id + '"' + (s.id === state.selectedSkriptId ? ' selected' : '') + '>' + escHtml(s.name) + '</option>';
-        }).join('');
+        var skOpts = '<option value=""' + (state.selectedSkriptId === null ? ' selected' : '') + '>— kein Skript —</option>'
+          + state.skripte.map(function (s) {
+              return '<option value="' + s.id + '"' + (s.id === state.selectedSkriptId ? ' selected' : '') + '>' + escHtml(s.name) + '</option>';
+            }).join('');
         var skPrev = skSel5 ? escHtml(skSel5.inhalt || '') : '';
         tabContentHtml =
           '<select class="launcher-select" id="lnr-skript-select">' + skOpts + '</select>'
