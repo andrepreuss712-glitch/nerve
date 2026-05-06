@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.6.1 Plan 02 COMPLETE — R-01 Teleprompter Block-Sequenz + R-04 Personalisierungs-Return-Flow abgeschlossen. Phase 08.19.5.6.1 vollstaendig."
+stopped_at: "08.19.5.6.2 Plan 01 COMPLETE — 3-Button-Modus-Wahl zu 1-Button lnr-step4-confirm konsolidiert. state.briefingModus vollstaendig entfernt (0 grep-Treffer). PiP-Tab-Gate auf precallBriefing.firmenname umgestellt. 28 Tests gruen."
 last_updated: "2026-05-06T00:00:00.000Z"
 last_activity: 2026-05-06
 progress:
   total_phases: 64
   completed_phases: 51
-  total_plans: 221
-  completed_plans: 213
+  total_plans: 222
+  completed_plans: 214
   percent: 96
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.6.1 (4-reiter-ui-hotfixes-ux-polish) — PHASE COMPLETE (Plan 01 + 02)
-Plan: 2 — Plan 02 COMPLETE (2026-05-06)
+Phase: 08.19.5.6.2 (briefing-buttons-konsolidierung-3-zu-1) — PHASE COMPLETE (Plan 01)
+Plan: 1 — Plan 01 COMPLETE (2026-05-06)
 Last activity: 2026-05-06
+
+**Phase 08.19.5.6.2 Plan 01 abgeschlossen:** 3-Button-Modus-Wahl (A/B/C) in Step 4 zu 1-Button lnr-step4-confirm konsolidiert. state.briefingModus vollstaendig aus pip-launcher.js entfernt (0 Treffer). PiP-Tab-Gate von briefingModus==='B' auf precallBriefing.firmenname umgestellt. Toter briefingModus-Kommentar in test_08_20_3.py entfernt. 28 Tests gruen. 4 Commits: d118a4f, df11b67, c3122be, fc9fe08. Decisions: D-01 lnr-step4-confirm ID, D-02 direkte ta.value-Zuweisung, D-03 Kommentar bereinigt.
 
 **Phase 08.19.5.6.1 Plan 02 abgeschlossen:** R-01 + R-04 in pip-launcher.js — _initTeleprompter() Block-Sequenz [openerText?, erlaubnisText?, skriptOrPitchBlocks?]: erlaubnisText aus selectedErlaubnisId via openerItems(type='erlaubnis'), hasOpener/hasErlaubnis Guard ersetzt fruehen Return, blocks via .concat().concat(). _savePersonalizedAndStartCall(): startCall(true) durch fetch(/api/launcher/profile/{id})+renderStep5() ersetzt, is_personalized Filter, Null-Guard mit _showToast, .catch() ruft renderStep5(). Rule-1-Fix: falsche saveBtn-ID entfernt. 2 Commits: 895b5ee, e1e80b0.
 
