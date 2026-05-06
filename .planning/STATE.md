@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.6.1 Plan 01 COMPLETE — R-02 Null-Optionen, R-03 Preview-Trigger, R-05 Hint-Box in renderStep5() abgeschlossen"
+stopped_at: "08.19.5.6.1 Plan 02 COMPLETE — R-01 Teleprompter Block-Sequenz + R-04 Personalisierungs-Return-Flow abgeschlossen. Phase 08.19.5.6.1 vollstaendig."
 last_updated: "2026-05-06T00:00:00.000Z"
 last_activity: 2026-05-06
 progress:
   total_phases: 64
-  completed_phases: 50
+  completed_phases: 51
   total_plans: 221
-  completed_plans: 212
+  completed_plans: 213
   percent: 96
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.19.5.6.1 (4-reiter-ui-hotfixes-ux-polish) — Plan 01 COMPLETE
-Plan: 1 — Plan 01 COMPLETE (2026-05-06)
+Phase: 08.19.5.6.1 (4-reiter-ui-hotfixes-ux-polish) — PHASE COMPLETE (Plan 01 + 02)
+Plan: 2 — Plan 02 COMPLETE (2026-05-06)
 Last activity: 2026-05-06
+
+**Phase 08.19.5.6.1 Plan 02 abgeschlossen:** R-01 + R-04 in pip-launcher.js — _initTeleprompter() Block-Sequenz [openerText?, erlaubnisText?, skriptOrPitchBlocks?]: erlaubnisText aus selectedErlaubnisId via openerItems(type='erlaubnis'), hasOpener/hasErlaubnis Guard ersetzt fruehen Return, blocks via .concat().concat(). _savePersonalizedAndStartCall(): startCall(true) durch fetch(/api/launcher/profile/{id})+renderStep5() ersetzt, is_personalized Filter, Null-Guard mit _showToast, .catch() ruft renderStep5(). Rule-1-Fix: falsche saveBtn-ID entfernt. 2 Commits: 895b5ee, e1e80b0.
 
 **Phase 08.19.5.6.1 Plan 01 abgeschlossen:** R-02/R-03/R-05 in renderStep5() — Null-Optionen ("— kein Opener —" / "— keine Erlaubnisfrage —" / "— keinen Pitch —" / "— kein Skript —") mit value="" in allen 4 Dropdowns. IIFE Preview-Trigger nach innerHTML-Assign: zeigt items[0].inhalt kursiv wenn selId null (state bleibt unverändert per D-03). Hint-Box permanent über Tab-Nav: Reihenfolge (Opener→Erlaubnisfrage→Pitch/Skript) + Skript-Priorität + Null-Option-Erklärung. nerve.css: .launcher-hint-box + .launcher-hint-icon mit ausschließlich var(--...) Tokens. 2 Commits: 234843d, eaa42c3.
 
