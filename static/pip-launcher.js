@@ -599,7 +599,7 @@
       '<div id="lnr-4c-save-error" style="display:none;color:#f87171;font-size:13px;margin-bottom:8px"></div>',
       '<div class="launcher-actions" style="flex-wrap:wrap;gap:8px">',
       '<button class="launcher-btn-ghost" id="lnr-step4c-original">Original nutzen</button>',
-      '<button class="launcher-btn-primary" id="lnr-step4c-save">Personalisiert nutzen + Call ▶</button>',
+      '<button class="launcher-btn-primary" id="lnr-step4c-save">Personalisiert nutzen</button>',
       '</div>',
       '</div>'
     ].join('');
@@ -642,12 +642,12 @@
       .then(function (data) {
         if (data && data.cap_exceeded) {
           _showCapSubModal(data.items || []);
-          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen'; }
           return;
         }
         if (data && data.error) {
           if (errEl) { errEl.textContent = sanitizeErrorMsg(data.error); errEl.style.display = 'block'; }
-          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen'; }
           return;
         }
         // R-04: Zurück zu Step-5-4-Reiter-Ansicht statt startCall(true)
@@ -717,7 +717,7 @@
           errEl.textContent = sanitizeErrorMsg((err && err.message) ? err.message : 'Fehler beim Speichern');
           errEl.style.display = 'block';
         }
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen + Call ▶'; }
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Personalisiert nutzen'; }
       });
   }
 

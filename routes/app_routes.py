@@ -1157,13 +1157,12 @@ def api_personalize_skript_save():
     Returns {'cap_exceeded': True, 'items': [...]} when cap is hit (no delete_ids given).
     Accepts optional 'delete_ids' list to free cap slots before saving.
 
-    IMPORTANT (Finding B): All deletes + the INSERT are wrapped in a single
-    `with _db.begin():` transaction. If INSERT fails after DELETE, ALL changes
-    are rolled back. No partial state, no data loss.
+    Modus-abhängiger Insert (Fix Sache 1):
+    - cold_call → ProfileOpener (type='opener', is_personalized=True)
+    - meeting   → ProfileSkript (wie bisher)
 
-    IMPORTANT (Finding A): briefing_source_firma is stored on the new ProfileOpener,
-    sourced from request body 'firmenname'. This enables the Step-5 optgroup grouping
-    in pip-launcher.js (Plan 01).
+    Cap-Check deckt beide Tabellen ab: ProfileSkript (meeting) + ProfileOpener (cold_call).
+    Delete-Phase sucht zuerst in ProfileSkript, dann in ProfileOpener.
     """
     from database.db import get_session as get_db_session
     from config import PERSONALIZED_SCRIPTS_CAP
@@ -1255,37 +1254,51 @@ def api_personalize_skript_save():
         cap_exceeded_response = None  # set if cap is hit
         new_item_id = None
         try:
-            # Cap-Check gegen ProfileSkript — in beiden Modi (meeting + cold_call)
-            from database.models import ProfileSkript
+            from database.models import ProfileSkript, ProfileOpener
+            # Cap-Check über beide Tabellen: ProfileSkript (meeting) + ProfileOpener (cold_call)
             if not delete_ids:
-                personalized_count = _db.query(ProfileSkript).filter_by(
+                count_skript = _db.query(ProfileSkript).filter_by(
                     profile_id=profile_id, is_personalized=True
                 ).with_for_update().count()
+                count_opener = _db.query(ProfileOpener).filter_by(
+                    profile_id=profile_id, is_personalized=True
+                ).with_for_update().count()
+                personalized_count = count_skript + count_opener
 
                 if personalized_count >= cap:
-                    # Cap exceeded — collect items list for sub-modal (SPEC Req 9)
-                    items_query = _db.query(ProfileSkript).filter_by(
-                        profile_id=profile_id, is_personalized=True
-                    ).order_by(ProfileSkript.created_at.asc()).all()
-
+                    # Cap exceeded — collect items from both tables for sub-modal (SPEC Req 9)
                     now = datetime.datetime.utcnow()
                     items_list = []
-                    for item in items_query:
-                        weeks_old = 0
-                        if item.created_at:
-                            delta = now - item.created_at
-                            weeks_old = int(delta.days / 7)
+                    for item in _db.query(ProfileSkript).filter_by(
+                        profile_id=profile_id, is_personalized=True
+                    ).order_by(ProfileSkript.created_at.asc()).all():
+                        weeks_old = int((now - item.created_at).days / 7) if item.created_at else 0
                         items_list.append({
                             'id': item.id,
                             'name': item.name or '',
                             'created_at': str(item.created_at) if item.created_at else '',
                             'firmenname': (item.name or '')[:20],
                             'weeks_old': weeks_old,
+                            '_table': 'skript',
                         })
+                    for item in _db.query(ProfileOpener).filter_by(
+                        profile_id=profile_id, is_personalized=True
+                    ).order_by(ProfileOpener.created_at.asc()).all():
+                        weeks_old = int((now - item.created_at).days / 7) if item.created_at else 0
+                        items_list.append({
+                            'id': item.id,
+                            'name': item.name or '',
+                            'created_at': str(item.created_at) if item.created_at else '',
+                            'firmenname': (item.name or '')[:20],
+                            'weeks_old': weeks_old,
+                            '_table': 'opener',
+                        })
+                    # Sort combined list by created_at ascending (oldest first)
+                    items_list.sort(key=lambda x: x['created_at'])
                     cap_exceeded_response = items_list
                     raise _CapExceeded()
 
-            # Delete-Phase (Cap-Befreiung) — IMMER gegen ProfileSkript
+            # Delete-Phase (Cap-Befreiung) — sucht in ProfileSkript, dann ProfileOpener
             for item_id in delete_ids:
                 item = _db.query(ProfileSkript).filter_by(
                     id=item_id,
@@ -1293,26 +1306,47 @@ def api_personalize_skript_save():
                     is_personalized=True  # Schutz: nur personalisierte koennen via Cap-Modal geloescht werden
                 ).first()
                 if not item:
+                    # Fallback: cold-call personalisierte Opener
+                    item = _db.query(ProfileOpener).filter_by(
+                        id=item_id,
+                        profile_id=profile_id,
+                        is_personalized=True
+                    ).first()
+                if not item:
                     raise ValueError(f"Item {item_id} not found or not personalized")
 
                 # DSGVO-Audit-Log (SPEC Req 10) — before delete so we have the data
                 firmenname_hint = (item.name or '')[:20]
                 print(
-                    f"[DSGVO-Audit] User-Aktion: personalisiertes Skript gelöscht zur Cap-Befreiung "
+                    f"[DSGVO-Audit] User-Aktion: personalisiertes Item gelöscht zur Cap-Befreiung "
                     f"(item_id={item.id}, firmenname={firmenname_hint}, erstellt={item.created_at})"
                 )
                 _db.delete(item)
 
-            # Insert IMMER als ProfileSkript (auch Cold-Call-Pfad — kein ProfileOpener-Insert)
-            new_item = ProfileSkript(
-                profile_id=profile_id,
-                name=new_name,
-                inhalt=personalized_text,
-                parent_id=original.id,          # Quell-Item ID (ProfileSkript oder ProfileOpener)
-                is_personalized=True,
-                briefing_source_firma=firmenname or None,
-                sortierung=0,
-            )
+            # Modus-abhängiger Insert: cold_call → ProfileOpener, meeting → ProfileSkript
+            if opener_id:
+                # Cold-Call-Pfad: Insert in ProfileOpener (type='opener', is_personalized=True)
+                new_item = ProfileOpener(
+                    profile_id=profile_id,
+                    name=new_name,
+                    inhalt=personalized_text,
+                    type='opener',
+                    parent_id=original.id,
+                    is_personalized=True,
+                    briefing_source_firma=firmenname or None,
+                    sortierung=0,
+                )
+            else:
+                # Meeting-Pfad: Insert in ProfileSkript (wie bisher)
+                new_item = ProfileSkript(
+                    profile_id=profile_id,
+                    name=new_name,
+                    inhalt=personalized_text,
+                    parent_id=original.id,
+                    is_personalized=True,
+                    briefing_source_firma=firmenname or None,
+                    sortierung=0,
+                )
             _db.add(new_item)
             _db.flush()   # trigger ID generation without committing yet
             new_item_id = new_item.id
