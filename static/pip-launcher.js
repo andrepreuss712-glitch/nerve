@@ -673,11 +673,13 @@
             if (state.mode === 'meeting') {
               var persSkripte = (profileData.skripte || []).filter(function (s) { return s.is_personalized; });
               persSkripte.sort(function (a, b) { return b.id - a.id; });
-              // HIGH (Cross-AI-Fix): Null-Guard — leeres Ergebnis = stiller Backend-Fehler (200 OK ohne Item)
+              // FIX doppel-save: Null-Guard navigiert zu Step 5 statt Button re-enablen
+              // Save war bereits erfolgreich (200 OK) — re-enable wuerde zweiten Save-Klick ermoeglichen
               if (persSkripte.length === 0) {
                 console.error('[Personalize] Reload fand kein personalisiertes Skript — stiller Backend-Fehler?');
                 if (typeof _showToast === 'function') _showToast('Personalisierung gespeichert, aber Reload fehlgeschlagen — bitte Profil neu laden.', 'warning');
-                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = saveBtnOrigText; }
+                state.step = 5;
+                renderStep5();
                 return;
               }
               state.selectedSkriptId = persSkripte[0].id;
@@ -687,11 +689,13 @@
                 return o.type === 'opener' && o.is_personalized;
               });
               persOpener.sort(function (a, b) { return b.id - a.id; });
-              // HIGH (Cross-AI-Fix): Null-Guard — analog Meeting-Pfad
+              // FIX doppel-save: Null-Guard navigiert zu Step 5 statt Button re-enablen
+              // Save war bereits erfolgreich (200 OK) — re-enable wuerde zweiten Save-Klick ermoeglichen
               if (persOpener.length === 0) {
                 console.error('[Personalize] Reload fand keinen personalisierten Opener — stiller Backend-Fehler?');
                 if (typeof _showToast === 'function') _showToast('Personalisierung gespeichert, aber Reload fehlgeschlagen — bitte Profil neu laden.', 'warning');
-                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = saveBtnOrigText; }
+                state.step = 5;
+                renderStep5();
                 return;
               }
               state.selectedOpenerId = persOpener[0].id;
