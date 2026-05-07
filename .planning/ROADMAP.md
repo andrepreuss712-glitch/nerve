@@ -1095,7 +1095,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 08.19.5.6.2-01-PLAN.md — renderStep4() 3→1 Button + briefingModus entfernen + PiP-Gate + Tests bereinigen
+- [x] 08.19.5.6.2-01-PLAN.md — renderStep4() 3→1 Button + briefingModus entfernen + PiP-Gate + Tests bereinigen ✅ 2026-05-07
 
 ---
 

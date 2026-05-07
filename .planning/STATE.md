@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.6.2 Plan 01 COMPLETE — 3-Button-Modus-Wahl zu 1-Button lnr-step4-confirm konsolidiert. state.briefingModus vollstaendig entfernt (0 grep-Treffer). PiP-Tab-Gate auf precallBriefing.firmenname umgestellt. 28 Tests gruen."
-last_updated: "2026-05-06T00:00:00.000Z"
-last_activity: 2026-05-06
+stopped_at: "08.19.5.6.2 PHASE COMPLETE (2026-05-07) — 1-Button-Step4, briefingModus=0, PiP-Gate automatisch, UAT approved. Next: 08.20 Pipeline-Re-Wire."
+last_updated: "2026-05-07T00:00:00.000Z"
+last_activity: 2026-05-07
 progress:
   total_phases: 64
-  completed_phases: 51
+  completed_phases: 52
   total_plans: 222
-  completed_plans: 214
-  percent: 96
+  completed_plans: 215
+  percent: 97
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** 08.19.5.1 VERIFIED — WR-01 + WR-02 per-SID migration complete. Multi-User-Daten-Trennung 100% abgeschlossen.
+**Current focus:** 08.19.5.6.2 COMPLETE (2026-05-07) — Briefing-Buttons 3→1, briefingModus entfernt, Cold-Call-Personalisierung-Fix, UAT approved. Next: 08.20 Pipeline-Re-Wire.
 
 ## Current Position
 
