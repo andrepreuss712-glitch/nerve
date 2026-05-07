@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: "08.19.5.6.2 PHASE COMPLETE (2026-05-07) — 1-Button-Step4, briefingModus=0, PiP-Gate automatisch, UAT approved. Next: 08.20 Pipeline-Re-Wire."
-last_updated: "2026-05-07T00:00:00.000Z"
-last_activity: 2026-05-07
+stopped_at: context exhaustion at 90% (2026-05-07)
+last_updated: "2026-05-07T08:38:11.625Z"
+last_activity: 2026-05-06
 progress:
-  total_phases: 64
-  completed_phases: 52
-  total_plans: 222
-  completed_plans: 215
-  percent: 97
+  total_phases: 69
+  completed_phases: 55
+  total_plans: 233
+  completed_plans: 222
+  percent: 95
 ---
 
 # Project State
@@ -666,6 +666,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-05T19:18:00.000Z
-Stopped at: Session resumed — 08.19.5.6 Phase complete (Plans 01+02+Review-Fix done). Next: 08.20.3 Plan 05 (Call-Flow Integration) to plan and execute.
+Last session: 2026-05-07T08:38:11.614Z
+Stopped at: context exhaustion at 90% (2026-05-07)
 Resume file: None
