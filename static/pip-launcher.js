@@ -1850,7 +1850,8 @@
         var analyseBody = pipEl('pip-analyse-body');
         var analyseIcon = pipEl('pip-analyse-icon');
         if (analyseBody) {
-          var analyseExpanded = analyseBody.style.maxHeight !== '0' && analyseBody.style.maxHeight !== '';
+          // Browser normalisiert maxHeight beim Auslesen zu '0px' — numerischer Check robuster
+          var analyseExpanded = parseFloat(analyseBody.style.maxHeight) > 0;
           if (analyseExpanded) {
             analyseBody.style.maxHeight = '0';
             if (analyseIcon) { analyseIcon.textContent = '▶'; }
@@ -1868,7 +1869,8 @@
         var empfBody = pipEl('pip-empfehlungen-body');
         var empfIcon = pipEl('pip-empfehlungen-icon');
         if (empfBody) {
-          var empfExpanded = empfBody.style.maxHeight !== '0' && empfBody.style.maxHeight !== '';
+          // Browser normalisiert maxHeight beim Auslesen zu '0px' — numerischer Check robuster
+          var empfExpanded = parseFloat(empfBody.style.maxHeight) > 0;
           if (empfExpanded) {
             empfBody.style.maxHeight = '0';
             if (empfIcon) { empfIcon.textContent = '▶'; }
