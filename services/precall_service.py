@@ -565,7 +565,7 @@ Briefing:
         _t0 = time.time()
         msg = claude_client.messages.create(
             model=config.MODEL_PRECALL,
-            max_tokens=1200,
+            max_tokens=8000,
             system=_system,
             messages=[{"role": "user", "content": user_msg}],
         )
