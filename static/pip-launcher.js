@@ -1863,6 +1863,24 @@
         return;
       }
 
+      // Bug fix: Empfehlungen-Fliesstext toggle (analog data-analyse-toggle)
+      if (ev.target.closest('[data-empfehlungen-toggle]')) {
+        var empfBody = pipEl('pip-empfehlungen-body');
+        var empfIcon = pipEl('pip-empfehlungen-icon');
+        if (empfBody) {
+          var empfExpanded = empfBody.style.maxHeight !== '0' && empfBody.style.maxHeight !== '';
+          if (empfExpanded) {
+            empfBody.style.maxHeight = '0';
+            if (empfIcon) { empfIcon.textContent = '▶'; }
+          } else {
+            empfBody.style.maxHeight = '999px';
+            if (empfIcon) { empfIcon.textContent = '▼'; }
+          }
+        }
+        ev.stopPropagation();
+        return;
+      }
+
       // BUG2 FIX: Anrede toggle — data-anrede on pip-anrede-du / pip-anrede-sie
       // onlick attrs removed from base.html (fired in PiP-window scope without access
       // to window.pipSetAnrede on main window). Event delegation runs in main-window
@@ -1958,9 +1976,9 @@
           for (var fi = 0; fi < fieldDefs.length; fi++) {
             var fd = fieldDefs[fi];
             var f = briefingFields[fd.key];
-            if (f && f.confidence !== 'not_found' && f.value) {
-              eckdatenRows += '<div class="pip-cheat-row"><span>' + fd.label + ':</span><span>' + f.value + '</span></div>';
-            }
+            // Bug fix: always show all 4 Eckdaten fields — use '—' when not_found
+            var fVal = (f && f.confidence !== 'not_found' && f.value) ? f.value : '—';
+            eckdatenRows += '<div class="pip-cheat-row"><span>' + fd.label + ':</span><span>' + fVal + '</span></div>';
           }
           if (eckdatenRows) {
             cheatHtml += eckdatenRows;
@@ -1969,8 +1987,15 @@
           var empf = state.precallBriefing.empfehlungen || '';
           if (empf && empf.trim()) {
             cheatHtml += '<hr class="pip-cheat-sep">';
-            cheatHtml += '<div class="pip-cheat-heading">Empfehlungen</div>';
-            cheatHtml += mdToHtml(empf);
+            // Bug fix: strip leading H1 that duplicates the section heading
+            var empfClean = empf.replace(/^#[^
+]*
+?/m, '');
+            // Bug fix: collapsible Empfehlungen section (default expanded)
+            cheatHtml += '<button class="pip-analyse-toggle" data-empfehlungen-toggle="1"><span id="pip-empfehlungen-icon">▼</span> Empfehlungen</button>';
+            cheatHtml += '<div id="pip-empfehlungen-body" style="max-height:999px;overflow:hidden;transition:max-height 200ms ease;">';
+            cheatHtml += mdToHtml(empfClean);
+            cheatHtml += '</div>';
           }
           // ── Sektion 3: Fließtext kollabiert (R-03) ──
           var analyseText = state.precallBriefing.text || '';
@@ -2006,14 +2031,14 @@
   function _expandBriefingTab() {
     var body = pipEl('pip-briefing-tab-body');
     var icon = pipEl('pip-briefing-tab-icon');
-    if (body) { body.style.maxHeight = '300px'; }
+    if (body) { body.style.maxHeight = '300px'; body.style.overflowY = 'auto'; }
     if (icon) { icon.textContent = '▼'; }
   }
 
   function _collapseBriefingTab() {
     var body = pipEl('pip-briefing-tab-body');
     var icon = pipEl('pip-briefing-tab-icon');
-    if (body) { body.style.maxHeight = '0'; }
+    if (body) { body.style.maxHeight = '0'; body.style.overflowY = 'hidden'; }
     if (icon) { icon.textContent = '▶'; }
   }
 
