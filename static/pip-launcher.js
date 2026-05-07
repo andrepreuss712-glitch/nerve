@@ -1988,9 +1988,7 @@
           if (empf && empf.trim()) {
             cheatHtml += '<hr class="pip-cheat-sep">';
             // Bug fix: strip leading H1 that duplicates the section heading
-            var empfClean = empf.replace(/^#[^
-]*
-?/m, '');
+            var empfClean = empf.replace(/^#[^\n]*\n?/m, '');
             // Bug fix: collapsible Empfehlungen section (default expanded)
             cheatHtml += '<button class="pip-analyse-toggle" data-empfehlungen-toggle="1"><span id="pip-empfehlungen-icon">▼</span> Empfehlungen</button>';
             cheatHtml += '<div id="pip-empfehlungen-body" style="max-height:999px;overflow:hidden;transition:max-height 200ms ease;">';
