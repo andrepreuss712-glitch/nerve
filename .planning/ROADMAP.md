@@ -1107,7 +1107,10 @@ Plans:
 **Komplexität:** 🟢
 **UI-SAFETY-GATE:** --skip-ui (Visual-Polish kommt in Block O Teil 2)
 
-**Plans:** tbd
+**Plans:** 1 plan
+
+Plans:
+- [ ] 08.19.5.6.3-01-PLAN.md — nerve.css pip-cheat-* Klassen + pip-launcher.js Cheat-Sheet render + Toggle Event-Delegation
 
 ---
 
