@@ -1845,6 +1845,24 @@
         return;
       }
 
+      // Phase 08.19.5.6.3: Analyse-Fließtext toggle
+      if (ev.target.closest('[data-analyse-toggle]')) {
+        var analyseBody = pipEl('pip-analyse-body');
+        var analyseIcon = pipEl('pip-analyse-icon');
+        if (analyseBody) {
+          var analyseExpanded = analyseBody.style.maxHeight !== '0' && analyseBody.style.maxHeight !== '';
+          if (analyseExpanded) {
+            analyseBody.style.maxHeight = '0';
+            if (analyseIcon) { analyseIcon.textContent = '▶'; }
+          } else {
+            analyseBody.style.maxHeight = '999px';
+            if (analyseIcon) { analyseIcon.textContent = '▼'; }
+          }
+        }
+        ev.stopPropagation();
+        return;
+      }
+
       // BUG2 FIX: Anrede toggle — data-anrede on pip-anrede-du / pip-anrede-sie
       // onlick attrs removed from base.html (fired in PiP-window scope without access
       // to window.pipSetAnrede on main window). Event delegation runs in main-window
@@ -1924,11 +1942,44 @@
         briefingTab.style.display = 'block';
         var titleEl = pipEl('pip-briefing-tab-title');
         if (titleEl) titleEl.textContent = state.precallBriefing.firmenname;
-        // Populate content via mdToHtml (XSS-safe)
+        // Phase 08.19.5.6.3: Cheat-Sheet render (Eckdaten + Empfehlungen + kollabierter Fließtext)
         var contentEl = pipEl('pip-briefing-tab-content');
         if (contentEl) {
-          var briefingHtml = mdToHtml(state.precallBriefing.text || '');
-          contentEl.innerHTML = briefingHtml;
+          var cheatHtml = '';
+          // ── Sektion 1: Eckdaten-Block (R-01) ──
+          var briefingFields = state.precallBriefing.fields || {};
+          var fieldDefs = [
+            { key: 'geschaeftsfuehrer', label: 'GF' },
+            { key: 'branche',           label: 'Branche' },
+            { key: 'mitarbeiterzahl',   label: 'MA' },
+            { key: 'hauptprodukt',      label: 'Produkt' }
+          ];
+          var eckdatenRows = '';
+          for (var fi = 0; fi < fieldDefs.length; fi++) {
+            var fd = fieldDefs[fi];
+            var f = briefingFields[fd.key];
+            if (f && f.confidence !== 'not_found' && f.value) {
+              eckdatenRows += '<div class="pip-cheat-row"><span>' + fd.label + ':</span><span>' + f.value + '</span></div>';
+            }
+          }
+          if (eckdatenRows) {
+            cheatHtml += eckdatenRows;
+          }
+          // ── Sektion 2: Empfehlungen-Block (R-02) ──
+          var empf = state.precallBriefing.empfehlungen || '';
+          if (empf && empf.trim()) {
+            cheatHtml += '<hr class="pip-cheat-sep">';
+            cheatHtml += '<div class="pip-cheat-heading">Empfehlungen</div>';
+            cheatHtml += mdToHtml(empf);
+          }
+          // ── Sektion 3: Fließtext kollabiert (R-03) ──
+          var analyseText = state.precallBriefing.text || '';
+          cheatHtml += '<hr class="pip-cheat-sep">';
+          cheatHtml += '<button class="pip-analyse-toggle" data-analyse-toggle="1"><span id="pip-analyse-icon">▶</span> Analyse aufklappen</button>';
+          cheatHtml += '<div id="pip-analyse-body" style="max-height:0;overflow:hidden;transition:max-height 200ms ease;">';
+          cheatHtml += mdToHtml(analyseText);
+          cheatHtml += '</div>';
+          contentEl.innerHTML = cheatHtml;
         }
         // Education hint: first Modus-B call
         if (!localStorage.getItem('nerve.seen_briefing_tab_intro')) {
