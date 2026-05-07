@@ -477,7 +477,7 @@ def _generiere_empfehlungen(sid, firmenname, fields, user_id=None):
         _t0 = time.time()
         msg = claude_client.messages.create(
             model=config.MODEL_PRECALL,
-            max_tokens=400,
+            max_tokens=1500,
             system=empf_system,
             messages=[{"role": "user", "content": empf_user}],
         )
