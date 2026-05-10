@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: context exhaustion at 90% (2026-05-07)
-last_updated: "2026-05-07T08:38:11.625Z"
-last_activity: 2026-05-06
+stopped_at: Auto-Scroll-Komplex KOMPLETT zurückgenommen (2026-05-10) — siehe ROADMAP.md Eintrag am Ende
+last_updated: "2026-05-10T11:00:00.000Z"
+last_activity: 2026-05-10
 progress:
   total_phases: 69
   completed_phases: 55
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** 08.19.5.6.2 COMPLETE (2026-05-07) — Briefing-Buttons 3→1, briefingModus entfernt, Cold-Call-Personalisierung-Fix, UAT approved. Next: 08.20 Pipeline-Re-Wire.
+**Current focus:** Auto-Scroll-Komplex (5 Phasen 08.19.5.6.4 + .4.1 + .4.2 + .4.3 + .4.4) KOMPLETT zurückgenommen 2026-05-10. Token-Match-Algorithmus war falsches Werkzeug. Teleprompter wieder dumm-statisch. Siehe ROADMAP.md-Eintrag am Ende. Next: 08.20 Pipeline-Re-Wire (wie ursprünglich geplant nach 08.19.5.6.2).
 
 ## Current Position
 

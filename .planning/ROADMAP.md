@@ -1270,3 +1270,34 @@ Plans:
 **Launch-relevant:** true
 **Plans:** 4/4 plans complete
 
+---
+
+## ⚠️ Auto-Scroll-Komplex KOMPLETT ZURÜCKGENOMMEN (2026-05-10)
+
+**Was wurde versucht (5.-10. Mai 2026):**
+- Phase 08.19.5.6.4 — PiP Teleprompter Auto-Scroll + KI-Position-Erkennung
+- Phase 08.19.5.6.4.1 — TeleprompterRegistry + lokales Token-Match
+- Phase 08.19.5.6.4.2 — Deepgram-Latenz-Optimierung (interim_results, endpointing 300, CSS-Pulse)
+- Phase 08.19.5.6.4.3 — Predictive-Cursor-Jump bei Block-Ende (Coverage-Tracking)
+- Phase 08.19.5.6.4.4 — Visuelle Voranzeige (CSS .tp-block-next-up)
+
+**Aufwand:** 5 Phasen, ~78 Commits, mehrere Cross-AI-Reviews mit Gemini, mehrere Bug-Cycles, eine Code-Review pro Phase, knapp 5 Tage Solo-Founder-Zeit.
+
+**Ergebnis aus User-Sicht:** Funktioniert nicht zuverlässig. Andre-UAT mehrfach: Cursor reagiert nicht klar genug auf Block-Wechsel, springt nicht vor Block-Ende, Predictive triggert nicht zuverlässig wegen Deepgram-Aussprache-Drift + Token-Match-Fragilität.
+
+**Wurzel der Fehlentscheidung:** Token-Match-Algorithmus war das falsche Werkzeug für vorausschauende Cursor-Steuerung. Reactive-Auto-Scroll mit Deepgram-Latenz (1-3s Final-Transcript) war im echten Live-Call nicht user-tauglich. Plus: Frust-Schleife durch wiederholte UAT-Iterationen ohne sauber zu reframen (Drei-Versuche-Stop-Regel aus CLAUDE.md Punkt 16 wiederholt verletzt).
+
+**Aktion 2026-05-10:**
+- Hard-Reset auf Pre-Phase-Stand (Commit 1c3bccd vom 7.5.2026)
+- qa-pipeline-Markdown-Sanitizer-Fix (86671ae vom 8.5.) als einziger Code-Fix erhalten
+- Alle 5 Phase-Verzeichnisse (.planning/phases/08.19.5.6.4*) entfernt
+- Teleprompter ist wieder dumm-statisch wie vor 5.5.2026 — User scrollt manuell mit Mausrad
+
+**Nächster Anlauf — wenn überhaupt:**
+Komplett andere Architektur erforderlich (Embedding-basierter Vergleich statt Token-Match). Frühestens Phase 08.21 (Sales-Wisdom-Layer) mit anderer LLM-Pipeline. Eventuell auch nie — manuelles Scrollen durch User ist akzeptable Default-UX, Auto-Scroll war Premium-Feature-Ambition die mit aktueller Tech nicht haltbar ist.
+
+**Lessons-Learned für CLAUDE.md (separat zu dokumentieren):**
+- Drei-Versuche-Stop-Regel (Punkt 16) muss ernster genommen werden — wir hatten >8 Iterationen heute (10.5.) bevor Stop kam
+- Token-Match ist false-friend für UX-kritische Algorithmen mit realer Sprache (Deepgram-Drift, Improvisation, Tokenization-Verluste)
+- Bei Algorithmen-Bugs früher die Architektur-Frage stellen statt am gleichen Werkzeug rumzudoktern (Punkt 11 Fix-vs-Rebuild)
+
