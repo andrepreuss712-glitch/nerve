@@ -89,7 +89,8 @@ Analysiere den Einwand. Entscheide:
 3. NIEMALS stumm bleiben. NIEMALS halluzinierte konkrete Behauptungen über Produkt/Firma/Zahlen.
 
 {tabu_block}
-Anrede: {anrede}. Nutze konsequent {anrede}-Form. Max. 45 Wörter."""
+Anrede: {anrede}. Nutze konsequent {anrede}-Form. Max. 45 Wörter.
+Antworte als reiner Fließtext. Kein Markdown, keine Code-Blocks, keine Sternchen, kein --- Separator, kein Reasoning-Trace, keine Begründungen — nur was der Berater wörtlich sagen soll."""
 
 _FALLBACK_RUECKFRAGE = "Frag nach: Wie meinen Sie das genau?"
 
@@ -355,6 +356,34 @@ def classify_utterance(text: str, kontext: str, user_id: int) -> dict:
         return fallback
 
 
+# ── Internal: markdown sanitizer ─────────────────────────────────────────────
+def _sanitize_qa_output(text: str) -> str:
+    """Strip markdown artifacts the LLM may produce despite plaintext instruction.
+
+    Removes: ```lang ... ``` code-block wrappers, --- separator lines,
+    **Bold:** header markers (keeps the text after the colon), leading/trailing
+    whitespace. Called on raw LLM output before any branch logic.
+    """
+    if not text:
+        return text
+    # Strip ```lang ... ``` wrappers (handles multi-line blocks)
+    text = re.sub(r'```[a-zA-Z]*\n?', '', text)
+    # Strip standalone --- separator lines
+    text = re.sub(r'^\s*---+\s*$', '', text, flags=re.MULTILINE)
+    # Strip **Label:** bold headers — keep the text after the colon
+    # e.g. "**Frag nach:** foo" → "Frag nach: foo"
+    text = re.sub(r'\*\*([^*]+)\*\*:', r'\1:', text)
+    # Strip remaining stray ** markers
+    text = text.replace('**', '')
+    # Collapse multiple blank lines into one, strip surrounding whitespace
+    text = re.sub(r'\n{3,}', '\n\n', text).strip()
+    # Remove everything after first --- block separator if a Begründung section crept in
+    # Pattern: blank line + "Begründung" or "Reasoning" section
+    text = re.sub(r'\n\s*\n.*?(Begründ|Reasoning|Rationale).*', '', text,
+                  flags=re.IGNORECASE | re.DOTALL)
+    return text.strip()
+
+
 # ── Public: generate_qa_response ─────────────────────────────────────────────
 def generate_qa_response(utterance: str, category: str, profile_data: dict,
                          anrede: str, confidence: float = 1.0,
@@ -441,7 +470,7 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
             system=_system,
             messages=[{"role": "user", "content": user_msg}]
         )
-        text = (msg.content[0].text or '').strip()
+        text = _sanitize_qa_output((msg.content[0].text or '').strip())
 
         # ── Low-confidence: ensure "Frag nach:" prefix ────────────────────────
         if is_low_confidence:
