@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: In Progress
-stopped_at: Auto-Scroll-Komplex KOMPLETT zurückgenommen (2026-05-10) — siehe ROADMAP.md Eintrag am Ende
-last_updated: "2026-05-10T11:00:00.000Z"
-last_activity: 2026-05-10
+status: Ready to execute
+stopped_at: context exhaustion at 90% (2026-05-07)
+last_updated: "2026-05-12T08:33:00.197Z"
+last_activity: 2026-05-12
 progress:
   total_phases: 69
   completed_phases: 55
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Auto-Scroll-Komplex (5 Phasen 08.19.5.6.4 + .4.1 + .4.2 + .4.3 + .4.4) KOMPLETT zurückgenommen 2026-05-10. Token-Match-Algorithmus war falsches Werkzeug. Teleprompter wieder dumm-statisch. Siehe ROADMAP.md-Eintrag am Ende. Next: 08.20 Pipeline-Re-Wire (wie ursprünglich geplant nach 08.19.5.6.2).
+**Current focus:** Phase 08.23.2.A — postgres-migration-schema-umbenennung
 
 ## Current Position
 
-Phase: 08.19.5.6.2 (briefing-buttons-konsolidierung-3-zu-1) — PHASE COMPLETE (Plan 01)
-Plan: 1 — Plan 01 COMPLETE (2026-05-06)
-Last activity: 2026-05-06
+Phase: 08.23.2.A (postgres-migration-schema-umbenennung) — EXECUTING
+Plan: 2 of 9
+Last activity: 2026-05-12
 
 **Phase 08.19.5.6.2 Plan 01 abgeschlossen:** 3-Button-Modus-Wahl (A/B/C) in Step 4 zu 1-Button lnr-step4-confirm konsolidiert. state.briefingModus vollstaendig aus pip-launcher.js entfernt (0 Treffer). PiP-Tab-Gate von briefingModus==='B' auf precallBriefing.firmenname umgestellt. Toter briefingModus-Kommentar in test_08_20_3.py entfernt. 28 Tests gruen. 4 Commits: d118a4f, df11b67, c3122be, fc9fe08. Decisions: D-01 lnr-step4-confirm ID, D-02 direkte ta.value-Zuweisung, D-03 Kommentar bereinigt.
 
@@ -666,6 +666,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-07T08:38:11.614Z
+Last session: 2026-05-12T08:33:00.187Z
 Stopped at: context exhaustion at 90% (2026-05-07)
 Resume file: None
