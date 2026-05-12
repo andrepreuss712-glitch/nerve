@@ -14,7 +14,6 @@ from sqlalchemy import text
 from database.models import (
     ConversationLog,
     EwbRating,
-    FtCallSession,
     ObjectionEvent,
     Organisation,
     TrainingScenario,
