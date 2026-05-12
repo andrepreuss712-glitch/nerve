@@ -1233,12 +1233,15 @@ def api_personalize_skript_save():
             from database.models import ProfileSkript, ProfileOpener
             # Cap-Check über beide Tabellen: ProfileSkript (meeting) + ProfileOpener (cold_call)
             if not delete_ids:
+                # Postgres erlaubt kein FOR UPDATE mit count()/Aggregaten.
+                # Phase 08.23.2.A: with_for_update() entfernt — der nachfolgende
+                # ID-Loop holt sich die Locks selbst beim Cap-Exceeded-Pfad.
                 count_skript = _db.query(ProfileSkript).filter_by(
                     profile_id=profile_id, is_personalized=True
-                ).with_for_update().count()
+                ).count()
                 count_opener = _db.query(ProfileOpener).filter_by(
                     profile_id=profile_id, is_personalized=True
-                ).with_for_update().count()
+                ).count()
                 personalized_count = count_skript + count_opener
 
                 if personalized_count >= cap:
