@@ -129,6 +129,18 @@ NGINX
   sudo nginx -t && sudo systemctl reload nginx
   echo "[deploy] nginx config updated and reloaded"
 
+  echo "[deploy] Running server-side tests (Postgres)..."
+  TEST_DATABASE_URL=postgresql://nerve_test_user@/nerve_test \
+    /opt/nerve/venv/bin/pytest /opt/nerve/app/tests/ -m "postgres or not postgres" \
+    --tb=short -q > /tmp/pytest_out.txt 2>&1
+  PYTEST_EXIT=$?
+  tail -30 /tmp/pytest_out.txt
+  if [ $PYTEST_EXIT -ne 0 ]; then
+    echo "[deploy] FEHLER: Tests fehlgeschlagen (exit $PYTEST_EXIT) — kein Restart, kein Deploy"
+    exit 1
+  fi
+  echo "[deploy] Tests bestanden"
+
   echo "[deploy] Restarting nerve service..."
   sudo systemctl restart nerve
 
