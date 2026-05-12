@@ -1,5 +1,7 @@
 from datetime import datetime, timezone, date
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric, CheckConstraint, Index, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+import uuid
 from database.db import Base
 
 
@@ -621,3 +623,56 @@ class CrmNote(Base):
 def init_db(engine_instance):
     """Create all tables."""
     Base.metadata.create_all(engine_instance)
+
+
+# --- Neue Architektur-Tabellen (Phase 08.23.2.A+) ---
+
+class Call(Base):
+    __tablename__ = 'calls'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # FK-Verknüpfung wird in Phase 08.23.2.F nachgereicht (tenant_orgs existiert dort)
+    tenant_id = Column(UUID(as_uuid=True), nullable=True)
+    # FK-Verknüpfung wird in Phase 08.23.2.G nachgereicht (accounts existiert dort)
+    account_id = Column(UUID(as_uuid=True), nullable=True)
+    # FK-Verknüpfung wird in Phase 08.23.2.G nachgereicht (contacts existiert dort)
+    contact_id = Column(UUID(as_uuid=True), nullable=True)
+    # user_id bleibt Integer-kompatibel mit users.id bis UUID-Migration in 08.23.2.F
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    call_mode = Column(Text, nullable=False)
+    call_type = Column(Text, nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    ended_at = Column(DateTime(timezone=True), nullable=True)
+    transcript_storage = Column(Text, nullable=True)
+    transcript_expires_at = Column(DateTime(timezone=True), nullable=True)
+    call_summary = Column(Text, nullable=True)
+    outcome = Column(Text, nullable=True)
+    audio_health_score = Column(Float, nullable=True)
+    coaching_score = Column(Float, nullable=True)
+    meddpicc_extracted = Column(JSONB, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    __table_args__ = (
+        CheckConstraint("call_mode IN ('cold_call', 'meeting_consented')", name='ck_calls_call_mode'),
+        CheckConstraint("transcript_storage IN ('none', 'ephemeral', 'consented_full')", name='ck_calls_transcript_storage'),
+        CheckConstraint("outcome IN ('meeting_booked', 'callback', 'no_interest', 'wrong_person', 'contract_signed', 'unknown') OR outcome IS NULL", name='ck_calls_outcome'),
+        Index('idx_calls_account_time', 'account_id', 'started_at'),
+        Index('idx_calls_user_time', 'user_id', 'started_at'),
+        Index('idx_calls_mode_outcome', 'call_mode', 'outcome', postgresql_where=text('outcome IS NOT NULL')),
+    )
+
+
+class CallEvent(Base):
+    __tablename__ = 'call_events'
+    id = Column(BigInteger, primary_key=True, autoincrement=True)  # BIGSERIAL on Postgres
+    call_id = Column(UUID(as_uuid=True), ForeignKey('calls.id', ondelete='CASCADE'), nullable=False)
+    # FK-Verknüpfung wird in Phase 08.23.2.F nachgereicht (tenant_orgs existiert dort)
+    tenant_id = Column(UUID(as_uuid=True), nullable=True)
+    event_type = Column(Text, nullable=False)
+    event_ts_ms = Column(BigInteger, nullable=False)  # BIGINT required: Unix ms timestamps exceed 2^31 after 2038 (C-4 fix)
+    payload = Column(JSONB, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+    __table_args__ = (
+        CheckConstraint("event_type IN ('transcript_chunk', 'suggestion_shown', 'reaction', 'phase_change', 'audio_health', 'objection_detected', 'consent_optin')", name='ck_call_events_event_type'),
+        Index('idx_call_events_call_time', 'call_id', 'event_ts_ms'),
+        Index('idx_call_events_type', 'call_id', 'event_type'),
+        Index('idx_call_events_payload_gin', 'payload', postgresql_using='gin'),
+    )
