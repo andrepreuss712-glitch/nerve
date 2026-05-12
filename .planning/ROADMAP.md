@@ -1301,3 +1301,24 @@ Komplett andere Architektur erforderlich (Embedding-basierter Vergleich statt To
 - Token-Match ist false-friend für UX-kritische Algorithmen mit realer Sprache (Deepgram-Drift, Improvisation, Tokenization-Verluste)
 - Bei Algorithmen-Bugs früher die Architektur-Frage stellen statt am gleichen Werkzeug rumzudoktern (Punkt 11 Fix-vs-Rebuild)
 
+---
+
+### Phase 08.23.2.A: Postgres-Migration + Schema-Umbenennung (INSERTED — 2026-05-11) 🔴
+
+**Goal:** SQLite → Postgres Engine-Wechsel (32 Tabellen 1:1) + 2 Rebuilds (calls/call_events ersetzen ft_call_sessions/ft_assistant_events) + Code-Refactor (alle FtCallSession/FtAssistantEvent-Referenzen entfernen) + Alembic-Baseline + Migrations-/Validierungs-Skripte + Cutover-Vorbereitung + Backup-Cronjob.
+
+**Depends on:** Phase 08.19.5 ✅
+**Komplexität:** 🔴 — Schema-Migration, Postgres-Cutover, DB-Rebuild
+**Plans:** 9 plans (3 completed)
+
+Plans:
+- [x] 08.23.2.A-01-PLAN.md — Call + CallEvent SQLAlchemy-Modelle in models.py + FtCallSession/FtAssistantEvent löschen ✅ 2026-05-12
+- [x] 08.23.2.A-02-PLAN.md — Alembic tooling init (alembic.ini + env.py + requirements.txt) ✅ 2026-05-12
+- [x] 08.23.2.A-03-PLAN.md — FT dead-code prune: deepgram_service.py + claude_service.py + export_ft_jsonl.py ✅ 2026-05-12
+- [ ] 08.23.2.A-04-PLAN.md — app_routes.py FtCallSession block + test file cleanup (D-08/D-10/D-11)
+- [ ] 08.23.2.A-05-PLAN.md — Migrations-Skript scripts/migrate_to_postgres.py (D-01)
+- [ ] 08.23.2.A-06-PLAN.md — Validierungs-Skript scripts/validate_postgres_migration.py (D-02)
+- [ ] 08.23.2.A-07-PLAN.md — Alembic Baseline-Migration autogenerate + stamp
+- [ ] 08.23.2.A-08-PLAN.md — Postgres-Setup Hetzner (D-13/D-14/D-15) + Backup-Cronjob (D-17/D-18)
+- [ ] 08.23.2.A-09-PLAN.md — Cutover-Sonntag + Smoke-Test + Dashboard-Backup-Warnung
+

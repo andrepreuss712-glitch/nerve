@@ -4,14 +4,14 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
 stopped_at: context exhaustion at 90% (2026-05-07)
-last_updated: "2026-05-12T10:36:00.000Z"
+last_updated: "2026-05-12T08:39:01Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 69
   completed_phases: 55
   total_plans: 233
-  completed_plans: 223
-  percent: 95
+  completed_plans: 224
+  percent: 96
 ---
 
 # Project State
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.A (postgres-migration-schema-umbenennung) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 Last activity: 2026-05-12
+
+**Phase 08.23.2.A Plan 03 abgeschlossen:** FT dead-code prune in services — FtCallSession writer block deleted from deepgram_service.py (37 lines), _write_ft_assistant_event function + 2 call sites deleted from claude_service.py (188 lines), scripts/export_ft_jsonl.py git-removed. Zero FtCallSession/FtAssistantEvent references remain in services/. 2 Commits: c965dc0, e4fc949. Decisions: D-06 FtCallSession ersatzlos geloescht, D-07 FtAssistantEvent ersatzlos geloescht, D-09 export_ft_jsonl.py git-removed, user_id-Zuweisung behalten (Phase 08.19.4 braucht sie).
 
 **Phase 08.23.2.A Plan 02 abgeschlossen:** Alembic tooling initialized — alembic>=1.13.0 + psycopg2-binary>=2.9.9 in requirements.txt. alembic.ini with DATABASE_URL env-var. alembic/env.py imports database.models (side-effect), target_metadata=Base.metadata, compare_type=True. alembic/versions/.gitkeep tracked. 2 Commits: 6cec015, 4f236d6. Decisions: D-01 DATABASE_URL from os.environ (never hardcoded), D-02 compare_type=True, D-03 psycopg2-binary only.
 
