@@ -1,8 +1,15 @@
 from datetime import datetime, timezone, date
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric, CheckConstraint, Index, text
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric, CheckConstraint, Index, text, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
 from database.db import Base
+
+# JSONB on Postgres (performance, indexing), JSON on SQLite (test compatibility).
+# Phase 08.23.2.A: SQLite-in-memory tests need to create the schema, but SQLite
+# doesn't know JSONB. JSON.with_variant(JSONB, "postgresql") gives us JSONB
+# on Postgres and JSON (TEXT) on SQLite — both render correctly per dialect.
+JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
+UUID_TYPE = String(36).with_variant(UUID(as_uuid=True), "postgresql")
 
 
 def utcnow():
@@ -629,13 +636,13 @@ def init_db(engine_instance):
 
 class Call(Base):
     __tablename__ = 'calls'
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
     # FK-Verknüpfung wird in Phase 08.23.2.F nachgereicht (tenant_orgs existiert dort)
-    tenant_id = Column(UUID(as_uuid=True), nullable=True)
+    tenant_id = Column(UUID_TYPE, nullable=True)
     # FK-Verknüpfung wird in Phase 08.23.2.G nachgereicht (accounts existiert dort)
-    account_id = Column(UUID(as_uuid=True), nullable=True)
+    account_id = Column(UUID_TYPE, nullable=True)
     # FK-Verknüpfung wird in Phase 08.23.2.G nachgereicht (contacts existiert dort)
-    contact_id = Column(UUID(as_uuid=True), nullable=True)
+    contact_id = Column(UUID_TYPE, nullable=True)
     # user_id bleibt Integer-kompatibel mit users.id bis UUID-Migration in 08.23.2.F
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     call_mode = Column(Text, nullable=False)
@@ -648,7 +655,7 @@ class Call(Base):
     outcome = Column(Text, nullable=True)
     audio_health_score = Column(Float, nullable=True)
     coaching_score = Column(Float, nullable=True)
-    meddpicc_extracted = Column(JSONB, nullable=True)
+    meddpicc_extracted = Column(JSON_TYPE, nullable=True)
     created_at = Column(DateTime, default=utcnow)
     __table_args__ = (
         CheckConstraint("call_mode IN ('cold_call', 'meeting_consented')", name='ck_calls_call_mode'),
@@ -663,12 +670,12 @@ class Call(Base):
 class CallEvent(Base):
     __tablename__ = 'call_events'
     id = Column(BigInteger, primary_key=True, autoincrement=True)  # BIGSERIAL on Postgres
-    call_id = Column(UUID(as_uuid=True), ForeignKey('calls.id', ondelete='CASCADE'), nullable=False)
+    call_id = Column(UUID_TYPE, ForeignKey('calls.id', ondelete='CASCADE'), nullable=False)
     # FK-Verknüpfung wird in Phase 08.23.2.F nachgereicht (tenant_orgs existiert dort)
-    tenant_id = Column(UUID(as_uuid=True), nullable=True)
+    tenant_id = Column(UUID_TYPE, nullable=True)
     event_type = Column(Text, nullable=False)
     event_ts_ms = Column(BigInteger, nullable=False)  # BIGINT required: Unix ms timestamps exceed 2^31 after 2038 (C-4 fix)
-    payload = Column(JSONB, nullable=False)
+    payload = Column(JSON_TYPE, nullable=False)
     created_at = Column(DateTime, default=utcnow)
     __table_args__ = (
         CheckConstraint("event_type IN ('transcript_chunk', 'suggestion_shown', 'reaction', 'phase_change', 'audio_health', 'objection_detected', 'consent_optin')", name='ck_call_events_event_type'),
