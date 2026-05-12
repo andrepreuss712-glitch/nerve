@@ -129,9 +129,12 @@ NGINX
   sudo nginx -t && sudo systemctl reload nginx
   echo "[deploy] nginx config updated and reloaded"
 
-  echo "[deploy] Running server-side tests (Postgres)..."
-  TEST_DATABASE_URL=postgresql://nerve_test_user@/nerve_test \
-    /opt/nerve/venv/bin/pytest /opt/nerve/app/tests/ -m "postgres or not postgres" \
+  echo "[deploy] Running server-side tests (SQLite-in-memory)..."
+  # NOTE: conftest.py uses sqlite:///:memory: for all fixtures regardless of TEST_DATABASE_URL.
+  # Echte Postgres-Test-Suite ist eigene Folge-Phase (conftest-Refactor erforderlich).
+  # Cutover-Verifikation gegen Postgres erfolgt via Pre-Cutover-Alembic-Test (manuell) +
+  # post-Cutover-Smoke-Test (Live-App auf Postgres).
+  /opt/nerve/venv/bin/pytest /opt/nerve/app/tests/ \
     --tb=short -q > /tmp/pytest_out.txt 2>&1
   PYTEST_EXIT=$?
   tail -30 /tmp/pytest_out.txt

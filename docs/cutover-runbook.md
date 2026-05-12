@@ -13,7 +13,7 @@
 - [ ] Dry-run migration completed (Plan 07, Section 9) — all 32 tables validated
 - [ ] Postgres tables truncated after dry-run (so production migration starts fresh)
 - [ ] Alembic baseline migration ready (Plan 06): `ls alembic/versions/0001_initial_postgres_schema.py`
-- [ ] Verify migration file against nerve_test before cutover: `DATABASE_URL=postgresql://nerve_app@/nerve_test /opt/nerve/venv/bin/alembic upgrade head`
+- [ ] Verify migration file against nerve_test before cutover: `sudo -u postgres bash -c "cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/nerve_test /opt/nerve/venv/bin/alembic upgrade head"` (must run as postgres — nerve_app has no CREATE TABLE permission per Least-Privilege design)
 - [ ] Latest code deployed via deploy.sh (includes new models.py with Call/CallEvent)
 - [ ] backup_postgres.sh copied to server: `ls /opt/nerve/app/scripts/backup_postgres.sh`
 - [ ] systemd backup unit files prepared (from docs/systemd-backup-setup.md)
@@ -56,11 +56,13 @@ CORRECT ORDER: schema first (Alembic creates tables), then data (migration scrip
 ```bash
 # Step 4a: Create Postgres schema via Alembic (alembic upgrade head)
 # This uses the baseline migration file at alembic/versions/0001_initial_postgres_schema.py
+# MUST run as postgres-user: alembic does CREATE TABLE, nerve_app has no CREATE permission
+# (Least-Privilege design — ALTER DEFAULT PRIVILEGES auto-grants SELECT/INSERT/UPDATE/DELETE to nerve_app on new tables)
 cd /opt/nerve/app
-DATABASE_URL=postgresql://nerve_app@/nerve \
-/opt/nerve/venv/bin/alembic upgrade head
+sudo -u postgres bash -c "cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/nerve /opt/nerve/venv/bin/alembic upgrade head"
 
 # Step 4b: Insert data from SQLite
+# Runs as nerve_app — only INSERT/SELECT needed, no CREATE
 SQLITE_URL=sqlite:///database/nerve.db \
 DATABASE_URL=postgresql://nerve_app@/nerve \
 /opt/nerve/venv/bin/python scripts/migrate_to_postgres.py
