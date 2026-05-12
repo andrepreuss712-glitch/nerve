@@ -236,19 +236,37 @@ def restore_circular_fks(sqlite_sess, pg_sess, dry_run=False):
         print('[MIGRATE] DRY_RUN: circular FK restore uebersprungen')
         return
 
+    # Pre-load valid parent IDs to skip orphan FKs (same logic as migrate_table)
+    valid_user_ids = {r[0] for r in pg_sess.execute(text('SELECT id FROM users')).fetchall()}
+    valid_profile_ids = {r[0] for r in pg_sess.execute(text('SELECT id FROM profiles')).fetchall()}
+
     # organisations.coach_id
     orgs = sqlite_sess.execute(text('SELECT id, coach_id FROM organisations WHERE coach_id IS NOT NULL')).fetchall()
+    updated_orgs = 0
+    skipped_orgs = 0
     for org_id, coach_id in orgs:
-        pg_sess.execute(text('UPDATE organisations SET coach_id = :cid WHERE id = :id'), {'cid': coach_id, 'id': org_id})
+        if coach_id in valid_user_ids:
+            pg_sess.execute(text('UPDATE organisations SET coach_id = :cid WHERE id = :id'), {'cid': coach_id, 'id': org_id})
+            updated_orgs += 1
+        else:
+            skipped_orgs += 1
     pg_sess.commit()
-    print(f'[MIGRATE] organisations.coach_id: {len(orgs)} Zeilen aktualisiert')
+    suffix_o = f' ({skipped_orgs} orphan-FK uebersprungen)' if skipped_orgs else ''
+    print(f'[MIGRATE] organisations.coach_id: {updated_orgs} Zeilen aktualisiert{suffix_o}')
 
     # users.active_profile_id
     users = sqlite_sess.execute(text('SELECT id, active_profile_id FROM users WHERE active_profile_id IS NOT NULL')).fetchall()
+    updated_users = 0
+    skipped_users = 0
     for user_id, profile_id in users:
-        pg_sess.execute(text('UPDATE users SET active_profile_id = :pid WHERE id = :id'), {'pid': profile_id, 'id': user_id})
+        if profile_id in valid_profile_ids:
+            pg_sess.execute(text('UPDATE users SET active_profile_id = :pid WHERE id = :id'), {'pid': profile_id, 'id': user_id})
+            updated_users += 1
+        else:
+            skipped_users += 1
     pg_sess.commit()
-    print(f'[MIGRATE] users.active_profile_id: {len(users)} Zeilen aktualisiert')
+    suffix_u = f' ({skipped_users} orphan-FK uebersprungen)' if skipped_users else ''
+    print(f'[MIGRATE] users.active_profile_id: {updated_users} Zeilen aktualisiert{suffix_u}')
 
 
 def main():
