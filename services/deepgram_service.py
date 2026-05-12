@@ -386,45 +386,8 @@ def register_audio_handlers(sio):
                 ls.state['skript_bloecke'] = bloecke
             print(f"[PiP] Skript geladen ({len(bloecke)} Bloecke)")
 
-        # WR-04: user_id extracted before try-blocks so it's always defined even
-        # if the FT logging block raises before the assignment.
         from flask import session as flask_session
         user_id = flask_session.get('user_id')
-
-        # FT logging: create ft_call_sessions row (Phase 04.7.1)
-        try:
-            from database.db import SessionLocal
-            from database.models import FtCallSession, User
-            if user_id:
-                db = SessionLocal()
-                try:
-                    u = db.query(User).filter_by(id=user_id).first()
-                    market = (getattr(u, 'market', None) if u else None) or 'dach'
-                    language = (getattr(u, 'language', None) if u else None) or 'de'
-                    ft_row = FtCallSession(
-                        user_id=user_id,
-                        mode=mode,
-                        market=market,
-                        language=language,
-                        hints_shown=0,
-                        hints_used=0,
-                        buttons_pressed=0,
-                    )
-                    db.add(ft_row)
-                    db.commit()
-                    ft_session_id = ft_row.id
-                finally:
-                    db.close()
-                with ls.state_lock:
-                    ls.state['ft_session_id'] = ft_session_id
-                    ls.state['user_id'] = user_id
-                    ls.state['market'] = market
-                    ls.state['language'] = language
-                    ls.state['org_id'] = u.org_id if u else None
-                    ls.state['mode'] = mode
-                print(f"[FT] ft_call_sessions row created id={ft_session_id} market={market}")
-        except Exception as _e:
-            print(f"[FT] ft_call_sessions insert failed: {_e}")
 
         # ── Phase 08.19.4: Per-SID Profile + Session State Init ──────────────
         # Loads active profile from DB (User.active_profile_id — D-05 Single Source of Truth).
