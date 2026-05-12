@@ -3,9 +3,7 @@
 
 {% block content %}
 <!-- Backup Warning Strip (Phase 08.23.2.A D-18) — shown when backup_status != 'ok' -->
-<div id="backup-warning-strip"
-     style="display:none; background:#f59e0b; color:#1a1a1a; padding:8px 16px;
-            text-align:center; font-size:14px; font-weight:500; position:relative; z-index:100;">
+<div id="backup-warning-strip" class="n-backup-warning">
   &#9888; Postgres-Backup veraltet oder fehlgeschlagen &mdash;
   <span id="backup-warning-detail">bitte prüfen</span>
 </div>

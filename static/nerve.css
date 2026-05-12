@@ -19,6 +19,15 @@
   --page-text-muted:    #9CA3AF;
 
   /* ═══════════════════════════════════════
+     WARNING STRIP (.n-backup-warning)
+     ═══════════════════════════════════════ */
+  --warning-bg:           #f59e0b;
+  --warning-text:         #1a1a1a;
+  --warning-padding:      8px 16px;
+  --warning-size:         14px;
+  --warning-weight:       500;
+
+  /* ═══════════════════════════════════════
      GLASS PANEL (.n-glass)
      ═══════════════════════════════════════ */
   --glass-bg:             #FFFFFF;
@@ -587,6 +596,9 @@ a{color:inherit;text-decoration:none}
 .n-badge-info{background:var(--badge-info-bg);color:var(--badge-info-text);}
 .n-badge-neutral{background:var(--badge-neutral-bg);color:var(--badge-neutral-text);}
 .n-badge-solid{background:var(--badge-solid-bg);color:var(--badge-solid-text);font-size:var(--badge-solid-size);font-weight:var(--badge-solid-weight);}
+
+/* Backup Warning Strip */
+.n-backup-warning{display:none;background:var(--warning-bg);color:var(--warning-text);padding:var(--warning-padding);text-align:center;font-size:var(--warning-size);font-weight:var(--warning-weight);position:relative;z-index:100;}
 
 /* Nav */
 .n-nav-item{display:flex;align-items:center;gap:var(--nav-gap);padding:var(--nav-padding);border-radius:var(--nav-radius);color:var(--nav-text);font-size:var(--nav-size);font-weight:var(--nav-weight);cursor:pointer;transition:all 0.2s ease;}
