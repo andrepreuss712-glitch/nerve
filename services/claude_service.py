@@ -139,95 +139,6 @@ def get_active_prompt_version(module: str) -> str:
     return version
 
 
-def _write_ft_assistant_event(
-    module: str,
-    hint_type: str,
-    hint_text: str,
-    model_used: str,
-    context: dict | None = None,
-    sid: str | None = None,
-) -> None:
-    """
-    Write one row to ft_assistant_events. Called from background threads
-    (analyse_loop, coaching_loop). MUST NOT raise — swallows all errors.
-
-    Cold-Call DSGVO enforcement: transcript_segment and speaker are
-    hard-set to None when mode == 'cold_call' (or when mode
-    is missing/unknown — default to cold_call for safety), regardless
-    of what the caller passed in.
-    """
-    context = context or {}
-    try:
-        import services.live_session as ls
-        from database.db import SessionLocal
-        from database.models import FtAssistantEvent
-
-        # D-01 (Phase 08.19.5.1): sid=None → skip immediately (no DB write, no global read)
-        if sid is None:
-            print(f'[FT] skip — no sid for module={module}')
-            return
-
-        with ls._session_state_lock:
-            _sid_entry = ls._session_state.get(sid, {})
-            _sid_state = _sid_entry.get('state', {})
-            ft_session_id = _sid_state.get('ft_session_id')
-            mode          = _sid_entry.get('mode') or 'cold_call'
-            user_id       = _sid_entry.get('user_id')
-            market        = _sid_entry.get('market') or 'dach'
-            language      = _sid_entry.get('language') or 'de'
-            readiness     = _sid_state.get('kaufbereitschaft')
-
-        if ft_session_id is None or user_id is None:
-            # Phase not yet started or anonymous — skip write (no error)
-            return
-
-        # D-03/D-04/D-05: Cold-Call hard NULL enforcement (DSGVO)
-        if mode == 'cold_call':
-            transcript_segment = None
-            speaker = None
-        else:
-            transcript_segment = context.get('transcript_segment')
-            speaker = context.get('speaker')
-
-        def _jdump(v):
-            if v is None:
-                return None
-            try:
-                return json.dumps(v, ensure_ascii=False)
-            except Exception:
-                return None
-
-        db = SessionLocal()
-        try:
-            row = FtAssistantEvent(
-                ft_session_id=ft_session_id,
-                user_id=user_id,
-                market=market,
-                language=language,
-                timestamp_ms=int(time.time() * 1000),
-                conversation_phase=context.get('conversation_phase') or 'unknown',
-                speaker=speaker,
-                transcript_segment=transcript_segment,
-                context_window=_jdump(context.get('context_window')),
-                customer_data=_jdump(context.get('customer_data')),
-                profile_data=_jdump(context.get('profile_data')),
-                readiness_score=readiness,
-                active_learning_cards=None,  # Phase 4.11
-                hint_type=hint_type or 'hint',
-                hint_text=hint_text or '',
-                hint_category=context.get('hint_category'),
-                model_used=model_used or 'unknown',
-                prompt_version=get_active_prompt_version(module),
-            )
-            db.add(row)
-            db.commit()
-        finally:
-            db.close()
-    except Exception as e:
-        # NEVER raise — analyse_loop/coaching_loop must not crash on FT logging
-        print(f"[FT] assistant_event write failed (module={module}): {e}")
-
-
 def _build_coaching_prompt(sid: str = None) -> str:
     import services.live_session as ls
     # D-05: get_active_profile() deprecated else-Zweig entfernt (Phase 08.19.4 Plan 04)
@@ -997,29 +908,6 @@ def analyse_loop():
                     ls.state['aktiv']           = False
                     ls.state['version']        += 1
                     ls.state['kaufbereitschaft'] = kb_aktuell
-                # ── FT logging hook (Phase 04.7.1) ────────────────────────────
-                try:
-                    if ergebnis.get('einwand'):
-                        _hint_text = (ergebnis.get('gegenargument_1') or '').strip()
-                        _hint_type = ergebnis.get('typ') or 'einwand'
-                    else:
-                        _hint_text = ergebnis.get('notiz') or ''
-                        _hint_type = 'kein_einwand'
-                    _write_ft_assistant_event(
-                        module='assistant_live',
-                        hint_type=_hint_type,
-                        hint_text=_hint_text,
-                        model_used=config.MODEL_ANALYSE,
-                        context={
-                            'transcript_segment': neuer_text,
-                            'speaker': 'rep',
-                            'conversation_phase': None,
-                            'hint_category': ergebnis.get('typ'),
-                        },
-                        sid=sid,
-                    )
-                except Exception as _e:
-                    print(f"[FT] assistant_live hook skipped: {_e}")
                 # ── Phase 04.8: phase classifier (every 5th cycle) ────────────
                 _phase_cycle_counter = getattr(analyse_loop, '_phase_cycle_counter', 0) + 1
                 analyse_loop._phase_cycle_counter = _phase_cycle_counter
@@ -1558,30 +1446,8 @@ def coaching_loop():
                 # Der coaching-Channel landete im Frontend via _showProactiveTipp auf Slot 1
                 # und hat die EWB-Antwort nach Stream-Ende ueberschrieben. Coaching-Daten
                 # bleiben vollstaendig erhalten fuer Post-Call-Scoring: conversation_log
-                # (oben), _write_ft_assistant_event (unten) und der [Claude-2]-Log-Print.
+                # (oben) und der [Claude-2]-Log-Print.
                 # Live-Anzeige waehrend des Calls war kontraproduktiv — der Berater kann
                 # nicht gleichzeitig lesen und zuhoeren.
-
-                # ── FT logging hook (Phase 04.7.1) ────────────────────────────
-                try:
-                    _coach_text_parts = []
-                    if tipp:
-                        _coach_text_parts.append(f"tipp: {tipp}")
-                    if painpoint:
-                        _coach_text_parts.append(f"painpoint: {painpoint}")
-                    _coach_text = ' | '.join(_coach_text_parts)
-                    if _coach_text:
-                        _write_ft_assistant_event(
-                            module='coaching_live',
-                            hint_type='coaching',
-                            hint_text=_coach_text,
-                            model_used=config.MODEL_COACHING,
-                            context={
-                                'hint_category': 'coaching',
-                            },
-                            sid=sid,
-                        )
-                except Exception as _e:
-                    print(f"[FT] coaching_live hook skipped: {_e}")
             except Exception as e:
                 print(f"[Claude-2] SID={sid} Fehler: {e}")
