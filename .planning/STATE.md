@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
 stopped_at: context exhaustion at 90% (2026-05-07)
-last_updated: "2026-05-12T08:33:00.197Z"
+last_updated: "2026-05-12T10:36:00.000Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 69
   completed_phases: 55
   total_plans: 233
-  completed_plans: 222
+  completed_plans: 223
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.A (postgres-migration-schema-umbenennung) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Last activity: 2026-05-12
+
+**Phase 08.23.2.A Plan 02 abgeschlossen:** Alembic tooling initialized — alembic>=1.13.0 + psycopg2-binary>=2.9.9 in requirements.txt. alembic.ini with DATABASE_URL env-var. alembic/env.py imports database.models (side-effect), target_metadata=Base.metadata, compare_type=True. alembic/versions/.gitkeep tracked. 2 Commits: 6cec015, 4f236d6. Decisions: D-01 DATABASE_URL from os.environ (never hardcoded), D-02 compare_type=True, D-03 psycopg2-binary only.
 
 **Phase 08.19.5.6.2 Plan 01 abgeschlossen:** 3-Button-Modus-Wahl (A/B/C) in Step 4 zu 1-Button lnr-step4-confirm konsolidiert. state.briefingModus vollstaendig aus pip-launcher.js entfernt (0 Treffer). PiP-Tab-Gate von briefingModus==='B' auf precallBriefing.firmenname umgestellt. Toter briefingModus-Kommentar in test_08_20_3.py entfernt. 28 Tests gruen. 4 Commits: d118a4f, df11b67, c3122be, fc9fe08. Decisions: D-01 lnr-step4-confirm ID, D-02 direkte ta.value-Zuweisung, D-03 Kommentar bereinigt.
 
