@@ -1315,7 +1315,7 @@ Plans:
 - [x] 08.23.2.A-01-PLAN.md — Call + CallEvent SQLAlchemy-Modelle in models.py + FtCallSession/FtAssistantEvent löschen ✅ 2026-05-12
 - [x] 08.23.2.A-02-PLAN.md — Alembic tooling init (alembic.ini + env.py + requirements.txt) ✅ 2026-05-12
 - [x] 08.23.2.A-03-PLAN.md — FT dead-code prune: deepgram_service.py + claude_service.py + export_ft_jsonl.py ✅ 2026-05-12
-- [ ] 08.23.2.A-04-PLAN.md — app_routes.py FtCallSession block + test file cleanup (D-08/D-10/D-11)
+- [x] 08.23.2.A-04-PLAN.md — app_routes.py FtCallSession block + test file cleanup (D-08/D-10/D-11) ✅ 2026-05-12
 - [ ] 08.23.2.A-05-PLAN.md — Migrations-Skript scripts/migrate_to_postgres.py (D-01)
 - [ ] 08.23.2.A-06-PLAN.md — Validierungs-Skript scripts/validate_postgres_migration.py (D-02)
 - [ ] 08.23.2.A-07-PLAN.md — Alembic Baseline-Migration autogenerate + stamp

@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.A (postgres-migration-schema-umbenennung) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Last activity: 2026-05-12
+
+**Phase 08.23.2.A Plan 04 abgeschlossen:** Routes + tests vollständig von FtCallSession/FtAssistantEvent bereinigt. FtCallSession update block (lines 364-386) aus app_routes.py gelöscht (D-08). 3 FT-Test-Dateien via git rm gelöscht: test_ft_lifecycle.py, test_ft_models.py, test_ft_write_hooks.py (D-10). test_per_sid_migration.py: nur test_write_ft_event_isolation_per_sid chirurgisch gelöscht, 5 DSGVO-kritische Isolation-Tests intakt (D-11). test_ab_stats.py: FtCallSession aus Import entfernt. test_ft_seed.py: keine FT-Refs, unverändert. REQ-4 grep check: 0 Treffer. 2 Commits: 8fd95b5, 533b32c. Deferred: JSONB/SQLite-Inkompatibilität in db_session-Fixture (pre-existing, seit Plan 01/02).
 
 **Phase 08.23.2.A Plan 03 abgeschlossen:** FT dead-code prune in services — FtCallSession writer block deleted from deepgram_service.py (37 lines), _write_ft_assistant_event function + 2 call sites deleted from claude_service.py (188 lines), scripts/export_ft_jsonl.py git-removed. Zero FtCallSession/FtAssistantEvent references remain in services/. 2 Commits: c965dc0, e4fc949. Decisions: D-06 FtCallSession ersatzlos geloescht, D-07 FtAssistantEvent ersatzlos geloescht, D-09 export_ft_jsonl.py git-removed, user_id-Zuweisung behalten (Phase 08.19.4 braucht sie).
 
