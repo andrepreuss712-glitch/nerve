@@ -269,6 +269,40 @@ def restore_circular_fks(sqlite_sess, pg_sess, dry_run=False):
     print(f'[MIGRATE] users.active_profile_id: {updated_users} Zeilen aktualisiert{suffix_u}')
 
 
+def reset_sequences(pg_sess):
+    """Reset auto-increment sequences to MAX(id)+1 for all migrated tables.
+
+    Phase 08.23.2.A bugfix: After migrating rows with explicit IDs (1, 2, 3...),
+    Postgres' auto-increment sequences still start at 1. Next INSERT would
+    collide with existing row IDs. Must SETVAL each sequence to MAX(id)+1
+    after data migration. SQLite doesn't have this problem (ROWID semantics).
+    """
+    from sqlalchemy import text
+    pg_sess.execute(text("""
+        DO $$
+        DECLARE
+            r RECORD;
+            seq_name TEXT;
+            max_id BIGINT;
+        BEGIN
+            FOR r IN
+                SELECT table_name, column_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND column_default LIKE 'nextval%'
+            LOOP
+                seq_name := pg_get_serial_sequence(r.table_name, r.column_name);
+                IF seq_name IS NOT NULL THEN
+                    EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I', r.column_name, r.table_name) INTO max_id;
+                    EXECUTE format('SELECT setval(%L, %s, true)', seq_name, GREATEST(max_id, 1));
+                END IF;
+            END LOOP;
+        END $$;
+    """))
+    pg_sess.commit()
+    print('[MIGRATE] Sequences auf MAX(id)+1 gesetzt fuer alle migrierten Tabellen')
+
+
 def main():
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
@@ -305,6 +339,7 @@ def main():
 
         if not dry_run:
             restore_circular_fks(sqlite_sess, pg_sess)
+            reset_sequences(pg_sess)
 
         print('[MIGRATE] --- Migration abgeschlossen ---')
         print(f'[MIGRATE] 33/33 Tabellen migriert und validiert')
