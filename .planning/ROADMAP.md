@@ -1322,3 +1322,13 @@ Plans:
 - [x] 08.23.2.A-08-PLAN.md — backup_postgres.sh + systemd docs + deploy.sh pytest + /api/health backup_status + dashboard warning strip ✅ 2026-05-12
 - [ ] 08.23.2.A-09-PLAN.md — Cutover-Sonntag + Smoke-Test + Dashboard-Backup-Warnung
 
+### Phase 08.23.2.B: Anonymisierungs-Strecke vor Mitschrift-Schreibungen (INSERTED — 2026-05-12) 🔴
+
+**Goal:** Drei-stufige Anonymisierungs-Strecke (Regex-Vorfilter + spaCy NER + Art-9-Filter) als eigenständiges Modul `services/anonymization.py` bauen und vor allen DB-Schreibungen von Mitschrift-Daten in existierenden Tabellen verdrahten. Sicherheits-Test (50 Snippets, <5% Re-Identifikation) + Performance-Test (<200ms/Snippet) als Acceptance-Gate.
+
+**Depends on:** Phase 08.23.2.A
+**Komplexität:** 🔴 — DSGVO-kritische Foundation-Phase. Cross-AI mit Gemini Pflicht.
+**Plans:** TBD
+
+Plans:
+
