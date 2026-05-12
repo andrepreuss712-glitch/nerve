@@ -80,6 +80,42 @@ CIRCULAR_FK_NULLS = {
 }
 
 
+def _get_typed_columns(table_name):
+    """Return (bool_cols, json_cols) sets for the given Postgres table.
+
+    Phase 08.23.2.A bugfix: SQLite stores Booleans as int 0/1 and JSON as
+    string. Postgres rejects ints in Boolean columns and strings in JSONB
+    columns. Map Postgres model column types so we can coerce on insert.
+    """
+    from sqlalchemy import Boolean, JSON
+    from database.db import Base
+    import database.models  # noqa: F401 — registers models
+
+    pg_table = Base.metadata.tables.get(table_name)
+    if pg_table is None:
+        return set(), set()
+
+    bool_cols = {c.name for c in pg_table.columns if isinstance(c.type, Boolean)}
+    # JSON_TYPE = JSON().with_variant(JSONB, "postgresql") — base impl is JSON
+    json_cols = {c.name for c in pg_table.columns if isinstance(c.type, JSON)}
+    return bool_cols, json_cols
+
+
+def _coerce_value(val, col, bool_cols, json_cols):
+    """Convert SQLite-stored value to Postgres-compatible Python type."""
+    if val is None:
+        return None
+    if col in bool_cols and isinstance(val, int):
+        return bool(val)
+    if col in json_cols and isinstance(val, str):
+        import json as _json
+        try:
+            return _json.loads(val)
+        except (ValueError, TypeError):
+            return val  # leave as-is, let Postgres complain if truly bad
+    return val
+
+
 def migrate_table(table_name, sqlite_sess, pg_sess, dry_run=False):
     """Read all rows from SQLite table, insert into Postgres via raw SQL copy."""
     from sqlalchemy import text, inspect as sa_inspect
@@ -87,6 +123,9 @@ def migrate_table(table_name, sqlite_sess, pg_sess, dry_run=False):
     # Get columns
     inspector = sa_inspect(sqlite_sess.bind)
     columns = [col['name'] for col in inspector.get_columns(table_name)]
+
+    # Type-coercion maps for SQLite -> Postgres compatibility
+    bool_cols, json_cols = _get_typed_columns(table_name)
 
     # Read all rows
     rows = sqlite_sess.execute(text(f'SELECT * FROM {table_name}')).fetchall()
@@ -112,6 +151,10 @@ def migrate_table(table_name, sqlite_sess, pg_sess, dry_run=False):
         batch_dicts = []
         for row in batch:
             row_dict = dict(zip(columns, row))
+            # Coerce types: SQLite int/string -> Postgres bool/json
+            for col in list(row_dict.keys()):
+                row_dict[col] = _coerce_value(row_dict[col], col, bool_cols, json_cols)
+            # Circular FK first-pass nulls
             for col, val in null_overrides.items():
                 if col in row_dict:
                     row_dict[col] = val
