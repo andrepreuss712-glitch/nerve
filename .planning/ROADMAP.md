@@ -1319,6 +1319,6 @@ Plans:
 - [x] 08.23.2.A-05-PLAN.md — migrate_to_postgres.py + validate_postgres_migration.py (33 Tabellen, FK-Order, DRY_RUN) ✅ 2026-05-12
 - [x] 08.23.2.A-06-PLAN.md — Alembic Baseline-Migration 0001 (35 Tabellen, CHECK-Constraints, GIN-Index) ✅ 2026-05-12
 - [x] 08.23.2.A-07-PLAN.md — Postgres 16 Server-Setup Runbook + Hetzner-Setup durch Andre ausgefuehrt ✅ 2026-05-12
-- [ ] 08.23.2.A-08-PLAN.md — Postgres-Setup Hetzner (D-13/D-14/D-15) + Backup-Cronjob (D-17/D-18)
+- [x] 08.23.2.A-08-PLAN.md — backup_postgres.sh + systemd docs + deploy.sh pytest + /api/health backup_status + dashboard warning strip ✅ 2026-05-12
 - [ ] 08.23.2.A-09-PLAN.md — Cutover-Sonntag + Smoke-Test + Dashboard-Backup-Warnung
 

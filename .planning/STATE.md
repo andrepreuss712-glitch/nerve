@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08.23.2.A-07-PLAN.md
+stopped_at: Completed 08.23.2.A-08-PLAN.md
 last_updated: "2026-05-12T12:00:00Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 69
   completed_phases: 55
   total_plans: 233
-  completed_plans: 227
+  completed_plans: 228
   percent: 97
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.A (postgres-migration-schema-umbenennung) — EXECUTING
-Plan: 8 of 9
+Plan: 9 of 9
 Last activity: 2026-05-12
 
 **Phase 08.23.2.A Plan 07 abgeschlossen:** Postgres 16 Server-Setup Runbook erstellt und Hetzner-Setup durch Andre ausgefuehrt. docs/postgres-server-setup.md: 9-Sektionen (SQLite-Backup, Postgres-Install, nerve+nerve_test DBs mit de_DE.UTF-8, nerve_app restricted user, pg_hba.conf peer-auth, TCP disabled via listen_addresses='', Linux-User-Setup, Connection-Verify, Dry-Run-Prozedur). Checkpoint "server-setup-complete" bestaetigt: Postgres 16 laeuft, beide DBs existieren, nerve_app verbindet per unix socket, SQLite-Backup auf Laptop. DATABASE_URL noch auf SQLite (aendert sich erst Plan 09). 2 Commits: b723d3d, 17d1ddf. Decisions: DATABASE_URL deferred to Plan 09 cutover (C-5), TRUNCATE via postgres superuser (C-3), ALTER DEFAULT PRIVILEGES fuer kuenftige Phasen.
