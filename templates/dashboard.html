@@ -2,6 +2,34 @@
 {% block title %} — Dashboard{% endblock %}
 
 {% block content %}
+<!-- Backup Warning Strip (Phase 08.23.2.A D-18) — shown when backup_status != 'ok' -->
+<div id="backup-warning-strip"
+     style="display:none; background:#f59e0b; color:#1a1a1a; padding:8px 16px;
+            text-align:center; font-size:14px; font-weight:500; position:relative; z-index:100;">
+  &#9888; Postgres-Backup veraltet oder fehlgeschlagen &mdash;
+  <span id="backup-warning-detail">bitte prüfen</span>
+</div>
+<script>
+(function() {
+  fetch('/api/health')
+    .then(r => r.json())
+    .then(data => {
+      if (data.backup_status && data.backup_status !== 'ok') {
+        var strip = document.getElementById('backup-warning-strip');
+        var detail = document.getElementById('backup-warning-detail');
+        if (strip) {
+          if (data.backup_status === 'stale') {
+            detail.textContent = 'Letztes Backup vor ' + (data.backup_age_hours || '?') + ' Stunden.';
+          } else {
+            detail.textContent = 'Kein Backup gefunden.';
+          }
+          strip.style.display = 'block';
+        }
+      }
+    })
+    .catch(function() {}); // silent fail — backup warning is non-critical
+})();
+</script>
 <!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
 <div class="db2-wrap page-wrap">
 

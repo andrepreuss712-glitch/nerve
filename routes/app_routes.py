@@ -1341,3 +1341,50 @@ def api_personalize_skript_save():
         return jsonify({'cap_exceeded': True, 'items': cap_exceeded_response})
 
     return jsonify({'item_id': new_item_id, 'ok': True})
+
+
+# ── Phase 08.23.2.A D-18: /api/health mit backup_status ──────────────────────
+@app_routes_bp.route('/api/health')
+def api_health():
+    """Health-Check Endpoint — gibt backup_status zurueck.
+
+    backup_status: 'ok' | 'stale' | 'missing'
+    backup_age_hours: float | None
+
+    C-6b-Fix: Wenn DATABASE_URL nicht mit 'postgresql' beginnt (lokale Dev/SQLite),
+    wird backup_status sofort 'ok' zurueckgegeben — kein Filesystem-Zugriff,
+    kein spurioeses gelbes Warning im Dashboard waehrend der Entwicklung.
+    """
+    import glob
+    import time
+
+    database_url = os.environ.get('DATABASE_URL', '')
+    if not database_url.startswith('postgresql'):
+        # Local dev / SQLite mode — backup dir not present, skip check entirely
+        backup_status = 'ok'
+        age_hours = None
+    else:
+        backup_status = 'missing'
+        age_hours = None
+        backup_dir = '/opt/nerve/backups/postgres'
+        try:
+            files = sorted(glob.glob(os.path.join(backup_dir, 'nerve-*.sql.gz')))
+            if files:
+                newest = files[-1]
+                mtime = os.path.getmtime(newest)
+                age_seconds = time.time() - mtime
+                age_hours = round(age_seconds / 3600, 1)
+                if age_hours <= 25:  # allow 1hr buffer over 24h schedule
+                    backup_status = 'ok'
+                else:
+                    backup_status = 'stale'
+            # else: backup_status stays 'missing'
+        except Exception:
+            backup_status = 'missing'
+            age_hours = None
+
+    return jsonify({
+        'status': 'ok',
+        'backup_status': backup_status,   # 'ok' | 'stale' | 'missing'
+        'backup_age_hours': age_hours,    # float or None
+    })
