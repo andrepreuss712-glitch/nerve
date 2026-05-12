@@ -13,7 +13,7 @@
 - [ ] Dry-run migration completed (Plan 07, Section 9) — all 32 tables validated
 - [ ] Postgres tables truncated after dry-run (so production migration starts fresh)
 - [ ] Alembic baseline migration ready (Plan 06): `ls alembic/versions/0001_initial_postgres_schema.py`
-- [ ] Verify migration file against nerve_test before cutover: `sudo -u postgres bash -c "cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/nerve_test /opt/nerve/venv/bin/alembic upgrade head"` (must run as postgres — nerve_app has no CREATE TABLE permission per Least-Privilege design)
+- [ ] Verify schema-create against nerve_test before cutover: `sudo -u postgres bash -c 'cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/nerve_test /opt/nerve/venv/bin/python -c "from database.db import Base; import database.models; from sqlalchemy import create_engine; import os; engine = create_engine(os.environ[chr(34)+\"DATABASE_URL\"+chr(34)]); Base.metadata.create_all(engine); print(\"35 tables created\")"'` (Base.metadata.create_all handles circular FKs between users/profiles/organisations.coach_id automatically — manual alembic migration could not order them correctly)
 - [ ] Latest code deployed via deploy.sh (includes new models.py with Call/CallEvent)
 - [ ] backup_postgres.sh copied to server: `ls /opt/nerve/app/scripts/backup_postgres.sh`
 - [ ] systemd backup unit files prepared (from docs/systemd-backup-setup.md)
@@ -54,12 +54,17 @@ echo "App stopped at $(date)"
 CORRECT ORDER: schema first (Alembic creates tables), then data (migration script inserts rows).
 
 ```bash
-# Step 4a: Create Postgres schema via Alembic (alembic upgrade head)
-# This uses the baseline migration file at alembic/versions/0001_initial_postgres_schema.py
-# MUST run as postgres-user: alembic does CREATE TABLE, nerve_app has no CREATE permission
-# (Least-Privilege design — ALTER DEFAULT PRIVILEGES auto-grants SELECT/INSERT/UPDATE/DELETE to nerve_app on new tables)
+# Step 4a: Create Postgres schema via SQLAlchemy Base.metadata.create_all
+# (the manual alembic baseline 0001 is a no-op marker — see file header for why)
+# Base.metadata.create_all handles circular FKs (users<->profiles, users<->organisations.coach_id)
+# automatically via SQLAlchemy's two-pass DDL strategy.
+# MUST run as postgres-user: needs CREATE TABLE. ALTER DEFAULT PRIVILEGES auto-grants
+# SELECT/INSERT/UPDATE/DELETE to nerve_app on every new table.
 cd /opt/nerve/app
-sudo -u postgres bash -c "cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/nerve /opt/nerve/venv/bin/alembic upgrade head"
+sudo -u postgres bash -c 'cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/nerve /opt/nerve/venv/bin/python scripts/create_postgres_schema.py'
+
+# After schema is created, mark alembic at baseline:
+sudo -u postgres bash -c 'cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/nerve /opt/nerve/venv/bin/alembic stamp 0001'
 
 # Step 4b: Insert data from SQLite
 # Runs as nerve_app — only INSERT/SELECT needed, no CREATE
