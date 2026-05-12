@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
-stopped_at: context exhaustion at 90% (2026-05-07)
-last_updated: "2026-05-12T08:39:01Z"
+stopped_at: Completed 08.23.2.A-05-PLAN.md
+last_updated: "2026-05-12T10:00:00Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 69
   completed_phases: 55
   total_plans: 233
-  completed_plans: 224
-  percent: 96
+  completed_plans: 225
+  percent: 97
 ---
 
 # Project State
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.A (postgres-migration-schema-umbenennung) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 Last activity: 2026-05-12
+
+**Phase 08.23.2.A Plan 05 abgeschlossen:** Migration scripts erstellt. validate_postgres_migration.py: 33-table MIGRATE_TABLES, validate_row_count() + validate_sample_rows() als importierbare Funktionen, Standalone __main__ Runner. migrate_to_postgres.py: 33 Tabellen in FK-Dependency-Order, BATCH_SIZE=500, circular FK two-pass (organisations.coach_id + users.active_profile_id), inline Validierung nach jeder Tabelle, DRY_RUN=1 Mode. DRY_RUN gegen lokale SQLite verifiziert (alle 33 Tabellen gelesen). Deviation: Plan sagte 32 Tabellen, models.py hat 33 (crm_notes fehlte in Plan-Count). 2 Commits: 94f618d, a48ecb1.
 
 **Phase 08.23.2.A Plan 04 abgeschlossen:** Routes + tests vollständig von FtCallSession/FtAssistantEvent bereinigt. FtCallSession update block (lines 364-386) aus app_routes.py gelöscht (D-08). 3 FT-Test-Dateien via git rm gelöscht: test_ft_lifecycle.py, test_ft_models.py, test_ft_write_hooks.py (D-10). test_per_sid_migration.py: nur test_write_ft_event_isolation_per_sid chirurgisch gelöscht, 5 DSGVO-kritische Isolation-Tests intakt (D-11). test_ab_stats.py: FtCallSession aus Import entfernt. test_ft_seed.py: keine FT-Refs, unverändert. REQ-4 grep check: 0 Treffer. 2 Commits: 8fd95b5, 533b32c. Deferred: JSONB/SQLite-Inkompatibilität in db_session-Fixture (pre-existing, seit Plan 01/02).
 
