@@ -27,6 +27,8 @@ class _FakeAnthropic:
 
 _fake_anthropic.Anthropic = _FakeAnthropic
 sys.modules.setdefault('anthropic', _fake_anthropic)
+# Stub requests ONLY if not already loaded — see _t1.py for full reasoning.
+import requests as _real_requests  # noqa: F401
 sys.modules.setdefault('requests', types.ModuleType('requests'))
 
 

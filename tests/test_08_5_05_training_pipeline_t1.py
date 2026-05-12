@@ -26,7 +26,11 @@ class _FakeAnthropic:
 _fake_anthropic.Anthropic = _FakeAnthropic
 sys.modules.setdefault('anthropic', _fake_anthropic)
 
-# Stub requests
+# Stub requests ONLY if not already loaded. import first to ensure the real
+# package wins (authlib in oauth.py needs requests.Session — if this setdefault
+# fired before authlib's import, the real package would be replaced by an empty
+# stub and break all subsequent test collection). Phase 08.23.2.A bugfix.
+import requests as _real_requests  # noqa: F401
 sys.modules.setdefault('requests', types.ModuleType('requests'))
 
 # Stub elevenlabs/config imports via a thin config stub
