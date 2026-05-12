@@ -438,65 +438,6 @@ class PlanningFeedbackLink(Base):
     created_at       = Column(DateTime, default=utcnow, nullable=False)
 
 
-# ── Phase 04.7.1: FineTuning Logging Grundlage ───────────────────────────────
-
-class FtCallSession(Base):
-    __tablename__ = 'ft_call_sessions'
-    id                    = Column(Integer, primary_key=True)
-    conversation_log_id   = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
-    user_id               = Column(Integer, ForeignKey('users.id'), nullable=False)
-    mode                  = Column(String(20), nullable=False)  # 'cold_call'|'meeting'
-    duration_seconds      = Column(Integer)
-    market                = Column(String(10), nullable=False, default='dach')
-    language              = Column(String(10), nullable=False, default='de')
-    customer_industry     = Column(String(200), nullable=True)
-    customer_position     = Column(String(200), nullable=True)
-    customer_company_size = Column(String(50), nullable=True)
-    phases_completed      = Column(Text)  # JSON
-    talk_ratio_rep        = Column(Float)
-    talk_ratio_customer   = Column(Float)
-    readiness_score_start = Column(Integer)
-    readiness_score_end   = Column(Integer)
-    readiness_score_peak  = Column(Integer)
-    hints_shown           = Column(Integer, default=0)
-    hints_used            = Column(Integer, default=0)
-    buttons_pressed       = Column(Integer, default=0)
-    outcome               = Column(String(50))
-    user_rating           = Column(Integer)
-    user_feedback         = Column(Text)
-    model_used            = Column(String(100))
-    prompt_version        = Column(String(50))
-    created_at            = Column(DateTime, default=utcnow)
-
-
-class FtAssistantEvent(Base):
-    __tablename__ = 'ft_assistant_events'
-    id                    = Column(Integer, primary_key=True)
-    ft_session_id         = Column(Integer, ForeignKey('ft_call_sessions.id'), nullable=False)
-    user_id               = Column(Integer, ForeignKey('users.id'), nullable=False)
-    market                = Column(String(10), nullable=False, default='dach')
-    language              = Column(String(10), nullable=False, default='de')
-    timestamp_ms          = Column(Integer, nullable=False)
-    conversation_phase    = Column(String(50), nullable=False)
-    speaker               = Column(String(20), nullable=True)   # D-04
-    transcript_segment    = Column(Text, nullable=True)         # D-05
-    context_window        = Column(Text, nullable=True)         # JSON
-    customer_data         = Column(Text, nullable=True)         # JSON
-    profile_data          = Column(Text, nullable=True)         # JSON
-    readiness_score       = Column(Integer, nullable=True)
-    active_learning_cards = Column(Text, nullable=True)         # JSON; kein FK (D-11)
-    hint_type             = Column(String(50), nullable=False)
-    hint_text             = Column(Text, nullable=False)
-    hint_category         = Column(String(50))
-    model_used            = Column(String(100), nullable=False)
-    prompt_version        = Column(String(50), nullable=False)
-    hint_action           = Column(String(30))
-    score_change          = Column(Integer)
-    call_rating           = Column(Integer)
-    call_outcome          = Column(String(50))
-    created_at            = Column(DateTime, default=utcnow)
-
-
 class PromptVersion(Base):
     __tablename__ = 'prompt_versions'
     __table_args__ = (
