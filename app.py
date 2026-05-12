@@ -121,6 +121,15 @@ init_db(engine)
 
 # ── Migrate existing DB (add new columns if missing) ──────────────────────────
 def _migrate():
+    # Phase 08.23.2.A: Auf Postgres wird Schema via Alembic verwaltet, nicht
+    # via dieser idempotenten _migrate()-Funktion. ALTER TABLE-Aufrufe wuerden
+    # hier scheitern weil (1) nerve_app keine ALTER-Rechte hat (Least-Privilege),
+    # (2) Postgres aborted die ganze Transaktion bei einem DDL-Fehler.
+    # Lokale Entwicklung mit SQLite faehrt unveraendert fort.
+    db_url = str(engine.url)
+    if db_url.startswith('postgresql'):
+        print('[DB] _migrate skipped on Postgres (schema managed via Alembic since Phase 08.23.2.A)')
+        return
     from sqlalchemy import text
     with engine.connect() as conn:
         # ── users ─────────────────────────────────────────────────────────────
