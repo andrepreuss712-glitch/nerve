@@ -116,6 +116,42 @@ def _coerce_value(val, col, bool_cols, json_cols):
     return val
 
 
+def _get_fk_info(table_name):
+    """Return list of (col_name, parent_table, parent_col, is_nullable) for each FK.
+
+    Phase 08.23.2.A bugfix: SQLite source has orphan FKs (e.g. conversation_logs
+    .profile_id=5 references a profile that was deleted). Postgres enforces FKs
+    strictly. We need to detect and handle these during migration.
+    """
+    from database.db import Base
+    import database.models  # noqa: F401
+
+    pg_table = Base.metadata.tables.get(table_name)
+    if pg_table is None:
+        return []
+
+    fk_info = []
+    for col in pg_table.columns:
+        for fk in col.foreign_keys:
+            parent_full = fk.target_fullname  # 'profiles.id'
+            parent_table, parent_col = parent_full.split('.')
+            fk_info.append((col.name, parent_table, parent_col, col.nullable))
+    return fk_info
+
+
+def _build_parent_id_cache(pg_sess, fk_info):
+    """Pre-load existing parent IDs for each FK target table — used for orphan detection."""
+    from sqlalchemy import text
+    cache = {}
+    for _col, parent_table, parent_col, _nullable in fk_info:
+        cache_key = (parent_table, parent_col)
+        if cache_key in cache:
+            continue
+        rows = pg_sess.execute(text(f'SELECT {parent_col} FROM {parent_table}')).fetchall()
+        cache[cache_key] = {r[0] for r in rows}
+    return cache
+
+
 def migrate_table(table_name, sqlite_sess, pg_sess, dry_run=False):
     """Read all rows from SQLite table, insert into Postgres via raw SQL copy."""
     from sqlalchemy import text, inspect as sa_inspect
@@ -126,6 +162,12 @@ def migrate_table(table_name, sqlite_sess, pg_sess, dry_run=False):
 
     # Type-coercion maps for SQLite -> Postgres compatibility
     bool_cols, json_cols = _get_typed_columns(table_name)
+
+    # FK-orphan handling: SQLite had no FK enforcement, so legacy data may
+    # reference parent rows that no longer exist (e.g. conversation_logs
+    # .profile_id=5 -> profile 5 deleted long ago).
+    fk_info = _get_fk_info(table_name)
+    parent_ids = _build_parent_id_cache(pg_sess, fk_info) if fk_info else {}
 
     # Read all rows
     rows = sqlite_sess.execute(text(f'SELECT * FROM {table_name}')).fetchall()
@@ -146,6 +188,8 @@ def migrate_table(table_name, sqlite_sess, pg_sess, dry_run=False):
     # Circular FK: override with NULL for first pass
     null_overrides = CIRCULAR_FK_NULLS.get(table_name, {})
 
+    inserted = 0
+    skipped_orphan = 0
     for i in range(0, len(rows), BATCH_SIZE):
         batch = rows[i:i + BATCH_SIZE]
         batch_dicts = []
@@ -154,14 +198,34 @@ def migrate_table(table_name, sqlite_sess, pg_sess, dry_run=False):
             # Coerce types: SQLite int/string -> Postgres bool/json
             for col in list(row_dict.keys()):
                 row_dict[col] = _coerce_value(row_dict[col], col, bool_cols, json_cols)
+            # FK orphan handling
+            row_has_unresolvable_orphan = False
+            for fk_col, parent_table, parent_col, nullable in fk_info:
+                val = row_dict.get(fk_col)
+                if val is None:
+                    continue
+                if val not in parent_ids.get((parent_table, parent_col), set()):
+                    if nullable:
+                        row_dict[fk_col] = None
+                    else:
+                        row_has_unresolvable_orphan = True
+                        break
+            if row_has_unresolvable_orphan:
+                skipped_orphan += 1
+                continue
             # Circular FK first-pass nulls
             for col, val in null_overrides.items():
                 if col in row_dict:
                     row_dict[col] = val
             batch_dicts.append(row_dict)
-        pg_sess.execute(insert_sql, batch_dicts)
+        if batch_dicts:
+            pg_sess.execute(insert_sql, batch_dicts)
+            inserted += len(batch_dicts)
     pg_sess.commit()
-    print(f'[MIGRATE] {table_name}: {len(rows)} Zeilen -> Postgres OK')
+    if skipped_orphan:
+        print(f'[MIGRATE] {table_name}: {inserted} Zeilen -> Postgres OK ({skipped_orphan} orphan-FK-Records uebersprungen, NOT-NULL-FK-Parent fehlt)')
+    else:
+        print(f'[MIGRATE] {table_name}: {inserted} Zeilen -> Postgres OK')
 
 
 def restore_circular_fks(sqlite_sess, pg_sess, dry_run=False):
