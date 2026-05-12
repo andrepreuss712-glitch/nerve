@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08.23.2.A-06-PLAN.md
-last_updated: "2026-05-12T11:00:00Z"
+stopped_at: Completed 08.23.2.A-07-PLAN.md
+last_updated: "2026-05-12T12:00:00Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 69
   completed_phases: 55
   total_plans: 233
-  completed_plans: 226
+  completed_plans: 227
   percent: 97
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.A (postgres-migration-schema-umbenennung) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 Last activity: 2026-05-12
+
+**Phase 08.23.2.A Plan 07 abgeschlossen:** Postgres 16 Server-Setup Runbook erstellt und Hetzner-Setup durch Andre ausgefuehrt. docs/postgres-server-setup.md: 9-Sektionen (SQLite-Backup, Postgres-Install, nerve+nerve_test DBs mit de_DE.UTF-8, nerve_app restricted user, pg_hba.conf peer-auth, TCP disabled via listen_addresses='', Linux-User-Setup, Connection-Verify, Dry-Run-Prozedur). Checkpoint "server-setup-complete" bestaetigt: Postgres 16 laeuft, beide DBs existieren, nerve_app verbindet per unix socket, SQLite-Backup auf Laptop. DATABASE_URL noch auf SQLite (aendert sich erst Plan 09). 2 Commits: b723d3d, 17d1ddf. Decisions: DATABASE_URL deferred to Plan 09 cutover (C-5), TRUNCATE via postgres superuser (C-3), ALTER DEFAULT PRIVILEGES fuer kuenftige Phasen.
 
 **Phase 08.23.2.A Plan 06 abgeschlossen:** Alembic Baseline Migration 0001 erstellt. Postgres nicht verfuegbar (psql not found) — manuelle Erstellung per Plan-Fallback. 35 Tabellen (33 Legacy + calls + call_events). CHECK-Constraints via op.execute() fuer calls (call_mode, transcript_storage, outcome) und call_events (event_type). GIN-Index auf call_events.payload. idx_calls_mode_outcome mit postgresql_where. revision='0001', down_revision=None. ft_call_sessions/ft_assistant_events korrekt ausgeschlossen. Muss nach Postgres-Installation verifiziert/regeneriert werden. 1 Commit: 9e9b745. Decision: Manuelle Erstellung weil Postgres 16 noch nicht installiert.
 

@@ -1316,9 +1316,9 @@ Plans:
 - [x] 08.23.2.A-02-PLAN.md — Alembic tooling init (alembic.ini + env.py + requirements.txt) ✅ 2026-05-12
 - [x] 08.23.2.A-03-PLAN.md — FT dead-code prune: deepgram_service.py + claude_service.py + export_ft_jsonl.py ✅ 2026-05-12
 - [x] 08.23.2.A-04-PLAN.md — app_routes.py FtCallSession block + test file cleanup (D-08/D-10/D-11) ✅ 2026-05-12
-- [ ] 08.23.2.A-05-PLAN.md — Migrations-Skript scripts/migrate_to_postgres.py (D-01)
-- [ ] 08.23.2.A-06-PLAN.md — Validierungs-Skript scripts/validate_postgres_migration.py (D-02)
-- [ ] 08.23.2.A-07-PLAN.md — Alembic Baseline-Migration autogenerate + stamp
+- [x] 08.23.2.A-05-PLAN.md — migrate_to_postgres.py + validate_postgres_migration.py (33 Tabellen, FK-Order, DRY_RUN) ✅ 2026-05-12
+- [x] 08.23.2.A-06-PLAN.md — Alembic Baseline-Migration 0001 (35 Tabellen, CHECK-Constraints, GIN-Index) ✅ 2026-05-12
+- [x] 08.23.2.A-07-PLAN.md — Postgres 16 Server-Setup Runbook + Hetzner-Setup durch Andre ausgefuehrt ✅ 2026-05-12
 - [ ] 08.23.2.A-08-PLAN.md — Postgres-Setup Hetzner (D-13/D-14/D-15) + Backup-Cronjob (D-17/D-18)
 - [ ] 08.23.2.A-09-PLAN.md — Cutover-Sonntag + Smoke-Test + Dashboard-Backup-Warnung
 
