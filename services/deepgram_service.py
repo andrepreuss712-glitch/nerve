@@ -447,6 +447,7 @@ def register_audio_handlers(sio):
                 language=language,
                 mode=mode,
             )
+            ls.init_anonymisierer(_sid)   # WR-03 fix: D-06 create AnrufAnonymisierer for this SID
             ls.set_profile_for_sid(_sid, _profile_name2, _profile_daten2)
             # BUG1 FIX: bridge precall_briefing from socket payload to _session_state[sid]["_briefing"]
             # Must run AFTER init_session_state (which overwrites _session_state[sid])
