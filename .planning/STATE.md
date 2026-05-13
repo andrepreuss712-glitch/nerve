@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.B Plan 07 abgeschlossen (2026-05-13)
-last_updated: "2026-05-13T08:35:18Z"
+stopped_at: Phase 08.23.2.B Plan 07.1 abgeschlossen (2026-05-13)
+last_updated: "2026-05-13T09:00:00Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 70
   completed_phases: 55
   total_plans: 233
-  completed_plans: 229
+  completed_plans: 230
   percent: 98
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.B (anonymisierungs-strecke-vor-mitschrift-schreibungen) — EXECUTING
-Plan: 7 of 10 abgeschlossen
+Plan: 7.1 of 10 abgeschlossen
 Last activity: 2026-05-13
+
+**Phase 08.23.2.B Plan 07.1 abgeschlossen:** Dashboard-Banner fuer Anonymisierungs-Pipeline-Fehler (D-08 Kat. A + C). _record_snippet_error() als neue Funktion in anonymization.py (Z.368) — registriert Snippet-Fehler-Timestamps thread-safe fuer Rolling-Error-Banner-Zaehler; Aufruf in allen 3 anonymize()-Exception-Pfaden. get_pipeline_status() von str auf dict erweitert: {'status': str, 'error_count_10min': int}. /api/health gibt jetzt pipeline_error_count_10min zurueck (routes/app_routes.py Z.1430). CSS: --pipeline-error-bg/text + --pipeline-warning-bg/text Tokens in :root; .n-pipeline-error (rot) + .n-pipeline-warning (gelb) Klassen ohne Hex im Body. dashboard.html: 2 neue Streifen-Divs + JS-Erweiterung im bestehenden health-fetch IIFE. 4 Commits: dcc32de, 9ef1e08, 7455c39, 1ca1a17.
 
 **Phase 08.23.2.B Plan 07 abgeschlossen:** Anonymisierungs-Verdrahtung in app_routes.py an zwei Stellen. /api/session-rating (Z.901-929): anonymize(comment, None) vor latest.kommentar DB-Write; cache=None (Token-Cache nach Session-Ende geloescht, Pitfall 4); Finding 4: [ART9_REDACTED] und [ANON_FEHLER] -> leerer Kommentar (kein Literal in DB); Pipeline-Unavailable: Fail-safe leerer Kommentar; Fail-open fuer unerwartete Exceptions. /api/health (Z.1415-1426): pipeline_status='ok'|'degraded'|'unavailable' aus get_pipeline_status(). get_pipeline_status() in services/anonymization.py (Z.365): liest _error_timestamps Thread-safe — Kat. A = unavailable, Kat. C = degraded, sonst ok. 2 Commits: 7003079, e084686.
 
