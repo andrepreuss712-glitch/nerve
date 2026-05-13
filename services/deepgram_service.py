@@ -588,6 +588,18 @@ def register_audio_handlers(sio):
             try:
                 result = streame_manual_ewb_variante(typ, profile_einwand or {}, kontext, _sid, slot=1)
                 _antwort = (result.get('gegenargument_1') or '').strip() or None
+                # Phase 08.23.2.B: OUTPUT-PFAD Anonymisierung (D-01, Req-9)
+                # anonymize_output() nutzt Cache-Reverse-Lookup (bekannte Namen aus Briefing echoen)
+                # einwand_text=typ ist ein Typ-Label ('zu_teuer') — kein Anonymisierungs-Bedarf (D-01)
+                # Finding 4: anonymize_output() gibt nie '[ART9_REDACTED]' zurueck — kein Skip-Check noetig.
+                if _antwort:
+                    try:
+                        from services.anonymization import anonymize_output
+                        _anon_cache = ls.get_anonymisierer(_sid)
+                        _antwort = anonymize_output(_antwort, _anon_cache)
+                    except Exception as _out_err:
+                        print(f'[ANON] anonymize_output Fehler (EWB, sid={_sid!r}): {type(_out_err).__name__}')
+                        # Fallback: _antwort bleibt unveraendert (fail-open fuer Output-Pfad)
                 try:
                     ls.record_ewb_click(typ, success=True,
                                         antwort_text=_antwort, einwand_text=typ)
