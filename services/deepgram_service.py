@@ -74,12 +74,34 @@ def _make_on_message(sid):
                          room=sid)
                 # D-06: Du/Sie detection heuristic (2-trigger threshold per utterance)
                 _check_anrede_switch(sio, sid, text, ls)
-                with ls.log_lock:
-                    ls.conversation_log.append({
-                        'ts': ts, 'type': 'transcript',
-                        'speaker': log_sp if roles_confirmed else None,
-                        'text': text, 'data': None,
-                    })
+                # Phase 08.23.2.B: INPUT-PFAD Anonymisierung (D-01, Req-7)
+                # Pre-Insert-Audit: laeuft unter ls.log_lock; Race-Condition (Ghost-SID) via
+                # get_anonymisierer()-None-Return abgefangen; anonymize() handelt None-Cache defensiv.
+                # Finding 4: Expliziter Skip bei '[ART9_REDACTED]' und '[ANON_FEHLER]' — verhindert DB-Spam.
+                try:
+                    from services.anonymization import anonymize, AnonymizationPipelineUnavailable
+                    _anon_cache = ls.get_anonymisierer(sid)
+                    _anon_result = anonymize(text, _anon_cache)
+                    _anon_text, _anon_tier = _anon_result
+                    if _anon_text == '[ART9_REDACTED]':
+                        # Art-9-Treffer: Snippet nicht persistieren (D-05, Finding 4)
+                        print(f'[ANON] Art-9 erkannt, Transcript-Snippet verworfen (sid={sid!r}, len={len(text)})')
+                    elif _anon_text == '[ANON_FEHLER]':
+                        # Pipeline-Fehler: Snippet nicht persistieren (Finding 4 — kein DB-Spam)
+                        print(f'[ANON] Pipeline-Fehler, Transcript-Snippet verworfen (sid={sid!r}, len={len(text)})')
+                    else:
+                        with ls.log_lock:
+                            ls.conversation_log.append({
+                                'ts': ts, 'type': 'transcript',
+                                'speaker': log_sp if roles_confirmed else None,
+                                'text': _anon_text, 'data': None,
+                            })
+                except AnonymizationPipelineUnavailable:
+                    # D-08 Kat. A: Pipeline unavailable — kein Insert, Live-Call laeuft weiter
+                    print(f'[ANON] Pipeline unavailable, Transcript-Snippet verworfen (sid={sid!r})')
+                except Exception as _anon_err:
+                    # Unerwarteter Fehler — Safety: lieber nicht persistieren
+                    print(f'[ANON] Unerwarteter Fehler im INPUT-PFAD (sid={sid!r}): {type(_anon_err).__name__}')
 
                 # ── H-9: akkumuliere echte STT-Sekunden ──────────────────────
                 _dur = getattr(getattr(result, 'metadata', None), 'duration', 0.0) or 0.0
