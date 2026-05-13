@@ -899,8 +899,34 @@ def api_session_rating():
                   .order_by(ConversationLog.created_at.desc())
                   .first())
         if latest and latest.sterne is None:
-            latest.sterne    = int(stars)
-            latest.kommentar = comment
+            latest.sterne = int(stars)
+            # Phase 08.23.2.B: INPUT-PFAD Anonymisierung (D-01, Req-7)
+            # cache=None: Token-Cache nach Session-Ende geloescht (Pitfall 4).
+            # Regex+NER laeuft ohne Mapping-Persistenz (quality_tier='B').
+            # Finding 4: Expliziter Skip-Check fuer '[ART9_REDACTED]' und '[ANON_FEHLER]' — verhindert DB-Spam.
+            _comment_anon = comment
+            if comment:
+                try:
+                    from services.anonymization import anonymize, AnonymizationPipelineUnavailable
+                    _anon_result = anonymize(comment, None)  # cache=None: ephemerer Modus
+                    _comment_text, _comment_tier = _anon_result
+                    if _comment_text == '[ART9_REDACTED]':
+                        # Art-9-Treffer: leerer Kommentar (Finding 4 — nicht persistieren)
+                        _comment_anon = ''
+                        print('[ANON] Art-9 in session-rating Kommentar erkannt, Kommentar geleert')
+                    elif _comment_text == '[ANON_FEHLER]':
+                        # Pipeline-Fehler-Sentinel: leerer Kommentar (Finding 4 — kein DB-Spam)
+                        _comment_anon = ''
+                        print('[ANON] Pipeline-Fehler in session-rating, Kommentar nicht persistiert')
+                    else:
+                        _comment_anon = _comment_text
+                except AnonymizationPipelineUnavailable:
+                    print('[ANON] Pipeline unavailable, Kommentar nicht anonymisiert — nicht persistiert')
+                    _comment_anon = ''  # Fail-safe: kein Kommentar wenn Pipeline down
+                except Exception as _anon_err:
+                    print(f'[ANON] anonymize() Fehler in session-rating: {type(_anon_err).__name__}')
+                    _comment_anon = comment  # Fail-open Fallback fuer unerwartete Fehler
+            latest.kommentar = _comment_anon
         db.commit()
 
         # D-10: Rating-Diskrepanz als learning_event loggen
