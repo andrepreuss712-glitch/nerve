@@ -289,7 +289,6 @@ def anonymize(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple[str, str]
             return ('[ART9_REDACTED]', 'C')
     except Exception as e:
         _register_error()
-        _record_snippet_error()   # D-08 Kat. C: Rolling-Error-Counter
         print(f'[ANON] Art9-Check-Fehler (len={len(text)}): {type(e).__name__}')
         return ('[ANON_FEHLER]', 'C')
 
@@ -298,7 +297,6 @@ def anonymize(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple[str, str]
         text, tier = _apply_regex_filter(text, cache)
     except Exception as e:
         _register_error()
-        _record_snippet_error()   # D-08 Kat. C: Rolling-Error-Counter
         print(f'[ANON] Regex-Fehler (len={len(text)}): {type(e).__name__}')
         return ('[ANON_FEHLER]', 'C')
 
@@ -313,7 +311,6 @@ def anonymize(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple[str, str]
         raise
     except Exception as e:
         _register_error()
-        _record_snippet_error()   # D-08 Kat. C: Rolling-Error-Counter
         print(f'[ANON] NER-Fehler (len={len(text)}): {type(e).__name__}')
         return ('[ANON_FEHLER]', 'C')
 
