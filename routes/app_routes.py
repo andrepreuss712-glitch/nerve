@@ -1415,13 +1415,17 @@ def api_health():
     # Phase 08.23.2.B: Anonymisierungs-Pipeline-Status (D-08)
     try:
         from services.anonymization import get_pipeline_status
-        pipeline_status = get_pipeline_status()
+        _pipeline = get_pipeline_status()
+        pipeline_status = _pipeline.get('status', 'unknown')
+        pipeline_error_count = _pipeline.get('error_count_10min', 0)
     except Exception:
         pipeline_status = 'unknown'
+        pipeline_error_count = 0
 
     return jsonify({
         'status': 'ok',
         'backup_status': backup_status,   # 'ok' | 'stale' | 'missing'
         'backup_age_hours': age_hours,    # float or None
-        'pipeline_status': pipeline_status,   # D-08: 'ok' | 'degraded' | 'unavailable'
+        'pipeline_status': pipeline_status,              # D-08: 'ok' | 'degraded' | 'unavailable'
+        'pipeline_error_count_10min': pipeline_error_count,  # D-08 Kat. C: Fehler in 10-Min-Fenster
     })
