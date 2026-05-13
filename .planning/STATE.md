@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Phase 08.23.2.B context gathered (2026-05-12)
-last_updated: "2026-05-12T10:00:00.000Z"
-last_activity: 2026-05-12
+status: Executing
+stopped_at: Phase 08.23.2.B Plan 01 abgeschlossen (2026-05-13)
+last_updated: "2026-05-13T05:47:00.000Z"
+last_activity: 2026-05-13
 progress:
   total_phases: 70
   completed_phases: 55
   total_plans: 233
-  completed_plans: 222
-  percent: 95
+  completed_plans: 223
+  percent: 96
 ---
 
 # Project State
@@ -21,13 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.23.2.A — postgres-migration-schema-umbenennung
+**Current focus:** Phase 08.23.2.B — anonymisierungs-strecke-vor-mitschrift-schreibungen
 
 ## Current Position
 
-Phase: 08.23.2.A (postgres-migration-schema-umbenennung) — EXECUTING
-Plan: 9 of 9
-Last activity: 2026-05-12
+Phase: 08.23.2.B (anonymisierungs-strecke-vor-mitschrift-schreibungen) — EXECUTING
+Plan: 1 of 10 abgeschlossen
+Last activity: 2026-05-13
+
+**Phase 08.23.2.B Plan 01 abgeschlossen:** DSGVO-Anonymisierungs-Foundation-Modul erstellt (Greenfield). services/art9_keywords.py: ART9_KEYWORDS Dict mit 6 Kategorien, 198 Keywords, BayLDA-auditierbar. services/anonymization.py: AnrufAnonymisierer-Klasse (Thread-safe Token-Cache), anonymize() 3-stufige Pipeline (Art-9 -> Regex -> spaCy NER), anonymize_output(), register_briefing_pii(), should_persist(), AnonymizationPipelineUnavailable, is_pipeline_healthy. D-05 Tuple-Kontrakt implementiert: bei Art-9-Treffer ('[ART9_REDACTED]', 'C'). Finding 1 Fix: ART9_KEYWORDS als Modul-Level-Import. Finding 4 Fix: should_persist() exportiert. Finding 5 Fix: Pre-Warm anonymize('Warmup', None) in app.py Zeile 2273. 3 Commits: 6876fc6, b448c0c, 28100cd.
 
 **Phase 08.23.2.A Plan 07 abgeschlossen:** Postgres 16 Server-Setup Runbook erstellt und Hetzner-Setup durch Andre ausgefuehrt. docs/postgres-server-setup.md: 9-Sektionen (SQLite-Backup, Postgres-Install, nerve+nerve_test DBs mit de_DE.UTF-8, nerve_app restricted user, pg_hba.conf peer-auth, TCP disabled via listen_addresses='', Linux-User-Setup, Connection-Verify, Dry-Run-Prozedur). Checkpoint "server-setup-complete" bestaetigt: Postgres 16 laeuft, beide DBs existieren, nerve_app verbindet per unix socket, SQLite-Backup auf Laptop. DATABASE_URL noch auf SQLite (aendert sich erst Plan 09). 2 Commits: b723d3d, 17d1ddf. Decisions: DATABASE_URL deferred to Plan 09 cutover (C-5), TRUNCATE via postgres superuser (C-3), ALTER DEFAULT PRIVILEGES fuer kuenftige Phasen.
 
