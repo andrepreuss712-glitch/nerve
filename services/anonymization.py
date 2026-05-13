@@ -288,6 +288,7 @@ def anonymize(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple[str, str]
             return ('[ART9_REDACTED]', 'C')
     except Exception as e:
         _register_error()
+        _record_snippet_error()   # D-08 Kat. C: Rolling-Error-Counter
         print(f'[ANON] Art9-Check-Fehler (len={len(text)}): {type(e).__name__}')
         return ('[ANON_FEHLER]', 'C')
 
@@ -296,6 +297,7 @@ def anonymize(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple[str, str]
         text, tier = _apply_regex_filter(text, cache)
     except Exception as e:
         _register_error()
+        _record_snippet_error()   # D-08 Kat. C: Rolling-Error-Counter
         print(f'[ANON] Regex-Fehler (len={len(text)}): {type(e).__name__}')
         return ('[ANON_FEHLER]', 'C')
 
@@ -310,6 +312,7 @@ def anonymize(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple[str, str]
         raise
     except Exception as e:
         _register_error()
+        _record_snippet_error()   # D-08 Kat. C: Rolling-Error-Counter
         print(f'[ANON] NER-Fehler (len={len(text)}): {type(e).__name__}')
         return ('[ANON_FEHLER]', 'C')
 
@@ -362,20 +365,31 @@ def should_persist(anon_text: str) -> bool:
     return anon_text not in ('[ART9_REDACTED]', '[ANON_FEHLER]')
 
 
-def get_pipeline_status() -> str:
-    """Gibt pipeline_status zurueck fuer /api/health Endpoint.
-    'ok': Pipeline verfuegbar und keine erhoehlte Fehlerrate
+def _record_snippet_error() -> None:
+    """Registriert einen Snippet-Fehler ([ANON_FEHLER]) fuer Rolling-Error-Rate (D-08 Kat. C).
+    Thread-safe via _error_lock. Entfernt Eintraege ausserhalb des Zeitfensters.
+    """
+    now = time.monotonic()
+    with _error_lock:
+        _error_timestamps.append(now)
+        # Prune: Eintraege aelter als ROLLING_ERROR_WINDOW_S entfernen
+        cutoff = now - ROLLING_ERROR_WINDOW_S
+        while _error_timestamps and _error_timestamps[0] < cutoff:
+            _error_timestamps.pop(0)
+
+
+def get_pipeline_status() -> dict:
+    """Gibt pipeline_status und error_count_10min zurueck fuer /api/health Endpoint.
+    'ok': Pipeline verfuegbar, keine erhoehlte Fehlerrate
     'degraded': Rolling-Error-Rate ueber Schwellenwert (D-08 Kat. C)
     'unavailable': spaCy nicht ladbar (D-08 Kat. A)
     """
-    global is_pipeline_healthy, _error_timestamps
-    if not is_pipeline_healthy:
-        return 'unavailable'
-    import time
     now = time.monotonic()
     with _error_lock:
         cutoff = now - ROLLING_ERROR_WINDOW_S
         recent_errors = sum(1 for ts in _error_timestamps if ts >= cutoff)
+    if not is_pipeline_healthy:
+        return {'status': 'unavailable', 'error_count_10min': recent_errors}
     if recent_errors > ROLLING_ERROR_THRESHOLD:
-        return 'degraded'
-    return 'ok'
+        return {'status': 'degraded', 'error_count_10min': recent_errors}
+    return {'status': 'ok', 'error_count_10min': recent_errors}
