@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.B Plan 07.1 abgeschlossen (2026-05-13)
-last_updated: "2026-05-13T09:00:00Z"
+stopped_at: Phase 08.23.2.B Plan 08 abgeschlossen (2026-05-13)
+last_updated: "2026-05-13T10:00:00Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 70
   completed_phases: 55
   total_plans: 233
-  completed_plans: 230
-  percent: 98
+  completed_plans: 231
+  percent: 99
 ---
 
 # Project State
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.B (anonymisierungs-strecke-vor-mitschrift-schreibungen) — EXECUTING
-Plan: 7.1 of 10 abgeschlossen
+Plan: 08 of 10 abgeschlossen
 Last activity: 2026-05-13
+
+**Phase 08.23.2.B Plan 08 abgeschlossen:** Unit-Test-Suite fuer services/anonymization.py (Req-1 bis Req-6). 22 Runtime-Behavior-Tests: AnrufAnonymisierer (Token-Format, Stabilitaet, Cross-Session, Thread-Safety), Regex-PII (IBAN, Email, Multiple), Art-9-Filter (Hit/No-Hit, Tuple-Return, 6 Kategorien), anonymize_output() (Reverse-Lookup, Longer-Key-First, None-Cache), register_briefing_pii() (Person, Firma, Empty), Pipeline-Unavailable-Exception, Empty-Text-Edge-Case, Art-9-False-Negative-Gate (30 Snippets x 6 Kategorien, 100%). Rule-1-Auto-Fix: KeyError in get_or_assign_token fuer Regex-PII-Typen (setdefault statt direktem dict-Zugriff). autouse-Fixture fuer Modul-State-Reset (is_pipeline_healthy + _error_timestamps) — notwendig da spaCy lokal nicht installiert. 2 Commits: a275a9c, 5bdf335.
 
 **Phase 08.23.2.B Plan 07.1 abgeschlossen:** Dashboard-Banner fuer Anonymisierungs-Pipeline-Fehler (D-08 Kat. A + C). _record_snippet_error() als neue Funktion in anonymization.py (Z.368) — registriert Snippet-Fehler-Timestamps thread-safe fuer Rolling-Error-Banner-Zaehler; Aufruf in allen 3 anonymize()-Exception-Pfaden. get_pipeline_status() von str auf dict erweitert: {'status': str, 'error_count_10min': int}. /api/health gibt jetzt pipeline_error_count_10min zurueck (routes/app_routes.py Z.1430). CSS: --pipeline-error-bg/text + --pipeline-warning-bg/text Tokens in :root; .n-pipeline-error (rot) + .n-pipeline-warning (gelb) Klassen ohne Hex im Body. dashboard.html: 2 neue Streifen-Divs + JS-Erweiterung im bestehenden health-fetch IIFE. 4 Commits: dcc32de, 9ef1e08, 7455c39, 1ca1a17.
 
