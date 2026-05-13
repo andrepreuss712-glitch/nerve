@@ -7,6 +7,13 @@
   &#9888; Postgres-Backup veraltet oder fehlgeschlagen &mdash;
   <span id="backup-warning-detail">bitte prüfen</span>
 </div>
+<!-- Pipeline-Status-Strips (Phase 08.23.2.B D-08) — Kat. A (rot) und Kat. C (gelb) -->
+<div id="pipeline-error-strip" class="n-pipeline-error" style="display:none">
+  &#9888; Anonymisierungs-Pipeline gest&ouml;rt &mdash; Anruf-Aufzeichnung tempor&auml;r ausgesetzt.
+</div>
+<div id="pipeline-warning-strip" class="n-pipeline-warning" style="display:none">
+  &#9888; Anonymisierungs-Pipeline produziert Fehler (<span id="pipeline-error-count">0</span> Snippets in 10 Min) &mdash; Logs pr&uuml;fen.
+</div>
 <script>
 (function() {
   fetch('/api/health')
