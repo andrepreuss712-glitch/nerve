@@ -265,6 +265,36 @@ def get_briefing_for_sid(sid: str) -> str | None:
         return _session_state.get(sid, {}).get('_briefing')
 
 
+# ── Per-SID AnrufAnonymisierer Cache (D-06 Phase 08.23.2.B) ──────────────────
+# AnrufAnonymisierer stored as sub-key of _session_state[sid]['anonymisierer'].
+# Uses _session_state_lock (no extra lock needed — eliminates deadlock risk).
+# Ghost-SID guard: if SID not in _session_state, init is silently skipped.
+# Lifecycle: set via init_anonymisierer() after init_session_state(), auto-cleared
+# when pop_session_state() pops _session_state[sid] (D-06 Trigger 1+2).
+# mapping NIEMALS in DB persistiert — nur RAM-Cache.
+
+def init_anonymisierer(sid: str) -> None:
+    """Erstellt AnrufAnonymisierer fuer SID und legt ihn in _session_state[sid]['anonymisierer'].
+    Muss NACH init_session_state() aufgerufen werden.
+    Ghost-SID Guard: kein Fehler wenn SID nicht mehr existiert (Race-Condition Pitfall 3).
+    """
+    from services.anonymization import AnrufAnonymisierer
+    with _session_state_lock:
+        if sid not in _session_state:
+            print(f'[ANON] init_anonymisierer: Ghost SID {sid!r} — skipped')
+            return
+        _session_state[sid]['anonymisierer'] = AnrufAnonymisierer()
+        print(f'[ANON] AnrufAnonymisierer erstellt fuer sid={sid!r}')
+
+
+def get_anonymisierer(sid: str):
+    """Gibt AnrufAnonymisierer fuer SID zurueck, oder None wenn nicht initialisiert/SID unbekannt.
+    Thread-safe. Gibt None bei Ghost-SID (Race-Condition Pitfall 3 — Caller handelt None defensiv).
+    """
+    with _session_state_lock:
+        return _session_state.get(sid, {}).get('anonymisierer')
+
+
 def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                        market: str = 'dach', language: str = 'de',
                        mode: str = 'meeting') -> None:
@@ -353,6 +383,7 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             'laengster_monolog_sek': 0.0,
             '_current_monolog_start': None,
             '_line_id_counter':      0,
+            'anonymisierer':         None,    # D-06: AnrufAnonymisierer, erstellt via init_anonymisierer()
         }
     # WR-03: init per-SID coaching buffer (separate lock — same lifecycle as transcript)
     with _per_sid_coaching_lock:
