@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.B Plan 02 abgeschlossen (2026-05-13)
-last_updated: "2026-05-13T06:10:00.000Z"
+stopped_at: Phase 08.23.2.B Plan 03 abgeschlossen (2026-05-13)
+last_updated: "2026-05-13T08:00:00.000Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 70
   completed_phases: 55
   total_plans: 233
-  completed_plans: 224
-  percent: 96
+  completed_plans: 225
+  percent: 97
 ---
 
 # Project State
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.B (anonymisierungs-strecke-vor-mitschrift-schreibungen) — EXECUTING
-Plan: 2 of 10 abgeschlossen
+Plan: 3 of 10 abgeschlossen
 Last activity: 2026-05-13
+
+**Phase 08.23.2.B Plan 03 abgeschlossen:** Alembic-Migration 0002 fuer Phrase.quality_tier (VARCHAR(1) NOT NULL DEFAULT 'A') erstellt. Revision-Chain 0001->0002 korrekt. database/models.py: quality_tier = Column(String(1), nullable=False, server_default='A') nach created_at eingefuegt. scripts/delete_pretest_data.py: D-07 Cutover-Skript mit pg_dump-Backup, --dry-run + --backup-only Flags, interaktiver DELETE-Bestaetigung, FK-Reihenfolge ueber 6 Tabellen, Sequence-Reset, audit_log AUSGENOMMEN. Checkpoint approved von Andre. 2 Commits: 8154496, dd7b5ce.
 
 **Phase 08.23.2.B Plan 02 abgeschlossen:** Deployment-Dependencies fuer spaCy-Anonymisierung: spacy>=3.7.0 und phonenumbers>=8.13.0 in requirements.txt. deploy.sh: de_core_news_lg Download nach pip install (Z.82). Finding-2-Fix: nerve.service (--worker-class gthread --workers 1 --threads 4) per scp+daemon-reload deployed — OOM-Schutz auf CX22 (1 Worker x 700MB = 700MB statt N x 700MB). Szenario B: gthread war bereits in nerve.service vorkonfiguriert; Deviation Rule 2: Service-Datei-Installations-Schritt ergaenzt da deploy/ aus TAR_EXCLUDES. 2 Commits: 879cc90, b0d9b2d.
 
