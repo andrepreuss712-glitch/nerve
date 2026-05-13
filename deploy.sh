@@ -60,6 +60,13 @@ echo "[deploy] Uploading via tar-over-ssh (excludes: .git, .env, .planning, *.db
 tar "${TAR_EXCLUDES[@]}" -cf - ./ | \
   ssh -i "$SSH_KEY" "$VPS_HOST" "mkdir -p '$APP_DIR' && tar -xf - -C '$APP_DIR' --no-same-owner"
 
+# Finding 2: gthread verhindert OOM durch mehrfaches spaCy-Model-Load.
+# nerve.service enthaelt --worker-class gthread --workers 1 --threads 4.
+# Deploy-Ordner ist vom tar ausgeschlossen — Service-Datei separat installieren.
+echo "[deploy] Installing systemd service unit (gthread worker-class)..."
+scp -i "$SSH_KEY" deploy/nerve.service "$VPS_HOST":/tmp/nerve.service
+ssh -i "$SSH_KEY" "$VPS_HOST" "sudo cp /tmp/nerve.service /etc/systemd/system/nerve.service && sudo systemctl daemon-reload"
+
 ssh -i ~/.ssh/nerve_vps "$VPS_HOST" bash -s << 'EOF'
   set -e
   echo "[deploy] Fixing file ownership (nerve_app fuer writable dirs)..."
@@ -71,6 +78,8 @@ ssh -i ~/.ssh/nerve_vps "$VPS_HOST" bash -s << 'EOF'
 
   echo "[deploy] Installing dependencies..."
   /opt/nerve/venv/bin/pip install -r /opt/nerve/app/requirements.txt --quiet
+  echo "[deploy] Downloading spaCy model de_core_news_lg (~570MB)..."
+  /opt/nerve/venv/bin/python -m spacy download de_core_news_lg --quiet
 
   echo "[deploy] Writing nginx config..."
   sudo tee /etc/nginx/sites-available/nerve > /dev/null << 'NGINX'
