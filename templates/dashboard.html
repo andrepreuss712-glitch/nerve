@@ -19,6 +19,7 @@
   fetch('/api/health')
     .then(r => r.json())
     .then(data => {
+      // Backup-Status-Streifen (Phase 08.23.2.A D-18) — unveraendert
       if (data.backup_status && data.backup_status !== 'ok') {
         var strip = document.getElementById('backup-warning-strip');
         var detail = document.getElementById('backup-warning-detail');
@@ -31,8 +32,26 @@
           strip.style.display = 'block';
         }
       }
+      // Pipeline-Status-Streifen (Phase 08.23.2.B D-08)
+      var pipelineStatus = data.pipeline_status;
+      var errorStrip = document.getElementById('pipeline-error-strip');
+      var warnStrip = document.getElementById('pipeline-warning-strip');
+      if (errorStrip && warnStrip) {
+        if (pipelineStatus === 'unavailable') {
+          errorStrip.style.display = 'block';
+          warnStrip.style.display = 'none';
+        } else if (pipelineStatus === 'degraded') {
+          errorStrip.style.display = 'none';
+          warnStrip.style.display = 'block';
+          var countEl = document.getElementById('pipeline-error-count');
+          if (countEl) countEl.textContent = data.pipeline_error_count_10min || 0;
+        } else {
+          errorStrip.style.display = 'none';
+          warnStrip.style.display = 'none';
+        }
+      }
     })
-    .catch(function() {}); // silent fail — backup warning is non-critical
+    .catch(function() {}); // silent fail — warnings sind non-critical
 })();
 </script>
 <!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
