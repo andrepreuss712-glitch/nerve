@@ -78,18 +78,24 @@ def _make_on_message(sid):
                 # Pre-Insert-Audit: laeuft unter ls.log_lock; Race-Condition (Ghost-SID) via
                 # get_anonymisierer()-None-Return abgefangen; anonymize() handelt None-Cache defensiv.
                 # Finding 4: Expliziter Skip bei '[ART9_REDACTED]' und '[ANON_FEHLER]' — verhindert DB-Spam.
+                # WR-05 fix: _text_for_analysis tracks anonymized text for merge-queue;
+                # None means Art-9/pipeline-error — snippet is excluded from analysis buffers.
+                _text_for_analysis = text  # default: raw text (fallback if anonymization unavailable)
                 try:
                     from services.anonymization import anonymize, AnonymizationPipelineUnavailable
                     _anon_cache = ls.get_anonymisierer(sid)
                     _anon_result = anonymize(text, _anon_cache)
                     _anon_text, _anon_tier = _anon_result
                     if _anon_text == '[ART9_REDACTED]':
-                        # Art-9-Treffer: Snippet nicht persistieren (D-05, Finding 4)
+                        # Art-9-Treffer: Snippet nicht persistieren und aus Analyse-Puffer ausschliessen
                         print(f'[ANON] Art-9 erkannt, Transcript-Snippet verworfen (sid={sid!r}, len={len(text)})')
+                        _text_for_analysis = None
                     elif _anon_text == '[ANON_FEHLER]':
                         # Pipeline-Fehler: Snippet nicht persistieren (Finding 4 — kein DB-Spam)
                         print(f'[ANON] Pipeline-Fehler, Transcript-Snippet verworfen (sid={sid!r}, len={len(text)})')
+                        _text_for_analysis = None
                     else:
+                        _text_for_analysis = _anon_text
                         with ls.log_lock:
                             ls.conversation_log.append({
                                 'ts': ts, 'type': 'transcript',
@@ -99,9 +105,11 @@ def _make_on_message(sid):
                 except AnonymizationPipelineUnavailable:
                     # D-08 Kat. A: Pipeline unavailable — kein Insert, Live-Call laeuft weiter
                     print(f'[ANON] Pipeline unavailable, Transcript-Snippet verworfen (sid={sid!r})')
+                    _text_for_analysis = None
                 except Exception as _anon_err:
                     # Unerwarteter Fehler — Safety: lieber nicht persistieren
                     print(f'[ANON] Unerwarteter Fehler im INPUT-PFAD (sid={sid!r}): {type(_anon_err).__name__}')
+                    _text_for_analysis = None
 
                 # ── H-9: akkumuliere echte STT-Sekunden ──────────────────────
                 _dur = getattr(getattr(result, 'metadata', None), 'duration', 0.0) or 0.0
@@ -114,26 +122,28 @@ def _make_on_message(sid):
                 else:
                     sp_name = 'Sprecher'
 
-                key = str(speaker) if speaker is not None else 'unknown'
-                with ls._merge_lock:
-                    if key in ls._merge_pending:
-                        ls._merge_pending[key]['timer'].cancel()
-                        ls._merge_pending[key]['texts'].append(text)
-                        ls._merge_pending[key]['line_id'] = line_id
-                    else:
-                        ls._merge_pending[key] = {
-                            'texts':           [text],
-                            'line_id':         line_id,
-                            'speaker':         speaker,
-                            'roles_confirmed': roles_confirmed,
-                            'sp_name':         sp_name,
-                            't_start':         time.monotonic(),
-                            'sid':             sid,   # Phase 08.19.4 D-02: route flush to per-SID buffer
-                        }
-                    t = threading.Timer(MERGE_WINDOW_S, ls._flush_segment, args=[key])
-                    t.daemon = True
-                    t.start()
-                    ls._merge_pending[key]['timer'] = t
+                # WR-05 fix: use anonymized text in merge-queue; skip if Art-9/pipeline-error
+                if _text_for_analysis is not None:
+                    key = str(speaker) if speaker is not None else 'unknown'
+                    with ls._merge_lock:
+                        if key in ls._merge_pending:
+                            ls._merge_pending[key]['timer'].cancel()
+                            ls._merge_pending[key]['texts'].append(_text_for_analysis)
+                            ls._merge_pending[key]['line_id'] = line_id
+                        else:
+                            ls._merge_pending[key] = {
+                                'texts':           [_text_for_analysis],
+                                'line_id':         line_id,
+                                'speaker':         speaker,
+                                'roles_confirmed': roles_confirmed,
+                                'sp_name':         sp_name,
+                                't_start':         time.monotonic(),
+                                'sid':             sid,   # Phase 08.19.4 D-02: route flush to per-SID buffer
+                            }
+                        t = threading.Timer(MERGE_WINDOW_S, ls._flush_segment, args=[key])
+                        t.daemon = True
+                        t.start()
+                        ls._merge_pending[key]['timer'] = t
             else:
                 sio.emit('transcript', {'type': 'interim', 'text': text},
                          room=sid)
