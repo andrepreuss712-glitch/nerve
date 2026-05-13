@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.B Plan 01 abgeschlossen (2026-05-13)
-last_updated: "2026-05-13T05:47:00.000Z"
+stopped_at: Phase 08.23.2.B Plan 02 abgeschlossen (2026-05-13)
+last_updated: "2026-05-13T06:10:00.000Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 70
   completed_phases: 55
   total_plans: 233
-  completed_plans: 223
+  completed_plans: 224
   percent: 96
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.B (anonymisierungs-strecke-vor-mitschrift-schreibungen) — EXECUTING
-Plan: 1 of 10 abgeschlossen
+Plan: 2 of 10 abgeschlossen
 Last activity: 2026-05-13
+
+**Phase 08.23.2.B Plan 02 abgeschlossen:** Deployment-Dependencies fuer spaCy-Anonymisierung: spacy>=3.7.0 und phonenumbers>=8.13.0 in requirements.txt. deploy.sh: de_core_news_lg Download nach pip install (Z.82). Finding-2-Fix: nerve.service (--worker-class gthread --workers 1 --threads 4) per scp+daemon-reload deployed — OOM-Schutz auf CX22 (1 Worker x 700MB = 700MB statt N x 700MB). Szenario B: gthread war bereits in nerve.service vorkonfiguriert; Deviation Rule 2: Service-Datei-Installations-Schritt ergaenzt da deploy/ aus TAR_EXCLUDES. 2 Commits: 879cc90, b0d9b2d.
 
 **Phase 08.23.2.B Plan 01 abgeschlossen:** DSGVO-Anonymisierungs-Foundation-Modul erstellt (Greenfield). services/art9_keywords.py: ART9_KEYWORDS Dict mit 6 Kategorien, 198 Keywords, BayLDA-auditierbar. services/anonymization.py: AnrufAnonymisierer-Klasse (Thread-safe Token-Cache), anonymize() 3-stufige Pipeline (Art-9 -> Regex -> spaCy NER), anonymize_output(), register_briefing_pii(), should_persist(), AnonymizationPipelineUnavailable, is_pipeline_healthy. D-05 Tuple-Kontrakt implementiert: bei Art-9-Treffer ('[ART9_REDACTED]', 'C'). Finding 1 Fix: ART9_KEYWORDS als Modul-Level-Import. Finding 4 Fix: should_persist() exportiert. Finding 5 Fix: Pre-Warm anonymize('Warmup', None) in app.py Zeile 2273. 3 Commits: 6876fc6, b448c0c, 28100cd.
 
