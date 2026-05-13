@@ -84,11 +84,12 @@ class AnrufAnonymisierer:
         """Gibt stabilen Token fuer entity_text zurueck (erstellt neuen bei erstem Auftritt).
         >26 Treffer: [PERSON_AA], [PERSON_AB], ...
         Thread-safe via self._lock.
+        entity_type: beliebiger String (PERSON, ORG, LOC, IBAN, EMAIL, TEL, USTID, STEUERNR, KREDITKARTE, ...)
         """
         with self._lock:
             if entity_text in self.mapping:
                 return self.mapping[entity_text]
-            idx = self.counters[entity_type]
+            idx = self.counters.setdefault(entity_type, 0)
             if idx < 26:
                 suffix = chr(ord('A') + idx)
             else:
