@@ -562,6 +562,14 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                 full_text += token
                 sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
         cleaned = full_text.strip()
+        # WR-01 fix: anonymize AI-generated output before persisting/emitting final result
+        try:
+            from services.anonymization import anonymize_output
+            import services.live_session as _ls_av
+            _anon_cache_av = _ls_av.get_anonymisierer(sid)
+            cleaned = anonymize_output(cleaned, _anon_cache_av)
+        except Exception as _anon_av_err:
+            print(f"[ANON] anonymize_output AutoVar failed (non-fatal): {_anon_av_err}")
         result = {'einwand': True, 'typ': 'AUTO', 'gegenargument_1': cleaned}
         sio.emit('pip_token_done', {'slot': slot, 'result': result, 'raw_text': True}, room=sid)
         print(f"[PiP-AutoVar] DONE sid={sid} slot={slot} chars={len(cleaned)}")
