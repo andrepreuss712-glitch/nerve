@@ -2265,6 +2265,17 @@ register_audio_handlers(socketio)
 threading.Thread(target=analyse_loop,     daemon=True).start()
 threading.Thread(target=coaching_loop,    daemon=True).start()
 
+# ── Phase 08.23.2.B: spaCy Pipeline Pre-Warm (Finding 5 Fix) ─────────────────
+# Ladet de_core_news_lg beim App-Start damit der erste echte Snippet keine
+# 700MB-Lade-Latenz ausloest. Non-critical: App startet auch wenn Pre-Warm fehlschlaegt.
+try:
+    from services.anonymization import anonymize
+    anonymize('Warmup', None)
+    print('[ANON] Pipeline pre-warmed')
+except Exception:
+    pass  # Non-critical — main startup continues
+# ────────────────────────────────────────────────────────────────────────────────
+
 # ── Run ───────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     print("=" * 55)
