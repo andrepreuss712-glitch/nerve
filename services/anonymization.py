@@ -360,3 +360,22 @@ def should_persist(anon_text: str) -> bool:
     Caller-Verwendung: if not should_persist(anon_text): continue  # skip DB insert
     """
     return anon_text not in ('[ART9_REDACTED]', '[ANON_FEHLER]')
+
+
+def get_pipeline_status() -> str:
+    """Gibt pipeline_status zurueck fuer /api/health Endpoint.
+    'ok': Pipeline verfuegbar und keine erhoehlte Fehlerrate
+    'degraded': Rolling-Error-Rate ueber Schwellenwert (D-08 Kat. C)
+    'unavailable': spaCy nicht ladbar (D-08 Kat. A)
+    """
+    global is_pipeline_healthy, _error_timestamps
+    if not is_pipeline_healthy:
+        return 'unavailable'
+    import time
+    now = time.monotonic()
+    with _error_lock:
+        cutoff = now - ROLLING_ERROR_WINDOW_S
+        recent_errors = sum(1 for ts in _error_timestamps if ts >= cutoff)
+    if recent_errors > ROLLING_ERROR_THRESHOLD:
+        return 'degraded'
+    return 'ok'

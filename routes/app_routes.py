@@ -1412,8 +1412,16 @@ def api_health():
             backup_status = 'missing'
             age_hours = None
 
+    # Phase 08.23.2.B: Anonymisierungs-Pipeline-Status (D-08)
+    try:
+        from services.anonymization import get_pipeline_status
+        pipeline_status = get_pipeline_status()
+    except Exception:
+        pipeline_status = 'unknown'
+
     return jsonify({
         'status': 'ok',
         'backup_status': backup_status,   # 'ok' | 'stale' | 'missing'
         'backup_age_hours': age_hours,    # float or None
+        'pipeline_status': pipeline_status,   # D-08: 'ok' | 'degraded' | 'unavailable'
     })
