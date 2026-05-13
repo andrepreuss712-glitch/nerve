@@ -1338,7 +1338,7 @@ Plans:
 - [x] 08.23.2.B-05-PLAN.md -- deepgram_service.py INPUT-PFAD (Z.78 conversation_log) + OUTPUT-PFAD (Z.568 EWB)
 - [x] 08.23.2.B-06-PLAN.md -- claude_service.py OUTPUT-PFAD (Z.892 gegenargument_log + Z.1432 painpoints)
 - [x] 08.23.2.B-07-PLAN.md -- app_routes.py /api/session-rating Kommentar + /api/health pipeline_status
-- [ ] 08.23.2.B-08-PLAN.md -- Unit-Tests anonymization.py + art9_keywords.py (Req-1 bis Req-6)
-- [ ] 08.23.2.B-09-PLAN.md -- Integration-Tests Verdrahtungs-Punkte + Fallback A/B/C (Req-7 bis Req-9)
-- [ ] 08.23.2.B-10-PLAN.md -- Security-Test (50 Snippets, Re-ID <5%) + Performance-Test (<200ms P95)
+- [x] 08.23.2.B-08-PLAN.md -- Unit-Tests anonymization.py + art9_keywords.py (Req-1 bis Req-6) ✅ 2026-05-13
+- [x] 08.23.2.B-09-PLAN.md -- Integration-Tests Verdrahtungs-Punkte + Fallback A/B/C (Req-7 bis Req-9) ✅ 2026-05-13
+- [x] 08.23.2.B-10-PLAN.md -- Security-Test (50 Snippets, Re-ID <5%) + Performance-Test (<200ms P95) ✅ 2026-05-13
 
