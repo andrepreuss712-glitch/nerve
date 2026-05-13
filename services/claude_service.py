@@ -880,6 +880,27 @@ def analyse_loop():
                     kb_aktuell = ls.kaufbereitschaft
                 # Gegenargument-Tracking
                 if ergebnis.get('einwand'):
+                    # Phase 08.23.2.B: OUTPUT-PFAD Anonymisierung (D-01, Req-8)
+                    # anonymize_output() ersetzt bekannte Namen (Briefing) via Cache-Reverse-Lookup
+                    # Finding 4: anonymize_output() gibt keine Sentinel-Werte zurueck — kein Skip-Check noetig.
+                    try:
+                        from services.anonymization import anonymize_output
+                        _anon_cache = ls.get_anonymisierer(sid)
+                        _einwand_zitat_anon = anonymize_output(
+                            ergebnis.get('einwand_zitat', ''), _anon_cache
+                        )
+                        _gegenarg_1_anon = anonymize_output(
+                            ergebnis.get('gegenargument_1', ''), _anon_cache
+                        )
+                        _gegenarg_2_anon = anonymize_output(
+                            ergebnis.get('gegenargument_2', ''), _anon_cache
+                        )
+                    except Exception as _anon_err:
+                        print(f'[ANON] anonymize_output Fehler (gegenargument_log, sid={sid!r}): {type(_anon_err).__name__}')
+                        # Fallback: originale Werte verwenden (fail-open fuer Output-Pfad)
+                        _einwand_zitat_anon = ergebnis.get('einwand_zitat', '')
+                        _gegenarg_1_anon = ergebnis.get('gegenargument_1', '')
+                        _gegenarg_2_anon = ergebnis.get('gegenargument_2', '')
                     with ls.gegenargument_log_lock:
                         # Vorherigen Eintrag mit kb_nachher aktualisieren
                         if ls.gegenargument_log:
@@ -888,14 +909,14 @@ def analyse_loop():
                                 last['kb_nachher'] = kb_vor_einwand
                                 last['kb_delta']   = kb_vor_einwand - last['kb_vorher']
                                 last['erfolgreich'] = last['kb_delta'] > 0
-                        # Neuen Eintrag anlegen
+                        # Neuen Eintrag anlegen (Freitext-Felder anonymisiert)
                         ls.gegenargument_log.append({
                             'ts':               ts,
-                            'einwand_typ':      ergebnis.get('typ', ''),
-                            'einwand_zitat':    ergebnis.get('einwand_zitat', ''),
+                            'einwand_typ':      ergebnis.get('typ', ''),      # Typ-Label, kein Freitext
+                            'einwand_zitat':    _einwand_zitat_anon,          # anonymisiert
                             'ist_vorwand':      ergebnis.get('ist_vorwand', False),
-                            'gegenargument_1':  ergebnis.get('gegenargument_1', ''),
-                            'gegenargument_2':  ergebnis.get('gegenargument_2', ''),
+                            'gegenargument_1':  _gegenarg_1_anon,             # anonymisiert
+                            'gegenargument_2':  _gegenarg_2_anon,             # anonymisiert
                             'gewaehlte_option': None,
                             'kb_vorher':        kb_aktuell,
                             'kb_nachher':       None,
