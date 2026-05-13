@@ -327,6 +327,14 @@ def anonymize_output(text: str, cache: Optional[AnrufAnonymisierer]) -> str:
     Ersetzt alle bekannten Klartext-Entitaeten aus cache.mapping durch ihre Tokens.
     Laengere Keys zuerst (verhindert Partial-Matches: 'Dr. Mueller' vor 'Mueller').
     Kein NER-Aufruf (Output-Pfad ist Cache-Lookup-Only, A6 aus RESEARCH.md).
+
+    WR-04 Thread-Safety-Hinweis: Der Lock wird nur fuer den Snapshot gehalten
+    (items = sorted(...)). Die Ersetzungsschleife laeuft ausserhalb des Locks.
+    Das ist korrekt — Tokens sind write-once (get_or_assign_token weist denselben
+    Key nie neu zu). Bekannte Einschraenkung: Mapping-Eintraege die NACH dem Snapshot
+    via register_briefing_pii() oder get_or_assign_token() in einem anderen Thread
+    hinzugefuegt werden, werden in diesem Output-Pass nicht substituiert. Fuer den
+    aktuellen Single-Session-Betrieb ist dieses Risiko gering (D-08, WR-04).
     """
     if not text or not cache:
         return text if text else ''
