@@ -1334,7 +1334,7 @@ Plans:
 - [x] 08.23.2.B-01-PLAN.md -- services/art9_keywords.py + services/anonymization.py (AnrufAnonymisierer + Fallback-Architektur)
 - [x] 08.23.2.B-02-PLAN.md -- requirements.txt + deploy.sh Dependencies (spacy + phonenumbers + Modell-Download)
 - [x] 08.23.2.B-03-PLAN.md -- Alembic-Migration quality_tier + DELETE-Skript historische Daten (D-07)
-- [ ] 08.23.2.B-04-PLAN.md -- live_session.py Cache-Lifecycle-Verdrahtung (init_anonymisierer + get_anonymisierer)
+- [x] 08.23.2.B-04-PLAN.md -- live_session.py Cache-Lifecycle-Verdrahtung (init_anonymisierer + get_anonymisierer)
 - [ ] 08.23.2.B-05-PLAN.md -- deepgram_service.py INPUT-PFAD (Z.78 conversation_log) + OUTPUT-PFAD (Z.568 EWB)
 - [ ] 08.23.2.B-06-PLAN.md -- claude_service.py OUTPUT-PFAD (Z.892 gegenargument_log + Z.1432 painpoints)
 - [ ] 08.23.2.B-07-PLAN.md -- app_routes.py /api/session-rating Kommentar + /api/health pipeline_status

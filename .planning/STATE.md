@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.B Plan 03 abgeschlossen (2026-05-13)
-last_updated: "2026-05-13T08:00:00.000Z"
+stopped_at: Phase 08.23.2.B Plan 04 abgeschlossen (2026-05-13)
+last_updated: "2026-05-13T07:30:00.000Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 70
   completed_phases: 55
   total_plans: 233
-  completed_plans: 225
+  completed_plans: 226
   percent: 97
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.B (anonymisierungs-strecke-vor-mitschrift-schreibungen) — EXECUTING
-Plan: 3 of 10 abgeschlossen
+Plan: 4 of 10 abgeschlossen
 Last activity: 2026-05-13
+
+**Phase 08.23.2.B Plan 04 abgeschlossen:** AnrufAnonymisierer-Lifecycle in live_session.py verdrahtet. init_anonymisierer(sid): erstellt AnrufAnonymisierer-Instanz per SID mit Ghost-SID Guard und Lazy-Import (verhindert Circular-Import). get_anonymisierer(sid): thread-sicherer Accessor gibt Instanz oder None zurueck. 'anonymisierer': None als neuer Key in init_session_state() (Z.386). pop_session_state() loescht 'anonymisierer' automatisch via dict.pop(). Lifecycle-Test gruen: init -> get(None) -> init_anonymisierer -> get(Instanz) -> pop -> get(None). Ghost-SID-Test gruen. DB-Grep: 0 Treffer (Cache nie in DB). 1 Commit: ac5c09a.
 
 **Phase 08.23.2.B Plan 03 abgeschlossen:** Alembic-Migration 0002 fuer Phrase.quality_tier (VARCHAR(1) NOT NULL DEFAULT 'A') erstellt. Revision-Chain 0001->0002 korrekt. database/models.py: quality_tier = Column(String(1), nullable=False, server_default='A') nach created_at eingefuegt. scripts/delete_pretest_data.py: D-07 Cutover-Skript mit pg_dump-Backup, --dry-run + --backup-only Flags, interaktiver DELETE-Bestaetigung, FK-Reihenfolge ueber 6 Tabellen, Sequence-Reset, audit_log AUSGENOMMEN. Checkpoint approved von Andre. 2 Commits: 8154496, dd7b5ce.
 
