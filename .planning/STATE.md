@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.B Plan 08 abgeschlossen (2026-05-13)
-last_updated: "2026-05-13T10:00:00Z"
+stopped_at: Phase 08.23.2.B Plan 09 abgeschlossen (2026-05-13)
+last_updated: "2026-05-13T10:15:00Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 70
   completed_phases: 55
   total_plans: 233
-  completed_plans: 231
+  completed_plans: 232
   percent: 99
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.B (anonymisierungs-strecke-vor-mitschrift-schreibungen) — EXECUTING
-Plan: 08 of 10 abgeschlossen
+Plan: 09 of 10 abgeschlossen
 Last activity: 2026-05-13
+
+**Phase 08.23.2.B Plan 09 abgeschlossen:** Verdrahtungs-Integration-Tests fuer Req-7/8/9 + Fallback A/B/C. 14 pytest-Tests in tests/test_anonymization_wiring.py: INPUT-Pfad (IBAN, Art-9, E-Mail), OUTPUT-Pfad (Briefing-Namen in Claude-Output, Einwand-Zitat, Painpoint, EWB-Antwort), Fallback Kat. A (AnonymizationPipelineUnavailable), Kat. C (degraded via ROLLING_ERROR_THRESHOLD), Lifecycle-Chain (init_anonymisierer -> get_anonymisierer -> pop -> None), Ghost-SID-Guard. autouse Fixture reset_pipeline_health (T-08.23.2.B-TW-01/02). Anpassung: get_pipeline_status() gibt dict zurueck — Tests nutzen result['status']. Kein Source-Presence-Test. 1 Commit: 1fe7f7f.
 
 **Phase 08.23.2.B Plan 08 abgeschlossen:** Unit-Test-Suite fuer services/anonymization.py (Req-1 bis Req-6). 22 Runtime-Behavior-Tests: AnrufAnonymisierer (Token-Format, Stabilitaet, Cross-Session, Thread-Safety), Regex-PII (IBAN, Email, Multiple), Art-9-Filter (Hit/No-Hit, Tuple-Return, 6 Kategorien), anonymize_output() (Reverse-Lookup, Longer-Key-First, None-Cache), register_briefing_pii() (Person, Firma, Empty), Pipeline-Unavailable-Exception, Empty-Text-Edge-Case, Art-9-False-Negative-Gate (30 Snippets x 6 Kategorien, 100%). Rule-1-Auto-Fix: KeyError in get_or_assign_token fuer Regex-PII-Typen (setdefault statt direktem dict-Zugriff). autouse-Fixture fuer Modul-State-Reset (is_pipeline_healthy + _error_timestamps) — notwendig da spaCy lokal nicht installiert. 2 Commits: a275a9c, 5bdf335.
 
