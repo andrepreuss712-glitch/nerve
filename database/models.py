@@ -329,6 +329,9 @@ class Phrase(Base):
     text           = Column(Text, nullable=False)
     objection_type = Column(String(100), nullable=False)
     created_at     = Column(DateTime, default=utcnow)
+    # Phase 08.23.2.B: DSGVO-Anonymisierungs-Pipeline quality_tier
+    # 'A'=sauber, 'B'=Edge-Case-NER, 'C'=Art9-Treffer/Exception
+    quality_tier   = Column(String(1), nullable=False, server_default='A')
 
 
 # Block 5: Early Access Waitlist
