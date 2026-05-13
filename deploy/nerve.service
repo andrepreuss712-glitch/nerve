@@ -10,8 +10,8 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-Group=www-data
+User=nerve_app
+Group=nerve_app
 WorkingDirectory=/opt/nerve/app
 
 # Environment — secrets live in /etc/nerve/.env (not in repo)
