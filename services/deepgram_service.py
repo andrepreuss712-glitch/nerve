@@ -410,6 +410,9 @@ def register_audio_handlers(sio):
 
         from flask import session as flask_session
         user_id = flask_session.get('user_id')
+        # CR-01 fix: extract market/language from payload with safe defaults
+        market   = (data or {}).get('market', 'dach') if isinstance(data, dict) else 'dach'
+        language = (data or {}).get('language', 'de')  if isinstance(data, dict) else 'de'
 
         # ── Phase 08.19.4: Per-SID Profile + Session State Init ──────────────
         # Loads active profile from DB (User.active_profile_id — D-05 Single Source of Truth).
