@@ -133,6 +133,10 @@ def _apply_regex_filter(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple
     """
     tier = 'A'
 
+    # WR-02 fix: collect phone matches from original text BEFORE any mutation
+    # (IBAN/email replacements insert tokens that could confuse phone regex fallback)
+    _phone_vals = _parse_phone_de(text)
+
     # IBAN
     for m in _RE_IBAN.finditer(text):
         iban_val = m.group()
@@ -151,8 +155,8 @@ def _apply_regex_filter(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple
             token = '[EMAIL_X]'
         text = text.replace(email_val, token)
 
-    # Telefon (phonenumbers-Library)
-    for phone_val in _parse_phone_de(text):
+    # Telefon (phonenumbers-Library) — apply pre-collected matches from original text
+    for phone_val in _phone_vals:
         if cache:
             token = cache.get_or_assign_token(phone_val, 'TEL')
         else:
