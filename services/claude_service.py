@@ -1450,11 +1450,33 @@ def coaching_loop():
                             print(f"[Claude-2] Painpoint Duplikat: {painpoint!r}")
                             painpoint = None
                         else:
-                            ls.painpoints.append({'ts': ts, 'text': painpoint})
+                            # Phase 08.23.2.B: OUTPUT-PFAD Anonymisierung (D-01, Req-8)
+                            # Duplikat-Check auf Original-Text (korrekt — vor Anonymisierung)
+                            # painpoint IS Claude-Paraphrase von STT-Content und kann Namen enthalten
+                            # (D-01 OUTPUT-PFAD: anonymize_output() Pflicht, DSGVO-Blocker-Fix)
+                            # Finding 4: anonymize_output() gibt keine Sentinel-Werte zurueck — kein Skip-Check noetig.
+                            try:
+                                from services.anonymization import anonymize_output
+                                _anon_cache = ls.get_anonymisierer(sid)
+                                _painpoint_anon = anonymize_output(painpoint, _anon_cache)
+                            except Exception as _anon_err:
+                                print(f'[ANON] anonymize_output Fehler (painpoint, sid={sid!r}): {type(_anon_err).__name__}')
+                                _painpoint_anon = painpoint  # Fallback: Original-Text
+                            ls.painpoints.append({'ts': ts, 'text': _painpoint_anon})
                     if painpoint:
+                        # Phase 08.23.2.B: conversation_log[type=painpoint] ebenfalls anonymisieren
+                        # painpoint-Text ist Claude-Paraphrase von STT-Content (OUTPUT-PFAD per D-01)
+                        # und kann Briefing-Namen enthalten — anonymize_output() Pflicht (DSGVO)
+                        try:
+                            from services.anonymization import anonymize_output
+                            _anon_cache = ls.get_anonymisierer(sid)
+                            _painpoint_log_anon = anonymize_output(painpoint, _anon_cache)
+                        except Exception as _anon_err:
+                            print(f'[ANON] anonymize_output Fehler (conv_log painpoint, sid={sid!r}): {type(_anon_err).__name__}')
+                            _painpoint_log_anon = painpoint  # Fallback: Original-Text
                         with ls.log_lock:
                             ls.conversation_log.append({
-                                'ts': ts, 'type': 'painpoint', 'text': painpoint,
+                                'ts': ts, 'type': 'painpoint', 'text': _painpoint_log_anon,
                             })
 
                 if tipp:
