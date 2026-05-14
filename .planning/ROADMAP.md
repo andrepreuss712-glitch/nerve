@@ -1342,3 +1342,12 @@ Plans:
 - [x] 08.23.2.B-09-PLAN.md -- Integration-Tests Verdrahtungs-Punkte + Fallback A/B/C (Req-7 bis Req-9) ✅ 2026-05-13
 - [x] 08.23.2.B-10-PLAN.md -- Security-Test (50 Snippets, Re-ID <5%) + Performance-Test (<200ms P95) ✅ 2026-05-13
 
+### Phase 08.23.2.C: Phasen-Klassifikator-Anpassung + Gatekeeper-Erkennung (INSERTED — 2026-05-14) 🔴
+
+**Goal:** Modus-blinder Phasen-Klassifikator auf drei separate Listen umbauen (Cold-Call 6, Meeting 6, Gatekeeper 4) + Drei-Kategorien-Klassifikator (target/gatekeeper/unknown) via NER-Namens-Match gegen Briefing-CEO/GF + GLiNER-Integration + manueller Strg+G/Strg+E Toggle + Hysterese-Logik + Trigger-Phrasen + UWG §7 Hard-Block + Mr.-Miyagi-Buttons + phrases.mode-Migration.
+
+**Depends on:** Phase 08.23.2.B ✅
+**Komplexität:** 🔴 — Cross-AI mit Gemini Pflicht.
+**Plans:** 0 plans
+
+Plans:
