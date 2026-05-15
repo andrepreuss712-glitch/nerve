@@ -3054,3 +3054,54 @@ input[type="range"].perf-slider::-moz-range-thumb {
 /* Bug fix: PiP Briefing Tab body scroll (content overflow) */
 #pip-briefing-tab-body::-webkit-scrollbar { width: 3px; }
 #pip-briefing-tab-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
+
+/* Phase 08.23.2.C — Gatekeeper-Modus + UWG-Banner */
+
+.pip-mode-indicator {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: var(--glass-bg);
+    color: var(--btn-primary-bg-from);
+    margin-left: 6px;
+}
+
+.pip-mode-indicator[data-mode="gatekeeper"] {
+    background-color: var(--pipeline-warning-bg);
+    color: var(--pipeline-warning-text);
+}
+
+.pip-uwg-banner {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 8px 12px;
+    background-color: var(--pipeline-error-bg);
+    color: var(--pipeline-error-text);
+    font-weight: 600;
+    font-size: 13px;
+    z-index: 100;
+    border-radius: 8px 8px 0 0;
+}
+
+.pip-uwg-banner.is-visible {
+    display: block;
+}
+
+.pip-uwg-banner__close {
+    float: right;
+    background: transparent;
+    color: var(--pipeline-error-text);
+    border: 0;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* Gatekeeper-Button-Set (gleiche Optik wie .pip-ewb-btn aber mit Mode-Indikator) */
+.pip-ewb-btn[data-mode-button="gatekeeper"] {
+    border-color: var(--pipeline-warning-text);
+}
