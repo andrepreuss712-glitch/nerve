@@ -2265,15 +2265,22 @@ register_audio_handlers(socketio)
 threading.Thread(target=analyse_loop,     daemon=True).start()
 threading.Thread(target=coaching_loop,    daemon=True).start()
 
-# ── Phase 08.23.2.B: spaCy Pipeline Pre-Warm (Finding 5 Fix) ─────────────────
-# Ladet de_core_news_lg beim App-Start damit der erste echte Snippet keine
-# 700MB-Lade-Latenz ausloest. Non-critical: App startet auch wenn Pre-Warm fehlschlaegt.
+# ── Phase 08.23.2.B+C: Anonymisierungs-Pipeline Pre-Warm ─────────────────────
+# Ladet de_core_news_lg + GLiNER beim App-Start damit der erste echte Snippet
+# keine Lade-Latenz ausloest. Non-critical: App startet auch wenn Pre-Warm fehlschlaegt.
 try:
-    from services.anonymization import anonymize
+    from services.anonymization import anonymize, _get_gliner
+    # spaCy-Warmup via anonymize() (Phase B)
     anonymize('Warmup', None)
     print('[ANON] Pipeline pre-warmed')
-except Exception:
-    pass  # Non-critical — main startup continues
+    # GLiNER-Warmup explizit (Phase C — Modell ~800MB, App-Start besser als First-Request)
+    _gliner = _get_gliner()
+    if _gliner is not None:
+        print('[INIT] GLiNER pre-warmed')
+    else:
+        print('[INIT] GLiNER nicht verfuegbar — Pipeline laeuft im Fallback-Modus')
+except Exception as e:
+    print(f'[INIT] Anonymisierungs-Pre-Warm Fehler: {type(e).__name__}: {e}')
 # ────────────────────────────────────────────────────────────────────────────────
 
 # ── Run ───────────────────────────────────────────────────────────────────────
