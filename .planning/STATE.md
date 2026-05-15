@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.B Plan 10 abgeschlossen — Phase COMPLETE (2026-05-13)
-last_updated: "2026-05-13T10:50:00Z"
-last_activity: 2026-05-13
+stopped_at: "Andre-Gate — Task 4 in 08.23.2.C-01: Phrase-Seed-Review + Korpus-Erstellung (2026-05-15)"
+last_updated: "2026-05-15T06:17:00.000Z"
+last_activity: 2026-05-15
 progress:
-  total_phases: 70
-  completed_phases: 56
-  total_plans: 233
-  completed_plans: 233
-  percent: 100
+  total_phases: 72
+  completed_phases: 55
+  total_plans: 242
+  completed_plans: 222
+  percent: 95
 ---
 
 # Project State
@@ -21,13 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.23.2.B — anonymisierungs-strecke-vor-mitschrift-schreibungen
+**Current focus:** Phase 08.23.2.C — phasen-klassifikator-gatekeeper-erkennung
 
 ## Current Position
 
-Phase: 08.23.2.B (anonymisierungs-strecke-vor-mitschrift-schreibungen) — COMPLETE (alle 10 Plaene abgeschlossen)
-Plan: 10 of 10 abgeschlossen
-Last activity: 2026-05-13
+Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
+Plan: 01 of ? — CHECKPOINT-PAUSED bei Task 4 (Andre-Gate)
+Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 01 — CHECKPOINT-PAUSED (Andre-Gate):** GLiNER-Foundation Wave 1. gliner>=0.2.24 in requirements.txt. deploy.sh: GLiNER-Pre-Cache-Block (nicht-fatal). scripts/gliner_smoke.py: Latenz-Diagnose + Return-Format-Dump (klaert Open Question 1). scripts/verify_corpus_gate.py: Pre-Execute-Gate (Exit 1 solange Korpora fehlen). tests/fixtures/*_corpus.schema.json: JSON-Schemas fuer beide Korpora (minItems=20/10). tests/fixtures/gatekeeper_phrases_seed.md: 4 Mr.-Miyagi-Buttons (Verbuendeten-Bitte, Insider-Antwort, Voss-Label, Vornamen-Pause) aus Vault B.6/B.7/Bonus-Block. 3 Commits: 93a5921, 979c814, 865853a. CHECKPOINT Task 4 Andre-Gate: Phrase-Seed-Review + Korpus-Erstellung.
 
 **Phase 08.23.2.B Plan 10 abgeschlossen:** Security-Test (Req-11) und Performance-Test (Req-12) fuer services/anonymization.py. tests/test_anonymization_security.py: 50 repraesentative deutsche B2B-Mitschrift-Snippets, Re-ID-Test via Claude-Haiku, @pytest.mark.skipif(not ANTHROPIC_API_KEY) CI-Guard, test_snippets_count() ohne API-Key. tests/test_anonymization_perf.py: P95-Latenz-Test auf 1000-Zeichen-Text (100 Runs, frischer Cache), Short-Snippet-Test (<100ms P95), Art-9-Short-Circuit-Diagnose. Checkpoint approved von Andre. 2 Commits: 1248aed, 4ea6120. PHASE 08.23.2.B VOLLSTAENDIG — alle Req-1 bis Req-12 abgedeckt.
 
@@ -700,6 +702,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-12T09:25:07.297Z
-Stopped at: context exhaustion at 90% (2026-05-12)
+Last session: 2026-05-14T12:24:28.247Z
+Stopped at: context exhaustion at 92% (2026-05-14)
 Resume file: None
