@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "08.23.2.C-04 abgeschlossen — GLiNER NER-Integration + extract_entities() + Warmup, naechste: 08.23.2.C-05 oder 06"
-last_updated: "2026-05-15T12:00:00Z"
+stopped_at: "08.23.2.C-05 abgeschlossen — Modus-spezifischer Phasen-Klassifikator + TRIGGER_PHRASES, naechste: 08.23.2.C-06"
+last_updated: "2026-05-15T14:00:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
   completed_phases: 55
   total_plans: 242
-  completed_plans: 225
+  completed_plans: 226
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
-Plan: 04 of ? — COMPLETED
+Plan: 05 of ? — COMPLETED
 Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 05 abgeschlossen:** Modus-spezifischer Phasen-Klassifikator (Req-2) + Trigger-Phrasen-Data-Layer (Req-7+Req-8). claude_service.py: _PHASE_NAMES_COLD_CALL (6 Phasen), _PHASE_NAMES_MEETING (6 Phasen), _PHASE_NAMES_GATEKEEPER (4 Phasen), _PHASE_NAMES_BY_MODE Hilfs-Mapping. classify_phase() waehlt phase_names + max_phase per mode-Parameter, Range-Validation 1..max_phase (gatekeeper max=4 enforced, T-08.23.2.C-15 mitigiert). PHASE_CLASSIFIER_PROMPT mit {labels}+{mode} Platzhalter. _PHASE_NAMES Backward-Compat-Alias erhalten fuer Analyse-Loop Z.970/974/983/984. ki_logik.py: TRIGGER_PHRASES (18 Eintraege, 14 Brush-Off + 4 UWG), UWG_HARD_BLOCK_PATTERNS (4 Opt-Out-Regex), _phrase_matches() Wrapper. 2 Commits: e751373, bf1b11c.
 
 **Phase 08.23.2.C Plan 04 abgeschlossen:** GLiNER als zweite NER-Stufe in services/anonymization.py (Union-Voting D-01). _get_gliner(): thread-safe lazy load (Double-Checked Locking, analog _get_nlp), is_pipeline_healthy=False bei Load-Fehler. _apply_ner(): Union-Voting spaCy+GLiNER, native Offsets + re.finditer-Fallback (Review Finding 1). _apply_ner_parallel(): ThreadPoolExecutor concurrent dispatch bereit (Review Finding 2, Latenz-Mitigation). extract_entities(text, cache=None): oeffentliche Funktion fuer gatekeeper.py-Konsens-Voting (D-02). app.py: _get_gliner()-Warmup nach anonymize('Warmup', None) im Pre-Warm-Block. Phase-B-Performance-Gate: 3/3 Tests gruen (0.24s). 3 Commits: f20ca9b, 703b206, d43686c.
 

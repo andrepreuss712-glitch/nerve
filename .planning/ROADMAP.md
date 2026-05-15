@@ -1355,7 +1355,7 @@ Plans:
 - [ ] 08.23.2.C-02-PLAN.md -- Alembic 0003 phrases.mode + Schema-Sync (Req-10)
 - [x] 08.23.2.C-03-PLAN.md -- config/phase_transitions.py + Kalibrierungs-Skript + Foundation-Code-Register (Req-3, Req-11)
 - [x] 08.23.2.C-04-PLAN.md -- GLiNER in services/anonymization.py Union-Voting + extract_entities() Export (Req-1)
-- [ ] 08.23.2.C-05-PLAN.md -- claude_service modus-spezifische Phasen + ki_logik TRIGGER_PHRASES (Req-2, Req-7)
+- [x] 08.23.2.C-05-PLAN.md -- claude_service modus-spezifische Phasen + ki_logik TRIGGER_PHRASES (Req-2, Req-7) ✅ 2026-05-15
 - [ ] 08.23.2.C-06-PLAN.md -- services/gatekeeper.py + live_session + Call-Lifecycle + phase_change/UWG Wiring + Phrase-Seeds (Req-3,4,5,7,8,9,11)
 - [ ] 08.23.2.C-07-PLAN.md -- PiP Ctrl+G/E Toggle + Gatekeeper-Buttons + UWG-Banner (Req-6, Req-8, Req-9) [Checkpoint]
 - [ ] 08.23.2.C-08-PLAN.md -- Tests: Hysterese, Phase-Classifier (F1>=0.75), Gatekeeper (acc>=0.80), Re-ID<5%, Session-State (Req-2,3,4,5,7,8,11,12,13,14)
