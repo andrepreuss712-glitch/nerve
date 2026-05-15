@@ -866,6 +866,10 @@ def analyse_loop():
             if sid_state.get('state', {}).get('is_paused', False):
                 continue  # per-SID pause — only skip this SID
 
+            # UWG §7 Guard — Review Finding 5: kein Claude-API-Call nach Hard-Block
+            if sid_state.get('state', {}).get('uwg_blocked'):
+                continue  # keine weitere Verarbeitung nach UWG Hard-Block
+
             # Read per-SID transcript buffer (D-02 — implemented in Task 1 this plan)
             with ls._per_sid_transcript_lock:
                 buf = ls._per_sid_transcript.get(sid, [])
@@ -1073,6 +1077,110 @@ def analyse_loop():
                             print(f"[coldcall_infer] loop error: {e}")
                     except Exception as e:
                         print(f"[phase_classify] loop error: {e}")
+                # ── Phase 08.23.2.C: classify_contact + Hysterese + phase_change ──
+                try:
+                    from services.gatekeeper import apply_hysteresis, classify_contact
+                    from extensions import socketio as sio
+
+                    with ls._session_state_lock:
+                        _c_state = (ls._session_state.get(sid) or {}).get('state', {})
+
+                    # Briefing-CEO-Name aus Profil-Daten lesen (Fallback-Kette)
+                    _, _pdata = ls.get_profile_for_sid(sid)
+                    _pdata = _pdata or {}
+                    _ceo_name = (
+                        _pdata.get('ansprechpartner')
+                        or _pdata.get('ceo_name')
+                        or _pdata.get('ansprechpartner_name')
+                        or None
+                    )
+
+                    _current_mode_c = _c_state.get('current_mode', 'cold_call')
+
+                    # 1) classify_contact (Req-5) — nur wenn category noch 'unknown'
+                    if _c_state.get('contact_category') == 'unknown':
+                        _tw = list(sid_state.get('analysiert_bisher', [])[-10:])
+                        _category = classify_contact(_tw, _ceo_name, _current_mode_c)
+                        if _category != 'unknown':
+                            with ls._session_state_lock:
+                                _live_c = (ls._session_state.get(sid) or {}).get('state')
+                                if _live_c is not None:
+                                    _live_c['contact_category'] = _category
+                                    if _category == 'gatekeeper' and _current_mode_c != 'gatekeeper':
+                                        _live_c['current_mode'] = 'gatekeeper'
+                                        _live_c['phase_hint_count'] = 0
+                                        _live_c['pending_phase'] = None
+                                        _live_c['phase_entered_at'] = time.monotonic()
+                                        print(f"[gatekeeper] SID={sid} Modus -> gatekeeper (classify_contact)")
+                                    elif _category == 'target' and _current_mode_c == 'gatekeeper':
+                                        _live_c['current_mode'] = 'cold_call'
+                                        _live_c['phase_hint_count'] = 0
+                                        _live_c['pending_phase'] = None
+                                        _live_c['phase_entered_at'] = time.monotonic()
+                                        print(f"[gatekeeper] SID={sid} Modus -> cold_call (target erkannt)")
+                            sio.emit('contact_category_update', {
+                                'category': _category,
+                                'mode': (ls._session_state.get(sid) or {}).get('state', {}).get('current_mode', _current_mode_c),
+                            }, room=sid)
+
+                    # 2) Phase-C Hysterese (Req-3): classify_phase-Token + apply_hysteresis
+                    # Nutzt classify_phase()-Ergebnis des bestehenden Phase-04.8-Blocks.
+                    # phase_cycle_counter ist bereits oben inkrementiert worden.
+                    if _phase_cycle_counter % 5 == 0:
+                        try:
+                            _tw_h = list(sid_state.get('analysiert_bisher', [])[-10:])
+                            with ls._session_state_lock:
+                                _h_state = (ls._session_state.get(sid) or {}).get('state', {})
+                            _mode_h = _h_state.get('current_mode', 'cold_call')
+                            _elapsed_h = time.monotonic() - (_h_state.get('phase_entered_at') or time.monotonic())
+                            _raw_h = classify_phase(_tw_h, None, _elapsed_h, _mode_h)
+                            if _raw_h and _raw_h.get('phase_name'):
+                                _proposed_token = _raw_h['phase_name'].lower()
+                                with ls._session_state_lock:
+                                    _live_h = (ls._session_state.get(sid) or {}).get('state')
+                                    if _live_h is not None:
+                                        _old_phase_token = _live_h.get('current_phase')
+                                        _accepted = apply_hysteresis(_live_h, _proposed_token, _mode_h)
+                                    else:
+                                        _old_phase_token = None
+                                        _accepted = None
+                                if _accepted:
+                                    # Req-4: phase_change in call_events persistieren
+                                    _call_id = (_h_state or {}).get('call_id')
+                                    if _call_id:
+                                        try:
+                                            from database.db import SessionLocal as _SL_h
+                                            from database.models import CallEvent as _CE_h
+                                            _db_h = _SL_h()
+                                            try:
+                                                _ev_h = _CE_h(
+                                                    call_id=_call_id,
+                                                    event_type='phase_change',
+                                                    event_ts_ms=int(time.time() * 1000),
+                                                    payload={
+                                                        'old_phase': _old_phase_token,
+                                                        'new_phase': _accepted,
+                                                        'confidence': _raw_h.get('confidence', 0.0),
+                                                        'mode': _mode_h,
+                                                    },
+                                                )
+                                                _db_h.add(_ev_h)
+                                                _db_h.commit()
+                                            finally:
+                                                _db_h.close()
+                                        except Exception as _eh:
+                                            print(f"[phase_change] persist Fehler: {type(_eh).__name__}: {_eh}")
+                                    else:
+                                        print(f"[phase_change] skipped — no call_id for sid={sid} (Pitfall 4)")
+                                    sio.emit('phase_change', {
+                                        'old': _old_phase_token,
+                                        'new': _accepted,
+                                        'mode': _mode_h,
+                                    }, room=sid)
+                        except Exception as _he:
+                            print(f"[hysteresis] loop error: {type(_he).__name__}: {_he}")
+                except Exception as e:
+                    print(f"[classify_contact/hysteresis] loop error: {e}")
                 # ── Phase 04.8 P04: Readiness score + active hint orchestration ──
                 try:
                     from services.ki_logik import (
