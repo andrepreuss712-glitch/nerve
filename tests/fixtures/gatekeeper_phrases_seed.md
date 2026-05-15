@@ -59,7 +59,7 @@ Varianten (2):
 Varianten (2):
 
 1. "{vorname} ... (Pause) ... ich brauche genau zwei Minuten."
-2. "{vorname} — kurz: {detail}. Reicht das für Ihre Einschätzung?"
+2. "Ist denn der {vorname} ... der {vorname} {nachname} im Hause?"
 
 **Quellen-Hinweis:**
 - Martin Limbeck: „Schönen guten Tag. Hier ist Martin Limbeck. *(kleine Pause)* DER Martin Limbeck. *(kleine Pause)* Sagen Sie mal, ist denn der Herbert … *(kleine Pause)* … der Herbert Meier im Hause?"
