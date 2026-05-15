@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "Andre-Gate — Task 4 in 08.23.2.C-01: Phrase-Seed-Review + Korpus-Erstellung (2026-05-15)"
-last_updated: "2026-05-15T06:17:00.000Z"
+stopped_at: "08.23.2.C-02 complete — naechste: 08.23.2.C-03 (gatekeeper.py + classify_contact)"
+last_updated: "2026-05-15T06:21:21Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
   completed_phases: 55
   total_plans: 242
-  completed_plans: 222
+  completed_plans: 223
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
-Plan: 01 of ? — CHECKPOINT-PAUSED bei Task 4 (Andre-Gate)
+Plan: 02 of ? — COMPLETED
 Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 02 abgeschlossen:** Alembic Migration 0003 fuer phrases.mode (VARCHAR(20) NOT NULL DEFAULT 'cold_call') + CHECK-Constraint ck_phrases_mode (cold_call|gatekeeper|meeting). database/models.py: Phrase-Klasse um mode-Column erweitert. alembic history zeigt korrekte Chain 0001->0002->0003 (head). DB-Live-Verifikation deferred auf Server (SQLite local). Req-10 erfuellt. 2 Commits: e8717e0, 182f097.
 
 **Phase 08.23.2.C Plan 01 — CHECKPOINT-PAUSED (Andre-Gate):** GLiNER-Foundation Wave 1. gliner>=0.2.24 in requirements.txt. deploy.sh: GLiNER-Pre-Cache-Block (nicht-fatal). scripts/gliner_smoke.py: Latenz-Diagnose + Return-Format-Dump (klaert Open Question 1). scripts/verify_corpus_gate.py: Pre-Execute-Gate (Exit 1 solange Korpora fehlen). tests/fixtures/*_corpus.schema.json: JSON-Schemas fuer beide Korpora (minItems=20/10). tests/fixtures/gatekeeper_phrases_seed.md: 4 Mr.-Miyagi-Buttons (Verbuendeten-Bitte, Insider-Antwort, Voss-Label, Vornamen-Pause) aus Vault B.6/B.7/Bonus-Block. 3 Commits: 93a5921, 979c814, 865853a. CHECKPOINT Task 4 Andre-Gate: Phrase-Seed-Review + Korpus-Erstellung.
 
