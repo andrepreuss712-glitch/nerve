@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "08.23.2.C-01 Andre-Gate abgeschlossen — Plan 01 complete, naechste: 08.23.2.C-04"
-last_updated: "2026-05-15T08:00:00Z"
+stopped_at: "08.23.2.C-04 abgeschlossen — GLiNER NER-Integration + extract_entities() + Warmup, naechste: 08.23.2.C-05 oder 06"
+last_updated: "2026-05-15T12:00:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
   completed_phases: 55
   total_plans: 242
-  completed_plans: 224
+  completed_plans: 225
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
-Plan: 03 of ? — COMPLETED
+Plan: 04 of ? — COMPLETED
 Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 04 abgeschlossen:** GLiNER als zweite NER-Stufe in services/anonymization.py (Union-Voting D-01). _get_gliner(): thread-safe lazy load (Double-Checked Locking, analog _get_nlp), is_pipeline_healthy=False bei Load-Fehler. _apply_ner(): Union-Voting spaCy+GLiNER, native Offsets + re.finditer-Fallback (Review Finding 1). _apply_ner_parallel(): ThreadPoolExecutor concurrent dispatch bereit (Review Finding 2, Latenz-Mitigation). extract_entities(text, cache=None): oeffentliche Funktion fuer gatekeeper.py-Konsens-Voting (D-02). app.py: _get_gliner()-Warmup nach anonymize('Warmup', None) im Pre-Warm-Block. Phase-B-Performance-Gate: 3/3 Tests gruen (0.24s). 3 Commits: f20ca9b, 703b206, d43686c.
 
 **Phase 08.23.2.C Plan 03 abgeschlossen:** Konfigurations-Foundation fuer Hysterese-Logik (Req-3) und Foundation-Code-Register (Req-11). config/__init__.py + config/phase_transitions.py: MIN_PHASE_DURATIONS (3 Modi, D-03-Werte 1:1), ALLOWED_TRANSITIONS, FORBIDDEN_TRANSITIONS, MODE_TRANSITION_AUTO, HYSTERESIS_REQUIRED_HINTS=2. scripts/calibrate_phase_durations.py: Read-only Diagnose-Skript, graceful exit ohne Korpus. .planning/04 Entscheidungen/Foundation-Code-Register.md: populate_context_notes-Stub + context_notes-State-Feld fuer Phase 08.23.2.I. 3 Commits: 9718df8, 1445ef6, b40a418.
 
