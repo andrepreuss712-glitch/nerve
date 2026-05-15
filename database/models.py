@@ -332,6 +332,10 @@ class Phrase(Base):
     # Phase 08.23.2.B: DSGVO-Anonymisierungs-Pipeline quality_tier
     # 'A'=sauber, 'B'=Edge-Case-NER, 'C'=Art9-Treffer/Exception
     quality_tier   = Column(String(1), nullable=False, server_default='A')
+    # Phase 08.23.2.C: Phasen-Klassifikator + Gatekeeper-Erkennung
+    # Diskriminator fuer Gatekeeper-Phrases vs. cold_call/meeting-Phrases
+    # CHECK-Constraint ck_phrases_mode in DB via Alembic 0003
+    mode           = Column(String(20), nullable=False, server_default='cold_call')
 
 
 # Block 5: Early Access Waitlist
