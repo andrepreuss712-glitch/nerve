@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "08.23.2.C-07 abgeschlossen — PiP-UI Gatekeeper-Modus (Tasks 1-3 committed), Live-Test deferred auf Production. naechste: 08.23.2.C-08"
-last_updated: "2026-05-15T12:00:00Z"
+stopped_at: "08.23.2.C-08 abgeschlossen — Test-Suite komplett (Hysterese, Phase-Classifier, Gatekeeper, Re-ID, Session-State). Phase 08.23.2.C Phase-Gate abgedeckt. naechste: 08.23.2.C ist fertig (pending gatekeeper_classifier_corpus.json von Andre)"
+last_updated: "2026-05-15T14:00:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
   completed_phases: 55
   total_plans: 242
-  completed_plans: 229
+  completed_plans: 230
   percent: 95
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
-Plan: 07 of ? — COMPLETED
+Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS (pending gatekeeper corpus)
+Plan: 08 of ? — COMPLETED
 Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 08 abgeschlossen:** Test-Suite Phase-Gate. 5 Test-Dateien: tests/test_hysteresis.py (8 Tests, Req-3), tests/test_phase_classifier.py (5+1 Tests, Req-2/4/12, F1-Gate mit 10% Noise FALSIFIZIERBAR, f1>=0.75 && f1<=0.95 Sanity-Cap), tests/test_gatekeeper_classifier.py (12+1 Tests, Req-5/7/8/13, skipif gatekeeper_classifier_corpus.json fehlt), tests/test_anonymization_reid.py (1 Test, Req-14, skipif kein API-Key/GLiNER), tests/test_session_state_phase_c.py (8 Tests, Req-11, Pitfall-3+6). 4 Commits: f371f26, eaaee92, 5708155, c3e21dc. Deviations: init_session_state braucht user_id+org_id, UWG-Phrasen angepasst an tatsaechliche Pattern-Abdeckung, Patch-Target ist claude_client nicht _call_haiku. Pre-existing Failures: MODEL_PIP_AUTOVAR, test_anonymization_perf State-Pollution, test_ewb_pipeline, test_exchange_rates, test_profile_schema_v3, test_qa_pipeline_rueckfrage — alle out-of-scope. Phase-Gate bereit sobald gatekeeper_classifier_corpus.json von Andre erstellt wird.
 
 **Phase 08.23.2.C Plan 07 abgeschlossen:** PiP-UI Gatekeeper-Modus. routes/app_routes.py: GET /api/gatekeeper/phrases (filtert mode='gatekeeper', Template-Var-Ersetzung, @login_required). services/deepgram_service.py: manual_mode_toggle Socket-Handler in register_audio_handlers() (Whitelist target|gatekeeper, setzt contact_category + current_mode + Hysterese-Reset, emittet contact_category_update + manual_mode_toggle_ack). static/nerve.css: .pip-uwg-banner, .pip-mode-indicator, .pip-ewb-btn[data-mode-button="gatekeeper"] — alle var(--...) Tokens, 0 Hex. templates/base.html: pip-uwg-banner + pip-mode-indicator DOM eingefuegt. static/pip-launcher.js: Ctrl+G/E Keydown-Handler, _renderGatekeeperButtons() via /api/gatekeeper/phrases, _showUwgBanner(), _wireUwgBannerClose(), Socket-Subscriptions. 3 Commits: 51f83ab, 54dcc7d, 05ba9ef. Task 4 (Live-PiP-Test) deferred — lokale Umgebung (Asset-Loading + Server-Crash) nicht nutzbar; Verifikation auf Production nach Code-Review + Deploy.
 
