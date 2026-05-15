@@ -719,3 +719,32 @@ def register_audio_handlers(sio):
                 ls.record_ewb_click(typ, success=False, einwand_text=typ)
             except Exception as e:
                 print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
+
+    @sio.on('manual_mode_toggle')
+    def handle_manual_mode_toggle(data=None):
+        """Phase 08.23.2.C Req-6 — Berater toggled manuell zwischen target/gatekeeper.
+
+        Setzt contact_category + current_mode im per-SID-State. Schickt Bestaetigung zurueck.
+        T-08.23.2.C-24: category wird gegen Whitelist validiert — invalid emits werden mit ok:False quittiert.
+        """
+        from flask import request
+        sid = request.sid
+        category = (data.get('category') if isinstance(data, dict) else None)
+        if category not in ('target', 'gatekeeper'):
+            sio.emit('manual_mode_toggle_ack', {'ok': False, 'error': 'invalid category'}, room=sid)
+            return
+        new_mode = 'gatekeeper' if category == 'gatekeeper' else 'cold_call'
+        with ls._session_state_lock:
+            if sid in ls._session_state:
+                st = ls._session_state[sid].setdefault('state', {})
+                st['contact_category'] = category
+                st['current_mode'] = new_mode
+                # Reset Hysterese auf neuer Modus
+                st['current_phase'] = 'opener' if new_mode == 'cold_call' else 'greeting'
+                st['phase_hint_count'] = 0
+                st['pending_phase'] = None
+                import time as _t
+                st['phase_entered_at'] = _t.monotonic()
+        print(f"[Phase-C] manual_mode_toggle sid={sid} category={category} new_mode={new_mode}")
+        sio.emit('contact_category_update', {'category': category, 'mode': new_mode, 'source': 'manual'}, room=sid)
+        sio.emit('manual_mode_toggle_ack', {'ok': True, 'category': category, 'mode': new_mode}, room=sid)

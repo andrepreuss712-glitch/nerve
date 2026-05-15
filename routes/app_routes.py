@@ -1429,3 +1429,55 @@ def api_health():
         'pipeline_status': pipeline_status,              # D-08: 'ok' | 'degraded' | 'unavailable'
         'pipeline_error_count_10min': pipeline_error_count,  # D-08 Kat. C: Fehler in 10-Min-Fenster
     })
+
+
+# ── Phase 08.23.2.C — Gatekeeper-Phrases-API ─────────────────────────────────
+
+@app_routes_bp.route('/api/gatekeeper/phrases', methods=['GET'])
+@login_required
+def api_gatekeeper_phrases():
+    """Gibt die 4 Mr.-Miyagi-Phrases (mode='gatekeeper') mit Template-Variablen-Ersetzung.
+
+    Phase 08.23.2.C Req-9. Variablen kommen aus dem aktuellen Session-Briefing +
+    contact_category-Detected-Names (falls vorhanden).
+    """
+    from database.models import Phrase
+    db = get_session()
+    try:
+        rows = (
+            db.query(Phrase)
+              .filter(Phrase.mode == 'gatekeeper')
+              .filter((Phrase.user_id == 1) | (Phrase.user_id == g.user.id))
+              .order_by(Phrase.objection_type, Phrase.id)
+              .all()
+        )
+        grouped = {}
+        for p in rows:
+            grouped.setdefault(p.objection_type, []).append({
+                'id': p.id,
+                'text': p.text,
+            })
+        # Template-Variablen aus Session-State (best effort — fehlende Werte bleiben als Platzhalter)
+        sid = request.args.get('sid') or flask_session.get('sid')
+        variables = {'branche': '', 'detail': '', 'vorname': '', 'nachname': ''}
+        if sid:
+            from services.live_session import _session_state, _session_state_lock
+            with _session_state_lock:
+                st = _session_state.get(sid, {}).get('state', {})
+                briefing = st.get('active_profile_data') or st.get('_briefing') or {}
+            if isinstance(briefing, dict):
+                variables['branche'] = briefing.get('branche', '') or ''
+                variables['detail'] = briefing.get('detail', '') or briefing.get('produkt', '') or ''
+
+        def _fill(text):
+            out = text
+            for k, v in variables.items():
+                out = out.replace('{' + k + '}', v or ('{' + k + '}'))
+            return out
+
+        for btn, phrases in grouped.items():
+            for ph in phrases:
+                ph['filled_text'] = _fill(ph['text'])
+        return jsonify({'buttons': grouped, 'variables': variables})
+    finally:
+        db.close()
