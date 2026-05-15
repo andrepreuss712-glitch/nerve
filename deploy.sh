@@ -81,6 +81,11 @@ ssh -i ~/.ssh/nerve_vps "$VPS_HOST" bash -s << 'EOF'
   echo "[deploy] Downloading spaCy model de_core_news_lg (~570MB)..."
   /opt/nerve/venv/bin/python -m spacy download de_core_news_lg --quiet
 
+  # GLiNER Modell vorab cachen (Phase 08.23.2.C — Req-1)
+  echo "[deploy] Pre-caching GLiNER model urchade/gliner_multi-v2.1 (~450MB)..."
+  /opt/nerve/venv/bin/python -c "from gliner import GLiNER; GLiNER.from_pretrained('urchade/gliner_multi-v2.1')" || \
+      echo "[deploy] GLiNER-Pre-Download fehlgeschlagen — App startet trotzdem, laedt beim ersten Request"
+
   echo "[deploy] Writing nginx config..."
   sudo tee /etc/nginx/sites-available/nerve > /dev/null << 'NGINX'
 server {

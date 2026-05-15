@@ -21,3 +21,4 @@ bleach>=6.1.0
 pytest>=8.0.0
 spacy>=3.7.0
 phonenumbers>=8.13.0
+gliner>=0.2.24
