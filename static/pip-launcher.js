@@ -2409,7 +2409,107 @@
         console.warn('[QA] qa_soft_hint handler error', e);
       }
     });
+
+    // ── Phase 08.23.2.C — Gatekeeper + UWG Socket-Subscriptions ─────────────
+    state.socket.on('contact_category_update', function (data) {
+      _updateContactCategory(data.category, data.mode);
+    });
+
+    state.socket.on('phase_change', function (data) {
+      console.log('[pip] phase_change', data);
+    });
+
+    state.socket.on('uwg_hard_block', function (data) {
+      _showUwgBanner(data && data.phrase);
+    });
+
+    state.socket.on('trigger_phrase_hint', function (data) {
+      // Phase 08.23.2.C Req-7 — MVP: nur Console-Log.
+      console.log('[pip] trigger_phrase_hint', data);
+    });
+
+    state.socket.on('manual_mode_toggle_ack', function (data) {
+      if (data && !data.ok) {
+        console.warn('[pip] manual_mode_toggle_ack error:', data.error);
+      }
+    });
   }
+
+  // ── Phase 08.23.2.C — Gatekeeper-Modus-Funktionen ────────────────────────
+
+  function _updateContactCategory(category, mode) {
+    state.contactCategory = category;
+    state.currentMode = mode;
+    var indicator = pipEl('pip-mode-indicator');
+    if (indicator) {
+      indicator.dataset.mode = mode;
+      var label = (mode === 'gatekeeper') ? 'Vorzimmer' : (mode === 'meeting') ? 'Meeting' : 'Cold-Call';
+      indicator.textContent = label;
+    }
+    if (category === 'gatekeeper') {
+      _renderGatekeeperButtons();
+    } else {
+      _renderStandardEwbButtons();
+    }
+  }
+
+  function _renderGatekeeperButtons() {
+    var row = pipEl('nlp-ewb-row');
+    if (!row) return;
+    fetch('/api/gatekeeper/phrases?sid=' + encodeURIComponent(state.sid || ''))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.buttons) return;
+        var ORDER = [
+          'gatekeeper_verbuendeten_bitte',
+          'gatekeeper_insider_antwort',
+          'gatekeeper_voss_label',
+          'gatekeeper_vornamen_pause',
+        ];
+        var LABELS = {
+          'gatekeeper_verbuendeten_bitte': 'Verbündeten-Bitte',
+          'gatekeeper_insider_antwort': 'Insider-Antwort',
+          'gatekeeper_voss_label': 'Voss-Label',
+          'gatekeeper_vornamen_pause': 'Vornamen-Pause',
+        };
+        var html = ORDER.map(function (key) {
+          var variants = data.buttons[key] || [];
+          if (variants.length === 0) return '';
+          var firstText = variants[0].filled_text || variants[0].text;
+          return '<button type="button" class="pip-ewb-btn" data-mode-button="gatekeeper" data-typ="'
+               + escHtml(key) + '" data-phrase="' + escHtml(firstText) + '">' + escHtml(LABELS[key]) + '</button>';
+        }).join('');
+        row.innerHTML = html;
+      })
+      .catch(function (e) { console.error('[pip] Fehler beim Laden Gatekeeper-Phrases', e); });
+  }
+
+  function _renderStandardEwbButtons() {
+    // Zurueck zu den Standard-EWB-Buttons aus dem Profil
+    _renderEwbButtons();
+  }
+
+  function _showUwgBanner(phrase) {
+    var banner = document.getElementById('pip-uwg-banner');
+    var textEl = document.getElementById('pip-uwg-banner-text');
+    if (!banner) return;
+    if (textEl) {
+      textEl.textContent = 'UWG §7: "' + String(phrase || '').slice(0, 100) + '" erkannt – DSGVO/UWG-Risiko, Anruf zeitnah höflich beenden.';
+    }
+    banner.classList.add('is-visible');
+  }
+
+  // UWG-Banner Close-Button (wired at DOM-ready, works both in main doc and PiP window)
+  function _wireUwgBannerClose() {
+    var bannerClose = document.getElementById('pip-uwg-banner-close');
+    if (bannerClose) {
+      bannerClose.addEventListener('click', function () {
+        var banner = document.getElementById('pip-uwg-banner');
+        if (banner) banner.classList.remove('is-visible');
+      });
+    }
+  }
+  _wireUwgBannerClose();
 
   function _renderSlotResult(slot, result) {
     var body = pipEl('pip-slot-body-' + slot);
@@ -3386,6 +3486,32 @@
     if (state.micStarted) {
       e.preventDefault();
       e.returnValue = '';
+    }
+  });
+
+  // ── Phase 08.23.2.C — Ctrl+G / Ctrl+E Keyboard-Shortcuts (Req-6) ─────────
+  // Ctrl+G = manuell auf Gatekeeper-Modus wechseln
+  // Ctrl+E = manuell auf Target-Modus zurueck (E = Entscheider)
+  // Skip wenn User in einem Input/Textarea/contentEditable tippt.
+  document.addEventListener('keydown', function (ev) {
+    if (!(ev.ctrlKey || ev.metaKey)) return;
+    var category = null;
+    if (ev.key === 'g' || ev.key === 'G') {
+      category = 'gatekeeper';
+    } else if (ev.key === 'e' || ev.key === 'E') {
+      category = 'target';
+    } else {
+      return;
+    }
+    ev.preventDefault();
+    // Skip wenn User in einem Eingabefeld tippt (Briefing-Editor etc.)
+    var tag = ((ev.target && ev.target.tagName) || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || (ev.target && ev.target.isContentEditable)) {
+      return;
+    }
+    if (state.socket && state.socket.emit) {
+      state.socket.emit('manual_mode_toggle', { category: category });
+      console.log('[pip] manual_mode_toggle emitted:', category);
     }
   });
 
