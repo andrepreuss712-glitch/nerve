@@ -7,6 +7,7 @@ import threading
 import time
 import logging as _logging
 from datetime import datetime
+from typing import Optional
 from config import ANALYSE_INTERVALL, MERGE_WINDOW_S, SPEAKER_DEBOUNCE_S, KATEGORIE_LABEL
 
 _logger = _logging.getLogger(__name__)
@@ -351,6 +352,20 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 'is_paused':             False,   # REQ-01
                 'ft_session_id':         None,
                 'session_anrede':        None,
+                # Phase 08.23.2.C — Gatekeeper-State (Req-11, Foundation-Code-Register Eintrag 2)
+                'contact_category':      'unknown',   # 'target' | 'gatekeeper' | 'unknown'
+                'current_mode':          'cold_call', # initial cold_call; ggf. via call_mode ueberschrieben
+                'context_notes':         [],          # Phase 08.23.2.I aktiviert Befuellung
+                # Hysterese-interne Keys (Req-3) — Token-basiert (z.B. 'opener', 'pitch')
+                # HINWEIS: 'current_phase' (Integer) oben ist das alte Phase-04.8-System.
+                # 'phase_hint_count', 'pending_phase', 'phase_entered_at' sind neu fuer Phase-C.
+                'phase_hint_count':      0,
+                'pending_phase':         None,
+                'phase_entered_at':      None,        # monotonic seconds
+                # Call-Record-Referenz (Pitfall 4 — call_id-Provenienz)
+                'call_id':               None,        # UUID nach Call-Insert in create_call_for_sid
+                # UWG §7 Hard-Block Guard (Review Finding 5)
+                'uwg_blocked':           False,       # True nach detect_uwg_hard_block() — stoppt Deepgram+Claude
             },
             # D-04: tracking logs — initialized as per-SID scaffolding for future migration.
             # NOTE (HIGH-2 coexistence): Services still WRITE to module-level globals
@@ -403,6 +418,52 @@ def pop_session_state(sid: str) -> None:
     with _per_sid_coaching_lock:
         _per_sid_coaching_buffer.pop(sid, None)
     drop_matcher(sid)
+
+
+def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') -> Optional[str]:
+    """Legt Call-Record an und speichert call_id im per-SID-State.
+
+    Phase 08.23.2.C Pitfall 4 — call_events.call_id ist NOT NULL.
+    Erstellt bei Session-Start einen Call-Eintrag, sodass CallEvent-Inserts
+    (z.B. phase_change, uwg_hard_block) eine gueltige FK-Referenz haben.
+
+    call_mode: 'cold_call' oder 'meeting_consented' (CHECK-Constraint in DB).
+    Unbekannte Modi werden auf 'cold_call' gemappt.
+
+    Returns: call_id (UUID-string) oder None bei Fehler.
+    """
+    from datetime import timezone as _tz
+    from database.db import SessionLocal as _SL
+    from database.models import Call
+    # Mapping auf erlaubte call_mode-Werte (CHECK-Constraint ck_calls_call_mode)
+    _allowed_modes = ('cold_call', 'meeting_consented')
+    _db_mode = call_mode if call_mode in _allowed_modes else 'cold_call'
+    _db = _SL()
+    try:
+        call = Call(
+            user_id=user_id,
+            call_mode=_db_mode,
+            started_at=datetime.now(_tz.utc),
+            transcript_storage='none',
+        )
+        _db.add(call)
+        _db.commit()
+        _db.refresh(call)
+        cid = str(call.id)
+        with _session_state_lock:
+            if sid in _session_state:
+                _session_state[sid].setdefault('state', {})['call_id'] = cid
+        print(f'[live_session] create_call_for_sid: call_id={cid!r} sid={sid!r}')
+        return cid
+    except Exception as e:
+        print(f'[live_session] create_call_for_sid Fehler: {type(e).__name__}: {e}')
+        try:
+            _db.rollback()
+        except Exception:
+            pass
+        return None
+    finally:
+        _db.close()
 
 
 def _load_profile_cache(sid: str, user_id: int, profile_id: int) -> None:
