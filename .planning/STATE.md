@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "08.23.2.C-03 complete — naechste: 08.23.2.C-04"
-last_updated: "2026-05-15T06:25:46Z"
+stopped_at: "08.23.2.C-01 Andre-Gate abgeschlossen — Plan 01 complete, naechste: 08.23.2.C-04"
+last_updated: "2026-05-15T08:00:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
@@ -33,7 +33,7 @@ Last activity: 2026-05-15
 
 **Phase 08.23.2.C Plan 02 abgeschlossen:** Alembic Migration 0003 fuer phrases.mode (VARCHAR(20) NOT NULL DEFAULT 'cold_call') + CHECK-Constraint ck_phrases_mode (cold_call|gatekeeper|meeting). database/models.py: Phrase-Klasse um mode-Column erweitert. alembic history zeigt korrekte Chain 0001->0002->0003 (head). DB-Live-Verifikation deferred auf Server (SQLite local). Req-10 erfuellt. 2 Commits: e8717e0, 182f097.
 
-**Phase 08.23.2.C Plan 01 — CHECKPOINT-PAUSED (Andre-Gate):** GLiNER-Foundation Wave 1. gliner>=0.2.24 in requirements.txt. deploy.sh: GLiNER-Pre-Cache-Block (nicht-fatal). scripts/gliner_smoke.py: Latenz-Diagnose + Return-Format-Dump (klaert Open Question 1). scripts/verify_corpus_gate.py: Pre-Execute-Gate (Exit 1 solange Korpora fehlen). tests/fixtures/*_corpus.schema.json: JSON-Schemas fuer beide Korpora (minItems=20/10). tests/fixtures/gatekeeper_phrases_seed.md: 4 Mr.-Miyagi-Buttons (Verbuendeten-Bitte, Insider-Antwort, Voss-Label, Vornamen-Pause) aus Vault B.6/B.7/Bonus-Block. 3 Commits: 93a5921, 979c814, 865853a. CHECKPOINT Task 4 Andre-Gate: Phrase-Seed-Review + Korpus-Erstellung.
+**Phase 08.23.2.C Plan 01 abgeschlossen:** GLiNER-Foundation Wave 1. gliner>=0.2.24 in requirements.txt. deploy.sh: GLiNER-Pre-Cache-Block (nicht-fatal). scripts/gliner_smoke.py: Latenz-Diagnose + Return-Format-Dump (klaert Open Question 1). scripts/verify_corpus_gate.py: Pre-Execute-Gate (Exit 1 solange Korpora fehlen). tests/fixtures/*_corpus.schema.json: JSON-Schemas fuer beide Korpora (minItems=20/10). tests/fixtures/gatekeeper_phrases_seed.md: 4 Mr.-Miyagi-Buttons (3+3+2+2 Varianten) aus Vault B.6/B.7/Bonus-Block — Andre-Gate abgeschlossen (Resume-Signal "phrase-seed edits done"). 4 Commits: 93a5921, 979c814, 865853a, 2f07f2a.
 
 **Phase 08.23.2.B Plan 10 abgeschlossen:** Security-Test (Req-11) und Performance-Test (Req-12) fuer services/anonymization.py. tests/test_anonymization_security.py: 50 repraesentative deutsche B2B-Mitschrift-Snippets, Re-ID-Test via Claude-Haiku, @pytest.mark.skipif(not ANTHROPIC_API_KEY) CI-Guard, test_snippets_count() ohne API-Key. tests/test_anonymization_perf.py: P95-Latenz-Test auf 1000-Zeichen-Text (100 Runs, frischer Cache), Short-Snippet-Test (<100ms P95), Art-9-Short-Circuit-Diagnose. Checkpoint approved von Andre. 2 Commits: 1248aed, 4ea6120. PHASE 08.23.2.B VOLLSTAENDIG — alle Req-1 bis Req-12 abgedeckt.
 
