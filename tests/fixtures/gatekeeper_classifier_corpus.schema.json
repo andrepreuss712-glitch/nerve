@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Schema fuer tests/fixtures/gatekeeper_classifier_corpus.json (Phase 08.23.2.C, Req-13). Wird von scripts/verify_corpus_gate.py manuell validiert (kein jsonschema-Package noetig).",
+  "type": "array",
+  "minItems": 10,
+  "items": {
+    "type": "object",
+    "required": ["transcript_window", "briefing_ceo_name", "expected_category"],
+    "additionalProperties": false,
+    "properties": {
+      "transcript_window": {
+        "type": "array",
+        "items": {"type": "string"},
+        "minItems": 1,
+        "description": "Liste von Berater-Saetzen aus dem Gespraechsfenster"
+      },
+      "briefing_ceo_name": {
+        "type": "string",
+        "description": "Name des Ziel-Entscheiders aus dem Briefing (z.B. 'Jacob', 'Meier', 'Dr. Schmidt')"
+      },
+      "expected_category": {
+        "enum": ["target", "gatekeeper", "unknown"],
+        "description": "Erwartete Kontakt-Kategorie: target=Entscheider erreicht, gatekeeper=Vorzimmer/Filter, unknown=unklar"
+      }
+    }
+  }
+}
