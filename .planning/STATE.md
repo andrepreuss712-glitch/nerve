@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "08.23.2.C-06 abgeschlossen — Gatekeeper-Core-Service (gatekeeper.py, Session-State, Loops), naechste: 08.23.2.C-06b"
-last_updated: "2026-05-15T09:00:00Z"
+stopped_at: "08.23.2.C-06b abgeschlossen — Migration 0003 Gatekeeper Seed-Insert (10 Phrasen, 4 Buttons), naechste: 08.23.2.C-07"
+last_updated: "2026-05-15T10:00:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
   completed_phases: 55
   total_plans: 242
-  completed_plans: 227
+  completed_plans: 228
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
-Plan: 06 of ? — COMPLETED
+Plan: 06b of ? — COMPLETED
 Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 06b abgeschlossen:** Migration 0003 Gatekeeper Seed-Insert. alembic/versions/0003_add_phrases_mode.py: op.bulk_insert mit 10 Gatekeeper-Phrasen (D-05: >=2 Varianten pro 4 Buttons). Button 1 gatekeeper_verbuendeten_bitte: 3 Varianten (Stephan Heinrich + Ulrike Knauer). Button 2 gatekeeper_insider_antwort: 3 Varianten (Tim Taxis + Eduard Klein). Button 3 gatekeeper_voss_label: 2 Varianten (Chris Voss). Button 4 gatekeeper_vornamen_pause: 2 Varianten (Martin Limbeck). Alle Rows: user_id=1 (Admin-MVP), mode='gatekeeper', quality_tier='A'. Texte 1:1 aus Andre-Gate-genehmigter tests/fixtures/gatekeeper_phrases_seed.md. downgrade() loescht Seeds vor drop_column. py_compile OK, Varianten-Verifikation gruen. 1 Commit: 4fb6267.
 
 **Phase 08.23.2.C Plan 06 abgeschlossen:** Gatekeeper-Core-Service-Implementation. services/gatekeeper.py: classify_contact (UNION/CONSENSUS-Voting Review Finding 4), _names_match (RapidFuzz fuzzy threshold=80, Deviation: 85 wuerde Meier/Meyer verfehlen), detect_trigger_phrases, detect_uwg_hard_block, apply_hysteresis (3-Bedingungen: Hints+Dwell+Transitions), populate_context_notes (Foundation-Stub). services/live_session.py: 9 Phase-C-Keys in init_session_state() (contact_category, current_mode, context_notes, phase_hint_count, pending_phase, phase_entered_at, call_id, uwg_blocked=False), create_call_for_sid() Helper. services/claude_service.py: UWG-Guard, classify_contact-Wiring, apply_hysteresis+phase_change-CallEvent-Persist, Socket-Events. services/deepgram_service.py: UWG-Guard, detect_trigger_phrases+trigger_phrase_hint-Emit, detect_uwg_hard_block+uwg_blocked=True+uwg_hard_block-Emit. config/__init__.py: Deviation Rule 3 — re-exportiert config.py-Konstanten (repariert 21 pre-existing Testfehler). 3 Commits: 3e01035, 2169854, 3b56814.
 
