@@ -216,6 +216,40 @@ def _parse_json(raw: str) -> dict:
 # rank_ewb / EWB-Ranking Haiku call REMOVED per Phase 04.8 D-08 + user override.
 # Phase-based button table from briefing (ki_logik.PHASE_BUTTONS) replaces it.
 
+# Phase 08.23.2.C — Modus-spezifische Phasen-Listen (Req-2).
+# Phase-Namen sind englische Lowercase-Tokens (Code-Identifier, ASCII per CLAUDE.md).
+_PHASE_NAMES_COLD_CALL = {
+    1: 'opener',
+    2: 'permission',
+    3: 'reason',
+    4: 'pitch',
+    5: 'discovery',
+    6: 'closing',
+}
+_PHASE_NAMES_MEETING = {
+    1: 'intro',
+    2: 'agenda',
+    3: 'discovery',
+    4: 'pitch',
+    5: 'objection',
+    6: 'closing',
+}
+_PHASE_NAMES_GATEKEEPER = {
+    1: 'greeting',
+    2: 'identify',
+    3: 'bypass',
+    4: 'handoff',
+}
+
+# Hilfs-Mapping fuer Modus -> (phasen_dict, max_phase).
+_PHASE_NAMES_BY_MODE = {
+    'cold_call':   (_PHASE_NAMES_COLD_CALL, 6),
+    'meeting':     (_PHASE_NAMES_MEETING, 6),
+    'gatekeeper':  (_PHASE_NAMES_GATEKEEPER, 4),
+}
+
+# Backward-Compat-Alias fuer bestehende Callers (Z.970/974/983/984 im Analyse-Loop).
+# Callers haben keinen Modus-Kontext — Alias bleibt erhalten.
 _PHASE_NAMES = {
     1: 'Opener',
     2: 'Qualifizierung',
@@ -225,38 +259,46 @@ _PHASE_NAMES = {
     6: 'Abschluss',
 }
 
-PHASE_CLASSIFIER_PROMPT = """Du klassifizierst die aktuelle Phase eines B2B-Verkaufsgesprächs.
+PHASE_CLASSIFIER_PROMPT = """Du klassifizierst die aktuelle Phase eines B2B-Verkaufsgesprächs im Modus '{mode}'.
 
-Die 6 Phasen (exakt in dieser Reihenfolge):
-1 = Opener — Begrüßung, Aufmerksamkeit gewinnen, Gesprächserlaubnis (0-3 Min)
-2 = Qualifizierung — Entscheider? Budget? Bedarf? (3-10 Min)
-3 = Bedarfsanalyse — Kunde artikuliert seinen Schmerz (10-20 Min)
-4 = Pitch — Lösungspräsentation, USPs auf Schmerz mappen (20-30 Min)
-5 = Einwandbehandlung — Einwand kam, wird adressiert (variabel)
-6 = Abschluss — Verbindliche Entscheidung herbeiführen (variabel)
-
-Aktueller Kontext:
-- Bisherige Phase: {current_phase}
-- Gesprächsdauer bisher: {elapsed_s} Sekunden
-- Modus: {mode}
+Phasen fuer diesen Modus: {labels}
+Aktuelle Phase: {current_phase}, seit {elapsed_s}s im Gespräch.
 
 Letzte Gesprächsaussagen (chronologisch):
 {transcript_window}
 
 Bestimme die AKTUELLE Phase basierend auf den letzten Aussagen.
-Eine Phase kann bestehen bleiben. Phase 5 kann aus jeder späteren Phase zurück-aktiviert werden wenn ein Einwand kommt.
+Eine Phase kann bestehen bleiben. Wähle die wahrscheinlichste Phase.
 
 Antworte NUR als JSON:
-{{"phase": <1-6>, "confidence": <0.0-1.0>, "grund": "<max 10 Wörter>"}}"""
+{{"phase": <1-N>, "confidence": <0.0-1.0>, "grund": "<max 10 Wörter>"}}"""
 
 
 def classify_phase(transcript_window, current_phase, elapsed_s, mode):
-    """Haiku call. Returns {'phase': int 1-6, 'confidence': float, 'grund': str}
-    or None on parse failure / empty input."""
+    """Modus-bewusster Phasen-Klassifikator (Phase 08.23.2.C Req-2).
+
+    Args:
+        transcript_window: List[str] der letzten Berater-Saetze.
+        current_phase: int — aktuell aktive Phasen-Nummer.
+        elapsed_s: float — Sekunden seit Gespraechs-Start.
+        mode: 'cold_call' | 'meeting' | 'gatekeeper'.
+
+    Returns:
+        dict {'phase': int (1..max_phase), 'confidence': float (0..1), 'grund': str}
+        oder None bei API-Fehler / ungueltigem Output.
+    """
     if not transcript_window:
         return None
+
+    # Modus-Dispatch: waehle Phasen-Liste + max_phase basierend auf mode.
+    phase_names, max_phase = _PHASE_NAMES_BY_MODE.get(
+        mode, (_PHASE_NAMES_COLD_CALL, 6)  # Fallback: cold_call
+    )
+
+    labels_str = ', '.join(f'{i}={name}' for i, name in phase_names.items())
     formatted = "\n".join(f"- {t}" for t in transcript_window[-10:])
     prompt = PHASE_CLASSIFIER_PROMPT.format(
+        labels=labels_str,
         current_phase=current_phase,
         elapsed_s=int(elapsed_s or 0),
         mode=mode or 'meeting',
@@ -302,7 +344,8 @@ def classify_phase(transcript_window, current_phase, elapsed_s, mode):
         data = json.loads(text)
         phase = int(data.get('phase', current_phase))
         conf = float(data.get('confidence', 0.0))
-        if 1 <= phase <= 6 and 0.0 <= conf <= 1.0:
+        # Range-Validation per Modus (Req-2 Acceptance, T-08.23.2.C-15).
+        if 1 <= phase <= max_phase and 0.0 <= conf <= 1.0:
             return {
                 'phase': phase,
                 'confidence': conf,
