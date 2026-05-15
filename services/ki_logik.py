@@ -14,6 +14,7 @@ NOTE: `einwand_geloest` scores +20 per user override. The original briefing
 reflect that a resolved objection is a stronger buy signal than a detail
 question — the customer has actively removed a barrier.
 """
+import re
 from typing import Optional
 
 
@@ -202,3 +203,61 @@ def infer_cold_call_context(seller_transcript: list, current_phase: int,
     if not haiku_caller:
         return None
     return haiku_caller(seller_transcript, current_phase)
+
+
+# ── Phase 08.23.2.C — Gatekeeper-Trigger-Phrasen (Req-7 + Req-8) ─────────────
+# Strings in 'pattern' sind Regex-Muster fuer deutschen User-Text (Umlaute OK).
+# re.IGNORECASE wird in gatekeeper.py beim Match-Aufruf gesetzt.
+# Code-Identifier (Keys, category-Werte) sind ASCII per CLAUDE.md.
+TRIGGER_PHRASES = [
+    # Kategorie: Inquiry — Vorzimmer fragt nach Gesprächsgrund (B.6)
+    {'pattern': r'worum geht es',                    'category': 'inquiry',         'hard_block': False},
+    {'pattern': r'um was geht es',                   'category': 'inquiry',         'hard_block': False},
+    {'pattern': r'was ist der Grund',                'category': 'inquiry',         'hard_block': False},
+    # Kategorie: Absence — Entscheider nicht erreichbar
+    {'pattern': r'nicht im Haus',                    'category': 'absence',         'hard_block': False},
+    {'pattern': r'(ist|sind) (in einem|im) Termin',  'category': 'absence',         'hard_block': False},
+    {'pattern': r'gerade nicht verfügbar',           'category': 'absence',         'hard_block': False},
+    # Kategorie: Callback — Verzoegerungstaktik
+    {'pattern': r'probieren Sie (es )?sp(ä|ae)ter|versuchen Sie sp(ä|ae)ter',
+                                                     'category': 'callback',        'hard_block': False},
+    {'pattern': r'rufen Sie sp(ä|ae)ter (nochmal )?an',
+                                                     'category': 'callback',        'hard_block': False},
+    # Kategorie: Redirect — Weiterleitung auf schriftlichen Kanal
+    {'pattern': r'schicken Sie (uns )?(bitte )?(eine )?(E-?Mail|Mail)',
+                                                     'category': 'redirect',        'hard_block': False},
+    {'pattern': r'per Mail|per E-?Mail',             'category': 'redirect',        'hard_block': False},
+    # Kategorie: Rejection — Direkte Ablehnung
+    {'pattern': r'kein Interesse',                   'category': 'rejection',       'hard_block': False},
+    # Kategorie: Hold — Kurze Warteschleife
+    {'pattern': r'(einen Moment|einen Augenblick) bitte',
+                                                     'category': 'hold',            'hard_block': False},
+    # Kategorie: Identify Caller — Gatekeeper fragt nach Identitaet
+    {'pattern': r'mit wem spreche ich',              'category': 'identify_caller', 'hard_block': False},
+    {'pattern': r'(wer|von welcher Firma) sind Sie', 'category': 'identify_caller', 'hard_block': False},
+    # Kategorie: UWG §7 Hard-Block (Req-8) — Opt-Out-Signale mit Rechtspflicht
+    {'pattern': r'bitte rufen Sie (mich )?(hier )?nicht (mehr )?an',
+                                                     'category': 'uwg_optout',      'hard_block': True},
+    {'pattern': r'rufen Sie hier nicht (mehr )?an',  'category': 'uwg_optout',      'hard_block': True},
+    {'pattern': r'wir wollen (das|hier) nicht',      'category': 'uwg_optout',      'hard_block': True},
+    {'pattern': r'(l(ö|oe)schen|streichen) Sie (uns )?(aus der|von der) Liste',
+                                                     'category': 'uwg_optout',      'hard_block': True},
+]
+
+# Subset fuer schnelle Hard-Block-Detection (Req-8).
+UWG_HARD_BLOCK_PATTERNS = [p['pattern'] for p in TRIGGER_PHRASES if p['hard_block']]
+
+
+def _phrase_matches(line: str, pattern: str) -> bool:
+    """Case-insensitive Regex-Match auf einzelne Zeile.
+
+    Wrapper fuer wiederholte Nutzung in gatekeeper.py (Plan 06).
+
+    Args:
+        line: Transkript-Zeile (User-Text, kann Umlaute enthalten).
+        pattern: Regex-Pattern aus TRIGGER_PHRASES[i]['pattern'].
+
+    Returns:
+        True wenn Pattern in line gefunden, sonst False.
+    """
+    return bool(re.search(pattern, line or '', re.IGNORECASE))
