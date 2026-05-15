@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "08.23.2.C-02 complete — naechste: 08.23.2.C-03 (gatekeeper.py + classify_contact)"
-last_updated: "2026-05-15T06:21:21Z"
+stopped_at: "08.23.2.C-03 complete — naechste: 08.23.2.C-04"
+last_updated: "2026-05-15T06:25:46Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
   completed_phases: 55
   total_plans: 242
-  completed_plans: 223
+  completed_plans: 224
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
-Plan: 02 of ? — COMPLETED
+Plan: 03 of ? — COMPLETED
 Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 03 abgeschlossen:** Konfigurations-Foundation fuer Hysterese-Logik (Req-3) und Foundation-Code-Register (Req-11). config/__init__.py + config/phase_transitions.py: MIN_PHASE_DURATIONS (3 Modi, D-03-Werte 1:1), ALLOWED_TRANSITIONS, FORBIDDEN_TRANSITIONS, MODE_TRANSITION_AUTO, HYSTERESIS_REQUIRED_HINTS=2. scripts/calibrate_phase_durations.py: Read-only Diagnose-Skript, graceful exit ohne Korpus. .planning/04 Entscheidungen/Foundation-Code-Register.md: populate_context_notes-Stub + context_notes-State-Feld fuer Phase 08.23.2.I. 3 Commits: 9718df8, 1445ef6, b40a418.
 
 **Phase 08.23.2.C Plan 02 abgeschlossen:** Alembic Migration 0003 fuer phrases.mode (VARCHAR(20) NOT NULL DEFAULT 'cold_call') + CHECK-Constraint ck_phrases_mode (cold_call|gatekeeper|meeting). database/models.py: Phrase-Klasse um mode-Column erweitert. alembic history zeigt korrekte Chain 0001->0002->0003 (head). DB-Live-Verifikation deferred auf Server (SQLite local). Req-10 erfuellt. 2 Commits: e8717e0, 182f097.
 
