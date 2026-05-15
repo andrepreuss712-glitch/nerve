@@ -1,12 +1,13 @@
 """
 DSGVO-Anonymisierungs-Foundation-Modul fuer NERVE.
-Pipeline-Reihenfolge: Art-9-Filter (Schritt 0) -> Regex (Schritt 1) -> spaCy NER (Schritt 2)
-Phase: 08.23.2.B
+Pipeline-Reihenfolge: Art-9-Filter (Schritt 0) -> Regex (Schritt 1) -> spaCy+GLiNER NER (Schritt 2)
+Phase: 08.23.2.B + 08.23.2.C (GLiNER Union-Voting)
 """
 import os
 import re
 import time
 import threading
+import concurrent.futures
 from typing import Optional, Tuple, Dict, List
 
 # ── Modul-Level-Import: ART9_KEYWORDS (PFLICHT hier — NICHT in _check_art9()) ──────────────
@@ -42,6 +43,34 @@ def _get_nlp():
                     print(f'[ANON] KRITISCH: de_core_news_lg nicht ladbar: {type(e).__name__}')
                     is_pipeline_healthy = False
     return _nlp
+
+
+# ── GLiNER Lazy-Load (Thread-safe Double-Checked Locking) ── Phase 08.23.2.C ─
+
+_gliner_model = None
+_gliner_lock = threading.Lock()
+
+
+def _get_gliner():
+    """Thread-safe lazy load von GLiNER gliner_multi-v2.1.
+    Analog _get_nlp(). Bei Load-Fehler: is_pipeline_healthy=False, return None.
+    GLiNER-Import bleibt innerhalb dieser Funktion (Cross-AI-Finding 1: kein Modul-Level-Import).
+    """
+    global _gliner_model, is_pipeline_healthy
+    if _gliner_model is not None:
+        return _gliner_model
+    with _gliner_lock:
+        if _gliner_model is not None:
+            return _gliner_model
+        try:
+            from gliner import GLiNER
+            _gliner_model = GLiNER.from_pretrained('urchade/gliner_multi-v2.1')
+            print('[ANON] GLiNER gliner_multi-v2.1 geladen')
+        except Exception as e:
+            print(f'[ANON] KRITISCH: GLiNER nicht ladbar: {type(e).__name__}: {e}')
+            is_pipeline_healthy = False
+            _gliner_model = None
+    return _gliner_model
 
 
 # ── Custom Exception ─────────────────────────────────────────────────────────
@@ -198,36 +227,149 @@ def _apply_regex_filter(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple
 
 
 def _apply_ner(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> Tuple[str, str]:
-    """spaCy NER: ersetzt PER/LOC/ORG durch stabile [TYP_X]-Tokens.
-    quality_tier='B' wenn unsichere NER-Treffer (strukturelle Heuristik).
-    HINWEIS: spaCy de_core_news_lg liefert KEINE Confidence-Scores fuer NER (Pitfall 1).
-    quality_tier='B' via: Token-Laenge < 3 Zeichen, keine Grossbuchstaben, Sonderzeichen.
+    """Union-Voting: spaCy OR GLiNER fuer Personen-/Organisations-/Ortsnamen.
+    Recall maximieren — DSGVO-Pflicht (D-01 Anonymisierungs-Pipeline).
+    Review Finding 1: native GLiNER-Offsets bevorzugt, re.finditer() als Fallback.
+    quality_tier='B' wenn unsichere spaCy-Treffer (strukturelle Heuristik).
     """
     tier = 'A'
-    doc = nlp(text)
-    # Offset-basiertes Replacement (Entities von hinten nach vorne um Offset-Shift zu vermeiden)
-    spans = [(ent.start_char, ent.end_char, ent.label_, ent.text) for ent in doc.ents
-             if ent.label_ in ('PER', 'LOC', 'ORG')]
-    # Sortiere von hinten nach vorne
-    spans.sort(key=lambda x: x[0], reverse=True)
-    for start, end, label, ent_text in spans:
-        # Typ-Mapping: PER->PERSON, LOC->LOC, ORG->ORG
-        token_type = 'PERSON' if label == 'PER' else label
-        # quality_tier='B' Heuristik (kein spaCy-Confidence-Score verfuegbar)
-        is_uncertain = (
-            len(ent_text) < 3
-            or not ent_text[0].isupper()
-            or any(c in ent_text for c in ['/', '\\', '@', '#'])
-        )
-        if is_uncertain:
-            tier = 'B'
+    all_spans: List[Tuple[int, int, str, str]] = []  # (start, end, token_type, original_text)
+
+    # spaCy-Treffer (Char-Offsets verfuegbar via ent.start_char / ent.end_char)
+    if nlp:
+        doc = nlp(text)
+        for ent in doc.ents:
+            if ent.label_ in ('PER', 'LOC', 'ORG'):
+                token_type = 'PERSON' if ent.label_ == 'PER' else ent.label_
+                # quality_tier='B' Heuristik (kein spaCy-Confidence-Score verfuegbar)
+                is_uncertain = (
+                    len(ent.text) < 3
+                    or not ent.text[0].isupper()
+                    or any(c in ent.text for c in ['/', '\\', '@', '#'])
+                )
+                if is_uncertain:
+                    tier = 'B'
+                all_spans.append((ent.start_char, ent.end_char, token_type, ent.text))
+
+    # GLiNER-Treffer — native Offsets preferred, re.finditer() als Fallback (Review Finding 1)
+    gliner = _get_gliner()
+    if gliner is not None:
+        try:
+            results = gliner.predict_entities(
+                text,
+                ['person', 'organisation', 'location'],
+                threshold=0.5,
+            )
+            for ent in results:
+                ent_text = ent.get('text', '')
+                if not ent_text:
+                    continue
+                ent_label = ent.get('label', '').lower()
+                if ent_label == 'person':
+                    token_type = 'PERSON'
+                elif ent_label == 'organisation':
+                    token_type = 'ORG'
+                elif ent_label == 'location':
+                    token_type = 'LOC'
+                else:
+                    continue
+
+                # Native Offsets wenn GLiNER sie liefert (Standard-Lib gliner_multi-v2.1)
+                if 'start' in ent and 'end' in ent:
+                    all_spans.append((ent['start'], ent['end'], token_type, ent_text))
+                else:
+                    # Fallback: re.finditer findet ALLE Vorkommen (robuster als text.find-Loop)
+                    for m in re.finditer(re.escape(ent_text), text):
+                        all_spans.append((m.start(), m.end(), token_type, ent_text))
+        except Exception as e:
+            print(f'[ANON] GLiNER predict_entities Fehler: {type(e).__name__}')
+            # Kein Fail-Hard — spaCy-only-Treffer reichen fuer Fallback
+
+    # Dedup: gleiche (start, end, type, text) nur einmal
+    unique_spans = list(set(all_spans))
+    # Sort by start ascending fuer deterministisches Replacement
+    unique_spans.sort(key=lambda x: x[0])
+
+    # Replacement (reverse so spaetere Spans nicht offset-shiften)
+    result = text
+    for start, end, token_type, original in reversed(unique_spans):
         if cache:
-            token = cache.get_or_assign_token(ent_text, token_type)
+            token = cache.get_or_assign_token(original, token_type)
         else:
             # Kein Cache (Ghost-SID, Pitfall 3): anonymer Token ohne Mapping-Persistenz
             token = f'[{token_type}_X]'
-        text = text[:start] + token + text[end:]
-    return (text, tier)
+        result = result[:start] + token + result[end:]
+
+    return (result, tier)
+
+
+def _apply_ner_parallel(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> Tuple[str, str]:
+    """Concurrent spaCy + GLiNER dispatch fuer Latenz-Reduktion (Review Finding 2).
+
+    Wird verwendet wenn Server-GLiNER-P95 > 100ms bei sequentiellem _apply_ner().
+    GIL-Release erlaubt echte Parallelitaet bei I/O-bound-Inferenz.
+    """
+
+    def run_spacy() -> List[Tuple[int, int, str, str]]:
+        if nlp is None:
+            return []
+        doc = nlp(text)
+        return [
+            (e.start_char, e.end_char, 'PERSON' if e.label_ == 'PER' else e.label_, e.text)
+            for e in doc.ents if e.label_ in ('PER', 'LOC', 'ORG')
+        ]
+
+    def run_gliner() -> List[Tuple[int, int, str, str]]:
+        gliner = _get_gliner()
+        if gliner is None:
+            return []
+        spans: List[Tuple[int, int, str, str]] = []
+        try:
+            results = gliner.predict_entities(
+                text,
+                ['person', 'organisation', 'location'],
+                threshold=0.5,
+            )
+            for ent in results:
+                ent_text = ent.get('text', '')
+                if not ent_text:
+                    continue
+                ent_label = ent.get('label', '').lower()
+                if ent_label == 'person':
+                    token_type = 'PERSON'
+                elif ent_label == 'organisation':
+                    token_type = 'ORG'
+                elif ent_label == 'location':
+                    token_type = 'LOC'
+                else:
+                    continue
+                if 'start' in ent and 'end' in ent:
+                    spans.append((ent['start'], ent['end'], token_type, ent_text))
+                else:
+                    for m in re.finditer(re.escape(ent_text), text):
+                        spans.append((m.start(), m.end(), token_type, ent_text))
+        except Exception as e:
+            print(f'[ANON] parallel GLiNER Fehler: {type(e).__name__}')
+        return spans
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        f_spacy = pool.submit(run_spacy)
+        f_gliner = pool.submit(run_gliner)
+        spacy_spans = f_spacy.result()
+        gliner_spans = f_gliner.result()
+
+    all_spans = list(set(spacy_spans + gliner_spans))
+    all_spans.sort(key=lambda x: x[0])
+
+    result = text
+    for start, end, token_type, original in reversed(all_spans):
+        if cache:
+            token = cache.get_or_assign_token(original, token_type)
+        else:
+            token = f'[{token_type}_X]'
+        result = result[:start] + token + result[end:]
+
+    return (result, 'A')
 
 
 def _check_art9(text: str) -> bool:
@@ -386,6 +528,64 @@ def _record_snippet_error() -> None:
         cutoff = now - ROLLING_ERROR_WINDOW_S
         while _error_timestamps and _error_timestamps[0] < cutoff:
             _error_timestamps.pop(0)
+
+
+def extract_entities(text: str, cache=None) -> list:
+    """Gibt rohe NER-Treffer mit Source-Tag zurueck.
+
+    Fuer Konsens-Voting in services/gatekeeper.classify_contact() (D-01 Gatekeeper-Pfad).
+
+    Args:
+        text: Roher Transkript-Text.
+        cache: Optional, nicht verwendet — Signatur konsistent mit anonymize().
+
+    Returns:
+        List[dict]: [{'text': str, 'type': 'PERSON'|'ORG'|'LOC', 'source': 'spacy'|'gliner'}, ...]
+        Leere Liste wenn NER nicht verfuegbar.
+    """
+    entities: list = []
+
+    nlp = _get_nlp()
+    if nlp is not None:
+        try:
+            doc = nlp(text)
+            for ent in doc.ents:
+                if ent.label_ in ('PER', 'LOC', 'ORG'):
+                    entities.append({
+                        'text': ent.text,
+                        'type': 'PERSON' if ent.label_ == 'PER' else ent.label_,
+                        'source': 'spacy',
+                    })
+        except Exception as e:
+            print(f'[ANON] extract_entities spaCy Fehler: {type(e).__name__}')
+
+    gliner = _get_gliner()
+    if gliner is not None:
+        try:
+            results = gliner.predict_entities(
+                text,
+                ['person', 'organisation', 'location'],
+                threshold=0.5,
+            )
+            for ent in results:
+                ent_label = ent.get('label', '').lower()
+                if ent_label == 'person':
+                    token_type = 'PERSON'
+                elif ent_label == 'organisation':
+                    token_type = 'ORG'
+                elif ent_label == 'location':
+                    token_type = 'LOC'
+                else:
+                    continue
+                entities.append({
+                    'text': ent.get('text', ''),
+                    'type': token_type,
+                    'source': 'gliner',
+                })
+        except Exception as e:
+            print(f'[ANON] extract_entities GLiNER Fehler: {type(e).__name__}')
+
+    return entities
 
 
 def get_pipeline_status() -> dict:
