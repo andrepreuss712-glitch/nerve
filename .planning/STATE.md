@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "08.23.2.C-06b abgeschlossen — Migration 0003 Gatekeeper Seed-Insert (10 Phrasen, 4 Buttons), naechste: 08.23.2.C-07"
-last_updated: "2026-05-15T10:00:00Z"
+stopped_at: "08.23.2.C-07 abgeschlossen — PiP-UI Gatekeeper-Modus (Tasks 1-3 committed), Live-Test deferred auf Production. naechste: 08.23.2.C-08"
+last_updated: "2026-05-15T12:00:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
   completed_phases: 55
   total_plans: 242
-  completed_plans: 228
+  completed_plans: 229
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
-Plan: 06b of ? — COMPLETED
+Plan: 07 of ? — COMPLETED
 Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 07 abgeschlossen:** PiP-UI Gatekeeper-Modus. routes/app_routes.py: GET /api/gatekeeper/phrases (filtert mode='gatekeeper', Template-Var-Ersetzung, @login_required). services/deepgram_service.py: manual_mode_toggle Socket-Handler in register_audio_handlers() (Whitelist target|gatekeeper, setzt contact_category + current_mode + Hysterese-Reset, emittet contact_category_update + manual_mode_toggle_ack). static/nerve.css: .pip-uwg-banner, .pip-mode-indicator, .pip-ewb-btn[data-mode-button="gatekeeper"] — alle var(--...) Tokens, 0 Hex. templates/base.html: pip-uwg-banner + pip-mode-indicator DOM eingefuegt. static/pip-launcher.js: Ctrl+G/E Keydown-Handler, _renderGatekeeperButtons() via /api/gatekeeper/phrases, _showUwgBanner(), _wireUwgBannerClose(), Socket-Subscriptions. 3 Commits: 51f83ab, 54dcc7d, 05ba9ef. Task 4 (Live-PiP-Test) deferred — lokale Umgebung (Asset-Loading + Server-Crash) nicht nutzbar; Verifikation auf Production nach Code-Review + Deploy.
 
 **Phase 08.23.2.C Plan 06b abgeschlossen:** Migration 0003 Gatekeeper Seed-Insert. alembic/versions/0003_add_phrases_mode.py: op.bulk_insert mit 10 Gatekeeper-Phrasen (D-05: >=2 Varianten pro 4 Buttons). Button 1 gatekeeper_verbuendeten_bitte: 3 Varianten (Stephan Heinrich + Ulrike Knauer). Button 2 gatekeeper_insider_antwort: 3 Varianten (Tim Taxis + Eduard Klein). Button 3 gatekeeper_voss_label: 2 Varianten (Chris Voss). Button 4 gatekeeper_vornamen_pause: 2 Varianten (Martin Limbeck). Alle Rows: user_id=1 (Admin-MVP), mode='gatekeeper', quality_tier='A'. Texte 1:1 aus Andre-Gate-genehmigter tests/fixtures/gatekeeper_phrases_seed.md. downgrade() loescht Seeds vor drop_column. py_compile OK, Varianten-Verifikation gruen. 1 Commit: 4fb6267.
 

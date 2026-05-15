@@ -1358,5 +1358,5 @@ Plans:
 - [x] 08.23.2.C-05-PLAN.md -- claude_service modus-spezifische Phasen + ki_logik TRIGGER_PHRASES (Req-2, Req-7) ✅ 2026-05-15
 - [x] 08.23.2.C-06-PLAN.md -- services/gatekeeper.py + live_session + Call-Lifecycle + phase_change/UWG Wiring (Req-3,4,5,7,8,11) ✅ 2026-05-15
 - [x] 08.23.2.C-06b-PLAN.md -- Migration 0003 Gatekeeper Seed-Insert (10 Phrasen, 4 Buttons, Req-9) ✅ 2026-05-15
-- [ ] 08.23.2.C-07-PLAN.md -- PiP Ctrl+G/E Toggle + Gatekeeper-Buttons + UWG-Banner (Req-6, Req-8, Req-9) [Checkpoint]
+- [x] 08.23.2.C-07-PLAN.md -- PiP Ctrl+G/E Toggle + Gatekeeper-Buttons + UWG-Banner (Req-6, Req-8, Req-9) ✅ 2026-05-15 [Live-Test deferred → Production]
 - [ ] 08.23.2.C-08-PLAN.md -- Tests: Hysterese, Phase-Classifier (F1>=0.75), Gatekeeper (acc>=0.80), Re-ID<5%, Session-State (Req-2,3,4,5,7,8,11,12,13,14)
