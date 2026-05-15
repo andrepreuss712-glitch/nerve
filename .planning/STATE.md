@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: "08.23.2.C-05 abgeschlossen — Modus-spezifischer Phasen-Klassifikator + TRIGGER_PHRASES, naechste: 08.23.2.C-06"
-last_updated: "2026-05-15T14:00:00Z"
+stopped_at: "08.23.2.C-06 abgeschlossen — Gatekeeper-Core-Service (gatekeeper.py, Session-State, Loops), naechste: 08.23.2.C-06b"
+last_updated: "2026-05-15T09:00:00Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 72
   completed_phases: 55
   total_plans: 242
-  completed_plans: 226
+  completed_plans: 227
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS
-Plan: 05 of ? — COMPLETED
+Plan: 06 of ? — COMPLETED
 Last activity: 2026-05-15
+
+**Phase 08.23.2.C Plan 06 abgeschlossen:** Gatekeeper-Core-Service-Implementation. services/gatekeeper.py: classify_contact (UNION/CONSENSUS-Voting Review Finding 4), _names_match (RapidFuzz fuzzy threshold=80, Deviation: 85 wuerde Meier/Meyer verfehlen), detect_trigger_phrases, detect_uwg_hard_block, apply_hysteresis (3-Bedingungen: Hints+Dwell+Transitions), populate_context_notes (Foundation-Stub). services/live_session.py: 9 Phase-C-Keys in init_session_state() (contact_category, current_mode, context_notes, phase_hint_count, pending_phase, phase_entered_at, call_id, uwg_blocked=False), create_call_for_sid() Helper. services/claude_service.py: UWG-Guard, classify_contact-Wiring, apply_hysteresis+phase_change-CallEvent-Persist, Socket-Events. services/deepgram_service.py: UWG-Guard, detect_trigger_phrases+trigger_phrase_hint-Emit, detect_uwg_hard_block+uwg_blocked=True+uwg_hard_block-Emit. config/__init__.py: Deviation Rule 3 — re-exportiert config.py-Konstanten (repariert 21 pre-existing Testfehler). 3 Commits: 3e01035, 2169854, 3b56814.
 
 **Phase 08.23.2.C Plan 05 abgeschlossen:** Modus-spezifischer Phasen-Klassifikator (Req-2) + Trigger-Phrasen-Data-Layer (Req-7+Req-8). claude_service.py: _PHASE_NAMES_COLD_CALL (6 Phasen), _PHASE_NAMES_MEETING (6 Phasen), _PHASE_NAMES_GATEKEEPER (4 Phasen), _PHASE_NAMES_BY_MODE Hilfs-Mapping. classify_phase() waehlt phase_names + max_phase per mode-Parameter, Range-Validation 1..max_phase (gatekeeper max=4 enforced, T-08.23.2.C-15 mitigiert). PHASE_CLASSIFIER_PROMPT mit {labels}+{mode} Platzhalter. _PHASE_NAMES Backward-Compat-Alias erhalten fuer Analyse-Loop Z.970/974/983/984. ki_logik.py: TRIGGER_PHRASES (18 Eintraege, 14 Brush-Off + 4 UWG), UWG_HARD_BLOCK_PATTERNS (4 Opt-Out-Regex), _phrase_matches() Wrapper. 2 Commits: e751373, bf1b11c.
 
