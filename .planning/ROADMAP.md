@@ -1361,15 +1361,45 @@ Plans:
 - [x] 08.23.2.C-07-PLAN.md -- PiP Ctrl+G/E Toggle + Gatekeeper-Buttons + UWG-Banner (Req-6, Req-8, Req-9) ✅ 2026-05-15 [Live-Test deferred → Production]
 - [ ] 08.23.2.C-08-PLAN.md -- Tests: Hysterese, Phase-Classifier (F1>=0.75), Gatekeeper (acc>=0.80), Re-ID<5%, Session-State (Req-2,3,4,5,7,8,11,12,13,14)
 
-### Phase 08.23.2.C.1: Lokales Development-Setup stabilisieren (INSERTED — 2026-05-19) 🟡
+### Phase 08.23.2.C.1: Staging-Server aufsetzen + Deploy-Workflow Staging→Production (REWRITTEN — 2026-05-19) 🔴
 
-**Goal:** Lokales Test-Setup wieder stabil machen — Server lokal startbar, Login möglich, alle Hauptmenü-Punkte ohne Crash, Live-Assistent öffnet ohne Server-Error, PiP startet. Direkte Folge der Anti-Abrieb-Erkenntnis vom 2026-05-15 Live-Test (Phase-C-Plan-07 Task 4 konnte lokal nicht durchgeführt werden).
+**Goal:** Zweiter Hetzner-Server `staging.getnerve.app` als 1:1-Spiegel von Production. Deploy-Workflow: Code → push → Auto-Deploy auf Staging → Browser-Tests dort → manuelle Freigabe → Push auf Production. Damit fängt jede künftige Phase Bugs auf Staging statt auf Production. Anti-Drift-Erkenntnis Andre 2026-05-19: lokales Windows-SQLite-Setup wird strukturell NIE 1:1-Production-Linux-Postgres-Spiegel sein — Staging ist die strukturelle Lösung, nicht Lokal-Fix. Lokal bleibt "good enough" zum Code-Schreiben.
 
-**Depends on:** Phase 08.23.2.C (Code-Stand — nicht auf completion warten)
-**Komplexität:** 🟡 — mehrere unabhängige Fixes, kein Architektur-Risiko. Cross-AI Pflicht (Foundation mit langfristigen Folgen).
+**Andre-Quote (Pflicht-Lesen für Spec-Author):** "vllt macht es mehr sinn einen testserver jetzt schon aufzusetzen mit den aktuellen live daten. dann werkeln wir immer auf dem testserver und schubsen es dann rüber auf den live server. meist treten ja eh nochmal bugs auf wenn wir von local auf live pushen und weil aus einem mir nicht erkennbaren grund die versionen komplett anders sind oder anders handeln"
+
+**Datenstrategie (Andre-Decision 2026-05-19): Option A — 1:1-Kopie der Production-Postgres-DB auf Staging.** Pre-Launch: DSGVO-konform weil Daten generisch (Andre-Test-Daten + post-Phase-B-anonymisierte Anrufe) + beide Server EU-Frankfurt. **Pflicht-Trigger:** sobald erster externer Early-Access-User registriert → Refresh-Logik muss DSGVO-konform werden (siehe `Nerve-Vault/04 Entscheidungen/NERVE DSGVO Analyse.md` Sektion 8).
+
+**Pflicht-Inputs für Spec-Phase (LESEN BEVOR INTERVIEW STARTET):**
+- `Nerve-Vault/01 Roadmap.md` Eintrag 08.23.2.C.1 (vollständige 11-Tasks-Liste + Akzeptanz-Kriterium + Symptome-Mapping welche durch Staging entblockt werden)
+- `Nerve-Vault/04 Entscheidungen/NERVE DSGVO Analyse.md` Sektion 8 (Staging-Datenstrategie + Pflicht-Trigger)
+- `Nerve-Vault/05 Log.md` Eintrag 2026-05-19 (Drift-Historie + Andre's Anti-Abrieb-Argumentation)
+
+**Kern-Tasks (Detail in Spec-Phase ausarbeiten):**
+1. Hetzner CX22 zweiter Server provisionieren (Frankfurt, Ubuntu 24.04, ~5€/Monat)
+2. DNS-Eintrag `staging.getnerve.app` + SSL via Let's Encrypt
+3. Postgres 16.13 installieren (gleiche Version wie Production), nerve + nerve_test DBs anlegen
+4. nginx + systemd nerve.service deployen analog zu Production
+5. deploy.sh erweitern: TARGET-Parameter (production vs staging), Default = staging
+6. pg_dump-Refresh-Skript scripts/refresh_staging_from_production.sh (manueller Trigger + ggf. nightly Cron)
+7. Sandbox-API-Keys für Staging (separate Anthropic, Deepgram, Stripe-Test-Mode)
+8. Browser-Test-Workflow dokumentiert (nach jedem Staging-Deploy: Test-Checkliste)
+9. Pre-Deploy-Gate vor Production (blockiert wenn Staging rot oder veraltet)
+10. DSGVO-Pflicht-Eintrag verlinken (existiert bereits in Vault Sektion 8)
+11. Mini-Teil: Lokales Setup minimum (Auto-Alembic für SQLite + DB-File-Drift-Schutz, max 1 Tag) — NUR damit Andre lokal Code schreiben kann, keine vollständige Lokal-Fix
+
+**Akzeptanz-Kriterium:**
+1. staging.getnerve.app erreichbar mit gültigem SSL
+2. deploy.sh staging deployt in <5 Min
+3. refresh_staging_from_production.sh synchronisiert DB in <10 Min
+4. Deferred Live-PiP-Test aus Phase 08.23.2.C Plan 07 Task 4 läuft auf Staging durch (Ctrl+G/Ctrl+E/UWG-Banner)
+5. deploy.sh production blockt automatisch wenn Staging rot
+6. DSGVO-Trigger-Eintrag in Vault verlinkt
+7. Lokales Setup minimum: python app.py startet, Alembic-Auto-Hook funktioniert, CSRF-Workaround bleibt
+
+**Depends on:** Phase 08.23.2.C (Code committed) — Live-PiP-Test wird auf Staging nachgeholt
+**Komplexität:** 🔴 — Server-Provisionierung + DSGVO-Datenstrategie + Deploy-Workflow-Änderung = drei unabhängige Hochrisiko-Achsen. Cross-AI Pflicht mit Gemini.
 **Blocker für:** Phase 08.23.2.D + Phase 08.23.2.C Production-Deploy
-**Plans:** TBD
+**Plans:** TBD (Spec-Phase definiert die Plan-Aufteilung)
 
 Plans:
-- [ ] 08.23.2.C.1-01-PLAN.md -- Auto-Alembic beim App-Start (SQLite) + CSRF via FLASK_ENV + landing.html relative URLs
-- [ ] 08.23.2.C.1-02-PLAN.md -- DB-Datei-Drift-Warnung + Live-Assistent-Crash-Diagnose + docs/local-dev.md
+- [ ] TBD nach Spec-Phase
