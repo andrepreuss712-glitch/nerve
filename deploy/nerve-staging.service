@@ -1,0 +1,41 @@
+# ── NERVE Staging systemd Service Unit ───────────────────────────────────────
+# Copy to: /etc/systemd/system/nerve-staging.service
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable nerve-staging
+# Start:   sudo systemctl start nerve-staging
+# Logs:    sudo journalctl -u nerve-staging -f
+
+[Unit]
+Description=NERVE Sales Assistant — STAGING (gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=nerve_app
+Group=nerve_app
+WorkingDirectory=/opt/nerve/app
+
+# Environment — secrets live in /etc/nerve/.env (not in repo)
+EnvironmentFile=/etc/nerve/.env
+
+# gunicorn with gthread worker class (required for Flask-SocketIO threading mode)
+# 1 worker + 4 threads: optimal for CX32 (4 vCPU, 8 GB RAM) with Socket.IO
+ExecStart=/opt/nerve/venv/bin/gunicorn \
+    --worker-class gthread \
+    --workers 1 \
+    --threads 4 \
+    --bind 127.0.0.1:8000 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    app:app
+
+# Restart policy
+Restart=always
+RestartSec=5s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
