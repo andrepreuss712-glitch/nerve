@@ -51,6 +51,12 @@ socketio = SocketIO(app, cors_allowed_origins=CORS_ORIGIN, async_mode='threading
 # Reihenfolge socketio-vor-csrf garantiert SocketIO-WSGI-Level-Interception. (VARIANTE B)
 csrf = CSRFProtect(app)
 
+# Local dev override: WTF_CSRF_ENABLED=False in .env deaktiviert CSRF-Pruefung
+# (analog tests/conftest.py:80). Production-.env hat das NICHT gesetzt → CSRF bleibt aktiv.
+if os.environ.get('WTF_CSRF_ENABLED', 'True').lower() == 'false':
+    app.config['WTF_CSRF_ENABLED'] = False
+    print('[CSRF] DISABLED — local dev mode (WTF_CSRF_ENABLED=False in .env)')
+
 # ── Brute-Force-Schutz (H-20) ─────────────────────────────────────────────────
 # Reihenfolge KRITISCH: (1) ProxyFix(app.wsgi_app) [Wave 2] →
 #                       (2) CSRFProtect(app) [Wave 3] →
