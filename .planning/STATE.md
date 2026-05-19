@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-19T14:32:00.000Z"
+last_updated: "2026-05-19T14:36:00.000Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 73
   completed_phases: 55
   total_plans: 238
-  completed_plans: 223
+  completed_plans: 224
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — EXECUTING
-Plan: 3 of 5 — COMPLETE
+Plan: 4 of 5 — COMPLETE
 Last activity: 2026-05-19
+
+**Phase 08.23.2.C.1 Plan 04 abgeschlossen:** render_as_batch=True in alembic/env.py (REVIEW-MEDIUM-5): context.configure() in run_migrations_online() + run_migrations_offline() — verhindert NotImplementedError bei SQLite ALTER TABLE. Alembic-Auto-Hook in app.py (REVIEW-MEDIUM-4): Python API (AlembicConfig + alembic_command.upgrade) statt subprocess, CWD-unabhaengiger alembic.ini-Pfad via os.path.abspath(__file__), SQLite-only-Check, Postgres-Skip-Log. CSRF-Patch Z.54-58 unveraendert (git diff bestaetigt). 2 Commits: d130e3d, 74bc286.
 
 **Phase 08.23.2.C.1 Plan 03 abgeschlossen:** DB-Sync-Skripte erstellt. scripts/reset_sequences.py: eigenstaendiges Python-Skript (67 Zeilen), verbindet via DATABASE_URL, setzt alle Postgres-Sequences auf GREATEST(MAX(id),1) via PL/pgSQL-DO-Block, idempotent, [DB]-Log-Ausgabe. scripts/refresh_staging_from_production.sh: Bash-Skript mit set -eo pipefail (REVIEW-HIGH-3 Fix), Dump in RAM-Variable + DUMP_SIZE-Check (< 1024 Bytes = ABORT), Bestaetigungs-Prompt [y/N], Pre-Refresh-Backup auf Staging via SSH, SSH-Pipe Production→Staging ohne lokalen Dump (DSGVO-Hygiene), Aufruf reset_sequences.py nach Import. STAGING_IP als Env-Var oder Platzhalter fuer nach Hetzner-Provisionierung. 2 Commits: 20cbac6, 80a22ff.
 
