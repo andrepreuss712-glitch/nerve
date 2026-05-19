@@ -1,29 +1,8 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-19T09:46:39Z",
-  "phase": "08.23.2.C.1",
-  "phase_name": "lokales-development-setup-stabilisieren",
-  "phase_dir": ".planning/phases/08.23.2.C.1-lokales-development-setup-stabilisieren",
-  "plan": 0,
-  "task": 0,
-  "total_tasks": 0,
-  "status": "paused",
-  "completed_tasks": [
-    {"id": 1, "name": "SPEC.md geschrieben (7 Requirements, Ambiguity 0.14)", "status": "done", "commit": "99019d6"}
-  ],
-  "remaining_tasks": [
-    {"id": 2, "name": "/gsd-discuss-phase 08.23.2.C.1", "status": "not_started"},
-    {"id": 3, "name": "/gsd-plan-phase 08.23.2.C.1", "status": "not_started"},
-    {"id": 4, "name": "/gsd-review 08.23.2.C.1 --all (Cross-AI Pflicht)", "status": "not_started"},
-    {"id": 5, "name": "/gsd-execute-phase 08.23.2.C.1", "status": "not_started"}
-  ],
-  "blockers": [],
-  "human_actions_pending": [],
-  "decisions": [
-    {"decision": "CSRF via FLASK_ENV=development statt WTF_CSRF_ENABLED Custom-ENV", "rationale": "Vault sagt Production-Code-Patch zurueckrollen, Flask-Standard-Pattern", "phase": "08.23.2.C.1"},
-    {"decision": "Live-Assistent: UI-only Akzeptanz (crash-freies PiP-Oeffnen)", "rationale": "Kein Mikrofon-Pflicht fuer C.1, Audio-Test deferred to Production", "phase": "08.23.2.C.1"}
-  ],
-  "uncommitted_files": [],
-  "next_action": "/gsd-discuss-phase 08.23.2.C.1 — SPEC.md wird automatisch erkannt",
-  "context_notes": "SPEC.md vollstaendig. 3 der 9 Symptome bereits gefixt (GLiNER req.txt, Backup-Warning C-6b, DB-Drift). Verbleibende 6: Alembic auto-run, CSRF-Pattern, landing.html Links, DB-Drift-Warnung, Live-Assistent Crash, docs/local-dev.md"
+  "timestamp": "2026-05-19T11:55:00Z",
+  "phase": null,
+  "status": "clean",
+  "next_action": "/gsd-spec-phase 08.23.2.C.1 — Staging-Server aufsetzen (siehe Vault-Roadmap)",
+  "context_notes": "Phase 08.23.2.C.1 (Lokales Setup) komplett zurueckgerollt nach Drift-Erkenntnis: GSD hatte am 19.05.2026 versehentlich Spec fuer alten Scope (Lokal-Fix) statt fuer neuen Scope (Staging-Server) geschrieben. Saubere Loesung: WIP-Commit + Verzeichnis geloescht, GSD startet fuer 08.23.2.C.1 mit frischem Staging-Scope. Vault-Roadmap hat den Staging-Scope als C.1 verankert."
 }
