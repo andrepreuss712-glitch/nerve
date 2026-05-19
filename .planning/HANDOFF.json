@@ -1,44 +1,29 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-16T14:15:00.000Z",
-  "phase": "06.2",
-  "phase_name": "auto-einwand-latenz-architektur",
-  "status": "complete_with_followup",
+  "timestamp": "2026-05-19T09:46:39Z",
+  "phase": "08.23.2.C.1",
+  "phase_name": "lokales-development-setup-stabilisieren",
+  "phase_dir": ".planning/phases/08.23.2.C.1-lokales-development-setup-stabilisieren",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Keyword-Matcher Modul + 46 pytest-Tests", "status": "done", "commit": "bda77fe+02d825d"},
-    {"id": 2, "name": "Deepgram-Interim-Pipeline + keyword_einwand_match Emit + UtteranceEnd + mute_mic", "status": "done", "commit": "375faa8"},
-    {"id": 3, "name": "Shared-Lock slot1_variant_busy_until (keyword + analyse_loop)", "status": "done", "commit": "dbdcc36"},
-    {"id": 4, "name": "Frontend keyword_einwand_match + 3s-Dominanz + Latenz-Logs", "status": "done", "commit": "b60d904"},
-    {"id": 5, "name": "trigger-Parameter in streame_auto_variante + Shared-Lock-Doku", "status": "done", "commit": "014e671"}
+    {"id": 1, "name": "SPEC.md geschrieben (7 Requirements, Ambiguity 0.14)", "status": "done", "commit": "99019d6"}
   ],
-  "remaining_tasks": [],
-  "bugs_fixed": [
-    "DEFAULT_KEYWORDS regex character-class statt alternation (bda77fe)",
-    "KEYWORD_TO_PROFILE_ALIASES gegen echte DB verifiziert (bda77fe)",
-    "tuple-unpack get_active_profile() in manual_ewb + analyse_loop fallback (60e743a)",
-    "matched_label liefert Feld-WERT statt Feld-NAME (8599063)",
-    "UtteranceEnd hebt Dedup nicht mehr auf — Feedback-Loop durch EWB-Vorlesen (4691f38)"
+  "remaining_tasks": [
+    {"id": 2, "name": "/gsd-discuss-phase 08.23.2.C.1", "status": "not_started"},
+    {"id": 3, "name": "/gsd-plan-phase 08.23.2.C.1", "status": "not_started"},
+    {"id": 4, "name": "/gsd-review 08.23.2.C.1 --all (Cross-AI Pflicht)", "status": "not_started"},
+    {"id": 5, "name": "/gsd-execute-phase 08.23.2.C.1", "status": "not_started"}
   ],
   "blockers": [],
-  "followup_phase_proposed": {
-    "id": "06.3",
-    "name": "analyse-loop-overload-fix",
-    "reason": "Sekundaerer Feedback-Loop: analyse_loop respektiert Keyword-Dominanz nicht — bei langem EWB-Vorlesen entstehen parallele Claude-Calls die 529 overloaded_error triggern",
-    "root_cause_hypothesis": "state.slot0LastKeywordTyp ist nur frontend-side — backend analyse_loop in claude_service.py prueft nicht ob Keyword-Pipe Slot 0 gerade dominiert",
-    "approach_options": [
-      "A: ls.state['slot0_keyword_active_until'] als Backend-Counterpart zum frontend-marker, analyse_loop skippt Claude-Call wenn aktiv",
-      "B: analyse_loop-Detection nur als Fallback wenn Keyword-Matcher nicht gematcht hat (Keyword = Primary, wie im originalen CONTEXT)",
-      "C: Anthropic 529 Retry-Backoff auch fuer analyse_loop hinzufuegen (streame_manual_ewb_variante hat es schon)"
-    ],
-    "priority": "klein-mittel",
-    "effort": "1-2 Stunden"
-  },
-  "launch_priorities_queue": [
-    {"id": "phase-4.19", "name": "Transkript-Persistierung + Anonymisierungs-Pipeline", "priority": "launch-blocker", "effort": "4-6 Tage"},
-    {"id": "polish-16", "name": "Headset-Pflicht-Modal (DSGVO Cold-Call)", "priority": "launch-blocker", "effort": "klein-mittel"},
-    {"id": "bug-09", "name": "Scoreboard auf /logs/{id}", "priority": "pre-launch", "effort": "klein"},
-    {"id": "06.3", "name": "analyse_loop Overload-Fix (siehe oben)", "priority": "nice-to-have-vor-launch", "effort": "klein-mittel"},
-    {"id": "latency-counter", "name": "Frontend [Latency]-Counter misst falsches Event", "priority": "cosmetic", "effort": "klein"}
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "CSRF via FLASK_ENV=development statt WTF_CSRF_ENABLED Custom-ENV", "rationale": "Vault sagt Production-Code-Patch zurueckrollen, Flask-Standard-Pattern", "phase": "08.23.2.C.1"},
+    {"decision": "Live-Assistent: UI-only Akzeptanz (crash-freies PiP-Oeffnen)", "rationale": "Kein Mikrofon-Pflicht fuer C.1, Audio-Test deferred to Production", "phase": "08.23.2.C.1"}
   ],
-  "next_action": "Waehle: /gsd-plan-phase 06.3 (analyse_loop overload) ODER /gsd-plan-phase 4.19 (Transkript-Persistierung, launch-blocker) ODER POLISH-16 direkt. .continue-here.md in Phase 06.2 hat Repro-Steps + Loesungsansaetze."
+  "uncommitted_files": [],
+  "next_action": "/gsd-discuss-phase 08.23.2.C.1 — SPEC.md wird automatisch erkannt",
+  "context_notes": "SPEC.md vollstaendig. 3 der 9 Symptome bereits gefixt (GLiNER req.txt, Backup-Warning C-6b, DB-Drift). Verbleibende 6: Alembic auto-run, CSRF-Pattern, landing.html Links, DB-Drift-Warnung, Live-Assistent Crash, docs/local-dev.md"
 }
