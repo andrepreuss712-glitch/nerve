@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — READY TO EXECUTE (5 plans, Cross-AI Review PFLICHT vor Execute — 🔴)
-Plan: 0 of 5 — PLANNED
+Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — EXECUTING
+Plan: 1 of 5 — COMPLETE
 Last activity: 2026-05-19
+
+**Phase 08.23.2.C.1 Plan 01 abgeschlossen:** Staging-Artefakte erstellt. scripts/setup_staging.sh: idempotentes Bash-Skript fuer Hetzner CX32 (10 apt-Pakete inkl. jq+apache2-utils, nerve_app System-User, /opt/nerve/-Verzeichnisstruktur inkl. backups/pre-refresh, nerve+nerve_test Postgres-DBs mit psql -tAc Guard). deploy/nerve-staging.service: systemd Unit fuer Staging-Gunicorn (nerve-staging, EnvironmentFile=/etc/nerve/.env). deploy/nginx-staging.conf: HTTP-Basic-Auth Server-Ebene + REVIEW-HIGH-1 Fix (auth_basic off fuer /api/health + /socket.io/) + robots.txt Disallow:/. deploy/nginx-production.conf: statische Datei fuer Plan 02 scp (getnerve.app + www-Redirect, kein auth_basic). RUNBOOK-staging.md: 9-Schritt-Checkliste fuer manuellen Erst-Setup. 2 Commits: 0dde184, 6ada4be.
 
 **Phase 08.23.2.C Plan 08 abgeschlossen:** Test-Suite Phase-Gate. 5 Test-Dateien: tests/test_hysteresis.py (8 Tests, Req-3), tests/test_phase_classifier.py (5+1 Tests, Req-2/4/12, F1-Gate mit 10% Noise FALSIFIZIERBAR, f1>=0.75 && f1<=0.95 Sanity-Cap), tests/test_gatekeeper_classifier.py (12+1 Tests, Req-5/7/8/13, skipif gatekeeper_classifier_corpus.json fehlt), tests/test_anonymization_reid.py (1 Test, Req-14, skipif kein API-Key/GLiNER), tests/test_session_state_phase_c.py (8 Tests, Req-11, Pitfall-3+6). 4 Commits: f371f26, eaaee92, 5708155, c3e21dc. Deviations: init_session_state braucht user_id+org_id, UWG-Phrasen angepasst an tatsaechliche Pattern-Abdeckung, Patch-Target ist claude_client nicht _call_haiku. Pre-existing Failures: MODEL_PIP_AUTOVAR, test_anonymization_perf State-Pollution, test_ewb_pipeline, test_exchange_rates, test_profile_schema_v3, test_qa_pipeline_rueckfrage — alle out-of-scope. Phase-Gate bereit sobald gatekeeper_classifier_corpus.json von Andre erstellt wird.
 
