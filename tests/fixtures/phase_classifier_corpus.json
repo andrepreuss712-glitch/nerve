@@ -1,0 +1,182 @@
+[
+  {
+    "transcript_window": [
+      "Schönen guten Tag, hier ist Markus Brenner von der Brenner Vertriebsberatung.",
+      "Spreche ich mit Herrn Wiegand?",
+      "Sehr schön, dass ich Sie persönlich erreiche."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 1
+  },
+  {
+    "transcript_window": [
+      "Guten Morgen, mein Name ist Tobias Lehmann.",
+      "Äh — ich rufe an aus dem Vertrieb der Nordwest Spedition GmbH.",
+      "Habe ich Frau Köster am Apparat?"
+    ],
+    "mode": "cold_call",
+    "expected_phase": 1
+  },
+  {
+    "transcript_window": [
+      "Hallo, Schenkel ist mein Name, von der CloudPath Systemhaus GmbH.",
+      "Hatte vorhin schon mit Ihrer Kollegin gesprochen — sie meinte, Sie wären der Richtige für IT-Sicherheit.",
+      "Schön, dass es jetzt geklappt hat."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 1
+  },
+  {
+    "transcript_window": [
+      "Ja guten Tag, Eichberger hier, Vertrieb Großkunden bei der Hesselbach Großhandels-KG.",
+      "Ich versuche Sie schon den ganzen Vormittag zu erreichen — bin froh dass es jetzt geklappt hat.",
+      "Sie sind doch Herr Petermann, Einkauf, richtig?"
+    ],
+    "mode": "cold_call",
+    "expected_phase": 1
+  },
+  {
+    "transcript_window": [
+      "Herr Wiegand, ich weiß, Sie haben viel zu tun.",
+      "Stört es Sie, wenn ich Ihnen kurz mein Anliegen schildere?",
+      "Eine Minute — danach wissen Sie, ob Sie weiter mit mir reden wollen oder nicht."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 2
+  },
+  {
+    "transcript_window": [
+      "Herr Petermann, ich mach's kurz.",
+      "Geben Sie mir 30 Sekunden, warum ich konkret bei Ihnen anrufe?",
+      "Und dann entscheiden Sie, ob das für Ihren Einkauf gerade Sinn macht oder nicht."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 2
+  },
+  {
+    "transcript_window": [
+      "Ich bin ehrlich, das ist ein klassischer Akquise-Anruf.",
+      "Geben Sie mir 27 Sekunden — danach wissen Sie, ob das für Ihre IT-Sicherheit relevant ist.",
+      "Wenn nicht, legen Sie einfach auf, alles gut."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 2
+  },
+  {
+    "transcript_window": [
+      "Der Grund meines Anrufs ist konkret folgender:",
+      "Ich habe gesehen, dass Sie letztes Jahr zwei zusätzliche CNC-Anlagen in Betrieb genommen haben.",
+      "In dem Zusammenhang melde ich mich, weil bei wachsenden Maschinenbetrieben ein bestimmtes Thema in der Vertriebsbetreuung immer kritischer wird."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 3
+  },
+  {
+    "transcript_window": [
+      "Ich rufe an, weil mir aufgefallen ist, dass Sie aktuell drei Stellen für Disponenten ausgeschrieben haben.",
+      "Bei Speditionen in Ihrer Größenordnung kommt diese Wachstumsphase oft mit Schmerzen im Vertriebsteam.",
+      "Genau in diesem Spannungsfeld bewege ich mich beruflich."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 3
+  },
+  {
+    "transcript_window": [
+      "Anlass meines Anrufs ist die DORA-Verordnung, die im Januar gegriffen hat.",
+      "Wir sehen seit Wochen, dass IT-Dienstleister wie Sie genau jetzt unter Druck stehen, weil Banken-Kunden plötzlich Compliance-Nachweise einfordern.",
+      "Deshalb bin ich heute dran."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 3
+  },
+  {
+    "transcript_window": [
+      "Wir helfen Maschinenbau-Mittelständlern dabei, neue Vertriebsmitarbeiter in der Hälfte der Zeit zu produktivem Verkauf zu bringen.",
+      "Konkret schauen wir während des echten Telefonats live auf den Anruf und geben dem Berater im richtigen Moment den nächsten Satz vor.",
+      "Drei unserer Kunden in Ihrer Branche haben damit die Einarbeitungszeit von acht Monaten auf vier reduziert."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 4
+  },
+  {
+    "transcript_window": [
+      "Wir unterstützen Speditionen genau in der Wachstumsphase mit KI-gestütztem Coaching für Vertriebsanrufe.",
+      "Ihr Disponent oder Vertriebler bekommt während des Gesprächs live auf dem Bildschirm den richtigen Einwand-Konter eingeblendet.",
+      "Das Ergebnis bei vergleichbaren Speditionen: Termin-Quote in der Kaltakquise verdoppelt."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 4
+  },
+  {
+    "transcript_window": [
+      "Was wir machen: KI-Sparringspartner für Vertriebsteams im IT-Sales.",
+      "Während der Berater telefoniert, hört unsere Lösung mit und schlägt im richtigen Moment die passende Antwort vor — DSGVO-konform, kein Audio-Mitschnitt.",
+      "Gerade für Systemhäuser wie Ihres, die viel über Cold-Akquise wachsen, ist das ein echter Hebel."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 4
+  },
+  {
+    "transcript_window": [
+      "Unser Werkzeug ist quasi ein zweites Paar Ohren für Ihren Außendienst.",
+      "Während Ihr Vertriebsmitarbeiter mit Kunden telefoniert, läuft im Hintergrund eine KI mit, die ihm in Echtzeit hilft — Einwände behandeln, Preise rechtfertigen, nach dem Termin fragen.",
+      "Bei Großhändlern im DACH sehen wir typisch 15 bis 20 Prozent mehr Abschlüsse pro Vertriebler."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 4
+  },
+  {
+    "transcript_window": [
+      "Mich würde mal interessieren — wie läuft das bei Ihnen aktuell mit der Einarbeitung neuer Vertriebler?",
+      "Wie lange dauert es bei Ihnen typischerweise, bis ein Neuer eigenständig Termine generiert?",
+      "Und wo hängt es bei Ihnen am meisten — eher beim Erstkontakt oder beim Closing?"
+    ],
+    "mode": "cold_call",
+    "expected_phase": 5
+  },
+  {
+    "transcript_window": [
+      "Wie sieht denn aktuell Ihre Cold-Akquise aus, was das Coaching neuer Berater angeht?",
+      "Was funktioniert bei Ihnen gut, was läuft eher schwierig?",
+      "Und wer ist bei Ihnen im Haus dafür verantwortlich, dass Berater nach Onboarding wirklich produktiv werden?"
+    ],
+    "mode": "cold_call",
+    "expected_phase": 5
+  },
+  {
+    "transcript_window": [
+      "Wie machen Ihre Außendienstler aktuell die Termin-Vorbereitung — eher CRM-basiert oder noch viel im Kopf?",
+      "Was sind die häufigsten Einwände, an denen Termine bei Ihnen scheitern?",
+      "Und wie messen Sie aktuell, wer im Team gut läuft und wer Unterstützung braucht?"
+    ],
+    "mode": "cold_call",
+    "expected_phase": 5
+  },
+  {
+    "transcript_window": [
+      "Ich schlage vor, wir machen einen kurzen Termin nächste Woche.",
+      "Würde Ihnen Dienstag 14 Uhr oder Donnerstag 10 Uhr besser passen?",
+      "Wir gehen das in 25 Minuten zusammen durch, ich zeige Ihnen konkret, wie das bei vergleichbaren Speditionen aussieht."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 6
+  },
+  {
+    "transcript_window": [
+      "Lassen Sie uns das in einem Gespräch konkret machen.",
+      "Ich schicke Ihnen einen Kalender-Link für nächste Woche — passt Dienstag früh besser oder Donnerstag mittag?",
+      "Dann zeige ich Ihnen live, wie das bei einem Systemhaus in Ihrer Größenordnung läuft."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 6
+  },
+  {
+    "transcript_window": [
+      "Ich würde sagen, wir setzen einen 20-Minuten-Termin auf.",
+      "Wann passt es Ihnen besser — Mittwochnachmittag oder Freitagvormittag?",
+      "Dann bringe ich Ihnen die konkreten Zahlen aus zwei vergleichbaren Maschinenbau-Firmen mit, und Sie entscheiden, ob's einen zweiten Schritt wert ist."
+    ],
+    "mode": "cold_call",
+    "expected_phase": 6
+  }
+]

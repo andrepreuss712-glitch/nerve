@@ -1,0 +1,77 @@
+[
+  {
+    "transcript_window": [
+      "Wiegand, Geschäftsführung, was kann ich für Sie tun?"
+    ],
+    "briefing_ceo_name": "Markus Wiegand",
+    "expected_category": "target"
+  },
+  {
+    "transcript_window": [
+      "Nordwest Spedition, Vorzimmer Geschäftsleitung, mein Name ist Frau Wagner.",
+      "Worum geht es bitte?"
+    ],
+    "briefing_ceo_name": "Sebastian Köster",
+    "expected_category": "gatekeeper"
+  },
+  {
+    "transcript_window": [
+      "CloudPath Systemhaus, hallo?"
+    ],
+    "briefing_ceo_name": "Lars Schenkel",
+    "expected_category": "unknown"
+  },
+  {
+    "transcript_window": [
+      "Petermann hier, Einkauf bei Hesselbach.",
+      "Sind Sie der mit der Industrie-Klebstoff-Anfrage?"
+    ],
+    "briefing_ceo_name": "Holger Petermann",
+    "expected_category": "target"
+  },
+  {
+    "transcript_window": [
+      "Schmidt-Industries, Sekretariat Müller am Apparat.",
+      "Mit wem hätten Sie's denn gerne?"
+    ],
+    "briefing_ceo_name": "Bernhard Schmidt",
+    "expected_category": "gatekeeper"
+  },
+  {
+    "transcript_window": [
+      "Hallo?",
+      "Was kann ich für Sie tun?"
+    ],
+    "briefing_ceo_name": "Andrea Köster",
+    "expected_category": "unknown"
+  },
+  {
+    "transcript_window": [
+      "TechFlow GmbH, Empfang, Larissa Brand.",
+      "Wen darf ich verbinden?"
+    ],
+    "briefing_ceo_name": "Stefan Vollmer",
+    "expected_category": "gatekeeper"
+  },
+  {
+    "transcript_window": [
+      "Yilmaz, Geschäftsführung Yilmaz Trans, schönen guten Tag."
+    ],
+    "briefing_ceo_name": "Emre Yilmaz",
+    "expected_category": "target"
+  },
+  {
+    "transcript_window": [
+      "Heinz Großhandel, Müller hier, Assistenz von Herrn Heinz."
+    ],
+    "briefing_ceo_name": "Wolfgang Heinz",
+    "expected_category": "gatekeeper"
+  },
+  {
+    "transcript_window": [
+      "Maschinenfabrik Berger, guten Tag."
+    ],
+    "briefing_ceo_name": "Christian Berger",
+    "expected_category": "unknown"
+  }
+]
