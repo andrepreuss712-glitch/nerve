@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-19T00:00:00.000Z"
+last_updated: "2026-05-19T14:32:00.000Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 73
   completed_phases: 55
   total_plans: 238
-  completed_plans: 222
+  completed_plans: 223
   percent: 95
 ---
 
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — EXECUTING
-Plan: 2 of 5 — COMPLETE
+Plan: 3 of 5 — COMPLETE
 Last activity: 2026-05-19
+
+**Phase 08.23.2.C.1 Plan 03 abgeschlossen:** DB-Sync-Skripte erstellt. scripts/reset_sequences.py: eigenstaendiges Python-Skript (67 Zeilen), verbindet via DATABASE_URL, setzt alle Postgres-Sequences auf GREATEST(MAX(id),1) via PL/pgSQL-DO-Block, idempotent, [DB]-Log-Ausgabe. scripts/refresh_staging_from_production.sh: Bash-Skript mit set -eo pipefail (REVIEW-HIGH-3 Fix), Dump in RAM-Variable + DUMP_SIZE-Check (< 1024 Bytes = ABORT), Bestaetigungs-Prompt [y/N], Pre-Refresh-Backup auf Staging via SSH, SSH-Pipe Production→Staging ohne lokalen Dump (DSGVO-Hygiene), Aufruf reset_sequences.py nach Import. STAGING_IP als Env-Var oder Platzhalter fuer nach Hetzner-Provisionierung. 2 Commits: 20cbac6, 80a22ff.
 
 **Phase 08.23.2.C.1 Plan 02 abgeschlossen:** deploy.sh auf TARGET=staging|production refactored. TARGET-Pflicht-Parameter (kein Default, kein versehentlicher Prod-Deploy). Production Pre-Deploy-Gate: 3 Checks (status==ok, deployed_at <24h, git_head==LOCAL_HEAD) via jq. Staging-Branch: VPS_HOST=root@<STAGING_IP>, SSH_KEY=~/.ssh/nerve_staging, SERVICE_NAME=nerve-staging. /etc/nerve/.env-Check fuer beide Targets. Service-Unit-scp TARGET-spezifisch ohne 2>/dev/null || true. nginx-Config per scp (nginx-staging.conf / nginx-production.conf). REVIEW-HIGH-2 Fix: .deploy_meta Zeile 182 VOR systemctl restart Zeile 187. api_health() gibt git_head + deployed_at zurueck (liest /opt/nerve/.deploy_meta). .env.staging.example committed. 2 Commits: 9ea3047, 108a88a.
 
