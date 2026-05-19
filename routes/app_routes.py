@@ -1387,6 +1387,23 @@ def api_health():
     import glob
     import time
 
+    # Phase 08.23.2.C.1: Deploy-Meta fuer Staging-Gate (D-06)
+    # Lese beim Request (nicht beim App-Start) — funktioniert ohne App-Neustart
+    deploy_meta_path = '/opt/nerve/.deploy_meta'
+    git_head = None
+    deployed_at = None
+    try:
+        with open(deploy_meta_path, 'r') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line.startswith('GIT_HEAD='):
+                    git_head = _line[len('GIT_HEAD='):]
+                elif _line.startswith('DEPLOYED_AT='):
+                    deployed_at = _line[len('DEPLOYED_AT='):]
+    except (OSError, IOError):
+        # Datei fehlt (lokale Dev-Umgebung) — git_head + deployed_at bleiben None
+        pass
+
     database_url = os.environ.get('DATABASE_URL', '')
     if not database_url.startswith('postgresql'):
         # Local dev / SQLite mode — backup dir not present, skip check entirely
@@ -1428,6 +1445,8 @@ def api_health():
         'backup_age_hours': age_hours,    # float or None
         'pipeline_status': pipeline_status,              # D-08: 'ok' | 'degraded' | 'unavailable'
         'pipeline_error_count_10min': pipeline_error_count,  # D-08 Kat. C: Fehler in 10-Min-Fenster
+        'git_head': git_head,        # Phase 08.23.2.C.1: SHA oder null (lokale Dev)
+        'deployed_at': deployed_at,  # Phase 08.23.2.C.1: ISO-8601 oder null (lokale Dev)
     })
 
 
