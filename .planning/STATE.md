@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-19T14:36:00.000Z"
+stopped_at: checkpoint:human-verify — Task 2 Manueller PiP-Live-Test auf staging.getnerve.app (Req-9) ausstehend
+last_updated: "2026-05-19T15:00:00.000Z"
 last_activity: 2026-05-19
 progress:
   total_phases: 73
@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — EXECUTING
-Plan: 4 of 5 — COMPLETE
+Plan: 5 of 5 — CHECKPOINT (Task 1 complete, Task 2 awaiting human-verify)
 Last activity: 2026-05-19
+
+**Phase 08.23.2.C.1 Plan 05 — Task 1 abgeschlossen, Task 2 Checkpoint ausstehend:** DSGVO Analyse.md §8.3 Staging-Datenstrategie eingefuegt (Vault-Datei, nicht Git-tracked): PFLICHT-TRIGGER erster externer User dokumentiert, refresh_staging_from_production.sh-Verweis, Anonymisierungs-Pflichtfelder. CSRF-Patch Z.54-58 verifiziert: 4 WTF_CSRF_ENABLED-Zeilen, git diff aae9aa8 = 0 Aenderungen (Req-11 bestanden). Commit: 682d7f6. Task 2 (Manueller PiP-Live-Test auf staging.getnerve.app, Req-9) wartet auf checkpoint:human-verify Signal von Andre.
 
 **Phase 08.23.2.C.1 Plan 04 abgeschlossen:** render_as_batch=True in alembic/env.py (REVIEW-MEDIUM-5): context.configure() in run_migrations_online() + run_migrations_offline() — verhindert NotImplementedError bei SQLite ALTER TABLE. Alembic-Auto-Hook in app.py (REVIEW-MEDIUM-4): Python API (AlembicConfig + alembic_command.upgrade) statt subprocess, CWD-unabhaengiger alembic.ini-Pfad via os.path.abspath(__file__), SQLite-only-Check, Postgres-Skip-Log. CSRF-Patch Z.54-58 unveraendert (git diff bestaetigt). 2 Commits: d130e3d, 74bc286.
 
