@@ -26,8 +26,10 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — EXECUTING
-Plan: 1 of 5 — COMPLETE
+Plan: 2 of 5 — COMPLETE
 Last activity: 2026-05-19
+
+**Phase 08.23.2.C.1 Plan 02 abgeschlossen:** deploy.sh auf TARGET=staging|production refactored. TARGET-Pflicht-Parameter (kein Default, kein versehentlicher Prod-Deploy). Production Pre-Deploy-Gate: 3 Checks (status==ok, deployed_at <24h, git_head==LOCAL_HEAD) via jq. Staging-Branch: VPS_HOST=root@<STAGING_IP>, SSH_KEY=~/.ssh/nerve_staging, SERVICE_NAME=nerve-staging. /etc/nerve/.env-Check fuer beide Targets. Service-Unit-scp TARGET-spezifisch ohne 2>/dev/null || true. nginx-Config per scp (nginx-staging.conf / nginx-production.conf). REVIEW-HIGH-2 Fix: .deploy_meta Zeile 182 VOR systemctl restart Zeile 187. api_health() gibt git_head + deployed_at zurueck (liest /opt/nerve/.deploy_meta). .env.staging.example committed. 2 Commits: 9ea3047, 108a88a.
 
 **Phase 08.23.2.C.1 Plan 01 abgeschlossen:** Staging-Artefakte erstellt. scripts/setup_staging.sh: idempotentes Bash-Skript fuer Hetzner CX32 (10 apt-Pakete inkl. jq+apache2-utils, nerve_app System-User, /opt/nerve/-Verzeichnisstruktur inkl. backups/pre-refresh, nerve+nerve_test Postgres-DBs mit psql -tAc Guard). deploy/nerve-staging.service: systemd Unit fuer Staging-Gunicorn (nerve-staging, EnvironmentFile=/etc/nerve/.env). deploy/nginx-staging.conf: HTTP-Basic-Auth Server-Ebene + REVIEW-HIGH-1 Fix (auth_basic off fuer /api/health + /socket.io/) + robots.txt Disallow:/. deploy/nginx-production.conf: statische Datei fuer Plan 02 scp (getnerve.app + www-Redirect, kein auth_basic). RUNBOOK-staging.md: 9-Schritt-Checkliste fuer manuellen Erst-Setup. 2 Commits: 0dde184, 6ada4be.
 

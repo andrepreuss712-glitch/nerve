@@ -1399,7 +1399,7 @@ Plans:
 **Depends on:** Phase 08.23.2.C (Code committed) — Live-PiP-Test wird auf Staging nachgeholt
 **Komplexität:** 🔴 — Server-Provisionierung + DSGVO-Datenstrategie + Deploy-Workflow-Änderung = drei unabhängige Hochrisiko-Achsen. Cross-AI Pflicht mit Gemini.
 **Blocker für:** Phase 08.23.2.D + Phase 08.23.2.C Production-Deploy
-**Plans:** TBD (Spec-Phase definiert die Plan-Aufteilung)
+**Plans:** 5 Plaene | Plan 01 DONE (Staging-Artefakte) | Plan 02 DONE (deploy.sh Refactor + /api/health + .env.staging.example) | Plan 03-05 offen
 
 Plans:
 - [ ] TBD nach Spec-Phase
