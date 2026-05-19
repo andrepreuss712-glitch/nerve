@@ -4,12 +4,12 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-19T09:35:20.146Z"
-last_activity: 2026-05-15
+last_updated: "2026-05-19T00:00:00.000Z"
+last_activity: 2026-05-19
 progress:
   total_phases: 73
   completed_phases: 55
-  total_plans: 233
+  total_plans: 238
   completed_plans: 222
   percent: 95
 ---
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.23.2.C — phasen-klassifikator-gatekeeper-erkennung
+**Current focus:** Phase 08.23.2.C.1 — staging-server-deploy-workflow
 
 ## Current Position
 
-Phase: 08.23.2.C (phasen-klassifikator-gatekeeper-erkennung) — IN PROGRESS (pending gatekeeper corpus)
-Plan: 08 of ? — COMPLETED
-Last activity: 2026-05-15
+Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — READY TO EXECUTE (5 plans, Cross-AI Review PFLICHT vor Execute — 🔴)
+Plan: 0 of 5 — PLANNED
+Last activity: 2026-05-19
 
 **Phase 08.23.2.C Plan 08 abgeschlossen:** Test-Suite Phase-Gate. 5 Test-Dateien: tests/test_hysteresis.py (8 Tests, Req-3), tests/test_phase_classifier.py (5+1 Tests, Req-2/4/12, F1-Gate mit 10% Noise FALSIFIZIERBAR, f1>=0.75 && f1<=0.95 Sanity-Cap), tests/test_gatekeeper_classifier.py (12+1 Tests, Req-5/7/8/13, skipif gatekeeper_classifier_corpus.json fehlt), tests/test_anonymization_reid.py (1 Test, Req-14, skipif kein API-Key/GLiNER), tests/test_session_state_phase_c.py (8 Tests, Req-11, Pitfall-3+6). 4 Commits: f371f26, eaaee92, 5708155, c3e21dc. Deviations: init_session_state braucht user_id+org_id, UWG-Phrasen angepasst an tatsaechliche Pattern-Abdeckung, Patch-Target ist claude_client nicht _call_haiku. Pre-existing Failures: MODEL_PIP_AUTOVAR, test_anonymization_perf State-Pollution, test_ewb_pipeline, test_exchange_rates, test_profile_schema_v3, test_qa_pipeline_rueckfrage — alle out-of-scope. Phase-Gate bereit sobald gatekeeper_classifier_corpus.json von Andre erstellt wird.
 
@@ -718,6 +718,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-19T09:35:20.134Z
+Last session: 2026-05-19T11:28:42.300Z
 Stopped at: context exhaustion at 90% (2026-05-19)
 Resume file: None
