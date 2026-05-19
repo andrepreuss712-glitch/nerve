@@ -1360,3 +1360,16 @@ Plans:
 - [x] 08.23.2.C-06b-PLAN.md -- Migration 0003 Gatekeeper Seed-Insert (10 Phrasen, 4 Buttons, Req-9) ✅ 2026-05-15
 - [x] 08.23.2.C-07-PLAN.md -- PiP Ctrl+G/E Toggle + Gatekeeper-Buttons + UWG-Banner (Req-6, Req-8, Req-9) ✅ 2026-05-15 [Live-Test deferred → Production]
 - [ ] 08.23.2.C-08-PLAN.md -- Tests: Hysterese, Phase-Classifier (F1>=0.75), Gatekeeper (acc>=0.80), Re-ID<5%, Session-State (Req-2,3,4,5,7,8,11,12,13,14)
+
+### Phase 08.23.2.C.1: Lokales Development-Setup stabilisieren (INSERTED — 2026-05-19) 🟡
+
+**Goal:** Lokales Test-Setup wieder stabil machen — Server lokal startbar, Login möglich, alle Hauptmenü-Punkte ohne Crash, Live-Assistent öffnet ohne Server-Error, PiP startet. Direkte Folge der Anti-Abrieb-Erkenntnis vom 2026-05-15 Live-Test (Phase-C-Plan-07 Task 4 konnte lokal nicht durchgeführt werden).
+
+**Depends on:** Phase 08.23.2.C (Code-Stand — nicht auf completion warten)
+**Komplexität:** 🟡 — mehrere unabhängige Fixes, kein Architektur-Risiko. Cross-AI Pflicht (Foundation mit langfristigen Folgen).
+**Blocker für:** Phase 08.23.2.D + Phase 08.23.2.C Production-Deploy
+**Plans:** TBD
+
+Plans:
+- [ ] 08.23.2.C.1-01-PLAN.md -- Auto-Alembic beim App-Start (SQLite) + CSRF via FLASK_ENV + landing.html relative URLs
+- [ ] 08.23.2.C.1-02-PLAN.md -- DB-Datei-Drift-Warnung + Live-Assistent-Crash-Diagnose + docs/local-dev.md
