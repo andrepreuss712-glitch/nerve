@@ -5,7 +5,7 @@
 #
 # Voraussetzungen:
 #   - SSH-Key ~/.ssh/nerve_vps fuer Production (root@178.104.82.166)
-#   - SSH-Key ~/.ssh/nerve_staging fuer Staging (root@<STAGING_IP>)
+#   - SSH-Key ~/.ssh/nerve_staging fuer Staging (root@178.104.245.8)
 #   - pg_dump/psql auf beiden Servern verfuegbar (Postgres installiert)
 #   - STAGING_IP: als Env-Var setzen oder Platzhalter unten ersetzen
 #
@@ -28,7 +28,7 @@ set -eo pipefail
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 PROD_HOST="root@178.104.82.166"
 PROD_SSH_KEY="$HOME/.ssh/nerve_vps"
-STAGING_IP="${STAGING_IP:-<STAGING_IP>}"  # Env-Var oder Platzhalter ersetzen
+STAGING_IP="${STAGING_IP:-178.104.245.8}"  # Env-Var oder Platzhalter ersetzen
 STAGING_HOST="root@${STAGING_IP}"
 STAGING_SSH_KEY="$HOME/.ssh/nerve_staging"
 DB_NAME="nerve"
