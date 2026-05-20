@@ -64,7 +64,7 @@ if [[ "$TARGET" == "production" ]]; then
   SERVICE_NAME="nerve"
 
 elif [[ "$TARGET" == "staging" ]]; then
-  VPS_HOST="root@<STAGING_IP>"
+  VPS_HOST="root@178.104.245.8"
   SSH_KEY="$HOME/.ssh/nerve_staging"
   SERVICE_NAME="nerve-staging"
 
