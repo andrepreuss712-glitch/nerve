@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Executing
-stopped_at: checkpoint:human-verify — Task 2 Manueller PiP-Live-Test auf staging.getnerve.app (Req-9) ausstehend
-last_updated: "2026-05-19T15:00:00.000Z"
-last_activity: 2026-05-19
+status: Blocked
+stopped_at: Phase 08.23.2.C.1 Plan 05 — Checkpoint FAILED. Req-9 deferred to Phase 08.23.2.C.R (Gatekeeper-Modul-Rebuild erforderlich). Phase 08.23.2.C NICHT auf Production deployen.
+last_updated: "2026-05-20T00:00:00.000Z"
+last_activity: 2026-05-20
 progress:
   total_phases: 73
   completed_phases: 55
@@ -21,15 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.23.2.C.1 — staging-server-deploy-workflow
+**Current focus:** Phase 08.23.2.C.R — Gatekeeper-Modul-Rebuild (nach gescheitertem Plan-05-Checkpoint)
 
 ## Current Position
 
-Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — EXECUTING
-Plan: 5 of 5 — CHECKPOINT (Task 1 complete, Task 2 awaiting human-verify)
-Last activity: 2026-05-19
+Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — ABGESCHLOSSEN (Staging-Infrastruktur OK, Req-9 offen)
+Next: Phase 08.23.2.C.R — Gatekeeper-Modul-Rebuild
+Last activity: 2026-05-20
 
-**Phase 08.23.2.C.1 Plan 05 — Task 1 abgeschlossen, Task 2 Checkpoint ausstehend:** DSGVO Analyse.md §8.3 Staging-Datenstrategie eingefuegt (Vault-Datei, nicht Git-tracked): PFLICHT-TRIGGER erster externer User dokumentiert, refresh_staging_from_production.sh-Verweis, Anonymisierungs-Pflichtfelder. CSRF-Patch Z.54-58 verifiziert: 4 WTF_CSRF_ENABLED-Zeilen, git diff aae9aa8 = 0 Aenderungen (Req-11 bestanden). Commit: 682d7f6. Task 2 (Manueller PiP-Live-Test auf staging.getnerve.app, Req-9) wartet auf checkpoint:human-verify Signal von Andre.
+**BLOCKER: Phase 08.23.2.C.1 Plan 05 — Checkpoint FAILED (2026-05-20):** Live-Test auf staging.getnerve.app deckte fundamentalen Architektur-Fehler auf. NERVE Cold-Call ist Single-Speaker (DSGVO-Pflicht) — Klassifikator kann Sekretar nicht hoeren, daher Auto-Erkennung in den ersten 5 Sekunden konzeptuell unmoeglich. Trigger-Phrasen-Erkennung greift nie (Sekretar-Audio nie bei NERVE). Zusaetzlich: 3x Plan-07-Drift (hardcoded Farbe im Vorzimmer-Indikator, Tastaturkuerzel-UX unzugaenglich im Cold-Call, fehlender Default-Modus-Indikator) + Plan-09-Drift (Phrasen-Qualitaet nie gegen echte Sekretar-Interaktionen validiert). CLAUDE.md Punkt 11 Modul-Rewrite-Trigger erfuellt (3+ Pflaster + Architektur-Drift). Req-9 OFFEN → deferred zu Phase 08.23.2.C.R. Req-11 (CSRF) BESTANDEN (682d7f6). Phase 08.23.2.C wird NICHT auf Production deployed. SUMMARY: 08.23.2.C.1-05-SUMMARY.md.
+
+**Phase 08.23.2.C.1 Plan 05 — Task 1 abgeschlossen:** DSGVO Analyse.md §8.3 Staging-Datenstrategie eingefuegt (Vault-Datei, nicht Git-tracked): PFLICHT-TRIGGER erster externer User dokumentiert, refresh_staging_from_production.sh-Verweis, Anonymisierungs-Pflichtfelder. CSRF-Patch Z.54-58 verifiziert: 4 WTF_CSRF_ENABLED-Zeilen, git diff aae9aa8 = 0 Aenderungen (Req-11 bestanden). Commit: 682d7f6.
 
 **Phase 08.23.2.C.1 Plan 04 abgeschlossen:** render_as_batch=True in alembic/env.py (REVIEW-MEDIUM-5): context.configure() in run_migrations_online() + run_migrations_offline() — verhindert NotImplementedError bei SQLite ALTER TABLE. Alembic-Auto-Hook in app.py (REVIEW-MEDIUM-4): Python API (AlembicConfig + alembic_command.upgrade) statt subprocess, CWD-unabhaengiger alembic.ini-Pfad via os.path.abspath(__file__), SQLite-only-Check, Postgres-Skip-Log. CSRF-Patch Z.54-58 unveraendert (git diff bestaetigt). 2 Commits: d130e3d, 74bc286.
 
