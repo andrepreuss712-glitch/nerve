@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Blocked
-stopped_at: Phase 08.23.2.C.1 Plan 05 — Checkpoint FAILED. Req-9 deferred to Phase 08.23.2.C.R (Gatekeeper-Modul-Rebuild erforderlich). Phase 08.23.2.C NICHT auf Production deployen.
+status: Planning
+stopped_at: ""
 last_updated: "2026-05-20T00:00:00.000Z"
 last_activity: 2026-05-20
 progress:
   total_phases: 73
-  completed_phases: 55
+  completed_phases: 56
   total_plans: 238
-  completed_plans: 224
+  completed_plans: 227
   percent: 95
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.23.2.C.R — Gatekeeper-Modul-Rebuild (nach gescheitertem Plan-05-Checkpoint)
+**Current focus:** Phase 08.23.2.C.R — Gatekeeper-Modul-Rebuild planen (Architektur-Rebuild)
 
 ## Current Position
 

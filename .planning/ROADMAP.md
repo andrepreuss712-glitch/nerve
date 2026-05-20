@@ -1361,7 +1361,7 @@ Plans:
 - [x] 08.23.2.C-07-PLAN.md -- PiP Ctrl+G/E Toggle + Gatekeeper-Buttons + UWG-Banner (Req-6, Req-8, Req-9) ✅ 2026-05-15 [Live-Test deferred → Production]
 - [ ] 08.23.2.C-08-PLAN.md -- Tests: Hysterese, Phase-Classifier (F1>=0.75), Gatekeeper (acc>=0.80), Re-ID<5%, Session-State (Req-2,3,4,5,7,8,11,12,13,14)
 
-### Phase 08.23.2.C.1: Staging-Server aufsetzen + Deploy-Workflow Staging→Production (REWRITTEN — 2026-05-19) 🔴
+### Phase 08.23.2.C.1: Staging-Server aufsetzen + Deploy-Workflow Staging→Production ✅ 2026-05-20
 
 **Goal:** Zweiter Hetzner-Server `staging.getnerve.app` als 1:1-Spiegel von Production. Deploy-Workflow: Code → push → Auto-Deploy auf Staging → Browser-Tests dort → manuelle Freigabe → Push auf Production. Damit fängt jede künftige Phase Bugs auf Staging statt auf Production. Anti-Drift-Erkenntnis Andre 2026-05-19: lokales Windows-SQLite-Setup wird strukturell NIE 1:1-Production-Linux-Postgres-Spiegel sein — Staging ist die strukturelle Lösung, nicht Lokal-Fix. Lokal bleibt "good enough" zum Code-Schreiben.
 
@@ -1399,7 +1399,11 @@ Plans:
 **Depends on:** Phase 08.23.2.C (Code committed) — Live-PiP-Test wird auf Staging nachgeholt
 **Komplexität:** 🔴 — Server-Provisionierung + DSGVO-Datenstrategie + Deploy-Workflow-Änderung = drei unabhängige Hochrisiko-Achsen. Cross-AI Pflicht mit Gemini.
 **Blocker für:** Phase 08.23.2.D + Phase 08.23.2.C Production-Deploy
-**Plans:** 5 Plaene | Plan 01 DONE (Staging-Artefakte) | Plan 02 DONE (deploy.sh Refactor + /api/health + .env.staging.example) | Plan 03 DONE (reset_sequences.py + refresh_staging_from_production.sh, REVIEW-HIGH-3 Fix) | Plan 04 DONE (render_as_batch=True alembic/env.py REVIEW-MEDIUM-5 + Alembic-Auto-Hook app.py Python-API REVIEW-MEDIUM-4) | Plan 05 offen
+**Plans:** 5 Plaene abgeschlossen. Req-9 (PiP-Live-Test) deferred → Phase 08.23.2.C.R (Gatekeeper-Rebuild). Staging-Infrastruktur 100% funktional.
 
 Plans:
-- [ ] TBD nach Spec-Phase
+- [x] 08.23.2.C.1-01-PLAN.md -- Staging-Artefakte (setup_staging.sh, nginx-configs, systemd, RUNBOOK) ✅ 2026-05-20
+- [x] 08.23.2.C.1-02-PLAN.md -- deploy.sh Refactor + Production-Gate + /api/health + .env.staging.example ✅ 2026-05-20
+- [x] 08.23.2.C.1-03-PLAN.md -- DB-Sync-Skripte (refresh_staging + reset_sequences, REVIEW-HIGH-3 Fix) ✅ 2026-05-20
+- [x] 08.23.2.C.1-04-PLAN.md -- alembic/env.py render_as_batch + app.py Alembic Python-API-Hook ✅ 2026-05-20
+- [x] 08.23.2.C.1-05-PLAN.md -- DSGVO §8.3 + CSRF-Check ✅ | PiP-Test DEFERRED → 08.23.2.C.R ✅ 2026-05-20
