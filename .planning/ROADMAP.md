@@ -1407,3 +1407,89 @@ Plans:
 - [x] 08.23.2.C.1-03-PLAN.md -- DB-Sync-Skripte (refresh_staging + reset_sequences, REVIEW-HIGH-3 Fix) ✅ 2026-05-20
 - [x] 08.23.2.C.1-04-PLAN.md -- alembic/env.py render_as_batch + app.py Alembic Python-API-Hook ✅ 2026-05-20
 - [x] 08.23.2.C.1-05-PLAN.md -- DSGVO §8.3 + CSRF-Check ✅ | PiP-Test DEFERRED → 08.23.2.C.R ✅ 2026-05-20
+
+### Phase 08.23.2.C.R: Gatekeeper-Modul-Rebuild (INSERTED — 2026-05-21) 🔴
+
+**Goal:** Phase 08.23.2.C komplett umbauen weil Live-Test auf Staging am 2026-05-20 vier kritische Findings aufgedeckt hat (1 KRITISCH Architektur-Spec-Fehler + 3 HIGH). CLAUDE.md Punkt 11 (Fix-vs-Rebuild) Trigger erfüllt. Phase 08.23.2.C ist Code-committed aber Production-Deploy ist eingefroren bis C.R durch ist.
+
+**Andre-Live-Test-Befunde 2026-05-20 (Pflicht-Lesen für Spec-/Plan-Author, siehe `Nerve-Vault/05 Log.md` Eintrag 19+20.05.):**
+
+1. **KRITISCH — Architektur-Spec-Fehler:** Auto-Erkennung Gatekeeper im Single-Speaker-Cold-Call ist konzeptuell unmöglich. NERVE hört im Cold-Call NUR Berater-Stimme (DSGVO-Konstrukt aus `Nerve-Vault/04 Entscheidungen/NERVE DSGVO Analyse.md`). Klassifikator kann den Sekretär nie direkt hören → 12 Sekretär-Trigger-Phrasen aus Phase-C-Recherche-Block-B.6 greifen nie. Drei Cross-AI-Pässe + Code-Review haben die DSGVO-Single-Speaker-Konflikt übersehen (Phase-08.18-Wiederholungs-Pattern: Theorie-Spec gegen Realität nie validiert).
+2. **HIGH — UX-Drift:** Tastaturkürzel Strg+G/E unzugänglich (Berater-Hände am Telefon, plus Strg+G ist Browser-Standard).
+3. **HIGH — CLAUDE.md HART-Regel-Verletzung #4:** "Vorzimmer"-Indikator nutzt hardcoded gelbe Farbe statt CSS-Token aus `static/nerve.css`.
+4. **HIGH — Inhalts-Drift:** 10 Gatekeeper-Phrasen aus Migration 0003 nie gegen Real-Sekretär-Interaktion validiert ("Bettel-Ton, Pseudo-Therapie").
+
+**Spec-Phase abgeschlossen 2026-05-21 (Commit 6346391, Ambiguity 0.13 bei Gate ≤0.20). 9 Requirements gelockt:**
+
+1. Auto-Erkennung löschen — `classify_contact()`, `apply_hysteresis()`, `detect_trigger_phrases()` aus `deepgram_service.py` + `services/gatekeeper.py` raus
+2. UWG vollständig raus — `detect_uwg_hard_block()`, Banner, DOM, CSS, Handler komplett gelöscht. UWG-§7-Erfassung wandert in Block J Outcome-Tracking als Manuell-Status (siehe `Nerve-Vault/01 Roadmap.md` Block J)
+3. Strg+G/E löschen — kein Tastatur-Kürzel mehr
+4. Toggle-Button neben pip-mode-indicator — klickbar via existierendem Socket-Handler `manual_mode_toggle`
+5. Default = Sekretär-Modus beim PiP-Öffnen — `init_session_state()` + `base.html`
+6. call_events bei Mode-Switch — `event_type='mode_switch'`, payload mit 4 Feldern (old_mode/new_mode/timestamp/sid). KEIN visueller Trennstrich im Live-PiP
+7. CSS-Token `--pip-gatekeeper-bg` + `--pip-gatekeeper-text` — `--pipeline-warning-bg` war semantisch falsch
+8. pip-launcher.js Hex-Sweep — Z.1226 + Z.2582 + Z.1710 + Brand-Teal-Vorkommen migriert. SVG-inline-Strokes bleiben (CSS-Cascade greift nicht)
+9. Terminologie "Sekretär/Entscheider" — sichtbare UI-Texte komplett umstellen. `gatekeeper` bleibt nur als Code-Variable
+
+**Out of scope (explizit locked):**
+- Phrasen-Inhalt (→ Phase 08.23.2.C.R.2 = eigene Mini-Phase, Praxis-Recherche durch Claudian + Andre-Filter)
+- cold_call-phrases Re-Seed (→ Phase 08.23.2.C.R.1 = eigene Mini-Phase)
+- SVG-inline-Farben
+- Production-Deploy (eingefroren bis C.R komplett durch + Staging-Live-PiP-Test grün)
+
+**Done-Kriterium (3-Schichten-Verteidigung — Andre-Decision 2026-05-21 nach Live-Test-Bug-Lerneffekt):**
+1. Pytest auf `init_session_state()` — State-Init = `contact_category='gatekeeper'` UND `current_mode='gatekeeper'`
+2. Pytest auf `nlp_ewb_payload()` — Default-State liefert 4 Gatekeeper-Buttons, nicht Standard-EWB
+3. Manueller Browser-Test auf Staging mit Screenshot-Beleg im SUMMARY — PiP öffnen ohne Toggle → Indikator "Sekretär" + 4 Gatekeeper-Buttons sichtbar. Test-Schritte in HUMAN-UAT.md verankern.
+
+Begründung: 20.05.-Live-Test-Bug hätte reinen Pytest bestanden (Daten korrekt, UI kaputt). Drei Schichten weil Datenpfad ≠ Render-Pfad ≠ User-Sicht.
+
+**Anti-Pattern verankert:** vor jeder UI-Phase Pflicht-Live-Test auf Staging bevor Code-Review-Approval. Theoretisches Review reicht nicht.
+
+**Depends on:** Phase 08.23.2.C (Code committed), Phase 08.23.2.C.1 (Staging-Workflow)
+**Komplexität:** 🔴 — DSGVO-relevante Architektur-Korrektur + UI-Rebuild + Cross-AI Pflicht mit Real-Test-Material aus Phase-C-Live-Test
+**Blocker für:** Phase 08.23.2.D + Production-Deploy von Phase 08.23.2.C
+**Spec-Commit:** 6346391
+**Plans:** TBD (folgt aus `/gsd-discuss-phase 08.23.2.C.R`)
+
+### Phase 08.23.2.C.R.1: cold_call-phrases Re-Seed in Production-DB (INSERTED — 2026-05-21) 🟢
+
+**Goal:** Production-DB hat seit Bulk-DELETE in Phase 08.23.2.A 0 cold_call-Phrases. Folge: normale EWB-Buttons (zu_teuer, keine_zeit, etc.) fehlen komplett im Browser. Beobachtungsbefund aus 20.05.-Live-Test. Pflicht vor C.R-Production-Deploy weil PiP ohne EWB-Buttons unbenutzbar.
+
+**Scope:**
+1. Re-Seed-Logik aus Migration 0002 oder Backup wiederherstellen
+2. Mindestens 8 Standard-Themen-Keywords (zu_teuer, keine_zeit, kein_interesse, kein_budget, schicken_sie_unterlagen, anderer_anbieter, brauche_bedenkzeit, nicht_zustaendig) mit jeweils 2-3 Antwort-Varianten
+3. Idempotente Alembic-Migration (skip wenn Reihen bereits existieren)
+4. Staging-DB-Test: nach Migration zeigt PiP im Cold-Call-Modus die EWB-Button-Row mit allen 8 Buttons
+5. Production-Deploy zusammen mit C.R (gleiches Deploy-Fenster)
+
+**Depends on:** Phase 08.23.2.C.R (gleiches Deploy-Fenster)
+**Komplexität:** 🟢 — mechanische Migration, klares Pattern. Cross-AI Skip.
+**Blocker für:** Production-Deploy von Phase 08.23.2.C.R
+
+### Phase 08.23.2.C.R.2: Gatekeeper-Phrasen-Inhalt aus Praxis-Recherche (INSERTED — 2026-05-21) 🟡
+
+**Goal:** Andre-Live-Test 2026-05-20 hat die 10 Gatekeeper-Phrasen aus Migration 0003 als unrealistisch markiert. Phrasen waren aus Verhandlungs-Theorie-Literatur (Heinrich/Voss/Taxis) — nie gegen echte deutsche Sekretärs-Realität validiert. Andre hat selbst keine Cold-Call-Sekretärs-Erfahrung → kann Phrasen nicht aus eigener Real-Daten-Quelle schreiben → KI-Generierung aus Theorie würde gleichen Bettel-Ton produzieren.
+
+**Strategie — Praxis-Recherche statt Theorie:**
+
+Claudian (im Vault) führt gezielte Recherche durch echte Praxis-Quellen (nicht Verhandlungs-Bücher):
+- Deutsche Cold-Call-Coach-YouTube-Videos mit echten Anruf-Mitschnitten
+- Vertriebler-Foren wo Praxis-Skripte geteilt werden (LinkedIn-Posts, Reddit r/sales, Xing-Gruppen)
+- Verkaufs-Coach-Blogs mit Beispiel-Dialogen
+- Stichproben aus DACH-Telefonie-Anbieter-Best-Practice-Material (Placetel/NFON/Sipgate-Blogs)
+
+Claudian liefert 30-40 Vorschläge in 4 Button-Kategorien. Andre wählt pro Button 2-3 finale Phrasen nach Bauchgefühl "Profi-Ton" vs. "Bettel-Ton". Andre-Filter ist Pflicht, kein KI-Auto-Pick.
+
+**Scope:**
+1. Recherche-Dokument `Nerve-Vault/03 Planung/NERVE Gatekeeper-Phrasen Praxis-Recherche YYYY-MM-DD.md` mit Quellen + Vorschlägen
+2. Sparring-Pass mit Andre (~30-45 Min): Andre liest, kommentiert, wählt
+3. Finales Vault-Dokument mit 10 finalen Phrasen (4 Buttons × 2-3 Varianten)
+4. Alembic-Migration 0004 ersetzt 10 Phrasen in `phrases`-Tabelle (mode='gatekeeper')
+5. Pre-Deploy-Smoke-Test: Phrases sind in DB, Buttons zeigen neue Texte
+
+**CLAUDE.md Punkt 13 (Real-Daten-Validation):** Wenn erste EA-Vertriebler im Live-Test sagen "Phrase X funktioniert nicht" → Update-Mechanismus aus C.R wird genutzt. C.R.2 ist Pre-EA-Best-Effort, nicht endgültig.
+
+**Depends on:** Phase 08.23.2.C.R (Production-Deploy, Update-Mechanismus muss live sein)
+**Komplexität:** 🟡 — Recherche-Quellen-Vielfalt + Andre-Filter ist eigener Cross-Check. Cross-AI optional.
+**Blocker für:** keine harten Blocker (Phrasen-Update braucht nicht den Mechanismus aufzuhalten)
