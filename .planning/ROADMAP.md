@@ -1485,7 +1485,7 @@ Claudian liefert 30-40 Vorschläge in 4 Button-Kategorien. Andre wählt pro Butt
 1. Recherche-Dokument `Nerve-Vault/03 Planung/NERVE Gatekeeper-Phrasen Praxis-Recherche YYYY-MM-DD.md` mit Quellen + Vorschlägen
 2. Sparring-Pass mit Andre (~30-45 Min): Andre liest, kommentiert, wählt
 3. Finales Vault-Dokument mit 10 finalen Phrasen (4 Buttons × 2-3 Varianten)
-4. Alembic-Migration 0004 ersetzt 10 Phrasen in `phrases`-Tabelle (mode='gatekeeper')
+4. Alembic-Migration 0005 ersetzt 10 Phrasen in `phrases`-Tabelle (mode='gatekeeper') — Hinweis: ursprünglich als 0004 vorgemerkt, ist auf 0005 verschoben weil Migration 0004 in Phase 08.23.2.C.R den `call_events.event_type`-CHECK-Constraint um `mode_switch` + `mode_initial` erweitert
 5. Pre-Deploy-Smoke-Test: Phrases sind in DB, Buttons zeigen neue Texte
 
 **CLAUDE.md Punkt 13 (Real-Daten-Validation):** Wenn erste EA-Vertriebler im Live-Test sagen "Phrase X funktioniert nicht" → Update-Mechanismus aus C.R wird genutzt. C.R.2 ist Pre-EA-Best-Effort, nicht endgültig.
