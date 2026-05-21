@@ -1450,7 +1450,17 @@ Begründung: 20.05.-Live-Test-Bug hätte reinen Pytest bestanden (Daten korrekt,
 **Komplexität:** 🔴 — DSGVO-relevante Architektur-Korrektur + UI-Rebuild + Cross-AI Pflicht mit Real-Test-Material aus Phase-C-Live-Test
 **Blocker für:** Phase 08.23.2.D + Production-Deploy von Phase 08.23.2.C
 **Spec-Commit:** 6346391
-**Plans:** TBD (folgt aus `/gsd-discuss-phase 08.23.2.C.R`)
+**Plans:** 8 Pläne in 6 Waves
+
+Plans:
+- [ ] 08.23.2.C.R-01-PLAN.md -- Alembic Migration 0004 (batch_alter_table) + Test-Scaffolds
+- [ ] 08.23.2.C.R-02-PLAN.md -- gatekeeper.py Prune + deepgram_service.py UWG/Auto-Erkennung löschen
+- [ ] 08.23.2.C.R-03-PLAN.md -- claude_service.py Auto-Erkennung löschen + live_session.py gatekeeper-Default
+- [ ] 08.23.2.C.R-04-PLAN.md -- mode_switch-INSERT + mode_initial-INSERT
+- [ ] 08.23.2.C.R-05-PLAN.md -- nerve.css Tokens + base.html span→button
+- [ ] 08.23.2.C.R-06-PLAN.md -- pip-launcher.js UWG/Ctrl+G/Hex-Sweep/aria-label/Klick-Handler
+- [ ] 08.23.2.C.R-07-PLAN.md -- Test-Cleanup + alle Acceptance-Greps
+- [ ] 08.23.2.C.R-08-PLAN.md -- Staging-Smoke-Test (checkpoint:human-verify)
 
 ### Phase 08.23.2.C.R.1: cold_call-phrases Re-Seed in Production-DB (INSERTED — 2026-05-21) 🟢
 
