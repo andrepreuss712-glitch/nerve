@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Planning
 stopped_at: ""
-last_updated: "2026-05-22T10:38:00.000Z"
+last_updated: "2026-05-22T10:46:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 73
   completed_phases: 56
   total_plans: 246
-  completed_plans: 229
+  completed_plans: 230
   percent: 93
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 03 abgeschlossen, Plan 04 als naechstes)
-Next: Plan 04 — Test-Cleanup (test_gatekeeper_classifier.py + test_hysteresis.py loeschen, test_phase_classifier.py bereinigen)
+Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 04 abgeschlossen, Plan 05 als naechstes)
+Next: Plan 05 — (naechster Plan in Phase 08.23.2.C.R)
 Last activity: 2026-05-22
+
+**Phase 08.23.2.C.R Plan 04 abgeschlossen:** mode_switch-INSERT mit Skip-Guard in manual_mode_toggle (deepgram_service.py) + mode_initial-INSERT in create_call_for_sid() (live_session.py) — REQ-6 vollstaendig. Skip-Guard: call_id=None -> log + skip (D-04a). mode_initial nach call_id-Write, cid lokal (Pitfall 2). call_id=cid (UUID-String, nicht int — Plan-Annahme Integer war falsch). Non-fatal Exception-Handling in beiden INSERTs. 2 Commits: 2dd791a, fe91d91. SUMMARY: 08.23.2.C.R-04-SUMMARY.md. Decisions: UUID FK (nicht Integer), Skip-Guard korrekt, Whitelist-Security intakt.
 
 **Phase 08.23.2.C.R Plan 03 abgeschlossen:** claude_service.py classify_contact + apply_hysteresis Block (Z.1080-1183, 104 Zeilen) geloescht — REQ-1 vollstaendig (beide Service-Dateien sauber). live_session.py init_session_state(): contact_category='gatekeeper', current_mode='gatekeeper', uwg_blocked Key entfernt — REQ-5 abgeschlossen. Control-Flow-Audit fand zweiten uwg_blocked-Guard in claude_service.py Z.870 (auto-geloescht). test_live_session_gatekeeper.py: Tests auf korrekte init_session_state()-Signatur fixiert, 3 Tests GRUEN. 2 Commits: 007f414, d0dbe55. SUMMARY: 08.23.2.C.R-03-SUMMARY.md. Decisions: REQ-1 abgeschlossen (zweiter Fundort laut RESEARCH.md Pitfall 6), Default gatekeeper nach DSGVO Single-Speaker-Constraint.
 
