@@ -655,9 +655,15 @@ def register_audio_handlers(sio):
             sio.emit('manual_mode_toggle_ack', {'ok': False, 'error': 'invalid category'}, room=sid)
             return
         new_mode = 'gatekeeper' if category == 'gatekeeper' else 'cold_call'
+        _old_cat = None
+        _old_mode = None
+        _call_id = None
         with ls._session_state_lock:
             if sid in ls._session_state:
                 st = ls._session_state[sid].setdefault('state', {})
+                _old_cat = st.get('contact_category')
+                _old_mode = st.get('current_mode')
+                _call_id = st.get('call_id')
                 st['contact_category'] = category
                 st['current_mode'] = new_mode
                 # Reset Hysterese auf neuer Modus
@@ -667,5 +673,36 @@ def register_audio_handlers(sio):
                 import time as _t
                 st['phase_entered_at'] = _t.monotonic()
         print(f"[Phase-C] manual_mode_toggle sid={sid} category={category} new_mode={new_mode}")
+        # D-04a: Skip-Guard — kein INSERT wenn call_id nicht gesetzt (kein aktiver Anruf)
+        if _call_id is None:
+            print(f'[pip] mode_switch: call_id not set, skip event')
+        else:
+            _db_ms = None
+            try:
+                from database.db import SessionLocal as _SL_ms
+                from database.models import CallEvent as _CE_ms
+                import time as _t_ms
+                _db_ms = _SL_ms()
+                try:
+                    _db_ms.add(_CE_ms(
+                        call_id=_call_id,
+                        event_type='mode_switch',
+                        event_ts_ms=int(_t_ms.time() * 1000),
+                        payload={
+                            'old_mode': _old_mode,
+                            'new_mode': new_mode,
+                            'old_category': _old_cat,
+                            'new_category': category,
+                            'timestamp': _t_ms.monotonic(),
+                        },
+                    ))
+                    _db_ms.commit()
+                    print(f'[pip] mode_switch event written: {_old_mode!r} → {new_mode!r}')
+                finally:
+                    _db_ms.close()
+            except Exception as _ms_err:
+                if _db_ms is not None:
+                    _db_ms.rollback()
+                print(f'[pip] mode_switch persist Fehler (non-fatal): {type(_ms_err).__name__}: {_ms_err}')
         sio.emit('contact_category_update', {'category': category, 'mode': new_mode, 'source': 'manual'}, room=sid)
         sio.emit('manual_mode_toggle_ack', {'ok': True, 'category': category, 'mode': new_mode}, room=sid)
