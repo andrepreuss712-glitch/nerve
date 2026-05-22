@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Planning
 stopped_at: ""
-last_updated: "2026-05-22T10:34:00.000Z"
+last_updated: "2026-05-22T10:38:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 73
   completed_phases: 56
   total_plans: 246
-  completed_plans: 228
+  completed_plans: 229
   percent: 93
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 01 abgeschlossen, Plan 02 als naechstes)
-Next: Plan 02 — Wave 0 Test-Cleanup (test_gatekeeper_classifier.py + test_hysteresis.py loeschen, test_phase_classifier.py bereinigen)
+Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 02 abgeschlossen, Plan 03 als naechstes)
+Next: Plan 03 — Wave 1 Test-Cleanup (test_gatekeeper_classifier.py + test_hysteresis.py loeschen, test_phase_classifier.py bereinigen)
 Last activity: 2026-05-22
+
+**Phase 08.23.2.C.R Plan 02 abgeschlossen:** gatekeeper.py auf Single-Function-Stub reduziert (245→17 Zeilen): 6 Auto-Erkennungs-Funktionen + alle Dead Imports geloescht, populate_context_notes() Foundation-Stub unveraendert beibehalten. deepgram_service.py: UWG-Guard (Z.47-49) + Trigger-Phrasen-Detection Block (Req-7) + UWG-Hard-Block-Detection Block (Req-8) geloescht (79 Zeilen). 0 Treffer fuer uwg/detect_trigger_phrases/classify_contact nach Prune. manual_mode_toggle Handler intakt. 2 Commits: 41015f3, f67c52d. SUMMARY: 08.23.2.C.R-02-SUMMARY.md. Decisions: gatekeeper.py bleibt als Datei (D-02a), Dead-Code-Prune nach DSGVO Single-Speaker-Constraint.
 
 **Phase 08.23.2.C.R Plan 01 abgeschlossen:** Alembic Migration 0004 mit batch_alter_table (SQLite-safe) erweitert call_events CHECK-Constraint um mode_switch + mode_initial. Chain 0001->0002->0003->0004 (head). alembic upgrade head Exit-Code 0. Deviation: Migration 0003 hatte pre-existing Bug (op.execute ALTER TABLE ADD CONSTRAINT auf SQLite ungueltig) — per batch_alter_table + idempotente add_column via sa_inspect repariert. Test-Scaffolds: tests/test_live_session_gatekeeper.py (3 Tests, RED), tests/test_mode_switch_event.py (2 Tests, 2 PASSED). 3 Commits: 901fee8, b5cf5c6, 33f75ae. SUMMARY: 08.23.2.C.R-01-SUMMARY.md.
 
