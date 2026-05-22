@@ -452,6 +452,37 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
             if sid in _session_state:
                 _session_state[sid].setdefault('state', {})['call_id'] = cid
         print(f'[live_session] create_call_for_sid: call_id={cid!r} sid={sid!r}')
+        # D-04b: mode_initial-Event — liest aktuellen Modus aus State (nach call_id-Write)
+        with _session_state_lock:
+            _mode_init_state = _session_state.get(sid, {}).get('state', {})
+            _current_mode = _mode_init_state.get('current_mode', 'gatekeeper')
+            _current_cat = _mode_init_state.get('contact_category', 'gatekeeper')
+        _db_mi = None
+        try:
+            from database.db import SessionLocal as _SL_mi
+            from database.models import CallEvent as _CE_mi
+            import time as _t_mi
+            _db_mi = _SL_mi()
+            try:
+                _db_mi.add(_CE_mi(
+                    call_id=cid,
+                    event_type='mode_initial',
+                    event_ts_ms=int(_t_mi.time() * 1000),
+                    payload={
+                        'mode': _current_mode,
+                        'category': _current_cat,
+                        'sid': sid,
+                        'timestamp': _t_mi.monotonic(),
+                    },
+                ))
+                _db_mi.commit()
+                print(f'[live_session] mode_initial event written: call_id={cid!r} mode={_current_mode!r}')
+            finally:
+                _db_mi.close()
+        except Exception as _mi_err:
+            if _db_mi is not None:
+                _db_mi.rollback()
+            print(f'[live_session] mode_initial persist Fehler (non-fatal): {type(_mi_err).__name__}: {_mi_err}')
         return cid
     except Exception as e:
         print(f'[live_session] create_call_for_sid Fehler: {type(e).__name__}: {e}')
