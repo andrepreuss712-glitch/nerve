@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 02 abgeschlossen, Plan 03 als naechstes)
-Next: Plan 03 — Wave 1 Test-Cleanup (test_gatekeeper_classifier.py + test_hysteresis.py loeschen, test_phase_classifier.py bereinigen)
+Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 03 abgeschlossen, Plan 04 als naechstes)
+Next: Plan 04 — Test-Cleanup (test_gatekeeper_classifier.py + test_hysteresis.py loeschen, test_phase_classifier.py bereinigen)
 Last activity: 2026-05-22
+
+**Phase 08.23.2.C.R Plan 03 abgeschlossen:** claude_service.py classify_contact + apply_hysteresis Block (Z.1080-1183, 104 Zeilen) geloescht — REQ-1 vollstaendig (beide Service-Dateien sauber). live_session.py init_session_state(): contact_category='gatekeeper', current_mode='gatekeeper', uwg_blocked Key entfernt — REQ-5 abgeschlossen. Control-Flow-Audit fand zweiten uwg_blocked-Guard in claude_service.py Z.870 (auto-geloescht). test_live_session_gatekeeper.py: Tests auf korrekte init_session_state()-Signatur fixiert, 3 Tests GRUEN. 2 Commits: 007f414, d0dbe55. SUMMARY: 08.23.2.C.R-03-SUMMARY.md. Decisions: REQ-1 abgeschlossen (zweiter Fundort laut RESEARCH.md Pitfall 6), Default gatekeeper nach DSGVO Single-Speaker-Constraint.
 
 **Phase 08.23.2.C.R Plan 02 abgeschlossen:** gatekeeper.py auf Single-Function-Stub reduziert (245→17 Zeilen): 6 Auto-Erkennungs-Funktionen + alle Dead Imports geloescht, populate_context_notes() Foundation-Stub unveraendert beibehalten. deepgram_service.py: UWG-Guard (Z.47-49) + Trigger-Phrasen-Detection Block (Req-7) + UWG-Hard-Block-Detection Block (Req-8) geloescht (79 Zeilen). 0 Treffer fuer uwg/detect_trigger_phrases/classify_contact nach Prune. manual_mode_toggle Handler intakt. 2 Commits: 41015f3, f67c52d. SUMMARY: 08.23.2.C.R-02-SUMMARY.md. Decisions: gatekeeper.py bleibt als Datei (D-02a), Dead-Code-Prune nach DSGVO Single-Speaker-Constraint.
 
