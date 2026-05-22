@@ -352,10 +352,10 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 'is_paused':             False,   # REQ-01
                 'ft_session_id':         None,
                 'session_anrede':        None,
-                # Phase 08.23.2.C — Gatekeeper-State (Req-11, Foundation-Code-Register Eintrag 2)
-                'contact_category':      'unknown',   # 'target' | 'gatekeeper' | 'unknown'
-                'current_mode':          'cold_call', # initial cold_call; ggf. via call_mode ueberschrieben
-                'context_notes':         [],          # Phase 08.23.2.I aktiviert Befuellung
+                # Phase 08.23.2.C.R — Gatekeeper-State (Default: Sekretaer-Modus, DSGVO Single-Speaker)
+                'contact_category':      'gatekeeper', # 'target' | 'gatekeeper' — Default gatekeeper (REQ-5)
+                'current_mode':          'gatekeeper',  # Default gatekeeper; manuell via pip-mode-indicator aenderbar
+                'context_notes':         [],            # Phase 08.23.2.I aktiviert Befuellung
                 # Hysterese-interne Keys (Req-3) — Token-basiert (z.B. 'opener', 'pitch')
                 # HINWEIS: 'current_phase' (Integer) oben ist das alte Phase-04.8-System.
                 # 'phase_hint_count', 'pending_phase', 'phase_entered_at' sind neu fuer Phase-C.
@@ -364,8 +364,6 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 'phase_entered_at':      None,        # monotonic seconds
                 # Call-Record-Referenz (Pitfall 4 — call_id-Provenienz)
                 'call_id':               None,        # UUID nach Call-Insert in create_call_for_sid
-                # UWG §7 Hard-Block Guard (Review Finding 5)
-                'uwg_blocked':           False,       # True nach detect_uwg_hard_block() — stoppt Deepgram+Claude
             },
             # D-04: tracking logs — initialized as per-SID scaffolding for future migration.
             # NOTE (HIGH-2 coexistence): Services still WRITE to module-level globals

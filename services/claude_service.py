@@ -866,10 +866,6 @@ def analyse_loop():
             if sid_state.get('state', {}).get('is_paused', False):
                 continue  # per-SID pause — only skip this SID
 
-            # UWG §7 Guard — Review Finding 5: kein Claude-API-Call nach Hard-Block
-            if sid_state.get('state', {}).get('uwg_blocked'):
-                continue  # keine weitere Verarbeitung nach UWG Hard-Block
-
             # Read per-SID transcript buffer (D-02 — implemented in Task 1 this plan)
             with ls._per_sid_transcript_lock:
                 buf = ls._per_sid_transcript.get(sid, [])
