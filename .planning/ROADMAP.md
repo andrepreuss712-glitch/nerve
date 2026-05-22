@@ -1457,7 +1457,7 @@ Plans:
 - [x] 08.23.2.C.R-02-PLAN.md -- gatekeeper.py Prune + deepgram_service.py UWG/Auto-Erkennung löschen ✅ 2026-05-22
 - [x] 08.23.2.C.R-03-PLAN.md -- claude_service.py Auto-Erkennung löschen + live_session.py gatekeeper-Default ✅ 2026-05-22
 - [x] 08.23.2.C.R-04-PLAN.md -- mode_switch-INSERT + mode_initial-INSERT ✅ 2026-05-22
-- [ ] 08.23.2.C.R-05-PLAN.md -- nerve.css Tokens + base.html span→button
+- [x] 08.23.2.C.R-05-PLAN.md -- nerve.css Tokens + base.html span→button ✅ 2026-05-22
 - [ ] 08.23.2.C.R-06-PLAN.md -- pip-launcher.js UWG/Ctrl+G/Hex-Sweep/aria-label/Klick-Handler
 - [ ] 08.23.2.C.R-07-PLAN.md -- Test-Cleanup + alle Acceptance-Greps
 - [ ] 08.23.2.C.R-08-PLAN.md -- Staging-Smoke-Test (checkpoint:human-verify)

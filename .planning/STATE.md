@@ -4,14 +4,14 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Planning
 stopped_at: ""
-last_updated: "2026-05-22T10:46:00.000Z"
+last_updated: "2026-05-22T10:50:20.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 73
   completed_phases: 56
   total_plans: 246
-  completed_plans: 230
-  percent: 93
+  completed_plans: 231
+  percent: 94
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 04 abgeschlossen, Plan 05 als naechstes)
-Next: Plan 05 — (naechster Plan in Phase 08.23.2.C.R)
+Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 05 abgeschlossen, Plan 06 als naechstes)
+Next: Plan 06 — pip-launcher.js Klick-Handler + Hex-Sweep
 Last activity: 2026-05-22
+
+**Phase 08.23.2.C.R Plan 05 abgeschlossen:** nerve.css: 6 neue CSS-Tokens (pip-gatekeeper-bg/text/bg-hover, pip-bg, badge-default-bg/text) + --btn-primary-text auf #06060a aktualisiert. #pip-mode-indicator Button-Reset (border:none, color:inherit, appearance:none, min-height:32px, cursor:pointer). pip-uwg-banner CSS-Bloecke geloescht (REQ-2). pip-mode-indicator[gatekeeper] Token-Migration von pipeline-warning auf pip-gatekeeper (REQ-7). base.html: pip-uwg-banner div geloescht, span->button Migration fuer pip-mode-indicator mit data-mode=gatekeeper + Sekretar-Label + aria-label (REQ-4). 2 Commits: 68b709e, df25d48. SUMMARY: 08.23.2.C.R-05-SUMMARY.md. Decisions: --btn-primary-text Wert-Update #0D1117->#06060a, aria-label zeigt Ziel-Modus (D-03b).
 
 **Phase 08.23.2.C.R Plan 04 abgeschlossen:** mode_switch-INSERT mit Skip-Guard in manual_mode_toggle (deepgram_service.py) + mode_initial-INSERT in create_call_for_sid() (live_session.py) — REQ-6 vollstaendig. Skip-Guard: call_id=None -> log + skip (D-04a). mode_initial nach call_id-Write, cid lokal (Pitfall 2). call_id=cid (UUID-String, nicht int — Plan-Annahme Integer war falsch). Non-fatal Exception-Handling in beiden INSERTs. 2 Commits: 2dd791a, fe91d91. SUMMARY: 08.23.2.C.R-04-SUMMARY.md. Decisions: UUID FK (nicht Integer), Skip-Guard korrekt, Whitelist-Security intakt.
 
