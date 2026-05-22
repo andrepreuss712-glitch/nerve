@@ -57,7 +57,7 @@
      ═══════════════════════════════════════ */
   --btn-primary-bg-from:  #00D4AA;
   --btn-primary-bg-to:    #00B894;
-  --btn-primary-text:     #0D1117;
+  --btn-primary-text:     #06060a;
   --btn-primary-radius:   9999px;
   --btn-primary-padding:  12px 28px;
   --btn-primary-size:     14px;
@@ -381,6 +381,14 @@
   --success-green:  #22c55e;   /* Save-Toast, Erfolg-Indikatoren */
   --danger-red:     #EF4444;   /* Delete-Buttons, Fehler-Borders */
   --info-blue:      #4899c8;   /* btn-add Basis-Farbe */
+
+  /* Phase 08.23.2.C.R — Gatekeeper-Toggle + PiP-Body + Default-Badge */
+  --pip-gatekeeper-bg: rgba(96, 165, 250, 0.12);
+  --pip-gatekeeper-text: #3b82f6;
+  --pip-gatekeeper-bg-hover: rgba(96, 165, 250, 0.22);
+  --pip-bg: #F8FAFC;
+  --badge-default-bg: rgba(100, 116, 139, 0.08);
+  --badge-default-text: #475569;
 }
 
 
@@ -3069,39 +3077,29 @@ input[type="range"].perf-slider::-moz-range-thumb {
 }
 
 .pip-mode-indicator[data-mode="gatekeeper"] {
-    background-color: var(--pipeline-warning-bg);
-    color: var(--pipeline-warning-text);
+    background-color: var(--pip-gatekeeper-bg);
+    color: var(--pip-gatekeeper-text);
 }
 
-.pip-uwg-banner {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    padding: 8px 12px;
-    background-color: var(--pipeline-error-bg);
-    color: var(--pipeline-error-text);
+/* span→button Migration: Browser-Button-Defaults reset */
+#pip-mode-indicator {
+    border: none;
+    background: var(--glass-bg);
+    font-family: inherit;
+    color: inherit;
+    appearance: none;
+    font-size: 11px;
     font-weight: 600;
-    font-size: 13px;
-    z-index: 100;
-    border-radius: 8px 8px 0 0;
-}
-
-.pip-uwg-banner.is-visible {
-    display: block;
-}
-
-.pip-uwg-banner__close {
-    float: right;
-    background: transparent;
-    color: var(--pipeline-error-text);
-    border: 0;
+    min-height: 32px;
     cursor: pointer;
-    font-size: 14px;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+#pip-mode-indicator:hover {
+    background-color: var(--pip-gatekeeper-bg-hover);
 }
 
 /* Gatekeeper-Button-Set (gleiche Optik wie .pip-ewb-btn aber mit Mode-Indikator) */
 .pip-ewb-btn[data-mode-button="gatekeeper"] {
-    border-color: var(--pipeline-warning-text);
+    border-color: var(--pip-gatekeeper-text);
 }
