@@ -1453,7 +1453,7 @@ Begründung: 20.05.-Live-Test-Bug hätte reinen Pytest bestanden (Daten korrekt,
 **Plans:** 8 Pläne in 6 Waves
 
 Plans:
-- [ ] 08.23.2.C.R-01-PLAN.md -- Alembic Migration 0004 (batch_alter_table) + Test-Scaffolds
+- [x] 08.23.2.C.R-01-PLAN.md -- Alembic Migration 0004 (batch_alter_table) + Test-Scaffolds ✅ 2026-05-22
 - [ ] 08.23.2.C.R-02-PLAN.md -- gatekeeper.py Prune + deepgram_service.py UWG/Auto-Erkennung löschen
 - [ ] 08.23.2.C.R-03-PLAN.md -- claude_service.py Auto-Erkennung löschen + live_session.py gatekeeper-Default
 - [ ] 08.23.2.C.R-04-PLAN.md -- mode_switch-INSERT + mode_initial-INSERT

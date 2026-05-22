@@ -4,14 +4,14 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Planning
 stopped_at: ""
-last_updated: "2026-05-20T00:00:00.000Z"
-last_activity: 2026-05-20
+last_updated: "2026-05-22T10:34:00.000Z"
+last_activity: 2026-05-22
 progress:
   total_phases: 73
   completed_phases: 56
-  total_plans: 238
-  completed_plans: 227
-  percent: 95
+  total_plans: 246
+  completed_plans: 228
+  percent: 93
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.1 (staging-server-deploy-workflow) — ABGESCHLOSSEN (Staging-Infrastruktur OK, Req-9 offen)
-Next: Phase 08.23.2.C.R — Gatekeeper-Modul-Rebuild
-Last activity: 2026-05-20
+Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 01 abgeschlossen, Plan 02 als naechstes)
+Next: Plan 02 — Wave 0 Test-Cleanup (test_gatekeeper_classifier.py + test_hysteresis.py loeschen, test_phase_classifier.py bereinigen)
+Last activity: 2026-05-22
+
+**Phase 08.23.2.C.R Plan 01 abgeschlossen:** Alembic Migration 0004 mit batch_alter_table (SQLite-safe) erweitert call_events CHECK-Constraint um mode_switch + mode_initial. Chain 0001->0002->0003->0004 (head). alembic upgrade head Exit-Code 0. Deviation: Migration 0003 hatte pre-existing Bug (op.execute ALTER TABLE ADD CONSTRAINT auf SQLite ungueltig) — per batch_alter_table + idempotente add_column via sa_inspect repariert. Test-Scaffolds: tests/test_live_session_gatekeeper.py (3 Tests, RED), tests/test_mode_switch_event.py (2 Tests, 2 PASSED). 3 Commits: 901fee8, b5cf5c6, 33f75ae. SUMMARY: 08.23.2.C.R-01-SUMMARY.md.
 
 **BLOCKER: Phase 08.23.2.C.1 Plan 05 — Checkpoint FAILED (2026-05-20):** Live-Test auf staging.getnerve.app deckte fundamentalen Architektur-Fehler auf. NERVE Cold-Call ist Single-Speaker (DSGVO-Pflicht) — Klassifikator kann Sekretar nicht hoeren, daher Auto-Erkennung in den ersten 5 Sekunden konzeptuell unmoeglich. Trigger-Phrasen-Erkennung greift nie (Sekretar-Audio nie bei NERVE). Zusaetzlich: 3x Plan-07-Drift (hardcoded Farbe im Vorzimmer-Indikator, Tastaturkuerzel-UX unzugaenglich im Cold-Call, fehlender Default-Modus-Indikator) + Plan-09-Drift (Phrasen-Qualitaet nie gegen echte Sekretar-Interaktionen validiert). CLAUDE.md Punkt 11 Modul-Rewrite-Trigger erfuellt (3+ Pflaster + Architektur-Drift). Req-9 OFFEN → deferred zu Phase 08.23.2.C.R. Req-11 (CSRF) BESTANDEN (682d7f6). Phase 08.23.2.C wird NICHT auf Production deployed. SUMMARY: 08.23.2.C.1-05-SUMMARY.md.
 
