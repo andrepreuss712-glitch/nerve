@@ -25,16 +25,28 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # mode-Spalte mit server_default='cold_call' — bestehende Zeilen bekommen automatisch 'cold_call'
-    op.add_column(
-        'phrases',
-        sa.Column('mode', sa.String(20), nullable=False, server_default='cold_call'),
-    )
-    # CHECK-Constraint: mode IN ('cold_call', 'gatekeeper', 'meeting')
-    op.execute(
-        "ALTER TABLE phrases ADD CONSTRAINT ck_phrases_mode "
-        "CHECK (mode IN ('cold_call', 'gatekeeper', 'meeting'))"
-    )
+    # mode-Spalte hinzufuegen — idempotent via inspect (Spalte koennte durch app.py-Migration bereits existieren)
+    from sqlalchemy import inspect as sa_inspect
+    from alembic import op as _op
+    conn = _op.get_bind()
+    inspector = sa_inspect(conn)
+    existing_cols = [c['name'] for c in inspector.get_columns('phrases')]
+    if 'mode' not in existing_cols:
+        op.add_column(
+            'phrases',
+            sa.Column('mode', sa.String(20), nullable=False, server_default='cold_call'),
+        )
+    # CHECK-Constraint via batch_alter_table — render_as_batch=True transformiert nur Alembic-Ops,
+    # nicht raw SQL in op.execute(). batch_op.create_check_constraint ist SQLite-safe.
+    # Bestehenden Constraint ignorieren falls er bereits existiert (idempotent).
+    try:
+        with op.batch_alter_table('phrases') as batch_op:
+            batch_op.create_check_constraint(
+                'ck_phrases_mode',
+                "mode IN ('cold_call', 'gatekeeper', 'meeting')",
+            )
+    except Exception:
+        pass  # Constraint bereits vorhanden (idempotent re-run)
 
     # ── Gatekeeper-Seed-Phrases (Phase 08.23.2.C D-05, Req-9) ──────────────────
     # Eingelesen aus tests/fixtures/gatekeeper_phrases_seed.md (Andre-Gate approved in Plan 01).
@@ -136,5 +148,10 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Seed-Daten loeschen vor Schema-Aenderung
     op.execute("DELETE FROM phrases WHERE mode = 'gatekeeper' AND objection_type LIKE 'gatekeeper_%'")
-    op.execute("ALTER TABLE phrases DROP CONSTRAINT IF EXISTS ck_phrases_mode")
+    # CHECK-Constraint via batch_alter_table entfernen (SQLite-safe)
+    with op.batch_alter_table('phrases') as batch_op:
+        try:
+            batch_op.drop_constraint('ck_phrases_mode', type_='check')
+        except Exception:
+            pass  # Constraint existiert nicht (idempotent)
     op.drop_column('phrases', 'mode')
