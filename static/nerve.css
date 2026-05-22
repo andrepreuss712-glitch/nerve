@@ -3063,7 +3063,7 @@ input[type="range"].perf-slider::-moz-range-thumb {
 #pip-briefing-tab-body::-webkit-scrollbar { width: 3px; }
 #pip-briefing-tab-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
 
-/* Phase 08.23.2.C — Gatekeeper-Modus + UWG-Banner */
+/* Phase 08.23.2.C.R — Gatekeeper-Modus */
 
 .pip-mode-indicator {
     display: inline-block;
