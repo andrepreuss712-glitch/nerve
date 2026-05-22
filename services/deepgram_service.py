@@ -44,10 +44,6 @@ def _make_on_message(sid):
             if ls.get_sid_paused(sid):
                 return
 
-            # UWG §7 Guard — Review Finding 5: keine weitere Verarbeitung nach Hard-Block
-            if ls._session_state.get(sid, {}).get('state', {}).get('uwg_blocked'):
-                return
-
             if result.is_final:
                 speaker = ls.stabilize_speaker(sid, _get_speaker(result))
                 line_id = ls.next_line_id(sid)
@@ -114,81 +110,6 @@ def _make_on_message(sid):
                     # Unerwarteter Fehler — Safety: lieber nicht persistieren
                     print(f'[ANON] Unerwarteter Fehler im INPUT-PFAD (sid={sid!r}): {type(_anon_err).__name__}')
                     _text_for_analysis = None
-
-                # ── Req-7: Trigger-Phrasen-Detection (roher Text vor anonymize) ──────
-                # Laeuft pro Final-Transcript-Zeile auf rohem text (Pattern triggern auch
-                # bei teilanonymisierten Inputs, aber roher Text ist zuverlaessiger).
-                try:
-                    from services.gatekeeper import detect_trigger_phrases, detect_uwg_hard_block
-                    _tp_result = detect_trigger_phrases(text)
-                    if _tp_result['matches']:
-                        _tp_sid_state = ls._session_state.get(sid, {}).get('state', {})
-                        _tp_call_id = _tp_sid_state.get('call_id')
-                        for _tp_cat in _tp_result['matches']:
-                            sio.emit('trigger_phrase_hint', {
-                                'category': _tp_cat,
-                                'phrase': text[:200],
-                            }, room=sid)
-                        # call_events als reaction (best-effort, schweigt bei DB-Fehler)
-                        if _tp_call_id:
-                            try:
-                                from database.db import SessionLocal as _SL_tp
-                                from database.models import CallEvent as _CE_tp
-                                _db_tp = _SL_tp()
-                                try:
-                                    _db_tp.add(_CE_tp(
-                                        call_id=_tp_call_id,
-                                        event_type='reaction',
-                                        event_ts_ms=int(time.time() * 1000),
-                                        payload={
-                                            'type': 'trigger_phrase',
-                                            'categories': _tp_result['matches'],
-                                            'phrase': text[:200],
-                                        },
-                                    ))
-                                    _db_tp.commit()
-                                finally:
-                                    _db_tp.close()
-                            except Exception as _tp_db_err:
-                                print(f'[deepgram] trigger_phrase persist Fehler: {type(_tp_db_err).__name__}')
-                except Exception as _tp_err:
-                    print(f'[deepgram] trigger_phrase detect Fehler: {type(_tp_err).__name__}')
-
-                # ── Req-8: UWG §7 Hard-Block-Detection ──────────────────────────────
-                # Hard-Block-Check NACH Trigger-Phrasen (hard_block-Phrasen sind Subset
-                # von TRIGGER_PHRASES, also ggf. Doppel-Emit — fachlich gewollt).
-                try:
-                    if detect_uwg_hard_block(text):
-                        # uwg_blocked=True setzen — verhindert weitere Verarbeitung ab naechstem Tick
-                        with ls._session_state_lock:
-                            if sid in ls._session_state:
-                                ls._session_state[sid].setdefault('state', {})['uwg_blocked'] = True
-                        print(f'[deepgram] UWG Hard-Block erkannt, uwg_blocked=True (sid={sid!r})')
-                        # In call_events persistieren
-                        _uwg_call_id = ls._session_state.get(sid, {}).get('state', {}).get('call_id')
-                        if _uwg_call_id:
-                            try:
-                                from database.db import SessionLocal as _SL_uwg
-                                from database.models import CallEvent as _CE_uwg
-                                _db_uwg = _SL_uwg()
-                                try:
-                                    _db_uwg.add(_CE_uwg(
-                                        call_id=_uwg_call_id,
-                                        event_type='reaction',
-                                        event_ts_ms=int(time.time() * 1000),
-                                        payload={'type': 'uwg_hard_block', 'phrase': text[:200]},
-                                    ))
-                                    _db_uwg.commit()
-                                finally:
-                                    _db_uwg.close()
-                            except Exception as _uwg_db_err:
-                                print(f'[deepgram] uwg_hard_block persist Fehler: {type(_uwg_db_err).__name__}')
-                        # Socket-Event fuer PiP-Banner (Plan 07)
-                        sio.emit('uwg_hard_block', {'phrase': text[:200]}, room=sid)
-                        # Nach Emit: return — kein weiteres Processing (Guard oben faengt naechste Iteration ab)
-                        return
-                except Exception as _uwg_err:
-                    print(f'[deepgram] uwg_hard_block detect Fehler: {type(_uwg_err).__name__}')
 
                 # ── H-9: akkumuliere echte STT-Sekunden ──────────────────────
                 _dur = getattr(getattr(result, 'metadata', None), 'duration', 0.0) or 0.0
