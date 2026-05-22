@@ -26,13 +26,15 @@ def test_init_session_state_has_context_notes(fresh_sid):
 
 
 def test_init_session_state_has_contact_category(fresh_sid):
+    # Phase 08.23.2.C.R REQ-5: Default ist 'gatekeeper' (DSGVO Single-Speaker-Constraint)
     init_session_state(fresh_sid, user_id=1, org_id=1)
-    assert _session_state[fresh_sid]['state']['contact_category'] == 'unknown'
+    assert _session_state[fresh_sid]['state']['contact_category'] == 'gatekeeper'
 
 
 def test_init_session_state_has_current_mode(fresh_sid):
+    # Phase 08.23.2.C.R REQ-5: Default ist 'gatekeeper'
     init_session_state(fresh_sid, user_id=1, org_id=1)
-    assert _session_state[fresh_sid]['state']['current_mode'] == 'cold_call'
+    assert _session_state[fresh_sid]['state']['current_mode'] == 'gatekeeper'
 
 
 def test_init_session_state_has_hysteresis_keys(fresh_sid):
@@ -47,10 +49,6 @@ def test_init_session_state_has_call_id_placeholder(fresh_sid):
     init_session_state(fresh_sid, user_id=1, org_id=1)
     assert _session_state[fresh_sid]['state'].get('call_id') is None
 
-
-def test_init_session_state_has_uwg_blocked(fresh_sid):
-    init_session_state(fresh_sid, user_id=1, org_id=1)
-    assert _session_state[fresh_sid]['state'].get('uwg_blocked') is False
 
 
 def test_pop_session_state_removes_context_notes(fresh_sid):

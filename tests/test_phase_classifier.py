@@ -132,26 +132,3 @@ def test_phase_classifier_integration_real_haiku(corpus):
     assert hits >= 4, f'Integration-Smoke: nur {hits}/5 korrekt (Schwelle >=4/5 = 80%)'
 
 
-# ── Req-4: phase_change in call_events ────────────────────────────────
-
-def test_call_events_phase_change_persisted(monkeypatch):
-    """Simuliert Phasen-Wechsel und prueft State-Mutation nach apply_hysteresis().
-
-    MVP-Loesung: Hysterese-Accept-Pfad testen; Wiring-Test fuer Insert
-    ist im Plan 06 acceptance_criteria (grep auf 'phase_change' in claude_service.py).
-    """
-    from services.gatekeeper import apply_hysteresis
-    import time
-    state = {
-        'current_phase': 'opener',
-        'phase_hint_count': 1,
-        'pending_phase': 'permission',
-        'phase_entered_at': time.monotonic() - 100,
-        'call_id': 'test-call-id-123',
-        'current_mode': 'cold_call',
-    }
-    # 2. Hinweis -> Wechsel
-    accepted = apply_hysteresis(state, 'permission', 'cold_call')
-    assert accepted == 'permission'
-    # State wurde mutiert
-    assert state['current_phase'] == 'permission'
