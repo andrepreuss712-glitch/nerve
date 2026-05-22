@@ -1223,7 +1223,7 @@
       + '<div style="font-size:13px;color:var(--page-text-muted);margin-bottom:16px">Die Änderung gilt sonst nur für diesen Call.</div>'
       + '<div style="display:flex;gap:10px;justify-content:center">'
       + '<button id="lnr-save-no" style="padding:8px 20px;border:1.5px solid var(--glass-border);border-radius:8px;background:none;color:var(--page-text-color);cursor:pointer;font-size:13px">Nur dieser Call</button>'
-      + '<button id="lnr-save-yes" style="padding:8px 20px;border:none;border-radius:8px;background:#00D4AA;color:#06060a;cursor:pointer;font-weight:700;font-size:13px">Im Profil speichern</button>'
+      + '<button id="lnr-save-yes" style="padding:8px 20px;border:none;border-radius:8px;background:#00D4AA;color:var(--btn-primary-text);cursor:pointer;font-weight:700;font-size:13px">Im Profil speichern</button>'
       + '</div></div>';
     document.body.appendChild(overlay);
 
@@ -1707,7 +1707,7 @@
     // Body styles — 06.1-r2 CLEANUP: Slider raus, solide slate-50 Background wieder
     var body = pipWindow.document.body;
     body.style.margin = '0';
-    body.style.background = '#F8FAFC';
+    body.style.background = 'var(--pip-bg)';
     body.style.color = 'var(--page-text-color,#e8ecf4)';
     body.style.fontFamily = "'Inter',sans-serif";
     body.style.display = 'flex';
@@ -2439,8 +2439,11 @@
     var indicator = pipEl('pip-mode-indicator');
     if (indicator) {
       indicator.dataset.mode = mode;
-      var label = (mode === 'gatekeeper') ? 'Vorzimmer' : (mode === 'meeting') ? 'Meeting' : 'Cold-Call';
+      var label = (mode === 'gatekeeper') ? 'Sekretär' : (mode === 'meeting') ? 'Meeting' : 'Entscheider';
       indicator.textContent = label;
+      // Dynamisches aria-label zeigt Ziel-Modus (D-03b): "Modus wechseln zu X"
+      indicator.setAttribute('aria-label',
+        'Modus wechseln zu ' + ((mode === 'gatekeeper') ? 'Entscheider' : 'Sekretär'));
     }
     if (category === 'gatekeeper') {
       _renderGatekeeperButtons();
@@ -2553,7 +2556,7 @@
       'Konkurrenz': 'background:rgba(168,85,247,0.15);color:#a855f7',
       'Timing': 'background:rgba(107,114,128,0.15);color:#6B7280'
     };
-    return (colors[typ] || 'background:rgba(255,255,255,0.1);color:#c5c9d4') + ';font-size:11px;padding:2px 8px;border-radius:9999px';
+    return (colors[typ] || 'background:var(--badge-default-bg);color:var(--badge-default-text)') + ';font-size:11px;padding:2px 8px;border-radius:9999px';
   }
 
   function _highlightEwbButton(typ) {
@@ -3462,5 +3465,21 @@
       e.returnValue = '';
     }
   });
+
+  // ── Phase 08.23.2.C.R: Klick-Handler fuer pip-mode-indicator Toggle-Button (300ms Throttle) ──
+  var _modeBtnThrottle = 0;
+  var _modeBtn = document.getElementById('pip-mode-indicator');
+  if (_modeBtn) {
+    _modeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var _now = Date.now();
+      if (_now - _modeBtnThrottle < 300) { return; }
+      _modeBtnThrottle = _now;
+      var newCategory = (state.contactCategory === 'gatekeeper') ? 'target' : 'gatekeeper';
+      if (state.socket && state.socket.emit) {
+        state.socket.emit('manual_mode_toggle', { category: newCategory });
+      }
+    });
+  }
 
 })();
