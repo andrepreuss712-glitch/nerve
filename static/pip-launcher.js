@@ -2410,17 +2410,13 @@
       }
     });
 
-    // ── Phase 08.23.2.C — Gatekeeper + UWG Socket-Subscriptions ─────────────
+    // ── Phase 08.23.2.C.R — Gatekeeper Socket-Subscriptions ─────────────────
     state.socket.on('contact_category_update', function (data) {
       _updateContactCategory(data.category, data.mode);
     });
 
     state.socket.on('phase_change', function (data) {
       console.log('[pip] phase_change', data);
-    });
-
-    state.socket.on('uwg_hard_block', function (data) {
-      _showUwgBanner(data && data.phrase);
     });
 
     state.socket.on('trigger_phrase_hint', function (data) {
@@ -2488,28 +2484,6 @@
     // Zurueck zu den Standard-EWB-Buttons aus dem Profil
     _renderEwbButtons();
   }
-
-  function _showUwgBanner(phrase) {
-    var banner = document.getElementById('pip-uwg-banner');
-    var textEl = document.getElementById('pip-uwg-banner-text');
-    if (!banner) return;
-    if (textEl) {
-      textEl.textContent = 'UWG §7: "' + String(phrase || '').slice(0, 100) + '" erkannt – DSGVO/UWG-Risiko, Anruf zeitnah höflich beenden.';
-    }
-    banner.classList.add('is-visible');
-  }
-
-  // UWG-Banner Close-Button (wired at DOM-ready, works both in main doc and PiP window)
-  function _wireUwgBannerClose() {
-    var bannerClose = document.getElementById('pip-uwg-banner-close');
-    if (bannerClose) {
-      bannerClose.addEventListener('click', function () {
-        var banner = document.getElementById('pip-uwg-banner');
-        if (banner) banner.classList.remove('is-visible');
-      });
-    }
-  }
-  _wireUwgBannerClose();
 
   function _renderSlotResult(slot, result) {
     var body = pipEl('pip-slot-body-' + slot);
@@ -3486,32 +3460,6 @@
     if (state.micStarted) {
       e.preventDefault();
       e.returnValue = '';
-    }
-  });
-
-  // ── Phase 08.23.2.C — Ctrl+G / Ctrl+E Keyboard-Shortcuts (Req-6) ─────────
-  // Ctrl+G = manuell auf Gatekeeper-Modus wechseln
-  // Ctrl+E = manuell auf Target-Modus zurueck (E = Entscheider)
-  // Skip wenn User in einem Input/Textarea/contentEditable tippt.
-  document.addEventListener('keydown', function (ev) {
-    if (!(ev.ctrlKey || ev.metaKey)) return;
-    var category = null;
-    if (ev.key === 'g' || ev.key === 'G') {
-      category = 'gatekeeper';
-    } else if (ev.key === 'e' || ev.key === 'E') {
-      category = 'target';
-    } else {
-      return;
-    }
-    ev.preventDefault();
-    // Skip wenn User in einem Eingabefeld tippt (Briefing-Editor etc.)
-    var tag = ((ev.target && ev.target.tagName) || '').toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || (ev.target && ev.target.isContentEditable)) {
-      return;
-    }
-    if (state.socket && state.socket.emit) {
-      state.socket.emit('manual_mode_toggle', { category: category });
-      console.log('[pip] manual_mode_toggle emitted:', category);
     }
   });
 
