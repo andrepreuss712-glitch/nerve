@@ -1459,7 +1459,7 @@ Plans:
 - [x] 08.23.2.C.R-04-PLAN.md -- mode_switch-INSERT + mode_initial-INSERT ✅ 2026-05-22
 - [x] 08.23.2.C.R-05-PLAN.md -- nerve.css Tokens + base.html span→button ✅ 2026-05-22
 - [x] 08.23.2.C.R-06-PLAN.md -- pip-launcher.js UWG/Ctrl+G/Hex-Sweep/aria-label/Klick-Handler ✅ 2026-05-22
-- [ ] 08.23.2.C.R-07-PLAN.md -- Test-Cleanup + alle Acceptance-Greps
+- [x] 08.23.2.C.R-07-PLAN.md -- Test-Cleanup + alle Acceptance-Greps ✅ 2026-05-22
 - [ ] 08.23.2.C.R-08-PLAN.md -- Staging-Smoke-Test (checkpoint:human-verify)
 
 ### Phase 08.23.2.C.R.1: cold_call-phrases Re-Seed in Production-DB (INSERTED — 2026-05-21) 🟢

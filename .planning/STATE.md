@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Planning
 stopped_at: ""
-last_updated: "2026-05-22T11:00:00.000Z"
+last_updated: "2026-05-22T11:03:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 73
   completed_phases: 56
   total_plans: 246
-  completed_plans: 232
+  completed_plans: 233
   percent: 94
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 06 abgeschlossen, Plan 07 als naechstes)
-Next: Plan 07 — naechster Plan in Phase 08.23.2.C.R
+Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 07 abgeschlossen, Plan 08 als naechstes)
+Next: Plan 08 — naechster Plan in Phase 08.23.2.C.R
 Last activity: 2026-05-22
+
+**Phase 08.23.2.C.R Plan 07 abgeschlossen:** Test-Cleanup: test_gatekeeper_classifier.py + test_hysteresis.py geloescht. test_phase_classifier.py: apply_hysteresis Import + test_call_events_phase_change_persisted entfernt. test_session_state_phase_c.py: uwg_blocked-Test geloescht, contact_category/current_mode auf 'gatekeeper' korrigiert (REQ-5 Compliance). test_mode_initial_db.py erstellt: Behavioral-Test fuer mode_initial DB-INSERT (REQ-6 Nachweis) via database.db.SessionLocal Patch. nerve.css: UWG-Banner Kommentar-Residue bereinigt (REQ-2). Alle 8 SPEC.md Acceptance-Greps PASS. 493 Tests PASS, 17 pre-existing Failures unveraendert. 2 Commits: 3c3d118, f76840e. SUMMARY: 08.23.2.C.R-07-SUMMARY.md. Decisions: database.db.SessionLocal Patch-Strategie fuer lokalen Import.
 
 **Phase 08.23.2.C.R Plan 06 abgeschlossen:** pip-launcher.js: uwg_hard_block Socket-Listener + _showUwgBanner() + _wireUwgBannerClose() + Ctrl+G/E keydown-Handler geloescht (REQ-2, REQ-3). 3 Hex-Werte durch CSS-Tokens ersetzt: color:#06060a->var(--btn-primary-text), #F8FAFC->var(--pip-bg), rgba(255,255,255,0.1);color:#c5c9d4->var(--badge-default-bg);var(--badge-default-text) (REQ-8). _updateContactCategory(): 'Vorzimmer'->'Sekretar', 'Cold-Call'->'Entscheider', aria-label dynamisch via setAttribute (REQ-9, D-03b). Klick-Handler auf #pip-mode-indicator mit 300ms Throttle + stopPropagation + manual_mode_toggle emit (REQ-4, D-03i). state.contactCategory als semantisch korrekter Category-Toggle-Key. 2 Commits: 059acc3, 807e4b4. SUMMARY: 08.23.2.C.R-06-SUMMARY.md. Decisions: state.contactCategory fuer Toggle-Check (nicht state.currentMode).
 
