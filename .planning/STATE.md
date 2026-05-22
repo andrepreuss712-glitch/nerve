@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Planning
 stopped_at: ""
-last_updated: "2026-05-22T10:50:20.000Z"
+last_updated: "2026-05-22T11:00:00.000Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 73
   completed_phases: 56
   total_plans: 246
-  completed_plans: 231
+  completed_plans: 232
   percent: 94
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 05 abgeschlossen, Plan 06 als naechstes)
-Next: Plan 06 — pip-launcher.js Klick-Handler + Hex-Sweep
+Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 06 abgeschlossen, Plan 07 als naechstes)
+Next: Plan 07 — naechster Plan in Phase 08.23.2.C.R
 Last activity: 2026-05-22
+
+**Phase 08.23.2.C.R Plan 06 abgeschlossen:** pip-launcher.js: uwg_hard_block Socket-Listener + _showUwgBanner() + _wireUwgBannerClose() + Ctrl+G/E keydown-Handler geloescht (REQ-2, REQ-3). 3 Hex-Werte durch CSS-Tokens ersetzt: color:#06060a->var(--btn-primary-text), #F8FAFC->var(--pip-bg), rgba(255,255,255,0.1);color:#c5c9d4->var(--badge-default-bg);var(--badge-default-text) (REQ-8). _updateContactCategory(): 'Vorzimmer'->'Sekretar', 'Cold-Call'->'Entscheider', aria-label dynamisch via setAttribute (REQ-9, D-03b). Klick-Handler auf #pip-mode-indicator mit 300ms Throttle + stopPropagation + manual_mode_toggle emit (REQ-4, D-03i). state.contactCategory als semantisch korrekter Category-Toggle-Key. 2 Commits: 059acc3, 807e4b4. SUMMARY: 08.23.2.C.R-06-SUMMARY.md. Decisions: state.contactCategory fuer Toggle-Check (nicht state.currentMode).
 
 **Phase 08.23.2.C.R Plan 05 abgeschlossen:** nerve.css: 6 neue CSS-Tokens (pip-gatekeeper-bg/text/bg-hover, pip-bg, badge-default-bg/text) + --btn-primary-text auf #06060a aktualisiert. #pip-mode-indicator Button-Reset (border:none, color:inherit, appearance:none, min-height:32px, cursor:pointer). pip-uwg-banner CSS-Bloecke geloescht (REQ-2). pip-mode-indicator[gatekeeper] Token-Migration von pipeline-warning auf pip-gatekeeper (REQ-7). base.html: pip-uwg-banner div geloescht, span->button Migration fuer pip-mode-indicator mit data-mode=gatekeeper + Sekretar-Label + aria-label (REQ-4). 2 Commits: 68b709e, df25d48. SUMMARY: 08.23.2.C.R-05-SUMMARY.md. Decisions: --btn-primary-text Wert-Update #0D1117->#06060a, aria-label zeigt Ziel-Modus (D-03b).
 
