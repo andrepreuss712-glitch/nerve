@@ -69,7 +69,9 @@
     // Phase 08.20.3: Modus-B Briefing Tab state
     briefingTabExpandedAtStreamStart: false, // guard for PiP tab auto-collapse (D-05)
     _personalizedSkriptText: null,           // KI result buffer for renderStep4c
-    _personalizeAbortController: null        // AbortController for renderStep4b cancel
+    _personalizeAbortController: null,       // AbortController for renderStep4b cancel
+    // Phase 08.23.2.C: gatekeeper toggle — mirrors server default (init_session_state)
+    contactCategory: 'gatekeeper'
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
