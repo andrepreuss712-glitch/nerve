@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 Phase: 08.23.2.C.R.F (gatekeeper-modul-fix-pass) — IN PROGRESS (Plan 03 abgeschlossen)
 Next: Naechster Plan in Phase 08.23.2.C.R.F oder Phase-Abschluss
-Last activity: 2026-05-23
+Last activity: 2026-05-23 - Quick Task 20260523-cr1: cold_call-Phrases Re-Seed (Alembic 0005, 18 Phrasen, idempotent)
 
 **Phase 08.23.2.C.R.F Plan 03 abgeschlossen:** test_mode_switch_event.py vollstaendig ersetzt: 2 tautologische False-Green-Tests (manuelle CallEvent-Instanziierung) durch behavioral Handler-Tests. Handler-Extraktion via register_audio_handlers(mock_sio) mit Dict-Capture. test_mode_switch_payload_persisted_to_db: ruft echten Handler auf, assertiert db.add() mit event_type='mode_switch' + 4 Payload-Keys. test_call_id_none_means_skip_guard_fires: ruft Handler mit call_id=None, assertiert assert_not_called() (Skip-Guard real geprueft). 1 Commit: d8d5656. SUMMARY: 08.23.2.C.R.F-03-SUMMARY.md. Decisions: mock_sio.on-Dict-Capture fuer Closure-Extraktion; database.db.SessionLocal-Patch fuer lokalen Import-Intercept; try/finally fuer State-Cleanup.
 
@@ -728,6 +728,7 @@ Recent decisions affecting current work:
 | 260429-dmd | Polish 08.19.3: FAQ-Card-Header truncation — JS slice(0,40) entfernt + CSS ellipsis + title-Tooltip | 2026-04-29 | bba802d | [260429-dmd-faq-header-truncation](./quick/260429-dmd-faq-header-truncation/) |
 | 20260430-css | 08.20.2 CSS-Hotfix U1-U3: nav-live-box 90vh scroll, launcher-step overflow guard, launcher-inline-edit-btn | 2026-04-30 | ecf8d41+df20777+67beec0 | [20260430-css-modal-button-hotfix-u1u2u3](./quick/20260430-css-modal-button-hotfix-u1u2u3/) |
 | 20260430-r6r7 | Block-J R6+R7: Vorwissen-Duplikat (step45/renderStep4b) entfernt + Step-5-Zurück zu Step-4 korrigiert | 2026-04-30 | 2613fd3+18487b7 | [20260430-block-j-r6-r7-vorwissen-zurueck](./quick/20260430-block-j-r6-r7-vorwissen-zurueck/) |
+| 20260523-cr1 | 08.23.2.C.R.1: cold_call-Phrases Re-Seed — Alembic Migration 0005, 18 Phrasen in 8 objection_types | 2026-05-23 | 6092d3f | [20260523-cr1-cold-call-phrases-reseed](./quick/20260523-cr1-cold-call-phrases-reseed/) |
 
 ## What's Done
 
