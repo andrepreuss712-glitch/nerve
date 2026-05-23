@@ -472,6 +472,41 @@ def register_audio_handlers(sio):
                     ls._load_profile_cache(sid=_sid, user_id=user_id, profile_id=_profile_id2)
                 except Exception as _cache_e:
                     print(f"[DG] _load_profile_cache failed (non-fatal): {_cache_e}")
+            # Phase 08.23.2.C.R.F: Call-Record anlegen fuer mode_switch/mode_initial Events (REQ-6)
+            # Punkt 14 Control-Flow-Audit: user_id ist gesetzt (handle_connect() rejectet unauthenticated)
+            # sio ist per Closure aus register_audio_handlers(sio) verfuegbar
+            # call_mode mapping: 'meeting' -> 'meeting_consented', else 'cold_call'
+            # DSGVO Single-Speaker: Modus-Toggle ist manuell durch Nutzer — kein auto-detection
+            _call_mode_f = 'meeting_consented' if mode == 'meeting' else 'cold_call'
+            # Idempotenz-Pruefung im deepgram_service ist nur noch Fast-Path-Optimierung.
+            # Die echte atomare Idempotenz-Sicherung sitzt in create_call_for_sid() selbst
+            # (Sentinel '__call_pending__' unter _session_state_lock — Cross-AI Review Fix).
+            # Dieser Check vermeidet ueberfluessige create_call_for_sid()-Aufrufe bei Reconnect,
+            # ist aber NICHT fuer Korrektheit bei Concurrent-Reconnects verantwortlich.
+            with ls._session_state_lock:
+                _existing_cid_f = ls._session_state.get(_sid, {}).get('state', {}).get('call_id')
+            if _existing_cid_f is None:
+                # Finding 1.3 (Claudian Pre-Execute): Return-Wert protokollieren.
+                # Bei DB-Fehler bleibt call_id None und Skip-Guard greift weiterhin.
+                # Sichtbar im Log statt stiller Folge-Fehler.
+                _cid_f = ls.create_call_for_sid(_sid, user_id=user_id, call_mode=_call_mode_f)
+                if _cid_f is None:
+                    print(f'[DG] create_call_for_sid returned None for sid={_sid!r} — '
+                          f'mode_switch/mode_initial events will be skipped on this session')
+            else:
+                print(f'[DG] Reconnect detected for sid={_sid!r}, existing call_id={_existing_cid_f!r} '
+                      f'— skipping create_call_for_sid (fast-path idempotency)')
+            # Initial-Sync: Frontend state.contactCategory setzen (verhindert "erster Klick wirkt nicht")
+            # Ohne dieses Emit ist state.contactCategory undefined nach PiP-Open.
+            # Finding 1.1 (Claudian Pre-Execute): category+mode aus Session-State lesen,
+            # NICHT hardcoden — Meeting-Sessions wuerden sonst faelschlich Sekretaer-Toggle anzeigen.
+            with ls._session_state_lock:
+                _init_st_f = ls._session_state.get(_sid, {}).get('state', {})
+                _init_cat_f = _init_st_f.get('contact_category', 'gatekeeper')
+                _init_mode_f = _init_st_f.get('current_mode', 'gatekeeper')
+            sio.emit('contact_category_update',
+                     {'category': _init_cat_f, 'mode': _init_mode_f, 'source': 'session_init'},
+                     room=_sid)
         except Exception as _pe:
             print(f"[08.19.4] per-SID init failed for {_sid}: {_pe}")
 
