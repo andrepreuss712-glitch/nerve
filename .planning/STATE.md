@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R.F (gatekeeper-modul-fix-pass) — IN PROGRESS (Plan 01 abgeschlossen)
+Phase: 08.23.2.C.R.F (gatekeeper-modul-fix-pass) — IN PROGRESS (Plan 02 abgeschlossen)
 Next: Naechster Plan in Phase 08.23.2.C.R.F oder Phase-Abschluss
 Last activity: 2026-05-23
+
+**Phase 08.23.2.C.R.F Plan 02 abgeschlossen:** iOS-Style Toggle Switch fuer pip-mode-indicator: base.html inner structure (pip-toggle-track + pip-toggle-knob + pip-toggle-label Spans, kein Whitespace zwischen Elementen). nerve.css: Pill/Badge-Block ersetzt durch iOS-Toggle-CSS (28x16px Track, 10px Knob via translateX(12px), 3-State: gatekeeper/meeting/target). Token-Fix: --page-text-muted / --page-text-secondary (nicht --text-muted / --text-secondary). Meeting-Mode: Track display:none, Label in Brand-Teal. pip-launcher.js: querySelector('.pip-toggle-label') mit else-Fallback (T-RF-07). 2 Commits: 95757af, d805831. SUMMARY: 08.23.2.C.R.F-02-SUMMARY.md. Decisions: Meeting-mode kein binaerer Toggle; Token-Fix Cross-AI-Review MEDIUM; querySelector-Fallback fuer Null-Safety.
 
 **Phase 08.23.2.C.R.F Plan 01 abgeschlossen:** Atomic TOCTOU-Safe Sentinel in create_call_for_sid() (live_session.py): Guard unter _session_state_lock verhindert Doppel-Records bei parallelen Reconnects. Sentinel-Cleanup im except-Block (T-RF-10). create_call_for_sid() Aufruf in handle_start_live_session() (deepgram_service.py): REQ-6 Production-Pfad gefixt — call_id ist jetzt nicht mehr immer None. contact_category_update Session-Init-Emit: liest aus session_state (nicht hardcoded). 2 Commits: 7f84317, df4fa7f. SUMMARY: 08.23.2.C.R.F-01-SUMMARY.md. Decisions: Sentinel '__call_pending__' unter _session_state_lock; externer Check ist Fast-Path-Optimierung; emit liest aus State.
 
