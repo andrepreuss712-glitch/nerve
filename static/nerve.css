@@ -3063,43 +3063,77 @@ input[type="range"].perf-slider::-moz-range-thumb {
 #pip-briefing-tab-body::-webkit-scrollbar { width: 3px; }
 #pip-briefing-tab-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
 
-/* Phase 08.23.2.C.R — Gatekeeper-Modus */
-
+/* Phase 08.23.2.C.R.F — iOS-Style Toggle Switch */
+/* Token-Fix: --page-text-muted / --page-text-secondary (nicht --text-muted / --text-secondary) */
 .pip-mode-indicator {
-    display: inline-block;
-    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 6px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
-    background-color: var(--glass-bg);
-    color: var(--btn-primary-bg-from);
     margin-left: 6px;
+    background: none;
 }
-
-.pip-mode-indicator[data-mode="gatekeeper"] {
-    background-color: var(--pip-gatekeeper-bg);
+.pip-toggle-track {
+    display: inline-block;
+    width: 28px;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--glass-bg);
+    border: 1.5px solid var(--border);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.18s, border-color 0.18s;
+}
+.pip-toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--page-text-muted);
+    transition: transform 0.18s, background 0.18s;
+}
+.pip-toggle-label {
+    color: var(--page-text-secondary);
+}
+/* Gatekeeper (Sekretar) = toggle ON: Knob rechts, blaue Farben */
+.pip-mode-indicator[data-mode="gatekeeper"] .pip-toggle-track {
+    background: var(--pip-gatekeeper-bg);
+    border-color: var(--pip-gatekeeper-text);
+}
+.pip-mode-indicator[data-mode="gatekeeper"] .pip-toggle-knob {
+    transform: translateX(12px);
+    background: var(--pip-gatekeeper-text);
+}
+.pip-mode-indicator[data-mode="gatekeeper"] .pip-toggle-label {
     color: var(--pip-gatekeeper-text);
 }
-
-/* span→button Migration: Browser-Button-Defaults reset */
+/* Meeting: Toggle-Track ausgeblendet — kein binaerer Toggle fuer diesen Modus */
+/* Label in Brand-Teal signalisiert "gesperrter Zustand / andere Kategorie" */
+.pip-mode-indicator[data-mode="meeting"] .pip-toggle-track {
+    display: none;
+}
+.pip-mode-indicator[data-mode="meeting"] .pip-toggle-label {
+    color: var(--btn-primary-bg-from);
+}
+/* Button-Reset */
 #pip-mode-indicator {
     border: none;
-    background: var(--glass-bg);
     font-family: inherit;
     color: inherit;
     appearance: none;
-    font-size: 11px;
-    font-weight: 600;
-    min-height: 32px;
     cursor: pointer;
-    padding: 2px 8px;
-    border-radius: 4px;
+    min-height: 32px;
 }
-#pip-mode-indicator:hover {
-    background-color: var(--pip-gatekeeper-bg-hover);
+#pip-mode-indicator:hover .pip-toggle-track {
+    border-color: var(--pip-gatekeeper-text);
+    background: var(--pip-gatekeeper-bg-hover);
 }
-
-/* Gatekeeper-Button-Set (gleiche Optik wie .pip-ewb-btn aber mit Mode-Indikator) */
+/* Gatekeeper-Button-Set (unveraendert) */
 .pip-ewb-btn[data-mode-button="gatekeeper"] {
     border-color: var(--pip-gatekeeper-text);
 }

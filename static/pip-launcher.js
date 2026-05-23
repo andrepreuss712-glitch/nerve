@@ -2440,7 +2440,8 @@
     if (indicator) {
       indicator.dataset.mode = mode;
       var label = (mode === 'gatekeeper') ? 'Sekretär' : (mode === 'meeting') ? 'Meeting' : 'Entscheider';
-      indicator.textContent = label;
+      var _lbl = indicator.querySelector('.pip-toggle-label');
+      if (_lbl) { _lbl.textContent = label; } else { indicator.textContent = label; }
       // Dynamisches aria-label zeigt Ziel-Modus (D-03b): "Modus wechseln zu X"
       indicator.setAttribute('aria-label',
         'Modus wechseln zu ' + ((mode === 'gatekeeper') ? 'Entscheider' : 'Sekretär'));
