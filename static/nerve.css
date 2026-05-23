@@ -383,9 +383,12 @@
   --info-blue:      #4899c8;   /* btn-add Basis-Farbe */
 
   /* Phase 08.23.2.C.R — Gatekeeper-Toggle + PiP-Body + Default-Badge */
-  --pip-gatekeeper-bg: rgba(96, 165, 250, 0.12);
-  --pip-gatekeeper-text: #3b82f6;
-  --pip-gatekeeper-bg-hover: rgba(96, 165, 250, 0.22);
+  /* Hotfix 2026-05-23: Token-Werte von Blau (#3b82f6) auf Brand-Teal (#00D4AA) umgestellt */
+  /* — Andre-Live-Test-Befund: blaue Farbe ist Fremdkörper, NERVE-Brand ist Teal. */
+  /* Vorherige Werte rgba(96,165,250,*) / #3b82f6 kamen aus UI-SPEC ohne Brand-Check. */
+  --pip-gatekeeper-bg: rgba(0, 212, 170, 0.12);
+  --pip-gatekeeper-text: #00D4AA;
+  --pip-gatekeeper-bg-hover: rgba(0, 212, 170, 0.22);
   --pip-bg: #F8FAFC;
   --badge-default-bg: rgba(100, 116, 139, 0.08);
   --badge-default-text: #475569;
