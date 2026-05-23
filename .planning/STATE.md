@@ -4,8 +4,8 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Planning
 stopped_at: ""
-last_updated: "2026-05-22T11:03:00.000Z"
-last_activity: 2026-05-22
+last_updated: "2026-05-23T00:00:00.000Z"
+last_activity: 2026-05-23
 progress:
   total_phases: 73
   completed_phases: 56
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R (gatekeeper-modul-rebuild) — IN PROGRESS (Plan 07 abgeschlossen, Plan 08 als naechstes)
-Next: Plan 08 — naechster Plan in Phase 08.23.2.C.R
-Last activity: 2026-05-22
+Phase: 08.23.2.C.R.F (gatekeeper-modul-fix-pass) — IN PROGRESS (Plan 01 abgeschlossen)
+Next: Naechster Plan in Phase 08.23.2.C.R.F oder Phase-Abschluss
+Last activity: 2026-05-23
+
+**Phase 08.23.2.C.R.F Plan 01 abgeschlossen:** Atomic TOCTOU-Safe Sentinel in create_call_for_sid() (live_session.py): Guard unter _session_state_lock verhindert Doppel-Records bei parallelen Reconnects. Sentinel-Cleanup im except-Block (T-RF-10). create_call_for_sid() Aufruf in handle_start_live_session() (deepgram_service.py): REQ-6 Production-Pfad gefixt — call_id ist jetzt nicht mehr immer None. contact_category_update Session-Init-Emit: liest aus session_state (nicht hardcoded). 2 Commits: 7f84317, df4fa7f. SUMMARY: 08.23.2.C.R.F-01-SUMMARY.md. Decisions: Sentinel '__call_pending__' unter _session_state_lock; externer Check ist Fast-Path-Optimierung; emit liest aus State.
 
 **Phase 08.23.2.C.R Plan 07 abgeschlossen:** Test-Cleanup: test_gatekeeper_classifier.py + test_hysteresis.py geloescht. test_phase_classifier.py: apply_hysteresis Import + test_call_events_phase_change_persisted entfernt. test_session_state_phase_c.py: uwg_blocked-Test geloescht, contact_category/current_mode auf 'gatekeeper' korrigiert (REQ-5 Compliance). test_mode_initial_db.py erstellt: Behavioral-Test fuer mode_initial DB-INSERT (REQ-6 Nachweis) via database.db.SessionLocal Patch. nerve.css: UWG-Banner Kommentar-Residue bereinigt (REQ-2). Alle 8 SPEC.md Acceptance-Greps PASS. 493 Tests PASS, 17 pre-existing Failures unveraendert. 2 Commits: 3c3d118, f76840e. SUMMARY: 08.23.2.C.R-07-SUMMARY.md. Decisions: database.db.SessionLocal Patch-Strategie fuer lokalen Import.
 
