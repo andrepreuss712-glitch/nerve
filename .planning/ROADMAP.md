@@ -1504,7 +1504,9 @@ Claudian liefert 30-40 Vorschläge in 4 Button-Kategorien. Andre wählt pro Butt
 **Komplexität:** 🟡 — Recherche-Quellen-Vielfalt + Andre-Filter ist eigener Cross-Check. Cross-AI optional.
 **Blocker für:** keine harten Blocker (Phrasen-Update braucht nicht den Mechanismus aufzuhalten)
 
-### Phase 08.23.2.C.R.F: Gatekeeper-Modul Fix-Pass (INSERTED — 2026-05-23) 🟡
+### Phase 08.23.2.C.R.F: Gatekeeper-Modul Fix-Pass ✅ 2026-05-23 (INSERTED — 2026-05-23) 🟡
+
+**Status:** Abgeschlossen 2026-05-23 nachmittag mit Staging-Live-Test-Approval durch Andre. 12/12 must-haves grün, REQ-6 strukturell in DB verifiziert (1× mode_initial + 8× mode_switch sauber persistiert pro Test-Call). Plus Brand-Token-Hotfix nachgeschoben (blau → teal, Andre-Live-Befund) als Commit 78b1f11.
 
 **Goal:** Live-Test 2026-05-23 hat zwei kritische Findings aufgedeckt die vor Production-Deploy gefixt werden müssen: (1) create_call_for_sid() wird im Production-Code nirgendwo aufgerufen → Skip-Guard greift immer → mode_switch + mode_initial nie persistiert → REQ-6 strukturell nicht erfüllt trotz Pytest-Grün. (2) Toggle-Button visuell zu blass → iOS-Style-Schalter (toggle switch).
 
@@ -1516,10 +1518,18 @@ Claudian liefert 30-40 Vorschläge in 4 Button-Kategorien. Andre wählt pro Butt
 
 **Depends on:** Phase 08.23.2.C.R (Code-Stand)
 **Komplexität:** 🟡 — Code-Insert in bestehende Funktion (handle_start_live_session) = CLAUDE.md Punkt 14 Pflicht-Audit. Cross-AI Gemini bei Plan 01 empfohlen.
-**Blocker für:** Production-Deploy von Phase 08.23.2.C + 08.23.2.C.R
-**Plans:** 3 Pläne geplant
+**Blocker für:** Production-Deploy von Phase 08.23.2.C + 08.23.2.C.R (gleiches Deploy-Fenster mit 08.23.2.C.R.1)
+**Plans:** 3 Pläne ✅ abgeschlossen
 
 Plans:
-- [ ] 08.23.2.C.R.F-01-PLAN.md -- create_call_for_sid() Hook + Initial contact_category_update Emit
-- [ ] 08.23.2.C.R.F-02-PLAN.md -- pip-mode-indicator → iOS Toggle Switch (CSS+HTML)
-- [ ] 08.23.2.C.R.F-03-PLAN.md -- Tests: mode_initial + mode_switch mit echtem call_id
+- [x] 08.23.2.C.R.F-01-PLAN.md -- create_call_for_sid() Hook + Initial contact_category_update Emit (atomic TOCTOU sentinel, Cross-AI-Fix) ✅ 2026-05-23
+- [x] 08.23.2.C.R.F-02-PLAN.md -- pip-mode-indicator → iOS Toggle Switch (CSS+HTML+JS) ✅ 2026-05-23
+- [x] 08.23.2.C.R.F-03-PLAN.md -- Behavioral handler tests via register_audio_handlers(mock_sio) ✅ 2026-05-23
+
+**Code-Review-Notes für später (3 IN-Findings out-of-scope + Brand-Token-Lerneffekt):**
+- Concurrent-Return-Log-Drift in deepgram_service.py: wenn Sentinel von parallel-Reconnect getroffen wird, loggt Caller fälschlich "DB-Fehler". WR-02 Code-Review-Fix hat das auf JS-Seite mit `contactCategory: 'gatekeeper'` Init mitigated. Backend-Log-Drift bleibt minor.
+- Meeting-Modus Click-Handler Edge-Case: pip-launcher.js Click-Handler sollte `if (state.currentMode === 'meeting') return;` checken — sonst wechselt Meeting-Session zu Cold-Call wenn User auf Toggle-Bereich klickt obwohl Track via `display: none` ausgeblendet ist. Sehr selten weil visual nicht-klickbar wirkt.
+- deploy.sh Drift-Pattern: tar-over-ssh überschreibt Dateien aber löscht keine → Geister-Test-Files können pytest-Collection blockieren. Empfehlung: rsync `--delete` ODER `find -newer` Cleanup ergänzen.
+- Brand-Token-Pflicht-Check (NEU CLAUDE.md HART-Regel-Erweiterung): bei jeder neuen UI-Token-Definition Pflicht-grep gegen Brand-Tokens (`--btn-primary-bg-from`, `--accent`-Familie). Hardcoded-Farbe-Verbot ist eine Schicht, Brand-Konsistenz ist zweite Schicht. UI-SPEC vom 21.05. hat blau gewählt ohne Brand-Check.
+
+**Schieber-UX-Polish deferred nach Block O Teil 2 (Visual-Polish via Claude Design):** Andre-Quote 2026-05-23: "die stelle ist zwar noch nicht gut aber wir gehen ja sowieso in einer späteren phase nochmal durch das design". Schieber-Position relativ zum Header, exakter Hover-State, Größen-Tuning werden in Block O finalisiert.
