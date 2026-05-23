@@ -1503,3 +1503,23 @@ Claudian liefert 30-40 Vorschläge in 4 Button-Kategorien. Andre wählt pro Butt
 **Depends on:** Phase 08.23.2.C.R (Production-Deploy, Update-Mechanismus muss live sein)
 **Komplexität:** 🟡 — Recherche-Quellen-Vielfalt + Andre-Filter ist eigener Cross-Check. Cross-AI optional.
 **Blocker für:** keine harten Blocker (Phrasen-Update braucht nicht den Mechanismus aufzuhalten)
+
+### Phase 08.23.2.C.R.F: Gatekeeper-Modul Fix-Pass (INSERTED — 2026-05-23) 🟡
+
+**Goal:** Live-Test 2026-05-23 hat zwei kritische Findings aufgedeckt die vor Production-Deploy gefixt werden müssen: (1) create_call_for_sid() wird im Production-Code nirgendwo aufgerufen → Skip-Guard greift immer → mode_switch + mode_initial nie persistiert → REQ-6 strukturell nicht erfüllt trotz Pytest-Grün. (2) Toggle-Button visuell zu blass → iOS-Style-Schalter (toggle switch).
+
+**Scope:**
+1. create_call_for_sid() in handle_start_live_session() integrieren — CLAUDE.md Punkt 14 Pflicht-Audit des gesamten Control-Flow-Pfads
+2. Initial-Backend-Emit von contact_category_update beim Connect (verhindert "erster Klick wirkt nicht")
+3. button → iOS-Style Toggle Switch CSS+HTML Migration (pip-mode-indicator)
+4. Tests grün für mode_initial + mode_switch mit echtem call_id (nicht nur Mock)
+
+**Depends on:** Phase 08.23.2.C.R (Code-Stand)
+**Komplexität:** 🟡 — Code-Insert in bestehende Funktion (handle_start_live_session) = CLAUDE.md Punkt 14 Pflicht-Audit. Cross-AI Gemini bei Plan 01 empfohlen.
+**Blocker für:** Production-Deploy von Phase 08.23.2.C + 08.23.2.C.R
+**Plans:** 3 Pläne geplant
+
+Plans:
+- [ ] 08.23.2.C.R.F-01-PLAN.md -- create_call_for_sid() Hook + Initial contact_category_update Emit
+- [ ] 08.23.2.C.R.F-02-PLAN.md -- pip-mode-indicator → iOS Toggle Switch (CSS+HTML)
+- [ ] 08.23.2.C.R.F-03-PLAN.md -- Tests: mode_initial + mode_switch mit echtem call_id
