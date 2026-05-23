@@ -497,8 +497,6 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
             finally:
                 _db_mi.close()
         except Exception as _mi_err:
-            if _db_mi is not None:
-                _db_mi.rollback()
             print(f'[live_session] mode_initial persist Fehler (non-fatal): {type(_mi_err).__name__}: {_mi_err}')
         return cid
     except Exception as e:
