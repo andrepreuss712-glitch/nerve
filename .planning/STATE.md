@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Planning
-stopped_at: ""
-last_updated: "2026-05-23T00:00:00.000Z"
+stopped_at: context exhaustion at 90% (2026-05-19)
+last_updated: "2026-05-23T10:56:25.650Z"
 last_activity: 2026-05-23
 progress:
-  total_phases: 73
-  completed_phases: 56
-  total_plans: 246
-  completed_plans: 233
-  percent: 94
+  total_phases: 77
+  completed_phases: 55
+  total_plans: 233
+  completed_plans: 222
+  percent: 95
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.C.R.F (gatekeeper-modul-fix-pass) — IN PROGRESS (Plan 02 abgeschlossen)
+Phase: 08.23.2.C.R.F (gatekeeper-modul-fix-pass) — IN PROGRESS (Plan 03 abgeschlossen)
 Next: Naechster Plan in Phase 08.23.2.C.R.F oder Phase-Abschluss
 Last activity: 2026-05-23
+
+**Phase 08.23.2.C.R.F Plan 03 abgeschlossen:** test_mode_switch_event.py vollstaendig ersetzt: 2 tautologische False-Green-Tests (manuelle CallEvent-Instanziierung) durch behavioral Handler-Tests. Handler-Extraktion via register_audio_handlers(mock_sio) mit Dict-Capture. test_mode_switch_payload_persisted_to_db: ruft echten Handler auf, assertiert db.add() mit event_type='mode_switch' + 4 Payload-Keys. test_call_id_none_means_skip_guard_fires: ruft Handler mit call_id=None, assertiert assert_not_called() (Skip-Guard real geprueft). 1 Commit: d8d5656. SUMMARY: 08.23.2.C.R.F-03-SUMMARY.md. Decisions: mock_sio.on-Dict-Capture fuer Closure-Extraktion; database.db.SessionLocal-Patch fuer lokalen Import-Intercept; try/finally fuer State-Cleanup.
 
 **Phase 08.23.2.C.R.F Plan 02 abgeschlossen:** iOS-Style Toggle Switch fuer pip-mode-indicator: base.html inner structure (pip-toggle-track + pip-toggle-knob + pip-toggle-label Spans, kein Whitespace zwischen Elementen). nerve.css: Pill/Badge-Block ersetzt durch iOS-Toggle-CSS (28x16px Track, 10px Knob via translateX(12px), 3-State: gatekeeper/meeting/target). Token-Fix: --page-text-muted / --page-text-secondary (nicht --text-muted / --text-secondary). Meeting-Mode: Track display:none, Label in Brand-Teal. pip-launcher.js: querySelector('.pip-toggle-label') mit else-Fallback (T-RF-07). 2 Commits: 95757af, d805831. SUMMARY: 08.23.2.C.R.F-02-SUMMARY.md. Decisions: Meeting-mode kein binaerer Toggle; Token-Fix Cross-AI-Review MEDIUM; querySelector-Fallback fuer Null-Safety.
 
@@ -748,6 +750,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-19T11:28:42.300Z
+Last session: 2026-05-23T10:56:25.639Z
 Stopped at: context exhaustion at 90% (2026-05-19)
 Resume file: None
