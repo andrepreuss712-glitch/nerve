@@ -430,6 +430,23 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
 
     Returns: call_id (UUID-string) oder None bei Fehler.
     """
+    # Phase 08.23.2.C.R.F Fix — Atomare Idempotenz (Cross-AI Review: TOCTOU bei Reconnect).
+    # Check + Sentinel-Write muessen unter DEMSELBEN Lock-Eintritt passieren.
+    # Zwei parallele handle_start_live_session-Aufrufe koennen sonst beide None lesen
+    # und beide einen Call-Record in DB schreiben (Doppel-Records + Doppel-mode_initial).
+    with _session_state_lock:
+        _existing_cid_atomic = _session_state.get(sid, {}).get('state', {}).get('call_id')
+        if _existing_cid_atomic is not None and _existing_cid_atomic != '__call_pending__':
+            print(f'[live_session] create_call_for_sid: call_id already set, returning existing '
+                  f'sid={sid!r} call_id={_existing_cid_atomic!r}')
+            return _existing_cid_atomic
+        if _existing_cid_atomic == '__call_pending__':
+            print(f'[live_session] create_call_for_sid: in-progress by parallel call, skipping '
+                  f'sid={sid!r}')
+            return None
+        # Sentinel setzen: kein anderer Thread kann jetzt ebenfalls None lesen und fortfahren
+        if sid in _session_state:
+            _session_state[sid].setdefault('state', {})['call_id'] = '__call_pending__'
     from datetime import timezone as _tz
     from database.db import SessionLocal as _SL
     from database.models import Call
@@ -490,6 +507,12 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
             _db.rollback()
         except Exception:
             pass
+        # Sentinel aufraumen: DB-Fehler darf '__call_pending__' nicht im State lassen
+        with _session_state_lock:
+            if sid in _session_state:
+                _st_err = _session_state[sid].get('state', {})
+                if _st_err.get('call_id') == '__call_pending__':
+                    _st_err['call_id'] = None
         return None
     finally:
         _db.close()
