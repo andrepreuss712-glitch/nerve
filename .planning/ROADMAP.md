@@ -1462,20 +1462,23 @@ Plans:
 - [x] 08.23.2.C.R-07-PLAN.md -- Test-Cleanup + alle Acceptance-Greps ✅ 2026-05-22
 - [ ] 08.23.2.C.R-08-PLAN.md -- Staging-Smoke-Test (checkpoint:human-verify)
 
-### Phase 08.23.2.C.R.1: cold_call-phrases Re-Seed in Production-DB (INSERTED — 2026-05-21) 🟢
+### Phase 08.23.2.C.R.1: cold_call-phrases Re-Seed in Production-DB ❌ VERWORFEN 2026-05-24
 
-**Goal:** Production-DB hat seit Bulk-DELETE in Phase 08.23.2.A 0 cold_call-Phrases. Folge: normale EWB-Buttons (zu_teuer, keine_zeit, etc.) fehlen komplett im Browser. Beobachtungsbefund aus 20.05.-Live-Test. Pflicht vor C.R-Production-Deploy weil PiP ohne EWB-Buttons unbenutzbar.
+**Status:** Verworfen + revertet 2026-05-24 nach Claudian-Diagnose-Fehler aufgedeckt.
 
-**Scope:**
-1. Re-Seed-Logik aus Migration 0002 oder Backup wiederherstellen
-2. Mindestens 8 Standard-Themen-Keywords (zu_teuer, keine_zeit, kein_interesse, kein_budget, schicken_sie_unterlagen, anderer_anbieter, brauche_bedenkzeit, nicht_zustaendig) mit jeweils 2-3 Antwort-Varianten
-3. Idempotente Alembic-Migration (skip wenn Reihen bereits existieren)
-4. Staging-DB-Test: nach Migration zeigt PiP im Cold-Call-Modus die EWB-Button-Row mit allen 8 Buttons
-5. Production-Deploy zusammen mit C.R (gleiches Deploy-Fenster)
+**Was passiert ist:** Phase wurde via /gsd-quick durchgezogen (Commits 6092d3f + 595f837, Migration 0005 mit 18 Cold-Call-Phrasen, nie auf Staging applied). DANACH beim Andre-Phrasen-Review hat Andre gefragt "wo werden die Phrasen ausgespielt?" — und beim Code-Lookup festgestellt: **die phrases-Tabelle wird im echten Code-Pfad NUR für Gatekeeper-Modus gelesen** (`routes/app_routes.py` Z.1468: `Phrase.mode == 'gatekeeper'`). Es gibt KEINEN Code-Pfad der `phrases` WHERE `mode='cold_call'` liest. Die 18 Migration-0005-Phrasen wären toter Code in der DB.
 
-**Depends on:** Phase 08.23.2.C.R (gleiches Deploy-Fenster)
-**Komplexität:** 🟢 — mechanische Migration, klares Pattern. Cross-AI Skip.
-**Blocker für:** Production-Deploy von Phase 08.23.2.C.R
+**Wo die echten Cold-Call-EWB-Buttons herkommen:** `static/pip-launcher.js` Z.2099 `_renderEwbButtons()` liest aus `state.profileDaten.einwaende_detail` (oder fallback `einwaende`) — also aus dem **User-Profil**, nicht aus phrases-Tabelle. Andre's "fehlende EWB-Buttons im 20.05.-Live-Test" war NICHT durch leere phrases-Tabelle verursacht, sondern durch fehlende `einwaende_detail` im Test-Profil (separates Profil-Daten-Issue).
+
+**Claudian-Selbst-Lerneffekt:** Pre-/gsd-quick Pflicht-grep: wird die betroffene Tabelle überhaupt im echten Code-Pfad gelesen? Wäre 2 Min Aufwand gewesen, hätte ganzen C.R.1-Detour erspart. Verankert für künftige Mini-Phasen.
+
+**Revert-Aktionen 2026-05-24:**
+- Migration 0005 Datei gelöscht (`alembic/versions/0005_seed_cold_call_phrases.py`)
+- Plan-Files gelöscht (`.planning/quick/20260523-cr1-cold-call-phrases-reseed/`)
+- DB-Cleanup nicht nötig: Migration war nie auf Staging applied (alembic_version blieb 0004)
+- Production-Deploy-Plan: kein C.R.1-Block mehr, nur noch C.R + C.R.F
+
+**Was bleibt:** Die echte Wurzel "fehlende EWB-Buttons im Test-Profil" bleibt offen — wird beim ersten echten EA-User mit befülltem Profil sichtbar oder nicht, abhängig vom User. Nicht Production-Blocker.
 
 ### Phase 08.23.2.C.R.2: Gatekeeper-Phrasen-Inhalt aus Praxis-Recherche (INSERTED — 2026-05-21) 🟡
 
