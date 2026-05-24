@@ -1622,8 +1622,12 @@ if (new URLSearchParams(window.location.search).get('from') === 'wizard') {
 }
 
 /* ── Unsaved Changes Guard ─────────────────────────────────────────── */
-let _isDirty = false;
-let _pendingUrl = null;
+/* Hotfix 2026-05-24: let → var weil buildAndSubmit() (Z.1122) _isDirty referenziert
+   bevor die Deklaration durchgelaufen ist. let hat TDZ (Temporal Dead Zone) — crasht
+   wenn Funktion vor Z.1625-Ausführung getriggert wird. var ist hoisted, kein Crash.
+   Bug-Regression: war früher schon mal var, irgendwann auf let umgestellt. */
+var _isDirty = false;
+var _pendingUrl = null;
 
 function _markDirty() { _isDirty = true; }
 
