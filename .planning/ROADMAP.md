@@ -1480,9 +1480,11 @@ Plans:
 
 **Was bleibt:** Die echte Wurzel "fehlende EWB-Buttons im Test-Profil" bleibt offen — wird beim ersten echten EA-User mit befülltem Profil sichtbar oder nicht, abhängig vom User. Nicht Production-Blocker.
 
-### Phase 08.23.2.C.R.2: Gatekeeper-Phrasen-Inhalt aus Praxis-Recherche (INSERTED — 2026-05-21) 🟡
+### Phase 08.23.2.C.R.2: Gatekeeper-Phrasen-Inhalt aus Praxis-Recherche ⏸ ABSORBIERT in 08.21 (Andre-Decision 2026-05-24)
 
-**Goal:** Andre-Live-Test 2026-05-20 hat die 10 Gatekeeper-Phrasen aus Migration 0003 als unrealistisch markiert. Phrasen waren aus Verhandlungs-Theorie-Literatur (Heinrich/Voss/Taxis) — nie gegen echte deutsche Sekretärs-Realität validiert. Andre hat selbst keine Cold-Call-Sekretärs-Erfahrung → kann Phrasen nicht aus eigener Real-Daten-Quelle schreiben → KI-Generierung aus Theorie würde gleichen Bettel-Ton produzieren.
+**Status:** Verschoben + zusammengefasst in Phase 08.21 (Sales-Wisdom-Layer). Statt 10 statische Phrasen-Templates auszutauschen wird Gatekeeper-Modus auf KI-generierte Antworten umgebaut (Sales-Wisdom + Gatekeeper-spezifischer System-Prompt + Profil-Context). Anti-Abrieb-Reflex: statische Phrasen sind Pflaster, KI-Antworten mit Wisdom sind die saubere Lösung. Plus: YouTube-Sales-Mining-Tool unter `Nerve-Vault/07 Referenz/yt-sales-mining/` feeded beide (Cold-Call + Gatekeeper) mit gleichem Datenstrom — Andre sammelt URLs reaktiv (was Algorithmus ausspielt), Tool zieht Transkripte, Claudian extrahiert Patterns. Siehe Vault-Roadmap-Eintrag 08.21 für vollständigen absorbierten Scope.
+
+**Original-Goal (historisch):** Andre-Live-Test 2026-05-20 hat die 10 Gatekeeper-Phrasen aus Migration 0003 als unrealistisch markiert. Phrasen waren aus Verhandlungs-Theorie-Literatur (Heinrich/Voss/Taxis) — nie gegen echte deutsche Sekretärs-Realität validiert. Andre hat selbst keine Cold-Call-Sekretärs-Erfahrung → kann Phrasen nicht aus eigener Real-Daten-Quelle schreiben → KI-Generierung aus Theorie würde gleichen Bettel-Ton produzieren.
 
 **Strategie — Praxis-Recherche statt Theorie:**
 
