@@ -1538,3 +1538,35 @@ Plans:
 - Brand-Token-Pflicht-Check (NEU CLAUDE.md HART-Regel-Erweiterung): bei jeder neuen UI-Token-Definition Pflicht-grep gegen Brand-Tokens (`--btn-primary-bg-from`, `--accent`-Familie). Hardcoded-Farbe-Verbot ist eine Schicht, Brand-Konsistenz ist zweite Schicht. UI-SPEC vom 21.05. hat blau gewählt ohne Brand-Check.
 
 **Schieber-UX-Polish deferred nach Block O Teil 2 (Visual-Polish via Claude Design):** Andre-Quote 2026-05-23: "die stelle ist zwar noch nicht gut aber wir gehen ja sowieso in einer späteren phase nochmal durch das design". Schieber-Position relativ zum Header, exakter Hover-State, Größen-Tuning werden in Block O finalisiert.
+
+### Phase 08.23.2.D: Outcome-Erfassung + Audio-Qualitäts-Score (INSERTED — 2026-05-11, GSD-Roadmap-Sync 2026-05-26) 🟡
+
+**Status:** Vault-Roadmap-Eintrag bestand seit 2026-05-11. GSD-Roadmap-Sync 2026-05-26 nach Drift-Fund — CLAUDE.md "Vault-vs-GSD-Roadmap-Sync HART"-Regel ausgelöst, weil `/gsd-spec-phase 08.23.2.D` ohne Eintrag aus dem Bauch geraten hätte.
+
+**Goal:** Pflicht-Modal nach jedem Anruf mit 5 Knöpfen (Termin / Rückruf / Kein Interesse / Falsche Person / Vertrag) + Optional-Notiz (durch Anonymisierungs-Strecke aus 08.23.2.B gejagt). Plus Audio-Qualitäts-Score pro Anruf aus Deepgram-Wort-Confidences (5 Metriken: mean, median, %-unter-0.7, längster unsicherer Block, stddev). Harte Schwelle 0,80 für Trainings-Korpus-Aufnahme (DPO-Gate in 08.23.2.E). Live-Warnung an User wenn rollender 10-Sek-Score unter 0,70.
+
+**Scope (6 Tasks aus Vault-Roadmap):**
+1. Frontend-Modal nicht-überspringbar nach Anruf-Ende
+2. `calls.outcome` speichern (Optional-Notiz durch Anonymisierungs-Strecke)
+3. Dashboard-Reminder wenn 7-Tage-Outcome-Quote unter 80%
+4. Audio-Health-Berechnung als Hintergrund-Job nach Anruf-Ende
+5. `calls.audio_health_score` persistieren
+6. Empirische Kalibrierung gegen 200 Hand-Korrekturen (Pflicht in den ersten 100 Anrufen)
+
+**Code-Pattern:** Vault-Repo `Nerve-Vault/03 Planung/NERVE DPO.md` Sektion F.2-F.8. Audio-Health-Code lebt im Backend nach Call-Ende (Hintergrund-Job, kein Live-Pfad).
+
+**Depends on:** Phase 08.23.2.B ✅ (Anonymisierungs-Strecke), Phase 08.23.2.C + C.R + C.R.F ✅ 2026-05-24 (Production-Deploy)
+**Komplexität:** 🟡 mittel — neue UX (Pflicht-Modal-Anti-Pattern-Risiko) + neuer Hintergrund-Job + Schema-Erweiterung `calls.outcome` + `calls.audio_health_score`. Cross-AI Pflicht (CLAUDE.md Punkt 7 — 🟡 immer Cross-AI).
+**Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler nutzt `audio_health_score >= 0.80` als Gate für Trainings-Korpus-Aufnahme)
+
+**Plans:** noch nicht erstellt — `/gsd-spec-phase 08.23.2.D` ist der nächste Schritt.
+
+**CLAUDE.md-Pflicht-Pattern für die Spec/Plan-Phase:**
+- **Punkt 7** Cross-AI Gemini Pflicht (🟡 mittel — keine Skip-Begründung möglich)
+- **Punkt 13** Real-Daten-Validation: Schema-Änderungen (`calls.outcome` + `calls.audio_health_score`) gegen bestehende `calls`-Records prüfen — bestehende Records bekommen NULL und brauchen keine Backfill-Pflicht (Outcome ist Vorwärts-Feature, Audio-Health ebenfalls). Pflicht-Check trotzdem dokumentieren.
+- **Punkt 14** Pre-Insert-Control-Flow-Audit: Modal-Trigger-Pfad nach Call-End in `services/live_session.py` + `routes/` komplett lesen (30 Zeilen vor/nach Insertion-Site, alle return/continue/break, Cross-File-grep wo `call.outcome` und `audio_health_score` gelesen werden würden)
+- **Punkt 19** Pre-Execute-Audit: Plans vor Execute auf Placeholders + ungeprüfte Annahmen + Race-Conditions (Modal-Trigger vs. parallel-Reconnect) prüfen
+- **Punkt 20** Pflicht-grep vor Migration + Code-Insert: wird `calls.outcome` + `audio_health_score` im echten Lese-Pfad genutzt nach Bau? Foundation-Code-Register-Eintrag falls Felder vor 08.23.2.E noch keinen aktiven Lese-Pfad haben
+
+Plans:
+- [ ] 08.23.2.D-XX-PLAN.md -- noch nicht erstellt
