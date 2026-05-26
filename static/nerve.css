@@ -3140,3 +3140,172 @@ input[type="range"].perf-slider::-moz-range-thumb {
 .pip-ewb-btn[data-mode-button="gatekeeper"] {
     border-color: var(--pip-gatekeeper-text);
 }
+
+/* ===========================================================================
+   Phase 08.23.2.D - Outcome-UX + Audio-Warning (REQ-D-4, REQ-D-5, REQ-D-7)
+   Brand-Lock per UI-SPEC Rev 2026-05-26:
+     - Auto-Confirm + Unsicher = Teal-Familie (#00D4AA), KEIN Gelb fuer Marker
+     - Audio-Warning = #f59e0b (echte System-Warnung, semantisch korrekt)
+   =========================================================================== */
+
+.pip-outcome-section {
+    padding: 16px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pip-outcome-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--page-text-secondary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.pip-outcome-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--page-text-color);
+}
+
+.pip-outcome-confirm-ring {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(0,212,170,0.10);
+    border: 3px solid #00D4AA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0;
+}
+
+.pip-outcome-confirm-ring.pip-outcome-confirmed {
+    background: #00D4AA;
+    color: #fff;
+}
+
+.pip-outcome-countdown {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: #00D4AA;
+}
+
+.pip-outcome-confirm-ring.pip-outcome-confirmed .pip-outcome-countdown {
+    color: #fff;
+}
+
+.pip-outcome-caption {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--page-text-secondary);
+}
+
+/* ai_auto_unsicher Badge - Teal-Outline (KEIN Gelb per HART-Regel) */
+.pip-outcome-badge-unsicher {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    border: 1px solid #00D4AA;
+    background: rgba(0,212,170,0.08);
+    color: #00D4AA;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+/* Korrektur-Modal */
+.pip-outcome-heading {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--page-text-color);
+}
+
+.pip-outcome-hint {
+    font-size: 12px;
+    color: var(--page-text-secondary);
+    margin-bottom: 4px;
+}
+
+.pip-outcome-correction-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.pip-outcome-correction-btn {
+    min-height: 44px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.pip-outcome-correction-btn.active,
+.pip-outcome-correction-btn:active {
+    background: var(--btn-primary-bg-from, #00D4AA);
+    color: #fff;
+}
+
+/* D-08 Option a - outcome_note Textarea NUR im <70%-Korrektur-Modal */
+.pip-outcome-note-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--label-color, var(--page-text-secondary));
+    margin-top: 8px;
+}
+
+.pip-outcome-note-textarea {
+    width: 100%;
+    min-height: 72px;
+    resize: none;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--page-text-color);
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.pip-outcome-note-textarea:focus {
+    outline: none;
+    border-color: var(--input-border-focus, #00D4AA);
+}
+
+.pip-outcome-note-sub {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--page-text-muted, var(--page-text-secondary));
+    margin-top: 4px;
+}
+
+.pip-outcome-saved {
+    padding: 12px 16px;
+    background: rgba(0,212,170,0.06);
+    border: 1px solid rgba(0,212,170,0.2);
+    color: #00D4AA;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Audio-Warning - echte System-Warnung, #f59e0b semantisch korrekt */
+.pip-audio-warn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    opacity: 1;
+    animation: pip-audio-warn-pulse 1.5s ease-in-out infinite;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes pip-audio-warn-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
