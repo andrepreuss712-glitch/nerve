@@ -1,10 +1,16 @@
 import threading
 import time
+import statistics as _stats_wc  # Phase 08.23.2.D - Rolling-10s-Score
 from datetime import datetime
 from deepgram import DeepgramClient, DeepgramClientOptions, LiveTranscriptionEvents, LiveOptions
 from config import DEEPGRAM_API_KEY, DEEPGRAM_HOST, SAMPLE_RATE, MERGE_WINDOW_S
 import services.live_session as ls
 import time as _time_mod
+
+# Phase 08.23.2.D REQ-D-7 - Hysterese-Schwellen
+_AUDIO_WARN_TRIGGER_BELOW = 0.70  # Score faellt unter -> emit warning
+_AUDIO_WARN_RESET_ABOVE   = 0.80  # Score steigt ueber -> Hysterese reset
+_ROLLING_WINDOW_MS        = 10_000
 
 # ── Per-session Deepgram connections ──────────────────────────────────────────
 _deepgram_sessions = {}        # {sid: connection}
@@ -12,6 +18,14 @@ _session_modes = {}            # {sid: 'cold_call'|'meeting'}
 _cost_opened_at = {}           # {sid: float} — Phase 04.7.2 STT-minute tracking (kept for clean dict)
 _stt_seconds_accumulated = {}  # {sid: float} — H-9: echte STT-Sekunden, nicht Socket-Lifetime
 _sessions_lock = threading.Lock()
+
+
+def _rolling_10s_score(buffer, now_ms):
+    """Phase 08.23.2.D D-06c - Rolling-10s-Score aus Word-Confidence-Buffer.
+    Returns 1.0 wenn Buffer leer (defensive - keine Warnung bei Stille)."""
+    cutoff = now_ms - _ROLLING_WINDOW_MS
+    recent = [c for ts, c in buffer if ts >= cutoff]
+    return _stats_wc.mean(recent) if recent else 1.0
 
 
 def _get_speaker(result):
@@ -116,6 +130,40 @@ def _make_on_message(sid):
                 if _dur > 0:
                     with _sessions_lock:
                         _stt_seconds_accumulated[sid] = _stt_seconds_accumulated.get(sid, 0.0) + _dur
+
+                # -- Phase 08.23.2.D - Word-Confidence-Buffer + Hysterese-Warning (REQ-D-7) --
+                try:
+                    _wc_words = result.channel.alternatives[0].words or []
+                except (AttributeError, IndexError):
+                    _wc_words = []
+                if _wc_words:
+                    _now_ms = int(time.time() * 1000)
+                    _new_tuples = [(_now_ms, float(w.confidence)) for w in _wc_words if hasattr(w, 'confidence') and w.confidence is not None]
+                    _should_emit = False
+                    _score_now = 1.0
+                    with ls._session_state_lock:
+                        _sd = ls._session_state.get(sid)
+                        if _sd is not None:
+                            _buf = _sd.setdefault('word_confidences', [])
+                            _buf.extend(_new_tuples)
+                            # Hysterese-Check innerhalb Lock - atomar mit Buffer-Update
+                            _score_now = _rolling_10s_score(_buf, _now_ms)
+                            _state = _sd.get('state', {})
+                            _warn_active = _state.get('audio_warn_active', False)
+                            if not _warn_active and _score_now < _AUDIO_WARN_TRIGGER_BELOW:
+                                _state['audio_warn_active'] = True
+                                _should_emit = True
+                            elif _warn_active and _score_now > _AUDIO_WARN_RESET_ABOVE:
+                                _state['audio_warn_active'] = False  # Hysterese reset
+                    # Emit AUSSERHALB Lock (SocketIO kann blockierend sein)
+                    if _should_emit:
+                        try:
+                            sio.emit('audio_health_warning', {
+                                'score': round(_score_now, 3),
+                                'window_s': 10,
+                            }, room=sid)
+                        except Exception as _e_emit:
+                            print(f'[AudioHealth] emit Fehler: {_e_emit}')
 
                 if roles_confirmed:
                     sp_name = 'Berater' if speaker == 0 else ('Kunde' if speaker == 1 else 'Sprecher')
