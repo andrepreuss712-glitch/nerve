@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.D Plan 03 abgeschlossen (2026-05-26)
-last_updated: "2026-05-26T17:35:00Z"
-last_activity: 2026-05-26
+stopped_at: context exhaustion at 90% (2026-05-19)
+last_updated: "2026-05-26T17:28:57.917Z"
+last_activity: 2026-05-26 - Phase 08.23.2.D Plan 04 — api_beenden calls-UPDATE + Audio-Health-Thread (10c3b3b, c7afd2b)
 progress:
-  total_phases: 77
+  total_phases: 78
   completed_phases: 55
   total_plans: 233
-  completed_plans: 225
-  percent: 97
+  completed_plans: 223
+  percent: 95
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 03 abgeschlossen 2026-05-26
-Next: /gsd-execute-phase 08.23.2.D --plan 04
-Last activity: 2026-05-26 - Phase 08.23.2.D Plan 03 — Word-Confidence-Buffer + Hysterese-Emit (9bb676f, 0289f5a, 40faa5e)
+Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 04 abgeschlossen 2026-05-26
+Next: /gsd-execute-phase 08.23.2.D --plan 05
+Last activity: 2026-05-26 - Phase 08.23.2.D Plan 04 — api_beenden calls-UPDATE + Audio-Health-Thread (10c3b3b, c7afd2b)
+
+**Phase 08.23.2.D Plan 04 abgeschlossen:** api_beenden() erweitert: UPDATE des bestehenden Early-Call-Records nach ConvLog-Save (REQ-D-2 — kein zweiter INSERT, SPEC-Override: create_call_for_sid() legt Early-Record bei Session-Start an). Felder: ended_at, conversation_log_id, call_mode (aus req_data D-05a). Background-Thread (daemon=True) startet VOR reset_session() mit Flask App-Context: liest word_confidences-Buffer (VOR reset_session() — Race-Condition-Sicherung), berechnet audio_health via outcome_service.calculate_audio_health(), schreibt audio_health_score + CallEvent(event_type='audio_health') (REQ-D-6). call_id im Response fuer Frontend-Fallback-Pull. 6 Runtime-Behavior-Tests (CLAUDE.md-konform, kein Source-Presence). Deviations: UUID-str()-Compat + explizite event_id fuer SQLite-BIGINT-NOT-NULL. 2 Commits: 10c3b3b, c7afd2b. SUMMARY: 08.23.2.D-04-SUMMARY.md.
 
 **Phase 08.23.2.D Plan 03 abgeschlossen:** Word-Confidence-Buffer (D-06) vollstaendig implementiert. services/live_session.py: 'word_confidences': [] als Top-Level-Key + 'audio_warn_active': False als Sub-Key in state-Dict (REQ-D-7). services/deepgram_service.py: statistics-Import, _AUDIO_WARN_TRIGGER_BELOW=0.70 + _AUDIO_WARN_RESET_ABOVE=0.80 + _ROLLING_WINDOW_MS=10_000 Konstanten, _rolling_10s_score() Helper, Word-Confidence-Buffer-Schreibpfad bei is_final=True, Hysterese-Emit audio_health_warning (per-Socket, ausserhalb Lock, non-blocking). tests/test_word_confidence_buffer.py: 7 Unit-Tests (alle gruen). REQ-D-7 erfuellt. 3 Commits: 9bb676f, 0289f5a, 40faa5e. SUMMARY: 08.23.2.D-03-SUMMARY.md.
 
