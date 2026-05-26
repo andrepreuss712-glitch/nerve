@@ -4,8 +4,8 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-26T17:28:57.917Z"
-last_activity: 2026-05-26 - Phase 08.23.2.D Plan 04 — api_beenden calls-UPDATE + Audio-Health-Thread (10c3b3b, c7afd2b)
+last_updated: "2026-05-26T17:36:33Z"
+last_activity: 2026-05-26 - Phase 08.23.2.D Plan 05 — Post-Call Outcome Route Integration (3431d56, e506899, 5add8c2)
 progress:
   total_phases: 78
   completed_phases: 55
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 04 abgeschlossen 2026-05-26
-Next: /gsd-execute-phase 08.23.2.D --plan 05
-Last activity: 2026-05-26 - Phase 08.23.2.D Plan 04 — api_beenden calls-UPDATE + Audio-Health-Thread (10c3b3b, c7afd2b)
+Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 05 abgeschlossen 2026-05-26
+Next: /gsd-execute-phase 08.23.2.D --plan 06
+Last activity: 2026-05-26 - Phase 08.23.2.D Plan 05 — Post-Call Outcome Route Integration (3431d56, e506899, 5add8c2)
+
+**Phase 08.23.2.D Plan 05 abgeschlossen:** api_postcall_analysis() erweitert: outcome_service.classify() NACH Sonnet-Block, Schwellenlogik (conf>=0.90->ai_auto, 0.70<=conf<0.90->ai_auto_unsicher, <0.70->NULL), UPDATE calls.outcome/outcome_confidence/outcome_source mit Ownership-Check (V4 ASVS), SocketIO emit('outcome_ready') NUR room-targeted via _session_state-SID-Lookup (KEIN broadcast — Multi-User-Privacy). Zwei neue Endpoints: GET /api/calls/latest_outcome (D-04e Fallback-Pull, Ownership) + POST /api/calls/<id>/correct_outcome (User-Korrektur, anonymize(cache=None), outcome_source='user_corrected'). 10 Runtime-Behavior-Tests (CLAUDE.md-konform). Deviations: separate DB-Sessions, str(uuid4()) SQLite-Compat, outcome_confidence-Persistierung auch bei niedrigem Confidence. 3 Commits: 3431d56, e506899, 5add8c2. SUMMARY: 08.23.2.D-05-SUMMARY.md.
 
 **Phase 08.23.2.D Plan 04 abgeschlossen:** api_beenden() erweitert: UPDATE des bestehenden Early-Call-Records nach ConvLog-Save (REQ-D-2 — kein zweiter INSERT, SPEC-Override: create_call_for_sid() legt Early-Record bei Session-Start an). Felder: ended_at, conversation_log_id, call_mode (aus req_data D-05a). Background-Thread (daemon=True) startet VOR reset_session() mit Flask App-Context: liest word_confidences-Buffer (VOR reset_session() — Race-Condition-Sicherung), berechnet audio_health via outcome_service.calculate_audio_health(), schreibt audio_health_score + CallEvent(event_type='audio_health') (REQ-D-6). call_id im Response fuer Frontend-Fallback-Pull. 6 Runtime-Behavior-Tests (CLAUDE.md-konform, kein Source-Presence). Deviations: UUID-str()-Compat + explizite event_id fuer SQLite-BIGINT-NOT-NULL. 2 Commits: 10c3b3b, c7afd2b. SUMMARY: 08.23.2.D-04-SUMMARY.md.
 

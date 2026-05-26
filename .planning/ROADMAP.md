@@ -1573,6 +1573,6 @@ Plans:
 - [x] 08.23.2.D-02-PLAN.md — services/outcome_service.py (Haiku-Classifier + Audio-Health-5-Metriken) (REQ-D-3, REQ-D-6) — DONE 2026-05-26
 - [x] 08.23.2.D-03-PLAN.md — Word-Confidence-Buffer + Rolling-10s-Score + Hysterese-Emit in deepgram_service (REQ-D-7) — DONE 2026-05-26
 - [x] 08.23.2.D-04-PLAN.md — api_beenden: calls-UPDATE + Audio-Health-Background-Thread + call_id in Response (REQ-D-2, REQ-D-6) — DONE 2026-05-26
-- [ ] 08.23.2.D-05-PLAN.md — api_postcall_analysis (Classifier+UPDATE+Emit) + Fallback-Pull + Korrektur-Endpoint (REQ-D-3, REQ-D-5, REQ-D-8, REQ-D-9)
+- [x] 08.23.2.D-05-PLAN.md — api_postcall_analysis (Classifier+UPDATE+Emit) + Fallback-Pull + Korrektur-Endpoint (REQ-D-3, REQ-D-5, REQ-D-8, REQ-D-9) — DONE 2026-05-26
 - [ ] 08.23.2.D-06-PLAN.md — PiP Frontend: outcome_ready-Handler + 3-stufige UX + Korrektur-Modal + Audio-Warn (REQ-D-4, REQ-D-5, REQ-D-7)
 - [ ] 08.23.2.D-07-PLAN.md — Dashboard Reminder-Card + Inline-Korrektur + Foundation-Code-Register (REQ-D-8, REQ-D-9, REQ-D-10)
