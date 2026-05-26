@@ -2431,6 +2431,50 @@
         console.warn('[pip] manual_mode_toggle_ack error:', data.error);
       }
     });
+
+    // -- Phase 08.23.2.D REQ-D-4 - outcome_ready Handler (dreistufige UX) ----
+    state.socket.on('outcome_ready', function (d) {
+      try {
+        if (!d || !d.call_id) return;
+        if (state.lastCallId && String(state.lastCallId) !== String(d.call_id)) {
+          return; // Event fuer anderen Call - ignorieren
+        }
+        _renderOutcomeUx(d);
+      } catch (e) {
+        console.error('[PhaseD] outcome_ready Handler Fehler:', e);
+      }
+    });
+
+    // -- Phase 08.23.2.D REQ-D-7 - audio_health_warning Handler -----------
+    state.socket.on('audio_health_warning', function (d) {
+      try {
+        _showAudioWarning(d && d.score);
+      } catch (e) {
+        console.error('[PhaseD] audio_health_warning Handler Fehler:', e);
+      }
+    });
+
+    // -- Phase 08.23.2.D D-04e - Reconnect-Fallback-Pull -----------------
+    state.socket.on('connect', function () {
+      if (state.lastCallId) {
+        // Nur abfragen wenn aktuell keine UX im PostCall-Overlay aktiv
+        var sec = document.getElementById('pip-outcome-section');
+        if (sec && sec.dataset.outcomeRendered === '1') return;
+        fetch('/api/calls/latest_outcome?call_id=' + encodeURIComponent(state.lastCallId))
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (json) {
+            if (json && json.ok && json.call_id) {
+              _renderOutcomeUx({
+                outcome: json.outcome,
+                confidence: json.confidence,
+                source: json.source,
+                call_id: json.call_id,
+              });
+            }
+          })
+          .catch(function () { /* silent */ });
+      }
+    });
   }
 
   // ── Phase 08.23.2.C — Gatekeeper-Modus-Funktionen ────────────────────────
@@ -2854,6 +2898,7 @@
         }
         if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); _showPostcallEmpty(); return; }
         state.lastConvId = data.conv_id || null;
+        state.lastCallId = data.call_id || null; // Phase 08.23.2.D REQ-D-4: Fallback-Pull
         if (data.postcall) {
           _showPostcall(data.postcall);
         } else {
@@ -3483,6 +3528,156 @@
         state.socket.emit('manual_mode_toggle', { category: newCategory });
       }
     });
+  }
+
+  // ── Phase 08.23.2.D - Outcome-UX Hilfsfunktionen ─────────────────────────
+
+  function _showAudioWarning(score) {
+    var host = document.querySelector('.pip-header-mic-area') || document.querySelector('.pip-header') || document.body;
+    var existing = document.getElementById('pip-audio-warn');
+    if (existing) existing.remove();
+    var el = document.createElement('span');
+    el.id = 'pip-audio-warn';
+    el.className = 'pip-audio-warn';
+    el.setAttribute('data-tip', 'Audio-Qualität schlecht');
+    el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/></svg>';
+    host.appendChild(el);
+    setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 5000);
+  }
+
+  function _renderOutcomeUx(data) {
+    // Ermittle PostCall-Overlay-Section
+    var sec = document.getElementById('pip-outcome-section');
+    if (!sec) {
+      var host = document.getElementById('pip-postcall') || document.querySelector('.nlp-section-postcall') || document.body;
+      sec = document.createElement('div');
+      sec.id = 'pip-outcome-section';
+      sec.className = 'n-glass pip-outcome-section';
+      host.appendChild(sec);
+    }
+    sec.dataset.outcomeRendered = '1';
+    sec.innerHTML = '';
+    var outcome = data.outcome;
+    var conf = +data.confidence || 0;
+    var source = data.source;
+    var callId = data.call_id;
+
+    if (source === 'ai_auto' || source === 'ai_auto_unsicher') {
+      // Auto-Confirm mit 30s Countdown
+      var label = document.createElement('div');
+      label.className = 'pip-outcome-label';
+      label.textContent = 'Outcome erkannt';
+      sec.appendChild(label);
+      var value = document.createElement('div');
+      value.className = 'pip-outcome-value';
+      value.textContent = _outcomeLabelDe(outcome);
+      sec.appendChild(value);
+      var ring = document.createElement('div');
+      ring.className = 'pip-outcome-confirm-ring';
+      ring.innerHTML = '<span class="pip-outcome-countdown">30</span>';
+      sec.appendChild(ring);
+      var caption = document.createElement('div');
+      caption.className = 'pip-outcome-caption';
+      caption.textContent = 'Wird automatisch bestätigt in 30s';
+      sec.appendChild(caption);
+      if (source === 'ai_auto_unsicher') {
+        var badge = document.createElement('span');
+        badge.className = 'pip-outcome-badge-unsicher';
+        badge.textContent = 'Unsicher - wird im Dashboard markiert';
+        sec.appendChild(badge);
+      }
+      var remaining = 30;
+      var tickEl = ring.querySelector('.pip-outcome-countdown');
+      var iv = setInterval(function () {
+        remaining -= 1;
+        if (tickEl) tickEl.textContent = String(remaining);
+        if (remaining <= 0) {
+          clearInterval(iv);
+          ring.classList.add('pip-outcome-confirmed');
+          if (tickEl) tickEl.textContent = 'OK';
+          if (caption) caption.textContent = 'Bestätigt';
+        }
+      }, 1000);
+    } else {
+      // Korrektur-Modal (confidence<0.70 oder Classifier-Fehler)
+      var heading = document.createElement('div');
+      heading.className = 'pip-outcome-heading';
+      heading.textContent = 'Outcome unklar - bitte korrigieren';
+      sec.appendChild(heading);
+      if (outcome) {
+        var hint = document.createElement('div');
+        hint.className = 'pip-outcome-hint';
+        hint.textContent = 'KI-Vorschlag: ' + _outcomeLabelDe(outcome);
+        sec.appendChild(hint);
+      }
+      var grid = document.createElement('div');
+      grid.className = 'pip-outcome-correction-grid';
+      var noteEl = null;
+      var opts = [
+        ['meeting_booked', 'Termin gebucht'],
+        ['callback', 'Rückruf'],
+        ['no_interest', 'Kein Interesse'],
+        ['wrong_person', 'Falsche Person'],
+        ['contract_signed', 'Abschluss'],
+      ];
+      opts.forEach(function (pair) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'n-btn-ghost pip-outcome-correction-btn';
+        btn.dataset.value = pair[0];
+        btn.textContent = pair[1];
+        btn.addEventListener('click', function () {
+          _submitOutcomeCorrection(callId, pair[0], noteEl ? noteEl.value : null);
+        });
+        grid.appendChild(btn);
+      });
+      sec.appendChild(grid);
+      // D-08 Option a: outcome_note Textarea NUR im Korrektur-Modal
+      var noteLabel = document.createElement('label');
+      noteLabel.className = 'pip-outcome-note-label';
+      noteLabel.textContent = 'Notiz (optional)';
+      sec.appendChild(noteLabel);
+      noteEl = document.createElement('textarea');
+      noteEl.className = 'pip-outcome-note-textarea n-input';
+      noteEl.placeholder = 'Stichworte zum Gespräch…';
+      noteEl.rows = 3;
+      sec.appendChild(noteEl);
+      var sub = document.createElement('div');
+      sub.className = 'pip-outcome-note-sub';
+      sub.textContent = 'Wird vor dem Speichern anonymisiert.';
+      sec.appendChild(sub);
+    }
+  }
+
+  function _outcomeLabelDe(val) {
+    var m = {
+      meeting_booked: 'Termin gebucht',
+      callback: 'Rückruf',
+      no_interest: 'Kein Interesse',
+      wrong_person: 'Falsche Person',
+      contract_signed: 'Abschluss',
+      unknown: 'Unklar',
+    };
+    return m[val] || (val || '-');
+  }
+
+  function _submitOutcomeCorrection(callId, outcome, note) {
+    if (!callId || !outcome) return;
+    var body = { outcome: outcome };
+    if (note && String(note).trim()) body.note = String(note);
+    fetch('/api/calls/' + encodeURIComponent(callId) + '/correct_outcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify(body),
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (json) {
+        if (json && json.ok) {
+          var sec = document.getElementById('pip-outcome-section');
+          if (sec) sec.innerHTML = '<div class="pip-outcome-saved">Outcome gespeichert.</div>';
+        }
+      })
+      .catch(function (e) { console.error('[PhaseD] correct_outcome POST Fehler:', e); });
   }
 
 })();
