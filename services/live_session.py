@@ -364,6 +364,10 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 'phase_entered_at':      None,        # monotonic seconds
                 # Call-Record-Referenz (Pitfall 4 — call_id-Provenienz)
                 'call_id':               None,        # UUID nach Call-Insert in create_call_for_sid
+                # Phase 08.23.2.D - Audio-Health-Hysterese (REQ-D-7)
+                # False = keine aktive Warnung; True nach erstem Score<0.70-Emit,
+                # zurueck auf False sobald Score>0.80 (Hysterese - verhindert Spam).
+                'audio_warn_active':     False,
             },
             # D-04: tracking logs — initialized as per-SID scaffolding for future migration.
             # NOTE (HIGH-2 coexistence): Services still WRITE to module-level globals
@@ -397,6 +401,10 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             '_current_monolog_start': None,
             '_line_id_counter':      0,
             'anonymisierer':         None,    # D-06: AnrufAnonymisierer, erstellt via init_anonymisierer()
+            # Phase 08.23.2.D - Word-Confidence-Buffer (D-06)
+            # Liste von (ts_ms: int, confidence: float) Tuples;
+            # cleared bei reset_session/pop_session_state automatisch.
+            'word_confidences':      [],
         }
     # WR-03: init per-SID coaching buffer (separate lock — same lifecycle as transcript)
     with _per_sid_coaching_lock:
