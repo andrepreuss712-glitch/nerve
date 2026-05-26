@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Planning
-stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-23T10:56:25.650Z"
-last_activity: 2026-05-23
+stopped_at: Phase 08.23.2.D context gathered (2026-05-26)
+last_updated: "2026-05-26T14:58:00.000Z"
+last_activity: 2026-05-26
 progress:
   total_phases: 77
   completed_phases: 55
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
-**Current focus:** Phase 08.23.2.C.R — Gatekeeper-Modul-Rebuild planen (Architektur-Rebuild)
+**Current focus:** Phase 08.23.2.D — Outcome-Erfassung + Audio-Qualitäts-Score
 
 ## Current Position
 
-Phase: 08.23.2.C.R.F (gatekeeper-modul-fix-pass) — IN PROGRESS (Plan 03 abgeschlossen)
-Next: Naechster Plan in Phase 08.23.2.C.R.F oder Phase-Abschluss
-Last activity: 2026-05-23 - Quick Task 20260523-cr1: cold_call-Phrases Re-Seed (Alembic 0005, 18 Phrasen, idempotent)
+Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Context gathered 2026-05-26
+Next: /gsd-plan-phase 08.23.2.D
+Last activity: 2026-05-26 - discuss-phase 08.23.2.D — implementation decisions captured (outcome_service.py, Audio-Health-Buffer, PiP SocketIO flow, Dashboard Brand-Token fix)
 
 **Phase 08.23.2.C.R.F Plan 03 abgeschlossen:** test_mode_switch_event.py vollstaendig ersetzt: 2 tautologische False-Green-Tests (manuelle CallEvent-Instanziierung) durch behavioral Handler-Tests. Handler-Extraktion via register_audio_handlers(mock_sio) mit Dict-Capture. test_mode_switch_payload_persisted_to_db: ruft echten Handler auf, assertiert db.add() mit event_type='mode_switch' + 4 Payload-Keys. test_call_id_none_means_skip_guard_fires: ruft Handler mit call_id=None, assertiert assert_not_called() (Skip-Guard real geprueft). 1 Commit: d8d5656. SUMMARY: 08.23.2.C.R.F-03-SUMMARY.md. Decisions: mock_sio.on-Dict-Capture fuer Closure-Extraktion; database.db.SessionLocal-Patch fuer lokalen Import-Intercept; try/finally fuer State-Cleanup.
 
