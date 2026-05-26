@@ -1559,7 +1559,7 @@ Plans:
 **Komplexität:** 🟡 mittel — neue UX (Pflicht-Modal-Anti-Pattern-Risiko) + neuer Hintergrund-Job + Schema-Erweiterung `calls.outcome` + `calls.audio_health_score`. Cross-AI Pflicht (CLAUDE.md Punkt 7 — 🟡 immer Cross-AI).
 **Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler nutzt `audio_health_score >= 0.80` als Gate für Trainings-Korpus-Aufnahme)
 
-**Plans:** noch nicht erstellt — `/gsd-spec-phase 08.23.2.D` ist der nächste Schritt.
+**Plans:** 7 Pläne in 6 Waves (erstellt 2026-05-26)
 
 **CLAUDE.md-Pflicht-Pattern für die Spec/Plan-Phase:**
 - **Punkt 7** Cross-AI Gemini Pflicht (🟡 mittel — keine Skip-Begründung möglich)
@@ -1569,4 +1569,10 @@ Plans:
 - **Punkt 20** Pflicht-grep vor Migration + Code-Insert: wird `calls.outcome` + `audio_health_score` im echten Lese-Pfad genutzt nach Bau? Foundation-Code-Register-Eintrag falls Felder vor 08.23.2.E noch keinen aktiven Lese-Pfad haben
 
 Plans:
-- [ ] 08.23.2.D-XX-PLAN.md -- noch nicht erstellt
+- [x] 08.23.2.D-01-PLAN.md — Alembic-Migration 0005 (calls + outcome_* Felder + FK conversation_log_id) (REQ-D-1) — DONE 2026-05-26
+- [ ] 08.23.2.D-02-PLAN.md — services/outcome_service.py (Haiku-Classifier + Audio-Health-5-Metriken) (REQ-D-3, REQ-D-6)
+- [ ] 08.23.2.D-03-PLAN.md — Word-Confidence-Buffer + Rolling-10s-Score + Hysterese-Emit in deepgram_service (REQ-D-7)
+- [ ] 08.23.2.D-04-PLAN.md — api_beenden: calls-UPDATE + Audio-Health-Background-Thread + call_id in Response (REQ-D-2, REQ-D-6)
+- [ ] 08.23.2.D-05-PLAN.md — api_postcall_analysis (Classifier+UPDATE+Emit) + Fallback-Pull + Korrektur-Endpoint (REQ-D-3, REQ-D-5, REQ-D-8, REQ-D-9)
+- [ ] 08.23.2.D-06-PLAN.md — PiP Frontend: outcome_ready-Handler + 3-stufige UX + Korrektur-Modal + Audio-Warn (REQ-D-4, REQ-D-5, REQ-D-7)
+- [ ] 08.23.2.D-07-PLAN.md — Dashboard Reminder-Card + Inline-Korrektur + Foundation-Code-Register (REQ-D-8, REQ-D-9, REQ-D-10)

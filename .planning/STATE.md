@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Planning
-stopped_at: Phase 08.23.2.D context gathered (2026-05-26)
-last_updated: "2026-05-26T14:58:00.000Z"
+status: Executing
+stopped_at: Phase 08.23.2.D Plan 01 abgeschlossen (2026-05-26)
+last_updated: "2026-05-26T17:05:40Z"
 last_activity: 2026-05-26
 progress:
   total_phases: 77
   completed_phases: 55
   total_plans: 233
-  completed_plans: 222
+  completed_plans: 223
   percent: 95
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Context gathered 2026-05-26
-Next: /gsd-plan-phase 08.23.2.D
-Last activity: 2026-05-26 - discuss-phase 08.23.2.D — implementation decisions captured (outcome_service.py, Audio-Health-Buffer, PiP SocketIO flow, Dashboard Brand-Token fix)
+Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 01 abgeschlossen 2026-05-26
+Next: /gsd-execute-phase 08.23.2.D --plan 02
+Last activity: 2026-05-26 - Phase 08.23.2.D Plan 01 — Alembic-Migration 0005 + Call-ORM + Real-Daten-Test (3 Commits: f81e61c, eaa2d54, cf1aac0)
+
+**Phase 08.23.2.D Plan 01 abgeschlossen:** Alembic-Migration 0005 addet 4 nullable Spalten zu calls (conversation_log_id FK, outcome_confidence, outcome_note, outcome_source + CHECK ck_calls_outcome_source). Call-ORM-Modell in database/models.py gespiegelt. Real-Daten-Validation-Test (CLAUDE.md Punkt 13): 4 Tests gruen — Spalten-Inspect, SELECT-Smoke, CHECK-Violation bei invalid_value, NULL+gueltige-Werte erlaubt. Deviation: Downgrade via Raw-SQL CREATE+COPY+DROP statt batch_alter_table (SQLite-Limitation: ORM-CHECK-Constraint kollidiert mit column-drop in temp-Tabelle). REQ-D-1 vollstaendig, REQ-D-2 FK-Prerequisite erfuellt. 3 Commits: f81e61c, eaa2d54, cf1aac0. SUMMARY: 08.23.2.D-01-SUMMARY.md.
 
 **Phase 08.23.2.C.R.F Plan 03 abgeschlossen:** test_mode_switch_event.py vollstaendig ersetzt: 2 tautologische False-Green-Tests (manuelle CallEvent-Instanziierung) durch behavioral Handler-Tests. Handler-Extraktion via register_audio_handlers(mock_sio) mit Dict-Capture. test_mode_switch_payload_persisted_to_db: ruft echten Handler auf, assertiert db.add() mit event_type='mode_switch' + 4 Payload-Keys. test_call_id_none_means_skip_guard_fires: ruft Handler mit call_id=None, assertiert assert_not_called() (Skip-Guard real geprueft). 1 Commit: d8d5656. SUMMARY: 08.23.2.C.R.F-03-SUMMARY.md. Decisions: mock_sio.on-Dict-Capture fuer Closure-Extraktion; database.db.SessionLocal-Patch fuer lokalen Import-Intercept; try/finally fuer State-Cleanup.
 
