@@ -662,12 +662,21 @@ class Call(Base):
     outcome = Column(Text, nullable=True)
     audio_health_score = Column(Float, nullable=True)
     coaching_score = Column(Float, nullable=True)
+    # --- Phase 08.23.2.D — Outcome-Erfassung (REQ-D-1) ---
+    conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
+    outcome_confidence = Column(Float, nullable=True)
+    outcome_note = Column(Text, nullable=True)
+    outcome_source = Column(Text, nullable=True)
     meddpicc_extracted = Column(JSON_TYPE, nullable=True)
     created_at = Column(DateTime, default=utcnow)
     __table_args__ = (
         CheckConstraint("call_mode IN ('cold_call', 'meeting_consented')", name='ck_calls_call_mode'),
         CheckConstraint("transcript_storage IN ('none', 'ephemeral', 'consented_full')", name='ck_calls_transcript_storage'),
         CheckConstraint("outcome IN ('meeting_booked', 'callback', 'no_interest', 'wrong_person', 'contract_signed', 'unknown') OR outcome IS NULL", name='ck_calls_outcome'),
+        CheckConstraint(
+            "outcome_source IN ('ai_auto', 'ai_auto_unsicher', 'user_corrected') OR outcome_source IS NULL",
+            name='ck_calls_outcome_source',
+        ),
         Index('idx_calls_account_time', 'account_id', 'started_at'),
         Index('idx_calls_user_time', 'user_id', 'started_at'),
         Index('idx_calls_mode_outcome', 'call_mode', 'outcome', postgresql_where=text('outcome IS NOT NULL')),
