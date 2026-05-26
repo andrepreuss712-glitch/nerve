@@ -1607,3 +1607,96 @@ def api_gatekeeper_phrases():
         return jsonify({'buttons': grouped, 'variables': variables})
     finally:
         db.close()
+
+
+# ===========================================================================
+# Phase 08.23.2.D - Fallback-Pull + Korrektur-Endpoints (REQ-D-3/5/8/9)
+# ===========================================================================
+
+@app_routes_bp.route('/api/calls/latest_outcome', methods=['GET'])
+@login_required
+def api_calls_latest_outcome():
+    """Phase 08.23.2.D D-04e - Fallback-Pull fuer Reconnect-Case.
+
+    Query: ?call_id=<uuid> (optional - sonst letzter Call des Users)
+    Returns: {outcome, confidence, source, call_id, outcome_note}
+    Ownership: Call.user_id == g.user.id (V4 ASVS).
+    """
+    from database.models import Call
+    call_id_param = request.args.get('call_id')
+    db_lo = get_session()
+    try:
+        q = db_lo.query(Call).filter(Call.user_id == g.user.id)
+        if call_id_param:
+            q = q.filter(Call.id == call_id_param)
+        else:
+            q = q.order_by(Call.started_at.desc())
+        row = q.first()
+        if row is None:
+            return jsonify({'ok': False, 'error': 'not_found'}), 404
+        return jsonify({
+            'ok': True,
+            'call_id': str(row.id),
+            'outcome': row.outcome,
+            'confidence': row.outcome_confidence,
+            'source': row.outcome_source,
+            'outcome_note': row.outcome_note,
+        })
+    finally:
+        db_lo.close()
+
+
+@app_routes_bp.route('/api/calls/<call_id>/correct_outcome', methods=['POST'])
+@login_required
+def api_calls_correct_outcome(call_id):
+    """Phase 08.23.2.D REQ-D-5 + REQ-D-9 - User-Korrektur + Outcome-Note.
+
+    Body: {outcome: '<enum>', note?: '<freitext>'}
+    - outcome muss in VALID_OUTCOMES sein
+    - note wird via anonymize(cache=None) anonymisiert vor DB-Write (REQ-D-5 Constraint)
+    - setzt outcome_source = 'user_corrected'
+    Ownership: Call.user_id == g.user.id.
+    """
+    from database.models import Call
+    from services.outcome_service import VALID_OUTCOMES
+    from services.anonymization import anonymize
+    data_co = request.get_json(silent=True) or {}
+    new_outcome = data_co.get('outcome')
+    new_note = data_co.get('note')
+    if new_outcome not in VALID_OUTCOMES:
+        return jsonify({'ok': False, 'error': 'invalid_outcome'}), 400
+    db_co = get_session()
+    try:
+        row = db_co.query(Call).filter(Call.id == call_id, Call.user_id == g.user.id).first()
+        if row is None:
+            return jsonify({'ok': False, 'error': 'not_found_or_forbidden'}), 404
+        row.outcome = new_outcome
+        row.outcome_source = 'user_corrected'
+        # outcome_confidence bleibt unveraendert (Audit-Trail-Hint - alte Haiku-Confidence sichtbar)
+        if new_note is not None and str(new_note).strip():
+            # REQ-D-5: anonymisieren Pflicht, auch ohne erkannte PII (D-02 Defense-in-Depth)
+            try:
+                anon_text, _tier = anonymize(str(new_note), None)  # cache=None - kein Session-Cache
+                if anon_text in ('[ART9_REDACTED]', '[ANON_FEHLER]'):
+                    row.outcome_note = None  # SPEC: leere/redacted Notiz -> NULL
+                else:
+                    row.outcome_note = anon_text.strip() or None
+            except Exception as _e_anon:
+                print(f'[Phase08.23.2.D] outcome_note anonymize Fehler: {_e_anon}')
+                row.outcome_note = None  # fail-safe
+        else:
+            row.outcome_note = None
+        db_co.commit()
+        return jsonify({
+            'ok': True,
+            'call_id': str(row.id),
+            'outcome': row.outcome,
+            'source': row.outcome_source,
+            'outcome_note': row.outcome_note,
+        })
+    except Exception as e:
+        db_co.rollback()
+        print(f'[Phase08.23.2.D] correct_outcome Fehler: {e}')
+        return jsonify({'ok': False, 'error': 'server_error'}), 500
+    finally:
+        db_co.close()
