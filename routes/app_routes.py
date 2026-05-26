@@ -1,6 +1,7 @@
 import os
+import threading
 from datetime import datetime
-from flask import Blueprint, jsonify, request, g, session as flask_session
+from flask import Blueprint, jsonify, request, g, session as flask_session, current_app
 from routes.auth import login_required
 import services.live_session as ls
 from services.live_session import LOG_DIR, _build_log_content, reset_session
@@ -453,9 +454,115 @@ def api_beenden():
     except Exception:
         pass
 
+    # -- Phase 08.23.2.D REQ-D-2 - calls-Record UPDATEN (kein zweiter INSERT) --
+    # create_call_for_sid() legt bei start_live_session bereits einen Call-Record an.
+    # Hier UPDATEn wir ended_at, conversation_log_id, call_mode (aus req_data per D-05a).
+    # RACE-CONDITION-SICHERUNG: word_confidences werden HIER gelesen, VOR reset_session(),
+    # damit der Audio-Health-Thread den vollen Buffer erhaelt.
+    _phase_d_call_id = None
+    _phase_d_word_confidences = []
+    try:
+        # SID-Lookup: api_beenden ist HTTP-Route. Wir suchen via user_id den aktiven Session-State-Eintrag.
+        # Wenn das Frontend in Plan 05 'call_id' im POST-Body mitschickt, ist das deterministischer -
+        # bevorzugt diesen, fallback auf user_id-Iteration.
+        _posted_call_id = req_data.get('call_id') if isinstance(req_data, dict) else None
+        with ls._session_state_lock:
+            if _posted_call_id:
+                for _sid, _sd in ls._session_state.items():
+                    if _sd.get('state', {}).get('call_id') and str(_sd['state']['call_id']) == str(_posted_call_id):
+                        _phase_d_call_id = _sd['state']['call_id']
+                        _phase_d_word_confidences = list(_sd.get('word_confidences', []))
+                        break
+            if not _phase_d_call_id:
+                for _sid, _sd in ls._session_state.items():
+                    if _sd.get('user_id') == g.user.id and _sd.get('state', {}).get('call_id'):
+                        _phase_d_call_id = _sd['state']['call_id']
+                        _phase_d_word_confidences = list(_sd.get('word_confidences', []))
+                        break
+    except Exception as _e_lookup:
+        print(f'[Phase08.23.2.D] call_id-Lookup Fehler (non-fatal): {_e_lookup}')
+
+    if _phase_d_call_id:
+        from datetime import datetime as _dt, timezone as _tz
+        from database.models import Call as _CallModel
+        _db_calls = get_session()
+        try:
+            _call_row = _db_calls.query(_CallModel).filter(_CallModel.id == _phase_d_call_id).first()
+            if _call_row is not None:
+                _call_row.ended_at = _dt.now(_tz.utc)
+                _call_row.conversation_log_id = saved_conv_id
+                # D-05a: call_mode aus req_data, NICHT aus Session-State
+                _req_mode = (req_data.get('session_mode') if isinstance(req_data, dict) else None) or 'meeting'
+                # call_mode CHECK-Constraint erlaubt nur 'cold_call' und 'meeting_consented'
+                _call_row.call_mode = 'cold_call' if _req_mode == 'cold_call' else 'meeting_consented'
+                _db_calls.commit()
+        except Exception as _e_upd:
+            print(f'[Phase08.23.2.D] calls-UPDATE Fehler: {_e_upd}')
+            _db_calls.rollback()
+        finally:
+            _db_calls.close()
+
+    # -- Phase 08.23.2.D REQ-D-6 - Audio-Health-Background-Thread --
+    # Liest _phase_d_word_confidences (bereits oben kopiert VOR reset_session),
+    # berechnet 5 Metriken via outcome_service.calculate_audio_health,
+    # UPDATEt calls.audio_health_score + INSERTet CallEvent(event_type='audio_health').
+    # flask_app wird VOR Thread-Start aus current_app extrahiert, da current_app im
+    # Background-Thread nicht mehr verfuegbar ist (kein Request-Context).
+    _flask_app = current_app._get_current_object()
+
+    def _audio_health_bg(call_id_val, wc_buffer, flask_app):
+        with flask_app.app_context():
+            import time as _t_ah
+            from database.db import get_session as _gs_ah
+            from database.models import Call as _CallAH, CallEvent as _CallEventAH
+            from services import outcome_service as _os_ah
+            try:
+                metrics = _os_ah.calculate_audio_health(wc_buffer)
+                if metrics.get('score') is None:
+                    return  # Kein Buffer -> nichts zu schreiben
+                _db_ah = _gs_ah()
+                try:
+                    _row = _db_ah.query(_CallAH).filter(_CallAH.id == call_id_val).first()
+                    if _row is not None:
+                        _row.audio_health_score = float(metrics['score'])
+                        _db_ah.add(_CallEventAH(
+                            call_id=call_id_val,
+                            event_type='audio_health',
+                            event_ts_ms=int(_t_ah.time() * 1000),
+                            payload={
+                                'mean': metrics.get('mean'),
+                                'median': metrics.get('median'),
+                                'pct_below_07': metrics.get('pct_below_07'),
+                                'longest_uncertain_block_s': metrics.get('longest_uncertain_block_s'),
+                                'stddev': metrics.get('stddev'),
+                                'score': metrics.get('score'),
+                            },
+                        ))
+                        _db_ah.commit()
+                except Exception as _e_inner:
+                    print(f'[AudioHealth] DB-Write Fehler: {_e_inner}')
+                    _db_ah.rollback()
+                finally:
+                    _db_ah.close()
+            except Exception as _e_outer:
+                print(f'[AudioHealth] Thread Fehler: {_e_outer}')
+
+    if _phase_d_call_id and _phase_d_word_confidences:
+        threading.Thread(
+            target=_audio_health_bg,
+            args=(_phase_d_call_id, _phase_d_word_confidences, _flask_app),
+            daemon=True,
+        ).start()
+
     reset_session()
     print("[Beenden] State zurückgesetzt.")
-    return jsonify({'ok': True, 'filename': filename, 'postcall': postcall, 'conv_id': saved_conv_id})
+    return jsonify({
+        'ok': True,
+        'filename': filename,
+        'postcall': postcall,
+        'conv_id': saved_conv_id,
+        'call_id': str(_phase_d_call_id) if _phase_d_call_id else None,  # Phase 08.23.2.D - Frontend-Fallback-Pull
+    })
 
 
 @app_routes_bp.route('/api/keepalive', methods=['POST'])
