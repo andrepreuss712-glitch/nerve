@@ -1,8 +1,18 @@
 """Learning Card + Coach Report API routes."""
 from flask import Blueprint, request, jsonify, g
 from routes.auth import login_required
+from services import outcome_service
+from database.db import get_session
+from database.models import ConversationLog, Call
+import services.live_session as ls
 
 learning_bp = Blueprint('learning', __name__)
+
+# Phase 08.23.2.D: socketio fuer outcome_ready-Emit
+try:
+    from extensions import socketio as _sio_phase_d
+except ImportError:
+    _sio_phase_d = None
 
 
 @learning_bp.route('/api/postcall_analysis', methods=['POST'])
@@ -43,7 +53,110 @@ def api_postcall_analysis():
             ga_details=data.get('ga_details', []),
             kaufsignale=data.get('kaufsignale', []),
         )
-        return jsonify({'vorschlaege': suggestions})
+
+        # -- Phase 08.23.2.D REQ-D-3 - Haiku-Outcome-Classifier + calls-UPDATE + outcome_ready-Emit --
+        _posted_call_id = data.get('call_id') if isinstance(data, dict) else None
+        _outcome_val = None
+        _outcome_conf = 0.0
+        _outcome_source_val = None
+        if _posted_call_id:
+            # Conv-Data fuer Classifier zusammenbauen
+            _db_cls = get_session()
+            try:
+                _conv = _db_cls.query(ConversationLog).filter(
+                    ConversationLog.id == conv_id,
+                    ConversationLog.user_id == g.user.id,
+                ).first()
+                if _conv is not None:
+                    _conv_data = {
+                        'dauer_sekunden': data.get('dauer_sek', 0) or 0,
+                        'erreichte_phase': getattr(_conv, 'erreichte_phase', None),
+                        'einwaende_liste': data.get('einwaende', []),
+                        'ewb_clicks': [],
+                        'kb_endwert': data.get('kb_end', 0) or 0,
+                        'log_entries': [],
+                    }
+                    try:
+                        import json as _json_d
+                        _le_raw = getattr(_conv, 'log_entries', None)
+                        if isinstance(_le_raw, str):
+                            _conv_data['log_entries'] = _json_d.loads(_le_raw) or []
+                        elif isinstance(_le_raw, list):
+                            _conv_data['log_entries'] = _le_raw
+                    except Exception:
+                        _conv_data['log_entries'] = []
+
+                    _result = outcome_service.classify(_conv_data)
+                    _outcome_val = _result.get('outcome')
+                    _outcome_conf = float(_result.get('confidence', 0.0))
+
+                    # Schwellenlogik (REQ-D-4)
+                    if _outcome_val is None:
+                        _outcome_source_val = None
+                    elif _outcome_conf >= 0.90:
+                        _outcome_source_val = 'ai_auto'
+                    elif _outcome_conf >= 0.70:
+                        _outcome_source_val = 'ai_auto_unsicher'
+                    else:
+                        # Niedrige Confidence: KEIN Auto-Set, User muss korrigieren
+                        _outcome_val = None
+                        _outcome_source_val = None
+            finally:
+                _db_cls.close()
+
+            # UPDATE calls (separate Session)
+            if _outcome_val is not None or _outcome_conf > 0.0:
+                _db_upd = get_session()
+                try:
+                    _call_row = _db_upd.query(Call).filter(
+                        Call.id == _posted_call_id,
+                        Call.user_id == g.user.id,
+                    ).first()
+                    if _call_row is not None:
+                        if _outcome_val is not None:
+                            _call_row.outcome = _outcome_val
+                            _call_row.outcome_confidence = _outcome_conf
+                            _call_row.outcome_source = _outcome_source_val
+                        else:
+                            # Niedrige Confidence: confidence trotzdem speichern fuer Statistik
+                            _call_row.outcome_confidence = _outcome_conf
+                        _db_upd.commit()
+                except Exception as _e_cu:
+                    print(f'[Phase08.23.2.D] postcall calls-UPDATE Fehler: {_e_cu}')
+                    _db_upd.rollback()
+                finally:
+                    _db_upd.close()
+
+            # SocketIO emit 'outcome_ready' - NUR room-targeted, KEIN broadcast (Multi-User-Privacy)
+            if _sio_phase_d is not None:
+                try:
+                    _sid_for_emit = None
+                    with ls._session_state_lock:
+                        for _sid, _sd in ls._session_state.items():
+                            if str(_sd.get('state', {}).get('call_id')) == str(_posted_call_id):
+                                _sid_for_emit = _sid
+                                break
+                    if _sid_for_emit:
+                        _payload = {
+                            'outcome': _outcome_val,
+                            'confidence': round(_outcome_conf, 3),
+                            'source': _outcome_source_val,
+                            'call_id': str(_posted_call_id),
+                        }
+                        _sio_phase_d.emit('outcome_ready', _payload, room=_sid_for_emit)
+                    # else: KEINE aktive SID - SKIP emit. Frontend nutzt /api/calls/latest_outcome
+                    # fuer den Reconnect-Case (D-04e Fallback-Pull). Broadcast ist verboten weil
+                    # multi-user-leaky (alle verbundenen User wuerden den Event empfangen).
+                except Exception as _e_em:
+                    print(f'[Phase08.23.2.D] outcome_ready emit Fehler: {_e_em}')
+
+        return jsonify({
+            'vorschlaege': suggestions,
+            'outcome': _outcome_val,
+            'confidence': round(_outcome_conf, 3) if _outcome_conf else 0.0,
+            'source': _outcome_source_val,
+            'call_id': str(_posted_call_id) if _posted_call_id else None,
+        })
     except Exception as _e:
         import traceback
         traceback.print_exc()
