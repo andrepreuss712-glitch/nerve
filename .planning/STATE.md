@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.D Plan 02 abgeschlossen (2026-05-26)
-last_updated: "2026-05-26T17:13:01Z"
+stopped_at: Phase 08.23.2.D Plan 03 abgeschlossen (2026-05-26)
+last_updated: "2026-05-26T17:35:00Z"
 last_activity: 2026-05-26
 progress:
   total_phases: 77
   completed_phases: 55
   total_plans: 233
-  completed_plans: 224
-  percent: 96
+  completed_plans: 225
+  percent: 97
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 02 abgeschlossen 2026-05-26
-Next: /gsd-execute-phase 08.23.2.D --plan 03
-Last activity: 2026-05-26 - Phase 08.23.2.D Plan 02 — outcome_service.py TDD (RED 3ba6215, GREEN 1df87fd)
+Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 03 abgeschlossen 2026-05-26
+Next: /gsd-execute-phase 08.23.2.D --plan 04
+Last activity: 2026-05-26 - Phase 08.23.2.D Plan 03 — Word-Confidence-Buffer + Hysterese-Emit (9bb676f, 0289f5a, 40faa5e)
+
+**Phase 08.23.2.D Plan 03 abgeschlossen:** Word-Confidence-Buffer (D-06) vollstaendig implementiert. services/live_session.py: 'word_confidences': [] als Top-Level-Key + 'audio_warn_active': False als Sub-Key in state-Dict (REQ-D-7). services/deepgram_service.py: statistics-Import, _AUDIO_WARN_TRIGGER_BELOW=0.70 + _AUDIO_WARN_RESET_ABOVE=0.80 + _ROLLING_WINDOW_MS=10_000 Konstanten, _rolling_10s_score() Helper, Word-Confidence-Buffer-Schreibpfad bei is_final=True, Hysterese-Emit audio_health_warning (per-Socket, ausserhalb Lock, non-blocking). tests/test_word_confidence_buffer.py: 7 Unit-Tests (alle gruen). REQ-D-7 erfuellt. 3 Commits: 9bb676f, 0289f5a, 40faa5e. SUMMARY: 08.23.2.D-03-SUMMARY.md.
 
 **Phase 08.23.2.D Plan 02 abgeschlossen:** TDD-implementiertes services/outcome_service.py mit classify() (Claude-Haiku Outcome-Klassifikation, crash-safe, 6 Enum-Werte + confidence 0.0-1.0, Edge-Cases: <30s/Exception/malformed-JSON/invalid-Enum) und calculate_audio_health() (5 deterministische Metriken: mean, median, pct_below_07, longest_uncertain_block_s, stddev + gewichteter Composite-Score 0.0-1.0). Pure-Logik-Service (D-01b/c) — kein Emit, kein DB-Write. TDD: RED 3ba6215 (10 Tests), GREEN 1df87fd. Deviation: MODEL_POSTCALL_HAIKU fehlt in config.py — Fallback auf MODEL_ANALYSE (bestehende Haiku-Konstante). REQ-D-3 + REQ-D-6 erfuellt. SUMMARY: 08.23.2.D-02-SUMMARY.md.
 
