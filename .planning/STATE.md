@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: Phase 08.23.2.D Plan 01 abgeschlossen (2026-05-26)
-last_updated: "2026-05-26T17:05:40Z"
+stopped_at: Phase 08.23.2.D Plan 02 abgeschlossen (2026-05-26)
+last_updated: "2026-05-26T17:13:01Z"
 last_activity: 2026-05-26
 progress:
   total_phases: 77
   completed_phases: 55
   total_plans: 233
-  completed_plans: 223
-  percent: 95
+  completed_plans: 224
+  percent: 96
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 01 abgeschlossen 2026-05-26
-Next: /gsd-execute-phase 08.23.2.D --plan 02
-Last activity: 2026-05-26 - Phase 08.23.2.D Plan 01 — Alembic-Migration 0005 + Call-ORM + Real-Daten-Test (3 Commits: f81e61c, eaa2d54, cf1aac0)
+Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 02 abgeschlossen 2026-05-26
+Next: /gsd-execute-phase 08.23.2.D --plan 03
+Last activity: 2026-05-26 - Phase 08.23.2.D Plan 02 — outcome_service.py TDD (RED 3ba6215, GREEN 1df87fd)
+
+**Phase 08.23.2.D Plan 02 abgeschlossen:** TDD-implementiertes services/outcome_service.py mit classify() (Claude-Haiku Outcome-Klassifikation, crash-safe, 6 Enum-Werte + confidence 0.0-1.0, Edge-Cases: <30s/Exception/malformed-JSON/invalid-Enum) und calculate_audio_health() (5 deterministische Metriken: mean, median, pct_below_07, longest_uncertain_block_s, stddev + gewichteter Composite-Score 0.0-1.0). Pure-Logik-Service (D-01b/c) — kein Emit, kein DB-Write. TDD: RED 3ba6215 (10 Tests), GREEN 1df87fd. Deviation: MODEL_POSTCALL_HAIKU fehlt in config.py — Fallback auf MODEL_ANALYSE (bestehende Haiku-Konstante). REQ-D-3 + REQ-D-6 erfuellt. SUMMARY: 08.23.2.D-02-SUMMARY.md.
 
 **Phase 08.23.2.D Plan 01 abgeschlossen:** Alembic-Migration 0005 addet 4 nullable Spalten zu calls (conversation_log_id FK, outcome_confidence, outcome_note, outcome_source + CHECK ck_calls_outcome_source). Call-ORM-Modell in database/models.py gespiegelt. Real-Daten-Validation-Test (CLAUDE.md Punkt 13): 4 Tests gruen — Spalten-Inspect, SELECT-Smoke, CHECK-Violation bei invalid_value, NULL+gueltige-Werte erlaubt. Deviation: Downgrade via Raw-SQL CREATE+COPY+DROP statt batch_alter_table (SQLite-Limitation: ORM-CHECK-Constraint kollidiert mit column-drop in temp-Tabelle). REQ-D-1 vollstaendig, REQ-D-2 FK-Prerequisite erfuellt. 3 Commits: f81e61c, eaa2d54, cf1aac0. SUMMARY: 08.23.2.D-01-SUMMARY.md.
 
