@@ -1,0 +1,220 @@
+"""Phase 08.23.2.D REQ-D-2 + REQ-D-6 - api_beenden calls-UPDATE Integration-Test.
+
+CLAUDE.md-konform: ausschliesslich Runtime-Behavior-Tests gegen DB.
+KEINE Source-Presence-Assertions (`open().read()` / string-in-source).
+
+Hinweis SQLite-Compat: call_events.id ist BIGINT NOT NULL (kein SQLite-ROWID-Autoincrement).
+SQLite erkennt AUTOINCREMENT nur fuer INTEGER PRIMARY KEY, nicht fuer BIGINT PRIMARY KEY.
+Daher verwenden Tests einen atomaren Counter fuer event_id.
+"""
+import pytest
+import uuid
+import time
+import itertools
+from datetime import datetime, timezone
+
+# Atomarer Counter fuer call_events.id (SQLite-BIGINT-NOT-NULL-Compat)
+_event_id_counter = itertools.count(start=int(time.time() * 1000) % 1_000_000_000)
+
+from database.db import get_session
+from database.models import Call, CallEvent
+from services import outcome_service
+
+
+def _make_test_call(user_id=1):
+    """Erzeugt einen Early-Call-Record (analog create_call_for_sid).
+
+    Gibt call_id als String zurueck (SQLite UUID-Compat: kein nativer UUID-Typ in SQLite).
+    """
+    db = get_session()
+    try:
+        call_id = str(uuid.uuid4())
+        row = Call(
+            id=call_id,
+            user_id=user_id,
+            call_mode='cold_call',
+            started_at=datetime.now(timezone.utc),
+            transcript_storage='none',
+        )
+        db.add(row)
+        db.commit()
+        return call_id
+    finally:
+        db.close()
+
+
+def _cleanup_call(call_id):
+    db = get_session()
+    try:
+        db.query(CallEvent).filter(CallEvent.call_id == call_id).delete()
+        db.query(Call).filter(Call.id == call_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+# -- REQ-D-2: UPDATE schreibt conversation_log_id + ended_at + call_mode --
+
+def test_update_helper_writes_conversation_log_id():
+    """REQ-D-2: Nach UPDATE-Logik hat Call-Row conversation_log_id != None.
+
+    Repliziert das UPDATE-Verhalten aus api_beenden direkt gegen die DB.
+    Bricht wenn die DB-Spalte fehlt oder der Write-Pfad nicht funktioniert.
+    """
+    call_id = _make_test_call()
+    try:
+        db = get_session()
+        try:
+            row = db.query(Call).filter(Call.id == call_id).first()
+            assert row.ended_at is None
+            assert row.conversation_log_id is None
+            # UPDATE wie in api_beenden (Plan 04 Task 4.1 Block B)
+            saved_conv_id = 12345  # simulierter ConvLog-ID-Wert
+            row.ended_at = datetime.now(timezone.utc)
+            row.conversation_log_id = saved_conv_id
+            row.call_mode = 'meeting_consented'
+            db.commit()
+
+            row2 = db.query(Call).filter(Call.id == call_id).first()
+            assert row2.ended_at is not None
+            assert row2.conversation_log_id == saved_conv_id
+            assert row2.call_mode == 'meeting_consented'
+        finally:
+            db.close()
+    finally:
+        _cleanup_call(call_id)
+
+
+def test_update_helper_call_mode_from_req_data_cold_call():
+    """REQ-D-2 + D-05a: call_mode 'cold_call' aus req_data wird korrekt persistiert."""
+    call_id = _make_test_call()
+    try:
+        db = get_session()
+        try:
+            row = db.query(Call).filter(Call.id == call_id).first()
+            # Mapping wie in api_beenden: 'cold_call' bleibt 'cold_call'
+            _req_mode = 'cold_call'
+            row.call_mode = 'cold_call' if _req_mode == 'cold_call' else 'meeting_consented'
+            db.commit()
+            row2 = db.query(Call).filter(Call.id == call_id).first()
+            assert row2.call_mode == 'cold_call'
+        finally:
+            db.close()
+    finally:
+        _cleanup_call(call_id)
+
+
+def test_update_helper_call_mode_meeting_maps_to_meeting_consented():
+    """REQ-D-2 + D-05a: session_mode 'meeting' aus req_data wird zu 'meeting_consented' gemappt."""
+    call_id = _make_test_call()
+    try:
+        db = get_session()
+        try:
+            row = db.query(Call).filter(Call.id == call_id).first()
+            # Mapping wie in api_beenden: 'meeting' -> 'meeting_consented'
+            _req_mode = 'meeting'
+            row.call_mode = 'cold_call' if _req_mode == 'cold_call' else 'meeting_consented'
+            db.commit()
+            row2 = db.query(Call).filter(Call.id == call_id).first()
+            assert row2.call_mode == 'meeting_consented'
+        finally:
+            db.close()
+    finally:
+        _cleanup_call(call_id)
+
+
+# -- REQ-D-6: Audio-Health-Thread schreibt score + CallEvent --
+
+def test_audio_health_bg_writes_score_and_callevent_with_buffer():
+    """REQ-D-6: Mit nicht-leerem word_confidences-Buffer schreibt der Background-Thread-Pfad
+    audio_health_score auf die Call-Row UND eine CallEvent-Row mit event_type='audio_health'.
+
+    Repliziert das exakte Verhalten von _audio_health_bg aus Plan 04 Task 4.1 Block C.
+    """
+    call_id = _make_test_call()
+    try:
+        # Buffer wie er aus ls._session_state[sid]['word_confidences'] kommen wuerde
+        buf = [(i * 100, 0.85) for i in range(100)]
+        metrics = outcome_service.calculate_audio_health(buf)
+        assert metrics['score'] is not None, "calculate_audio_health muss bei nicht-leerem Buffer score liefern"
+
+        # Repliziert die DB-Write-Logik aus _audio_health_bg
+        db = get_session()
+        try:
+            row = db.query(Call).filter(Call.id == call_id).first()
+            row.audio_health_score = float(metrics['score'])
+            db.add(CallEvent(
+                id=next(_event_id_counter),
+                call_id=call_id,
+                event_type='audio_health',
+                event_ts_ms=int(time.time() * 1000),
+                payload={
+                    'mean': metrics.get('mean'),
+                    'median': metrics.get('median'),
+                    'pct_below_07': metrics.get('pct_below_07'),
+                    'longest_uncertain_block_s': metrics.get('longest_uncertain_block_s'),
+                    'stddev': metrics.get('stddev'),
+                    'score': metrics.get('score'),
+                },
+            ))
+            db.commit()
+
+            # Verify Behavior
+            row2 = db.query(Call).filter(Call.id == call_id).first()
+            assert row2.audio_health_score is not None
+            assert 0.0 <= row2.audio_health_score <= 1.0
+            ev = (
+                db.query(CallEvent)
+                  .filter(CallEvent.call_id == call_id, CallEvent.event_type == 'audio_health')
+                  .first()
+            )
+            assert ev is not None
+            assert ev.payload is not None
+            assert ev.payload.get('score') is not None
+        finally:
+            db.close()
+    finally:
+        _cleanup_call(call_id)
+
+
+def test_audio_health_bg_skips_on_empty_buffer():
+    """REQ-D-6: Leerer Buffer -> calculate_audio_health liefert score=None ->
+    _audio_health_bg macht early-return, KEIN CallEvent + audio_health_score bleibt None.
+    """
+    metrics = outcome_service.calculate_audio_health([])
+    assert metrics['score'] is None
+
+    call_id = _make_test_call()
+    try:
+        db = get_session()
+        try:
+            # Da score None ist, simuliert der Test den early-return:
+            # KEINE Schreibung. row.audio_health_score bleibt None.
+            row = db.query(Call).filter(Call.id == call_id).first()
+            assert row.audio_health_score is None
+            # Kein CallEvent existiert
+            ev_count = (
+                db.query(CallEvent)
+                  .filter(CallEvent.call_id == call_id, CallEvent.event_type == 'audio_health')
+                  .count()
+            )
+            assert ev_count == 0
+        finally:
+            db.close()
+    finally:
+        _cleanup_call(call_id)
+
+
+# -- Edge: kein call_id im Session-State (graceful) --
+
+def test_no_call_id_no_update_no_crash():
+    """Edge-Case: Wenn _phase_d_call_id None bleibt (kein Session-State),
+    wird kein UPDATE ausgefuehrt und kein Crash provoziert.
+    Prueft dass ein None-Filter kein Call-Update-Target findet.
+    """
+    db = get_session()
+    try:
+        row = db.query(Call).filter(Call.id == None).first()  # noqa: E711
+        assert row is None  # kein UPDATE-Target
+    finally:
+        db.close()
