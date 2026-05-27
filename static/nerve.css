@@ -3309,3 +3309,83 @@ input[type="range"].perf-slider::-moz-range-thumb {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
+
+/* ===========================================================================
+   Phase 08.23.2.D - Dashboard Outcome-Reminder + Inline-Korrektur (REQ-D-8/9)
+   Brand-Lock: ausschliesslich Teal-Familie (#00D4AA), KEIN Gelb (#f59e0b/#fbbf24)
+   =========================================================================== */
+
+.n-outcome-reminder-stripe {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    border-left: 4px solid #00D4AA;
+    background: rgba(0,212,170,0.04);
+    border-top: 1px solid rgba(0,212,170,0.15);
+    border-right: 1px solid rgba(0,212,170,0.15);
+    border-bottom: 1px solid rgba(0,212,170,0.15);
+    margin: 0 0 16px 0;
+}
+
+.n-outcome-reminder-icon {
+    color: #00D4AA;
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+.n-outcome-reminder-heading {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--page-text-color);
+}
+
+.n-outcome-reminder-sub {
+    font-size: 12px;
+    color: var(--page-text-secondary);
+    margin-top: 2px;
+}
+
+/* Unsicher-Marker im Calls-Listen-Row - Teal-Outline (KEIN Gelb) */
+.outcome-unsicher-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid #00D4AA;
+    background: rgba(0,212,170,0.15);
+    margin-left: 6px;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.outcome-unsicher-dot:hover {
+    background: rgba(0,212,170,0.30);
+}
+
+.db2-session-outcome {
+    font-size: 12px;
+    color: var(--page-text-secondary);
+    margin-left: 8px;
+}
+
+.outcome-correction-inline-row {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px;
+    margin: 0 0 8px 0;
+    background: rgba(0,212,170,0.03);
+    border-left: 2px solid #00D4AA;
+    border-radius: 0 8px 8px 0;
+    flex-wrap: wrap;
+}
+
+.outcome-correction-btn {
+    min-height: 36px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+}
