@@ -57,11 +57,23 @@ _validate_integer() {
 }
 
 _run_psql() {
-    psql -U "$DB_USER" -d "$DB_NAME" -h /var/run/postgresql "$@" 2>&1 || {
-        echo "FEHLER: psql-Aufruf gescheitert. DB-User=$DB_USER DB-Name=$DB_NAME" >&2
-        echo "Hinweis: Wenn peer-auth via Unix-Socket nicht passt, prüfe sudo -u postgres oder DB-User-Setup." >&2
-        return 1
-    }
+    # Phase 08.23.2.D Hotfix 2026-05-27 — psql via sudo -u nerve_app weil Postgres
+    # peer-auth den System-User mit dem DB-User matchen muss. Wenn das Skript als
+    # root via SSH läuft, scheitert direktes psql -U nerve_app mit "Peer authentication
+    # failed". sudo -u $DB_USER wechselt den System-User vor psql-Aufruf.
+    # Fallback: wenn sudo nicht vorhanden, direkter Aufruf (z.B. Tests in CI).
+    if command -v sudo >/dev/null 2>&1 && [ "$(whoami)" != "$DB_USER" ]; then
+        sudo -u "$DB_USER" psql -d "$DB_NAME" "$@" 2>&1 || {
+            echo "FEHLER: psql-Aufruf via sudo -u $DB_USER gescheitert. DB-Name=$DB_NAME" >&2
+            return 1
+        }
+    else
+        psql -U "$DB_USER" -d "$DB_NAME" -h /var/run/postgresql "$@" 2>&1 || {
+            echo "FEHLER: psql-Aufruf gescheitert. DB-User=$DB_USER DB-Name=$DB_NAME" >&2
+            echo "Hinweis: Wenn peer-auth via Unix-Socket nicht passt, prüfe sudo -u postgres oder DB-User-Setup." >&2
+            return 1
+        }
+    fi
 }
 
 # ─── Commands ───────────────────────────────────────────────────────────────
