@@ -1576,3 +1576,63 @@ Plans:
 - [x] 08.23.2.D-05-PLAN.md — api_postcall_analysis (Classifier+UPDATE+Emit) + Fallback-Pull + Korrektur-Endpoint (REQ-D-3, REQ-D-5, REQ-D-8, REQ-D-9) — DONE 2026-05-26
 - [x] 08.23.2.D-06-PLAN.md — PiP Frontend: outcome_ready-Handler + 3-stufige UX + Korrektur-Modal + Audio-Warn (REQ-D-4, REQ-D-5, REQ-D-7) — DONE 2026-05-27
 - [x] 08.23.2.D-07-PLAN.md — Dashboard Reminder-Card + Inline-Korrektur + Foundation-Code-Register (REQ-D-8, REQ-D-9, REQ-D-10) — DONE 2026-05-27
+
+### Phase 08.23.2.D.UX: UX-Inline + Score-Integration + Klassifikations-Tuning (NEU 2026-05-27, GSD-Roadmap-Sync 2026-05-27) 🟡
+
+**Goal:** Folge-Phase aus Live-Test-Feedback Phase D. 4 Wellen: Wave 1 Security-Findings (CR-01 CSRF, CR-02 Ownership, WR-01/02/04 Sicherheit + IN-03 Debug-Cleanup), Wave 2 Klassifikations-Tuning (Plan-02 Snippet-Heuristik + Haiku-Prompt), Wave 3 Outcome-Pflicht-Schritt VOR Score-Reveal im PiP (Andre-Direktive 27.05.: "bevor der user seinen score sehen darf, bekommt er einmal dieses modal vorgesetzt"), Wave 4 coaching_score-Outcome-Modifier (Cross-AI-Architektur: process_score × outcome_modifier, NICHT Komponente) + Dashboard-Edit-Knopf für nachträgliche Korrektur.
+
+**Score-Architektur final (Cross-AI 2026-05-27):**
+- process_score = 30/30/20/10/10 (kb_end / behandelt_rate / redeanteil / skript / Reserve)
+- final_score = clamp(process_score × outcome_modifier, 0, 100)
+- Modifier: contract_signed=1.15, meeting_booked=1.10, callback=0.95, no_interest=0.85, wrong_person=1.00
+- Roh-Werte-Persistierung pflicht (calls.coaching_score + calls.score_breakdown JSONB) für Phase-E-Tuning
+
+**Pflicht-Patterns (CLAUDE.md):** Punkt 7 Cross-AI (🟡 + Security-Anteil), Punkt 13 Real-Daten-Validation, Punkt 14 Pre-Insert-Audit für Score-Migration, HART-Regel 27.05. (Default Production, kein Local-Dev), inspect.sh für Schema-Inspection.
+
+**Depends on:** Phase 08.23.2.D ✅ 2026-05-27
+**Komplexität:** 🟡 mittel mit Security-Anteil
+**Blocker für:** keine direkten Blocker — kann parallel zu G/MEET laufen, aber UX-Coherence besser wenn G/MEET vor 08.21 fertig
+
+### Phase 08.23.2.G/MEET: Foundation-Phase Conversational Memory + CRM-Lookup + Multi-Tenancy + Training-Schema (NEU 2026-05-27, Phase G + MEET fusioniert nach Cross-AI-Architektur-Entscheidung) 🔴
+
+**KRITISCHE Architektur-Phase. Cross-AI-Recherche 2026-05-27 abgeschlossen. Spec-Dokument:** `Nerve-Vault/04 Entscheidungen/NERVE Architektur-Entscheidung Internes Datenmodell.md` — **Pflicht-Pre-Read** für Plan-Phase.
+
+**Goal:** Foundation-Schema das industriebestätigte Conversational-Memory-Pattern (Gong/Chorus/Salesloft/Apollo/Outreach) für NERVE etabliert. Phase G (Konten-Welt) wird vorgezogen weil account_memory Foundation des Pre-Call-Briefing-USP ist. Plus Meeting-Memory-Modal-Frontend integriert (Andre-Wunsch 27.05.). Plus DPO-Foundation für Phase E.
+
+**Drei Day-1-Pflichten (sonst frisst's uns in Year 2):**
+1. `workspace_id` auf JEDER Tabelle (auch existing users/profiles/calls/conversation_logs/call_events) — Multi-Tenancy-Retrofit ist Hölle wenn später
+2. Strikte Schema-Trennung `crm.*` vs. `training.*` mit zwei DB-Rollen (nerve_app crm-only, nerve_anon_worker bridge)
+3. `schema_version SMALLINT` auf jedem JSONB-Feld — JSONB-Migration-Hell-Prevention
+
+**3-Wellen-Aufteilung:**
+- **Wave 1 Multi-Tenancy-Retrofit:** workspace_id-Migration auf existing Tabellen, Postgres RLS aktivieren, neue DB-Rollen, GRANT-Audit.
+- **Wave 2 CRM-Schema + Meeting-Modal:** 5 neue Tabellen (crm.accounts, crm.contacts, crm.calls-Erweiterung, crm.call_events append-only, crm.meetings, crm.account_memory mit MEDDPICC-JSONB + context_hooks, crm.user_preferences). Meeting-Modal-Frontend nach Outcome=Termin (4 Felder + auto-save-Checkbox). Pre-Call-Briefing-Pipeline um account_memory erweitern. CSV-Export-Endpoint.
+- **Wave 3 Training-Schema + Anonymizer:** training.preference_pairs (TRL-kompatibel, prompt/chosen/rejected JSONB), Anonymizer-Worker als separater Cron mit nerve_anon_worker-Rolle.
+
+**Anti-Patterns explizit verboten:**
+- Pipeline-Stages / Deal-Values / Forecasts (Pipedrive-Territorium)
+- FKs zwischen crm.* und training.*
+- Token-Cache-Persistierung (Pseudonymisierungs-Falle)
+- JSONB ohne schema_version
+- Custom-Fields-Mechanismus für User
+- Lead/Contact-Trennung
+- Bidirektionaler CRM-Sync v1 (push-only reicht)
+- Volle Event-Sourcing-Implementierung
+
+**Cross-AI Pflicht** (🔴 Foundation + DSGVO + DPO-Tragweite).
+
+**Depends on:** Phase 08.23.2.D ✅
+**Komplexität:** 🔴 komplex — Schema-Migration + Multi-Tenancy-Retrofit + neues Frontend-Modal + DSGVO-relevante Architektur-Trennung
+**Blocker für:** Phase 08.23.2.E (DPO-Sammler nutzt training.preference_pairs aus Wave 3), Phase 08.21 (Battlecard-Pattern nutzt account_memory aus Wave 2), EA-Launch (Wave 1+2 sollten vor EA-Launch fertig sein, Wave 3 kann während EA-Phase)
+
+**Schema-Skizze:** vollständig in `04 Entscheidungen/NERVE Architektur-Entscheidung Internes Datenmodell.md` (Cross-AI-Output). Migrations-Pfad in 3 Phasen, 8-Wochen-Plan bis EA-Launch.
+
+### Phase 08.23.2.E: DPO-Paar-Sammler + DSFA-Dokument (NEU 2026-05-11, **erweitert 2026-05-27**) 🟡
+
+**Goal:** Sammelt strukturiert "chosen/rejected"-Paare aus jedem Anruf für späteres Fine-Tuning. NOCH KEIN Training. Plus DSFA-Dokument für BayLDA.
+
+**Erweitert 2026-05-27 nach Cross-AI-Architektur-Entscheidung:** training-Schema-Foundation (`training.preference_pairs`-Tabelle + Anonymizer-Worker) kommt jetzt aus Phase 08.23.2.G/MEET Wave 3, NICHT in dieser Phase neu gebaut. Phase E nutzt die existing Foundation und schreibt nur die Sammler-Logik (Pair-Klassifikator: Cosinus+Jaccard, Quality-Tier-Vergabe, Hintergrund-Job nach Call-Ende) plus DSFA-Dokument.
+
+**Depends on:** Phase 08.23.2.G/MEET Wave 3 (training-Schema-Foundation)
+**Komplexität:** 🟡 (kleiner als ursprünglich geplant, weil Schema-Foundation schon in G/MEET)
+**Blocker für:** Fine-Tuning-Iterationen (langfristig)
