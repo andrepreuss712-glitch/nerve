@@ -4,14 +4,14 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-26T17:36:33Z"
-last_activity: 2026-05-26 - Phase 08.23.2.D Plan 05 — Post-Call Outcome Route Integration (3431d56, e506899, 5add8c2)
+last_updated: "2026-05-27T00:00:00Z"
+last_activity: 2026-05-27 - Phase 08.23.2.D Plan 06 — PiP-Frontend-Outcome-UX (c4a45b6, 80fe050)
 progress:
   total_phases: 78
   completed_phases: 55
   total_plans: 233
-  completed_plans: 223
-  percent: 95
+  completed_plans: 224
+  percent: 96
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 05 abgeschlossen 2026-05-26
-Next: /gsd-execute-phase 08.23.2.D --plan 06
-Last activity: 2026-05-26 - Phase 08.23.2.D Plan 05 — Post-Call Outcome Route Integration (3431d56, e506899, 5add8c2)
+Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 06 abgeschlossen 2026-05-27
+Next: /gsd-execute-phase 08.23.2.D --plan 07
+Last activity: 2026-05-27 - Phase 08.23.2.D Plan 06 — PiP-Frontend-Outcome-UX (c4a45b6, 80fe050)
+
+**Phase 08.23.2.D Plan 06 abgeschlossen:** pip-launcher.js: state.lastCallId aus api_beenden Response, outcome_ready Handler (dreistufige UX: ai_auto=Auto-Ring 30s, ai_auto_unsicher=Auto-Ring+Teal-Outline-Badge, NULL/low-conf=Korrektur-Modal 5 Buttons+Notiz-Textarea), audio_health_warning Handler (Pulse-Mic-Icon #f59e0b, 5s Auto-Hide), Reconnect-Fallback (GET /api/calls/latest_outcome bei socket connect), _submitOutcomeCorrection() (POST /api/calls/<id>/correct_outcome). nerve.css: .pip-outcome-confirm-ring (Teal), .pip-outcome-badge-unsicher (Teal-Outline, D-07c Override), .pip-outcome-correction-grid (2-col grid, 44px Touch-Target), .pip-audio-warn + @keyframes pip-audio-warn-pulse. D-08 Option a: Notiz-Textarea NUR im Korrektur-Modal. Visuell verifiziert (Task 6.3 approved). REQ-D-4 + REQ-D-5 + REQ-D-7 erfuellt. 2 Commits: c4a45b6, 80fe050. SUMMARY: 08.23.2.D-06-SUMMARY.md.
 
 **Phase 08.23.2.D Plan 05 abgeschlossen:** api_postcall_analysis() erweitert: outcome_service.classify() NACH Sonnet-Block, Schwellenlogik (conf>=0.90->ai_auto, 0.70<=conf<0.90->ai_auto_unsicher, <0.70->NULL), UPDATE calls.outcome/outcome_confidence/outcome_source mit Ownership-Check (V4 ASVS), SocketIO emit('outcome_ready') NUR room-targeted via _session_state-SID-Lookup (KEIN broadcast — Multi-User-Privacy). Zwei neue Endpoints: GET /api/calls/latest_outcome (D-04e Fallback-Pull, Ownership) + POST /api/calls/<id>/correct_outcome (User-Korrektur, anonymize(cache=None), outcome_source='user_corrected'). 10 Runtime-Behavior-Tests (CLAUDE.md-konform). Deviations: separate DB-Sessions, str(uuid4()) SQLite-Compat, outcome_confidence-Persistierung auch bei niedrigem Confidence. 3 Commits: 3431d56, e506899, 5add8c2. SUMMARY: 08.23.2.D-05-SUMMARY.md.
 
