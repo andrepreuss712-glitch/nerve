@@ -3329,6 +3329,29 @@
     stopForNavigation: function () { if (state.micStarted) _stopMic(); }
   };
 
+  // ── Phase 08.23.2.D Test-Hook (2026-05-27) ───────────────────────────────
+  // Nur aktiv wenn URL-Param ?test=1 oder &test=1 — sonst unsichtbar (kein
+  // Production-Test-Pfad-Leak). Erlaubt UX-Tests aus Browser-Console ohne
+  // SID-Lookup oder Server-Manipulation. Pflicht weil outcome_ready/audio_health_warning
+  // Server->Client Push-Events sind, die vom Client nicht simulierbar sind.
+  if (window.location.search.indexOf('test=1') >= 0) {
+    window.__phaseDTest = {
+      renderOutcome: function (d) {
+        try { _renderOutcomeUx(d); console.log('[PhaseD-Test] renderOutcome OK', d); }
+        catch (e) { console.error('[PhaseD-Test] renderOutcome Fehler:', e); }
+      },
+      showAudioWarn: function (score) {
+        try { _showAudioWarning(score); console.log('[PhaseD-Test] showAudioWarn OK score=' + score); }
+        catch (e) { console.error('[PhaseD-Test] showAudioWarn Fehler:', e); }
+      }
+    };
+    console.log('[PhaseD-Test] Hook aktiv. Befehle:');
+    console.log("  window.__phaseDTest.renderOutcome({outcome:'meeting_booked', confidence:0.95, source:'ai_auto', call_id:'test'})");
+    console.log("  window.__phaseDTest.renderOutcome({outcome:'callback', confidence:0.80, source:'ai_auto_unsicher', call_id:'test'})");
+    console.log("  window.__phaseDTest.renderOutcome({outcome:null, confidence:0.55, source:null, call_id:'test'})");
+    console.log("  window.__phaseDTest.showAudioWarn(0.55)");
+  }
+
   // ── Phase 08.20 D-06: PiP Du/Sie toggle + Vorwissen override (global fns) ─
   // These run in the PiP window context; nerveSio / currentSid are set by pip-launcher.
   window.pipSetAnrede = function (anrede) {
