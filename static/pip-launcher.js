@@ -1441,6 +1441,14 @@
   // ── Start Call ─────────────────────────────────────────────────────────────
   // CRITICAL: called from click handler (user gesture for getUserMedia + PiP)
   function startCall(setProfile) {
+    // Phase 08.23.2.D Hotfix 2026-05-27 — lastCallId beim Call-START zuruecksetzen.
+    // Sonst feuert state.socket.on('connect') -> /api/calls/latest_outcome mit der
+    // ALTEN call_id, holt das alte outcome (oder null), rendert PostCall-UX direkt
+    // beim Call-START. Plan-06-Reconnect-Fallback war fuer Mid-PostCall-Reconnect
+    // gedacht, nicht fuer normalen Call-Beginn.
+    state.lastCallId = null;
+    state.lastConvId = null;
+
     // ── Headset-Pflicht-Gate (Cold Call only, per D-01/POLISH-16) ──
     if (state.mode === 'cold_call' && !sessionStorage.getItem('headsetConfirmed')) {
       _showHeadsetModal(function () {
@@ -2463,7 +2471,11 @@
         fetch('/api/calls/latest_outcome?call_id=' + encodeURIComponent(state.lastCallId))
           .then(function (r) { return r.ok ? r.json() : null; })
           .then(function (json) {
-            if (json && json.ok && json.call_id) {
+            // Phase 08.23.2.D Hotfix 2026-05-27 — Reconnect-Fallback nur rendern wenn
+            // Backend tatsaechlich einen Outcome-Stand hat. Sonst wuerde {outcome:null,
+            // source:null} als <70%-Korrektur-Modal interpretiert -> Modal springt
+            // beim Call-START auf wenn lastCallId noch von vorherigem Call gesetzt war.
+            if (json && json.ok && json.call_id && (json.outcome || json.source)) {
               _renderOutcomeUx({
                 outcome: json.outcome,
                 confidence: json.confidence,
