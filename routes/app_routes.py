@@ -482,6 +482,38 @@ def api_beenden():
     except Exception as _e_lookup:
         print(f'[Phase08.23.2.D] call_id-Lookup Fehler (non-fatal): {_e_lookup}')
 
+    # Phase 08.23.2.D Debug-Print 2026-05-27 — Diagnose warum Lookup leer auf Production.
+    # Wenn _session_state schon leer ist (SocketIO-Disconnect vor HTTP-api_beenden),
+    # bleibt _phase_d_call_id None und der UPDATE wird stillschweigend uebersprungen.
+    try:
+        _sess_count = len(ls._session_state)
+        _sess_keys = list(ls._session_state.keys())[:3]
+        _sess_user_match = [k for k, v in ls._session_state.items() if v.get('user_id') == g.user.id]
+        print(f'[Phase08.23.2.D] DEBUG Lookup: sessions={_sess_count} keys={_sess_keys} user_match={_sess_user_match} found_call_id={_phase_d_call_id} posted={_posted_call_id if "_posted_call_id" in dir() else None}')
+    except Exception as _e_dbg:
+        print(f'[Phase08.23.2.D] DEBUG-print Fehler: {_e_dbg}')
+
+    # Phase 08.23.2.D Fallback 2026-05-27 — wenn _session_state schon leer:
+    # Latest Call des Users mit ended_at=NULL als Update-Target nehmen.
+    # Pragmatisch: User hat genau einen aktiven Call gleichzeitig (kein Multi-Tab-Live).
+    if not _phase_d_call_id:
+        from datetime import datetime as _dt_fb, timezone as _tz_fb
+        from database.models import Call as _CallModel_fb
+        _db_fb = get_session()
+        try:
+            _latest = (_db_fb.query(_CallModel_fb)
+                       .filter(_CallModel_fb.user_id == g.user.id,
+                               _CallModel_fb.ended_at.is_(None))
+                       .order_by(_CallModel_fb.started_at.desc())
+                       .first())
+            if _latest is not None:
+                _phase_d_call_id = _latest.id
+                print(f'[Phase08.23.2.D] Fallback-Lookup via DB: call_id={_phase_d_call_id} (ended_at=NULL, user_id={g.user.id})')
+        except Exception as _e_fb:
+            print(f'[Phase08.23.2.D] Fallback-Lookup Fehler: {_e_fb}')
+        finally:
+            _db_fb.close()
+
     if _phase_d_call_id:
         from datetime import datetime as _dt, timezone as _tz
         from database.models import Call as _CallModel
