@@ -497,3 +497,73 @@ Wenn beim Schreiben von Plan-Files oder Diskussionen "ja aber Ausnahmen" hochkom
 - Plus heute Vormittag hat lokaler Pytest den Flask-Context-Bug NICHT gefangen — Cross-AI Gemini hat ihn gefangen
 
 Lokale Tests sind Schein-Sicherheit. Auf Staging zu gehen ist Pflicht.
+
+## HART-Erweiterung 2026-05-27 — Daten/Schema/Logs werden von Staging gezogen
+
+**Zweite Schicht der HART-Regel "Kein Local-Dev" (Andre-Direktive 2026-05-27):**
+
+Code-LESEN lokal ist OK weil git die Synchronität garantiert. ABER alles was Live-Zustand betrifft (DB-Schema, Real-Daten, Environment, Flask-Routes, Logs, Service-Status), wird via `scripts/inspect.sh` von Staging gezogen — nicht lokal aufgerufen.
+
+### Pflicht-Werkzeug: `scripts/inspect.sh`
+
+Read-only Wrapper auf Staging-Server `/opt/nerve/app/scripts/inspect.sh`. SQL-Injection-sicher (Whitelist [a-z_][a-z0-9_]*), Secret-sicher (env-keys gibt nur Namen, nie Werte).
+
+**SSH-Pattern für GSD-Plan-Author + Research-Phase + Pre-Execute-Audit:**
+
+```bash
+ssh -i ~/.ssh/id_ed25519_nerve root@staging.getnerve.app \
+    'cd /opt/nerve/app && bash scripts/inspect.sh <command> [args]'
+```
+
+### Plan-Author-Pflicht-Pattern (für `<read_first>`-Sektionen)
+
+**NICHT mehr (lokal):**
+
+```xml
+<read_first>
+  - database/models.py Z.644-693 (Call-Modell aktueller Stand)
+  - inspect(engine).get_columns('calls') Output
+</read_first>
+```
+
+**STATTDESSEN (Staging):**
+
+```xml
+<read_first>
+  - ssh deploy@staging 'cd /opt/nerve/app && bash scripts/inspect.sh schema calls' (Live-Schema-Stand)
+  - ssh deploy@staging 'cd /opt/nerve/app && bash scripts/inspect.sh constraints calls' (CHECK-Constraints)
+  - ssh deploy@staging 'cd /opt/nerve/app && bash scripts/inspect.sh sample calls 100' (Real-Daten-Sample)
+  - database/models.py Z.644-693 (ORM-Definition — Code-Lesen lokal OK via git-Sync)
+</read_first>
+```
+
+### Konkrete Befehlsabbildung
+
+| Was der Plan-Author wissen will | Lokaler Reflex (NICHT mehr) | Staging-Befehl |
+|---|---|---|
+| Schema-Detail einer Tabelle | `inspect(engine).get_columns(...)` lokal | `inspect.sh schema <table>` |
+| Spalten + Nullable + Type | DESCRIBE lokal | `inspect.sh columns <table>` |
+| CHECK/FK/Unique-Constraints | Code in models.py lesen | `inspect.sh constraints <table>` |
+| Real-Daten-Sample | `SELECT * LIMIT N` lokal | `inspect.sh sample <table> <N>` |
+| Row-Count | `COUNT(*)` lokal | `inspect.sh count <table>` |
+| Alle Tabellen | `\dt` lokal | `inspect.sh tables` |
+| Migration-Stand | `alembic current` lokal | `inspect.sh migrations` |
+| Flask-Routes | `app.url_map.iter_rules()` lokal | `inspect.sh routes` |
+| Live-Logs | gibt es lokal nicht | `inspect.sh logs [N]` |
+| Nur Errors aus Logs | gibt es lokal nicht | `inspect.sh logs-errors [N]` |
+| /api/health Output | lokal nicht aussagekräftig | `inspect.sh health` |
+| Git-Stand (Commit + Working-Tree) | lokal nicht repräsentativ | `inspect.sh git-stand` |
+| Service-Status | gibt es lokal nicht | `inspect.sh service-status` |
+| Environment-Variablen | `cat .env` lokal | `inspect.sh env-keys` (NUR Namen, Secret-Safety) |
+| Code-Grep auf deployed Stand | `grep -rn` lokal | `inspect.sh grep <pattern>` |
+
+### Folgen für andere CLAUDE.md-Punkte
+
+- **Punkt 13 (Real-Daten-Validation):** der Pflicht-Schritt "Real-Daten-Sample ziehen" läuft ab sofort über `inspect.sh sample`-SSH. Sonst ist Validation wertlos.
+- **Punkt 15 (Logging-First-Debugging):** Logs via `inspect.sh logs` / `logs-errors`, nicht lokal. Neue Diagnose-Prints werden committed → `deploy.sh staging` → dann via `inspect.sh logs` gelesen.
+- **Punkt 19 (Pre-Execute-Audit):** neuer Pflicht-Check — "Greifen alle Daten/Schema/Routes-Pulls in den Plan-Files auf Staging zu, nicht lokal?" Wenn lokal → BLOCK + Replan.
+- **Punkt 20 (Pflicht-grep):** der Pflicht-grep läuft ab sofort entweder lokal auf git-pulled Code ODER via `inspect.sh grep` auf Staging — beide äquivalent solange Code synchron ist. Pflicht: vor dem Grep `git pull origin/main` damit lokaler Stand = Staging-Stand.
+
+### Anti-Inkonsistenz-Reflex (Erweiterung)
+
+Wenn beim Schreiben von Plan-Files / Discuss / Research ein lokaler DB-/Routes-/Logs-Befehl reinrutscht ("nur kurz lokal nachschauen"), STOP. Lokale Antworten zu Live-Zustand sind Schein-Sicherheit. Auf Staging-Inspect-Befehl umstellen, dann weitermachen.
