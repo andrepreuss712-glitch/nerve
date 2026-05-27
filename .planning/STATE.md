@@ -5,13 +5,13 @@ milestone_name: milestone
 status: Executing
 stopped_at: context exhaustion at 90% (2026-05-19)
 last_updated: "2026-05-27T00:00:00Z"
-last_activity: 2026-05-27 - Phase 08.23.2.D Plan 06 — PiP-Frontend-Outcome-UX (c4a45b6, 80fe050)
+last_activity: 2026-05-27 - Phase 08.23.2.D Plan 07 — Dashboard Outcome-Reminder + Inline-Korrektur + Foundation-Code-Register (e254525, b7e5ece, 1ca5448, e26f9d6, daa3e62)
 progress:
   total_phases: 78
-  completed_phases: 55
+  completed_phases: 56
   total_plans: 233
-  completed_plans: 224
-  percent: 96
+  completed_plans: 225
+  percent: 97
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — Plan 06 abgeschlossen 2026-05-27
-Next: /gsd-execute-phase 08.23.2.D --plan 07
-Last activity: 2026-05-27 - Phase 08.23.2.D Plan 06 — PiP-Frontend-Outcome-UX (c4a45b6, 80fe050)
+Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — VOLLSTAENDIG (alle 7 Plaene abgeschlossen 2026-05-27)
+Next: Phase 08.23.2.E (DPO-Paar-Sammler) oder naechste Phase gemaess ROADMAP
+Last activity: 2026-05-27 - Phase 08.23.2.D Plan 07 — Dashboard Outcome-Reminder + Inline-Korrektur + Foundation-Code-Register (e254525, b7e5ece, 1ca5448, e26f9d6, daa3e62)
+
+**Phase 08.23.2.D Plan 07 abgeschlossen:** api_dashboard: JOIN Call ueber conversation_log_id, outcome/outcome_source/call_id pro Session, unsichere_outcomes_count (7-Tage-Filter: ai_auto_unsicher OR outcome IS NULL). dashboard.html: Reminder-Stripe-Markup (Teal-Brand, KEIN Gelb), renderSessions() um Outcome-Label + Unsicher-Dot (8px Teal-Outline-Kreis) erweitert, Event-Delegation Click-Handler fuer Inline-Korrektur (5 Buttons, POST /api/calls/<id>/correct_outcome, Row-Update bei Success). nerve.css: .n-outcome-reminder-stripe + .outcome-unsicher-dot + .outcome-correction-inline-row (alle Teal, KEIN #f59e0b/#fbbf24). 4 Runtime-Behavior-Tests. Foundation-Code-Register: 4 kanonische Phase-D-Eintraege (calls.outcome_confidence, calls.outcome_source, calls.outcome_note, calls.conversation_log_id) mit Downstream-Konsumenten Phase E/H/O. REQ-D-8 + REQ-D-9 + REQ-D-10 erfuellt. Checkpoint Task 7.5 approved. 5 Commits: e254525, b7e5ece, 1ca5448, e26f9d6, daa3e62. SUMMARY: 08.23.2.D-07-SUMMARY.md.
 
 **Phase 08.23.2.D Plan 06 abgeschlossen:** pip-launcher.js: state.lastCallId aus api_beenden Response, outcome_ready Handler (dreistufige UX: ai_auto=Auto-Ring 30s, ai_auto_unsicher=Auto-Ring+Teal-Outline-Badge, NULL/low-conf=Korrektur-Modal 5 Buttons+Notiz-Textarea), audio_health_warning Handler (Pulse-Mic-Icon #f59e0b, 5s Auto-Hide), Reconnect-Fallback (GET /api/calls/latest_outcome bei socket connect), _submitOutcomeCorrection() (POST /api/calls/<id>/correct_outcome). nerve.css: .pip-outcome-confirm-ring (Teal), .pip-outcome-badge-unsicher (Teal-Outline, D-07c Override), .pip-outcome-correction-grid (2-col grid, 44px Touch-Target), .pip-audio-warn + @keyframes pip-audio-warn-pulse. D-08 Option a: Notiz-Textarea NUR im Korrektur-Modal. Visuell verifiziert (Task 6.3 approved). REQ-D-4 + REQ-D-5 + REQ-D-7 erfuellt. 2 Commits: c4a45b6, 80fe050. SUMMARY: 08.23.2.D-06-SUMMARY.md.
 
