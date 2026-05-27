@@ -422,3 +422,78 @@ Pro Phase wird in `Nerve-Vault/05 Log.md` festgehalten:
 
 Begründung: Lerneffekt aus Block-N-Phasen — Hit-Rate steigt bei klarem Briefing + Pro-Modell, Skip-Entscheidungen müssen genauso bewusst sein wie Run-Entscheidungen.
 - "Immer git push nach Phase" → CLAUDE.md (Ausnahmen: lokale Branches, WIP)
+
+## HART: Kein Local-Dev mehr — Default ist Staging (2026-05-27)
+
+**Verankert nach Andre-Direktanweisung in Phase 08.23.2.D Live-Test 2026-05-27:** *"nene moment, wir entwickeln GAR NICHTS MEHR LOCAL."*
+
+NERVE wird ab 2026-05-27 nicht mehr lokal entwickelt oder getestet. Phase 08.23.2.C.1 (2026-05-20) hat den Staging-Server bei Hetzner aufgesetzt + Deploy-Workflow Staging→Production. Lokal hat andere CORS-Defaults, andere SSL-Pfade, andere SocketIO-Worker, andere Python-Package-Versionen — lokale Setup-Fixes können auf Production andere Bugs produzieren. Lokale Tests sind eine Falle: "ich teste schnell lokal" → Stunden Setup-Bastelei → unsicher ob's auf Production läuft → Drift-Risiko bei Deploy.
+
+### Die Regel
+
+Code-Änderungen werden committet, gepusht, auf Staging deployed, dort getestet (Pytest auf Server, Live-Test im Browser). Wenn grün: Production-Deploy. Punkt.
+
+### Keine Ausnahmen — auch nicht für vermeintlich kleine Sachen
+
+- KEIN lokales `python app.py`
+- KEIN lokales `pytest` als Acceptance-Check (auch nicht für "ist doch nur ein Unit-Test")
+- KEINE lokalen Smoke-Tests via `python -c "import ..."`
+- KEINE lokalen Migrations-Trockenläufe
+- KEINE lokalen Frontend-Tests (Browser, DevTools, WebSocket)
+- KEINE Live-`.env`-Anpassung für Local-Dev (CORS_ORIGIN=\*, FLASK_DEBUG=1, GLINER_DISABLED=1, etc.)
+
+### Erlaubt ohne Diskussion
+
+- `git`-Operationen (commit, push, log, diff, status, checkout) — manipulieren keinen Code-Pfad
+- Lesen von Dateien (Source-Code, Configs, Docs) — kein Ausführen
+- `pip install` lokal NUR wenn explizit für GSD-Agent-Tooling nötig (z.B. Context7, MCP-Server) — NICHT für NERVE-App-Dependencies
+- IDE-Funktionen (Grep, Find, Refactor-Tools) — verändern Source aber führen nicht aus
+
+### Folge für GSD-Workflow
+
+Plan-Author + Executor müssen Pytest-Acceptance-Checks auf Staging laufen lassen, nicht lokal. Macht jede Plan-Acceptance 30-60s langsamer (SSH-Roundtrip), aber stellt sicher dass Tests-Grün auf Staging tatsächlich Aussagekraft hat.
+
+**Workflow pro Plan-Task:**
+
+1. Code-Edit (lokal in IDE — nur Editieren, kein Ausführen)
+2. `git commit`
+3. `git push`
+4. `bash deploy.sh staging` (oder GSD-Executor-Wrapper)
+5. Pytest auf Staging via SSH: `ssh deploy@<staging-ip> 'cd /opt/nerve && source venv/bin/activate && pytest tests/test_X.py -x -v'`
+6. Live-Test im Browser via `https://staging.getnerve.app`
+7. Wenn grün: `bash deploy.sh production`
+
+### Konsequenz für Plan-Author
+
+Plan-Files müssen `<verify>`-Sektionen so formulieren dass Pytest **auf Staging-Server** läuft, nicht in lokalem Working-Directory. Plan-Acceptance-Criteria müssen Staging-Befehle enthalten (SSH-basiert).
+
+Pattern für Plan-Author:
+
+```xml
+<verify>
+  <automated>bash deploy.sh staging && ssh deploy@staging.getnerve.app 'cd /opt/nerve && source venv/bin/activate && pytest tests/test_X.py -x'</automated>
+</verify>
+```
+
+NICHT mehr:
+
+```xml
+<verify>
+  <automated>cd C:\Users\andre\dev\salesnerve && pytest tests/test_X.py -x</automated>
+</verify>
+```
+
+### Anti-Inkonsistenz-Reflex
+
+Wenn beim Schreiben von Plan-Files oder Diskussionen "ja aber Ausnahmen" hochkommen (z.B. "Unit-Tests sind doch lokal okay" / "schnell mal eben pytest lokal"), ist das die Falle. Die Trennlinie wird sonst weich, der Local-Dev-Modus kommt zurück. Klartext-Direktive von Andre: keine Ausnahmen.
+
+### Beleg warum die Regel notwendig ist
+
+**Aus heutiger Session (Phase 08.23.2.D Live-Test 2026-05-27):**
+
+- Plan 01-05 alle lokalen Pytests grün
+- ABER lokaler Server-Start scheiterte an CORS-Origin-Block (`CORS_ORIGIN` default = `https://getnerve.app`)
+- Plus GLiNER-Pre-Warm-Hang (~800MB Hugging-Face-Download ohne HF_TOKEN)
+- Plus heute Vormittag hat lokaler Pytest den Flask-Context-Bug NICHT gefangen — Cross-AI Gemini hat ihn gefangen
+
+Lokale Tests sind Schein-Sicherheit. Auf Staging zu gehen ist Pflicht.
