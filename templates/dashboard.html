@@ -54,6 +54,14 @@
     .catch(function() {}); // silent fail — warnings sind non-critical
 })();
 </script>
+<!-- Phase 08.23.2.D REQ-D-8 - Outcome-Reminder-Card (Teal-Brand, kein Gelb) -->
+<div id="outcome-reminder-stripe" class="n-outcome-reminder-stripe" style="display:none">
+  <span class="n-outcome-reminder-icon">!</span>
+  <div class="n-outcome-reminder-body">
+    <div id="outcome-reminder-heading" class="n-outcome-reminder-heading"></div>
+    <div class="n-outcome-reminder-sub">Letzte 7 Tage — klicke auf einen Anruf um den Outcome zu korrigieren.</div>
+  </div>
+</div>
 <!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
 <div class="db2-wrap page-wrap">
 
@@ -767,7 +775,35 @@ function simUpdate() {
 
 // ── Zeile 5a: Letzte Sessions ─────────────────────────────────────────────────
 
+// Phase 08.23.2.D REQ-D-8/9 - Outcome-Label-Helper
+function _outcomeLabelDe(v) {
+  var m = {
+    meeting_booked: 'Termin gebucht',
+    callback: 'Rückruf',
+    no_interest: 'Kein Interesse',
+    wrong_person: 'Falsche Person',
+    contract_signed: 'Abschluss',
+    unknown: 'Unklar',
+  };
+  return m[v] || (v || '');
+}
+
 function renderSessions(d) {
+  // Phase 08.23.2.D REQ-D-8 - Reminder-Stripe Update
+  var unsicherCount = +(d && d.unsichere_outcomes_count) || 0;
+  var stripe = document.getElementById('outcome-reminder-stripe');
+  if (stripe) {
+    if (unsicherCount > 0) {
+      stripe.style.display = 'flex';
+      var headEl = document.getElementById('outcome-reminder-heading');
+      if (headEl) {
+        headEl.textContent = unsicherCount + (unsicherCount === 1 ? ' Anruf-Outcome wartet auf Bestätigung' : ' Anruf-Outcomes warten auf Bestätigung');
+      }
+    } else {
+      stripe.style.display = 'none';
+    }
+  }
+
   var sessions = d.recent_sessions || [];
   var el = document.getElementById('session-list');
   if (!sessions.length) {
@@ -779,14 +815,73 @@ function renderSessions(d) {
   var html = '';
   sessions.forEach(function(s) {
     var scoreColor = s.score >= 70 ? '#00D4AA' : (s.score >= 40 ? '#6B7280' : '#F85149');
+    var outcomeLabel = s.outcome ? _outcomeLabelDe(s.outcome) : '';
+    var unsicherDot = (s.outcome_source === 'ai_auto_unsicher')
+      ? '<span class="outcome-unsicher-dot" data-call-id="' + esc(s.call_id || '') + '" title="Outcome unsicher — klicken zum Korrigieren"></span>'
+      : '';
     html += '<div class="db2-session-row" onclick="location.href=\'/session/' + s.id + '\'" style="cursor:pointer">';
     html +=   '<span class="db2-session-date">'  + esc(s.date_str) + '</span>';
     html +=   '<span class="db2-badge ' + (typeCls[s.session_type] || 'db2-badge-cold') + '">' + (typeLabel[s.session_type] || s.session_type) + '</span>';
     html +=   '<span class="db2-session-score" style="color:' + scoreColor + '">' + (s.score || '—') + '</span>';
+    html +=   '<span class="db2-session-outcome">' + esc(outcomeLabel) + unsicherDot + '</span>';
     html += '</div>';
   });
   el.innerHTML = html;
 }
+
+// Phase 08.23.2.D REQ-D-9 - Inline-Korrektur Click-Handler (event delegation)
+document.addEventListener('click', function(ev) {
+  var dot = ev.target.closest && ev.target.closest('.outcome-unsicher-dot');
+  if (!dot) return;
+  ev.stopPropagation();
+  ev.preventDefault();
+  var callId = dot.getAttribute('data-call-id');
+  if (!callId) return;
+  var row = dot.closest('.db2-session-row');
+  if (!row) return;
+  // Toggle Inline-Korrektur
+  var existing = row.nextSibling;
+  if (existing && existing.classList && existing.classList.contains('outcome-correction-inline-row')) {
+    existing.parentNode.removeChild(existing);
+    return;
+  }
+  var ext = document.createElement('div');
+  ext.className = 'outcome-correction-inline-row';
+  ext.setAttribute('data-call-id', callId);
+  var opts = [
+    ['meeting_booked', 'Termin gebucht'],
+    ['callback', 'Rückruf'],
+    ['no_interest', 'Kein Interesse'],
+    ['wrong_person', 'Falsche Person'],
+    ['contract_signed', 'Abschluss'],
+  ];
+  opts.forEach(function(pair){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'n-btn-ghost outcome-correction-btn';
+    btn.textContent = pair[1];
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      fetch('/api/calls/' + encodeURIComponent(callId) + '/correct_outcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome: pair[0] }),
+      })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(json){
+        if (json && json.ok) {
+          // Marker entfernen, Outcome-Label updaten
+          var outcomeSpan = row.querySelector('.db2-session-outcome');
+          if (outcomeSpan) outcomeSpan.textContent = pair[1];
+          ext.parentNode.removeChild(ext);
+        }
+      })
+      .catch(function(e){ console.error('[PhaseD] inline-correct Fehler:', e); });
+    });
+    ext.appendChild(btn);
+  });
+  row.parentNode.insertBefore(ext, row.nextSibling);
+});
 
 // ── Zeile 5b: Empfehlungen ────────────────────────────────────────────────────
 
