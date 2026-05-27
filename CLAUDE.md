@@ -423,15 +423,41 @@ Pro Phase wird in `Nerve-Vault/05 Log.md` festgehalten:
 Begründung: Lerneffekt aus Block-N-Phasen — Hit-Rate steigt bei klarem Briefing + Pro-Modell, Skip-Entscheidungen müssen genauso bewusst sein wie Run-Entscheidungen.
 - "Immer git push nach Phase" → CLAUDE.md (Ausnahmen: lokale Branches, WIP)
 
-## HART: Kein Local-Dev mehr — Default ist Staging (2026-05-27)
+## HART: Kein Local-Dev — Default ist Production-Server (bis EA-Launch)
 
-**Verankert nach Andre-Direktanweisung in Phase 08.23.2.D Live-Test 2026-05-27:** *"nene moment, wir entwickeln GAR NICHTS MEHR LOCAL."*
+**Verankert 2026-05-27 in zwei Andre-Direktanweisungen (Phase 08.23.2.D Live-Test):**
 
-NERVE wird ab 2026-05-27 nicht mehr lokal entwickelt oder getestet. Phase 08.23.2.C.1 (2026-05-20) hat den Staging-Server bei Hetzner aufgesetzt + Deploy-Workflow Staging→Production. Lokal hat andere CORS-Defaults, andere SSL-Pfade, andere SocketIO-Worker, andere Python-Package-Versionen — lokale Setup-Fixes können auf Production andere Bugs produzieren. Lokale Tests sind eine Falle: "ich teste schnell lokal" → Stunden Setup-Bastelei → unsicher ob's auf Production läuft → Drift-Risiko bei Deploy.
+1. *"nene moment, wir entwickeln GAR NICHTS MEHR LOCAL."* (vormittag — Stufe 1 verankert)
+2. *"lass uns auf live bauen bis launch, dann auf staging wechseln. wir ändern aktuell viel auf staging nur um dinge herauszufinden... ich bin gespannt ob unser feature dann tatsächlich auf dem live server laufen oder ob wieder bugs entstehen."* (nachmittag — Default-Umgebung auf Production)
 
-### Die Regel
+### Pre-EA-Launch: Default-Test-Umgebung ist Production
 
-Code-Änderungen werden committet, gepusht, auf Staging deployed, dort getestet (Pytest auf Server, Live-Test im Browser). Wenn grün: Production-Deploy. Punkt.
+Code-Änderungen werden committet, gepusht, **direkt auf Production deployed** (`bash deploy.sh production`), dort getestet mit Test-User-Account. Wenn grün: Feature ist live. Punkt.
+
+Begründung: Phase 08.23.2.D Live-Test 2026-05-27 hat empirisch belegt dass Staging-Workflow nicht 1:1-Production-Spiegel ist. Heute 4× manuelle Eingriffe nötig (manueller Alembic-Upgrade, deploy_meta-Patch, Service-Restart, SCP-Hotfix für Test-Hook). Solange keine echten EA-User Schaden nehmen können, ist Direkt-Live-Test der ehrlichere Workflow.
+
+### Drei-Stufen-Plan (verankert 2026-05-27)
+
+| Stufe | Wann | Was |
+|---|---|---|
+| **1 — Live bis Launch** | jetzt bis EA-Launch | Direkt auf Production deployen + testen. Sandbox via dedicated Test-User. |
+| **2 — Staging-Promotion-Pipeline** | kurz vor EA-Launch (Mini-Phase, ~1 Tag) | `deploy.sh`-Test-Gate fixen (test_ft_seed Pre-existing Failure), Auto-Alembic im Deploy-Workflow, Auto-deploy_meta-Write, atomarer `staging→production`-Promote als single command. |
+| **3 — Dedicated Staging-Cloud** | Post-Launch wenn EA-User da | Eigene abgekapselte Umgebung mit Production-identischen URLs, eigene OAuth-Apps für Google/Microsoft, eigene Stripe-Test-Setup, DB-Snapshot-Sync von Production. Eigene große Phase. Vermutlich Roadmap-Eintrag als `08.23.2.X — Staging-Mirror-Cloud`. |
+
+### Pre-Launch Sandbox-Pattern: Test-User-Account
+
+Damit Live-Tests keinen Daten-Schaden anrichten:
+
+- Dedicated User-Account (z.B. `andre-test@nerve.local`) mit Spalte `is_test_user=True` in users-Tabelle
+- DPO-Korpus-Sammler (Phase 08.23.2.E) **filtert is_test_user-Calls aus** — keine Vergiftung der Trainings-Foundation
+- Founder-Analytics-Dashboards (Block J + 08.16) filtern Test-User-Calls aus
+- Stripe-Subscription des Test-Users im Stripe-Test-Mode oder ganz ohne Subscription
+- Calls vom Test-User bekommen Tag `tag='test'` für spätere Daten-Filterung
+- Test-User darf KEINE Email-Sends triggern (Test-SMTP oder Dummy)
+
+**Pflicht-Migration vor Phase 08.23.2.E** (Mini-Phase): `is_test_user BOOLEAN DEFAULT FALSE` zu users-Tabelle. Plus Filter-Logik in DPO-Sammler.
+
+### Was bleibt unverändert — Kein Local-Dev (Original HART-Regel)
 
 ### Keine Ausnahmen — auch nicht für vermeintlich kleine Sachen
 

@@ -1622,8 +1622,16 @@ def api_calls_latest_outcome():
     Returns: {outcome, confidence, source, call_id, outcome_note}
     Ownership: Call.user_id == g.user.id (V4 ASVS).
     """
+    import uuid as _uuid_lo
     from database.models import Call
     call_id_param = request.args.get('call_id')
+    # Phase 08.23.2.D Hotfix 2026-05-27 — UUID-Validation vor Postgres-Query
+    # (gleicher Fix wie api_calls_correct_outcome).
+    if call_id_param:
+        try:
+            _uuid_lo.UUID(str(call_id_param))
+        except (ValueError, TypeError, AttributeError):
+            return jsonify({'ok': False, 'error': 'not_found'}), 404
     db_lo = get_session()
     try:
         q = db_lo.query(Call).filter(Call.user_id == g.user.id)
@@ -1657,6 +1665,7 @@ def api_calls_correct_outcome(call_id):
     - setzt outcome_source = 'user_corrected'
     Ownership: Call.user_id == g.user.id.
     """
+    import uuid as _uuid_co
     from database.models import Call
     from services.outcome_service import VALID_OUTCOMES
     from services.anonymization import anonymize
@@ -1665,6 +1674,14 @@ def api_calls_correct_outcome(call_id):
     new_note = data_co.get('note')
     if new_outcome not in VALID_OUTCOMES:
         return jsonify({'ok': False, 'error': 'invalid_outcome'}), 400
+    # Phase 08.23.2.D Hotfix 2026-05-27 — UUID-Validation vor Postgres-Query.
+    # Ohne diesen Check wirft Postgres "invalid input syntax for type uuid"
+    # bei non-UUID call_id (z.B. 'test'-String aus Test-Hook) → uncaught Exception → 500.
+    # Mit Check: graceful 404 (not_found). Verhindert auch info-leak.
+    try:
+        _uuid_co.UUID(str(call_id))
+    except (ValueError, TypeError, AttributeError):
+        return jsonify({'ok': False, 'error': 'not_found_or_forbidden'}), 404
     db_co = get_session()
     try:
         row = db_co.query(Call).filter(Call.id == call_id, Call.user_id == g.user.id).first()
