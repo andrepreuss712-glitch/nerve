@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, date
 from flask import Blueprint, jsonify, request, g
 from routes.auth import login_required
 from database.db import get_session
-from database.models import ConversationLog, User as UserModel
+from database.models import ConversationLog, User as UserModel, Call
 
 performance_bp = Blueprint('performance', __name__)
 
@@ -383,11 +383,20 @@ def api_dashboard():
                 stype = 'cold_call'
             else:
                 stype = 'meeting'
+            # -- Phase 08.23.2.D - calls-Daten pro Session laden (REQ-D-8 + REQ-D-9) --
+            _call_row = db.query(Call).filter(Call.conversation_log_id == l.id, Call.user_id == g.user.id).first()
+            _outcome = _call_row.outcome if _call_row else None
+            _outcome_source = _call_row.outcome_source if _call_row else None
+            _call_id = str(_call_row.id) if _call_row else None
             recent_sessions.append({
                 'id':           l.id,
                 'date_str':     date_str,
                 'session_type': stype,
                 'score':        l.kb_end or 0,
+                # Phase 08.23.2.D - Outcome-Daten fuer Dashboard-Render
+                'outcome':         _outcome,
+                'outcome_source':  _outcome_source,
+                'call_id':         _call_id,
             })
 
         # ── Empfehlungen ──────────────────────────────────────────────────────
@@ -434,6 +443,23 @@ def api_dashboard():
                 'url':      '/live',
             })
 
+        # -- Phase 08.23.2.D REQ-D-8 - 7-Tage-Reminder: COUNT unsichere Outcomes --
+        from datetime import timedelta as _td_d
+        _seven_days_ago = now - _td_d(days=7)
+        try:
+            _unsichere = (
+                db.query(Call)
+                  .filter(
+                      Call.user_id == g.user.id,
+                      Call.ended_at >= _seven_days_ago,
+                      (Call.outcome_source == 'ai_auto_unsicher') | (Call.outcome.is_(None)),
+                  )
+                  .count()
+            )
+        except Exception as _e_unsi:
+            print(f'[Phase08.23.2.D] unsichere_outcomes_count Fehler: {_e_unsi}')
+            _unsichere = 0
+
         return jsonify({
             'greeting':          greeting,
             'greeting_subtitle': greeting_subtitle,
@@ -465,8 +491,9 @@ def api_dashboard():
                 'hint_ewb':        hint_ewb,
                 's_curve':         s_curve_data,
             },
-            'recent_sessions':   recent_sessions,
-            'recommendations':   recommendations,
+            'recent_sessions':         recent_sessions,
+            'recommendations':         recommendations,
+            'unsichere_outcomes_count': _unsichere,
         })
     finally:
         db.close()
