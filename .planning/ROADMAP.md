@@ -1539,9 +1539,9 @@ Plans:
 
 **Schieber-UX-Polish deferred nach Block O Teil 2 (Visual-Polish via Claude Design):** Andre-Quote 2026-05-23: "die stelle ist zwar noch nicht gut aber wir gehen ja sowieso in einer späteren phase nochmal durch das design". Schieber-Position relativ zum Header, exakter Hover-State, Größen-Tuning werden in Block O finalisiert.
 
-### Phase 08.23.2.D: Outcome-Erfassung + Audio-Qualitäts-Score (INSERTED — 2026-05-11, GSD-Roadmap-Sync 2026-05-26) 🟡
+### Phase 08.23.2.D: Outcome-Erfassung + Audio-Qualitäts-Score ✅ 2026-05-27 (technisch fertig auf Production) (INSERTED — 2026-05-11, GSD-Roadmap-Sync 2026-05-26) 🟡
 
-**Status:** Vault-Roadmap-Eintrag bestand seit 2026-05-11. GSD-Roadmap-Sync 2026-05-26 nach Drift-Fund — CLAUDE.md "Vault-vs-GSD-Roadmap-Sync HART"-Regel ausgelöst, weil `/gsd-spec-phase 08.23.2.D` ohne Eintrag aus dem Bauch geraten hätte.
+**Status:** ✅ Production-Deploy 2026-05-27 abgeschlossen. Migration 0005 live auf Postgres, Haiku-Classifier-Chain durchgängig, Brand-konforme UX (Teal-Outline), Dashboard-Reminder + Inline-Korrektur. 7 Hotfixes im Live-Test-Cycle gefangen + gefixt (Commit-Range f81e61c..0ab3680). Klassifikations-Qualität + UX-Polish (Inline-Korrektur, Score-Integration, Call-Bewertung-Knopf) wandern in Folge-Phase 08.23.2.D.UX. Vault-Roadmap-Eintrag bestand seit 2026-05-11. GSD-Roadmap-Sync 2026-05-26 nach Drift-Fund — CLAUDE.md "Vault-vs-GSD-Roadmap-Sync HART"-Regel ausgelöst, weil `/gsd-spec-phase 08.23.2.D` ohne Eintrag aus dem Bauch geraten hätte.
 
 **Goal:** Pflicht-Modal nach jedem Anruf mit 5 Knöpfen (Termin / Rückruf / Kein Interesse / Falsche Person / Vertrag) + Optional-Notiz (durch Anonymisierungs-Strecke aus 08.23.2.B gejagt). Plus Audio-Qualitäts-Score pro Anruf aus Deepgram-Wort-Confidences (5 Metriken: mean, median, %-unter-0.7, längster unsicherer Block, stddev). Harte Schwelle 0,80 für Trainings-Korpus-Aufnahme (DPO-Gate in 08.23.2.E). Live-Warnung an User wenn rollender 10-Sek-Score unter 0,70.
 
