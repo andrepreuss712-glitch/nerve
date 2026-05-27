@@ -2916,6 +2916,53 @@
         } else {
           _showPostcallEmpty();
         }
+
+        // Phase 08.23.2.D Hotfix 2026-05-27 — /api/postcall_analysis Trigger.
+        // Plan 05 baut den Endpoint aus (Sonnet-Lernkarten + Haiku-Outcome-Classifier),
+        // aber kein Caller im Frontend hat ihn bisher getriggert. Folge: outcome-Felder
+        // blieben in allen Calls NULL, weil Haiku nie lief.
+        // Plus Plan 05 Response enthaelt outcome+confidence+source → wenn SocketIO-Emit
+        // verloren geht (z.B. weil _session_state schon leer), nutzen wir die Response
+        // als direkten Render-Pfad.
+        if (state.lastConvId && state.lastCallId) {
+          var _pc = data.postcall || {};
+          fetch('/api/postcall_analysis', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            body: JSON.stringify({
+              conv_id: state.lastConvId,
+              call_id: state.lastCallId,
+              einwaende: _pc.einwaende || [],
+              painpoints: _pc.painpoints || [],
+              kb_start: _pc.kb_start || 30,
+              kb_end: _pc.kb_end || 30,
+              redeanteil_berater: _pc.redeanteil_berater || 50,
+              redeanteil_kunde: _pc.redeanteil_kunde || 50,
+              dauer_sek: _pc.dauer_sek || _pc.dauer || 0,
+              skript_abdeckung: _pc.skript_abdeckung || 0,
+              ga_details: _pc.ga_details || [],
+              kaufsignale: _pc.kaufsignale || []
+            })
+          })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (paResult) {
+              if (!paResult) return;
+              // Phase D Fallback-Render: wenn SocketIO-Emit den Browser nicht erreicht hat
+              // (z.B. _session_state schon leer beim Emit-Zeitpunkt), Response-basiert rendern.
+              var sec = document.getElementById('pip-outcome-section');
+              if (sec && sec.dataset.outcomeRendered === '1') return; // schon gerendert
+              if (paResult.call_id && (paResult.outcome || paResult.source)) {
+                _renderOutcomeUx({
+                  outcome: paResult.outcome,
+                  confidence: paResult.confidence,
+                  source: paResult.source,
+                  call_id: paResult.call_id
+                });
+              }
+            })
+            .catch(function (e) { console.log('[NerveLauncher] postcall_analysis Trigger Fehler (non-fatal):', e); });
+        }
       })
       .catch(function (err) {
         if (state.callGen !== endCallGen || state.micStarted) {
