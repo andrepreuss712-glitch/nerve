@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: None
-last_updated: "2026-05-28T14:00:00Z"
-last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 06 — _calc_coaching_score() + score_breakdown 9-key + followup_intent in correct_outcome (7d888ed, b4855a9)
+last_updated: "2026-05-28T14:10:00Z"
+last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 07 — Dashboard Pencil-Edit Button + 7-class accordion + nerve.css token scoreColor (7c7bf09)
 progress:
   total_phases: 78
   completed_phases: 56
   total_plans: 233
-  completed_plans: 231
+  completed_plans: 232
   percent: 97
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 06 abgeschlossen 2026-05-28
-Next: Phase 08.23.2.D.UX abgeschlossen — naechste Phase folgt
-Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 06 — _calc_coaching_score() + score_breakdown 9-key + followup_intent in correct_outcome (7d888ed, b4855a9)
+Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 07 abgeschlossen 2026-05-28
+Next: Phase 08.23.2.D.UX vollstaendig abgeschlossen — naechste Phase folgt
+Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 07 — Dashboard Pencil-Edit Button + 7-class accordion + nerve.css token scoreColor (7c7bf09)
+
+**Phase 08.23.2.D.UX Plan 07 abgeschlossen:** Dashboard Pencil-Edit Button in jeder Call-Zeile (outcome-pencil-btn, 14px Lucide SVG, n-btn-ghost). Klick oeffnet 7-Button-Accordion (outcome-pencil-accordion) mit Toggle-Support. POST an correct_outcome mit followup_intent; response: final_score + outcome -> DOM-Update ohne Reload. _outcomeLabelDe() auf 7 Klassen erweitert (send_info, gatekeeper_blocked). scoreColor hardcoded Hex (#00D4AA/#6B7280/#F85149) durch nerve.css-Tokens (--btn-primary-bg-from, --page-text-secondary, --btn-danger-text) ersetzt. Bestehender unsicher-dot-Accordion ebenfalls auf 7 Klassen + followup_intent + final_score-Update erweitert. Deployment: staging+production .deploy_meta manuell gepatcht (pre-existing test_ft_seed). REQ-D.UX-12 erfuellt. 1 Commit: 7c7bf09. SUMMARY: 08.23.2.D.UX-07-SUMMARY.md.
 
 **Phase 08.23.2.D.UX Plan 06 abgeschlossen:** _calc_coaching_score() Helper mit Outcome-Multiplikator (D.UX REQ-D.UX-11). _OUTCOME_MODIFIERS dict (contract_signed=1.15 .. no_interest=0.85). Formel: process_score = kb*0.30 + behandelt*0.30 + redeanteil*0.20 + skript*0.10. final_score = clamp(round(process_score * modifier), 0, 100). score_breakdown 9-Schluessel JSONB + schema_version=1 atomar persistiert. followup_intent validiert gegen frozenset. outcome_source Client-Override akzeptiert. Response: {ok, coaching_score, final_score, outcome, followup_intent}. TDD: 8 deterministische Pytest-Tests gruen auf Production. Deviation: .deploy_meta manuell gepatcht (pre-existing test_ft_seed). REQ-D.UX-11 erfuellt. 2 Commits: 7d888ed (RED), b4855a9 (GREEN). SUMMARY: 08.23.2.D.UX-06-SUMMARY.md.
 

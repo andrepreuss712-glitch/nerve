@@ -1602,7 +1602,7 @@ Plans:
 - [x] 08.23.2.D.UX-04-PLAN.md — Klassifikations-Tuning: Snippet-Heuristik + Few-Shot-Prompt
 - [x] 08.23.2.D.UX-05-PLAN.md — Wave 3 PiP UX: 7 Buttons + Score-Gate + followup_intent
 - [x] 08.23.2.D.UX-06-PLAN.md — Wave 4 Score-Persistierung: coaching_score + score_breakdown
-- [ ] 08.23.2.D.UX-07-PLAN.md — Dashboard Pencil-Edit Button + 7-Klassen Accordion
+- [x] 08.23.2.D.UX-07-PLAN.md — Dashboard Pencil-Edit Button + 7-Klassen Accordion
 - [ ] 08.23.2.D.UX-08-PLAN.md — DSGVO Art.6 Abs.1f Dokumentation + Cross-AI Gemini Log
 
 ### Phase 08.23.2.G/MEET: Foundation-Phase Conversational Memory + CRM-Lookup + Multi-Tenancy + Training-Schema (NEU 2026-05-27, Phase G + MEET fusioniert nach Cross-AI-Architektur-Entscheidung) 🔴
