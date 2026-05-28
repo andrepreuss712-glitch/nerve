@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-28T13:09:05Z"
-last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 02 — Migration 0007: score_breakdown JSONB + score_schema_version SMALLINT (0b9b472)
+last_updated: "2026-05-28T13:18:00Z"
+last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 03 — 5 Security/Quality Fixes: CR-01 CSRF, CR-02 ownership, WR-01 or_(), WR-02 XSS, IN-03 debug-print (c3db0e2)
 progress:
   total_phases: 78
   completed_phases: 56
   total_plans: 233
-  completed_plans: 227
+  completed_plans: 228
   percent: 97
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 02 abgeschlossen 2026-05-28
-Next: Phase 08.23.2.D.UX Plan 03 (Wave 1 — naechste Plaene)
-Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 02 — Migration 0007: score_breakdown JSONB + score_schema_version SMALLINT (0b9b472)
+Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 03 abgeschlossen 2026-05-28
+Next: Phase 08.23.2.D.UX Plan 04 (naechster Plan)
+Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 03 — 5 Security/Quality Fixes: CR-01 CSRF, CR-02 ownership, WR-01 or_(), WR-02 XSS, IN-03 debug-print (c3db0e2)
+
+**Phase 08.23.2.D.UX Plan 03 abgeschlossen:** 5 Security/Quality-Fixes auf Production deployed. CR-01: X-CSRFToken-Header (null-safe csrfMeta-Read) in dashboard.html correct_outcome POST hinzugefuegt. WR-02: r.icon in renderRecommendations() mit esc() escaped (XSS-Schutz). CR-02: _audio_health_bg bekommt user_id_val-Parameter, filtert Call.user_id == user_id_val — g.user.id als primitiver Int in Thread-Args kopiert (thread-safe). IN-03: Debug-Print-Block (Phase08.23.2.D DEBUG Lookup) vollstaendig entfernt. WR-01: or_(Call.outcome_source == 'ai_auto_unsicher', Call.outcome.is_(None)) ersetzt Pipe-Operator, from sqlalchemy import or_ hinzugefuegt. Alle 5 Fixes via inspect.sh auf Production bestaetigt. Deviation: .deploy_meta manuell gepatcht (pre-existing test_ft_seed). REQ-D.UX-1 bis REQ-D.UX-5 erfuellt. 3 Commits: 28f5de7, 20e29d3, c3db0e2. SUMMARY: 08.23.2.D.UX-03-SUMMARY.md.
 
 **Phase 08.23.2.D.UX Plan 02 abgeschlossen:** Alembic Migration 0007 auf Production deployed. score_breakdown JSONB NULL + score_schema_version SMALLINT NOT NULL DEFAULT 1 zu calls hinzugefuegt. coaching_score nicht dupliziert (Pre-Audit bestaetigt). database/models.py synchronisiert: SmallInteger-Import + beide Spalten nach coaching_score eingefuegt. Alle 5 bestehenden Rows haben score_schema_version=1 (server_default greift). Deviation: Staging-Deploy-Gate blockiert durch pre-existing test_ft_seed failure — identisches Workaround wie Plan 01 (Alembic als nerve_app, .deploy_meta manuell gepatcht). REQ-D.UX-11 erfuellt. 1 Commit: 0b9b472. SUMMARY: 08.23.2.D.UX-02-SUMMARY.md.
 
