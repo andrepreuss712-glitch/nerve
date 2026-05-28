@@ -778,14 +778,16 @@ function simUpdate() {
 // Phase 08.23.2.D REQ-D-8/9 - Outcome-Label-Helper
 function _outcomeLabelDe(v) {
   var m = {
-    meeting_booked: 'Termin gebucht',
-    callback: 'Rückruf',
-    no_interest: 'Kein Interesse',
-    wrong_person: 'Falsche Person',
-    contract_signed: 'Abschluss',
-    unknown: 'Unklar',
+    meeting_booked:     'Termin gebucht',
+    callback:           'Rückruf vereinbart',
+    send_info:          'Infos zusenden',
+    wrong_person:       'Falsche Person',
+    gatekeeper_blocked: 'Gatekeeper blockt',
+    no_interest:        'Kein Interesse',
+    contract_signed:    'Abschluss',
+    unknown:            'Unklar',
   };
-  return m[v] || (v || '');
+  return m[v] || (v || '-');
 }
 
 function renderSessions(d) {
@@ -814,16 +816,28 @@ function renderSessions(d) {
   var typeCls   = { cold_call: 'db2-badge-cold', meeting: 'db2-badge-meeting', training: 'db2-badge-training' };
   var html = '';
   sessions.forEach(function(s) {
-    var scoreColor = s.score >= 70 ? '#00D4AA' : (s.score >= 40 ? '#6B7280' : '#F85149');
+    var scoreColor = s.score >= 70
+      ? 'var(--btn-primary-bg-from, #00D4AA)'
+      : (s.score >= 40
+        ? 'var(--page-text-secondary, #6B7280)'
+        : 'var(--btn-danger-text, #f87171)');
     var outcomeLabel = s.outcome ? _outcomeLabelDe(s.outcome) : '';
     var unsicherDot = (s.outcome_source === 'ai_auto_unsicher')
       ? '<span class="outcome-unsicher-dot" data-call-id="' + esc(s.call_id || '') + '" title="Outcome unsicher — klicken zum Korrigieren"></span>'
+      : '';
+    // Pencil-Edit Button (nur wenn call_id vorhanden — REQ-D.UX-12)
+    var pencilBtn = s.call_id
+      ? '<button type="button" class="n-btn-ghost outcome-pencil-btn" data-call-id="' + esc(s.call_id) + '" title="Outcome nachträglich korrigieren" onclick="event.stopPropagation()" style="margin-left:4px;padding:2px 4px;line-height:1;vertical-align:middle;min-height:auto">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>'
+        + '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'
+        + '</svg></button>'
       : '';
     html += '<div class="db2-session-row" onclick="location.href=\'/session/' + s.id + '\'" style="cursor:pointer">';
     html +=   '<span class="db2-session-date">'  + esc(s.date_str) + '</span>';
     html +=   '<span class="db2-badge ' + (typeCls[s.session_type] || 'db2-badge-cold') + '">' + (typeLabel[s.session_type] || s.session_type) + '</span>';
     html +=   '<span class="db2-session-score" style="color:' + scoreColor + '">' + (s.score || '—') + '</span>';
-    html +=   '<span class="db2-session-outcome">' + esc(outcomeLabel) + unsicherDot + '</span>';
+    html +=   '<span class="db2-session-outcome">' + esc(outcomeLabel) + unsicherDot + pencilBtn + '</span>';
     html += '</div>';
   });
   el.innerHTML = html;
@@ -849,32 +863,51 @@ document.addEventListener('click', function(ev) {
   ext.className = 'outcome-correction-inline-row';
   ext.setAttribute('data-call-id', callId);
   var opts = [
-    ['meeting_booked', 'Termin gebucht'],
-    ['callback', 'Rückruf'],
-    ['no_interest', 'Kein Interesse'],
-    ['wrong_person', 'Falsche Person'],
-    ['contract_signed', 'Abschluss'],
+    ['meeting_booked',     'Termin gebucht'],
+    ['callback',           'Rückruf vereinbart'],
+    ['send_info',          'Infos zusenden'],
+    ['wrong_person',       'Falsche Person'],
+    ['gatekeeper_blocked', 'Gatekeeper blockt'],
+    ['no_interest',        'Kein Interesse'],
+    ['contract_signed',    'Abschluss'],
   ];
+  var followupMap = { meeting_booked: 'meeting', callback: 'callback', send_info: 'send_info', gatekeeper_blocked: 'retry_internal' };
   opts.forEach(function(pair){
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'n-btn-ghost outcome-correction-btn';
     btn.textContent = pair[1];
+    btn.style.minHeight = '44px';
     btn.addEventListener('click', function(e){
       e.stopPropagation();
       var csrfMeta = document.querySelector('meta[name="csrf-token"]');
       var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+      var followupIntent = followupMap[pair[0]] || 'none';
       fetch('/api/calls/' + encodeURIComponent(callId) + '/correct_outcome', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-        body: JSON.stringify({ outcome: pair[0] }),
+        body: JSON.stringify({ outcome: pair[0], followup_intent: followupIntent }),
       })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(json){
         if (json && json.ok) {
-          // Marker entfernen, Outcome-Label updaten
           var outcomeSpan = row.querySelector('.db2-session-outcome');
-          if (outcomeSpan) outcomeSpan.textContent = pair[1];
+          if (outcomeSpan) {
+            var dot = outcomeSpan.querySelector('.outcome-unsicher-dot');
+            var pencil = outcomeSpan.querySelector('.outcome-pencil-btn');
+            outcomeSpan.textContent = _outcomeLabelDe(json.outcome || pair[0]);
+            if (dot) outcomeSpan.appendChild(dot);
+            if (pencil) outcomeSpan.appendChild(pencil);
+          }
+          if (json.final_score !== undefined) {
+            var scoreSpan = row.querySelector('.db2-session-score');
+            if (scoreSpan) {
+              scoreSpan.textContent = String(json.final_score);
+              scoreSpan.style.color = json.final_score >= 70
+                ? 'var(--btn-primary-bg-from, #00D4AA)'
+                : (json.final_score >= 40 ? 'var(--page-text-secondary, #6B7280)' : 'var(--btn-danger-text, #f87171)');
+            }
+          }
           ext.parentNode.removeChild(ext);
         }
       })
@@ -883,6 +916,91 @@ document.addEventListener('click', function(ev) {
     ext.appendChild(btn);
   });
   row.parentNode.insertBefore(ext, row.nextSibling);
+});
+
+// Phase 08.23.2.D.UX REQ-D.UX-12 — Pencil-Edit Click-Handler
+document.addEventListener('click', function(ev) {
+  var pencilBtn = ev.target.closest && ev.target.closest('.outcome-pencil-btn');
+  if (!pencilBtn) return;
+  ev.stopPropagation();
+  ev.preventDefault();
+  var callId = pencilBtn.getAttribute('data-call-id');
+  if (!callId) return;
+  var row = pencilBtn.closest('.db2-session-row');
+  if (!row) return;
+
+  // Toggle: schließen wenn bereits offen
+  var existing = row.nextSibling;
+  if (existing && existing.classList && existing.classList.contains('outcome-pencil-accordion')) {
+    existing.parentNode.removeChild(existing);
+    return;
+  }
+
+  var acc = document.createElement('div');
+  acc.className = 'outcome-pencil-accordion';
+  acc.setAttribute('data-call-id', callId);
+
+  var opts7 = [
+    ['meeting_booked',     'Termin gebucht'],
+    ['callback',           'Rückruf vereinbart'],
+    ['send_info',          'Infos zusenden'],
+    ['wrong_person',       'Falsche Person'],
+    ['gatekeeper_blocked', 'Gatekeeper blockt'],
+    ['no_interest',        'Kein Interesse'],
+    ['contract_signed',    'Abschluss'],
+  ];
+  var followupMap7 = { meeting_booked: 'meeting', callback: 'callback', send_info: 'send_info', gatekeeper_blocked: 'retry_internal' };
+
+  opts7.forEach(function(pair) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'n-btn-ghost outcome-correction-btn';
+    btn.textContent = pair[1];
+    btn.style.minHeight = '44px';
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+      var followupIntent = followupMap7[pair[0]] || 'none';
+
+      fetch('/api/calls/' + encodeURIComponent(callId) + '/correct_outcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ outcome: pair[0], followup_intent: followupIntent }),
+      })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(json) {
+        if (json && json.ok) {
+          var outcomeSpan = row.querySelector('.db2-session-outcome');
+          if (outcomeSpan) {
+            var dot = outcomeSpan.querySelector('.outcome-unsicher-dot');
+            var pencil = outcomeSpan.querySelector('.outcome-pencil-btn');
+            outcomeSpan.textContent = _outcomeLabelDe(json.outcome || pair[0]);
+            if (dot) outcomeSpan.appendChild(dot);
+            if (pencil) outcomeSpan.appendChild(pencil);
+          }
+          if (json.final_score !== undefined) {
+            var scoreSpan = row.querySelector('.db2-session-score');
+            if (scoreSpan) {
+              scoreSpan.textContent = String(json.final_score);
+              scoreSpan.style.color = json.final_score >= 70
+                ? 'var(--btn-primary-bg-from, #00D4AA)'
+                : (json.final_score >= 40 ? 'var(--page-text-secondary, #6B7280)' : 'var(--btn-danger-text, #f87171)');
+            }
+          }
+          acc.parentNode.removeChild(acc);
+        }
+      })
+      .catch(function(e) {
+        console.error('[PhaseD.UX] pencil-edit Fehler:', e);
+        acc.innerHTML = '<div style="color:var(--btn-danger-text,#f87171);padding:8px 4px">Fehler — bitte erneut versuchen</div>';
+      });
+    });
+    acc.appendChild(btn);
+  });
+
+  row.parentNode.insertBefore(acc, row.nextSibling);
 });
 
 // ── Zeile 5b: Empfehlungen ────────────────────────────────────────────────────
