@@ -667,15 +667,25 @@ class Call(Base):
     outcome_confidence = Column(Float, nullable=True)
     outcome_note = Column(Text, nullable=True)
     outcome_source = Column(Text, nullable=True)
+    # --- Phase 08.23.2.D.UX — followup_intent (REQ-D.UX-9/10, Migration 0006) ---
+    followup_intent = Column(Text, nullable=False, server_default='none')
     meddpicc_extracted = Column(JSON_TYPE, nullable=True)
     created_at = Column(DateTime, default=utcnow)
     __table_args__ = (
         CheckConstraint("call_mode IN ('cold_call', 'meeting_consented')", name='ck_calls_call_mode'),
         CheckConstraint("transcript_storage IN ('none', 'ephemeral', 'consented_full')", name='ck_calls_transcript_storage'),
-        CheckConstraint("outcome IN ('meeting_booked', 'callback', 'no_interest', 'wrong_person', 'contract_signed', 'unknown') OR outcome IS NULL", name='ck_calls_outcome'),
+        CheckConstraint(
+            "outcome IN ('meeting_booked', 'callback', 'send_info', 'wrong_person', "
+            "'gatekeeper_blocked', 'no_interest', 'contract_signed', 'unknown') OR outcome IS NULL",
+            name='ck_calls_outcome',
+        ),
         CheckConstraint(
             "outcome_source IN ('ai_auto', 'ai_auto_unsicher', 'user_corrected') OR outcome_source IS NULL",
             name='ck_calls_outcome_source',
+        ),
+        CheckConstraint(
+            "followup_intent IN ('none', 'callback', 'meeting', 'send_info', 'retry_internal')",
+            name='ck_calls_followup_intent',
         ),
         Index('idx_calls_account_time', 'account_id', 'started_at'),
         Index('idx_calls_user_time', 'user_id', 'started_at'),
