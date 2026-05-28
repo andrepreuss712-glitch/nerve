@@ -1607,6 +1607,48 @@ Plans:
 
 **⚠️ Live-Test-Bug 2026-05-28:** Andre's erster Test-Call nach Production-Deploy zeigte KEIN Outcome-Modal — System sprang direkt zur alten Auswertung. **Wurzel-Diagnose (via Logs + DB-Inspect):** Plan 04 hat in `routes/learning.py` angenommen `conv.log_entries` ist DB-Spalte auf conversation_logs. War aber nur Code-Variable im RAM während Calls — DB-Spalte existiert nicht. Transcript landet als TXT-Datei in `/opt/nerve/app/logs/`, classify() liest aus DB → leer. Folge: Haiku rät blind ohne Wortlaut → 0.65 confidence → `outcome=NULL, source=NULL` gesetzt → Frontend-Defensive-Check `if (paResult.outcome || paResult.source)` failed → kein Modal. **Cross-Layer-Bug, durch ALLE drei Schutzschichten gerutscht** (Cross-AI Gemini Pre+Post, zwei Pre-Execute-Audit-Runden Claudian, GSD Verification). Fix in **Phase 08.23.2.D.UX.1**. D.UX-UAT bleibt offen bis D.UX.1 durch. Plus: neue CLAUDE.md Hartregel Punkt 21 verankert (Cross-Layer-Audit-Pflicht) damit gleiche Bug-Klasse zukünftig gefangen wird.
 
+### Phase 08.23.2.D.UX.0: Test-User-Pattern + Drei-Schichten-Backup-Foundation (NEU 2026-05-28, Foundation vor D.UX.1) 🟡
+
+**Goal:** Zwei Foundation-Komponenten die VOR D.UX.1 stehen müssen damit Trainings-Daten-Sammlung sauber startet ohne Test-Daten-Verschmutzung in der Cloud.
+
+**Andre-Quote 2026-05-28:** *"wenn wir das backup jetzt schon bauen dann werden ständig tests gespeichert in der cloud, dann müssen wir alles vor launch nochmal löschen was wir als backup gespeichert haben."* Lösung: Test-User-Pattern markiert Test-Calls, Backup-Schicht 3 filtert is_test_user-Calls aus → kein Cloud-Müll, kein Pre-Launch-Purge nötig.
+
+**Drei Komponenten:**
+
+**A) Test-User-Pattern (aus CLAUDE.md HART-Regel 27.05.):**
+- Migration: `users.is_test_user BOOLEAN DEFAULT FALSE`
+- Test-User-Account `andre-test@nerve.local` mit Flag=True anlegen
+- DPO-Korpus-Sammler-Filter (Phase E nutzt das später)
+- Analytics-Dashboard-Filter
+- Calls vom Test-User bekommen `tag='test'` für spätere Daten-Filterung
+- Email-Send-Schutz für Test-User (Test-SMTP oder Dummy — keine echten Emails an externe)
+
+**B) Backup-Schicht 2 (Hetzner Storage Box):**
+- Hetzner Storage Box bestellen (~3 EUR/Monat für 100 GB, gleicher AVV wie Hauptsystem)
+- SSH-Key + Skript-Erweiterung in `scripts/backup_postgres.sh` → nach pg_dump auch zu Storage Box pushen
+- 90 Tage Rotation
+- Test-Restore-Verifikation
+- Defense bei Server-Crash oder Disk-Failure
+
+**C) Backup-Schicht 3 (IONOS S3 Object Storage):**
+- Cross-AI-Empfehlung Gemini 2026-05-28: IONOS bevorzugt über Backblaze B2 wegen DSGVO-Eindeutigkeit (deutscher Anbieter, kein Drittland-Transfer-Issue)
+- IONOS-Account + S3-Bucket anlegen, AVV abschließen
+- **Object-Lock-Konfiguration (30 Tage WORM)** — Ransomware-Schutz, Gemini-Pflicht-Empfehlung
+- Backup-Skript für `training.*`-Tabellen NUR (anonymisierte Daten, kein DSGVO-Issue beim Cross-Anbieter-Transfer)
+- **Filter:** `WHERE source_call_hash NOT IN (SELECT call_hash FROM calls WHERE user_id IN (SELECT id FROM users WHERE is_test_user=TRUE))` — Test-Calls ausgefiltert
+- 365 Tage Rotation
+- Push-basiert via S3-CLI (s3cmd oder rclone)
+- Test-Restore-Verifikation
+- Verschlüsselung-at-rest verifizieren
+
+**DSGVO-Pflicht:** `NERVE DSGVO Analyse.md` Sektion 3 (AVVs) um IONOS-AVV erweitern. Plus Sektion 7 um Schicht-3-Backup-Strategie + Begründung warum nur `training.*` outside Hetzner.
+
+**Pflicht-Patterns:** CLAUDE.md Punkt 7 Cross-AI (🟡 mittel, AVV-Trigger + DSGVO-relevant), Punkt 21 NEU (Cross-Layer-Audit für users-Tabelle Erweiterung + Backup-Pfade auf Production), Punkt 19 (Pre-Execute-Audit für Backup-Skript-Erweiterung).
+
+**Depends on:** keine (Foundation-Phase)
+**Komplexität:** 🟡 mittel (zwei Komponenten, Cloud-Setup, AVV-Verhandlung)
+**Blocker für:** Phase 08.23.2.D.UX.1 (Backup von Trainings-Daten muss VOR ersten echten Trainings-Daten existieren), Phase 08.23.2.E (DPO-Sammler braucht is_test_user-Filter)
+
 ### Phase 08.23.2.D.UX.1: Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix (NEU 2026-05-28, aus D.UX-Live-Test-Bug-Befund) 🟡
 
 **Goal:** Drei Bugs eine Wurzel fixen damit D.UX-Outcome-Modal tatsächlich funktioniert.
