@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: None
-last_updated: "2026-05-28T14:10:00Z"
-last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 07 — Dashboard Pencil-Edit Button + 7-class accordion + nerve.css token scoreColor (7c7bf09)
+last_updated: "2026-05-28T14:59:00Z"
+last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 08 — DSGVO Art. 6 Abs. 1f followup_intent Vault-Dokumentation + Cross-AI Gemini Log-Eintrag
 progress:
   total_phases: 78
   completed_phases: 56
   total_plans: 233
-  completed_plans: 232
+  completed_plans: 233
   percent: 97
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 07 abgeschlossen 2026-05-28
-Next: Phase 08.23.2.D.UX vollstaendig abgeschlossen — naechste Phase folgt
-Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 07 — Dashboard Pencil-Edit Button + 7-class accordion + nerve.css token scoreColor (7c7bf09)
+Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 08 abgeschlossen 2026-05-28 — PHASE VOLLSTAENDIG
+Next: Naechste Phase gemaess ROADMAP.md
+Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 08 — DSGVO Art. 6 Abs. 1f followup_intent Vault-Dokumentation + Cross-AI Gemini Log-Eintrag
+
+**Phase 08.23.2.D.UX Plan 08 abgeschlossen:** Zwei Vault-Dokumentations-Tasks. Task 1: NERVE DSGVO Analyse.md um standalone Sektion `## calls.followup_intent — DSGVO-Rechtsgrundlage` ergaenzt (Art. 6 Abs. 1f, B2B-Sales-Follow-up, Interessenabwaegung + Loeschkonzept + Review-Trigger). Task 2: Nerve-Vault/05 Log.md Eintrag `2026-05-28 Phase 08.23.2.D.UX Cross-AI Gemini Review (Pre-Plan)` mit 4 Findings dokumentiert. Beide Vault-Dateien ausserhalb Git-Repo. SUMMARY: 08.23.2.D.UX-08-SUMMARY.md. Phase 08.23.2.D.UX vollstaendig abgeschlossen (8/8 Plans done).
 
 **Phase 08.23.2.D.UX Plan 07 abgeschlossen:** Dashboard Pencil-Edit Button in jeder Call-Zeile (outcome-pencil-btn, 14px Lucide SVG, n-btn-ghost). Klick oeffnet 7-Button-Accordion (outcome-pencil-accordion) mit Toggle-Support. POST an correct_outcome mit followup_intent; response: final_score + outcome -> DOM-Update ohne Reload. _outcomeLabelDe() auf 7 Klassen erweitert (send_info, gatekeeper_blocked). scoreColor hardcoded Hex (#00D4AA/#6B7280/#F85149) durch nerve.css-Tokens (--btn-primary-bg-from, --page-text-secondary, --btn-danger-text) ersetzt. Bestehender unsicher-dot-Accordion ebenfalls auf 7 Klassen + followup_intent + final_score-Update erweitert. Deployment: staging+production .deploy_meta manuell gepatcht (pre-existing test_ft_seed). REQ-D.UX-12 erfuellt. 1 Commit: 7c7bf09. SUMMARY: 08.23.2.D.UX-07-SUMMARY.md.
 
