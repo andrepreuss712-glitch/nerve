@@ -896,7 +896,8 @@ document.addEventListener('click', function(ev) {
             var dot = outcomeSpan.querySelector('.outcome-unsicher-dot');
             var pencil = outcomeSpan.querySelector('.outcome-pencil-btn');
             outcomeSpan.textContent = _outcomeLabelDe(json.outcome || pair[0]);
-            if (dot) outcomeSpan.appendChild(dot);
+            // WR-03: remove unsicher-dot after successful correction (outcome is now user_corrected)
+            if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
             if (pencil) outcomeSpan.appendChild(pencil);
           }
           if (json.final_score !== undefined) {
@@ -977,7 +978,8 @@ document.addEventListener('click', function(ev) {
             var dot = outcomeSpan.querySelector('.outcome-unsicher-dot');
             var pencil = outcomeSpan.querySelector('.outcome-pencil-btn');
             outcomeSpan.textContent = _outcomeLabelDe(json.outcome || pair[0]);
-            if (dot) outcomeSpan.appendChild(dot);
+            // WR-03: remove unsicher-dot after successful correction (outcome is now user_corrected)
+            if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
             if (pencil) outcomeSpan.appendChild(pencil);
           }
           if (json.final_score !== undefined) {
