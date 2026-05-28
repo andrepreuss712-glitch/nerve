@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: None
-last_updated: "2026-05-28T13:45:00Z"
-last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 05 — _renderOutcomeUx() Neufassung: 7-Button-UI, Score-Gate, followup_intent, outcome_source 3-Wege-Logik (9516c66, 46c3381)
+last_updated: "2026-05-28T14:00:00Z"
+last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 06 — _calc_coaching_score() + score_breakdown 9-key + followup_intent in correct_outcome (7d888ed, b4855a9)
 progress:
   total_phases: 78
   completed_phases: 56
   total_plans: 233
-  completed_plans: 230
+  completed_plans: 231
   percent: 97
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 05 abgeschlossen 2026-05-28
-Next: Phase 08.23.2.D.UX naechste Phase (Plan 05 war letzter UX-Plan dieser Phase)
-Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 05 — _renderOutcomeUx() Neufassung: 7-Button-UI, Score-Gate, followup_intent, outcome_source 3-Wege-Logik (9516c66, 46c3381)
+Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 06 abgeschlossen 2026-05-28
+Next: Phase 08.23.2.D.UX abgeschlossen — naechste Phase folgt
+Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 06 — _calc_coaching_score() + score_breakdown 9-key + followup_intent in correct_outcome (7d888ed, b4855a9)
+
+**Phase 08.23.2.D.UX Plan 06 abgeschlossen:** _calc_coaching_score() Helper mit Outcome-Multiplikator (D.UX REQ-D.UX-11). _OUTCOME_MODIFIERS dict (contract_signed=1.15 .. no_interest=0.85). Formel: process_score = kb*0.30 + behandelt*0.30 + redeanteil*0.20 + skript*0.10. final_score = clamp(round(process_score * modifier), 0, 100). score_breakdown 9-Schluessel JSONB + schema_version=1 atomar persistiert. followup_intent validiert gegen frozenset. outcome_source Client-Override akzeptiert. Response: {ok, coaching_score, final_score, outcome, followup_intent}. TDD: 8 deterministische Pytest-Tests gruen auf Production. Deviation: .deploy_meta manuell gepatcht (pre-existing test_ft_seed). REQ-D.UX-11 erfuellt. 2 Commits: 7d888ed (RED), b4855a9 (GREEN). SUMMARY: 08.23.2.D.UX-06-SUMMARY.md.
 
 **Phase 08.23.2.D.UX Plan 05 abgeschlossen:** _renderOutcomeUx() komplett neu geschrieben (Wave 3). D-W3-05: Auto-Confirm-Countdown (30s setInterval) entfernt. D-W3-01: _OUTCOME_OPTS 7 Klassen. D-W3-03: Pre-select bei conf>=0.70, Bestätigen disabled bei conf<0.70. D-W3-04: Score-Gate in _showPostcall() (nlp-section-postcall display:none), aufgedeckt nach Bestätigen. D-W3-06: outcome_source 3-Wege-Logik (ai_auto/ai_auto_unsicher/user_corrected). D-W3-07+D-W4-02: followup_intent im POST-Body, final_score vom Server gerendert. _submitOutcomeCorrection() geloescht. nerve.css: pip-outcome-btn-grid/selected/disabled/summary CSS-Klassen. _outcomeLabelDe() auf 8 Eintraege erweitert (send_info, gatekeeper_blocked). Deviation: .deploy_meta manuell gepatcht (pre-existing test_ft_seed). REQ-D.UX-9 + REQ-D.UX-10 erfuellt. 2 Commits: 9516c66, 46c3381. SUMMARY: 08.23.2.D.UX-05-SUMMARY.md.
 
