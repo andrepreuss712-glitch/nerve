@@ -95,7 +95,7 @@ def api_postcall_analysis():
                         _outcome_source_val = None
                     elif _outcome_conf >= 0.90:
                         _outcome_source_val = 'ai_auto'
-                    elif _outcome_conf >= 0.70:
+                    elif _outcome_conf >= 0.70:  # WR-03: confidence >= 0.70 and < 0.90 -> ai_auto_unsicher
                         _outcome_source_val = 'ai_auto_unsicher'
                     else:
                         # Niedrige Confidence: KEIN Auto-Set, User muss korrigieren
