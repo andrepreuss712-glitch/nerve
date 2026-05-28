@@ -862,9 +862,11 @@ document.addEventListener('click', function(ev) {
     btn.textContent = pair[1];
     btn.addEventListener('click', function(e){
       e.stopPropagation();
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
       fetch('/api/calls/' + encodeURIComponent(callId) + '/correct_outcome', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({ outcome: pair[0] }),
       })
       .then(function(r){ return r.ok ? r.json() : null; })
@@ -895,7 +897,7 @@ function renderRecommendations(d) {
   var html = '';
   recos.forEach(function(r) {
     html += '<div class="db2-reco-item"' + (r.url ? ' onclick="location.href=\'' + esc(r.url) + '\'" style="cursor:pointer"' : '') + '>';
-    html +=   '<div class="db2-reco-icon">' + r.icon + '</div>';
+    html +=   '<div class="db2-reco-icon">' + esc(r.icon) + '</div>';
     html +=   '<div>';
     html +=     '<div class="db2-reco-title">' + esc(r.title) + '</div>';
     if (r.subtitle) html += '<div class="db2-reco-sub">' + esc(r.subtitle) + '</div>';
