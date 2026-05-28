@@ -608,6 +608,65 @@ def _calc_call_score(conv):
     return min(100, max(0, round(kb * 0.4 + behandelt_rate * 100 * 0.3 + rede_score * 0.2 + skript * 0.1)))
 
 
+# ── D.UX Phase — neue Formel mit Outcome-Multiplikator ───────────────────────
+_OUTCOME_MODIFIERS = {
+    'contract_signed':    1.15,
+    'meeting_booked':     1.10,
+    'wrong_person':       1.00,
+    'callback':           0.95,
+    'send_info':          0.95,
+    'gatekeeper_blocked': 0.95,
+    'no_interest':        0.85,
+}
+
+
+def _calc_coaching_score(conv, outcome):
+    """D.UX REQ-D.UX-11: coaching_score mit Outcome-Multiplikator.
+
+    Formel: process_score = kb*0.30 + behandelt*0.30 + redeanteil*0.20 + skript*0.10 + frage*0.10
+    frage_qualitaet = 0 in v1.
+    final_score = clamp(round(process_score * modifier), 0, 100).
+
+    Returns: (coaching_score_float, final_score_int, breakdown_dict)
+    coaching_score und final_score sind beide auf 0-100 Skala (konsistent).
+    """
+    from datetime import datetime, timezone as _tz_score
+    kb_norm = float(conv.kb_end if conv is not None and conv.kb_end is not None else 30)
+    einw_total = (conv.einwaende_gesamt or 0) if conv is not None else 0
+    einw_ok = (conv.einwaende_behandelt or 0) if conv is not None else 0
+    behandelt_rate = (einw_ok / einw_total) if einw_total > 0 else 0.5
+    redeanteil = float(conv.redeanteil_avg if conv is not None and conv.redeanteil_avg is not None else 50)
+    redeanteil_score = float(max(0, 100 - abs(redeanteil - 40) * 2))
+    skript = float((conv.skript_abdeckung or 0) if conv is not None else 0)
+    frage_qualitaet = 0.0  # v1 placeholder
+
+    process_score = (
+        kb_norm * 0.30
+        + behandelt_rate * 100 * 0.30
+        + redeanteil_score * 0.20
+        + skript * 0.10
+        + frage_qualitaet * 0.10
+    )
+    modifier = _OUTCOME_MODIFIERS.get(outcome, 1.00)
+    raw = process_score * modifier
+    final_score = int(min(100, max(0, round(raw))))
+    coaching_score_val = round(raw, 4)  # 0-100 Skala, konsistent mit final_score
+
+    breakdown = {
+        'schema_version': 1,
+        'kb_end_norm': round(kb_norm, 4),
+        'behandelt_rate': round(behandelt_rate, 4),
+        'redeanteil_score': round(redeanteil_score, 4),
+        'skript_norm': round(skript, 4),
+        'frage_qualitaet': frage_qualitaet,
+        'outcome_modifier': modifier,
+        'process_score': round(process_score, 4),
+        'final_score': final_score,
+        'computed_at_iso': datetime.now(_tz_score.utc).isoformat(),
+    }
+    return (coaching_score_val, final_score, breakdown)
+
+
 # ========================================================================
 # Phase 07.1: POLISH-24 Practice Recommendations Helper
 # ========================================================================
@@ -1712,7 +1771,13 @@ def api_calls_correct_outcome(call_id):
         if row is None:
             return jsonify({'ok': False, 'error': 'not_found_or_forbidden'}), 404
         row.outcome = new_outcome
-        row.outcome_source = 'user_corrected'
+        # outcome_source: Client-Override akzeptieren (fuer ai_auto / ai_auto_unsicher Pfade)
+        _VALID_SOURCES = frozenset({'ai_auto', 'ai_auto_unsicher', 'user_corrected'})
+        client_outcome_source = data_co.get('outcome_source')
+        if client_outcome_source in _VALID_SOURCES:
+            row.outcome_source = client_outcome_source
+        else:
+            row.outcome_source = 'user_corrected'
         # outcome_confidence bleibt unveraendert (Audit-Trail-Hint - alte Haiku-Confidence sichtbar)
         if new_note is not None and str(new_note).strip():
             # REQ-D-5: anonymisieren Pflicht, auch ohne erkannte PII (D-02 Defense-in-Depth)
@@ -1727,13 +1792,34 @@ def api_calls_correct_outcome(call_id):
                 row.outcome_note = None  # fail-safe
         else:
             row.outcome_note = None
+        # D.UX REQ-D.UX-11: followup_intent (T-D.UX-06-02: validiert gegen Whitelist)
+        new_followup_intent = data_co.get('followup_intent')
+        _VALID_FOLLOWUP = frozenset({'none', 'callback', 'meeting', 'send_info', 'retry_internal'})
+        if new_followup_intent not in _VALID_FOLLOWUP:
+            new_followup_intent = None  # ignore invalid values
+        if new_followup_intent is not None:
+            row.followup_intent = new_followup_intent
+        # D.UX REQ-D.UX-11: Score-Berechnung + score_breakdown atomar persistieren
+        from database.models import ConversationLog as _CLScore
+        conv_for_score = None
+        if row.conversation_log_id:
+            conv_for_score = db_co.query(_CLScore).filter(_CLScore.id == row.conversation_log_id).first()
+        try:
+            coaching_score_val, final_score_val, breakdown_data = _calc_coaching_score(conv_for_score, new_outcome)
+        except Exception as _e_score:
+            print(f'[Phase08.23.2.D.UX] _calc_coaching_score Fehler: {_e_score}')
+            coaching_score_val, final_score_val, breakdown_data = 0.0, 0, {}
+        row.coaching_score = coaching_score_val
+        row.score_breakdown = breakdown_data
+        row.score_schema_version = 1
+        # Alles in einem atomaren Commit (outcome + followup_intent + score)
         db_co.commit()
         return jsonify({
             'ok': True,
-            'call_id': str(row.id),
+            'coaching_score': coaching_score_val,
+            'final_score': final_score_val,
             'outcome': row.outcome,
-            'source': row.outcome_source,
-            'outcome_note': row.outcome_note,
+            'followup_intent': row.followup_intent or 'none',
         })
     except Exception as e:
         db_co.rollback()
