@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta, date
 from flask import Blueprint, jsonify, request, g
+from sqlalchemy import or_
 from routes.auth import login_required
 from database.db import get_session
 from database.models import ConversationLog, User as UserModel, Call
@@ -452,7 +453,7 @@ def api_dashboard():
                   .filter(
                       Call.user_id == g.user.id,
                       Call.ended_at >= _seven_days_ago,
-                      (Call.outcome_source == 'ai_auto_unsicher') | (Call.outcome.is_(None)),
+                      or_(Call.outcome_source == 'ai_auto_unsicher', Call.outcome.is_(None)),
                   )
                   .count()
             )
