@@ -1593,6 +1593,18 @@ Plans:
 **Komplexität:** 🟡 mittel mit Security-Anteil
 **Blocker für:** keine direkten Blocker — kann parallel zu G/MEET laufen, aber UX-Coherence besser wenn G/MEET vor 08.21 fertig
 
+**Plans:** 8 plans
+
+Plans:
+- [ ] 08.23.2.D.UX-01-PLAN.md — Migration 0006: outcome CHECK (8 Werte) + followup_intent Spalte
+- [ ] 08.23.2.D.UX-02-PLAN.md — Migration 0007: score_breakdown + score_schema_version
+- [ ] 08.23.2.D.UX-03-PLAN.md — Security Fixes: CR-01/CR-02/WR-01/WR-02/IN-03
+- [ ] 08.23.2.D.UX-04-PLAN.md — Klassifikations-Tuning: Snippet-Heuristik + Few-Shot-Prompt
+- [ ] 08.23.2.D.UX-05-PLAN.md — Wave 3 PiP UX: 7 Buttons + Score-Gate + followup_intent
+- [ ] 08.23.2.D.UX-06-PLAN.md — Wave 4 Score-Persistierung: coaching_score + score_breakdown
+- [ ] 08.23.2.D.UX-07-PLAN.md — Dashboard Pencil-Edit Button + 7-Klassen Accordion
+- [ ] 08.23.2.D.UX-08-PLAN.md — DSGVO Art.6 Abs.1f Dokumentation + Cross-AI Gemini Log
+
 ### Phase 08.23.2.G/MEET: Foundation-Phase Conversational Memory + CRM-Lookup + Multi-Tenancy + Training-Schema (NEU 2026-05-27, Phase G + MEET fusioniert nach Cross-AI-Architektur-Entscheidung) 🔴
 
 **KRITISCHE Architektur-Phase. Cross-AI-Recherche 2026-05-27 abgeschlossen. Spec-Dokument:** `Nerve-Vault/04 Entscheidungen/NERVE Architektur-Entscheidung Internes Datenmodell.md` — **Pflicht-Pre-Read** für Plan-Phase.
