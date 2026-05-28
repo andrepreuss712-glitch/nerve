@@ -482,17 +482,6 @@ def api_beenden():
     except Exception as _e_lookup:
         print(f'[Phase08.23.2.D] call_id-Lookup Fehler (non-fatal): {_e_lookup}')
 
-    # Phase 08.23.2.D Debug-Print 2026-05-27 — Diagnose warum Lookup leer auf Production.
-    # Wenn _session_state schon leer ist (SocketIO-Disconnect vor HTTP-api_beenden),
-    # bleibt _phase_d_call_id None und der UPDATE wird stillschweigend uebersprungen.
-    try:
-        _sess_count = len(ls._session_state)
-        _sess_keys = list(ls._session_state.keys())[:3]
-        _sess_user_match = [k for k, v in ls._session_state.items() if v.get('user_id') == g.user.id]
-        print(f'[Phase08.23.2.D] DEBUG Lookup: sessions={_sess_count} keys={_sess_keys} user_match={_sess_user_match} found_call_id={_phase_d_call_id} posted={_posted_call_id if "_posted_call_id" in dir() else None}')
-    except Exception as _e_dbg:
-        print(f'[Phase08.23.2.D] DEBUG-print Fehler: {_e_dbg}')
-
     # Phase 08.23.2.D Fallback 2026-05-27 — wenn _session_state schon leer:
     # Latest Call des Users mit ended_at=NULL als Update-Target nehmen.
     # Pragmatisch: User hat genau einen aktiven Call gleichzeitig (kein Multi-Tab-Live).
@@ -542,7 +531,7 @@ def api_beenden():
     # Background-Thread nicht mehr verfuegbar ist (kein Request-Context).
     _flask_app = current_app._get_current_object()
 
-    def _audio_health_bg(call_id_val, wc_buffer, flask_app):
+    def _audio_health_bg(call_id_val, wc_buffer, flask_app, user_id_val):
         with flask_app.app_context():
             import time as _t_ah
             from database.db import get_session as _gs_ah
@@ -554,7 +543,10 @@ def api_beenden():
                     return  # Kein Buffer -> nichts zu schreiben
                 _db_ah = _gs_ah()
                 try:
-                    _row = _db_ah.query(_CallAH).filter(_CallAH.id == call_id_val).first()
+                    _row = _db_ah.query(_CallAH).filter(
+                        _CallAH.id == call_id_val,
+                        _CallAH.user_id == user_id_val
+                    ).first()
                     if _row is not None:
                         _row.audio_health_score = float(metrics['score'])
                         _db_ah.add(_CallEventAH(
@@ -582,7 +574,7 @@ def api_beenden():
     if _phase_d_call_id and _phase_d_word_confidences:
         threading.Thread(
             target=_audio_health_bg,
-            args=(_phase_d_call_id, _phase_d_word_confidences, _flask_app),
+            args=(_phase_d_call_id, _phase_d_word_confidences, _flask_app, g.user.id),
             daemon=True,
         ).start()
 
