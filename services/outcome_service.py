@@ -69,8 +69,9 @@ def _select_snippets(log_entries: List[dict], dauer_sek: int) -> List[str]:
     if has_ts:
         early = [e.get('text', '') for e in log_entries
                  if e.get('ts_ms', 0) <= 30_000 and e.get('text')]
+        late_threshold_ms = max(0, (dauer_sek - 60) * 1000)
         late  = [e.get('text', '') for e in log_entries
-                 if e.get('ts_ms', 0) >= (dauer_sek - 60) * 1000 and e.get('text')]
+                 if e.get('ts_ms', 0) >= late_threshold_ms and e.get('text')]
     else:
         # Index-based fallback: first 15 + last 15 entries
         early = texts[:15]
