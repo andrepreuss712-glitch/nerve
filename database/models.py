@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, date
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric, CheckConstraint, Index, text, JSON
+from sqlalchemy import Column, Integer, BigInteger, SmallInteger, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric, CheckConstraint, Index, text, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
 from database.db import Base
@@ -662,6 +662,9 @@ class Call(Base):
     outcome = Column(Text, nullable=True)
     audio_health_score = Column(Float, nullable=True)
     coaching_score = Column(Float, nullable=True)
+    # --- Phase 08.23.2.D.UX — Score-Breakdown (REQ-D.UX-11, Migration 0007) ---
+    score_breakdown = Column(JSON_TYPE, nullable=True)
+    score_schema_version = Column(SmallInteger, nullable=False, server_default='1')
     # --- Phase 08.23.2.D — Outcome-Erfassung (REQ-D-1) ---
     conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
     outcome_confidence = Column(Float, nullable=True)
