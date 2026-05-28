@@ -1,4 +1,4 @@
-"""Phase 08.23.2.D REQ-D-3 + REQ-D-6 — outcome_service Unit-Tests."""
+"""Phase 08.23.2.D REQ-D-3 + REQ-D-6 + REQ-D.UX-6/7/8 -- outcome_service Unit-Tests."""
 import pytest
 from unittest.mock import patch, MagicMock
 import json
@@ -18,7 +18,7 @@ def valid_conv_data():
         'log_entries': [
             {'sprecher': 'berater', 'text': 'Guten Tag, ich rufe wegen ...'},
             {'sprecher': 'kunde', 'text': 'Wir haben aktuell keinen Bedarf.'},
-            {'sprecher': 'berater', 'text': 'Verstehe — darf ich Ihnen kurz erläutern ...'},
+            {'sprecher': 'berater', 'text': 'Verstehe -- darf ich Ihnen kurz erläutern ...'},
         ],
     }
 
@@ -35,53 +35,149 @@ def test_classify_returns_valid_outcome(valid_conv_data, mock_haiku_response_mee
     with patch.object(outcome_service, 'claude_client') as mock_client:
         mock_client.messages.create.return_value = mock_haiku_response_meeting
         result = outcome_service.classify(valid_conv_data)
-    assert result['outcome'] in ('meeting_booked', 'callback', 'no_interest', 'wrong_person', 'contract_signed', 'unknown')
+    assert result['outcome'] in outcome_service.VALID_OUTCOMES
     assert 0.0 <= result['confidence'] <= 1.0
 
 
-def test_classify_short_call_returns_null():
-    """Edge-Case D-02: Call <30s → outcome=None, confidence=0."""
+def test_classify_short_call_returns_unknown():
+    """Edge-Case REQ-D.UX-6: Call <30s -> outcome='unknown' (not None), confidence=0."""
     from services import outcome_service
-    short_call = {'dauer_sekunden': 15, 'erreichte_phase': None, 'einwaende_liste': [], 'ewb_clicks': [], 'kb_endwert': 30, 'log_entries': []}
+    short_call = {'dauer_sekunden': 15, 'erreichte_phase': None, 'einwaende_liste': [], 'kb_endwert': 30, 'log_entries': []}
     result = outcome_service.classify(short_call)
-    assert result['outcome'] is None
+    assert result['outcome'] == 'unknown'
     assert result['confidence'] == 0.0
 
 
+def test_classify_empty_conv_data_no_http():
+    """Empty conv_data returns unknown/0.0 without HTTP call."""
+    from services import outcome_service
+    with patch.object(outcome_service, 'claude_client') as mock_client:
+        result = outcome_service.classify({})
+        mock_client.messages.create.assert_not_called()
+    assert result == {'outcome': 'unknown', 'confidence': 0.0}
+
+
+def test_classify_dauer_zero_no_http():
+    """Call with dauer_sekunden=0 returns unknown/0.0 without HTTP call."""
+    from services import outcome_service
+    with patch.object(outcome_service, 'claude_client') as mock_client:
+        result = outcome_service.classify({'dauer_sekunden': 0})
+        mock_client.messages.create.assert_not_called()
+    assert result == {'outcome': 'unknown', 'confidence': 0.0}
+
+
 def test_classify_handles_claude_exception(valid_conv_data):
-    """Bei Claude-Fehler: outcome=None, kein Crash."""
+    """Bei Claude-Fehler: outcome='unknown', kein Crash."""
     from services import outcome_service
     with patch.object(outcome_service, 'claude_client') as mock_client:
         mock_client.messages.create.side_effect = RuntimeError('Claude API down')
         result = outcome_service.classify(valid_conv_data)
-    assert result['outcome'] is None
+    assert result['outcome'] == 'unknown'
     assert result['confidence'] == 0.0
 
 
 def test_classify_handles_malformed_json(valid_conv_data):
-    """Claude liefert kaputtes JSON → outcome=None, kein Crash."""
+    """Claude liefert kaputtes JSON -> outcome='unknown', kein Crash."""
     from services import outcome_service
     bad_msg = MagicMock()
     bad_msg.content = [MagicMock(text='nicht-json-text {{{')]
     with patch.object(outcome_service, 'claude_client') as mock_client:
         mock_client.messages.create.return_value = bad_msg
         result = outcome_service.classify(valid_conv_data)
-    assert result['outcome'] is None
+    assert result['outcome'] == 'unknown'
     assert result['confidence'] == 0.0
 
 
 def test_classify_invalid_outcome_value_rejected(valid_conv_data):
-    """Claude liefert outcome außerhalb Enum → outcome=None."""
+    """Claude liefert outcome ausserhalb Enum -> outcome='unknown'."""
     from services import outcome_service
     bad_msg = MagicMock()
     bad_msg.content = [MagicMock(text=json.dumps({'outcome': 'random_value', 'confidence': 0.9}))]
     with patch.object(outcome_service, 'claude_client') as mock_client:
         mock_client.messages.create.return_value = bad_msg
         result = outcome_service.classify(valid_conv_data)
-    assert result['outcome'] is None
+    assert result['outcome'] == 'unknown'
 
 
-# ── calculate_audio_health() Tests ────────────────────────────────────────────
+def test_confidence_ceiling_short_text():
+    """Text < 20 words gets confidence ceiling of 0.65 (post-processing, REQ-D.UX-7)."""
+    from services import outcome_service
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text='{"outcome": "meeting_booked", "confidence": 0.92}')]
+    with patch.object(outcome_service, 'claude_client') as mock_client:
+        mock_client.messages.create.return_value = mock_response
+        result = outcome_service.classify({
+            'dauer_sekunden': 60,
+            'log_entries': [{'text': 'ja tschüss'}]
+        })
+    assert result['confidence'] <= 0.65
+
+
+# ── _estimate_tokens() Tests ──────────────────────────────────────────────────
+
+def test_estimate_tokens_empty():
+    from services.outcome_service import _estimate_tokens
+    assert _estimate_tokens('') == 0
+
+
+def test_estimate_tokens_three_words():
+    from services.outcome_service import _estimate_tokens
+    assert _estimate_tokens('ein zwei drei') == int(3 * 1.4)
+
+
+# ── _select_snippets() Tests ──────────────────────────────────────────────────
+
+def test_select_snippets_empty():
+    from services.outcome_service import _select_snippets
+    assert _select_snippets([], 60) == []
+
+
+def test_select_snippets_short_returns_full():
+    from services.outcome_service import _select_snippets
+    entries = [{'text': 'Hallo wie geht es'}]
+    result = _select_snippets(entries, 30)
+    assert result == ['Hallo wie geht es']
+
+
+def test_select_snippets_no_text_field():
+    from services.outcome_service import _select_snippets
+    entries = [{'sprecher': 'berater'}, {'sprecher': 'kunde'}]
+    assert _select_snippets(entries, 60) == []
+
+
+# ── VALID_OUTCOMES Tests ──────────────────────────────────────────────────────
+
+def test_valid_outcomes_contains_new_values():
+    from services.outcome_service import VALID_OUTCOMES
+    assert 'send_info' in VALID_OUTCOMES
+    assert 'gatekeeper_blocked' in VALID_OUTCOMES
+
+
+def test_valid_outcomes_has_8_values():
+    from services.outcome_service import VALID_OUTCOMES
+    assert len(VALID_OUTCOMES) == 8
+
+
+def test_valid_outcomes_contains_all_expected():
+    from services.outcome_service import VALID_OUTCOMES
+    expected = {'meeting_booked', 'callback', 'send_info', 'wrong_person',
+                'gatekeeper_blocked', 'no_interest', 'contract_signed', 'unknown'}
+    assert VALID_OUTCOMES == expected
+
+
+# ── SYSTEM_PROMPT Tests ───────────────────────────────────────────────────────
+
+def test_system_prompt_contains_examples():
+    from services.outcome_service import SYSTEM_PROMPT
+    # Runtime behavior check: SYSTEM_PROMPT is a non-empty string with XML examples block
+    assert isinstance(SYSTEM_PROMPT, str)
+    assert len(SYSTEM_PROMPT) > 100
+    assert '<examples>' in SYSTEM_PROMPT
+    assert 'meeting_booked' in SYSTEM_PROMPT
+    assert 'gatekeeper_blocked' in SYSTEM_PROMPT
+
+
+# ── calculate_audio_health() Tests ───────────────────────────────────────────
 
 def test_audio_health_5_metrics_present():
     from services.outcome_service import calculate_audio_health
