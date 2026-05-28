@@ -3037,6 +3037,9 @@
       _showPostcallEmpty();
       return;
     }
+    // D-W3-04: Score-Sektion initial verstecken bis Outcome-Confirm (Phase 08.23.2.D.UX-05)
+    var scoreSection = document.querySelector('#nlp-section-postcall');
+    if (scoreSection) scoreSection.style.display = 'none';
     var score = _calcScore(postcall);
     var tags = _buildTags(postcall);
     _showPostcallRaw(score + '%', tags);
@@ -3733,12 +3736,14 @@
 
   function _outcomeLabelDe(val) {
     var m = {
-      meeting_booked: 'Termin gebucht',
-      callback: 'Rückruf',
-      no_interest: 'Kein Interesse',
-      wrong_person: 'Falsche Person',
-      contract_signed: 'Abschluss',
-      unknown: 'Unklar',
+      meeting_booked:     'Termin gebucht',
+      callback:           'Rückruf vereinbart',
+      send_info:          'Infos zusenden',
+      wrong_person:       'Falsche Person',
+      gatekeeper_blocked: 'Gatekeeper blockt',
+      no_interest:        'Kein Interesse',
+      contract_signed:    'Abschluss',
+      unknown:            'Unklar',
     };
     return m[val] || (val || '-');
   }
