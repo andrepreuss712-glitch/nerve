@@ -1779,6 +1779,7 @@ def api_calls_correct_outcome(call_id):
         else:
             row.outcome_source = 'user_corrected'
         # outcome_confidence bleibt unveraendert (Audit-Trail-Hint - alte Haiku-Confidence sichtbar)
+        anon_note_failed = False
         if new_note is not None and str(new_note).strip():
             # REQ-D-5: anonymisieren Pflicht, auch ohne erkannte PII (D-02 Defense-in-Depth)
             try:
@@ -1790,6 +1791,7 @@ def api_calls_correct_outcome(call_id):
             except Exception as _e_anon:
                 print(f'[Phase08.23.2.D] outcome_note anonymize Fehler: {_e_anon}')
                 row.outcome_note = None  # fail-safe
+                anon_note_failed = True  # signal to caller that note was dropped
         else:
             row.outcome_note = None
         # D.UX REQ-D.UX-11: followup_intent (T-D.UX-06-02: validiert gegen Whitelist)
@@ -1814,13 +1816,16 @@ def api_calls_correct_outcome(call_id):
         row.score_schema_version = 1
         # Alles in einem atomaren Commit (outcome + followup_intent + score)
         db_co.commit()
-        return jsonify({
+        resp = {
             'ok': True,
             'coaching_score': coaching_score_val,
             'final_score': final_score_val,
             'outcome': row.outcome,
             'followup_intent': row.followup_intent or 'none',
-        })
+        }
+        if anon_note_failed:
+            resp['note_dropped'] = True  # WR-02: inform caller that note was silently dropped
+        return jsonify(resp)
     except Exception as e:
         db_co.rollback()
         print(f'[Phase08.23.2.D] correct_outcome Fehler: {e}')
