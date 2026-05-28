@@ -3630,108 +3630,184 @@
     setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 5000);
   }
 
+  // ── Outcome-Flow Helpers (Phase 08.23.2.D.UX-05 — D-W3-01/02/06) ──────────
+
+  var _OUTCOME_OPTS = [
+    ['meeting_booked',     'Termin gebucht'],
+    ['callback',           'Rückruf vereinbart'],
+    ['send_info',          'Infos zusenden'],
+    ['wrong_person',       'Falsche Person'],
+    ['gatekeeper_blocked', 'Gatekeeper blockt'],
+    ['no_interest',        'Kein Interesse'],
+    ['contract_signed',    'Abschluss'],
+  ];
+
+  var _FOLLOWUP_MAP = {
+    meeting_booked:     'meeting',
+    callback:           'callback',
+    send_info:          'send_info',
+    gatekeeper_blocked: 'retry_internal',
+  };
+
+  function _deriveFollowupIntent(outcome) {
+    return _FOLLOWUP_MAP[outcome] || 'none';
+  }
+
   function _renderOutcomeUx(data) {
-    // Ermittle PostCall-Overlay-Section
+    // Idempotenz-Guard (D.UX constraint — beibehalten)
     var sec = document.getElementById('pip-outcome-section');
     if (!sec) {
-      var host = document.getElementById('pip-postcall') || document.querySelector('.nlp-section-postcall') || document.body;
+      var host = document.getElementById('pip-postcall') || document.querySelector('#nlp-section-postcall') || document.body;
       sec = document.createElement('div');
       sec.id = 'pip-outcome-section';
       sec.className = 'n-glass pip-outcome-section';
       host.appendChild(sec);
     }
+    if (sec.dataset.outcomeRendered === '1') return;
     sec.dataset.outcomeRendered = '1';
     sec.innerHTML = '';
-    var outcome = data.outcome;
+
+    var haikuOutcome = data.outcome;
     var conf = +data.confidence || 0;
-    var source = data.source;
     var callId = data.call_id;
 
-    if (source === 'ai_auto' || source === 'ai_auto_unsicher') {
-      // Auto-Confirm mit 30s Countdown
-      var label = document.createElement('div');
-      label.className = 'pip-outcome-label';
-      label.textContent = 'Outcome erkannt';
-      sec.appendChild(label);
-      var value = document.createElement('div');
-      value.className = 'pip-outcome-value';
-      value.textContent = _outcomeLabelDe(outcome);
-      sec.appendChild(value);
-      var ring = document.createElement('div');
-      ring.className = 'pip-outcome-confirm-ring';
-      ring.innerHTML = '<span class="pip-outcome-countdown">30</span>';
-      sec.appendChild(ring);
-      var caption = document.createElement('div');
-      caption.className = 'pip-outcome-caption';
-      caption.textContent = 'Wird automatisch bestätigt in 30s';
-      sec.appendChild(caption);
-      if (source === 'ai_auto_unsicher') {
-        var badge = document.createElement('span');
-        badge.className = 'pip-outcome-badge-unsicher';
-        badge.textContent = 'Unsicher - wird im Dashboard markiert';
-        sec.appendChild(badge);
-      }
-      var remaining = 30;
-      var tickEl = ring.querySelector('.pip-outcome-countdown');
-      var iv = setInterval(function () {
-        remaining -= 1;
-        if (tickEl) tickEl.textContent = String(remaining);
-        if (remaining <= 0) {
-          clearInterval(iv);
-          ring.classList.add('pip-outcome-confirmed');
-          if (tickEl) tickEl.textContent = 'OK';
-          if (caption) caption.textContent = 'Bestätigt';
-        }
-      }, 1000);
-    } else {
-      // Korrektur-Modal (confidence<0.70 oder Classifier-Fehler)
-      var heading = document.createElement('div');
-      heading.className = 'pip-outcome-heading';
-      heading.textContent = 'Outcome unklar - bitte korrigieren';
-      sec.appendChild(heading);
-      if (outcome) {
-        var hint = document.createElement('div');
-        hint.className = 'pip-outcome-hint';
-        hint.textContent = 'KI-Vorschlag: ' + _outcomeLabelDe(outcome);
-        sec.appendChild(hint);
-      }
-      var grid = document.createElement('div');
-      grid.className = 'pip-outcome-correction-grid';
-      var noteEl = null;
-      var opts = [
-        ['meeting_booked', 'Termin gebucht'],
-        ['callback', 'Rückruf'],
-        ['no_interest', 'Kein Interesse'],
-        ['wrong_person', 'Falsche Person'],
-        ['contract_signed', 'Abschluss'],
-      ];
-      opts.forEach(function (pair) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'n-btn-ghost pip-outcome-correction-btn';
-        btn.dataset.value = pair[0];
-        btn.textContent = pair[1];
-        btn.addEventListener('click', function () {
-          _submitOutcomeCorrection(callId, pair[0], noteEl ? noteEl.value : null);
-        });
-        grid.appendChild(btn);
-      });
-      sec.appendChild(grid);
-      // D-08 Option a: outcome_note Textarea NUR im Korrektur-Modal
-      var noteLabel = document.createElement('label');
-      noteLabel.className = 'pip-outcome-note-label';
-      noteLabel.textContent = 'Notiz (optional)';
-      sec.appendChild(noteLabel);
-      noteEl = document.createElement('textarea');
-      noteEl.className = 'pip-outcome-note-textarea n-input';
-      noteEl.placeholder = 'Stichworte zum Gespräch…';
-      noteEl.rows = 3;
-      sec.appendChild(noteEl);
-      var sub = document.createElement('div');
-      sub.className = 'pip-outcome-note-sub';
-      sub.textContent = 'Wird vor dem Speichern anonymisiert.';
-      sec.appendChild(sub);
+    if (!callId) return;
+
+    // State: welches Outcome gerade ausgewaehlt ist
+    var selectedOutcome = (conf >= 0.70 && haikuOutcome) ? haikuOutcome : null;
+
+    // ── Header ───────────────────────────────────────────────────────────────
+    var header = document.createElement('div');
+    header.className = 'pip-outcome-header';
+    header.textContent = 'Gesprächsergebnis bestätigen';
+    sec.appendChild(header);
+
+    // ── Unsicher-Badge (nur wenn confidence < 0.70) ──────────────────────────
+    if (conf < 0.70) {
+      var badge = document.createElement('div');
+      badge.className = 'pip-outcome-badge-unsicher';  // Teal-Outline — NICHT gelb (CLAUDE.md HART Punkt 8)
+      badge.textContent = 'KI unsicher — bitte wählen';
+      sec.appendChild(badge);
     }
+
+    // ── 7 Buttons ────────────────────────────────────────────────────────────
+    var grid = document.createElement('div');
+    grid.className = 'pip-outcome-btn-grid';
+    var btnEls = {};
+    var confirmBtn; // forward-ref fuer click-Handler
+
+    _OUTCOME_OPTS.forEach(function(pair) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'n-btn-ghost pip-outcome-btn';
+      btn.dataset.value = pair[0];
+      btn.textContent = escHtml(pair[1]);
+      btn.style.minHeight = '44px';  // Touch-Target min 44px
+
+      // Pre-select Haiku-Vorschlag wenn conf >= 0.70
+      if (pair[0] === selectedOutcome) {
+        btn.classList.add('pip-outcome-btn--selected');
+      }
+
+      btn.addEventListener('click', function() {
+        // Deselect alle anderen
+        Object.keys(btnEls).forEach(function(k) {
+          btnEls[k].classList.remove('pip-outcome-btn--selected');
+        });
+        btn.classList.add('pip-outcome-btn--selected');
+        selectedOutcome = pair[0];
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.classList.remove('pip-outcome-btn--disabled');
+        }
+      });
+      btnEls[pair[0]] = btn;
+      grid.appendChild(btn);
+    });
+    sec.appendChild(grid);
+
+    // ── Bestätigen-Button ─────────────────────────────────────────────────────
+    confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = 'n-btn-primary pip-outcome-confirm-btn';
+    confirmBtn.textContent = 'Bestätigen';
+    confirmBtn.style.minHeight = '44px';
+    // Disabled wenn kein Outcome gewaehlt (conf < 0.70 und kein Klick)
+    if (!selectedOutcome) {
+      confirmBtn.disabled = true;
+      confirmBtn.classList.add('pip-outcome-btn--disabled');
+    }
+
+    confirmBtn.addEventListener('click', function() {
+      if (confirmBtn.disabled) return;  // Doppelklick-Guard
+      if (!selectedOutcome) return;
+      confirmBtn.disabled = true;
+
+      // outcome_source Mapping per D-W3-06 (three-way logic):
+      // State A (conf >= 0.90 + AI-Vorschlag): ai_auto
+      // State B (0.70 <= conf < 0.90 + AI-Vorschlag bestaetigt): ai_auto_unsicher
+      // Everything else: user_corrected
+      var outcomeSource;
+      if (conf >= 0.90 && selectedOutcome === haikuOutcome) {
+        outcomeSource = 'ai_auto';
+      } else if (conf >= 0.70 && selectedOutcome === haikuOutcome) {
+        outcomeSource = 'ai_auto_unsicher';
+      } else {
+        outcomeSource = 'user_corrected';
+      }
+
+      var followupIntent = _deriveFollowupIntent(selectedOutcome);
+
+      // Spinner
+      confirmBtn.textContent = 'Bewertung wird berechnet…';
+
+      // CSRF null-check PFLICHT (TypeError wenn meta-Tag fehlt)
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+      fetch('/api/calls/' + encodeURIComponent(callId) + '/correct_outcome', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+          outcome: selectedOutcome,
+          followup_intent: followupIntent,
+          outcome_source: outcomeSource,
+        }),
+      })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(json) {
+        if (!json || !json.ok) {
+          confirmBtn.textContent = 'Fehler — erneut versuchen';
+          confirmBtn.disabled = false;
+          return;
+        }
+        // Score aufdecken (per D-W3-04 + D-W4-02)
+        var scoreSection = document.querySelector('#nlp-section-postcall');
+        if (scoreSection) scoreSection.style.display = '';
+
+        // final_score vom Server rendern (nicht lokal berechnen — per D-W4-02)
+        if (json.final_score !== undefined) {
+          var scoreEl = document.getElementById('nlp-postcall-score');
+          if (scoreEl) scoreEl.textContent = String(json.final_score) + '%';
+        }
+
+        // Outcome-Sektion zu 1-Zeiler kollabieren
+        sec.innerHTML = '';
+        var summary = document.createElement('div');
+        summary.className = 'pip-outcome-summary';
+        summary.textContent = '✓ ' + escHtml(_outcomeLabelDe(json.outcome || selectedOutcome));
+        sec.appendChild(summary);
+      })
+      .catch(function(e) {
+        console.error('[PhaseD.UX] correct_outcome POST Fehler:', e);
+        confirmBtn.textContent = 'Fehler — erneut versuchen';
+        confirmBtn.disabled = false;
+      });
+    });
+    sec.appendChild(confirmBtn);
   }
 
   function _outcomeLabelDe(val) {
@@ -3748,23 +3824,7 @@
     return m[val] || (val || '-');
   }
 
-  function _submitOutcomeCorrection(callId, outcome, note) {
-    if (!callId || !outcome) return;
-    var body = { outcome: outcome };
-    if (note && String(note).trim()) body.note = String(note);
-    fetch('/api/calls/' + encodeURIComponent(callId) + '/correct_outcome', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-      body: JSON.stringify(body),
-    })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (json) {
-        if (json && json.ok) {
-          var sec = document.getElementById('pip-outcome-section');
-          if (sec) sec.innerHTML = '<div class="pip-outcome-saved">Outcome gespeichert.</div>';
-        }
-      })
-      .catch(function (e) { console.error('[PhaseD] correct_outcome POST Fehler:', e); });
-  }
+  // _submitOutcomeCorrection() entfernt (Phase 08.23.2.D.UX-05 D-W3-05)
+  // Ersetzt durch inline Logik in _renderOutcomeUx() confirmBtn-Handler
 
 })();

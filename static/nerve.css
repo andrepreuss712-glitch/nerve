@@ -3294,6 +3294,51 @@ input[type="range"].perf-slider::-moz-range-thumb {
     font-weight: 600;
 }
 
+/* Phase 08.23.2.D.UX-05 — neue 7-Button-UI (D-W3-01/03) */
+.pip-outcome-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--page-text-color);
+    letter-spacing: 0.3px;
+}
+
+.pip-outcome-btn-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0;
+}
+
+.pip-outcome-btn {
+    min-height: 44px;
+    font-size: 13px;
+    font-weight: 600;
+    flex: 1 1 auto;
+}
+
+.pip-outcome-btn--selected {
+    background: var(--btn-primary-bg-from, #00D4AA) !important;
+    color: #06060a !important;
+    border-color: var(--btn-primary-bg-from, #00D4AA) !important;
+}
+
+.pip-outcome-btn--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.pip-outcome-confirm-btn {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.pip-outcome-summary {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--btn-primary-bg-from, #00D4AA);
+    padding: 6px 0;
+}
+
 /* Audio-Warning - echte System-Warnung, #f59e0b semantisch korrekt */
 .pip-audio-warn {
     display: inline-flex;
