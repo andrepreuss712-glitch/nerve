@@ -1605,6 +1605,65 @@ Plans:
 - [x] 08.23.2.D.UX-07-PLAN.md — Dashboard Pencil-Edit Button + 7-Klassen Accordion
 - [x] 08.23.2.D.UX-08-PLAN.md — DSGVO Art.6 Abs.1f Dokumentation + Cross-AI Gemini Log — DONE 2026-05-28
 
+**⚠️ Live-Test-Bug 2026-05-28:** Andre's erster Test-Call nach Production-Deploy zeigte KEIN Outcome-Modal — System sprang direkt zur alten Auswertung. **Wurzel-Diagnose (via Logs + DB-Inspect):** Plan 04 hat in `routes/learning.py` angenommen `conv.log_entries` ist DB-Spalte auf conversation_logs. War aber nur Code-Variable im RAM während Calls — DB-Spalte existiert nicht. Transcript landet als TXT-Datei in `/opt/nerve/app/logs/`, classify() liest aus DB → leer. Folge: Haiku rät blind ohne Wortlaut → 0.65 confidence → `outcome=NULL, source=NULL` gesetzt → Frontend-Defensive-Check `if (paResult.outcome || paResult.source)` failed → kein Modal. **Cross-Layer-Bug, durch ALLE drei Schutzschichten gerutscht** (Cross-AI Gemini Pre+Post, zwei Pre-Execute-Audit-Runden Claudian, GSD Verification). Fix in **Phase 08.23.2.D.UX.1**. D.UX-UAT bleibt offen bis D.UX.1 durch. Plus: neue CLAUDE.md Hartregel Punkt 21 verankert (Cross-Layer-Audit-Pflicht) damit gleiche Bug-Klasse zukünftig gefangen wird.
+
+### Phase 08.23.2.D.UX.1: Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix (NEU 2026-05-28, aus D.UX-Live-Test-Bug-Befund) 🟡
+
+**Goal:** Drei Bugs eine Wurzel fixen damit D.UX-Outcome-Modal tatsächlich funktioniert.
+
+**Bug-Liste:**
+- **Bug A (Wurzel):** Transcript wird als TXT-Datei gespeichert, NICHT in DB → outcome_service.classify() bekommt leere log_entries
+- **Bug B:** Backend bei confidence < 0.70 setzt outcome+source auf NULL (statt outcome=Haiku-Best-Guess + source='ai_auto_unsicher')
+- **Bug C:** Frontend bei outcome+source=NULL: kein Modal rendern (statt Force-Wahl-Modal ohne Vorauswahl)
+
+**Tasks:**
+1. **Bug A:** Migration `0008` mit neuer `conversation_logs.log_entries`-Spalte als JSONB (oder eigene `transcript_segments`-Tabelle mit FK — Architektur-Entscheidung in Spec-Phase). Plus `services/live_session.py` beim Call-Ende: Transcript-Segments aus RAM in DB schreiben (anonymisiert wie schon in TXT-Datei).
+2. **Bug B:** `routes/learning.py` Z.97-101 — bei confidence < 0.70: outcome=Haiku-Vorschlag + source='ai_auto_unsicher' (nicht NULL).
+3. **Bug C:** `static/pip-launcher.js` Z.2956 — Defensive-Check erweitern: auch rendern wenn call_id + confidence>0, auch wenn outcome+source=null (Force-Wahl-Modal ohne Vorauswahl).
+4. DSGVO-Anpassung: Transcript-Persistierung war bisher TXT-Datei. Neue DB-Spalte erweitert `04 Entscheidungen/NERVE DSGVO Analyse.md` Sektion 7. Plus Cascade-Delete für log_entries bei User-Löschanfragen.
+5. Re-Test der D.UX-UAT-Items nach Fix-Deploy.
+
+**Pflicht-Patterns:** CLAUDE.md Punkt 7 Cross-AI (🟡 mittel), Punkt 14 Pre-Insert-Audit, **Punkt 21 NEU (Cross-Layer-Audit-Pflicht):** Persistenz-Schicht-Verifikation für conversation_logs UND calls UND alle Tabellen die TXT-Logging-Code anfasst. Plan MUSS Sektion `## 5. Persistenz-Schicht-Verifikation` mit inspect.sh-Output für jede angefasste Tabelle + Cross-Layer-Konsistenz-Tabelle enthalten.
+
+**Depends on:** Phase 08.23.2.D.UX ✅ 2026-05-28 (technisch fertig, Live-Test-Bug muss aber zuerst hier gefixt werden)
+**Komplexität:** 🟡 mittel (DB-Migration + Backend-Edit + Frontend-Edit + DSGVO-Doku)
+**Blocker für:** D.UX-UAT-Pass, Phase 08.23.2.D.UX.2 (Transcript-Reiter braucht DB-Persistierung), Phase 08.23.2.E (DPO-Sammler nutzt log_entries als Trainings-Korpus-Input)
+
+### Phase 08.23.2.D.UX.2: Transcript-Reiter UI im PiP + Auswertung + Dashboard (NEU 2026-05-28, Andre-Feature-Wunsch) 🟡
+
+**Goal:** Transcript-Reiter an drei UI-Stellen damit Cold-Caller nicht mehr mitschreiben muss während er telefoniert.
+
+**Andre-Quote 2026-05-28:** *"Was ich auch gern hätte in kürze ist ein Transskript reiter. Gerne auch an mehreren Stellen. Einmal während des Calls, dann in jeder auswertung (Pip und in der kompletten auswertung). das führt dann dazu das user auch nicht zwingend sofort mitschreiben müssen und sich komplett auf den call konzentrieren können."*
+
+**Tasks:**
+1. Transcript-Reiter im PiP **während Call** — Live-Scroll der Transcript-Segments. Hidden-Default, optional einblendbar via Tab/Knopf.
+2. Transcript-Reiter in PiP-Post-Call-Auswertung — direkt nach Outcome-Bestätigen sichtbar als Reiter neben Score + Lernkarten.
+3. Transcript-Reiter im Dashboard-Call-Detail-View — User klickt alten Call → Detail-Seite öffnet → Transcript ist Reiter neben Score-/Outcome-/Lernkarten-Reitern.
+4. **Optional Bonus:** Such-/Highlight-Funktion im Transcript (z.B. nach "Termin", "Einwand").
+
+**UI-SPEC nötig** für drei UI-Kontexte mit unterschiedlichen Constraints (PiP-eng vs. Dashboard-breit) — `/gsd-ui-phase` Pflicht.
+
+**Depends on:** Phase 08.23.2.D.UX.1 (Transcript-DB-Persistierung)
+**Komplexität:** 🟡 mittel (drei UI-Kontexte, neue Reiter-Komponente, neue API-Endpoints für Transcript-Pull)
+**Blocker für:** keine direkten
+
+### Phase 08.23.2.D.UX.3: Anonymisierungs-Tuning Pronomen + Whitelist + Konfidenz (NEU 2026-05-28, aus Transcript-Review) 🟢
+
+**Goal:** GLiNER + spaCy-Pipeline weniger aggressiv tunen — Trainings-Daten-Qualität für Phase E sichern.
+
+**Befund Andre's Transcript 2026-05-28:** Pipeline tokenisiert zu aggressiv. Beispiele: "Ich" → `[PERSON_C]`, "Sie" → `[PERSON_B]`, "NERVE" (eigener Firmen-Name) → `[ORG_A]`, "Vertriebsteams" / "Vertriebler" → `[ORG_B]`/`[ORG_C]`. Auswirkung: Kontext-Verlust für Trainings-Daten + Scoring kann nicht zwischen eigene Firma vs. Kunde unterscheiden.
+
+**Tasks:**
+1. Pronomen-Whitelist (Ich, mich, mir, mein, Sie, Ihr, ihr, du, dich, dir, dein, etc.) — werden NIE anonymisiert.
+2. User-spezifische Whitelist aus Profil: eigener Firmen-Name (z.B. "NERVE") wird im Profil-Editor hinterlegt + im Anonymizer als Schutz-Wort registriert.
+3. Generic-Berufs-Wort-Liste (Vertriebler, Berater, Manager, Verkäufer, Hufschmied, Geschäftsführer, etc.) — werden nie als ORG tokenisiert.
+4. GLiNER-Konfidenz-Schwelle erhöhen — nur sicher erkannte Entities anonymisieren.
+5. Re-Test mit kuratiertem Goldstandard-Korpus (10-20 Beispiel-Calls).
+
+**Depends on:** keine (kann parallel zu D.UX.1+2 laufen)
+**Komplexität:** 🟢 trivial-mittel (Whitelist-Config + Konfidenz-Tuning, keine Architektur-Änderung)
+**Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler — Trainings-Daten würden sonst durch Over-Anonymisierung verzerrt)
+
 ### Phase 08.23.2.G/MEET: Foundation-Phase Conversational Memory + CRM-Lookup + Multi-Tenancy + Training-Schema (NEU 2026-05-27, Phase G + MEET fusioniert nach Cross-AI-Architektur-Entscheidung) 🔴
 
 **KRITISCHE Architektur-Phase. Cross-AI-Recherche 2026-05-27 abgeschlossen. Spec-Dokument:** `Nerve-Vault/04 Entscheidungen/NERVE Architektur-Entscheidung Internes Datenmodell.md` — **Pflicht-Pre-Read** für Plan-Phase.

@@ -593,3 +593,81 @@ ssh -i ~/.ssh/id_ed25519_nerve root@staging.getnerve.app \
 ### Anti-Inkonsistenz-Reflex (Erweiterung)
 
 Wenn beim Schreiben von Plan-Files / Discuss / Research ein lokaler DB-/Routes-/Logs-Befehl reinrutscht ("nur kurz lokal nachschauen"), STOP. Lokale Antworten zu Live-Zustand sind Schein-Sicherheit. Auf Staging-Inspect-Befehl umstellen, dann weitermachen.
+
+## Punkt 21 — Cross-Layer-Audit-Pflicht (verankert 2026-05-28)
+
+Vollständige Begründung in `Nerve-Vault/CLAUDE.md` Punkt 21. Hier die GSD-relevante Kurzfassung.
+
+**Verankerungs-Anlass (D.UX-Bug 2026-05-28):**
+
+Phase 08.23.2.D.UX hatte einen Bug der durch ALLE drei Schutzschichten gerutscht ist — Cross-AI Gemini (Pre + Post), zwei Pre-Execute-Audit-Runden (Claudian), GSD's interne Verification. Plan 04 hat in `routes/learning.py` angenommen `conv.log_entries` ist eine DB-Spalte auf conversation_logs. War aber nur eine Code-Variable im RAM während des Calls — DB-Spalte existiert nicht. outcome_service.classify() bekam leere log_entries-Liste → Haiku rät blind ohne Wortlaut → 0.65 confidence → outcome=NULL → kein Modal angezeigt → D.UX-Feature funktional broken trotz "All edits succeeded"-Bestätigung.
+
+**Wurzel-Pattern:** Aktuelle Audit-Schichten prüfen Code-Pfade (was wird aufgerufen, was wird gelesen/geschrieben), aber NICHT die darunterliegende Daten-Persistenz-Schicht (wo werden die Daten WIRKLICH gespeichert, existiert die angenommene DB-Spalte/Tabelle/Datei?). Cross-Variable-Naming-Falle: nur weil eine Code-Variable `log_entries` heißt heißt nicht dass es eine DB-Spalte `log_entries` gibt.
+
+### Pflicht-Aktion für Plan-Author (GSD)
+
+Bei jedem Plan der Daten LIEST oder SCHREIBT muss eine neue Pflicht-Sektion `## 5. Persistenz-Schicht-Verifikation` enthalten sein:
+
+1. **Liste aller DB-Tabellen** die der Plan anfasst (lesen oder schreiben)
+2. **Für jede Tabelle:** `inspect.sh schema <table>`-Output als read_first-Beleg zitieren — nicht aus dem Bauch raten, nicht delegieren an Executor
+3. **Cross-Layer-Konsistenz-Tabelle:** jedes gelesene/geschriebene Datum mit Persistenz-Schicht (DB-Spalte/Datei/RAM/Cache)
+4. **Falls Datum in mehreren Schichten existiert:** explizite Auswahl welche Schicht der Plan nutzt + Begründung
+
+**Pflicht-Beispiel-Template für die Sektion:**
+
+```markdown
+## 5. Persistenz-Schicht-Verifikation
+
+### Angefasste Tabellen
+
+- `conversation_logs` (lesen) — siehe inspect.sh-Output unten
+- `calls` (schreiben) — siehe inspect.sh-Output unten
+
+### inspect.sh-Beleg
+
+```
+$ ssh ... 'bash scripts/inspect.sh schema conversation_logs'
+[Output verbatim hier einfügen, NICHT zusammenfassen]
+```
+
+### Cross-Layer-Konsistenz-Tabelle
+
+| Code-Variable / Feld | Lese-/Schreib-Pfad | Persistenz-Schicht | Verifiziert? |
+|---|---|---|---|
+| `conv.log_entries` | gelesen in classify() | KEINE DB-Spalte — nur RAM + TXT-Datei | ❌ inspect.sh zeigt: existiert nicht |
+| `call.outcome` | geschrieben | DB-Spalte calls.outcome | ✓ inspect.sh bestätigt |
+
+### Bei Diskrepanz: STOP + Replan
+```
+
+### Pflicht-Check für Plan-Checker
+
+Wenn ein Plan Daten anfasst und die Sektion "Persistenz-Schicht-Verifikation" fehlt ODER unvollständig befüllt ist (inspect.sh-Output fehlt, Tabelle leer, keine Cross-Layer-Konsistenz-Tabelle): **BLOCK-Verdikt**, kein Cross-AI-Review bis nachgeholt.
+
+### Pflicht-Check für Cross-AI Gemini
+
+Cross-AI-Briefing muss bei Daten-anfassenden Plänen explizit fragen:
+- "Werden alle gelesenen/geschriebenen Daten in der wirklichen Persistenz-Schicht erwartet?"
+- "Ist der inspect.sh-Output im Plan substantiell (echter Output) oder nur Pseudo-Code-Block?"
+- "Gibt es Code-Variablen die DB-Spalten-Namen tragen aber keine DB-Spalten sind?"
+
+### 10-20%-Lese-Aufwand-Regel
+
+Audit-Schichten dürfen nicht nur den Plan + den direkten Code lesen. Sie müssen 10-20% darüber hinaus:
+- Welche DB-Tabellen sind betroffen? Schema via inspect.sh verifizieren.
+- Wo werden die Daten persistiert? Cross-Layer-Konsistenz prüfen.
+- Cross-Variable-Naming-Check: passt der Code-Variable-Name zur DB-Spalte?
+
+### Verhältnis zu anderen Punkten
+
+- **Punkt 13 (Real-Daten-Validation):** prüft Schema-vs-Real-Daten. Punkt 21 prüft Code-vs-Schema-Konsistenz.
+- **Punkt 14 (Pre-Insert-Control-Flow-Audit):** 4 Schichten. Punkt 21 fügt **Schicht 5** hinzu (Persistenz-Schicht-Verifikation).
+- **Punkt 19 (Pre-Execute-Audit):** Claudian's Audit erweitert sich um eine fünfte Pflicht-Frage zur Persistenz-Schicht.
+- **Punkt 20 (Pflicht-grep):** prüft Code-Pfad-Sinnhaftigkeit. Punkt 21 prüft Cross-Layer-Annahmen. Beide parallel.
+
+### Geltungsbereich
+
+- Pflicht bei jedem Plan der DB-Spalten liest oder schreibt
+- Pflicht bei jedem Plan der via getattr/setattr auf Model-Objekte zugreift
+- Pflicht bei jedem Plan der Migrations-Annahmen über existing Spalten macht
+- Skip-OK: rein UI-Tweaks ohne Daten-Pfad-Änderung, CSS-Polish, String-Updates
