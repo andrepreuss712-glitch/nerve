@@ -1577,7 +1577,7 @@ Plans:
 - [x] 08.23.2.D-06-PLAN.md — PiP Frontend: outcome_ready-Handler + 3-stufige UX + Korrektur-Modal + Audio-Warn (REQ-D-4, REQ-D-5, REQ-D-7) — DONE 2026-05-27
 - [x] 08.23.2.D-07-PLAN.md — Dashboard Reminder-Card + Inline-Korrektur + Foundation-Code-Register (REQ-D-8, REQ-D-9, REQ-D-10) — DONE 2026-05-27
 
-### Phase 08.23.2.D.UX: UX-Inline + Score-Integration + Klassifikations-Tuning (NEU 2026-05-27, GSD-Roadmap-Sync 2026-05-27) 🟡
+### Phase 08.23.2.D.UX: UX-Inline + Score-Integration + Klassifikations-Tuning (NEU 2026-05-27, GSD-Roadmap-Sync 2026-05-27) ✅ 2026-05-28
 
 **Goal:** Folge-Phase aus Live-Test-Feedback Phase D. 4 Wellen: Wave 1 Security-Findings (CR-01 CSRF, CR-02 Ownership, WR-01/02/04 Sicherheit + IN-03 Debug-Cleanup), Wave 2 Klassifikations-Tuning (Plan-02 Snippet-Heuristik + Haiku-Prompt), Wave 3 Outcome-Pflicht-Schritt VOR Score-Reveal im PiP (Andre-Direktive 27.05.: "bevor der user seinen score sehen darf, bekommt er einmal dieses modal vorgesetzt"), Wave 4 coaching_score-Outcome-Modifier (Cross-AI-Architektur: process_score × outcome_modifier, NICHT Komponente) + Dashboard-Edit-Knopf für nachträgliche Korrektur.
 
