@@ -1721,7 +1721,7 @@ def api_calls_latest_outcome():
         if call_id_param:
             q = q.filter(Call.id == call_id_param)
         else:
-            q = q.order_by(Call.started_at.desc())
+            q = q.order_by(Call.started_at.desc().nullslast(), Call.created_at.desc())
         row = q.first()
         if row is None:
             return jsonify({'ok': False, 'error': 'not_found'}), 404
