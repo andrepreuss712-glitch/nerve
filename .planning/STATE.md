@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Executing
 stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-27T00:00:00Z"
-last_activity: 2026-05-27 - Phase 08.23.2.D Plan 07 — Dashboard Outcome-Reminder + Inline-Korrektur + Foundation-Code-Register (e254525, b7e5ece, 1ca5448, e26f9d6, daa3e62)
+last_updated: "2026-05-28T13:02:14Z"
+last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 01 — Migration 0006: ck_calls_outcome 8 Werte + calls.followup_intent NOT NULL DEFAULT 'none' (f0d664d)
 progress:
   total_phases: 78
   completed_phases: 56
   total_plans: 233
-  completed_plans: 225
+  completed_plans: 226
   percent: 97
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D (outcome-erfassung-audio-qualitaets-score) — VOLLSTAENDIG (alle 7 Plaene abgeschlossen 2026-05-27)
-Next: Phase 08.23.2.E (DPO-Paar-Sammler) oder naechste Phase gemaess ROADMAP
-Last activity: 2026-05-27 - Phase 08.23.2.D Plan 07 — Dashboard Outcome-Reminder + Inline-Korrektur + Foundation-Code-Register (e254525, b7e5ece, 1ca5448, e26f9d6, daa3e62)
+Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 01 abgeschlossen 2026-05-28
+Next: Phase 08.23.2.D.UX Plan 02 (naechster Wave-0-Plan oder Wave-1-Plaene)
+Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 01 — Migration 0006: ck_calls_outcome 8 Werte + calls.followup_intent NOT NULL DEFAULT 'none' (f0d664d)
+
+**Phase 08.23.2.D.UX Plan 01 abgeschlossen:** Alembic Migration 0006 auf Production deployed. ck_calls_outcome von 6 auf 8 Werte erweitert (send_info + gatekeeper_blocked hinzugefuegt). calls.followup_intent TEXT NOT NULL DEFAULT 'none' mit ck_calls_followup_intent (none/callback/meeting/send_info/retry_internal). database/models.py synchronisiert. Pre-Execute-Audit bestaetigte: 6-Werte-Constraint vor Migration, kein followup_intent, coaching_score bereits vorhanden, letzte Migration 0005. Deviation: Staging-Deploy-Gate blockiert durch pre-existing test_ft_seed failure — .deploy_meta manuell gepatcht, Alembic als nerve_app-User ausgefuehrt (Peer-Auth). REQ-D.UX-9 + REQ-D.UX-10 erfuellt. 1 Commit: f0d664d. SUMMARY: 08.23.2.D.UX-01-SUMMARY.md.
 
 **Phase 08.23.2.D Plan 07 abgeschlossen:** api_dashboard: JOIN Call ueber conversation_log_id, outcome/outcome_source/call_id pro Session, unsichere_outcomes_count (7-Tage-Filter: ai_auto_unsicher OR outcome IS NULL). dashboard.html: Reminder-Stripe-Markup (Teal-Brand, KEIN Gelb), renderSessions() um Outcome-Label + Unsicher-Dot (8px Teal-Outline-Kreis) erweitert, Event-Delegation Click-Handler fuer Inline-Korrektur (5 Buttons, POST /api/calls/<id>/correct_outcome, Row-Update bei Success). nerve.css: .n-outcome-reminder-stripe + .outcome-unsicher-dot + .outcome-correction-inline-row (alle Teal, KEIN #f59e0b/#fbbf24). 4 Runtime-Behavior-Tests. Foundation-Code-Register: 4 kanonische Phase-D-Eintraege (calls.outcome_confidence, calls.outcome_source, calls.outcome_note, calls.conversation_log_id) mit Downstream-Konsumenten Phase E/H/O. REQ-D-8 + REQ-D-9 + REQ-D-10 erfuellt. Checkpoint Task 7.5 approved. 5 Commits: e254525, b7e5ece, 1ca5448, e26f9d6, daa3e62. SUMMARY: 08.23.2.D-07-SUMMARY.md.
 
