@@ -1597,7 +1597,7 @@ Plans:
 
 Plans:
 - [x] 08.23.2.D.UX-01-PLAN.md — Migration 0006: outcome CHECK (8 Werte) + followup_intent Spalte
-- [ ] 08.23.2.D.UX-02-PLAN.md — Migration 0007: score_breakdown + score_schema_version
+- [x] 08.23.2.D.UX-02-PLAN.md — Migration 0007: score_breakdown + score_schema_version
 - [ ] 08.23.2.D.UX-03-PLAN.md — Security Fixes: CR-01/CR-02/WR-01/WR-02/IN-03
 - [ ] 08.23.2.D.UX-04-PLAN.md — Klassifikations-Tuning: Snippet-Heuristik + Few-Shot-Prompt
 - [ ] 08.23.2.D.UX-05-PLAN.md — Wave 3 PiP UX: 7 Buttons + Score-Gate + followup_intent
