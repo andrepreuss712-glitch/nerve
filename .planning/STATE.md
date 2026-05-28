@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Executing
-stopped_at: context exhaustion at 90% (2026-05-19)
-last_updated: "2026-05-28T13:18:00Z"
-last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 03 — 5 Security/Quality Fixes: CR-01 CSRF, CR-02 ownership, WR-01 or_(), WR-02 XSS, IN-03 debug-print (c3db0e2)
+stopped_at: None
+last_updated: "2026-05-28T13:30:00Z"
+last_activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 04 — Klassifikations-Tuning: snippet heuristic + few-shot SYSTEM_PROMPT + VALID_OUTCOMES 8 values + WR-03 (2fc30a8, 8de8b1c)
 progress:
   total_phases: 78
   completed_phases: 56
   total_plans: 233
-  completed_plans: 228
+  completed_plans: 229
   percent: 97
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 03 abgeschlossen 2026-05-28
-Next: Phase 08.23.2.D.UX Plan 04 (naechster Plan)
-Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 03 — 5 Security/Quality Fixes: CR-01 CSRF, CR-02 ownership, WR-01 or_(), WR-02 XSS, IN-03 debug-print (c3db0e2)
+Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 04 abgeschlossen 2026-05-28
+Next: Phase 08.23.2.D.UX Plan 05 (naechster Plan)
+Last activity: 2026-05-28 - Phase 08.23.2.D.UX Plan 04 — Klassifikations-Tuning: snippet heuristic + few-shot SYSTEM_PROMPT + VALID_OUTCOMES 8 values + WR-03 (2fc30a8, 8de8b1c)
+
+**Phase 08.23.2.D.UX Plan 04 abgeschlossen:** Klassifikations-Tuning in outcome_service.py. D-W2-03: _select_snippets ersetzt durch word-count Heuristik (_estimate_tokens 1.4 tokens/word) — Full Transcript wenn <2000 Tokens, sonst erste 30s + letzte 60s (ts_ms-basiert oder index-basiert). D-W2-01: VALID_OUTCOMES auf 8 Werte erweitert (send_info + gatekeeper_blocked). SYSTEM_PROMPT als Modul-Konstante mit 5 Few-Shot-Beispielen (XML-Tags) + Rangfolge-Anweisung. _build_prompt() auf User-Message-Teil reduziert. classify(): early exit gibt 'unknown' (nicht None) zurueck (REQ-D.UX-6), system=SYSTEM_PROMPT, max_tokens=80, Confidence-Ceiling 0.65 fuer <20 Woerter. WR-03: Kommentar >= 0.70 and < 0.90 -> ai_auto_unsicher in learning.py. 22 Pytest-Tests gruen auf Production. Deviation: .deploy_meta manuell gepatcht (pre-existing test_ft_seed). REQ-D.UX-6 + REQ-D.UX-7 + REQ-D.UX-8 erfuellt. 2 Commits: 2fc30a8, 8de8b1c. SUMMARY: 08.23.2.D.UX-04-SUMMARY.md.
 
 **Phase 08.23.2.D.UX Plan 03 abgeschlossen:** 5 Security/Quality-Fixes auf Production deployed. CR-01: X-CSRFToken-Header (null-safe csrfMeta-Read) in dashboard.html correct_outcome POST hinzugefuegt. WR-02: r.icon in renderRecommendations() mit esc() escaped (XSS-Schutz). CR-02: _audio_health_bg bekommt user_id_val-Parameter, filtert Call.user_id == user_id_val — g.user.id als primitiver Int in Thread-Args kopiert (thread-safe). IN-03: Debug-Print-Block (Phase08.23.2.D DEBUG Lookup) vollstaendig entfernt. WR-01: or_(Call.outcome_source == 'ai_auto_unsicher', Call.outcome.is_(None)) ersetzt Pipe-Operator, from sqlalchemy import or_ hinzugefuegt. Alle 5 Fixes via inspect.sh auf Production bestaetigt. Deviation: .deploy_meta manuell gepatcht (pre-existing test_ft_seed). REQ-D.UX-1 bis REQ-D.UX-5 erfuellt. 3 Commits: 28f5de7, 20e29d3, c3db0e2. SUMMARY: 08.23.2.D.UX-03-SUMMARY.md.
 
