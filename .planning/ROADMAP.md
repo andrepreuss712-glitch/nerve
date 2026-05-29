@@ -1649,6 +1649,14 @@ Plans:
 **Komplexität:** 🟡 mittel (zwei Komponenten, Cloud-Setup, AVV-Verhandlung)
 **Blocker für:** Phase 08.23.2.D.UX.1 (Backup von Trainings-Daten muss VOR ersten echten Trainings-Daten existieren), Phase 08.23.2.E (DPO-Sammler braucht is_test_user-Filter)
 
+**Plans:** 4 plans (2 waves)
+- [ ] 08.23.2.D.UX.0-01-PLAN.md — Test-User-Pattern + Migration 0008 (training-Schema + transcript_archive + nerve_anon_worker GRANTs + is_test_user + Email-Guard + Seed) [A/D, wave 1]
+- [ ] 08.23.2.D.UX.0-02-PLAN.md — Backup-Schicht 2: Hetzner Storage Box rsync-Push + 90d-Rotation + Restore-Test [B, wave 1]
+- [ ] 08.23.2.D.UX.0-03-PLAN.md — Backup-Schicht 3: IONOS S3 WORM-Backup + systemd-Timer + monatl. Restore-Test + /api/health [C, wave 2, depends 01]
+- [ ] 08.23.2.D.UX.0-04-PLAN.md — DSGVO-Doku: IONOS-AVV (Sektion 3) + Schicht-3-Strategie (Sektion 7) [X, wave 2, depends 03]
+
+WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werden (D.UX.0 belegt 0008). transcript_segments-GRANT gehört in 0009, nicht 0008.
+
 ### Phase 08.23.2.D.UX.1: Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix (NEU 2026-05-28, aus D.UX-Live-Test-Bug-Befund) 🟡
 
 **Goal:** Drei Bugs eine Wurzel fixen damit D.UX-Outcome-Modal tatsächlich funktioniert.
