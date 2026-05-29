@@ -76,6 +76,7 @@ class User(Base):
     trial_ends_at       = Column(DateTime, nullable=True)
     is_trial            = Column(Boolean, default=False)
     is_coach            = Column(Boolean, default=False)
+    is_test_user        = Column(Boolean, default=False, nullable=False)
     # Block 1: Onboarding
     vorname             = Column(String(100))
     nachname            = Column(String(100))
