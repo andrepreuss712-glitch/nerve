@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Awaiting human action
-stopped_at: Phase 08.23.2.D.UX.0 Plan 02 Task 1 — Hetzner Storage Box BX11 bestellen + SSH-Key id_storagebox generieren/hinterlegen (BLOCKING gate)
-last_updated: "2026-05-29T14:10:00.000Z"
-last_activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 01 vollstaendig abgeschlossen (010a690) — Migration 0008 auf Production (head), Email-Guard @nerve.local, seed_test_user.py, Test-Account andre-test@nerve.local (is_test_user=TRUE) verifiziert
+status: In Progress
+stopped_at: Phase 08.23.2.D.UX.0 Plan 02 abgeschlossen — Next: Plan 03
+last_updated: "2026-05-29T14:15:00.000Z"
+last_activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 02 vollstaendig abgeschlossen (5b0e829) — rsync-Push auf Hetzner Storage Box u604274 (Push OK), RESTORE-OK (gunzip -t), BOX_KEY /opt/nerve/.ssh/ (postgres-User Fix), BOX_PATH relativ (Hetzner-Box-Fix). 4 Commits.
 progress:
   total_phases: 84
   completed_phases: 55
   total_plans: 233
-  completed_plans: 223
-  percent: 95
+  completed_plans: 224
+  percent: 96
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX.0 — Plan 01 abgeschlossen 2026-05-29
-Next: 08.23.2.D.UX.0 Plan 02 (Hetzner Storage Box + S3-Backup) — wartet auf Hetzner-Provisioning
-Last activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 01 abgeschlossen
+Phase: 08.23.2.D.UX.0 — Plan 02 abgeschlossen 2026-05-29
+Next: 08.23.2.D.UX.0 Plan 03 (S3-Backup Schicht 3 oder naechste Phase)
+Last activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 02 abgeschlossen
+
+**Phase 08.23.2.D.UX.0 Plan 02 abgeschlossen:** Backup-Schicht 2 vollstaendig auf Production deployed. rsync-Push auf Hetzner Storage Box u604274.your-storagebox.de (Port 23, Key-Auth, non-fatal W-4). BOX_KEY-Bug gefixt: Key nach /opt/nerve/.ssh/id_storagebox kopiert (chown postgres:postgres) da systemd-Service als postgres-User laeuft. BOX_PATH-Bug gefixt: relativ 'backups/nerve' (Hetzner Box hat kein absolutes /-Root). Production-Lauf: Push OK, Box-ls nerve-2026-05-29_141127.sql.gz (136030 bytes). Restore-Test: RESTORE-OK (gunzip -t). 90d-Rotation script-seitig mit grep-Guard G-3. Staging-Gate-Workaround (pre-existing test_ft_seed). Anforderungen B-01..05 erfuellt. 4 Commits: 3748772, bda9d97, 5b0e829 (+ 0f6cf95 prior agent). SUMMARY: 08.23.2.D.UX.0-02-SUMMARY.md.
 
 **Phase 08.23.2.D.UX.0 Plan 01 abgeschlossen:** Migration 0008 auf Production (head). training-Schema + transcript_archive-Tabelle + nerve_anon_worker-GRANTs verifiziert. users.is_test_user BOOLEAN NOT NULL DEFAULT false auf Production. Email-Guard in _send() mit isinstance-Normalisierung (G-1) — blockt @nerve.local-Empfaenger auch als bare-String (Production-REPL: beide Formen False + Log). Test-Account andre-test@nerve.local mit is_test_user=TRUE angelegt (id=3). D-07 TIEF: nerve_app kein Superuser (leere Attributes), postgres Owner von training (GRANT-Isolation aktiv). TCP-Konnektivitaet nerve_anon_worker -h 127.0.0.1 verifiziert (G-2). Deployment: tar-over-ssh + alembic upgrade als postgres-User (nerve_app hat kein CREATE SCHEMA-Recht — korrekt). 3 Deviations (Rule 3/1): alembic als postgres, seed mit DATABASE_URL-Env, market='dach' Fix. Anforderungen A-01..05, D-01..07 erfuellt. 2 Commits: 84f4ccf, 010a690. SUMMARY: 08.23.2.D.UX.0-01-SUMMARY.md.
 
