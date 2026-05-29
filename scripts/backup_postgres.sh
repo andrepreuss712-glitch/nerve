@@ -8,7 +8,7 @@ set -e
 # ── Schicht 2: Hetzner Storage Box (Phase 08.23.2.D.UX.0) ────────────────────
 BOX_USER="u604274"          # Hetzner Storage Box (Phase 08.23.2.D.UX.0, provisioniert 2026-05-29)
 BOX_HOST="${BOX_USER}.your-storagebox.de"
-BOX_PATH="/backups/nerve"
+BOX_PATH="backups/nerve"      # Relativ zum Home des Box-Users (Hetzner Storage Box hat kein absolutes /-Root)
 BOX_KEY="/opt/nerve/.ssh/id_storagebox"  # postgres-User hat kein Zugriff auf /root/.ssh/
 BOX_RETENTION_DAYS=90      # 3x laenger als lokale 30d (B-03)
 # ─────────────────────────────────────────────────────────────────────────────
