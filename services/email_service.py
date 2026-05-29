@@ -18,6 +18,19 @@ def _send(payload):
     if not resend.api_key:
         print('[EMAIL] RESEND_API_KEY missing — skip send')
         return False
+    # Test-User-Guard (A-02): @nerve.local ist nicht-routbar (.local IANA-reserviert).
+    # Domain-Check, kein DB-Lookup — alle @nerve.local-Empfaenger sind Test-Accounts.
+    # WICHTIG (G-1): `to` zuerst zu einer Liste normalisieren. Resend akzeptiert sowohl
+    # einen String als auch eine Liste. Ohne isinstance-Normalisierung wuerde
+    # `any(... for r in recipients)` bei einem bare-String ueber EINZELZEICHEN iterieren
+    # ('a','n','d',...), der endswith-Check waere immer False → Test-Mail wuerde
+    # gesendet → A-02 ausgehebelt.
+    recipients = payload.get('to', [])
+    if isinstance(recipients, str):
+        recipients = [recipients]
+    if any(r.endswith('@nerve.local') for r in recipients):
+        print(f'[EMAIL] test-user recipient {recipients!r}, skip')
+        return False
     try:
         resend.Emails.send(payload)
         return True
