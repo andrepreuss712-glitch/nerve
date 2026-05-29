@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: Phase 08.23.2.D.UX.0 Plan 03 abgeschlossen — naechste: Plan 04 (DSGVO-Doku IONOS-AVV + Schicht-3-Strategie)
-last_updated: "2026-05-29T17:30:00.000Z"
-last_activity: 2026-05-29 -- Plan 03 vollstaendig abgeschlossen (18752fc, 6d9af35, 8edfcb9, d3bcd1a, 55bfae3) — IONOS S3 WORM live, backup_s3_restore_ok=true
+stopped_at: Phase 08.23.2.D.UX.0 Plan 04 abgeschlossen — Phase 08.23.2.D.UX.0 vollstaendig (4/4 Plans done)
+last_updated: "2026-05-29T15:25:00.000Z"
+last_activity: 2026-05-29 -- Plan 04 abgeschlossen — DSGVO Analyse.md um IONOS-AVV (Sektion 2.3) + Drei-Schichten-Backup-Strategie (neue Sektion 9) ergaenzt
 progress:
   total_phases: 84
   completed_phases: 55
   total_plans: 233
-  completed_plans: 225
+  completed_plans: 226
   percent: 97
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX.0 — Plan 04 (DSGVO-Doku: IONOS-AVV Sektion 3 + Schicht-3-Strategie Sektion 7)
-Next: Plan 04 starten (DSGVO-Doku IONOS-AVV + Schicht-3-Backup-Begruendung)
-Last activity: 2026-05-29 -- Plan 03 vollstaendig abgeschlossen (18752fc, 6d9af35, 8edfcb9, d3bcd1a, 55bfae3) — IONOS S3 WORM live, backup_s3_restore_ok=true, migration 0009 applied
+Phase: 08.23.2.D.UX.0 — VOLLSTAENDIG (4/4 Plans done)
+Next: Naechste Phase gemaess Roadmap
+Last activity: 2026-05-29 -- Plan 04 abgeschlossen — DSGVO Analyse.md um IONOS-AVV (Sektion 2.3) + Drei-Schichten-Backup-Strategie (neue Sektion 9) ergaenzt. Vault-Datei ausserhalb Git-Repo, keine Code-Commits.
+
+**Phase 08.23.2.D.UX.0 Plan 04 abgeschlossen:** DSGVO-Dokumentations-Pflicht erfuellt. NERVE DSGVO Analyse.md in zwei Bereichen additiv erweitert: (1) IONOS SE AVV in Sektion 2.3 (AVV-Tabelle + Detail-Block mit Anbieter, AVV-Datum 2026-05-29, Endpoint eu-central-4, Scope training.*, Jurisdiktion DE, AVV-Status gruen); (2) neue Sektion 9 Drei-Schichten-Backup-Strategie (Schicht 1 Lokal/30d, Schicht 2 Hetzner Box/90d, Schicht 3 IONOS WORM/365d) mit Begruendung warum nur training.* IONOS verlaesst (Write-Time-Filter-Contract C-03 + bewusste Klartext-Nicht-Streuung). PowerShell-Check: IONOS (16 Treffer) + training vorhanden, keine Secrets. SUMMARY: 08.23.2.D.UX.0-04-SUMMARY.md.
 
 **Phase 08.23.2.D.UX.0 Plan 03 abgeschlossen:** Backup-Schicht 3 vollstaendig auf Production live. aws-cli v2.34.56, IONOS S3 eu-central-4 (contract-owned Bucket, Korrektur von eu-central-1), Bucket nerve-training-backup mit Object-Lock COMPLIANCE 30d + Versioning + SSE AES256. Staged WORM bring-up eingehalten (C-BLOCKER-4): Smoke-Restore-OK 1d VOR 30d-COMPLIANCE-Default. Erstes Backup: training-2026-05-29_150941.sql.gz (962 Bytes, WORM bis 2026-06-28). Restore-Test: S3_RESTORE_OK=true. /api/health: backup_s3_restore_ok=true, backup_s3_restore_checked_at=2026-05-29T15:09:46Z. 3 Deviations: (1) eu-central-4-Korrektur, (2) Migration 0009 Sequence-Grant-Fix (0008-Luecke), (3) app_routes.py surgical scp hotfix (user-approved). 5 Commits: 18752fc, 6d9af35, 8edfcb9, d3bcd1a, 55bfae3. SUMMARY: 08.23.2.D.UX.0-03-SUMMARY.md.
 
