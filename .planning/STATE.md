@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: Awaiting human action
-stopped_at: Phase 08.23.2.D.UX.0 Plan 01 Task 2 — nerve_anon_worker CREATE ROLE + pg_hba + Migration 0008 upgrade auf Production (BLOCKING gate)
-last_updated: "2026-05-29T11:00:00.000Z"
-last_activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 01 Task 1 abgeschlossen (84f4ccf) — wartet auf nerve_anon_worker Runbook + Production-Upgrade
+stopped_at: Phase 08.23.2.D.UX.0 Plan 02 Task 1 — Hetzner Storage Box BX11 bestellen + SSH-Key id_storagebox generieren/hinterlegen (BLOCKING gate)
+last_updated: "2026-05-29T12:00:00.000Z"
+last_activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 02 Task 2 Code abgeschlossen (0f6cf95) — rsync-Push-Block + 90d-Rotation in backup_postgres.sh — wartet auf Hetzner Storage Box Provisioning + BOX_USER-ID
 progress:
   total_phases: 84
   completed_phases: 55
