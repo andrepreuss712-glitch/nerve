@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: Phase 08.23.2.D.UX.0 Plan 02 abgeschlossen — Next: Plan 03
-last_updated: "2026-05-29T14:15:00.000Z"
-last_activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 02 vollstaendig abgeschlossen (5b0e829) — rsync-Push auf Hetzner Storage Box u604274 (Push OK), RESTORE-OK (gunzip -t), BOX_KEY /opt/nerve/.ssh/ (postgres-User Fix), BOX_PATH relativ (Hetzner-Box-Fix). 4 Commits.
+stopped_at: Phase 08.23.2.D.UX.0 Plan 03 — IONOS-Provisioning-Gate (human-action, Task 1) — Autonomer Code (Tasks 2+3) committed
+last_updated: "2026-05-29T15:30:00.000Z"
+last_activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 03 Tasks 2+3 committed (18752fc, 6d9af35) — IONOS-Gate erwartet (Account+AVV+Bucket+Credentials)
 progress:
   total_phases: 84
   completed_phases: 55
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX.0 — Plan 02 abgeschlossen 2026-05-29
-Next: 08.23.2.D.UX.0 Plan 03 (S3-Backup Schicht 3 oder naechste Phase)
-Last activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 02 abgeschlossen
+Phase: 08.23.2.D.UX.0 — Plan 03 in progress (Tasks 2+3 committed, Task 1 Gate offen)
+Next: IONOS-Account + AVV + Bucket anlegen (Task 1 Runbook folgen), dann Plan 03 fortsetzen
+Last activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 03 Tasks 2+3 abgeschlossen (18752fc, 6d9af35)
+
+**Phase 08.23.2.D.UX.0 Plan 03 Task 1 GATE OFFEN (human-action):** IONOS-Account + AVV + Object-Lock-Bucket + aws-cli v2 + ionos-s3.env noch nicht provisioniert. Autonome Artefakte committed: backup_training_to_s3.sh (TCP pg_dump + WORM-Upload COMPLIANCE +30d + 365d-Rotation + G-3-Guard, 18752fc) + restore_test_s3.sh + 4 systemd-Units + /api/health backup_s3_restore_ok (6d9af35). Staged-WORM-Runbook: Bucket MIT Object-Lock-enabled, dann 1-Tages-Smoke-Restore, DANN erst 30d-COMPLIANCE-Default (C-BLOCKER-4). APPEND-PFLICHT: ionos-s3.env mit >> (nie >). Resume-Signal erwartet.
 
 **Phase 08.23.2.D.UX.0 Plan 02 abgeschlossen:** Backup-Schicht 2 vollstaendig auf Production deployed. rsync-Push auf Hetzner Storage Box u604274.your-storagebox.de (Port 23, Key-Auth, non-fatal W-4). BOX_KEY-Bug gefixt: Key nach /opt/nerve/.ssh/id_storagebox kopiert (chown postgres:postgres) da systemd-Service als postgres-User laeuft. BOX_PATH-Bug gefixt: relativ 'backups/nerve' (Hetzner Box hat kein absolutes /-Root). Production-Lauf: Push OK, Box-ls nerve-2026-05-29_141127.sql.gz (136030 bytes). Restore-Test: RESTORE-OK (gunzip -t). 90d-Rotation script-seitig mit grep-Guard G-3. Staging-Gate-Workaround (pre-existing test_ft_seed). Anforderungen B-01..05 erfuellt. 4 Commits: 3748772, bda9d97, 5b0e829 (+ 0f6cf95 prior agent). SUMMARY: 08.23.2.D.UX.0-02-SUMMARY.md.
 
