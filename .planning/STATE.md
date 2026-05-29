@@ -4,13 +4,13 @@ milestone: v0.9.4
 milestone_name: milestone
 status: Awaiting human action
 stopped_at: Phase 08.23.2.D.UX.0 Plan 02 Task 1 — Hetzner Storage Box BX11 bestellen + SSH-Key id_storagebox generieren/hinterlegen (BLOCKING gate)
-last_updated: "2026-05-29T12:00:00.000Z"
-last_activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 02 Task 2 Code abgeschlossen (0f6cf95) — rsync-Push-Block + 90d-Rotation in backup_postgres.sh — wartet auf Hetzner Storage Box Provisioning + BOX_USER-ID
+last_updated: "2026-05-29T14:10:00.000Z"
+last_activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 01 vollstaendig abgeschlossen (010a690) — Migration 0008 auf Production (head), Email-Guard @nerve.local, seed_test_user.py, Test-Account andre-test@nerve.local (is_test_user=TRUE) verifiziert
 progress:
   total_phases: 84
   completed_phases: 55
   total_plans: 233
-  completed_plans: 222
+  completed_plans: 223
   percent: 95
 ---
 
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX (outcome-ux-quality-polish) — Plan 08 abgeschlossen 2026-05-28 — PHASE VOLLSTAENDIG
-Next: Naechste Phase gemaess ROADMAP.md
-Last activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 planning complete
+Phase: 08.23.2.D.UX.0 — Plan 01 abgeschlossen 2026-05-29
+Next: 08.23.2.D.UX.0 Plan 02 (Hetzner Storage Box + S3-Backup) — wartet auf Hetzner-Provisioning
+Last activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 01 abgeschlossen
+
+**Phase 08.23.2.D.UX.0 Plan 01 abgeschlossen:** Migration 0008 auf Production (head). training-Schema + transcript_archive-Tabelle + nerve_anon_worker-GRANTs verifiziert. users.is_test_user BOOLEAN NOT NULL DEFAULT false auf Production. Email-Guard in _send() mit isinstance-Normalisierung (G-1) — blockt @nerve.local-Empfaenger auch als bare-String (Production-REPL: beide Formen False + Log). Test-Account andre-test@nerve.local mit is_test_user=TRUE angelegt (id=3). D-07 TIEF: nerve_app kein Superuser (leere Attributes), postgres Owner von training (GRANT-Isolation aktiv). TCP-Konnektivitaet nerve_anon_worker -h 127.0.0.1 verifiziert (G-2). Deployment: tar-over-ssh + alembic upgrade als postgres-User (nerve_app hat kein CREATE SCHEMA-Recht — korrekt). 3 Deviations (Rule 3/1): alembic als postgres, seed mit DATABASE_URL-Env, market='dach' Fix. Anforderungen A-01..05, D-01..07 erfuellt. 2 Commits: 84f4ccf, 010a690. SUMMARY: 08.23.2.D.UX.0-01-SUMMARY.md.
 
 **Phase 08.23.2.D.UX Plan 08 abgeschlossen:** Zwei Vault-Dokumentations-Tasks. Task 1: NERVE DSGVO Analyse.md um standalone Sektion `## calls.followup_intent — DSGVO-Rechtsgrundlage` ergaenzt (Art. 6 Abs. 1f, B2B-Sales-Follow-up, Interessenabwaegung + Loeschkonzept + Review-Trigger). Task 2: Nerve-Vault/05 Log.md Eintrag `2026-05-28 Phase 08.23.2.D.UX Cross-AI Gemini Review (Pre-Plan)` mit 4 Findings dokumentiert. Beide Vault-Dateien ausserhalb Git-Repo. SUMMARY: 08.23.2.D.UX-08-SUMMARY.md. Phase 08.23.2.D.UX vollstaendig abgeschlossen (8/8 Plans done).
 
@@ -400,6 +402,11 @@ Recent decisions affecting current work:
 - [Phase 08.18-02]: Premium-Cluster DACH (fuer Plan 03 Tiefen-Recherche): Maschinenbau (~16-18%), IT/SaaS (~12-14%), Versicherung/Finanz (~11-13%) — auf Basis BA KldB 2010 + VDMA/GDV/bitkom
 - [Phase 08.18-02]: Premium-Cluster USA: Technology/SaaS (~15-18%), Financial Services (~12-15%), Healthcare/Pharma (~10-12%) — auf Basis BLS OES May 2023 SOC 41-XXXX
 - [Phase 08.18-02]: USA gleichberechtigt zu DACH in Research (André-Entscheidung) — USA ist echtes Hauptgeschaeft, DACH ist Soft-Launch/Test-Sandbox
+- [Phase 08.23.2.D.UX.0-01]: CREATE ROLE nerve_anon_worker als Runbook-Step ausserhalb Alembic (Passwort darf nicht in VCS — CLAUDE.md HART Secrets-Regel, D-01)
+- [Phase 08.23.2.D.UX.0-01]: alembic upgrade head fuer 0008 muss als postgres-User laufen (nerve_app hat kein CREATE SCHEMA-Recht — korrekt/sicher)
+- [Phase 08.23.2.D.UX.0-01]: isinstance(recipients, str)-Normalisierung in _send() schliesst bare-String-Bypass (G-1); ohne diese Zeile iteriert any() ueber Einzelzeichen
+- [Phase 08.23.2.D.UX.0-01]: D-07 Finding: nerve_app kein Superuser, postgres Owner von training — GRANT-Isolation D-06 ist aktiv und greift; kein Erzwingungsbedarf diese Phase
+- [Phase 08.23.2.D.UX.0-01]: D.UX.1-Migration muss Nummer 0009 verwenden; training.transcript_segments-GRANT gehoert in 0009 (Pitfall 7 eingehalten)
 - [Phase 08.18-01]: Reihenfolge build_profile_context: Block 1 Kern (Cache-Anchor), Block 2 Einwand-Repertoire, Block 3 No-Gos, Block 4 Kommunikation — per Anthropic Lost-in-Middle + Sales-Trainer-Konsens
 - [Phase 08.18-01]: EWB-Integration-Ziel nach 08.19/08.20: 21% (10/48) → 62% (30/48) — Literatur-Konsens erfordert einwaende[] + wettbewerber[] + nogos[] + ki.zusatz + statusquo im EWB-Prompt
 - [Phase 08.18-01]: 6 neue Schema-Felder empfohlen: zielkunde.unternehmensgroesse, zielkunde.buying_committee, zielkunde.statusquo, zielkunde.zeithorizont, value.roi_argumente, einwaende[].einwand_typ
