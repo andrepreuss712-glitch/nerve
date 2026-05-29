@@ -15,6 +15,22 @@ if [ ! -f "$SECRETS_FILE" ]; then
 fi
 source "$SECRETS_FILE"
 
+# C-WARN-2: AWS_DEFAULT_REGION MUSS gesetzt sein — aws-cli braucht Region fuer SigV4-Signing
+# auch gegen custom IONOS-Endpoints. Wird aus IONOS_S3_REGION (ionos-s3.env) exportiert.
+if [ -z "${IONOS_S3_REGION:-}" ]; then
+    echo "[BACKUP-S3] FEHLER: IONOS_S3_REGION nicht gesetzt in $SECRETS_FILE" >&2
+    exit 1
+fi
+if [ -z "${IONOS_S3_ENDPOINT:-}" ]; then
+    echo "[BACKUP-S3] FEHLER: IONOS_S3_ENDPOINT nicht gesetzt in $SECRETS_FILE" >&2
+    exit 1
+fi
+if [ -z "${IONOS_S3_BUCKET:-}" ]; then
+    echo "[BACKUP-S3] FEHLER: IONOS_S3_BUCKET nicht gesetzt in $SECRETS_FILE" >&2
+    exit 1
+fi
+export AWS_DEFAULT_REGION="${IONOS_S3_REGION}"
+
 TIMESTAMP=$(date +%Y-%m-%d_%H%M%S)
 BACKUP_KEY="training-${TIMESTAMP}.sql.gz"
 TMP_FILE="/tmp/${BACKUP_KEY}"

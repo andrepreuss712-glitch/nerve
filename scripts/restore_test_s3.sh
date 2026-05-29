@@ -7,6 +7,23 @@ set -uo pipefail
 
 SECRETS_FILE="/etc/nerve/ionos-s3.env"
 [ -f "$SECRETS_FILE" ] && source "$SECRETS_FILE"
+
+# C-WARN-2: AWS_DEFAULT_REGION MUSS gesetzt sein — aws-cli braucht Region fuer SigV4-Signing
+# auch gegen custom IONOS-Endpoints. Wird aus IONOS_S3_REGION (ionos-s3.env) exportiert.
+if [ -z "${IONOS_S3_REGION:-}" ]; then
+    echo "[RESTORE-TEST] FEHLER: IONOS_S3_REGION nicht gesetzt in $SECRETS_FILE" >&2
+    exit 1
+fi
+if [ -z "${IONOS_S3_ENDPOINT:-}" ]; then
+    echo "[RESTORE-TEST] FEHLER: IONOS_S3_ENDPOINT nicht gesetzt in $SECRETS_FILE" >&2
+    exit 1
+fi
+if [ -z "${IONOS_S3_BUCKET:-}" ]; then
+    echo "[RESTORE-TEST] FEHLER: IONOS_S3_BUCKET nicht gesetzt in $SECRETS_FILE" >&2
+    exit 1
+fi
+export AWS_DEFAULT_REGION="${IONOS_S3_REGION}"
+
 STATUS_FILE="/opt/nerve/.s3_restore_status"
 CHECKED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
