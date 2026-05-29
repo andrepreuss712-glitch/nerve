@@ -6,7 +6,7 @@
 set -e
 
 # ── Schicht 2: Hetzner Storage Box (Phase 08.23.2.D.UX.0) ────────────────────
-BOX_USER="uXXXXX"          # ← ID aus Task 1 eintragen (Format uXXXXX); resume-signal: "box ready uXXXXX=<id>"
+BOX_USER="u604274"          # Hetzner Storage Box (Phase 08.23.2.D.UX.0, provisioniert 2026-05-29)
 BOX_HOST="${BOX_USER}.your-storagebox.de"
 BOX_PATH="/backups/nerve"
 BOX_KEY="/root/.ssh/id_storagebox"
