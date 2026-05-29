@@ -1,0 +1,12 @@
+[Unit]
+Description=NERVE Training Schema Backup (Schicht 3 — IONOS S3 WORM)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/etc/nerve/ionos-s3.env
+ExecStart=/opt/nerve/app/scripts/backup_training_to_s3.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=backup_training_to_s3.sh

@@ -1,0 +1,10 @@
+[Unit]
+Description=NERVE Training Schema Backup Timer (woechentlich, Sonntag 02:00 UTC)
+
+[Timer]
+OnCalendar=Sun *-*-* 02:00:00
+Persistent=true
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=NERVE S3 Restore-Test Timer (monatlich)
+
+[Timer]
+OnCalendar=monthly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

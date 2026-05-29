@@ -1,0 +1,12 @@
+[Unit]
+Description=NERVE S3 Restore-Integritaets-Test (Schicht 3, C-08)
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/etc/nerve/ionos-s3.env
+ExecStart=/opt/nerve/app/scripts/restore_test_s3.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=restore_test_s3.sh

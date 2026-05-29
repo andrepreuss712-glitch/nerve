@@ -1629,6 +1629,20 @@ def api_health():
         pipeline_status = 'unknown'
         pipeline_error_count = 0
 
+    # Phase 08.23.2.D.UX.0: Schicht 3 S3 Restore-Test Status
+    backup_s3_restore_ok = None
+    backup_s3_restore_checked_at = None
+    try:
+        with open('/opt/nerve/.s3_restore_status', 'r') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line.startswith('S3_RESTORE_OK='):
+                    backup_s3_restore_ok = _line[len('S3_RESTORE_OK='):] == 'true'
+                elif _line.startswith('S3_RESTORE_CHECKED_AT='):
+                    backup_s3_restore_checked_at = _line[len('S3_RESTORE_CHECKED_AT='):]
+    except (OSError, IOError):
+        pass  # Datei fehlt = noch kein Restore-Test / Schicht 3 nicht aktiv
+
     return jsonify({
         'status': 'ok',
         'backup_status': backup_status,   # 'ok' | 'stale' | 'missing'
@@ -1637,6 +1651,8 @@ def api_health():
         'pipeline_error_count_10min': pipeline_error_count,  # D-08 Kat. C: Fehler in 10-Min-Fenster
         'git_head': git_head,        # Phase 08.23.2.C.1: SHA oder null (lokale Dev)
         'deployed_at': deployed_at,  # Phase 08.23.2.C.1: ISO-8601 oder null (lokale Dev)
+        'backup_s3_restore_ok': backup_s3_restore_ok,                 # True | False | None
+        'backup_s3_restore_checked_at': backup_s3_restore_checked_at, # ISO-8601 | None
     })
 
 
