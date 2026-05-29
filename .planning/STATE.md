@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
 status: In Progress
-stopped_at: Phase 08.23.2.D.UX.0 Plan 03 — IONOS-Provisioning-Gate (human-action, Task 1) — Autonomer Code (Tasks 2+3) committed + eu-central-4 Korrektur + AWS_DEFAULT_REGION Fix committed
-last_updated: "2026-05-29T16:00:00.000Z"
-last_activity: 2026-05-29 -- AWS_DEFAULT_REGION-Fix + eu-central-4-Korrektur committed (8edfcb9) — IONOS-Gate weiterhin offen
+stopped_at: Phase 08.23.2.D.UX.0 Plan 03 abgeschlossen — naechste: Plan 04 (DSGVO-Doku IONOS-AVV + Schicht-3-Strategie)
+last_updated: "2026-05-29T17:30:00.000Z"
+last_activity: 2026-05-29 -- Plan 03 vollstaendig abgeschlossen (18752fc, 6d9af35, 8edfcb9, d3bcd1a, 55bfae3) — IONOS S3 WORM live, backup_s3_restore_ok=true
 progress:
   total_phases: 84
   completed_phases: 55
   total_plans: 233
-  completed_plans: 224
-  percent: 96
+  completed_plans: 225
+  percent: 97
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX.0 — Plan 03 in progress (Tasks 2+3 committed, Task 1 Gate offen)
-Next: IONOS-Account + AVV + Bucket anlegen (Task 1 Runbook folgen), dann Plan 03 fortsetzen
-Last activity: 2026-05-29 -- Phase 08.23.2.D.UX.0 Plan 03 Tasks 2+3 abgeschlossen (18752fc, 6d9af35)
+Phase: 08.23.2.D.UX.0 — Plan 04 (DSGVO-Doku: IONOS-AVV Sektion 3 + Schicht-3-Strategie Sektion 7)
+Next: Plan 04 starten (DSGVO-Doku IONOS-AVV + Schicht-3-Backup-Begruendung)
+Last activity: 2026-05-29 -- Plan 03 vollstaendig abgeschlossen (18752fc, 6d9af35, 8edfcb9, d3bcd1a, 55bfae3) — IONOS S3 WORM live, backup_s3_restore_ok=true, migration 0009 applied
 
-**Phase 08.23.2.D.UX.0 Plan 03 Task 1 GATE OFFEN (human-action):** IONOS-Account + AVV + Object-Lock-Bucket + aws-cli v2 + ionos-s3.env noch nicht provisioniert. Autonome Artefakte committed: backup_training_to_s3.sh (TCP pg_dump + WORM-Upload COMPLIANCE +30d + 365d-Rotation + G-3-Guard, 18752fc) + restore_test_s3.sh + 4 systemd-Units + /api/health backup_s3_restore_ok (6d9af35). KORREKTUR 8edfcb9: AWS_DEFAULT_REGION aus IONOS_S3_REGION exportiert (SigV4-Fix) + Missing-Var-Guards in beiden Skripten. KORREKTUR eu-central-4: Echter Frankfurt-Endpoint ist https://s3.eu-central-4.ionoscloud.com Region=eu-central-4 (contract-owned Bucket) — NICHT eu-central-1/de. APPEND-PFLICHT: ionos-s3.env mit >> (nie >) da NERVE_ANON_WORKER_DB_PASSWORD (Wave 1) bereits drin. Resume-Signal erwartet (korrigierte Werte unten).
+**Phase 08.23.2.D.UX.0 Plan 03 abgeschlossen:** Backup-Schicht 3 vollstaendig auf Production live. aws-cli v2.34.56, IONOS S3 eu-central-4 (contract-owned Bucket, Korrektur von eu-central-1), Bucket nerve-training-backup mit Object-Lock COMPLIANCE 30d + Versioning + SSE AES256. Staged WORM bring-up eingehalten (C-BLOCKER-4): Smoke-Restore-OK 1d VOR 30d-COMPLIANCE-Default. Erstes Backup: training-2026-05-29_150941.sql.gz (962 Bytes, WORM bis 2026-06-28). Restore-Test: S3_RESTORE_OK=true. /api/health: backup_s3_restore_ok=true, backup_s3_restore_checked_at=2026-05-29T15:09:46Z. 3 Deviations: (1) eu-central-4-Korrektur, (2) Migration 0009 Sequence-Grant-Fix (0008-Luecke), (3) app_routes.py surgical scp hotfix (user-approved). 5 Commits: 18752fc, 6d9af35, 8edfcb9, d3bcd1a, 55bfae3. SUMMARY: 08.23.2.D.UX.0-03-SUMMARY.md.
 
 **Phase 08.23.2.D.UX.0 Plan 02 abgeschlossen:** Backup-Schicht 2 vollstaendig auf Production deployed. rsync-Push auf Hetzner Storage Box u604274.your-storagebox.de (Port 23, Key-Auth, non-fatal W-4). BOX_KEY-Bug gefixt: Key nach /opt/nerve/.ssh/id_storagebox kopiert (chown postgres:postgres) da systemd-Service als postgres-User laeuft. BOX_PATH-Bug gefixt: relativ 'backups/nerve' (Hetzner Box hat kein absolutes /-Root). Production-Lauf: Push OK, Box-ls nerve-2026-05-29_141127.sql.gz (136030 bytes). Restore-Test: RESTORE-OK (gunzip -t). 90d-Rotation script-seitig mit grep-Guard G-3. Staging-Gate-Workaround (pre-existing test_ft_seed). Anforderungen B-01..05 erfuellt. 4 Commits: 3748772, bda9d97, 5b0e829 (+ 0f6cf95 prior agent). SUMMARY: 08.23.2.D.UX.0-02-SUMMARY.md.
 
