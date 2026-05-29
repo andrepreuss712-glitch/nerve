@@ -1607,7 +1607,7 @@ Plans:
 
 **⚠️ Live-Test-Bug 2026-05-28:** Andre's erster Test-Call nach Production-Deploy zeigte KEIN Outcome-Modal — System sprang direkt zur alten Auswertung. **Wurzel-Diagnose (via Logs + DB-Inspect):** Plan 04 hat in `routes/learning.py` angenommen `conv.log_entries` ist DB-Spalte auf conversation_logs. War aber nur Code-Variable im RAM während Calls — DB-Spalte existiert nicht. Transcript landet als TXT-Datei in `/opt/nerve/app/logs/`, classify() liest aus DB → leer. Folge: Haiku rät blind ohne Wortlaut → 0.65 confidence → `outcome=NULL, source=NULL` gesetzt → Frontend-Defensive-Check `if (paResult.outcome || paResult.source)` failed → kein Modal. **Cross-Layer-Bug, durch ALLE drei Schutzschichten gerutscht** (Cross-AI Gemini Pre+Post, zwei Pre-Execute-Audit-Runden Claudian, GSD Verification). Fix in **Phase 08.23.2.D.UX.1**. D.UX-UAT bleibt offen bis D.UX.1 durch. Plus: neue CLAUDE.md Hartregel Punkt 21 verankert (Cross-Layer-Audit-Pflicht) damit gleiche Bug-Klasse zukünftig gefangen wird.
 
-### Phase 08.23.2.D.UX.0: Test-User-Pattern + Drei-Schichten-Backup-Foundation (NEU 2026-05-28, Foundation vor D.UX.1) 🟡
+### Phase 08.23.2.D.UX.0: Test-User-Pattern + Drei-Schichten-Backup-Foundation (NEU 2026-05-28, Foundation vor D.UX.1) ✅ ABGESCHLOSSEN + verifiziert 2026-05-29 (15/15 Must-Haves, live auf Production)
 
 **Goal:** Zwei Foundation-Komponenten die VOR D.UX.1 stehen müssen damit Trainings-Daten-Sammlung sauber startet ohne Test-Daten-Verschmutzung in der Cloud.
 
