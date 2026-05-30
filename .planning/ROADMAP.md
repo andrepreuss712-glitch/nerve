@@ -1686,7 +1686,7 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 - [x] 08.23.2.D.UX.1-04-PLAN.md — Bug C: pip-launcher.js _decideModalState 5-Zustaende + 3 Call-Sites + node:test [DC-01/02/03/04; wave 1] ✅ (Decider in UMD-Helper outcome-modal-state.js)
 - [x] 08.23.2.D.UX.1-05-PLAN.md — DSGVO + Re-Test: Soft-Delete-Gap-Entscheidung (Option A) + audit log_action + DSGVO-Doku Sektion 7 + Live-Re-Test [DD-01/02/03/04, DP-01/02, DT-01/02/03; wave 3] ✅
 
-**Folge-Items (Backlog, NICHT in D.UX.1):** OUTCOME-ORDER (Score läuft vor Outcome-Bestätigung — 🟡 eigene Phase), ART17-PURGE (DSGVO Hard-Delete + Cascade aufwecken — 🔴 START-BLOCKER vor EA-Launch), DA-06 Training-Archiv-Doppelschreib (-> Phase E).
+**Folge-Items aus D.UX.1 — promotet zu echten Phasen 2026-05-30:** OUTCOME-ORDER → Phase 08.23.2.D.UX.4 (🟡, NÄCHSTE PHASE), ART17-PURGE → Phase 08.23.2.ART17 (🔴 START-BLOCKER vor EA-Launch), Login-Härtung → Phase 08.23.2.LOGIN (aus Backlog 999.1 promotet, 🟡 START-BLOCKER Login-Audit-Teil). DA-06 Training-Archiv-Doppelschreib → Phase E.
 
 ### Phase 08.23.2.D.UX.2: Transcript-Reiter UI im PiP + Auswertung + Dashboard (NEU 2026-05-28, Andre-Feature-Wunsch) 🟡
 
@@ -1722,6 +1722,70 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Depends on:** keine (kann parallel zu D.UX.1+2 laufen)
 **Komplexität:** 🟢 trivial-mittel (Whitelist-Config + Konfidenz-Tuning, keine Architektur-Änderung)
 **Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler — Trainings-Daten würden sonst durch Over-Anonymisierung verzerrt)
+
+### Phase 08.23.2.D.UX.4: Call-Ende-Ablauf-Redesign — Ergebnis-vor-Score (NEU 2026-05-30, aus D.UX.1-Live-Test) 🟡 ▶ NÄCHSTE PHASE
+
+**Goal:** Reihenfolge beim Auflegen umdrehen — erst Outcome bestätigen, dann Score EINMAL sauber rechnen+zeigen. Plus Outcome-Abfrage sofort im PiP statt verzögert im Dashboard-Auswertungs-Ladebildschirm.
+
+**Befund Andre's Live-Test 2026-05-30 (D.UX.1):** Score wird BERECHNET BEVOR Outcome bestätigt ist → bestätigtes Outcome fließt nicht in die erste Score-Anzeige. Ergebnis-Fenster wartet auf Auswertungs-Ladebildschirm (~10-15s spät, im Dashboard) statt sofort im PiP.
+
+**Claudian Code-Lesung 2026-05-30:** Logik "Outcome beeinflusst Score" STEHT bereits — `_calc_coaching_score(conv, outcome)` (routes/app_routes.py:720) mit `_OUTCOME_MODIFIERS` (contract_signed ×1.15, meeting_booked ×1.10, no_interest ×0.85) + `correct_outcome` (Z.1923) rechnet Score neu bei Bestätigung/Korrektur. → Reihenfolge-Umbau (🟡), KEIN Neubau (nicht 🔴).
+
+**Tasks:**
+1. Ablauf umdrehen: erst Outcome-Abfrage, dann Score-Berechnung EINMAL (statt vorläufig-zeigen-und-still-nachrechnen).
+2. Outcome-Abfrage sofort im PiP beim Auflegen — Knöpfe sofort klickbar, KI-Vorauswahl async nachladend.
+3. "Call wirklich beenden?" + Outcome-Abfrage als EIN Schritt (Andre-UX).
+4. Ladebalken danach für Detail-Auswertung.
+
+**Offen für Discuss:** mit welchem Outcome die allererste Score-Berechnung beim Auflegen läuft (AI-Guess vs. ×1.00-Default bis User bestätigt).
+
+**Cross-AI Pflicht** (🟡, Punkt 7). **Pre-Plan-Check Punkt 21:** Persistenz-Schicht `calls` (outcome, coaching_score, score_breakdown).
+
+**Depends on:** Phase 08.23.2.D.UX.1 ✅
+**Komplexität:** 🟡 mittel — Reihenfolge-Umbau Frontend (PiP) + Backend-Score-Trigger, keine Schema-Änderung
+**Blocker für:** keine direkten. **Priorität vor D.UX.2/.3** (dort keine harte Abhängigkeit).
+**Plans:** 0 plans — noch nicht geplant
+
+### Phase 08.23.2.ART17: Art. 17 Hard-Delete — echtes PII-Löschen (NEU 2026-05-30, promotet aus D.UX.1-Folge-Item) 🔴 START-BLOCKER vor EA-Launch
+
+**Goal:** Echtes Löschen/Anonymisieren von PII bei Account-Löschung. DSGVO Art. 17. Heute nur Soft-Delete ("inaktiv"-Flag).
+
+**Stand nach D.UX.1 (Option A):** Soft-Delete bleibt + Lösch-Anfrage im Audit-Log (`user_deletion_request` via log_action). Diese Phase aktiviert das echte Hard-Delete + Cascade.
+
+**Tasks:**
+1. Hard-Delete-Pfad: echtes PII-Löschen oder Anonymisieren bei Account-Löschung.
+2. Lösch-Kaskade über alle PII-haltenden Tabellen aufwecken — Entscheidung pro Tabelle: Hard-Delete vs. anonymisierter Tombstone (Trainings-Daten bleiben anonymisiert erhalten).
+3. Cross-Layer-Inventur welche Tabellen PII halten (Punkt 21): users, profiles, conversation_logs, transcript_segments, calls, call_events, suggestions/reactions falls vorhanden.
+4. Restore-Re-Delete-Skript für Backups (WORM): liest user_deletion_request, re-deletet bei Restore. Gemini-Insight aus D.UX.1.
+5. DSGVO-Doc Sektion 7.x aktualisieren.
+
+**Cross-AI Pflicht** (🔴, DSGVO-Architektur + Daten-Verlust-Risiko). **Pre-Plan-Check Punkt 21:** Persistenz-Schicht-Inventur aller PII-Tabellen Pflicht.
+
+**Depends on:** Phase 08.23.2.D.UX.1 ✅ (Audit-Log-Foundation)
+**Komplexität:** 🔴 komplex — Lösch-Kaskade + Backup-Konformität + DSGVO
+**Blocker für:** EA-Launch (START-BLOCKER — darf nicht im Backlog untergehen)
+**Herkunft:** verschoben aus 08.19.6 Punkt 2 + Block D Löschkaskaden → eigene fokussierte Phase.
+**Plans:** 0 plans
+
+### Phase 08.23.2.LOGIN: Login-Härtung + Admin-Nutzerverwaltung (promotet aus Backlog 999.1 am 2026-05-30) 🟡 START-BLOCKER (Login-Audit-Teil) vor EA-Launch
+
+**Goal:** (1) Login-Audit als Start-Blocker: sicherstellen dass echte User sich sauber einloggen. (2) Admin-Maske zum User-Anlegen als Side-Feature.
+
+**Start-Pflicht — Login-Härtung (Pre-EA-Launch-Audit):**
+- Verifizieren: Passwort-Login + OAuth Google/Microsoft funktionieren für echte User.
+- Edge-Cases: falsches Passwort, nicht-bestätigte Email, OAuth-Erstanmeldung.
+- Auslöser: Login-Bereich wirkt fehlerhaft; andre-test@nerve.local in D.UX.0 ohne Login-Weg angelegt → real nicht einloggbar.
+
+**Side-Feature — Admin-Nutzerverwaltung (nach Kernfeatures, CLAUDE.md Kernfeatures-Priorität):**
+- Backend-Maske User-Anlegen (Admin-only), "Passwort generieren"-Knopf, Willkommens-Mail mit Zugangsdaten, Auswahl regulärer vs. Test-Account (is_test_user).
+
+**Reihenfolge:** Login-Audit = Blocker, sofort machbar. Admin-Maske = Side-Feature, darf warten bis Kernfeatures sauber.
+
+**Cross-AI Pflicht** (🟡).
+**Depends on:** keine harte
+**Komplexität:** 🟡 (Admin-Maske + Mail + Login-Audit) — finalisieren in Spec/Discuss
+**Blocker für:** EA-Launch (Login-Audit-Teil — START-BLOCKER)
+**Plans:** 0 plans
 
 ### Phase 08.23.2.G/MEET: Foundation-Phase Conversational Memory + CRM-Lookup + Multi-Tenancy + Training-Schema (NEU 2026-05-27, Phase G + MEET fusioniert nach Cross-AI-Architektur-Entscheidung) 🔴
 
@@ -1773,7 +1837,7 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 
 > Unsequenzierte Ideen (999.x), noch nicht in der aktiven Phasen-Reihenfolge. Promoten via `/gsd-review-backlog`.
 
-### Phase 999.1: Admin-Nutzerverwaltung + Login-Härtung (BACKLOG)
+### Phase 999.1: Admin-Nutzerverwaltung + Login-Härtung — ✅ PROMOTET 2026-05-30 → Phase 08.23.2.LOGIN (oben in der aktiven Reihenfolge)
 
 **Goal:** Eine Backend-Maske mit der Andre selbst User anlegen kann, plus ein Audit ob echte User sich vor dem EA-Launch sauber einloggen können.
 
