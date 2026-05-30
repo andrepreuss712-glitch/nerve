@@ -1657,7 +1657,7 @@ Plans:
 
 WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werden (D.UX.0 belegt 0008). transcript_segments-GRANT gehört in 0009, nicht 0008.
 
-### Phase 08.23.2.D.UX.1: Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix (NEU 2026-05-28, aus D.UX-Live-Test-Bug-Befund) 🔴
+### Phase 08.23.2.D.UX.1: Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix (NEU 2026-05-28, aus D.UX-Live-Test-Bug-Befund) 🔴 ✅ ABGESCHLOSSEN + live verifiziert 2026-05-30 (3 Bugs gefixt, Production HEAD a2d7d3c, conv 200: 11 Segmente + meeting_booked 0.96; Modal rendert)
 
 **Goal:** Drei Bugs eine Wurzel fixen damit D.UX-Outcome-Modal tatsächlich funktioniert.
 
@@ -1680,11 +1680,13 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Blocker für:** D.UX-UAT-Pass, Phase 08.23.2.D.UX.2 (Transcript-Reiter braucht DB-Persistierung), Phase 08.23.2.E (DPO-Sammler nutzt log_entries als Trainings-Korpus-Input)
 
 **Plans:** 5 plans (3 waves) — geplant 2026-05-30 (🔴 Cross-AI-Review PFLICHT vor Execute)
-- [ ] 08.23.2.D.UX.1-01-PLAN.md — Bug-A-Foundation: Migration 0010 transcript_segments + TranscriptSegment-Model + [BLOCKING] migration-apply [DA-01/02/03, DD-01, DP-01; wave 1]
-- [ ] 08.23.2.D.UX.1-02-PLAN.md — Bug-A Write-Pfad: api_beenden transcript_segments INSERT (speaker/ts_ms-Transform + Idempotenz) + training.transcript_archive Background-Doppel-Write [DA-04/06, DP-02; wave 2, depends 01]
-- [ ] 08.23.2.D.UX.1-03-PLAN.md — Bug-A Read-Pfad + Bug B: learning.py DB-Read statt getattr + Schwellen-Rewrite (Best-Guess behalten) + confidence=0 Telemetrie [DA-05, DB-01/02/03/04, DP-02; wave 2, depends 01]
-- [ ] 08.23.2.D.UX.1-04-PLAN.md — Bug C: pip-launcher.js _decideModalState 4-Zustaende + 3 Call-Sites + Jest-Tests [DC-01/02/03/04; wave 1]
-- [ ] 08.23.2.D.UX.1-05-PLAN.md — DSGVO + Re-Test: Soft-Delete-Gap-Entscheidung + audit log_action + DSGVO-Doku Sektion 7 + Live-Re-Test [DD-01/02/03/04, DP-01/02, DT-01/02/03; wave 3, depends 01-04]
+- [x] 08.23.2.D.UX.1-01-PLAN.md — Bug-A-Foundation: Migration 0010 transcript_segments + TranscriptSegment-Model + [BLOCKING] migration-apply [DA-01/02/03, DD-01, DP-01; wave 1] ✅ live head=0010
+- [x] 08.23.2.D.UX.1-02-PLAN.md — Bug-A Write-Pfad: api_beenden transcript_segments INSERT (speaker/ts_ms-Transform + Idempotenz) [DA-04, DP-02; wave 2] ✅ (DA-06 training-Doppelschreib -> Phase E verschoben)
+- [x] 08.23.2.D.UX.1-03-PLAN.md — Bug-A Read-Pfad + Bug B: learning.py DB-Read statt getattr + Schwellen-Rewrite (Best-Guess behalten) + confidence=0 Telemetrie [DA-05, DB-01/02/03/04, DP-02; wave 2] ✅
+- [x] 08.23.2.D.UX.1-04-PLAN.md — Bug C: pip-launcher.js _decideModalState 5-Zustaende + 3 Call-Sites + node:test [DC-01/02/03/04; wave 1] ✅ (Decider in UMD-Helper outcome-modal-state.js)
+- [x] 08.23.2.D.UX.1-05-PLAN.md — DSGVO + Re-Test: Soft-Delete-Gap-Entscheidung (Option A) + audit log_action + DSGVO-Doku Sektion 7 + Live-Re-Test [DD-01/02/03/04, DP-01/02, DT-01/02/03; wave 3] ✅
+
+**Folge-Items (Backlog, NICHT in D.UX.1):** OUTCOME-ORDER (Score läuft vor Outcome-Bestätigung — 🟡 eigene Phase), ART17-PURGE (DSGVO Hard-Delete + Cascade aufwecken — 🔴 START-BLOCKER vor EA-Launch), DA-06 Training-Archiv-Doppelschreib (-> Phase E).
 
 ### Phase 08.23.2.D.UX.2: Transcript-Reiter UI im PiP + Auswertung + Dashboard (NEU 2026-05-28, Andre-Feature-Wunsch) 🟡
 

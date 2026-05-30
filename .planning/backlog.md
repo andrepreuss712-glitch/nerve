@@ -23,6 +23,17 @@
 
 ---
 
+### OUTCOME-ORDER — Score läuft vor Outcome-Bestätigung (Reihenfolge/Timing)
+
+- **Severity:** high (UX/Flow — D.UX-Direktive "Outcome-Pflicht-Schritt VOR Score")
+- **Entdeckt:** Phase 08.23.2.D.UX.1 Live-Test (2026-05-30, andre-test@nerve.local)
+- **Symptom:** Nach Auflegen erscheint das Outcome-Modal jetzt zuverlässig (Bug C gefixt), ABER der Score/die Auswertung läuft/erscheint bereits BEVOR der User das Gesprächsergebnis bestätigt hat. Die D.UX-Direktive verlangt: erst Outcome-Pflicht-Wahl, dann Score aufdecken.
+- **Abgrenzung:** Das ist KEIN Bug-C-Render-Fehler (Modal erscheint). Es ist ein Reihenfolge-/Timing-Problem im Zusammenspiel Modal ↔ Score-Aufdeckung. D.UX hatte ein Score-Gate (`nlp-section-postcall display:none` bis Bestätigen) — vermutlich greift das Gate im neuen Force-Wahl-Pfad (Zustand 1/3, Bestätigen ausgegraut) nicht oder der Score wird auf einem anderen Pfad früher gerendert.
+- **Betrifft:** `static/pip-launcher.js` (_renderOutcomeUx Score-Gate + postcall-Render-Reihenfolge), evtl. Socket-Reihenfolge outcome_ready vs. postcall_analysis-Response.
+- **Planung:** eigene Folge-Phase (Andre-Entscheidung 2026-05-30 — bewusst NICHT in D.UX.1 reingezogen). Klein, fokussiert (🟡).
+
+---
+
 ### POLISH-38 — `ConversationLog.einwaende_gesamt` wird nicht hochgezählt
 
 - **Severity:** medium

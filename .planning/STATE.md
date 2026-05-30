@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Phase 08.23.2.D.UX.1 geplant — 5 Plans in 3 Waves, Plan-Checker PASSED (Iteration 2). Cross-AI-Review PFLICHT (🔴) vor Execute.
-last_updated: "2026-05-30T10:00:00.000Z"
-last_activity: 2026-05-30 -- Phase 08.23.2.D.UX.1 geplant (Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix). 5 PLAN.md erstellt, verifiziert (2 Blocker gefixt in Revision-Iteration 1, PASSED Iteration 2). Naechster Schritt: /gsd-review --phase 08.23.2.D.UX.1 --all
+status: Phase 08.23.2.D.UX.1 abgeschlossen (3 Bugs gefixt + live verifiziert auf Production)
+stopped_at: Phase 08.23.2.D.UX.1 COMPLETE — 5 Plans deployed auf Production (HEAD a2d7d3c), Migration 0010 live (head=0010), Live-Re-Test bestanden (Bug A: 11 Segmente conv 200; Bug B: meeting_booked 0.96 ai_auto; Bug C: Modal rendert).
+last_updated: "2026-05-30T11:30:00.000Z"
+last_activity: 2026-05-30 -- Phase 08.23.2.D.UX.1 ausgefuehrt + manuell auf Production deployed (Staging pre-existing kaputt, Andre-Approval direkt-Prod). 3 Bugs (A Transcript-Persistenz, B Confidence-Best-Guess, C Modal-Render) gefixt + live verifiziert. Follow-ups im Backlog: ART17-PURGE (DSGVO Hard-Delete START-BLOCKER), OUTCOME-ORDER (Score-vor-Outcome-Timing), DA-06 (Training-Archiv-Doppelschreib -> Phase E).
 progress:
   total_phases: 84
-  completed_phases: 55
+  completed_phases: 56
   total_plans: 233
-  completed_plans: 226
-  percent: 97
+  completed_plans: 231
+  percent: 99
 ---
 
 # Project State
@@ -25,9 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX.1 — GEPLANT, bereit fuer Cross-AI-Review (5 Plans, 3 Waves)
-Next: /gsd-review --phase 08.23.2.D.UX.1 --all (🔴 PFLICHT vor Execute), dann /gsd-plan-phase 08.23.2.D.UX.1 --reviews, dann /gsd-execute-phase
-Last activity: 2026-05-30 -- Phase 08.23.2.D.UX.1 geplant (Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix). 5 PLAN.md erstellt + verifiziert (Plan-Checker PASSED Iteration 2; 2 Blocker in Revision gefixt: confidence=0-Emit-Pfad + Node-Test-Toolchain). Multi-Segment-Phase-ID — Pfade hardcoded, gsd-tools umgangen.
+Phase: 08.23.2.D.UX.1 — ABGESCHLOSSEN (5/5 Plans, live auf Production verifiziert)
+Next: Folge-Phasen aus Backlog — OUTCOME-ORDER (Score-vor-Outcome-Timing, 🟡), ART17-PURGE (DSGVO Hard-Delete, 🔴 START-BLOCKER vor EA-Launch). DA-06 (Training-Doppelschreib) -> Phase E.
+Last activity: 2026-05-30 -- Phase 08.23.2.D.UX.1 ausgefuehrt + auf Production deployed + live verifiziert. Multi-Segment-Phase-ID — Pfade hardcoded, gsd-tools/roadmap-helper umgangen, STATE/ROADMAP hand-editiert.
+
+**Phase 08.23.2.D.UX.1 abgeschlossen:** Drei Bugs einer Wurzel gefixt. Bug A: Transcript landet jetzt in DB-Tabelle public.transcript_segments (Migration 0010, head=0010 live, owner nerve_app, CASCADE FK + CHECK + Index); learning.py liest sie statt der nie existierenden log_entries-Spalte. Bug B: Confidence-Schwellenlogik behaelt Haiku-Best-Guess bei <0.70 (ai_auto_unsicher) statt auf None zu setzen; confidence=0 -> typisierte Telemetrie; Emit guard-unabhaengig (feuert auch bei conf=0). Bug C: zentrale _decideModalState (5 Zustaende, ausgelagert in UMD-Helper static/outcome-modal-state.js), 3 Call-Sites umverdrahtet, (outcome||source)-Skip-Guards entfernt -> Modal rendert immer. Deploy: manuell direkt auf Production (Staging bootet wegen pre-existing audit_log-Trigger-Bug nicht, Andre-Approval). 2 prod-gefangene Fixes: func.now() (text-Spalte ueberdeckte text()), ALTER OWNER nerve_app (kein CREATE auf public). DA-06 (Training-Archiv-Doppelschreib) bewusst auf Phase E verschoben (nerve_app ohne training-Rechte, kein Konsument). Live-Re-Test bestanden: conv 200 -> 11 transcript_segments, outcome meeting_booked 0.96 ai_auto. Follow-up OUTCOME-ORDER (Score vor Outcome-Bestaetigung) als eigene Phase im Backlog. Commits: 09b8c51, 0be7a52, 3c5ff46, 381054c, 55a3cde, 31c0881, 35f2da1, a2d7d3c. SUMMARYs: 08.23.2.D.UX.1-0[1-5]-SUMMARY.md.
 
 **Phase 08.23.2.D.UX.0 Plan 04 abgeschlossen:** DSGVO-Dokumentations-Pflicht erfuellt. NERVE DSGVO Analyse.md in zwei Bereichen additiv erweitert: (1) IONOS SE AVV in Sektion 2.3 (AVV-Tabelle + Detail-Block mit Anbieter, AVV-Datum 2026-05-29, Endpoint eu-central-4, Scope training.*, Jurisdiktion DE, AVV-Status gruen); (2) neue Sektion 9 Drei-Schichten-Backup-Strategie (Schicht 1 Lokal/30d, Schicht 2 Hetzner Box/90d, Schicht 3 IONOS WORM/365d) mit Begruendung warum nur training.* IONOS verlaesst (Write-Time-Filter-Contract C-03 + bewusste Klartext-Nicht-Streuung). PowerShell-Check: IONOS (16 Treffer) + training vorhanden, keine Secrets. SUMMARY: 08.23.2.D.UX.0-04-SUMMARY.md.
 
