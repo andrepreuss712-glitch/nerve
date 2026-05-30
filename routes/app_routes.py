@@ -15,6 +15,63 @@ class _CapExceeded(Exception):
     """Sentinel raised inside with _db.begin() to signal cap exceeded without error (WR-02)."""
 
 
+# ── Phase 08.23.2.D.UX.1 (Bug A) — Transcript-Segment-Transform (WARN-3/4/5) ──────────
+# Reine, testbare Helfer (Function-Call-Return). api_beenden ruft _transcript_entries_to_segments
+# fuer den synchronen transcript_segments-INSERT auf — single source of truth fuer die Transform,
+# damit tests/test_transcript_segments_write.py den Helper direkt importieren + aufrufen kann.
+#
+# WARN-4 (Evidenz, NICHT geraten): die RAM-Entries (ls.conversation_log) tragen 'ts' als
+#   WALL-CLOCK 'HH:MM:SS' — Beleg: services/deepgram_service.py:64 -> datetime.now().strftime('%H:%M:%S').
+#   KEIN ts_ms / Offset-Feld vorhanden. ts_ms wird daher relativ zum ERSTEN Transcript-Entry
+#   abgeleitet (ms-ab-Call-Start), NICHT als absolute Tageszeit. Die Listen-Reihenfolge ist die
+#   autoritative Ordnung; ts_ms wird monoton non-decreasing geklemmt, damit Clock-Skew oder ein
+#   Mitternachts-Wrap die Ordnung nie zerstoeren (Plateau statt Ruecksprung).
+# WARN-5: speaker ist int 0/1; kann None sein wenn Rollen noch nicht bestaetigt sind
+#   (deepgram_service.py:116 schreibt speaker=None). 0->'berater', 1->'kunde', sonst/None->'system'
+#   (CHECK-sicher). Statische Map gemaess Plan-Lock; roles_swapped wird hier bewusst NICHT
+#   invertiert (die TXT-Datei ist swap-aware, die Trainings-Label-Qualitaet ist unkritisch).
+_sp_map = {0: 'berater', 1: 'kunde'}
+
+
+def _ts_to_ms_of_day(ts_str):
+    """Parse 'HH:MM:SS' -> ms seit Mitternacht (Wall-Clock). Fallback 0 bei Parse-Fehler."""
+    try:
+        h, m, s = (int(x) for x in str(ts_str).split(':'))
+        return (h * 3600 + m * 60 + s) * 1000
+    except Exception:
+        return 0
+
+
+def _transcript_entries_to_segments(log_entries):
+    """Pure transform (WARN-3): RAM-Entries -> Liste Segment-Dicts {'ts_ms','speaker','text'}.
+    Filtert non-transcript- und leere-Text-Entries. speaker int->role (unbekannt/None -> 'system').
+    ts_ms = (Wall-Clock-ms - erster-Transcript-Entry-Wall-Clock-ms), monoton non-decreasing geklemmt.
+    Ordnung = Listenreihenfolge (autoritativ, auch wenn die ts-Arithmetik auf 0 degradiert).
+    """
+    out = []
+    base = None
+    running = 0
+    for _entry in (log_entries or []):
+        if not isinstance(_entry, dict) or _entry.get('type') != 'transcript':
+            continue
+        _txt = _entry.get('text') or ''
+        if not _txt:
+            continue
+        _abs = _ts_to_ms_of_day(_entry.get('ts'))
+        if base is None:
+            base = _abs
+        _rel = _abs - base
+        if _rel < running:          # Clock-Skew / Mitternachts-Wrap -> Ordnung wahren
+            _rel = running
+        running = _rel
+        out.append({
+            'ts_ms': _rel,
+            'speaker': _sp_map.get(_entry.get('speaker'), 'system'),  # None/unbekannt -> 'system' (CHECK-safe)
+            'text': _txt,
+        })
+    return out
+
+
 OBJECTION_TRIGGER_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent. Der Kunde hat gerade einen Einwand geäußert.
 {profile_ctx}
 Einwand-Typ: {einwand_typ}
@@ -281,6 +338,37 @@ def api_beenden():
             ))
         if ewb_clicks:
             db_conv.commit()
+
+        # ── Phase 08.23.2.D.UX.1 (Bug A) — Transcript-Segments persistieren ──────────
+        # Schreibt die anonymisierten RAM-Segmente (gleiche Quelle wie die TXT-Datei:
+        # log_entries aus ls.conversation_log, Z.85-86 — NICHT neu gelesen) in
+        # public.transcript_segments, gekeyt auf conv.id. Idempotent via Reentrance-Guard
+        # (DA-04). Ein Fehler hier bricht die Call-Finalisierung NIE (wie ObjectionEvent).
+        try:
+            from database.models import TranscriptSegment
+            _existing_seg = (db_conv.query(TranscriptSegment.id)
+                             .filter(TranscriptSegment.conversation_log_id == conv.id)
+                             .first())
+            if _existing_seg is None:
+                _segs = _transcript_entries_to_segments(log_entries)
+                for _s in _segs:
+                    db_conv.add(TranscriptSegment(
+                        conversation_log_id=conv.id,
+                        ts_ms=_s['ts_ms'],
+                        speaker=_s['speaker'],
+                        text=_s['text'],
+                    ))
+                if _segs:
+                    db_conv.commit()
+                print(f"[D.UX.1] transcript_segments INSERT conv={conv.id} added={len(_segs)}")
+            else:
+                print(f"[D.UX.1] transcript_segments INSERT skipped (idempotent) conv={conv.id}")
+        except Exception as _seg_err:
+            print(f"[D.UX.1] transcript_segments INSERT Fehler: {_seg_err}")
+            try:
+                db_conv.rollback()
+            except Exception:
+                pass
 
         # POLISH-38 (Haupt-Fix): Re-aggregate counters from ObjectionEvent (authoritative source).
         # cf38589 set einwaende_gesamt=len(ewb_clicks) initially - defensive fallback.
