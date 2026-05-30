@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify, g
 from routes.auth import login_required
 from services import outcome_service
 from database.db import get_session
-from database.models import ConversationLog, Call
+from database.models import ConversationLog, Call, TranscriptSegment
 import services.live_session as ls
 
 learning_bp = Blueprint('learning', __name__)
@@ -76,31 +76,46 @@ def api_postcall_analysis():
                         'kb_endwert': data.get('kb_end', 0) or 0,
                         'log_entries': [],
                     }
-                    try:
-                        import json as _json_d
-                        _le_raw = getattr(_conv, 'log_entries', None)
-                        if isinstance(_le_raw, str):
-                            _conv_data['log_entries'] = _json_d.loads(_le_raw) or []
-                        elif isinstance(_le_raw, list):
-                            _conv_data['log_entries'] = _le_raw
-                    except Exception:
-                        _conv_data['log_entries'] = []
+                    # D.UX.1 (Bug A Fix, DA-05): log_entries kommen jetzt aus der DB-Tabelle
+                    # transcript_segments — NICHT mehr aus dem alten getattr-Lesepfad auf eine
+                    # nie existierende Spalte (Bug-A-Wurzel: conversation_logs hat diese Spalte nicht).
+                    # F2 (Cross-AI Gemini): stabile Zwei-Spalten-Ordnung (ts_ms, id). id=BIGSERIAL=
+                    # Insert-Reihenfolge = temporale Ordnung — korrekter Sekundaerschluessel bei
+                    # ts_ms-Ties (Postgres-Sort ist auf Ties nicht stabil; HH:MM:SS hat 1s-Granularitaet).
+                    segments = (_db_cls.query(TranscriptSegment)
+                                .filter(TranscriptSegment.conversation_log_id == _conv.id)
+                                .order_by(TranscriptSegment.ts_ms, TranscriptSegment.id)
+                                .all())
+                    _conv_data['log_entries'] = [
+                        {'ts_ms': s.ts_ms, 'speaker': s.speaker, 'text': s.text}
+                        for s in segments
+                    ]
+                    if not segments:
+                        print(f'[D.UX.1] no transcript_segments for conv={_conv.id} (empty transcript or pre-0010 call)')
 
                     _result = outcome_service.classify(_conv_data)
                     _outcome_val = _result.get('outcome')
                     _outcome_conf = float(_result.get('confidence', 0.0))
 
-                    # Schwellenlogik (REQ-D-4)
-                    if _outcome_val is None:
-                        _outcome_source_val = None
-                    elif _outcome_conf >= 0.90:
-                        _outcome_source_val = 'ai_auto'
-                    elif _outcome_conf >= 0.70:  # WR-03: confidence >= 0.70 and < 0.90 -> ai_auto_unsicher
-                        _outcome_source_val = 'ai_auto_unsicher'
-                    else:
-                        # Niedrige Confidence: KEIN Auto-Set, User muss korrigieren
+                    # Schwellenlogik (D.UX.1 Bug B Fix — DB-01/02/03). Thresholds unveraendert (DB-03).
+                    # ck_calls_outcome_source erlaubt bereits ai_auto / ai_auto_unsicher / user_corrected
+                    # -> keine Constraint-Aenderung. Reihenfolge: == 0 ZUERST testen.
+                    if _outcome_conf == 0:
+                        # Kein Klassifizierungs-Versuch: leeres Transcript / API-Timeout / Parse-Fehler / Exception.
                         _outcome_val = None
                         _outcome_source_val = None
+                        # DB-04 Telemetrie: lokal ableitbarer Fehler-Typ. empty_transcript wenn log_entries leer,
+                        # sonst classify_zero (outcome_service liefert hier nur confidence — feinere Typen
+                        # empty/timeout/parse/exception sind D.UX.4-Telemetrie, deferred per CONTEXT).
+                        _fail_type = 'empty_transcript' if not _conv_data.get('log_entries') else 'classify_zero'
+                        print(f'[D.UX.1] classify() confidence=0 fail_type={_fail_type} conv={_conv.id}')
+                    elif _outcome_conf < 0.70:
+                        # Haiku unsicher: Best-Guess BEHALTEN (DB-02, fuer DPO-Training Phase E), NICHT auf None setzen.
+                        _outcome_source_val = 'ai_auto_unsicher'
+                    elif _outcome_conf < 0.90:
+                        _outcome_source_val = 'ai_auto_unsicher'  # bestehende D.UX-Logik (0.70..0.90)
+                    else:
+                        _outcome_source_val = 'ai_auto'           # bestehende D.UX-Logik (>= 0.90)
             finally:
                 _db_cls.close()
 
@@ -137,6 +152,10 @@ def api_postcall_analysis():
                                 _sid_for_emit = _sid
                                 break
                     if _sid_for_emit:
+                        # BLOCKER-1: emit fires even for confidence=0 (outcome/source null) so FE _decideModalState
+                        # can render Zustand 1 ('Automatische Erkennung nicht verfügbar'). Dieser Emit ist ein
+                        # SIBLING des calls-UPDATE-Write-Guards (oben) — er haengt NICHT von (_outcome_val or
+                        # _outcome_conf) ab, nur von SocketIO + aktiver SID. NICHT in den Write-Guard verschieben.
                         _payload = {
                             'outcome': _outcome_val,
                             'confidence': round(_outcome_conf, 3),
@@ -150,6 +169,9 @@ def api_postcall_analysis():
                 except Exception as _e_em:
                     print(f'[Phase08.23.2.D] outcome_ready emit Fehler: {_e_em}')
 
+        # BLOCKER-1 (belt-and-suspenders): unconditional response — traegt den confidence=0-Fall
+        # ({outcome:null, source:null, call_id}) fuer den no-active-SID Fallback (Plan 04 Call-site B).
+        # KEIN (_outcome_val||_outcome_conf)-Guard hier.
         return jsonify({
             'vorschlaege': suggestions,
             'outcome': _outcome_val,
