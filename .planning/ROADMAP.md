@@ -1733,11 +1733,11 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 
 **Tasks:**
 1. Ablauf umdrehen: erst Outcome-Abfrage, dann Score-Berechnung EINMAL (statt vorläufig-zeigen-und-still-nachrechnen).
-2. Outcome-Abfrage sofort im PiP beim Auflegen — Knöpfe sofort klickbar, KI-Vorauswahl async nachladend.
+2. Beim Auflegen kurzer Ladebalken im PiP während die KI das Outcome aus dem Transkript schätzt, DANN Auswahl-Screen mit KI-Vorauswahl (bewusst sequenziell, KEIN async-Preselect — vermeidet Race-Bugs).
 3. "Call wirklich beenden?" + Outcome-Abfrage als EIN Schritt (Andre-UX).
-4. Ladebalken danach für Detail-Auswertung.
+4. Zweiter Ladebalken danach für Detail-Auswertung.
 
-**Offen für Discuss:** mit welchem Outcome die allererste Score-Berechnung beim Auflegen läuft (AI-Guess vs. ×1.00-Default bis User bestätigt).
+**Entscheidung 2026-05-30 (Andre):** KEIN vorläufiger Score. Der Score wird ERST berechnet wenn das Outcome gewählt ist (User bestätigt oder KI-Vorauswahl übernommen) — keine Doppelrechnung. Ablauf: Auflegen → Ladebalken (KI schätzt Outcome aus Transkript) → Auswahl-Screen mit Vorauswahl → User bestätigt/korrigiert → Score EINMAL rechnen+zeigen. **Claudian-Empfehlung (in Discuss bestätigen):** Timeout-Fallback — wenn die KI-Schätzung >~3s braucht oder fehlschlägt, erscheint der Auswahl-Screen ohne Vorauswahl (User wählt manuell), damit niemand am Ladebalken hängenbleibt.
 
 **Cross-AI Pflicht** (🟡, Punkt 7). **Pre-Plan-Check Punkt 21:** Persistenz-Schicht `calls` (outcome, coaching_score, score_breakdown).
 
