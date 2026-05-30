@@ -2475,7 +2475,9 @@
             // Backend tatsaechlich einen Outcome-Stand hat. Sonst wuerde {outcome:null,
             // source:null} als <70%-Korrektur-Modal interpretiert -> Modal springt
             // beim Call-START auf wenn lastCallId noch von vorherigem Call gesetzt war.
-            if (json && json.ok && json.call_id && (json.outcome || json.source)) {
+            // D.UX.1 (LANDMINE 7): kein (outcome||source)-Skip mehr — _decideModalState
+            // entscheidet (auch user_corrected -> 'final' read-only auf Reconnect, F1).
+            if (json && json.ok && json.call_id) {
               _renderOutcomeUx({
                 outcome: json.outcome,
                 confidence: json.confidence,
@@ -2952,7 +2954,9 @@
               // (z.B. _session_state schon leer beim Emit-Zeitpunkt), Response-basiert rendern.
               var sec = document.getElementById('pip-outcome-section');
               if (sec && sec.dataset.outcomeRendered === '1') return; // schon gerendert
-              if (paResult.call_id && (paResult.outcome || paResult.source)) {
+              // D.UX.1 (Bug-C Fix): kein (outcome||source)-Guard mehr — Modal rendert
+              // auch bei outcome/source null (Zustand 1 'kein_versuch'). call_id reicht.
+              if (paResult.call_id) {
                 _renderOutcomeUx({
                   outcome: paResult.outcome,
                   confidence: paResult.confidence,
@@ -3653,6 +3657,15 @@
     return _FOLLOWUP_MAP[outcome] || 'none';
   }
 
+  // ── Phase 08.23.2.D.UX.1 — zentrale 5-Zustand-Entscheidung (DC-01/DC-02 + F1) ──
+  // Single source of truth = static/outcome-modal-state.js (UMD: Browser-Global +
+  // Node-Export). pip-launcher.js kann nicht unter Node geladen werden (window-Zugriff
+  // auf Top-Level), daher die Extraktion in ein DOM-freies Helper-Modul (Plan 04
+  // BLOCKER-2 Fallback). Alle drei Call-Sites rendern ueber _renderOutcomeUx -> _decideModalState.
+  var _decideModalState = (typeof window !== 'undefined' && window.NerveOutcomeModalState)
+    ? window.NerveOutcomeModalState._decideModalState
+    : function () { return 'unsicher'; };  // defensiver Fallback falls Helper-Script fehlt
+
   function _renderOutcomeUx(data) {
     // Idempotenz-Guard (D.UX constraint — beibehalten)
     var sec = document.getElementById('pip-outcome-section');
@@ -3673,8 +3686,8 @@
 
     if (!callId) return;
 
-    // State: welches Outcome gerade ausgewaehlt ist
-    var selectedOutcome = (conf >= 0.70 && haikuOutcome) ? haikuOutcome : null;
+    // D.UX.1: zentrale Zustands-Entscheidung — treibt Badge/Hint/Vorauswahl/Confirm
+    var modalState = _decideModalState(data);
 
     // ── Header ───────────────────────────────────────────────────────────────
     var header = document.createElement('div');
@@ -3682,12 +3695,34 @@
     header.textContent = 'Gesprächsergebnis bestätigen';
     sec.appendChild(header);
 
-    // ── Unsicher-Badge (nur wenn confidence < 0.70) ──────────────────────────
-    if (conf < 0.70) {
+    // ── Zustand 5 'final' (F1): Reconnect auf bereits finalisierten Call ──────
+    // Read-only Anzeige des vom User gewaehlten Outcomes. KEIN "KI unsicher"-Badge,
+    // KEIN "Automatische Erkennung nicht verfügbar"-Text, kein erneuter Confirm.
+    if (modalState === 'final') {
+      var finalSummary = document.createElement('div');
+      finalSummary.className = 'pip-outcome-summary';  // Teal — wiederverwendet (WARN-1, kein neuer Style)
+      finalSummary.textContent = '✓ ' + escHtml(_outcomeLabelDe(haikuOutcome));
+      sec.appendChild(finalSummary);
+      return;
+    }
+
+    // State: welches Outcome gerade ausgewaehlt ist — Vorauswahl NUR bei 'sicher'
+    var selectedOutcome = (modalState === 'sicher' && haikuOutcome) ? haikuOutcome : null;
+
+    // ── Unsicher-Badge nur bei Zustand 3+4 ('unsicher') ──────────────────────
+    if (modalState === 'unsicher') {
       var badge = document.createElement('div');
       badge.className = 'pip-outcome-badge-unsicher';  // Teal-Outline — NICHT gelb (CLAUDE.md HART Punkt 8)
       badge.textContent = 'KI unsicher — bitte wählen';
       sec.appendChild(badge);
+    }
+
+    // ── Hint nur bei Zustand 1 ('kein_versuch', confidence===0) ──────────────
+    if (modalState === 'kein_versuch') {
+      var hint = document.createElement('div');
+      hint.className = 'pip-outcome-hint';  // var(--page-text-secondary) — kein inline Color (WARN-1)
+      hint.textContent = 'Automatische Erkennung nicht verfügbar';
+      sec.appendChild(hint);
     }
 
     // ── 7 Buttons ────────────────────────────────────────────────────────────

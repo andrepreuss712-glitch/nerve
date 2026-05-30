@@ -780,6 +780,8 @@ function setLanguage(code, e) {
 }
 </script>
 {% if g.user %}
+<!-- D.UX.1: Outcome-Modal-Zustands-Logik (UMD-Helper) — MUSS vor pip-launcher.js geladen werden (window.NerveOutcomeModalState) -->
+<script src="{{ url_for('static', filename='outcome-modal-state.js') }}?v={{ static_mtime('outcome-modal-state.js') }}"></script>
 <script src="{{ url_for('static', filename='pip-launcher.js') }}?v={{ static_mtime('pip-launcher.js') }}"></script>
 {% endif %}
 {% block scripts %}{% endblock %}
