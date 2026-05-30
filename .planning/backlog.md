@@ -8,6 +8,21 @@
 
 ## Open
 
+### ART17-PURGE — Echte Art.17-Löschung (Hard-Delete + Cascade aufwecken) — 🔴 START-BLOCKER vor EA-Launch
+
+- **Severity:** critical (DSGVO-Pflicht, Launch-Blocker) — eigene 🔴-Phase mit Threat-Model, NICHT als Polish-Fix
+- **Entdeckt / entschieden:** Phase 08.23.2.D.UX.1 (2026-05-30), Andre-Entscheidung Option A (Soft-Delete + Audit jetzt, Hard-Purge verschoben)
+- **Kontext:** `settings.py::delete_account` ist heute ein Soft-Delete (`aktiv=False`, keine Zeilen-Löschung). Die `ON DELETE CASCADE` auf `transcript_segments.conversation_log_id` (DD-01, seit D.UX.1 live) ist scharf aber **schlafend** — sie feuert nie aus App-Code. D.UX.1 hat nur den Audit-Eintrag (`user_deletion_request`) als Grundlage gebaut. Echte Löschung fehlt.
+- **Scope (Andre-Vorgabe 2026-05-30) — alle drei Punkte Pflicht:**
+  1. **Hard-Delete** `conversation_logs`-Zeilen → CASCADE über alle Fremdschlüssel-Tabellen (ewb_ratings, learning_cards, objection_events, phrases, calls, transcript_segments). Cascade aufwecken ist aufwendiger als es aussieht: Lock-Verhalten während Löschung + bis dahin neu hinzugekommene FK-Tabellen mitdenken.
+  2. **Backup-Retention-Doku** in AVV/TOMs/Datenschutzerklärung: Live-Löschung sofort, unveränderliche (WORM-)Backups max. 30 Tage.
+  3. **Restore-Re-Delete-Skript:** liest `user_deletion_request` aus `audit_log` und wendet Hard-Deletes nach jedem Backup-Restore erneut an. Pflicht: deletion-request-IDs stabil + nicht-recycelt halten (das D.UX.1-Audit-Log ist die Grundlage).
+- **Cascade-Falle (LANDMINE 6):** `transcript_expires_at` liegt auf `calls`, der Cascade hängt aber an `conversation_logs`. Lösch-/Ablauf-Pfad MUSS über `calls.conversation_log_id → conversation_logs.id → transcript_segments` laufen, sonst Waisen-Zeilen.
+- **Betrifft:** `routes/settings.py`, neue Migration evtl., `scripts/` (Restore-Re-Delete), AVV/TOMs/Privacy-Doku.
+- **Trigger:** vor EA-Launch (50 Early-Access-Plätze) — sobald ein externer User existiert ist echte Löschung Pflicht.
+
+---
+
 ### POLISH-38 — `ConversationLog.einwaende_gesamt` wird nicht hochgezählt
 
 - **Severity:** medium

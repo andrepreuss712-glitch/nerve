@@ -195,6 +195,30 @@ def delete_account():
         return jsonify({'error': 'Tippe LÖSCHEN zur Bestätigung'}), 400
     db = get_session()
     try:
+        # ── Phase 08.23.2.D.UX.1 (DD-02) — DSGVO-Rechenschaftspflicht-Audit VOR jeder ──────
+        # Zustandsaenderung. Echte audit_log-Spalten (action/target_type/target_id/details),
+        # NICHT die nicht-existierenden Alt-Spalten. Nur Counts + IDs, KEINE Klartext-User-Daten. Traversiert
+        # die Cascade-Kette (LANDMINE 6): calls.conversation_log_id -> conversation_logs.id ->
+        # transcript_segments. So sind die Counts schon korrekt fuer die spaetere Hard-Purge-Phase.
+        from services.audit import log_action
+        from database.models import ConversationLog, Call, TranscriptSegment
+        _conv_ids = [r[0] for r in db.query(ConversationLog.id).filter(ConversationLog.user_id == g.user.id).all()]
+        _n_conv = len(_conv_ids)
+        _n_calls = db.query(Call).filter(Call.user_id == g.user.id).count()
+        _n_seg = (db.query(TranscriptSegment)
+                  .filter(TranscriptSegment.conversation_log_id.in_(_conv_ids)).count()
+                  if _conv_ids else 0)
+        log_action(db, g.user.id, g.org.id, 'user_deletion_request',
+                   target_type='user', target_id=g.user.id,
+                   details={'transcript_segments_count': _n_seg, 'calls_count': _n_calls,
+                            'conversation_logs_count': _n_conv, 'initiator': 'user_self_request'},
+                   request=request)
+
+        # Art.17 Hard-Purge der conversation_logs (-> CASCADE transcript_segments) ist BEWUSST
+        # auf eine eigene 🔴-Art.17-Phase verschoben (Andre-Entscheidung 2026-05-30, Option A;
+        # START-BLOCKER vor EA-Launch im Backlog). Die ON-DELETE-CASCADE (DD-01) ist live aber
+        # schlafend — dieser Audit-Eintrag ist die Grundlage fuer das Restore-Re-Delete-Skript
+        # der Folge-Phase (deletion-request-IDs muessen stabil/nicht-recycelt bleiben).
         db.query(User).filter_by(org_id=g.org.id).update({'aktiv': False})
         org = db.query(Organisation).get(g.org.id)
         org.aktiv = False
