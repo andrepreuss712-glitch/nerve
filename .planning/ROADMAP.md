@@ -1737,7 +1737,7 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 3. "Call wirklich beenden?" + Outcome-Abfrage als EIN Schritt (Andre-UX).
 4. Zweiter Ladebalken danach für Detail-Auswertung.
 
-**Entscheidung 2026-05-30 (Andre):** KEIN vorläufiger Score. Der Score wird ERST berechnet wenn das Outcome gewählt ist (User bestätigt oder KI-Vorauswahl übernommen) — keine Doppelrechnung. Ablauf: Auflegen → Ladebalken (KI schätzt Outcome aus Transkript) → Auswahl-Screen mit Vorauswahl → User bestätigt/korrigiert → Score EINMAL rechnen+zeigen. **Claudian-Empfehlung (in Discuss bestätigen):** Timeout-Fallback — wenn die KI-Schätzung >~3s braucht oder fehlschlägt, erscheint der Auswahl-Screen ohne Vorauswahl (User wählt manuell), damit niemand am Ladebalken hängenbleibt.
+**Entscheidung 2026-05-30 (Andre):** KEIN vorläufiger Score. Der Score wird ERST berechnet wenn das Outcome gewählt ist (User bestätigt oder KI-Vorauswahl übernommen) — keine Doppelrechnung. Ablauf: Auflegen → Ladebalken (KI schätzt Outcome aus Transkript) → Auswahl-Screen mit Vorauswahl → User bestätigt/korrigiert → Score EINMAL rechnen+zeigen. Der Auswahl-Screen erscheint IMMER erst NACH der KI-Analyse → immer eine KI-Vorauswahl (kein leerer Screen, kein "später nachtragen"). Bei unsicherer KI (selten): Vorauswahl wird trotzdem getroffen, aber ROT hinterlegt + Disclaimer im PiP ("KI unsicher, bitte prüfen") — zwingt den User bei wackeligen Fällen zum Hinschauen, gut für Daten-Qualität. Echter KI-Ausfall (sehr selten) = degradierter Modus, Plan-Detail.
 
 **Cross-AI Pflicht** (🟡, Punkt 7). **Pre-Plan-Check Punkt 21:** Persistenz-Schicht `calls` (outcome, coaching_score, score_breakdown).
 
