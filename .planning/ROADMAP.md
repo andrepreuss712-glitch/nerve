@@ -1902,3 +1902,23 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.2: Session-Detail Live-Auswertung ausbauen — 3 verwaiste UI-Platzhalter (BACKLOG, NEU 2026-05-30)
+
+**Goal:** Drei "Future"-Platzhalter-Karten im Session-Detail (Live-Call-Detailansicht, `templates/session_detail.html`) versprechen Features mit TOTEN Phasen-Nummern. Aufräumen + als echte Features einordnen.
+
+**Die 3 Platzhalter:**
+1. **Wendepunkt-Analyse** (session_detail.html:367-372) — markiert einzelne Sätze die den Gesprächsverlauf kritisch beeinflusst haben. Label "Kommt mit Phase 4.19 (Transkript-Persistierung)".
+2. **Einzel-Bewertungen** (session_detail.html:401-406) — 6 Coaching-Dimensionen (Gesprächseröffnung, Bedarfsanalyse, Einwandbehandlung, Gesprächsführung, Abschluss, Beziehungsaufbau) statt nur Gesamt-Score + 4 Komponenten. Label "Kommt mit Phase 4.19".
+3. **Lernkarten / Coach-Modul** (session_detail.html:453-461) — max 3 Sätze pro Call als Lernkarte speichern, vor nächstem Call geladen. Label "Kommt mit Phase 4.11". (Coach-Modul-Backend existiert teilweise aus alter Phase 04.11.)
+
+**WICHTIG — Status-Klärung 2026-05-30:**
+- "Phase 4.19 (Transkript-Persistierung)" = Voraussetzung von #1+#2 = WURDE IN D.UX.1 GELIEFERT (transcript_segments-Tabelle). → #1 und #2 sind jetzt UNBLOCKED.
+- Phasen-Nummern 4.19 / 4.11 sind STALE (alte Nummerierung, existieren in aktueller Roadmap nicht).
+- **Pre-Launch-Polish-Bug (separat + kleiner):** die Badges zeigen interne Phasen-Nummern AN USER ("Kommt mit Phase 4.19") — unprofessionell fürs Verkaufsprodukt. Text vor Launch bereinigen (→ "folgt bald" oder Karte ausblenden), unabhängig davon wann die Features kommen.
+
+**Verbindungen:** #2 Einzel-Bewertungen = Coaching-Score-Tiefe (verwandt mit Frage-Qualitäts-Dimension `frage_qualitaet=0.0` in app_routes.py:738 + Zwei-Track-Scoring, D.UX-Roadmap). #3 Lernkarten = verwandt mit Battlecard (vor Call geladen) + Coach-Modul. Alle 3 teilen die Transkript-Abhängigkeit mit Phase 08.23.2.D.UX.2 (Transcript-Reiter).
+
+**Priorität:** TBD mit Andre — #2 (Einzel-Bewertungen) ist Coaching-Kernwert (evtl. pre-launch), #1/#3 eher Tiefe (evtl. post-launch). UI-Text-Cleanup ist kleiner Pre-Launch-Polish.
+**Komplexität:** 🟡 (Sonnet-Analyse pro Dimension + UI), finalisieren in Spec/Discuss.
+**Plans:** 0 plans
