@@ -1765,6 +1765,7 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Komplexität:** 🔴 komplex — Lösch-Kaskade + Backup-Konformität + DSGVO
 **Blocker für:** EA-Launch (START-BLOCKER — darf nicht im Backlog untergehen)
 **Herkunft:** verschoben aus 08.19.6 Punkt 2 + Block D Löschkaskaden → eigene fokussierte Phase.
+**Team-Verbindung (NEU 2026-05-30):** Lösch-Logik muss Org-Ownership beachten — User-Konto-Löschung entfernt den User, lässt aber Org-Calls + geteilte Skripte stehen (Daten gehören der Org, nicht dem User — Andre-Entscheidung). Schon hier mitdenken, auch wenn Team-System (08.23.2.TEAM/SEATS) erst danach voll steht.
 **Plans:** 0 plans
 
 ### Phase 08.23.2.LOGIN: Login-Härtung + Admin-Nutzerverwaltung (promotet aus Backlog 999.1 am 2026-05-30) 🟡 START-BLOCKER (Login-Audit-Teil) vor EA-Launch
@@ -1820,6 +1821,49 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Blocker für:** Phase 08.23.2.E (DPO-Sammler nutzt training.preference_pairs aus Wave 3), Phase 08.21 (Battlecard-Pattern nutzt account_memory aus Wave 2), EA-Launch (Wave 1+2 sollten vor EA-Launch fertig sein, Wave 3 kann während EA-Phase)
 
 **Schema-Skizze:** vollständig in `04 Entscheidungen/NERVE Architektur-Entscheidung Internes Datenmodell.md` (Cross-AI-Output). Migrations-Pfad in 3 Phasen, 8-Wochen-Plan bis EA-Launch.
+
+### Phase 08.23.2.TEAM: Team-Grundgerüst — Firmen-Konten, Rollen, Einladungen, Org-Ownership (NEU 2026-05-30, Andre-Strategie + Cross-AI Gemini) 🔴 PRE-LAUNCH-PFLICHT (Verkaufs-Enabler)
+
+**Goal:** Verkaufbares Team-System-Grundgerüst (ohne Abrechnung). Im B2B-Vertrieb kaum Einzelkämpfer → Käufer ist die Firma, ein Kunde = ein ganzes Team = Multiplikator. Ohne Team-Verwaltung stirbt das Verkaufsgespräch ("Sie müssten jeden einzeln anmelden").
+
+**Tasks:**
+1. Rollen: Manager / Mitarbeiter.
+2. Einladungs-Flow: Manager lädt Team ein — Status pending/accepted/expired (Token), Einladungs-Link mündet in den bestehenden Auth-Flow.
+3. Team-Liste für Manager (Mitglieder + X/Y Plätze belegt — einfache Liste, KEINE tiefen Aktivitäts-Analytics, die kommen nach EA-Feedback).
+4. **Org-Ownership (Andre-Entscheidung 2026-05-30):** Call-Logs, Skripte + Opener gehören der ORG, nicht dem User. Datenmodell `owner = Org`, nicht `owner = User`.
+5. Seat-Enforcement-Vorbereitung (Logik die blockt wenn active_users > paid_seats — scharf in SEATS).
+
+**Verbindung ART17:** Hard-Delete muss Org-Ownership beachten — User-Konto-Löschung entfernt den User, lässt aber Org-Calls + geteilte Skripte stehen.
+
+**Cross-AI Pflicht** (🔴). Gemini-Konsultation 2026-05-30: Reihenfolge korrigiert (Datenmodell VOR Billing), Ownership-Konflikt aufgedeckt.
+
+**Depends on:** Phase 08.23.2.G/MEET (workspace_id/Org-Struktur + DB-Rollen-Trennung)
+**Komplexität:** 🔴 komplex — Rollen + Invite-Lifecycle + Org-Ownership-Retrofit auf profile_opener/profile_skripte/calls
+**Blocker für:** Phase 08.23.2.SEATS (Billing braucht Team-Tabellen), EA-Launch (Verkaufs-Enabler)
+**Reihenfolge:** nach G/MEET, VOR den Preis-Phasen 08.15/08.16 (ohne Team-Tabellen kein Per-Seat-Billing baubar — sonst 08.15 zweimal).
+**Plans:** 0 plans
+
+### Phase 08.23.2.SEATS: Team-Abrechnung pro Platz + Opener/Skript-Sharing (NEU 2026-05-30, Andre-Strategie + Cross-AI Gemini) 🔴 PRE-LAUNCH-PFLICHT
+
+**Goal:** Per-Seat-Billing + Team-Sharing oben auf das Team-Grundgerüst.
+
+**Tasks:**
+1. Per-Seat-Billing via Stripe (Seat-Anzahl als quantity).
+2. Proration von Anfang an (Seat mitten im Monat dazu → Stripe rechnet anteilig). Gemini: B2B-Manager prüfen Rechnungen pingelig; Stripe macht das fast automatisch wenn man quantity sauber hoch/runtersetzt statt neue Subscriptions anzulegen.
+3. Seat-Enforcement scharf (blockt wenn active_users > paid_seats).
+4. **Opener + Skripte im Team teilen** ("ganzes Team" / "Auswahl") — sitzt auf profile_opener + profile_skripte + Org-Ownership.
+5. "Team verwalten"-UI für den Manager.
+
+**Stripe-Fallstricke (Gemini, für Plan-Phase):**
+- Webhook-Race: bei schnellem Mehrfach-Add IMMER absolute quantity aus dem Stripe-Payload nehmen, nie Delta addieren/subtrahieren (sonst DB-Desync).
+- Failed Invoice bei Seat-Erhöhung: Seat erst in DB freigeben wenn Stripe `invoice.paid` fürs Update meldet, nicht schon beim Erhöhen.
+
+**Cross-AI Pflicht** (🔴, Billing-Korrektheit).
+**Depends on:** Phase 08.23.2.TEAM (Grundgerüst) + 08.15/08.16 (Preis-/Stripe-Fundament)
+**Komplexität:** 🔴 komplex — Billing-Korrektheit + Stripe-Quantity-Sync + Sharing
+**Blocker für:** EA-Launch (Verkaufs-Enabler — ohne Per-Seat kein Team-Verkauf)
+**Reihenfolge:** nach 08.15/08.16.
+**Plans:** 0 plans
 
 ### Phase 08.23.2.E: DPO-Paar-Sammler + DSFA-Dokument (NEU 2026-05-11, **erweitert 2026-05-27**) 🟡
 
