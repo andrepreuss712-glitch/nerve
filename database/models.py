@@ -713,3 +713,17 @@ class CallEvent(Base):
         Index('idx_call_events_type', 'call_id', 'event_type'),
         Index('idx_call_events_payload_gin', 'payload', postgresql_using='gin'),
     )
+
+
+class TranscriptSegment(Base):
+    __tablename__ = 'transcript_segments'
+    id                  = Column(BigInteger, primary_key=True, autoincrement=True)  # BIGSERIAL
+    conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id', ondelete='CASCADE'), nullable=False)
+    ts_ms               = Column(Integer, nullable=False)        # ms ab Call-Start, fuer Reihenfolge
+    speaker             = Column(Text, nullable=False)           # 'berater'|'kunde'|'system'
+    text                = Column(Text, nullable=False)           # anonymisierter Text (Pipeline B)
+    created_at          = Column(DateTime(timezone=True), server_default=text('now()'))
+    __table_args__ = (
+        CheckConstraint("speaker IN ('berater', 'kunde', 'system')", name='ck_transcript_segments_speaker'),
+        Index('idx_transcript_segments_conv_ts', 'conversation_log_id', 'ts_ms'),
+    )
