@@ -1699,6 +1699,10 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 2. Transcript-Reiter in PiP-Post-Call-Auswertung — direkt nach Outcome-Bestätigen sichtbar als Reiter neben Score + Lernkarten.
 3. Transcript-Reiter im Dashboard-Call-Detail-View — User klickt alten Call → Detail-Seite öffnet → Transcript ist Reiter neben Score-/Outcome-/Lernkarten-Reitern.
 4. **Optional Bonus:** Such-/Highlight-Funktion im Transcript (z.B. nach "Termin", "Einwand").
+5. **Aus-/einklappbares Panel im PiP** (nicht nur Tab) — erreichbar per Knopf aus der PiP-Score-Ansicht UND der vollen Auswertung (Andre 2026-05-30).
+6. **Text-Markieren + Copy-out** — User kann Transcript-Stellen rauskopieren / extern speichern.
+
+**Warum wichtig (Andre 2026-05-30, "finde ich definitiv wichtig"):** (a) für uns bei Tests — prüfen ob was zerschossen wurde; (b) für User — gute Out-of-Script-Momente / neue Einwände rauskopieren zum Nachdenken/Speichern.
 
 **UI-SPEC nötig** für drei UI-Kontexte mit unterschiedlichen Constraints (PiP-eng vs. Dashboard-breit) — `/gsd-ui-phase` Pflicht.
 
@@ -1744,6 +1748,7 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Depends on:** Phase 08.23.2.D.UX.1 ✅
 **Komplexität:** 🟡 mittel — Reihenfolge-Umbau Frontend (PiP) + Backend-Score-Trigger, keine Schema-Änderung
 **Blocker für:** keine direkten. **Priorität vor D.UX.2/.3** (dort keine harte Abhängigkeit).
+**Koordination mit D.UX.2:** neuen Post-Call-Score-Screen so bauen, dass D.UX.2 später Transkript-Knopf/ausklappbares Panel dranhängen kann (Platz lassen, kein Umbau) — Anti-Abrieb.
 **Plans:** 0 plans — noch nicht geplant
 
 ### Phase 08.23.2.ART17: Art. 17 Hard-Delete — echtes PII-Löschen (NEU 2026-05-30, promotet aus D.UX.1-Folge-Item) 🔴 START-BLOCKER vor EA-Launch
