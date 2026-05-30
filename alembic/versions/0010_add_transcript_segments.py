@@ -33,6 +33,11 @@ def upgrade() -> None:
         "CREATE INDEX IF NOT EXISTS idx_transcript_segments_conv_ts "
         "ON public.transcript_segments (conversation_log_id, ts_ms)"
     )
+    # Production: alembic laeuft als postgres (nerve_app hat KEIN CREATE auf schema public,
+    # has_schema_privilege=f). Damit der App-User die Tabelle lesen/schreiben kann wie alle
+    # anderen public-Tabellen (calls, conversation_logs sind nerve_app-owned), wird die
+    # Tabelle + ihre BIGSERIAL-Sequence dem App-User zugewiesen (Eigentuemer-Konsistenz).
+    op.execute("ALTER TABLE public.transcript_segments OWNER TO nerve_app")
     # GRANT deferred from 0008/0009 (0009 docstring). DA-06: worker reads public, writes training.* -> SELECT only.
     # F3 (Cross-AI): no sequence grant — nerve_anon_worker is SELECT-only on public.transcript_segments; it never calls nextval.
     op.execute("GRANT SELECT ON public.transcript_segments TO nerve_anon_worker")
