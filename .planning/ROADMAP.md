@@ -1766,3 +1766,31 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Depends on:** Phase 08.23.2.G/MEET Wave 3 (training-Schema-Foundation)
 **Komplexität:** 🟡 (kleiner als ursprünglich geplant, weil Schema-Foundation schon in G/MEET)
 **Blocker für:** Fine-Tuning-Iterationen (langfristig)
+
+---
+
+## Backlog
+
+> Unsequenzierte Ideen (999.x), noch nicht in der aktiven Phasen-Reihenfolge. Promoten via `/gsd-review-backlog`.
+
+### Phase 999.1: Admin-Nutzerverwaltung + Login-Härtung (BACKLOG)
+
+**Goal:** Eine Backend-Maske mit der Andre selbst User anlegen kann, plus ein Audit ob echte User sich vor dem EA-Launch sauber einloggen können.
+
+**Side-Feature — Admin-Nutzerverwaltung:**
+- Backend-Maske zum User-Anlegen (Admin-only)
+- "Passwort generieren"-Knopf (sicheres Zufalls-Passwort)
+- Automatische Willkommens-Mail an die eingetragene Adresse (mit Zugangsdaten / Login-Weg)
+- Auswahl beim Anlegen: regulärer Account vs. Test-Account (`is_test_user`-Flag setzen)
+
+**Launch-relevant — Login-Härtung (Pre-EA-Launch-Audit):**
+- Login-Bereich wirkt fehlerhaft → vor EA-Launch prüfen ob echte User (Passwort-Login + OAuth Google/Microsoft) sich sauber einloggen können. Edge-Cases: falsches Passwort, nicht-bestätigte Email, OAuth-Erstanmeldung.
+
+**Hintergrund:** Der Test-Account `andre-test@nerve.local` wurde in Phase 08.23.2.D.UX.0 direkt in der Datenbank angelegt — OHNE Login-Weg (kein OAuth-Konto, kein gesetztes Passwort). Dadurch ist er real nicht einloggbar. Live-Tests mit dem Test-User brauchen entweder einen gesetzten Passwort-Login oder die Admin-Maske oben.
+
+**Requirements:** TBD
+**Komplexität:** 🟡 (vermutlich — Admin-Maske + Mail-Versand + Login-Audit; finalisieren in Spec/Discuss)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
