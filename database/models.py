@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, date
-from sqlalchemy import Column, Integer, BigInteger, SmallInteger, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric, CheckConstraint, Index, text, JSON
+from sqlalchemy import Column, Integer, BigInteger, SmallInteger, String, Boolean, DateTime, Text, ForeignKey, Float, Date, UniqueConstraint, Numeric, CheckConstraint, Index, text, JSON, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
 from database.db import Base
@@ -722,7 +722,11 @@ class TranscriptSegment(Base):
     ts_ms               = Column(Integer, nullable=False)        # ms ab Call-Start, fuer Reihenfolge
     speaker             = Column(Text, nullable=False)           # 'berater'|'kunde'|'system'
     text                = Column(Text, nullable=False)           # anonymisierter Text (Pipeline B)
-    created_at          = Column(DateTime(timezone=True), server_default=text('now()'))
+    # WICHTIG: das Spalten-Attribut `text` ueberdeckt im Klassen-Koerper die importierte
+    # sqlalchemy-Funktion `text` -> server_default=text('now()') wuerde das Column-Objekt
+    # aufrufen (TypeError). Daher func.now() (Modul-Ebene, nicht ueberdeckt). DDL-Aequivalent
+    # zur Migration 0010 `DEFAULT now()` (CLAUDE.md Punkt 21 ORM/DDL-Konsistenz).
+    created_at          = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         CheckConstraint("speaker IN ('berater', 'kunde', 'system')", name='ck_transcript_segments_speaker'),
         Index('idx_transcript_segments_conv_ts', 'conversation_log_id', 'ts_ms'),
