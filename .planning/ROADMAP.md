@@ -1657,7 +1657,7 @@ Plans:
 
 WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werden (D.UX.0 belegt 0008). transcript_segments-GRANT gehört in 0009, nicht 0008.
 
-### Phase 08.23.2.D.UX.1: Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix (NEU 2026-05-28, aus D.UX-Live-Test-Bug-Befund) 🟡
+### Phase 08.23.2.D.UX.1: Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix (NEU 2026-05-28, aus D.UX-Live-Test-Bug-Befund) 🔴
 
 **Goal:** Drei Bugs eine Wurzel fixen damit D.UX-Outcome-Modal tatsächlich funktioniert.
 
@@ -1676,8 +1676,15 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Pflicht-Patterns:** CLAUDE.md Punkt 7 Cross-AI (🟡 mittel), Punkt 14 Pre-Insert-Audit, **Punkt 21 NEU (Cross-Layer-Audit-Pflicht):** Persistenz-Schicht-Verifikation für conversation_logs UND calls UND alle Tabellen die TXT-Logging-Code anfasst. Plan MUSS Sektion `## 5. Persistenz-Schicht-Verifikation` mit inspect.sh-Output für jede angefasste Tabelle + Cross-Layer-Konsistenz-Tabelle enthalten.
 
 **Depends on:** Phase 08.23.2.D.UX ✅ 2026-05-28 (technisch fertig, Live-Test-Bug muss aber zuerst hier gefixt werden)
-**Komplexität:** 🟡 mittel (DB-Migration + Backend-Edit + Frontend-Edit + DSGVO-Doku)
+**Komplexität:** 🔴 komplex (DB-Migration 0010 + DSGVO/Cascade-Delete + Schema + FE+BE multi-layer — Cross-AI Pflicht vor Execute)
 **Blocker für:** D.UX-UAT-Pass, Phase 08.23.2.D.UX.2 (Transcript-Reiter braucht DB-Persistierung), Phase 08.23.2.E (DPO-Sammler nutzt log_entries als Trainings-Korpus-Input)
+
+**Plans:** 5 plans (3 waves) — geplant 2026-05-30 (🔴 Cross-AI-Review PFLICHT vor Execute)
+- [ ] 08.23.2.D.UX.1-01-PLAN.md — Bug-A-Foundation: Migration 0010 transcript_segments + TranscriptSegment-Model + [BLOCKING] migration-apply [DA-01/02/03, DD-01, DP-01; wave 1]
+- [ ] 08.23.2.D.UX.1-02-PLAN.md — Bug-A Write-Pfad: api_beenden transcript_segments INSERT (speaker/ts_ms-Transform + Idempotenz) + training.transcript_archive Background-Doppel-Write [DA-04/06, DP-02; wave 2, depends 01]
+- [ ] 08.23.2.D.UX.1-03-PLAN.md — Bug-A Read-Pfad + Bug B: learning.py DB-Read statt getattr + Schwellen-Rewrite (Best-Guess behalten) + confidence=0 Telemetrie [DA-05, DB-01/02/03/04, DP-02; wave 2, depends 01]
+- [ ] 08.23.2.D.UX.1-04-PLAN.md — Bug C: pip-launcher.js _decideModalState 4-Zustaende + 3 Call-Sites + Jest-Tests [DC-01/02/03/04; wave 1]
+- [ ] 08.23.2.D.UX.1-05-PLAN.md — DSGVO + Re-Test: Soft-Delete-Gap-Entscheidung + audit log_action + DSGVO-Doku Sektion 7 + Live-Re-Test [DD-01/02/03/04, DP-01/02, DT-01/02/03; wave 3, depends 01-04]
 
 ### Phase 08.23.2.D.UX.2: Transcript-Reiter UI im PiP + Auswertung + Dashboard (NEU 2026-05-28, Andre-Feature-Wunsch) 🟡
 

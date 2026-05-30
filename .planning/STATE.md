@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9.4
 milestone_name: milestone
-status: In Progress
-stopped_at: Phase 08.23.2.D.UX.0 Plan 04 abgeschlossen — Phase 08.23.2.D.UX.0 vollstaendig (4/4 Plans done)
-last_updated: "2026-05-29T15:25:00.000Z"
-last_activity: 2026-05-29 -- Plan 04 abgeschlossen — DSGVO Analyse.md um IONOS-AVV (Sektion 2.3) + Drei-Schichten-Backup-Strategie (neue Sektion 9) ergaenzt
+status: Ready to execute
+stopped_at: Phase 08.23.2.D.UX.1 geplant — 5 Plans in 3 Waves, Plan-Checker PASSED (Iteration 2). Cross-AI-Review PFLICHT (🔴) vor Execute.
+last_updated: "2026-05-30T10:00:00.000Z"
+last_activity: 2026-05-30 -- Phase 08.23.2.D.UX.1 geplant (Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix). 5 PLAN.md erstellt, verifiziert (2 Blocker gefixt in Revision-Iteration 1, PASSED Iteration 2). Naechster Schritt: /gsd-review --phase 08.23.2.D.UX.1 --all
 progress:
   total_phases: 84
   completed_phases: 55
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 08.23.2.D.UX.0 — VOLLSTAENDIG (4/4 Plans done)
-Next: Naechste Phase gemaess Roadmap
-Last activity: 2026-05-29 -- Plan 04 abgeschlossen — DSGVO Analyse.md um IONOS-AVV (Sektion 2.3) + Drei-Schichten-Backup-Strategie (neue Sektion 9) ergaenzt. Vault-Datei ausserhalb Git-Repo, keine Code-Commits.
+Phase: 08.23.2.D.UX.1 — GEPLANT, bereit fuer Cross-AI-Review (5 Plans, 3 Waves)
+Next: /gsd-review --phase 08.23.2.D.UX.1 --all (🔴 PFLICHT vor Execute), dann /gsd-plan-phase 08.23.2.D.UX.1 --reviews, dann /gsd-execute-phase
+Last activity: 2026-05-30 -- Phase 08.23.2.D.UX.1 geplant (Transcript-Persistence + Outcome-Force-Wahl-Bug-Fix). 5 PLAN.md erstellt + verifiziert (Plan-Checker PASSED Iteration 2; 2 Blocker in Revision gefixt: confidence=0-Emit-Pfad + Node-Test-Toolchain). Multi-Segment-Phase-ID — Pfade hardcoded, gsd-tools umgangen.
 
 **Phase 08.23.2.D.UX.0 Plan 04 abgeschlossen:** DSGVO-Dokumentations-Pflicht erfuellt. NERVE DSGVO Analyse.md in zwei Bereichen additiv erweitert: (1) IONOS SE AVV in Sektion 2.3 (AVV-Tabelle + Detail-Block mit Anbieter, AVV-Datum 2026-05-29, Endpoint eu-central-4, Scope training.*, Jurisdiktion DE, AVV-Status gruen); (2) neue Sektion 9 Drei-Schichten-Backup-Strategie (Schicht 1 Lokal/30d, Schicht 2 Hetzner Box/90d, Schicht 3 IONOS WORM/365d) mit Begruendung warum nur training.* IONOS verlaesst (Write-Time-Filter-Contract C-03 + bewusste Klartext-Nicht-Streuung). PowerShell-Check: IONOS (16 Treffer) + training vorhanden, keine Secrets. SUMMARY: 08.23.2.D.UX.0-04-SUMMARY.md.
 
