@@ -370,6 +370,15 @@ def api_beenden():
             except Exception:
                 pass
 
+        # ── DA-06 (training.transcript_archive Doppel-Write) BEWUSST VERSCHOBEN ───────
+        # Entscheidung Andre 2026-05-30: Der anonymisierte Trainings-Archiv-Doppelschreib
+        # wird NICHT in D.UX.1 implementiert. Grund: die Live-App verbindet als nerve_app,
+        # das hat KEINE Rechte auf das training-Schema (nur postgres + nerve_anon_worker) —
+        # ein Direkt-Insert wuerde 'permission denied' werfen. Der einzige Konsument
+        # (Phase 08.23.2.E DPO-Sammler) existiert noch nicht. DA-06 wird mit Phase E gebaut,
+        # wo entweder nerve_anon_worker-Connection oder ein dedizierter Worker schreibt.
+        # public.transcript_segments (oben) ist der eigentliche Bug-A-Fix und reicht fuer D.UX.1.
+
         # POLISH-38 (Haupt-Fix): Re-aggregate counters from ObjectionEvent (authoritative source).
         # cf38589 set einwaende_gesamt=len(ewb_clicks) initially - defensive fallback.
         # Here we overwrite with the DB-truth: einwaende_behandelt becomes SUM(success)
