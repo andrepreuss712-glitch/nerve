@@ -1979,8 +1979,7 @@
       if (holdFired) return;
       holdFired = true;
       _resetHoldVisual();
-      console.log('[DBG-UX4] hold fired -> endCall()');
-      try { endCall(); } catch (e) { console.error('[DBG-UX4] endCall THREW:', e); }
+      try { endCall(); } catch (e) { console.error('[NerveLauncher] endCall err:', e); }
     }
 
     pipWindow.document.addEventListener('pointerdown', function (ev) {
@@ -3019,7 +3018,6 @@
   }
 
   function endCall() {
-    console.log('[DBG-UX4] endCall ENTER mode=' + state.mode + ' micStarted=' + state.micStarted + ' lastCallId=' + state.lastCallId);
     _stopTimer();
     _stopMic();
     // B-01: Mic stoppt sofort, Live-UI sofort weg.
@@ -3028,9 +3026,7 @@
     // 08.23.2.D.UX.4 (LB-01): ehrlicher Ladebalken 1 statt Score-Skeleton.
     // Score-Render kommt erst nach Confirm (Task 2/3). Postcall-Section bleibt
     // versteckt (F9 — _showLadebalken1 setzt display:none).
-    console.log('[DBG-UX4] post-reset, calling _showLadebalken1()');
     _showLadebalken1();
-    console.log('[DBG-UX4] LB1 shown, fetching /api/beenden');
 
     var endCallGen = (state.callGen = (state.callGen || 0) + 1);
     fetch('/api/beenden', {
@@ -3045,7 +3041,6 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        console.log('[DBG-UX4] beenden resp ok=' + (data && data.ok) + ' conv=' + (data && data.conv_id) + ' call=' + (data && data.call_id) + ' stale=' + (state.callGen !== endCallGen) + ' micStarted=' + state.micStarted);
         if (state.callGen !== endCallGen || state.micStarted) {
           console.log('[NerveLauncher] Beenden response stale (neue Session läuft) — verworfen');
           return;
@@ -3093,7 +3088,6 @@
         var lb1Timeout = setTimeout(function () {
           if (state.callGen !== endCallGen) return;            // Stale-Guard (Landmine 2)
           haikuTimedOut = true;
-          console.log('[DBG-UX4] 9s TIMEOUT fired -> renderOutcomeUx(kein_versuch)');
           _hideLadebalken1();
           _renderOutcomeUx({ outcome: null, confidence: 0, source: null, call_id: state.lastCallId });
           // HIGH-2 Defence-in-depth: Timeout-Screen sofort idempotent gegen Late-Haiku.
@@ -3129,7 +3123,6 @@
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (paResult) {
               clearTimeout(lb1Timeout);
-              console.log('[DBG-UX4] postcall_outcome resp call_id=' + (paResult && paResult.call_id) + ' outcome=' + (paResult && paResult.outcome) + ' timedOut=' + haikuTimedOut + ' stale=' + (state.callGen !== endCallGen));
               if (state.callGen !== endCallGen) return;   // Stale-Guard (Landmine 2)
               if (haikuTimedOut) return;                  // Late-Haiku darf Timeout-Screen NICHT ueberschreiben (Landmine 1)
               _hideLadebalken1();
@@ -3853,7 +3846,6 @@
     : function () { return 'unsicher'; };  // defensiver Fallback falls Helper-Script fehlt
 
   function _renderOutcomeUx(data) {
-    console.log('[DBG-UX4] _renderOutcomeUx ENTER outcome=' + (data && data.outcome) + ' source=' + (data && data.source) + ' call_id=' + (data && data.call_id));
     // NEW-1/F5 (BLOCKER): alle Lookups + Section-Erzeugung PiP-aware. Bare document
     // trifft im PiP-Modus das Haupt-Fenster -> Outcome-Screen waere fuer den User unsichtbar.
     var _doc = (state.pipWindow && !state.pipWindow.closed) ? state.pipWindow.document : document;
@@ -4023,11 +4015,9 @@
           outcome_source: outcomeSource,
         }),
       })
-      .then(function(r) { try { console.log('[DBG-UX4] correct_outcome HTTP=' + r.status + ' ok=' + r.ok); } catch(_){} return r.ok ? r.json() : null; })
+      .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(json) {
-        try { console.log('[DBG-UX4] confirm response callId=' + callId + ' selOutcome=' + selectedOutcome + ' json.ok=' + (json && json.ok) + ' final_score=' + (json && json.final_score)); } catch(_){}
         if (!json || !json.ok) {
-          console.warn('[DBG-UX4] correct_outcome NOT ok — json=', json);
           // MEDIUM-3: Hard-Error -> Button wieder freigeben fuer erneuten Versuch.
           confirmBtn.textContent = 'Konnte nicht speichern – bitte erneut auf Bestätigen tippen.';
           confirmBtn.disabled = false;
@@ -4039,7 +4029,6 @@
         // ── S-03 (Task 3): Score + Basis-Analytics SOFORT zusammen, PiP-aware + null-safe.
         // Reveal der postcall-Section ist der EINZIGE Ort (F9 — Score-Hide-Owner).
         var _scoreSec = pipEl('nlp-section-postcall');
-        try { console.log('[DBG-UX4] scoreSec found=' + !!_scoreSec + ' innerHTMLlen=' + (_scoreSec ? _scoreSec.innerHTML.length : -1) + ' inPiPdoc=' + (_scoreSec && state.pipWindow && !state.pipWindow.closed ? (_scoreSec.ownerDocument === state.pipWindow.document) : 'noPiP')); } catch(_){}
         if (_scoreSec) _scoreSec.style.display = '';
         // FIX: Score-Karten-Kinder wieder einblenden, die _showLadebalken1 bis Confirm versteckt hatte.
         if (_scoreSec) {
@@ -4049,7 +4038,6 @@
         // Score aus json.final_score (S-01, kein _calcScore). Haengt NICHT an pendingPostcall.
         if (json.final_score !== undefined && json.final_score !== null) {
           var scoreEl = pipEl('nlp-postcall-score');
-          try { console.log('[DBG-UX4] scoreEl found=' + !!scoreEl); } catch(_){}
           if (scoreEl) {
             scoreEl.style.display = '';
             scoreEl.textContent = String(json.final_score) + '%';
@@ -4070,7 +4058,6 @@
         // Basis-Analytics (Kaufbereitschaft / Redeanteil / Einwaende) — NULL-SAFE.
         // state.pendingPostcall kann am Confirm-Zeitpunkt undefined sein (Timeout/Race/Stale).
         var _pp = state.pendingPostcall;
-        try { console.log('[DBG-UX4] pendingPostcall present=' + !!_pp + ' quickstatsEl=' + !!pipEl('nlp-postcall-quickstats')); } catch(_){}
         if (_pp) {
           _renderQuickStats(_pp);   // PiP-aware, zeigt Einwaende/Redeanteil/Dauer/Skript-Tiles
           _renderSparkline(_pp);
