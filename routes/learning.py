@@ -186,6 +186,237 @@ def api_postcall_analysis():
         return jsonify({'ok': False, 'error': 'internal error'}), 500
 
 
+# ── Phase 08.23.2.D.UX.4-02: Postcall-Split ────────────────────────────────
+# /api/postcall_analysis (Monolith oben) wird in zwei Endpoints aufgeteilt:
+#   /api/postcall_outcome — NUR Haiku-Klassifikation (schnell, treibt Outcome-Screen)
+#   /api/postcall_cards   — NUR Sonnet generate_postcall_analysis (background, persistiert LearningCards)
+# Der Monolith /api/postcall_analysis bleibt als Backward-Compat-Shim erhalten (siehe SHIM-DEBT-NOTIZ Task 2).
+
+
+@learning_bp.route('/api/postcall_outcome', methods=['POST'])
+@login_required
+def api_postcall_outcome():
+    """D.UX.4-02 (L-04/B-01): Schneller Haiku-only Outcome-Endpoint — KEIN Sonnet.
+
+    Inhalt = Block B (Haiku-Klassifikation + calls-UPDATE) + Block C (outcome_ready-Emit)
+    des heutigen Monolithen, OHNE Block A (Sonnet). Treibt Ladebalken 1 (Outcome-Screen)
+    ohne auf die langsame Lernkarten-Generierung zu warten. Aeusserer try/except (F11)
+    spiegelt den Monolith-Soft-Error (learning.py:182-186): eine Haiku-/DB-Exception
+    crasht den Endpoint nicht hart, sondern liefert sanften 500 + Traceback-Log.
+    """
+    data = request.get_json(force=True)
+    conv_id = data.get('conv_id')
+    if not conv_id:
+        return jsonify({'error': 'conv_id required'}), 400
+
+    # T-04.11-02 / T-UX4-05: Ownership-Check — conv_id gehoert dem requesting User
+    from database.db import get_session
+    from database.models import ConversationLog
+    db_check = get_session()
+    try:
+        conv = db_check.query(ConversationLog).filter_by(
+            id=conv_id, user_id=g.user.id
+        ).first()
+        if not conv:
+            return jsonify({'error': 'not found'}), 404
+    finally:
+        db_check.close()
+
+    try:
+        # -- Block B (Haiku-Outcome-Classifier + calls-UPDATE) — KEIN Sonnet hier --
+        _posted_call_id = data.get('call_id') if isinstance(data, dict) else None
+        _outcome_val = None
+        _outcome_conf = 0.0
+        _outcome_source_val = None
+        if _posted_call_id:
+            # Conv-Data fuer Classifier zusammenbauen
+            _db_cls = get_session()
+            try:
+                _conv = _db_cls.query(ConversationLog).filter(
+                    ConversationLog.id == conv_id,
+                    ConversationLog.user_id == g.user.id,
+                ).first()
+                if _conv is not None:
+                    _conv_data = {
+                        'dauer_sekunden': data.get('dauer_sek', 0) or 0,
+                        'erreichte_phase': getattr(_conv, 'erreichte_phase', None),
+                        'einwaende_liste': data.get('einwaende', []),
+                        'ewb_clicks': [],
+                        'kb_endwert': data.get('kb_end', 0) or 0,
+                        'log_entries': [],
+                    }
+                    # D.UX.1 (Bug A Fix, DA-05): log_entries kommen aus der DB-Tabelle
+                    # transcript_segments — NICHT aus einem getattr-Lesepfad auf eine
+                    # nie existierende Spalte (Bug-A-Wurzel: conversation_logs hat diese
+                    # Spalte nicht). F2 (Cross-AI Gemini): stabile Zwei-Spalten-Ordnung
+                    # (ts_ms, id). id=BIGSERIAL=Insert-Reihenfolge=temporale Ordnung —
+                    # korrekter Sekundaerschluessel bei ts_ms-Ties.
+                    segments = (_db_cls.query(TranscriptSegment)
+                                .filter(TranscriptSegment.conversation_log_id == _conv.id)
+                                .order_by(TranscriptSegment.ts_ms, TranscriptSegment.id)
+                                .all())
+                    _conv_data['log_entries'] = [
+                        {'ts_ms': s.ts_ms, 'speaker': s.speaker, 'text': s.text}
+                        for s in segments
+                    ]
+                    if not segments:
+                        print(f'[D.UX.1] no transcript_segments for conv={_conv.id} (empty transcript or pre-0010 call)')
+
+                    _result = outcome_service.classify(_conv_data)
+                    _outcome_val = _result.get('outcome')
+                    _outcome_conf = float(_result.get('confidence', 0.0))
+
+                    # Schwellenlogik (D.UX.1 Bug B Fix — DB-01/02/03). Thresholds unveraendert.
+                    # ck_calls_outcome_source erlaubt ai_auto / ai_auto_unsicher / user_corrected
+                    # -> keine Constraint-Aenderung. Reihenfolge: == 0 ZUERST testen.
+                    if _outcome_conf == 0:
+                        # Kein Klassifizierungs-Versuch: leeres Transcript / API-Timeout / Parse-Fehler.
+                        _outcome_val = None
+                        _outcome_source_val = None
+                        # DB-04 Telemetrie: lokal ableitbarer Fehler-Typ.
+                        _fail_type = 'empty_transcript' if not _conv_data.get('log_entries') else 'classify_zero'
+                        print(f'[D.UX.1] classify() confidence=0 fail_type={_fail_type} conv={_conv.id}')
+                    elif _outcome_conf < 0.70:
+                        # Haiku unsicher: Best-Guess BEHALTEN (DB-02), NICHT auf None setzen.
+                        _outcome_source_val = 'ai_auto_unsicher'
+                    elif _outcome_conf < 0.90:
+                        _outcome_source_val = 'ai_auto_unsicher'  # bestehende D.UX-Logik (0.70..0.90)
+                    else:
+                        _outcome_source_val = 'ai_auto'           # bestehende D.UX-Logik (>= 0.90)
+            finally:
+                _db_cls.close()
+
+            # UPDATE calls (separate Session) — Guard unveraendert vom Monolith
+            if _outcome_val is not None or _outcome_conf > 0.0:
+                _db_upd = get_session()
+                try:
+                    _call_row = _db_upd.query(Call).filter(
+                        Call.id == _posted_call_id,
+                        Call.user_id == g.user.id,
+                    ).first()
+                    if _call_row is not None:
+                        if _outcome_val is not None:
+                            _call_row.outcome = _outcome_val
+                            _call_row.outcome_confidence = _outcome_conf
+                            _call_row.outcome_source = _outcome_source_val
+                        else:
+                            # Niedrige Confidence: confidence trotzdem speichern fuer Statistik
+                            _call_row.outcome_confidence = _outcome_conf
+                        _db_upd.commit()
+                except Exception as _e_cu:
+                    print(f'[Phase08.23.2.D] postcall calls-UPDATE Fehler: {_e_cu}')
+                    _db_upd.rollback()
+                finally:
+                    _db_upd.close()
+
+            # -- Block C: SocketIO emit 'outcome_ready' — NUR room-targeted, KEIN broadcast --
+            if _sio_phase_d is not None:
+                try:
+                    _sid_for_emit = None
+                    with ls._session_state_lock:
+                        for _sid, _sd in ls._session_state.items():
+                            if str(_sd.get('state', {}).get('call_id')) == str(_posted_call_id):
+                                _sid_for_emit = _sid
+                                break
+                    if _sid_for_emit:
+                        # BLOCKER-1: emit fires even for confidence=0 (outcome/source null) so FE
+                        # _decideModalState Zustand 1 rendern kann. SIBLING des calls-UPDATE-Write-
+                        # Guards — haengt NICHT von (_outcome_val or _outcome_conf) ab, nur von
+                        # SocketIO + aktiver SID. NICHT in den Write-Guard verschieben (LB-04).
+                        _payload = {
+                            'outcome': _outcome_val,
+                            'confidence': round(_outcome_conf, 3),
+                            'source': _outcome_source_val,
+                            'call_id': str(_posted_call_id),
+                        }
+                        _sio_phase_d.emit('outcome_ready', _payload, room=_sid_for_emit)
+                    # else: KEINE aktive SID - SKIP emit. Frontend nutzt /api/calls/latest_outcome
+                    # (D-04e Fallback-Pull). Broadcast ist verboten (multi-user-leaky).
+                except Exception as _e_em:
+                    print(f'[Phase08.23.2.D] outcome_ready emit Fehler: {_e_em}')
+
+        # BLOCKER-1 (belt-and-suspenders): unconditional response — traegt den confidence=0-Fall
+        # ({outcome:null, source:null, call_id}) fuer den no-active-SID Fallback. KEIN
+        # (_outcome_val||_outcome_conf)-Guard. KEIN 'vorschlaege'-Key (gehoert zu /api/postcall_cards).
+        return jsonify({
+            'outcome': _outcome_val,
+            'confidence': round(_outcome_conf, 3) if _outcome_conf else 0.0,
+            'source': _outcome_source_val,
+            'call_id': str(_posted_call_id) if _posted_call_id else None,
+        })
+    except Exception as _e:
+        # F11 (Claudian-Audit / T-UX4-18): aeusserer Soft-Error wie Monolith (learning.py:182-186).
+        # Eine Haiku-/DB-Exception crasht den Endpoint nicht hart -> sanfter 500 + Traceback-Log.
+        import traceback
+        traceback.print_exc()
+        print(f"[Learning] api_postcall_outcome Fehler: {_e}")
+        return jsonify({'ok': False, 'error': 'internal error'}), 500
+
+
+@learning_bp.route('/api/postcall_cards', methods=['POST'])
+@login_required
+def api_postcall_cards():
+    """D.UX.4-02 (L-04): Sonnet-only Cards-Endpoint — persistiert LearningCards.
+
+    Inhalt = NUR Block A (Sonnet generate_postcall_analysis) des heutigen Monolithen.
+    Wird vom Frontend (Plan 03) im HINTERGRUND direkt nach dem Beenden getriggert
+    (fire-and-forget), UNABHAENGIG vom Outcome-Confirm.
+
+    CONFIRM-UNABHAENGIGKEIT (Claudian-Audit NEW-2): generate_postcall_analysis
+    PERSISTIERT LearningCard-Rows (coaching_service.py:115-130, status='vorschlag',
+    keyed call_id=conv_id) BEVOR es vorschlaege zurueckgibt. Wuerde der Trigger am
+    Outcome-Confirm haengen und der User bricht den Outcome-Screen ab, persistieren
+    0 LearningCards = stille Daten-Regression vs. heutigem Monolith (der die Karten
+    immer am Beenden persistiert hat). Der idempotente duplicate-guard
+    (coaching_service.py:60-68: existieren bereits LearningCards fuer die conv_id ->
+    Sonnet skip, [] zurueck) macht mehrfache Aufrufe sicher. Das Frontend verwirft die
+    Response (Option 3, kein PiP-Render). Dieser Endpoint selbst ist confirm-agnostisch —
+    die Trigger-Disziplin liegt im Frontend (Plan 03).
+    """
+    data = request.get_json(force=True)
+    conv_id = data.get('conv_id')
+    if not conv_id:
+        return jsonify({'error': 'conv_id required'}), 400
+
+    # T-04.11-02 / T-UX4-05: Ownership-Check — conv_id gehoert dem requesting User
+    from database.db import get_session
+    from database.models import ConversationLog
+    db_check = get_session()
+    try:
+        conv = db_check.query(ConversationLog).filter_by(
+            id=conv_id, user_id=g.user.id
+        ).first()
+        if not conv:
+            return jsonify({'error': 'not found'}), 404
+    finally:
+        db_check.close()
+
+    try:
+        # -- Block A (Sonnet) — persistiert LearningCards via coaching_service --
+        from services.coaching_service import generate_postcall_analysis
+        suggestions = generate_postcall_analysis(
+            conv_id=conv_id,
+            user_id=g.user.id,
+            einwaende=data.get('einwaende', []),
+            painpoints=data.get('painpoints', []),
+            kb_start=data.get('kb_start', 30),
+            kb_end=data.get('kb_end', 30),
+            redeanteil_berater=data.get('redeanteil_berater', 50),
+            redeanteil_kunde=data.get('redeanteil_kunde', 50),
+            dauer_sek=data.get('dauer_sek', 0),
+            skript_abdeckung=data.get('skript_abdeckung', 0),
+            ga_details=data.get('ga_details', []),
+            kaufsignale=data.get('kaufsignale', []),
+        )
+        return jsonify({'vorschlaege': suggestions})
+    except Exception as _e:
+        # F11: aeusserer Soft-Error wie Monolith (learning.py:182-186).
+        import traceback
+        traceback.print_exc()
+        print(f"[Learning] api_postcall_cards Fehler: {_e}")
+        return jsonify({'ok': False, 'error': 'internal error'}), 500
+
+
 @learning_bp.route('/api/learning_cards', methods=['GET'])
 @login_required
 def api_get_cards():
