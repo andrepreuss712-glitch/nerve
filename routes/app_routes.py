@@ -1956,15 +1956,24 @@ def api_calls_correct_outcome(call_id):
             new_followup_intent = None  # ignore invalid values
         if new_followup_intent is not None:
             row.followup_intent = new_followup_intent
-        # D.UX REQ-D.UX-11: Score-Berechnung + score_breakdown atomar persistieren
+        # D.UX REQ-D.UX-11 / 08.23.2.D.UX.4 (S-02): Stash-Read + Modifier-Anwendung.
+        # Normalfall: Prozess-Score wurde in /api/beenden gestasht (calls.score_breakdown
+        # mit 'process_score') -> hier nur noch Modifier anwenden, KEINE Doppelrechnung (L-01).
+        # Fallback (alter Call / kein Stash): Prozess-Score per _calc_process_score neu rechnen.
         from database.models import ConversationLog as _CLScore
         conv_for_score = None
         if row.conversation_log_id:
             conv_for_score = db_co.query(_CLScore).filter(_CLScore.id == row.conversation_log_id).first()
         try:
-            coaching_score_val, final_score_val, breakdown_data = _calc_coaching_score(conv_for_score, new_outcome)
+            base_bd = dict(row.score_breakdown or {})
+            if 'process_score' in base_bd:
+                process_score = base_bd['process_score']
+            else:
+                process_score, base_bd = _calc_process_score(conv_for_score)  # Fallback: Stash-Miss
+            coaching_score_val, final_score_val, breakdown_data = _apply_outcome_modifier(
+                process_score, base_bd, new_outcome)
         except Exception as _e_score:
-            print(f'[Phase08.23.2.D.UX] _calc_coaching_score Fehler: {_e_score}')
+            print(f'[08.23.2.D.UX.4] correct_outcome score Fehler: {_e_score}')
             coaching_score_val, final_score_val, breakdown_data = 0.0, 0, {}
         row.coaching_score = coaching_score_val
         row.score_breakdown = breakdown_data
