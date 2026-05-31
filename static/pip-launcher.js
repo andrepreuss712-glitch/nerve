@@ -4004,9 +4004,11 @@
           outcome_source: outcomeSource,
         }),
       })
-      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(r) { try { console.log('[DBG-UX4] correct_outcome HTTP=' + r.status + ' ok=' + r.ok); } catch(_){} return r.ok ? r.json() : null; })
       .then(function(json) {
+        try { console.log('[DBG-UX4] confirm response callId=' + callId + ' selOutcome=' + selectedOutcome + ' json.ok=' + (json && json.ok) + ' final_score=' + (json && json.final_score)); } catch(_){}
         if (!json || !json.ok) {
+          console.warn('[DBG-UX4] correct_outcome NOT ok — json=', json);
           // MEDIUM-3: Hard-Error -> Button wieder freigeben fuer erneuten Versuch.
           confirmBtn.textContent = 'Konnte nicht speichern – bitte erneut auf Bestätigen tippen.';
           confirmBtn.disabled = false;
@@ -4018,11 +4020,13 @@
         // ── S-03 (Task 3): Score + Basis-Analytics SOFORT zusammen, PiP-aware + null-safe.
         // Reveal der postcall-Section ist der EINZIGE Ort (F9 — Score-Hide-Owner).
         var _scoreSec = pipEl('nlp-section-postcall');
+        try { console.log('[DBG-UX4] scoreSec found=' + !!_scoreSec + ' innerHTMLlen=' + (_scoreSec ? _scoreSec.innerHTML.length : -1) + ' inPiPdoc=' + (_scoreSec && state.pipWindow && !state.pipWindow.closed ? (_scoreSec.ownerDocument === state.pipWindow.document) : 'noPiP')); } catch(_){}
         if (_scoreSec) _scoreSec.style.display = '';
 
         // Score aus json.final_score (S-01, kein _calcScore). Haengt NICHT an pendingPostcall.
         if (json.final_score !== undefined && json.final_score !== null) {
           var scoreEl = pipEl('nlp-postcall-score');
+          try { console.log('[DBG-UX4] scoreEl found=' + !!scoreEl); } catch(_){}
           if (scoreEl) {
             scoreEl.style.display = '';
             scoreEl.textContent = String(json.final_score) + '%';
@@ -4043,6 +4047,7 @@
         // Basis-Analytics (Kaufbereitschaft / Redeanteil / Einwaende) — NULL-SAFE.
         // state.pendingPostcall kann am Confirm-Zeitpunkt undefined sein (Timeout/Race/Stale).
         var _pp = state.pendingPostcall;
+        try { console.log('[DBG-UX4] pendingPostcall present=' + !!_pp + ' quickstatsEl=' + !!pipEl('nlp-postcall-quickstats')); } catch(_){}
         if (_pp) {
           _renderQuickStats(_pp);   // PiP-aware, zeigt Einwaende/Redeanteil/Dauer/Skript-Tiles
           _renderSparkline(_pp);
