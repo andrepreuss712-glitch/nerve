@@ -3829,17 +3829,19 @@
     : function () { return 'unsicher'; };  // defensiver Fallback falls Helper-Script fehlt
 
   function _renderOutcomeUx(data) {
-    // Idempotenz-Guard (D.UX constraint — beibehalten)
-    var sec = document.getElementById('pip-outcome-section');
+    // NEW-1/F5 (BLOCKER): alle Lookups + Section-Erzeugung PiP-aware. Bare document
+    // trifft im PiP-Modus das Haupt-Fenster -> Outcome-Screen waere fuer den User unsichtbar.
+    var _doc = (state.pipWindow && !state.pipWindow.closed) ? state.pipWindow.document : document;
+    var sec = pipEl('pip-outcome-section');
     if (!sec) {
-      var host = document.getElementById('pip-postcall') || document.querySelector('#nlp-section-postcall') || document.body;
-      sec = document.createElement('div');
+      var host = pipEl('pip-postcall') || _doc.querySelector('#nlp-section-postcall') || _doc.body;
+      sec = _doc.createElement('div');
       sec.id = 'pip-outcome-section';
       sec.className = 'n-glass pip-outcome-section';
       host.appendChild(sec);
     }
+    // Idempotenz-Guard (D.UX constraint — beibehalten, jetzt auf der PiP-sec)
     if (sec.dataset.outcomeRendered === '1') return;
-    sec.dataset.outcomeRendered = '1';
     sec.innerHTML = '';
 
     var haikuOutcome = data.outcome;
@@ -3852,67 +3854,87 @@
     var modalState = _decideModalState(data);
 
     // ── Header ───────────────────────────────────────────────────────────────
-    var header = document.createElement('div');
+    var header = _doc.createElement('div');
     header.className = 'pip-outcome-header';
-    header.textContent = 'Gesprächsergebnis bestätigen';
+    header.textContent = 'Call wirklich beenden?';   // B-01: der Screen IST die Bestaetigung
     sec.appendChild(header);
 
+    // HIGH-2: outcomeRendered='1' BRANCH-UNABHAENGIG setzen — sodass auch der
+    // kein_versuch-/Timeout-Branch ihn setzt und ein Late-Haiku-Socket-Emit den
+    // bereits gerenderten Screen NICHT mehr ueberschreibt. NICHT in einen state-Zweig packen.
+    sec.dataset.outcomeRendered = '1';
+
     // ── Zustand 5 'final' (F1): Reconnect auf bereits finalisierten Call ──────
-    // Read-only Anzeige des vom User gewaehlten Outcomes. KEIN "KI unsicher"-Badge,
-    // KEIN "Automatische Erkennung nicht verfügbar"-Text, kein erneuter Confirm.
+    // Read-only Anzeige des vom User gewaehlten Outcomes. KEIN Disclaimer, kein erneuter Confirm.
     if (modalState === 'final') {
-      var finalSummary = document.createElement('div');
+      var finalSummary = _doc.createElement('div');
       finalSummary.className = 'pip-outcome-summary';  // Teal — wiederverwendet (WARN-1, kein neuer Style)
       finalSummary.textContent = '✓ ' + escHtml(_outcomeLabelDe(haikuOutcome));
       sec.appendChild(finalSummary);
       return;
     }
 
-    // State: welches Outcome gerade ausgewaehlt ist — Vorauswahl NUR bei 'sicher'
+    // State: welches Outcome gerade fuer Confirm ausgewaehlt ist — NUR bei 'sicher'.
     var selectedOutcome = (modalState === 'sicher' && haikuOutcome) ? haikuOutcome : null;
+    // U-01: bei 'unsicher' wird der Haiku-Vorschlag ROT vorausgewaehlt (Optik), zaehlt
+    // aber NICHT als bestaetigbar — Confirm bleibt disabled bis aktiver Tap.
+    var presetUnsicher = (modalState === 'unsicher' && haikuOutcome) ? haikuOutcome : null;
 
-    // ── Unsicher-Badge nur bei Zustand 3+4 ('unsicher') ──────────────────────
+    // ── Disclaimer nur bei 'unsicher' (U-01) ─────────────────────────────────
+    // Ersetzt den alten Teal-Outline-Badge 'KI unsicher — bitte wählen' (U-04 supersedes D.UX.1).
     if (modalState === 'unsicher') {
-      var badge = document.createElement('div');
-      badge.className = 'pip-outcome-badge-unsicher';  // Teal-Outline — NICHT gelb (CLAUDE.md HART Punkt 8)
-      badge.textContent = 'KI unsicher — bitte wählen';
-      sec.appendChild(badge);
+      var disclaimer = _doc.createElement('div');
+      disclaimer.className = 'pip-outcome-disclaimer';  // var(--btn-danger-text), Token-only (Task 3)
+      disclaimer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" '
+        + 'viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" '
+        + 'stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>'
+        + '<path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
+        + '<span>KI unsicher, bitte prüfen</span>';
+      sec.appendChild(disclaimer);
     }
 
     // ── Hint nur bei Zustand 1 ('kein_versuch', confidence===0) ──────────────
     if (modalState === 'kein_versuch') {
-      var hint = document.createElement('div');
+      var hint = _doc.createElement('div');
       hint.className = 'pip-outcome-hint';  // var(--page-text-secondary) — kein inline Color (WARN-1)
       hint.textContent = 'Automatische Erkennung nicht verfügbar';
       sec.appendChild(hint);
     }
 
     // ── 7 Buttons ────────────────────────────────────────────────────────────
-    var grid = document.createElement('div');
+    var grid = _doc.createElement('div');
     grid.className = 'pip-outcome-btn-grid';
     var btnEls = {};
     var confirmBtn; // forward-ref fuer click-Handler
 
     _OUTCOME_OPTS.forEach(function(pair) {
-      var btn = document.createElement('button');
+      var btn = _doc.createElement('button');
       btn.type = 'button';
       btn.className = 'n-btn-ghost pip-outcome-btn';
       btn.dataset.value = pair[0];
       btn.textContent = escHtml(pair[1]);
       btn.style.minHeight = '44px';  // Touch-Target min 44px
 
-      // Pre-select Haiku-Vorschlag wenn conf >= 0.70
+      // 'sicher': teal Vorauswahl (bestaetigbar).
       if (pair[0] === selectedOutcome) {
         btn.classList.add('pip-outcome-btn--selected');
       }
+      // 'unsicher': ROTE Vorauswahl (Optik) — NICHT bestaetigbar bis aktiver Tap (U-01).
+      if (pair[0] === presetUnsicher) {
+        btn.classList.add('pip-outcome-btn--selected-unsicher');
+      }
 
       btn.addEventListener('click', function() {
-        // Deselect alle anderen
+        // Deselect alle (BEIDE Vorauswahl-Klassen) — der aktive Tap ist der "bewusste Klick" (U-02).
         Object.keys(btnEls).forEach(function(k) {
           btnEls[k].classList.remove('pip-outcome-btn--selected');
+          btnEls[k].classList.remove('pip-outcome-btn--selected-unsicher');
         });
-        btn.classList.add('pip-outcome-btn--selected');
+        btn.classList.add('pip-outcome-btn--selected');  // immer teal nach aktivem Tap
         selectedOutcome = pair[0];
+        // Disclaimer-Zeile entfernen (falls vorhanden) — Unsicherheit ist aufgeloest.
+        var _dc = sec.querySelector('.pip-outcome-disclaimer');
+        if (_dc && _dc.parentNode) _dc.parentNode.removeChild(_dc);
         if (confirmBtn) {
           confirmBtn.disabled = false;
           confirmBtn.classList.remove('pip-outcome-btn--disabled');
@@ -3924,12 +3946,12 @@
     sec.appendChild(grid);
 
     // ── Bestätigen-Button ─────────────────────────────────────────────────────
-    confirmBtn = document.createElement('button');
+    confirmBtn = _doc.createElement('button');
     confirmBtn.type = 'button';
     confirmBtn.className = 'n-btn-primary pip-outcome-confirm-btn';
     confirmBtn.textContent = 'Bestätigen';
     confirmBtn.style.minHeight = '44px';
-    // Disabled wenn kein Outcome gewaehlt (conf < 0.70 und kein Klick)
+    // Disabled wenn kein bestaetigbares Outcome (unsicher/kein_versuch bis Tap); sofort aktiv bei 'sicher'.
     if (!selectedOutcome) {
       confirmBtn.disabled = true;
       confirmBtn.classList.add('pip-outcome-btn--disabled');
@@ -3938,7 +3960,9 @@
     confirmBtn.addEventListener('click', function() {
       if (confirmBtn.disabled) return;  // Doppelklick-Guard
       if (!selectedOutcome) return;
+      // MEDIUM-3 Submit-Lock: SOFORT sperren vor dem fetch — kein Double-Submit.
       confirmBtn.disabled = true;
+      confirmBtn.classList.add('pip-outcome-btn--disabled');
 
       // outcome_source Mapping per D-W3-06 (three-way logic):
       // State A (conf >= 0.90 + AI-Vorschlag): ai_auto
@@ -3955,7 +3979,7 @@
 
       var followupIntent = _deriveFollowupIntent(selectedOutcome);
 
-      // Spinner
+      // In-flight-Label (UI-SPEC)
       confirmBtn.textContent = 'Bewertung wird berechnet…';
 
       // CSRF null-check PFLICHT (TypeError wenn meta-Tag fehlt)
@@ -3977,31 +4001,61 @@
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(json) {
         if (!json || !json.ok) {
-          confirmBtn.textContent = 'Fehler — erneut versuchen';
+          // MEDIUM-3: Hard-Error -> Button wieder freigeben fuer erneuten Versuch.
+          confirmBtn.textContent = 'Konnte nicht speichern – bitte erneut auf Bestätigen tippen.';
           confirmBtn.disabled = false;
+          confirmBtn.classList.remove('pip-outcome-btn--disabled');
           return;
         }
-        // Score aufdecken (per D-W3-04 + D-W4-02)
-        var scoreSection = document.querySelector('#nlp-section-postcall');
-        if (scoreSection) scoreSection.style.display = '';
+        state.lastOutcome = json.outcome || selectedOutcome;
 
-        // final_score vom Server rendern (nicht lokal berechnen — per D-W4-02)
-        if (json.final_score !== undefined) {
-          var scoreEl = document.getElementById('nlp-postcall-score');
-          if (scoreEl) scoreEl.textContent = String(json.final_score) + '%';
+        // ── S-03 (Task 3): Score + Basis-Analytics SOFORT zusammen, PiP-aware + null-safe.
+        // Reveal der postcall-Section ist der EINZIGE Ort (F9 — Score-Hide-Owner).
+        var _scoreSec = pipEl('nlp-section-postcall');
+        if (_scoreSec) _scoreSec.style.display = '';
+
+        // Score aus json.final_score (S-01, kein _calcScore). Haengt NICHT an pendingPostcall.
+        if (json.final_score !== undefined && json.final_score !== null) {
+          var scoreEl = pipEl('nlp-postcall-score');
+          if (scoreEl) {
+            scoreEl.style.display = '';
+            scoreEl.textContent = String(json.final_score) + '%';
+            var _fs = +json.final_score;
+            scoreEl.style.color = (_fs >= 70) ? 'var(--session-score-high)'
+              : (_fs >= 40) ? 'var(--session-score-mid)'
+              : 'var(--session-score-low)';
+          }
+          var detailsBtn = pipEl('nlp-btn-details');
+          if (detailsBtn) { detailsBtn.style.display = ''; detailsBtn.disabled = false; }
+          // F9: Trend mit dem BESTAETIGTEN final_score fuettern (nicht _calcScore).
+          _fetchAndRenderTrend(json.final_score);
         }
 
-        // Outcome-Sektion zu 1-Zeiler kollabieren
+        // Basis-Analytics (Kaufbereitschaft / Redeanteil / Einwaende) — NULL-SAFE.
+        // state.pendingPostcall kann am Confirm-Zeitpunkt undefined sein (Timeout/Race/Stale).
+        var _pp = state.pendingPostcall;
+        if (_pp) {
+          _renderQuickStats(_pp);   // PiP-aware, zeigt Einwaende/Redeanteil/Dauer/Skript-Tiles
+          _renderSparkline(_pp);
+        } else {
+          // Fallback: Score-Karte allein, KPI-Block uebersprungen — KEIN Throw, KEIN undefined-Deref.
+          var _qs = pipEl('nlp-postcall-quickstats');
+          if (_qs) _qs.innerHTML = '';
+        }
+
+        // Outcome-Sektion zu 1-Zeiler kollabieren (terminaler Screen, B-03 — kein Back-to-Call).
         sec.innerHTML = '';
-        var summary = document.createElement('div');
+        var summary = _doc.createElement('div');
         summary.className = 'pip-outcome-summary';
         summary.textContent = '✓ ' + escHtml(_outcomeLabelDe(json.outcome || selectedOutcome));
         sec.appendChild(summary);
       })
       .catch(function(e) {
         console.error('[PhaseD.UX] correct_outcome POST Fehler:', e);
-        confirmBtn.textContent = 'Fehler — erneut versuchen';
+        // MEDIUM-3: Re-Enable im catch — erneuter Versuch moeglich, kein Double-Submit waehrend POST.
+        confirmBtn.textContent = 'Konnte nicht speichern – bitte erneut auf Bestätigen tippen.';
         confirmBtn.disabled = false;
+        confirmBtn.classList.remove('pip-outcome-btn--disabled');
       });
     });
     sec.appendChild(confirmBtn);

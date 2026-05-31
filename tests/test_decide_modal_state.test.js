@@ -36,3 +36,9 @@ test('Zustand 5 final when source user_corrected', () => {
   // F1: user_corrected ist autoritativ auch bei confidence 0 (beweist Branch-Ordering: final VOR conf===0).
   assert.strictEqual(_decideModalState({confidence: 0, source: 'user_corrected', outcome: 'meeting_booked'}), 'final');
 });
+
+test('08.23.2.D.UX.4: conf zero beats source (ai_auto + confidence 0 -> kein_versuch, Reihenfolge load-bearing)', () => {
+  // U-01-relevant: ein ai_auto-Vorschlag mit confidence 0 ist KEIN sicherer Outcome —
+  // conf===0 muss VOR dem ai_auto->sicher-Zweig greifen, sonst falsche Teal-Vorauswahl.
+  assert.strictEqual(_decideModalState({confidence: 0, source: 'ai_auto', outcome: 'meeting_booked'}), 'kein_versuch');
+});
