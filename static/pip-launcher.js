@@ -2977,9 +2977,20 @@
   // 08.23.2.D.UX.4 (LB-01) — Ladebalken 1: ehrlicher unbestimmter Spinner statt
   // Score-Skeleton. PiP-aware (Container via pipEl). KEIN Prozentbalken.
   function _showLadebalken1() {
-    // Postcall-Section bis Confirm versteckt halten (F9 — Score-Hide-Owner).
+    // FIX (Bug pip-score-empty-after-confirm): #nlp-section-postcall ist der SICHTBARE
+    // Container, in den Ladebalken 1 UND der Outcome-Screen (_renderOutcomeUx-Host) gerendert
+    // werden. Frueher wurde die ganze Section auf display:none gesetzt -> Ladebalken + Outcome-
+    // Screen unsichtbar -> User kann Bestaetigen nie klicken -> leeres PiP. Jetzt: Section
+    // SICHTBAR schalten, aber nur die Score-Karten-Kinder (Zahl/Label/Actions) bis Confirm
+    // verstecken (L-01/F9 — kein vorlaeufiger Score). Leere Kinder (trend/sparkline/quickstats/
+    // tags) blendet CSS :empty bereits aus.
     var sps = pipEl('nlp-section-postcall');
-    if (sps) sps.style.display = 'none';
+    if (sps) {
+      sps.style.display = 'flex';
+      var _scNum = pipEl('nlp-postcall-score'); if (_scNum) _scNum.style.display = 'none';
+      var _scLbl = sps.querySelector('.pip-postcall-label'); if (_scLbl) _scLbl.style.display = 'none';
+      var _scAct = sps.querySelector('.pip-postcall-actions'); if (_scAct) _scAct.style.display = 'none';
+    }
     // Live-Controls verstecken, Header verstecken — analog _showPostcallRaw, aber
     // ohne die Postcall-Section aufzudecken.
     ['nlp-btn-beenden', 'nlp-ewb-row', 'pip-section-live'].forEach(function (id) {
@@ -4030,6 +4041,10 @@
         var _scoreSec = pipEl('nlp-section-postcall');
         try { console.log('[DBG-UX4] scoreSec found=' + !!_scoreSec + ' innerHTMLlen=' + (_scoreSec ? _scoreSec.innerHTML.length : -1) + ' inPiPdoc=' + (_scoreSec && state.pipWindow && !state.pipWindow.closed ? (_scoreSec.ownerDocument === state.pipWindow.document) : 'noPiP')); } catch(_){}
         if (_scoreSec) _scoreSec.style.display = '';
+        // FIX: Score-Karten-Kinder wieder einblenden, die _showLadebalken1 bis Confirm versteckt hatte.
+        if (_scoreSec) {
+          var _actEl = _scoreSec.querySelector('.pip-postcall-actions'); if (_actEl) _actEl.style.display = '';
+        }
 
         // Score aus json.final_score (S-01, kein _calcScore). Haengt NICHT an pendingPostcall.
         if (json.final_score !== undefined && json.final_score !== null) {
@@ -4044,7 +4059,7 @@
               : 'var(--session-score-low)';
             // Score-Label auf den UI-SPEC-Copy-Contract setzen (PiP-aware via Sibling).
             var _lbl = scoreEl.parentNode ? scoreEl.parentNode.querySelector('.pip-postcall-label') : null;
-            if (_lbl) _lbl.textContent = 'Coaching-Score';
+            if (_lbl) { _lbl.style.display = ''; _lbl.textContent = 'Coaching-Score'; }
           }
           var detailsBtn = pipEl('nlp-btn-details');
           if (detailsBtn) { detailsBtn.style.display = ''; detailsBtn.disabled = false; }
