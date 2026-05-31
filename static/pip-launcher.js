@@ -1785,12 +1785,14 @@
       var t = ev.target;
       if (!t || typeof t.closest !== 'function') return;
 
+      // 08.23.2.D.UX.4 (B-02/F10): Single-Click auf Beenden beendet NICHT mehr —
+      // der Call endet ausschliesslich ueber 600ms Press-and-Hold (Pointer-Delegation
+      // unten) bzw. Keyboard-2nd-Press. Den click-Zweig hier nur noch konsumieren
+      // (preventDefault), damit kein Default-Verhalten feuert; KEIN endCall().
       var beenden = t.closest('#nlp-btn-beenden');
       if (beenden) {
         ev.preventDefault();
         ev.stopPropagation();
-        console.log('[NerveLauncher] Beenden click (delegation)');
-        try { endCall(); } catch (e) { console.error('[NerveLauncher] endCall err:', e); }
         return;
       }
 
@@ -1950,6 +1952,96 @@
       }
     }, true);  // capture phase — vor allen anderen Handlern
     console.log('[NerveLauncher] PiP click-delegation wired');
+
+    // ── 08.23.2.D.UX.4 (B-02/F10) — Beenden Hold-to-end, rebuild-sicher ─────────
+    // Pointer-Delegation auf dem PiP-Document (closest('#nlp-btn-beenden')) — ueberlebt
+    // jeden PiP-Rebuild (der Button-Knoten wird neu erzeugt, der Document-Listener nicht).
+    // KEIN one-time addEventListener auf dem Button-Element (F10). Hold-State in der
+    // _wirePipButtons-Closure, damit Doppel-Trigger (Click+Hold) ausgeschlossen ist.
+    var holdTimer = null;
+    var holdFired = false;
+    var keyArmedAt = 0;
+    var keyResetTimer = null;
+
+    function _beendenLabelEl() {
+      // Label-Span im Button ODER der Button selbst (Text wird ueberschrieben + restauriert)
+      var b = pipEl('nlp-btn-beenden');
+      return b || null;
+    }
+    function _resetHoldVisual() {
+      var b = pipEl('nlp-btn-beenden');
+      if (b) {
+        b.classList.remove('pip-beenden-holding');
+        b.textContent = 'Beenden';
+      }
+    }
+    function _fireEndCall() {
+      if (holdFired) return;
+      holdFired = true;
+      _resetHoldVisual();
+      try { endCall(); } catch (e) { console.error('[NerveLauncher] endCall err:', e); }
+    }
+
+    pipWindow.document.addEventListener('pointerdown', function (ev) {
+      var t = ev.target;
+      if (!t || typeof t.closest !== 'function') return;
+      if (!t.closest('#nlp-btn-beenden')) return;
+      ev.preventDefault();
+      holdFired = false;
+      var b = pipEl('nlp-btn-beenden');
+      if (b) {
+        b.classList.add('pip-beenden-holding');
+        b.textContent = 'Halten zum Beenden…';
+      }
+      if (holdTimer) { clearTimeout(holdTimer); }
+      holdTimer = setTimeout(function () {
+        holdTimer = null;
+        // 120ms solid-hover-Flash, dann endCall
+        var bb = pipEl('nlp-btn-beenden');
+        if (bb) bb.classList.add('pip-beenden-holding');
+        setTimeout(_fireEndCall, 120);
+      }, 600);
+    }, true);
+
+    function _cancelHold(ev) {
+      var t = ev && ev.target;
+      // pointerup/leave/cancel: nur abbrechen wenn noch nicht gefeuert
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+      if (!holdFired) { _resetHoldVisual(); }
+    }
+    pipWindow.document.addEventListener('pointerup', _cancelHold, true);
+    pipWindow.document.addEventListener('pointerleave', _cancelHold, true);
+    pipWindow.document.addEventListener('pointercancel', _cancelHold, true);
+
+    // Keyboard-Aequivalent (B-02): Enter/Space auf fokussiertem Beenden -> 2nd-Press binnen 2s.
+    pipWindow.document.addEventListener('keydown', function (ev) {
+      var t = ev.target;
+      if (!t || typeof t.closest !== 'function') return;
+      if (!t.closest('#nlp-btn-beenden')) return;
+      if (ev.key !== 'Enter' && ev.key !== ' ' && ev.key !== 'Spacebar') return;
+      ev.preventDefault();
+      var now = Date.now();
+      if (keyArmedAt && (now - keyArmedAt) <= 2000) {
+        // 2. Druck binnen 2s -> beenden
+        keyArmedAt = 0;
+        if (keyResetTimer) { clearTimeout(keyResetTimer); keyResetTimer = null; }
+        holdFired = false;
+        _fireEndCall();
+        return;
+      }
+      // 1. Druck: armen + Hinweis-Label
+      keyArmedAt = now;
+      var b = pipEl('nlp-btn-beenden');
+      if (b) b.textContent = 'Nochmal drücken zum Beenden';
+      if (keyResetTimer) { clearTimeout(keyResetTimer); }
+      keyResetTimer = setTimeout(function () {
+        keyArmedAt = 0;
+        keyResetTimer = null;
+        var bb = pipEl('nlp-btn-beenden');
+        if (bb) bb.textContent = 'Beenden';
+      }, 2000);
+    }, true);
+    console.log('[NerveLauncher] PiP beenden hold-delegation wired (B-02/F10)');
   }
 
   function _initPipLive() {
@@ -2072,6 +2164,9 @@
     // alte "Kein Gespräch erkannt"-View auf dem neuen Call liegen bleibt.
     var postcallSection = pipEl('nlp-section-postcall');
     if (postcallSection) postcallSection.style.display = 'none';
+    // 08.23.2.D.UX.4: Ladebalken-1-View des vorherigen Calls verstecken.
+    var lb1 = pipEl('pip-ladebalken1');
+    if (lb1) lb1.style.display = 'none';
     if (liveSection) liveSection.style.display = 'flex';
     if (beendenBtn) beendenBtn.style.display = 'inline-block';
     // 06.1-r2 BUG-13: Header wieder einblenden (Beenden wurde in _showPostcallRaw versteckt).
@@ -2465,8 +2560,8 @@
     // -- Phase 08.23.2.D D-04e - Reconnect-Fallback-Pull -----------------
     state.socket.on('connect', function () {
       if (state.lastCallId) {
-        // Nur abfragen wenn aktuell keine UX im PostCall-Overlay aktiv
-        var sec = document.getElementById('pip-outcome-section');
+        // Nur abfragen wenn aktuell keine UX im PostCall-Overlay aktiv (F5: PiP-aware)
+        var sec = pipEl('pip-outcome-section');
         if (sec && sec.dataset.outcomeRendered === '1') return;
         fetch('/api/calls/latest_outcome?call_id=' + encodeURIComponent(state.lastCallId))
           .then(function (r) { return r.ok ? r.json() : null; })
@@ -2808,6 +2903,11 @@
   // MUST NOT touch: state.lastConvId (needed for Details-link), state.profileDaten,
   //                 state.skripte, state.selectedSkriptId, state.precallFormData, state.socket.
   function _resetLiveState() {
+    // 08.23.2.D.UX.4 (NEW-5): Postcall-/Call-Zustand nullen, damit nichts in den
+    // naechsten Call leckt. lastCallId wurde bisher nur am Call-START genullt (Z.1449);
+    // pendingPostcall (neu in dieser Phase) wurde NIRGENDS genullt.
+    state.pendingPostcall = null;
+    state.lastCallId = null;
     // 1. Timer: stop interval AND reset DOM to 00:00 immediately (fixes 1s display lag)
     _stopTimer();
     state.sessionSeconds = 0;
@@ -2873,26 +2973,50 @@
   }
 
   // ── End Call ───────────────────────────────────────────────────────────────
+  // 08.23.2.D.UX.4 (LB-01) — Ladebalken 1: ehrlicher unbestimmter Spinner statt
+  // Score-Skeleton. PiP-aware (Container via pipEl). KEIN Prozentbalken.
+  function _showLadebalken1() {
+    // Postcall-Section bis Confirm versteckt halten (F9 — Score-Hide-Owner).
+    var sps = pipEl('nlp-section-postcall');
+    if (sps) sps.style.display = 'none';
+    // Live-Controls verstecken, Header verstecken — analog _showPostcallRaw, aber
+    // ohne die Postcall-Section aufzudecken.
+    ['nlp-btn-beenden', 'nlp-ewb-row', 'pip-section-live'].forEach(function (id) {
+      var el = pipEl(id);
+      if (el) el.style.display = 'none';
+    });
+    var pipHeader = pipEl('pip-header');
+    if (pipHeader) pipHeader.style.display = 'none';
+    // Ladebalken-1-View in den Live-Container-Host rendern (PiP-Fenster).
+    var doc = (state.pipWindow && !state.pipWindow.closed) ? state.pipWindow.document : document;
+    var host = pipEl('pip-postcall') || pipEl('nlp-section-postcall') || doc.body;
+    var lb = pipEl('pip-ladebalken1');
+    if (!lb) {
+      lb = doc.createElement('div');
+      lb.id = 'pip-ladebalken1';
+      lb.className = 'pip-ladebalken1';
+      if (host) host.appendChild(lb);
+    }
+    lb.style.display = 'flex';
+    lb.innerHTML = '<div class="pip-loading-spinner" aria-label="Auswertung laeuft"></div>'
+      + '<div class="pip-ladebalken1-text">KI wertet das Gespräch aus…</div>';
+  }
+  function _hideLadebalken1() {
+    var lb = pipEl('pip-ladebalken1');
+    if (lb) lb.style.display = 'none';
+  }
+
   function endCall() {
     _stopTimer();
     _stopMic();
-    // Architecture fix: reset all live UI state before showing postcall section.
-    // Postcall appears over a clean live-UI — eliminates stale DOM/timer/slot bleed-through
-    // that caused BUG-11 alternating aborts and symptom-3 slot/timer leaks.
+    // B-01: Mic stoppt sofort, Live-UI sofort weg.
     _resetLiveState();
 
-    // 06.1-r2 BUG-9: UI SOFORT umschalten mit Loading-Skeleton. Backend-Response
-    // füllt Score/Tags nachträglich.
-    // BUG-15b: KEIN resizeTo auf Postcall — Chrome merkt sich die zuletzt gesetzte
-    // PiP-Größe und ignoriert spätere requestWindow-Hints. PiP bleibt bei 480x900,
-    // Postcall-Content wird im bestehenden Fenster zentriert.
-    _showPostcallLoading();
+    // 08.23.2.D.UX.4 (LB-01): ehrlicher Ladebalken 1 statt Score-Skeleton.
+    // Score-Render kommt erst nach Confirm (Task 2/3). Postcall-Section bleibt
+    // versteckt (F9 — _showLadebalken1 setzt display:none).
+    _showLadebalken1();
 
-    // BUG-11 r5 ROOT CAUSE: endCall fetch kann spät resolven während bereits ein
-    // neuer Call läuft. Dann würde _showPostcall die Postcall-Section über die
-    // Live-UI legen, der User klickt "Nächster Call" aus altem Postcall und killt
-    // so den aktiven Call. Capture-Generation beim Fetch-Start, abbrechen wenn
-    // inzwischen ein neuer Call gestartet ist (micStarted wieder true).
     var endCallGen = (state.callGen = (state.callGen || 0) + 1);
     fetch('/api/beenden', {
       method: 'POST',
@@ -2910,25 +3034,63 @@
           console.log('[NerveLauncher] Beenden response stale (neue Session läuft) — verworfen');
           return;
         }
-        if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); _showPostcallEmpty(); return; }
+        if (!data.ok) { console.error('[NerveLauncher] Beenden error:', data.error); _hideLadebalken1(); _showPostcallEmpty(); return; }
         state.lastConvId = data.conv_id || null;
         state.lastCallId = data.call_id || null; // Phase 08.23.2.D REQ-D-4: Fallback-Pull
-        if (data.postcall) {
-          _showPostcall(data.postcall);
-        } else {
-          _showPostcallEmpty();
+        // 08.23.2.D.UX.4 (S-03): Postcall NICHT mehr hier rendern — zwischenspeichern,
+        // Basis-Analytics erscheinen zusammen mit dem Score nach Confirm (Task 3).
+        // HINWEIS: nur auf dem Erfolgs-/Non-Stale-Pfad gesetzt; bei Timeout/Stale/Race
+        // bleibt es undefined -> Task 3 rendert KPI null-safe.
+        state.pendingPostcall = data.postcall || null;
+
+        var _pc = data.postcall || {};
+
+        // 08.23.2.D.UX.4 (NEW-2 / Option 3): Sonnet-Lernkarten im HINTERGRUND triggern,
+        // unabhaengig vom spaeteren Confirm. Response wird VERWORFEN (kein PiP-Render).
+        // So persistieren LearningCards auch wenn der User den Outcome-Screen abbricht.
+        if (state.lastConvId && state.lastCallId) {
+          fetch('/api/postcall_cards', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            body: JSON.stringify({
+              conv_id: state.lastConvId,
+              call_id: state.lastCallId,
+              einwaende: _pc.einwaende || [],
+              painpoints: _pc.painpoints || [],
+              kb_start: _pc.kb_start || 30,
+              kb_end: _pc.kb_end || 30,
+              redeanteil_berater: _pc.redeanteil_berater || 50,
+              redeanteil_kunde: _pc.redeanteil_kunde || 50,
+              dauer_sek: _pc.dauer_sek || _pc.dauer || 0,
+              skript_abdeckung: _pc.skript_abdeckung || 0,
+              ga_details: _pc.ga_details || [],
+              kaufsignale: _pc.kaufsignale || []
+            })
+          })
+            .then(function () {})  // Response bewusst verworfen (Option 3)
+            .catch(function () {});
         }
 
-        // Phase 08.23.2.D Hotfix 2026-05-27 — /api/postcall_analysis Trigger.
-        // Plan 05 baut den Endpoint aus (Sonnet-Lernkarten + Haiku-Outcome-Classifier),
-        // aber kein Caller im Frontend hat ihn bisher getriggert. Folge: outcome-Felder
-        // blieben in allen Calls NULL, weil Haiku nie lief.
-        // Plus Plan 05 Response enthaelt outcome+confidence+source → wenn SocketIO-Emit
-        // verloren geht (z.B. weil _session_state schon leer), nutzen wir die Response
-        // als direkten Render-Pfad.
+        // 08.23.2.D.UX.4 (LB-02 + HIGH-2 + F5): 9s-Timeout VOR dem Outcome-Fetch armen.
+        var haikuTimedOut = false;
+        var lb1Timeout = setTimeout(function () {
+          if (state.callGen !== endCallGen) return;            // Stale-Guard (Landmine 2)
+          haikuTimedOut = true;
+          _hideLadebalken1();
+          _renderOutcomeUx({ outcome: null, confidence: 0, source: null, call_id: state.lastCallId });
+          // HIGH-2 Defence-in-depth: Timeout-Screen sofort idempotent gegen Late-Haiku.
+          // F5: KORREKTE ID 'pip-outcome-section', PiP-aware via pipEl (NICHT bare,
+          // NICHT 'nlp-outcome-section').
+          try {
+            var _sec = pipEl('pip-outcome-section');
+            if (_sec) _sec.dataset.outcomeRendered = '1';
+          } catch (_e) {}
+        }, 9000);
+
+        // 08.23.2.D.UX.4 (Plan 02): schneller Haiku-Outcome statt postcall_analysis-Monolith.
         if (state.lastConvId && state.lastCallId) {
-          var _pc = data.postcall || {};
-          fetch('/api/postcall_analysis', {
+          fetch('/api/postcall_outcome', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
@@ -2949,14 +3111,11 @@
           })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (paResult) {
-              if (!paResult) return;
-              // Phase D Fallback-Render: wenn SocketIO-Emit den Browser nicht erreicht hat
-              // (z.B. _session_state schon leer beim Emit-Zeitpunkt), Response-basiert rendern.
-              var sec = document.getElementById('pip-outcome-section');
-              if (sec && sec.dataset.outcomeRendered === '1') return; // schon gerendert
-              // D.UX.1 (Bug-C Fix): kein (outcome||source)-Guard mehr — Modal rendert
-              // auch bei outcome/source null (Zustand 1 'kein_versuch'). call_id reicht.
-              if (paResult.call_id) {
+              clearTimeout(lb1Timeout);
+              if (state.callGen !== endCallGen) return;   // Stale-Guard (Landmine 2)
+              if (haikuTimedOut) return;                  // Late-Haiku darf Timeout-Screen NICHT ueberschreiben (Landmine 1)
+              _hideLadebalken1();
+              if (paResult && paResult.call_id) {
                 _renderOutcomeUx({
                   outcome: paResult.outcome,
                   confidence: paResult.confidence,
@@ -2965,7 +3124,9 @@
                 });
               }
             })
-            .catch(function (e) { console.log('[NerveLauncher] postcall_analysis Trigger Fehler (non-fatal):', e); });
+            .catch(function (e) { console.log('[NerveLauncher] postcall_outcome Trigger Fehler (non-fatal):', e); });
+        } else {
+          clearTimeout(lb1Timeout);
         }
       })
       .catch(function (err) {
@@ -2974,6 +3135,7 @@
           return;
         }
         console.error('[NerveLauncher] Beenden fetch error:', err);
+        _hideLadebalken1();
         _showPostcallEmpty();
       });
   }
