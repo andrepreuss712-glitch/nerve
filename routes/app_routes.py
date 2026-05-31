@@ -613,6 +613,21 @@ def api_beenden():
                 _req_mode = (req_data.get('session_mode') if isinstance(req_data, dict) else None) or 'meeting'
                 # call_mode CHECK-Constraint erlaubt nur 'cold_call' und 'meeting_consented'
                 _call_row.call_mode = 'cold_call' if _req_mode == 'cold_call' else 'meeting_consented'
+                # Phase 08.23.2.D.UX.4 (S-02): Prozess-Score vorab stashen.
+                # Liest die voll befuellte ConversationLog-Row (Aggregate sind bereits
+                # committed Z.~322 + ~403, BEVOR dieser calls-UPDATE-Block laeuft -> HIGH-1).
+                # coaching_score bleibt NULL bis zum Confirm (correct_outcome wendet Modifier an).
+                try:
+                    from database.models import ConversationLog as _CLBeenden
+                    _conv_bd = (
+                        _db_calls.query(_CLBeenden).filter(_CLBeenden.id == saved_conv_id).first()
+                        if saved_conv_id else None
+                    )
+                    _proc_score, _base_bd = _calc_process_score(_conv_bd)
+                    _call_row.score_breakdown = _base_bd
+                    _call_row.score_schema_version = 1
+                except Exception as _e_stash:
+                    print(f'[08.23.2.D.UX.4] process-score stash Fehler: {_e_stash}')
                 _db_calls.commit()
         except Exception as _e_upd:
             print(f'[Phase08.23.2.D] calls-UPDATE Fehler: {_e_upd}')
