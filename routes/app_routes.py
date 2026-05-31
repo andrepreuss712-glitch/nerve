@@ -717,17 +717,16 @@ _OUTCOME_MODIFIERS = {
 }
 
 
-def _calc_coaching_score(conv, outcome):
-    """D.UX REQ-D.UX-11: coaching_score mit Outcome-Multiplikator.
+def _calc_process_score(conv):
+    """Phase 08.23.2.D.UX.4 (S-02): outcome-UNABHAENGIGER Prozess-Score.
 
     Formel: process_score = kb*0.30 + behandelt*0.30 + redeanteil*0.20 + skript*0.10 + frage*0.10
-    frage_qualitaet = 0 in v1.
-    final_score = clamp(round(process_score * modifier), 0, 100).
+    frage_qualitaet = 0 in v1. Nimmt KEIN outcome-Argument — kann vorab (z.B. im
+    Beenden-Pfad) gerechnet + gestasht werden.
 
-    Returns: (coaching_score_float, final_score_int, breakdown_dict)
-    coaching_score und final_score sind beide auf 0-100 Skala (konsistent).
+    Returns: (process_score_float, base_breakdown_dict) — base_breakdown enthaelt
+    NUR die outcome-unabhaengigen Keys (kein outcome_modifier/final_score/computed_at_iso).
     """
-    from datetime import datetime, timezone as _tz_score
     kb_norm = float(conv.kb_end if conv is not None and conv.kb_end is not None else 30)
     einw_total = (conv.einwaende_gesamt or 0) if conv is not None else 0
     einw_ok = (conv.einwaende_behandelt or 0) if conv is not None else 0
@@ -744,24 +743,52 @@ def _calc_coaching_score(conv, outcome):
         + skript * 0.10
         + frage_qualitaet * 0.10
     )
-    modifier = _OUTCOME_MODIFIERS.get(outcome, 1.00)
-    raw = process_score * modifier
-    final_score = int(min(100, max(0, round(raw))))
-    coaching_score_val = round(raw, 4)  # 0-100 Skala, konsistent mit final_score
-
-    breakdown = {
+    base_breakdown = {
         'schema_version': 1,
         'kb_end_norm': round(kb_norm, 4),
         'behandelt_rate': round(behandelt_rate, 4),
         'redeanteil_score': round(redeanteil_score, 4),
         'skript_norm': round(skript, 4),
         'frage_qualitaet': frage_qualitaet,
-        'outcome_modifier': modifier,
         'process_score': round(process_score, 4),
+    }
+    return process_score, base_breakdown
+
+
+def _apply_outcome_modifier(process_score, base_breakdown, outcome):
+    """Phase 08.23.2.D.UX.4 (S-02): wendet NUR den Outcome-Modifier auf den
+    (bereits gerechneten) Prozess-Score an. Wird beim Confirm aufgerufen.
+
+    Returns: (coaching_score_float, final_score_int, full_breakdown_dict)
+    full_breakdown = base_breakdown + outcome_modifier/final_score/computed_at_iso
+    (identische Keys wie der alte monolithische _calc_coaching_score).
+    """
+    from datetime import datetime, timezone as _tz_score
+    modifier = _OUTCOME_MODIFIERS.get(outcome, 1.00)
+    raw = process_score * modifier
+    final_score = int(min(100, max(0, round(raw))))
+    coaching_score_val = round(raw, 4)  # 0-100 Skala, konsistent mit final_score
+
+    full = dict(base_breakdown)
+    full.update({
+        'outcome_modifier': modifier,
         'final_score': final_score,
         'computed_at_iso': datetime.now(_tz_score.utc).isoformat(),
-    }
-    return (coaching_score_val, final_score, breakdown)
+    })
+    return coaching_score_val, final_score, full
+
+
+def _calc_coaching_score(conv, outcome):
+    """D.UX REQ-D.UX-11: coaching_score mit Outcome-Multiplikator.
+
+    Thin-Wrapper fuer Rueckwaerts-Kompatibilitaet (bestehende Caller/Tests erwarten
+    diese Signatur + 3-Tupel-Return mit identischen breakdown-Keys). Delegiert an
+    _calc_process_score + _apply_outcome_modifier (S-02-Split).
+
+    Returns: (coaching_score_float, final_score_int, breakdown_dict)
+    """
+    process_score, base_bd = _calc_process_score(conv)
+    return _apply_outcome_modifier(process_score, base_bd, outcome)
 
 
 # ========================================================================
