@@ -3203,16 +3203,18 @@
       _showPostcallEmpty();
       return;
     }
-    // D-W3-04: Score-Sektion initial verstecken bis Outcome-Confirm (Phase 08.23.2.D.UX-05)
-    var scoreSection = document.querySelector('#nlp-section-postcall');
+    // D-W3-04: Score-Sektion initial verstecken bis Outcome-Confirm (F5/NEW-1: PiP-aware).
+    var scoreSection = pipEl('nlp-section-postcall');
     if (scoreSection) scoreSection.style.display = 'none';
-    var score = _calcScore(postcall);
+    // 08.23.2.D.UX.4 (L-01): KEIN vorlaeufiger _calcScore mehr im Render-Pfad.
+    // Der angezeigte Score kommt ausschliesslich aus der correct_outcome-Response nach
+    // Confirm (S-01). Hier nur Tags/Sparkline/QuickStats; KEIN _fetchAndRenderTrend(score)
+    // mit dem _calcScore-Wert (F9 — der Trend-Feed sitzt jetzt im confirm-handler mit final_score).
     var tags = _buildTags(postcall);
-    _showPostcallRaw(score + '%', tags);
+    _showPostcallRaw('', tags);
     // POLISH-22: Trend + Sparkline + QuickStats zusätzlich rendern
     _renderQuickStats(postcall);
     _renderSparkline(postcall);
-    _fetchAndRenderTrend(score);
   }
 
   // ── POLISH-22 v2: Kaufbereitschafts-Chart mit Achsen + Gitterlinien ─────
@@ -3343,8 +3345,12 @@
     var skript = (pc.skript_abdeckung || {}).gesamt_prozent || 0;
     var skriptStr = skript > 0 ? skript + '%' : '–';
     var skriptAccent = skript >= 80;
+    // 08.23.2.D.UX.4 (S-03): Kaufbereitschaft (kb_end) als Basis-Analytics-Tile.
+    var kbEnd = (typeof pc.kb_end === 'number') ? pc.kb_end : null;
+    var kbStr = (kbEnd !== null) ? kbEnd + '%' : '–';
 
     el.innerHTML = [
+      '<div class="pip-quickstat"><div class="pip-quickstat-value">' + escHtml(kbStr) + '</div><div class="pip-quickstat-label">Kaufbereitschaft</div></div>',
       '<div class="pip-quickstat"><div class="pip-quickstat-value">' + escHtml(dauerStr) + '</div><div class="pip-quickstat-label">Dauer</div></div>',
       '<div class="pip-quickstat"><div class="pip-quickstat-value">' + escHtml(einwStr) + '</div><div class="pip-quickstat-label">Einwände</div></div>',
       '<div class="pip-quickstat pip-quickstat-split">'
@@ -4024,6 +4030,9 @@
             scoreEl.style.color = (_fs >= 70) ? 'var(--session-score-high)'
               : (_fs >= 40) ? 'var(--session-score-mid)'
               : 'var(--session-score-low)';
+            // Score-Label auf den UI-SPEC-Copy-Contract setzen (PiP-aware via Sibling).
+            var _lbl = scoreEl.parentNode ? scoreEl.parentNode.querySelector('.pip-postcall-label') : null;
+            if (_lbl) _lbl.textContent = 'Coaching-Score';
           }
           var detailsBtn = pipEl('nlp-btn-details');
           if (detailsBtn) { detailsBtn.style.display = ''; detailsBtn.disabled = false; }

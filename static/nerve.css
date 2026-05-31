@@ -3332,6 +3332,57 @@ input[type="range"].perf-slider::-moz-range-thumb {
     margin-top: 4px;
 }
 
+/* 08.23.2.D.UX.4 (U-01) — ROTE Vorauswahl bei 'unsicher'. Token-only (CLAUDE.md Punkt 8). */
+.pip-outcome-btn--selected-unsicher {
+    border: 1.5px solid var(--btn-danger-text);
+    background: var(--btn-danger-bg);
+    color: var(--btn-danger-text);
+    font-weight: 600;
+}
+
+/* 08.23.2.D.UX.4 (U-01) — Disclaimer 'KI unsicher, bitte prüfen'. Token-only, kein Background. */
+.pip-outcome-disclaimer {
+    color: var(--btn-danger-text);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 08.23.2.D.UX.4 (B-02) — rote Progress-Wipe-Optik fuer den 600ms-Hold. Danger-Tokens, kein Teal. */
+.pip-beenden-holding {
+    background: linear-gradient(90deg, var(--btn-danger-text) 0%, var(--btn-danger-bg) 100%) !important;
+    color: var(--btn-danger-text-hover) !important;
+    border-color: var(--btn-danger-text) !important;
+}
+
+/* 08.23.2.D.UX.4 (LB-01) — Ladebalken 1: unbestimmter Spinner, KEIN Prozentbalken.
+   Bewusst nur EINE Spinner-Klasse — Option 3 baut keinen zweiten Ladebalken im PiP. */
+.pip-ladebalken1 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 100%;
+    padding: 20px 16px;
+    box-sizing: border-box;
+}
+.pip-ladebalken1-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--page-text, #e6e6ec);
+    text-align: center;
+}
+.pip-loading-spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--btn-primary-bg-from, #00D4AA);
+    animation: n-pulse 1.2s ease-in-out infinite;
+}
+
 .pip-outcome-summary {
     font-size: 13px;
     font-weight: 600;
