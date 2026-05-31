@@ -1727,7 +1727,7 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Komplexität:** 🟢 trivial-mittel (Whitelist-Config + Konfidenz-Tuning, keine Architektur-Änderung)
 **Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler — Trainings-Daten würden sonst durch Over-Anonymisierung verzerrt)
 
-### Phase 08.23.2.D.UX.4: Call-Ende-Ablauf-Redesign — Ergebnis-vor-Score (NEU 2026-05-30, aus D.UX.1-Live-Test) 🟡 ▶ NÄCHSTE PHASE
+### Phase 08.23.2.D.UX.4: Call-Ende-Ablauf-Redesign — Ergebnis-vor-Score (NEU 2026-05-30, aus D.UX.1-Live-Test) 🟡 ✅ COMPLETE 2026-05-31
 
 **Goal:** Reihenfolge beim Auflegen umdrehen — erst Outcome bestätigen, dann Score EINMAL sauber rechnen+zeigen. Plus Outcome-Abfrage sofort im PiP statt verzögert im Dashboard-Auswertungs-Ladebildschirm.
 
@@ -1749,11 +1749,11 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Komplexität:** 🟡 mittel — Reihenfolge-Umbau Frontend (PiP) + Backend-Score-Trigger, keine Schema-Änderung
 **Blocker für:** keine direkten. **Priorität vor D.UX.2/.3** (dort keine harte Abhängigkeit).
 **Koordination mit D.UX.2:** neuen Post-Call-Score-Screen so bauen, dass D.UX.2 später Transkript-Knopf/ausklappbares Panel dranhängen kann (Platz lassen, kein Umbau) — Anti-Abrieb.
-**Plans:** 3 plans (2 Waves) — geplant 2026-05-31
+**Plans:** 3 plans (2 Waves) — geplant 2026-05-31, ✅ ausgeführt + deployed + UAT PASS 2026-05-31. Cross-AI (Gemini) + Claudian-Pre-Execute-Audit + 1 Live-UAT-Bug (leeres PiP: _showLadebalken1 versteckte den Outcome-Container → gefixt, Section sichtbar). Option-3-Scope: keine Karten/Ladebalken-2 im PiP (Sonnet laeuft im Hintergrund, persistiert LearningCards). Deploy: manual-direct-prod (tar-over-ssh, kein git pull — Prod ist tar-deployed mit .git excluded).
 Plans:
-- [ ] 08.23.2.D.UX.4-01-PLAN.md — Backend Score-Split: _calc_process_score + _apply_outcome_modifier, Beenden-Stash, correct_outcome-Rewire [S-02/S-01/L-01; wave 1]
-- [ ] 08.23.2.D.UX.4-02-PLAN.md — Backend Postcall-Split: /api/postcall_outcome (Haiku schnell) + /api/postcall_cards (Sonnet post-confirm) [L-04/LB-04/B-01; wave 1]
-- [ ] 08.23.2.D.UX.4-03-PLAN.md — Frontend Reorder: Hold-to-end (B-02), Ladebalken 1+2, Outcome-Screen 3 States (U-01 rot), Score+Analytics S-03, _calcScore raus (L-01) [alle FE-IDs; wave 2]
+- [x] 08.23.2.D.UX.4-01-PLAN.md — Backend Score-Split: _calc_process_score + _apply_outcome_modifier, Beenden-Stash, correct_outcome-Rewire [S-02/S-01/L-01; wave 1] ✅
+- [x] 08.23.2.D.UX.4-02-PLAN.md — Backend Postcall-Split: /api/postcall_outcome (Haiku schnell) + /api/postcall_cards (Sonnet, confirm-unabhaengig im Hintergrund) [L-04/LB-04/B-01; wave 1] ✅
+- [x] 08.23.2.D.UX.4-03-PLAN.md — Frontend Reorder: Hold-to-end (B-02), Ladebalken 1 (Option-3: kein Ladebalken-2/keine Karten im PiP), Outcome-Screen 3 States (U-01 rot), Score+Analytics S-03 (pipEl), _calcScore raus (L-01) [alle FE-IDs; wave 2] ✅
 
 ### Phase 08.23.2.ART17: Art. 17 Hard-Delete — echtes PII-Löschen (NEU 2026-05-30, promotet aus D.UX.1-Folge-Item) 🔴 START-BLOCKER vor EA-Launch
 
