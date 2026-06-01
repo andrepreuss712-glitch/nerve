@@ -26,7 +26,7 @@ def _csv_response(rows: list, headers: list, filename: str):
     writer.writerow(headers)
     for row in rows:
         writer.writerow(row)
-    data = '﻿' + buf.getvalue()  # BOM for Excel
+    data = '\ufeff' + buf.getvalue()  # UTF-8 BOM for Excel
     return Response(data, mimetype='text/csv; charset=utf-8', headers={
         'Content-Disposition': f'attachment; filename={filename}'
     })
