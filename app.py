@@ -2153,6 +2153,8 @@ from routes.admin_dashboard import admin_dashboard_bp
 from routes.learning       import learning_bp
 # Phase 08 Plan 06:
 from routes.admin_ewb      import admin_ewb_bp
+# Phase 08.23.2.G-MEET Wave 2: CRM CSV export (tenant-scoped via RLS)
+from routes.crm_export     import crm_export_bp
 
 app.register_blueprint(feedback_bp)
 app.register_blueprint(admin_dashboard_bp)
@@ -2174,6 +2176,7 @@ app.register_blueprint(legal_bp)
 app.register_blueprint(performance_bp)
 app.register_blueprint(oauth_bp)
 app.register_blueprint(learning_bp)
+app.register_blueprint(crm_export_bp)
 init_oauth(app)
 
 # ── CSRF-Exempts für externe Endpoints ────────────────────────────────────────

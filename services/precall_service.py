@@ -14,7 +14,7 @@ import config
 from config import BRAVE_SEARCH_API_KEY
 from services.claude_service import claude_client
 from database.db import get_session
-from database.models import ProfileOpener
+from database.models import ProfileOpener, AccountMemory
 
 BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
 
@@ -152,7 +152,53 @@ POSITIVES BEISPIEL (Few-Shot)
 """
 
 
-def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None, user_id=None, profile_id=None, sid: str = None):
+# ── Phase 08.23.2.G-MEET Wave 2 — account_memory Pre-Call-Briefing extension (D-13/D-14) ──
+
+def merge_account_memory(briefing: dict, account_id, anonymizer_cache=None) -> dict:
+    """Read crm.account_memory for the given account and merge MEDDPICC + context_hooks +
+    last_call_summary into the briefing dict (USP — the Pre-Call-Briefing surfaces remembered
+    account intelligence).
+
+    Reads go through nerve_app -> RLS scopes the row to the current tenant automatically (the GUC
+    is set transaction-local on after_begin, Task 3). Graceful degradation: a missing/absent
+    account_memory row (or no account_id) is NON-FATAL -- the briefing still builds unchanged.
+
+    When `anonymizer_cache` is provided, register_briefing_pii() pre-seeds the PII token cache
+    from the briefing (the wiring anticipated by anonymization.py:495 -- "kommt in Phase
+    08.23.2.G"). Returns the (mutated) briefing dict.
+    """
+    if briefing is None:
+        briefing = {}
+    if account_id:
+        db = get_session()
+        try:
+            mem = (db.query(AccountMemory)
+                     .filter(AccountMemory.account_id == account_id)
+                     .order_by(AccountMemory.updated_at.desc())
+                     .first())
+            if mem is not None:
+                briefing['meddpicc'] = mem.meddpicc or {}
+                briefing['context_hooks'] = mem.context_hooks or []
+                if mem.last_call_summary:
+                    briefing['last_call_summary'] = mem.last_call_summary
+        except Exception as _me:
+            # Non-fatal: account_memory read failure must not break the briefing (graceful deg.)
+            print(f"[PreCall] account_memory merge failed (non-fatal): {_me}")
+        finally:
+            db.close()
+
+    # Wire the PII pre-seed now that account_memory exists (anonymization.py:495 anticipated this).
+    if anonymizer_cache is not None:
+        try:
+            from services.anonymization import register_briefing_pii
+            register_briefing_pii(briefing, anonymizer_cache)
+        except Exception as _pe:
+            print(f"[PreCall] register_briefing_pii failed (non-fatal): {_pe}")
+
+    return briefing
+
+
+def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten=None, user_id=None, profile_id=None, sid: str = None, account_id=None, anonymizer_cache=None):
     """Web-Recherche + Claude-Briefing fuer eine Firma (3-Schicht-Architektur).
     Returns: (briefing_dict, error_msg) — per existing service tuple pattern.
     briefing_dict keys: fields, text, empfehlungen, firmenname, ansprechpartner, quellen_count
@@ -193,6 +239,9 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten
             cached_briefing['empfehlungen'] = _generiere_empfehlungen(
                 sid, firmenname, cached_briefing.get('fields', {}), user_id=user_id
             )
+            # Account-Memory ist tenant/account-spezifisch (NICHT gecacht mit dem Firmen-Briefing) —
+            # bei jedem Aufruf frisch RLS-gescoped mergen (D-13/D-14).
+            merge_account_memory(cached_briefing, account_id, anonymizer_cache=anonymizer_cache)
             return (cached_briefing, None)
 
         # API-Key pruefen
@@ -230,9 +279,14 @@ def recherche_firma(firmenname, ansprechpartner=None, branche=None, profil_daten
         empfehlungen = _generiere_empfehlungen(sid, firmenname, briefing['fields'], user_id=user_id)
         briefing['empfehlungen'] = empfehlungen
 
-        # Cache speichern NACH empfehlungen-Setzen — Cache-Hit liefert vollstaendiges 6-Key-Dict
+        # Cache speichern NACH empfehlungen-Setzen — Cache-Hit liefert vollstaendiges 6-Key-Dict.
+        # WICHTIG: VOR dem account_memory-Merge cachen — account_memory ist tenant/account-spezifisch
+        # und darf nicht im (firmen-globalen) Cache landen.
         with _cache_lock:
             _briefing_cache[cache_key] = (briefing, time.time())
+
+        # account_memory (MEDDPICC + context_hooks + last_call_summary) tenant-scoped mergen (D-13/D-14)
+        merge_account_memory(briefing, account_id, anonymizer_cache=anonymizer_cache)
 
         return (briefing, None)
 
