@@ -125,18 +125,23 @@ def upgrade() -> None:
     """)
 
     # ── Step C: RLS per table (D-12.4/.5/.6) + tenant index ──
-    # current_setting('app.tenant_id', true) uses missing_ok=true: an UNSET GUC yields NULL
-    # (not an error). NULL::uuid never equals any tenant_id -> predicate false -> 0 rows
+    # current_setting('app.tenant_id', true) uses missing_ok=true. AMENDMENT 2026-06-01 (Claudian
+    # gate + Cross-AI Gemini, reproduced live on PG 16.14): a custom GUC set transaction-locally on
+    # a connection reverts to EMPTY STRING '' (NOT NULL) on that pooled connection's later
+    # transactions. Bare current_setting(...)::uuid then evaluates ''::uuid -> ERROR "invalid input
+    # syntax for type uuid" instead of fail-closing. nullif(...,'') maps BOTH the never-set (NULL)
+    # and the reverted-empty ('') cases to NULL -> NULL::uuid -> predicate false -> 0 rows
     # (fail-closed, D-12.1). The GUC is set TRANSACTION-LOCAL via set_config(...,true) on the
     # SQLAlchemy Session after_begin hook (Task 3), so the SET and the tenant queries share ONE
-    # transaction.
+    # transaction. (Non-UUID garbage would still throw ::uuid, but after_begin only ever writes
+    # real UUIDs or None -> garbage cannot enter; nullif suffices, no try_cast needed -- Gemini.)
     for tbl in _CRM_TABLES:
         op.execute(f"ALTER TABLE crm.{tbl} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE crm.{tbl} FORCE ROW LEVEL SECURITY")   # belt-and-suspenders (D-12.4)
         op.execute(f"""
             CREATE POLICY tenant_isolation ON crm.{tbl}
-              USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
-              WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid)
+              USING (tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid)
+              WITH CHECK (tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid)
         """)                                                            # D-12.5 USING + WITH CHECK
         op.execute(f"CREATE INDEX IF NOT EXISTS idx_{tbl}_tenant ON crm.{tbl}(tenant_id)")  # D-12.6
 
