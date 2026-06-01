@@ -219,7 +219,7 @@ def test_no_crm_id_in_training(mem_engine):
     """Written transcript_archive rows store source_call_hash (a SHA-256 hash), NEVER a raw crm/call
     id -> no re-identification surface (D-17)."""
     mem_id, acct_id, call_id = _seed_account(
-        mem_engine, segments=[(0, 'berater', "Ein Satz ohne GEHEIM")],
+        mem_engine, segments=[(0, 'berater', "Ein Satz ohne PII")],
     )
     _run(mem_engine)
 

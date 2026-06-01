@@ -147,16 +147,17 @@ def process_unstamped(conn, dry_run=False, anonymize_fn=None, should_persist_fn=
                         anon_text, _tier = anonymize_fn(seg_text, None)
                         if not should_persist_fn(anon_text):
                             continue  # drop [ART9_REDACTED] / [ANON_FEHLER]
-                        if not dry_run:
-                            conn.execute(
-                                text(
-                                    "INSERT INTO training.transcript_archive "
-                                    "(source_call_hash, segment_index, speaker, text, ts_offset_ms, schema_version) "
-                                    "VALUES (:h, :idx, :sp, :tx, :off, 1)"
-                                ),
-                                {'h': src_hash, 'idx': seg_index, 'sp': speaker,
-                                 'tx': anon_text, 'off': ts_ms},
-                            )
+                        if dry_run:
+                            continue  # dry-run: count nothing as archived, write nothing
+                        conn.execute(
+                            text(
+                                "INSERT INTO training.transcript_archive "
+                                "(source_call_hash, segment_index, speaker, text, ts_offset_ms, schema_version) "
+                                "VALUES (:h, :idx, :sp, :tx, :off, 1)"
+                            ),
+                            {'h': src_hash, 'idx': seg_index, 'sp': speaker,
+                             'tx': anon_text, 'off': ts_ms},
+                        )
                         seg_index += 1
                         stats['archived_segments'] += 1
                 # Variante A stamp — relies on the 0013 column-level UPDATE grant + anon_worker_stamp
