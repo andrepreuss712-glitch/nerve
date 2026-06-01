@@ -111,13 +111,14 @@ def _seed_account(engine, *, is_test_user=False, stamped=False, segments=None, t
                     is_test_user=is_test_user)
         s.add(user)
         s.flush()
-        clog = ConversationLog(user_id=user.id, org_id=org.id, started_at=datetime.utcnow())
+        clog = ConversationLog(user_id=user.id, org_id=org.id, started_at=datetime.now())
         s.add(clog)
         s.flush()
         acct_id = str(uuid.uuid4())
         call_id = str(uuid.uuid4())
         s.add(Account(id=acct_id, tenant_id=tid, name="[ANON-TEST] account"))
-        s.add(Call(id=call_id, user_id=user.id, account_id=acct_id, call_mode='live',
+        # call_mode CHECK is ('cold_call','meeting_consented') — see ck_calls_call_mode.
+        s.add(Call(id=call_id, user_id=user.id, account_id=acct_id, call_mode='cold_call',
                    conversation_log_id=clog.id))
         if segments:
             for ts_ms, speaker, seg_text in segments:
