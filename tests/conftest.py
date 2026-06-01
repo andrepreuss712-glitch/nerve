@@ -95,3 +95,38 @@ def client(monkeypatch):
 def db_from_client(client):
     """Alias: returns the test session bound to the same engine as client."""
     return client._test_session
+
+
+# ── Phase 08.23.2.G-MEET Wave 2 — real-PG nerve_app connection (RLS isolation test, D-12.2) ──
+# The RLS isolation test (tests/test_rls_isolation.py) MUST run against REAL Postgres as the
+# RLS-constrained `nerve_app` role -- SQLite has no Row-Level-Security (a SQLite branch would be a
+# FALSE-GREEN). This fixture provides a raw psycopg2 connection as nerve_app to the real `nerve`
+# DB, reading its DSN from env. It is ONLY available server-side on Production (where the DSN
+# env var is set). When the DSN is absent (e.g. local, no real PG) the dependent tests SKIP --
+# they NEVER fall back to SQLite.
+#
+# Expected env var (server-side, set by André in the deploy/test environment):
+#   NERVE_APP_TEST_DSN  -- e.g. postgresql://nerve_app@127.0.0.1:5432/nerve
+# (nerve_app uses peer/socket auth on Production; the DSN is read/write to the real nerve DB.)
+@pytest.fixture
+def nerve_app_pg_conn():
+    dsn = os.environ.get('NERVE_APP_TEST_DSN')
+    if not dsn:
+        pytest.skip(
+            "NERVE_APP_TEST_DSN not set -- RLS isolation test requires a real-PG nerve_app "
+            "connection (no SQLite fallback by design, D-12.2). Run server-side on Production."
+        )
+    try:
+        import psycopg2
+    except ImportError:
+        pytest.skip("psycopg2 not installed -- RLS isolation test requires real Postgres.")
+    conn = psycopg2.connect(dsn)
+    conn.autocommit = False  # explicit transactions: SET LOCAL must share the query's txn
+    try:
+        yield conn
+    finally:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        conn.close()
