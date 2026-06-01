@@ -19,14 +19,32 @@ import pytest
 
 @pytest.fixture
 def _patched_session(monkeypatch):
-    """Rebind get_session in precall_service to an in-memory SQLite session built from the ORM."""
-    from sqlalchemy import create_engine
+    """Rebind get_session in precall_service to an in-memory SQLite session built from the ORM.
+
+    The crm.* models are schema-qualified ({'schema': 'crm'}), but SQLite has no schemas -- a schema
+    name maps to an ATTACHed database. So we ATTACH an in-memory db AS crm before create_all. A
+    StaticPool (single shared connection) is required so the ATTACH, create_all, and every session
+    all run on the SAME connection -- otherwise the attached crm db (and the in-memory data) would
+    vanish per-connection. crm models carry NO SQLAlchemy-level ForeignKeys (DB-side only), so
+    create_all emits no cross-database REFERENCES that SQLite would reject.
+    """
+    from sqlalchemy import create_engine, event
     from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
     from database.db import Base
     import database.models  # noqa: F401  (registers all tables incl. crm.* on Base.metadata)
     import services.precall_service as precall
 
-    engine = create_engine("sqlite:///:memory:", connect_args={'check_same_thread': False})
+    engine = create_engine(
+        "sqlite://",
+        connect_args={'check_same_thread': False},
+        poolclass=StaticPool,
+    )
+
+    @event.listens_for(engine, "connect")
+    def _attach_crm_schema(dbapi_conn, _rec):
+        dbapi_conn.execute("ATTACH DATABASE ':memory:' AS crm")
+
     Base.metadata.create_all(engine)
     TestSession = sessionmaker(bind=engine)
 
