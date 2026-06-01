@@ -2190,6 +2190,13 @@ csrf.exempt(microsoft_callback)
 @app.before_request
 def _load_user():
     from flask import session as _sess, g as _g2
+    # Phase 08.23.2.G-MEET Wave 2 (D-11/D-12.1): publish the session tenant UUID into the RLS
+    # contextvar on EVERY request (before any early return), so the Session after_begin hook
+    # issues the transaction-local set_config('app.tenant_id', ...) at txn start. Unauthenticated
+    # requests get None -> RLS fails closed (0 crm rows) by construction.
+    from database.db import set_current_tenant as _set_tenant
+    _g2.tenant_id = _sess.get('tenant_id')
+    _set_tenant(_g2.tenant_id)
     uid = _sess.get('user_id')
     if uid is None:
         return
@@ -2205,6 +2212,18 @@ def _load_user():
             _g2.org  = db.get(_Org, user.org_id)
     finally:
         db.close()
+
+# ── Tenant contextvar hygiene (Phase 08.23.2.G-MEET Wave 2) ───────────────────
+# The transaction-local set_config(...,true) is the ACTUAL tenant control (auto-clears at
+# COMMIT/ROLLBACK -- no checkin RESET needed). This teardown is light hygiene only: it stops the
+# contextvar surviving into the next request on a reused worker thread.
+@app.teardown_request
+def _clear_tenant(exc=None):
+    try:
+        from database.db import clear_current_tenant as _clear_tenant_fn
+        _clear_tenant_fn()
+    except Exception:
+        pass
 
 # ── Favicon stub (POLISH-17) ──────────────────────────────────────────────────
 # Browser requesten /favicon.ico automatisch — ohne Datei/Route schlug es in einen

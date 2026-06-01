@@ -108,10 +108,25 @@ def _login_user(db, user):
     user_is_coach        = bool(user.is_coach) if hasattr(user, 'is_coach') else False
     user_onboarding_done = bool(user.onboarding_done) if hasattr(user, 'onboarding_done') else True
 
+    # Phase 08.23.2.G-MEET Wave 2 (D-11): resolve the tenant UUID ONCE at login (avoids a
+    # per-request tenant_orgs bridge reload). Stored in the session as a string UUID alongside
+    # org_id; before_request publishes it into the RLS contextvar each request.
+    tenant_id_str = None
+    try:
+        from database.models import TenantOrg as _TenantOrg
+        _to = db.query(_TenantOrg).filter_by(legacy_org_id=user_org_id).first()
+        if _to is not None:
+            tenant_id_str = str(_to.id)
+    except Exception as _te:
+        # Non-fatal: a missing tenant_orgs row leaves tenant_id unset -> RLS fails closed
+        # (0 crm rows) rather than leaking. Login still succeeds.
+        print(f"[AUTH] tenant_id resolve failed (non-fatal): {_te}")
+
     session.clear()      # H-17: Session-Fixation-Praevention — neue Session-ID vor Key-Writes
     session.permanent    = True
     session['user_id']   = user_id
     session['org_id']    = user_org_id
+    session['tenant_id'] = tenant_id_str   # string UUID or None (D-11)
     session['rolle']     = user_rolle
     session['is_coach']  = user_is_coach
     tok    = secrets.token_urlsafe(32)
