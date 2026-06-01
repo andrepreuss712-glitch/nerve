@@ -1841,7 +1841,7 @@ Plans:
 **Plans:** 3 plans (1 pro Welle, sequenziell deploybar — D-02)
 
 Plans:
-- [ ] 08.23.2.G-MEET-01-PLAN.md — Wave 1: Multi-Tenancy-Unterbau (tenant_orgs + Dual-Write-Trigger + calls.tenant_id-Backfill + Residual-Verification-Runbook)
+- [x] 08.23.2.G-MEET-01-PLAN.md — Wave 1: Multi-Tenancy-Unterbau (tenant_orgs + Dual-Write-Trigger + calls.tenant_id-Backfill + Residual-Verification-Runbook) ✅ 2026-06-01 — live auf Prod (migration head=0011, git_head ed8a137); tenant_orgs 1:1 seeded (2==2), trg_mk_tenant_org SECURITY INVOKER, backfill 0 Orphans, 6 Tests grün
 - [ ] 08.23.2.G-MEET-02-PLAN.md — Wave 2: crm-Schema + 4 Tabellen + RLS-Kit + Session-UUID-Enrichment + Pre-Call-Briefing + CSV-Export (Meeting-Modal-UX deferred zu /gsd-ui-phase)
 - [ ] 08.23.2.G-MEET-03-PLAN.md — Wave 3: training.preference_pairs (EXTEND) + Anonymizer-Worker (Variante A)
 
