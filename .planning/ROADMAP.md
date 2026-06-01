@@ -1838,6 +1838,13 @@ Plans:
 
 **UPDATE 2026-06-01 (Discuss-Phase abgeschlossen, CONTEXT D-01–D-20, Cross-AI Gemini 4×):** Scope-Präzisierung gegenüber obiger Skizze — Plan-Author MUSS das beachten: (1) Mandanten-Schild = `tenant_id` (UUID) → `tenant_orgs`, NICHT `workspace_id` (0 Code-Treffer). (2) Strangler statt Big-Bang: neue Tabellen in `crm` mit `tenant_id`; die ~32 Alttabellen behalten `org_id` (Integer) in `public` — KEIN Retrofit auf existing Tabellen jetzt. Wave 1 = `tenant_orgs` anlegen + Brücke zu `organisations.id` + `calls.tenant_id`-Backfill (NICHT Voll-Retrofit). `users`→UUID + `org_id`-Ablösung deferred (war Vault-Phase-F-Scope, F existiert nur in Vault-Roadmap). (3) RLS nur auf neuen Tabellen. (4) Verbindungs-Karten-Pflicht: kein Name/Tabelle ohne grep+Live-Server-Beweis. Gemini-Umsetzungs-Fallen für den Plan: Connection-Pooling-Reset (teardown_request), Owner-BYPASSRLS (FORCE RLS oder restricted role), WITH CHECK, tenant_id-Index, search_path auf der Rolle, ALTER DEFAULT PRIVILEGES, Dual-Write bei Neuanmeldung, Session-tenant-UUID-Enrichment, Anonymizer-State-Tracking ohne ID-Spiegelung über die crm/training-Mauer.
 
+**Plans:** 3 plans (1 pro Welle, sequenziell deploybar — D-02)
+
+Plans:
+- [ ] 08.23.2.G-MEET-01-PLAN.md — Wave 1: Multi-Tenancy-Unterbau (tenant_orgs + Dual-Write-Trigger + calls.tenant_id-Backfill + Residual-Verification-Runbook)
+- [ ] 08.23.2.G-MEET-02-PLAN.md — Wave 2: crm-Schema + 4 Tabellen + RLS-Kit + Session-UUID-Enrichment + Pre-Call-Briefing + CSV-Export (Meeting-Modal-UX deferred zu /gsd-ui-phase)
+- [ ] 08.23.2.G-MEET-03-PLAN.md — Wave 3: training.preference_pairs (EXTEND) + Anonymizer-Worker (Variante A)
+
 ### Phase 08.23.2.TEAM: Team-Grundgerüst — Firmen-Konten, Rollen, Einladungen, Org-Ownership (NEU 2026-05-30, Andre-Strategie + Cross-AI Gemini) 🔴 PRE-LAUNCH-PFLICHT (Verkaufs-Enabler)
 
 **Goal:** Verkaufbares Team-System-Grundgerüst (ohne Abrechnung). Im B2B-Vertrieb kaum Einzelkämpfer → Käufer ist die Firma, ein Kunde = ein ganzes Team = Multiplikator. Ohne Team-Verwaltung stirbt das Verkaufsgespräch ("Sie müssten jeden einzeln anmelden").
