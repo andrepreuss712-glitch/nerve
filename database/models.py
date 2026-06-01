@@ -743,3 +743,83 @@ class TenantOrg(Base):
     name          = Column(Text, nullable=False)
     # func.now() (Modul-Ebene) wie TranscriptSegment — DDL-Aequivalent zu 0011 `DEFAULT now()`.
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# --- Phase 08.23.2.G-MEET Wave 2 — crm-Schema-Modelle (DDL-parity zu Migration 0012) ---
+# Alle EXPLIZIT schema-qualifiziert via __table_args__ {'schema': 'crm'} — bewiesen noetig:
+# nerve_app rolconfig ist EMPTY (kein role search_path), die ORM MUSS schema-qualifizieren.
+# Das {'schema': 'crm'}-Dict MUSS das LETZTE Element des __table_args__-Tuples sein.
+# Diese Modelle sind die SQLite-in-memory-Test-Schema-Quelle (CLAUDE.md Punkt 21) — sie muessen
+# 0012's DDL Spalte-fuer-Spalte (und Index-fuer-Index) spiegeln.
+
+class Account(Base):
+    __tablename__ = 'accounts'
+    id         = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    tenant_id  = Column(UUID_TYPE, nullable=False)   # NOT NULL auf neuen Tabellen (D-07); FK DB-seitig zu tenant_orgs
+    name       = Column(Text, nullable=False)
+    domain     = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        Index('idx_accounts_tenant', 'tenant_id'),
+        {'schema': 'crm'},   # MUSS letztes Element sein; explizite Schema-Qualifizierung (kein search_path-Verlass)
+    )
+
+
+class Contact(Base):
+    __tablename__ = 'contacts'
+    id         = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    tenant_id  = Column(UUID_TYPE, nullable=False)
+    account_id = Column(UUID_TYPE, nullable=True)
+    name       = Column(Text, nullable=False)
+    email      = Column(Text, nullable=True)
+    phone      = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        Index('idx_contacts_tenant', 'tenant_id'),
+        Index('idx_contacts_account_id', 'account_id'),
+        {'schema': 'crm'},
+    )
+
+
+class AccountMemory(Base):
+    __tablename__ = 'account_memory'
+    id                = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    tenant_id         = Column(UUID_TYPE, nullable=False)
+    account_id        = Column(UUID_TYPE, nullable=True)
+    contact_id        = Column(UUID_TYPE, nullable=True)
+    schema_version    = Column(SmallInteger, nullable=False, server_default='1')   # D-19
+    # MEDDPICC 8 ASCII keys leben INSIDE der meddpicc JSONB:
+    # metrics, economic_buyer, decision_criteria, decision_process, paper_process,
+    # pain, champion, competition.
+    meddpicc          = Column(JSON_TYPE, nullable=False, server_default='{}')
+    context_hooks     = Column(JSON_TYPE, nullable=False, server_default='[]')
+    last_call_summary = Column(Text, nullable=True)
+    anonymized_at     = Column(DateTime(timezone=True), nullable=True)   # Variante A state-tracking (Wave 3)
+    updated_at        = Column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        CheckConstraint("account_id IS NOT NULL OR contact_id IS NOT NULL", name='ck_account_memory_acc_or_con'),
+        Index('idx_account_memory_tenant', 'tenant_id'),
+        Index('idx_account_memory_account_id', 'account_id'),
+        Index('idx_account_memory_contact_id', 'contact_id'),
+        Index('idx_account_memory_meddpicc_gin', 'meddpicc', postgresql_using='gin'),
+        {'schema': 'crm'},
+    )
+
+
+class Meeting(Base):
+    __tablename__ = 'meetings'
+    id             = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    tenant_id      = Column(UUID_TYPE, nullable=False)
+    account_id     = Column(UUID_TYPE, nullable=True)
+    contact_id     = Column(UUID_TYPE, nullable=True)
+    call_id        = Column(UUID_TYPE, nullable=True)   # soft link zu public.calls.id, KEIN FK (D-08)
+    scheduled_at   = Column(DateTime(timezone=True), nullable=True)
+    notes          = Column(Text, nullable=True)
+    schema_version = Column(SmallInteger, nullable=False, server_default='1')
+    created_at     = Column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        Index('idx_meetings_tenant', 'tenant_id'),
+        Index('idx_meetings_account_id', 'account_id'),
+        Index('idx_meetings_contact_id', 'contact_id'),
+        {'schema': 'crm'},
+    )

@@ -149,9 +149,16 @@ def upgrade() -> None:
     op.execute("CREATE INDEX IF NOT EXISTS idx_meetings_contact_id        ON crm.meetings(contact_id)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_contacts_account_id        ON crm.contacts(account_id)")
 
+    # ── Step C.3: GIN index on meddpicc JSONB (DDL/ORM parity with AccountMemory, Task 2) ──
+    # Mirrors CallEvent's payload GIN index (models.py) -- supports containment queries on the
+    # MEDDPICC keys. The ORM declares idx_account_memory_meddpicc_gin; keep the live DB in sync.
+    op.execute("CREATE INDEX IF NOT EXISTS idx_account_memory_meddpicc_gin "
+               "ON crm.account_memory USING gin (meddpicc)")
+
 
 def downgrade() -> None:
     # Reverse, symmetric. No BYPASSRLS / search_path to restore -- none were set.
+    op.execute("DROP INDEX IF EXISTS crm.idx_account_memory_meddpicc_gin")
     op.execute("DROP INDEX IF EXISTS crm.idx_account_memory_account_id")
     op.execute("DROP INDEX IF EXISTS crm.idx_account_memory_contact_id")
     op.execute("DROP INDEX IF EXISTS crm.idx_meetings_account_id")
