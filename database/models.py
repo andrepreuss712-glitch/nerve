@@ -823,3 +823,33 @@ class Meeting(Base):
         Index('idx_meetings_contact_id', 'contact_id'),
         {'schema': 'crm'},
     )
+
+
+# --- Phase 08.23.2.G-MEET Wave 3 — training-Schema DPO-Foundation (DDL-parity zu Migration 0013) ---
+# preference_pairs wird HIER als ORM/DDL-Quelle definiert, aber von Phase 08.23.2.E BEFUELLT
+# (W-6-Grenze: das crm-Row -> DPO-Triple-Mapping gehoert Phase E, ist noch nicht spezifiziert).
+# Schema-qualifiziert via {'schema': 'training'} (LETZTES __table_args__-Element) — KEIN search_path-Verlass.
+# EXPLIZIT KEIN ForeignKey auf irgendeine crm.*-Tabelle (D-17, DSGVO-Mauer) — source_call_hash ist
+# ein Einweg-Hash, kein call_id-FK. UUID-PK -> keine Sequence.
+
+class PreferencePair(Base):
+    __tablename__ = 'preference_pairs'
+    pair_id            = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    prompt             = Column(JSON_TYPE, nullable=False)
+    chosen             = Column(JSON_TYPE, nullable=False)
+    rejected           = Column(JSON_TYPE, nullable=False)
+    batch_id           = Column(UUID_TYPE, nullable=False)
+    anonymizer_version = Column(Text, nullable=False)
+    source_call_hash   = Column(Text, nullable=True)   # Hash, NICHT call_id (D-17, kein FK ueber die Mauer)
+    labeller           = Column(Text, nullable=True)
+    rating_chosen      = Column(SmallInteger, nullable=True)
+    rating_rejected    = Column(SmallInteger, nullable=True)
+    rationale          = Column(Text, nullable=True)
+    split              = Column(Text, nullable=True)
+    schema_version     = Column(SmallInteger, nullable=False, server_default='1')   # D-19
+    created_at         = Column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        CheckConstraint("split IN ('train', 'val', 'test') OR split IS NULL", name='ck_preference_pairs_split'),
+        Index('idx_preference_pairs_batch', 'batch_id'),
+        {'schema': 'training'},   # MUSS letztes Element sein; explizite Schema-Qualifizierung
+    )
