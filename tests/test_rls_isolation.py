@@ -66,14 +66,22 @@ def two_tenants(nerve_app_pg_conn):
 
     mem_a = str(uuid.uuid4())
     mem_b = str(uuid.uuid4())
+    acct_a = str(uuid.uuid4())
+    acct_b = str(uuid.uuid4())
 
-    # Insert one account_memory row per tenant, each under its OWN tenant GUC (WITH CHECK pass).
-    for tid, mem_id in ((tenant_a, mem_a), (tenant_b, mem_b)):
+    # account_memory.account_id is an FK -> crm.accounts(id), so a real accounts row must exist
+    # FIRST. Insert the accounts row AND the account_memory row per tenant, each under its OWN
+    # tenant GUC so both RLS WITH CHECKs (tenant_id = current_setting('app.tenant_id')) pass.
+    for tid, acct_id, mem_id in ((tenant_a, acct_a, mem_a), (tenant_b, acct_b, mem_b)):
         cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tid,))
+        cur.execute(
+            "INSERT INTO crm.accounts (id, tenant_id, name) VALUES (%s, %s, %s)",
+            (acct_id, tid, f"[RLS-TEST] account {tid[:8]}"),
+        )
         cur.execute(
             "INSERT INTO crm.account_memory (id, tenant_id, account_id, meddpicc, context_hooks) "
             "VALUES (%s, %s, %s, %s, %s)",
-            (mem_id, tid, str(uuid.uuid4()), '{"pain": "test"}', '[]'),
+            (mem_id, tid, acct_id, '{"pain": "test"}', '[]'),
         )
     conn.commit()
 
@@ -81,15 +89,18 @@ def two_tenants(nerve_app_pg_conn):
         "conn": conn,
         "tenant_a": tenant_a, "tenant_b": tenant_b,
         "mem_a": mem_a, "mem_b": mem_b,
+        "acct_a": acct_a, "acct_b": acct_b,
         "org_a": org_a, "org_b": org_b,
     }
 
-    # Teardown: delete crm rows under each tenant GUC, then public rows. Best-effort.
+    # Teardown: delete crm rows under each tenant GUC in reverse FK order (account_memory ->
+    # accounts), then public rows (tenant_orgs -> organisations). Best-effort.
     cur = conn.cursor()
     try:
         for tid in (tenant_a, tenant_b):
             cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tid,))
             cur.execute("DELETE FROM crm.account_memory WHERE tenant_id = %s::uuid", (tid,))
+            cur.execute("DELETE FROM crm.accounts WHERE tenant_id = %s::uuid", (tid,))
         conn.commit()
         cur = conn.cursor()
         cur.execute("DELETE FROM public.tenant_orgs WHERE id IN (%s::uuid, %s::uuid)", (tenant_a, tenant_b))
