@@ -1802,7 +1802,7 @@ Plans:
 **Blocker für:** EA-Launch (Login-Audit-Teil — START-BLOCKER)
 **Plans:** 0 plans
 
-### Phase 08.23.2.G/MEET: Foundation-Phase Conversational Memory + CRM-Lookup + Multi-Tenancy + Training-Schema (NEU 2026-05-27, Phase G + MEET fusioniert nach Cross-AI-Architektur-Entscheidung) 🔴
+### Phase 08.23.2.G/MEET: Foundation-Phase Conversational Memory + CRM-Lookup + Multi-Tenancy + Training-Schema (NEU 2026-05-27, Phase G + MEET fusioniert nach Cross-AI-Architektur-Entscheidung) 🔴 ✅ COMPLETE 2026-06-01 (alle 3 Wellen live auf Prod, migration head=0013, git_head a5a2b60)
 
 **KRITISCHE Architektur-Phase. Cross-AI-Recherche 2026-05-27 abgeschlossen. Spec-Dokument:** `Nerve-Vault/04 Entscheidungen/NERVE Architektur-Entscheidung Internes Datenmodell.md` — **Pflicht-Pre-Read** für Plan-Phase.
 
@@ -1842,8 +1842,8 @@ Plans:
 
 Plans:
 - [x] 08.23.2.G-MEET-01-PLAN.md — Wave 1: Multi-Tenancy-Unterbau (tenant_orgs + Dual-Write-Trigger + calls.tenant_id-Backfill + Residual-Verification-Runbook) ✅ 2026-06-01 — live auf Prod (migration head=0011, git_head ed8a137); tenant_orgs 1:1 seeded (2==2), trg_mk_tenant_org SECURITY INVOKER, backfill 0 Orphans, 6 Tests grün
-- [ ] 08.23.2.G-MEET-02-PLAN.md — Wave 2: crm-Schema + 4 Tabellen + RLS-Kit + Session-UUID-Enrichment + Pre-Call-Briefing + CSV-Export (Meeting-Modal-UX deferred zu /gsd-ui-phase)
-- [ ] 08.23.2.G-MEET-03-PLAN.md — Wave 3: training.preference_pairs (EXTEND) + Anonymizer-Worker (Variante A)
+- [x] 08.23.2.G-MEET-02-PLAN.md — Wave 2: crm-Schema + 4 Tabellen + RLS-Kit + Session-UUID-Enrichment + Pre-Call-Briefing + CSV-Export (Meeting-Modal-UX deferred zu /gsd-ui-phase) ✅ 2026-06-01 — live auf Prod (migration head=0012, nullif fail-closed RLS-Amendment); 8/8 real-PG-Tests grün (RLS-Isolation 4/4 + Briefing 4/4)
+- [x] 08.23.2.G-MEET-03-PLAN.md — Wave 3: training.preference_pairs (EXTEND, created-not-populated → Phase E) + Anonymizer-Worker (Variante A) + worker-targeted crm-RLS-Policies (anon_worker_read/stamp) ✅ 2026-06-01 — live auf Prod (migration head=0013, git_head a5a2b60); 14/14 Tests grün + D-16-Worker-Runtime via Claudian SET-ROLE-Tor verifiziert (cross-tenant read + stamp-persist + column-bound + nerve_app no-leak)
 
 ### Phase 08.23.2.TEAM: Team-Grundgerüst — Firmen-Konten, Rollen, Einladungen, Org-Ownership (NEU 2026-05-30, Andre-Strategie + Cross-AI Gemini) 🔴 PRE-LAUNCH-PFLICHT (Verkaufs-Enabler)
 
