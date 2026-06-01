@@ -685,3 +685,26 @@ Audit-Schichten dürfen nicht nur den Plan + den direkten Code lesen. Sie müsse
 - Pflicht bei jedem Plan der via getattr/setattr auf Model-Objekte zugreift
 - Pflicht bei jedem Plan der Migrations-Annahmen über existing Spalten macht
 - Skip-OK: rein UI-Tweaks ohne Daten-Pfad-Änderung, CSS-Polish, String-Updates
+
+## Punkt 22 — Verbindungs-Karten-Pflicht vor Namen-/Schema-/Tabellen-Entscheidungen (verankert 2026-06-01)
+
+Vollständige Begründung in `Nerve-Vault/05 Log` (G/MEET-Saga 2026-06-01). Hier die GSD-relevante Kurzfassung.
+
+**Verankerungs-Anlass (G/MEET 2026-06-01):** GSDs Discuss-Agent empfahl "tenant_id ist tot, neue Tabellen kriegen org_id" — eine reine Annahme. `grep` + Phase-08.23.2.A-SPEC zeigten: `tenant_id` ist bewusst gelegte Deferred-FK-Foundation, NICHT tot. Hätte zu Split-Brain (calls=UUID-tenant, accounts=Integer-org) geführt. Gefangen NUR weil vor dem Festklopfen eine bewiesene Verbindungs-Karte verlangt wurde. Dieselbe Phase fing später noch 2 Production-Defekte (empty-string-GUC, SHA-256-Re-ID) — alle durch dieselbe Beweis-statt-Annahme-Disziplin.
+
+**Pflicht-Aktion bei jeder Plan-Phase die Namen / DB-Schema / Tabellen / Spalten / DB-Rollen festlegt:**
+
+Bevor IRGENDEIN Name/Tabelle/Spalte/Schema-Identifier im Plan festgeklopft wird, MUSS eine **Verbindungs-Karte** als eigenes Artefakt (RESEARCH.md oder Plan-Sektion) vorliegen — nichts aus Annahme, alles bewiesen:
+
+1. **NAMEN/IDENTIFIER:** jeder Kandidat via `grep -rn` in services/ routes/ database/ alembic/ + Treffer-Zählung pro aktivem Production-Pfad (Tests/Migrationen getrennt zählen). Entscheidung wird mit der Treffer-Liste begründet — **was LEBT gewinnt, nicht was der Plan/das Doc wünscht.** Kein neuer Name / keine neue Parallel-Spalte ohne Beweis dass die alte tot ist (0 aktive Leser/Schreiber im Production-Pfad).
+2. **TABELLEN/SPALTEN:** jede angefasste Tabelle gegen Production verifiziert — `inspect.sh schema <t>` ODER `sudo -u postgres psql -c "\d <t>"` wenn privilege-maskiert (z.B. training.*/Rollen-Attribute sieht nerve_app nicht). Existiert sie? Typ? Constraints? Befüllt?
+3. **WER SCHREIBT / WER LIEST + Schicht-Check (Punkt 21):** pro Verknüpfung der echte Code-Pfad (welche Funktion schreibt/liest, welche Datei, welcher Thread/Worker) + liegt das Datum wirklich da wo angenommen (DB-Spalte/RAM/Datei).
+4. **REICHWEITE:** pro Entscheidung der umgebende Code (~30 Zeilen) + was die Entscheidung sonst berührt (andere Worker, Migrationen, RLS-Policies, SocketIO/Thread-Pfade).
+
+**Beweis pro Behauptung, nicht Prosa:** jeder Punkt mit `grep file:line` UND inspect.sh/psql-Output. Bei Researcher-Subagent: Karte physisch in Datei schreiben, KEINE komprimierte Prosa-Zusammenfassung an den Orchestrator zurück (Informationsverlust-Schutz).
+
+**Kontroll-Mechanismen:** Plan-Checker BLOCKt wenn die Karte fehlt oder unbewiesen ist (Behauptung ohne grep/inspect-Beleg). Cross-AI Gemini prüft Substanz. Claudian-Pre-Execute-Audit (Punkt 19) verifiziert dass die Karte bewiesen statt behauptet ist — bei "X ist tot" ohne grep-Beleg → BLOCK + zurück.
+
+**Geltungsbereich:** Pflicht bei jeder Plan-Phase mit Namen-/Schema-/Tabellen-/DB-Rollen-Entscheidung. Skip-OK: reine Logik-Bugfixes, CSS, String-Updates ohne neue Identifier.
+
+**Verhältnis zu anderen Punkten:** synthetisiert Punkt 14 (Control-Flow), 20 (Pflicht-grep) und 21 (Cross-Layer) in EIN bewiesenes Artefakt — die Karte ist das Plan-Deliverable, die anderen Punkte sind die Checks darin.
