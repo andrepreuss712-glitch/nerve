@@ -44,6 +44,9 @@ def _patched_session(monkeypatch):
     @event.listens_for(engine, "connect")
     def _attach_crm_schema(dbapi_conn, _rec):
         dbapi_conn.execute("ATTACH DATABASE ':memory:' AS crm")
+        # Phase 08.23.2.G-MEET Wave 3 added PreferencePair ({'schema':'training'}) to Base.metadata,
+        # so create_all now also emits training.* — the training schema must be ATTACHed too.
+        dbapi_conn.execute("ATTACH DATABASE ':memory:' AS training")
 
     Base.metadata.create_all(engine)
     TestSession = sessionmaker(bind=engine)
