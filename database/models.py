@@ -731,3 +731,15 @@ class TranscriptSegment(Base):
         CheckConstraint("speaker IN ('berater', 'kunde', 'system')", name='ck_transcript_segments_speaker'),
         Index('idx_transcript_segments_conv_ts', 'conversation_log_id', 'ts_ms'),
     )
+
+
+class TenantOrg(Base):
+    # Phase 08.23.2.G-MEET Wave 1 — UUID tenancy root (parallel register beside Integer org_id,
+    # bridged by legacy_org_id). public schema (tenancy infra, NOT crm) -> no schema= table_arg.
+    # ORM/DDL-konsistent zu Migration 0011 (CLAUDE.md Punkt 21 — ORM ist die Test-Schema-Quelle).
+    __tablename__ = 'tenant_orgs'
+    id            = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    legacy_org_id = Column(Integer, ForeignKey('organisations.id'), nullable=False, unique=True)
+    name          = Column(Text, nullable=False)
+    # func.now() (Modul-Ebene) wie TranscriptSegment — DDL-Aequivalent zu 0011 `DEFAULT now()`.
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())
