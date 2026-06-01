@@ -1769,7 +1769,8 @@ Plans:
 **Tasks:**
 1. Hard-Delete-Pfad: echtes PII-Löschen oder Anonymisieren bei Account-Löschung.
 2. Lösch-Kaskade über alle PII-haltenden Tabellen aufwecken — Entscheidung pro Tabelle: Hard-Delete vs. anonymisierter Tombstone (Trainings-Daten bleiben anonymisiert erhalten).
-3. Cross-Layer-Inventur welche Tabellen PII halten (Punkt 21): users, profiles, conversation_logs, transcript_segments, calls, call_events, suggestions/reactions falls vorhanden.
+3. Cross-Layer-Inventur welche Tabellen PII halten (Punkt 21): users, profiles, conversation_logs, transcript_segments, calls, call_events, suggestions/reactions falls vorhanden. **PLUS (Holistic-Review 01.06.): die neuen crm-Tabellen (accounts/contacts/account_memory/meetings) — sie halten Klartext-PII (Namen, MEDDPICC, context_hooks).**
+   - **⚠ HOLISTIC-REVIEW-CONSTRAINT (Gemini 01.06., HIGH/Drift):** die crm-FKs (Migration 0012: `account_id`/`contact_id` → crm.accounts/contacts, `tenant_id` → public.tenant_orgs) haben KEIN `ON DELETE CASCADE` (Drift vom Architektur-Doc, das es hatte) → naive Account/Contact/Tenant-Löschung bricht mit Constraint-Error solange account_memory/meetings existieren. Bei der Kaskaden-Entscheidung crm-Tabellen explizit aufnehmen (CASCADE nachrüsten ODER Reihenfolge choreografieren). Detail: `Nerve-Vault/04 Entscheidungen/NERVE Architektur-Entscheidung Internes Datenmodell.md` §Nachträge-2026-06-01.
 4. Restore-Re-Delete-Skript für Backups (WORM): liest user_deletion_request, re-deletet bei Restore. Gemini-Insight aus D.UX.1.
 5. DSGVO-Doc Sektion 7.x aktualisieren.
 
@@ -1893,6 +1894,8 @@ Plans:
 **Goal:** Sammelt strukturiert "chosen/rejected"-Paare aus jedem Anruf für späteres Fine-Tuning. NOCH KEIN Training. Plus DSFA-Dokument für BayLDA.
 
 **Erweitert 2026-05-27 nach Cross-AI-Architektur-Entscheidung:** training-Schema-Foundation (`training.preference_pairs`-Tabelle + Anonymizer-Worker) kommt jetzt aus Phase 08.23.2.G/MEET Wave 3, NICHT in dieser Phase neu gebaut. Phase E nutzt die existing Foundation und schreibt nur die Sammler-Logik (Pair-Klassifikator: Cosinus+Jaccard, Quality-Tier-Vergabe, Hintergrund-Job nach Call-Ende) plus DSFA-Dokument.
+
+**⚠ HOLISTIC-REVIEW-CONSTRAINT (Gemini 01.06., HIGH/DSGVO) — VOR Worker-Aktivierung fixen:** `scripts/anonymizer_worker.py` `_hash_call_id()` nutzt nacktes `SHA-256(call_id)` → reversibel für jeden mit `public.calls`-Lesezugriff (alle call_ids hashen + joinen) = nur Pseudonymisierung, bricht die "echte Anonymisierung"-Behauptung. **Fix:** `HMAC-SHA256(call_id, ANON_WORKER_PEPPER)`, Pepper nur in Worker-`.env`, nie in DB. Im DSFA adressieren. Detail: `Nerve-Vault/04 Entscheidungen/NERVE Architektur-Entscheidung Internes Datenmodell.md` §Nachträge-2026-06-01 + `05 Log` Anker.
 
 **Depends on:** Phase 08.23.2.G/MEET Wave 3 (training-Schema-Foundation)
 **Komplexität:** 🟡 (kleiner als ursprünglich geplant, weil Schema-Foundation schon in G/MEET)
