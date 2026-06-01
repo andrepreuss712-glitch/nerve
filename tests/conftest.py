@@ -130,3 +130,29 @@ def nerve_app_pg_conn():
         except Exception:
             pass
         conn.close()
+
+
+# ── Phase 08.23.2.G-MEET Wave 3 — real-PG nerve_anon_worker engine (anonymizer RLS test, D-16) ──
+# The anonymizer worker's RLS group (tests/test_anonymizer_worker.py) MUST run against REAL Postgres
+# as the `nerve_anon_worker` role -- the only role the 0013 anon_worker_read / anon_worker_stamp
+# policies target. SQLite has no RLS (a SQLite branch would be a FALSE-GREEN), so there is NO
+# fallback: when the DSN is absent the dependent tests SKIP. This yields a SQLAlchemy Engine (not a
+# raw connection) because the worker's process_unstamped() runs on a SQLAlchemy Connection -- the
+# test exercises the SAME code path the production cron uses.
+#
+# Expected env var (server-side, set by André in the deploy/test environment):
+#   ANON_WORKER_TEST_DSN  -- e.g. postgresql://nerve_anon_worker@/nerve  (the worker role; sets NO
+#                            app.tenant_id, relies on the 0013 worker policies for cross-tenant access)
+@pytest.fixture
+def anon_worker_pg_engine():
+    dsn = os.environ.get('ANON_WORKER_TEST_DSN')
+    if not dsn:
+        pytest.skip(
+            "ANON_WORKER_TEST_DSN not set -- anonymizer RLS test requires a real-PG nerve_anon_worker "
+            "connection (no SQLite fallback by design, D-16). Run server-side on Production."
+        )
+    engine = create_engine(dsn)
+    try:
+        yield engine
+    finally:
+        engine.dispose()
