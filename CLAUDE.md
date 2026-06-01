@@ -425,6 +425,20 @@ Begründung: Lerneffekt aus Block-N-Phasen — Hit-Rate steigt bei klarem Briefi
 
 ## HART: Kein Local-Dev — Default ist Production-Server (bis EA-Launch)
 
+> ### ⬛ ÜBERSCHREIBUNG 2026-06-01 — Staging ist KOMPLETT aus dem Workflow (Andre-Decision)
+>
+> **Bis zur letzten Phase vor Launch gibt es nur Production.** Staging wird NICHT mehr benutzt — weder zum Deployen, Testen, noch für Daten/Schema/Logs/inspect.sh. Begründung: das kaputte Staging-Gate hat 2× Phasen ausgebremst (D.UX.1, D.UX.4) und GSD jede Phase die falsche git-pull/Staging-Verify-Strategie schreiben lassen. Schluss damit.
+>
+> **Mapping — überall wo unten "Staging" steht, gilt JETZT Production:**
+> - **Deploy:** `bash deploy.sh production` (das Staging-Pre-Gate wurde aus `deploy.sh` ENTFERNT). KEIN `deploy.sh staging`, KEIN "erst staging dann production".
+> - **Verify in Plan-Files:** KEIN `git pull` — Production ist tar-deployed (`.git` excluded), git pull existiert dort nicht. Acceptance = der Pytest-Gate den `deploy.sh production` selbst eingebaut hat (läuft auf dem Production-Server vor dem Restart; bei Test-Fehler kein Restart, alter Code bleibt live). Plus Live-Test im Browser mit Test-User.
+> - **Daten/Schema/Logs/Routes:** `inspect.sh` gegen **Production** read-only: `ssh -i ~/.ssh/nerve_vps root@178.104.82.166 'cd /opt/nerve/app && bash scripts/inspect.sh <cmd>'`. NICHT gegen `staging.getnerve.app`.
+> - **Vor jedem Prod-Overwrite-Deploy:** kurz prüfen ob auf Prod echter Code liegt der NICHT in origin/main ist (SCP-Hotfix) — sonst bügelt der tar-Push ihn weg.
+>
+> **Reaktivierung:** Das gesamte Staging-basierte Vorgehen unten in diesem Abschnitt ist PAUSIERT und als "= Production" zu lesen. Es wird in der **LETZTEN Phase vor Launch** wieder scharfgeschaltet — Phase **08.23.2.STAGING** (Staging-Promotion-Pipeline, ans Ende verschoben).
+>
+> **Der Kern bleibt unverändert gültig:** kein Local-Dev — Production IST die Test-Umgebung (mit Test-User), nicht der lokale Rechner.
+
 **Verankert 2026-05-27 in zwei Andre-Direktanweisungen (Phase 08.23.2.D Live-Test):**
 
 1. *"nene moment, wir entwickeln GAR NICHTS MEHR LOCAL."* (vormittag — Stufe 1 verankert)

@@ -32,6 +32,11 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - DACH-Fokus Milestone 1, i18n später
 - Flat-Rate Pricing (69/59/49€) — nicht Credit-basiert
 
+**Aktuelle Richtungs-Entscheidungen (Stand 2026-06-01, Sync von Vault-Roadmap):**
+- **Staging komplett aus dem Workflow** bis zur letzten Phase vor Launch → Production ist einziger Deploy-/Test-Pfad (Details: `CLAUDE.md` → "ÜBERSCHREIBUNG 2026-06-01"). `deploy.sh`-Staging-Gate entfernt. Reaktivierung = Phase **08.23.2.STAGING** (ganz am Ende, letzte Phase vor Launch).
+- **Block O = kompletter Design-Wechsel auf neues Dark-Design** (kein Polish mehr). Das alte Light-Design fliegt komplett raus (nerve.css-Tokens/Klassen/Inline-Styles) → nur das neue bleibt als single source of truth, damit GSD künftig nicht mehr im alten Design bauen kann. Mockups + Export in `_design_export/`. Usability-Bar: ein Anfänger ohne Sales/IT muss das Dashboard in ~10 Sek verstehen (Klartext-Labels statt Metapher-Jargon).
+- **Hinweis:** Strategische Blocks (Block O, STAGING, Pricing 08.15/08.16) leben primär in der Vault-Roadmap (`Nerve-Vault/01 Roadmap.md`); diese GSD-Roadmap ist operativ-granularer. Bei Phasen-Scope immer beide abgleichen.
+
 ## Phases Overview
 
 | Phase | Title | Depends On |

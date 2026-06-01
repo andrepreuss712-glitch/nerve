@@ -17,47 +17,13 @@ APP_DIR="/opt/nerve/app"
 VENV_DIR="/opt/nerve/venv"
 
 if [[ "$TARGET" == "production" ]]; then
-  # ── Production Pre-Deploy-Gate ─────────────────────────────────────────
-  echo "[deploy] TARGET=production — Pre-Deploy-Gate wird ausgefuehrt..."
-
-  # jq-Pflicht-Check (fuer JSON-Parsing der Health-Response)
-  which jq || { echo "[deploy] ERROR: jq nicht installiert — brew install jq oder https://stedolan.github.io/jq/"; exit 1; }
-
-  STAGING_HEALTH=$(curl -fsS --max-time 10 https://staging.getnerve.app/api/health 2>/dev/null || true)
-
-  if [[ -z "$STAGING_HEALTH" ]]; then
-    echo "[deploy] BLOCKER: Staging nicht erreichbar — https://staging.getnerve.app/api/health antwortet nicht"
-    exit 1
-  fi
-
-  STAGING_STATUS=$(echo "$STAGING_HEALTH" | jq -r '.status // "error"')
-  if [[ "$STAGING_STATUS" != "ok" ]]; then
-    echo "[deploy] BLOCKER: Staging not healthy (status=$STAGING_STATUS) — zuerst ./deploy.sh staging ausfuehren"
-    exit 1
-  fi
-
-  STAGING_DEPLOYED_AT=$(echo "$STAGING_HEALTH" | jq -r '.deployed_at // ""')
-  if [[ -z "$STAGING_DEPLOYED_AT" || "$STAGING_DEPLOYED_AT" == "null" ]]; then
-    echo "[deploy] BLOCKER: Staging hat kein deployed_at — zuerst ./deploy.sh staging ausfuehren"
-    exit 1
-  fi
-  # Alter pruefen: deployed_at ist ISO-8601 UTC, z.B. 2026-05-19T14:30:00Z
-  DEPLOYED_TS=$(date -u -d "$STAGING_DEPLOYED_AT" +%s 2>/dev/null || date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$STAGING_DEPLOYED_AT" +%s 2>/dev/null || echo "0")
-  NOW_TS=$(date -u +%s)
-  AGE_HOURS=$(( (NOW_TS - DEPLOYED_TS) / 3600 ))
-  if [[ "$AGE_HOURS" -ge 24 ]]; then
-    echo "[deploy] BLOCKER: Staging deploy older than 24h (${AGE_HOURS}h) — zuerst ./deploy.sh staging ausfuehren"
-    exit 1
-  fi
-
-  LOCAL_HEAD=$(git rev-parse HEAD)
-  STAGING_HEAD=$(echo "$STAGING_HEALTH" | jq -r '.git_head // ""')
-  if [[ "$STAGING_HEAD" != "$LOCAL_HEAD" ]]; then
-    echo "[deploy] BLOCKER: Local HEAD ($LOCAL_HEAD) != Staging HEAD ($STAGING_HEAD) — zuerst ./deploy.sh staging mit aktuellem Commit ausfuehren"
-    exit 1
-  fi
-
-  echo "[deploy] Pre-Deploy-Gate bestanden — Staging ist ok, aktuell (${AGE_HOURS}h alt), HEAD stimmt ueberein"
+  # ── Production-Target (Staging-Gate ENTFERNT 2026-06-01) ───────────────
+  # Andre-Decision: Staging ist bis zur letzten Phase vor Launch KOMPLETT aus
+  # dem Workflow. Production ist der einzige Deploy-/Test-Pfad (manual-direct-prod).
+  # Das alte Staging-Pre-Deploy-Gate (Health/Frische/HEAD-Match gegen staging.getnerve.app)
+  # wird als Staging-Promotion-Pipeline in der LETZTEN Phase vor Launch reaktiviert
+  # (Phase 08.23.2.STAGING). Siehe ROADMAP.md + CLAUDE.md "Deploy-Realitaet".
+  echo "[deploy] TARGET=production — direkter Deploy (kein Staging-Gate, Pre-Launch-Modus)"
 
   VPS_HOST="root@178.104.82.166"
   SSH_KEY="$HOME/.ssh/nerve_vps"
@@ -92,6 +58,7 @@ TAR_EXCLUDES=(
   --exclude='./logs'
   --exclude='./deploy'
   --exclude='./deploy.sh'
+  --exclude='./_design_export'
   --exclude='*.pyc'
   --exclude='__pycache__'
   --exclude='salesnerve_log_*.txt'
@@ -178,11 +145,11 @@ ssh -i "$SSH_KEY" "$VPS_HOST" bash -s << ENDHEREDOC
   # REVIEW-HIGH-2 FIX: .deploy_meta VOR systemctl restart schreiben
   # Datei muss existieren bevor Service neu startet — sonst liest /api/health
   # beim ersten Request nach Restart noch stale/keine Daten.
-  if [[ "$TARGET" == "staging" ]]; then
-    echo "GIT_HEAD=$GIT_HEAD_LOCAL" > /opt/nerve/.deploy_meta
-    echo "DEPLOYED_AT=\$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /opt/nerve/.deploy_meta
-    echo "[deploy] .deploy_meta geschrieben (vor Restart)"
-  fi
+  # .deploy_meta fuer BEIDE Targets schreiben (Fix 2026-06-01: vorher nur staging
+  # -> /api/health zeigte auf Production stale git_head). Vor systemctl restart.
+  echo "GIT_HEAD=$GIT_HEAD_LOCAL" > /opt/nerve/.deploy_meta
+  echo "DEPLOYED_AT=\$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> /opt/nerve/.deploy_meta
+  echo "[deploy] .deploy_meta geschrieben (vor Restart)"
 
   sudo systemctl restart $SERVICE_NAME
   echo "[deploy] Service status:"
