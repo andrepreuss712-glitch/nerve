@@ -26,10 +26,16 @@ TWO GROUPS, by what they prove:
 Run server-side on Production (CLAUDE.md HART: pytest via SSH, real PG; no local pytest).
 """
 import hashlib
+import itertools
 import uuid
 from datetime import datetime, timezone
 
 import pytest
+
+# TranscriptSegment.id is BigInteger (BIGSERIAL on PG) — SQLite only auto-increments INTEGER PRIMARY
+# KEY, not BIGINT, so we assign explicit ids in the in-memory logic group. Process-global counter
+# guarantees uniqueness within each (per-test, fresh) in-memory DB.
+_seg_id = itertools.count(1)
 
 from scripts.anonymizer_worker import process_unstamped, _hash_call_id
 
@@ -122,7 +128,7 @@ def _seed_account(engine, *, is_test_user=False, stamped=False, segments=None, t
                    conversation_log_id=clog.id))
         if segments:
             for ts_ms, speaker, seg_text in segments:
-                s.add(TranscriptSegment(conversation_log_id=clog.id, ts_ms=ts_ms,
+                s.add(TranscriptSegment(id=next(_seg_id), conversation_log_id=clog.id, ts_ms=ts_ms,
                                         speaker=speaker, text=seg_text))
         mem_id = str(uuid.uuid4())
         s.add(AccountMemory(
