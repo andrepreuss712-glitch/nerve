@@ -31,21 +31,26 @@ import pytest
 
 
 def _new_tenant(cur, suffix):
-    """Create a test organisation + tenant_orgs row, return the tenant UUID (str).
+    """Create a test organisation, return its (trigger-created) tenant UUID (str) + org id.
 
-    tenant_orgs.legacy_org_id is NOT NULL UNIQUE FK -> organisations(id), so a real org row is
-    required. Org name is tagged '[RLS-TEST]' for identifiability + analytics exclusion lineage.
+    tenant_orgs.legacy_org_id is NOT NULL UNIQUE FK -> organisations(id). The Wave-1 AFTER INSERT
+    trigger trg_mk_tenant_org -> mk_tenant_org() AUTO-creates the matching tenant_orgs row
+    (ON CONFLICT (legacy_org_id) DO NOTHING) the moment we insert the org. So we must NOT insert a
+    second tenant_orgs row (that would collide on the UNIQUE legacy_org_id) -- we READ BACK the
+    tenant_orgs.id the trigger generated and use that as the tenant UUID. The SELECT runs in the
+    same transaction, so the trigger-inserted row is visible. Org name is tagged '[RLS-TEST]' for
+    identifiability + analytics exclusion lineage.
     """
     cur.execute(
         "INSERT INTO public.organisations (name) VALUES (%s) RETURNING id",
         (f"[RLS-TEST] tenant {suffix}",),
     )
     org_id = cur.fetchone()[0]
-    tenant_id = str(uuid.uuid4())
     cur.execute(
-        "INSERT INTO public.tenant_orgs (id, legacy_org_id, name) VALUES (%s, %s, %s)",
-        (tenant_id, org_id, f"[RLS-TEST] tenant {suffix}"),
+        "SELECT id::text FROM public.tenant_orgs WHERE legacy_org_id = %s",
+        (org_id,),
     )
+    tenant_id = cur.fetchone()[0]
     return tenant_id, org_id
 
 
