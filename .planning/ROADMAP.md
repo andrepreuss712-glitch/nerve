@@ -1877,6 +1877,15 @@ Plans:
 - **Bau-Workflow TEAM + COACH:** beide Phasen erst KOMPLETT planen → Pläne gegeneinander abgleichen (Schnittstellen, v.a. Datenmodell „Aktivität pro Person unter Org-Ownership") → DANN sequenziell bauen.
 - **Coach-Plan = eigener günstiger Tarif, bewusst beschnitten (Andre 2026-06-02):** Coach-Zugang deutlich günstiger, ABER (a) KEINE Cold-Call/Meeting-Ausführung mit dem Coach-Account (separat als Add-on dazubuchbar); (b) KEIN Team-Einladen/-Verwalten. Zweck: verhindern dass jeder den billigen Coach-Plan kauft und faktisch alle Features hat. → 08.15/08.16 müssen Coach-Tarif + Call/Meeting-Add-on abbilden; SEATS regelt die Abrechnung.
 
+### Phase 08.23.2.MODES: Live-Assistent aufteilen — eigener Cold-Call- + Meeting-Modus (NEU 2026-06-02, Andre-Insight) 🟡 Kernfeature
+
+**Problem:** Cold Call + Meeting beide hinter EINEM Live-Assistent-Button → gleicher Ablauf, obwohl grundverschiedene Einstiege (Cold Call = bei null; Meeting = Kontext existiert schon).
+**Insight:** In Sidebar splitten → eigene Buttons + eigene Modal-Wege pro Modus.
+**Kern-Nutzen:** Meeting-Modus listet gebuchte Termine (liest crm.meetings) → User startet konkretes Meeting → Vorab-Briefing lädt automatisch aus gespeichertem Termin + account_memory (precall_service.merge_account_memory). Beantwortet "woher weiß NERVE welches Briefing?": man startet vom gespeicherten Termin, statt Firma neu einzutippen. Schließt die Termin→Briefing-Schleife (die der Meeting-Modal-Bestätigungstext G/MEET bereits verspricht — bewusst nicht gekürzt, weil DIESE Phase es nachreicht).
+**Depends on:** G/MEET (crm.meetings + account_memory-Briefing, live).
+**Cross-AI Pflicht** (UX + Daten-Flow). **Reihenfolge:** Kernfeature (Live-Assistent) → vor COACH; Einordnung vs Auto-Save-Mini (999.3) + 08.21 in Discuss.
+**Plans:** 0 plans
+
 ### Phase 08.23.2.COACH: Teamleiter-/Coach-Coaching-Sicht (Team-Leistungs-Dashboard) (NEU 2026-06-02, Andre-Idee) 🟡 Nebenfeature, nach TEAM
 
 **Goal:** Teamleiter (+ Coach) sieht schwarz auf weiß wo das Team steht (Cold Calls/Meetings/Trainings pro Person, wer struggelt bei welchen Einwänden/Vorwänden) → gezieltes Nachschulen statt ungenaues Selbst-Berichten im Team-Meeting.
