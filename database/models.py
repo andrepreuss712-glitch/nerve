@@ -760,6 +760,8 @@ class Account(Base):
     domain     = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
+        # MM-05 (Cross-AI): atomare Doppel-Submit-Sicherung — DDL-parity zu Migration 0014.
+        UniqueConstraint('tenant_id', 'name', name='uq_accounts_tenant_name'),
         Index('idx_accounts_tenant', 'tenant_id'),
         {'schema': 'crm'},   # MUSS letztes Element sein; explizite Schema-Qualifizierung (kein search_path-Verlass)
     )
@@ -821,6 +823,27 @@ class Meeting(Base):
         Index('idx_meetings_tenant', 'tenant_id'),
         Index('idx_meetings_account_id', 'account_id'),
         Index('idx_meetings_contact_id', 'contact_id'),
+        {'schema': 'crm'},
+    )
+
+
+# --- Meeting-Modal-Increment (08.23.2.G-MEET Plan 04) — crm.user_preferences (DDL-parity zu Migration 0014) ---
+# auto_save_meeting DEFAULT false = DSGVO Opt-in off-by-default (Art. 25 Abs. 2), serverseitig gehonort.
+# user_id ist SOFT-LINK zu public.users.id (Integer, KEIN Mauer-FK, D-08-Analogie); serverseitig aus
+# g.user.id gesetzt, nie aus Client-Wert (MM-07). Schema-qualifiziert via {'schema': 'crm'} (LETZTES Element).
+
+class UserPreference(Base):
+    __tablename__ = 'user_preferences'
+    id                = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    tenant_id         = Column(UUID_TYPE, nullable=False)
+    user_id           = Column(Integer, nullable=False)          # soft link zu public.users.id, KEIN FK (D-08); serverseitig aus g.user.id (MM-07)
+    auto_save_meeting = Column(Boolean, nullable=False, server_default=text('false'))  # DSGVO default OFF
+    schema_version    = Column(SmallInteger, nullable=False, server_default='1')
+    created_at        = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at        = Column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        UniqueConstraint('tenant_id', 'user_id', name='uq_user_preferences_tenant_user'),
+        Index('idx_user_preferences_tenant', 'tenant_id'),
         {'schema': 'crm'},
     )
 
