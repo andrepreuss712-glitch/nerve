@@ -7,10 +7,13 @@ over RLS). UTF-8 BOM + ';' delimiter for DE Excel (copied verbatim from admin_da
 
 Route slugs are ASCII; CSV CONTENT keeps Umlaute (user-facing data). Both routes @login_required.
 """
-from flask import Blueprint
+import traceback
+from datetime import datetime
+from flask import Blueprint, g, request, jsonify
+from sqlalchemy import text
 from routes.auth import login_required
 from database.db import get_session
-from database.models import Account, Contact
+from database.models import Account, Contact, Meeting, UserPreference
 
 crm_export_bp = Blueprint('crm_export', __name__, url_prefix='/crm')
 
@@ -73,5 +76,144 @@ def export_contacts_csv():
             ['ID', 'Account-ID', 'Name', 'E-Mail', 'Telefon', 'Erstellt'],
             'contacts.csv',
         )
+    finally:
+        db.close()
+
+
+# ── Meeting-Modal-Increment (08.23.2.G-MEET Plan 04) — Write-Route /crm/meetings + Preferences ──
+# RLS scopes every crm query to the request's tenant via the transaction-local app.tenant_id GUC
+# (db.py after_begin). The route stamps tenant_id = g.tenant_id (== the GUC) so WITH CHECK passes.
+
+def _resolve_account(db, tenant_id, firma):
+    """Resolve-or-create a tenant-scoped crm.accounts row by name; blank -> None.
+
+    MM-05: find-then-create is not atomic. On a double-submit two requests race past the
+    SELECT and both INSERT -> the DB UNIQUE(tenant_id, name) (uq_accounts_tenant_name, 0014)
+    rejects the loser. We INSERT ... ON CONFLICT DO NOTHING and re-select so both the winner
+    and the racing creator end up with the same single row (no IntegrityError to the client).
+    """
+    firma = (firma or '').strip()
+    if not firma:
+        return None
+    acc = db.query(Account).filter(Account.name == firma).first()   # RLS scopes to tenant
+    if acc:
+        return acc.id
+    db.execute(
+        text("INSERT INTO crm.accounts (id, tenant_id, name) "
+             "VALUES (gen_random_uuid(), :tid, :name) "
+             "ON CONFLICT (tenant_id, name) DO NOTHING"),
+        {"tid": tenant_id, "name": firma},
+    )
+    db.flush()
+    acc = db.query(Account).filter(Account.name == firma).first()
+    return acc.id if acc else None
+
+
+def _resolve_contact(db, tenant_id, account_id, name):
+    """Resolve-or-create a tenant-scoped crm.contacts row by name; blank -> None.
+
+    Contact-Uniqueness ist in diesem Increment NICHT als DB-Constraint nachgeruestet (Plan 04
+    MM-05-Entscheidung, deferred): account_id ist nullable (blank-Firma-Fall) -> partielle
+    Uniqueness verkompliziert. find-then-create reicht hier (Doppel-Submit-Risiko adressiert
+    primaer accounts als Pflicht-Resolve-Ziel)."""
+    name = (name or '').strip()
+    if not name:
+        return None
+    con = db.query(Contact).filter(Contact.name == name).first()   # RLS scopes to tenant
+    if con is None:
+        con = Contact(tenant_id=tenant_id, account_id=account_id, name=name)  # tenant_id stamped -> WITH CHECK ok
+        db.add(con)
+        db.flush()
+    return con.id
+
+
+@crm_export_bp.route('/meetings', methods=['POST'])
+@login_required
+def save_meeting():
+    tenant_id = g.tenant_id
+    if not tenant_id:
+        return jsonify(ok=False, error='Kein Mandant'), 403
+    data = request.get_json(silent=True) or {}
+    firma   = (data.get('firma') or '').strip()
+    person  = (data.get('ansprechpartner') or '').strip()
+    notes   = (data.get('notes') or '').strip() or None
+    call_id = data.get('call_id') or None
+    sched_raw = data.get('scheduled_at')
+    scheduled_at = None
+    if sched_raw:
+        # MM-01 (Andre-Decision Option a): Frontend sendet offset-tragende ISO-8601
+        # (z.B. "2026-06-03T10:00:00+02:00"). datetime.fromisoformat erzeugt ein tz-AWARE
+        # datetime -> Insert in timestamptz speichert den korrekten Instant (10:00+02:00 == 08:00Z).
+        # Eine offset-LOSE (naive) Eingabe wird ABGELEHNT, damit Postgres NICHT still die Session-TZ
+        # unterstellt (sonst stiller TZ-Drift). Py 3.8: fromisoformat akzeptiert "+02:00"-Offsets;
+        # "Z"-Suffix erst ab 3.11 -> Frontend sendet numerischen Offset, kein "Z".
+        try:
+            parsed = datetime.fromisoformat(sched_raw)
+        except (ValueError, TypeError):
+            return jsonify(ok=False, error='Datum ungueltig'), 400
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            return jsonify(ok=False, error='Datum braucht Zeitzone'), 400
+        scheduled_at = parsed
+    db = get_session()
+    try:
+        account_id = _resolve_account(db, tenant_id, firma)
+        contact_id = _resolve_contact(db, tenant_id, account_id, person)
+        m = Meeting(tenant_id=tenant_id, account_id=account_id, contact_id=contact_id,
+                    call_id=call_id, scheduled_at=scheduled_at, notes=notes)
+        db.add(m)
+        db.commit()
+        return jsonify(ok=True, firma=firma, thema=notes or '',
+                       scheduled_at=scheduled_at.isoformat() if scheduled_at else None)
+    except Exception as e:
+        db.rollback()
+        # MM-04 (CLAUDE.md Punkt 15 / learning.py:184-185-Pattern): Diagnose loggen VOR sanitized
+        # Antwort. User-Response bleibt ohne Traceback.
+        traceback.print_exc()
+        print(f"[CRM-Meeting] save_meeting Fehler: {e}")
+        return jsonify(ok=False, error='Konnte nicht gespeichert werden'), 500
+    finally:
+        db.close()
+
+
+@crm_export_bp.route('/preferences', methods=['GET'])
+@login_required
+def get_meeting_pref():
+    db = get_session()
+    try:
+        # MM-07: per-User-Authz via Session-Identitaet g.user.id (kein Client-Wert). RLS scopt
+        # zusaetzlich auf Tenant -> Nutzer liest nur die EIGENE Zeile.
+        pref = db.query(UserPreference).filter(UserPreference.user_id == g.user.id).first()
+        return jsonify(auto_save_meeting=bool(pref.auto_save_meeting) if pref else False)
+    except Exception as e:
+        traceback.print_exc()
+        print(f"[CRM-Meeting] get_meeting_pref Fehler: {e}")
+        return jsonify(auto_save_meeting=False), 500
+    finally:
+        db.close()
+
+
+@crm_export_bp.route('/preferences', methods=['POST'])
+@login_required
+def set_meeting_pref():
+    tenant_id = g.tenant_id
+    if not tenant_id:
+        return jsonify(ok=False, error='Kein Mandant'), 403
+    val = bool((request.get_json(silent=True) or {}).get('auto_save_meeting'))
+    db = get_session()
+    try:
+        # MM-07: g.user.id serverseitig, kein Client-user_id.
+        pref = db.query(UserPreference).filter(UserPreference.user_id == g.user.id).first()
+        if pref is None:
+            pref = UserPreference(tenant_id=tenant_id, user_id=g.user.id, auto_save_meeting=val)
+            db.add(pref)
+        else:
+            pref.auto_save_meeting = val
+        db.commit()
+        return jsonify(ok=True, auto_save_meeting=val)
+    except Exception as e:
+        db.rollback()
+        traceback.print_exc()
+        print(f"[CRM-Meeting] set_meeting_pref Fehler: {e}")
+        return jsonify(ok=False, error='Speichern fehlgeschlagen'), 500
     finally:
         db.close()
