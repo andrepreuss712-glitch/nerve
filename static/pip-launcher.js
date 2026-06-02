@@ -4073,6 +4073,13 @@
         summary.className = 'pip-outcome-summary';
         summary.textContent = '✓ ' + escHtml(_outcomeLabelDe(json.outcome || selectedOutcome));
         sec.appendChild(summary);
+
+        // MM-03 (G-MEET Plan 05): Meeting-Form ERST nach dem Score-Screen — nicht im rohen
+        // meeting_booked-Branch. selectedOutcome ist im Closure. renderMeetingForm mountet in
+        // einen eigenen Child-Node (#meeting-form-mount), clobbert den Score-Screen NICHT.
+        if (selectedOutcome === 'meeting_booked') {
+          try { renderMeetingForm(json); } catch (_mfe) { console.error('[G-MEET] renderMeetingForm:', _mfe); }
+        }
       })
       .catch(function(e) {
         console.error('[PhaseD.UX] correct_outcome POST Fehler:', e);
@@ -4083,6 +4090,234 @@
       });
     });
     sec.appendChild(confirmBtn);
+  }
+
+  // ── Meeting-Merk-Fenster (Phase 08.23.2.G-MEET Plan 05) ──────────────────────
+  // Mountet NACH dem D.UX.4 Score-Screen (MM-03) in einen eigenen Child-Node im
+  // PiP-Postcall-Host. Konsumiert die live Plan-04-Routen. ALLE Lookups via pipEl.
+
+  // MM-01: tz-NAIVER datetime-local-Wert -> offset-tragende ISO-8601 (Backend lehnt
+  // offset-lose Werte mit 400 ab). Lokale Browser-Wandzeit + expliziter Offset.
+  function _toIsoWithOffset(localVal) {
+    if (!localVal) return null;
+    var d = new Date(localVal);                 // als LOKALE Browser-Zeit interpretiert
+    if (isNaN(d.getTime())) return null;
+    var off = -d.getTimezoneOffset();           // Minuten, z.B. +120 fuer MESZ
+    var sign = off >= 0 ? '+' : '-';
+    var abs = Math.abs(off);
+    function p(n) { return String(n).padStart(2, '0'); }
+    var hh = p(Math.floor(abs / 60));
+    var mm = p(abs % 60);
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+         + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds())
+         + sign + hh + ':' + mm;                // z.B. "2026-06-03T10:00:00+02:00"
+  }
+
+  // datetime-local default: naechster Werktag 10:00 (Sa->Mo, So->Mo), client-side.
+  function _nextBusinessDay1000Value() {
+    var d = new Date();
+    d.setDate(d.getDate() + 1);
+    while (d.getDay() === 0 || d.getDay() === 6) { d.setDate(d.getDate() + 1); }  // 0=So,6=Sa
+    d.setHours(10, 0, 0, 0);
+    function p(n) { return String(n).padStart(2, '0'); }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+         + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());                       // naiv (datetime-local)
+  }
+
+  var _MEETING_WEEKDAYS_DE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  function _formatBriefingDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    function p(n) { return String(n).padStart(2, '0'); }
+    return _MEETING_WEEKDAYS_DE[d.getDay()] + ', ' + p(d.getDate()) + '.' + p(d.getMonth() + 1) + '. · '
+         + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function _meetingMount() {
+    var host = pipEl('nlp-section-postcall');
+    if (!host) return null;
+    var mount = host.querySelector('#meeting-form-mount');
+    if (!mount) {
+      mount = (host.ownerDocument || document).createElement('div');
+      mount.id = 'meeting-form-mount';
+      host.appendChild(mount);                  // MM-03: eigener Child-Node, NICHT host.innerHTML
+    }
+    return mount;
+  }
+
+  function _closeMeetingForm() {
+    var mount = pipEl('meeting-form-mount');
+    if (mount && mount.parentNode) mount.parentNode.removeChild(mount);
+  }
+
+  function renderMeetingForm() {
+    var mount = _meetingMount();
+    if (!mount) return;
+    mount.innerHTML = '';                        // MM-03: NUR den eigenen Mount clearen, nie den Host
+
+    // User-facing Copy mit echten Umlauten; HTML-ids/Klassen ASCII.
+    // Firma = Pflichtfeld (André-Direktive 2026-06-02): sichtbare Markierung + required.
+    var dtDefault = _nextBusinessDay1000Value();
+    mount.innerHTML =
+      '<div class="n-meeting-card">'
+    +   '<div class="n-meeting-title">Termin festhalten</div>'
+    +   '<div class="n-meeting-subline">Schnell sichern, bevor du den nächsten Call startest.</div>'
+    +   '<div class="n-meeting-context">'
+    +     '<span class="n-meeting-context-time">Anruf beendet</span>'
+    +     '<span class="n-meeting-chip"><i data-lucide="calendar-check"></i>Termin gebucht</span>'
+    +   '</div>'
+    +   '<div class="n-meeting-field-row">'
+    +     '<div class="n-meeting-field">'
+    +       '<label class="n-label" for="meeting-person">Ansprechpartner</label>'
+    +       '<input class="n-input" id="meeting-person" type="text" autocomplete="off">'
+    +     '</div>'
+    +     '<div class="n-meeting-field" id="meeting-firma-field">'
+    +       '<label class="n-label" for="meeting-firma">Firma'
+    +         '<span class="n-meeting-required-mark" aria-hidden="true">*</span></label>'
+    +       '<input class="n-input" id="meeting-firma" type="text" required aria-required="true" autocomplete="off">'
+    +       '<span class="n-meeting-error" id="meeting-firma-error" role="alert"></span>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="n-meeting-field">'
+    +     '<label class="n-label" for="meeting-datetime">Datum &amp; Uhrzeit</label>'
+    +     '<input class="n-input" id="meeting-datetime" type="datetime-local" value="' + dtDefault + '">'
+    +   '</div>'
+    +   '<div class="n-meeting-field">'
+    +     '<label class="n-label" for="meeting-notes">Worum geht’s?</label>'
+    +     '<input class="n-input" id="meeting-notes" type="text" placeholder="z. B. Angebot vorstellen, Konditionen klären…" autocomplete="off">'
+    +   '</div>'
+    +   '<div class="n-meeting-checkbox" id="meeting-autosave" role="checkbox" aria-checked="false" tabindex="0">'
+    +     '<span class="n-meeting-checkbox-box"><i data-lucide="check"></i></span>'
+    +     '<span>'
+    +       '<span class="n-meeting-checkbox-label">Solche Termine künftig automatisch merken</span>'
+    +       '<span class="n-meeting-checkbox-hint">Merkt sich deine Auswahl für später. Jederzeit abschaltbar.</span>'
+    +     '</span>'
+    +   '</div>'
+    +   '<div class="n-meeting-privacy">'
+    +     '<i data-lucide="shield-check"></i>'
+    +     '<span>Kontaktdaten werden als B2B-Geschäftskontakt gespeichert (berechtigtes Interesse, Art. 6 Abs. 1 f DSGVO), um dir beim nächsten Anruf ein Briefing zu zeigen.</span>'
+    +   '</div>'
+    +   '<span class="n-meeting-error" id="meeting-error" role="alert"></span>'
+    +   '<div class="n-meeting-actions">'
+    +     '<button type="button" class="n-btn-primary" id="meeting-save-btn"><i data-lucide="bookmark-check"></i> Termin merken</button>'
+    +     '<button type="button" class="n-btn-ghost" id="meeting-skip-btn">Überspringen</button>'
+    +   '</div>'
+    + '</div>';
+
+    // DSGVO-Checkbox: default IMMER unchecked (Art. 25 Abs. 2). Toggle persistiert die Auswahl.
+    var cb = pipEl('meeting-autosave');
+    function _setCb(on) {
+      if (!cb) return;
+      cb.classList.toggle('on', !!on);
+      cb.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    function _toggleCb() {
+      var on = !cb.classList.contains('on');
+      _setCb(on);
+      // Nur Persistenz der Auswahl (KEINE honor-Logik — MM-02 deferred -> Backlog 999.3).
+      try {
+        fetch('/crm/preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+          body: JSON.stringify({ auto_save_meeting: on })
+        });
+      } catch (_) {}
+    }
+    if (cb) {
+      cb.addEventListener('click', _toggleCb);
+      cb.addEventListener('keydown', function (e) {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); _toggleCb(); }
+      });
+    }
+    // Spiegelung eines ZUVOR explizit gewaehlten Opt-in (Nutzer-Wille, NICHT default-on).
+    try {
+      fetch('/crm/preferences').then(function (r) { return r.json(); }).then(function (d) {
+        if (d && d.auto_save_meeting === true) _setCb(true);
+      }).catch(function () {});
+    } catch (_) {}
+
+    var saveBtn = pipEl('meeting-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', _onSaveMeeting);
+    var skipBtn = pipEl('meeting-skip-btn');
+    if (skipBtn) skipBtn.addEventListener('click', _closeMeetingForm);
+
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+      try { lucide.createIcons(); } catch (_) {}
+    }
+  }
+
+  function _onSaveMeeting() {
+    var saveBtn = pipEl('meeting-save-btn');
+    var firmaEl = pipEl('meeting-firma');
+    var firma = (firmaEl && firmaEl.value || '').trim();
+
+    // Firma = Pflichtfeld (André-Direktive 2026-06-02): client-seitig blocken, Eingaben ERHALTEN.
+    var firmaField = pipEl('meeting-firma-field');
+    var firmaErr = pipEl('meeting-firma-error');
+    if (!firma) {
+      if (firmaField) firmaField.classList.add('n-meeting-field--error');
+      if (firmaErr) firmaErr.textContent = 'Firma ist Pflicht.';
+      if (firmaEl) firmaEl.focus();
+      return;                                   // KEIN POST, KEIN disable -> Felder behalten Werte
+    }
+    if (firmaField) firmaField.classList.remove('n-meeting-field--error');
+    if (firmaErr) firmaErr.textContent = '';
+
+    if (saveBtn) saveBtn.disabled = true;       // MM-05: vor fetch sperren (Doppel-Submit-Schutz)
+    fetch('/crm/meetings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify({
+        firma: firma,
+        ansprechpartner: (pipEl('meeting-person') || {}).value || '',
+        scheduled_at: _toIsoWithOffset((pipEl('meeting-datetime') || {}).value),  // MM-01 offset-ISO
+        notes: (pipEl('meeting-notes') || {}).value || '',
+        call_id: state.lastCallId || null
+      })
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data && data.ok) {
+        renderMeetingConfirm(data);             // Bestaetigung in-place (im Mount)
+      } else {
+        if (saveBtn) saveBtn.disabled = false;  // MM-05 re-enable
+        showMeetingError(sanitizeErrorMsg(data && data.error));
+      }
+    }).catch(function () {
+      if (saveBtn) saveBtn.disabled = false;     // MM-05 re-enable
+      showMeetingError('Konnte nicht gespeichert werden. Nochmal versuchen?');
+    });
+  }
+
+  function showMeetingError(msg) {
+    var errEl = pipEl('meeting-error');
+    if (errEl) errEl.textContent = msg || 'Konnte nicht gespeichert werden. Nochmal versuchen?';
+    // Felder werden NIE geleert (Input-Erhalt, UI-SPEC Error-State).
+  }
+
+  function renderMeetingConfirm(data) {
+    var mount = pipEl('meeting-form-mount');
+    if (!mount) return;
+    var firma = (data && data.firma) || '';
+    var datePart = _formatBriefingDate(data && data.scheduled_at);   // "Mittwoch, 03.06. · 10:00"
+    var thema = ((data && data.thema) || '').trim();
+    // MM-06a: kein dangling " · " wenn thema leer.
+    var briefingLine = thema ? (thema + ' · ' + datePart) : datePart;
+    mount.innerHTML =
+      '<div class="n-meeting-card n-meeting-confirm">'
+    +   '<div class="n-meeting-confirm-ring"><i data-lucide="bookmark-check"></i></div>'
+    +   '<div class="n-meeting-confirm-title">Termin gemerkt</div>'
+    +   '<div class="n-meeting-confirm-body">Beim nächsten Anruf von <strong>' + escHtml(firma) + '</strong> zeige ich dir das.</div>'
+    +   '<div class="n-meeting-briefing">'
+    +     '<i data-lucide="sparkles"></i>'
+    +     '<span class="n-meeting-briefing-line">' + escHtml(briefingLine) + '</span>'
+    +   '</div>'
+    +   '<button type="button" class="n-btn-primary" id="meeting-weiter-btn">Weiter <i data-lucide="arrow-right"></i></button>'
+    + '</div>';
+    var weiter = pipEl('meeting-weiter-btn');
+    if (weiter) weiter.addEventListener('click', _closeMeetingForm);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+      try { lucide.createIcons(); } catch (_) {}
+    }
   }
 
   function _outcomeLabelDe(val) {
