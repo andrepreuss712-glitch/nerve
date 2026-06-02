@@ -1839,12 +1839,14 @@ Plans:
 
 **UPDATE 2026-06-01 (Discuss-Phase abgeschlossen, CONTEXT D-01–D-20, Cross-AI Gemini 4×):** Scope-Präzisierung gegenüber obiger Skizze — Plan-Author MUSS das beachten: (1) Mandanten-Schild = `tenant_id` (UUID) → `tenant_orgs`, NICHT `workspace_id` (0 Code-Treffer). (2) Strangler statt Big-Bang: neue Tabellen in `crm` mit `tenant_id`; die ~32 Alttabellen behalten `org_id` (Integer) in `public` — KEIN Retrofit auf existing Tabellen jetzt. Wave 1 = `tenant_orgs` anlegen + Brücke zu `organisations.id` + `calls.tenant_id`-Backfill (NICHT Voll-Retrofit). `users`→UUID + `org_id`-Ablösung deferred (war Vault-Phase-F-Scope, F existiert nur in Vault-Roadmap). (3) RLS nur auf neuen Tabellen. (4) Verbindungs-Karten-Pflicht: kein Name/Tabelle ohne grep+Live-Server-Beweis. Gemini-Umsetzungs-Fallen für den Plan: Connection-Pooling-Reset (teardown_request), Owner-BYPASSRLS (FORCE RLS oder restricted role), WITH CHECK, tenant_id-Index, search_path auf der Rolle, ALTER DEFAULT PRIVILEGES, Dual-Write bei Neuanmeldung, Session-tenant-UUID-Enrichment, Anonymizer-State-Tracking ohne ID-Spiegelung über die crm/training-Mauer.
 
-**Plans:** 3 plans (1 pro Welle, sequenziell deploybar — D-02)
+**Plans:** 5 plans (Wellen 1-3 done; +2 NEU: Meeting-Modal-Increment, Welle 1 backend / Welle 2 frontend)
 
 Plans:
 - [x] 08.23.2.G-MEET-01-PLAN.md — Wave 1: Multi-Tenancy-Unterbau (tenant_orgs + Dual-Write-Trigger + calls.tenant_id-Backfill + Residual-Verification-Runbook) ✅ 2026-06-01 — live auf Prod (migration head=0011, git_head ed8a137); tenant_orgs 1:1 seeded (2==2), trg_mk_tenant_org SECURITY INVOKER, backfill 0 Orphans, 6 Tests grün
 - [x] 08.23.2.G-MEET-02-PLAN.md — Wave 2: crm-Schema + 4 Tabellen + RLS-Kit + Session-UUID-Enrichment + Pre-Call-Briefing + CSV-Export (Meeting-Modal-UX deferred zu /gsd-ui-phase) ✅ 2026-06-01 — live auf Prod (migration head=0012, nullif fail-closed RLS-Amendment); 8/8 real-PG-Tests grün (RLS-Isolation 4/4 + Briefing 4/4)
 - [x] 08.23.2.G-MEET-03-PLAN.md — Wave 3: training.preference_pairs (EXTEND, created-not-populated → Phase E) + Anonymizer-Worker (Variante A) + worker-targeted crm-RLS-Policies (anon_worker_read/stamp) ✅ 2026-06-01 — live auf Prod (migration head=0013, git_head a5a2b60); 14/14 Tests grün + D-16-Worker-Runtime via Claudian SET-ROLE-Tor verifiziert (cross-tenant read + stamp-persist + column-bound + nerve_app no-leak)
+- [ ] 08.23.2.G-MEET-04-PLAN.md — 🔴 NEU-Increment Wave 1 (backend, eigenständig deploybar): crm.user_preferences (Migration 0014, FORCED RLS NULLIF-Policy, owner postgres) + POST /crm/meetings (tenant_id-Stamp + resolve-or-create accounts/contacts) + GET/POST /crm/preferences + real-PG RLS/DSGVO-default-off-Tests
+- [ ] 08.23.2.G-MEET-05-PLAN.md — 🔴 NEU-Increment Wave 2 (frontend, konsumiert Plan-04-Route): PiP 'Termin festhalten'-Form (pipEl, post-call host, datetime-local) + DSGVO-Checkbox UNCHECKED-by-default (Art. 25 Abs. 2) + Art. 6 Abs. 1 f Privacy-Note verbatim (build-blocking) + Bestätigungs-View + .n-meeting-* Light-Mode-Teal-CSS
 
 ### Phase 08.23.2.TEAM: Team-Grundgerüst — Firmen-Konten, Rollen, Einladungen, Org-Ownership (NEU 2026-05-30, Andre-Strategie + Cross-AI Gemini) 🔴 PRE-LAUNCH-PFLICHT (Verkaufs-Enabler)
 
@@ -1867,6 +1869,29 @@ Plans:
 **Reihenfolge:** nach G/MEET, VOR den Preis-Phasen 08.15/08.16 (ohne Team-Tabellen kein Per-Seat-Billing baubar — sonst 08.15 zweimal).
 **Plans:** 0 plans
 
+**ERWEITERUNG 2026-06-02 (Andre — Rollen-Ausbau + Coach + Profil-Sharing):**
+- Rollen jetzt 3-stufig: **Leiter (Manager) > Coach > Mitarbeiter.** Coach UNTER Leiter (nicht gleichgestellt) — Coach hat KEINE Rechte auf Zahlungsdaten/Pläne/Abrechnung (bleibt beim Leiter).
+- Profil-Einsicht: Coach UND Leiter dürfen Mitarbeiter-Profile EINSEHEN (gemeinsame Verbesserung). Ändern-Rechte + volle Permission-Matrix in Discuss festlegen.
+- Profil-Sharing: Share-Button für ganze Profile UND einzelne Profil-Teilbereiche (Peer-Hilfe). ⚠️ Überschneidung mit SEATS Task 4 (Opener/Skript-Sharing) → Sharing-Mechanik an EINER Stelle (Vorschlag: Grund-Mechanik in TEAM, Nutzung in SEATS/COACH). In Discuss zusammenführen.
+- OFFEN (Discuss): Coach intern (Org-Mitarbeiter) vs. extern (Coaching-Dienst über mehrere Tenants)? Ändert Zugriffs-/Tenant-Modell → vor Datenmodell klären.
+- **Bau-Workflow TEAM + COACH:** beide Phasen erst KOMPLETT planen → Pläne gegeneinander abgleichen (Schnittstellen, v.a. Datenmodell „Aktivität pro Person unter Org-Ownership") → DANN sequenziell bauen.
+- **Coach-Plan = eigener günstiger Tarif, bewusst beschnitten (Andre 2026-06-02):** Coach-Zugang deutlich günstiger, ABER (a) KEINE Cold-Call/Meeting-Ausführung mit dem Coach-Account (separat als Add-on dazubuchbar); (b) KEIN Team-Einladen/-Verwalten. Zweck: verhindern dass jeder den billigen Coach-Plan kauft und faktisch alle Features hat. → 08.15/08.16 müssen Coach-Tarif + Call/Meeting-Add-on abbilden; SEATS regelt die Abrechnung.
+
+### Phase 08.23.2.COACH: Teamleiter-/Coach-Coaching-Sicht (Team-Leistungs-Dashboard) (NEU 2026-06-02, Andre-Idee) 🟡 Nebenfeature, nach TEAM
+
+**Goal:** Teamleiter (+ Coach) sieht schwarz auf weiß wo das Team steht (Cold Calls/Meetings/Trainings pro Person, wer struggelt bei welchen Einwänden/Vorwänden) → gezieltes Nachschulen statt ungenaues Selbst-Berichten im Team-Meeting.
+
+**PFLICHT-Recherche ZUERST (vor Design):** Was darf ein Chef in DE über Mitarbeiter sehen? Leistungs-/Verhaltenskontrolle, Betriebsrat-Mitbestimmung (§ 87 BetrVG), Beschäftigten-Datenschutz (DSGVO Art. 88). Auslegungssache — wie weit im Erlaubten?
+
+**Design-Leitplanken (Andre 2026-06-02):**
+- evtl. nur VAGE Hinweise ("hat noch Schwierigkeiten bei Einwand X") statt nackter Zahlen — Recherche entscheidet wie weit.
+- Report-Schwelle: ab Leistungs-Level X% bei allen Metriken kein Report mehr (Mitarbeiter läuft allein) = Data-Minimization, nur Hilfsbedürftige zeigen.
+
+**Depends on:** Phase 08.23.2.TEAM (Rollen + Org-Ownership + Aktivitätsdaten pro Person).
+**Cross-AI Pflicht** (Beschäftigten-Datenschutz).
+**Reihenfolge:** Plan zusammen mit TEAM (abgleichen), Bau direkt nach TEAM.
+**Plans:** 0 plans
+
 ### Phase 08.23.2.SEATS: Team-Abrechnung pro Platz + Opener/Skript-Sharing (NEU 2026-05-30, Andre-Strategie + Cross-AI Gemini) 🔴 PRE-LAUNCH-PFLICHT
 
 **Goal:** Per-Seat-Billing + Team-Sharing oben auf das Team-Grundgerüst.
@@ -1887,6 +1912,7 @@ Plans:
 **Komplexität:** 🔴 komplex — Billing-Korrektheit + Stripe-Quantity-Sync + Sharing
 **Blocker für:** EA-Launch (Verkaufs-Enabler — ohne Per-Seat kein Team-Verkauf)
 **Reihenfolge:** nach 08.15/08.16.
+**Coach-Seat (NEU 2026-06-02):** eigener günstiger Seat-Typ OHNE Cold-Call/Meeting-Ausführung (separat als Add-on dazubuchbar) und OHNE Team-Einladen/-Verwalten — Plan-Segmentierung gegen Missbrauch des billigen Coach-Plans. Stripe führt Coach-Seat + Call/Meeting-Add-on als getrennte Posten.
 **Plans:** 0 plans
 
 ### Phase 08.23.2.E: DPO-Paar-Sammler + DSFA-Dokument (NEU 2026-05-11, **erweitert 2026-05-27**) 🟡
@@ -1947,4 +1973,18 @@ Plans:
 
 **Priorität:** TBD mit Andre — #2 (Einzel-Bewertungen) ist Coaching-Kernwert (evtl. pre-launch), #1/#3 eher Tiefe (evtl. post-launch). UI-Text-Cleanup ist kleiner Pre-Launch-Polish.
 **Komplexität:** 🟡 (Sonnet-Analyse pro Dimension + UI), finalisieren in Spec/Discuss.
+**Plans:** 0 plans
+
+### Phase 999.3: Auto-Save-Meeting HONOR-Logik — gebuchte Termine ohne Form anlegen (BACKLOG, NEU 2026-06-02, aus G-MEET-Cross-AI MM-02)
+
+**Goal:** Die echte Auto-Save-Behavior die das `auto_save_meeting`-Preference-Flag tatsächlich EINLÖST. In Phase 08.23.2.G-MEET (Meeting-Modal) wird das Häkchen "Solche Termine künftig automatisch merken" gebaut + die Präferenz nach `crm.user_preferences` persistiert — ABER die Honor-Logik (Termin am Call-Ende OHNE Form-Anzeige automatisch nach `crm.meetings` schreiben wenn Flag=true) ist bewusst NICHT in 04/05 enthalten. Cross-AI MM-02 (Gemini + Claudian) fing die sonst falsche UX-Versprechung; André-Entscheidung 2026-06-02 (Option b): Häkchen + Persistenz jetzt mit ehrlichem Hint ("Merkt sich deine Auswahl für später"), Honor-Logik in DIESE dedizierte Folge-Mini-Phase — direkt NACH G-MEET einzuplanen, weil sie den Call-End-Flow neu anfasst und richtig gebaut (nicht drangeflanscht) werden soll.
+
+**Tasks (Skizze, in Spec/Discuss schärfen):**
+1. Beim Call-Ende mit outcome=meeting_booked: `crm.user_preferences.auto_save_meeting` des aktuellen Nutzers (`g.user.id`, tenant-scoped) lesen.
+2. Wenn true: Termin OHNE Form direkt nach `crm.meetings` schreiben (tenant_id-Stamp + resolve-or-create accounts/contacts wie POST /crm/meetings) — entscheiden: welche Felder aus dem Call ableitbar (Firma/Ansprechpartner/Datum/Thema), welcher Default-Zeitpunkt, was bei fehlenden Daten.
+3. UX-Entscheidung: stille Bestätigung (Toast "Termin gemerkt") vs. Mini-Confirm; wie bei AI-unsicherem Outcome (confidence-Schwelle) verfahren — NICHT blind bei Unsicherheit auto-anlegen.
+4. DSGVO bleibt: Flag default OFF (Art. 25 Abs. 2), jederzeit abschaltbar; Auto-Anlage nur bei explizitem Opt-in.
+
+**Abhängigkeit:** Baut auf G-MEET Plan 04 (crm.user_preferences + /crm/meetings-Write-Pfad) + Plan 05 (Häkchen + Persistenz). Re-touchiert den D.UX.4 Post-Call-Flow.
+**Komplexität:** 🟡 (Call-End-Flow-Integration + UX-Entscheidungen + confidence-Handling), finalisieren in Spec/Discuss.
 **Plans:** 0 plans
