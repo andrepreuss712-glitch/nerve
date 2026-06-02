@@ -135,6 +135,11 @@ def save_meeting():
         return jsonify(ok=False, error='Kein Mandant'), 403
     data = request.get_json(silent=True) or {}
     firma   = (data.get('firma') or '').strip()
+    # André-Direktive 2026-06-02: Firma ist PFLICHTFELD — kein Orphan-Termin (account_id NULL).
+    # Firma ist der Schluessel, der den Termin spaeter dem richtigen Briefing zuordnet (Phase MODES).
+    # Ansprechpartner/Datum/Thema bleiben optional. Fail-closed VOR jedem DB-Write.
+    if not firma:
+        return jsonify(ok=False, error='Firma ist Pflicht'), 400
     person  = (data.get('ansprechpartner') or '').strip()
     notes   = (data.get('notes') or '').strip() or None
     call_id = data.get('call_id') or None
