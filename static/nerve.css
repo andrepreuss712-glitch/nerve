@@ -392,6 +392,8 @@
   --pip-bg: #F8FAFC;
   --badge-default-bg: rgba(100, 116, 139, 0.08);
   --badge-default-text: #475569;
+  /* MM-06b (G-MEET Plan 05): weisser Check auf Teal-Fill — KEIN --btn-primary-text (das ist #06060a). */
+  --meeting-check-color: #FFFFFF;
 }
 
 
@@ -3485,3 +3487,97 @@ input[type="range"].perf-slider::-moz-range-thumb {
     font-weight: 600;
     padding: 6px 12px;
 }
+
+/* ── Meeting-Merk-Fenster (Phase 08.23.2.G-MEET Plan 05) ────────────────────────
+   Light-Mode, Teal-only, AUSSCHLIESSLICH var(--token) — kein hardcoded hex/rgba,
+   kein blau/lila/gold (Punkt 8). PiP-eingebettet (kein Overlay). MM-06b: Check via
+   --meeting-check-color, Chip via --pip-gatekeeper-*. */
+.n-meeting-card {
+    background: var(--pip-bg);
+    border: 1.5px solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    padding: 24px;
+    margin-top: 16px;
+}
+.n-meeting-title { font-size: 16px; font-weight: 700; color: var(--page-text); margin: 0 0 4px; }
+.n-meeting-subline { font-size: 12px; color: var(--page-text-secondary); margin: 0 0 16px; }
+
+.n-meeting-context {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--badge-default-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 16px;
+}
+.n-meeting-context-time { font-family: var(--page-font-mono); font-size: 12px; color: var(--page-text-secondary); }
+.n-meeting-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--pip-gatekeeper-bg);
+    color: var(--pip-gatekeeper-text);
+    border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600;
+}
+
+.n-meeting-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+@media (max-width: 360px) { .n-meeting-field-row { grid-template-columns: 1fr; } }
+.n-meeting-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+/* Firma = Pflichtfeld (André-Direktive 2026-06-02): sichtbare Pflicht-Markierung. */
+.n-meeting-required-mark { color: var(--btn-primary-bg-from); font-weight: 700; margin-left: 2px; }
+.n-meeting-field--error .n-input { border-color: var(--btn-danger-text); }
+.n-meeting-error {
+    color: var(--btn-danger-text); font-size: 12px; margin-top: 4px; min-height: 0;
+}
+/* datetime-local: HART color-scheme:light (nie dark — sonst weiss-auf-weiss unsichtbar). */
+.n-meeting-card input[type="datetime-local"].n-input { color-scheme: light; }
+
+/* DSGVO-Checkbox — ganze Row klickbar, >=40px; default unchecked (Art. 25 Abs. 2). */
+.n-meeting-checkbox {
+    display: flex; align-items: flex-start; gap: 10px;
+    min-height: 40px; padding: 8px 0; cursor: pointer;
+}
+.n-meeting-checkbox-box {
+    flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px;
+    background: var(--input-bg);
+    border: 1.5px solid var(--glass-border);
+    border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: transparent;
+}
+.n-meeting-checkbox.on .n-meeting-checkbox-box {
+    background: var(--btn-primary-bg-from);
+    border-color: var(--btn-primary-bg-from);
+    color: var(--meeting-check-color);   /* MM-06b: weisser Check, NICHT --btn-primary-text */
+}
+.n-meeting-checkbox-label { font-size: 13px; color: var(--page-text); }
+.n-meeting-checkbox-hint { font-size: 11px; color: var(--page-text-secondary); margin-top: 2px; }
+
+.n-meeting-privacy {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: var(--badge-default-bg);
+    border-radius: 10px; padding: 10px 12px; margin: 12px 0;
+    font-size: 11px; color: var(--page-text-secondary); line-height: 1.5;
+}
+.n-meeting-privacy svg { flex: 0 0 auto; color: var(--pip-gatekeeper-text); }
+
+.n-meeting-actions { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+
+/* Bestaetigungs-View (in-place im #meeting-form-mount). */
+.n-meeting-confirm { text-align: center; padding: 8px 0; }
+.n-meeting-confirm-ring {
+    width: 48px; height: 48px; margin: 0 auto 12px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--pip-gatekeeper-bg);
+    color: var(--success-green);
+}
+.n-meeting-confirm-title { font-size: 16px; font-weight: 700; color: var(--page-text); margin-bottom: 4px; }
+.n-meeting-confirm-body { font-size: 13px; color: var(--page-text-secondary); margin-bottom: 16px; }
+.n-meeting-briefing {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--badge-default-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px; padding: 12px;
+    text-align: left; margin-bottom: 16px;
+}
+.n-meeting-briefing svg { flex: 0 0 auto; color: var(--pip-gatekeeper-text); }
+.n-meeting-briefing-line { font-size: 12px; color: var(--page-text); }
