@@ -53,6 +53,18 @@
     </div>
   </header>
 
+  {# ── Phase 08.23.2.D.UX.2 (R-02): Reiter-Umbau. Header bleibt ausserhalb der Tabs.
+     n-tabs.js (Plan 01) initialisiert [data-tabs], togglet Panels via hidden, feuert
+     n-tab:activated. aria-controls PFLICHT pro Button (DUX2-04, Screenreader-Paarung).
+     Uebersicht MUSS Default/erster Tab sein (Landmine 4: Chart.js initialisiert sichtbar,
+     nicht in display:none). Die 11 Bestandssektionen wandern UNVERAENDERT ins #uebersicht-Panel. #}
+  <div class="n-tabs" data-tabs data-tabs-id="session-detail">
+    <div class="n-tabs-bar" role="tablist">
+      <button class="n-tab-btn" role="tab" data-tab-target="uebersicht" aria-controls="uebersicht" aria-selected="true">Übersicht</button>
+      <button class="n-tab-btn" role="tab" data-tab-target="transkript" aria-controls="transkript" aria-selected="false">Transkript</button>
+    </div>
+    <div class="n-tab-panel" id="uebersicht" role="tabpanel">
+
   {# ── Section 2: Score-Hero (W-06: score_total aus Plan 01) ────── #}
   {% set score = score_total %}
   {% set score_class = 'n-session-detail-score--high' if score >= 70 else ('n-session-detail-score--mid' if score >= 60 else 'n-session-detail-score--low') %}
@@ -460,6 +472,26 @@
     </div>
   </section>
 
+    </div><!-- /#uebersicht -->
+
+    {# ── Transkript-Reiter (R-02 / DQ-02): laedt LAZY fire-once bei erster #transkript-
+       Aktivierung via n-tab:activated (Plan 01). Quelle: /api/transcript/<conv.id> (Plan 02,
+       anonymisierte DB-Segmente — bewusst anders als PiP, das rohen RAM-Text zeigt). #}
+    <div class="n-tab-panel" id="transkript" role="tabpanel" hidden data-conv-id="{{ conv.id }}">
+      <div class="transcript-search-bar">
+        <input type="text" id="transcript-search-input" class="transcript-search-input"
+               placeholder="Suche im Transkript…" aria-label="Suche im Transkript" autocomplete="off">
+        <button type="button" id="transcript-search-prev" class="n-btn n-btn-ghost" aria-label="Vorheriger Treffer">◀</button>
+        <button type="button" id="transcript-search-next" class="n-btn n-btn-ghost" aria-label="Naechster Treffer">▶</button>
+        <span id="transcript-search-counter" class="transcript-search-counter"></span>
+        <button type="button" id="transcript-copy-all" class="n-btn n-btn-ghost" aria-live="polite">Ganzes Transkript kopieren</button>
+      </div>
+      <div id="transcript-segments" class="transcript-segments-container" aria-live="polite">
+        <p class="transcript-empty">Transkript wird geladen…</p>
+      </div>
+    </div><!-- /#transkript -->
+  </div><!-- /.n-tabs -->
+
 </main>
 
 {# ── Phase 08 D-04: rateEwb() — 3-Button-Rating via /api/ewb/<id>/rate ── #}
@@ -574,6 +606,201 @@ async function rateEwb(eventId, value, btn) {
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
+  }
+})();
+</script>
+{% endblock %}
+
+{% block scripts %}
+{# Phase 08.23.2.D.UX.2 Plan 03 — n-tabs + Transkript-Reiter (lazy fire-once, Suche, Copy). #}
+<script src="{{ url_for('static', filename='n-tabs.js') }}?v={{ static_mtime('n-tabs.js') }}"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ── Lazy fire-once Transkript-Fetch (DUX2-03) ──────────────────────────
+  // PFLICHT: Listener SYNCHRON beim Script-Parse registrieren — NICHT in einem eigenen
+  // DOMContentLoaded kapseln. n-tabs.js feuert seine Initial-Aktivierung INNERHALB seines
+  // eigenen DOMContentLoaded-Handlers; ein spaeter (in zweitem DOMContentLoaded) angehaengter
+  // Listener wuerde diese Initial-Emission verpassen -> Deep-Link /session/<id>#transkript
+  // bliebe leer. Hier laeuft der addEventListener im IIFE-Body, also live BEVOR n-tabs initialisiert.
+  var loaded = false;          // fire-once-Guard
+  var segmentsData = [];       // gerenderte Segment-Texte (fuer Suche/Copy)
+
+  document.addEventListener('n-tab:activated', function (e) {
+    if (!e.detail || e.detail.tabId !== 'transkript') return;
+    if (loaded) return;        // fire-once: nach erstem Fetch kein Reload mehr
+    loaded = true;
+    loadTranscript();
+  });
+
+  function loadTranscript() {
+    var panel = document.getElementById('transkript');
+    var container = document.getElementById('transcript-segments');
+    if (!panel || !container) return;
+    var convId = panel.getAttribute('data-conv-id');
+
+    fetch('/api/transcript/' + convId)
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        renderSegments(data.segments || []);
+      })
+      .catch(function (err) {
+        console.error('[D.UX.2] transcript fetch failed', err);
+        container.innerHTML = '';
+        var p = document.createElement('p');
+        p.className = 'transcript-empty';
+        p.textContent = 'Transkript konnte nicht geladen werden. Seite neu laden oder Support kontaktieren.';
+        container.appendChild(p);
+      });
+  }
+
+  // ── Render (textContent statt innerHTML — XSS-Schutz) ──────────────────
+  var SPEAKER_LABEL = { berater: 'BERATER', kunde: 'KUNDE', system: 'SYSTEM' };
+
+  function fmtTs(ms) {
+    if (ms === null || ms === undefined || isNaN(ms)) return '';
+    var total = Math.floor(ms / 1000);
+    var mm = Math.floor(total / 60);
+    var ss = total % 60;
+    return (mm < 10 ? '0' : '') + mm + ':' + (ss < 10 ? '0' : '') + ss;
+  }
+
+  function renderSegments(segments) {
+    var container = document.getElementById('transcript-segments');
+    if (!container) return;
+    container.innerHTML = '';
+    segmentsData = [];
+
+    if (!segments.length) {
+      var empty = document.createElement('p');
+      empty.className = 'transcript-empty';
+      empty.textContent = 'Kein Transkript verfügbar für diesen Call.';
+      container.appendChild(empty);
+      return;
+    }
+
+    segments.forEach(function (seg) {
+      var speaker = (seg.speaker || 'system');
+      var row = document.createElement('div');
+      row.className = 'transcript-segment-row';
+
+      var label = document.createElement('span');
+      label.className = 'transcript-speaker-label';
+      label.setAttribute('data-speaker', speaker);
+      label.textContent = SPEAKER_LABEL[speaker] || 'SYSTEM';
+      row.appendChild(label);
+
+      var tsTxt = fmtTs(seg.ts_ms);
+      if (tsTxt) {
+        var ts = document.createElement('span');
+        ts.className = 'transcript-timestamp';
+        ts.textContent = tsTxt;
+        row.appendChild(ts);
+      }
+
+      var textEl = document.createElement('span');
+      textEl.className = 'transcript-text';
+      textEl.textContent = seg.text || '';   // KEIN innerHTML mit Segment-Text
+      row.appendChild(textEl);
+
+      container.appendChild(row);
+      segmentsData.push({ speaker: SPEAKER_LABEL[speaker] || 'SYSTEM', text: seg.text || '', el: textEl, original: seg.text || '' });
+    });
+  }
+
+  // ── Suche / Highlight / Durchspringen (TT-02) ──────────────────────────
+  var matches = [];        // alle <mark>-Elemente in Reihenfolge
+  var currentMatch = -1;
+
+  function clearHighlights() {
+    segmentsData.forEach(function (s) {
+      s.el.textContent = s.original;   // zurueck zu reinem Text
+    });
+    matches = [];
+    currentMatch = -1;
+  }
+
+  function highlightInto(el, text, query) {
+    // Sicheres DOM-Rebuild: Text in Treffer/Nicht-Treffer zerlegen, <mark> erzeugen (kein innerHTML-Concat).
+    el.textContent = '';
+    var lower = text.toLowerCase();
+    var q = query.toLowerCase();
+    var idx = 0, found;
+    while ((found = lower.indexOf(q, idx)) !== -1) {
+      if (found > idx) el.appendChild(document.createTextNode(text.slice(idx, found)));
+      var mark = document.createElement('mark');
+      mark.className = 'transcript-mark';
+      mark.textContent = text.slice(found, found + query.length);
+      el.appendChild(mark);
+      matches.push(mark);
+      idx = found + query.length;
+    }
+    if (idx < text.length) el.appendChild(document.createTextNode(text.slice(idx)));
+  }
+
+  function updateCounter() {
+    var counter = document.getElementById('transcript-search-counter');
+    if (!counter) return;
+    if (!matches.length) { counter.textContent = 'Keine Treffer'; return; }
+    counter.textContent = (currentMatch + 1) + ' / ' + matches.length;
+  }
+
+  function setCurrent(i) {
+    if (!matches.length) { updateCounter(); return; }
+    if (currentMatch >= 0 && matches[currentMatch]) matches[currentMatch].classList.remove('transcript-mark--current');
+    currentMatch = (i + matches.length) % matches.length;
+    var m = matches[currentMatch];
+    m.classList.add('transcript-mark--current');
+    m.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    updateCounter();
+  }
+
+  function runSearch(query) {
+    clearHighlights();
+    if (!query) { updateCounter(); return; }
+    segmentsData.forEach(function (s) {
+      if (s.original.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+        highlightInto(s.el, s.original, query);
+      }
+    });
+    if (matches.length) setCurrent(0); else updateCounter();
+  }
+
+  // ── Wiring (DOMContentLoaded ist OK fuer Such-/Copy-Buttons — die brauchen kein
+  //    n-tabs-Initial-Event; nur der n-tab:activated-Listener oben muss synchron sein) ──
+  function wireControls() {
+    var input = document.getElementById('transcript-search-input');
+    if (input) {
+      input.addEventListener('input', function () { runSearch(input.value.trim()); });
+    }
+    var prev = document.getElementById('transcript-search-prev');
+    var next = document.getElementById('transcript-search-next');
+    if (prev) prev.addEventListener('click', function () { if (matches.length) setCurrent(currentMatch - 1); });
+    if (next) next.addEventListener('click', function () { if (matches.length) setCurrent(currentMatch + 1); });
+
+    var copyBtn = document.getElementById('transcript-copy-all');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        var full = segmentsData.map(function (s) { return s.speaker + '  ' + s.text; }).join('\n');
+        navigator.clipboard.writeText(full).then(function () {
+          var orig = copyBtn.textContent;
+          copyBtn.textContent = 'Kopiert ✓';
+          setTimeout(function () { copyBtn.textContent = orig; }, 1500);
+        }).catch(function (err) {
+          console.error('[D.UX.2] clipboard write failed', err);
+        });
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireControls);
+  } else {
+    wireControls();
   }
 })();
 </script>
