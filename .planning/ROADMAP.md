@@ -1888,6 +1888,18 @@ Plans:
 **Plans:** 1 plan
 - [ ] 08.23.2.MEETSTEP-01-formular-vor-score-reorder-PLAN.md — Termin-Formular als eigener Schritt VOR dem Score: _revealScoreAndActions-Helper extrahieren, correct_outcome.then() bei meeting_booked verzweigen, Skip/Weiter/Zurück-Pfade verdrahten (D-03/D-04 Re-Entry)
 
+### Phase 08.23.2.NACHTRAG: Ergebnis-Korrektur + Termin nachtragen (Scoreboard-Zurück + Auswertungs-Reiter) (NEU 2026-06-03, aus MEETSTEP-Live-Test) 🟡
+
+**Problem (Andre-Logik-Bruch):** Übersprungener/verpasster Termin kann nirgends nachgetragen werden (Formular nur direkt nach dem Call). Wenn das Dashboard Skippern "schau nochmal rein" sagt, MUSS es hinten eine Nachtrag-Option geben.
+**Andre-Design 03.06.:**
+- (1) Knopf im Scoreboard (PiP) → komplett zurück zur Ergebnis-Auswahl (nutzt MEETSTEP-Re-Render; bei "Termin gebucht" öffnet Formular zum Nachtragen).
+- (2) Reiter in der großen Auswertung (session_detail.html) → Ergebnis korrigieren + Termin nachtragen.
+- (3) Wenn vorher Nicht-Formular-Ergebnis gewählt (oder PiP geschlossen) → spätestens in der Auswertung Formular nachtrag-öffenbar.
+**OFFEN (Discuss):** nachträgliche Korrektur in der Auswertung — Score neu werten ODER Disclaimer "Score bleibt unberührt"? (Claudian-Lean: neu werten = Single Source of Truth.)
+**Konsistenz-Regel:** Dashboard-Erinnerung ("schau nochmal rein") erst bauen WENN Nachtrag existiert — Reminder + Nachtrag zusammen, sonst broken promise.
+**Depends on:** MEETSTEP (Re-Render + Formular), G/MEET (crm.meetings), session_detail. **Koordination:** MODES (Meeting-Modus) + D.UX.4-Dashboard-Outcome-Korrektur (nicht doppelt). Cross-AI Pflicht (Control-Flow + Score-Logik).
+**Plans:** 0 plans
+
 ### Phase 08.23.2.MODES: Live-Assistent aufteilen — eigener Cold-Call- + Meeting-Modus (NEU 2026-06-02, Andre-Insight) 🟡 Kernfeature
 
 **Problem:** Cold Call + Meeting beide hinter EINEM Live-Assistent-Button → gleicher Ablauf, obwohl grundverschiedene Einstiege (Cold Call = bei null; Meeting = Kontext existiert schon).
