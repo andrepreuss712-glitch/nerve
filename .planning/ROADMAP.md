@@ -1877,7 +1877,7 @@ Plans:
 - **Bau-Workflow TEAM + COACH:** beide Phasen erst KOMPLETT planen → Pläne gegeneinander abgleichen (Schnittstellen, v.a. Datenmodell „Aktivität pro Person unter Org-Ownership") → DANN sequenziell bauen.
 - **Coach-Plan = eigener günstiger Tarif, bewusst beschnitten (Andre 2026-06-02):** Coach-Zugang deutlich günstiger, ABER (a) KEINE Cold-Call/Meeting-Ausführung mit dem Coach-Account (separat als Add-on dazubuchbar); (b) KEIN Team-Einladen/-Verwalten. Zweck: verhindern dass jeder den billigen Coach-Plan kauft und faktisch alle Features hat. → 08.15/08.16 müssen Coach-Tarif + Call/Meeting-Add-on abbilden; SEATS regelt die Abrechnung.
 
-### Phase 08.23.2.MEETSTEP: Termin-Formular als eigener Post-Call-Schritt (vor dem Score) (NEU 2026-06-03, aus G/MEET-Live-Test) 🟡
+### Phase 08.23.2.MEETSTEP: Termin-Formular als eigener Post-Call-Schritt (vor dem Score) (NEU 2026-06-03, aus G/MEET-Live-Test) 🟡 — ✅ COMPLETE 2026-06-03 (live auf Prod, 7/7 UAT bestätigt, head 021d21c)
 
 **Problem:** Termin-Formular sitzt aktuell UNTER dem Score + unter den "Nächster Call / Auswertung"-Buttons → User überspringt den Termin aus Versehen (klickt "Nächster Call"). Untergräbt den Feature-Nutzen.
 **Soll (Andre-Reihenfolge 03.06.):** Anruf endet → Ergebnis-Auswahl ("Termin gebucht") → **Termin-Formular (eigener PiP-Schritt)** → Score-Karte → Auswertung/Nächster Call. Formular kommt VOR den Score.
@@ -1886,7 +1886,7 @@ Plans:
 **Koordination mit MODES:** beide fassen den Post-Call-/Meeting-Flow an → nicht doppelt umbauen; MEETSTEP (klein, sofort, fixt Live-Skippability) zuerst.
 **Depends on:** G/MEET Meeting-Modal (live). ID ohne Schrägstrich (kein Multi-Segment-Gotcha).
 **Plans:** 1 plan
-- [ ] 08.23.2.MEETSTEP-01-formular-vor-score-reorder-PLAN.md — Termin-Formular als eigener Schritt VOR dem Score: _revealScoreAndActions-Helper extrahieren, correct_outcome.then() bei meeting_booked verzweigen, Skip/Weiter/Zurück-Pfade verdrahten (D-03/D-04 Re-Entry)
+- [x] 08.23.2.MEETSTEP-01-formular-vor-score-reorder-PLAN.md — Termin-Formular als eigener Schritt VOR dem Score: _revealScoreAndActions-Helper extrahieren, correct_outcome.then() bei meeting_booked verzweigen, Skip/Weiter/Zurück-Pfade verdrahten (D-03/D-04 Re-Entry) ✅ 2026-06-03 (Commits c448a6a/1382c36, SUMMARY)
 
 ### Phase 08.23.2.NACHTRAG: Ergebnis-Korrektur + Termin nachtragen (Scoreboard-Zurück + Auswertungs-Reiter) (NEU 2026-06-03, aus MEETSTEP-Live-Test) 🟡
 
