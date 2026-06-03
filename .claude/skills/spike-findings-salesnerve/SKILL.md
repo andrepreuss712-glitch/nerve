@@ -30,6 +30,10 @@ reference must honor these.
 - **Target side-by-side width ≈ 960px** (Coaching ~480 + Transkript ~480), must fit
   inside Chrome's ~80%-work-area clamp on the target machine.
 - **Minimum Chrome 121** for Document-PiP resize support.
+- **Measure-and-fallback, don't assume a width** (PT-GATE-Auflage, André 2026-06-03)
+  — achievable width is screen-dependent (915px on André's ~1707px screen). On the
+  toggle: request ~960, **measure** the width actually reached, then ≥~900px →
+  Side-by-side (optimize for this), <~900px → fallback (overlay/stacked) as a net.
 </requirements>
 
 <findings_index>
@@ -37,7 +41,7 @@ reference must honor these.
 
 | Area | Reference | Key Finding |
 |------|-----------|-------------|
-| PiP Window Resize (Document Picture-in-Picture) | references/pip-window-resize.md | Open narrow, `resizeTo(960,900)` from the toggle-click handler (gesture-gated); measure the real ~80% clamp on the target screen — empirical PT-GATE still open |
+| PiP Window Resize (Document Picture-in-Picture) | references/pip-window-resize.md | VALIDATED (PT-GATE=JA, Chrome 148, 915px reached). Open narrow, `resizeTo(960,900)` from the toggle-click handler (gesture-gated); measure achieved width → ≥900 side-by-side, else fallback |
 
 ## Source Files
 

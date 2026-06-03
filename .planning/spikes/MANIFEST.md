@@ -21,9 +21,13 @@ Design-Entscheidungen, die für den echten Bau verbindlich sind (entstehen beim 
 - **Zielbreite side-by-side ≈ 960px** (Coaching ~480 + Transkript ~480). Muss innerhalb Chromes
   ~80%-Arbeitsflächen-Klemme passen — auf der Zielmaschine zu verifizieren.
 - **Mindest-Chrome-Version 121** für Resize-Support.
+- **Measure-and-fallback statt Annahme (PT-GATE-Auflage, André 2026-06-03):** erreichbare Breite
+  ist bildschirm-abhängig (auf André ~1707px-Schirm: 915px). Bau muss die tatsächlich erreichte
+  Breite MESSEN: ≥~900px → Side-by-side (Zielzustand, zu optimieren); <~900px → Fallback
+  (Overlay/gestapelt) als Netz. Zielgruppe sitzt meist mit 2. Monitor/großem Schirm.
 
 ## Spikes
 
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
-| 001 | pip-window-resize-side-by-side | standard | PiP per Toggle-Klick auf side-by-side-Breite auto-verbreitern (ohne manuelles Ziehen) | PENDING | pip, document-picture-in-picture, resize, ux, chrome, pt-gate |
+| 001 | pip-window-resize-side-by-side | standard | PiP per Toggle-Klick auf side-by-side-Breite auto-verbreitern (ohne manuelles Ziehen) | VALIDATED | pip, document-picture-in-picture, resize, ux, chrome, pt-gate |

@@ -3,7 +3,7 @@ spike: 001
 name: pip-window-resize-side-by-side
 type: standard
 validates: "Given ein offenes Document-PiP-Fenster in Chrome, when ein Button-Klick im PiP resizeTo() auslöst, then verbreitert sich das Fenster automatisch auf side-by-side-Breite (Coaching rechts, Transkript links) ohne manuelles Ziehen"
-verdict: PENDING
+verdict: VALIDATED
 related: []
 tags: [pip, document-picture-in-picture, browser-api, resize, ux, chrome, pt-gate]
 ---
@@ -88,10 +88,27 @@ Forensik-Log-Schicht eingebaut:
 ## Investigation Trail
 
 - **2026-06-03 — Research:** Doku bestätigt Resize ab Chrome 121 mit Gesture-Pflicht und ~80%-Work-Area-Klemme; `file://` ist secure context. Kern-Unsicherheit ist die display-abhängige Klemm-Grenze → Harness gebaut, der genau das misst, plus den Gesture-Mechanismus (Toggle-Klick) und einen Negativ-Test (Timer ohne Klick).
-- **PENDING — André-Run:** Harness muss auf Andrés echtem Chrome/Bildschirm laufen. Verdict erst danach.
+- **2026-06-03 — André-Run (Chrome 148):** Harness auf Andrés echtem Rechner gelaufen. API vorhanden, Resize per Toggle-Klick (Geste) funktioniert. Breiteste erreichte Fensterbreite **915px** auf einem ~1707px-Schirm → side-by-side (≥900px) **erreichbar**. **PT-GATE = JA.**
 
 ## Results
 
-**Verdict: PENDING** — wartet auf André-Run in Chrome.
+**Verdict: VALIDATED (PT-GATE = JA)** — André-Run 2026-06-03, Chrome 148.
 
-_(Wird nach dem Run gefüllt: erreichte Max-Breite, ob side-by-side ≥900px klappt, ob der Toggle-Klick den Resize autorisiert, ob der Timer-Test wie erwartet blockiert. Daraus folgt JA → PT-01 bauen, oder NEIN → Alternativen an André.)_
+- **API vorhanden:** ✓ `documentPictureInPicture` verfügbar.
+- **Resize per Klick (Geste):** ✓ funktioniert — der Toggle-Klick autorisiert `resizeTo()`.
+- **Breiteste erreichte Fensterbreite:** **915px** (auf ~1707px-Arbeitsfläche).
+- **Side-by-side (≥900px) erreichbar:** ✓ JA.
+- **Timer-Test (ohne Klick):** wie erwartet blockiert (Geste-Pflicht bestätigt).
+
+### Auflage für den Bau (André-Direktive 2026-06-03)
+
+Erreichbare Breite ist **bildschirm-abhängig** (915 auf ~1707px-Schirm; auf großen/
+zweiten Monitoren mehr; auf nackten kleinen Laptops evtl. <900). Bau-Ansatz:
+
+1. Beim Toggle die Ziel-Breite (~960) **anfordern**.
+2. Die **tatsächlich erreichte Breite MESSEN** (async re-measure, da Resize nicht synchron).
+3. **≥~900px → Side-by-side** (Zielzustand: Transkript links, Coaching rechts).
+4. **<~900px → Fallback** (Overlay / gestapelt) als Netz.
+
+Zielgruppe sitzt meist mit 2. Monitor / großem Schirm → **Side-by-side optimieren**,
+Fallback nur für den Ausnahmefall. → PT-01 ist baubar.

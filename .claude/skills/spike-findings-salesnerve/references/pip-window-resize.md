@@ -18,6 +18,12 @@ Non-negotiable design decisions (from MANIFEST.md, André-Direktive 2026-06-03):
 - **Target side-by-side width ≈ 960px** (Coaching ~480 + Transkript ~480). Must
   fit inside Chrome's ~80%-work-area clamp on the target machine.
 - **Minimum Chrome 121** for Document-PiP resize support.
+- **Measure-and-fallback, don't assume a width** (PT-GATE-Auflage, André 2026-06-03):
+  achievable width is screen-dependent. On the toggle, request ~960, **measure** the
+  width actually reached, then **≥~900px → Side-by-side** (the target state, optimize
+  for it), **<~900px → fallback** (overlay/stacked) as a safety net. The target
+  audience mostly sits at a 2nd monitor / large screen, so optimize side-by-side;
+  fallback covers the bare-small-laptop exception.
 
 ## How to Build It
 
@@ -48,25 +54,30 @@ The proven approach is **Approach A — open narrow, widen on toggle-click**:
    left (~480px), Coaching right (~480px). Vanilla JS + injected DOM/CSS into the
    PiP window's `document` (no framework — see CONVENTIONS).
 
-4. **Measure, don't assume.** Resize is async and Chrome may clamp. After calling
-   `resizeTo`, log `requested` vs. actual `innerWidth`/`outerWidth`, and
-   re-measure ~350ms later. The spike's harness (`sources/.../pip-resize-spike.html`)
-   already implements this measurement layer — reuse its pattern:
+4. **Measure the achieved width and branch on it** (this is a hard build rule, not
+   just diagnostics). Resize is async and Chrome clamps to ~80% work area, which is
+   screen-dependent. After `resizeTo`, re-measure ~350ms later and decide the layout
+   from the *actual* width — `≥~900px` → side-by-side, else fallback. Reuse the
+   spike harness's measurement pattern (`sources/.../pip-resize-spike.html`):
    ```js
-   const requested = 960;
+   const requested = 960, MIN_SIDE_BY_SIDE = 900;
    const before = pip.innerWidth;
    pip.resizeTo(requested, 900);
    setTimeout(() => {
      const after = pip.innerWidth;
-     const grew = after > before;
-     const clamped = after < requested - 4;   // Chrome clamped below request
-     // log {requested, before, after, grew, clamped}
+     if (after >= MIN_SIDE_BY_SIDE) {
+       renderSideBySide(pip);     // target state: Transkript links, Coaching rechts
+     } else {
+       renderFallback(pip);       // overlay / stacked — safety net for small screens
+     }
+     // log {requested, before, after, layout}
    }, 350);
    ```
 
-5. **Gate the build on the empirical result** (PT-GATE): only ship PT-01 if, on
-   André's real screen, `resize-per-click = YES` AND `side-by-side (≥900px)
-   reachable = YES`. Otherwise STOP + report alternatives.
+5. **PT-GATE already passed** — on André's machine (Chrome 148, ~1707px screen) the
+   widest reached width was **915px**, so side-by-side ≥900px is reachable and PT-01
+   is cleared to build. The measure-and-fallback branch above is the standing
+   requirement, since other users' screens may land below 900.
 
 ## What to Avoid
 
@@ -95,17 +106,22 @@ The proven approach is **Approach A — open narrow, widen on toggle-click**:
   for spiking, not for the deployed app).
 - Side-by-side needs ~900–960px to be usable.
 
-## Open Empirical Question (PT-GATE — not yet answered)
+## PT-GATE Result (VALIDATED 2026-06-03)
 
-Doc-research is conclusive, but the **real clamp width on André's screen has not
-been measured**. The spike harness exists to answer exactly this. Before building
-PT-01, run `sources/001-pip-window-resize-side-by-side/pip-resize-spike.html` in
-Chrome ≥121 on the target machine and confirm side-by-side ≥900px is reachable via
-the toggle click. JA → build PT-01. NEIN → STOP + alternatives to André.
+Run on André's machine, **Chrome 148**:
+
+- API present ✓, resize-per-toggle-click (gesture) works ✓.
+- Widest window width reached: **915px** on a ~1707px work area.
+- Side-by-side (≥900px) reachable: **JA** → **PT-GATE = JA, PT-01 cleared to build.**
+- Timer-resize without click: blocked as expected (gesture requirement confirmed).
+
+Standing build constraint: achievable width is screen-dependent (915 here; more on
+large/second monitors; possibly <900 on bare small laptops), so the measure → branch
+→ fallback rule above is mandatory, not optional. Optimize side-by-side (target
+audience mostly on 2nd monitor / large screen); fallback covers the exception.
 
 ## Origin
 
-Synthesized from spikes: 001 (verdict PENDING — research conclusive, empirical
-run open).
+Synthesized from spikes: 001 (verdict VALIDATED — PT-GATE = JA, Chrome 148, 915px).
 Source files available in: `sources/001-pip-window-resize-side-by-side/`
 (README.md + pip-resize-spike.html measurement harness).
