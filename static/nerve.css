@@ -394,6 +394,16 @@
   --badge-default-text: #475569;
   /* MM-06b (G-MEET Plan 05): weisser Check auf Teal-Fill — KEIN --btn-primary-text (das ist #06060a). */
   --meeting-check-color: #FFFFFF;
+
+  /* Phase 08.23.2.D.UX.2 — Transcript Sprecher- + Highlight-Tokens (kein Gelb, CLAUDE.md P.8) */
+  --transcript-berater-color: #00D4AA;            /* Berater = Brand Teal */
+  --transcript-berater-bg: rgba(0, 212, 170, 0.08);
+  --transcript-kunde-color: #a78bfa;              /* Kunde = Brand Violet */
+  --transcript-kunde-bg: rgba(167, 139, 250, 0.08);
+  --transcript-timestamp-color: #9CA3AF;          /* muted */
+  --transcript-highlight-bg: rgba(0, 212, 170, 0.25);          /* non-current Treffer (25%) */
+  --transcript-highlight-current-bg: rgba(0, 212, 170, 0.55);  /* aktueller Treffer (55%, PRIMARY) */
+  --transcript-highlight-text: inherit;
 }
 
 
@@ -3581,3 +3591,49 @@ input[type="range"].perf-slider::-moz-range-thumb {
 }
 .n-meeting-briefing svg { flex: 0 0 auto; color: var(--pip-gatekeeper-text); }
 .n-meeting-briefing-line { font-size: 12px; color: var(--page-text); }
+
+/* ── Phase 08.23.2.D.UX.2 — n-tabs + Transcript ──────────────────────── */
+/* n-tabs: deklarativer Tab-Container (n-tabs.js). Aktiver Tab NEUTRAL — kein Teal. */
+.n-tabs { display: block; width: 100%; }
+.n-tabs-bar { display: flex; gap: 8px; padding-inline: 8px; border-bottom: 1px solid var(--glass-border); }
+.n-tab-btn {
+  background: var(--pill-bg); color: var(--pill-text);
+  border: 1.5px solid var(--pill-border); border-bottom: none;
+  padding: 8px 20px; cursor: pointer; font-family: var(--page-font);
+  font-size: 12px; font-weight: 600; border-radius: 10px 10px 0 0;
+  transition: all 0.25s ease;
+}
+.n-tab-btn:hover { background: var(--pill-bg-hover); color: var(--pill-text-hover); }
+/* Aktiver Tab: NEUTRAL (transparent bg, dunkler Text, Unterstrich) — NICHT .n-pill-active (=Teal, UI-SPEC verbietet das). */
+.n-tab-btn--active {
+  background: transparent; color: var(--page-text-color);
+  font-weight: 600; border-color: transparent;
+  border-bottom: 2px solid var(--glass-border);
+}
+.n-tab-panel { display: block; }
+.n-tab-panel[hidden] { display: none; }
+
+/* Transcript-Segment-Rows (Dashboard, UI-SPEC §Component Inventory 2) */
+.transcript-segment-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; user-select: text; }
+.transcript-speaker-label { min-width: 40px; text-transform: uppercase; font-size: 11px; font-weight: 600; }
+.transcript-speaker-label[data-speaker="berater"] { color: var(--transcript-berater-color); }
+.transcript-speaker-label[data-speaker="kunde"] { color: var(--transcript-kunde-color); }
+/* 'system'/None-Speaker (DB-CHECK erlaubt 'system') neutral-muted — FLAG fuer André (SUMMARY). */
+.transcript-speaker-label[data-speaker="system"] { color: var(--page-text-muted); }
+.transcript-timestamp { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--transcript-timestamp-color); flex: 0 0 auto; }
+.transcript-text { font-size: 14px; color: var(--page-text-color); white-space: normal; }
+
+/* Such-Highlights (Teal, KEIN Gelb) */
+.transcript-mark, mark.transcript-mark { background: var(--transcript-highlight-bg); color: var(--transcript-highlight-text); border-radius: 3px; }
+.transcript-mark--current { background: var(--transcript-highlight-current-bg); }
+
+/* Such-Bar */
+.transcript-search-bar { display: flex; gap: 8px; align-items: center; margin-block: 24px; }
+#transcript-search-input {
+  flex: 1 1 auto; padding: var(--input-padding); background: var(--input-bg);
+  border: 1.5px solid var(--input-border); border-radius: 12px;
+  color: var(--input-text); font-family: var(--page-font); font-size: var(--input-size); outline: none;
+  transition: all 0.25s ease;
+}
+#transcript-search-input:focus { border-color: var(--input-border-focus); box-shadow: var(--input-focus-glow); }
+.transcript-search-counter { font-size: 12px; color: var(--page-text-muted); min-width: 56px; text-align: center; }
