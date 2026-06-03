@@ -1,5 +1,5 @@
 """Learning Card + Coach Report API routes."""
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, abort
 from routes.auth import login_required
 from services import outcome_service
 from database.db import get_session
@@ -600,6 +600,37 @@ def api_user_text(card_id):
                 print(f"[Engine] LearningCard Event Fehler: {_le}")
             db.commit()
         return jsonify({'ok': True, 'validation': validation})
+    finally:
+        db.close()
+
+
+# ── Phase 08.23.2.D.UX.2 (DQ-02) — Transcript-Read fuer Dashboard-Auswertung ──────────
+@learning_bp.route('/api/transcript/<int:conversation_log_id>', methods=['GET'])
+@login_required
+def api_transcript(conversation_log_id):
+    """DQ-02: anonymisierte, sortierte Transcript-Segmente eines eigenen Calls.
+    Owner-scoped (user_id == g.user.id) -> IDOR-Schutz; abort(404) bei fremdem/fehlendem Call.
+    Quelle: DB-Tabelle transcript_segments (anonymisiert) — NICHT der RAM-Puffer (das ist der PiP-Pfad)."""
+    db = get_session()
+    try:
+        conv = db.query(ConversationLog).filter(
+            ConversationLog.id == conversation_log_id,
+            ConversationLog.user_id == g.user.id,
+        ).first()
+        if not conv:
+            abort(404)
+        segments = (db.query(TranscriptSegment)
+                    .filter(TranscriptSegment.conversation_log_id == conv.id)
+                    .order_by(TranscriptSegment.ts_ms, TranscriptSegment.id)
+                    .all())
+        return jsonify({
+            'conversation_log_id': conv.id,
+            'segments': [
+                {'ts_ms': s.ts_ms, 'speaker': s.speaker, 'text': s.text}
+                for s in segments
+            ],
+            'count': len(segments),
+        })
     finally:
         db.close()
 
