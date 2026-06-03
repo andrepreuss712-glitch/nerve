@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spike 001 — PiP Auto-Verbreitern (PT-GATE)</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222c; --line:#2a2f3a;
+    --txt:#e7eaf0; --muted:#9aa3b2; --brand:#5b8cff; --ok:#2ec27e; --warn:#ffb020; --bad:#ff5c5c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+  header{padding:18px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px}
+  main{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:18px 24px;align-items:start}
+  @media(max-width:1000px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+  .kv b{color:var(--muted);font-weight:500}
+  .kv span{font-variant-numeric:tabular-nums}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--txt);
+    padding:9px 13px;border-radius:8px;margin:0 6px 8px 0}
+  button:hover{border-color:var(--brand)}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  button.danger{border-color:var(--bad);color:#ffd2d2}
+  .step{margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--line)}
+  .step:last-child{border:0;margin:0;padding:0}
+  .step p{margin:0 0 8px;color:var(--muted);font-size:13px}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+  pre#log{background:#0a0c10;border:1px solid var(--line);border-radius:8px;padding:12px;
+    font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:420px;overflow:auto;white-space:pre-wrap;margin:0}
+  .l-info{color:var(--txt)} .l-ok{color:var(--ok)} .l-warn{color:var(--warn)} .l-bad{color:var(--bad)} .l-meas{color:var(--brand)}
+  .verdict{margin-top:10px;font-size:13px}
+  .verdict div{margin:3px 0}
+  .pill{font-weight:600}
+  .pill.ok{color:var(--ok)} .pill.bad{color:var(--bad)} .pill.warn{color:var(--warn)} .pill.pending{color:var(--muted)}
+  code{background:#0a0c10;padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Spike 001 — Kann das Document-PiP-Fenster per JS automatisch verbreitert werden? <span class="badge">PT-GATE</span></h1>
+  <div class="sub">Phase 08.23.2.D.UX.2 · Ziel-Layout: Coaching rechts, Transkript links im verbreiterten PiP · Manuelles Ziehen ist KEIN Fallback (André-Direktive 2026-06-03)</div>
+</header>
+
+<main>
+  <!-- LEFT COLUMN: environment + verdict -->
+  <section style="display:flex;flex-direction:column;gap:18px">
+    <div class="card">
+      <h2>Umgebung (dein Rechner)</h2>
+      <div class="kv" id="env"></div>
+      <div class="verdict" id="verdict">
+        <div><span class="badge">live ausgewertet</span></div>
+        <div>API verfügbar: <span class="pill pending" id="v-api">—</span></div>
+        <div>Resize per Button-Klick (Gesture): <span class="pill pending" id="v-resize">—</span></div>
+        <div>Resize OHNE Gesture (Timer): <span class="pill pending" id="v-nogesture">—</span></div>
+        <div>Breiteste erreichte Fensterbreite: <span class="pill pending" id="v-maxw">—</span></div>
+        <div>Side-by-side (≥900px) erreichbar: <span class="pill pending" id="v-sxs">—</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Forensik-Log</h2>
+      <button onclick="exportLog()">⬇ Log als JSON exportieren</button>
+      <button onclick="clearLog()">Log leeren</button>
+      <pre id="log"></pre>
+    </div>
+  </section>
+
+  <!-- RIGHT COLUMN: tests -->
+  <section class="card">
+    <h2>Tests — der Reihe nach durchklicken</h2>
+
+    <div class="step">
+      <p><b>Test 1 — PiP schmal öffnen (480×900)</b><br>
+      Baseline: exakt wie <code>pip-launcher.js:1540</code> heute. Öffnet den PiP mit dem Side-by-side-Layout, aber nur Coaching sichtbar.</p>
+      <button class="primary" onclick="test1_openNarrow()">PiP schmal öffnen</button>
+    </div>
+
+    <div class="step">
+      <p><b>Test 2 — Im PiP auf „Transkript einblenden“ klicken → Auto-Verbreitern</b><br>
+      Das ist die <b>echte André-UX</b>. Der Toggle-Klick <i>im PiP</i> liefert die Nutzer-Geste, die <code>resizeTo()</code> braucht. Erwartung: Fenster wächst, Transkript-Panel erscheint links.<br>
+      <span class="badge">Knopf ist IM PiP-Fenster</span></p>
+    </div>
+
+    <div class="step">
+      <p><b>Test 3 — PiP direkt breit öffnen (960×900)</b><br>
+      Alternativpfad ohne Nach-Resize: kann Chrome schon beim Öffnen breit aufmachen, oder klemmt es auf ~20% Arbeitsfläche?</p>
+      <button onclick="test3_openWide()">PiP breit öffnen (960)</button>
+    </div>
+
+    <div class="step">
+      <p><b>Test 4 — Resize OHNE Nutzer-Geste (Timer)</b><br>
+      Negativ-Test: 1,5s nach Öffnen versucht ein <code>setTimeout</code> ein <code>resizeTo</code> ohne Klick. Erwartung laut Doku: blockiert/ignoriert. Beweist, <i>warum</i> ein Auto-Aufklappen ohne Klick nicht ginge — aber der Toggle-Klick zählt als Geste.</p>
+      <button onclick="test4_noGesture()">PiP öffnen + Timer-Resize testen</button>
+    </div>
+
+    <div class="step">
+      <p><b>Test 5 — Klemm-Kurve vermessen (Max-Breite)</b><br>
+      Öffnet PiP und stellt im Panel Knöpfe bereit, die nacheinander 700 / 960 / 1200 / 9999 px anfordern. Zeigt die echte Chrome-Obergrenze auf <i>deinem</i> Bildschirm (Doku: ~80% der Arbeitsfläche).</p>
+      <button onclick="test5_clampCurve()">PiP öffnen + Breiten testen</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ─────────────────────────────────────────────────────────────────────────
+   Forensik-Log-Schicht
+   ───────────────────────────────────────────────────────────────────────── */
+const LOG = [];
+let T0 = performance.now();
+function nowTag(){ return (performance.now() - T0).toFixed(0).padStart(5,' ') + 'ms'; }
+function log(cat, msg, data){
+  const entry = { t_ms: +(performance.now()-T0).toFixed(1), cat, msg, data: data||null };
+  LOG.push(entry);
+  const el = document.getElementById('log');
+  const cls = {INFO:'l-info',OK:'l-ok',WARN:'l-warn',BAD:'l-bad',MEAS:'l-meas'}[cat] || 'l-info';
+  const line = document.createElement('div');
+  line.className = cls;
+  line.textContent = `[${nowTag()}] ${cat.padEnd(4)} ${msg}` + (data ? '  ' + JSON.stringify(data) : '');
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog(){ LOG.length=0; document.getElementById('log').innerHTML=''; T0=performance.now(); log('INFO','Log geleert'); }
+function exportLog(){
+  const blob = new Blob([JSON.stringify({
+    spike:'001-pip-window-resize-side-by-side',
+    exported_at: new Date().toISOString(),
+    env: collectEnv(),
+    summary: summarize(),
+    events: LOG
+  }, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'spike-001-pip-resize-log.json';
+  a.click();
+  log('INFO','Log exportiert');
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Verdict-Tracking
+   ───────────────────────────────────────────────────────────────────────── */
+const V = { api:null, resizeGesture:null, noGesture:null, maxWidth:0, sideBySide:null };
+function setPill(id, state, text){
+  const el = document.getElementById(id);
+  el.className = 'pill ' + state;
+  el.textContent = text;
+}
+function refreshVerdict(){
+  if(V.api!==null) setPill('v-api', V.api?'ok':'bad', V.api?'JA ✓':'NEIN ✗ (API fehlt)');
+  if(V.resizeGesture!==null) setPill('v-resize', V.resizeGesture?'ok':'bad', V.resizeGesture?'JA ✓ funktioniert':'NEIN ✗ blockiert');
+  if(V.noGesture!==null) setPill('v-nogesture', V.noGesture?'warn':'ok', V.noGesture?'unerwartet erlaubt ⚠':'wie erwartet blockiert ✓');
+  if(V.maxWidth>0) setPill('v-maxw', 'ok', V.maxWidth+' px');
+  if(V.sideBySide!==null) setPill('v-sxs', V.sideBySide?'ok':'bad', V.sideBySide?'JA ✓':'NEIN ✗ (klemmt zu schmal)');
+}
+function noteMaxWidth(w){ if(w>V.maxWidth){ V.maxWidth=w; if(V.maxWidth>=900){V.sideBySide=true;} else if(V.sideBySide!==true){V.sideBySide=false;} refreshVerdict(); } }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Umgebung
+   ───────────────────────────────────────────────────────────────────────── */
+function collectEnv(){
+  const m = (navigator.userAgent.match(/Chrome\/(\d+)/)||[])[1];
+  return {
+    userAgent: navigator.userAgent,
+    chromeMajor: m ? +m : null,
+    apiAvailable: 'documentPictureInPicture' in window,
+    screen_w: screen.width, screen_h: screen.height,
+    avail_w: screen.availWidth, avail_h: screen.availHeight,
+    dpr: window.devicePixelRatio,
+    predicted_max_w_80pct: Math.round(0.8 * screen.availWidth),
+    protocol: location.protocol
+  };
+}
+function renderEnv(){
+  const e = collectEnv();
+  const rows = [
+    ['Protokoll', e.protocol + (e.protocol==='file:'?' (secure context ✓)':'')],
+    ['Chrome-Version', e.chromeMajor ? (e.chromeMajor + (e.chromeMajor>=121?' ✓ (≥121, Resize unterstützt)':' ✗ (<121, kein Resize!)')) : 'unbekannt (kein Chrome?)'],
+    ['documentPictureInPicture', e.apiAvailable ? 'vorhanden ✓' : 'FEHLT ✗'],
+    ['Bildschirm', e.screen_w+' × '+e.screen_h+' px'],
+    ['Arbeitsfläche (avail)', e.avail_w+' × '+e.avail_h+' px'],
+    ['devicePixelRatio', e.dpr],
+    ['Prognose Max-Breite (~80%)', '≈ '+e.predicted_max_w_80pct+' px'],
+  ];
+  document.getElementById('env').innerHTML = rows.map(([k,v])=>`<b>${k}</b><span>${v}</span>`).join('');
+  V.api = e.apiAvailable;
+  if(e.chromeMajor && e.chromeMajor<121){ V.resizeGesture=false; }
+  refreshVerdict();
+  log('INFO','Umgebung erfasst', e);
+  if(!e.apiAvailable) log('BAD','documentPictureInPicture API NICHT vorhanden — Spike kann nicht laufen. Chrome ≥116 nötig (Resize ≥121).');
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PiP-Inhalt (Side-by-side-Layout, das André fühlen soll)
+   ───────────────────────────────────────────────────────────────────────── */
+const FAKE_SEGMENTS = [
+  ['Berater','Schönen guten Tag, spreche ich mit Herrn Müller?'],
+  ['Kunde','Ja, am Apparat. Worum geht es denn?'],
+  ['Berater','Mein Name ist Schmidt von der Firma XY. Ich rufe an, weil…'],
+  ['Kunde','Ehrlich gesagt habe ich gerade wenig Zeit.'],
+  ['Berater','Verstehe ich — geben Sie mir 30 Sekunden, dann entscheiden Sie.'],
+  ['Kunde','Na gut, aber kurz.'],
+  ['Berater','Sie sparen mit unserer Lösung im Schnitt 12 Stunden pro Woche.'],
+  ['Kunde','Das klingt zu schön. Was kostet der Spaß denn?'],
+  ['Berater','Gute Frage — bevor wir über Preis reden: wie läuft das aktuell bei Ihnen?'],
+  ['Kunde','Wir machen das alles manuell, ehrlich gesagt.'],
+];
+
+function pipStyles(){
+  return `
+    *{box-sizing:border-box;margin:0}
+    body{font:13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;background:#0f1115;color:#e7eaf0;height:100vh;overflow:hidden}
+    .wrap{display:flex;height:100vh}
+    .col{height:100vh;overflow:auto;padding:12px}
+    .transcript{flex:1 1 50%;border-right:1px solid #2a2f3a;background:#13161d;display:none}
+    .transcript.show{display:block}
+    .coaching{flex:1 1 50%;background:#0f1115;min-width:230px}
+    h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#9aa3b2;margin-bottom:10px}
+    .seg{margin-bottom:7px;padding:6px 8px;border-radius:7px;background:#1b1f29}
+    .seg .who{font-weight:600;font-size:11px;margin-right:6px}
+    .who.b{color:#5b8cff} .who.k{color:#2ec27e}
+    .tip{background:#1b1f29;border-left:3px solid #5b8cff;padding:9px 11px;border-radius:6px;margin-bottom:10px}
+    .toggle{position:sticky;top:0;width:100%;padding:9px;border:1px solid #2a2f3a;background:#5b8cff;color:#fff;
+      border-radius:8px;cursor:pointer;font:inherit;font-weight:600;margin-bottom:10px}
+    .dims{position:fixed;bottom:0;left:0;right:0;background:#0a0c10;border-top:1px solid #2a2f3a;
+      padding:5px 10px;font:11px ui-monospace,Consolas,monospace;color:#5b8cff;display:flex;gap:14px;justify-content:space-between}
+    .qbtns button{font:11px;padding:4px 8px;margin:0 4px 0 0;border:1px solid #2a2f3a;background:#1e222c;color:#e7eaf0;border-radius:6px;cursor:pointer}
+  `;
+}
+
+function buildPipContent(pipWin, opts){
+  opts = opts || {};
+  const d = pipWin.document;
+  const style = d.createElement('style'); style.textContent = pipStyles(); d.head.appendChild(style);
+  d.body.innerHTML = `
+    <div class="wrap">
+      <div class="col transcript ${opts.showTranscript?'show':''}" id="pip-transcript">
+        <h3>Transkript (live, roh)</h3>
+        <div id="pip-segs"></div>
+      </div>
+      <div class="col coaching">
+        <button class="toggle" id="pip-toggle">${opts.showTranscript?'◀ Transkript ausblenden':'Transkript einblenden ▶'}</button>
+        <h3>Coaching</h3>
+        <div class="tip"><b>Einwand erkannt:</b> „zu wenig Zeit“ → Mit 30-Sekunden-Versprechen entkräften.</div>
+        <div class="tip"><b>Kaufsignal:</b> Kunde fragt nach Preis — Bedarf zuerst, dann Zahl.</div>
+        <div class="tip">Redeanteil Berater 62% — mehr Fragen stellen.</div>
+        <div class="qbtns" style="margin-top:14px" id="pip-qbtns"></div>
+      </div>
+    </div>
+    <div class="dims"><span id="pip-dims-req">angefordert: —</span><span id="pip-dims-act">tatsächlich: —</span></div>
+  `;
+
+  // render fake transcript segments
+  const segHost = d.getElementById('pip-segs');
+  FAKE_SEGMENTS.forEach(([who,txt])=>{
+    const div = d.createElement('div'); div.className='seg';
+    div.innerHTML = `<span class="who ${who==='Berater'?'b':'k'}">${who}</span>${txt}`;
+    segHost.appendChild(div);
+  });
+
+  updatePipDims(pipWin);
+
+  // The TOGGLE — the real André UX. Click = user gesture → resizeTo allowed.
+  const toggle = d.getElementById('pip-toggle');
+  toggle.addEventListener('click', ()=>{
+    const panel = d.getElementById('pip-transcript');
+    const showing = panel.classList.toggle('show');
+    toggle.textContent = showing ? '◀ Transkript ausblenden' : 'Transkript einblenden ▶';
+    if(showing){
+      const target = 960;
+      log('INFO','Toggle-Klick (Geste) → resizeTo anfordern', {targetW:target});
+      doResize(pipWin, target, 900, 'toggle-gesture');
+    } else {
+      log('INFO','Toggle-Klick → zurück auf schmal (480)');
+      doResize(pipWin, 480, 900, 'toggle-collapse');
+    }
+  });
+
+  // clamp-curve quick buttons (Test 5)
+  if(opts.clampButtons){
+    const host = d.getElementById('pip-qbtns');
+    host.innerHTML = '<div style="font-size:11px;color:#9aa3b2;margin-bottom:5px">Breite anfordern (Geste):</div>';
+    [700,960,1200,9999].forEach(w=>{
+      const b = d.createElement('button');
+      b.textContent = w===9999 ? 'Max (9999)' : w+'px';
+      b.addEventListener('click', ()=>{
+        d.getElementById('pip-transcript').classList.add('show');
+        log('INFO','Klemm-Test: resizeTo angefordert', {targetW:w});
+        doResize(pipWin, w, 900, 'clamp-'+w);
+      });
+      host.appendChild(b);
+    });
+  }
+}
+
+function updatePipDims(pipWin, requested){
+  try{
+    const d = pipWin.document;
+    const reqEl = d.getElementById('pip-dims-req');
+    const actEl = d.getElementById('pip-dims-act');
+    if(requested && reqEl) reqEl.textContent = `angefordert: ${requested.w}×${requested.h}`;
+    if(actEl) actEl.textContent = `tatsächlich: ${pipWin.innerWidth}×${pipWin.innerHeight} (outer ${pipWin.outerWidth}×${pipWin.outerHeight})`;
+  }catch(e){/* window may be closing */}
+}
+
+/* core resize + measurement, with before/after + delayed remeasure */
+function doResize(pipWin, w, h, label){
+  const before = { inner:[pipWin.innerWidth,pipWin.innerHeight], outer:[pipWin.outerWidth,pipWin.outerHeight] };
+  let threw=null;
+  try{ pipWin.resizeTo(w, h); }catch(e){ threw = String(e); }
+  // immediate
+  const immediate = { inner:[pipWin.innerWidth,pipWin.innerHeight], outer:[pipWin.outerWidth,pipWin.outerHeight] };
+  updatePipDims(pipWin, {w,h});
+  // delayed (resize can be async)
+  setTimeout(()=>{
+    const after = { inner:[pipWin.innerWidth,pipWin.innerHeight], outer:[pipWin.outerWidth,pipWin.outerHeight] };
+    const grew = after.inner[0] > before.inner[0] + 5;
+    const cat = threw ? 'BAD' : (grew || w<before.inner[0] ? 'MEAS' : 'WARN');
+    log(cat, `resizeTo(${w},${h}) [${label}]`, { requested:[w,h], before:before.inner, after:after.inner, after_outer:after.outer, grew, error:threw });
+    updatePipDims(pipWin, {w,h});
+    noteMaxWidth(after.inner[0]);
+    if(label.startsWith('toggle-gesture') || label.startsWith('clamp')){
+      if(grew){ V.resizeGesture=true; }
+      else if(!threw){ V.resizeGesture = V.resizeGesture || false; }
+      if(threw){ V.resizeGesture=false; }
+      refreshVerdict();
+    }
+  }, 350);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Öffnen-Helfer
+   ───────────────────────────────────────────────────────────────────────── */
+async function openPip(width, height, contentOpts){
+  if(!('documentPictureInPicture' in window)){ log('BAD','API fehlt — abgebrochen'); return null; }
+  try{
+    log('INFO','requestWindow angefordert', {width, height});
+    const pipWin = await documentPictureInPicture.requestWindow({width, height});
+    // measure what Chrome actually gave us at open time
+    setTimeout(()=>{
+      const cat = pipWin.innerWidth >= width-20 ? 'MEAS' : 'WARN';
+      log(cat, 'PiP geöffnet — tatsächliche Größe', {
+        requested:[width,height], actual_inner:[pipWin.innerWidth,pipWin.innerHeight],
+        actual_outer:[pipWin.outerWidth,pipWin.outerHeight],
+        clamped: pipWin.innerWidth < width-20
+      });
+      noteMaxWidth(pipWin.innerWidth);
+    }, 250);
+    buildPipContent(pipWin, contentOpts||{});
+    pipWin.addEventListener('pagehide', ()=> log('INFO','PiP-Fenster geschlossen'));
+    return pipWin;
+  }catch(e){
+    log('BAD','requestWindow fehlgeschlagen', {error:String(e)});
+    return null;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Tests
+   ───────────────────────────────────────────────────────────────────────── */
+async function test1_openNarrow(){ log('INFO','── TEST 1: schmal öffnen (480×900) ──'); await openPip(480,900,{showTranscript:false}); }
+async function test3_openWide(){ log('INFO','── TEST 3: breit öffnen (960×900) ──'); await openPip(960,900,{showTranscript:true}); }
+
+async function test4_noGesture(){
+  log('INFO','── TEST 4: Resize OHNE Geste (Timer) ──');
+  const pip = await openPip(480,900,{showTranscript:false});
+  if(!pip) return;
+  log('INFO','Warte 1500ms, dann resizeTo OHNE Klick…');
+  setTimeout(()=>{
+    const before = pip.innerWidth;
+    let threw=null;
+    try{ pip.resizeTo(960,900); }catch(e){ threw=String(e); }
+    setTimeout(()=>{
+      const after = pip.innerWidth;
+      const grew = after > before+5;
+      V.noGesture = grew; // true = unexpectedly allowed
+      log(grew?'WARN':'OK', `Timer-resizeTo OHNE Geste: ${grew?'ERLAUBT (unerwartet)':'BLOCKIERT (erwartet)'}`, {before, after, error:threw});
+      refreshVerdict();
+    }, 350);
+  }, 1500);
+}
+
+async function test5_clampCurve(){
+  log('INFO','── TEST 5: Klemm-Kurve vermessen ──');
+  await openPip(480,900,{showTranscript:false, clampButtons:true});
+  log('INFO','Nutze die Breiten-Knöpfe im PiP (700/960/1200/Max) und beobachte die tatsächliche Breite unten im PiP.');
+}
+
+function summarize(){
+  return {
+    api_available: V.api,
+    resize_with_gesture_works: V.resizeGesture,
+    resize_without_gesture_allowed: V.noGesture,
+    max_inner_width_reached: V.maxWidth,
+    side_by_side_900_feasible: V.sideBySide,
+    verdict_hint: (V.api && V.resizeGesture && V.sideBySide) ? 'JA — PiP-Teil baubar' :
+                  (V.api===false || V.resizeGesture===false) ? 'NEIN — STOPP, Alternativen an André' :
+                  'unvollständig — alle Tests durchklicken'
+  };
+}
+
+/* init */
+renderEnv();
+log('INFO','Bereit. Tests von oben nach unten durchklicken. Danach „Log exportieren“.');
+</script>
+</body>
+</html>
