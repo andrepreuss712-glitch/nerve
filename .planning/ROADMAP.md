@@ -1715,12 +1715,12 @@ WARN D-02 Downstream: D.UX.1-Migration muss von 0008 auf 0009 umnummeriert werde
 **Komplexität:** 🟡 mittel (drei UI-Kontexte, neue Reiter-Komponente, neue API-Endpoints für Transcript-Pull)
 **Blocker für:** keine direkten
 
-**Plans:** 4 plans (2 Waves) — geplant 2026-06-03. 🟡 + Trigger (FE+BE gleichzeitig, neuer Endpoint) -> Cross-AI Pflicht VOR Execute.
+**Plans:** 4 plans (2 Waves) — geplant 2026-06-03. 🟡 + Trigger (FE+BE gleichzeitig, neuer Endpoint) -> Cross-AI Pflicht VOR Execute. **CODE-COMPLETE 2026-06-03 (alle 4 Plans, inline ausgeführt — Multi-Segment-ID-Gotcha: gsd-tools/gsd-code-review/gsd-verifier umgangen, Pfade hardcoded, STATE/ROADMAP hand-editiert). Manuell goal-backward verifiziert + node --check OK. NOCH NICHT auf Prod deployed — André fährt `deploy.sh production` + Live-UAT (CLAUDE.md HART: Production-only Verify). NICHT auto-advanced.**
 Plans:
-- [ ] 08.23.2.D.UX.2-01-PLAN.md — Foundation: n-tabs.js (reusable Vanilla-JS Tabs, deep-link+last-tab+ARIA) + nerve.css Transcript-/Tab-Tokens [R-01, R-03; wave 1]
-- [ ] 08.23.2.D.UX.2-02-PLAN.md — Endpoint GET /api/transcript/<int:id> in learning_bp, owner-scoped, anonymisierte DB-Segmente + Persistenz-Schicht-Verifikation [DQ-02; wave 1]
-- [ ] 08.23.2.D.UX.2-03-PLAN.md — session_detail.html Reiter-Umbau (Übersicht/Transkript) + Fetch/Suche-Highlight/Copy-All [R-02, R-03, TT-01/02/03; wave 2]
-- [ ] 08.23.2.D.UX.2-04-PLAN.md — PiP Live side-by-side (resize-Spike-Blueprint) + Live-Segment-Render (Neubau) + Auto-Scroll + Post-Call collapsible (RAM) [PT-01/02/03, DQ-01/03; wave 2]
+- [x] 08.23.2.D.UX.2-01-PLAN.md — Foundation: n-tabs.js (reusable Vanilla-JS Tabs, deep-link+last-tab+ARIA+n-tab:activated+hashchange) + nerve.css Transcript-/Tab-Tokens [R-01, R-03; wave 1] ✓ SUMMARY
+- [x] 08.23.2.D.UX.2-02-PLAN.md — Endpoint GET /api/transcript/<int:id> in learning_bp, owner-scoped, anonymisierte DB-Segmente + Persistenz-Schicht-Verifikation [DQ-02; wave 1] ✓ SUMMARY
+- [x] 08.23.2.D.UX.2-03-PLAN.md — session_detail.html Reiter-Umbau (Übersicht/Transkript) + lazy fire-once Fetch/Suche-Highlight/Copy-All [R-02, R-03, TT-01/02/03; wave 2] ✓ SUMMARY
+- [x] 08.23.2.D.UX.2-04-PLAN.md — PiP Live side-by-side (resize-Spike-Blueprint + ResizeObserver) + Live-Segment-Render (Neubau) + Auto-Scroll + Post-Call collapsible (RAM) [PT-01/02/03, DQ-01/03; wave 2] ✓ SUMMARY
 
 ### Phase 08.23.2.D.UX.3: Anonymisierungs-Tuning Pronomen + Whitelist + Konfidenz (NEU 2026-05-28, aus Transcript-Review) 🟢
 
