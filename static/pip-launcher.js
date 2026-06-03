@@ -1751,6 +1751,9 @@
     // Initialize content
     _initPipLive();
 
+    // Phase 08.23.2.D.UX.2 (PT-01): Transkript-Toggle in die PiP-Header-Controls injizieren.
+    _wireTranscriptToggle(pipWindow);
+
     // Start timer
     _startTimer();
 
@@ -2274,6 +2277,13 @@
     state.socket.on('transcript', function (d) {
       if (d && d.type === 'final' && d.text) {
         state.lastTranscript = d.text;
+        // Phase 08.23.2.D.UX.2 (DQ-01 + DUX2-01): Live-Segment-Akku (Neubau — der Event traegt
+        // KEINE gerenderte Liste). Akku VOR erstem push initialisieren, sonst TypeError auf undefined.
+        if (!state.transcriptSegments) state.transcriptSegments = [];
+        // speaker: INT 0=Berater | 1=Kunde | None/sonst -> SYSTEM (kein ts_ms im Payload).
+        var _seg = { speaker: d.speaker, text: d.text };
+        state.transcriptSegments.push(_seg);
+        _appendLiveSegment(_seg);
       }
     });
 
@@ -3852,6 +3862,289 @@
   // Mehrfach-Aufruf (display='' erneut zu setzen ist harmlos). ALLE Lookups via pipEl
   // (Pitfall 5: PiP-aware). Drei Trigger teilen diesen Helper: Nicht-Meeting-Confirm
   // (sofort), meeting-Skip, meeting-Weiter.
+  // ── Phase 08.23.2.D.UX.2 — PiP Live-Transkript (PT-01/02/03, DQ-01) + Post-Call (DQ-03) ──────
+  // Roher RAM-Text (state.transcriptSegments), bewusst anders als das anonymisierte Dashboard
+  // (DQ-02). Kein Bug — RESEARCH Landmine 3.
+  var _pipTranscriptOpen = false;
+
+  function _ensureTranscriptAccumulator() {
+    if (!state.transcriptSegments) state.transcriptSegments = [];   // DUX2-01: nie undefined
+  }
+
+  function _speakerInfo(sp) {
+    if (sp === 0) return { key: 'berater', label: 'BERATER' };
+    if (sp === 1) return { key: 'kunde', label: 'KUNDE' };
+    return { key: 'system', label: 'SYSTEM' };   // None/unbekannt (vor roles_confirmed) — FLAG André
+  }
+
+  // Eine kompakte Sprecher-Zeile. textContent (XSS-Schutz). KEIN ts_ms (Payload hat keinen).
+  function _buildSegmentRow(doc, seg) {
+    var info = _speakerInfo(seg.speaker);
+    var row = doc.createElement('div');
+    row.className = 'transcript-segment-row';
+    var label = doc.createElement('span');
+    label.className = 'transcript-speaker-label';
+    label.setAttribute('data-speaker', info.key);
+    label.textContent = info.label;
+    row.appendChild(label);
+    var text = doc.createElement('span');
+    text.className = 'transcript-text';
+    text.textContent = seg.text || '';
+    row.appendChild(text);
+    return row;
+  }
+
+  // Panel-Geruest (Header + Scroll-Container + verstecktem "↓ Neueste"-Knopf). Idempotent.
+  function _ensureTranscriptPanel(doc) {
+    var panel = doc.getElementById('pip-transcript-panel');
+    if (panel) return panel;
+    panel = doc.createElement('div');
+    panel.id = 'pip-transcript-panel';
+    panel.className = 'pip-transcript-panel';
+    panel.style.cssText = 'position:relative;display:flex;flex-direction:column;background:var(--pip-bg);border-right:1px solid var(--glass-border);overflow:hidden;';
+
+    var head = doc.createElement('div');
+    head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid var(--glass-border);font-size:12px;font-weight:600;flex:0 0 auto;';
+    var title = doc.createElement('span');
+    title.textContent = 'Transkript';
+    var closeBtn = doc.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.id = 'pip-transcript-close';
+    closeBtn.className = 'n-btn n-btn-ghost';
+    closeBtn.textContent = 'Schließen ×';
+    closeBtn.setAttribute('aria-label', 'Transkript schließen');
+    closeBtn.addEventListener('click', function () { _closeTranscriptPanel(state.pipWindow); });
+    head.appendChild(title);
+    head.appendChild(closeBtn);
+    panel.appendChild(head);
+
+    var segs = doc.createElement('div');
+    segs.id = 'pip-transcript-segments';
+    segs.className = 'transcript-segments-container';
+    segs.style.cssText = 'flex:1 1 0;overflow-y:auto;padding:8px 12px;';
+    var empty = doc.createElement('p');
+    empty.className = 'transcript-empty';
+    empty.id = 'pip-transcript-empty';
+    empty.textContent = 'Transkript wird aufgezeichnet…';
+    segs.appendChild(empty);
+    panel.appendChild(segs);
+
+    // PT-02: "↓ Neueste"-Knopf (PRIMARY-Teal), nur sichtbar wenn der User hochgescrollt hat.
+    var jump = doc.createElement('button');
+    jump.type = 'button';
+    jump.id = 'pip-transcript-jump';
+    jump.textContent = '↓ Neueste';
+    jump.style.cssText = 'display:none;position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:var(--btn-primary-bg);color:var(--btn-primary-text);border:none;border-radius:14px;padding:4px 14px;font-size:11px;font-weight:600;cursor:pointer;z-index:5;';
+    jump.addEventListener('click', function () { segs.scrollTop = segs.scrollHeight; jump.style.display = 'none'; });
+    panel.appendChild(jump);
+
+    segs.addEventListener('scroll', function () {
+      var paused = segs.scrollTop + segs.clientHeight < segs.scrollHeight - 10;
+      jump.style.display = paused ? '' : 'none';
+    });
+    return panel;
+  }
+
+  // Backlog komplett rendern (beim Oeffnen, wenn schon Segmente da sind).
+  function _renderAllSegments(doc) {
+    var segs = doc.getElementById('pip-transcript-segments');
+    if (!segs) return;
+    segs.innerHTML = '';
+    var data = state.transcriptSegments || [];
+    if (!data.length) {
+      var empty = doc.createElement('p');
+      empty.className = 'transcript-empty';
+      empty.id = 'pip-transcript-empty';
+      empty.textContent = 'Transkript wird aufgezeichnet…';
+      segs.appendChild(empty);
+      return;
+    }
+    data.forEach(function (s) { segs.appendChild(_buildSegmentRow(doc, s)); });
+    segs.scrollTop = segs.scrollHeight;
+  }
+
+  // PT-02: ein neues Segment live anhaengen + Auto-Scroll (pausiert wenn User hochgescrollt hat).
+  function _appendLiveSegment(seg) {
+    if (!_pipTranscriptOpen || !state.pipWindow || state.pipWindow.closed) return;
+    var doc = state.pipWindow.document;
+    var segs = doc.getElementById('pip-transcript-segments');
+    if (!segs) return;
+    var empty = doc.getElementById('pip-transcript-empty');
+    if (empty && empty.parentNode) empty.parentNode.removeChild(empty);
+    var paused = segs.scrollTop + segs.clientHeight < segs.scrollHeight - 10;
+    segs.appendChild(_buildSegmentRow(doc, seg));
+    if (!paused) segs.scrollTop = segs.scrollHeight;
+  }
+
+  // Side-by-Side (>=900px): Transkript links (~480), Coaching (pip-live-window) rechts.
+  function _renderSideBySide(pip) {
+    var doc = pip.document;
+    _removeFallbackOverlay(doc);
+    var panel = _ensureTranscriptPanel(doc);
+    panel.style.position = 'relative';
+    panel.style.width = '480px';
+    panel.style.flex = '0 0 480px';
+    panel.style.height = '100vh';
+    doc.body.style.flexDirection = 'row';
+    var live = doc.getElementById('pip-live-window');
+    if (live) { live.style.flex = '1 1 0'; live.style.minWidth = '0'; }
+    if (doc.body.firstChild !== panel) doc.body.insertBefore(panel, doc.body.firstChild);
+    _renderAllSegments(doc);
+  }
+
+  // Fallback (<900px): Overlay ueber dem Coaching, volle Breite. ResizeObserver kann es spaeter
+  // durch side-by-side ersetzen, falls das Fenster doch noch auf >=900 aufgeht.
+  function _renderFallbackOverlay(pip) {
+    var doc = pip.document;
+    var panel = _ensureTranscriptPanel(doc);
+    doc.body.style.flexDirection = 'column';
+    panel.style.position = 'fixed';
+    panel.style.top = '0'; panel.style.left = '0'; panel.style.right = '0'; panel.style.bottom = '0';
+    panel.style.width = '100%'; panel.style.height = '100vh'; panel.style.flex = '';
+    panel.style.zIndex = '9999';
+    panel.dataset.overlay = '1';
+    if (panel.parentNode !== doc.body) doc.body.appendChild(panel);
+    _renderAllSegments(doc);
+  }
+
+  function _removeFallbackOverlay(doc) {
+    var panel = doc.getElementById('pip-transcript-panel');
+    if (panel && panel.dataset.overlay === '1') {
+      panel.style.position = ''; panel.style.top = ''; panel.style.left = '';
+      panel.style.right = ''; panel.style.bottom = ''; panel.style.zIndex = '';
+      delete panel.dataset.overlay;
+    }
+  }
+
+  // PT-01: Toggle-Knopf in die PiP-Header-Controls injizieren (PiP-aware). Idempotent.
+  function _wireTranscriptToggle(pipWindow) {
+    if (!pipWindow) return;
+    var doc = pipWindow.document;
+    var headerRight = doc.querySelector('.pip-header-right');
+    if (!headerRight || doc.getElementById('pip-transcript-toggle')) return;
+    var btn = doc.createElement('button');
+    btn.type = 'button';
+    btn.id = 'pip-transcript-toggle';
+    btn.className = 'n-btn n-btn-ghost';
+    btn.setAttribute('aria-label', 'Transkript einblenden');
+    btn.innerHTML = '<i data-lucide="file-text"></i> Transkript ▶';
+    var beenden = doc.getElementById('nlp-btn-beenden');
+    if (beenden) headerRight.insertBefore(btn, beenden); else headerRight.appendChild(btn);
+    btn.addEventListener('click', function () {
+      if (_pipTranscriptOpen) _closeTranscriptPanel(pipWindow);
+      else _openTranscriptPanel(pipWindow);
+    });
+    if (pipWindow.lucide && typeof pipWindow.lucide.createIcons === 'function') pipWindow.lucide.createIcons();
+  }
+
+  // Resize-on-Toggle: Spike-Blueprint (resizeTo + 350ms-Notnagel) PLUS ResizeObserver-Flip (DUX2-02).
+  // committed-Guard: side-by-side nur EINMAL, sicher aus beiden Pfaden, kein Doppel-Render.
+  function _openTranscriptPanel(pipWindow) {
+    var pip = pipWindow;
+    _ensureTranscriptAccumulator();
+    _pipTranscriptOpen = true;
+    var toggle = pip.document.getElementById('pip-transcript-toggle');
+    if (toggle) {
+      toggle.innerHTML = '<i data-lucide="file-text"></i> Transkript ◀';
+      toggle.setAttribute('aria-label', 'Transkript ausblenden');
+    }
+
+    pip.resizeTo(960, 900);   // Der Klick IST die transient activation — kein Timer davor.
+
+    var committed = false;
+    var ro = null;
+    function commitSideBySide() {
+      if (committed) return;
+      if (pip.innerWidth >= 900) {
+        committed = true;
+        _renderSideBySide(pip);
+        if (ro) { ro.disconnect(); ro = null; }
+      }
+    }
+    // (A) ResizeObserver = zuverlaessiger Flip, auch wenn die OS-Resize-Animation >350ms dauert.
+    if (pip.ResizeObserver) {
+      ro = new pip.ResizeObserver(function () { commitSideBySide(); });
+      ro.observe(pip.document.body);
+    } else {
+      pip.addEventListener('resize', commitSideBySide);
+    }
+    // (B) 350ms-Timer NUR als Notnagel; bei <900 Fallback-Overlay (Observer korrigiert spaeter).
+    setTimeout(function () {
+      if (pip.innerWidth >= 900) commitSideBySide();
+      else _renderFallbackOverlay(pip);
+      console.log('[D.UX.2] pip resize', { requested: 960, after: pip.innerWidth, via: 'timer' });
+    }, 350);
+
+    if (pip.lucide && typeof pip.lucide.createIcons === 'function') pip.lucide.createIcons();
+  }
+
+  function _closeTranscriptPanel(pipWindow) {
+    if (!pipWindow || pipWindow.closed) { _pipTranscriptOpen = false; return; }
+    var doc = pipWindow.document;
+    _pipTranscriptOpen = false;
+    _removeFallbackOverlay(doc);
+    var panel = doc.getElementById('pip-transcript-panel');
+    if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
+    doc.body.style.flexDirection = 'column';
+    var live = doc.getElementById('pip-live-window');
+    if (live) { live.style.flex = ''; live.style.minWidth = ''; }
+    try { pipWindow.resizeTo(480, 900); } catch (e) {}
+    var toggle = doc.getElementById('pip-transcript-toggle');
+    if (toggle) {
+      toggle.innerHTML = '<i data-lucide="file-text"></i> Transkript ▶';
+      toggle.setAttribute('aria-label', 'Transkript einblenden');
+    }
+    if (pipWindow.lucide && typeof pipWindow.lucide.createIcons === 'function') pipWindow.lucide.createIcons();
+  }
+
+  // DQ-03: Post-Call inline-collapsibles Transkript (roher RAM-Akku, Auto-Scroll OFF). Idempotent.
+  function _appendPostcallTranscriptButton() {
+    var doc = (state.pipWindow && !state.pipWindow.closed) ? state.pipWindow.document : document;
+    var sec = pipEl('nlp-section-postcall');
+    var actRow = sec ? sec.querySelector('.pip-postcall-actions') : doc.querySelector('.pip-postcall-actions');
+    if (!actRow || doc.getElementById('pip-postcall-transcript-btn')) return;   // idempotent
+
+    var btn = doc.createElement('button');
+    btn.type = 'button';
+    btn.id = 'pip-postcall-transcript-btn';
+    btn.className = 'n-btn n-btn-ghost';
+    btn.innerHTML = '<i data-lucide="chevron-down"></i> Transkript ansehen';
+    actRow.appendChild(btn);
+
+    var panel = doc.createElement('div');
+    panel.id = 'pip-postcall-transcript-panel';
+    panel.className = 'transcript-segments-container';
+    panel.style.cssText = 'display:none;max-height:280px;overflow-y:auto;margin-top:12px;padding:8px 12px;text-align:left;';
+    if (actRow.parentNode) actRow.parentNode.insertBefore(panel, actRow.nextSibling);
+
+    var open = false;
+    btn.addEventListener('click', function () {
+      open = !open;
+      if (open) {
+        // DQ-03: roher RAM-Text (state.transcriptSegments), bewusst anders als das anonymisierte
+        // Dashboard-Transkript (DQ-02). Kein Bug — RESEARCH Landmine 3. Auto-Scroll OFF (Call vorbei).
+        panel.innerHTML = '';
+        var data = state.transcriptSegments || [];
+        if (!data.length) {
+          var p = doc.createElement('p');
+          p.className = 'transcript-empty';
+          p.textContent = 'Kein Transkript verfügbar für diesen Call.';
+          panel.appendChild(p);
+        } else {
+          data.forEach(function (s) { panel.appendChild(_buildSegmentRow(doc, s)); });
+        }
+        panel.style.display = '';
+        btn.innerHTML = '<i data-lucide="chevron-up"></i> Transkript schließen';
+      } else {
+        panel.style.display = 'none';
+        btn.innerHTML = '<i data-lucide="chevron-down"></i> Transkript ansehen';
+      }
+      if (state.pipWindow && state.pipWindow.lucide && typeof state.pipWindow.lucide.createIcons === 'function') {
+        state.pipWindow.lucide.createIcons();
+      }
+    });
+  }
+
   function _revealScoreAndActions(json) {
     if (!json) return;
     // ── S-03: Score + Basis-Analytics SOFORT zusammen, PiP-aware + null-safe.
@@ -3908,6 +4201,9 @@
       summary.textContent = '✓ ' + escHtml(_outcomeLabelDe(json.outcome || state.lastOutcome));
       sec.appendChild(summary);
     }
+
+    // Phase 08.23.2.D.UX.2 (DQ-03): Post-Call Transkript-Knopf an die Actions-Reihe haengen (idempotent).
+    _appendPostcallTranscriptButton();
   }
 
   function _renderOutcomeUx(data) {
