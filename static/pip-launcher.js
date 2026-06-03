@@ -4025,16 +4025,19 @@
     var btn = doc.createElement('button');
     btn.type = 'button';
     btn.id = 'pip-transcript-toggle';
-    btn.className = 'n-btn n-btn-ghost';
+    // FIX (debug pip-toggle-invisible 2026-06-03): NICHT .n-btn n-btn-ghost — die nutzt
+    // Light-Mode-Tokens (--btn-ghost-text #1a1a1a, bg/border rgba(0,0,0,...)) und ist auf dem
+    // dunklen #0D1117 pip-header dark-on-dark UNSICHTBAR. Stattdessen explizites kompaktes
+    // Dark-Header-Styling im Stil von .pip-btn-beenden / .pip-mic-indicator (teal Akzent, Pill).
+    btn.style.cssText = 'background:transparent;border:1.5px solid #00D4AA;border-radius:9999px;color:#00D4AA;padding:2px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;line-height:1;transition:background .15s,border-color .15s';
     btn.setAttribute('aria-label', 'Transkript einblenden');
-    btn.innerHTML = '<i data-lucide="file-text"></i> Transkript ▶';
+    btn.textContent = 'Transkript ▶';
     var beenden = doc.getElementById('nlp-btn-beenden');
     if (beenden) headerRight.insertBefore(btn, beenden); else headerRight.appendChild(btn);
     btn.addEventListener('click', function () {
       if (_pipTranscriptOpen) _closeTranscriptPanel(pipWindow);
       else _openTranscriptPanel(pipWindow);
     });
-    if (pipWindow.lucide && typeof pipWindow.lucide.createIcons === 'function') pipWindow.lucide.createIcons();
   }
 
   // Resize-on-Toggle: Spike-Blueprint (resizeTo + 350ms-Notnagel) PLUS ResizeObserver-Flip (DUX2-02).
@@ -4045,7 +4048,7 @@
     _pipTranscriptOpen = true;
     var toggle = pip.document.getElementById('pip-transcript-toggle');
     if (toggle) {
-      toggle.innerHTML = '<i data-lucide="file-text"></i> Transkript ◀';
+      toggle.textContent = 'Transkript ◀';
       toggle.setAttribute('aria-label', 'Transkript ausblenden');
     }
 
@@ -4091,7 +4094,7 @@
     try { pipWindow.resizeTo(480, 900); } catch (e) {}
     var toggle = doc.getElementById('pip-transcript-toggle');
     if (toggle) {
-      toggle.innerHTML = '<i data-lucide="file-text"></i> Transkript ▶';
+      toggle.textContent = 'Transkript ▶';
       toggle.setAttribute('aria-label', 'Transkript einblenden');
     }
     if (pipWindow.lucide && typeof pipWindow.lucide.createIcons === 'function') pipWindow.lucide.createIcons();
