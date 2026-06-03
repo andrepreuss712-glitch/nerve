@@ -3845,6 +3845,71 @@
     ? window.NerveOutcomeModalState._decideModalState
     : function () { return 'unsicher'; };  // defensiver Fallback falls Helper-Script fehlt
 
+  // ── _revealScoreAndActions(json) (Phase 08.23.2.MEETSTEP Task 1) ─────────────
+  // Verbatim extrahiert aus dem fruheren inline-Reveal-Block im correct_outcome.then()
+  // (KEIN Re-Write — Drift-Schutz). Blendet Score-Karte + Basis-Analytics + Aktions-
+  // Buttons ein und kollabiert die Outcome-Sektion zum 1-Zeiler. Idempotent gegen
+  // Mehrfach-Aufruf (display='' erneut zu setzen ist harmlos). ALLE Lookups via pipEl
+  // (Pitfall 5: PiP-aware). Drei Trigger teilen diesen Helper: Nicht-Meeting-Confirm
+  // (sofort), meeting-Skip, meeting-Weiter.
+  function _revealScoreAndActions(json) {
+    if (!json) return;
+    // ── S-03: Score + Basis-Analytics SOFORT zusammen, PiP-aware + null-safe.
+    // Reveal der postcall-Section ist der EINZIGE Ort (F9 — Score-Hide-Owner).
+    var _scoreSec = pipEl('nlp-section-postcall');
+    if (_scoreSec) _scoreSec.style.display = '';
+    // FIX: Score-Karten-Kinder wieder einblenden, die _showLadebalken1 bis Confirm versteckt hatte.
+    if (_scoreSec) {
+      var _actEl = _scoreSec.querySelector('.pip-postcall-actions'); if (_actEl) _actEl.style.display = '';
+    }
+
+    // Score aus json.final_score (S-01, kein _calcScore). Haengt NICHT an pendingPostcall.
+    if (json.final_score !== undefined && json.final_score !== null) {
+      var scoreEl = pipEl('nlp-postcall-score');
+      if (scoreEl) {
+        scoreEl.style.display = '';
+        scoreEl.textContent = String(json.final_score) + '%';
+        var _fs = +json.final_score;
+        scoreEl.style.color = (_fs >= 70) ? 'var(--session-score-high)'
+          : (_fs >= 40) ? 'var(--session-score-mid)'
+          : 'var(--session-score-low)';
+        // Score-Label auf den UI-SPEC-Copy-Contract setzen (PiP-aware via Sibling).
+        var _lbl = scoreEl.parentNode ? scoreEl.parentNode.querySelector('.pip-postcall-label') : null;
+        if (_lbl) { _lbl.style.display = ''; _lbl.textContent = 'Coaching-Score'; }
+      }
+      var detailsBtn = pipEl('nlp-btn-details');
+      if (detailsBtn) { detailsBtn.style.display = ''; detailsBtn.disabled = false; }
+      // F9: Trend mit dem BESTAETIGTEN final_score fuettern (nicht _calcScore).
+      _fetchAndRenderTrend(json.final_score);
+    }
+
+    // Basis-Analytics (Kaufbereitschaft / Redeanteil / Einwaende) — NULL-SAFE.
+    // state.pendingPostcall kann am Confirm-Zeitpunkt undefined sein (Timeout/Race/Stale).
+    var _pp = state.pendingPostcall;
+    if (_pp) {
+      _renderQuickStats(_pp);   // PiP-aware, zeigt Einwaende/Redeanteil/Dauer/Skript-Tiles
+      _renderSparkline(_pp);
+    } else {
+      // Fallback: Score-Karte allein, KPI-Block uebersprungen — KEIN Throw, KEIN undefined-Deref.
+      var _qs = pipEl('nlp-postcall-quickstats');
+      if (_qs) _qs.innerHTML = '';
+    }
+
+    // Outcome-Sektion zu 1-Zeiler kollabieren (terminaler Screen, B-03 — kein Back-to-Call).
+    // sec/_doc re-resolven — NICHT aus _renderOutcomeUx-Scope verfuegbar.
+    // KRITISCH (Cross-AI-Fix 2026-06-03): Variable MUSS _doc heissen, NICHT _doc2 —
+    // der verbatim verschobene Block nutzt _doc.createElement -> sonst ReferenceError.
+    var _doc = (state.pipWindow && !state.pipWindow.closed) ? state.pipWindow.document : document;
+    var sec = pipEl('pip-outcome-section');
+    if (sec) {
+      sec.innerHTML = '';
+      var summary = _doc.createElement('div');
+      summary.className = 'pip-outcome-summary';
+      summary.textContent = '✓ ' + escHtml(_outcomeLabelDe(json.outcome || state.lastOutcome));
+      sec.appendChild(summary);
+    }
+  }
+
   function _renderOutcomeUx(data) {
     // NEW-1/F5 (BLOCKER): alle Lookups + Section-Erzeugung PiP-aware. Bare document
     // trifft im PiP-Modus das Haupt-Fenster -> Outcome-Screen waere fuer den User unsichtbar.
@@ -4026,59 +4091,18 @@
         }
         state.lastOutcome = json.outcome || selectedOutcome;
 
-        // ── S-03 (Task 3): Score + Basis-Analytics SOFORT zusammen, PiP-aware + null-safe.
-        // Reveal der postcall-Section ist der EINZIGE Ort (F9 — Score-Hide-Owner).
-        var _scoreSec = pipEl('nlp-section-postcall');
-        if (_scoreSec) _scoreSec.style.display = '';
-        // FIX: Score-Karten-Kinder wieder einblenden, die _showLadebalken1 bis Confirm versteckt hatte.
-        if (_scoreSec) {
-          var _actEl = _scoreSec.querySelector('.pip-postcall-actions'); if (_actEl) _actEl.style.display = '';
-        }
+        // ── Phase 08.23.2.MEETSTEP: State fuer die verzoegerten Reveal-Trigger ablegen.
+        state.pendingRevealJson = json;   // Pitfall 2: bei jedem Confirm ueberschrieben (frischer Score)
+        state.pendingOutcomeData = data;  // urspruengliches _renderOutcomeUx(data)-Argument fuer Zurueck-Re-Render
 
-        // Score aus json.final_score (S-01, kein _calcScore). Haengt NICHT an pendingPostcall.
-        if (json.final_score !== undefined && json.final_score !== null) {
-          var scoreEl = pipEl('nlp-postcall-score');
-          if (scoreEl) {
-            scoreEl.style.display = '';
-            scoreEl.textContent = String(json.final_score) + '%';
-            var _fs = +json.final_score;
-            scoreEl.style.color = (_fs >= 70) ? 'var(--session-score-high)'
-              : (_fs >= 40) ? 'var(--session-score-mid)'
-              : 'var(--session-score-low)';
-            // Score-Label auf den UI-SPEC-Copy-Contract setzen (PiP-aware via Sibling).
-            var _lbl = scoreEl.parentNode ? scoreEl.parentNode.querySelector('.pip-postcall-label') : null;
-            if (_lbl) { _lbl.style.display = ''; _lbl.textContent = 'Coaching-Score'; }
-          }
-          var detailsBtn = pipEl('nlp-btn-details');
-          if (detailsBtn) { detailsBtn.style.display = ''; detailsBtn.disabled = false; }
-          // F9: Trend mit dem BESTAETIGTEN final_score fuettern (nicht _calcScore).
-          _fetchAndRenderTrend(json.final_score);
-        }
-
-        // Basis-Analytics (Kaufbereitschaft / Redeanteil / Einwaende) — NULL-SAFE.
-        // state.pendingPostcall kann am Confirm-Zeitpunkt undefined sein (Timeout/Race/Stale).
-        var _pp = state.pendingPostcall;
-        if (_pp) {
-          _renderQuickStats(_pp);   // PiP-aware, zeigt Einwaende/Redeanteil/Dauer/Skript-Tiles
-          _renderSparkline(_pp);
-        } else {
-          // Fallback: Score-Karte allein, KPI-Block uebersprungen — KEIN Throw, KEIN undefined-Deref.
-          var _qs = pipEl('nlp-postcall-quickstats');
-          if (_qs) _qs.innerHTML = '';
-        }
-
-        // Outcome-Sektion zu 1-Zeiler kollabieren (terminaler Screen, B-03 — kein Back-to-Call).
-        sec.innerHTML = '';
-        var summary = _doc.createElement('div');
-        summary.className = 'pip-outcome-summary';
-        summary.textContent = '✓ ' + escHtml(_outcomeLabelDe(json.outcome || selectedOutcome));
-        sec.appendChild(summary);
-
-        // MM-03 (G-MEET Plan 05): Meeting-Form ERST nach dem Score-Screen — nicht im rohen
-        // meeting_booked-Branch. selectedOutcome ist im Closure. renderMeetingForm mountet in
-        // einen eigenen Child-Node (#meeting-form-mount), clobbert den Score-Screen NICHT.
+        // D-07/D-08: Bei meeting_booked wird das Termin-Formular zum eigenen Schritt VOR dem Score —
+        // Score+Aktionen BLEIBEN versteckt (via _showLadebalken1, kein zusaetzliches Hide noetig),
+        // bis Skip/Weiter den Reveal triggert. Bei Nicht-Meeting (L-03): Reveal sofort, Flow unveraendert.
         if (selectedOutcome === 'meeting_booked') {
-          try { renderMeetingForm(json); } catch (_mfe) { console.error('[G-MEET] renderMeetingForm:', _mfe); }
+          // KEIN Reveal hier — die Score-Karten-Kinder bleiben display:none.
+          try { renderMeetingForm(json); } catch (_mfe) { console.error('[MEETSTEP] renderMeetingForm:', _mfe); }
+        } else {
+          _revealScoreAndActions(json);  // L-03: sofort, identisch zu heute
         }
       })
       .catch(function(e) {
