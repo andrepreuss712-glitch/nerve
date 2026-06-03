@@ -1877,6 +1877,16 @@ Plans:
 - **Bau-Workflow TEAM + COACH:** beide Phasen erst KOMPLETT planen → Pläne gegeneinander abgleichen (Schnittstellen, v.a. Datenmodell „Aktivität pro Person unter Org-Ownership") → DANN sequenziell bauen.
 - **Coach-Plan = eigener günstiger Tarif, bewusst beschnitten (Andre 2026-06-02):** Coach-Zugang deutlich günstiger, ABER (a) KEINE Cold-Call/Meeting-Ausführung mit dem Coach-Account (separat als Add-on dazubuchbar); (b) KEIN Team-Einladen/-Verwalten. Zweck: verhindern dass jeder den billigen Coach-Plan kauft und faktisch alle Features hat. → 08.15/08.16 müssen Coach-Tarif + Call/Meeting-Add-on abbilden; SEATS regelt die Abrechnung.
 
+### Phase 08.23.2.MEETSTEP: Termin-Formular als eigener Post-Call-Schritt (vor dem Score) (NEU 2026-06-03, aus G/MEET-Live-Test) 🟡
+
+**Problem:** Termin-Formular sitzt aktuell UNTER dem Score + unter den "Nächster Call / Auswertung"-Buttons → User überspringt den Termin aus Versehen (klickt "Nächster Call"). Untergräbt den Feature-Nutzen.
+**Soll (Andre-Reihenfolge 03.06.):** Anruf endet → Ergebnis-Auswahl ("Termin gebucht") → **Termin-Formular (eigener PiP-Schritt)** → Score-Karte → Auswertung/Nächster Call. Formular kommt VOR den Score.
+**Begründung:** Nicht jeder Vertriebler schaut auf den Score — die Termin-Erfassung ist die wichtige Geschäfts-Aktion, darf nicht hinter dem Score begraben/überspringbar sein.
+**Umbau am Post-Call-Flow (D.UX.4-Nachbarschaft).** Cross-AI Pflicht (🟡, Control-Flow Punkt 14: Schritt-Reihenfolge + Edge-Case Nicht-Meeting-Outcome = kein Formular → direkt Score). Pre-Insert-Control-Flow-Audit auf pip-launcher.js _renderOutcomeUx/Postcall-Sequenz.
+**Koordination mit MODES:** beide fassen den Post-Call-/Meeting-Flow an → nicht doppelt umbauen; MEETSTEP (klein, sofort, fixt Live-Skippability) zuerst.
+**Depends on:** G/MEET Meeting-Modal (live). ID ohne Schrägstrich (kein Multi-Segment-Gotcha).
+**Plans:** 0 plans
+
 ### Phase 08.23.2.MODES: Live-Assistent aufteilen — eigener Cold-Call- + Meeting-Modus (NEU 2026-06-02, Andre-Insight) 🟡 Kernfeature
 
 **Problem:** Cold Call + Meeting beide hinter EINEM Live-Assistent-Button → gleicher Ablauf, obwohl grundverschiedene Einstiege (Cold Call = bei null; Meeting = Kontext existiert schon).
