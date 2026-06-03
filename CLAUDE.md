@@ -10,6 +10,10 @@ NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertrie
 
 **Core Value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
 
+### Skill-Routing
+
+- **Spike findings for salesnerve** (implementation patterns, constraints, gotchas) → `Skill("spike-findings-salesnerve")`
+
 ### Constraints
 
 - **Stack:** Kein Framework-Wechsel — Flask + Vanilla JS bleibt. Keine React-Migration.
