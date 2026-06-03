@@ -4226,6 +4226,7 @@
     +   '<div class="n-meeting-actions">'
     +     '<button type="button" class="n-btn-primary" id="meeting-save-btn"><i data-lucide="bookmark-check"></i> Termin merken</button>'
     +     '<button type="button" class="n-btn-ghost" id="meeting-skip-btn">Überspringen</button>'
+    +     '<button type="button" class="n-btn-ghost n-meeting-back-btn" id="meeting-back-btn">Falsches Ergebnis? Zurück</button>'
     +   '</div>'
     + '</div>';
 
@@ -4264,7 +4265,18 @@
     var saveBtn = pipEl('meeting-save-btn');
     if (saveBtn) saveBtn.addEventListener('click', _onSaveMeeting);
     var skipBtn = pipEl('meeting-skip-btn');
-    if (skipBtn) skipBtn.addEventListener('click', _closeMeetingForm);
+    if (skipBtn) skipBtn.addEventListener('click', function () {
+      _closeMeetingForm();
+      _revealScoreAndActions(state.pendingRevealJson);   // D-01: Skip blendet Score+Aktionen ein (Outcome bleibt meeting_booked)
+    });
+    // D-03/D-04: "Falsches Ergebnis? Zurueck" — Formular schliessen, Guard reset, Outcome-Auswahl neu rendern.
+    var backBtn = pipEl('meeting-back-btn');
+    if (backBtn) backBtn.addEventListener('click', function () {
+      _closeMeetingForm();                                  // Pitfall 3: verwaisten #meeting-form-mount entfernen
+      var _sec = pipEl('pip-outcome-section');
+      if (_sec) _sec.dataset.outcomeRendered = '0';         // Pitfall 1: Idempotenz-Guard zuruecksetzen, sonst no-op Re-Render
+      _renderOutcomeUx(state.pendingOutcomeData);           // Pitfall 4: komplettes Re-Render -> frischer confirmBtn = Submit-Lock gratis
+    });
 
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
       try { lucide.createIcons(); } catch (_) {}
@@ -4338,7 +4350,10 @@
     +   '<button type="button" class="n-btn-primary" id="meeting-weiter-btn">Weiter <i data-lucide="arrow-right"></i></button>'
     + '</div>';
     var weiter = pipEl('meeting-weiter-btn');
-    if (weiter) weiter.addEventListener('click', _closeMeetingForm);
+    if (weiter) weiter.addEventListener('click', function () {
+      _closeMeetingForm();
+      _revealScoreAndActions(state.pendingRevealJson);   // D-06: Weiter (nach Speichern) blendet Score+Aktionen ein
+    });
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
       try { lucide.createIcons(); } catch (_) {}
     }
