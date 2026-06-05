@@ -96,6 +96,63 @@ _RE_DATUM_KONTEXT = re.compile(
 _RE_KREDITKARTE = re.compile(r'(?<!\d)(?:\d[\s\-]?){13,19}(?!\d)')
 
 
+# ── GLiNER-Konfidenz-Schwelle (Phase 08.23.2.D.UX.3 Task R3) ──────────────────
+# 0.5 (GLiNER-Default) liess Low-Confidence-Fehlalarme durch ('nach dem Anruf'->LOC).
+# Code-Default bewusst 0.55 (NICHT 0.6): Cross-AI Gemini HIGH — 0.6 riskiert
+# False Negatives bei echten Namen mit score ~0.55 (DSGVO Art. 32, PII-Leck).
+# 0.55 = milder Precision-Schwenk; echte Namen haben score typ. >0.85, bleiben getaggt.
+# ENV-Override erlaubt Live-Tuning ohne Redeploy (Production-only-Verify, Task R6/Task 4).
+# Eine Anhebung auf 0.6 ist eine BEWUSSTE Folge-Entscheidung NACH Korpus-Validierung
+# (Task 4: 5-10 historische Prod-Calls), NICHT im Code festgeschrieben.
+GLINER_THRESHOLD = float(os.environ.get('GLINER_THRESHOLD', '0.55'))
+
+# ── Pronomen-Whitelist (Phase 08.23.2.D.UX.3 Task R2) ─────────────────────────
+# NIE anonymisieren — sonst landen 'ich'/'Sie' im Cache und zerreissen via
+# Substring-Replace ganze Woerter (Wortteil-Bug). Lowercase-Vergleich.
+# DATEN-Strings -> echte Umlaute erlaubt (CLAUDE.md UTF-8-Regel, Identifier ASCII).
+# Bewusst KONSERVATIV: nur eindeutige Funktionswoerter (kein echter Kontakt heisst so).
+# Known-Limitation (Gemini LOW): .lower()-Vergleich koennte theoretisch 'Wir GmbH'
+# (falls GLiNER nur 'Wir' taggt) ueberspringen — bei B2B-Cold-Calls akzeptabel.
+PRONOMEN_WHITELIST = frozenset({
+    'ich', 'mich', 'mir', 'mein', 'meine', 'meiner', 'meinem', 'meinen', 'meins',
+    'du', 'dich', 'dir', 'dein', 'deine', 'deiner', 'deinem', 'deinen',
+    'sie', 'ihr', 'ihre', 'ihrer', 'ihrem', 'ihren', 'ihres',
+    'er', 'es', 'ihm', 'ihn', 'seiner', 'sein', 'seine',
+    'wir', 'uns', 'unser', 'unsere', 'unserer', 'unserem', 'unseren',
+    'man', 'wer', 'wen', 'wem',
+})
+
+# ── Generic-Berufs-/Org-Nomen-Whitelist (Phase 08.23.2.D.UX.3 Task R4) ────────
+# Generische Berufs- UND Org-Nomen werden nie als ORG tokenisiert.
+# Real-Daten-Befund: sichtbarer ORG-Laerm kommt v.a. von generischen Nomen
+# ('Firmen'/'Unternehmen'), nicht Berufen -> beide Listen (Claude's Discretion,
+# sinnvoller Default = beides, da billig; RESEARCH Open Question 1 + A3).
+GENERIC_BERUF_WHITELIST = frozenset({
+    # Berufe
+    'vertriebler', 'berater', 'beraterin', 'manager', 'managerin',
+    'verkäufer', 'verkäuferin', 'geschäftsführer', 'geschäftsführerin',
+    'mitarbeiter', 'mitarbeiterin', 'kollege', 'kollegin', 'chef', 'chefin',
+    'kunde', 'kundin', 'ansprechpartner', 'ansprechpartnerin',
+    'entscheider', 'entscheiderin', 'leiter', 'leiterin',
+    # Generische Org-Nomen
+    'firma', 'firmen', 'unternehmen', 'betrieb', 'betriebe', 'gesellschaft',
+})
+
+
+def _is_whitelisted(ent_text: str, token_type: str) -> bool:
+    """Zentrale Whitelist-Filterlogik (Phase 08.23.2.D.UX.3, Gemini-Review MEDIUM).
+    EINZIGE Quelle der Wahrheit — an allen 3 NER-Stellen aufgerufen, nie inline
+    dupliziert (verhindert Gatekeeper-Inkonsistenz). Pronomen typ-unabhaengig,
+    Generic-Nomen nur fuer ORG.
+    """
+    low = ent_text.strip().lower()
+    if low in PRONOMEN_WHITELIST:
+        return True
+    if token_type == 'ORG' and low in GENERIC_BERUF_WHITELIST:
+        return True
+    return False
+
+
 # ── AnrufAnonymisierer-Klasse (D-03) ─────────────────────────────────────────
 
 class AnrufAnonymisierer:
@@ -249,6 +306,8 @@ def _apply_ner(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> Tuple[str
                 )
                 if is_uncertain:
                     tier = 'B'
+                if _is_whitelisted(ent.text, token_type):
+                    continue
                 all_spans.append((ent.start_char, ent.end_char, token_type, ent.text))
 
     # GLiNER-Treffer — native Offsets preferred, re.finditer() als Fallback (Review Finding 1)
@@ -258,7 +317,7 @@ def _apply_ner(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> Tuple[str
             results = gliner.predict_entities(
                 text,
                 ['person', 'organisation', 'location'],
-                threshold=0.5,
+                threshold=GLINER_THRESHOLD,
             )
             for ent in results:
                 ent_text = ent.get('text', '')
@@ -272,6 +331,9 @@ def _apply_ner(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> Tuple[str
                 elif ent_label == 'location':
                     token_type = 'LOC'
                 else:
+                    continue
+
+                if _is_whitelisted(ent_text, token_type):
                     continue
 
                 # Native Offsets wenn GLiNER sie liefert (Standard-Lib gliner_multi-v2.1)
@@ -314,10 +376,15 @@ def _apply_ner_parallel(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> 
         if nlp is None:
             return []
         doc = nlp(text)
-        return [
-            (e.start_char, e.end_char, 'PERSON' if e.label_ == 'PER' else e.label_, e.text)
-            for e in doc.ents if e.label_ in ('PER', 'LOC', 'ORG')
-        ]
+        spans: List[Tuple[int, int, str, str]] = []
+        for e in doc.ents:
+            if e.label_ not in ('PER', 'LOC', 'ORG'):
+                continue
+            token_type = 'PERSON' if e.label_ == 'PER' else e.label_
+            if _is_whitelisted(e.text, token_type):
+                continue
+            spans.append((e.start_char, e.end_char, token_type, e.text))
+        return spans
 
     def run_gliner() -> List[Tuple[int, int, str, str]]:
         gliner = _get_gliner()
@@ -328,7 +395,7 @@ def _apply_ner_parallel(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> 
             results = gliner.predict_entities(
                 text,
                 ['person', 'organisation', 'location'],
-                threshold=0.5,
+                threshold=GLINER_THRESHOLD,
             )
             for ent in results:
                 ent_text = ent.get('text', '')
@@ -342,6 +409,8 @@ def _apply_ner_parallel(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> 
                 elif ent_label == 'location':
                     token_type = 'LOC'
                 else:
+                    continue
+                if _is_whitelisted(ent_text, token_type):
                     continue
                 if 'start' in ent and 'end' in ent:
                     spans.append((ent['start'], ent['end'], token_type, ent_text))
@@ -551,9 +620,12 @@ def extract_entities(text: str, cache=None) -> list:
             doc = nlp(text)
             for ent in doc.ents:
                 if ent.label_ in ('PER', 'LOC', 'ORG'):
+                    token_type = 'PERSON' if ent.label_ == 'PER' else ent.label_
+                    if _is_whitelisted(ent.text, token_type):
+                        continue
                     entities.append({
                         'text': ent.text,
-                        'type': 'PERSON' if ent.label_ == 'PER' else ent.label_,
+                        'type': token_type,
                         'source': 'spacy',
                     })
         except Exception as e:
@@ -565,7 +637,7 @@ def extract_entities(text: str, cache=None) -> list:
             results = gliner.predict_entities(
                 text,
                 ['person', 'organisation', 'location'],
-                threshold=0.5,
+                threshold=GLINER_THRESHOLD,
             )
             for ent in results:
                 ent_label = ent.get('label', '').lower()
@@ -576,6 +648,8 @@ def extract_entities(text: str, cache=None) -> list:
                 elif ent_label == 'location':
                     token_type = 'LOC'
                 else:
+                    continue
+                if _is_whitelisted(ent.get('text', ''), token_type):
                     continue
                 entities.append({
                     'text': ent.get('text', ''),
