@@ -44,7 +44,7 @@ def _get_speaker(result):
         return None
 
 
-def _make_on_message(sid):
+def _make_on_message(sid, mode='meeting'):
     def on_message(self, result, **kwargs):
         from extensions import socketio as sio
         # Guard: SID may not be in _per_sid_profile yet if Deepgram fires
@@ -373,7 +373,7 @@ def _open_deepgram_connection(sid, mode='meeting', keyterms=None):
         config=DeepgramClientOptions(url=f"https://{DEEPGRAM_HOST}"),
     )
     connection = client.listen.websocket.v("1")
-    connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid))
+    connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid, mode))
     connection.on(LiveTranscriptionEvents.Open, _make_on_open(sid))
     connection.on(LiveTranscriptionEvents.Error, _make_on_error(sid))
     connection.on(LiveTranscriptionEvents.Close, _make_on_close(sid))
