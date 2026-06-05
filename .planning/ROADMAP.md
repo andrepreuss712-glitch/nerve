@@ -1761,6 +1761,13 @@ Plans:
 **Blocker für:** Phase 08.23.2.E (DPO-Korpus-Qualität — schlechte Transkripte = schlechte Trainingsdaten), Transkript-Wert von D.UX.2.
 **Priorität:** vor Phase E, kann vor/parallel zu D.UX.3.
 
+**Plans:** 2 plans (2 Waves, sequenziell — beide nur `services/deepgram_service.py`) — geplant 2026-06-05. RESEARCH (context7-verifiziert) + plan-checker PASSED 1. Iteration (0 Blocker/0 Warning/3 INFO). Verzeichnis: `.planning/phases/08.23.2.STT-deepgram-qualitaet-nova3-keyterm-sprecher-label/`. **Cross-AI Pflicht VOR Execute** (🟡 Kern-STT, alle Calls).
+Plans:
+- [ ] 08.23.2.STT-01-PLAN.md — nova-2→nova-3 (model+cost-tag+[DG]-log) + 3-Schichten keyterm (`build_keyterms`: feste Sales-Grundliste + Profil-Layer aus `basis.produktbeschreibung`/`basis.unternehmen`/`Profile.branche`/`einwaende_detail`, dedup, MAX_KEYTERMS=60, 500-Token-Limit) + **Reorder** (additiver Mini-Profil-Load VOR `_open_deepgram_connection` Z.421) → `LiveOptions(keyterm=[...])` [wave 1]
+- [ ] 08.23.2.STT-02-PLAN.md — Cold-Call Sprecher-Label-Fix: `_make_on_message(sid, mode)` Closure-Wiring + bei cold_call `emit_speaker=0`/`roles_confirmed=True`/`sp_name='Berater'`, Meeting-Pfad (diarize=True) strikt unverändert [wave 2, depends_on 01]
+**Korrektur ggü. Original-Eintrag (RESEARCH grep-belegt):** Feldnamen oben waren teils falsch (kein `Produktname`; `Branche`=DB-Spalte `Profile.branche`; `einwaende`→`einwaende_detail` top-level). `profile_skripte`+`profile_faqs` = eigene DB-Tabellen, nicht im Session-Cache vor dem keyterm-Load → für Stufe 1 DEFERRED. Stufe 2 (endpointing/utterance_end_ms) bleibt out-of-scope.
+**keyterm context7-Befund:** `keyterm` (singular, repeated/Liste, **nova-3-only**), German GA, Limit 500 Token/Request. A1-Restrisiko (Listen→repeated-param vs CSV-Blob) → 1.-Prod-Log-Check in Plan 01.
+
 ### Phase 08.23.2.D.UX.3: Anonymisierungs-Tuning Pronomen + Whitelist + Konfidenz (NEU 2026-05-28, aus Transcript-Review) 🟢
 
 **Goal:** GLiNER + spaCy-Pipeline weniger aggressiv tunen — Trainings-Daten-Qualität für Phase E sichern.
