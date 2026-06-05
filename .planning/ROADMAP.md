@@ -1770,7 +1770,7 @@ Plans:
 **Korrektur ggü. Original-Eintrag (RESEARCH grep-belegt):** Feldnamen oben waren teils falsch (kein `Produktname`; `Branche`=DB-Spalte `Profile.branche`; `einwaende`→`einwaende_detail` top-level). `profile_skripte`+`profile_faqs` = eigene DB-Tabellen, nicht im Session-Cache vor dem keyterm-Load → für Stufe 1 DEFERRED. Stufe 2 (endpointing/utterance_end_ms) bleibt out-of-scope.
 **keyterm context7-Befund:** `keyterm` (singular, repeated/Liste, **nova-3-only**), German GA, Limit 500 Token/Request. A1-Restrisiko (Listen→repeated-param vs CSV-Blob) → 1.-Prod-Log-Check in Plan 01.
 
-### Phase 08.23.2.D.UX.3: Anonymisierungs-Tuning — Wortteil-Bug + Pronomen + Whitelist + Konfidenz (NEU 2026-05-28; neu priorisiert 2026-06-05) 🟡
+### Phase 08.23.2.D.UX.3: Anonymisierungs-Tuning — Wortteil-Bug + Pronomen + Whitelist + Konfidenz (NEU 2026-05-28; neu priorisiert 2026-06-05) 🟡 ✅ COMPLETE 2026-06-05
 
 **Goal:** Anonymizer (GLiNER + spaCy, `services/anonymization.py`) repariert + entschärft — Trainings-Daten-Qualität für Phase E + lesbare Transkripte sichern.
 
@@ -1787,9 +1787,9 @@ Plans:
 **Depends on:** keine
 **Komplexität:** 🟡 (hochgestuft von 🟢 — Task 1 ist echte Logik-Änderung in der Replace-Mechanik, kein reines Config-Tuning). Cross-AI optional.
 **Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler — Trainings-Daten würden sonst durch Over-Anonymisierung + Wortteil-Bug verzerrt)
-**Plans:** 1 plan (1 Wave, autonomous:false — 1 Production-only Human-Verify-Checkpoint Goldstandard-Re-Test)
+**Plans:** 1 plan (1 Wave, autonomous:false) — geplant + Cross-AI (Gemini) + --reviews-Replan + ✅ ausgeführt + UAT PASS 2026-06-05. RESEARCH korrigierte ROADMAP-Hypothese: Wortteil-Bug sitzt in `anonymize_output` (naked text.replace), NICHT `_apply_ner` (bereits span-korrekt); Pronomen-Whitelist = Wurzel-Fix. Gemini-Findings eingearbeitet: GLINER_THRESHOLD Default **0.55** (nicht 0.6) + ENV-Override, `_is_whitelisted`-Pflicht-Helper, 5-10-Call-Korpus-Gate, defensiver Dict-Zugriff. **Folge-Fix-Pass 1 (Prod-Log Call 15:04, commit 18a95a1):** (1) Doppel-Klammer `[PERSON_E]SON_D]` = überlappende Union-Voting-Spans → `_dedup_overlapping_spans` (längster gewinnt) in beiden NER-Funktionen; (2) generische Über-Schwärzung (wir Vertriebler/Vertriebsteams/Einkauf/Viele Firmen) → `_is_whitelisted` typ-unabhängig + Mehrwort-Check + Liste erweitert; (3) ORG-Teil-Leak `[PERSON_J] Brennecke GmbH` → durch (1) mit-behoben. UAT-Re-Test 2026-06-05: alle 3 Abweichungen weg, DSGVO-Gate hält (alle echten Namen geschwärzt @0.55). Deploy manual-direct-prod. Verzeichnis hardcoded `.planning/phases/08.23.2.D.UX.3-anonymisierungs-tuning/`. gsd-sdk/gsd-code-review/gsd-verifier umgangen (Multi-Segment-Gotcha).
 Plans:
-- [ ] 08.23.2.D.UX.3-01-PLAN.md — Anonymizer-Tuning: Pronomen/Berufs/Org-Whitelist + GLiNER-Threshold 0.6 (ENV) + wortgrenzen-gehaerteter anonymize_output (Wortteil-Bug-Root-Fix in OUTPUT-Pfad, NICHT _apply_ner) + basis.unternehmen-Registrierung + Goldstandard-Re-Test [R1-R6; wave 1]
+- [x] 08.23.2.D.UX.3-01-PLAN.md — Anonymizer-Tuning: Pronomen/Berufs/Org-Whitelist + `_is_whitelisted`-Helper + GLINER_THRESHOLD 0.55 (ENV) + wortgrenzen-gehaerteter `anonymize_output` (Wortteil-Bug-Root-Fix in OUTPUT-Pfad, NICHT `_apply_ner`) + `_dedup_overlapping_spans` (Folge-Fix) + basis.unternehmen-Registrierung + Goldstandard-Re-Test [R1-R6; wave 1] ✅ executed + UAT PASS
 
 ### Phase 08.23.2.D.UX.4: Call-Ende-Ablauf-Redesign — Ergebnis-vor-Score (NEU 2026-05-30, aus D.UX.1-Live-Test) 🟡 ✅ COMPLETE 2026-05-31
 
