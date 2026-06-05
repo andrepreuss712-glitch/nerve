@@ -1743,9 +1743,15 @@ Plans:
 
 **Datei:** `services/deepgram_service.py` — `_open_deepgram_connection` Z.310-324 (LiveOptions: model + keyterm), `_make_on_message` Z.61-88 (Label-Logik). **NICHT** `nerve_rt/services/stt/deepgram_adapter.py` (experimentelle Engine, nicht Live-Pfad).
 
+**Fachwort-Liste = 3-Schichten-Architektur (Andre-Decision 2026-06-05, Anti-Abrieb):** KEINE manuelle Pro-Branche-Recherche (Fass ohne Boden). Stattdessen:
+1. nova-3 trägt das allgemeine Deutsch (die schlimmsten Fehler waren normale Wörter wie "Einwände", kein Fachsprech → nova-3 räumt davon viel weg, null Pflege-Aufwand).
+2. Kleine FESTE Sales-Grundliste (~15 Wörter: Einwand/Einwandbehandlung/Cold Call/Kaltakquise/Kaufsignal/Vorwand/Kalendereinladung/Vertriebler/Opener/Entscheider etc.) — gilt universell, einmal gebaut.
+3. Branchen-Wörter AUTOMATISCH aus dem User-Profil extrahiert (Produktname, Branche, einwaende_detail, profile_faqs, profile_skripte) → pro Call als keyterm mitgegeben. Der Kunde liefert sein Vokabular durch Profilpflege. Skaliert ohne unsererseits Branchen-Lexika; ist Verkaufs-Argument (bessere Profilpflege = bessere KI). Margin-/Automate-Säule (CLAUDE.md Punkt 12).
+
 **Pre-Plan-Pflicht:**
-- context7 für exakte `keyterm`-Parameter-Syntax in `LiveOptions` (Deepgram Python SDK) — SDK-Drift-Schutz (Werkzeuge-Regel Context7-Trigger Deepgram).
-- Fachwort-Liste mit Andre zusammenstellen.
+- context7 für exakte `keyterm`-Parameter-Syntax + keyterm-LIMIT in `LiveOptions` (Deepgram Python SDK) — SDK-Drift-Schutz. Limit bestimmt Längen-Cap der Profil-Extraktion.
+- Profil-Extraktions-Logik designen: welche Felder, Dedup gegen Grundliste, Längen-Cap, wo im Session-Init (`handle_start_live_session` lädt Profil schon → keyterm dort ableiten vor `_open_deepgram_connection`).
+- DSGVO-Hinweis: Brand/Eigenname als keyterm = nur Erkennungs-Hilfe, Anonymizer schwärzt danach normal weiter. Cross-AI absegnen lassen.
 - Real-Daten via `inspect.sh logs` (HART-Regel: keine lokalen Tests, Production-Pfad).
 
 **Test:** nur Production (HART-Regel Kein-Local-Dev). Frische Test-Calls von Andre, Claudian zieht `[DG]`-Logs + Soll-Ist-Vergleich gegen bekannten Pitch.
