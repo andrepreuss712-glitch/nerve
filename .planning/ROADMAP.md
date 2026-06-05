@@ -1722,6 +1722,39 @@ Plans:
 - [x] 08.23.2.D.UX.2-03-PLAN.md — session_detail.html Reiter-Umbau (Übersicht/Transkript) + lazy fire-once Fetch/Suche-Highlight/Copy-All [R-02, R-03, TT-01/02/03; wave 2] ✓ SUMMARY
 - [x] 08.23.2.D.UX.2-04-PLAN.md — PiP Live side-by-side (resize-Spike-Blueprint + ResizeObserver) + Live-Segment-Render (Neubau) + Auto-Scroll + Post-Call collapsible (RAM) [PT-01/02/03, DQ-01/03; wave 2] ✓ SUMMARY
 
+### Phase 08.23.2.STT: Deepgram-Qualität — nova-3 + Fachwort-Liste (keyterm) + Sprecher-Label-Fix (NEU 2026-06-05, aus Transkript-Qualitäts-Diagnose) 🟡 — HOHE PRIORITÄT (vor Phase E)
+
+**Goal:** Live-Transkript-Qualität heben. nova-2→nova-3 + keyterm-Fachwort-Liste gegen zerschossene Domain/Brand-Wörter + Sprecher-Label-Fix im Cold-Call.
+
+**Diagnose 2026-06-05 (Claudian, gegen 5 rohe Production-Test-Calls im journalctl `[DG]`-Log):** Verdopplung ("Die die meisten", "ein eine Kalendereinladung", "fehlt die fehlt die", "ein mit Ihnen gerne einen") + Garbling stehen INNERHALB einer einzelnen `is_final`-Zeile → kommt aus **Deepgram-Rohausgabe, NICHT aus unserem Merge-Code** (`_flush_segment` joint nur Finals mit Space, kann mitten in Satz kein "die die" erzeugen). Verifiziert: (a) Sample-Rate/Encoding 16kHz linear16 stimmt Frontend↔Backend (audio-processor.js Int16 + AudioContext 16000 ↔ deepgram_service SAMPLE_RATE=16000) → KEIN Mismatch; (b) saved transcript + transcriptSegments nutzen nur `type==='final'` (pip-launcher.js:2278) → kein Interim-Leak.
+
+**Fehler-Cluster:**
+1. Fachwörter/Marken zerschossen: "Einwände"→"ein, wenn", "Cold Calls"→"Callcalls/Call Codes/Call Calls", "NERVE"→"Nerf/Neuauf/Nerfh", "Vertriebler"→"Fahrradbetreiber", "die mithört"→"die Mütter".
+2. Verdoppelte Grenz-Wörter (Endpointing/Segmentierung — inkonsistent: derselbe Satz mal sauber mal doppelt über die 5 Calls).
+3. Abgehackte Satz-Anfänge ("rufe an bei Vertrieb dabei unterstützen" — "wir" fehlt).
+
+**Doku-Check (context7 /websites/developers_deepgram):** Keyterm-Prompting (`keyterm`) ist NUR mit nova-3 kompatibel — nova-2 nutzt das ältere/schwächere `keywords`. nova-3 = 54 Sprachen inkl. Deutsch. Keyterm verfügbar für nova-3 monolingual + multilingual.
+
+**Strategie — 2 Stufen (Hebel-Isolierung, nicht alles auf einmal):**
+- **Stufe 1 (diese Phase):** `model="nova-2"`→`"nova-3"` + `keyterm`-Fachwort-Liste (Brand + Sales-Vokabular) + Sprecher-Label-Fix. Dann frische Test-Calls von Andre → Claudian zieht `[DG]`-Roh-Logs via `inspect.sh logs` + vergleicht vorher/nachher.
+- **Stufe 2 (nur falls Verdopplung bleibt):** `endpointing`/`utterance_end_ms`-Timing nachjustieren.
+
+**Sprecher-Label-Fix:** Im Cold-Call ist `diarize=False` → `_get_speaker` immer None → `roles_confirmed` bleibt False → jede Zeile Label "Unbekannt"/SYSTEM. Im Cold-Call ist es immer der Berater. Fix in `_make_on_message` (deepgram_service.py:78-84): bei mode=cold_call Label hart "Berater".
+
+**Datei:** `services/deepgram_service.py` — `_open_deepgram_connection` Z.310-324 (LiveOptions: model + keyterm), `_make_on_message` Z.61-88 (Label-Logik). **NICHT** `nerve_rt/services/stt/deepgram_adapter.py` (experimentelle Engine, nicht Live-Pfad).
+
+**Pre-Plan-Pflicht:**
+- context7 für exakte `keyterm`-Parameter-Syntax in `LiveOptions` (Deepgram Python SDK) — SDK-Drift-Schutz (Werkzeuge-Regel Context7-Trigger Deepgram).
+- Fachwort-Liste mit Andre zusammenstellen.
+- Real-Daten via `inspect.sh logs` (HART-Regel: keine lokalen Tests, Production-Pfad).
+
+**Test:** nur Production (HART-Regel Kein-Local-Dev). Frische Test-Calls von Andre, Claudian zieht `[DG]`-Logs + Soll-Ist-Vergleich gegen bekannten Pitch.
+
+**Depends on:** keine harte.
+**Komplexität:** 🟡 mittel (Kern-STT-Config, betrifft ALLE Calls). **Cross-AI Pflicht** (Punkt 7).
+**Blocker für:** Phase 08.23.2.E (DPO-Korpus-Qualität — schlechte Transkripte = schlechte Trainingsdaten), Transkript-Wert von D.UX.2.
+**Priorität:** vor Phase E, kann vor/parallel zu D.UX.3.
+
 ### Phase 08.23.2.D.UX.3: Anonymisierungs-Tuning Pronomen + Whitelist + Konfidenz (NEU 2026-05-28, aus Transcript-Review) 🟢
 
 **Goal:** GLiNER + spaCy-Pipeline weniger aggressiv tunen — Trainings-Daten-Qualität für Phase E sichern.
