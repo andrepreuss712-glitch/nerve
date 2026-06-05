@@ -1770,22 +1770,23 @@ Plans:
 **Korrektur ggü. Original-Eintrag (RESEARCH grep-belegt):** Feldnamen oben waren teils falsch (kein `Produktname`; `Branche`=DB-Spalte `Profile.branche`; `einwaende`→`einwaende_detail` top-level). `profile_skripte`+`profile_faqs` = eigene DB-Tabellen, nicht im Session-Cache vor dem keyterm-Load → für Stufe 1 DEFERRED. Stufe 2 (endpointing/utterance_end_ms) bleibt out-of-scope.
 **keyterm context7-Befund:** `keyterm` (singular, repeated/Liste, **nova-3-only**), German GA, Limit 500 Token/Request. A1-Restrisiko (Listen→repeated-param vs CSV-Blob) → 1.-Prod-Log-Check in Plan 01.
 
-### Phase 08.23.2.D.UX.3: Anonymisierungs-Tuning Pronomen + Whitelist + Konfidenz (NEU 2026-05-28, aus Transcript-Review) 🟢
+### Phase 08.23.2.D.UX.3: Anonymisierungs-Tuning — Wortteil-Bug + Pronomen + Whitelist + Konfidenz (NEU 2026-05-28; neu priorisiert 2026-06-05) 🟡
 
-**Goal:** GLiNER + spaCy-Pipeline weniger aggressiv tunen — Trainings-Daten-Qualität für Phase E sichern.
+**Goal:** Anonymizer (GLiNER + spaCy, `services/anonymization.py`) repariert + entschärft — Trainings-Daten-Qualität für Phase E + lesbare Transkripte sichern.
 
-**Befund Andre's Transcript 2026-05-28:** Pipeline tokenisiert zu aggressiv. Beispiele: "Ich" → `[PERSON_C]`, "Sie" → `[PERSON_B]`, "NERVE" (eigener Firmen-Name) → `[ORG_A]`, "Vertriebsteams" / "Vertriebler" → `[ORG_B]`/`[ORG_C]`. Auswirkung: Kontext-Verlust für Trainings-Daten + Scoring kann nicht zwischen eigene Firma vs. Kunde unterscheiden.
+**⭐ REAL-DATEN-BEFUND 2026-06-05 (Claudian, echtes Cold-Call-Transkript von heute via `inspect.sh` / TXT-Log `/opt/nerve/app/logs/`):** Die Über-Schwärzung überlappt fast NICHTS mit dem Profil — NUR der Firmenname (NERVE→`[ORG_A]`). Die ursprüngliche Annahme "Profil-Whitelist löst das" ist falsch: sie löst genau 1 Wort. Echte Belege heute + neue Wirk-Reihenfolge:
 
-**Tasks:**
-1. Pronomen-Whitelist (Ich, mich, mir, mein, Sie, Ihr, ihr, du, dich, dir, dein, etc.) — werden NIE anonymisiert.
-2. User-spezifische Whitelist aus Profil: eigener Firmen-Name (z.B. "NERVE") wird im Profil-Editor hinterlegt + im Anonymizer als Schutz-Wort registriert.
-3. Generic-Berufs-Wort-Liste (Vertriebler, Berater, Manager, Verkäufer, Hufschmied, Geschäftsführer, etc.) — werden nie als ORG tokenisiert.
-4. GLiNER-Konfidenz-Schwelle erhöhen — nur sicher erkannte Entities anonymisieren.
-5. Re-Test mit kuratiertem Goldstandard-Korpus (10-20 Beispiel-Calls).
+**Tasks (neu sortiert nach Wirkung):**
+1. **WORTTEIL-BUG FIXEN (wichtigster Hebel, ECHTER CODE-BUG):** Die Replace-Logik ersetzt Buchstaben-Folgen MITTEN im Wort statt nur ganzer erkannter Entity-Spans. Belege heute: `ausführliche`→`ausführl[PERSON_C]e`, `wirklich`→`wirkl[PERSON_C]`, `Ich`→`[PERSON_B]`, `Sie`→`[PERSON_D]`. Root-Cause vermutlich nacktes `str.replace(token, tag)` über den ganzen Text statt Offset-basiertes Ersetzen der NER-Entity-Spans. Fix: whole-word/Span-basiert ersetzen (Entity char-offsets von GLiNER/spaCy nutzen, rückwärts ersetzen). **Pflicht Real-Daten-Validation (Punkt 13):** gegen heutige TXT-Logs verifizieren.
+2. **Pronomen-Whitelist** (Ich, mich, mir, mein, Sie, Ihr, ihr, du, dich, dir, dein, wir, uns, …) — werden NIE anonymisiert. Größter sichtbarer Einzel-Gewinn.
+3. **GLiNER-Konfidenz-Schwelle erhöhen** — Fehlalarme wie `nach dem Anruf`→`[LOC_A]` raus.
+4. **Generic-Berufs-Wort-Liste** (Vertriebler, Berater, Manager, Verkäufer, Geschäftsführer, …) — nie als ORG tokenisiert.
+5. **Firmenname aus Profil `basis.unternehmen`** (NEBENDARSTELLER, löst nur NERVE — Feld heute via STT-Phase verifiziert vorhanden, kein neues Profilfeld nötig). Plus Doppel-Klammer-Token-Bug `[PERSON_B]B]`.
+6. Re-Test mit kuratiertem Goldstandard-Korpus (heutige Transkripte als Basis).
 
-**Depends on:** keine (kann parallel zu D.UX.1+2 laufen)
-**Komplexität:** 🟢 trivial-mittel (Whitelist-Config + Konfidenz-Tuning, keine Architektur-Änderung)
-**Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler — Trainings-Daten würden sonst durch Over-Anonymisierung verzerrt)
+**Depends on:** keine
+**Komplexität:** 🟡 (hochgestuft von 🟢 — Task 1 ist echte Logik-Änderung in der Replace-Mechanik, kein reines Config-Tuning). Cross-AI optional.
+**Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler — Trainings-Daten würden sonst durch Over-Anonymisierung + Wortteil-Bug verzerrt)
 
 ### Phase 08.23.2.D.UX.4: Call-Ende-Ablauf-Redesign — Ergebnis-vor-Score (NEU 2026-05-30, aus D.UX.1-Live-Test) 🟡 ✅ COMPLETE 2026-05-31
 
