@@ -2182,6 +2182,11 @@
     var _vwInd = pipEl('pip-vorwissen-indicator'); if (_vwInd) _vwInd.style.display = 'flex';
     var _vwEdit = pipEl('pip-vorwissen-edit'); if (_vwEdit) _vwEdit.style.display = 'none';
     var _modeBtn2 = pipEl('pip-mode-indicator'); if (_modeBtn2) _modeBtn2.style.display = '';
+    // pip-briefing-tab auf Default 'none' zuruecksetzen — der Briefing-Block direkt nach
+    // diesem _showPipLive()-Aufruf (Caller-Z.~2062) blendet ihn wieder als 'block' ein,
+    // FALLS ein Briefing vorliegt (state.precallBriefing.firmenname). So kommt der Tab beim
+    // 2. Call MIT Briefing korrekt zurueck, bleibt aber OHNE Briefing aus (Punkt 14).
+    var _bTab = pipEl('pip-briefing-tab'); if (_bTab) _bTab.style.display = 'none';
     // Score-Display zurücksetzen falls Empty-State das :none gesetzt hat
     var scoreEl = pipEl('nlp-postcall-score');
     if (scoreEl) scoreEl.style.display = '';
@@ -3014,7 +3019,8 @@
     // von #pip-header (nicht Kinder) und blieben sonst im Post-Call sichtbar UND klickbar bis
     // ins Scoreboard. Re-Show beim naechsten Call-Start in _showPipLive (CLAUDE.md Punkt 14).
     ['nlp-btn-beenden', 'nlp-ewb-row', 'pip-section-live',
-     'pip-anrede-row', 'pip-vorwissen-indicator', 'pip-vorwissen-edit', 'pip-mode-indicator'].forEach(function (id) {
+     'pip-anrede-row', 'pip-vorwissen-indicator', 'pip-vorwissen-edit', 'pip-mode-indicator',
+     'pip-briefing-tab'].forEach(function (id) {
       var el = pipEl(id);
       if (el) el.style.display = 'none';
     });

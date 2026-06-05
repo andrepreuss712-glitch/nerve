@@ -30,14 +30,15 @@ Die 3 Controls sind in `templates/base.html` **Geschwister** von `#pip-header` (
   Display-Werten ✓ · `_resetLiveState` bewusst NICHT genutzt (läuft auch bei Call-Start) ✓
 - **Ausstehend (Andre):** Deploy + Cold/Meeting-Call → beenden → 3 weg → 2. Call → 3 wieder da + funktional.
 
-## Plus-Check: weitere Live-only-Controls im Post-Call (NICHT gefixt, nur notiert)
+## Plus-Check: weitere Live-only-Controls im Post-Call
 
-- **`#pip-briefing-tab`** (Briefing-Klapp-Tab, Geschwister von `#pip-header`): wird bei
-  vorhandenem Briefing während des Calls via `display='block'` eingeblendet (pip-launcher.js
-  ~Z.2067), aber in `_showLadebalken1` **nicht** versteckt → bleibt vermutlich ebenfalls
-  post-call sichtbar. **Kandidat für Folge-Cleanup** (dieselbe Hide-Liste erweitern). Bewusst
-  hier NICHT mitgefixt (außerhalb Scope, ungefragt).
-- `#pip-anrede-toast`: nur transienter Toast (default display:none, auto-dismiss) — unkritisch.
+- **`#pip-briefing-tab`** (Briefing-Klapp-Tab, Geschwister von `#pip-header`): wurde bei
+  vorhandenem Briefing während des Calls via `display='block'` eingeblendet (~Z.2067), aber in
+  `_showLadebalken1` nicht versteckt → blieb post-call sichtbar. **✅ NACHGEZOGEN (André-OK
+  2026-06-05):** zur Hide-Liste in `_showLadebalken1` hinzugefügt + Reset auf `'none'` in
+  `_showPipLive`. Punkt-14-Edge: der Briefing-Block direkt nach `_showPipLive` (Caller-~Z.2062)
+  blendet den Tab beim 2. Call MIT Briefing wieder als `'block'` ein (OHNE Briefing bleibt er aus).
+- `#pip-anrede-toast`: nur transienter Toast (default display:none, auto-dismiss) — unkritisch, nicht angefasst.
 - Mic-Level / `pip-header-mic-area`: liegt INNERHALB `#pip-header` → wird mit Header versteckt, OK.
 
 ## Deviations
