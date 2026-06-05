@@ -551,9 +551,22 @@ def anonymize_output(text: str, cache: Optional[AnrufAnonymisierer]) -> str:
         return text if text else ''
     with cache._lock:
         items = sorted(cache.mapping.items(), key=lambda x: len(x[0]), reverse=True)
+    # R5B (defensiv): Keys ueberspringen die selbst wie ein fertiger Token aussehen
+    # ([PERSON_A] etc.) — verhindert Re-Tokenisierung/Doppel-Klammer bei Re-Run.
+    _token_like = re.compile(r'^\[[A-Z_]+_[A-Z]+\]$')
+    items = [(o, t) for (o, t) in items if not _token_like.match(o)]
     for original, token in items:
-        if original in text:
-            text = text.replace(original, token)
+        if original not in text:
+            continue
+        # Wortgrenzen-Replace (Phase 08.23.2.D.UX.3 Task R1): Defense-in-depth
+        # gegen Substring-Replace mitten im Wort ('ich'->[PERSON_C] in 'wirklich').
+        # Lookarounds statt \b — robuster an Umlaut-Grenzen (Pitfall 3).
+        # Mehrteilige Keys ('Dr. Mueller') bleiben an den aeusseren Grenzen korrekt.
+        # Keys die auf '.'/Ziffer enden (z.B. 'Commerzbank AG', IBAN-Tokens mit
+        # Leerzeichen) sitzen korrekt an den aeusseren Wortgrenzen; re.escape
+        # neutralisiert Sonderzeichen im Key.
+        pattern = r'(?<!\w)' + re.escape(original) + r'(?!\w)'
+        text = re.sub(pattern, lambda _m, _t=token: _t, text, flags=re.UNICODE)
     return text
 
 
