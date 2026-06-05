@@ -76,7 +76,13 @@ def _make_on_message(sid, mode='meeting'):
                         ls._log_last_sp = speaker
                     log_sp = speaker if speaker is not None else ls._log_last_sp
 
-                if roles_confirmed:
+                if mode == 'cold_call':
+                    # Cold-Call ist Single-Speaker: immer der Berater (diarize=False -> keine .speaker-Attribute).
+                    sp_label        = 'Berater'
+                    emit_speaker    = 0
+                    log_sp          = 0
+                    roles_confirmed = True       # damit Persist (unten) speaker=0 schreibt statt None
+                elif roles_confirmed:
                     sp_label     = 'Berater' if log_sp == 0 else ('Kunde' if log_sp == 1 else 'Unbekannt')
                     emit_speaker = speaker
                 else:
@@ -166,7 +172,9 @@ def _make_on_message(sid, mode='meeting'):
                         except Exception as _e_emit:
                             print(f'[AudioHealth] emit Fehler: {_e_emit}')
 
-                if roles_confirmed:
+                if mode == 'cold_call':
+                    sp_name = 'Berater'
+                elif roles_confirmed:
                     sp_name = 'Berater' if speaker == 0 else ('Kunde' if speaker == 1 else 'Sprecher')
                 else:
                     sp_name = 'Sprecher'
