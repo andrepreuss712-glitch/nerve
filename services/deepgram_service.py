@@ -365,7 +365,7 @@ def build_keyterms(profile_daten: dict, profile_branche: str, mode: str) -> list
     return terms
 
 
-def _open_deepgram_connection(sid, mode='meeting'):
+def _open_deepgram_connection(sid, mode='meeting', keyterms=None):
     # POLISH-49: EU-Host-Override für DSGVO-konforme Audio-Verarbeitung.
     # Standardmäßig `api.eu.deepgram.com` (siehe config.py Default).
     client = DeepgramClient(
@@ -388,7 +388,7 @@ def _open_deepgram_connection(sid, mode='meeting'):
     # runtime-verifiziert (Phase 04.2-03 Verification-Doku: "Runtime verification
     # still required") und erzeugte in der Praxis keine Transcripts.
     options_kwargs = dict(
-        model="nova-2",
+        model="nova-3",
         language="de",
         smart_format=True,
         interim_results=True,
@@ -400,8 +400,19 @@ def _open_deepgram_connection(sid, mode='meeting'):
     )
     if is_meeting:
         options_kwargs['utterance_end_ms'] = "1000"
-    options = LiveOptions(**options_kwargs)
-    print(f"[DG] LiveOptions: model=nova-2, diarize={is_meeting}, smart_format=True")
+    if keyterms:
+        # keyterm ist nova-3-only (siehe RESEARCH context7). Liste von Strings;
+        # jeder String = 1 (ggf. mehrwortiger) keyterm. SDK serialisiert zu wiederholten Query-Params.
+        options_kwargs['keyterm'] = keyterms
+    try:
+        options = LiveOptions(**options_kwargs)
+    except Exception as e:
+        # REVIEW HIGH: SDK kennt keyterm-Kwarg evtl. nicht (strikte LiveOptions-Signatur).
+        # Fallback: keyterm verwerfen, Call trotzdem mit nova-3 starten (kein harter Crash).
+        print(f"[DG] LiveOptions init mit keyterm fehlgeschlagen (SDK-Mismatch?): {e}. Fallback ohne keyterm.")
+        options_kwargs.pop('keyterm', None)
+        options = LiveOptions(**options_kwargs)
+    print(f"[DG] LiveOptions: model=nova-3, diarize={is_meeting}, smart_format=True, keyterm_count={len(options_kwargs.get('keyterm') or [])}")
     connection.start(options)
     with _sessions_lock:
         _deepgram_sessions[sid] = connection
@@ -421,7 +432,7 @@ def _close_deepgram_connection(sid):
         from services.cost_tracker import log_api_cost
         minutes = stt_sek / 60.0
         if minutes > 0.01:  # keine Artefakt-Rows fuer Sub-Sekunden
-            log_api_cost('deepgram', 'nova-2', user_id=None,
+            log_api_cost('deepgram', 'nova-3', user_id=None,
                          units=minutes, unit_type='per_minute',
                          session_id=str(sid), context_tag='stt')
     except Exception as _e:
