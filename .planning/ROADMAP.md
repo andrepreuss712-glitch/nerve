@@ -1722,7 +1722,9 @@ Plans:
 - [x] 08.23.2.D.UX.2-03-PLAN.md — session_detail.html Reiter-Umbau (Übersicht/Transkript) + lazy fire-once Fetch/Suche-Highlight/Copy-All [R-02, R-03, TT-01/02/03; wave 2] ✓ SUMMARY
 - [x] 08.23.2.D.UX.2-04-PLAN.md — PiP Live side-by-side (resize-Spike-Blueprint + ResizeObserver) + Live-Segment-Render (Neubau) + Auto-Scroll + Post-Call collapsible (RAM) [PT-01/02/03, DQ-01/03; wave 2] ✓ SUMMARY
 
-### Phase 08.23.2.STT: Deepgram-Qualität — nova-3 + Fachwort-Liste (keyterm) + Sprecher-Label-Fix (NEU 2026-06-05, aus Transkript-Qualitäts-Diagnose) 🟡 — HOHE PRIORITÄT (vor Phase E)
+### Phase 08.23.2.STT: Deepgram-Qualität — nova-3 + Fachwort-Liste (keyterm) + Sprecher-Label-Fix (NEU 2026-06-05) 🟡 — ✅ COMPLETE 2026-06-05 (live auf Prod, git_head bbd90ef)
+
+**Ergebnis Live-Test (2 Calls 09:31 cold_call + 09:33 meeting):** `[DG] LiveOptions: model=nova-3 ... keyterm_count=41` (Grundliste 16 + 25 Profil-Terms, KEIN SDK-Fallback → keyterm-Kwarg von deepgram-sdk akzeptiert, Gemini-HIGH-Risiko nicht eingetreten). Transkript klar besser: NERVE/Vertriebler/Einwände/Kalendereinladung/Cold Calls korrekt, Verdopplung weg, cold_call `[Berater]`-Label statt `[Unbekannt]`. Restfehler inkonsistent (tagesform) → **Stufe 2 datenbasiert** nach mehr Call-Samples (Name in keyterm, keyterm-Gewichtung, endpointing). Deploy via Claudian (deploy.sh upload + manueller systemctl restart wegen pre-existing test_ft_seed-Gate). **Folge-Items (Block J Vault):** Cold-Call-Redeanteil-Disclaimer + nicht-in-Score (Redeanteil ist Single-Speaker konstruktiv 100%). **Offen (NICHT STT-verursacht):** Meeting → Scoreboard ja, große Auswertung nein (separater Bug, eigene Untersuchung).
 
 **Goal:** Live-Transkript-Qualität heben. nova-2→nova-3 + keyterm-Fachwort-Liste gegen zerschossene Domain/Brand-Wörter + Sprecher-Label-Fix im Cold-Call.
 
