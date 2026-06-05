@@ -1,3 +1,4 @@
+import re
 import threading
 import time
 import statistics as _stats_wc  # Phase 08.23.2.D - Rolling-10s-Score
@@ -283,6 +284,85 @@ def _make_on_utterance_end(sid):
         # unabhaengige Dedup-Eintraege und blockieren sich nicht gegenseitig.
         pass
     return on_utterance_end
+
+
+# Phase 08.23.2.STT — keyterm Layer 2: feste Sales-Grundliste.
+# DATEN-Strings (keyterm-Werte) -> echte Umlaute erlaubt (CLAUDE.md User-Data-Regel), KEINE Identifier.
+_SALES_KEYTERMS_BASE = [
+    "Einwand",
+    "Einwandbehandlung",
+    "Vorwand",
+    "Cold Call",
+    "Kaltakquise",
+    "Kaufsignal",
+    "Kalendereinladung",
+    "Vertriebler",
+    "Opener",
+    "Entscheider",
+    "Gatekeeper",
+    "Abschluss",
+    "Termin",
+    "Bedarfsanalyse",
+    "Angebot",
+    "Nachfassen",
+]
+
+MAX_KEYTERMS = 60          # << 500-Token-Cap (Deepgram) mit grossem Sicherheitsabstand
+_KEYTERM_MIN_LEN = 4
+_STOPWORDS = {"oder", "und", "der", "die", "das", "fuer", "mit", "von", "den", "ein", "eine"}
+
+
+def build_keyterms(profile_daten: dict, profile_branche: str, mode: str) -> list:
+    """Baut die per-Call keyterm-Liste (Layer 2 fix + Layer 3 Profil-Extraktion).
+    Reihenfolge = Prioritaet: Grundliste zuerst (gewinnt bei Cap), dann Profil.
+    Return: deduplizierte Liste von Strings (jeder String = 1 keyterm, ggf. mehrwortig).
+    Niemals persistiert — nur Transkriptions-Hint (DSGVO).
+
+    mode wird in Stufe 1 NICHT im Body genutzt (bewusst durchgereicht fuer kuenftige
+    cold_call-vs-meeting-Differenzierung).
+    """
+    terms = []
+    seen = set()   # lowercase-dedup
+
+    def _add(t):
+        t = (t or "").strip()
+        if len(t) < _KEYTERM_MIN_LEN:
+            return
+        low = t.lower()
+        if low in seen or low in _STOPWORDS:
+            return
+        if len(terms) >= MAX_KEYTERMS:
+            return
+        seen.add(low)
+        terms.append(t)
+
+    # Layer 2: feste Grundliste zuerst (Prioritaet, gewinnt bei Cap)
+    for t in _SALES_KEYTERMS_BASE:
+        _add(t)
+
+    if not isinstance(profile_daten, dict):
+        profile_daten = {}
+    basis = profile_daten.get("basis") if isinstance(profile_daten.get("basis"), dict) else {}
+
+    # Layer 3.1: Branche (DB-Column-Prioritaet, sonst basis.branche)
+    _add(profile_branche or basis.get("branche") or "")
+
+    # Layer 3.2: Markenname / Unternehmen
+    _add(basis.get("unternehmen") or "")
+
+    # Layer 3.3: Substantive aus Produktbeschreibung (Capitalized-Token-Heuristik fuer Deutsch).
+    # Stufe-1-Limitation: zerlegt mehrwortige Komposita ("Sales Flow"->"Sales"+"Flow"); Multi-Word deferred (REVIEW LOW).
+    produkt = basis.get("produktbeschreibung") or ""
+    for tok in re.findall(r"\b[A-ZÄÖÜ][\wäöüß\-]{3,}\b", produkt)[:10]:
+        _add(tok)
+
+    # Layer 3.4: Einwand-Kategorien + Kurzlabels (kurze Domain-Begriffe, KEINE Saetze)
+    for e in (profile_daten.get("einwaende_detail") or [])[:20]:
+        if isinstance(e, dict):
+            _add(e.get("kategorie") or "")
+            _add(e.get("kurzlabel") or "")
+
+    return terms
 
 
 def _open_deepgram_connection(sid, mode='meeting'):
