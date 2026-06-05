@@ -1,8 +1,9 @@
 ---
-status: investigating
+status: resolved
 trigger: "Meeting-Modus: nach Call-Ende kein Ergebnis-Auswahl-Screen, springt direkt ins Scoreboard, 'Score wird berechnet' bleibt hängen, 'Zur Auswertung'-Knopf fehlt. Cold Call läuft sauber. NICHT von Phase STT (nur deepgram_service.py). Wahrscheinlich pre-existing, Meeting-Post-Call-Pfad nie exerziert."
 created: 2026-06-05
 updated: 2026-06-05
+resolved_by: .planning/quick/20260605-meeting-outcome-stale-screen/
 phase: pre-existing (entdeckt während 08.23.2.STT Prod-Test)
 approach: logging-first (CLAUDE.md Punkt 15) — kein Fix im ersten Pass
 ---
@@ -51,4 +52,8 @@ next_action: Logs einbauen (kein Fix), deploy, reproduzieren lassen.
 
 ## Resolution
 
-(pending)
+root_cause: Im `meeting_booked`-Branch des Confirm-Handlers (`_renderOutcomeUx`) ruft der Code `renderMeetingForm(json)` auf. `renderMeetingForm` clearet (MM-03) NUR seinen eigenen Mount `#meeting-form-mount`, NICHT die Host-Section `pip-outcome-section` (`sec`). Dadurch blieb der Outcome-Auswahl-Screen sichtbar und stapelte sich hinter dem Termin-Formular — mit `confirmBtn` eingefroren auf "Bewertung wird berechnet…" (nie zurückgesetzt). Andre-Screenshot bestätigte die Stapelung. (Hinweis: die [MEETDBG]-Logs grenzten den Pfad ein; die endgültige Bestätigung kam aus dem Screenshot, der die zwei gestapelten Screens zeigte.)
+fix: FIX 1a — `sec.style.display='none'` im `meeting_booked`-Branch VOR `renderMeetingForm`. FIX 1b — `sec.style.display=''` in `_renderOutcomeUx` (nach `innerHTML=''`), damit der "Zurück"-Re-Render die Section wieder sichtbar macht (Control-Flow-Edge). FIX 2 — alle [MEETDBG]-Logs entfernt.
+verification: `grep -c MEETDBG`==0, `node --check` OK, Production-Deploy + Andre-Meeting-Test-Call (inkl. "Zurück") ausstehend.
+files_changed: static/pip-launcher.js
+fixed_in: .planning/quick/20260605-meeting-outcome-stale-screen/ (commit 765a52b)
