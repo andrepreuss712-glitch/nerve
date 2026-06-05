@@ -2548,7 +2548,6 @@
     // -- Phase 08.23.2.D REQ-D-4 - outcome_ready Handler (dreistufige UX) ----
     state.socket.on('outcome_ready', function (d) {
       try {
-        try { console.log('[MEETDBG] SOCKET outcome_ready EMPFANGEN mode=' + state.mode + ' lastCallId=' + state.lastCallId + ' d=' + JSON.stringify(d)); } catch (_dbg) {}
         if (!d || !d.call_id) return;
         if (state.lastCallId && String(state.lastCallId) !== String(d.call_id)) {
           return; // Event fuer anderen Call - ignorieren
@@ -3134,7 +3133,6 @@
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (paResult) {
               clearTimeout(lb1Timeout);
-              try { console.log('[MEETDBG] postcall_outcome RESULT mode=' + state.mode + ' stale=' + (state.callGen !== endCallGen) + ' haikuTimedOut=' + haikuTimedOut + ' paResult=' + JSON.stringify(paResult)); } catch (_dbg) {}
               if (state.callGen !== endCallGen) return;   // Stale-Guard (Landmine 2)
               if (haikuTimedOut) return;                  // Late-Haiku darf Timeout-Screen NICHT ueberschreiben (Landmine 1)
               _hideLadebalken1();
@@ -4212,7 +4210,6 @@
   }
 
   function _renderOutcomeUx(data) {
-    try { console.log('[MEETDBG] _renderOutcomeUx CALLED mode=' + state.mode + ' outcome=' + (data && data.outcome) + ' source=' + (data && data.source) + ' call_id=' + (data && data.call_id) + ' conf=' + (data && data.confidence)); } catch (_dbg) {}
     // NEW-1/F5 (BLOCKER): alle Lookups + Section-Erzeugung PiP-aware. Bare document
     // trifft im PiP-Modus das Haupt-Fenster -> Outcome-Screen waere fuer den User unsichtbar.
     var _doc = (state.pipWindow && !state.pipWindow.closed) ? state.pipWindow.document : document;
@@ -4225,18 +4222,22 @@
       host.appendChild(sec);
     }
     // Idempotenz-Guard (D.UX constraint — beibehalten, jetzt auf der PiP-sec)
-    if (sec.dataset.outcomeRendered === '1') { try { console.log('[MEETDBG] _renderOutcomeUx EARLY-RETURN: outcomeRendered=1 (Screen bereits gerendert) mode=' + state.mode); } catch (_dbg) {} return; }
+    if (sec.dataset.outcomeRendered === '1') return;
     sec.innerHTML = '';
+    // Quick-Fix 2026-06-05 (FIX 1b): Section-Sichtbarkeit bei jedem Render erzwingen.
+    // Der meeting_booked-Pfad blendet sec aus (sec.style.display='none', FIX 1a); der
+    // "Falsches Ergebnis? Zurueck"-Button re-rendert hierher — ohne dieses Reset bliebe
+    // der Auswahl-Screen nach "Zurueck" unsichtbar (Control-Flow-Edge, CLAUDE.md Punkt 14).
+    sec.style.display = '';
 
     var haikuOutcome = data.outcome;
     var conf = +data.confidence || 0;
     var callId = data.call_id;
 
-    if (!callId) { try { console.log('[MEETDBG] _renderOutcomeUx EARLY-RETURN: !callId mode=' + state.mode + ' data=' + JSON.stringify(data)); } catch (_dbg) {} return; }
+    if (!callId) return;
 
     // D.UX.1: zentrale Zustands-Entscheidung — treibt Badge/Hint/Vorauswahl/Confirm
     var modalState = _decideModalState(data);
-    try { console.log('[MEETDBG] _renderOutcomeUx modalState=' + modalState + ' (final=read-only/no-confirm) mode=' + state.mode + ' outcome=' + haikuOutcome + ' conf=' + conf); } catch (_dbg) {}
 
     // ── Header ───────────────────────────────────────────────────────────────
     var header = _doc.createElement('div');
@@ -4366,7 +4367,6 @@
 
       // In-flight-Label (UI-SPEC)
       confirmBtn.textContent = 'Bewertung wird berechnet…';
-      try { console.log('[MEETDBG] CONFIRM geklickt -> correct_outcome wird gefeuert mode=' + state.mode + ' selectedOutcome=' + selectedOutcome + ' source=' + outcomeSource + ' callId=' + callId); } catch (_dbg) {}
 
       // CSRF null-check PFLICHT (TypeError wenn meta-Tag fehlt)
       var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -4402,9 +4402,13 @@
         // D-07/D-08: Bei meeting_booked wird das Termin-Formular zum eigenen Schritt VOR dem Score —
         // Score+Aktionen BLEIBEN versteckt (via _showLadebalken1, kein zusaetzliches Hide noetig),
         // bis Skip/Weiter den Reveal triggert. Bei Nicht-Meeting (L-03): Reveal sofort, Flow unveraendert.
-        try { console.log('[MEETDBG] correct_outcome OK -> branch=' + (selectedOutcome === 'meeting_booked' ? 'meeting_booked/renderMeetingForm' : 'sonst/_revealScoreAndActions') + ' json.ok=' + (json && json.ok)); } catch (_dbg) {}
         if (selectedOutcome === 'meeting_booked') {
           // KEIN Reveal hier — die Score-Karten-Kinder bleiben display:none.
+          // Quick-Fix 2026-06-05 (FIX 1a): Outcome-Auswahl-Screen ausblenden, BEVOR das
+          // Termin-Formular kommt. renderMeetingForm clearet nur seinen eigenen Mount
+          // (#meeting-form-mount), NICHT diese Host-Section -> sonst stapeln sich beide
+          // Screens und der confirmBtn bleibt auf "Bewertung wird berechnet…" eingefroren.
+          try { sec.style.display = 'none'; } catch (_hd) {}
           try { renderMeetingForm(json); } catch (_mfe) { console.error('[MEETSTEP] renderMeetingForm:', _mfe); }
         } else {
           _revealScoreAndActions(json);  // L-03: sofort, identisch zu heute
