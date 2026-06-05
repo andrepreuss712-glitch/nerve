@@ -509,7 +509,39 @@ def register_audio_handlers(sio):
             mode = data.get('mode', 'meeting')
             precall_briefing = data.get('precall_briefing', None)
         print(f"[DG] start_live_session received (sid={_sid}, mode={mode})")
-        _open_deepgram_connection(_sid, mode=mode)
+
+        # Phase 08.23.2.STT: keyterm-Liste VOR Connection-Open ableiten (keyterm ist nova-3-only,
+        # muss beim LiveOptions-Build vorliegen). Mini-Profil-Load (nur daten+branche) — der volle
+        # per-SID-Init unten (init_session_state/set_profile_for_sid/call-record) bleibt unveraendert.
+        # REVIEW MEDIUM (akzeptiert): Diese synchrone SQLAlchemy-Session laeuft im SocketIO-Handler
+        # und kann unter Gevent/Eventlet ohne Yield kurz blocken. Bewusst akzeptiert: nur EINMAL pro
+        # Call-Start (kein Hot-Path), und der bestehende volle Profil-Load (Z.478-509) macht exakt
+        # dasselbe Pattern — also kein NEUES Architektur-Risiko, kein Re-Architecting noetig.
+        _kt_daten = {}
+        _kt_branche = ''
+        try:
+            from flask import session as _kt_flask_session
+            _kt_user_id = _kt_flask_session.get('user_id')
+            from database.db import SessionLocal as _SL_kt
+            from database.models import User as _User_kt, Profile as _Profile_kt
+            _db_kt = _SL_kt()
+            try:
+                _u_kt = _db_kt.query(_User_kt).filter_by(id=_kt_user_id).first()
+                _pid_kt = getattr(_u_kt, 'active_profile_id', None) if _u_kt else None
+                if _pid_kt:
+                    _p_kt = _db_kt.query(_Profile_kt).filter_by(id=_pid_kt).first()
+                    if _p_kt:
+                        _kt_branche = getattr(_p_kt, 'branche', None) or ''   # DB-Column-Prioritaet (kanonisch seit 08.19.1)
+                        if _p_kt.daten:
+                            import json as _json_kt
+                            _kt_daten = _json_kt.loads(_p_kt.daten) if isinstance(_p_kt.daten, str) else (_p_kt.daten or {})
+            finally:
+                _db_kt.close()
+        except Exception as _kt_e:
+            print(f"[DG] keyterm-Profil-Load fehlgeschlagen (non-fatal, fallback Grundliste): {_kt_e}")
+        _keyterms = build_keyterms(_kt_daten, _kt_branche, mode)
+
+        _open_deepgram_connection(_sid, mode=mode, keyterms=_keyterms)
 
         # Store precall briefing in live session state
         # (ls imported at module level — do not re-import here, causes UnboundLocalError
