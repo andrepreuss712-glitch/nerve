@@ -2175,6 +2175,13 @@
     // 06.1-r2 BUG-13: Header wieder einblenden (Beenden wurde in _showPostcallRaw versteckt).
     var pipHeader = pipEl('pip-header');
     if (pipHeader) pipHeader.style.display = '';
+    // Quick-Fix 2026-06-05: Live-only-Precall-Controls wieder einblenden (in _showLadebalken1
+    // beim Call-Ende versteckt). Markup-Defaults wiederherstellen: anrede-row + vorwissen-
+    // indicator = flex, vorwissen-edit = none (collapsed), mode-indicator = '' (CSS-getrieben).
+    var _arRow = pipEl('pip-anrede-row'); if (_arRow) _arRow.style.display = 'flex';
+    var _vwInd = pipEl('pip-vorwissen-indicator'); if (_vwInd) _vwInd.style.display = 'flex';
+    var _vwEdit = pipEl('pip-vorwissen-edit'); if (_vwEdit) _vwEdit.style.display = 'none';
+    var _modeBtn2 = pipEl('pip-mode-indicator'); if (_modeBtn2) _modeBtn2.style.display = '';
     // Score-Display zurücksetzen falls Empty-State das :none gesetzt hat
     var scoreEl = pipEl('nlp-postcall-score');
     if (scoreEl) scoreEl.style.display = '';
@@ -3002,7 +3009,12 @@
     }
     // Live-Controls verstecken, Header verstecken — analog _showPostcallRaw, aber
     // ohne die Postcall-Section aufzudecken.
-    ['nlp-btn-beenden', 'nlp-ewb-row', 'pip-section-live'].forEach(function (id) {
+    // Quick-Fix 2026-06-05: Live-only-Precall-Controls (Anrede-Toggle / Vorwissen-Indikator
+    // + Edit-Panel / Sekretaer-Entscheider-Modus-Toggle) mit ausblenden. Sie sind GESCHWISTER
+    // von #pip-header (nicht Kinder) und blieben sonst im Post-Call sichtbar UND klickbar bis
+    // ins Scoreboard. Re-Show beim naechsten Call-Start in _showPipLive (CLAUDE.md Punkt 14).
+    ['nlp-btn-beenden', 'nlp-ewb-row', 'pip-section-live',
+     'pip-anrede-row', 'pip-vorwissen-indicator', 'pip-vorwissen-edit', 'pip-mode-indicator'].forEach(function (id) {
       var el = pipEl(id);
       if (el) el.style.display = 'none';
     });
