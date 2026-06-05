@@ -134,8 +134,24 @@ GENERIC_BERUF_WHITELIST = frozenset({
     'mitarbeiter', 'mitarbeiterin', 'kollege', 'kollegin', 'chef', 'chefin',
     'kunde', 'kundin', 'ansprechpartner', 'ansprechpartnerin',
     'entscheider', 'entscheiderin', 'leiter', 'leiterin',
-    # Generische Org-Nomen
+    # Generische Org-/Abteilungs-Nomen
     'firma', 'firmen', 'unternehmen', 'betrieb', 'betriebe', 'gesellschaft',
+    # Folge-Fix 2026-06-05 (Prod-Log Call 15:04): generische Abteilungs-/Funktions-Nomen,
+    # die als ORG/PERSON ueber-geschwaerzt wurden ('Vertriebsteams'->ORG, 'Einkauf'->ORG).
+    'team', 'teams', 'vertrieb', 'vertriebsteam', 'vertriebsteams', 'einkauf',
+    'abteilung', 'abteilungen', 'geschäftsführung', 'vorstand', 'marketing',
+    'personal', 'buchhaltung', 'einkaufsabteilung', 'vertriebsabteilung',
+})
+
+# Folge-Fix 2026-06-05: Mehrwort-Span-Stopwords — Artikel/Quantoren, die NIE allein PII
+# sind. Nur fuer den Mehrwort-Check in _is_whitelisted (siehe dort): ein Span wird NUR
+# uebersprungen, wenn JEDES Token unkritisch ist (Pronomen/Generic/Stopword) -> ein
+# echter Name im Span macht die Bedingung sofort False (kein PII-Leak).
+_MULTIWORD_STOPWORDS = frozenset({
+    'der', 'die', 'das', 'den', 'dem', 'des',
+    'ein', 'eine', 'einen', 'einem', 'einer', 'eines', 'kein', 'keine',
+    'viele', 'viel', 'manche', 'einige', 'alle', 'jede', 'jeder', 'jedes',
+    'und', 'oder', 'von', 'vom', 'zur', 'zum', 'im', 'in', 'bei', 'mit',
 })
 
 
@@ -148,7 +164,18 @@ def _is_whitelisted(ent_text: str, token_type: str) -> bool:
     low = ent_text.strip().lower()
     if low in PRONOMEN_WHITELIST:
         return True
-    if token_type == 'ORG' and low in GENERIC_BERUF_WHITELIST:
+    # Folge-Fix 2026-06-05: Generic-Nomen jetzt TYP-UNABHAENGIG (auch PERSON, nicht nur ORG).
+    # Real-Daten Call 15:04: 'Vertriebler' wurde als PERSON getaggt -> ORG-only-Check griff nicht.
+    if low in GENERIC_BERUF_WHITELIST:
+        return True
+    # Folge-Fix 2026-06-05: Mehrwort-Span ('wir Vertriebler', 'Viele Firmen') -> skip NUR wenn
+    # JEDES Token unkritisch ist (Pronomen/Generic/Stopword). DSGVO-sicher: ein echter Name im
+    # Span macht die all()-Bedingung False -> Span wird weiter geschwaerzt.
+    tokens = low.split()
+    if len(tokens) > 1 and all(
+        (t in PRONOMEN_WHITELIST or t in GENERIC_BERUF_WHITELIST or t in _MULTIWORD_STOPWORDS)
+        for t in tokens
+    ):
         return True
     return False
 
@@ -283,6 +310,35 @@ def _apply_regex_filter(text: str, cache: Optional[AnrufAnonymisierer]) -> Tuple
     return (text, tier)
 
 
+def _dedup_overlapping_spans(
+    spans: List[Tuple[int, int, str, str]]
+) -> List[Tuple[int, int, str, str]]:
+    """Entfernt ueberlappende/verschachtelte Entity-Spans VOR dem Reverse-Replace
+    (Phase 08.23.2.D.UX.3 Folge-Fix 2026-06-05).
+
+    Union-Voting (spaCy OR GLiNER) liefert oft ueberlappende Spans fuer denselben
+    Namen, z.B. 'Frau Berg' [0:9] UND 'Berg' [5:9]. Der Reverse-Replace nimmt
+    NICHT-ueberlappende Spans an — ueberlappende korrumpieren sonst die Offsets
+    ('[PERSON_E]SON_D]'-Doppel-Klammer-Bug, Prod-Log Call 15:04) ODER lassen PII
+    teils im Klartext ('[PERSON_J] Brennecke GmbH').
+
+    Strategie: laengster Span gewinnt (maximale PII-Abdeckung), ueberlappende
+    kuerzere werden verworfen. DSGVO: bevorzugt mehr Schwaerzung, nie weniger.
+    Returns: nicht-ueberlappende Spans, nach start aufsteigend sortiert.
+    """
+    uniq = list(set(spans))
+    # laengster Span zuerst -> greedy behalten, kuerzere Overlaps fallen raus
+    uniq.sort(key=lambda s: (s[1] - s[0]), reverse=True)
+    kept: List[Tuple[int, int, str, str]] = []
+    for s in uniq:
+        s_start, s_end = s[0], s[1]
+        # Overlap iff NICHT (s_end <= k_start ODER s_start >= k_end)
+        if not any((not (s_end <= k[0] or s_start >= k[1])) for k in kept):
+            kept.append(s)
+    kept.sort(key=lambda s: s[0])
+    return kept
+
+
 def _apply_ner(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> Tuple[str, str]:
     """Union-Voting: spaCy OR GLiNER fuer Personen-/Organisations-/Ortsnamen.
     Recall maximieren — DSGVO-Pflicht (D-01 Anonymisierungs-Pipeline).
@@ -347,10 +403,12 @@ def _apply_ner(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> Tuple[str
             print(f'[ANON] GLiNER predict_entities Fehler: {type(e).__name__}')
             # Kein Fail-Hard — spaCy-only-Treffer reichen fuer Fallback
 
-    # Dedup: gleiche (start, end, type, text) nur einmal
-    unique_spans = list(set(all_spans))
-    # Sort by start ascending fuer deterministisches Replacement
-    unique_spans.sort(key=lambda x: x[0])
+    # Folge-Fix 2026-06-05: ueberlappende/verschachtelte Spans mergen (laengster gewinnt) —
+    # verhindert Offset-Korruption beim Reverse-Replace (Doppel-Klammer + ORG-Teil-Leak).
+    unique_spans = _dedup_overlapping_spans(all_spans)
+    _merged = len(set(all_spans)) - len(unique_spans)
+    if _merged > 0:
+        print(f'[ANON] {_merged} ueberlappende Span(s) gemergt (Reverse-Replace-Schutz)')
 
     # Replacement (reverse so spaetere Spans nicht offset-shiften)
     result = text
@@ -427,8 +485,12 @@ def _apply_ner_parallel(text: str, cache: Optional[AnrufAnonymisierer], nlp) -> 
         spacy_spans = f_spacy.result()
         gliner_spans = f_gliner.result()
 
-    all_spans = list(set(spacy_spans + gliner_spans))
-    all_spans.sort(key=lambda x: x[0])
+    # Folge-Fix 2026-06-05: ueberlappende Spans mergen (siehe _dedup_overlapping_spans).
+    _raw = spacy_spans + gliner_spans
+    all_spans = _dedup_overlapping_spans(_raw)
+    _merged = len(set(_raw)) - len(all_spans)
+    if _merged > 0:
+        print(f'[ANON] {_merged} ueberlappende Span(s) gemergt (parallel, Reverse-Replace-Schutz)')
 
     result = text
     for start, end, token_type, original in reversed(all_spans):
