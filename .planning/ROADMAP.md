@@ -1787,6 +1787,9 @@ Plans:
 **Depends on:** keine
 **Komplexität:** 🟡 (hochgestuft von 🟢 — Task 1 ist echte Logik-Änderung in der Replace-Mechanik, kein reines Config-Tuning). Cross-AI optional.
 **Blocker für:** Phase 08.23.2.E (DPO-Paar-Sammler — Trainings-Daten würden sonst durch Over-Anonymisierung + Wortteil-Bug verzerrt)
+**Plans:** 1 plan (1 Wave, autonomous:false — 1 Production-only Human-Verify-Checkpoint Goldstandard-Re-Test)
+Plans:
+- [ ] 08.23.2.D.UX.3-01-PLAN.md — Anonymizer-Tuning: Pronomen/Berufs/Org-Whitelist + GLiNER-Threshold 0.6 (ENV) + wortgrenzen-gehaerteter anonymize_output (Wortteil-Bug-Root-Fix in OUTPUT-Pfad, NICHT _apply_ner) + basis.unternehmen-Registrierung + Goldstandard-Re-Test [R1-R6; wave 1]
 
 ### Phase 08.23.2.D.UX.4: Call-Ende-Ablauf-Redesign — Ergebnis-vor-Score (NEU 2026-05-30, aus D.UX.1-Live-Test) 🟡 ✅ COMPLETE 2026-05-31
 
