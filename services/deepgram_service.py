@@ -638,6 +638,24 @@ def register_audio_handlers(sio):
             )
             ls.init_anonymisierer(_sid)   # WR-03 fix: D-06 create AnrufAnonymisierer for this SID
             ls.set_profile_for_sid(_sid, _profile_name2, _profile_daten2)
+            # Phase 08.23.2.D.UX.3 Task R5: Firmenname aus Profil vorab in Token-Cache
+            # registrieren (loest NERVE->[ORG_A]-Ueberlappung). basis.unternehmen ist
+            # ein bestehendes Feld (profile_schema.py:52), kein neues Profilfeld.
+            # RAM-only: get_or_assign_token schreibt in cache.mapping, nie DB.
+            # Defensiver Dict-Zugriff (Gemini LOW): '.get('unternehmen') or ''' faengt
+            # zusaetzlich den Fall ab dass der Key existiert aber Wert explizit None ist
+            # (sonst .strip()-AttributeError); '.get('basis') or {}' faengt fehlende Section.
+            # Known-Limitation (Gemini MEDIUM, BEWUSST nicht behoben): Exact-String-Match.
+            # STT transkribiert Firmennamen oft abgewandelt ('Nerve GmbH' vs Profil 'NERVE')
+            # -> GLiNER taggt die Variante dann als neues [ORG_X] statt des Profil-Tokens.
+            # KEIN Fuzzy-/phonetisches Matching in dieser Phase (Scope-Creep, kein PII-Leck
+            # da die Variante immer noch als irgendein ORG-Token geschwaerzt wird).
+            _anon_cache = ls.get_anonymisierer(_sid)
+            if _anon_cache and _profile_daten2:
+                _firma = ((_profile_daten2.get('basis') or {}).get('unternehmen') or '')
+                if isinstance(_firma, str) and _firma.strip():
+                    _anon_cache.get_or_assign_token(_firma.strip(), 'ORG')
+                    print(f"[ANON] Firmenname aus Profil registriert ({len(_firma.strip())} Zeichen)")
             # BUG1 FIX: bridge precall_briefing from socket payload to _session_state[sid]["_briefing"]
             # Must run AFTER init_session_state (which overwrites _session_state[sid])
             if precall_briefing and isinstance(precall_briefing, str):
