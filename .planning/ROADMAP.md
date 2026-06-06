@@ -2079,3 +2079,19 @@ Plans:
 **Abhängigkeit:** Baut auf G-MEET Plan 04 (crm.user_preferences + /crm/meetings-Write-Pfad) + Plan 05 (Häkchen + Persistenz). Re-touchiert den D.UX.4 Post-Call-Flow.
 **Komplexität:** 🟡 (Call-End-Flow-Integration + UX-Entscheidungen + confidence-Handling), finalisieren in Spec/Discuss.
 **Plans:** 0 plans
+
+---
+
+## 🧭 Strategische Themen-Pipeline (aus Strategie-Gespräch 2026-06-06 — Vault-Sync)
+
+> Überwiegend Post-Kernfeature / Phase 2-3. Volldetail + Einordnung im Vault: `Nerve-Vault/03 Planung/Strategie-Gespräch 2026-06-06.md` + `Nerve-Vault/01 Roadmap.md` (Sektion Strategische Themen-Pipeline). Bau-Reihenfolge wird mit Gemini abgestimmt (06.06.). **NICHT sofort** — erst Speech-Stats (Block J / Notizbuch B).
+
+- **TAXO — Taxonomie-Rückgrat + Gesprächs-Verständnis-Konsolidierung** 🔴 (DAS große Architektur-Stück) — gemeinsame **Intent-Schicht** (Einwand/**Vorwand**/Info-Frage/Kaufsignal/Aufschub) + **Phasen-Achse** unter Live-Cues, Post-Call-Analyse, Training, Profil, Branchen-Packs. EWB UND VWB gleichwertig. Konsolidiert + repariert gedriftete Teile: Phasen-Analyse (`phase_classify`-Live-Bug), Speech-Stats, EWB-Keyword-Match, Training. Prozess: tiefer Code-Dive (Ist-Stand) → Recherche (Claude-Chat) → Realität-gegen-Recherche → Plan. Cross-AI + Real-Daten-Pflicht (Schema). Hängt mit Block-J-Outcome-Tracking + Phase E.
+- **PRODWISSEN — Info-Frage-Intent + tiefes Produktwissen + Live-Recherche** 🟡/🔴 — NERVE erkennt Info-/Produkt-Fragen (3. Intent ≠ EWB/VWB) + Button schnelle/ausführliche Recherche → Teleprompter. (a) Profil-Produktwissen (erweitert `profile_faqs`, ZUERST, sicher) (b) Live-Web-Recherche (PreCall hat schon Anthropic Web Search; Latenz+Haftung → später). Hängt an TAXO.
+- **HINTS — Stichpunkte-Toggle mehrstufig + adaptiv** 🟡 — Schalter ganze Sätze→Schlüsselphrase→Stichwort, Default Hilfestellung, adaptiver Schubs. Hängt an PROFILADAPT/TAXO-Skill-Stufen.
+- **PROFILADAPT — Adaptives Profil (Vorschläge aus Calls)** 🟡 — vorschlagen nie still editieren + Versionierung; Muster+Beleg; additiv vs korrigierend; Stimme nicht homogenisieren; Dosierung. Erste-Partei. Hängt an TAXO. Datenmodell nicht zumauern.
+- **TRAINING-REVISIT — Trainingsmodus Taxonomie-getrieben modernisieren** 🟡 — veraltet. "Üben X" = Zeiger auf Szenario (nicht neue Generierung). Personas eng + Rubrics. NACH TAXO. Hängt an Phase E.
+- **MEETING-Modus** → schon verankert (08.23.2.MODES + Client-Vehikel-Entscheidung Hybrid Web+Extension). Recall.ai-Bot tabu. Multi-Person = binär reicht meist, Pro-Person = Extension-Premium.
+- **Nicht-Build (Querverweis):** Legal-Moat (§7 UWG/AI Act, Mensch-in-Schleife = Burggraben) → Marketing; Retention-Policy (User-Daten behalten vs anonym. Korpus) → DSGVO + 08.23.2.ART17.
+
+**Plus Block-J-Bug (Vault):** `[phase_classify] loop error: '>' not supported between int and str` LIVE in Prod (05.06. 09:32) — Phasen-Klassifikation teils kaputt. Quick-Fix (Typ-Vergleich) ODER mit TAXO mitnehmen.
