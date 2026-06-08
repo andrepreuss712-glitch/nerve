@@ -154,16 +154,17 @@ def run_postcall_engine(db_session, user_id, conv_id, einwaende, ewb_clicks, ga_
         db_session.commit()
 
         # ── 2. Muster-Erkennung EWB >3x (D-11) ─────────────────────────────────
-        # NOTE: json_extract() is SQLite-specific. For PostgreSQL migration,
-        # replace with ->> operator or extract einwand_typ into its own column.
+        # Postgres (Prod): metadata ist TEXT mit JSON-Inhalt → ::jsonb casten,
+        # dann ->> extrahiert den Wert als Text. GROUP BY/HAVING auf den Ausdruck
+        # bzw. das Aggregat (Postgres erlaubt keine SELECT-Aliase in HAVING).
         try:
             from sqlalchemy import text
             rows = db_session.execute(text(
-                "SELECT json_extract(metadata, '$.einwand_typ') as einwand_typ, COUNT(*) as cnt "
+                "SELECT (metadata::jsonb ->> 'einwand_typ') as einwand_typ, COUNT(*) as cnt "
                 "FROM learning_events "
                 "WHERE user_id = :uid AND event_type = 'button_pressed' "
                 "AND created_at >= :cutoff "
-                "GROUP BY einwand_typ HAVING cnt > :threshold"
+                "GROUP BY (metadata::jsonb ->> 'einwand_typ') HAVING COUNT(*) > :threshold"
             ), {'uid': user_id, 'cutoff': cutoff, 'threshold': _EWB_THRESHOLD}).fetchall()
 
             for row in rows:
