@@ -2095,4 +2095,4 @@ Plans:
 - **MEETING-Modus** → schon verankert (08.23.2.MODES + Client-Vehikel-Entscheidung Hybrid Web+Extension). Recall.ai-Bot tabu. Multi-Person = binär reicht meist, Pro-Person = Extension-Premium.
 - **Nicht-Build (Querverweis):** Legal-Moat (§7 UWG/AI Act, Mensch-in-Schleife = Burggraben) → Marketing; Retention-Policy (User-Daten behalten vs anonym. Korpus) → DSGVO + 08.23.2.ART17.
 
-**Plus Block-J-Bug (Vault):** `[phase_classify] loop error: '>' not supported between int and str` LIVE in Prod (05.06. 09:32) — Phasen-Klassifikation teils kaputt. Quick-Fix (Typ-Vergleich) ODER mit TAXO mitnehmen.
+**Plus Block-J-Bug (Vault):** ~~`[phase_classify] loop error: '>' not supported between int and str` LIVE in Prod (05.06. 09:32) — Phasen-Klassifikation teils kaputt.~~ ✅ **GEFIXT 2026-06-08** (Quick-Task `20260608-phase-classify-int-str-fix`, commit `8db6278`, live auf Prod): Wurzel war `current_phase`-String-Label ('opener'/'greeting') beim manual_mode_toggle statt int 1 (deepgram_service.py) → Single-Source-of-State, kein Cast-Pflaster. TAXO muss den Bug NICHT mehr mitnehmen — die Phasen-Achsen-Konsolidierung bleibt aber Teil von TAXO.
