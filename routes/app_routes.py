@@ -162,26 +162,24 @@ def api_beenden():
     except Exception:
         _beenden_sid = None
     import time as _time
+    # K1-Fix: Speech-Stats HIER früh lesen+berechnen, solange die Session noch in
+    # _session_state liegt. Der WebSocket-disconnect-Handler (deepgram_service.py →
+    # pop_session_state) räumt _session_state[sid] vor dem späten Persistenz-Punkt ab;
+    # ein dortiger get_speech_stats(sid) läse die leere Session → {0,0,0} (per Logging
+    # diagnostiziert: früher Read bw=150, später Read leer). Berechnung spiegelt
+    # live_session.get_speech_stats (das für coaching_loop erhalten bleibt).
     with ls._session_state_lock:
         _ss_b = ls._session_state.get(_beenden_sid) if _beenden_sid else None
         bw = _ss_b.get('berater_words', 0) if _ss_b else 0
         kw = _ss_b.get('kunde_words', 0) if _ss_b else 0
         _st = _ss_b.get('session_start_time') if _ss_b else None
+        _monolog = round(_ss_b.get('laengster_monolog_sek', 0.0), 1) if _ss_b else 0.0
     dauer_sek = int(_time.monotonic() - _st) if _st else 0
-    # [K1-DIAG] DIAGNOSE-ONLY (CLAUDE.md Punkt 15) — misst H1: löst der user_id->sid-Scan
-    # eine sid auf oder None? Welche Counter liest /api/beenden? Snapshot aller aktiven
-    # Sessions (sid,user_id,start,bw,kw), um Scan-Miss vs leere Counter zu unterscheiden.
-    # Kein Verhaltens-Change. Vor Fix wieder entfernen.
-    try:
-        with ls._session_state_lock:
-            _diag_sids = [(s, st.get('user_id'), round(st.get('session_start_time') or 0.0, 1),
-                           st.get('berater_words', 0), st.get('kunde_words', 0))
-                          for s, st in ls._session_state.items()]
-        print(f"[K1-DIAG] /api/beenden uid={getattr(g.user, 'id', None)} resolved_sid={_beenden_sid!r} "
-              f"-> bw={bw} kw={kw} start_set={_st is not None} dauer={dauer_sek} | "
-              f"active_sessions={_diag_sids}")
-    except Exception as _kd_e:
-        print(f"[K1-DIAG] /api/beenden diag-log skip: {_kd_e}")
+    _total_w = bw + kw
+    _redeanteil = round(bw / _total_w * 100) if _total_w > 0 else 0
+    _elapsed_min = (_time.monotonic() - _st) / 60 if _st else 1
+    _tempo = round(bw / max(_elapsed_min, 0.1))
+    _stats = {'redeanteil': _redeanteil, 'tempo': _tempo, 'monolog': _monolog}
 
     einwaende_liste = []
     kaufsignale_liste = []
@@ -284,11 +282,8 @@ def api_beenden():
     except Exception as e:
         print(f"[Beenden] WARN: Log-Write fehlgeschlagen ({e}) — postcall laeuft trotzdem durch")
 
-    # Redeanteil fuer postcall + async analysis (K1: per-SID, sid oben aufgelöst)
-    _stats = ls.get_speech_stats(_beenden_sid)
-    # [K1-DIAG] DIAGNOSE-ONLY (Punkt 15) — was liefert get_speech_stats für die persistierten
-    # Felder (redeanteil_avg/tempo_avg/laengster_monolog)? Kein Verhaltens-Change.
-    print(f"[K1-DIAG] get_speech_stats(sid={_beenden_sid!r}) -> {_stats}")
+    # Redeanteil fuer postcall + async analysis — _stats wurde oben FRÜH berechnet
+    # (vor dem disconnect-Teardown von _session_state[sid]); hier nur noch verwenden.
     redeanteil_berater = _stats.get('redeanteil', 50)
     redeanteil_kunde = 100 - redeanteil_berater
 

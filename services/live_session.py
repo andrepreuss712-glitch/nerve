@@ -691,16 +691,6 @@ def _flush_segment(key: str):
                 elif sp_name == 'Kunde':
                     _ss['kunde_words'] = _ss.get('kunde_words', 0) + word_count
                     _ss['_current_monolog_start'] = None
-                # [K1-DIAG] DIAGNOSE-ONLY (CLAUDE.md Punkt 15) — misst H2: akkumulieren
-                # die per-SID-Counter? welches sp_name/roles_confirmed greift pro flush?
-                # (Verbindung zu qa_slot1: greift das Berater-Label im Single-Speaker-Call?)
-                # Kein Verhaltens-Change. Vor Fix wieder entfernen.
-                print(f"[K1-DIAG] flush sid={_flush_sid} sp_name={sp_name!r} speaker={speaker!r} "
-                      f"roles_confirmed={roles_confirmed} words={word_count} "
-                      f"-> berater_words={_ss.get('berater_words', 0)} kunde_words={_ss.get('kunde_words', 0)} "
-                      f"monolog={_ss.get('laengster_monolog_sek', 0.0):.1f} start_set={_ss.get('session_start_time') is not None}")
-            else:
-                print(f"[K1-DIAG] flush sid={_flush_sid} NICHT in _session_state (Session weg bei flush) sp_name={sp_name!r}")
 
     if not roles_confirmed or speaker != 0:
         _flush_sid = pending.get('sid')

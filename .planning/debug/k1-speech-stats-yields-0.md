@@ -41,8 +41,33 @@ deployen, André macht echten Test-Call, dann Diagnose aus echten Markern.
   (dieselbe wie qa_slot1).
 - MP1 akkumuliert + MP2 resolved korrekt mit bw>0 ABER MP3 stats=0 → Bug in get_speech_stats.
 
-## Current Focus
-hypothesis: deployed-but-ineffective — entweder sid-Resolution (H1) oder Counter-Akkumulation/
-  Sprecher-Routing (H2). Mess-Punkte unterscheiden.
-next_action: [K1-DIAG] deployen + manueller Restart → André echter Test-Call →
-  journalctl grep "[K1-DIAG]" → Diagnose, dann erst Fix.
+## Diagnose-Ergebnis (echte Marker, Test-Call 15:10-15:11)
+- **H1 WIDERLEGT:** `/api/beenden uid=2 resolved_sid='GMr6...' -> bw=150 kw=0 start_set=True
+  dauer=64` — sid-Scan funktioniert, früher Read sieht bw=150.
+- **H2 WIDERLEGT:** flush-Marker zeigen `sp_name='Berater' roles_confirmed=True`, berater_words
+  zählt 15→150 hoch, monolog→43.1, start_set=True. Counter akkumulieren sauber. Sprecher-
+  Routing greift (anders als qa_slot1) — die zwei Bugs hängen NICHT zusammen.
+- **ECHTE WURZEL (Case 3):** `get_speech_stats(sid='GMr6...') -> {0,0,0}` TROTZ bw=150.
+  Mathematisch unmöglich außer im `if not _ss`-Pfad → Session zum Zeitpunkt des SPÄTEN
+  get_speech_stats-Aufrufs (app_routes.py:288) schon aus _session_state entfernt. Der
+  WebSocket-`disconnect`-Handler (deepgram_service.py:755 `pop_session_state`) räumt
+  _session_state[sid] im Fenster zwischen frühem Read (Z.170, bw=150) und spätem
+  get_speech_stats (Z.288) ab. reset_session (Z.726) ist erst danach.
+
+## Fix (umgesetzt, commit folgt)
+app_routes.py /api/beenden: Speech-Stats FRÜH (Z.165-180, vor disconnect-Teardown) aus dem
+early _session_state-Read berechnen (+ laengster_monolog_sek mitlesen), `_stats` bis zur
+Persistenz durchreichen. Später get_speech_stats(Z.288)-Aufruf entfernt. get_speech_stats
+bleibt für coaching_loop (live, Session existiert). [K1-DIAG]-Marker entfernt.
+
+## PLUS — gleiche Bug-Klasse (späte _session_state-Reads, REPORT-ONLY, NICHT gefixt)
+- **word_confidences (app_routes.py:594-606):** später _session_state-Read NACH dem early-
+  Punkt. `call_id` HAT einen DB-Fallback (Z.613-624, latest Call ended_at IS NULL) → robust.
+  ABER `_phase_d_word_confidences` hat KEINEN Fallback → bei disconnect-Pop-Race leer (Daten
+  nur im RAM, nicht in DB). Gleiche Wurzel wie Speech-Stats. → Folge-Pass-Kandidat (früh lesen
+  oder word_confidences anders persistieren). Außerhalb dieses Scopes (nur Speech-Stats).
+- Andere späte Reads in /api/beenden lesen `ls.state` (globales Dict, NICHT _session_state) —
+  z.B. ewb_clicks (Z.202), session_anrede (Z.215). Global wird vom disconnect NICHT gepoppt →
+  nicht dieselbe Race-Klasse.
+
+status: fixed (verify pending nach Test-Call)
