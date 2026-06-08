@@ -898,8 +898,12 @@ def register_audio_handlers(sio):
                 _call_id = st.get('call_id')
                 st['contact_category'] = category
                 st['current_mode'] = new_mode
-                # Reset Hysterese auf neuer Modus
-                st['current_phase'] = 'opener' if new_mode == 'cold_call' else 'greeting'
+                # Reset Hysterese auf neuer Modus → Phase 1 (cold_call='opener',
+                # gatekeeper='greeting'). current_phase ist kanonisch INT 1-6
+                # (detect_phase/classify_phase/PHASE_BUTTONS); der Label kommt aus
+                # _PHASE_NAMES_BY_MODE. Vorher stand hier ein String-Label →
+                # '>' int vs str-Crash in detect_phase (live_bug phase_classify).
+                st['current_phase'] = 1
                 st['phase_hint_count'] = 0
                 st['pending_phase'] = None
                 import time as _t
