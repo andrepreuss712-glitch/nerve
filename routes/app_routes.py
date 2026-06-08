@@ -168,6 +168,20 @@ def api_beenden():
         kw = _ss_b.get('kunde_words', 0) if _ss_b else 0
         _st = _ss_b.get('session_start_time') if _ss_b else None
     dauer_sek = int(_time.monotonic() - _st) if _st else 0
+    # [K1-DIAG] DIAGNOSE-ONLY (CLAUDE.md Punkt 15) — misst H1: löst der user_id->sid-Scan
+    # eine sid auf oder None? Welche Counter liest /api/beenden? Snapshot aller aktiven
+    # Sessions (sid,user_id,start,bw,kw), um Scan-Miss vs leere Counter zu unterscheiden.
+    # Kein Verhaltens-Change. Vor Fix wieder entfernen.
+    try:
+        with ls._session_state_lock:
+            _diag_sids = [(s, st.get('user_id'), round(st.get('session_start_time') or 0.0, 1),
+                           st.get('berater_words', 0), st.get('kunde_words', 0))
+                          for s, st in ls._session_state.items()]
+        print(f"[K1-DIAG] /api/beenden uid={getattr(g.user, 'id', None)} resolved_sid={_beenden_sid!r} "
+              f"-> bw={bw} kw={kw} start_set={_st is not None} dauer={dauer_sek} | "
+              f"active_sessions={_diag_sids}")
+    except Exception as _kd_e:
+        print(f"[K1-DIAG] /api/beenden diag-log skip: {_kd_e}")
 
     einwaende_liste = []
     kaufsignale_liste = []
@@ -272,6 +286,9 @@ def api_beenden():
 
     # Redeanteil fuer postcall + async analysis (K1: per-SID, sid oben aufgelöst)
     _stats = ls.get_speech_stats(_beenden_sid)
+    # [K1-DIAG] DIAGNOSE-ONLY (Punkt 15) — was liefert get_speech_stats für die persistierten
+    # Felder (redeanteil_avg/tempo_avg/laengster_monolog)? Kein Verhaltens-Change.
+    print(f"[K1-DIAG] get_speech_stats(sid={_beenden_sid!r}) -> {_stats}")
     redeanteil_berater = _stats.get('redeanteil', 50)
     redeanteil_kunde = 100 - redeanteil_berater
 
