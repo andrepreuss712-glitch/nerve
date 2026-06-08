@@ -776,6 +776,7 @@ Recent decisions affecting current work:
 | 20260430-css | 08.20.2 CSS-Hotfix U1-U3: nav-live-box 90vh scroll, launcher-step overflow guard, launcher-inline-edit-btn | 2026-04-30 | ecf8d41+df20777+67beec0 | [20260430-css-modal-button-hotfix-u1u2u3](./quick/20260430-css-modal-button-hotfix-u1u2u3/) |
 | 20260430-r6r7 | Block-J R6+R7: Vorwissen-Duplikat (step45/renderStep4b) entfernt + Step-5-Zurück zu Step-4 korrigiert | 2026-04-30 | 2613fd3+18487b7 | [20260430-block-j-r6-r7-vorwissen-zurueck](./quick/20260430-block-j-r6-r7-vorwissen-zurueck/) |
 | 20260523-cr1 | 08.23.2.C.R.1: cold_call-Phrases Re-Seed — Alembic Migration 0005, 18 Phrasen in 8 objection_types | 2026-05-23 | 6092d3f | [20260523-cr1-cold-call-phrases-reseed](./quick/20260523-cr1-cold-call-phrases-reseed/) |
+| 20260608-phase-classify-int-str-fix | Live-Bug phase_classify '>' int vs str: current_phase beim manual_mode_toggle auf int 1 statt String-Label 'opener'/'greeting' (deepgram_service.py:902). Single-Source-of-State. Live auf Prod via manuellem Restart (deploy-Gate durch pre-existing crm-Schema-Failures blockiert). | 2026-06-08 | 8db6278 | [20260608-phase-classify-int-str-fix](./quick/20260608-phase-classify-int-str-fix/) |
 
 ## What's Done
 
