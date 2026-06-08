@@ -77,6 +77,11 @@ conversation_logs row 225: redeanteil_avg=100, tempo_avg=179, laengster_monolog=
 
 status: resolved (2026-06-08, commit 655a219, live + verifiziert)
 
-## Offen (Folge-Pass, dokumentiert)
-word_confidences (app_routes.py:594) — gleiche späte-_session_state-Read-Bug-Klasse,
-kein DB-Fallback → bei disconnect-Race leer. Separater Pass-Kandidat.
+## Folge-Pass: word_confidences (gleiche Wurzel) — GEFIXT (commit 72fd20f, verify pending)
+Punkt-20-Check: word_confidences IST aktiv genutzt (deepgram:154 write → app_routes read →
+outcome_service.calculate_audio_health → calls.audio_health_score + audio_health CallEvent)
+— kein Lösch-Kandidat. Fix: Capture (Buffer+call_id) GANZ OBEN in /api/beenden vor Teardown,
+_posted_call_id-bevorzugt (multi-session-sicher). Whack-a-Mole-Check: Speech-Stats +
+word_confidences waren die VOLLSTÄNDIGE Liste später per-SID _session_state-Reads — jetzt
+alle in der frühen Region (Z.156-205). Verify: calls.audio_health_score ≠ NULL +
+audio_health CallEvent nach Test-Call.
