@@ -777,6 +777,7 @@ Recent decisions affecting current work:
 | 20260430-r6r7 | Block-J R6+R7: Vorwissen-Duplikat (step45/renderStep4b) entfernt + Step-5-Zurück zu Step-4 korrigiert | 2026-04-30 | 2613fd3+18487b7 | [20260430-block-j-r6-r7-vorwissen-zurueck](./quick/20260430-block-j-r6-r7-vorwissen-zurueck/) |
 | 20260523-cr1 | 08.23.2.C.R.1: cold_call-Phrases Re-Seed — Alembic Migration 0005, 18 Phrasen in 8 objection_types | 2026-05-23 | 6092d3f | [20260523-cr1-cold-call-phrases-reseed](./quick/20260523-cr1-cold-call-phrases-reseed/) |
 | 20260608-phase-classify-int-str-fix | Live-Bug phase_classify '>' int vs str: current_phase beim manual_mode_toggle auf int 1 statt String-Label 'opener'/'greeting' (deepgram_service.py:902). Single-Source-of-State. Live auf Prod via manuellem Restart (deploy-Gate durch pre-existing crm-Schema-Failures blockiert). | 2026-06-08 | 8db6278 | [20260608-phase-classify-int-str-fix](./quick/20260608-phase-classify-int-str-fix/) |
+| 20260608-ewb-json-extract-postgres-fix | Prod-Bug [Engine] EWB-Muster-Check: json_extract (SQLite) → Postgres (metadata::jsonb ->> 'einwand_typ') in integration_engine.py Block 1; GROUP BY/HAVING Postgres-korrekt. Query gegen Prod-PG validiert, live via manuellem Restart. Blast-Radius Block 2+3 (json_extract) report-only für Folge-Pass (Block 3 mit Boolean-WR-05-Caveat). | 2026-06-08 | f118e57 | [20260608-ewb-json-extract-postgres-fix](./quick/20260608-ewb-json-extract-postgres-fix/) |
 
 ## What's Done
 
