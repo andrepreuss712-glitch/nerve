@@ -181,6 +181,32 @@ def api_beenden():
     _tempo = round(bw / max(_elapsed_min, 0.1))
     _stats = {'redeanteil': _redeanteil, 'tempo': _tempo, 'monolog': _monolog}
 
+    # Phase 08.23.2.D REQ-D-6 — word_confidences + call_id HIER FRÜH erfassen (gleiche Wurzel
+    # wie Speech-Stats: der WebSocket-disconnect-Handler poppt _session_state[sid] vor dem
+    # späten Audio-Health-Punkt; ein dortiger Read läse leer → Buffer=[] → Thread startet nie
+    # → audio_health_score bleibt NULL). Buffer UND call_id atomar aus DERSELBEN Session
+    # (kein Mismatch); Auflösung bevorzugt _posted_call_id (deterministisch für genau den
+    # beendeten Call, multi-session-sicher), sonst user_id. DB-Fallback für call_id bleibt unten.
+    _phase_d_call_id = None
+    _phase_d_word_confidences = []
+    try:
+        _posted_call_id = req_data.get('call_id') if isinstance(req_data, dict) else None
+        with ls._session_state_lock:
+            if _posted_call_id:
+                for _sid, _sd in ls._session_state.items():
+                    if _sd.get('state', {}).get('call_id') and str(_sd['state']['call_id']) == str(_posted_call_id):
+                        _phase_d_call_id = _sd['state']['call_id']
+                        _phase_d_word_confidences = list(_sd.get('word_confidences', []))
+                        break
+            if not _phase_d_call_id:
+                for _sid, _sd in ls._session_state.items():
+                    if _sd.get('user_id') == g.user.id and _sd.get('state', {}).get('call_id'):
+                        _phase_d_call_id = _sd['state']['call_id']
+                        _phase_d_word_confidences = list(_sd.get('word_confidences', []))
+                        break
+    except Exception as _e_lookup:
+        print(f'[Phase08.23.2.D] call_id-Lookup Fehler (non-fatal): {_e_lookup}')
+
     einwaende_liste = []
     kaufsignale_liste = []
     for e in log_entries:
@@ -582,30 +608,9 @@ def api_beenden():
     # -- Phase 08.23.2.D REQ-D-2 - calls-Record UPDATEN (kein zweiter INSERT) --
     # create_call_for_sid() legt bei start_live_session bereits einen Call-Record an.
     # Hier UPDATEn wir ended_at, conversation_log_id, call_mode (aus req_data per D-05a).
-    # RACE-CONDITION-SICHERUNG: word_confidences werden HIER gelesen, VOR reset_session(),
-    # damit der Audio-Health-Thread den vollen Buffer erhaelt.
-    _phase_d_call_id = None
-    _phase_d_word_confidences = []
-    try:
-        # SID-Lookup: api_beenden ist HTTP-Route. Wir suchen via user_id den aktiven Session-State-Eintrag.
-        # Wenn das Frontend in Plan 05 'call_id' im POST-Body mitschickt, ist das deterministischer -
-        # bevorzugt diesen, fallback auf user_id-Iteration.
-        _posted_call_id = req_data.get('call_id') if isinstance(req_data, dict) else None
-        with ls._session_state_lock:
-            if _posted_call_id:
-                for _sid, _sd in ls._session_state.items():
-                    if _sd.get('state', {}).get('call_id') and str(_sd['state']['call_id']) == str(_posted_call_id):
-                        _phase_d_call_id = _sd['state']['call_id']
-                        _phase_d_word_confidences = list(_sd.get('word_confidences', []))
-                        break
-            if not _phase_d_call_id:
-                for _sid, _sd in ls._session_state.items():
-                    if _sd.get('user_id') == g.user.id and _sd.get('state', {}).get('call_id'):
-                        _phase_d_call_id = _sd['state']['call_id']
-                        _phase_d_word_confidences = list(_sd.get('word_confidences', []))
-                        break
-    except Exception as _e_lookup:
-        print(f'[Phase08.23.2.D] call_id-Lookup Fehler (non-fatal): {_e_lookup}')
+    # RACE-FIX: _phase_d_call_id + _phase_d_word_confidences werden bereits GANZ OBEN
+    # (vor jedem _session_state-Teardown durch den disconnect-Handler) atomar erfasst.
+    # Hier nur noch der DB-Fallback für call_id, falls die Session schon ganz früh weg war.
 
     # Phase 08.23.2.D Fallback 2026-05-27 — wenn _session_state schon leer:
     # Latest Call des Users mit ended_at=NULL als Update-Target nehmen.
