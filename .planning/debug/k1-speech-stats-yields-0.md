@@ -70,4 +70,13 @@ bleibt für coaching_loop (live, Session existiert). [K1-DIAG]-Marker entfernt.
   z.B. ewb_clicks (Z.202), session_anrede (Z.215). Global wird vom disconnect NICHT gepoppt →
   nicht dieselbe Race-Klasse.
 
-status: fixed (verify pending nach Test-Call)
+## Verifikation (Test-Call 15:22, NACH Fix-Deploy 655a219)
+conversation_logs row 225: redeanteil_avg=100, tempo_avg=179, laengster_monolog=31.1
+(dauer 44s). Vorher row 224/223 = 0/0/0. → Fix bestätigt wirksam auf Prod.
+(redeanteil=100 korrekt für Single-Voice-Call — nur Berater gesprochen.)
+
+status: resolved (2026-06-08, commit 655a219, live + verifiziert)
+
+## Offen (Folge-Pass, dokumentiert)
+word_confidences (app_routes.py:594) — gleiche späte-_session_state-Read-Bug-Klasse,
+kein DB-Fallback → bei disconnect-Race leer. Separater Pass-Kandidat.
