@@ -1472,7 +1472,7 @@ def coaching_loop():
 
                 # ── Verhaltensbasierte Tipps (deterministisch, kein Claude-Call) ──
                 try:
-                    stats = ls.get_speech_stats()
+                    stats = ls.get_speech_stats(sid)
                     if stats['tempo'] > 160 and not tipp:
                         tipp      = f"Langsamer sprechen — dein Tempo liegt bei {stats['tempo']} WPM."
                         kategorie = 'redeanteil'

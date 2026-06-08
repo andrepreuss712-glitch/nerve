@@ -181,12 +181,12 @@ phase_lock      = threading.Lock()
 aktive_phase_idx = 0
 
 # ── Sprachstatistik ───────────────────────────────────────────────────────────
-speech_lock            = threading.Lock()
-berater_words          = 0
-kunde_words            = 0
-session_start_time     = None
-laengster_monolog_sek  = 0.0
-_current_monolog_start = None
+# Single-Source-of-State (Konstrukt §0.1): Sprach-Zähler sind AUSSCHLIESSLICH per-SID
+# (_session_state[sid]: berater_words / kunde_words / session_start_time /
+# laengster_monolog_sek / _current_monolog_start). _flush_segment schreibt nur dorthin,
+# get_speech_stats(sid) liest nur dorthin (unter _session_state_lock). Die früheren
+# Modul-Globalen + speech_lock wurden NIE befüllt (toter Ghost-Read → immer 0) und sind
+# komplett entfernt.
 
 # ── Abgedeckte Phasen ─────────────────────────────────────────────────────────
 covered_phases_lock = threading.Lock()
@@ -742,7 +742,6 @@ def reset_session():
     global _confirmed_speaker, _pending_speaker, _pending_since, _second_sp_seen
     global _bof_count, roles_swapped
     global kaufbereitschaft, kaufbereitschaft_verlauf, aktive_phase_idx
-    global berater_words, kunde_words, session_start_time, laengster_monolog_sek, _current_monolog_start
     global gegenargument_log, hilfe_log, quick_action_log, phasen_log
     # Per-SID cleanup: reset all active SIDs via pop+init (Phase 08.19.5 migration)
     with _session_state_lock:
@@ -815,12 +814,8 @@ def reset_session():
         kaufbereitschaft_verlauf.clear()
     with phase_lock:
         aktive_phase_idx = 0
-    with speech_lock:
-        berater_words          = 0
-        kunde_words            = 0
-        laengster_monolog_sek  = 0.0
-        _current_monolog_start = None
-        session_start_time     = time.monotonic()
+    # Sprach-Zähler werden per-SID via pop_session_state+init_session_state oben
+    # zurückgesetzt (Single-Source-of-State); keine Modul-Globalen mehr.
     with covered_phases_lock:
         covered_phases.clear()
     with gegenargument_log_lock:
@@ -864,14 +859,25 @@ def record_ewb_click(einwand_typ: str, success: bool = False,
         state.setdefault('ewb_clicks', []).append(entry)
 
 
-def get_speech_stats() -> dict:
-    """Gibt aktuelle Sprachstatistiken zurück."""
-    with speech_lock:
-        total = berater_words + kunde_words
-        redeanteil = round(berater_words / total * 100) if total > 0 else 0
-        st = session_start_time
-        bw = berater_words
-        monolog = round(laengster_monolog_sek, 1)
+def get_speech_stats(sid: str = None) -> dict:
+    """Gibt aktuelle Sprachstatistiken für die per-SID-Session zurück.
+
+    Liest die Zähler aus _session_state[sid] (dort befüllt _flush_segment sie).
+    Ohne gültige/bekannte sid → Null-Stats statt Crash (die früheren Modul-Globalen
+    wurden entfernt — Single-Source-of-State, Konstrukt §0.1).
+    """
+    if not sid:
+        return {'redeanteil': 0, 'tempo': 0, 'monolog': 0}
+    with _session_state_lock:
+        _ss = _session_state.get(sid)
+        if not _ss:
+            return {'redeanteil': 0, 'tempo': 0, 'monolog': 0}
+        bw = _ss.get('berater_words', 0)
+        kw = _ss.get('kunde_words', 0)
+        st = _ss.get('session_start_time')
+        monolog = round(_ss.get('laengster_monolog_sek', 0.0), 1)
+    total = bw + kw
+    redeanteil = round(bw / total * 100) if total > 0 else 0
     elapsed_min = (time.monotonic() - st) / 60 if st else 1
     tempo = round(bw / max(elapsed_min, 0.1))
     return {'redeanteil': redeanteil, 'tempo': tempo, 'monolog': monolog}

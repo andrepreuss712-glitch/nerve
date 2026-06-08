@@ -29,23 +29,39 @@ def _get_current_fx_rate(db, rate_currency: str) -> Decimal:
 
 
 def _resolve_user_id_from_live_session() -> int | None:
-    """Liest user_id aus live_session.state fuer Background-Thread-Kontexte
-    (analyse_loop, Deepgram-Close) wo kein Flask g.user verfuegbar ist."""
+    """Liest user_id aus der aktiven per-SID-Session (Background-Thread-Kontext:
+    analyse_loop, Deepgram-Close — kein Flask g.user verfuegbar).
+
+    K8-Fix: vorher globales ls.state.get('user_id') — das wird NIE befuellt (user_id
+    liegt nur per-SID in _session_state), daher Ghost-Read -> None.
+    ACHTUNG Multi-SID-Ambiguitaet: nimmt die erste aktive Session. Bei mehreren
+    parallelen Sessions ist die Zuordnung nicht eindeutig — vor EA-Launch durch
+    sid-Threading an log_api_cost(session_id=...) ersetzen (Option 2). Keine aktive
+    Session -> None (kein Raten, kein Crash)."""
     try:
         import services.live_session as ls
-        with ls.state_lock:
-            return ls.state.get('user_id')
+        with ls._session_state_lock:
+            for _st in ls._session_state.values():
+                return _st.get('user_id')
     except Exception:
-        return None
+        pass
+    return None
 
 
 def _resolve_org_id_from_live_session() -> int | None:
+    """Liest org_id aus der aktiven per-SID-Session.
+
+    K8-Fix: vorher globales ls.state.get('org_id') (nie befuellt -> None). Siehe
+    _resolve_user_id_from_live_session fuer die Multi-SID-Ambiguitaet — vor EA-Launch
+    via sid-Threading (Option 2) ersetzen. Keine aktive Session -> None."""
     try:
         import services.live_session as ls
-        with ls.state_lock:
-            return ls.state.get('org_id')
+        with ls._session_state_lock:
+            for _st in ls._session_state.values():
+                return _st.get('org_id')
     except Exception:
-        return None
+        pass
+    return None
 
 
 def log_api_cost(

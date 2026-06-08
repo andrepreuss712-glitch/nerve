@@ -554,14 +554,10 @@ def register_audio_handlers(sio):
         # Store precall briefing in live session state
         # (ls imported at module level — do not re-import here, causes UnboundLocalError
         # before the setdefault guard above which also uses ls)
-        # POLISH-22 Bugfix: session_start_time beim Call-Start setzen (nicht erst beim
-        # reset_session am Call-Ende). Vorher blieb der Timer auf dem time.monotonic()
-        # des letzten Call-Endes oder None, und dauer_sek wurde zu 0 oder falsch gross.
-        import time as _time
-        with ls.speech_lock:
-            ls.session_start_time = _time.monotonic()
-            ls.berater_words = 0
-            ls.kunde_words = 0
+        # POLISH-22 / K1: session_start_time wird per-SID gesetzt — und zwar NACH
+        # init_session_state() weiter unten (init überschreibt _session_state[sid]
+        # und würde einen hier gesetzten Wert wieder auf None zurücksetzen).
+        # berater_words/kunde_words werden von init_session_state() auf 0 initialisiert.
         # ── Phase 08 D-14: PreCall-Anrede-Override in ls.state persistieren ───
         # Whitelist {'Du', 'Sie'} schuetzt vor Prompt-Injection (T-08-05-01).
         # CR-02: Raw-Input wird zuerst via strip().title() normalisiert, damit
@@ -636,6 +632,13 @@ def register_audio_handlers(sio):
                 language=language,
                 mode=mode,
             )
+            # POLISH-22 / K1: per-SID session_start_time auf Call-Start setzen (Zeit-Basis
+            # für tempo in get_speech_stats). NACH init_session_state, da init es auf None setzt.
+            import time as _time_ss
+            with ls._session_state_lock:
+                _ss_start = ls._session_state.get(_sid)
+                if _ss_start is not None:
+                    _ss_start['session_start_time'] = _time_ss.monotonic()
             ls.init_anonymisierer(_sid)   # WR-03 fix: D-06 create AnrufAnonymisierer for this SID
             ls.set_profile_for_sid(_sid, _profile_name2, _profile_daten2)
             # Phase 08.23.2.D.UX.3 Task R5: Firmenname aus Profil vorab in Token-Cache

@@ -146,11 +146,27 @@ def api_beenden():
     with ls.kb_lock:
         kb_verlauf  = list(ls.kaufbereitschaft_verlauf)
         kb_end      = ls.kaufbereitschaft
-    with ls.speech_lock:
-        bw = ls.berater_words
-        kw = ls.kunde_words
-        _st = ls.session_start_time
+    # K1: /api/beenden ist eine globale HTTP-Route ohne sid. Die Speech-Zähler liegen
+    # per-SID in _session_state (nur dort befüllt _flush_segment sie). sid via
+    # user_id-Scan auflösen; bei mehreren aktiven Sessions desselben Users die zuletzt
+    # gestartete (max session_start_time) wählen; keine Session → Null-Werte (kein Crash).
+    _beenden_sid = None
+    try:
+        _my_uid = g.user.id
+        with ls._session_state_lock:
+            _cands = [(s, (st.get('session_start_time') or 0.0))
+                      for s, st in ls._session_state.items()
+                      if st.get('user_id') == _my_uid]
+        if _cands:
+            _beenden_sid = max(_cands, key=lambda x: x[1])[0]
+    except Exception:
+        _beenden_sid = None
     import time as _time
+    with ls._session_state_lock:
+        _ss_b = ls._session_state.get(_beenden_sid) if _beenden_sid else None
+        bw = _ss_b.get('berater_words', 0) if _ss_b else 0
+        kw = _ss_b.get('kunde_words', 0) if _ss_b else 0
+        _st = _ss_b.get('session_start_time') if _ss_b else None
     dauer_sek = int(_time.monotonic() - _st) if _st else 0
 
     einwaende_liste = []
@@ -254,8 +270,8 @@ def api_beenden():
     except Exception as e:
         print(f"[Beenden] WARN: Log-Write fehlgeschlagen ({e}) — postcall laeuft trotzdem durch")
 
-    # Redeanteil fuer postcall + async analysis
-    _stats = ls.get_speech_stats()
+    # Redeanteil fuer postcall + async analysis (K1: per-SID, sid oben aufgelöst)
+    _stats = ls.get_speech_stats(_beenden_sid)
     redeanteil_berater = _stats.get('redeanteil', 50)
     redeanteil_kunde = 100 - redeanteil_berater
 
