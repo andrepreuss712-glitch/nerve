@@ -183,12 +183,12 @@ def run_postcall_engine(db_session, user_id, conv_id, einwaende, ewb_clicks, ga_
                 schwach_typ = typ_counts.most_common(1)[0][0]
 
                 from sqlalchemy import text
-                # NOTE: json_extract() is SQLite-specific (see WR-04)
+                # Postgres: metadata ist TEXT mit JSON → ::jsonb casten, ->> als Text.
                 result = db_session.execute(text(
                     "SELECT COUNT(DISTINCT source_id) as call_count "
                     "FROM learning_events "
                     "WHERE user_id = :uid AND event_type = 'hint_used' "
-                    "AND json_extract(metadata, '$.einwand_typ') = :typ "
+                    "AND (metadata::jsonb ->> 'einwand_typ') = :typ "
                     "AND created_at >= :cutoff "
                     "AND source_id IS NOT NULL"
                 ), {'uid': user_id, 'typ': schwach_typ, 'cutoff': cutoff}).fetchone()
@@ -249,14 +249,17 @@ def run_posttraining_engine(db_session, user_id, log_id, scoring, wendepunkt_sae
                 cutoff = datetime.now() - timedelta(days=_LOOKBACK_DAYS)
                 from sqlalchemy import text
 
-                # NOTE: json_extract() is SQLite-specific (see WR-04)
-                # WR-05: SQLite json_extract returns 0/1 for JSON booleans, not 'false'/'true'
+                # Postgres: metadata ist TEXT mit JSON → ::jsonb casten, ->> als Text.
+                # WR-05-Sonderfall: 'success' wird als JSON-Boolean geschrieben
+                # (json.dumps(bool) → true/false). SQLite json_extract gab dafür 0/1
+                # (daher altes '= 0'); Postgres ->> gibt den Text 'true'/'false' →
+                # darum '= false' als String-Vergleich.
                 result = db_session.execute(text(
                     "SELECT COUNT(*) as fail_count "
                     "FROM learning_events "
                     "WHERE user_id = :uid AND event_type = 'training_completed' "
-                    "AND json_extract(metadata, '$.einwand_typ') = :typ "
-                    "AND json_extract(metadata, '$.success') = 0 "
+                    "AND (metadata::jsonb ->> 'einwand_typ') = :typ "
+                    "AND (metadata::jsonb ->> 'success') = 'false' "
                     "AND created_at >= :cutoff"
                 ), {'uid': user_id, 'typ': einwand_typ, 'cutoff': cutoff}).fetchone()
 
