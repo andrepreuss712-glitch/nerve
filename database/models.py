@@ -794,14 +794,14 @@ class Account(Base):
     __tablename__ = 'accounts'
     id         = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
     tenant_id  = Column(UUID_TYPE, nullable=False)   # NOT NULL auf neuen Tabellen (D-07); FK DB-seitig zu tenant_orgs
-    name       = Column(Text, nullable=False)
-    domain     = Column(Text, nullable=True)
+    name       = Column(Text, nullable=False, comment='Account-/Firmen-Name')
+    domain     = Column(Text, nullable=True, comment='Firmen-Domain')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         # MM-05 (Cross-AI): atomare Doppel-Submit-Sicherung — DDL-parity zu Migration 0014.
         UniqueConstraint('tenant_id', 'name', name='uq_accounts_tenant_name'),
         Index('idx_accounts_tenant', 'tenant_id'),
-        {'schema': 'crm'},   # MUSS letztes Element sein; explizite Schema-Qualifizierung (kein search_path-Verlass)
+        {'schema': 'crm', 'comment': 'Account-Stammdaten je Tenant. Status: lebt (crm, RLS-isoliert). Schreibt/liest services/crm_service.py + routes/crm_export.py.'},   # MUSS letztes Element sein; explizite Schema-Qualifizierung (kein search_path-Verlass)
     )
 
 
@@ -810,14 +810,14 @@ class Contact(Base):
     id         = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
     tenant_id  = Column(UUID_TYPE, nullable=False)
     account_id = Column(UUID_TYPE, nullable=True)
-    name       = Column(Text, nullable=False)
-    email      = Column(Text, nullable=True)
-    phone      = Column(Text, nullable=True)
+    name       = Column(Text, nullable=False, comment='Kontakt-Name')
+    email      = Column(Text, nullable=True, comment='Kontakt-Email')
+    phone      = Column(Text, nullable=True, comment='Kontakt-Telefon')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         Index('idx_contacts_tenant', 'tenant_id'),
         Index('idx_contacts_account_id', 'account_id'),
-        {'schema': 'crm'},
+        {'schema': 'crm', 'comment': 'Ansprechpartner je Account/Tenant. Status: lebt (crm, RLS-isoliert). Schreibt/liest services/crm_service.py + routes/crm_export.py.'},
     )
 
 
@@ -831,10 +831,10 @@ class AccountMemory(Base):
     # MEDDPICC 8 ASCII keys leben INSIDE der meddpicc JSONB:
     # metrics, economic_buyer, decision_criteria, decision_process, paper_process,
     # pain, champion, competition.
-    meddpicc          = Column(JSON_TYPE, nullable=False, server_default='{}')
-    context_hooks     = Column(JSON_TYPE, nullable=False, server_default='[]')
-    last_call_summary = Column(Text, nullable=True)
-    anonymized_at     = Column(DateTime(timezone=True), nullable=True)   # Variante A state-tracking (Wave 3)
+    meddpicc          = Column(JSON_TYPE, nullable=False, server_default='{}', comment='MEDDPICC-JSONB (8 ASCII-Keys: metrics/economic_buyer/decision_criteria/decision_process/paper_process/pain/champion/competition)')
+    context_hooks     = Column(JSON_TYPE, nullable=False, server_default='[]', comment='JSON-Array: Kontext-Hooks fuer PreCall-Briefing')
+    last_call_summary = Column(Text, nullable=True, comment='Zusammenfassung des letzten Calls')
+    anonymized_at     = Column(DateTime(timezone=True), nullable=True, comment='Anonymisierungs-Zeitpunkt (Variante A state-tracking, Wave 3)')   # Variante A state-tracking (Wave 3)
     updated_at        = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         CheckConstraint("account_id IS NOT NULL OR contact_id IS NOT NULL", name='ck_account_memory_acc_or_con'),
@@ -842,7 +842,7 @@ class AccountMemory(Base):
         Index('idx_account_memory_account_id', 'account_id'),
         Index('idx_account_memory_contact_id', 'contact_id'),
         Index('idx_account_memory_meddpicc_gin', 'meddpicc', postgresql_using='gin'),
-        {'schema': 'crm'},
+        {'schema': 'crm', 'comment': 'MEDDPICC-Gedaechtnis je Account (PreCall-Briefing-Quelle). Status: lebt (Foundation, crm; D-02 — NICHT toter Import). Schreibt G-MEET-Pipeline; liest services/precall_service.py:175.'},
     )
 
 
@@ -852,16 +852,16 @@ class Meeting(Base):
     tenant_id      = Column(UUID_TYPE, nullable=False)
     account_id     = Column(UUID_TYPE, nullable=True)
     contact_id     = Column(UUID_TYPE, nullable=True)
-    call_id        = Column(UUID_TYPE, nullable=True)   # soft link zu public.calls.id, KEIN FK (D-08)
-    scheduled_at   = Column(DateTime(timezone=True), nullable=True)
-    notes          = Column(Text, nullable=True)
+    call_id        = Column(UUID_TYPE, nullable=True, comment='Soft-Link zu public.calls.id, KEIN FK (D-08)')   # soft link zu public.calls.id, KEIN FK (D-08)
+    scheduled_at   = Column(DateTime(timezone=True), nullable=True, comment='Geplanter Meeting-Zeitpunkt')
+    notes          = Column(Text, nullable=True, comment='Meeting-Notizen')
     schema_version = Column(SmallInteger, nullable=False, server_default='1')
     created_at     = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         Index('idx_meetings_tenant', 'tenant_id'),
         Index('idx_meetings_account_id', 'account_id'),
         Index('idx_meetings_contact_id', 'contact_id'),
-        {'schema': 'crm'},
+        {'schema': 'crm', 'comment': 'Termin-/Meeting-Datensaetze je Tenant (PiP-Termin-Form, G-MEET). Status: lebt (crm, RLS-isoliert). Schreibt/liest services/crm_service.py + routes/app_routes.py.'},
     )
 
 
@@ -875,14 +875,14 @@ class UserPreference(Base):
     id                = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
     tenant_id         = Column(UUID_TYPE, nullable=False)
     user_id           = Column(Integer, nullable=False)          # soft link zu public.users.id, KEIN FK (D-08); serverseitig aus g.user.id (MM-07)
-    auto_save_meeting = Column(Boolean, nullable=False, server_default=text('false'))  # DSGVO default OFF
+    auto_save_meeting = Column(Boolean, nullable=False, server_default=text('false'), comment='DSGVO Opt-in (Art. 25 Abs. 2), default OFF, serverseitig gehonort')  # DSGVO default OFF
     schema_version    = Column(SmallInteger, nullable=False, server_default='1')
     created_at        = Column(DateTime(timezone=True), server_default=func.now())
     updated_at        = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         UniqueConstraint('tenant_id', 'user_id', name='uq_user_preferences_tenant_user'),
         Index('idx_user_preferences_tenant', 'tenant_id'),
-        {'schema': 'crm'},
+        {'schema': 'crm', 'comment': 'Nutzer-Praeferenzen je Tenant (z.B. auto_save_meeting DSGVO-Opt-in). Status: lebt (crm, RLS-isoliert). Schreibt/liest services/crm_service.py + routes/app_routes.py (g.user.id, MM-07).'},
     )
 
 
@@ -896,21 +896,21 @@ class UserPreference(Base):
 class PreferencePair(Base):
     __tablename__ = 'preference_pairs'
     pair_id            = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    prompt             = Column(JSON_TYPE, nullable=False)
-    chosen             = Column(JSON_TYPE, nullable=False)
-    rejected           = Column(JSON_TYPE, nullable=False)
-    batch_id           = Column(UUID_TYPE, nullable=False)
-    anonymizer_version = Column(Text, nullable=False)
-    source_call_hash   = Column(Text, nullable=True)   # Hash, NICHT call_id (D-17, kein FK ueber die Mauer)
-    labeller           = Column(Text, nullable=True)
-    rating_chosen      = Column(SmallInteger, nullable=True)
-    rating_rejected    = Column(SmallInteger, nullable=True)
-    rationale          = Column(Text, nullable=True)
-    split              = Column(Text, nullable=True)
+    prompt             = Column(JSON_TYPE, nullable=False, comment='JSON: DPO-Prompt (Kontext/Einwand)')
+    chosen             = Column(JSON_TYPE, nullable=False, comment='JSON: bevorzugte (chosen) Antwort im DPO-Triple')
+    rejected           = Column(JSON_TYPE, nullable=False, comment='JSON: abgelehnte (rejected) Antwort im DPO-Triple')
+    batch_id           = Column(UUID_TYPE, nullable=False, comment='Batch-Gruppierung der Generierung')
+    anonymizer_version = Column(Text, nullable=False, comment='Version der Anonymisierungs-Pipeline')
+    source_call_hash   = Column(Text, nullable=True, comment='Einweg-Hash der Quell-Call (D-17, kein call_id-FK ueber die DSGVO-Mauer)')   # Hash, NICHT call_id (D-17, kein FK ueber die Mauer)
+    labeller           = Column(Text, nullable=True, comment='Labeller-Kennung')
+    rating_chosen      = Column(SmallInteger, nullable=True, comment='Rating der chosen-Antwort')
+    rating_rejected    = Column(SmallInteger, nullable=True, comment='Rating der rejected-Antwort')
+    rationale          = Column(Text, nullable=True, comment='Begruendung der Praeferenz')
+    split              = Column(Text, nullable=True, comment="Datensatz-Split: 'train'|'val'|'test' (CHECK ck_preference_pairs_split)")
     schema_version     = Column(SmallInteger, nullable=False, server_default='1')   # D-19
     created_at         = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         CheckConstraint("split IN ('train', 'val', 'test') OR split IS NULL", name='ck_preference_pairs_split'),
         Index('idx_preference_pairs_batch', 'batch_id'),
-        {'schema': 'training'},   # MUSS letztes Element sein; explizite Schema-Qualifizierung
+        {'schema': 'training', 'comment': 'DPO-Praeferenz-Triples (DPO-Foundation). Status: Reserve/Foundation (0 aktive Befueller; Phase 08.23.2.E befuellt). Schreibt noch nicht aktiv; liest spaeterer DPO-Trainings-Job.'},   # MUSS letztes Element sein; explizite Schema-Qualifizierung
     )
