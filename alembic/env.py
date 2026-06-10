@@ -19,6 +19,17 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+# Phase 08.23.2.SCHILD: bound autogenerate to our 3 owned schemas (public/crm/training) so a future
+# autogenerate run does not drag in pg_catalog/information_schema/foreign schemas. ADDITIVE and
+# NON-CRITICAL for the 0015 op.execute COMMENT migration (op.execute writes COMMENTs independent of
+# autogenerate) — kept only for correctness of LATER autogenerate-driven phases. Decision from
+# DISCOVERY-DECISIONS.md (Plan 01, include_name-Fallback block).
+def _include_name(name, type_, parent_names):
+    if type_ == 'schema':
+        return name in {None, 'public', 'crm', 'training'}
+    return True
+
+
 def run_migrations_offline() -> None:
     url = config.get_main_option('sqlalchemy.url')
     context.configure(
@@ -28,6 +39,8 @@ def run_migrations_offline() -> None:
         dialect_opts={'paramstyle': 'named'},
         compare_type=True,
         render_as_batch=True,  # REVIEW-MEDIUM-5: SQLite ALTER TABLE via CREATE+COPY+DROP
+        include_schemas=True,
+        include_name=_include_name,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -45,6 +58,8 @@ def run_migrations_online() -> None:
             target_metadata=target_metadata,
             compare_type=True,
             render_as_batch=True,  # REVIEW-MEDIUM-5: SQLite ALTER TABLE via CREATE+COPY+DROP
+            include_schemas=True,
+            include_name=_include_name,
         )
         with context.begin_transaction():
             context.run_migrations()

@@ -74,15 +74,15 @@ class User(Base):
     aktiv               = Column(Boolean, default=True)
     erstellt_am         = Column(DateTime, default=utcnow)
     active_profile_id   = Column(Integer, ForeignKey('profiles.id'), nullable=True)
-    letzte_aktivitaet   = Column(DateTime, nullable=True)
-    trial_ends_at       = Column(DateTime, nullable=True)
+    letzte_aktivitaet   = Column(DateTime, nullable=True, comment='Zeitpunkt der letzten User-Aktivitaet')
+    trial_ends_at       = Column(DateTime, nullable=True, comment='Ablaufzeitpunkt der Trial-Phase')
     is_trial            = Column(Boolean, default=False)
     is_coach            = Column(Boolean, default=False)
     is_test_user        = Column(Boolean, default=False, nullable=False)
     # Block 1: Onboarding
     vorname             = Column(String(100), comment='Vorname')
     nachname            = Column(String(100), comment='Nachname')
-    onboarding_done     = Column(Boolean, default=False)
+    onboarding_done     = Column(Boolean, default=False, comment='Flag: Onboarding abgeschlossen')
     erfahrungslevel     = Column(String(50), comment='Erfahrungslevel: einsteiger/fortgeschritten/profi')   # einsteiger/fortgeschritten/profi
     schmerzpunkt        = Column(Text, comment='Onboarding: groesster Schmerzpunkt')
     persoenlich         = Column(Text, comment='Onboarding: persoenliche Angaben')
@@ -96,11 +96,11 @@ class User(Base):
     live_calls_used     = Column(Integer, default=0, comment='Verbrauchte Live-Calls')
     trainings_used      = Column(Integer, default=0, comment='Verbrauchte Trainings')
     # Block 4: Notification prefs
-    notif_training_reminder = Column(Boolean, default=True)
-    notif_streak_warning    = Column(Boolean, default=True)
-    notif_achievements      = Column(Boolean, default=True)
-    notif_coach             = Column(Boolean, default=True)
-    notif_nudges            = Column(Boolean, default=True)
+    notif_training_reminder = Column(Boolean, default=True, comment='Notif-Praeferenz: Training-Reminder')
+    notif_streak_warning    = Column(Boolean, default=True, comment='Notif-Praeferenz: Streak-Warnung')
+    notif_achievements      = Column(Boolean, default=True, comment='Notif-Praeferenz: Achievements')
+    notif_coach             = Column(Boolean, default=True, comment='Notif-Praeferenz: Coach-Hinweise')
+    notif_nudges            = Column(Boolean, default=True, comment='Notif-Praeferenz: Nudges')
     # Block 4: Dashboard style
     dashboard_stil      = Column(Text, comment='Dashboard-Stil-Praeferenz (Legacy)')
     # Block 6: Changelog
@@ -142,7 +142,7 @@ class Profile(Base):
     name            = Column(String(200), nullable=False, comment='Profil-Name')
     branche         = Column(String(200), comment='Branche des Profils')
     daten           = Column(Text, comment='JSON-Methodik-Container (einwaende/phasen/gegenargumente/ki/kaufsignale)')   # JSON
-    erstellt_von    = Column(Integer, ForeignKey('users.id'))
+    erstellt_von    = Column(Integer, ForeignKey('users.id'), comment='Ersteller-User (FK users.id)')
     erstellt_am     = Column(DateTime, default=utcnow)
     aktualisiert_am = Column(DateTime, default=utcnow, onupdate=utcnow)
     consent_text    = Column(Text, nullable=True, comment='Editierbarer Consent-Vorlesetext (Phase 06)')  # Phase 06: editable consent Vorlesetext
@@ -210,7 +210,7 @@ class Invitation(Base):
     email       = Column(String(200), nullable=False, comment='Eingeladene Email-Adresse')
     token       = Column(String(256), unique=True, nullable=False, comment='Einladungs-Token (eindeutig)')
     erstellt_am = Column(DateTime, default=utcnow)
-    verwendet   = Column(Boolean, default=False)
+    verwendet   = Column(Boolean, default=False, comment='Flag: Einladung wurde bereits eingeloest')
 
 
 class BillingEvent(Base):
@@ -257,7 +257,7 @@ class TrainingScenario(Base):
     kunde_verhalten   = Column(Text, comment='Verhalten des simulierten Kunden')
     spezial_einwaende = Column(Text, comment='JSON-Array: spezielle Einwaende fuer dieses Szenario')   # JSON array of strings
     schwierigkeit     = Column(String(50), default='mittel', comment='Schwierigkeitsgrad: leicht/mittel/schwer')
-    erstellt_von      = Column(Integer, ForeignKey('users.id'))
+    erstellt_von      = Column(Integer, ForeignKey('users.id'), comment='Ersteller-User (FK users.id)')
     erstellt_am       = Column(DateTime, default=utcnow)
 
 
@@ -384,7 +384,7 @@ class Changelog(Base):
     inhalt          = Column(Text, nullable=False, comment='Inhalt/Beschreibung')
     typ             = Column(String(50), default='update', comment='Typ: major/feature/improvement/bugfix/security')  # major/feature/improvement/bugfix/security
     bekannte_bugs   = Column(Text, comment='JSON-Array: bekannte Bugs')   # JSON array
-    veroeffentlicht = Column(Boolean, default=True)
+    veroeffentlicht = Column(Boolean, default=True, comment='Sichtbarkeits-Flag: Changelog-Eintrag veroeffentlicht')
     created_at      = Column(DateTime, default=utcnow)
 
 
@@ -464,7 +464,7 @@ class Feedback(Base):
     rating            = Column(Integer, nullable=True, comment='Quick-Rating 1-5')       # 1-5 für Quick-Rating
     created_at        = Column(DateTime, default=utcnow, nullable=False)
     updated_at        = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
-    notification_sent = Column(Boolean, default=False, nullable=False)
+    notification_sent = Column(Boolean, default=False, nullable=False, comment='Flag: Benachrichtigung ueber dieses Feedback wurde versendet')
 
 
 class PlanningFeedbackLink(Base):
@@ -534,7 +534,7 @@ class ApiRate(Base):
     unit_type = Column(String(32), nullable=False, comment='Einheiten-Typ')
     price_per_unit = Column(Numeric(12, 8), nullable=False, comment='Preis pro Einheit')
     currency = Column(String(3), nullable=False, default='USD', comment='Waehrung')
-    active = Column(Boolean, default=True, nullable=False)
+    active = Column(Boolean, default=True, nullable=False, comment='Aktiv-Flag: nur die aktuell gueltige Rate ist aktiv (Historie ueber active)')
     last_checked_at = Column(DateTime, default=utcnow, nullable=False, comment='Zeitpunkt letzter Preis-Pruefung')
     source_url = Column(String(512), nullable=True, comment='Quell-URL der Preisangabe')
     created_at = Column(DateTime, default=utcnow, nullable=False)
@@ -546,7 +546,7 @@ class PriceChangeLog(Base):
     __table_args__ = ({'comment': 'Manuell erkannte API-Preisaenderungen mit Impact-Berechnung. Status: write-only [ZOMBIE]. Schreibt routes/admin_dashboard.py:434; kein Reader.'},)
     id = Column(Integer, primary_key=True)
     api_rate_id = Column(Integer, ForeignKey('api_rates.id'), nullable=False)
-    changed_at = Column(DateTime, default=utcnow, nullable=False, index=True)
+    changed_at = Column(DateTime, default=utcnow, nullable=False, index=True, comment='Zeitpunkt der Preisaenderung')
     old_rate = Column(Numeric(12, 8), nullable=False, comment='Alte Rate')
     new_rate = Column(Numeric(12, 8), nullable=False, comment='Neue Rate')
     currency = Column(String(3), nullable=False, default='USD', comment='Waehrung')
@@ -565,7 +565,7 @@ class FixedCost(Base):
     cycle = Column(String(16), nullable=False, comment="Abrechnungs-Zyklus: 'monthly'|'yearly'|'per_day'")  # 'monthly' | 'yearly' | 'per_day'
     skr03 = Column(String(8), nullable=True, comment='SKR03-Kontonummer')
     eur_line = Column(Integer, nullable=True, comment='EUER-Zeilennummer')
-    active = Column(Boolean, default=True, nullable=False)
+    active = Column(Boolean, default=True, nullable=False, comment='Aktiv-Flag: Fixkosten-Posten aktuell gueltig')
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
@@ -827,7 +827,7 @@ class AccountMemory(Base):
     tenant_id         = Column(UUID_TYPE, nullable=False)
     account_id        = Column(UUID_TYPE, nullable=True)
     contact_id        = Column(UUID_TYPE, nullable=True)
-    schema_version    = Column(SmallInteger, nullable=False, server_default='1')   # D-19
+    schema_version    = Column(SmallInteger, nullable=False, server_default='1', comment='Schema-Version des MEDDPICC-Memory-Datensatzes (D-19)')  # D-19
     # MEDDPICC 8 ASCII keys leben INSIDE der meddpicc JSONB:
     # metrics, economic_buyer, decision_criteria, decision_process, paper_process,
     # pain, champion, competition.
@@ -855,7 +855,7 @@ class Meeting(Base):
     call_id        = Column(UUID_TYPE, nullable=True, comment='Soft-Link zu public.calls.id, KEIN FK (D-08)')   # soft link zu public.calls.id, KEIN FK (D-08)
     scheduled_at   = Column(DateTime(timezone=True), nullable=True, comment='Geplanter Meeting-Zeitpunkt')
     notes          = Column(Text, nullable=True, comment='Meeting-Notizen')
-    schema_version = Column(SmallInteger, nullable=False, server_default='1')
+    schema_version = Column(SmallInteger, nullable=False, server_default='1', comment='Schema-Version des Meeting-Datensatzes')
     created_at     = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         Index('idx_meetings_tenant', 'tenant_id'),
@@ -876,7 +876,7 @@ class UserPreference(Base):
     tenant_id         = Column(UUID_TYPE, nullable=False)
     user_id           = Column(Integer, nullable=False)          # soft link zu public.users.id, KEIN FK (D-08); serverseitig aus g.user.id (MM-07)
     auto_save_meeting = Column(Boolean, nullable=False, server_default=text('false'), comment='DSGVO Opt-in (Art. 25 Abs. 2), default OFF, serverseitig gehonort')  # DSGVO default OFF
-    schema_version    = Column(SmallInteger, nullable=False, server_default='1')
+    schema_version    = Column(SmallInteger, nullable=False, server_default='1', comment='Schema-Version des User-Preference-Datensatzes')
     created_at        = Column(DateTime(timezone=True), server_default=func.now())
     updated_at        = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
@@ -907,7 +907,7 @@ class PreferencePair(Base):
     rating_rejected    = Column(SmallInteger, nullable=True, comment='Rating der rejected-Antwort')
     rationale          = Column(Text, nullable=True, comment='Begruendung der Praeferenz')
     split              = Column(Text, nullable=True, comment="Datensatz-Split: 'train'|'val'|'test' (CHECK ck_preference_pairs_split)")
-    schema_version     = Column(SmallInteger, nullable=False, server_default='1')   # D-19
+    schema_version     = Column(SmallInteger, nullable=False, server_default='1', comment='Schema-Version des Preference-Pair-Datensatzes (D-19)')  # D-19
     created_at         = Column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (
         CheckConstraint("split IN ('train', 'val', 'test') OR split IS NULL", name='ck_preference_pairs_split'),
