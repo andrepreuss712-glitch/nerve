@@ -2044,6 +2044,46 @@ Plans:
 
 ---
 
+## TAXO-Bau — drei Teile (NEU 2026-06-10, aus `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md`)
+
+> **Workflow (Andre-Direktive 2026-06-10):** Alle drei Teile (TAXO1/2/3) ZUERST bis kurz vor Execute bringen — je Spec → Discuss → Plan → Cross-AI-Review. Dann alle drei Pläne + Reviews nebeneinanderlegen und auf sauberes Ineinandergreifen prüfen (gemeinsamer Klebstoff = das `intent_event`-Schema, Gerüst §3). ERST danach Execute, einer nach dem anderen: TAXO1 → TAXO2 → TAXO3. Anti-Abrieb: nicht Teil 1 fertigbauen und dann merken, dass Teil 2 ihn anders braucht.
+> **Quell-Doc Pflicht-Pre-Read für jede Spec/Plan-Phase:** `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md` (der verriegelte Bauplan, Single Source of Truth). Real-Daten/Schema-Pulls IMMER gegen Production (`inspect.sh`), kein Local-Dev. SCHILD-Guard bei Tabellen-Änderungen MANUELL laufen lassen (Auto-Blockade inert bis 08.23.2.STAGING — Tor-Fix).
+
+### Phase 08.23.2.TAXO1: Verstehen — Fundament + Erkennung (NEU 2026-06-10) 🔴
+
+**Goal:** Das Fundament UND das Herz "was sagt der Kunde gerade". Eine neue zentrale Ereignis-Tabelle `intent_event` als Single Source of Truth, die alten Test-Daten-Tabellen per Zombie-Rename aus dem Weg, das Drei-Bahnen-Gerüst als Klempnerei, und die Einsortier-Logik (Taxonomie + Modi) darauf umgestellt.
+
+**Scope (Gerüst §0.1 / §1-3 / §5):** (1) `intent_event` hybrides Schema (indizierte Spalten: event_id/session_id/call_id/mode/timestamp/intent_type/phase/handling_score_numeric/confidence + JSONB payload; alle 4+3 Pflichtfelder ab Tag 1 — Gerüst §3); (2) Zombie-Rename der 6 Call-Analyse-Tabellen (`conversation_logs` + 5 Kinder: calls/call_events/objection_events/ewb_ratings/transcript_segments; FK-Rückgrat-Reihenfolge, Inventur §F; `zombie_`-Prefix + [ZOMBIE]-Schild, NICHT droppen); (3) Drei-Bahnen-Gerüst (Fast/Medium/Slow Lane) — Slow-Lane = `queue.Queue` + Daemon-Consumer, Interface gekapselt (Adapter → Redis-Zukunft), Graceful-Shutdown-Flush in DB (Bau-Regel 2); intent_event read-only für Live-Bahnen, Slow Lane arbeitet auf Kopie + separates Score-Objekt (Bau-Regel 1); (4) Taxonomie §1 (Intent-Schubladen inkl. Gemini-Ergänzungen + custom_objection_*) + Modi §2 (Audibility-Contract als deklarative Routing-Tabelle, Modus-Registry/Strategy-Pattern, Single-Speaker-Echo-Regeln + Konfidenz-Deckel) auf intent_event umstellen; (5) Single-Source-Putzliste falten (§0.1): `user_id` (claude_service.py:452 global→per-SID, Prod 164× Warn), `current_phase` (:1012 write / :1085 read), `cold_call_inference` (:1071/:1086), `kw_fired_for_line` (REVERSE matcher:253/claude:1265) + Cross-Session-Globale (score_factors_seen/last_einwand_typ/kaufbereitschaft/readiness_*) auf EINE per-SID-Quelle, alte globale Pfade LÖSCHEN; (6) ewb-Varianten-Frage auflösen (user_id-Fix bestimmt v1-legacy vs v2-modular; ENV `PROMPT_EWB_VERSION_OVERRIDE` als Notschalter). org_id (K8) wandert als Teil dieser Konsolidierung mit (COST-ATTRIB).
+
+**Depends on:** 08.23.2.SCHILD (Boden dokumentiert) — DONE.
+**Blocker für:** TAXO2 + TAXO3 (beide referenzieren das `intent_event`-Schema). **Execute zuerst.**
+**Komplexität:** 🔴 — Schema-weite Migration + Live-Pfad-Umbau + Single-Source-Konsolidierung. Cross-AI **Pflicht**. Real-Daten-Validation (Punkt 13) + Persistenz-Schicht-Audit (Punkt 21) + Pflicht-grep (Punkt 20) Pflicht.
+**Plans:** TBD (Plan-Phase)
+
+### Phase 08.23.2.TAXO2: Bewerten — EINE Noten-Engine (NEU 2026-06-10) 🔴
+
+**Goal:** EINE rubrik-basierte Noten-Engine (BARS) ersetzt die ZWEI driftenden Alt-Systeme (Live-Formel `app_routes.py:735` + Training-7-Kategorien `training_service.py:1122`). Tötet den Redeanteil-0%-Bug an der Wurzel.
+
+**Scope (Gerüst §4 / §5 Slow Lane):** (1) EINE `rubric_score`-Tabelle, Live + Training schreiben rein (Single Source, ersetzt beide Alt-Systeme); (2) Dimensionen aus der Taxonomie abgeleitet (Vorwand-Behandlung, Kaufsignal-Nutzung, Aufschub-Behandlung, Phasen-Technik-Passung, Fragen-Qualität, Gesprächsführung, Outcome-Progression) als DB-Daten mit je 3 BARS-Stufen; (3) **Proration statt Null-Strafe** — nicht-messbare Dimension (Redeanteil im Single-Speaker) → available=false → Restgewichte renormalisieren auf 100%; <50% verfügbar → kein Gesamtscore, nur Teil-Dimensionen (tötet K2 `frage_qualitaet=0.0` + Block-J-Redeanteil); (4) Speech-Stats-Fix K1 (live_session.py:867 globale Zähler tot → per-SID-Quelle live_session.py:684-693) speist Note + ambienten Tempo-Regler; (5) `handling_score` 1-3 v1 regel-/marker-basiert + großzügige Abstention, LLM-Verhaltens-Urteil NUR async auf Slow Lane (Gemini-Fix gegen Zirkelschluss + unfaire Noten); (6) Vertrauens-Regeln (Kluger&DeNisi 1996): Breakdown + Transkript-Beleg statt nackter Zahl, "nicht gewertet"-Hinweis sichtbar, Low-Confidence als "vorläufig", ein erreichbares Ziel pro Call. Training-Ground-Truth (gespielter vs. erkannter Intent) als objektiver Anker.
+
+**Depends on:** 08.23.2.TAXO1 (`intent_event`-Schema + Slow Lane).
+**Komplexität:** 🔴 — Schema + Scoring-Logik (ersetzt 2 Systeme). Cross-AI **Pflicht**. Real-Daten-Validation Pflicht.
+**Plans:** TBD (Plan-Phase)
+
+### Phase 08.23.2.TAXO3: Antworten — EINE Wissensversorgung (Säule 3) (NEU 2026-06-10) 🔴
+
+**Goal:** EINE `build_answer_context()`-Funktion für ALLE KI-Antwort-Pfade (QA-Pipeline, manueller Knopf, Auto-Variante) — kein Antwort-Pfad mehr ohne Profil-Persona + Voice-Anker. Die kontext-arme hardcoded Auto-Variante stirbt.
+
+**Scope (Gerüst §4.5 / §5 Bau-Regel 3):** (1) `build_answer_context()` bauen, kontext-arme hardcoded Auto-Variante LÖSCHEN (Single Source, Konstrukt §2 "jede Antwort = voller Kontext"); (2) lokale Slot-A-Stichwort-Antwort BLEIBT (schnelle Bahn, Sofort-Netz aus Profil in User-Stimme); (3) kuratiertes Intent→Technik→Fakten-Mapping als editierbare Config (JSON/DB, NICHT hardcoded in Python) — die Taxonomie IST die Routing-Tabelle, KEIN RAG/Vektor-DB; (4) Technik als unsichtbares Gerüst in der Instruktion (NIE als Vokabular), Stimm-Erhalt via Few-Shot, 3-5 Standard-B2B-Beispiele für Kaltstart (User-eigene Stimm-Beispiele Post-Launch); (5) immer EIN Intent ans LLM (der wahrscheinlichste, kein Top-2-Hedging); (6) Modus + Konfidenz als EIN Parameter in derselben Funktion (Cold Call vorsichtiger, Meeting tiefer, Training Ground-Truth — kein Code-Zweig); (7) Produktwissen als strukturierte intent-getaggte FAQ mit IDs + "reguliert/riskant"-Flag + Grounding-Regel (KEINE Live-Web-Recherche in der Live-Schleife); (8) deterministische Single-Source-pro-Fenster (Slot B per line_id/Event-ID dedupliziert — behebt D3 Doppel-Emit keyword_einwand_match + qa_slot1, Bau-Regel 3). DEFERRED (Post-Launch): Prompt-Caching (Trigger gemessene Latenz+Call-Dichte), Top-2-Laden, User-Stimm-Onboarding.
+
+**Depends on:** 08.23.2.TAXO1 (`intent_event`-Schema; nutzt primary_intent + confidence + mode).
+**Komplexität:** 🔴 — berührt jeden Live-Antwort-Pfad. Cross-AI **Pflicht**. Context7 für SDK-Calls (Anthropic). Real-Daten-Validation Pflicht.
+**Plans:** TBD (Plan-Phase)
+
+> ⚠️ Multi-Segment-ID-Gotcha (wie SCHILD): Pfade auf `.planning/phases/08.23.2.TAXO1-*/` etc. hartkodieren. Verify=Production, kein Local-Dev. Plan-Pflicht-Sektionen Punkt 14 (Control-Flow) + Punkt 21 (Persistenz-Schicht) bei jedem Code-Insert.
+
+---
+
 ## Backlog
 
 > Unsequenzierte Ideen (999.x), noch nicht in der aktiven Phasen-Reihenfolge. Promoten via `/gsd-review-backlog`.
