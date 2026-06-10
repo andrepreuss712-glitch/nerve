@@ -4,7 +4,7 @@
 
 ## Was du gerade reviewst
 
-NERVE — ein KI-gestützter SaaS-Vertriebsassistent für Cold-Calls (Deutsch, DACH-Markt, Pre-Launch). Solo-Founder-Projekt von André Preuß. Aktuell **Stabilisierungs-Phase** vor EA-Launch (50 Plätze, 50% Gründerrabatt).
+NERVE — ein KI-gestützter SaaS-Vertriebsassistent für Cold-Calls (Deutsch, DACH-Markt, Pre-Launch). Solo-Founder-Projekt. Aktuell **Stabilisierungs-Phase** vor EA-Launch (50 Plätze, 50% Gründerrabatt).
 
 ## Stack (du musst die Codebase nicht raten)
 
