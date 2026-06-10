@@ -156,3 +156,35 @@ def anon_worker_pg_engine():
         yield engine
     finally:
         engine.dispose()
+
+
+# ── Phase 08.23.2.SCHILD Wave 4 — read-only pg_description guard connection ──
+# The Schild-Guard (tests/test_schild_guard.py) verifies that every table + non-trivial column in
+# public/crm/training carries a Postgres COMMENT (>=10 chars) in pg_description. It MUST run against
+# REAL Postgres -- SQLite has no schemas/COMMENTs (a SQLite branch would be a FALSE-GREEN,
+# RESEARCH §1.3). pg_description is a world-readable catalog, so plain nerve_app suffices WITHOUT any
+# GRANT (proven in Plan 01 / DISCOVERY-DECISIONS.md via a SET ROLE + obj_description ROLLBACK test:
+# GUARD_ROLE=nerve_app). When the DSN is absent (local/SQLite) the guard SKIPS -- never falls back.
+#
+# Expected env var (server-side; name LOCKED in DISCOVERY-DECISIONS.md key `DSN_ENV_VAR:`):
+#   NERVE_SCHILD_TEST_DSN  -- set it to the value of DATABASE_URL from /etc/nerve/.env
+#                            (postgresql://nerve_app:<pw>@/nerve, Unix socket). Read-only catalog use.
+@pytest.fixture
+def schild_guard_pg_conn():
+    dsn = os.environ.get('NERVE_SCHILD_TEST_DSN')
+    if not dsn:
+        pytest.skip(
+            "NERVE_SCHILD_TEST_DSN not set -- Schild-Guard requires a real-PG connection that can read "
+            "pg_description of public/crm/training (no SQLite fallback by design, RESEARCH §1.3). "
+            "Run server-side: NERVE_SCHILD_TEST_DSN=$(grep ^DATABASE_URL= /etc/nerve/.env | cut -d= -f2-)"
+        )
+    try:
+        import psycopg2
+    except ImportError:
+        pytest.skip("psycopg2 not installed -- Schild-Guard requires real Postgres.")
+    conn = psycopg2.connect(dsn)
+    conn.autocommit = True  # read-only catalog queries; no transaction needed
+    try:
+        yield conn
+    finally:
+        conn.close()
