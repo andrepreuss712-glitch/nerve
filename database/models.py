@@ -136,56 +136,60 @@ class User(Base):
 
 class Profile(Base):
     __tablename__ = 'profiles'
+    __table_args__ = ({'comment': 'Verkaeufer-Wissen/Methodik-Profil je Organisation (JSON-Methodik-Container daten). Status: lebt. Schreibt/liest routes/profiles.py; daten gelesen in live_session.set_active_profile.'},)
     id              = Column(Integer, primary_key=True)
     org_id          = Column(Integer, ForeignKey('organisations.id'), nullable=False)
-    name            = Column(String(200), nullable=False)
-    branche         = Column(String(200))
-    daten           = Column(Text)   # JSON
+    name            = Column(String(200), nullable=False, comment='Profil-Name')
+    branche         = Column(String(200), comment='Branche des Profils')
+    daten           = Column(Text, comment='JSON-Methodik-Container (einwaende/phasen/gegenargumente/ki/kaufsignale)')   # JSON
     erstellt_von    = Column(Integer, ForeignKey('users.id'))
     erstellt_am     = Column(DateTime, default=utcnow)
     aktualisiert_am = Column(DateTime, default=utcnow, onupdate=utcnow)
-    consent_text    = Column(Text, nullable=True)  # Phase 06: editable consent Vorlesetext
+    consent_text    = Column(Text, nullable=True, comment='Editierbarer Consent-Vorlesetext (Phase 06)')  # Phase 06: editable consent Vorlesetext
 
 
 class ProfileSkript(Base):
     __tablename__ = 'profile_skripte'
+    __table_args__ = ({'comment': 'Skript-Bausteine je Profil (Gespraechsleitfaeden, ggf. personalisiert). Status: lebt. Schreibt/liest routes/profiles.py; PreCall-Personalisierung in services/.'},)
     id          = Column(Integer, primary_key=True)
     profile_id  = Column(Integer, ForeignKey('profiles.id'), nullable=False)
-    name        = Column(String(200), nullable=False)
-    inhalt      = Column(Text)
-    sortierung  = Column(Integer, default=0)
+    name        = Column(String(200), nullable=False, comment='Skript-Name')
+    inhalt      = Column(Text, comment='Skript-Inhalt')
+    sortierung  = Column(Integer, default=0, comment='Sortier-Reihenfolge')
     created_at  = Column(DateTime, default=utcnow)
-    parent_id             = Column(Integer, nullable=True)              # D-04: kein FK-Constraint; zeigt auf Quell-Item (ProfileSkript oder ProfileOpener id)
+    parent_id             = Column(Integer, nullable=True, comment='Quell-Item-ID (ProfileSkript/ProfileOpener); D-04: kein FK-Constraint')              # D-04: kein FK-Constraint; zeigt auf Quell-Item (ProfileSkript oder ProfileOpener id)
     is_personalized       = Column(Boolean, default=False, nullable=False)
-    briefing_source_firma = Column(String(200), nullable=True)
+    briefing_source_firma = Column(String(200), nullable=True, comment='Firma aus PreCall-Briefing (Personalisierungs-Quelle)')
 
 
 # ── Phase 08.5: FAQ-Feld pro Profil (D-13) ───────────────────────────────────
 
 class ProfileFaq(Base):
     __tablename__ = 'profile_faqs'
+    __table_args__ = ({'comment': 'FAQ-Eintraege je Profil (Frage-Muster -> Antwort, fuer Live-Antwort-Vorschlaege). Status: lebt. Schreibt/liest routes/profiles.py; gelesen im Live-Loop services/.'},)
     id           = Column(Integer, primary_key=True)
     profile_id   = Column(Integer, ForeignKey('profiles.id'), nullable=False)
-    frage_muster = Column(Text, nullable=False)
-    antwort      = Column(Text, nullable=False)
-    kategorie    = Column(String(100), nullable=True)   # Technik/Preis/Referenzen/DSGVO/Produkt/Sonstiges
+    frage_muster = Column(Text, nullable=False, comment='Frage-Muster, gegen das gematcht wird')
+    antwort      = Column(Text, nullable=False, comment='Hinterlegte Antwort')
+    kategorie    = Column(String(100), nullable=True, comment='Kategorie: Technik/Preis/Referenzen/DSGVO/Produkt/Sonstiges')   # Technik/Preis/Referenzen/DSGVO/Produkt/Sonstiges
     created_at   = Column(DateTime, default=utcnow)
-    used_count   = Column(Integer, default=0, nullable=False)
-    mode         = Column(String(20), nullable=False, default='ki_generated')
+    used_count   = Column(Integer, default=0, nullable=False, comment='Verwendungs-Zaehler')
+    mode         = Column(String(20), nullable=False, default='ki_generated', comment='Herkunft: ki_generated vs. manuell')
 
 
 class ProfileOpener(Base):
     __tablename__ = 'profile_opener'
+    __table_args__ = ({'comment': 'Gespraechs-Opener/Einstiegs-Bausteine je Profil (ggf. personalisiert). Status: lebt. Schreibt/liest routes/profiles.py; PreCall-Personalisierung in services/.'},)
     id          = Column(Integer, primary_key=True)
     profile_id  = Column(Integer, ForeignKey('profiles.id'), nullable=False)
-    name        = Column(String(200), nullable=False)
-    inhalt      = Column(Text)
-    sortierung  = Column(Integer, default=0)
-    type        = Column(String(20), nullable=False, server_default='opener')
+    name        = Column(String(200), nullable=False, comment='Opener-Name')
+    inhalt      = Column(Text, comment='Opener-Inhalt')
+    sortierung  = Column(Integer, default=0, comment='Sortier-Reihenfolge')
+    type        = Column(String(20), nullable=False, server_default='opener', comment='Typ des Bausteins (z.B. opener)')
     created_at  = Column(DateTime, default=utcnow)
     parent_id             = Column(Integer, ForeignKey('profile_opener.id'), nullable=True)
     is_personalized       = Column(Boolean, default=False, nullable=False)
-    briefing_source_firma = Column(String(200), nullable=True)
+    briefing_source_firma = Column(String(200), nullable=True, comment='Firma aus PreCall-Briefing (Personalisierungs-Quelle)')
 
 
 class Session(Base):
@@ -244,29 +248,31 @@ class CoachAssignment(Base):
 
 class TrainingScenario(Base):
     __tablename__ = 'training_scenarios'
+    __table_args__ = ({'comment': 'Trainings-Szenario-Konfiguration je Organisation (Kunden-Situation/Verhalten/Einwaende fuer KI-Training). Status: lebt. Schreibt/liest routes/training.py; gelesen in services/training_service.py.'},)
     id                = Column(Integer, primary_key=True)
     org_id            = Column(Integer, ForeignKey('organisations.id'), nullable=False)
-    name              = Column(String(200), nullable=False)
-    beschreibung      = Column(Text)
-    kunde_situation   = Column(Text)
-    kunde_verhalten   = Column(Text)
-    spezial_einwaende = Column(Text)   # JSON array of strings
-    schwierigkeit     = Column(String(50), default='mittel')
+    name              = Column(String(200), nullable=False, comment='Szenario-Name')
+    beschreibung      = Column(Text, comment='Szenario-Beschreibung')
+    kunde_situation   = Column(Text, comment='Situation des simulierten Kunden')
+    kunde_verhalten   = Column(Text, comment='Verhalten des simulierten Kunden')
+    spezial_einwaende = Column(Text, comment='JSON-Array: spezielle Einwaende fuer dieses Szenario')   # JSON array of strings
+    schwierigkeit     = Column(String(50), default='mittel', comment='Schwierigkeitsgrad: leicht/mittel/schwer')
     erstellt_von      = Column(Integer, ForeignKey('users.id'))
     erstellt_am       = Column(DateTime, default=utcnow)
 
 
 class PersonalityType(Base):
     __tablename__ = 'personality_types'
+    __table_args__ = ({'comment': 'Persoenlichkeitstyp-Konfiguration fuer Personality-driven Training (Standard + Custom). Status: lebt. Schreibt/liest routes/training.py; gelesen im Trainings-Loop services/.'},)
     id               = Column(Integer, primary_key=True)
     user_id          = Column(Integer, ForeignKey('users.id'), nullable=True)
     org_id           = Column(Integer, ForeignKey('organisations.id'), nullable=True)
     is_custom        = Column(Boolean, default=False, nullable=False)
-    name             = Column(String(100), nullable=False)
-    icon             = Column(String(10), nullable=True)
-    kurzbeschreibung = Column(String(300), nullable=True)
-    attribute        = Column(Text, nullable=False)  # JSON
-    kommentar        = Column(Text, nullable=True)
+    name             = Column(String(100), nullable=False, comment='Name des Persoenlichkeitstyps')
+    icon             = Column(String(10), nullable=True, comment='Icon/Emoji des Typs')
+    kurzbeschreibung = Column(String(300), nullable=True, comment='Kurzbeschreibung des Typs')
+    attribute        = Column(Text, nullable=False, comment='JSON: Verhaltens-Attribute des Typs')  # JSON
+    kommentar        = Column(Text, nullable=True, comment='Freitext-Kommentar')
     erstellt_am      = Column(DateTime, default=utcnow)
 
 
@@ -620,18 +626,19 @@ class LearningCard(Base):
 
 class CoachingReport(Base):
     __tablename__ = 'coaching_reports'
+    __table_args__ = ({'comment': 'Woechentlicher Coaching-Report je User (Read-Through-Cache). Status: lebt (Read-Through-Wochen-Cache, D-03 — NICHT write-only). Schreibt services/coaching_service.py:351; liest services/coaching_service.py:195 + Dashboard.'},)
     id                  = Column(Integer, primary_key=True)
     user_id             = Column(Integer, ForeignKey('users.id'), nullable=False)
-    period_start        = Column(Date, nullable=False)
-    period_end          = Column(Date, nullable=False)
-    calls_count         = Column(Integer, default=0)
-    avg_readiness_score = Column(Float, nullable=True)
-    strongest_phase     = Column(String(100), nullable=True)
-    weakest_phase       = Column(String(100), nullable=True)
-    talk_ratio_user     = Column(Float, nullable=True)
-    talk_ratio_customer = Column(Float, nullable=True)
-    report_text         = Column(Text, nullable=True)
-    suggested_card_json = Column(Text, nullable=True)
+    period_start        = Column(Date, nullable=False, comment='Wochen-Start des Report-Zeitraums')
+    period_end          = Column(Date, nullable=False, comment='Wochen-Ende des Report-Zeitraums')
+    calls_count         = Column(Integer, default=0, comment='Anzahl Calls im Zeitraum')
+    avg_readiness_score = Column(Float, nullable=True, comment='Durchschnittlicher Readiness-Score im Zeitraum')
+    strongest_phase     = Column(String(100), nullable=True, comment='Staerkste Gespraechsphase')
+    weakest_phase       = Column(String(100), nullable=True, comment='Schwaechste Gespraechsphase')
+    talk_ratio_user     = Column(Float, nullable=True, comment='Redeanteil Berater')
+    talk_ratio_customer = Column(Float, nullable=True, comment='Redeanteil Kunde')
+    report_text         = Column(Text, nullable=True, comment='Generierter Coaching-Report-Text (Dashboard-Anzeige)')
+    suggested_card_json = Column(Text, nullable=True, comment='JSON: vorgeschlagene Lernkarte aus dem Report')
     created_at          = Column(DateTime, default=utcnow)
 
 
