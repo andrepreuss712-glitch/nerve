@@ -2020,6 +2020,30 @@ Plans:
 
 ---
 
+### Phase 08.23.2.SCHILD: Tabellen-Dokumentations-Pflicht — "Schild an jeder Tabelle" (NEU 2026-06-10, aus TAXO-Gerüst §0.2) 🔴 VOR dem TAXO-Bau
+
+**Goal:** Jede DB-Tabelle (~44, Schemas public/crm/training) + jede nicht-triviale Spalte bekommt ein selbst-erklärendes "Schild" (Postgres-`COMMENT`): Zweck (Business-Logik), Status (lebt/Reserve/Zombie), wer liest/schreibt (Code-Pfade). Schild lebt im Code (`models.py` `comment=`) → Alembic-Migration schiebt es in die DB. pytest-Guard blockt künftig den Deploy, wenn eine Tabelle/Spalte kein Schild hat. `inspect.sh schilder` zeigt Schild + Migrations-Historie. Regel §0.2 in `salesnerve/CLAUDE.md` verankert. **Doku-Grundlage VOR dem TAXO-Bau** — macht spätere Zombie-Renames + Tabellen-Konsolidierungen sicher ("kein Raten mehr ob tot oder lebendig").
+
+**Scope (7 Punkte, Detail in CONTEXT.md):** (1) `comment=` für jede Tabelle + nicht-triviale Spalte in `database/models.py` (Trivial-Konvention: id/created_at/updated_at/erstellt_am/aktualisiert_am/*_id/is_*/aktiv/UUID-PK ausgenommen); (2) Alembic-Migration (autogenerate; `training.transcript_archive` hat KEIN ORM-Model → COMMENT direkt in Migration/DDL); (3) pytest-Guard über `pg_description` auf ALLEN Schemas (Test-Connection braucht search_path + USAGE auf crm+training; KEIN FK-im-Text-Abgleich; failt bei fehlendem/<10-Zeichen-Schild); (4) `inspect.sh schilder`-Befehl; (5) §0.2 in `salesnerve/CLAUDE.md`; (6) Roadmap-Sync beide Roadmaps (erledigt); (7) Cross-AI vor Execute.
+
+**PFLICHT:** §G-Schild-Entwürfe (Aufräum-Inventur) sind KANDIDATEN — jeden Status vor Festschreibung selbst greppen (Punkt 20/22). Bekannte Korrekturen: `AccountMemory` LEBT (precall_service.py:175), `coaching_reports` LEBT (Cache, dashboard.py:599). NICHT löschen: write-only/Zombie-Funde (sessions, feedback_events, price_change_log, learning_events) nur als [ZOMBIE]/Status markieren. Foundation-Tabellen (crm.account_memory, training.preference_pairs, training.transcript_archive, tenant_orgs) ins Foundation-Code-Register.
+
+**Quell-Docs:** `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md` §0.2 · `Nerve-Vault/03 Planung/TAXO Aufräum-Inventur (Verständnis + Scoring).md` §G.
+**Depends on:** — (eigenständige Doku-Phase; KEIN Code-Verhalten geändert)
+**Blocker für:** TAXO-Bau (Zombie-Rename + Single-Source-Konsolidierung + intent_event + Scoring-Rubrik + Drei-Bahnen)
+**Komplexität:** 🔴 — Schema-Migration DB-weit + neue Test-Infrastruktur. Cross-AI **Pflicht** vor Execute.
+**Plans:** 6 plans (6 Wellen — models.py-Edits serialisieren da EINE Datei; Guard wird VOR der Migration gebaut/ROT beobachtet, Migration flippt ihn GRUEN; inspect.sh+CLAUDE.md zuletzt)
+- [ ] 08.23.2.SCHILD-01-discovery-db-rolle-autogenerate-PLAN.md — Discovery: DB-Rolle pg_description (3 Schemas) + MIGRATION_STYLE + include_schemas-Filter + Provisioning-SQL gegen Production beweisen (Wave 1)
+- [ ] 08.23.2.SCHILD-02-schilder-cluster-call-infra-PLAN.md — comment= Cluster Call-Analyse + Identitaet/Abrechnung/Infra + Punkt-20-grep-Status (Wave 2)
+- [ ] 08.23.2.SCHILD-03-schilder-cluster-wissen-crm-training-PLAN.md — comment= Cluster Verkaeufer-Wissen + crm + training-ORM (Wave 3)
+- [ ] 08.23.2.SCHILD-05-guard-inspect-claudemd-PLAN.md — pytest-Schild-Guard + conftest-Fixture (pg_description, 3 Schemas), server-seitig ROT beobachtet VOR Migration (Wave 4)
+- [ ] 08.23.2.SCHILD-04-migration-foundation-register-PLAN.md — env.py include_schemas + Migration 0015 (autogen/op.execute + transcript_archive) + Foundation-Register D-05; flippt Guard GRUEN (Wave 5)
+- [ ] 08.23.2.SCHILD-06-inspect-claudemd-PLAN.md — inspect.sh schilder (beide Connection-Faelle) + salesnerve/CLAUDE.md Punkt 23; traegt den Cross-AI-Gate Terminal-Block (Wave 6)
+
+> ⚠️ Multi-Segment-ID-Gotcha: Pfade hartkodieren auf `.planning/phases/08.23.2.SCHILD-tabellen-dokumentations-pflicht/`. Verify=Production (`deploy.sh production` + `inspect.sh schilder`), kein Local-Dev.
+
+---
+
 ## Backlog
 
 > Unsequenzierte Ideen (999.x), noch nicht in der aktiven Phasen-Reihenfolge. Promoten via `/gsd-review-backlog`.
