@@ -18,56 +18,58 @@ def utcnow():
 
 class Organisation(Base):
     __tablename__ = 'organisations'
+    __table_args__ = ({'comment': 'Mandant/Organisation = Abrechnungs- und Daten-Isolations-Einheit (Plan, Fair-Use, Stripe). Status: lebt (Kern-Identitaet). Schreibt/liest routes/auth.py, routes/billing/-Pfade und services/.'},)
     id                   = Column(Integer, primary_key=True)
-    name                 = Column(String(200), nullable=False)
-    plan                 = Column(String(50), default='starter')  # starter/team/business/enterprise
-    max_users            = Column(Integer, default=5)
-    billing_email        = Column(String(200))
+    name                 = Column(String(200), nullable=False, comment='Organisations-Name')
+    plan                 = Column(String(50), default='starter', comment='Plan: starter/team/business/enterprise')
+    max_users            = Column(Integer, default=5, comment='Maximale Nutzerzahl im Plan')
+    billing_email        = Column(String(200), comment='Rechnungs-Email')
     aktiv                = Column(Boolean, default=True)
     erstellt_am          = Column(DateTime, default=utcnow)
-    naechste_abrechnung  = Column(DateTime)
-    trial_starts_at      = Column(DateTime, nullable=True)
+    naechste_abrechnung  = Column(DateTime, comment='Naechster Abrechnungstermin')
+    trial_starts_at      = Column(DateTime, nullable=True, comment='Trial-Startzeitpunkt')
     coach_id             = Column(Integer, ForeignKey('users.id'), nullable=True)
-    dsgvo_modus          = Column(Boolean, default=True)
+    dsgvo_modus          = Column(Boolean, default=True, comment='DSGVO-Modus aktiv (kein woertliches Mitschneiden)')
     # Block 3: Modulares Pricing
-    plan_typ             = Column(String(50), default='bundle')   # training/live/bundle/coach
-    training_free_calls  = Column(Integer, default=5)
-    live_free_trainings  = Column(Integer, default=3)
+    plan_typ             = Column(String(50), default='bundle', comment='Plan-Typ: training/live/bundle/coach')
+    training_free_calls  = Column(Integer, default=5, comment='Freie Trainings-Calls')
+    live_free_trainings  = Column(Integer, default=3, comment='Freie Live-Trainings')
     # Block 4: Self-Service / Billing
-    billing_name         = Column(String(200))
-    billing_street       = Column(String(200))
-    billing_zip          = Column(String(20))
-    billing_city         = Column(String(100))
-    billing_country      = Column(String(100), default='Deutschland')
-    billing_vat_id       = Column(String(50))
-    cancelled_at         = Column(DateTime)
-    cancel_reason        = Column(Text)
-    cancel_feedback      = Column(Text)
+    billing_name         = Column(String(200), comment='Rechnungs-Name')
+    billing_street       = Column(String(200), comment='Rechnungs-Strasse')
+    billing_zip          = Column(String(20), comment='Rechnungs-PLZ')
+    billing_city         = Column(String(100), comment='Rechnungs-Stadt')
+    billing_country      = Column(String(100), default='Deutschland', comment='Rechnungs-Land')
+    billing_vat_id       = Column(String(50), comment='USt-IdNr.')
+    cancelled_at         = Column(DateTime, comment='Kuendigungszeitpunkt')
+    cancel_reason        = Column(Text, comment='Kuendigungsgrund')
+    cancel_feedback      = Column(Text, comment='Kuendigungs-Feedback')
     # Block 5: Early Access
     is_early_access      = Column(Boolean, default=False)
-    early_access_discount = Column(Integer, default=50)
+    early_access_discount = Column(Integer, default=50, comment='Early-Access-Rabatt in Prozent')
     # Block 6: Flat-Rate Pricing
-    minuten_limit        = Column(Integer, default=1000)   # Fair-Use pro User/Monat
-    training_voice_limit = Column(Integer, default=50)     # TTS-Trainings pro User/Monat
-    plan_preis           = Column(Integer, default=49)     # Euro/Monat Flat-Rate
+    minuten_limit        = Column(Integer, default=1000, comment='Fair-Use Minuten-Limit pro User/Monat')   # Fair-Use pro User/Monat
+    training_voice_limit = Column(Integer, default=50, comment='TTS-Trainings-Limit pro User/Monat')     # TTS-Trainings pro User/Monat
+    plan_preis           = Column(Integer, default=49, comment='Flat-Rate-Preis in Euro/Monat')     # Euro/Monat Flat-Rate
     # Fair-Use Tracking (org-level, resets monthly)
-    live_minutes_used      = Column(Integer, default=0)    # Live-Minuten verbraucht diesen Monat
-    training_sessions_used = Column(Integer, default=0)    # Trainings gestartet diesen Monat
-    fair_use_reset_month   = Column(String(7))             # e.g. '2026-04'
+    live_minutes_used      = Column(Integer, default=0, comment='Verbrauchte Live-Minuten diesen Monat')    # Live-Minuten verbraucht diesen Monat
+    training_sessions_used = Column(Integer, default=0, comment='Gestartete Trainings diesen Monat')    # Trainings gestartet diesen Monat
+    fair_use_reset_month   = Column(String(7), comment="Fair-Use-Reset-Monat, z.B. '2026-04'")             # e.g. '2026-04'
     # Block 7: Stripe Integration
-    stripe_customer_id     = Column(String(100))
-    stripe_subscription_id = Column(String(100))
-    stripe_price_id        = Column(String(100))
-    subscription_status    = Column(String(50), default='inactive')
+    stripe_customer_id     = Column(String(100), comment='Stripe Customer-ID')
+    stripe_subscription_id = Column(String(100), comment='Stripe Subscription-ID')
+    stripe_price_id        = Column(String(100), comment='Stripe Price-ID')
+    subscription_status    = Column(String(50), default='inactive', comment='Subscription-Status')
 
 
 class User(Base):
     __tablename__ = 'users'
+    __table_args__ = ({'comment': 'Nutzer-Konto innerhalb einer Organisation (Auth, Rolle, Onboarding, Usage, OAuth). Status: lebt (Kern-Identitaet). Schreibt/liest routes/auth.py, routes/onboarding/, services/ ueberall via g.user.'},)
     id                  = Column(Integer, primary_key=True)
     org_id              = Column(Integer, ForeignKey('organisations.id'), nullable=False)
-    email               = Column(String(200), unique=True, nullable=False)
-    passwort_hash       = Column(String(256), nullable=True)  # Phase 04.6.1: nullable für OAuth-User. SQLite Tabellen-NOT-NULL bleibt — OAuth-Flow setzt '' als Sentinel.
-    rolle               = Column(String(50), default='member')  # owner/admin/member
+    email               = Column(String(200), unique=True, nullable=False, comment='Login-Email (eindeutig)')
+    passwort_hash       = Column(String(256), nullable=True, comment="Passwort-Hash; nullable fuer OAuth-User (OAuth setzt '' als Sentinel)")  # Phase 04.6.1: nullable für OAuth-User. SQLite Tabellen-NOT-NULL bleibt — OAuth-Flow setzt '' als Sentinel.
+    rolle               = Column(String(50), default='member', comment='Rolle: owner/admin/member')  # owner/admin/member
     is_superadmin       = Column(Boolean, default=False, nullable=False)
     aktiv               = Column(Boolean, default=True)
     erstellt_am         = Column(DateTime, default=utcnow)
@@ -78,21 +80,21 @@ class User(Base):
     is_coach            = Column(Boolean, default=False)
     is_test_user        = Column(Boolean, default=False, nullable=False)
     # Block 1: Onboarding
-    vorname             = Column(String(100))
-    nachname            = Column(String(100))
+    vorname             = Column(String(100), comment='Vorname')
+    nachname            = Column(String(100), comment='Nachname')
     onboarding_done     = Column(Boolean, default=False)
-    erfahrungslevel     = Column(String(50))   # einsteiger/fortgeschritten/profi
-    schmerzpunkt        = Column(Text)
-    persoenlich         = Column(Text)
+    erfahrungslevel     = Column(String(50), comment='Erfahrungslevel: einsteiger/fortgeschritten/profi')   # einsteiger/fortgeschritten/profi
+    schmerzpunkt        = Column(Text, comment='Onboarding: groesster Schmerzpunkt')
+    persoenlich         = Column(Text, comment='Onboarding: persoenliche Angaben')
     # Block 2: Gamification
-    streak_count        = Column(Integer, default=0)
-    streak_last_date    = Column(Date)
-    total_points        = Column(Integer, default=0)
-    level               = Column(String(50), default='rookie')
+    streak_count        = Column(Integer, default=0, comment='Aktuelle Streak-Laenge')
+    streak_last_date    = Column(Date, comment='Letztes Datum mit Aktivitaet (Streak)')
+    total_points        = Column(Integer, default=0, comment='Gesamtpunkte (Gamification)')
+    level               = Column(String(50), default='rookie', comment='Gamification-Level')
     # Block 3: Pricing / Nudges
-    nudge_dismissed     = Column(Text)         # JSON array
-    live_calls_used     = Column(Integer, default=0)
-    trainings_used      = Column(Integer, default=0)
+    nudge_dismissed     = Column(Text, comment='JSON-Array: weggeklickte Nudges')         # JSON array
+    live_calls_used     = Column(Integer, default=0, comment='Verbrauchte Live-Calls')
+    trainings_used      = Column(Integer, default=0, comment='Verbrauchte Trainings')
     # Block 4: Notification prefs
     notif_training_reminder = Column(Boolean, default=True)
     notif_streak_warning    = Column(Boolean, default=True)
@@ -100,36 +102,36 @@ class User(Base):
     notif_coach             = Column(Boolean, default=True)
     notif_nudges            = Column(Boolean, default=True)
     # Block 4: Dashboard style
-    dashboard_stil      = Column(Text)
+    dashboard_stil      = Column(Text, comment='Dashboard-Stil-Praeferenz (Legacy)')
     # Block 6: Changelog
-    last_seen_changelog = Column(String(20))
+    last_seen_changelog = Column(String(20), comment='Zuletzt gesehene Changelog-Version')
     # Block 8: Dashboard Layout Preference
-    dashboard_style     = Column(String(20), default='vollstaendig')
+    dashboard_style     = Column(String(20), default='vollstaendig', comment='Dashboard-Layout: vollstaendig/kompakt')
     # Block 7: Flat-Rate Usage Tracking
-    minuten_used          = Column(Integer, default=0)    # Diesen Monat verbrauchte Minuten
-    trainings_voice_used  = Column(Integer, default=0)    # TTS-Trainings diesen Monat
-    usage_reset_date      = Column(Date)
+    minuten_used          = Column(Integer, default=0, comment='Verbrauchte Minuten diesen Monat')    # Diesen Monat verbrauchte Minuten
+    trainings_voice_used  = Column(Integer, default=0, comment='TTS-Trainings diesen Monat')    # TTS-Trainings diesen Monat
+    usage_reset_date      = Column(Date, comment='Datum des naechsten Usage-Resets')
     # Block 9: Language Preference
-    preferred_language    = Column(String(10), default='de')
+    preferred_language    = Column(String(10), default='de', comment='Bevorzugte UI-Sprache')
     # Block 10: Theme Preference
-    preferred_theme       = Column(String(10), default='dark')
+    preferred_theme       = Column(String(10), default='dark', comment='Bevorzugtes Theme: dark/light')
     # Block 11: Training Analytics
-    weekly_goal           = Column(Integer, default=5)
+    weekly_goal           = Column(Integer, default=5, comment='Woechentliches Trainings-Ziel')
     # Block 7: Integration Engine
-    pending_training_recommendation = Column(Text, nullable=True)  # JSON: {"einwand_typ": "...", "scenario_name": "...", "created_at": "..."}
+    pending_training_recommendation = Column(Text, nullable=True, comment='JSON: offene Trainings-Empfehlung der Integration-Engine')  # JSON: {"einwand_typ": "...", "scenario_name": "...", "created_at": "..."}
     # Block 12: Sales Performance Calculator
-    avg_deal_wert         = Column(Integer, nullable=True)   # Euro, NULL = nicht gesetzt
+    avg_deal_wert         = Column(Integer, nullable=True, comment='Durchschnittlicher Deal-Wert in Euro (NULL = nicht gesetzt)')   # Euro, NULL = nicht gesetzt
     # Block 13: OAuth (Google + Microsoft) — Phase 04.6.1
-    oauth_provider        = Column(String(50),  nullable=True)  # 'google' | 'microsoft' | None
-    oauth_id              = Column(String(200), nullable=True)  # Provider Sub-ID (eindeutig pro Provider)
-    avatar_url            = Column(String(500), nullable=True)
+    oauth_provider        = Column(String(50),  nullable=True, comment="OAuth-Provider: 'google' | 'microsoft' | None")  # 'google' | 'microsoft' | None
+    oauth_id              = Column(String(200), nullable=True, comment='OAuth Provider-Sub-ID (eindeutig pro Provider)')  # Provider Sub-ID (eindeutig pro Provider)
+    avatar_url            = Column(String(500), nullable=True, comment='Avatar-Bild-URL')
     # H-18: Email-Confirmation-Flag (Microsoft-OAuth Email-Hijacking-Mitigation)
     # True = bestaetigt oder Email/Google-User. False = Microsoft Neu-User pending.
     # Default=True: bestehende User gelten automatisch als bestaetigt.
-    email_confirmed       = Column(Boolean, default=True, nullable=True)
+    email_confirmed       = Column(Boolean, default=True, nullable=True, comment='Email bestaetigt (Microsoft-OAuth Hijacking-Mitigation, H-18)')
     # Phase 04.7.1: Markt-Trennung (FT-Logging)
-    market                = Column(String(10), nullable=False, default='dach')
-    language              = Column(String(10), nullable=False, default='de')
+    market                = Column(String(10), nullable=False, default='dach', comment='Markt fuer FT-Logging-Trennung (z.B. dach)')
+    language              = Column(String(10), nullable=False, default='de', comment='Sprache des Nutzers (z.B. de)')
 
 
 class Profile(Base):
@@ -188,46 +190,51 @@ class ProfileOpener(Base):
 
 class Session(Base):
     __tablename__ = 'sessions'
+    __table_args__ = ({'comment': 'DB-Token-Session (DbSession) — Auth nutzt jedoch Flask-Session, nicht diese Tabelle. Status: write-only [ZOMBIE]. Schreibt routes/auth.py:134; KEIN Reader.'},)
     id          = Column(Integer, primary_key=True)
     user_id     = Column(Integer, ForeignKey('users.id'), nullable=False)
-    token       = Column(String(256), unique=True, nullable=False)
+    token       = Column(String(256), unique=True, nullable=False, comment='Session-Token (eindeutig)')
     erstellt_am = Column(DateTime, default=utcnow)
-    ablauf_am   = Column(DateTime)
+    ablauf_am   = Column(DateTime, comment='Ablaufzeitpunkt der Session')
 
 
 class Invitation(Base):
     __tablename__ = 'invitations'
+    __table_args__ = ({'comment': 'Einladungs-Token fuer neue Team-Mitglieder einer Organisation. Status: lebt. Schreibt/liest routes/ (Org-/Team-Verwaltung) ueber Token.'},)
     id          = Column(Integer, primary_key=True)
     org_id      = Column(Integer, ForeignKey('organisations.id'), nullable=False)
-    email       = Column(String(200), nullable=False)
-    token       = Column(String(256), unique=True, nullable=False)
+    email       = Column(String(200), nullable=False, comment='Eingeladene Email-Adresse')
+    token       = Column(String(256), unique=True, nullable=False, comment='Einladungs-Token (eindeutig)')
     erstellt_am = Column(DateTime, default=utcnow)
     verwendet   = Column(Boolean, default=False)
 
 
 class BillingEvent(Base):
     __tablename__ = 'billing_events'
+    __table_args__ = ({'comment': 'Abrechnungs-Ereignisse pro Organisation (Stripe-Webhooks, Betraege). Status: lebt. Schreibt Billing-/Stripe-Webhook-Pfad; liest Abrechnungs-/Founder-Ansichten.'},)
     id           = Column(Integer, primary_key=True)
     org_id       = Column(Integer, ForeignKey('organisations.id'), nullable=False)
-    typ          = Column(String(100))
-    betrag       = Column(Float)
-    beschreibung = Column(Text)
-    timestamp    = Column(DateTime, default=utcnow)
-    stripe_event_id  = Column(String(200), unique=True, nullable=True)
+    typ          = Column(String(100), comment='Ereignis-Typ')
+    betrag       = Column(Float, comment='Betrag in Euro')
+    beschreibung = Column(Text, comment='Beschreibung des Ereignisses')
+    timestamp    = Column(DateTime, default=utcnow, comment='Zeitpunkt des Ereignisses')
+    stripe_event_id  = Column(String(200), unique=True, nullable=True, comment='Stripe-Event-ID (Idempotenz, eindeutig)')
 
 
 class FeedbackEvent(Base):
     __tablename__ = 'feedback_events'
+    __table_args__ = ({'comment': 'Stern-Feedback zu einer Session (Legacy-Feedback-Kanal). Status: write-only [ZOMBIE]. Schreibt routes/app_routes.py:1253; kein Reader.'},)
     id             = Column(Integer, primary_key=True)
     user_id        = Column(Integer, ForeignKey('users.id'), nullable=False)
-    session_log_id = Column(String(200))
-    stars          = Column(Integer)
-    comment        = Column(Text)
+    session_log_id = Column(String(200), comment='Referenzierte Session-Log-ID')
+    stars          = Column(Integer, comment='Stern-Bewertung')
+    comment        = Column(Text, comment='Freitext-Kommentar')
     created_at     = Column(DateTime, default=utcnow)
 
 
 class CoachAssignment(Base):
     __tablename__ = 'coach_assignments'
+    __table_args__ = ({'comment': 'Zuordnung Coach <-> Organisation (Coach-Plattform fuer Teams). Status: lebt. Schreibt/liest routes/coach.py.'},)
     id          = Column(Integer, primary_key=True)
     coach_id    = Column(Integer, ForeignKey('users.id'), nullable=False)
     org_id      = Column(Integer, ForeignKey('organisations.id'), nullable=False)
@@ -344,46 +351,49 @@ class Phrase(Base):
 # Block 5: Early Access Waitlist
 class Waitlist(Base):
     __tablename__ = 'waitlist'
+    __table_args__ = ({'comment': 'Early-Access-Warteliste mit Position und Referral-Tracking. Status: lebt. Schreibt Landing-/Waitlist-Pfad; liest Admin-/Invite-Ansicht.'},)
     id            = Column(Integer, primary_key=True)
-    email         = Column(String(200), unique=True, nullable=False)
-    name          = Column(String(200))
-    firma         = Column(String(200))
-    rolle         = Column(String(100))
-    branche       = Column(String(100))
-    nachricht     = Column(Text)
-    position      = Column(Integer)
-    status        = Column(String(50), default='waiting')  # waiting/invited/registered/declined
-    invited_at    = Column(DateTime)
-    registered_at = Column(DateTime)
-    referral_code = Column(String(50))
-    referred_by   = Column(String(50))
+    email         = Column(String(200), unique=True, nullable=False, comment='Email (eindeutig)')
+    name          = Column(String(200), comment='Name')
+    firma         = Column(String(200), comment='Firma')
+    rolle         = Column(String(100), comment='Rolle/Position im Unternehmen')
+    branche       = Column(String(100), comment='Branche')
+    nachricht     = Column(Text, comment='Freitext-Nachricht')
+    position      = Column(Integer, comment='Position in der Warteliste')
+    status        = Column(String(50), default='waiting', comment='Status: waiting/invited/registered/declined')  # waiting/invited/registered/declined
+    invited_at    = Column(DateTime, comment='Zeitpunkt der Einladung')
+    registered_at = Column(DateTime, comment='Zeitpunkt der Registrierung')
+    referral_code = Column(String(50), comment='Eigener Referral-Code')
+    referred_by   = Column(String(50), comment='Referral-Code des Werbers')
     created_at    = Column(DateTime, default=utcnow)
 
 
 # Block 6: Changelog
 class Changelog(Base):
     __tablename__ = 'changelog'
+    __table_args__ = ({'comment': 'Veroeffentlichte Produkt-Changelog-Eintraege fuer User-Anzeige. Status: lebt. Schreibt Admin-Pfad; liest Changelog-Anzeige (User.last_seen_changelog-Abgleich).'},)
     id              = Column(Integer, primary_key=True)
-    version         = Column(String(20), nullable=False)
-    titel           = Column(String(300), nullable=False)
-    inhalt          = Column(Text, nullable=False)
-    typ             = Column(String(50), default='update')  # major/feature/improvement/bugfix/security
-    bekannte_bugs   = Column(Text)   # JSON array
+    version         = Column(String(20), nullable=False, comment='Versions-String des Eintrags')
+    titel           = Column(String(300), nullable=False, comment='Titel des Eintrags')
+    inhalt          = Column(Text, nullable=False, comment='Inhalt/Beschreibung')
+    typ             = Column(String(50), default='update', comment='Typ: major/feature/improvement/bugfix/security')  # major/feature/improvement/bugfix/security
+    bekannte_bugs   = Column(Text, comment='JSON-Array: bekannte Bugs')   # JSON array
     veroeffentlicht = Column(Boolean, default=True)
     created_at      = Column(DateTime, default=utcnow)
 
 
 class AuditLog(Base):
     __tablename__ = 'audit_log'
+    __table_args__ = ({'comment': 'Audit-Trail sicherheitsrelevanter Aktionen (Actor, Action, Target, IP). Status: lebt. Schreibt audit-loggende Pfade; liest Admin-/Compliance-Ansicht.'},)
     id          = Column(Integer, primary_key=True)
     user_id     = Column(Integer, ForeignKey('users.id'), nullable=True)
     org_id      = Column(Integer, ForeignKey('organisations.id'), nullable=True)
-    action      = Column(String(100), nullable=False)
-    target_type = Column(String(100), nullable=True)
-    target_id   = Column(Integer, nullable=True)
-    details     = Column(Text, nullable=True)
-    ip_address  = Column(String(64), nullable=True)
-    user_agent  = Column(String(500), nullable=True)
+    action      = Column(String(100), nullable=False, comment='Durchgefuehrte Aktion')
+    target_type = Column(String(100), nullable=True, comment='Typ des betroffenen Objekts')
+    target_id   = Column(Integer, nullable=True, comment='ID des betroffenen Objekts')
+    details     = Column(Text, nullable=True, comment='JSON/Freitext: Aktions-Details')
+    ip_address  = Column(String(64), nullable=True, comment='IP-Adresse des Actors')
+    user_agent  = Column(String(500), nullable=True, comment='User-Agent des Actors')
     created_at  = Column(DateTime, default=utcnow, nullable=False)
 
 
@@ -435,16 +445,17 @@ class EwbRating(Base):
 
 class Feedback(Base):
     __tablename__ = 'feedback'
+    __table_args__ = ({'comment': 'In-App-Nutzer-Feedback (Bug/Idee/Lob/Frage) mit Screenshot und Status-Workflow. Status: lebt. Schreibt Feedback-Widget-Pfad; liest Admin-/Founder-Feedback-Ansicht.'},)
     id                = Column(Integer, primary_key=True)
     user_id           = Column(Integer, ForeignKey('users.id'), nullable=False)
     org_id            = Column(Integer, ForeignKey('organisations.id'), nullable=True)
-    typ               = Column(String(50), nullable=False)   # 'bug' | 'idea' | 'praise' | 'question'
-    text              = Column(Text, nullable=False)
-    screenshot_path   = Column(String(300), nullable=True)   # relativ: 'feedback/{uuid}.png'
-    context_url       = Column(String(500), nullable=True)
-    status            = Column(String(30), default='new', nullable=False)  # new|seen|in_planning|done|wont_fix
-    kategorie         = Column(String(50), nullable=True)
-    rating            = Column(Integer, nullable=True)       # 1-5 für Quick-Rating
+    typ               = Column(String(50), nullable=False, comment="Feedback-Typ: 'bug'|'idea'|'praise'|'question'")   # 'bug' | 'idea' | 'praise' | 'question'
+    text              = Column(Text, nullable=False, comment='Feedback-Text')
+    screenshot_path   = Column(String(300), nullable=True, comment="Relativer Screenshot-Pfad: 'feedback/{uuid}.png'")   # relativ: 'feedback/{uuid}.png'
+    context_url       = Column(String(500), nullable=True, comment='URL, auf der das Feedback gegeben wurde')
+    status            = Column(String(30), default='new', nullable=False, comment='Status: new|seen|in_planning|done|wont_fix')  # new|seen|in_planning|done|wont_fix
+    kategorie         = Column(String(50), nullable=True, comment='Kategorie des Feedbacks')
+    rating            = Column(Integer, nullable=True, comment='Quick-Rating 1-5')       # 1-5 für Quick-Rating
     created_at        = Column(DateTime, default=utcnow, nullable=False)
     updated_at        = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
     notification_sent = Column(Boolean, default=False, nullable=False)
@@ -452,10 +463,11 @@ class Feedback(Base):
 
 class PlanningFeedbackLink(Base):
     __tablename__ = 'planning_feedback_link'
+    __table_args__ = ({'comment': 'Verknuepfung Feedback <-> Planungs-Eintrag (Backlog-Tracking). Status: lebt. Schreibt/liest Admin-/Founder-Feedback-Planungs-Ansicht.'},)
     id               = Column(Integer, primary_key=True)
     feedback_id      = Column(Integer, ForeignKey('feedback.id'), nullable=False)
-    planning_title   = Column(String(200), nullable=False)
-    planning_status  = Column(String(40), default='backlog', nullable=False)  # backlog|active|done
+    planning_title   = Column(String(200), nullable=False, comment='Titel des Planungs-Eintrags')
+    planning_status  = Column(String(40), default='backlog', nullable=False, comment='Planungs-Status: backlog|active|done')  # backlog|active|done
     created_at       = Column(DateTime, default=utcnow, nullable=False)
 
 
@@ -463,12 +475,13 @@ class PromptVersion(Base):
     __tablename__ = 'prompt_versions'
     __table_args__ = (
         UniqueConstraint('version', 'module', name='uq_prompt_version_module'),
+        {'comment': 'Versionierte LLM-Prompts pro Modul mit A/B-Default-Fallback. Status: lebt. Schreibt Prompt-Admin-Pfad; liest get_active_prompt_version() in services/.'},
     )
     id          = Column(Integer, primary_key=True)
-    version     = Column(String(50), nullable=False)
-    module      = Column(String(50), nullable=False)
-    prompt_text = Column(Text, nullable=False)
-    changelog   = Column(Text)
+    version     = Column(String(50), nullable=False, comment='Prompt-Versions-String')
+    module      = Column(String(50), nullable=False, comment='Modul, zu dem der Prompt gehoert')
+    prompt_text = Column(Text, nullable=False, comment='Prompt-Text')
+    changelog   = Column(Text, comment='Changelog zur Prompt-Version')
     is_active   = Column(Boolean, default=False, nullable=False)
     # Phase 08 D-26: A/B-Default-Fallback (wenn get_active_prompt_version() single-lookup macht).
     # Bei 2+ aktiven Varianten pro module: exakt 1 Row hat is_default=True.
@@ -483,22 +496,23 @@ class ApiCostLog(Base):
     D-02: Wechselkurs wird beim Schreiben eingefroren (steuerlich korrekt).
     """
     __tablename__ = 'api_cost_log'
+    __table_args__ = ({'comment': 'Jeder API-Call mit eingefrorenem Wechselkurs und Rate (Founder Cost Dashboard, steuerlich korrekt). Status: lebt. Schreibt API-Call-Wrapper in services/; liest Founder-Cost-Dashboard.'},)
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=utcnow, nullable=False, index=True)
-    provider = Column(String(32), nullable=False, index=True)
-    model = Column(String(64), nullable=False)
+    provider = Column(String(32), nullable=False, index=True, comment='API-Provider (z.B. anthropic/deepgram)')
+    model = Column(String(64), nullable=False, comment='Verwendetes Modell')
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
     org_id = Column(Integer, ForeignKey('organisations.id'), nullable=True, index=True)
-    units = Column(Numeric(14, 4), nullable=False)
-    unit_type = Column(String(32), nullable=False)
-    rate_applied = Column(Numeric(12, 8), nullable=False)
-    rate_currency = Column(String(3), nullable=False, default='USD')
-    fx_rate_applied = Column(Numeric(10, 6), nullable=False)
-    cost_eur = Column(Numeric(12, 6), nullable=False)
-    session_id = Column(String(64), nullable=True, index=True)
-    context_tag = Column(String(32), nullable=True)
-    latency_ms  = Column(Integer, nullable=True)
-    call_site   = Column(String(50), nullable=True)
+    units = Column(Numeric(14, 4), nullable=False, comment='Verbrauchte Einheiten')
+    unit_type = Column(String(32), nullable=False, comment='Einheiten-Typ (z.B. tokens/minutes)')
+    rate_applied = Column(Numeric(12, 8), nullable=False, comment='Angewandte (eingefrorene) Rate')
+    rate_currency = Column(String(3), nullable=False, default='USD', comment='Waehrung der Rate')
+    fx_rate_applied = Column(Numeric(10, 6), nullable=False, comment='Eingefrorener Wechselkurs (D-02)')
+    cost_eur = Column(Numeric(12, 6), nullable=False, comment='Berechnete Kosten in Euro')
+    session_id = Column(String(64), nullable=True, index=True, comment='Zugehoerige Session-ID')
+    context_tag = Column(String(32), nullable=True, comment='Kontext-Tag des Calls')
+    latency_ms  = Column(Integer, nullable=True, comment='API-Latenz in ms')
+    call_site   = Column(String(50), nullable=True, comment='Code-Aufrufstelle')
 
 
 class ApiRate(Base):
@@ -506,42 +520,45 @@ class ApiRate(Base):
     __tablename__ = 'api_rates'
     __table_args__ = (
         UniqueConstraint('provider', 'model', 'unit_type', 'active', name='uix_api_rate_active'),
+        {'comment': 'Aktuelle API-Preise pro Provider/Modell, editierbar, historisch via active-Flag. Status: lebt. Schreibt Admin-Rate-Pflege; liest Cost-Berechnung (api_cost_log) + Dashboard.'},
     )
     id = Column(Integer, primary_key=True)
-    provider = Column(String(32), nullable=False, index=True)
-    model = Column(String(64), nullable=False)
-    unit_type = Column(String(32), nullable=False)
-    price_per_unit = Column(Numeric(12, 8), nullable=False)
-    currency = Column(String(3), nullable=False, default='USD')
+    provider = Column(String(32), nullable=False, index=True, comment='API-Provider')
+    model = Column(String(64), nullable=False, comment='Modell')
+    unit_type = Column(String(32), nullable=False, comment='Einheiten-Typ')
+    price_per_unit = Column(Numeric(12, 8), nullable=False, comment='Preis pro Einheit')
+    currency = Column(String(3), nullable=False, default='USD', comment='Waehrung')
     active = Column(Boolean, default=True, nullable=False)
-    last_checked_at = Column(DateTime, default=utcnow, nullable=False)
-    source_url = Column(String(512), nullable=True)
+    last_checked_at = Column(DateTime, default=utcnow, nullable=False, comment='Zeitpunkt letzter Preis-Pruefung')
+    source_url = Column(String(512), nullable=True, comment='Quell-URL der Preisangabe')
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
 class PriceChangeLog(Base):
     """D-06: Manuell erkannte Preisaenderungen mit Impact-Berechnung."""
     __tablename__ = 'price_change_log'
+    __table_args__ = ({'comment': 'Manuell erkannte API-Preisaenderungen mit Impact-Berechnung. Status: write-only [ZOMBIE]. Schreibt routes/admin_dashboard.py:434; kein Reader.'},)
     id = Column(Integer, primary_key=True)
     api_rate_id = Column(Integer, ForeignKey('api_rates.id'), nullable=False)
     changed_at = Column(DateTime, default=utcnow, nullable=False, index=True)
-    old_rate = Column(Numeric(12, 8), nullable=False)
-    new_rate = Column(Numeric(12, 8), nullable=False)
-    currency = Column(String(3), nullable=False, default='USD')
-    impact_eur_per_month = Column(Numeric(12, 2), nullable=True)
-    note = Column(Text, nullable=True)
+    old_rate = Column(Numeric(12, 8), nullable=False, comment='Alte Rate')
+    new_rate = Column(Numeric(12, 8), nullable=False, comment='Neue Rate')
+    currency = Column(String(3), nullable=False, default='USD', comment='Waehrung')
+    impact_eur_per_month = Column(Numeric(12, 2), nullable=True, comment='Geschaetzter Impact in Euro/Monat')
+    note = Column(Text, nullable=True, comment='Notiz zur Preisaenderung')
 
 
 class FixedCost(Base):
     """D-10: Fixe Betriebskosten (Hetzner, Domain, Kontist, count.tax, Homeoffice)."""
     __tablename__ = 'fixed_costs'
+    __table_args__ = ({'comment': 'Fixe Betriebskosten (Hetzner, Domain, Kontist etc.) mit USt und SKR03-Konto. Status: lebt. Schreibt Admin-Fixkosten-Pflege; liest Founder-Cost-Dashboard.'},)
     id = Column(Integer, primary_key=True)
-    name = Column(String(128), nullable=False)
-    amount_eur = Column(Numeric(12, 2), nullable=False)
-    vat_rate = Column(Numeric(4, 2), nullable=False, default=19.00)
-    cycle = Column(String(16), nullable=False)  # 'monthly' | 'yearly' | 'per_day'
-    skr03 = Column(String(8), nullable=True)
-    eur_line = Column(Integer, nullable=True)
+    name = Column(String(128), nullable=False, comment='Bezeichnung der Fixkosten-Position')
+    amount_eur = Column(Numeric(12, 2), nullable=False, comment='Betrag in Euro')
+    vat_rate = Column(Numeric(4, 2), nullable=False, default=19.00, comment='USt-Satz in Prozent')
+    cycle = Column(String(16), nullable=False, comment="Abrechnungs-Zyklus: 'monthly'|'yearly'|'per_day'")  # 'monthly' | 'yearly' | 'per_day'
+    skr03 = Column(String(8), nullable=True, comment='SKR03-Kontonummer')
+    eur_line = Column(Integer, nullable=True, comment='EUER-Zeilennummer')
     active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
@@ -549,19 +566,20 @@ class FixedCost(Base):
 class RevenueLog(Base):
     """D-03: Jede Stripe-Zahlung aus invoice.payment_succeeded mit USt-Split + Land."""
     __tablename__ = 'revenue_log'
+    __table_args__ = ({'comment': 'Jede Stripe-Zahlung (invoice.payment_succeeded) mit USt-Split und Land. Status: lebt. Schreibt Stripe-Webhook-Handler; liest Founder-Revenue-Dashboard.'},)
     id = Column(Integer, primary_key=True)
-    stripe_invoice_id = Column(String(128), nullable=False, unique=True, index=True)
-    stripe_customer_id = Column(String(128), nullable=True, index=True)
+    stripe_invoice_id = Column(String(128), nullable=False, unique=True, index=True, comment='Stripe-Invoice-ID (eindeutig, Idempotenz)')
+    stripe_customer_id = Column(String(128), nullable=True, index=True, comment='Stripe-Customer-ID')
     org_id = Column(Integer, ForeignKey('organisations.id'), nullable=True, index=True)
-    paid_at = Column(DateTime, nullable=False, index=True)
-    netto_cents = Column(Integer, nullable=False, default=0)
-    ust_cents = Column(Integer, nullable=False, default=0)
-    brutto_cents = Column(Integer, nullable=False, default=0)
-    currency = Column(String(3), nullable=False, default='EUR')
-    country = Column(String(2), nullable=True, index=True)
-    tax_treatment = Column(String(16), nullable=False)  # 'DE_19' | 'EU_RC' | 'DRITTLAND'
-    plan_key = Column(String(32), nullable=True)
-    raw_json = Column(Text, nullable=True)
+    paid_at = Column(DateTime, nullable=False, index=True, comment='Zahlungszeitpunkt')
+    netto_cents = Column(Integer, nullable=False, default=0, comment='Netto-Betrag in Cent')
+    ust_cents = Column(Integer, nullable=False, default=0, comment='USt-Betrag in Cent')
+    brutto_cents = Column(Integer, nullable=False, default=0, comment='Brutto-Betrag in Cent')
+    currency = Column(String(3), nullable=False, default='EUR', comment='Waehrung')
+    country = Column(String(2), nullable=True, index=True, comment='Laenderkennung (ISO-2)')
+    tax_treatment = Column(String(16), nullable=False, comment="Steuer-Behandlung: 'DE_19'|'EU_RC'|'DRITTLAND'")  # 'DE_19' | 'EU_RC' | 'DRITTLAND'
+    plan_key = Column(String(32), nullable=True, comment='Plan-Schluessel der Zahlung')
+    raw_json = Column(Text, nullable=True, comment='Roh-JSON des Stripe-Events')
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
@@ -570,12 +588,13 @@ class ExchangeRate(Base):
     __tablename__ = 'exchange_rates'
     __table_args__ = (
         UniqueConstraint('date', 'currency_pair', name='uix_exchange_rate_date_pair'),
+        {'comment': 'Taeglicher EZB-Wechselkurs (Frankfurter-API) zum Einfrieren in api_cost_log. Status: lebt. Schreibt FX-Sync-Job; liest Cost-Berechnung in services/.'},
     )
     id = Column(Integer, primary_key=True)
-    date = Column(Date, nullable=False, index=True)
-    currency_pair = Column(String(7), nullable=False)  # 'USD_EUR'
-    rate = Column(Numeric(10, 6), nullable=False)
-    source = Column(String(16), nullable=False, default='frankfurter')
+    date = Column(Date, nullable=False, index=True, comment='Kurs-Datum')
+    currency_pair = Column(String(7), nullable=False, comment="Waehrungspaar, z.B. 'USD_EUR'")  # 'USD_EUR'
+    rate = Column(Numeric(10, 6), nullable=False, comment='Wechselkurs')
+    source = Column(String(16), nullable=False, default='frankfurter', comment='Kurs-Quelle')
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
@@ -633,10 +652,12 @@ class LearningEvent(Base):
 # ── Phase 04.14: CRM Customer Success ────────────────────────────────────────
 
 class CrmNote(Base):
+    # PUBLIC-Schema-Tabelle trotz "Crm"-Klassenname (kein {schema:crm}) — Customer-Success-Notiz pro User.
     __tablename__ = 'crm_notes'
+    __table_args__ = ({'comment': 'Customer-Success-Notiz pro User (public-Schema, NICHT crm-Schema trotz Klassenname). Status: lebt. Schreibt/liest routes/admin_views.py:209, services/customer_success_service.py:48.'},)
     id         = Column(Integer, primary_key=True)
     user_id    = Column(Integer, ForeignKey('users.id'), nullable=False, unique=True)
-    notiz      = Column(Text, nullable=True)
+    notiz      = Column(Text, nullable=True, comment='Freitext-Notiz zum User (Customer Success)')
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
     created_at = Column(DateTime, default=utcnow)
 
@@ -747,9 +768,10 @@ class TenantOrg(Base):
     # bridged by legacy_org_id). public schema (tenancy infra, NOT crm) -> no schema= table_arg.
     # ORM/DDL-konsistent zu Migration 0011 (CLAUDE.md Punkt 21 — ORM ist die Test-Schema-Quelle).
     __tablename__ = 'tenant_orgs'
+    __table_args__ = ({'comment': 'UUID-Tenancy-Root parallel zur Integer-org_id (Bruecke via legacy_org_id), public-Schema. Status: Reserve/Foundation (FK-Aktivierung Phase 08.23.2.F). Schreibt/liest noch nicht aktiv — Foundation fuer UUID-Tenancy.'},)
     id            = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    legacy_org_id = Column(Integer, ForeignKey('organisations.id'), nullable=False, unique=True)
-    name          = Column(Text, nullable=False)
+    legacy_org_id = Column(Integer, ForeignKey('organisations.id'), nullable=False, unique=True, comment='Bruecke zur Integer-organisations.id (Tenancy-Migration)')
+    name          = Column(Text, nullable=False, comment='Tenant-/Organisations-Name')
     # func.now() (Modul-Ebene) wie TranscriptSegment — DDL-Aequivalent zu 0011 `DEFAULT now()`.
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
