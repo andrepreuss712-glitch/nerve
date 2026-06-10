@@ -265,78 +265,80 @@ class PersonalityType(Base):
 
 class ConversationLog(Base):
     __tablename__ = 'conversation_logs'
+    __table_args__ = ({'comment': 'Persistenter Call-Datensatz mit aggregierter Post-Call-Analyse (Einwaende, Redeanteil, KB-Verlauf). RUECKGRAT des Call-Analyse-Clusters mit 6 Kindern. Status: lebt (TAXO-Umbau-Zone). Schreibt routes/app_routes.py (end_session); liest routes/dashboard.py, routes/learning.py.'},)
     id                       = Column(Integer, primary_key=True)
     user_id                  = Column(Integer, ForeignKey('users.id'), nullable=False)
     org_id                   = Column(Integer, ForeignKey('organisations.id'), nullable=False)
     profile_id               = Column(Integer, ForeignKey('profiles.id'), nullable=True)
-    profile_name             = Column(String(200))
+    profile_name             = Column(String(200), comment='Profil-Name zum Zeitpunkt des Calls (Snapshot)')
 
-    started_at               = Column(DateTime, nullable=False)
-    ended_at                 = Column(DateTime)
-    dauer_sekunden           = Column(Integer)
+    started_at               = Column(DateTime, nullable=False, comment='Call-Startzeitpunkt')
+    ended_at                 = Column(DateTime, comment='Call-Endzeitpunkt')
+    dauer_sekunden           = Column(Integer, comment='Call-Dauer in Sekunden')
 
-    segmente_gesamt          = Column(Integer, default=0)
-    einwaende_gesamt         = Column(Integer, default=0)
-    einwaende_behandelt      = Column(Integer, default=0)
-    einwaende_fehlgeschlagen = Column(Integer, default=0)
-    einwaende_ignoriert      = Column(Integer, default=0)
-    vorwaende_erkannt        = Column(Integer, default=0)
+    segmente_gesamt          = Column(Integer, default=0, comment='Anzahl Transkript-Segmente gesamt')
+    einwaende_gesamt         = Column(Integer, default=0, comment='Anzahl erkannter Einwaende gesamt')
+    einwaende_behandelt      = Column(Integer, default=0, comment='Anzahl erfolgreich behandelter Einwaende')
+    einwaende_fehlgeschlagen = Column(Integer, default=0, comment='Anzahl fehlgeschlagener Einwand-Behandlungen')
+    einwaende_ignoriert      = Column(Integer, default=0, comment='Anzahl ignorierter Einwaende')
+    vorwaende_erkannt        = Column(Integer, default=0, comment='Anzahl als Vorwand erkannter Einwaende')
 
-    kb_start                 = Column(Integer, default=30)
-    kb_end                   = Column(Integer)
-    kb_min                   = Column(Integer)
-    kb_max                   = Column(Integer)
+    kb_start                 = Column(Integer, default=30, comment='Kaufbereitschaft Start-Wert (0-100)')
+    kb_end                   = Column(Integer, comment='Kaufbereitschaft End-Wert (0-100)')
+    kb_min                   = Column(Integer, comment='Kaufbereitschaft Minimum waehrend Call')
+    kb_max                   = Column(Integer, comment='Kaufbereitschaft Maximum waehrend Call')
 
-    redeanteil_avg           = Column(Integer)
-    tempo_avg                = Column(Integer)
-    laengster_monolog        = Column(Float)
+    redeanteil_avg           = Column(Integer, comment='Durchschnittlicher Redeanteil Berater in Prozent')
+    tempo_avg                = Column(Integer, comment='Durchschnittliches Sprechtempo')
+    laengster_monolog        = Column(Float, comment='Laengster Monolog in Sekunden')
 
-    hilfe_genutzt            = Column(Integer, default=0)
-    quick_actions            = Column(Integer, default=0)
-    skript_abdeckung         = Column(Integer)
+    hilfe_genutzt            = Column(Integer, default=0, comment='Anzahl genutzter Hilfe-/Coaching-Einblendungen')
+    quick_actions            = Column(Integer, default=0, comment='Anzahl ausgeloester Quick-Actions')
+    skript_abdeckung         = Column(Integer, comment='Skript-Abdeckung in Prozent')
 
-    sterne                   = Column(Integer)
-    kommentar                = Column(Text)
+    sterne                   = Column(Integer, comment='Manuelle Stern-Bewertung des Calls (1-5)')
+    kommentar                = Column(Text, comment='Manueller Kommentar zum Call')
 
-    gegenargument_details    = Column(Text)   # JSON
-    painpoints_details       = Column(Text)   # JSON
-    phasen_details           = Column(Text)   # JSON
+    gegenargument_details    = Column(Text, comment='JSON: Detail-Daten zu Gegenargumenten')
+    painpoints_details       = Column(Text, comment='JSON: Detail-Daten zu erkannten Painpoints')
+    phasen_details           = Column(Text, comment='JSON: Detail-Daten zu Gespraechsphasen')
 
-    typ                      = Column(String(20), default='live')
-    session_mode             = Column(String(20), default='meeting')  # 'cold_call' or 'meeting'
+    typ                      = Column(String(20), default='live', comment='Call-Typ: live oder training')
+    session_mode             = Column(String(20), default='meeting', comment="Modus: 'cold_call' oder 'meeting'")
     created_at               = Column(DateTime, default=utcnow)
-    result                   = Column(String(20), nullable=True)  # 'gewonnen' | 'verloren' | NULL
+    result                   = Column(String(20), nullable=True, comment="Call-Ergebnis: 'gewonnen' | 'verloren' | NULL")
     # Phase 04.7.1: Markt-Trennung (FT-Logging)
-    market                   = Column(String(10), nullable=False, default='dach')
-    language                 = Column(String(10), nullable=False, default='de')
+    market                   = Column(String(10), nullable=False, default='dach', comment='Markt fuer FT-Logging-Trennung (z.B. dach)')
+    language                 = Column(String(10), nullable=False, default='de', comment='Sprache des Calls (z.B. de)')
     # Phase 04.9: Personality-driven training
     personality_type_id      = Column(Integer, ForeignKey('personality_types.id'), nullable=True)
-    stimmung_history         = Column(Text, nullable=True)  # JSON list
+    stimmung_history         = Column(Text, nullable=True, comment='JSON-Liste: Stimmungs-Verlauf waehrend Call')
     # Phase 04.13: PreCall Intelligence
-    precall_briefing         = Column(Text, nullable=True)     # generated call briefing (per D-03: only briefing text, no raw search data)
+    precall_briefing         = Column(Text, nullable=True, comment='Generiertes Call-Briefing (D-03: nur Briefing-Text, keine Roh-Suchdaten)')
     # Phase 08.20.2: Structured Schicht-1 fields (JSON)
-    precall_fields           = Column(Text, nullable=True)     # JSON-serialized Schicht-1 fields dict (per D-03: no raw search data)
+    precall_fields           = Column(Text, nullable=True, comment='JSON: strukturierte Schicht-1-Felder (D-03: keine Roh-Suchdaten)')
     # Phase 07.1: Kaufbereitschafts-Verlauf fuer Live-Session-Chart
-    kb_verlauf               = Column(Text, nullable=True)     # JSON list [{ts: "HH:MM:SS", wert: 0-100}]
+    kb_verlauf               = Column(Text, nullable=True, comment='JSON-Liste: Kaufbereitschafts-Verlauf [{ts, wert 0-100}] fuer Chart')
     # Phase 08 D-14: PreCall-Anrede-Override (Du/Sie pro Session). Fallback: Profile.daten.ki.ansprache.
-    anrede                   = Column(String(10), nullable=True)
+    anrede                   = Column(String(10), nullable=True, comment="PreCall-Anrede-Override (Du/Sie); Fallback: Profile.daten.ki.ansprache")
 
 
 class Phrase(Base):
     __tablename__ = 'phrases'
+    __table_args__ = ({'comment': 'Anonymisierte Einwand-Phrasen aus Calls als Trainings-/Muster-Korpus (DSGVO-Pipeline). Status: lebt. Schreibt services/-Anonymisierungs-Pipeline (Phase 08.23.2.B); liest Muster-/Klassifikator-Pfad.'},)
     id             = Column(Integer, primary_key=True)
     user_id        = Column(Integer, ForeignKey('users.id'), nullable=False)
     session_id     = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
-    text           = Column(Text, nullable=False)
-    objection_type = Column(String(100), nullable=False)
+    text           = Column(Text, nullable=False, comment='Anonymisierter Phrasen-Text (Einwand)')
+    objection_type = Column(String(100), nullable=False, comment='Einwand-Typ-Klassifikation')
     created_at     = Column(DateTime, default=utcnow)
     # Phase 08.23.2.B: DSGVO-Anonymisierungs-Pipeline quality_tier
     # 'A'=sauber, 'B'=Edge-Case-NER, 'C'=Art9-Treffer/Exception
-    quality_tier   = Column(String(1), nullable=False, server_default='A')
+    quality_tier   = Column(String(1), nullable=False, server_default='A', comment="Anonymisierungs-Qualitaet: 'A'=sauber, 'B'=Edge-Case-NER, 'C'=Art9/Exception")
     # Phase 08.23.2.C: Phasen-Klassifikator + Gatekeeper-Erkennung
     # Diskriminator fuer Gatekeeper-Phrases vs. cold_call/meeting-Phrases
     # CHECK-Constraint ck_phrases_mode in DB via Alembic 0003
-    mode           = Column(String(20), nullable=False, server_default='cold_call')
+    mode           = Column(String(20), nullable=False, server_default='cold_call', comment="Phasen-Diskriminator: gatekeeper vs. cold_call/meeting (CHECK ck_phrases_mode)")
 
 
 # Block 5: Early Access Waitlist
@@ -387,17 +389,18 @@ class AuditLog(Base):
 
 class ObjectionEvent(Base):
     __tablename__ = 'objection_events'
+    __table_args__ = ({'comment': 'Einzel-Einwand-Ereignis pro Call mit Erfolgs-Status (Kind von conversation_logs). Status: lebt. Schreibt routes/app_routes.py:384; liest routes/app_routes.py:471/1389, routes/dashboard.py:736.'},)
     id                  = Column(Integer, primary_key=True)
     user_id             = Column(Integer, ForeignKey('users.id'), nullable=False)
     org_id              = Column(Integer, ForeignKey('organisations.id'), nullable=True)
     conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=False)
-    einwand_typ         = Column(String(100), nullable=False)
+    einwand_typ         = Column(String(100), nullable=False, comment='Einwand-Typ-Klassifikation')
     # Phase 08 D-01: 3-state (TRUE=Erfolg, FALSE=Kein Erfolg, NULL=Uebersprungen/Unbekannt)
-    success             = Column(Boolean, default=None, nullable=True)
+    success             = Column(Boolean, default=None, nullable=True, comment='3-State: TRUE=Erfolg, FALSE=kein Erfolg, NULL=uebersprungen/unbekannt')
     created_at          = Column(DateTime, default=utcnow, nullable=False)
     # Phase 08.X: Persistierter Claude-Response-Text für Rating-Page
-    antwort_text        = Column(Text, nullable=True)
-    einwand_text        = Column(Text, nullable=True)
+    antwort_text        = Column(Text, nullable=True, comment='Persistierter Claude-Antwort-Text (fuer Rating-Page)')
+    einwand_text        = Column(Text, nullable=True, comment='Original-Einwand-Text des Kunden')
 
 
 class EwbRating(Base):
@@ -411,15 +414,16 @@ class EwbRating(Base):
     __table_args__ = (
         UniqueConstraint('conversation_log_id', 'einwand_typ_key',
                          name='uq_ewb_rating_per_conv_ewb'),
+        {'comment': 'Manuelle EWB-Quality-Ratings (3 binaere Kriterien) pro EWB einer Session, fuer Quality-Score. Status: lebt. Schreibt routes/admin_ewb.py:192; liest routes/admin_ewb.py:65/181.'},
     )
     id                  = Column(Integer, primary_key=True)
     conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=False)
-    einwand_typ_key     = Column(String(100), nullable=False)  # matched gegen ObjectionEvent.einwand_typ
-    klingt_wie_mensch   = Column(Boolean, nullable=False)
-    keine_halluzination = Column(Boolean, nullable=False)
-    trifft_einwand      = Column(Boolean, nullable=False)
+    einwand_typ_key     = Column(String(100), nullable=False, comment='Einwand-Typ-Key (matched gegen ObjectionEvent.einwand_typ)')
+    klingt_wie_mensch   = Column(Boolean, nullable=False, comment='Sub-Kriterium: klingt wie Mensch')
+    keine_halluzination = Column(Boolean, nullable=False, comment='Sub-Kriterium: keine Halluzination (doppelt gewichtet)')
+    trifft_einwand      = Column(Boolean, nullable=False, comment='Sub-Kriterium: trifft den Einwand')
     rater_id            = Column(Integer, ForeignKey('users.id'), nullable=False)
-    rated_at            = Column(DateTime, default=utcnow, nullable=False)
+    rated_at            = Column(DateTime, default=utcnow, nullable=False, comment='Zeitpunkt der Bewertung')
 
     @property
     def quality_score(self) -> float:
@@ -579,19 +583,20 @@ class ExchangeRate(Base):
 
 class LearningCard(Base):
     __tablename__ = 'learning_cards'
+    __table_args__ = ({'comment': 'Persoenliche Lernkarten (Coach-Modul): KI-/User-Formulierungen mit Lernziel und Status. Status: lebt. Schreibt services/coaching_service.py; liest routes/learning.py:429+, services/coaching_service.py:65/170.'},)
     id                  = Column(Integer, primary_key=True)
     user_id             = Column(Integer, ForeignKey('users.id'), nullable=False)
     call_id             = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
-    category            = Column(String(100), nullable=False)
-    original_suggestion = Column(Text, nullable=False)
-    final_text          = Column(Text, nullable=False)
-    lernziel            = Column(Text, nullable=True)
-    source              = Column(String(20), default='ki')       # 'ki' | 'user'
-    status              = Column(String(20), default='vorschlag') # 'vorschlag' | 'aktiv' | 'gelernt' | 'archiviert'
-    applied_count       = Column(Integer, default=0)
-    regenerate_count    = Column(Integer, default=0)
+    category            = Column(String(100), nullable=False, comment='Kategorie der Lernkarte')
+    original_suggestion = Column(Text, nullable=False, comment='Urspruenglicher KI-Vorschlag')
+    final_text          = Column(Text, nullable=False, comment='Finaler (ggf. editierter) Karten-Text')
+    lernziel            = Column(Text, nullable=True, comment='Lernziel der Karte')
+    source              = Column(String(20), default='ki', comment="Quelle: 'ki' | 'user'")
+    status              = Column(String(20), default='vorschlag', comment="Status: 'vorschlag' | 'aktiv' | 'gelernt' | 'archiviert'")
+    applied_count       = Column(Integer, default=0, comment='Wie oft angewendet')
+    regenerate_count    = Column(Integer, default=0, comment='Wie oft neu generiert')
     created_at          = Column(DateTime, default=utcnow)
-    learned_at          = Column(DateTime, nullable=True)
+    learned_at          = Column(DateTime, nullable=True, comment='Zeitpunkt als gelernt markiert')
 
 
 class CoachingReport(Base):
@@ -615,12 +620,13 @@ class CoachingReport(Base):
 
 class LearningEvent(Base):
     __tablename__ = 'learning_events'
+    __table_args__ = ({'comment': 'Cross-Modul-Lernereignisse fuer Muster-Erkennung der Integration-Engine. Status: lebt. Schreibt services/integration_engine.py:54+ (log_learning_event); liest services/integration_engine.py:163+188 (raw-SQL Muster-Erkennung).'},)
     id            = Column(Integer, primary_key=True)
     user_id       = Column(Integer, ForeignKey('users.id'), nullable=False)
-    event_type    = Column(String(50), nullable=False)
-    source_module = Column(String(20), nullable=False)
-    source_id     = Column(Integer, nullable=True)
-    event_metadata = Column('metadata', Text, nullable=True)
+    event_type    = Column(String(50), nullable=False, comment='Art des Lernereignisses')
+    source_module = Column(String(20), nullable=False, comment='Ursprungs-Modul des Ereignisses')
+    source_id     = Column(Integer, nullable=True, comment='ID des Quell-Objekts im Ursprungs-Modul')
+    event_metadata = Column('metadata', Text, nullable=True, comment='JSON: ereignisspezifische Metadaten')
     created_at    = Column(DateTime, default=utcnow)
 
 
@@ -653,27 +659,27 @@ class Call(Base):
     contact_id = Column(UUID_TYPE, nullable=True)
     # user_id bleibt Integer-kompatibel mit users.id bis UUID-Migration in 08.23.2.F
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    call_mode = Column(Text, nullable=False)
-    call_type = Column(Text, nullable=True)
-    started_at = Column(DateTime(timezone=True), nullable=True)
-    ended_at = Column(DateTime(timezone=True), nullable=True)
-    transcript_storage = Column(Text, nullable=True)
-    transcript_expires_at = Column(DateTime(timezone=True), nullable=True)
-    call_summary = Column(Text, nullable=True)
-    outcome = Column(Text, nullable=True)
-    audio_health_score = Column(Float, nullable=True)
-    coaching_score = Column(Float, nullable=True)
+    call_mode = Column(Text, nullable=False, comment="Call-Modus: 'cold_call' | 'meeting_consented' (CHECK ck_calls_call_mode)")
+    call_type = Column(Text, nullable=True, comment='Optionale Call-Typ-Klassifikation')
+    started_at = Column(DateTime(timezone=True), nullable=True, comment='Call-Startzeitpunkt (tz-aware)')
+    ended_at = Column(DateTime(timezone=True), nullable=True, comment='Call-Endzeitpunkt (tz-aware)')
+    transcript_storage = Column(Text, nullable=True, comment="Transkript-Speichermodus: 'none'|'ephemeral'|'consented_full' (DSGVO, CHECK)")
+    transcript_expires_at = Column(DateTime(timezone=True), nullable=True, comment='Ablaufzeitpunkt fuer ephemeres Transkript (DSGVO)')
+    call_summary = Column(Text, nullable=True, comment='Post-Call-Zusammenfassung')
+    outcome = Column(Text, nullable=True, comment='Call-Ergebnis (CHECK ck_calls_outcome, z.B. meeting_booked/no_interest)')
+    audio_health_score = Column(Float, nullable=True, comment='Audio-Qualitaets-Score des Calls')
+    coaching_score = Column(Float, nullable=True, comment='Gesamt-Coaching-Score des Calls')
     # --- Phase 08.23.2.D.UX — Score-Breakdown (REQ-D.UX-11, Migration 0007) ---
-    score_breakdown = Column(JSON_TYPE, nullable=True)
-    score_schema_version = Column(SmallInteger, nullable=False, server_default='1')
+    score_breakdown = Column(JSON_TYPE, nullable=True, comment='JSON: Aufschluesselung des Coaching-Scores')
+    score_schema_version = Column(SmallInteger, nullable=False, server_default='1', comment='Schema-Version des score_breakdown')
     # --- Phase 08.23.2.D — Outcome-Erfassung (REQ-D-1) ---
     conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=True)
-    outcome_confidence = Column(Float, nullable=True)
-    outcome_note = Column(Text, nullable=True)
-    outcome_source = Column(Text, nullable=True)
+    outcome_confidence = Column(Float, nullable=True, comment='KI-Konfidenz der Outcome-Klassifikation (0-1)')
+    outcome_note = Column(Text, nullable=True, comment='Notiz zum Outcome')
+    outcome_source = Column(Text, nullable=True, comment="Outcome-Quelle: 'ai_auto'|'ai_auto_unsicher'|'user_corrected' (CHECK)")
     # --- Phase 08.23.2.D.UX — followup_intent (REQ-D.UX-9/10, Migration 0006) ---
-    followup_intent = Column(Text, nullable=False, server_default='none')
-    meddpicc_extracted = Column(JSON_TYPE, nullable=True)
+    followup_intent = Column(Text, nullable=False, server_default='none', comment="Follow-up-Absicht: 'none'|'callback'|'meeting'|'send_info'|'retry_internal' (CHECK)")
+    meddpicc_extracted = Column(JSON_TYPE, nullable=True, comment='JSON: aus Call extrahierte MEDDPICC-Felder')
     created_at = Column(DateTime, default=utcnow)
     __table_args__ = (
         CheckConstraint("call_mode IN ('cold_call', 'meeting_consented')", name='ck_calls_call_mode'),
@@ -694,6 +700,7 @@ class Call(Base):
         Index('idx_calls_account_time', 'account_id', 'started_at'),
         Index('idx_calls_user_time', 'user_id', 'started_at'),
         Index('idx_calls_mode_outcome', 'call_mode', 'outcome', postgresql_where=text('outcome IS NOT NULL')),
+        {'comment': 'Zentraler Call-Datensatz der neuen Architektur (UUID-PK, Outcome/Coaching/Transkript-Storage). Status: lebt (neue Architektur Phase 08.23.2.A+). Schreibt/liest services/+routes/ der neuen Call-Pipeline.'},
     )
 
 
@@ -703,15 +710,16 @@ class CallEvent(Base):
     call_id = Column(UUID_TYPE, ForeignKey('calls.id', ondelete='CASCADE'), nullable=False)
     # FK-Verknüpfung wird in Phase 08.23.2.F nachgereicht (tenant_orgs existiert dort)
     tenant_id = Column(UUID_TYPE, nullable=True)
-    event_type = Column(Text, nullable=False)
-    event_ts_ms = Column(BigInteger, nullable=False)  # BIGINT required: Unix ms timestamps exceed 2^31 after 2038 (C-4 fix)
-    payload = Column(JSON_TYPE, nullable=False)
+    event_type = Column(Text, nullable=False, comment="Event-Typ (CHECK ck_call_events_event_type, z.B. transcript_chunk/objection_detected)")
+    event_ts_ms = Column(BigInteger, nullable=False, comment='Event-Zeitstempel in Unix-ms (BIGINT, 2038-sicher)')  # BIGINT required: Unix ms timestamps exceed 2^31 after 2038 (C-4 fix)
+    payload = Column(JSON_TYPE, nullable=False, comment='JSON: event-spezifische Nutzdaten (GIN-indiziert)')
     created_at = Column(DateTime, default=utcnow)
     __table_args__ = (
         CheckConstraint("event_type IN ('transcript_chunk', 'suggestion_shown', 'reaction', 'phase_change', 'audio_health', 'objection_detected', 'consent_optin')", name='ck_call_events_event_type'),
         Index('idx_call_events_call_time', 'call_id', 'event_ts_ms'),
         Index('idx_call_events_type', 'call_id', 'event_type'),
         Index('idx_call_events_payload_gin', 'payload', postgresql_using='gin'),
+        {'comment': 'Append-only Event-Stream pro Call (Kind von calls) der neuen Architektur. Status: lebt (neue Architektur Phase 08.23.2.A+). Schreibt/liest Live-Call-Pipeline in services/.'},
     )
 
 
@@ -719,9 +727,9 @@ class TranscriptSegment(Base):
     __tablename__ = 'transcript_segments'
     id                  = Column(BigInteger, primary_key=True, autoincrement=True)  # BIGSERIAL
     conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id', ondelete='CASCADE'), nullable=False)
-    ts_ms               = Column(Integer, nullable=False)        # ms ab Call-Start, fuer Reihenfolge
-    speaker             = Column(Text, nullable=False)           # 'berater'|'kunde'|'system'
-    text                = Column(Text, nullable=False)           # anonymisierter Text (Pipeline B)
+    ts_ms               = Column(Integer, nullable=False, comment='ms ab Call-Start, fuer Reihenfolge')        # ms ab Call-Start, fuer Reihenfolge
+    speaker             = Column(Text, nullable=False, comment="Sprecher: 'berater'|'kunde'|'system' (CHECK)")           # 'berater'|'kunde'|'system'
+    text                = Column(Text, nullable=False, comment='Anonymisierter Segment-Text (Pipeline B)')           # anonymisierter Text (Pipeline B)
     # WICHTIG: das Spalten-Attribut `text` ueberdeckt im Klassen-Koerper die importierte
     # sqlalchemy-Funktion `text` -> server_default=text('now()') wuerde das Column-Objekt
     # aufrufen (TypeError). Daher func.now() (Modul-Ebene, nicht ueberdeckt). DDL-Aequivalent
@@ -730,6 +738,7 @@ class TranscriptSegment(Base):
     __table_args__ = (
         CheckConstraint("speaker IN ('berater', 'kunde', 'system')", name='ck_transcript_segments_speaker'),
         Index('idx_transcript_segments_conv_ts', 'conversation_log_id', 'ts_ms'),
+        {'comment': 'Anonymisierte Transkript-Segmente pro Call (Kind von conversation_logs, Pipeline B). Status: lebt (neue Architektur Phase 08.23.2.A+). Schreibt Anonymisierungs-Pipeline; liest Analyse-/Anzeige-Pfad.'},
     )
 
 
