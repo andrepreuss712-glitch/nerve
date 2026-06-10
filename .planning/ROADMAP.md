@@ -2020,7 +2020,7 @@ Plans:
 
 ---
 
-### Phase 08.23.2.SCHILD: Tabellen-Dokumentations-Pflicht — "Schild an jeder Tabelle" (NEU 2026-06-10, aus TAXO-Gerüst §0.2) 🔴 VOR dem TAXO-Bau
+### Phase 08.23.2.SCHILD: Tabellen-Dokumentations-Pflicht — "Schild an jeder Tabelle" (NEU 2026-06-10, aus TAXO-Gerüst §0.2) 🔴 ✅ COMPLETE 2026-06-10 (alle 6 Wellen, Migration 0015 live auf Prod, Guard RED→GREEN belegt)
 
 **Goal:** Jede DB-Tabelle (~44, Schemas public/crm/training) + jede nicht-triviale Spalte bekommt ein selbst-erklärendes "Schild" (Postgres-`COMMENT`): Zweck (Business-Logik), Status (lebt/Reserve/Zombie), wer liest/schreibt (Code-Pfade). Schild lebt im Code (`models.py` `comment=`) → Alembic-Migration schiebt es in die DB. pytest-Guard blockt künftig den Deploy, wenn eine Tabelle/Spalte kein Schild hat. `inspect.sh schilder` zeigt Schild + Migrations-Historie. Regel §0.2 in `salesnerve/CLAUDE.md` verankert. **Doku-Grundlage VOR dem TAXO-Bau** — macht spätere Zombie-Renames + Tabellen-Konsolidierungen sicher ("kein Raten mehr ob tot oder lebendig").
 
@@ -2033,12 +2033,12 @@ Plans:
 **Blocker für:** TAXO-Bau (Zombie-Rename + Single-Source-Konsolidierung + intent_event + Scoring-Rubrik + Drei-Bahnen)
 **Komplexität:** 🔴 — Schema-Migration DB-weit + neue Test-Infrastruktur. Cross-AI **Pflicht** vor Execute.
 **Plans:** 6 plans (6 Wellen — models.py-Edits serialisieren da EINE Datei; Guard wird VOR der Migration gebaut/ROT beobachtet, Migration flippt ihn GRUEN; inspect.sh+CLAUDE.md zuletzt)
-- [ ] 08.23.2.SCHILD-01-discovery-db-rolle-autogenerate-PLAN.md — Discovery: DB-Rolle pg_description (3 Schemas) + MIGRATION_STYLE + include_schemas-Filter + Provisioning-SQL gegen Production beweisen (Wave 1)
-- [ ] 08.23.2.SCHILD-02-schilder-cluster-call-infra-PLAN.md — comment= Cluster Call-Analyse + Identitaet/Abrechnung/Infra + Punkt-20-grep-Status (Wave 2)
-- [ ] 08.23.2.SCHILD-03-schilder-cluster-wissen-crm-training-PLAN.md — comment= Cluster Verkaeufer-Wissen + crm + training-ORM (Wave 3)
-- [ ] 08.23.2.SCHILD-05-guard-inspect-claudemd-PLAN.md — pytest-Schild-Guard + conftest-Fixture (pg_description, 3 Schemas), server-seitig ROT beobachtet VOR Migration (Wave 4)
-- [ ] 08.23.2.SCHILD-04-migration-foundation-register-PLAN.md — env.py include_schemas + Migration 0015 (autogen/op.execute + transcript_archive) + Foundation-Register D-05; flippt Guard GRUEN (Wave 5)
-- [ ] 08.23.2.SCHILD-06-inspect-claudemd-PLAN.md — inspect.sh schilder (beide Connection-Faelle) + salesnerve/CLAUDE.md Punkt 23; traegt den Cross-AI-Gate Terminal-Block (Wave 6)
+- [x] 08.23.2.SCHILD-01-discovery-db-rolle-autogenerate-PLAN.md — Discovery: nerve_app liest pg_description aller 3 Schemas OHNE GRANT (SET-ROLE-Proof), MIGRATION_STYLE=op.execute, down_revision=0014 (Wave 1)
+- [x] 08.23.2.SCHILD-02-schilder-cluster-call-infra-PLAN.md — comment= 30 Tabellen (Call-Analyse + Identitaet/Abrechnung/Infra), 3 Zombies grep-belegt, learning_events→lebt korrigiert (Wave 2)
+- [x] 08.23.2.SCHILD-03-schilder-cluster-wissen-crm-training-PLAN.md — comment= 13 Tabellen (Wissen + crm + training-ORM), crm/training ins Schema-Dict gemerged; alle 43 ORM-Tabellen beschildert (Wave 3)
+- [x] 08.23.2.SCHILD-05-guard-inspect-claudemd-PLAN.md — pytest-Schild-Guard + conftest-Fixture, server-seitig ROT beobachtet (44 Tab + 317 Spalten, transcript_archive gefangen) (Wave 4)
+- [x] 08.23.2.SCHILD-04-migration-foundation-register-PLAN.md — Migration 0015 op.execute COMMENTs (44 Tab + 333 Spalten inkl. transcript_archive) live auf Prod, Guard GRUEN; env.py include_schemas; Foundation-Register (Wave 5)
+- [x] 08.23.2.SCHILD-06-inspect-claudemd-PLAN.md — inspect.sh schilder (FALL A nerve_app, public+crm bewiesen) + CLAUDE.md Punkt 23 + deploy.sh-Guard-Stufe (Wave 6)
 
 > ⚠️ Multi-Segment-ID-Gotcha: Pfade hartkodieren auf `.planning/phases/08.23.2.SCHILD-tabellen-dokumentations-pflicht/`. Verify=Production (`deploy.sh production` + `inspect.sh schilder`), kein Local-Dev.
 
