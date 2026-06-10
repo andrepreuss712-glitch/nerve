@@ -142,6 +142,19 @@ ssh -i "$SSH_KEY" "$VPS_HOST" bash -s << ENDHEREDOC
   fi
   echo "[deploy] Tests bestanden"
 
+  # Phase 08.23.2.SCHILD (CLAUDE.md Punkt 23): Schild-Guard als SEPARATE Stufe — laeuft als nerve_app
+  # (peer-auth) gegen Postgres-pg_description aller 3 Schemas. NICHT im root-SQLite-Lauf oben (der
+  # skippt mangels DSN; root kann nerve_app peer-auth nicht). Blockt den Deploy, wenn eine
+  # Tabelle/Spalte kein Schild (>=10 Zeichen) hat. Eingehaengt NACH dem ersten GRUEN-Deploy
+  # (Migration 0015), damit der eigene Setup-Deploy nicht blockiert wurde (Deadlock-Schutz).
+  echo "[deploy] Schild-Guard (pg_description, public/crm/training)..."
+  if sudo -u nerve_app bash -c 'cd /opt/nerve/app && NERVE_SCHILD_TEST_DSN=postgresql://nerve_app@/nerve /opt/nerve/venv/bin/pytest tests/test_schild_guard.py -q -p no:cacheprovider'; then
+    echo "[deploy] Schild-Guard GRUEN"
+  else
+    echo "[deploy] FEHLER: Schild-Guard ROT — Tabelle/Spalte ohne Schild. Kein Restart, kein Deploy."
+    exit 1
+  fi
+
   # REVIEW-HIGH-2 FIX: .deploy_meta VOR systemctl restart schreiben
   # Datei muss existieren bevor Service neu startet — sonst liest /api/health
   # beim ersten Request nach Restart noch stale/keine Daten.

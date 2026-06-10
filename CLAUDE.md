@@ -6,7 +6,7 @@
 NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertriebler im DACH-Markt. Er hört Verkaufsgesprächen live zu, erkennt Einwände in Echtzeit und liefert Gegenargumente sowie Coaching-Tipps direkt auf den Bildschirm — unsichtbar für den Kunden. Ergänzend bietet NERVE einen KI-Trainingsmodus, eine Coach-Plattform für Teams und automatisierte Post-Call-Analysen.
 
 **Status:** v0.9.4, Pre-Launch — Early Access vorbereitet
-**Founder:** André Preuß, Iserlohn (Solo-Founder, Einzelunternehmer)
+**Founder:** Solo-Founder (Einzelunternehmer)
 
 **Core Value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
 
@@ -712,3 +712,26 @@ Bevor IRGENDEIN Name/Tabelle/Spalte/Schema-Identifier im Plan festgeklopft wird,
 **Geltungsbereich:** Pflicht bei jeder Plan-Phase mit Namen-/Schema-/Tabellen-/DB-Rollen-Entscheidung. Skip-OK: reine Logik-Bugfixes, CSS, String-Updates ohne neue Identifier.
 
 **Verhältnis zu anderen Punkten:** synthetisiert Punkt 14 (Control-Flow), 20 (Pflicht-grep) und 21 (Cross-Layer) in EIN bewiesenes Artefakt — die Karte ist das Plan-Deliverable, die anderen Punkte sind die Checks darin.
+
+## Punkt 23 — Tabellen-Dokumentations-Pflicht (Schild an jeder Tabelle) — verankert 2026-06-10
+
+Quelle: `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md` §0.2. Umgesetzt in Phase 08.23.2.SCHILD (Migration 0015, pg_description aller 3 Schemas).
+
+**Die Regel (6 Punkte aus §0.2):**
+
+1. **Schild = Postgres-`COMMENT`** auf JEDER Tabelle UND jeder nicht-trivialen Spalte (in `models.py` via `comment=`, in die DB via Alembic-Migration).
+2. **Inhalt des Schilds:** `"<Zweck/Business-Logik>. Status: <lebt|Reserve/Foundation|write-only [ZOMBIE]>. Schreibt <datei.py:zeile>; liest <datei.py>."` — knackig, aber alle drei Teile + ≥10 Zeichen.
+3. **Schild lebt im Code** (`models.py` `comment=`) und wird per Migration in `pg_description` geschoben — KEIN zweites Tagebuch.
+4. **KEINE Historie/FK-Pfade im Schild-Text** (zu brüchig). Die „wann/warum"-Historie kommt aus `inspect.sh schilder` (Migrationen, die die Tabelle berühren), nicht aus dem COMMENT.
+5. **Trivial-Spalten-Konvention (L-04, NICHT kommentieren):** `id`, `created_at`, `updated_at`, `erstellt_am`, `aktualisiert_am`, `*_id` (FK/Refs), `is_*`/`aktiv` (Flags), UUID-PK. Alles andere = nicht-trivial = braucht ein Schild.
+6. **Zombie-Regel:** tote/write-only Tabellen werden NUR per Status `[ZOMBIE]`/`write-only` im Schild markiert — NICHT gelöscht (Löschung/Reparatur = eigener Cleanup/TAXO-Bau, nach grep-Beleg).
+
+**Workflow-Pflicht (Anti-Abrieb):** Wer einen Code-Pfad ändert, der eine Tabelle/Spalte liest/schreibt, oder eine neue Tabelle/Spalte anlegt, **zieht das Schild in DERSELBEN Änderung nach** (`comment=` in models.py + COMMENT-Migration).
+
+**Guard (Deploy-Block):** `tests/test_schild_guard.py` prüft server-side gegen Postgres über `pg_description` aller 3 Schemas (public/crm/training), dass jede Tabelle + nicht-triviale Spalte ein Schild ≥10 Zeichen hat. Läuft als OS-User `nerve_app` (peer-auth, Catalog-Read braucht KEINEN GRANT) mit `NERVE_SCHILD_TEST_DSN`; skippt lokal/SQLite (kein False-Green). Fängt auch ORM-lose Tabellen (z.B. `training.transcript_archive`), weil er die DB prüft, nicht models.py.
+
+**Werkzeug:** `inspect.sh schilder <tabelle>` zeigt Tabellen-Schild + Spalten-Schilder + best-effort Migrations-Historie (für public UND crm/training).
+
+**Migrations-Stil:** neue Schilder via `op.execute("COMMENT ON TABLE/COLUMN ... IS '...'")` in einer Migration (hauseigenes Muster aller Migrationen, Cross-AI-Finding 1) — KEIN autogenerate-Round-Trip nötig.
+
+**Geltungsbereich:** Pflicht bei jeder neuen Tabelle/Spalte + bei jeder Änderung an deren Leser/Schreiber. Skip-OK: reine UI/CSS/String-Edits ohne DB-Bezug.

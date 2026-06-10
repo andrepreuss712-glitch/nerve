@@ -161,6 +161,35 @@ for rule in sorted(app.url_map.iter_rules(), key=lambda r: r.rule):
         fi
         ;;
 
+    # ── Schild-Inspection (Phase 08.23.2.SCHILD) ───────────────────────────
+    schilder)
+        _validate_table "${2:?schilder needs table name}"
+        tbl="$2"
+        echo "── Schild: $tbl (Tabelle) ─────────────────────────────────"
+        # nerve_app liest pg_description aller 3 Schemas (Plan 01 GUARD_ROLE=nerve_app, bewiesen).
+        _run_psql -c "SET search_path TO public, crm, training;
+          SELECT n.nspname AS schema, obj_description(c.oid,'pg_class') AS schild
+          FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+          WHERE c.relname='$tbl' AND n.nspname IN ('public','crm','training') AND c.relkind='r';"
+        echo "── Spalten-Schilder ───────────────────────────────────────"
+        _run_psql -c "
+          SELECT a.attname AS spalte, col_description(a.attrelid,a.attnum) AS schild
+          FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid
+          JOIN pg_namespace n ON n.oid=c.relnamespace
+          WHERE c.relname='$tbl' AND n.nspname IN ('public','crm','training')
+          AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum;"
+        echo "── Migrations-Historie (best-effort: Struktur-Ops/COMMENTs die diese Tabelle berühren) ──"
+        # Cross-AI-Finding 2 (LOW): präziser als nacktes grep -l "$tbl" (Substring-/Kommentar-False-
+        # Positives). Nur echte Alembic-Strukturoperationen, literale COMMENT-Statements ODER die
+        # schema-qualifizierte Tupel-Form der 0015-COMMENT-Migration ('schema', 'tabelle',). $tbl ist
+        # via _validate_table Whitelist-validiert ([a-z_][a-z0-9_]*) → injection-safe in der Regex.
+        { grep -lE "op\.(create_table|alter_table|drop_table|add_column|drop_column)\(['\"]${tbl}['\"]|COMMENT ON (TABLE|COLUMN) [a-z_]*\.?${tbl}([^a-z0-9_]|\$)|\('(public|crm|training)', '${tbl}'," "$APP_DIR"/alembic/versions/*.py 2>/dev/null || true; } | while read -r f; do
+            echo "  $(basename "$f"):"
+            (cd "$APP_DIR" && git log --oneline -- "$f" 2>/dev/null | head -3) | sed 's/^/      /'
+        done
+        echo "(best-effort — dynamisch generierte DDL wird nicht erschöpfend erfasst.)"
+        ;;
+
     # ── Help ───────────────────────────────────────────────────────────────
     help|--help|-h|"")
         cat << 'HELP'
@@ -175,6 +204,8 @@ DB-Inspection (Postgres):
     count <table>               Row-Count
     tables                      Alle Tabellen
     migrations                  alembic_version-Tabelle
+    schilder <table>            Tabellen-Schild + Spalten-Schilder (pg_description,
+                                public/crm/training) + best-effort Migrations-Historie
 
 App-Inspection:
     alembic-current             Aktueller Migration-Stand
