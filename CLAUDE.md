@@ -735,3 +735,31 @@ Quelle: `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md` §0.2
 **Migrations-Stil:** neue Schilder via `op.execute("COMMENT ON TABLE/COLUMN ... IS '...'")` in einer Migration (hauseigenes Muster aller Migrationen, Cross-AI-Finding 1) — KEIN autogenerate-Round-Trip nötig.
 
 **Geltungsbereich:** Pflicht bei jeder neuen Tabelle/Spalte + bei jeder Änderung an deren Leser/Schreiber. Skip-OK: reine UI/CSS/String-Edits ohne DB-Bezug.
+
+## Punkt 24 — Rollende Voraus-Planung + 3 Sichten (verankert 2026-06-11)
+
+Quelle: `Nerve-Vault/CLAUDE.md` → „Vorgehens-Prinzip: Rollende Voraus-Planung + 3 Sichten" (Andre-Direktive nach der TAXO-Erfahrung). Gilt für Plan-Author, Executor, Reviewer.
+
+### Teil A — Rollende Voraus-Planung (immer EINEN Roadmap-Brocken vorausplanen)
+
+Ein großer Roadmap-Brocken wird in Phasen aufgeteilt und **bis kurz vor Execute** geplant. **Bevor** der aktuelle Brocken executet wird, wird der **nächste** Brocken so weit geplant, dass die **gemeinsamen Verträge/Nahtstellen** geprüft werden können. So liegen ≥2 Brocken-Pläne nebeneinander und man fängt Vertrags-Drifts (Schema/Schnittstelle/Daten-Fluss), die der aktuelle Brocken sonst falsch zementiert, VOR dem Bau. Anker-Beleg: TAXO1/2/3 teilen den `intent_event`-Vertrag; der Interlock fing I-1/I-2/I-3 + den I-4-Launch-Blocker, die im Einzelplan + Standard-Cross-AI durchgerutscht waren.
+
+**Drei harte Leitplanken (für den Plan-Author):**
+1. **VERTRAGS-tief, nicht BAU-tief.** Vom nächsten Brocken NUR die gemeinsamen Verträge festzurren (DB-Tabelle/Schema, Funktions-/API-Signatur, Daten-Fluss-Naht). NICHT bis zur Bau-Reife durchdetaillieren — ein zu weit vorausgeplanter Detail-Plan verrottet (der Code ändert sich beim Bauen des aktuellen Brockens). Details des nächsten Brockens erst kurz vorm Bauen.
+2. **Genau EIN Brocken voraus.** Nicht zwei+ (Kartenhaus).
+3. **Kopplungs-abhängig.** Voller Interlock NUR wenn der nächste Brocken einen gemeinsamen Vertrag/eine Architektur-Naht mit dem aktuellen teilt. Unabhängige Brocken (kein gemeinsamer Schreib-/Lese-Pfad, kein geteiltes Schema) → leichter Check oder skip.
+
+**Interlock-Schritt vor Execute (Pflicht bei gekoppelten Brocken):** alle relevanten Phasen-Pläne nebeneinander legen, die geteilten Verträge gegeneinander greppen (gleicher Tabellen-/Spalten-/Signatur-Name? gleiche Semantik? gleiche Arbeitslisten-/Trigger-Invariante?). Divergenz = STOP + auflösen, BEVOR der aktuelle Brocken gebaut wird. Plus: **„erst alle Blocker des aktuellen Brockens fixen, dann nächster Teil"** (Andre 2026-06-11) — kein Bau auf einem Fundament mit bekanntem Loch (Anker: TAXO1-04-Blocker I-4 vor TAXO3).
+
+### Teil B — 3 Sichten: Gemini bei ALLEN substanziellen Fragen (erweitert die GSD-Workflow-Pflichten + Cross-AI-Regel)
+
+Default ist drei unabhängige Sichten auf jede substanzielle Entscheidung: (1) Andre + Claudian (Vault-Strategie), (2) GSD/Claude Code (Code-Repo), (3) **Gemini** (anderes Gehirn, andere Blindstellen). Cross-AI mit Gemini wird damit der Default — nicht mehr NUR beim formalen `/gsd-review`, sondern auch bei: Discuss-Grau-Zonen, Plan-Entscheidungen, Interlock-Checks, Audit-Funden, Architektur-/Design-Fragen, nicht-trivialen Bug-Diagnosen.
+
+**Einzige Ausnahme (Anti-Inflation):** echt-triviale/mechanische Dinge (Renaming, CSS, String-Fixes, Tippfehler, Bugfix mit glasklarer Root-Cause). Da ist Gemini Rauschen.
+
+**Pflicht-Disziplin:**
+- **Gemini ist code-/vault-blind** — sieht nur was gefüttert wird. JEDEN Gemini-Befund gegen echten Code/Gerüst (`inspect.sh`/grep) gegenprüfen, nie blind übernehmen.
+- **Gegenleser, kein Bauer:** Gemini via `agy -p`/`gemini -p` (reiner Antwort-Modus) oder interaktiv mit verweigerten Schreib-/Ausführ-Rechten. NIEMALS unseren Code eigenständig anfassen lassen. Modell: `gemini-3.1-pro-preview` (bzw. agy Gemini 3.1 Pro High ab 15.06.), Flash als Notausweich.
+- Cross-AI-Entscheidung + -Funde pro Brocken in `Nerve-Vault/05 Log` dokumentieren.
+
+**Geltungsbereich:** Pflicht-Prozess bei jedem großen Roadmap-Brocken (Plan→Interlock→Execute). Skip-OK nur für 🟢-triviale Einzelaufgaben.
