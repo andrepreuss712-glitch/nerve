@@ -2071,7 +2071,16 @@ Plans:
 **Erbt aus TAXO1 (Spec-Lock 2026-06-10):** echte Zombifizierung von `objection_events` (Dual-Write-Brücke ablösen, Dashboard-Einwand-Zähler auf intent_event/rubric_score umziehen) + Konsolidierung des `conversation_logs`-Aggregats (Note/Bewertung).
 **Depends on:** 08.23.2.TAXO1 (`intent_event`-Schema + Slow Lane).
 **Komplexität:** 🔴 — Schema + Scoring-Logik (ersetzt 2 Systeme). Cross-AI **Pflicht**. Real-Daten-Validation Pflicht.
-**Plans:** TBD (Plan-Phase)
+**Plans:** 7 Plans / 6 De-Risk-Wellen (GEPLANT 2026-06-11, Wellen-Schnitt):
+- [ ] 08.23.2.TAXO2-01-rubric-score-tabelle-PLAN.md — neue rubric_score-Tabelle (hybrid, Owner nerve_app, RLS FORCE, Schild, Training-Fit-Pass) [W1, Req 1/5/8/D-08/D-11]
+- [ ] 08.23.2.TAXO2-02-bars-engine-proration-PLAN.md — BARS-Engine + Proration + Modus-Gewichte + 2 D-02-Pflicht-Tests (reine Funktion) [W2, Req 2/3/5/9/D-01..05/D-08]
+- [ ] 08.23.2.TAXO2-03-handling-score-slow-lane-PLAN.md — handling_score 1-3 in-place (Slow Lane), Race-Gate, Goodhart-Logging [W2, Req 4/D-03/D-07]
+- [ ] 08.23.2.TAXO2-04-coaching-score-cutover-async-PLAN.md — Live-Cutover: Engine→calls.coaching_score (EIN Schreiber, async D-10), alte Formel weg, Audio-Gate D-09, NULL-Edge 3 Screens [W3, Req 2/5/6/9/D-09/D-10]
+- [ ] 08.23.2.TAXO2-05-objection-zombify-admin-ewb-PLAN.md — 4 objection_events-Leser→intent_event, Brücke weg, [ZOMBIE]-Schild + admin_ewb ersatzlos raus [W4, Req 7/D-06]
+- [ ] 08.23.2.TAXO2-06-convlogs-aggregat-schatten-PLAN.md — conversation_logs-Aggregat Schatten-Welle (Engine rechnet alle, loggt Diskrepanzen) [W5, Req 8]
+- [ ] 08.23.2.TAXO2-07-convlogs-aggregat-cutover-PLAN.md — Cutover: Engine = EIN Schreiber je Aggregat-Feld, alte raus, FK unangetastet [W6, Req 8]
+
+**🔴 → Cross-AI PFLICHT vor Execute** (André-Direktive: TAXO1/2/3 alle bis kurz vor Execute, dann Ineinandergreifen prüfen, dann TAXO1→TAXO2→TAXO3). NÄCHSTER SCHRITT: /gsd-review --phase 08.23.2.TAXO2 --all. Alle 9 SPEC-Requirements abgedeckt. Multi-Segment-Gotcha: Pfade hardcoded, gsd-tools umgangen, STATE/ROADMAP hand-editiert.
 
 ### Phase 08.23.2.TAXO3: Antworten — EINE Wissensversorgung (Säule 3) (NEU 2026-06-10) 🔴
 
