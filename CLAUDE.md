@@ -758,7 +758,7 @@ Default ist drei unabhängige Sichten auf jede substanzielle Entscheidung: (1) A
 **Einzige Ausnahme (Anti-Inflation):** echt-triviale/mechanische Dinge (Renaming, CSS, String-Fixes, Tippfehler, Bugfix mit glasklarer Root-Cause). Da ist Gemini Rauschen.
 
 **Pflicht-Disziplin:**
-- **Gemini ist code-/vault-blind** — sieht nur was gefüttert wird. JEDEN Gemini-Befund gegen echten Code/Gerüst (`inspect.sh`/grep) gegenprüfen, nie blind übernehmen.
+- **Gemini liest bei echten Reviews den REALEN Code read-only** (aus dem Repo / auf die Dateien gezeigt, Schreib-/Ausführ-Rechte verweigert) — NICHT nur zugefütterte Auszüge. Grund: nur Auszüge geben macht den Frager zum Filter und vererbt dessen blinde Flecken (genau die soll die 3. Sicht finden). Read-Zugriff ist kein Sicherheitsthema (nur Schreiben/Ausführen bleibt verboten). Auszüge nur für geschlossene Logik-Checks („Plan A vs B — Widerspruch?"), dann als „prüft die Auswahl" markiert. **Bleibt (gilt für alle):** Gemini sieht Code im Ruhezustand, nicht den Live-Server → Befunde gegen `inspect.sh`/Live gegenprüfen. (Intuition: ein Bauteil ohne Sicht auf seinen Einbau-Ort entwerfen → landet an unerreichbarer Position, der Mechaniker zahlt — Review ohne Einbau-Ort ist dasselbe Anti-Pattern.)
 - **Gegenleser, kein Bauer:** Gemini via `agy -p`/`gemini -p` (reiner Antwort-Modus) oder interaktiv mit verweigerten Schreib-/Ausführ-Rechten. NIEMALS unseren Code eigenständig anfassen lassen. Modell: `gemini-3.1-pro-preview` (bzw. agy Gemini 3.1 Pro High ab 15.06.), Flash als Notausweich.
 - Cross-AI-Entscheidung + -Funde pro Brocken in `Nerve-Vault/05 Log` dokumentieren.
 
