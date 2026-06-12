@@ -2092,7 +2092,16 @@ Plans:
 
 **Depends on:** 08.23.2.TAXO1 (`intent_event`-Schema; nutzt primary_intent + confidence + mode).
 **Komplexität:** 🔴 — berührt jeden Live-Antwort-Pfad. Cross-AI **Pflicht**. Context7 für SDK-Calls (Anthropic). Real-Daten-Validation Pflicht.
-**Plans:** TBD (Plan-Phase)
+**Plans:** 5 plans / 5 De-Risk-Wellen (GEPLANT 2026-06-12, Wave-Cut RESEARCH: erst Ton, dann Tempo; W3 gated auf TAXO1-interaction_id-Interlock)
+
+Plans:
+- [ ] 08.23.2.TAXO3-01-coach-tuer-schema-grant-PLAN.md — W0 Schema-Tür: method_packs + pack_assignments + product_facts (training, leer) + OQ-1 narrow GRANT [NEEDS ANDRÉ+GEMINI] + Schild [W1, SPEC Req 4/7-Schema; schema-addition, kein Test-Anruf]
+- [ ] 08.23.2.TAXO3-02-nerve-default-pack-freigabe-PLAN.md — W0b: NERVE-Default method_pack-Inhalt destilliert (Paradigma+3 Rollen+3 Tabus) → André-Freigabe (D-01) → idempotenter Seed [W2, SPEC Req 2/3/4-Inhalt; daten-seed, kein Test-Anruf]
+- [ ] 08.23.2.TAXO3-03-build-answer-context-ton-PLAN.md — W1 Ton (größter Hebel): EINE build_answer_context (Wrapper, Block-Split strukturell), Auto-Müll + Few-Shot gelöscht, Paradigma/Rollen/Intent aus method_pack, EIN Intent, Modus/Konfidenz Parameter, Grounding-Regel [W3, SPEC Req 1/2/3/4-Loader/5/6/7-Grounding; riskant, Test-Anruf + TTFT-Basislinie]
+- [ ] 08.23.2.TAXO3-04-caching-circuit-breaker-tempo-PLAN.md — W2 Tempo: cache_control-Layering aktiv (stabil cached/volatil ungecacht), Pre-Warming nicht-blockierend, is_auto_triggered-Circuit-Breaker (Auto→Haiku/Knopf→Sonnet) [W4, SPEC Req 9; riskant, Test-Anruf + eigene TTFT-Messung + cache_read>0]
+- [ ] 08.23.2.TAXO3-05-slot-b-dedup-interaction-id-PLAN.md — W3 D3-Dedup: Slot B deterministisch per interaction_id (nicht line_id/Mutex), keyword-Doppelung raus, Slot A bleibt, FE-Render-Dedup [W5, SPEC Req 8; riskant, Test-Anruf; GATED auf TAXO1-04-I-4-Fix + interaction_id-Quelle per-SID]
+
+**🔴 → Cross-AI PFLICHT vor Execute** (André-Direktive: TAXO1/2/3 alle bis kurz vor Execute, dann 3-Wege-Interlock intent_event-Klebstoff, dann Execute TAXO1→2→3). W0 OQ-1-Schema-Entscheidung (narrow GRANT vs public vs coach-Schema) am Cross-AI-Review bestätigen. W3 erst nach TAXO1-04-Blocker-I-4-Fix + interaction_id-Quelle-Klärung. NÄCHSTER SCHRITT: /gsd-review --phase 08.23.2.TAXO3 --all. Alle 9 SPEC-Requirements abgedeckt. Multi-Segment-Gotcha: Pfade hardcoded, gsd-tools umgangen, STATE/ROADMAP hand-editiert.
 
 > ⚠️ Multi-Segment-ID-Gotcha (wie SCHILD): Pfade auf `.planning/phases/08.23.2.TAXO1-*/` etc. hartkodieren. Verify=Production, kein Local-Dev. Plan-Pflicht-Sektionen Punkt 14 (Control-Flow) + Punkt 21 (Persistenz-Schicht) bei jedem Code-Insert.
 
