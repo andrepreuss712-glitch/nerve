@@ -2096,7 +2096,7 @@ Plans:
 **Plans:** 5 plans / 5 De-Risk-Wellen (GEPLANT 2026-06-12, Wave-Cut RESEARCH: erst Ton, dann Tempo; W3 gated auf TAXO1-interaction_id-Interlock)
 
 Plans:
-- [ ] 08.23.2.TAXO3-01-coach-tuer-schema-grant-PLAN.md — W0 Schema-Tür: method_packs + pack_assignments + product_facts (training, leer) + OQ-1 narrow GRANT [NEEDS ANDRÉ+GEMINI] + Schild [W1, SPEC Req 4/7-Schema; schema-addition, kein Test-Anruf]
+- [ ] 08.23.2.TAXO3-01-coach-tuer-schema-grant-PLAN.md — W0 Schema-Tür: method_packs + pack_assignments + product_facts (**public-Schema**, leer) — **OQ-1 = Option B (André 2026-06-12): public, KEIN training-Grant, DPO-Wand bleibt absolut (Blast-Radius)** + Schild [W1, SPEC Req 4/7-Schema; schema-addition, kein Test-Anruf]
 - [ ] 08.23.2.TAXO3-02-nerve-default-pack-freigabe-PLAN.md — W0b: NERVE-Default method_pack-Inhalt destilliert (Paradigma+3 Rollen+3 Tabus) → André-Freigabe (D-01) → idempotenter Seed [W2, SPEC Req 2/3/4-Inhalt; daten-seed, kein Test-Anruf]
 - [ ] 08.23.2.TAXO3-03-build-answer-context-ton-PLAN.md — W1 Ton (größter Hebel): EINE build_answer_context (Wrapper, Block-Split strukturell), Auto-Müll + Few-Shot gelöscht, Paradigma/Rollen/Intent aus method_pack, EIN Intent, Modus/Konfidenz Parameter, Grounding-Regel [W3, SPEC Req 1/2/3/4-Loader/5/6/7-Grounding; riskant, Test-Anruf + TTFT-Basislinie]
 - [ ] 08.23.2.TAXO3-04-caching-circuit-breaker-tempo-PLAN.md — W2 Tempo: cache_control-Layering aktiv (stabil cached/volatil ungecacht), Pre-Warming nicht-blockierend, is_auto_triggered-Circuit-Breaker (Auto→Haiku/Knopf→Sonnet) [W4, SPEC Req 9; riskant, Test-Anruf + eigene TTFT-Messung + cache_read>0]
