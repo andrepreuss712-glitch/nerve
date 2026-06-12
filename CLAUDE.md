@@ -770,6 +770,8 @@ Quelle: `Nerve-Vault/CLAUDE.md` → „HART: Latenz ist ein Dealbreaker". Andre-
 
 **Regel für Plan-Author/Executor/Reviewer:** Jedes Feature, das einen Live-Antwort-/Erkennungs-Pfad berührt (EWB-Antwort, QA, Slot-A/B, Live-Cue, intent_event-Emit), nennt im Plan ein **Latenz-Budget** und prüft die Änderung dagegen. **Antwort-Latenz ist gleichrangig mit Qualität, nicht nachrangig.**
 
+**BALANCE (André 2026-06-12):** GLEICHGEWICHT, nicht „schnell gewinnt". **Schnell-aber-Müll = genauso Dealbreaker wie gut-aber-langsam** (Haiku-Müll in 200ms so wertlos wie Sonnet-Gold in 2-3s). **Ambition: das STARKE Modell schnell genug machen, NICHT aufs schwache ausweichen.** Wenn Sonnet via Caching/Prompt-Größe/First-Token-Streaming/Vorladen auf wenige ms kommt → klar Sonnet. Die schnellen Hebel machen das gute Modell schnell — sie sind keine Ausrede fürs schwache.
+
 - **Modell-Wahl IST eine Latenz-Entscheidung** (Haiku schnell/schwach vs Sonnet langsam/stark) — bewusst abwägen, nicht blind auf Qualität. Bau-Regel 1 (kein LLM in der schnellen Live-Bahn) bleibt.
 - **Schnelle Hebel zuerst** (vor „langsameres stärkeres Modell"): lokales Slot-A-Sofortnetz, Prompt-Caching (stabile Prompt-Teile gecacht — CACHE_* bereits vorhanden), fokussierte/kleine Prompts, paralleles Vorladen.
 - **Streaming hilft dem Gefühl, nicht der Roh-Latenz** bis zum ersten sinnvollen Wort.
