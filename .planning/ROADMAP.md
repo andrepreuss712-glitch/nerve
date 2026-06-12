@@ -2048,6 +2048,7 @@ Plans:
 
 > **Workflow (Andre-Direktive 2026-06-10):** Alle drei Teile (TAXO1/2/3) ZUERST bis kurz vor Execute bringen — je Spec → Discuss → Plan → Cross-AI-Review. Dann alle drei Pläne + Reviews nebeneinanderlegen und auf sauberes Ineinandergreifen prüfen (gemeinsamer Klebstoff = das `intent_event`-Schema, Gerüst §3). ERST danach Execute, einer nach dem anderen: TAXO1 → TAXO2 → TAXO3. Anti-Abrieb: nicht Teil 1 fertigbauen und dann merken, dass Teil 2 ihn anders braucht.
 > **Quell-Doc Pflicht-Pre-Read für jede Spec/Plan-Phase:** `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md` (der verriegelte Bauplan, Single Source of Truth). Real-Daten/Schema-Pulls IMMER gegen Production (`inspect.sh`), kein Local-Dev. SCHILD-Guard bei Tabellen-Änderungen MANUELL laufen lassen (Auto-Blockade inert bis 08.23.2.STAGING — Tor-Fix).
+> **Sicherheits-Verifikation pro Phase (André 2026-06-12):** Jede TAXO-Phase, die eine Tabelle anfasst, verifiziert für genau diese Tabellen den Daten-Schutz — User-Trennung (per-user/tenant-Isolation) + „sensible Daten nicht leicht erreichbar". Inline (OQ-1 = erster Fall, DPO-Wand). Die breite app-weite Userdaten-Sicherheits-Prüfung ist davon GETRENNT = eigene Pflicht-Phase vor Launch (SEC-USERDATA), nicht in TAXO reinquetschen (Scope/Abrieb).
 
 ### Phase 08.23.2.TAXO1: Verstehen — Fundament + Erkennung (NEU 2026-06-10) 🔴
 
@@ -2104,6 +2105,12 @@ Plans:
 **🔴 → Cross-AI PFLICHT vor Execute** (André-Direktive: TAXO1/2/3 alle bis kurz vor Execute, dann 3-Wege-Interlock intent_event-Klebstoff, dann Execute TAXO1→2→3). W0 OQ-1-Schema-Entscheidung (narrow GRANT vs public vs coach-Schema) am Cross-AI-Review bestätigen. W3 erst nach TAXO1-04-Blocker-I-4-Fix + interaction_id-Quelle-Klärung. NÄCHSTER SCHRITT: /gsd-review --phase 08.23.2.TAXO3 --all. Alle 9 SPEC-Requirements abgedeckt. Multi-Segment-Gotcha: Pfade hardcoded, gsd-tools umgangen, STATE/ROADMAP hand-editiert.
 
 > ⚠️ Multi-Segment-ID-Gotcha (wie SCHILD): Pfade auf `.planning/phases/08.23.2.TAXO1-*/` etc. hartkodieren. Verify=Production, kein Local-Dev. Plan-Pflicht-Sektionen Punkt 14 (Control-Flow) + Punkt 21 (Persistenz-Schicht) bei jedem Code-Insert.
+
+### Phase SEC-USERDATA: App-weite Userdaten-Sicherheits-Prüfung (PFLICHT vor Launch, André 2026-06-12) 🔴
+
+**Goal:** Proportionierte (NICHT Fort-Knox) Sicherheits-Prüfung der sensiblen Userdaten über die ganze App — getrennt von TAXO (dort wird der Daten-Fußabdruck pro Phase inline gesichert; SEC-USERDATA prüft das Gesamtbild + den Rest + den äußeren Zaun).
+
+**Scope:** (1) **Äußerer Zaun (kurz):** WAF/Schutzschild, Rate-Limiting (Flask-Limiter teils da → verifizieren+ergänzen), Account-Lockout nach Fehl-Logins, fail2ban-Pattern. (2) **Innere Schlösser (gründlich, das Wichtigere):** hält die per-user/tenant-Isolation an JEDER Tabelle+Query (RLS vs App-Level)? Ist Sensibles im Breach-Fall nicht leicht erreichbar (Blast-Radius)? Deckt die Anonymisierung jeden Persistenz-Pfad? Encryption-at-rest? DB-Credential-Handhabung? Secrets-Management. **Zahlungsdaten via Stripe (nicht bei uns) — Anbindung bestätigen.** **Output:** Klartext-Bericht „was dicht / was nicht" + Fix-Liste. **Werkzeug:** security-review-Skill + `/gsd-secure-phase` + Prod-Check Zugriffsrechte/RLS via inspect.sh. **Komplexität:** 🔴 (Security/DSGVO, Cross-AI Pflicht). **⚠ Timing offen (André 2026-06-12):** Fable 5/Mythos (Security-Tool) nur bis ~nächste Woche → erwägen, es JETZT auf stabile Schichten (Auth/Datenschicht/DSGVO-Architektur) + TAXO-Pläne anzusetzen und Funde zu banken, statt das Fenster verfallen zu lassen. Entscheidung steht aus.
 
 ---
 
