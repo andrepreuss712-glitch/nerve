@@ -763,3 +763,16 @@ Default ist drei unabhängige Sichten auf jede substanzielle Entscheidung: (1) A
 - Cross-AI-Entscheidung + -Funde pro Brocken in `Nerve-Vault/05 Log` dokumentieren.
 
 **Geltungsbereich:** Pflicht-Prozess bei jedem großen Roadmap-Brocken (Plan→Interlock→Execute). Skip-OK nur für 🟢-triviale Einzelaufgaben.
+
+## Punkt 25 — Latenz ist ein Dealbreaker (verankert 2026-06-12)
+
+Quelle: `Nerve-Vault/CLAUDE.md` → „HART: Latenz ist ein Dealbreaker". Andre-Direktive: Antworten müssen schnell SEIN, nicht nur gut — eine bessere Antwort, die spürbar später kommt, ist im Live-Call wertlos.
+
+**Regel für Plan-Author/Executor/Reviewer:** Jedes Feature, das einen Live-Antwort-/Erkennungs-Pfad berührt (EWB-Antwort, QA, Slot-A/B, Live-Cue, intent_event-Emit), nennt im Plan ein **Latenz-Budget** und prüft die Änderung dagegen. **Antwort-Latenz ist gleichrangig mit Qualität, nicht nachrangig.**
+
+- **Modell-Wahl IST eine Latenz-Entscheidung** (Haiku schnell/schwach vs Sonnet langsam/stark) — bewusst abwägen, nicht blind auf Qualität. Bau-Regel 1 (kein LLM in der schnellen Live-Bahn) bleibt.
+- **Schnelle Hebel zuerst** (vor „langsameres stärkeres Modell"): lokales Slot-A-Sofortnetz, Prompt-Caching (stabile Prompt-Teile gecacht — CACHE_* bereits vorhanden), fokussierte/kleine Prompts, paralleles Vorladen.
+- **Streaming hilft dem Gefühl, nicht der Roh-Latenz** bis zum ersten sinnvollen Wort.
+- **Pre-Execute-Audit Pflicht-Frage (Punkt 19 ergänzt):** „Erhöht dieser Pfad die spürbare Antwort-Latenz? Um wie viel? Im Budget?" Deutlicher Anstieg → Dealbreaker, umdesignen, NICHT „bauen + später optimieren".
+
+**Gilt besonders für TAXO3:** die Qualitäts-Verbesserung (gutes Antwort-Paradigma, Rollen-Bewusstsein, ggf. stärkeres Modell) darf das Tempo nicht opfern — die Latenz-Lösung (Slot-A-Sofortnetz + Caching + Modell-Abwägung) ist Teil des Scope, kein Nachgedanke.
