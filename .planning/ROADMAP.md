@@ -2061,10 +2061,14 @@ Plans:
 **Depends on:** keine harte (steht eigenständig). **Blocker für:** TAXO1-Deploy-Fortsetzung + jeden künftigen `deploy.sh production`. **Execute VOR TAXO1-Bau-Fortsetzung.**
 **Herkunft:** herausgelöst aus Slot 08.23.2.STAGING Task (1) („deploy.sh-Test-Gate fixen") — vorgezogen, weil es jeden Deploy blockiert. STAGING bleibt am Ende mit Rest-Tasks (2)-(5) (Auto-Alembic, deploy_meta, atomarer Promote, Drift-Audit).
 **Komplexität:** 🔴 — Cross-AI **Pflicht** (André-Direktive Punkt 24: 3 Sichten). Voll Spec → Plan → Cross-AI → Execute.
-**Plans:** 3 plans (2 waves).
-- [ ] 08.23.2.PGTEST-01-conftest-fixtures-PLAN.md — conftest generische Fixtures auf nerve_test-PG + Tenant-Kontext (Req-2/5/9) [Wave 1]
-- [ ] 08.23.2.PGTEST-02-deploy-gate-block-PLAN.md — deploy.sh Postgres-Gate: Provision→Cutover-Build→pytest→Teardown, fail-closed, Whitelist-Guard (Req-1/3/4/5/7/8/9) [Wave 1]
-- [ ] 08.23.2.PGTEST-03-remove-sqlite-port-klasse-a-PLAN.md — SQLite-Emulation entfernen + Klasse-A-Tests auf PG portieren (Req-4/6) [Wave 2]
+**Plans:** 3 plans (2 waves) — GEPLANT 2026-06-15, plan-checker PASSED (2. Iteration: 2 Blocker + 2 Warnings in Rev-1 gefixt).
+- [ ] 08.23.2.PGTEST-01-conftest-fixtures-PLAN.md — conftest generische Fixtures auf nerve_test-PG + Tenant-Kontext (Modul-SessionLocal-Rebind, D-05) + 3 Spezial-Fixtures → nerve_test (Req-2/5/9) [Wave 1]
+- [ ] 08.23.2.PGTEST-02-deploy-gate-block-PLAN.md — deploy.sh Postgres-Gate: Whitelist-Guard D-02 + trap-Teardown + **pg_dump-Bau-Pfad** (schema-only + alembic_version-data + upgrade-head-nur-neue-Revs) + 4-DSN-pytest, fail-closed pro Schritt (Req-1/3/4/5/7/8/9) [Wave 1]
+- [ ] 08.23.2.PGTEST-03-remove-sqlite-port-klasse-a-PLAN.md — SQLite-Emulation entfernen (ATTACH-Listener + app.py-Hook) + Klasse-A-Tests (test_account_memory_briefing + anonymizer-Logic-Group) auf PG portieren (Req-4/6) [Wave 2]
+
+**⚑ BUILD-PATH empirisch BEWIESEN 2026-06-15 (supervised, André Punkt-22):** plan-checker fing einen echten Blocker — `create_all→stamp 0001→upgrade head` kollidiert bei 0002 (create_all baut volles Modell, add_column-Replay doppelt). Gewählter+bewiesener Pfad = `pg_dump --schema-only nerve` + `pg_dump --data-only alembic_version` + `alembic upgrade head` (nur neue Revs 0015→0016). Gegen Wegwerf-nerve_test serverseitig belegt: 7 crm-RLS-Policies + FORCE + GRANTs treu vom Dump getragen, echter Cross-Tenant-Test (11 passed), danach rückstandsfrei geteardownt. Req-3-Mechanismus-Abweichung André-autorisiert (End-Zustand erfüllt Acceptance). Details: RESEARCH.md „⚑ BUILD-PATH LOCKED".
+
+**🔴 → Cross-AI PFLICHT vor Execute** (André Punkt 24). NÄCHSTER SCHRITT: `/gsd-review --phase 08.23.2.PGTEST --all`.
 
 > ⚠️ Multi-Segment-ID-Gotcha (wie SCHILD/TAXO): Pfade hartkodieren auf `.planning/phases/08.23.2.PGTEST-echtes-postgres-test-gate/`, gsd-tools-ID-Auflösung umgehen, STATE/ROADMAP hand-editieren. Verify=Production (`deploy.sh production`), kein Local-Dev.
 
