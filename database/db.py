@@ -1,6 +1,8 @@
 import os
+import sqlite3
 import contextvars
 from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, scoped_session
 
 # Resolve relative SQLite paths relative to project root
@@ -23,6 +25,29 @@ if 'sqlite' in _DATABASE_URL:
         cursor = dbapi_connection.cursor()
         cursor.execute('PRAGMA journal_mode=WAL')
         cursor.close()
+
+# ── Test-only: SQLite-Schema-Emulation fuer crm.* / training.* ─────────────────
+# Die crm-/training-Modelle (models.py) sind __table_args__ {'schema': 'crm'|'training'}.
+# SQLite kennt keine Schemas -> Base.metadata.create_all() wirft "unknown database crm"
+# und bricht das deploy.sh-Pytest-Gate schon bei der COLLECTION (jeder Test, der app/models
+# importiert). Wir ATTACHen pro SQLite-Verbindung eine In-Memory-DB namens crm/training, sodass
+# schema-qualifiziertes create_all + alle Queries aufloesen (generalisiert das StaticPool+ATTACH-
+# Muster aus test_account_memory_briefing.py / test_anonymizer_worker.py auf JEDE SQLite-Engine —
+# auch die im Test-Suite-Code separat erzeugten). Die crm/training-Modelle tragen ausschliesslich
+# Soft-Links (KEIN FK, D-08/D-17) -> create_all emittiert keine cross-database REFERENCES.
+# GLOBAL auf der Engine-Klasse registriert (nicht nur auf der Modul-Engine), damit es Test-Engines
+# aus conftest/tests/ ebenfalls erfasst. Postgres-Verbindungen sind psycopg2, kein sqlite3.Connection
+# -> unberuehrt (echte Schemas in Produktion).
+@event.listens_for(Engine, "connect")
+def _sqlite_attach_crm_training_schemas(dbapi_connection, connection_record):
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cur = dbapi_connection.cursor()
+        try:
+            cur.execute("ATTACH DATABASE ':memory:' AS crm")
+            cur.execute("ATTACH DATABASE ':memory:' AS training")
+        finally:
+            cur.close()
+
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db_session = scoped_session(SessionLocal)

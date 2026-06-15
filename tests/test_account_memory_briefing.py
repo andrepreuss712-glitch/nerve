@@ -28,7 +28,7 @@ def _patched_session(monkeypatch):
     vanish per-connection. crm models carry NO SQLAlchemy-level ForeignKeys (DB-side only), so
     create_all emits no cross-database REFERENCES that SQLite would reject.
     """
-    from sqlalchemy import create_engine, event
+    from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.pool import StaticPool
     from database.db import Base
@@ -41,13 +41,10 @@ def _patched_session(monkeypatch):
         poolclass=StaticPool,
     )
 
-    @event.listens_for(engine, "connect")
-    def _attach_crm_schema(dbapi_conn, _rec):
-        dbapi_conn.execute("ATTACH DATABASE ':memory:' AS crm")
-        # Phase 08.23.2.G-MEET Wave 3 added PreferencePair ({'schema':'training'}) to Base.metadata,
-        # so create_all now also emits training.* — the training schema must be ATTACHed too.
-        dbapi_conn.execute("ATTACH DATABASE ':memory:' AS training")
-
+    # crm/training werden jetzt ZENTRAL via globalem connect-Listener in database.db
+    # (_sqlite_attach_crm_training_schemas) auf JEDE SQLite-Verbindung ATTACHed — der frueher
+    # hier lokale @event.listens_for(engine,"connect")-ATTACH waere doppelt ("database crm is
+    # already in use"). StaticPool bleibt: ATTACH + create_all + Session auf EINER Verbindung.
     Base.metadata.create_all(engine)
     TestSession = sessionmaker(bind=engine)
 

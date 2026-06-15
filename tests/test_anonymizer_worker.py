@@ -60,7 +60,7 @@ def mem_engine():
     schema-qualified). StaticPool keeps the ATTACH, create_all and every connection on ONE DBAPI
     connection. training.transcript_archive is raw DDL (migration 0008), not an ORM model, so we
     create it by hand to mirror its 0008 shape."""
-    from sqlalchemy import create_engine, event, text
+    from sqlalchemy import create_engine, text
     from sqlalchemy.pool import StaticPool
     from database.db import Base
     import database.models  # noqa: F401 (registers crm.* + training.* on Base.metadata)
@@ -71,11 +71,9 @@ def mem_engine():
         poolclass=StaticPool,
     )
 
-    @event.listens_for(engine, "connect")
-    def _attach(dbapi_conn, _rec):
-        dbapi_conn.execute("ATTACH DATABASE ':memory:' AS crm")
-        dbapi_conn.execute("ATTACH DATABASE ':memory:' AS training")
-
+    # crm/training werden jetzt ZENTRAL via globalem connect-Listener in database.db
+    # (_sqlite_attach_crm_training_schemas) ATTACHed — lokaler ATTACH waere doppelt.
+    # StaticPool bleibt: ATTACH + create_all + raw training.transcript_archive auf EINER Verbindung.
     Base.metadata.create_all(engine)
     with engine.begin() as conn:
         conn.execute(text(
