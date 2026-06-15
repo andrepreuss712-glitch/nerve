@@ -751,6 +751,30 @@ class CallEvent(Base):
     )
 
 
+class IntentEvent(Base):
+    # TAXO1-Welle 1 — DIE zentrale Ereignis-Tabelle (Single Source of Truth) fuer
+    # erkannte Kunden-Intents pro Call. Verriegelter gemeinsamer Vertrag mit TAXO2/TAXO3
+    # (Geruest §3). Vollstaendiges Schema ab Tag 1; handling_score_numeric bleibt NULL
+    # (Scoring = TAXO2). KEIN Live-Writer in dieser Welle (matcher/analyse_loop = Welle 4).
+    __tablename__ = 'intent_event'
+    event_id               = Column(BigInteger, primary_key=True, autoincrement=True)  # BIGSERIAL, trivial (L-04)
+    session_id             = Column(String(128), index=True, nullable=False, comment="SocketIO-sid des Live-Calls. Korreliert mit live_session._session_state[sid]. Per-Call-Filter.")
+    call_id                = Column(UUID_TYPE, ForeignKey('calls.id', ondelete='CASCADE'), index=True, nullable=True, comment="Bezug zum Call-Record. HARTER FK ON DELETE CASCADE (INTERLOCK I-2 / DD-01-Konvention wie CallEvent models.py:738) — geloeschter Call raeumt Einwand + abstain_log (TAXO2-Wortlaut) DSGVO-sauber mit. A2-'lose FK' revidiert (F-08). nullable: Events ohne call_id moeglich, FK greift nur fuer gesetzte Werte.")
+    mode                   = Column(String(32), index=True, nullable=False, comment="Modus-Dimension (cold_call/meeting/...). First-Class, nicht aus Intent ableitbar. Quelle: ModeStrategy-Registry (Welle 7).")
+    timestamp              = Column(DateTime(timezone=True), index=True, nullable=False, default=utcnow, comment="Erzeugungs-Zeitpunkt des Events (Zeit-Achse/Latenz-Auswertung).")
+    intent_type            = Column(String(64), index=True, nullable=False, comment="Taxonomie-Wert (Geruest §1): Kern+Gemini-Werte ∪ custom_objection_*. Quelle services/intent_taxonomy.py. Geschrieben Fast+Medium Lane (Welle 4).")
+    phase                  = Column(SmallInteger, index=True, nullable=True, comment="Gespraechs-Phase 1-6 als INT (getrennt vom Intent). NICHT String (K3-Falle). Quelle detect_phase (Welle 4).")
+    handling_score_numeric = Column(SmallInteger, index=True, nullable=True, comment="REQ 2: Behandlungs-Note 1-3. Existiert ab Tag 1, bleibt NULL in TAXO1. Befuellung = TAXO2 (Slow Lane). KEIN Scoring-Code in TAXO1.")
+    handling_status        = Column(String(16), index=True, nullable=False, server_default='pending', comment="INTERLOCK I-1: Verarbeitungs-Status der Slow-Lane-Benotung (pending|scored|abstained|failed). TAXO2-Wurzel-Fix gegen dreifach-ueberladene NULL. Arbeitsliste = WHERE handling_status='pending'; abstained/failed = abgeschlossen. In TAXO1 leer/'pending' (Default), KEIN Status-Schreib-Code hier — TAXO2 setzt die Werte.")
+    confidence             = Column(Float, nullable=True, comment="Konfidenz der Klassifikation (ui_asserted=1.0). Steuert spaeter Cue-Aufdringlichkeit + Score-Beitrag.")
+    reaction_latency_ms    = Column(Integer, nullable=True, comment="Stress-Metrik: Reaktionszeit des Beraters in ms. Existiert ab Tag 1, befuellt spaeter (TAXO2).")
+    interaction_id         = Column(UUID_TYPE, index=True, nullable=True, comment="Korrelations-ID pro Kundenmoment — klammert alle Emits (Fast/Medium/Button) + Cue + Reaktion + Abstain eines Moments zusammen; FK-Ziel für spätere suggestion_reactions (Phase H). call_id zu grob, event_id zu fein.")
+    payload_jsonb          = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment="Hybrid-Rest: source, inference_basis, taxonomy_version(Pflicht non-null), abstained, speaker_role, speaker_id, is_simulation, origin_type, source_context, outcome, resolved_at_event_id, superseded_by, inference_config_id, was_correct, cue_fired, dimension_available, cue_visible, ui_state_hash. Provenance+Kontext-Felder; Pflichtfelder ab Tag 1, viele NULL in TAXO1.")
+    __table_args__ = (
+        {'comment': "Zentrale Ereignis-Tabelle (Single Source of Truth) fuer erkannte Kunden-Intents pro Call. Fast+Medium Lane emittieren; Slow Lane reichert via separatem Score-Objekt an (TAXO2). Hybrid: indizierte Kern-Spalten + payload_jsonb. Status: lebt (neu, TAXO1). Schreibt services/einwand_keyword_matcher.py, services/claude_service.py; liest TAXO2-Scoring."},
+    )
+
+
 class TranscriptSegment(Base):
     __tablename__ = 'transcript_segments'
     id                  = Column(BigInteger, primary_key=True, autoincrement=True)  # BIGSERIAL
