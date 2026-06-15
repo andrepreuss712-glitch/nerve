@@ -2061,7 +2061,10 @@ Plans:
 **Depends on:** keine harte (steht eigenständig). **Blocker für:** TAXO1-Deploy-Fortsetzung + jeden künftigen `deploy.sh production`. **Execute VOR TAXO1-Bau-Fortsetzung.**
 **Herkunft:** herausgelöst aus Slot 08.23.2.STAGING Task (1) („deploy.sh-Test-Gate fixen") — vorgezogen, weil es jeden Deploy blockiert. STAGING bleibt am Ende mit Rest-Tasks (2)-(5) (Auto-Alembic, deploy_meta, atomarer Promote, Drift-Audit).
 **Komplexität:** 🔴 — Cross-AI **Pflicht** (André-Direktive Punkt 24: 3 Sichten). Voll Spec → Plan → Cross-AI → Execute.
-**Plans:** TBD (Plan-Phase).
+**Plans:** 3 plans (2 waves).
+- [ ] 08.23.2.PGTEST-01-conftest-fixtures-PLAN.md — conftest generische Fixtures auf nerve_test-PG + Tenant-Kontext (Req-2/5/9) [Wave 1]
+- [ ] 08.23.2.PGTEST-02-deploy-gate-block-PLAN.md — deploy.sh Postgres-Gate: Provision→Cutover-Build→pytest→Teardown, fail-closed, Whitelist-Guard (Req-1/3/4/5/7/8/9) [Wave 1]
+- [ ] 08.23.2.PGTEST-03-remove-sqlite-port-klasse-a-PLAN.md — SQLite-Emulation entfernen + Klasse-A-Tests auf PG portieren (Req-4/6) [Wave 2]
 
 > ⚠️ Multi-Segment-ID-Gotcha (wie SCHILD/TAXO): Pfade hartkodieren auf `.planning/phases/08.23.2.PGTEST-echtes-postgres-test-gate/`, gsd-tools-ID-Auflösung umgehen, STATE/ROADMAP hand-editieren. Verify=Production (`deploy.sh production`), kein Local-Dev.
 
