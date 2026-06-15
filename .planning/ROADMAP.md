@@ -2044,10 +2044,33 @@ Plans:
 
 ---
 
+## Phase 08.23.2.PGTEST: Echtes Postgres-Test-Gate (NEU 2026-06-15) 🔴 — ⚠️ GATET TAXO1-DEPLOY, LÄUFT ZUERST
+
+**Goal:** Das `deploy.sh`-Test-Gate (volle pytest-Suite) läuft gegen eine echte, wegwerfbare Postgres-DB statt SQLite-in-memory — ehrlich + stabil für ALLE künftigen Deploys. Damit ist der Production-Deploy von TAXO1-01 (intent_event-Migration) und allem danach wieder belastbar abgesichert.
+
+**Anlass (Diagnose 2026-06-15, 3 Schichten, alle pre-existing, NICHT TAXO1):**
+1. `deploy.sh:135` fährt pytest gegen SQLite-in-memory.
+2. `tests/conftest.py` nutzt `sqlite:///:memory:` HARDCODED (ignoriert `TEST_DATABASE_URL` laut Code-Kommentar).
+3. `app.py:1115` lässt NUR im SQLite-Pfad `alembic upgrade head` laufen; Migrationen 0008–0016 haben ~57 nur-Postgres-Befehle (CREATE SCHEMA, GRANT, RLS, OWNER) → SQLite-Syntaxfehler → harter raise.
+4. Schicht-1-Fix `cf5de6d` (SQLite-ATTACH crm/training) ist nur ein Pflaster auf `create_all` (Cross-AI Gemini PASS = statisch korrekt, aber bestätigt: bleibt SQLite-Pflaster); die alembic-Kette bleibt SQLite-inkompatibel. **NICHT die 57 Befehle einzeln patchen (Hau-den-Maulwurf).**
+
+**Scope-Richtung (Research/Plan offen, nicht vorgeschrieben):** (1) Wegwerf-Postgres-Test-DB provisionieren (eigene DB auf bestehender Server-Instanz ODER Container — Research: was auf dem Hetzner-Host am saubersten + schnellsten ist); (2) Schema via `alembic upgrade head` gegen diese echte Postgres-DB bauen (läuft jetzt); (3) `conftest.py` refactoren: `TEST_DATABASE_URL` honorieren statt hardcoded sqlite; (4) Isolation entscheiden: frische DB pro Lauf vs. Transaktions-Rollback pro Test; (5) `deploy.sh`: Test-DB provisionieren → pytest dagegen → teardown; (6) `app.py:1115` alembic-auf-SQLite-Hook + `cf5de6d`-ATTACH-Fix prüfen ob obsolet → ggf. entfernen (sonst toter Pfad); (7) Postgres-Produktion + Schild-Guard-Pfad (läuft schon gegen echtes Postgres) NICHT brechen.
+
+**Sicherheits-Schranken (🔴-Begründung — Test-Infra + DB-Setup + RLS/Grants = security-nah):** Test-DB darf KEINE Produktionsdaten berühren + muss sauber teardownen. Pre-EA-Launch: Test gegen Production-Host, kein Local-Dev (CLAUDE.md HART).
+
+**Depends on:** keine harte (steht eigenständig). **Blocker für:** TAXO1-Deploy-Fortsetzung + jeden künftigen `deploy.sh production`. **Execute VOR TAXO1-Bau-Fortsetzung.**
+**Herkunft:** herausgelöst aus Slot 08.23.2.STAGING Task (1) („deploy.sh-Test-Gate fixen") — vorgezogen, weil es jeden Deploy blockiert. STAGING bleibt am Ende mit Rest-Tasks (2)-(5) (Auto-Alembic, deploy_meta, atomarer Promote, Drift-Audit).
+**Komplexität:** 🔴 — Cross-AI **Pflicht** (André-Direktive Punkt 24: 3 Sichten). Voll Spec → Plan → Cross-AI → Execute.
+**Plans:** TBD (Plan-Phase).
+
+> ⚠️ Multi-Segment-ID-Gotcha (wie SCHILD/TAXO): Pfade hartkodieren auf `.planning/phases/08.23.2.PGTEST-echtes-postgres-test-gate/`, gsd-tools-ID-Auflösung umgehen, STATE/ROADMAP hand-editieren. Verify=Production (`deploy.sh production`), kein Local-Dev.
+
+---
+
 ## TAXO-Bau — drei Teile (NEU 2026-06-10, aus `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md`)
 
 > **Workflow (Andre-Direktive 2026-06-10):** Alle drei Teile (TAXO1/2/3) ZUERST bis kurz vor Execute bringen — je Spec → Discuss → Plan → Cross-AI-Review. Dann alle drei Pläne + Reviews nebeneinanderlegen und auf sauberes Ineinandergreifen prüfen (gemeinsamer Klebstoff = das `intent_event`-Schema, Gerüst §3). ERST danach Execute, einer nach dem anderen: TAXO1 → TAXO2 → TAXO3. Anti-Abrieb: nicht Teil 1 fertigbauen und dann merken, dass Teil 2 ihn anders braucht.
-> **Quell-Doc Pflicht-Pre-Read für jede Spec/Plan-Phase:** `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md` (der verriegelte Bauplan, Single Source of Truth). Real-Daten/Schema-Pulls IMMER gegen Production (`inspect.sh`), kein Local-Dev. SCHILD-Guard bei Tabellen-Änderungen MANUELL laufen lassen (Auto-Blockade inert bis 08.23.2.STAGING — Tor-Fix).
+> **Quell-Doc Pflicht-Pre-Read für jede Spec/Plan-Phase:** `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md` (der verriegelte Bauplan, Single Source of Truth). Real-Daten/Schema-Pulls IMMER gegen Production (`inspect.sh`), kein Local-Dev. SCHILD-Guard bei Tabellen-Änderungen MANUELL laufen lassen (Auto-Blockade inert bis das Test-Gate echtes Postgres fährt — Tor-Fix = Phase **08.23.2.PGTEST**, vorgezogen vor TAXO1-Deploy; nicht mehr erst 08.23.2.STAGING).
 > **Sicherheits-Verifikation pro Phase (André 2026-06-12):** Jede TAXO-Phase, die eine Tabelle anfasst, verifiziert für genau diese Tabellen den Daten-Schutz — User-Trennung (per-user/tenant-Isolation) + „sensible Daten nicht leicht erreichbar". Inline (OQ-1 = erster Fall, DPO-Wand). Die breite app-weite Userdaten-Sicherheits-Prüfung ist davon GETRENNT = eigene Pflicht-Phase vor Launch (SEC-USERDATA), nicht in TAXO reinquetschen (Scope/Abrieb).
 
 ### Phase 08.23.2.TAXO1: Verstehen — Fundament + Erkennung (NEU 2026-06-10) 🔴
