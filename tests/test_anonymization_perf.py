@@ -101,6 +101,7 @@ TEST_TEXT_1000 = (
 assert len(TEST_TEXT_1000) <= 1000, f"Test-Text zu lang: {len(TEST_TEXT_1000)} Zeichen"
 
 
+@pytest.mark.perf
 def test_p95_latency():
     """
     Req-12: 95. Perzentil von anonymize() auf 1000-Zeichen-Text < 200ms.
@@ -135,6 +136,7 @@ def test_p95_latency():
     )
 
 
+@pytest.mark.perf
 def test_short_snippet_latency():
     """
     Smoke-Test: Kurze Snippets (typische STT-Segmente, 50-100 Zeichen) < 100ms P95.
@@ -157,6 +159,7 @@ def test_short_snippet_latency():
     assert p95 < 100, f"Short-Snippet P95 {p95:.1f}ms >= 100ms"
 
 
+@pytest.mark.perf
 def test_art9_short_circuit_faster():
     """
     Art-9-Treffer soll schneller sein als volle Pipeline (Short-Circuit nach Schritt 0).

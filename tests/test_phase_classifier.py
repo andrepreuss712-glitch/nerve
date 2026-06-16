@@ -115,6 +115,9 @@ def test_phase_classifier_f1_mocked_with_noise(corpus):
     assert f1 <= 0.95, f'F1={f1:.2f} verdaechtig hoch — Noise-Injection pruefen (i%10==0 sollte wrong-mock liefern)'
 
 
+# Phase 08.23.2.PGTEST.GREEN Plan 05: live-Marker (echter Haiku-API-Call -> aus dem Gate via
+# -m "not live" exkludiert; separat manuell mit ANTHROPIC_API_KEY laufen).
+@pytest.mark.live
 @pytest.mark.skipif(not ANTHROPIC_API_KEY, reason='ANTHROPIC_API_KEY nicht gesetzt')
 @pytest.mark.integration
 def test_phase_classifier_integration_real_haiku(corpus):

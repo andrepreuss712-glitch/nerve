@@ -73,6 +73,11 @@ SNIPPETS = [
 assert len(SNIPPETS) == 50, f"Genau 50 Snippets benoetigt, erhalten: {len(SNIPPETS)}"
 
 
+# Phase 08.23.2.PGTEST.GREEN Plan 05: live-Marker (Re-ID-RATE-MESSUNG braucht das ECHTE NER-Modell +
+# Korpus -> kann im Gate nicht deterministisch laufen; aus dem Gate via -m "not live" exkludiert).
+# Das ist KEIN Maskieren der Anonymisierungs-LOGIK: die deterministische should_persist/Filter/Hash-Logik
+# laeuft IM Gate (test_anonymizer_worker, grün). reid_rate ist eine statistische Qualitaets-Messung.
+@pytest.mark.live
 @pytest.mark.security
 @pytest.mark.skipif(
     not os.environ.get('ANTHROPIC_API_KEY'),
