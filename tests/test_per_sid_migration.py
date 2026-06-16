@@ -2,6 +2,13 @@
 Phase 08.19.5: Per-SID-Migration-Tests — REQ-06/07/08 + REQ-01 Isolation
 Prueft _load_profile_cache, vorwissen_level Chain, streame_manual_ewb_variante Error-Prop,
 is_paused SID-Isolation. Alle Tests sind Function-Call-Return-Tests. Siehe CLAUDE.md.
+
+Phase 08.23.2.PGTEST Gruppe B (T-PGTEST-24, Task 7): VERIFIZIERT 2026-06-16 —
+test_load_profile_cache_populates_sid macht NUR db_session.flush() (KEIN eigener-Session-commit) →
+der function-scoped db_session-Rollback (D-03) raeumt die User/Profile-Rows weg → baseline-sauber,
+KEIN cleanup_rows noetig. Die uebrigen Tests nutzen ausschliesslich services.live_session-In-Memory-
+State (per _clean_sids/pop_session_state aufgeraeumt) — kein nerve_test-Write. → rollback-covered,
+Waechter gruen.
 """
 import pytest
 import services.live_session as ls

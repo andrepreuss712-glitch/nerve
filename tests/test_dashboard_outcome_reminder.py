@@ -10,8 +10,21 @@ from sqlalchemy import or_
 
 from database.db import get_session
 from database.models import Call, ConversationLog
+from tests.conftest import cleanup_rows
 
 
+# ── Phase 08.23.2.PGTEST Gruppe B — cleanup_rows-Teardown + count-Scoping (T-PGTEST-24) ──────
+# _make_call committet einen Call auf einer EIGENEN get_session() (nicht db_session) → die Rows
+# PERSISTIEREN in nerve_test (calls ist im _BASELINE_PUBLIC_TABLES-Set). Frueher raeumte ein
+# ad-hoc-DELETE-Block (_cleanup) sie weg — jetzt der kanonische cleanup_rows-Helfer (Task 1),
+# weiterhin im try/finally jedes Tests (laeuft AUCH bei Assertion-Fehler). FK-Parents user_id=1/
+# org_id=1 liefert der Base-Seed (Plan 01 Task 4). REVERSE-FK: Call ist KIND von ConversationLog
+# (conversation_log_id-FK, models.py:704) → der Call MUSS vor der ConversationLog geloescht werden;
+# cleanup_rows' globale _CLEANUP_FK_ORDER listet conversation_logs VOR calls, daher wird der
+# Call+ConversationLog-Mischtest (test_join_call_to_conversation_log) in ZWEI getrennten
+# cleanup_rows-Aufrufen geraeumt (erst calls, dann conversation_logs). Zusaetzlich: die globale
+# unsichere-count-Assertion wird auf die Test-eigenen IDs gescoped (Call.id.in_(ids)) — sonst zoegen
+# Baseline-/Fremd-user_id=1-Calls den Count hoch (Delta-Review-2-Klasse).
 def _now():
     return datetime.now(timezone.utc)
 
@@ -39,11 +52,12 @@ def _make_call(user_id=1, source=None, outcome=None, ended_offset_days=0, conv_l
 
 
 def _cleanup(call_ids):
+    """POST-Test-Teardown via dem kanonischen cleanup_rows-Helfer (public.calls, kein crm-GUC)."""
+    if not call_ids:
+        return
     db = get_session()
     try:
-        for cid in call_ids:
-            db.query(Call).filter(Call.id == cid).delete()
-        db.commit()
+        cleanup_rows(db, {Call: list(call_ids)})
     finally:
         db.close()
 
@@ -70,12 +84,14 @@ def test_unsichere_count_filter_logic():
                   .filter(
                       Call.user_id == user_id,
                       Call.ended_at >= seven_days_ago,
+                      Call.id.in_(ids),  # auf Test-eigene IDs gescoped (kein Baseline-/Fremd-Poison)
                       or_(Call.outcome_source == 'ai_auto_unsicher', Call.outcome.is_(None)),
                   )
                   .count()
             )
-            # Mindestens 2 unsichere Calls in 7 Tagen (ai_auto_unsicher + NULL-outcome)
-            assert count >= 2, f'Erwartet >=2 unsichere Calls, bekam {count}'
+            # Genau die 2 in-scope unsicheren Test-Calls (ai_auto_unsicher 1d + NULL-outcome 2d);
+            # die ai_auto-/10d-alten Test-Calls fallen durch den Filter.
+            assert count == 2, f'Erwartet genau 2 unsichere Test-Calls, bekam {count}'
         finally:
             db.close()
     finally:
@@ -194,12 +210,22 @@ def test_join_call_to_conversation_log():
         assert row2.outcome == 'callback', f'Erwartet callback, bekam {row2.outcome}'
         assert row2.outcome_source == 'ai_auto_unsicher', f'Erwartet ai_auto_unsicher, bekam {row2.outcome_source}'
     finally:
-        if cid:
-            db.query(Call).filter(Call.id == cid).delete()
-        if conv_id:
-            db.query(ConversationLog).filter(ConversationLog.id == conv_id).delete()
-        db.commit()
         db.close()
+        # Reverse-FK: erst der Call (Kind), dann die ConversationLog (Eltern) — in ZWEI
+        # cleanup_rows-Aufrufen, da die globale _CLEANUP_FK_ORDER conversation_logs vor calls
+        # listet (ein einzelner Aufruf wuerde die Eltern-Row zuerst loeschen → FK-Bruch).
+        if cid:
+            cdb = get_session()
+            try:
+                cleanup_rows(cdb, {Call: [cid]})
+            finally:
+                cdb.close()
+        if conv_id:
+            cdb = get_session()
+            try:
+                cleanup_rows(cdb, {ConversationLog: [conv_id]})
+            finally:
+                cdb.close()
 
 
 def test_api_dashboard_returns_unsichere_outcomes_count():
