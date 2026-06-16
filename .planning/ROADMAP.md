@@ -2075,6 +2075,25 @@ Plans:
 
 > ⚠️ Multi-Segment-ID-Gotcha (wie SCHILD/TAXO): Pfade hartkodieren auf `.planning/phases/08.23.2.PGTEST-echtes-postgres-test-gate/`, gsd-tools-ID-Auflösung umgehen, STATE/ROADMAP hand-editieren. Verify=Production (`deploy.sh production`), kein Local-Dev.
 
+**🟥 PGTEST-AUSGANG 2026-06-16 (supervised execute, Claudian): Infrastruktur GELIEFERT, Gate bewusst KNOWN-RED → Rest in 08.23.2.PGTEST.GREEN eskaliert.**
+Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Restore→Katalog-Treue-Gate crm-Policies≥7/FORCE≥5/GRANTs≥5 ✅→pytest→POST-SUITE→trap-Teardown), die conftest-PG-Fixtures, der Baseline-Wächter, SQLite-Entfernung. **Der EINE validierende `deploy.sh production`-Lauf lief 4× (alle prod-sicher rot, KEIN Restart — Prod unangetastet, `nerve` auf 0015).** Gate-Ergebnis: `51 failed, 595 passed, 555 errors` → ehrlich rot, NICHT maskiert (Req-7).
+**2 ECHTE Bugs gefangen + gefixt (Claudian-verifizierbar):** (1) `6253676` — `_seed_test_tenant` committet org+tenant_org im `db_session`/`client`-Setup, Teardown raeumte nie auf → jede fixture-nutzende Testfunktion leakte; Fix = org_id zurueckgeben + `_leak_cleanup_seed_tenant` in beiden Teardowns. (2) `10e5d0a` — `cleanup_rows` `id = ANY(:ids)` warf `operator does not exist: uuid = text` bei uuid-PK-Tabellen (tenant_orgs/crm.*) → ganze Cleanup-Transaktion rollte zurueck; Fix = `id::text = ANY(:ids)`.
+**Bewusst KNOWN-RED (eskaliert, NICHT gefixt):** die suite-weite Baseline-Konformitaet — nach den 2 Fixes leaken weiterhin **61 Test-Files über 11 public-Tabellen** (organisations/users/tenant_orgs/ewb_ratings/conversation_logs/revenue_log/api_cost_log/fixed_costs/prompt_versions/exchange_rates/profiles). Wurzel: Plan-01s globaler fail-closed Baseline-Wächter verlangt dass JEDER der ~600 Tests die GANZE public-Baseline pristine laesst — die ueber viele Phasen gegen Wegwerf-SQLite geschriebene Suite war nie so gebaut. Plus **51 Assertion-Fails** (~22 Plan-03/04-Port-Bugs, ~29 fremde/env-abhaengige reds wie real-Haiku/Perf). Das ist eine Architektur-/Scope-Entscheidung (Plan-01-Design), kein lokaler Fix → Option-3-Schnitt (André 2026-06-16).
+
+### Phase 08.23.2.PGTEST.GREEN: Gate grün machen — Isolations-Strategie + Test-Triage (NEU 2026-06-16) 🔴 — ⚠️ GATET TAXO1-DEPLOY (erbt PGTESTs Gate-Rolle)
+
+**Herkunft:** Eskaliert aus 08.23.2.PGTEST (Option-3-Schnitt, André 2026-06-16). PGTEST lieferte das ehrliche PG-Tor + Infrastruktur; dieses Tor ist KNOWN-RED. GREEN macht es grün. **NICHT bauen — erst voll spec'en (Discuss→Plan→Cross-AI, Gemini Pflicht, alle Teile False-Green-nah).**
+
+**Scope — vier 🔴-Teile:**
+- **(a) ISOLATIONS-STRATEGIE entscheiden (Kern, Plan-01-Design-Reversal-Kandidat):** den globalen fail-closed Baseline-Wächter ersetzen. Führender Kandidat: **Auto-Reset** — Extra-Rows (alles NICHT in der Session-Start-Baseline) nach jedem Test automatisch DELETEn statt fail-closed-block, nutzt die schon vorhandene Snapshot-Infrastruktur, greent die Leak-Dimension über alle 61 Files mit EINER Fixture-Änderung ohne ~60 Test-Files umzuschreiben; Req-7 bleibt via lauter Warnung (welcher Test leakte) + auto-clean, Gate blockt nur noch auf echten Assertion-Fails. Alternativen offen (per-Test-Delta-Snapshot etc.). **Gemini gegenlesen BEVOR umgesetzt — kehrt die Plan-01-„fail-closed"-Entscheidung um.**
+- **(b) ~22 Port-Assertion-Fails triagieren** (Plan-03/04-Dateien: anonymizer_worker, postcall_split, postcall_outcome_route, eur_calculator, cost_tracker, ewb_pipeline, exchange_rates, dashboard_outcome_reminder): pro Test = echter App-Bug (eskalieren, Req-7) ODER veralteter Test (fixen, wie stale 6-vs-8). NICHT blind grün-machen.
+- **(c) Tor-Umfang:** ~29 env-abhängige Tests (real-Haiku-Integration, p95/Perf-Latenz, Re-ID-Rate) per pytest-Marker (z.B. `live`/`perf`) aus dem Gate, Gate läuft `-m "not live and not perf"`, separater Lauf + dokumentieren warum (sonst False-Green-Risiko).
+- **(d) Wächter-Tabellenlisten schema-abgeleitet statt hardcoded** (André-Fund 2026-06-16): `_BASELINE_PUBLIC_TABLES` + `_CLEANUP_FK_ORDER` sind heute handgepflegte Listen → neue Tabellen (intent_event, transcript_segments, künftige TAXO-Tabellen) werden NICHT auto-bewacht. Aus dem Schema ableiten. **MUSS vor TAXO-Deploy stehen.**
+
+**Depends on:** 08.23.2.PGTEST (Infrastruktur + 2 Bug-Fixes) — DONE/KNOWN-RED.
+**Blocker für:** TAXO1-Deploy (erbt die Gate-Rolle von PGTEST — ein grünes Tor ist die Voraussetzung für sicheren TAXO-Deploy).
+**🔴 → voll Spec → Discuss → Plan → Cross-AI (Gemini Pflicht) → Execute.** Multi-Segment-ID-Gotcha gilt (Pfade hardcoden).
+
 ---
 
 ## TAXO-Bau — drei Teile (NEU 2026-06-10, aus `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md`)
