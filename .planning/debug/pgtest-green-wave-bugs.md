@@ -95,6 +95,14 @@ keine-FK-Violation via Claudian-triage.sh test_06 (Server). Gemini-3.-Sicht-Kons
 (_green_bug3_gemini_PROMPT.md im Phasen-Verzeichnis), CLI lief headless nicht -> optional interaktiv.
 status: fix-applied (awaiting empirical triage.sh confirmation)
 
+KORREKTUR (Gemini-3.1-Pro 3.-Sicht, _green_bug3_gemini_OUT.md, Punkt-24-Beleg): der erste (A)-Brecher
+waehlte das Opfer per min(reverse_in_degree) = ein BLATT (crm.accounts) -> als Root frueh -> nach
+reversed() spaet -> crm.accounts HINTER public.tenant_orgs -> eine legitime Nicht-Zyklus-Kante
+(accounts->tenant_orgs) invertiert -> test_06 weiter rot + FK-Risiko. FIX: victim = max(blockierte
+Rest-Kinder) = der echte Zyklus-HUB (organisations) als Root -> spaet geloescht, nur eine Intra-SCC-Kante
+(organisations->users) gebrochen, alle cross-schema-Kanten erhalten -> crm-vor-public -> test_06 gruen.
+test_06 bewusst NICHT gelockert (Gemini: Maskieren). Quick-Task 20260616-bug3-cycle-breaker-hub.
+
 ### (historisch) Bug 3 — vorherige Instrumentierungs-Phase
 
 symptom: `[PGTEST-INTROSPECT] 31 Knoten mit Zyklen ans Ende angehaengt` auf dem echten public-Schema.

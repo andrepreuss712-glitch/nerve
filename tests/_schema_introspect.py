@@ -111,11 +111,11 @@ def _kahn_topo_sort(nodes, edges):
         # --- Queue leer, aber Knoten fehlen -> Mutual-FK-Zyklus. Eine Kante bewusst brechen. ---
         done = set(topo_order)
         stuck = sorted(n for n in nodes if n not in done)
+        stuck_set = set(stuck)
 
         if not diagnosed:
             # EINMALIGE Diagnose des vollen Zyklus-Kerns (Logging-First, fuer triage.sh-Beleg).
             diagnosed = True
-            stuck_set = set(stuck)
             cycle_core_edges = sorted(
                 f"{child}->{parent}"
                 for child, parent in valid_edges
@@ -140,12 +140,21 @@ def _kahn_topo_sort(nodes, edges):
                 {k: sorted(v) for k, v in sorted(blocking_parents.items())},
             )
 
-        # Opfer-Knoten: kleinster residualer reverse_in_degree (am wenigsten gekoppelt), tie-break Name.
-        victim = min(stuck, key=lambda n: (reverse_in_degree[n], n))
+        # Opfer-Knoten = der echte Zyklus-HUB: der Rest-Knoten mit den MEISTEN noch blockierten Kindern
+        # im Rest-Graph (Gemini-3.1-Pro 3.-Sicht, _green_bug3_gemini_OUT.md, Punkt-24-Beleg).
+        # NICHT min(reverse_in_degree): das waehlte ein BLATT (z.B. crm.accounts, 0 Kinder) und machte es
+        # per in_degree=0 zur Root -> frueh in topo_order -> nach reversed() SPAET in der Loeschorder ->
+        # crm.accounts landete HINTER public.tenant_orgs -> test_06 rot + FK-Violation (eine legitime
+        # Nicht-Zyklus-Kante accounts->tenant_orgs wurde invertiert). Den HUB (z.B. public.organisations,
+        # viele Kinder) zur Root zu machen = spaet geloescht (korrekt fuer einen vielreferenzierten Parent);
+        # gebrochen wird nur eine INTRA-SCC-Kante (organisations->users). Blaetter bleiben frueh ->
+        # crm-vor-public erhalten (test_06 gruen). Der Retry-Loop-Airbag zuendet nur fuer die echte Bruecke.
+        victim = max(stuck, key=lambda n: (sum(1 for child in reverse_adj[n] if child in stuck_set), n))
+        blocked_kids = sum(1 for child in reverse_adj[victim] if child in stuck_set)
         log.warning(
-            "[PGTEST-INTROSPECT] Zyklus-Kante gebrochen: Knoten %s freigegeben "
-            "(residual reverse_in_degree=%d, %d Rest-Knoten) -> eine FK-Kante bewusst ignoriert.",
-            victim, reverse_in_degree[victim], len(stuck),
+            "[PGTEST-INTROSPECT] Zyklus-Kante gebrochen: HUB %s als Root freigegeben "
+            "(blockiert %d Rest-Kinder, %d Rest-Knoten) -> eine FK-Kante bewusst ignoriert.",
+            victim, blocked_kids, len(stuck),
         )
         reverse_in_degree[victim] = 0
         queue.append(victim)
