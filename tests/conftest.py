@@ -412,6 +412,30 @@ def _baseline_schema(_baseline_guard_engine):
                         pk_cols_built[qualified_tbl] = pk_col
         _DERIVED_PK_COLS = pk_cols_built
 
+        # DIAGNOSE (Logging-First, Phase 08.23.2.PGTEST.GREEN Bug-2): warum sieht der TEST den
+        # Modul-Cache leer, obwohl diese Fixture ihn fuellt? Drei Verdaechtige, alle hier belegbar:
+        #  (a) DUAL-MODULE: pytest hat conftest sowohl als 'conftest' ALS auch 'tests.conftest'
+        #      geladen -> global-Rebind landet in EINEM, der Test liest den ANDEREN (-> leer).
+        #      Beleg: __name__ dieser Fixture + ob beide sys.modules-Eintraege existieren + ihre id().
+        #  (b) EMPTY-DERIVE: derive_baseline_tables lieferte leere Listen (-> len==0).
+        #  (c) PK-PASS-FAIL: table_list ok, aber zweiter Pass baute kein pk_cols (-> pk len==0).
+        import sys as _sys
+        _self_mod = _sys.modules.get(__name__)
+        _alias_conftest = _sys.modules.get('conftest')
+        _alias_tests_conftest = _sys.modules.get('tests.conftest')
+        _diaglog = logging.getLogger(__name__)
+        _diaglog.warning(
+            "[PGTEST-INTROSPECT] _baseline_schema FILL: module __name__=%s id(self)=%s | "
+            "sys.modules['conftest']=%s sys.modules['tests.conftest']=%s | "
+            "DUAL_MODULE=%s | len(table_list)=%d len(fk_order)=%d len(pk_cols)=%d",
+            __name__, id(_self_mod),
+            id(_alias_conftest) if _alias_conftest is not None else None,
+            id(_alias_tests_conftest) if _alias_tests_conftest is not None else None,
+            (_alias_conftest is not None and _alias_tests_conftest is not None
+             and _alias_conftest is not _alias_tests_conftest),
+            len(table_list), len(fk_order), len(pk_cols_built),
+        )
+
         # foundation_register loggen (Transparenz, Req-7)
         if foundation_register:
             _log = logging.getLogger(__name__)

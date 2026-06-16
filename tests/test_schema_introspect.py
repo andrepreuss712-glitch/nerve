@@ -216,17 +216,21 @@ def test_04_denylist_foundation_register(_pg_dsn):
         assert reason, f"foundation_register[{tbl!r}] hat leere Begruendung"
 
 
-def test_05_derived_list_contains_calls_and_objection_event(_pg_dsn):
-    """Test 5 (Req-9-Beleg): die abgeleitete public-Liste enthaelt calls + objection_event
+def test_05_derived_list_contains_calls_and_objection_events(_pg_dsn):
+    """Test 5 (Req-9-Beleg): die abgeleitete public-Liste enthaelt calls + objection_events
     (die in der alten _BASELINE_PUBLIC_TABLES fehlten).
+
+    Echter Tabellenname ist 'objection_events' (Plural, models.py:407 __tablename__) —
+    die fruehere Assertion auf Singular 'objection_event' war ein TEST-BUG (empirisch via
+    deploy.sh-Gate gefangen: derive lieferte 'public.objection_events', Assertion suchte Singular).
     """
     table_list, _, _ = derive_baseline_tables(_pg_dsn, schemas=('public',))
 
     assert 'public.calls' in table_list, (
         "public.calls sollte in der abgeleiteten baseline_table_list sein (Req-9)"
     )
-    assert 'public.objection_event' in table_list, (
-        "public.objection_event sollte in der abgeleiteten baseline_table_list sein (Req-9)"
+    assert 'public.objection_events' in table_list, (
+        "public.objection_events sollte in der abgeleiteten baseline_table_list sein (Req-9)"
     )
 
 

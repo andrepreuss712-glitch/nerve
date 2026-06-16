@@ -100,6 +100,35 @@ def _kahn_topo_sort(nodes, edges):
             len(remaining),
             remaining,
         )
+        # DIAGNOSE (Logging-First, Phase 08.23.2.PGTEST.GREEN Bug-3): bei Zyklen die
+        # tatsaechlichen FK-Kanten dumpen, die die haengenden Knoten blockieren — damit der
+        # naechste deploy.sh-Gate-Lauf den ECHTEN Zyklus-Kern zeigt (statt zu raten). Drei Sichten:
+        #  (a) Kanten INNERHALB des Rest-Sets (child UND parent haengen) = der eigentliche Zyklus-Kern.
+        #  (b) verbleibende reverse_in_degree pro Rest-Knoten = wie viele FK-Eltern noch unverarbeitet.
+        #  (c) blockierende Eltern pro Rest-Knoten = welche (evtl. selbst haengenden) Eltern ihn halten.
+        remaining_set = set(remaining)
+        cycle_core_edges = sorted(
+            f"{child}->{parent}"
+            for child, parent in valid_edges
+            if child in remaining_set and parent in remaining_set
+        )
+        residual_in_degree = {n: reverse_in_degree[n] for n in remaining if reverse_in_degree[n] > 0}
+        blocking_parents = {}
+        for child, parent in valid_edges:
+            if child in remaining_set:
+                blocking_parents.setdefault(child, []).append(parent)
+        log.warning(
+            "[PGTEST-INTROSPECT] Zyklus-Diagnose: Kern-Kanten (child->parent, beide im Rest) = %s",
+            cycle_core_edges,
+        )
+        log.warning(
+            "[PGTEST-INTROSPECT] Zyklus-Diagnose: Rest-Rest-Restgrad reverse_in_degree>0 = %s",
+            residual_in_degree,
+        )
+        log.warning(
+            "[PGTEST-INTROSPECT] Zyklus-Diagnose: FK-Eltern pro Rest-Knoten = %s",
+            {k: sorted(v) for k, v in sorted(blocking_parents.items())},
+        )
     topo_order += remaining
 
     # Umkehren: Roots waren zuerst, jetzt Leaves (Kinder) zuerst = reverse-FK-Loeschorder
