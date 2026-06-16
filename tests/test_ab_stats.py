@@ -6,6 +6,7 @@
   - A/B-Auswertungs-Query (3-stufiger JOIN, WHERE success IS NOT NULL filter)
   - Quality-Score-Gate threshold (D-27: >=80% >=80)
 """
+import uuid
 from datetime import datetime
 
 import pytest
@@ -21,7 +22,55 @@ from database.models import (
 )
 
 
-def _mk_user(db, email='a@a.de'):
+@pytest.fixture(autouse=True)
+def _ab_stats_cleanup():
+    """Phase 08.23.2.PGTEST Task 9: diese Tests COMMITTEN Org/User/ConvLog/EwbRating (public, kein crm).
+    Auf der persistenten nerve_test wuerden sie leaken -> Baseline-Cleanup-Waechter rot. id-Wasserzeichen-
+    Teardown ueber eine eigene kurzlebige Engine. (Die [P08-] System-Scenarios sind bereits Teil der
+    app-import-Baseline -> _seed_ewb_scenarios ist idempotent, kein training_scenarios-Drift.)"""
+    import os as _os
+    from sqlalchemy import create_engine as _ce, text as _sql
+    dsn = _os.environ.get('TEST_DATABASE_URL')
+    if not dsn:
+        yield
+        return
+    eng = _ce(dsn)
+    tables = ("ewb_ratings", "conversation_logs", "users", "tenant_orgs", "organisations")
+    def _maxid(conn, tbl):
+        try:
+            return conn.execute(_sql(f"SELECT COALESCE(MAX(id),0) FROM public.{tbl}")).scalar()
+        except Exception:
+            return 0
+    with eng.connect() as conn:
+        base = {t: _maxid(conn, t) for t in tables}
+    try:
+        yield
+    finally:
+        try:
+            with eng.begin() as conn:
+                conn.execute(_sql("DELETE FROM public.ewb_ratings WHERE id > :b"),
+                             {"b": base["ewb_ratings"]})
+                conn.execute(_sql("DELETE FROM public.conversation_logs WHERE id > :b"),
+                             {"b": base["conversation_logs"]})
+                conn.execute(
+                    _sql("DELETE FROM public.tenant_orgs WHERE legacy_org_id IN "
+                         "(SELECT id FROM public.organisations WHERE id > :b)"),
+                    {"b": base["organisations"]},
+                )
+                conn.execute(_sql("DELETE FROM public.users WHERE id > :b"), {"b": base["users"]})
+                conn.execute(_sql("DELETE FROM public.organisations WHERE id > :b"),
+                             {"b": base["organisations"]})
+        except Exception as _te:
+            print(f"[PGTEST-CLEANUP] ab_stats teardown failed (non-fatal): {_te!r}")
+        finally:
+            eng.dispose()
+
+
+def _mk_user(db, email=None):
+    # email UNIQUE pro Run (uuid-suffixed) -- persistente nerve_test (Task 9). TrainingScenario.
+    # erstellt_von ist nullable -> _seed_ewb_scenarios braucht keinen extra User-Parent.
+    if email is None:
+        email = f"ab-stats-{uuid.uuid4().hex[:8]}@nerve.local"
     org = Organisation(name='T', plan='starter')
     db.add(org)
     db.flush()
@@ -173,7 +222,9 @@ def test_quality_gate_80_percent_threshold(db_session):
             trifft_einwand=False, rater_id=u.id,
         ))
     db_session.commit()
-    all_ratings = db_session.query(EwbRating).all()
+    # scoped (Delta-Review-2): nur die test-eigenen Ratings dieses conv -> persistente nerve_test /
+    # geleakte Fremd-Ratings poisonen die rate nicht.
+    all_ratings = db_session.query(EwbRating).filter_by(conversation_log_id=conv.id).all()
     scores = [r.quality_score for r in all_ratings]
     high_count = sum(1 for s in scores if s >= 80)
     rate = high_count / len(scores)
