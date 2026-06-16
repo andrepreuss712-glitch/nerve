@@ -156,7 +156,7 @@ def test_ownership_check_finds_own_call():
 def test_valid_outcomes_match_check_constraint():
     """VALID_OUTCOMES aus outcome_service entspricht ck_calls_outcome CHECK-Constraint."""
     from services.outcome_service import VALID_OUTCOMES
-    expected = {'meeting_booked', 'callback', 'no_interest', 'wrong_person', 'contract_signed', 'unknown'}
+    expected = {'meeting_booked', 'callback', 'send_info', 'wrong_person', 'gatekeeper_blocked', 'no_interest', 'contract_signed', 'unknown'}
     assert VALID_OUTCOMES == expected
 
 
