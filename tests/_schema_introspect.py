@@ -37,8 +37,9 @@ def _schema_qualified(schema, table):
 def _kahn_topo_sort(nodes, edges):
     """Kahn-Algorithmus fuer einen gerichteten azyklischen Graphen.
     nodes: set von Knoten (Strings 'schema.table')
-    edges: list von (child, parent, confdeltype) 3-Tupeln aus _fetch_fk_edges — Kind-Kanten
-           (Kind zeigt auf Eltern). confdeltype wird hier ignoriert (alle Kanten in den Sort).
+    edges: list von (child, parent) 2-Tupeln — Kind-Kanten (Kind zeigt auf Eltern).
+           Der Caller (derive_baseline_tables) strippt confdeltype VOR dem Aufruf; die
+           Unit-Tests rufen direkt mit 2-Tupeln auf. ALLE Kanten gehen in den Sort.
     Rueckgabe: Liste der Knoten in der UMGEKEHRTEN topologischen Reihenfolge
     (Leaves zuerst, also Kinder vor Eltern = reverse-FK-Loeschorder).
 
@@ -61,9 +62,9 @@ def _kahn_topo_sort(nodes, edges):
     # allen beteiligten Schemas). self-ref ignorieren.
     valid_edges = [
         (child, parent)
-        # edges sind 3-Tupel (child, parent, confdeltype) aus _fetch_fk_edges; confdeltype
-        # wird ignoriert -> ALLE Kanten gehen in den Sort (Gemini-Fund #1, auch CASCADE).
-        for child, parent, _ in edges
+        # edges sind 2-Tupel (child, parent). Der Caller (derive_baseline_tables) strippt
+        # confdeltype VOR dem Aufruf -> ALLE Kanten gehen in den Sort (Gemini-Fund #1, auch CASCADE).
+        for child, parent in edges
         if child in nodes and parent in nodes and child != parent
     ]
 
@@ -260,7 +261,9 @@ def derive_baseline_tables(conn_or_dsn, schemas=('public',)):
         #    NERVE-konkrete CROSS-SCHEMA-FK-Kante: crm.accounts -> public.tenant_orgs
         #    (bewiesen via sudo -u postgres psql gegen 178.104.82.166, 2026-06-16).
         all_known = set(all_tables) | set(foundation_register.keys())
-        reverse_fk_delete_order = _kahn_topo_sort(all_known, fk_edges)
+        # fk_edges sind 3-Tupel (child, parent, confdeltype); _kahn_topo_sort nimmt 2-Tupel
+        # (wie die Unit-Tests) -> confdeltype hier strippen. ALLE Kanten gehen in den Sort.
+        reverse_fk_delete_order = _kahn_topo_sort(all_known, [(c, p) for c, p, _ in fk_edges])
 
         return baseline_table_list, reverse_fk_delete_order, foundation_register
 
