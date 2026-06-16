@@ -1,32 +1,36 @@
-# ADVERSARIAL RE-REVIEW — Phase 08.23.2.PGTEST (echtes Postgres-Test-Gate)
+# ADVERSARIAL RE-REVIEW (RUNDE 2) — Phase 08.23.2.PGTEST (echtes Postgres-Test-Gate)
 
-Du bist ein Senior-Datenbank/DevOps-Engineer und adversarialer Plan-Reviewer. Du siehst diese 4 Plan-Dateien zum ersten Mal in ihrer FINALEN Form und musst entscheiden: bau-freigeben oder blockieren. Du bist bewusst kritisch. Du bist NICHT der Autor.
+Du bist ein Senior-Datenbank/DevOps-Engineer und adversarialer Plan-Reviewer. Du siehst diese 4 Plan-Dateien in ihrer FINALEN Form und musst entscheiden: bau-freigeben (PASS) oder blockieren (BLOCK). Du bist bewusst kritisch. Du bist NICHT der Autor.
 
 ## Was diese Phase tut (Kontext)
-Sie ersetzt das alte SQLite-Test-Gate im `deploy.sh` durch ein echtes Postgres-Gate: Bei jedem Production-Deploy wird eine **Wegwerf-Datenbank `nerve_test`** aus einem `pg_dump --schema-only` der Produktion + `alembic upgrade head` gebaut, die volle Pytest-Suite läuft gegen diese echte Postgres-DB (inkl. echter RLS-Isolations- und Anonymizer-Tests), und nur bei Grün wird deployed. **Das Ziel der ganzen Phase ist es, False-Green / Silent-Failure auszurotten** — also Fälle, in denen das Gate "grün" meldet, obwohl die Sicherheit (RLS-Mandantentrennung, Anonymisierung) in Wahrheit kaputt ist. Produktions-Daten dürfen NIE berührt werden (Whitelist-Guard: nur `nerve_test`, nie `nerve`; trap-Teardown).
+Sie ersetzt das alte SQLite-Test-Gate im `deploy.sh` durch ein echtes Postgres-Gate: Bei jedem Production-Deploy wird eine **Wegwerf-Datenbank `nerve_test`** aus einem `pg_dump --schema-only` der Produktion + `alembic upgrade head` gebaut, die volle Pytest-Suite läuft gegen diese echte, über den ganzen Lauf **persistente** Postgres-DB (inkl. echter RLS-Isolations- und Anonymizer-Tests), und nur bei Grün wird deployed. **Ziel der Phase: False-Green / Silent-Failure ausrotten** — Fälle, in denen das Gate "grün" meldet, obwohl RLS-Mandantentrennung oder Anonymisierung in Wahrheit kaputt sind. Produktion (`nerve`) darf NIE berührt werden (Whitelist-Guard nur `nerve_test`; trap-Teardown).
+
+## Verlaufs-Kontext (wichtig)
+Diese Pläne wurden bereits in mehreren Pro-Runden gehärtet. Zuletzt (Runde 1) hast du 5 Funde bestätigt-gefixt und 3 NEUE State-Leak-Funde gemeldet, die jetzt EINGEARBEITET wurden:
+- **#6 BLOCKER (Plan 01 Task 5, T-PGTEST-24):** `cleanup_rows` macht jetzt als ALLERERSTE Aktion bedingungslos `rollback()`, DANN erst reverse-FK-DELETEs der committeten IDs + commit (verwirft uncommitteten Müll eines abgestürzten Tests).
+- **#7 HOCH (Plan 01 Task 6, T-PGTEST-33):** der Baseline-Wächter snapshottet jetzt `{pk: xmin}` statt nur das PK-Set → committete UPDATE-Mutationen an Baseline-Rows ändern `xmin` → fail-closed. Selbsttest um UPDATE-Fall erweitert.
+- **#8 MITTEL (Plan 03/04, T-PGTEST-34):** Executor-Regel: nie `yield` im Plain-Test-Body (→ Generator → Silent-Skip); Cleanup via `cleanup_tracker(db_session)`-Fixture per Argument.
 
 ## DEINE AUFGABE — zwei Teile
 
-### Teil 1: Verifiziere die 5 zuletzt eingearbeiteten Fixes
-Eine vorige Pro-Runde fand 5 Funde, die jetzt gefoldet wurden. Prüfe für JEDEN, ob er KORREKT und VOLLSTÄNDIG behoben ist (nicht nur erwähnt — wirklich baubar geschlossen), und ob der Fix selbst keinen NEUEN Fehler einführt:
-- **#1 (Plan 02):** `sudo -u nerve_app ANON_PW=val bash -c` war ein Syntax-Crash (sudo behandelt `ANON_PW=val` als auszuführenden Befehl). Fix: `env`-Kommando voranstellen. Sind ALLE Vorkommen (≥4 Spots + Task T-PGTEST-06/T-PGTEST-32) korrekt umgestellt? Ist die Env-Übergabe an `sudo` wirklich syntaktisch korrekt (sudo + env + bash -c Verschachtelung)?
-- **#2 (Plan 01 T1 vs T6 → T-PGTEST-31):** Der Aufräum-Wächter (Baseline-Guard) lief im Teardown NACH `engine.dispose()` der db_session/client-Fixtures → er las eine verworfene/unbound Engine → UnboundExecutionError. Fix: Wächter nutzt eine EIGENE session-scope Read-Engine. Ist die Lebensdauer/Reihenfolge jetzt wirklich sauber (Wächter-Engine lebt länger als die Test-Fixture-Engines, wird selbst korrekt entsorgt)?
-- **#3 (Plan 03 T8):** `test_ft_seed`/prompt_versions-Test hatte globale `count()==4`, aber der App-Import sät ≥6 prompt_versions (`_seed_prompt_versions`=4 + `_seed_ewb_v2`=2) → deterministischer Fail. Fix: auf test-eigene Module scopen (`filter(module.in_(EXPECTED_MODULES))`) oder baseline-delta. Ist das jetzt robust gegen die persistente nerve_test mit Baseline-Seed?
-- **#4 (Plan 01 T6 + Plan 02 → T-PGTEST-30):** Leak-Blindspot `training.transcript_archive` (training-Schema, ORM-los, Mig 0008) — vom public-Wächter UND vom crm-only POST-SUITE-Check ungedeckt; `test_anonymizer_worker` schreibt rein → False-Green. Fix: POST-SUITE-Check um `training.transcript_archive == 0` erweitern. Ist jetzt JEDE Tabelle, in die Tests schreiben, von irgendeinem Leak-Check gedeckt? Gibt es weitere ungedeckte Schreib-Ziele (andere non-public Schemas / ORM-lose Tabellen)?
-- **#5 (Plan 01 T5):** `cleanup_rows` schluckte FK-Fehler still (bare except) → defekter Teardown unbemerkt. Fix: lautes `logger.warning` im except. Ist das ausreichend, oder sollte ein nicht-leerer Teardown-Fehler das Gate sogar ROT machen?
+### Teil 1: Verifiziere die 3 zuletzt eingearbeiteten Fixes (#6/#7/#8)
+Prüfe für JEDEN: korrekt UND vollständig behoben (wirklich baubar geschlossen, nicht nur erwähnt)? Führt der Fix selbst einen NEUEN Fehler ein?
+- **#6:** Ist die rollback-zuerst-Reihenfolge an JEDER cleanup_rows-Nutzung wirksam? Verwirft der initiale `rollback()` versehentlich auch schon-committete Arbeit (nein, commit ist persistent) — oder genau richtig nur den pending State? Greift es auch, wenn cleanup_rows eine separate Connection statt der Test-Session nutzt?
+- **#7:** Ist `{pk: xmin}` der richtige Mechanismus? Deckt der Snapshot ALLE relevanten public-Tabellen ab, in die Tests committen könnten? Kann `xmin` durch etwas anderes als eine echte Test-Mutation wandern (VACUUM/FREEZE während des Laufs)? Ist der Selbsttest aussagekräftig?
+- **#8:** Ist die Anweisung glasklar genug, dass ein Executor-Agent NICHT in die yield-im-Body-Falle tappt? Gibt es noch andere Plan-Stellen, die "POST-yield" für Plain-Tests sagen, ohne die Fixture-Regel?
 
-### Teil 2: Frischer adversarialer Sweep
-Unabhängig von den 5 Fixes: finde NEUE Probleme. Pflicht-Achsen:
-- **False-Green:** Wo könnte das Gate grün melden, obwohl RLS/Anonymisierung/Isolation in Wahrheit kaputt ist?
-- **Silent-Failure:** Wo schluckt eine Pipe/ein Skript/ein Test einen Fehler (exit 0 trotz Crash, leere DB, übersprungener Test der als PASSED zählt)?
-- **Test-Reihenfolge / State-Leak:** persistente `nerve_test` über den Lauf — wo kann ein Test State hinterlassen, der einen späteren Test grün/rot fälscht?
-- **Produktions-Sicherheit:** irgendein Pfad, der doch `nerve` (Prod) statt `nerve_test` berühren könnte? trap/Whitelist wasserdicht?
-- **Baseline-Seed-Kollisionen:** der App-Import sät Rows in die persistente Test-DB — welche weiteren globalen `count()`-Assertions oder Unique-Constraints könnten daran zerschellen (wie #3 schon zeigte)?
+### Teil 2: Frischer adversarialer Sweep (NEUE Probleme)
+Unabhängig von #6/#7/#8. Pflicht-Achsen:
+- **False-Green:** Wo könnte das Gate grün melden, obwohl RLS/Anonymisierung/Isolation kaputt ist?
+- **Silent-Failure:** Wo schluckt eine Pipe/ein Skript/ein Test einen Fehler (exit 0 trotz Crash, leere DB, als PASSED zählender Skip)?
+- **Persistente-DB-State-Leak:** geteilte `nerve_test` über den ganzen Lauf — wo kann ein Test State hinterlassen (committete Rows, Sequenz-Werte, GUC/Session-Settings, veränderte Baseline), der einen späteren Test grün/rot fälscht?
+- **Produktions-Sicherheit:** irgendein Pfad, der doch `nerve` statt `nerve_test` berühren könnte? trap/Whitelist wasserdicht?
+- **Baseline-Seed-Kollisionen:** App-Import sät Rows in die persistente Test-DB — welche globalen `count()`/Unique-Annahmen könnten daran zerschellen?
 
 ## OUTPUT-FORMAT
-Pro Fund: **[SCHWEREGRAD: BLOCKER/HOCH/MITTEL/NIEDRIG]** — Plan-Datei + Task-ID — konkretes Problem — warum es False-Green/Silent-Failure/Prod-Risiko ist — präziser Fix.
-Wenn die 5 Fixes sauber sind, sag das explizit pro Fix (#1 OK / #2 OK ...). Am Ende: **GESAMT-VERDIKT: PASS** (bau-frei) **oder BLOCK** (Liste der Blocker) + Gesamt-Risiko (LOW/MED/HIGH).
-Sei ehrlich: wenn du nichts Neues findest, erfinde nichts. Aber wenn etwas stilles durchrutscht, ist das genau der Fehler, den diese Phase verhindern soll.
+Pro Fund: **[SCHWEREGRAD: BLOCKER/HOCH/MITTEL/NIEDRIG]** — Plan-Datei + Task-ID — konkretes Problem — warum False-Green/Silent-Failure/Prod-Risiko — präziser Fix.
+Für #6/#7/#8 explizit: OK oder nicht-OK (mit Grund). Am Ende: **GESAMT-VERDIKT: PASS** (bau-frei) **oder BLOCK** (Blocker-Liste) + Gesamt-Risiko (LOW/MED/HIGH).
+Sei ehrlich: nichts Neues finden ist ein legitimes Ergebnis — erfinde nichts. Aber wenn etwas Stilles durchrutscht, ist das genau der Fehler, den diese Phase verhindern soll.
 
 ---
 # UNTEN: Die 4 finalen Plan-Dateien + database/db.py + Persistenz-Enumeration (verbatim)
