@@ -8,6 +8,40 @@ from services.cost_tracker import log_api_cost
 import database.db as _db_mod
 
 
+@pytest.fixture(autouse=True)
+def _cost_tracker_cleanup():
+    """Phase 08.23.2.PGTEST: diese Tests COMMITTEN ApiRate/ExchangeRate (seeded_rate via db_session) +
+    ApiCostLog (log_api_cost auf eigener SessionLocal). Auf der persistenten nerve_test wuerden sie
+    leaken -> Baseline-Cleanup-Waechter rot. id-Wasserzeichen-Teardown ueber eine eigene kurzlebige
+    Engine (entkoppelt von der per-Test umgebundenen MODUL-SessionLocal). Public-only, kein crm-GUC."""
+    import os as _os
+    from sqlalchemy import create_engine as _ce, text as _sql
+    dsn = _os.environ.get('TEST_DATABASE_URL')
+    if not dsn:
+        yield
+        return
+    eng = _ce(dsn)
+    tables = ("api_cost_log", "api_rates", "exchange_rates")
+    def _maxid(conn, tbl):
+        try:
+            return conn.execute(_sql(f"SELECT COALESCE(MAX(id),0) FROM public.{tbl}")).scalar()
+        except Exception:
+            return 0
+    with eng.connect() as conn:
+        base = {t: _maxid(conn, t) for t in tables}
+    try:
+        yield
+    finally:
+        try:
+            with eng.begin() as conn:
+                for tbl in tables:   # no inter-FK among these three -> any order
+                    conn.execute(_sql(f"DELETE FROM public.{tbl} WHERE id > :b"), {"b": base[tbl]})
+        except Exception as _te:
+            print(f"[PGTEST-CLEANUP] cost_tracker teardown failed (non-fatal): {_te!r}")
+        finally:
+            eng.dispose()
+
+
 @pytest.fixture
 def patched_sessionlocal(db_session, monkeypatch):
     """Point database.db.SessionLocal at the in-memory test engine so that
@@ -46,9 +80,14 @@ def test_freeze_fx_on_write(db_session, seeded_rate):
 
 
 def test_missing_rate_no_raise(db_session, patched_sessionlocal):
-    # KEIN seeded_rate — log should silently skip
+    # KEIN seeded_rate — log should silently skip (unknown provider -> writes NOTHING NEW).
+    # persistence-robust (Delta-Review-2): nerve_test ist persistent (D-03); log_api_cost committet
+    # auf eigener Session -> Rows aus frueheren Tests persistieren. Baseline-Delta statt globaler
+    # count==0 (sonst False-Red durch die test_freeze_fx_on_write-Row).
+    before = db_session.query(ApiCostLog).count()
     log_api_cost('unknown', 'noop', user_id=1, units=5, unit_type='per_minute')
-    assert db_session.query(ApiCostLog).count() == 0
+    db_session.expire_all()  # log_api_cost committed on its own SessionLocal -> refresh the snapshot
+    assert db_session.query(ApiCostLog).count() == before
 
 
 def test_missing_rate_no_raise_no_db():
