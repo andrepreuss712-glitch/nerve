@@ -7,6 +7,7 @@ Whitelist-Logik (Phase 08 W-1): isinstance(value, bool) or value is None.
 Integer 1/0 darf NICHT als bool akzeptiert werden (Python-Equality 1 == True matcht sonst).
 """
 import json
+import uuid
 from datetime import datetime
 
 import pytest
@@ -20,10 +21,73 @@ from database.models import (
 )
 
 
+# ── Cleanup ────────────────────────────────────────────────────────────────
+# Diese Tests COMMITTEN ihre Org/User/ConvLog/ObjectionEvent-Kette (via _make_user/_make_event,
+# beide rufen db_session.commit()). Auf der persistenten nerve_test wuerden diese Rows leaken ->
+# der Baseline-Cleanup-Waechter (conftest._baseline_cleanup_guard) wuerde rot. Daher loescht der
+# id-Wasserzeichen-Teardown (#8/MED-1) alle nach Fixture-Start angelegten Rows reverse-FK wieder weg.
+# Public-only, kein crm -> kein Tenant-GUC noetig. Laeuft in der Fixture-POST-yield-Sektion (auch bei
+# Assertion-Fehler) -> kein State-Leak.
+@pytest.fixture(autouse=True)
+def _ewb_rate_cleanup():
+    import os as _os
+    from sqlalchemy import create_engine as _ce, text as _sql
+    dsn = _os.environ.get('TEST_DATABASE_URL')
+    if not dsn:
+        yield
+        return
+    # Eigene kurzlebige Engine (entkoppelt davon, ob der Test db_session ODER client/db_from_client
+    # nutzt — beide binden die MODUL-SessionLocal pro Test um/disposen sie). Snapshot der id-Watermark
+    # VOR dem Test, reverse-FK-DELETE aller danach angelegten Rows NACH dem Test.
+    eng = _ce(dsn)
+    def _maxid(conn, tbl):
+        try:
+            return conn.execute(_sql(f"SELECT COALESCE(MAX(id),0) FROM public.{tbl}")).scalar()
+        except Exception:
+            return 0
+    tables = ("objection_event", "conversation_logs", "users", "tenant_orgs", "organisations")
+    with eng.connect() as conn:
+        base = {t: _maxid(conn, t) for t in tables}
+    try:
+        yield
+    finally:
+        try:
+            with eng.begin() as conn:
+                # reverse-FK: objection_event -> conversation_logs -> users -> tenant_orgs -> orgs.
+                conn.execute(_sql("DELETE FROM public.objection_event WHERE id > :b"),
+                             {"b": base["objection_event"]})
+                conn.execute(_sql("DELETE FROM public.conversation_logs WHERE id > :b"),
+                             {"b": base["conversation_logs"]})
+                # tenant_orgs keyed by legacy_org_id (trigger row per new org) -> delete those first.
+                conn.execute(
+                    _sql("DELETE FROM public.tenant_orgs WHERE legacy_org_id IN "
+                         "(SELECT id FROM public.organisations WHERE id > :b)"),
+                    {"b": base["organisations"]},
+                )
+                conn.execute(_sql("DELETE FROM public.users WHERE id > :b"), {"b": base["users"]})
+                conn.execute(_sql("DELETE FROM public.organisations WHERE id > :b"),
+                             {"b": base["organisations"]})
+        except Exception as _te:
+            print(f"[PGTEST-CLEANUP] ewb_rate teardown failed (non-fatal): {_te!r}")
+        finally:
+            eng.dispose()
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────
 
-def _make_user(db_session, email='test@test.de'):
-    """Erstelle Org + User. Returnt (org, user)."""
+def _make_user(db_session, email=None):
+    """Erstelle Org + User. Returnt (org, user).
+
+    Phase 08.23.2.PGTEST Task 6: email ist UNIQUE pro Run (uuid-suffixed) — sonst wirft
+    users.email UNIQUE NOT NULL eine IntegrityError auf der persistenten nerve_test, wenn der Test
+    neben anderen email-seedenden Tests laeuft. Org-Insert feuert trg_mk_tenant_org -> tenant_orgs
+    entsteht automatisch (KEIN manueller tenant_orgs-Insert -> kein UNIQUE(legacy_org_id)-Bruch)."""
+    if email is None:
+        email = f"ewb-rate-{uuid.uuid4().hex[:8]}@nerve.local"
+    else:
+        # Auch explizit uebergebene Emails pro Run eindeutig machen (persistente nerve_test).
+        local, _, domain = email.partition('@')
+        email = f"{local}-{uuid.uuid4().hex[:8]}@{domain or 'nerve.local'}"
     org = Organisation(name='T', plan='starter')
     db_session.add(org)
     db_session.flush()
