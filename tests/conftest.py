@@ -1,8 +1,9 @@
 import os
 import sys
+import uuid
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 # Ensure repo root is on sys.path so `from services.ki_logik import ...`
@@ -14,6 +15,44 @@ if _REPO_ROOT not in sys.path:
 from database.db import Base
 # Import all models so Base.metadata knows about them
 import database.models  # noqa: F401
+
+
+# ── Phase 08.23.2.PGTEST — generic fixtures bind to REAL Postgres nerve_test ──────────────
+# KONVENTION (Baseline-Sauberkeit, Phase 08.23.2.PGTEST Option-A): Jeder Test, der Daten in nerve_test
+# COMMITTET, registriert seine erzeugten Row-IDs und ruft cleanup_rows(...) in seiner POST-yield-Sektion,
+# um sie reverse-FK-clean (crm.* unter Tenant-GUC) wieder zu loeschen. Erzwungen vom autouse
+# _baseline_cleanup_guard (Extension 2). Nicht aufgeraeumte public-Rows => Waechter rot => Gate blockt Deploy.
+# crm.*/training.* werden NICHT in-pytest geprueft (nerve_app saehe crm.* nur tenant-gefiltert) — ihre
+# Sauberkeit (jede crm.* Tabelle == 0 Rows, training.transcript_archive == 0) erzwingt der POST-SUITE-Check
+# in deploy.sh (Plan 02, sudo -u postgres psql, peer-auth). Bei Cleanup-Fehler emittiert cleanup_rows eine
+# laute [PGTEST-CLEANUP]-Warnung (Attribution, #5).
+
+# Seed-erzeugt (NICHT feste Konstante): crm.* FKs zeigen auf public.tenant_orgs(id); eine erfundene UUID
+# wuerde FK-Verletzung werfen (RESEARCH Q4b). Wird vom _seed_test_tenant-Helper beim ersten db_session/client
+# gefuellt; der A-1-Tripwire (tests/test_rls_generic_smoke.py) liest sie ueber das exportierte Modul-Attribut.
+TEST_TENANT_UUID = None
+
+
+def _seed_test_tenant(engine):
+    """Seede einen Test-Mandanten via Trigger-Muster (test_rls_isolation.py:_new_tenant) und gib seine
+    UUID zurueck. INSERT organisations -> AFTER-INSERT-Trigger trg_mk_tenant_org legt die tenant_orgs-Row
+    automatisch an -> SELECT tenant_orgs.id zurueck (NICHT manuell inserten, sonst UNIQUE(legacy_org_id)).
+    Setzt das Modul-Attribut TEST_TENANT_UUID, damit Tests (A-1-Tripwire) es importieren koennen.
+    Org-Name uuid-suffixed: [PGTEST-GENERIC]-Prefix fuer Analytics-Exklusion-Lineage, der uuid-Suffix
+    verhindert Unique-Kollisionen bei xdist / verpasstem Teardown (Gemini-LOW)."""
+    global TEST_TENANT_UUID
+    org_name = f"[PGTEST-GENERIC] tenant {uuid.uuid4().hex[:8]}"
+    with engine.begin() as conn:
+        org_id = conn.execute(
+            text("INSERT INTO public.organisations (name) VALUES (:n) RETURNING id"),
+            {"n": org_name},
+        ).scalar()
+        tenant_id = conn.execute(
+            text("SELECT id::text FROM public.tenant_orgs WHERE legacy_org_id = :oid"),
+            {"oid": org_id},
+        ).scalar()
+    TEST_TENANT_UUID = tenant_id
+    return tenant_id
 
 
 @pytest.fixture
@@ -39,56 +78,81 @@ def sample_state():
 
 
 @pytest.fixture
-def db_session():
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
+def db_session(monkeypatch):
+    """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+
+    Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+    (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+    Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+    nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+    ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+    loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+    Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+    pro Test disposed MODUL-SessionLocal.
+    """
+    dsn = os.environ.get('TEST_DATABASE_URL')
+    if not dsn:
+        pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                    "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+    import database.db as dbmod
+    from database.db import set_current_tenant, clear_current_tenant
+    engine = create_engine(dsn)
+    monkeypatch.setattr(dbmod, "engine", engine)
+    dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+    tenant_uuid = _seed_test_tenant(engine)     # Trigger-Muster, gibt tenant_orgs.id zurueck
+    set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+    session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
     try:
         yield session
     finally:
+        session.rollback()
         session.close()
+        clear_current_tenant()
+        dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
         engine.dispose()
 
 
 @pytest.fixture
 def client(monkeypatch):
-    """Flask test client with in-memory SQLite rebinding.
+    """Flask test client gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
 
-    Rebinds `database.db.engine` + `SessionLocal` + `db_session` to a fresh
-    in-memory SQLite engine so any code path using `get_session()` or
-    `SessionLocal()` sees the same test DB. Seeds schema via Base.metadata.
+    Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` um (EXAKT wie db_session,
+    KEINE frische sessionmaker, KEIN monkeypatch von SessionLocal auf ein neues Objekt — sonst geht der
+    after_begin-RLS-Hook verloren, Gemini-HIGH), monkeypatcht NUR `dbmod.engine`, ruft set_current_tenant.
+    Re-exponiert den `_test_session`/`_test_engine`-Vertrag (MODUL-SessionLocal-PG-Session, hook-tragend),
+    von dem db_from_client + ~20 Konsumenten-Tests abhaengen (T-PGTEST-22).
     """
-    from sqlalchemy import create_engine as _ce
-    from sqlalchemy.orm import sessionmaker as _sm, scoped_session as _ss
-    import database.db as _db_mod
-
-    engine = _ce("sqlite:///:memory:", connect_args={'check_same_thread': False})
-    Base.metadata.create_all(engine)
-    TestSession = _sm(autocommit=False, autoflush=False, bind=engine)
-    TestScoped = _ss(TestSession)
-
-    monkeypatch.setattr(_db_mod, 'engine', engine)
-    monkeypatch.setattr(_db_mod, 'SessionLocal', TestSession)
-    monkeypatch.setattr(_db_mod, 'db_session', TestScoped)
-
-    # Import app AFTER patching so module-level references still work;
-    # routes use get_session() which calls SessionLocal() at call time.
-    import app as _app_mod
-    flask_app = _app_mod.app
+    dsn = os.environ.get('TEST_DATABASE_URL')
+    if not dsn:
+        pytest.skip("TEST_DATABASE_URL not set -- client fixture requires real-PG nerve_test "
+                    "(no SQLite fallback by design, Req-2/D-07).")
+    import database.db as dbmod
+    from database.db import set_current_tenant, clear_current_tenant
+    engine = create_engine(dsn)
+    monkeypatch.setattr(dbmod, "engine", engine)   # NUR engine monkeypatchen
+    dbmod.SessionLocal.configure(bind=engine)      # MODUL-SessionLocal umbinden (Hook bleibt)
+    tenant_uuid = _seed_test_tenant(engine)
+    set_current_tenant(tenant_uuid)                # D-05, VOR dem app-Import-Pfad
+    from app import app as flask_app               # erst NACH der Umbindung importieren
     flask_app.config['TESTING'] = True
     flask_app.config['WTF_CSRF_ENABLED'] = False
-
-    # Expose the test session via the db_session fixture path for convenience
-    with flask_app.test_client() as c:
-        c._test_session = TestSession()
-        c._test_engine = engine
-        yield c
+    c = None
+    try:
+        with flask_app.test_client() as c:
+            # VERTRAG re-exponieren (pre-execute blocker fix): db_from_client + ~20 Tests lesen diese Attribute.
+            # MUSS die MODUL-SessionLocal-Session sein (hook-tragend, PG-gebunden), NICHT eine frische sessionmaker.
+            c._test_session = dbmod.SessionLocal()   # MODUL-SessionLocal -> PG-gebunden + hook-tragend
+            c._test_engine = engine                  # die nerve_test-PG-Engine
+            yield c
+    finally:
         try:
-            c._test_session.close()
+            if c is not None:
+                c._test_session.close()              # best-effort, analog IST-client
         except Exception:
             pass
-    engine.dispose()
+        clear_current_tenant()
+        dbmod.SessionLocal.configure(bind=None)    # Binding-Reset (Gemini-MEDIUM)
+        engine.dispose()
 
 
 @pytest.fixture
