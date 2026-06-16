@@ -11,11 +11,58 @@ Tests the server-side contract:
   - Mixed → saved=N, ignored=M
 """
 import json
+import uuid
+
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _profile_editor_cleanup():
+    """Phase 08.23.2.PGTEST Task 7: diese Tests COMMITTEN Org/User/Profile (public, kein crm). Auf der
+    persistenten nerve_test wuerden sie leaken -> Baseline-Cleanup-Waechter rot. id-Wasserzeichen-
+    Teardown ueber eine eigene kurzlebige Engine (entkoppelt von client/db_from_client)."""
+    import os as _os
+    from sqlalchemy import create_engine as _ce, text as _sql
+    dsn = _os.environ.get('TEST_DATABASE_URL')
+    if not dsn:
+        yield
+        return
+    eng = _ce(dsn)
+    tables = ("profiles", "users", "tenant_orgs", "organisations")
+    def _maxid(conn, tbl):
+        try:
+            return conn.execute(_sql(f"SELECT COALESCE(MAX(id),0) FROM public.{tbl}")).scalar()
+        except Exception:
+            return 0
+    with eng.connect() as conn:
+        base = {t: _maxid(conn, t) for t in tables}
+    try:
+        yield
+    finally:
+        try:
+            with eng.begin() as conn:
+                conn.execute(_sql("DELETE FROM public.profiles WHERE id > :b"), {"b": base["profiles"]})
+                conn.execute(
+                    _sql("DELETE FROM public.tenant_orgs WHERE legacy_org_id IN "
+                         "(SELECT id FROM public.organisations WHERE id > :b)"),
+                    {"b": base["organisations"]},
+                )
+                conn.execute(_sql("DELETE FROM public.users WHERE id > :b"), {"b": base["users"]})
+                conn.execute(_sql("DELETE FROM public.organisations WHERE id > :b"),
+                             {"b": base["organisations"]})
+        except Exception as _te:
+            print(f"[PGTEST-CLEANUP] profile_editor teardown failed (non-fatal): {_te!r}")
+        finally:
+            eng.dispose()
+
+
 def _make_test_user_and_profile(db_session, engine):
-    """Seed a minimal Organisation + User + Profile in the test DB."""
+    """Seed a minimal Organisation + User + Profile in the test DB.
+
+    Phase 08.23.2.PGTEST Task 7: email UNIQUE pro Run (uuid-suffixed) — sonst users.email UNIQUE-Bruch
+    auf der persistenten nerve_test (4 Tests seedeten denselben 'test@example.com'). Org-Insert feuert
+    trg_mk_tenant_org -> tenant_orgs automatisch (kein manueller Insert). profiles ist public, keine
+    crm-RLS-Luecke (Claudian); der client-Fixture-set_current_tenant deckt etwaige crm-Reads der Route."""
     from database.models import Organisation, User, Profile
     from werkzeug.security import generate_password_hash
 
@@ -25,7 +72,7 @@ def _make_test_user_and_profile(db_session, engine):
 
     user = User(
         org_id=org.id,
-        email='test@example.com',
+        email=f'profile-edit-{uuid.uuid4().hex[:8]}@nerve.local',
         passwort_hash=generate_password_hash('secret'),
         rolle='owner',
     )
