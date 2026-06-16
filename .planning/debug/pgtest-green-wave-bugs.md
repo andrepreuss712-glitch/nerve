@@ -29,7 +29,22 @@ fix: Assertion + Test-Name + Docstring auf `objection_events` (Plural) korrigier
 verification: py_compile OK; grep bestaetigt 0 verbleibende Singular-Assertions. Voll-Gruen via naechstem deploy.sh-Lauf.
 status: resolved
 
-## Bug 2 — test_baseline_autoreset test_01 + test_06 (CACHE-EMPTY) 🔬 INSTRUMENTIERT
+## Bug 2 — test_baseline_autoreset test_01 + test_06 (CACHE-EMPTY) ✅ GEFIXT (commit 0d0ffab)
+
+ROOT-CAUSE (empirisch via scripts/triage.sh, NICHT die instrumentierte Vermutung): die PK-Katalog-Abfrage
+im SQLAlchemy-Zweig von `_fetch_pk_for_table` (+ Duplikat `primary_key_column`) mischte named-param + Cast:
+`WHERE i.indrelid = :tbl::regclass`. Ueber eine SQLAlchemy-Connection (`_baseline_guard_engine.connect()`)
+-> `psycopg2: syntax error at or near ":"` -> JEDE ~45 Tabellen wirft -> pk_count=0 -> alles in
+foundation_register ("no watchable PK") -> baseline_table_list + _DERIVED_PK_COLS LEER -> Cache leer.
+Die instrumentierte DUAL-MODULE-Hypothese war FALSCH; das Fill-Log haette len(pk_cols)=0 gezeigt (PK-PASS-FAIL).
+Nur der SQLAlchemy-Pfad (conftest) war betroffen; test_schema_introspect (psycopg2-DSN) traf den
+funktionierenden %s::regclass-Zweig -> gruen.
+fix: SQLAlchemy-Zweig auf inline f-string `'{qualified}'::regclass` (Muster aus _fetch_fk_edges,
+injection-sicher), Duplikat konsolidiert (_fetch_pk_for_table delegiert an primary_key_column).
+verification: py_compile OK; grep 0 verbleibende `:tbl::regclass`-SQL. Voll-Gruen via triage.sh/deploy.sh.
+status: resolved
+
+### (historisch) Bug 2 — vorherige Instrumentierungs-Phase
 
 symptom: `_DERIVED_PK_COLS`/`_DERIVED_FK_ORDER` erscheinen dem Test leer ({}/[]) nach Session-Start
 -> cleanup_rows faellt still auf `_CLEANUP_FK_ORDER` zurueck (Fund-#7-Meta-False-Green).
