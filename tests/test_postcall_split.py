@@ -22,22 +22,21 @@ def _now():
 
 
 def _seed_user_and_conv(user_id=1, org_id=1):
-    """Legt Org + User + ConversationLog an, damit login_required passt + Ownership-Check gruen ist.
+    """Legt einen ConversationLog fuer die Base-Seed-Org/-User (id=1) an, damit login_required passt +
+    Ownership-Check gruen ist. Gibt conv_id (int) zurueck.
 
-    Gibt conv_id (int) zurueck. login_required laedt User via session['user_id'] und prueft
-    user.org_id == org.id — beide muessen existieren.
-    """
+    Phase 08.23.2.PGTEST Task 5: die Org(id=1)/User(id=1)-Parents kommen jetzt aus dem session-scoped
+    Plan-01-Base-Seed (conftest._pgtest_base_seed) — EINE Quelle der Wahrheit. Frueher legte dieser
+    Helper sie selbst per `db.add(Organisation(id=1,...))` hinter einem idempotenten `.first() is None`-
+    Guard an (kein harter PK-Doppel, aber ein paralleles 'Test-Org'-Duplikat fuer dieselbe id=1). Jetzt
+    READ-ONLY: wir verifizieren die Base-Parents existieren (kein zweiter Insert)."""
     db = get_session()
     try:
-        if db.query(Organisation).filter_by(id=org_id).first() is None:
-            db.add(Organisation(id=org_id, name='Test-Org'))
-            db.commit()
-        if db.query(User).filter_by(id=user_id).first() is None:
-            db.add(User(
-                id=user_id, org_id=org_id, email=f'split-test-{user_id}@nerve.local',
-                passwort_hash='x', rolle='owner', aktiv=True,
-            ))
-            db.commit()
+        # Base-Seed (Plan 01) liefert Org id=1 + User id=1 — read-only konsumieren, NICHT neu seeden.
+        assert db.query(Organisation).filter_by(id=org_id).first() is not None, \
+            "Base-Seed Org id=1 fehlt (conftest._pgtest_base_seed) — Gate-only Fixture"
+        assert db.query(User).filter_by(id=user_id).first() is not None, \
+            "Base-Seed User id=1 fehlt (conftest._pgtest_base_seed) — Gate-only Fixture"
         conv = ConversationLog(user_id=user_id, org_id=org_id, created_at=_now())
         db.add(conv)
         db.commit()
