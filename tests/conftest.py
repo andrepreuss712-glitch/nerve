@@ -103,6 +103,133 @@ def _pgtest_base_seed():
     yield
 
 
+# ── Phase 08.23.2.PGTEST Extension 1 — gemeinsamer cleanup_rows-Teardown-Helfer ──────────────
+# Reverse-FK-Reihenfolge der bekannten Tabellen-Familien (Kind zuerst, Eltern zuletzt). crm.* MUSS
+# unter gesetztem Tenant-GUC geloescht werden (sonst RLS fail-closed -> DELETE trifft 0 Rows -> Leak).
+# public.* braucht keinen GUC. Tabellen, die NICHT in dieser Liste stehen, werden in der uebergebenen
+# Reihenfolge am Ende angehaengt — best-effort.
+_CLEANUP_FK_ORDER = [
+    "crm.account_memory",
+    "crm.meetings",
+    "crm.contacts",
+    "crm.accounts",
+    "crm.user_preferences",
+    "public.objection_event",
+    "public.conversation_logs",
+    "public.calls",
+    "public.api_cost_log",
+    "public.revenue_log",
+    "public.ewb_ratings",
+    "public.profiles",
+    "public.users",
+    "public.tenant_orgs",
+    "public.organisations",
+]
+
+
+def _normalize_table_name(key):
+    """Akzeptiere ein ORM-Model ODER einen Tabellen-String. Liefert den qualifizierten DB-Namen
+    'schema.table' (crm.*/training.* tragen ihr Schema, public ohne Praefix wird zu public.<t>)."""
+    if isinstance(key, str):
+        return key if "." in key else f"public.{key}"
+    tname = getattr(key, "__tablename__", None)
+    if tname is None:
+        return str(key)
+    schema = None
+    targs = getattr(key, "__table_args__", None)
+    if isinstance(targs, (tuple, list)):
+        for item in targs:
+            if isinstance(item, dict) and "schema" in item:
+                schema = item["schema"]
+    elif isinstance(targs, dict):
+        schema = targs.get("schema")
+    return f"{schema}.{tname}" if schema else f"public.{tname}"
+
+
+def cleanup_rows(conn_or_session, spec, tenant=None):
+    """Gemeinsamer best-effort Teardown-Helfer (Extension 1) — modelliert auf test_rls_isolation.py:101-116.
+
+    Jeder committende Test ruft cleanup_rows(...) in seiner POST-yield-Sektion, um seine EIGENEN committeten
+    Rows reverse-FK-clean wieder zu loeschen. Akzeptiert eine SQLAlchemy-Session ODER eine psycopg2-Connection.
+    spec = {Model_oder_'schema.tabelle': [id, ...]}. tenant (UUID-str) ist PFLICHT wenn crm.*-Tabellen im spec
+    stehen (sonst RLS fail-closed -> 0 geloescht -> Leak).
+
+    DREI-SCHRITT-CONTRACT (#6, Delta-Review-5, BLOCKER):
+      SCHRITT 1: UNBEDINGTER rollback ALS ALLERERSTE Aktion — verwirft den uncommitteten In-Flight-State eines
+                 mid-body gecrashten Tests (AssertionError NACH einem crm-INSERT, VOR seinem commit). OHNE diesen
+                 fuehrenden rollback wuerde der commit in Schritt 3 die Garbage PERMANENT in nerve_test zementieren
+                 (crm.*-Leak, den der public-only Waechter Task 6 NICHT sieht).
+      SCHRITT 2: reverse-FK-DELETE NUR der vom Caller uebergebenen (= zuvor committeten, test-eigenen) IDs unter
+                 dem richtigen Tenant-GUC (crm.* via set_config); loescht NIE Baseline-Rows (id=1/[PGTEST-BASE]/
+                 app-import-Seeds) — nur die explizit uebergebenen IDs.
+      SCHRITT 3: commit.
+    CONTRACT: Caller uebergeben NUR ihre EIGENEN committeten IDs.
+
+    #5 (Gemini-3.1-Pro-Fold): bei einem Cleanup-Fehler emittiert der Helfer NACH dem rollback eine LAUTE
+    [PGTEST-CLEANUP]-Warnung (logger.warning/stderr, Tabelle/ids/Exception-repr) — kaputter Teardown laut +
+    attribuierbar statt still verschluckt. Bleibt best-effort (KEIN hartes re-raise — der Baseline-Waechter
+    (Task 6) / POST-SUITE-Check (Plan 02) ist der fail-closed Backstop).
+    """
+    norm = {}
+    for key, ids in spec.items():
+        norm[_normalize_table_name(key)] = list(ids or [])
+
+    has_crm = any(t.startswith("crm.") for t in norm)
+    if has_crm and not tenant:
+        raise ValueError(
+            "cleanup_rows: crm.*-Tabellen im spec, aber kein tenant uebergeben -> RLS fail-closed "
+            "(DELETE wuerde 0 Rows treffen). tenant=<UUID-str> ist Pflicht."
+        )
+
+    # psycopg2-Connection (hat .cursor(), keine .execute()) vs SQLAlchemy-Session.
+    is_psycopg2 = hasattr(conn_or_session, "cursor") and not hasattr(conn_or_session, "execute")
+
+    # SCHRITT 1 (#6): unbedingter rollback — uncommitteten In-Flight-State verwerfen.
+    try:
+        conn_or_session.rollback()
+    except Exception:
+        pass
+
+    ordered = [t for t in _CLEANUP_FK_ORDER if t in norm]
+    ordered += [t for t in norm if t not in _CLEANUP_FK_ORDER]
+
+    try:
+        if is_psycopg2:
+            cur = conn_or_session.cursor()
+            if tenant is not None:
+                cur.execute("SELECT set_config('app.tenant_id', %s, true)", (str(tenant),))
+            for tbl in ordered:                 # SCHRITT 2: reverse-FK-DELETE der uebergebenen IDs
+                ids = norm[tbl]
+                if not ids:
+                    continue
+                cur.execute(f"DELETE FROM {tbl} WHERE id = ANY(%s)", (list(ids),))
+        else:
+            if tenant is not None:
+                conn_or_session.execute(
+                    text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant)}
+                )
+            for tbl in ordered:
+                ids = norm[tbl]
+                if not ids:
+                    continue
+                conn_or_session.execute(
+                    text(f"DELETE FROM {tbl} WHERE id = ANY(:ids)"), {"ids": list(ids)}
+                )
+        conn_or_session.commit()                # SCHRITT 3
+    except Exception as e:
+        try:
+            conn_or_session.rollback()
+        except Exception:
+            pass
+        # #5: kaputter Teardown LAUT machen (Attribution), nicht still verschlucken.
+        msg = f"[PGTEST-CLEANUP] cleanup_rows FEHLGESCHLAGEN fuer spec={norm} tenant={tenant}: {e!r}"
+        try:
+            import logging
+            logging.getLogger(__name__).warning(msg)
+        except Exception:
+            print(msg, file=sys.stderr)
+
+
 @pytest.fixture
 def sample_state():
     """Factory returning a fresh state dict with all Phase 04.8 keys at defaults."""

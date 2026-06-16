@@ -334,6 +334,15 @@ Grenzfall: `inspect.getsource` fuer Regex-Muster die Runtime-Constraints sichern
 (z.B. "kein Opus-Model im Live-Loop") sind OK NUR wenn kein Function-Call-Mock
 die Constraint direkt testbar macht. Dokumentiere den Grund mit Kommentar im Test.
 
+## Test-Cleanup-Regel: Committende Tests raeumen ihre Rows weg (Phase 08.23.2.PGTEST)
+
+Tests, die Daten in nerve_test committen, raeumen ihre eigenen Rows im Teardown via dem gemeinsamen
+Cleanup-Helfer (`cleanup_rows` in tests/conftest.py) wieder weg (Baseline-Sauberkeit, vom
+Test-Cleanup-Waechter `_baseline_cleanup_guard` erzwungen; ein Cleanup-Fehler wird via
+`[PGTEST-CLEANUP]`-Warnung laut gemeldet). public.* erzwingt der in-pytest-Waechter; crm.*/training.*
+erzwingt der POST-SUITE-Check in deploy.sh (jede crm.* Tabelle == 0 Rows, training.transcript_archive
+== 0). Code-Identifier (`cleanup_rows`/`_baseline_cleanup_guard`) bleiben ASCII.
+
 ## Git-Regel: Immer pushen
 
 Nach jeder abgeschlossenen GSD-Phase und am Ende jeder Arbeitssession: `git push origin main` ausführen. GitHub muss immer den aktuellen Stand haben.
