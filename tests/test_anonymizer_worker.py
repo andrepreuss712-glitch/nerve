@@ -2,12 +2,15 @@
 
 TWO GROUPS, by what they prove:
 
-1. LOGIC GROUP (in-memory SQLite, built from the ORM models + a hand-created transcript_archive).
-   Proves the MERGE/FILTER/HASH/GATING logic — behavior that breaks without a source change:
-   transcript_archive rows written, anonymized_at stamped, is_test_user calls excluded,
-   source_call_hash is a one-way hash (no raw id), should_persist() drops ART9/error snippets.
-   SQLite has NO Row-Level-Security, so RLS is explicitly NOT tested here (a SQLite RLS branch
-   would be a Source-Presence FALSE-GREEN — CLAUDE.md). The heavy NLP pipeline is never loaded:
+1. LOGIC GROUP (REAL Postgres nerve_test — PORTIERT in Phase 08.23.2.PGTEST Task 2; frueher
+   in-memory SQLite). Proves the MERGE/FILTER/HASH/GATING logic — behavior that breaks without a
+   source change: transcript_archive rows written, anonymized_at stamped, is_test_user calls
+   excluded, source_call_hash is a one-way hash (no raw id), should_persist() drops ART9/error
+   snippets. RLS is NOT the subject here (the _fake_anonymize stub keeps the NLP out). Because
+   training.* is the DPO vault that nerve_app may NOT touch (CONTEXT.md:111), the WRITE path runs as
+   nerve_anon_worker (anon_worker_pg_engine) while the crm.* chain is seeded as nerve_app under the
+   tenant GUC (nerve_app_pg_conn) — same two-role harness as the RLS group, scoped via limit_ids.
+   SKIP when either DSN is absent (no SQLite fallback). The heavy NLP pipeline is never loaded:
    anonymize() is injected as a deterministic stub.
 
 2. RLS GROUP (REAL Postgres, NO SQLite fallback — same harness style as test_rls_isolation.py).
@@ -26,16 +29,10 @@ TWO GROUPS, by what they prove:
 Run server-side on Production (CLAUDE.md HART: pytest via SSH, real PG; no local pytest).
 """
 import hashlib
-import itertools
 import uuid
 from datetime import datetime, timezone
 
 import pytest
-
-# TranscriptSegment.id is BigInteger (BIGSERIAL on PG) — SQLite only auto-increments INTEGER PRIMARY
-# KEY, not BIGINT, so we assign explicit ids in the in-memory logic group. Process-global counter
-# guarantees uniqueness within each (per-test, fresh) in-memory DB.
-_seg_id = itertools.count(1)
 
 from scripts.anonymizer_worker import process_unstamped, _hash_call_id
 
@@ -52,176 +49,251 @@ def _fake_anonymize(text_in, _cache):
 
 
 # ──────────────────────────────────────────────────────────────────────────────────────────────
-# LOGIC GROUP
+# LOGIC GROUP — PORTIERT auf nerve_test-PG (Phase 08.23.2.PGTEST Task 2)
 # ──────────────────────────────────────────────────────────────────────────────────────────────
-@pytest.fixture
-def mem_engine():
-    """In-memory SQLite with `crm` and `training` ATTACHed as schemas (the crm/training models are
-    schema-qualified). StaticPool keeps the ATTACH, create_all and every connection on ONE DBAPI
-    connection. training.transcript_archive is raw DDL (migration 0008), not an ORM model, so we
-    create it by hand to mirror its 0008 shape."""
-    from sqlalchemy import create_engine, text
-    from sqlalchemy.pool import StaticPool
-    from database.db import Base
-    import database.models  # noqa: F401 (registers crm.* + training.* on Base.metadata)
+# Frueher lief die Logic-Group gegen eine in-memory SQLite-Engine mit ATTACHed crm/training (via dem
+# globalen cf5de6d-Listener, der in Plan 03 Task 1 entfernt wurde). Sie pruft die MERGE/FILTER/HASH/
+# GATING-Logik (NICHT RLS — der _fake_anonymize-Stub haelt das NLP raus).
+#
+# PG-PORT + ROLLEN-NOTWENDIGKEIT (Deviation Rule 3, im SUMMARY dokumentiert): training.* ist der
+# DPO-Tresor — nerve_app hat KEINEN Zugriff (CONTEXT.md:111, TAXO3-OQ-1: "permission denied for
+# schema training"). Die Worker-Schreib-Logik (INSERT training.transcript_archive) kann daher NICHT
+# als nerve_app laufen. Korrekter PG-Port = exakt die Rollen-Aufteilung der RLS-Gruppe unten:
+#   - SEEDEN der crm.*-Kette als `nerve_app` unter dem Tenant-GUC (RLS WITH CHECK) — nerve_app_pg_conn
+#   - LAUFEN von process_unstamped als `nerve_anon_worker` (die EINZIGE Rolle mit training-Write +
+#     cross-tenant-crm-Read) — anon_worker_pg_engine, mit limit_ids auf die test-eigenen mem_ids
+#     gescoped (zero blast radius + deterministische candidates-Counts auf der persistenten nerve_test).
+# Wenn eine der DSNs fehlt -> SKIP (kein sqlite-Fallback). Reverse-FK-Teardown in der Fixture-POST-yield-
+# Sektion (MED-1) raeumt crm.* + training.transcript_archive auf 0 (POST-SUITE-Check Plan 02 #4 faengt Leak).
 
-    engine = create_engine(
-        "sqlite://",
-        connect_args={'check_same_thread': False},
-        poolclass=StaticPool,
+
+def _seed_pg_account(cur, tenant_id, *, is_test_user=False, stamped=False, segments=None):
+    """As nerve_app (psycopg2 cur), seed one org/user/conversation_log/call/account/account_memory
+    chain (+ optional transcript segments) UNDER the given tenant GUC. Returns
+    (account_memory_id, account_id, call_id). `segments` = list of (ts_ms, speaker, text)."""
+    # public.* (no GUC needed): org/user/conversation_log/call/transcript_segments.
+    cur.execute("INSERT INTO public.organisations (name) VALUES (%s) RETURNING id",
+                ("[ANON-TEST] org",))
+    org_id = cur.fetchone()[0]
+    cur.execute(
+        "INSERT INTO public.users (org_id, email, is_test_user) VALUES (%s, %s, %s) RETURNING id",
+        (org_id, f"anon-test-{uuid.uuid4().hex[:8]}@nerve.local", is_test_user),
     )
-
-    # crm/training werden jetzt ZENTRAL via globalem connect-Listener in database.db
-    # (_sqlite_attach_crm_training_schemas) ATTACHed — lokaler ATTACH waere doppelt.
-    # StaticPool bleibt: ATTACH + create_all + raw training.transcript_archive auf EINER Verbindung.
-    Base.metadata.create_all(engine)
-    with engine.begin() as conn:
-        conn.execute(text(
-            """
-            CREATE TABLE IF NOT EXISTS training.transcript_archive (
-                id               INTEGER PRIMARY KEY AUTOINCREMENT,
-                source_call_hash TEXT    NOT NULL,
-                segment_index    INTEGER NOT NULL,
-                speaker          TEXT    NOT NULL,
-                text             TEXT    NOT NULL,
-                ts_offset_ms     INTEGER NOT NULL,
-                schema_version   SMALLINT NOT NULL DEFAULT 1,
-                archived_at      TIMESTAMP
+    user_id = cur.fetchone()[0]
+    cur.execute(
+        "INSERT INTO public.conversation_logs (user_id, org_id, started_at) VALUES (%s, %s, %s) "
+        "RETURNING id",
+        (user_id, org_id, datetime.now()),
+    )
+    clog_id = cur.fetchone()[0]
+    acct_id = str(uuid.uuid4())
+    call_id = str(uuid.uuid4())
+    # call_mode CHECK is ('cold_call','meeting_consented') — see ck_calls_call_mode.
+    cur.execute(
+        "INSERT INTO public.calls (id, user_id, account_id, call_mode, conversation_log_id) "
+        "VALUES (%s, %s, %s, %s, %s)",
+        (call_id, user_id, acct_id, 'cold_call', clog_id),
+    )
+    if segments:
+        for ts_ms, speaker, seg_text in segments:
+            # id is BIGSERIAL on PG -> let the sequence assign it (NO explicit id, Klasse-D-Hinweis).
+            cur.execute(
+                "INSERT INTO public.transcript_segments (conversation_log_id, ts_ms, speaker, text) "
+                "VALUES (%s, %s, %s, %s)",
+                (clog_id, ts_ms, speaker, seg_text),
             )
-            """
-        ))
-    try:
-        yield engine
-    finally:
-        engine.dispose()
-
-
-def _seed_account(engine, *, is_test_user=False, stamped=False, segments=None, tenant_id=None):
-    """Seed one org/user/conversation_log/call/account/account_memory chain (+ optional transcript
-    segments) and return (account_memory_id, account_id, call_id). `segments` is a list of
-    (ts_ms, speaker, text); when None the account has no transcript material."""
-    from sqlalchemy.orm import sessionmaker
-    from database.models import (
-        Organisation, User, ConversationLog, Call, TranscriptSegment, Account, AccountMemory,
+    # crm.* under the tenant GUC (RLS WITH CHECK: tenant_id = current_setting('app.tenant_id')).
+    cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+    cur.execute("INSERT INTO crm.accounts (id, tenant_id, name) VALUES (%s, %s, %s)",
+                (acct_id, tenant_id, "[ANON-TEST] account"))
+    mem_id = str(uuid.uuid4())
+    cur.execute(
+        "INSERT INTO crm.account_memory (id, tenant_id, account_id, meddpicc, context_hooks, "
+        "anonymized_at) VALUES (%s, %s, %s, %s, %s, %s)",
+        (mem_id, tenant_id, acct_id, '{}', '[]',
+         (datetime.now(timezone.utc) if stamped else None)),
     )
-    Session = sessionmaker(bind=engine)
-    s = Session()
-    try:
-        tid = tenant_id or str(uuid.uuid4())
-        org = Organisation(name="[ANON-TEST] org")
-        s.add(org)
-        s.flush()
-        user = User(org_id=org.id, email=f"anon-test-{uuid.uuid4().hex[:8]}@nerve.local",
-                    is_test_user=is_test_user)
-        s.add(user)
-        s.flush()
-        clog = ConversationLog(user_id=user.id, org_id=org.id, started_at=datetime.now())
-        s.add(clog)
-        s.flush()
-        acct_id = str(uuid.uuid4())
-        call_id = str(uuid.uuid4())
-        s.add(Account(id=acct_id, tenant_id=tid, name="[ANON-TEST] account"))
-        # call_mode CHECK is ('cold_call','meeting_consented') — see ck_calls_call_mode.
-        s.add(Call(id=call_id, user_id=user.id, account_id=acct_id, call_mode='cold_call',
-                   conversation_log_id=clog.id))
-        if segments:
-            for ts_ms, speaker, seg_text in segments:
-                s.add(TranscriptSegment(id=next(_seg_id), conversation_log_id=clog.id, ts_ms=ts_ms,
-                                        speaker=speaker, text=seg_text))
-        mem_id = str(uuid.uuid4())
-        s.add(AccountMemory(
-            id=mem_id, tenant_id=tid, account_id=acct_id,
-            meddpicc={}, context_hooks=[],
-            anonymized_at=(datetime.now(timezone.utc) if stamped else None),
-        ))
-        s.commit()
+    return mem_id, acct_id, call_id, org_id
+
+
+@pytest.fixture
+def logic_ctx(nerve_app_pg_conn, anon_worker_pg_engine):
+    """nerve_test-PG harness for the logic group. Seeds crm.* as nerve_app under a trigger-tenant GUC,
+    runs the worker as nerve_anon_worker (training-write + cross-tenant), tracks created IDs, and
+    tears everything down reverse-FK in the POST-yield section (MED-1, runs even on assertion failure).
+
+    Yields a context with:
+      - seed(...): seed one account chain, return (mem_id, acct_id, call_id)
+      - run(...): run process_unstamped as nerve_anon_worker, scoped to the seeded mem_ids
+      - archive_rows(): SELECT the test's own training.transcript_archive rows (by source_call_hash)
+      - anonymized_at(mem_id): read the crm.account_memory stamp (as nerve_app under the tenant GUC)
+    """
+    from sqlalchemy import text
+    conn = nerve_app_pg_conn       # psycopg2 as nerve_app (seeds + reads crm under GUC)
+    engine = anon_worker_pg_engine  # SQLAlchemy as nerve_anon_worker (runs the worker code path)
+    cur = conn.cursor()
+
+    # Trigger-tenant: INSERT organisations -> trg_mk_tenant_org auto-creates tenant_orgs; read it back.
+    cur.execute("INSERT INTO public.organisations (name) VALUES (%s) RETURNING id",
+                (f"[ANON-TEST] tenant {uuid.uuid4().hex[:8]}",))
+    tenant_org_id = cur.fetchone()[0]
+    cur.execute("SELECT id::text FROM public.tenant_orgs WHERE legacy_org_id = %s", (tenant_org_id,))
+    tenant_id = cur.fetchone()[0]
+    conn.commit()
+
+    created = {"mem_ids": [], "acct_ids": [], "call_ids": [], "org_ids": [tenant_org_id]}
+
+    def seed(*, is_test_user=False, stamped=False, segments=None):
+        mem_id, acct_id, call_id, org_id = _seed_pg_account(
+            cur, tenant_id, is_test_user=is_test_user, stamped=stamped, segments=segments)
+        conn.commit()
+        created["mem_ids"].append(mem_id)
+        created["acct_ids"].append(acct_id)
+        created["call_ids"].append(call_id)
+        created["org_ids"].append(org_id)
         return mem_id, acct_id, call_id
+
+    def run(dry_run=False):
+        # Scope to the test's own seeded rows: deterministic candidates count on persistent nerve_test
+        # + zero blast radius. The worker (nerve_anon_worker) reads cross-tenant via anon_worker_read.
+        ids = list(created["mem_ids"])
+        with engine.connect() as wconn:
+            stats = process_unstamped(wconn, dry_run=dry_run, anonymize_fn=_fake_anonymize,
+                                      limit_ids=ids)
+            if not dry_run:
+                wconn.commit()
+        return stats
+
+    def archive_rows():
+        # As nerve_anon_worker (the role that can read training), restricted to the test's own hashes.
+        own_hashes = [_hash_call_id(c) for c in created["call_ids"]]
+        with engine.connect() as wconn:
+            return wconn.execute(
+                text(
+                    "SELECT source_call_hash, segment_index, speaker, text "
+                    "FROM training.transcript_archive WHERE source_call_hash = ANY(:h) "
+                    "ORDER BY source_call_hash, segment_index"
+                ),
+                {"h": own_hashes},
+            ).fetchall()
+
+    def anonymized_at(mem_id):
+        # As nerve_app under the tenant GUC (RLS-scoped read of the stamp).
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute("SELECT anonymized_at FROM crm.account_memory WHERE id = %s::uuid", (mem_id,))
+        val = cur.fetchone()[0]
+        conn.rollback()  # end the read transaction; SET LOCAL discarded
+        return val
+
+    ctx = {
+        "tenant": tenant_id, "created": created,
+        "seed": seed, "run": run, "archive_rows": archive_rows, "anonymized_at": anonymized_at,
+    }
+    try:
+        yield ctx
     finally:
-        s.close()
-
-
-def _run(engine, dry_run=False):
-    with engine.connect() as conn:
-        stats = process_unstamped(conn, dry_run=dry_run, anonymize_fn=_fake_anonymize)
-        if not dry_run:
+        # POST-yield reverse-FK teardown (MED-1): runs even on assertion failure -> no leak.
+        # training.transcript_archive: DELETE as nerve_anon_worker? It has only column-UPDATE on crm
+        # and SELECT on training (no DELETE) -> the worker role canNOT clean training. So we delete
+        # training rows as nerve_app IF it has the grant; otherwise the POST-SUITE-Check (Plan 02 #4)
+        # is the fail-closed backstop. We attempt via the worker engine first, best-effort.
+        own_hashes = [_hash_call_id(c) for c in created["call_ids"]]
+        try:
+            with engine.begin() as wconn:
+                if own_hashes:
+                    wconn.execute(
+                        text("DELETE FROM training.transcript_archive WHERE source_call_hash = ANY(:h)"),
+                        {"h": own_hashes},
+                    )
+        except Exception as _we:
+            print(f"[PGTEST-CLEANUP] training teardown (anon_worker) failed (non-fatal): {_we!r}")
+        try:
+            c2 = conn.cursor()
+            c2.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+            if created["mem_ids"]:
+                c2.execute("DELETE FROM crm.account_memory WHERE id = ANY(%s::uuid[])",
+                           ([str(m) for m in created["mem_ids"]],))
+            if created["acct_ids"]:
+                c2.execute("DELETE FROM crm.accounts WHERE id = ANY(%s::uuid[])",
+                           ([str(a) for a in created["acct_ids"]],))
             conn.commit()
-    return stats
+            c3 = conn.cursor()
+            # public reverse-FK: calls -> transcript_segments(by clog) -> conversation_logs -> users
+            # -> tenant_orgs -> organisations. Delete by org lineage (test-own org_ids only).
+            org_ids = [o for o in created["org_ids"]]
+            if created["call_ids"]:
+                c3.execute("DELETE FROM public.calls WHERE id = ANY(%s::uuid[])",
+                           ([str(c) for c in created["call_ids"]],))
+            c3.execute(
+                "DELETE FROM public.transcript_segments WHERE conversation_log_id IN "
+                "(SELECT id FROM public.conversation_logs WHERE org_id = ANY(%s))", (org_ids,))
+            c3.execute("DELETE FROM public.conversation_logs WHERE org_id = ANY(%s)", (org_ids,))
+            c3.execute("DELETE FROM public.users WHERE org_id = ANY(%s)", (org_ids,))
+            c3.execute("DELETE FROM public.tenant_orgs WHERE legacy_org_id = ANY(%s)", (org_ids,))
+            c3.execute("DELETE FROM public.organisations WHERE id = ANY(%s)", (org_ids,))
+            conn.commit()
+        except Exception as _te:
+            print(f"[PGTEST-CLEANUP] anonymizer logic teardown failed (non-fatal): {_te!r}")
+            try:
+                conn.rollback()
+            except Exception:
+                pass
 
 
-def _archive_rows(engine):
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        return conn.execute(text(
-            "SELECT source_call_hash, segment_index, speaker, text FROM training.transcript_archive "
-            "ORDER BY source_call_hash, segment_index"
-        )).fetchall()
-
-
-def _anonymized_at(engine, mem_id):
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        return conn.execute(
-            text("SELECT anonymized_at FROM crm.account_memory WHERE id = :id"), {'id': mem_id}
-        ).scalar()
-
-
-def test_worker_processes_unstamped(mem_engine):
+def test_worker_processes_unstamped(logic_ctx):
     """A normal unstamped row with transcript material -> anonymized segments written to
     transcript_archive (Mueller rewritten), and anonymized_at stamped. The 'GEHEIM' segment is
     dropped by should_persist() -> 2 of 3 segments persisted."""
-    mem_id, _acct, call_id = _seed_account(
-        mem_engine,
+    mem_id, _acct, call_id = logic_ctx["seed"](
         segments=[(0, 'berater', "Herr Mueller will kaufen"),
                   (10, 'kunde', "Diagnose GEHEIM Information"),
                   (20, 'berater', "Zweiter Punkt ohne PII")],
     )
-    stats = _run(mem_engine)
+    stats = logic_ctx["run"]()
 
     assert stats['candidates'] == 1
     assert stats['stamped'] == 1
-    rows = [r for r in _archive_rows(mem_engine) if r[0] == _hash_call_id(call_id)]
+    rows = [r for r in logic_ctx["archive_rows"]() if r[0] == _hash_call_id(call_id)]
     assert len(rows) == 2                                  # GEHEIM snippet dropped by should_persist
     texts = [r[3] for r in rows]
     assert "Herr [PERSON_A] will kaufen" in texts          # anonymization actually rewrote the text
     assert all('GEHEIM' not in t for t in texts)           # ART9 snippet never persisted
-    assert _anonymized_at(mem_engine, mem_id) is not None   # Variante A stamp applied
+    assert logic_ctx["anonymized_at"](mem_id) is not None   # Variante A stamp applied
 
 
-def test_worker_skips_stamped(mem_engine):
+def test_worker_skips_stamped(logic_ctx):
     """An already-stamped row is NOT reselected (idempotent) -> its segments are never written."""
-    _mem_id, _acct, call_id = _seed_account(
-        mem_engine, stamped=True,
-        segments=[(0, 'berater', "Bereits anonymisiert Mueller")],
+    _mem_id, _acct, call_id = logic_ctx["seed"](
+        stamped=True, segments=[(0, 'berater', "Bereits anonymisiert Mueller")],
     )
-    stats = _run(mem_engine)
+    stats = logic_ctx["run"]()
 
     assert stats['candidates'] == 0                         # stamped row not selected
-    assert all(r[0] != _hash_call_id(call_id) for r in _archive_rows(mem_engine))
+    assert all(r[0] != _hash_call_id(call_id) for r in logic_ctx["archive_rows"]())
 
 
-def test_worker_filters_test_user(mem_engine):
+def test_worker_filters_test_user(logic_ctx):
     """A row whose source call belongs to an is_test_user user is NOT written to training (no test
     data into the foundation), though the row is still stamped (evaluated)."""
-    mem_id, _acct, call_id = _seed_account(
-        mem_engine, is_test_user=True,
-        segments=[(0, 'berater', "Test User Mueller Gespraech")],
+    mem_id, _acct, call_id = logic_ctx["seed"](
+        is_test_user=True, segments=[(0, 'berater', "Test User Mueller Gespraech")],
     )
-    stats = _run(mem_engine)
+    stats = logic_ctx["run"]()
 
     assert stats['skipped_test_user'] == 1
-    assert all(r[0] != _hash_call_id(call_id) for r in _archive_rows(mem_engine))  # nothing written
-    assert _anonymized_at(mem_engine, mem_id) is not None                          # still stamped
+    assert all(r[0] != _hash_call_id(call_id) for r in logic_ctx["archive_rows"]())  # nothing written
+    assert logic_ctx["anonymized_at"](mem_id) is not None                            # still stamped
 
 
-def test_no_crm_id_in_training(mem_engine):
+def test_no_crm_id_in_training(logic_ctx):
     """Written transcript_archive rows store source_call_hash (a SHA-256 hash), NEVER a raw crm/call
     id -> no re-identification surface (D-17)."""
-    mem_id, acct_id, call_id = _seed_account(
-        mem_engine, segments=[(0, 'berater', "Ein Satz ohne PII")],
+    mem_id, acct_id, call_id = logic_ctx["seed"](
+        segments=[(0, 'berater', "Ein Satz ohne PII")],
     )
-    _run(mem_engine)
+    logic_ctx["run"]()
 
-    rows = _archive_rows(mem_engine)
+    rows = logic_ctx["archive_rows"]()
     assert rows, "expected at least one archived segment"
     hashes = {r[0] for r in rows}
     expected = hashlib.sha256(str(call_id).encode('utf-8')).hexdigest()
@@ -231,17 +303,17 @@ def test_no_crm_id_in_training(mem_engine):
         assert h not in (str(call_id), str(acct_id), str(mem_id))         # never a raw id
 
 
-def test_dry_run_writes_nothing(mem_engine):
+def test_dry_run_writes_nothing(logic_ctx):
     """--dry-run reports candidates but writes no transcript_archive rows and stamps nothing."""
-    mem_id, _acct, _call = _seed_account(
-        mem_engine, segments=[(0, 'berater', "Mueller Satz")],
+    mem_id, _acct, _call = logic_ctx["seed"](
+        segments=[(0, 'berater', "Mueller Satz")],
     )
-    stats = _run(mem_engine, dry_run=True)
+    stats = logic_ctx["run"](dry_run=True)
 
     assert stats['candidates'] == 1
     assert stats['archived_segments'] == 0
-    assert _archive_rows(mem_engine) == []
-    assert _anonymized_at(mem_engine, mem_id) is None       # not stamped in dry-run
+    assert logic_ctx["archive_rows"]() == []
+    assert logic_ctx["anonymized_at"](mem_id) is None       # not stamped in dry-run
 
 
 # ──────────────────────────────────────────────────────────────────────────────────────────────
