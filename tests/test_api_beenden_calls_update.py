@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 _event_id_counter = itertools.count(start=int(time.time() * 1000) % 1_000_000_000)
 
 from database.db import get_session
-from database.models import Call, CallEvent
+from database.models import Call, CallEvent, ConversationLog
 from services import outcome_service
 
 
@@ -55,21 +55,29 @@ def _cleanup_call(call_id):
 
 # -- REQ-D-2: UPDATE schreibt conversation_log_id + ended_at + call_mode --
 
-def test_update_helper_writes_conversation_log_id():
+def test_update_helper_writes_conversation_log_id(db_session):
     """REQ-D-2: Nach UPDATE-Logik hat Call-Row conversation_log_id != None.
 
     Repliziert das UPDATE-Verhalten aus api_beenden direkt gegen die DB.
     Bricht wenn die DB-Spalte fehlt oder der Write-Pfad nicht funktioniert.
     """
     call_id = _make_test_call()
+    saved_conv_id = None
     try:
         db = get_session()
         try:
+            # Phase 08.23.2.PGTEST.GREEN Muster A: echte ConversationLog-Row statt fake 12345 —
+            # calls.conversation_log_id ist FK auf conversation_logs(id), auf PG erzwungen (SQLite-Aera
+            # kannte keine FK). ORM-Pfad fuellt market='dach'/language='de' (Python-default).
+            conv = ConversationLog(user_id=1, org_id=1, started_at=datetime.now(timezone.utc))
+            db.add(conv)
+            db.commit()
+            saved_conv_id = conv.id
+
             row = db.query(Call).filter(Call.id == call_id).first()
             assert row.ended_at is None
             assert row.conversation_log_id is None
             # UPDATE wie in api_beenden (Plan 04 Task 4.1 Block B)
-            saved_conv_id = 12345  # simulierter ConvLog-ID-Wert
             row.ended_at = datetime.now(timezone.utc)
             row.conversation_log_id = saved_conv_id
             row.call_mode = 'meeting_consented'
@@ -82,10 +90,17 @@ def test_update_helper_writes_conversation_log_id():
         finally:
             db.close()
     finally:
-        _cleanup_call(call_id)
+        _cleanup_call(call_id)  # zuerst das Kind (Call referenziert conv via FK)
+        if saved_conv_id is not None:
+            _db = get_session()
+            try:
+                _db.query(ConversationLog).filter(ConversationLog.id == saved_conv_id).delete()
+                _db.commit()
+            finally:
+                _db.close()
 
 
-def test_update_helper_call_mode_from_req_data_cold_call():
+def test_update_helper_call_mode_from_req_data_cold_call(db_session):
     """REQ-D-2 + D-05a: call_mode 'cold_call' aus req_data wird korrekt persistiert."""
     call_id = _make_test_call()
     try:
@@ -104,7 +119,7 @@ def test_update_helper_call_mode_from_req_data_cold_call():
         _cleanup_call(call_id)
 
 
-def test_update_helper_call_mode_meeting_maps_to_meeting_consented():
+def test_update_helper_call_mode_meeting_maps_to_meeting_consented(db_session):
     """REQ-D-2 + D-05a: session_mode 'meeting' aus req_data wird zu 'meeting_consented' gemappt."""
     call_id = _make_test_call()
     try:
@@ -125,7 +140,7 @@ def test_update_helper_call_mode_meeting_maps_to_meeting_consented():
 
 # -- REQ-D-6: Audio-Health-Thread schreibt score + CallEvent --
 
-def test_audio_health_bg_writes_score_and_callevent_with_buffer():
+def test_audio_health_bg_writes_score_and_callevent_with_buffer(db_session):
     """REQ-D-6: Mit nicht-leerem word_confidences-Buffer schreibt der Background-Thread-Pfad
     audio_health_score auf die Call-Row UND eine CallEvent-Row mit event_type='audio_health'.
 
@@ -177,7 +192,7 @@ def test_audio_health_bg_writes_score_and_callevent_with_buffer():
         _cleanup_call(call_id)
 
 
-def test_audio_health_bg_skips_on_empty_buffer():
+def test_audio_health_bg_skips_on_empty_buffer(db_session):
     """REQ-D-6: Leerer Buffer -> calculate_audio_health liefert score=None ->
     _audio_health_bg macht early-return, KEIN CallEvent + audio_health_score bleibt None.
     """
@@ -207,7 +222,7 @@ def test_audio_health_bg_skips_on_empty_buffer():
 
 # -- Edge: kein call_id im Session-State (graceful) --
 
-def test_no_call_id_no_update_no_crash():
+def test_no_call_id_no_update_no_crash(db_session):
     """Edge-Case: Wenn _phase_d_call_id None bleibt (kein Session-State),
     wird kein UPDATE ausgefuehrt und kein Crash provoziert.
     Prueft dass ein None-Filter kein Call-Update-Target findet.
