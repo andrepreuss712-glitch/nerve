@@ -10,8 +10,20 @@ from unittest.mock import patch
 
 from database.db import get_session
 from database.models import Call
+from tests.conftest import cleanup_rows
 
 
+# ── Phase 08.23.2.PGTEST Gruppe B — cleanup_rows-Teardown (T-PGTEST-24) ──────────
+# _make_call committet einen Call auf einer EIGENEN get_session() (nicht db_session) → die Row
+# PERSISTIERT in nerve_test (calls ist im _BASELINE_PUBLIC_TABLES-Set). Die FK-Parents (user_id=1/
+# org_id=1) liefert der Base-Seed (Plan 01 Task 4) — NICHT selbst inserten. FIX: _cleanup_call ruft
+# jetzt den kanonischen cleanup_rows-Helfer (statt eines ad-hoc-DELETE-Blocks) — phasenweit EINE
+# Teardown-Mechanik (Task 1). Es wird im try/finally jedes committenden Tests aufgerufen → laeuft
+# AUCH bei Assertion-Fehler. user_id=999/42 (fremde User in den Ownership-Tests) sind KEINE FK-Parents
+# (SQLite-Erbe: FK-Enforcement war off; auf nerve_test sind user_id nullable=False → die Tests nutzen
+# existierende/baseline-gedeckte IDs bzw. der Call traegt user_id ohne harten FK-Bruch je nach Schema).
+# Der stale 6-vs-8 VALID_OUTCOMES-Assert (test_valid_outcomes_match_check_constraint, Gruppe C) bleibt
+# UNANGETASTET (Orchestrator-eskaliert) — er committet ohnehin nichts.
 def _make_call(user_id=1, **kwargs):
     """Hilfsfunktion: erstellt echten Call-Record in der DB. SQLite FK-Enforcement off -> user_id frei.
 
@@ -36,10 +48,10 @@ def _make_call(user_id=1, **kwargs):
 
 
 def _cleanup_call(call_id):
+    """POST-Test-Teardown via dem kanonischen cleanup_rows-Helfer (public.calls, kein crm-GUC)."""
     db = get_session()
     try:
-        db.query(Call).filter(Call.id == call_id).delete()
-        db.commit()
+        cleanup_rows(db, {Call: [call_id]})
     finally:
         db.close()
 
