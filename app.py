@@ -1102,29 +1102,12 @@ def _migrate_fragen_to_faqs():
 
 _migrate()
 
-# ── Alembic-Auto-Hook (SQLite-only, Phase 08.23.2.C.1 Req-10) ────────────────
-# Fuehrt automatisch Alembic-Migrationen aus wenn DATABASE_URL auf SQLite zeigt.
-# Postgres-DBs werden von deploy.sh verwaltet — niemals von app.py.
-# Idempotent durch Alembic's alembic_version-Tabelle (keine Aktion wenn Schema aktuell).
-#
-# REVIEW-MEDIUM-4 FIX: Python API statt subprocess.run(['alembic', ...])
-# - Kein PATH-Lookup fuer alembic-Binary erforderlich
-# - Expliziter alembic.ini-Pfad via os.path.abspath(__file__) — CWD-unabhaengig
-# - Funktioniert auch wenn app.py aus einem anderen Verzeichnis gestartet wird
-_db_url_str = str(engine.url)
-if _db_url_str.startswith('sqlite'):
-    try:
-        from alembic.config import Config as AlembicConfig
-        from alembic import command as alembic_command
-        _app_dir = os.path.dirname(os.path.abspath(__file__))
-        _alembic_cfg = AlembicConfig(os.path.join(_app_dir, 'alembic.ini'))
-        alembic_command.upgrade(_alembic_cfg, 'head')
-        print('[DB] Alembic upgrade head: abgeschlossen (Schema aktuell oder migriert)')
-    except Exception as _e:
-        print(f'[DB] Alembic upgrade head FEHLER: {_e}')
-        raise
-else:
-    print('[DB] Alembic-Hook uebersprungen (Postgres — Schema via deploy.sh verwaltet)')
+# ── Phase 08.23.2.PGTEST (Req-6): SQLite-only Alembic-Auto-Hook ENTFERNT ─────────────
+# Frueher fuhr hier ein `if str(engine.url).startswith('sqlite'):`-Zweig automatisch
+# `alembic upgrade head` aus, wenn DATABASE_URL auf SQLite zeigte. Mit dem echten
+# Postgres-Test-Gate (nerve_test) sind die Tests Postgres-only und das Prod-Schema kommt
+# ausschliesslich von deploy.sh — der SQLite-Auto-Alembic-Hook ist toter Pfad und entfernt.
+# (_migrate() oben bleibt — das ist eine separate Spalten-Migration, NICHT der Alembic-Hook.)
 
 
 def _seed_founder_dashboard_defaults():
