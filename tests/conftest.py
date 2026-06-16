@@ -685,11 +685,17 @@ def db_session(monkeypatch):
     import database.db as dbmod
     from database.db import set_current_tenant, clear_current_tenant
     engine = create_engine(dsn)
+    # GREEN Wave-4 Fix: echte sessionmaker-Referenz beim Setup festhalten. Ein Test kann im Body
+    # database.db.SessionLocal via monkeypatch auf ein callable (lambda) umpatchen (z.B. test_ewb_pipeline/
+    # test_prompt_pipeline _bind). Der Fixture-Teardown laeuft LIFO VOR dem monkeypatch-undo -> dbmod.SessionLocal
+    # waere dann die lambda ('function' object has no attribute 'configure'). Die festgehaltene Referenz bleibt
+    # der echte sessionmaker, egal was der Test patcht.
+    _real_sm = dbmod.SessionLocal
     monkeypatch.setattr(dbmod, "engine", engine)
-    dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+    _real_sm.configure(bind=engine)             # behaelt den auf SessionLocal registrierten after_begin-Hook
     tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
     set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
-    session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+    session = _real_sm()                         # MODUL-SessionLocal -> Hook feuert auf BEGIN
     try:
         yield session
     finally:
@@ -699,7 +705,7 @@ def db_session(monkeypatch):
         # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
         # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
         _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
-        dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+        _real_sm.configure(bind=None)            # Binding-Reset (Gemini-MEDIUM): festgehaltene Referenz, robust gg. Test-Monkeypatch
         engine.dispose()
 
 
@@ -720,8 +726,11 @@ def client(monkeypatch):
     import database.db as dbmod
     from database.db import set_current_tenant, clear_current_tenant
     engine = create_engine(dsn)
+    # GREEN Wave-4 Fix (analog db_session): echte sessionmaker-Referenz festhalten, robust gegen
+    # Test-Monkeypatch von database.db.SessionLocal auf ein callable (Teardown laeuft VOR monkeypatch-undo).
+    _real_sm = dbmod.SessionLocal
     monkeypatch.setattr(dbmod, "engine", engine)   # NUR engine monkeypatchen
-    dbmod.SessionLocal.configure(bind=engine)      # MODUL-SessionLocal umbinden (Hook bleibt)
+    _real_sm.configure(bind=engine)                # MODUL-SessionLocal umbinden (Hook bleibt)
     tenant_uuid, seed_org_id = _seed_test_tenant(engine)
     set_current_tenant(tenant_uuid)                # D-05, VOR dem app-Import-Pfad
     from app import app as flask_app               # erst NACH der Umbindung importieren
@@ -732,7 +741,7 @@ def client(monkeypatch):
         with flask_app.test_client() as c:
             # VERTRAG re-exponieren (pre-execute blocker fix): db_from_client + ~20 Tests lesen diese Attribute.
             # MUSS die MODUL-SessionLocal-Session sein (hook-tragend, PG-gebunden), NICHT eine frische sessionmaker.
-            c._test_session = dbmod.SessionLocal()   # MODUL-SessionLocal -> PG-gebunden + hook-tragend
+            c._test_session = _real_sm()             # MODUL-SessionLocal -> PG-gebunden + hook-tragend
             c._test_engine = engine                  # die nerve_test-PG-Engine
             yield c
     finally:
@@ -745,7 +754,7 @@ def client(monkeypatch):
         # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
         # VOR configure(bind=None)/dispose(). Sonst leakt jede client/db_from_client-Nutzung 1 org + 1 tenant_org.
         _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
-        dbmod.SessionLocal.configure(bind=None)    # Binding-Reset (Gemini-MEDIUM)
+        _real_sm.configure(bind=None)              # Binding-Reset (Gemini-MEDIUM): festgehaltene Referenz, robust gg. Test-Monkeypatch
         engine.dispose()
 
 

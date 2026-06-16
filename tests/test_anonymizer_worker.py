@@ -75,9 +75,12 @@ def _seed_pg_account(cur, tenant_id, *, is_test_user=False, stamped=False, segme
     cur.execute("INSERT INTO public.organisations (name) VALUES (%s) RETURNING id",
                 ("[ANON-TEST] org",))
     org_id = cur.fetchone()[0]
+    # GREEN Wave-4: is_superadmin/market/language sind NOT NULL OHNE server_default (ORM-default greift
+    # bei rohem psycopg2-INSERT nicht) -> explizit setzen, sonst NotNullViolation im Seed (inspect.sh schema users).
     cur.execute(
-        "INSERT INTO public.users (org_id, email, is_test_user) VALUES (%s, %s, %s) RETURNING id",
-        (org_id, f"anon-test-{uuid.uuid4().hex[:8]}@nerve.local", is_test_user),
+        "INSERT INTO public.users (org_id, email, is_test_user, is_superadmin, market, language) "
+        "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+        (org_id, f"anon-test-{uuid.uuid4().hex[:8]}@nerve.local", is_test_user, False, 'dach', 'de'),
     )
     user_id = cur.fetchone()[0]
     cur.execute(

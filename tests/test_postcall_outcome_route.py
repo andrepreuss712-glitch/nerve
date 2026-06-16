@@ -81,8 +81,11 @@ def test_threshold_low_confidence_maps_to_none():
 
 # -- correct_outcome Logik (REQ-D-5 + REQ-D-9) ---------------------------------
 
-def test_correct_outcome_sets_user_corrected_source():
-    """REQ-D-9: Korrektur via DB-Write setzt outcome_source='user_corrected'."""
+def test_correct_outcome_sets_user_corrected_source(db_session):
+    """REQ-D-9: Korrektur via DB-Write setzt outcome_source='user_corrected'.
+
+    GREEN Wave-4: db_session-Param bindet die MODUL-SessionLocal an nerve_test (sonst UnboundExecutionError,
+    weil get_session() nach einem vorherigen Fixture-Teardown configure(bind=None) sieht)."""
     call_id = _make_call()
     try:
         db = get_session()
@@ -112,8 +115,8 @@ def test_correct_outcome_note_anonymized():
         pytest.skip('anonymize pipeline nicht verfuegbar im Test-Env')
 
 
-def test_correct_outcome_empty_note_becomes_null():
-    """REQ-D-5: Leer-String-Notiz wird als NULL in DB gespeichert."""
+def test_correct_outcome_empty_note_becomes_null(db_session):
+    """REQ-D-5: Leer-String-Notiz wird als NULL in DB gespeichert. (GREEN Wave-4: db_session bindet nerve_test)"""
     call_id = _make_call()
     try:
         db = get_session()
@@ -133,8 +136,8 @@ def test_correct_outcome_empty_note_becomes_null():
 
 # -- Ownership (V4 ASVS) --------------------------------------------------------
 
-def test_ownership_check_filter_blocks_foreign_call():
-    """V4 ASVS: DB-Query mit Call.user_id == 1 findet keinen Call von user_id=999."""
+def test_ownership_check_filter_blocks_foreign_call(db_session):
+    """V4 ASVS: DB-Query mit Call.user_id == 1 findet keinen Call von user_id=999. (GREEN Wave-4: db_session bindet nerve_test)"""
     call_id = _make_call(user_id=999)  # fremder User
     try:
         db = get_session()
@@ -148,8 +151,8 @@ def test_ownership_check_filter_blocks_foreign_call():
         _cleanup_call(call_id)
 
 
-def test_ownership_check_finds_own_call():
-    """V4 ASVS: DB-Query mit korrektem user_id findet eigenen Call."""
+def test_ownership_check_finds_own_call(db_session):
+    """V4 ASVS: DB-Query mit korrektem user_id findet eigenen Call. (GREEN Wave-4: db_session bindet nerve_test)"""
     call_id = _make_call(user_id=42)
     try:
         db = get_session()
