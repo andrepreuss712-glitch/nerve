@@ -163,6 +163,12 @@ ssh -i "$SSH_KEY" "$VPS_HOST" bash -s << ENDHEREDOC
   # (7) upgrade head (NICHT hardcoden, D-09): wendet nur Revs ueber prod-head an (z.B. 0015->0016) — keine 0002-Kollision.
   sudo -u postgres bash -c "cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/\$TEST_DB /opt/nerve/venv/bin/alembic upgrade head" || { echo "[deploy] FEHLER: alembic upgrade head gegen nerve_test fehlgeschlagen"; exit 1; }
 
+  # Test-only DELETE-Grant (GREEN Wave-4): der anonymizer-logic-Teardown raeumt SEINE EIGENEN
+  # training.transcript_archive-Test-Rows als nerve_anon_worker. Prod-DPO-Tresor bleibt UNVERAENDERT
+  # verriegelt (nerve_anon_worker hat in Prod NUR INSERT+SELECT, KEIN DELETE auf training).
+  # HART: Ziel IMMER \$TEST_DB (Wegwerf-nerve_test) — NIEMALS @/nerve.
+  sudo -u postgres psql -d "\$TEST_DB" -c "GRANT DELETE ON training.transcript_archive TO nerve_anon_worker" || { echo "[deploy] FEHLER: Test-only training-DELETE-Grant gegen nerve_test fehlgeschlagen"; exit 1; }
+
   # (8) INLINE DUMP-TREUE-KATALOG-GATE (Gemini-HIGH, T-PGTEST-09 — automatisierter False-Green-Guard, NACH upgrade, VOR pytest):
   #     harte fail-closed Counts — wenn der Dump RLS/FORCE/GRANTs NICHT treu trug, bricht der Deploy hier.
   POLICIES=\$(sudo -u postgres psql -tAc "SELECT count(*) FROM pg_policies WHERE schemaname='crm';" -d "\$TEST_DB")

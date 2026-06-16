@@ -63,6 +63,12 @@ sudo -u postgres bash -c "set -o pipefail; pg_dump --data-only --table=alembic_v
 sudo -u postgres bash -c "cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/$TEST_DB /opt/nerve/venv/bin/alembic upgrade head" \
   || { echo "[triage] FEHLER: alembic upgrade head gegen nerve_test fehlgeschlagen"; exit 1; }
 
+# Test-only DELETE-Grant (GREEN Wave-4): spiegelt deploy.sh — der anonymizer-logic-Teardown raeumt
+# SEINE EIGENEN training.transcript_archive-Test-Rows als nerve_anon_worker. Prod-DPO-Tresor UNVERAENDERT
+# (nerve_anon_worker dort NUR INSERT+SELECT). HART: Ziel IMMER $TEST_DB (nerve_test) — NIEMALS @/nerve.
+sudo -u postgres psql -d "$TEST_DB" -c "GRANT DELETE ON training.transcript_archive TO nerve_anon_worker" \
+  || { echo "[triage] FEHLER: Test-only training-DELETE-Grant gegen nerve_test fehlgeschlagen"; exit 1; }
+
 # ── (8) DUMP-TREUE-KATALOG-GATE (1:1 aus deploy.sh, Gemini-HIGH, T-PGTEST-09):
 #        fail-closed Counts — wenn der Dump RLS/FORCE/GRANTs NICHT treu trug, bricht hier ab.
 POLICIES=$(sudo -u postgres psql -tAc "SELECT count(*) FROM pg_policies WHERE schemaname='crm';" -d "$TEST_DB")
