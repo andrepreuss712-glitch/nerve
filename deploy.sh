@@ -199,18 +199,16 @@ ssh -i "$SSH_KEY" "$VPS_HOST" bash -s << ENDHEREDOC
   echo "[deploy] POST-SUITE Baseline-Check OK: alle crm.* Tabellen leer + training.transcript_archive leer (0 Leak-Rows)"
   echo "[deploy] Tests bestanden"
 
-  # Phase 08.23.2.SCHILD (CLAUDE.md Punkt 23): Schild-Guard als SEPARATE Stufe — laeuft als nerve_app
-  # (peer-auth) gegen Postgres-pg_description aller 3 Schemas. NICHT im root-SQLite-Lauf oben (der
-  # skippt mangels DSN; root kann nerve_app peer-auth nicht). Blockt den Deploy, wenn eine
-  # Tabelle/Spalte kein Schild (>=10 Zeichen) hat. Eingehaengt NACH dem ersten GRUEN-Deploy
-  # (Migration 0015), damit der eigene Setup-Deploy nicht blockiert wurde (Deadlock-Schutz).
-  echo "[deploy] Schild-Guard (pg_description, public/crm/training)..."
-  if sudo -u nerve_app bash -c 'cd /opt/nerve/app && NERVE_SCHILD_TEST_DSN=postgresql://nerve_app@/nerve /opt/nerve/venv/bin/pytest tests/test_schild_guard.py -q -p no:cacheprovider'; then
-    echo "[deploy] Schild-Guard GRUEN"
-  else
-    echo "[deploy] FEHLER: Schild-Guard ROT — Tabelle/Spalte ohne Schild. Kein Restart, kein Deploy."
-    exit 1
-  fi
+  # Phase 08.23.2.SCHILD (CLAUDE.md Punkt 23): Schild-Guard (pg_description aller 3 Schemas, >=10 Zeichen).
+  # Phase 08.23.2.PGTEST (Req-9/Req-5, MED-2): die FRUEHERE separate Schild-Guard-Stufe (DSN @/nerve)
+  # ist jetzt REDUNDANT — der Schild-Guard laeuft IM Postgres-Gate-Block oben mit, weil der Haupt-
+  # \`pytest tests/\`-Lauf in der nerve_app-Gate-Subshell test_schild_guard.py bereits ausfuehrt und dort
+  # NERVE_SCHILD_TEST_DSN=postgresql://nerve_app@/\$TEST_DB (nerve_test) gesetzt ist. Der dump-gebaute
+  # nerve_test traegt die head-Schilder (pg_description vom Prod-nerve mitgedumpt) -> der Guard laeuft
+  # scharf gegen nerve_test (A3) und erscheint als PASSED (NICHT SKIPPED, MED-2). Eine separate Stufe
+  # NACH dem Gate-Block waere wertlos: der trap cleanup EXIT droppt nerve_test am Block-Ende, und ein
+  # DSN @/nerve (Prod) wuerde Req-5 verletzen. Daher hier KEINE separate Schild-Guard-pytest-Stufe mehr.
+  echo "[deploy] Schild-Guard lief im Postgres-Gate gegen nerve_test mit (test_schild_guard.py, NERVE_SCHILD_TEST_DSN=@/nerve_test)"
 
   # REVIEW-HIGH-2 FIX: .deploy_meta VOR systemctl restart schreiben
   # Datei muss existieren bevor Service neu startet — sonst liest /api/health
