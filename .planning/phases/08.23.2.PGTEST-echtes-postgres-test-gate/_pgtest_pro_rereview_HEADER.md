@@ -1,36 +1,40 @@
-# ADVERSARIAL RE-REVIEW (RUNDE 2) — Phase 08.23.2.PGTEST (echtes Postgres-Test-Gate)
+# ADVERSARIAL RE-REVIEW (RUNDE 3) — Phase 08.23.2.PGTEST (echtes Postgres-Test-Gate)
 
 Du bist ein Senior-Datenbank/DevOps-Engineer und adversarialer Plan-Reviewer. Du siehst diese 4 Plan-Dateien in ihrer FINALEN Form und musst entscheiden: bau-freigeben (PASS) oder blockieren (BLOCK). Du bist bewusst kritisch. Du bist NICHT der Autor.
 
 ## Was diese Phase tut (Kontext)
-Sie ersetzt das alte SQLite-Test-Gate im `deploy.sh` durch ein echtes Postgres-Gate: Bei jedem Production-Deploy wird eine **Wegwerf-Datenbank `nerve_test`** aus einem `pg_dump --schema-only` der Produktion + `alembic upgrade head` gebaut, die volle Pytest-Suite läuft gegen diese echte, über den ganzen Lauf **persistente** Postgres-DB (inkl. echter RLS-Isolations- und Anonymizer-Tests), und nur bei Grün wird deployed. **Ziel der Phase: False-Green / Silent-Failure ausrotten** — Fälle, in denen das Gate "grün" meldet, obwohl RLS-Mandantentrennung oder Anonymisierung in Wahrheit kaputt sind. Produktion (`nerve`) darf NIE berührt werden (Whitelist-Guard nur `nerve_test`; trap-Teardown).
+Sie ersetzt das alte SQLite-Test-Gate im `deploy.sh` durch ein echtes Postgres-Gate: Bei jedem Production-Deploy wird eine **Wegwerf-Datenbank `nerve_test`** aus einem `pg_dump --schema-only` der Produktion + `alembic upgrade head` gebaut, die volle Pytest-Suite läuft gegen diese echte, über den ganzen Lauf **persistente** Postgres-DB (inkl. echter RLS-Isolations- und Anonymizer-Tests), und nur bei Grün wird deployed. **Ziel der Phase: False-Green / Silent-Failure ausrotten** — aber AUCH keine False-Reds (ein Gate, das jeden Deploy grundlos blockt, ist genauso wertlos). Produktion (`nerve`) darf NIE berührt werden (Whitelist-Guard nur `nerve_test`; trap-Teardown).
 
-## Verlaufs-Kontext (wichtig)
-Diese Pläne wurden bereits in mehreren Pro-Runden gehärtet. Zuletzt (Runde 1) hast du 5 Funde bestätigt-gefixt und 3 NEUE State-Leak-Funde gemeldet, die jetzt EINGEARBEITET wurden:
-- **#6 BLOCKER (Plan 01 Task 5, T-PGTEST-24):** `cleanup_rows` macht jetzt als ALLERERSTE Aktion bedingungslos `rollback()`, DANN erst reverse-FK-DELETEs der committeten IDs + commit (verwirft uncommitteten Müll eines abgestürzten Tests).
-- **#7 HOCH (Plan 01 Task 6, T-PGTEST-33):** der Baseline-Wächter snapshottet jetzt `{pk: xmin}` statt nur das PK-Set → committete UPDATE-Mutationen an Baseline-Rows ändern `xmin` → fail-closed. Selbsttest um UPDATE-Fall erweitert.
-- **#8 MITTEL (Plan 03/04, T-PGTEST-34):** Executor-Regel: nie `yield` im Plain-Test-Body (→ Generator → Silent-Skip); Cleanup via `cleanup_tracker(db_session)`-Fixture per Argument.
+## Verlaufs-Kontext (wichtig — Konvergenz)
+Diese Pläne wurden über mehrere Pro-Runden gehärtet. Konvergenz der Funde: Runde 1 = 5, Runde 2 = 3, Runde 3 = 1 — alle eingearbeitet:
+- **#1–#5** (Runde 1): sudo-`env`-Syntax · session-scope Guard-Read-Engine (UnboundExecutionError) · ft_seed-Scope · training.transcript_archive POST-SUITE-Check · cleanup_rows laute Warnung. Von Pro bestätigt.
+- **#6 (BLOCKER)** cleanup_rows macht jetzt als ALLERERSTE Aktion unbedingt `rollback()`, DANN reverse-FK-DELETEs + commit. Von Pro bestätigt.
+- **#7 (HOCH)** Baseline-Wächter snapshottet `{pk: xmin}` statt nur PK-Set → fängt committete UPDATE-Mutationen. Von Pro bestätigt.
+- **#8 (MITTEL)** `cleanup_tracker(db_session)`-Fixture statt `yield` im Plain-Test-Body. Von Pro bestätigt.
+- **#9 (BLOCKER, zuletzt)** die `_baseline_snapshot`-Fixture (Plan 01 Task 6) führt jetzt als ALLERERSTE Aktion `from app import app` aus (erzwingt die Modul-Seeder _seed_prompt_versions/_seed_ewb_v2/_seed_founder_dashboard_defaults gegen nerve_test), BEVOR die {pk:xmin}-Queries laufen — sonst False-Red beim ersten Test. sys.modules-Caching macht den späteren client-app-Import idempotent.
 
 ## DEINE AUFGABE — zwei Teile
 
-### Teil 1: Verifiziere die 3 zuletzt eingearbeiteten Fixes (#6/#7/#8)
-Prüfe für JEDEN: korrekt UND vollständig behoben (wirklich baubar geschlossen, nicht nur erwähnt)? Führt der Fix selbst einen NEUEN Fehler ein?
-- **#6:** Ist die rollback-zuerst-Reihenfolge an JEDER cleanup_rows-Nutzung wirksam? Verwirft der initiale `rollback()` versehentlich auch schon-committete Arbeit (nein, commit ist persistent) — oder genau richtig nur den pending State? Greift es auch, wenn cleanup_rows eine separate Connection statt der Test-Session nutzt?
-- **#7:** Ist `{pk: xmin}` der richtige Mechanismus? Deckt der Snapshot ALLE relevanten public-Tabellen ab, in die Tests committen könnten? Kann `xmin` durch etwas anderes als eine echte Test-Mutation wandern (VACUUM/FREEZE während des Laufs)? Ist der Selbsttest aussagekräftig?
-- **#8:** Ist die Anweisung glasklar genug, dass ein Executor-Agent NICHT in die yield-im-Body-Falle tappt? Gibt es noch andere Plan-Stellen, die "POST-yield" für Plain-Tests sagen, ohne die Fixture-Regel?
+### Teil 1: Verifiziere den zuletzt eingearbeiteten Fix (#9)
+Prüfe: korrekt UND vollständig behoben (wirklich baubar geschlossen)? Führt der frühe `from app import app` in der Snapshot-Fixture einen NEUEN Fehler ein? Konkret:
+- Feuern dadurch die Modul-Seeder garantiert VOR dem {pk:xmin}-Snapshot, sodass die Baseline prompt_versions/api_rates/fixed_costs korrekt enthält?
+- Ist das sys.modules-Caching-Argument stichhaltig (kein Doppel-Seed beim späteren client-Import)?
+- Kollidiert der frühe app-Import mit der bewussten SPÄT-Import-Strategie der client-Fixture (Task 1, „erst nach der Umbindung")? Seedet er gegen die richtige DB (nerve_test via A-1/DATABASE_URL)?
+- Bestätige auch, dass #1–#8 unangetastet/intakt sind.
 
 ### Teil 2: Frischer adversarialer Sweep (NEUE Probleme)
-Unabhängig von #6/#7/#8. Pflicht-Achsen:
-- **False-Green:** Wo könnte das Gate grün melden, obwohl RLS/Anonymisierung/Isolation kaputt ist?
-- **Silent-Failure:** Wo schluckt eine Pipe/ein Skript/ein Test einen Fehler (exit 0 trotz Crash, leere DB, als PASSED zählender Skip)?
-- **Persistente-DB-State-Leak:** geteilte `nerve_test` über den ganzen Lauf — wo kann ein Test State hinterlassen (committete Rows, Sequenz-Werte, GUC/Session-Settings, veränderte Baseline), der einen späteren Test grün/rot fälscht?
-- **Produktions-Sicherheit:** irgendein Pfad, der doch `nerve` statt `nerve_test` berühren könnte? trap/Whitelist wasserdicht?
-- **Baseline-Seed-Kollisionen:** App-Import sät Rows in die persistente Test-DB — welche globalen `count()`/Unique-Annahmen könnten daran zerschellen?
+Unabhängig von #1–#9. Pflicht-Achsen:
+- **False-Green:** Gate grün, obwohl RLS/Anonymisierung/Isolation kaputt?
+- **False-Red:** Gate rot, obwohl alles korrekt (deterministische Blockade jedes Deploys)?
+- **Silent-Failure:** Pipe/Skript/Test schluckt Fehler (exit 0 trotz Crash, leere DB, als PASSED zählender Skip)?
+- **Persistente-DB-State-Leak:** geteilte `nerve_test` über den ganzen Lauf — committete Rows, Sequenz-Werte, GUC/Session-Settings, Baseline-Mutation, die einen späteren Test fälschen?
+- **Produktions-Sicherheit:** irgendein Pfad, der doch `nerve` statt `nerve_test` berührt? trap/Whitelist wasserdicht?
+- **Fixture-/Import-Reihenfolge:** weitere verdeckte Ordering-Annahmen (wie #9) zwischen session-scoped Snapshot, Base-Seed, app-Import, per-Test-Fixtures?
 
 ## OUTPUT-FORMAT
-Pro Fund: **[SCHWEREGRAD: BLOCKER/HOCH/MITTEL/NIEDRIG]** — Plan-Datei + Task-ID — konkretes Problem — warum False-Green/Silent-Failure/Prod-Risiko — präziser Fix.
-Für #6/#7/#8 explizit: OK oder nicht-OK (mit Grund). Am Ende: **GESAMT-VERDIKT: PASS** (bau-frei) **oder BLOCK** (Blocker-Liste) + Gesamt-Risiko (LOW/MED/HIGH).
-Sei ehrlich: nichts Neues finden ist ein legitimes Ergebnis — erfinde nichts. Aber wenn etwas Stilles durchrutscht, ist das genau der Fehler, den diese Phase verhindern soll.
+Pro Fund: **[SCHWEREGRAD: BLOCKER/HOCH/MITTEL/NIEDRIG]** — Plan-Datei + Task-ID — konkretes Problem — warum False-Green/False-Red/Silent-Failure/Prod-Risiko — präziser Fix.
+Für #9 explizit: OK oder nicht-OK (mit Grund); #1–#8 intakt? Am Ende: **GESAMT-VERDIKT: PASS** (bau-frei) **oder BLOCK** (Blocker-Liste) + Gesamt-Risiko (LOW/MED/HIGH).
+Sei ehrlich: nichts Neues finden ist ein legitimes Ergebnis — erfinde nichts, nur um etwas zu liefern. Aber wenn etwas Stilles durchrutscht, ist das genau der Fehler, den diese Phase verhindern soll.
 
 ---
 # UNTEN: Die 4 finalen Plan-Dateien + database/db.py + Persistenz-Enumeration (verbatim)
