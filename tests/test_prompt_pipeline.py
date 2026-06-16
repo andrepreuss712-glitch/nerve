@@ -3,6 +3,7 @@ import os
 import sys
 import threading
 import time
+import uuid
 
 import pytest
 
@@ -24,7 +25,19 @@ def _reset_caches(monkeypatch):
             monkeypatch.delenv(k, raising=False)
 
 
-def _seed_variants(db_session, module='ewb', versions=('v1-legacy', 'v2-modular')):
+# ── Phase 08.23.2.PGTEST Gruppe A — unique test-module gegen UNIQUE(version,module) ──────
+# resolve_prompt_version(module, user_id) nimmt das Modul als PARAMETER (anders als
+# ewb_pipeline._load_prompt_template, das hart 'ewb' liest). Auf der persistenten nerve_test
+# traegt prompt_versions schon die app-import-Baseline (_seed_ewb_v2: (ewb,v1-legacy)+(ewb,v2-modular)).
+# Ein Re-Seed unter module='ewb' braeche auf UNIQUE(version,module)=uq_prompt_version_module
+# (models.py:483) UND machte das deterministische Routing von einer ggf. wachsenden Baseline-Varianten-
+# Menge abhaengig (Index-Shift bei kuenftiger 3. ewb-Variante). FIX: ein UNIQUE test-eigener
+# module-Name pro Run → keine Kollision, deterministisch genau 2 Varianten, baseline-unabhaengig.
+# db_session ist rollback-covered (D-03) → kein cleanup_rows noetig.
+def _seed_variants(db_session, module=None, versions=('v1-legacy', 'v2-modular')):
+    """Seed active variants under a UNIQUE test-module. Returns the module name to route against."""
+    if module is None:
+        module = f'ewb-test-{uuid.uuid4().hex[:8]}'
     for v in versions:
         db_session.add(PromptVersion(
             module=module, version=v, prompt_text=f'text-{v}',
@@ -32,6 +45,7 @@ def _seed_variants(db_session, module='ewb', versions=('v1-legacy', 'v2-modular'
             changelog=f'test-{v}',
         ))
     db_session.commit()
+    return module
 
 
 class _Fake:
@@ -69,29 +83,29 @@ def test_env_override_first_check(monkeypatch):
 # ─── 2. Deterministic routing (user_id % N) ─────────────────────────────────
 
 def test_deterministic_routing_even_user(db_session, monkeypatch):
-    _seed_variants(db_session)
+    module = _seed_variants(db_session)
     _bind(monkeypatch, db_session)
     # Sorted alphabetically: ['v1-legacy', 'v2-modular']; user_id=0 -> index 0
-    assert pp.resolve_prompt_version('ewb', user_id=0) == 'v1-legacy'
+    assert pp.resolve_prompt_version(module, user_id=0) == 'v1-legacy'
 
 
 def test_deterministic_routing_odd_user(db_session, monkeypatch):
-    _seed_variants(db_session)
+    module = _seed_variants(db_session)
     _bind(monkeypatch, db_session)
     # user_id=1 -> index 1
-    assert pp.resolve_prompt_version('ewb', user_id=1) == 'v2-modular'
+    assert pp.resolve_prompt_version(module, user_id=1) == 'v2-modular'
 
 
 # ─── 3. Cache-per-user key (W-7 regression-guard) ───────────────────────────
 
 def test_cache_per_user_key(db_session, monkeypatch):
-    _seed_variants(db_session)
+    module = _seed_variants(db_session)
     _bind(monkeypatch, db_session)
-    r0 = pp.resolve_prompt_version('ewb', user_id=0)
-    r1 = pp.resolve_prompt_version('ewb', user_id=1)
+    r0 = pp.resolve_prompt_version(module, user_id=0)
+    r1 = pp.resolve_prompt_version(module, user_id=1)
     assert r0 != r1, "different user_ids must land on different variants"
-    assert ('ewb', 0) in pp._RESOLVER_CACHE
-    assert ('ewb', 1) in pp._RESOLVER_CACHE
+    assert (module, 0) in pp._RESOLVER_CACHE
+    assert (module, 1) in pp._RESOLVER_CACHE
 
 
 # ─── 4. No-variants fallback ────────────────────────────────────────────────

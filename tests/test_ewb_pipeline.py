@@ -1,5 +1,6 @@
 """Phase 08 tests for services/ewb_pipeline.py + _seed_ewb_v2."""
 import sys
+import uuid
 
 import pytest
 
@@ -9,11 +10,27 @@ from database.models import PromptVersion
 import services.ewb_pipeline as ep
 
 
+# ── Phase 08.23.2.PGTEST Gruppe A — unique test-version gegen UNIQUE(version,module) ──────
+# _load_prompt_template() ist HART auf module='ewb' verdrahtet (ewb_pipeline.py:85) → ein
+# test-eigener module-Name ginge am Loader vorbei. Daher bleibt module='ewb', aber die VERSION
+# wird pro Test-Run unique (uuid-suffixed). Grund: auf der persistenten nerve_test traegt
+# prompt_versions bereits die app-import-Baseline (_seed_ewb_v2: (ewb,v1-legacy)+(ewb,v2-modular),
+# via `from app import app` im _baseline_snapshot gefeuert). Ein blindes Re-Insert derselben
+# (version,module) bricht auf UNIQUE(version,module)=uq_prompt_version_module (models.py:483).
+# Unique Versions kollidieren nicht UND tragen die test-eigene Distinkt-Content (die der Test
+# assertet — die Baseline-Rows tragen ANDEREN Content). db_session ist rollback-covered (D-03) →
+# kein cleanup_rows noetig; die test-eigenen Rows verschwinden beim Rollback, Baseline unberuehrt.
 def _seed_ewb_variants(db_session):
-    """Seed 2 prompt_versions rows for module='ewb' with distinct content."""
+    """Seed 2 prompt_versions rows for module='ewb' with distinct content + unique test-versions.
+
+    Returns (v1_version, v2_version) so callers pass the exact unique version into build_ewb_prompt.
+    """
+    suffix = uuid.uuid4().hex[:8]
+    v1 = f'v1-legacy-test-{suffix}'
+    v2 = f'v2-modular-test-{suffix}'
     for v, text, default in [
-        ('v1-legacy', 'v1-legacy-text CONTENT', True),
-        ('v2-modular',
+        (v1, 'v1-legacy-text CONTENT', False),
+        (v2,
          ('v2 with Anker Reframe Beweis Ueberleitung '
           'Active Listening max 45 Woerter NIEMALS apologetisch'),
          False),
@@ -24,6 +41,7 @@ def _seed_ewb_variants(db_session):
             changelog=f'test-{v}',
         ))
     db_session.commit()
+    return v1, v2
 
 
 class _Fake:
@@ -82,10 +100,10 @@ def _empty_active_profile(monkeypatch):
 # ─── 1. v1-legacy assembly ──────────────────────────────────────────────────
 
 def test_build_ewb_prompt_v1_legacy(db_session, monkeypatch, _empty_active_profile):
-    _seed_ewb_variants(db_session)
+    v1, _v2 = _seed_ewb_variants(db_session)
     _bind(monkeypatch, db_session)
     out = ep.build_ewb_prompt(profile_data={}, anrede='Sie',
-                              version='v1-legacy', user_id=0)
+                              version=v1, user_id=0)
     assert 'v1-legacy-text CONTENT' in out
     assert 'Anrede: Sie' in out
 
@@ -94,10 +112,10 @@ def test_build_ewb_prompt_v1_legacy(db_session, monkeypatch, _empty_active_profi
 
 def test_build_ewb_prompt_v2_modular_bausteine(db_session, monkeypatch,
                                                 _empty_active_profile):
-    _seed_ewb_variants(db_session)
+    _v1, v2 = _seed_ewb_variants(db_session)
     _bind(monkeypatch, db_session)
     out = ep.build_ewb_prompt(profile_data={}, anrede='Du',
-                              version='v2-modular', user_id=1)
+                              version=v2, user_id=1)
     for keyword in ['Anker', 'Reframe', 'Beweis', 'Ueberleitung',
                     'Active Listening', '45 Woerter']:
         assert keyword in out, f'missing keyword: {keyword}'
@@ -106,9 +124,9 @@ def test_build_ewb_prompt_v2_modular_bausteine(db_session, monkeypatch,
 # ─── 3. Anrede='Du' → D-15 Constraint ───────────────────────────────────────
 
 def test_build_ewb_prompt_anrede_du(db_session, monkeypatch, _empty_active_profile):
-    _seed_ewb_variants(db_session)
+    v1, _v2 = _seed_ewb_variants(db_session)
     _bind(monkeypatch, db_session)
-    out = ep.build_ewb_prompt(anrede='Du', version='v1-legacy')
+    out = ep.build_ewb_prompt(anrede='Du', version=v1)
     assert 'Anrede: Du' in out
     assert 'Wechsle NIEMALS' in out
 
