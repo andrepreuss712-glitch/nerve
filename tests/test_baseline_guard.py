@@ -9,6 +9,9 @@ Source-Presence (kein inspect.getsource/grep). Drei Pflicht-Faelle:
 Plus: missing-PK (Baseline-Row geloescht) -> Waechter feuert.
 
 Der Vergleichs-Kern ist DSN-frei -> dieser Test laeuft auch lokal ohne nerve_test (kein SKIP noetig).
+Er beweist die EXAKTE Logik, die der autouse `_baseline_cleanup_guard` (conftest.py) nach jedem Test gegen
+das `_baseline_snapshot`-{pk:xmin}-Mapping anwendet — ohne eine echte nerve_test-Verbindung zu brauchen
+(Plan-Alternative: Vergleichs-Kern statt pytester, robust + schnell).
 """
 from tests.conftest import _diff_baseline
 
