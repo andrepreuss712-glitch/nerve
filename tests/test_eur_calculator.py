@@ -161,15 +161,23 @@ def test_period_year_aggregation(db_session):
 
 
 def test_stripe_not_in_rc13b(db_session):
+    # Phase 08.23.2.PGTEST.GREEN Muster C: echtes nerve_test traegt gesaete FixedCosts -> Z57_uebrige
+    # enthaelt mehr als nur den Test-stripe-Betrag (absolutes ==5.0 drift-anfaellig). Delta: Baseline
+    # messen, Test-Rows addieren, Differenz pruefen (float-sicher). Verifiziert weiterhin: stripe -> Z57
+    # (nicht RC-13b/Z26), anthropic -> Z26 + KZ84.
+    start, end = date(2026, 3, 1), date(2026, 4, 1)
+    base = compute_eur(start, end, db_session)
+    base_z26 = base['ausgaben']['Z26_fremdleistungen']['total_netto']
+    base_z57 = base['ausgaben']['Z57_uebrige']['total_netto']
+    base_kz84 = base['ust_voranmeldung']['KZ84_rc_bemessung']
+
     _add_api(db_session, 'anthropic', 50.0)
     _add_api(db_session, 'stripe',     5.0)
     db_session.commit()
-    r = compute_eur(date(2026, 3, 1), date(2026, 4, 1), db_session)
-    z26 = r['ausgaben']['Z26_fremdleistungen']['total_netto']
-    assert z26 == 50.0
-    z57 = r['ausgaben']['Z57_uebrige']['total_netto']
-    assert z57 == 5.0
-    assert r['ust_voranmeldung']['KZ84_rc_bemessung'] == 50.0
+    r = compute_eur(start, end, db_session)
+    assert abs((r['ausgaben']['Z26_fremdleistungen']['total_netto'] - base_z26) - 50.0) < 1e-6
+    assert abs((r['ausgaben']['Z57_uebrige']['total_netto'] - base_z57) - 5.0) < 1e-6
+    assert abs((r['ust_voranmeldung']['KZ84_rc_bemessung'] - base_kz84) - 50.0) < 1e-6
 
 
 def test_rc_13b_providers_constant():

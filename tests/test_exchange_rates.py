@@ -1,5 +1,5 @@
 """Phase 04.7.2 — Frankfurter client + DB persistence tests."""
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
@@ -88,14 +88,22 @@ def test_fetch_failure_returns_none():
 # ── update_daily_rate() ─────────────────────────────────────────────────────
 
 def test_update_daily_rate_skips_on_api_failure(db_session, fx_cleanup):
-    with patch('services.exchange_rates.fetch_usd_eur', return_value=None):
-        update_daily_rate()
-    rows = (
+    # Phase 08.23.2.PGTEST.GREEN Muster C: echtes nerve_test traegt gesaete/geupgradete heutige
+    # USD_EUR-Rows -> absolutes `len == 0` ist drift-anfaellig. Delta-Pruefung: API-down darf KEINE
+    # NEUE frankfurter-Row schreiben (update_daily_rate returnt early bei rate=None).
+    before = (
         db_session.query(ExchangeRate)
                   .filter_by(date=date.today(), source='frankfurter')
-                  .all()
+                  .count()
     )
-    assert len(rows) == 0
+    with patch('services.exchange_rates.fetch_usd_eur', return_value=None):
+        update_daily_rate()
+    after = (
+        db_session.query(ExchangeRate)
+                  .filter_by(date=date.today(), source='frankfurter')
+                  .count()
+    )
+    assert after == before
 
 
 def test_update_daily_rate_idempotent(db_session, fx_cleanup):
@@ -113,14 +121,22 @@ def test_update_daily_rate_idempotent(db_session, fx_cleanup):
 # ── get_current_rate() ──────────────────────────────────────────────────────
 
 def test_get_current_rate_with_data(db_session):
-    db_session.add(ExchangeRate(
-        date=date(2026, 4, 1),
+    # Phase 08.23.2.PGTEST.GREEN Muster C: echtes nerve_test traegt eine gesaete heutige USD_EUR-Row
+    # (source='seed', 0.92). get_current_rate ordnet date.desc() OHNE Obergrenze -> die Test-Row braucht
+    # ein Datum NEUER als jede gesaete Row, damit sie date.desc() gewinnt (statt fixem 2026-04-01, das
+    # eine gesaete heutige Row ueberstimmt). Anschliessend cleanup_rows (Baseline-Sauberkeit).
+    row = ExchangeRate(
+        date=date.today() + timedelta(days=1),
         currency_pair='USD_EUR',
         rate=Decimal('0.91'),
         source='test',
-    ))
+    )
+    db_session.add(row)
     db_session.commit()
-    assert get_current_rate('USD_EUR') == 0.91
+    try:
+        assert get_current_rate('USD_EUR') == 0.91
+    finally:
+        cleanup_rows(db_session, {ExchangeRate: [row.id]})
 
 
 def test_get_current_rate_fallback_when_empty(db_session):

@@ -1,5 +1,5 @@
 """Phase 04.7.2 Wave 2 — cost_tracker unit tests."""
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 import pytest
 
@@ -60,7 +60,11 @@ def seeded_rate(db_session, patched_sessionlocal):
                    price_per_unit=Decimal('0.00025'),
                    currency='USD', active=True)
     db_session.add(rate)
-    fx = ExchangeRate(date=date(2026, 4, 1), currency_pair='USD_EUR',
+    # Phase 08.23.2.PGTEST.GREEN Muster C: echtes nerve_test traegt eine gesaete heutige USD_EUR-Row
+    # (0.86252). get_current_rate ordnet date.desc() ohne Obergrenze -> die Test-fx-Row braucht ein
+    # Datum NEUER als jede gesaete Row (statt fixem 2026-04-01), sonst gewinnt der gesaete Tageskurs
+    # und fx_rate_applied != 0.92. Autouse _cost_tracker_cleanup raeumt die Row per id-Wasserzeichen.
+    fx = ExchangeRate(date=date.today() + timedelta(days=1), currency_pair='USD_EUR',
                       rate=Decimal('0.92'), source='test')
     db_session.add(fx)
     db_session.commit()
@@ -96,13 +100,16 @@ def test_missing_rate_no_raise_no_db():
 
 
 def test_eur_rate_currency_no_fx(db_session, patched_sessionlocal):
-    rate = ApiRate(provider='stripe', model='card', unit_type='fixed_per_tx',
+    # Phase 08.23.2.PGTEST.GREEN Muster C: echtes nerve_test traegt bereits eine aktive stripe/card-Rate
+    # (uix_api_rate_active) -> ein zweites active stripe/card warf UniqueViolation. Eindeutiges Test-Modell
+    # 'card-pgtest-eur' vermeidet die Kollision; autouse _cost_tracker_cleanup raeumt die Rate per id.
+    rate = ApiRate(provider='stripe', model='card-pgtest-eur', unit_type='fixed_per_tx',
                    price_per_unit=Decimal('0.25'), currency='EUR', active=True)
     db_session.add(rate)
     db_session.commit()
-    log_api_cost('stripe', 'card', user_id=1, units=1.0,
+    log_api_cost('stripe', 'card-pgtest-eur', user_id=1, units=1.0,
                  unit_type='fixed_per_tx')
-    row = db_session.query(ApiCostLog).filter_by(provider='stripe').first()
+    row = db_session.query(ApiCostLog).filter_by(provider='stripe', model='card-pgtest-eur').first()
     assert row is not None
     assert float(row.fx_rate_applied) == 1.0
     assert float(row.cost_eur) == 0.25
