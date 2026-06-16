@@ -83,10 +83,12 @@ def _seed_pg_account(cur, tenant_id, *, is_test_user=False, stamped=False, segme
         (org_id, f"anon-test-{uuid.uuid4().hex[:8]}@nerve.local", is_test_user, False, 'dach', 'de'),
     )
     user_id = cur.fetchone()[0]
+    # GREEN Wave-4: conversation_logs.market/language sind NOT NULL OHNE server_default (ORM-default
+    # greift bei rohem psycopg2-INSERT nicht) -> explizit setzen (inspect.sh schema conversation_logs).
     cur.execute(
-        "INSERT INTO public.conversation_logs (user_id, org_id, started_at) VALUES (%s, %s, %s) "
-        "RETURNING id",
-        (user_id, org_id, datetime.now()),
+        "INSERT INTO public.conversation_logs (user_id, org_id, started_at, market, language) "
+        "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+        (user_id, org_id, datetime.now(), 'dach', 'de'),
     )
     clog_id = cur.fetchone()[0]
     acct_id = str(uuid.uuid4())
