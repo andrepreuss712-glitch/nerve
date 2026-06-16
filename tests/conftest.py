@@ -164,21 +164,23 @@ def db_from_client(client):
 # ── Phase 08.23.2.G-MEET Wave 2 — real-PG nerve_app connection (RLS isolation test, D-12.2) ──
 # The RLS isolation test (tests/test_rls_isolation.py) MUST run against REAL Postgres as the
 # RLS-constrained `nerve_app` role -- SQLite has no Row-Level-Security (a SQLite branch would be a
-# FALSE-GREEN). This fixture provides a raw psycopg2 connection as nerve_app to the real `nerve`
-# DB, reading its DSN from env. It is ONLY available server-side on Production (where the DSN
-# env var is set). When the DSN is absent (e.g. local, no real PG) the dependent tests SKIP --
+# FALSE-GREEN). This fixture provides a raw psycopg2 connection as nerve_app to the disposable
+# `nerve_test` DB (Req-5: never touches Production `nerve`), reading its DSN from env. It is ONLY
+# available server-side in the deploy.sh-Gate (where the DSN env var is set on the dedicated
+# nerve_test DB). When the DSN is absent (e.g. local, no real PG) the dependent tests SKIP --
 # they NEVER fall back to SQLite.
 #
-# Expected env var (server-side, set by André in the deploy/test environment):
-#   NERVE_APP_TEST_DSN  -- e.g. postgresql://nerve_app@127.0.0.1:5432/nerve
-# (nerve_app uses peer/socket auth on Production; the DSN is read/write to the real nerve DB.)
+# Expected env var (server-side, set by the deploy.sh-Gate / Plan 02):
+#   NERVE_APP_TEST_DSN  -- e.g. postgresql://nerve_app@/nerve_test
+# (nerve_app uses peer/socket auth; the DSN is read/write to the disposable nerve_test DB, NEVER Prod nerve.)
 @pytest.fixture
 def nerve_app_pg_conn():
     dsn = os.environ.get('NERVE_APP_TEST_DSN')
     if not dsn:
         pytest.skip(
             "NERVE_APP_TEST_DSN not set -- RLS isolation test requires a real-PG nerve_app "
-            "connection (no SQLite fallback by design, D-12.2). Run server-side on Production."
+            "connection to nerve_test (no SQLite fallback by design, D-12.2). Run server-side "
+            "via the deploy.sh-Gate (DSN points to nerve_test, never Prod nerve)."
         )
     try:
         import psycopg2
@@ -202,18 +204,21 @@ def nerve_app_pg_conn():
 # policies target. SQLite has no RLS (a SQLite branch would be a FALSE-GREEN), so there is NO
 # fallback: when the DSN is absent the dependent tests SKIP. This yields a SQLAlchemy Engine (not a
 # raw connection) because the worker's process_unstamped() runs on a SQLAlchemy Connection -- the
-# test exercises the SAME code path the production cron uses.
+# test exercises the SAME code path the production cron uses. The DSN points to the disposable
+# `nerve_test` DB (Req-5: never touches Production `nerve`).
 #
-# Expected env var (server-side, set by André in the deploy/test environment):
-#   ANON_WORKER_TEST_DSN  -- e.g. postgresql://nerve_anon_worker@/nerve  (the worker role; sets NO
-#                            app.tenant_id, relies on the 0013 worker policies for cross-tenant access)
+# Expected env var (server-side, set by the deploy.sh-Gate / Plan 02):
+#   ANON_WORKER_TEST_DSN  -- e.g. postgresql://nerve_anon_worker:<pw>@127.0.0.1:5432/nerve_test  (scram
+#                            path, PW from ionos-s3.env via the Gate; the worker role sets NO app.tenant_id,
+#                            relies on the 0013 worker policies for cross-tenant access). NEVER Prod nerve.
 @pytest.fixture
 def anon_worker_pg_engine():
     dsn = os.environ.get('ANON_WORKER_TEST_DSN')
     if not dsn:
         pytest.skip(
             "ANON_WORKER_TEST_DSN not set -- anonymizer RLS test requires a real-PG nerve_anon_worker "
-            "connection (no SQLite fallback by design, D-16). Run server-side on Production."
+            "connection to nerve_test (no SQLite fallback by design, D-16). Run server-side via the "
+            "deploy.sh-Gate (scram DSN @127.0.0.1:5432/nerve_test, never Prod nerve)."
         )
     engine = create_engine(dsn)
     try:
@@ -228,19 +233,21 @@ def anon_worker_pg_engine():
 # REAL Postgres -- SQLite has no schemas/COMMENTs (a SQLite branch would be a FALSE-GREEN,
 # RESEARCH §1.3). pg_description is a world-readable catalog, so plain nerve_app suffices WITHOUT any
 # GRANT (proven in Plan 01 / DISCOVERY-DECISIONS.md via a SET ROLE + obj_description ROLLBACK test:
-# GUARD_ROLE=nerve_app). When the DSN is absent (local/SQLite) the guard SKIPS -- never falls back.
+# GUARD_ROLE=nerve_app). The DSN points to the disposable `nerve_test` DB (Req-5: never touches
+# Production `nerve`). When the DSN is absent (local/SQLite) the guard SKIPS -- never falls back.
 #
-# Expected env var (server-side; name LOCKED in DISCOVERY-DECISIONS.md key `DSN_ENV_VAR:`):
-#   NERVE_SCHILD_TEST_DSN  -- set it to the value of DATABASE_URL from /etc/nerve/.env
-#                            (postgresql://nerve_app:<pw>@/nerve, Unix socket). Read-only catalog use.
+# Expected env var (server-side, set by the deploy.sh-Gate / Plan 02; name LOCKED in
+# DISCOVERY-DECISIONS.md key `DSN_ENV_VAR:`):
+#   NERVE_SCHILD_TEST_DSN  -- e.g. postgresql://nerve_app@/nerve_test (Unix socket / peer-auth).
+#                            Read-only catalog use against nerve_test, NEVER Prod nerve.
 @pytest.fixture
 def schild_guard_pg_conn():
     dsn = os.environ.get('NERVE_SCHILD_TEST_DSN')
     if not dsn:
         pytest.skip(
-            "NERVE_SCHILD_TEST_DSN not set -- Schild-Guard requires a real-PG connection that can read "
-            "pg_description of public/crm/training (no SQLite fallback by design, RESEARCH §1.3). "
-            "Run server-side: NERVE_SCHILD_TEST_DSN=$(grep ^DATABASE_URL= /etc/nerve/.env | cut -d= -f2-)"
+            "NERVE_SCHILD_TEST_DSN not set -- Schild-Guard requires a real-PG connection to nerve_test "
+            "that can read pg_description of public/crm/training (no SQLite fallback by design, "
+            "RESEARCH §1.3). Run server-side via the deploy.sh-Gate (DSN points to nerve_test, never Prod nerve)."
         )
     try:
         import psycopg2
