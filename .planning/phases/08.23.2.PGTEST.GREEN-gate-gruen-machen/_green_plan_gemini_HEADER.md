@@ -1,21 +1,20 @@
-# ADVERSARIAL PLAN-RE-REVIEW (RUNDE 3) — Phase 08.23.2.PGTEST.GREEN
+# ADVERSARIAL PLAN-RE-REVIEW (RUNDE 4) — Phase 08.23.2.PGTEST.GREEN
 
-Senior-DB/Test-Infra/DevOps-Engineer, unabhängige 3. Sicht. Lies die 5 Pläne + PATTERNS.md + echten Code (conftest.py, deploy.sh). Entscheide: PASS oder BLOCK. Sei kritisch, NICHT der Autor.
+Senior-DB/Test-Infra/DevOps, unabhängige 3. Sicht. Lies die 5 Pläne + PATTERNS.md + echten Code (conftest.py, deploy.sh). PASS oder BLOCK. Kritisch, NICHT der Autor.
 
-## Kontext
-NERVE-Deploy-Tor baut Wegwerf-`nerve_test`, läuft pytest, deployt nur bei grün. Phase GREEN macht das KNOWN-RED-Tor grün. Isolations-Mechanismus (Auto-Reset gespalten) bereits abgesegnet. Konvergenz der Reviews: Runde 1 = 4 Funde, Runde 2 = 3 Funde — alle gefoldet.
+## Kontext + Konvergenz
+NERVE-Deploy-Tor baut Wegwerf-`nerve_test`, läuft pytest, deployt nur bei grün. Phase GREEN macht das KNOWN-RED-Tor grün. Review-Konvergenz: R1=4 Funde, R2=3, R3=2 — alle gefoldet. Isolations-Mechanismus (Auto-Reset gespalten, public-only) bereits abgesegnet.
 
-## Teil 1 — verifiziere die 3 zuletzt gefoldeten Funde (Runde 2)
-- **#5 BLOCKER (Plan 03 triage.sh):** war `pytest "$@"` im single-quoted bash -c → Args expandieren nicht → ganze Suite statt targeted. FIX: Argument-Forwarding `bash -c '… pytest "$@"' _ "$@"` (`_`=$0, dann Args). Prüfe: ist das Forwarding-Muster KORREKT (kommt der Arg wirklich bei pytest an)? Keine Quoting-Lücke bei Pfaden mit Sonderzeichen?
-- **#6 HOCH (Plan 01 Task 1, Composite-PK):** war ungeschützt → Over-Deletion. FIX: `len(pk_cols) != 1` → Tabelle ins foundation_register/Denylist ("composite PK not supported"), aus Auto-Delete raus, geloggt. Prüfe: greift das für ALLE Pfade (Snapshot UND Delete)? Wird eine Composite-PK-Tabelle dann gar nicht bewacht (akzeptabel?) oder anders abgesichert?
-- **#7 MITTEL (Plan 01 Task 2, Cache-Init):** war keine Reihenfolge-Garantie → stiller Hardcode-Fallback. FIX: `_baseline_snapshot` fordert `_baseline_schema` als Fixture-Parameter. Prüfe: ist die Reihenfolge damit WIRKLICH hart (pytest-Fixture-Resolution)? Cache-Lebenszyklus sauber?
-- Plus: #1-#4 aus Runde 1 noch intakt? PATTERNS.md konsistent?
+## Teil 1 — verifiziere die 2 zuletzt gefoldeten Funde (Runde 3)
+- **#8 BLOCKER (Plan 01, cleanup_rows Cross-Schema-FK):** war public-only Cache → crm-Tabellen ans Ende → crm.accounts→public.tenant_orgs FK-Violation. FIX: `derive_baseline_tables` nimmt jetzt mehrere Schemas (`n.nspname IN %s`); Cache für public+crm+training gefüllt → globale Cross-Schema-FK-Order (crm vor public); der Snapshot-Wächter filtert table_list lokal auf public (D-G04 bleibt public-only). Prüfe: ist die globale Order WIRKLICH korrekt schema-übergreifend? Bleibt D-G04 (Wächter public-only) sauber? Kein neues Loch durch die Multi-Schema-Ableitung (z.B. crm im Snapshot, training-FKs)?
+- **#9 HOCH (Plan 01, Composite-PK False-Green):** Prod-Katalog-Check ergab 0 Composite-PK-Tabellen heute (public/crm/training). FIX: falsche „snapshot-sichtbar"-Behauptung raus; ehrlich als „known gate gap: composite-PK nicht überwacht" ins foundation_register (Req-7, geloggt); Tuple-Key als YAGNI-Folge. Prüfe: ist die Doku jetzt ehrlich (keine Falsch-Behauptung mehr)? Ist der Gap akzeptabel begründet?
+- Plus: #1-#7 noch intakt? PATTERNS.md konsistent mit allen Folds?
 
 ## Teil 2 — frischer adversarialer Sweep
-NEUE Probleme? False-Green / False-Red / Silent-Failure / Prod-Sicherheit (`nerve` nie berührt, trap-teardown) / Wave-Abhängigkeiten / Mock-Strategie / FK-Topologie-Edge-Cases / der Modul-Cache vs. per-Test-Engine-Churn / Bash-Quoting / die empirische Triage-Mechanik (Plan 04) / die Security-Determinismus-Mocks (Plan 05).
+NEUE Probleme? False-Green / False-Red / Silent-Failure / Prod-Sicherheit (`nerve` nie berührt, trap-teardown) / Wave-Abhängigkeiten / Mock-Strategie (Plan 05, umgeht Security-Logik nicht) / die empirische Triage (Plan 04) / Cross-Schema-Edge-Cases / der Modul-Cache vs. per-Test-Engine-Churn / Bash-Quoting. Achte besonders darauf, ob die letzten Folds (#8 Multi-Schema, #9 Gap-Doku) selbst neue Nähte aufreißen.
 
 ## OUTPUT
-Pro Fund: **[SCHWEREGRAD]** — Datei + Task — Problem — warum — Fix. Für #5/#6/#7 explizit OK/nicht-OK; #1-#4 intakt? Am Ende: **GESAMT-VERDIKT: PASS oder BLOCK** + Risiko (LOW/MED/HIGH). Ehrlich — nichts Neues finden ist legitim, erfinde nichts.
+Pro Fund: **[SCHWEREGRAD]** — Datei + Task — Problem — warum — Fix. Für #8/#9 explizit OK/nicht-OK; #1-#7 intakt? Am Ende: **GESAMT-VERDIKT: PASS oder BLOCK** + Risiko. Ehrlich — wenn die Pläne jetzt bau-frei sind, sag PASS; erfinde keine Funde, um etwas zu liefern.
 
 ---
 # UNTEN: 5 Plan-Dateien + PATTERNS.md + SPEC + CONTEXT + echter Code (conftest.py, deploy.sh)
