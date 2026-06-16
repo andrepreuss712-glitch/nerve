@@ -56,6 +56,31 @@ def _cleanup_call(call_id):
         db.close()
 
 
+def _seed_user(uid):
+    """Phase 08.23.2.PGTEST.GREEN (Ownership, KRITISCHE Klasse): echten User mit gegebener id anlegen.
+    calls.user_id ist FK auf users(id) — auf PG ERZWUNGEN (SQLite-Aera nutzte erfundene IDs). ORM-Pfad
+    fuellt is_superadmin/market/language (Python-default); org_id=1 = Base-Seed-Org. Idempotent.
+    Damit laeuft die ECHTE Ownership-Pruefung (Call.user_id-Filter) gegen reale FK-gueltige Daten."""
+    from database.models import User
+    db = get_session()
+    try:
+        if db.query(User).filter_by(id=uid).first() is None:
+            db.add(User(id=uid, org_id=1, email=f'pgtest-own-{uid}@nerve.local'))
+            db.commit()
+    finally:
+        db.close()
+
+
+def _cleanup_user(uid):
+    """User-Teardown — NACH _cleanup_call aufrufen (Call ist FK-Kind von users)."""
+    from database.models import User
+    db = get_session()
+    try:
+        cleanup_rows(db, {User: [uid]})
+    finally:
+        db.close()
+
+
 # -- Schwellenlogik (REQ-D-3 + REQ-D-4 Mapping) --------------------------------
 
 def test_threshold_high_confidence_maps_to_ai_auto():
@@ -138,6 +163,7 @@ def test_correct_outcome_empty_note_becomes_null(db_session):
 
 def test_ownership_check_filter_blocks_foreign_call(db_session):
     """V4 ASVS: DB-Query mit Call.user_id == 1 findet keinen Call von user_id=999. (GREEN Wave-4: db_session bindet nerve_test)"""
+    _seed_user(999)  # echter FK-gueltiger fremder User
     call_id = _make_call(user_id=999)  # fremder User
     try:
         db = get_session()
@@ -148,11 +174,13 @@ def test_ownership_check_filter_blocks_foreign_call(db_session):
         finally:
             db.close()
     finally:
-        _cleanup_call(call_id)
+        _cleanup_call(call_id)  # Kind zuerst
+        _cleanup_user(999)
 
 
 def test_ownership_check_finds_own_call(db_session):
     """V4 ASVS: DB-Query mit korrektem user_id findet eigenen Call. (GREEN Wave-4: db_session bindet nerve_test)"""
+    _seed_user(42)  # echter FK-gueltiger eigener User
     call_id = _make_call(user_id=42)
     try:
         db = get_session()
@@ -163,7 +191,8 @@ def test_ownership_check_finds_own_call(db_session):
         finally:
             db.close()
     finally:
-        _cleanup_call(call_id)
+        _cleanup_call(call_id)  # Kind zuerst
+        _cleanup_user(42)
 
 
 # -- VALID_OUTCOMES Import (Single-Source-of-Truth) ---------------------------
