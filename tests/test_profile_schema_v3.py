@@ -78,23 +78,32 @@ class TestExtraForbid:
 
 class TestMigrateV3:
     def test_basis_einwaende_upward_merge_when_toplevel_absent(self):
-        """basis.einwaende wird nach top-level verschoben wenn top-level fehlt."""
+        """basis.einwaende wird hochgezogen (v2->v3) und dann zu einwaende_detail migriert (v3->v4).
+
+        Phase 08.23.2.PGTEST.GREEN Muster D: Migration laeuft jetzt bis v4 (Phase 08.20 D-04,
+        einwaende->einwaende_detail, top-level einwaende entfernt). Assertion auf einwaende_detail.
+        """
         daten = {'schema_version': 2, 'basis': {'einwaende': ['Test-Einwand']}}
         result = _migrate_profile_data(daten)
-        assert result['einwaende'] == ['Test-Einwand']
+        assert result['schema_version'] == 4
+        assert 'einwaende' not in result
+        assert result['einwaende_detail'][0]['einwand'] == 'Test-Einwand'
         assert 'einwaende' not in result.get('basis', {})
 
     def test_basis_einwaende_not_overwritten_when_toplevel_empty_list(self):
-        """Leeres top-level einwaende=[] bleibt (User-Intent 'alles geloescht')."""
+        """Leeres top-level einwaende=[] bleibt leer (User-Intent 'alles geloescht'); v4 laesst
+        einwaende_detail leer (Muster D)."""
         daten = {'schema_version': 2, 'basis': {'einwaende': ['A']}, 'einwaende': []}
         result = _migrate_profile_data(daten)
-        assert result['einwaende'] == []
+        assert 'einwaende' not in result
+        assert result.get('einwaende_detail', []) == []
 
     def test_basis_einwaende_upward_merge_when_toplevel_null(self):
         """top-level einwaende=None gilt als nicht vorhanden — basis.* wird hochgezogen."""
         daten = {'schema_version': 2, 'basis': {'einwaende': ['B']}, 'einwaende': None}
         result = _migrate_profile_data(daten)
-        assert result['einwaende'] == ['B']
+        assert 'einwaende' not in result  # v4: einwaende -> einwaende_detail (Muster D)
+        assert result['einwaende_detail'][0]['einwand'] == 'B'
 
     def test_phasen_upward_merge(self):
         """basis.phasen wird nach top-level verschoben wenn top-level fehlt."""
@@ -115,11 +124,14 @@ class TestMigrateV3:
         result = _migrate_profile_data(daten)
         assert 'branche' not in result
 
-    def test_schema_version_bumped_to_3(self):
-        """schema_version wird auf 3 gesetzt."""
+    def test_schema_version_bumped_to_4(self):
+        """schema_version wird auf 4 (LATEST_SCHEMA_VERSION) gesetzt.
+
+        Muster D: Migration laeuft jetzt bis v4 (Phase 08.20 D-04), nicht mehr nur v3.
+        """
         daten = {'schema_version': 2}
         result = _migrate_profile_data(daten)
-        assert result['schema_version'] == 3
+        assert result['schema_version'] == 4
 
     def test_idempotent_v3(self):
         """v3-Profile werden unveraendert zurueckgegeben (Idempotenz)."""
@@ -135,7 +147,8 @@ class TestMigrateV3:
             'basis': {'einwaende': ['Basis-Wert']},
         }
         result = _migrate_profile_data(daten)
-        assert result['einwaende'] == ['Top-Level']
+        assert 'einwaende' not in result  # v4: einwaende -> einwaende_detail (Muster D)
+        assert result['einwaende_detail'][0]['einwand'] == 'Top-Level'
         assert 'einwaende' not in result.get('basis', {})
 
     def test_real_drift_profile_basis_einwaende(self):
@@ -157,9 +170,14 @@ class TestMigrateV3:
             }
         }
         result = _migrate_profile_data(daten)
-        assert result['einwaende'] == einwaende_dicts
+        # v4 (Muster D): basis.einwaende -> top-level (v3) -> einwaende_detail (v4); einwand/gegenargument
+        # bleiben erhalten, restliche Felder bekommen Defaults.
+        assert 'einwaende' not in result
+        assert len(result['einwaende_detail']) == 2
+        assert result['einwaende_detail'][0]['einwand'] == 'Zu teuer'
+        assert result['einwaende_detail'][0]['gegenargument'] == 'ROI in 3 Monaten'
         assert 'einwaende' not in result.get('basis', {})
-        ProfileSchema.model_validate(result)  # Muss gegen strict-Schema validieren
+        ProfileSchema.model_validate(result)  # Muss gegen strict v4-Schema validieren
 
 
 # ── C) Lokale Profil-Validierung ──────────────────────────────────────────────

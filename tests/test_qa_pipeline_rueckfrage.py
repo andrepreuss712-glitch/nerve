@@ -37,7 +37,7 @@ def test_build_tabu_instruction_empty():
 
 
 def test_build_tabu_instruction_populated():
-    """3 complete pairs → block containing 'WICHTIG:' and all 3 mappings."""
+    """3 complete pairs → block containing 'TABU-ALTERNATIVEN' and all 3 mappings."""
     from services.qa_pipeline import build_tabu_instruction
     tabu = [
         {'begriff': 'Kosten', 'alternative': 'Investition'},
@@ -46,7 +46,9 @@ def test_build_tabu_instruction_populated():
     ]
     profile = _make_profile(tabu)
     result = build_tabu_instruction(profile)
-    assert 'WICHTIG:' in result
+    # Phase 08.23.2.PGTEST.GREEN Muster D: Template-Header geaendert 'WICHTIG:' -> 'TABU-ALTERNATIVEN'
+    # (services/qa_pipeline.py:177 verifiziert).
+    assert 'TABU-ALTERNATIVEN' in result
     assert 'Kosten' in result and 'Investition' in result
     assert 'Problem' in result and 'Herausforderung' in result
     assert 'Risiko' in result and 'Absicherung' in result

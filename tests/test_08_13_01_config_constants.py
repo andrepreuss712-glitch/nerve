@@ -79,12 +79,14 @@ class TestHaikuConstants:
         assert cfg.MODEL_COLDCALL_INFER == 'claude-haiku-4-5-20251001'
 
     def test_model_pip_autovar_default(self):
+        # Phase 08.23.2.PGTEST.GREEN Muster D: PiP-Modelle default jetzt Sonnet (D-07 DSGVO/Qualitaet,
+        # config.py:68 verifiziert) — Haiku-Rollback nur via ENV. Test an Sonnet-Default nachgezogen.
         cfg = fresh_config()
-        assert cfg.MODEL_PIP_AUTOVAR == 'claude-haiku-4-5-20251001'
+        assert cfg.MODEL_PIP_AUTOVAR == 'claude-sonnet-4-5'
 
     def test_model_pip_variante_default(self):
         cfg = fresh_config()
-        assert cfg.MODEL_PIP_VARIANTE == 'claude-haiku-4-5-20251001'
+        assert cfg.MODEL_PIP_VARIANTE == 'claude-sonnet-4-5'
 
     def test_model_coaching_default(self):
         cfg = fresh_config()
