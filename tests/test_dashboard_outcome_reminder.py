@@ -62,7 +62,7 @@ def _cleanup(call_ids):
         db.close()
 
 
-def test_unsichere_count_filter_logic():
+def test_unsichere_count_filter_logic(db_session):
     """Filter: ai_auto_unsicher OR outcome IS NULL, ended_at >= now - 7d."""
     user_id = 1
     ids = []
@@ -98,7 +98,7 @@ def test_unsichere_count_filter_logic():
         _cleanup(ids)
 
 
-def test_old_call_excluded_from_count():
+def test_old_call_excluded_from_count(db_session):
     """Call aelter als 7 Tage wird vom Reminder-Counter ausgeschlossen."""
     user_id = 1
     ids = []
@@ -125,7 +125,7 @@ def test_old_call_excluded_from_count():
         _cleanup(ids)
 
 
-def test_ai_auto_not_in_unsicher_count():
+def test_ai_auto_not_in_unsicher_count(db_session):
     """Call mit outcome_source='ai_auto' (sicher) ist NICHT im Reminder-Counter."""
     user_id = 1
     ids = []
@@ -152,7 +152,7 @@ def test_ai_auto_not_in_unsicher_count():
         _cleanup(ids)
 
 
-def test_null_outcome_in_unsicher_count():
+def test_null_outcome_in_unsicher_count(db_session):
     """Call mit outcome=NULL zaehlt im Reminder-Counter (unklassifiziert)."""
     user_id = 1
     ids = []
@@ -179,13 +179,14 @@ def test_null_outcome_in_unsicher_count():
         _cleanup(ids)
 
 
-def test_join_call_to_conversation_log():
+def test_join_call_to_conversation_log(db_session):
     """Call.conversation_log_id FK funktioniert — JOIN liefert Outcome-Daten."""
     db = get_session()
     cid = None
     conv_id = None
     try:
-        conv = ConversationLog(user_id=1, org_id=1, created_at=_now())
+        # Phase 08.23.2.PGTEST.GREEN Muster B: started_at NOT NULL ohne server_default (PG-Pflicht).
+        conv = ConversationLog(user_id=1, org_id=1, started_at=_now(), created_at=_now())
         db.add(conv)
         db.commit()
         conv_id = conv.id
@@ -228,7 +229,7 @@ def test_join_call_to_conversation_log():
                 cdb.close()
 
 
-def test_api_dashboard_returns_unsichere_outcomes_count():
+def test_api_dashboard_returns_unsichere_outcomes_count(db_session):
     """REQ-D-8: GET /api/dashboard JSON-Body enthaelt unsichere_outcomes_count als Zahl.
 
     Echter Endpoint-Test via Flask test_client.

@@ -126,8 +126,15 @@ def test_build_ewb_prompt_v2_modular_bausteine(db_session, monkeypatch,
 def test_build_ewb_prompt_anrede_du(db_session, monkeypatch, _empty_active_profile):
     v1, _v2 = _seed_ewb_variants(db_session)
     _bind(monkeypatch, db_session)
+    # Phase 08.23.2.PGTEST.GREEN Muster D: der anrede-Parameter steuert NUR den Fallback-Kontext —
+    # build_ewb_prompt nutzt ihn erst, wenn build_profile_context leer ist (ewb_pipeline.py:58-64).
+    # Mit aktivem (leerem) Profil rendert der Profil-Pfad 'Lead-Kontext Anrede: Sie' und der
+    # Du-Parameter waere wirkungslos. Profil-Kontext leer monkeypatchen -> Fallback-Pfad mit der
+    # ECHTEN Du-Direktive (kein Maskieren: die anrede='Du'-Logik laeuft real).
+    monkeypatch.setattr(ep, 'build_profile_context', lambda *a, **k: '')
     out = ep.build_ewb_prompt(anrede='Du', version=v1)
     assert 'Anrede: Du' in out
+    assert 'konsequent Du-Form' in out
     assert 'Wechsle NIEMALS' in out
 
 

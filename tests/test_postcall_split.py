@@ -37,7 +37,10 @@ def _seed_user_and_conv(user_id=1, org_id=1):
             "Base-Seed Org id=1 fehlt (conftest._pgtest_base_seed) — Gate-only Fixture"
         assert db.query(User).filter_by(id=user_id).first() is not None, \
             "Base-Seed User id=1 fehlt (conftest._pgtest_base_seed) — Gate-only Fixture"
-        conv = ConversationLog(user_id=user_id, org_id=org_id, created_at=_now())
+        # Phase 08.23.2.PGTEST.GREEN Muster B: started_at ist NOT NULL ohne server_default
+        # (Schema-Check 2026-06-16) -> auf PG Pflicht; market/language fuellt der ORM-Python-default.
+        conv = ConversationLog(user_id=user_id, org_id=org_id,
+                               started_at=_now(), created_at=_now())
         db.add(conv)
         db.commit()
         return conv.id
