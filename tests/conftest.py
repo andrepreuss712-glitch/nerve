@@ -52,7 +52,10 @@ def _seed_test_tenant(engine):
             {"oid": org_id},
         ).scalar()
     TEST_TENANT_UUID = tenant_id
-    return tenant_id
+    # Phase 08.23.2.PGTEST LEAK-FIX: org_id mit zurueckgeben, damit der db_session/client-Teardown die
+    # committete Seed-Org (+ ihre Trigger-tenant_orgs-Row) wieder wegraeumen kann (sonst leakt jede
+    # fixture-nutzende Test-Funktion 1 org + 1 tenant_org -> _baseline_cleanup_guard rot).
+    return tenant_id, org_id
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -230,6 +233,24 @@ def cleanup_rows(conn_or_session, spec, tenant=None):
             print(msg, file=sys.stderr)
 
 
+def _leak_cleanup_seed_tenant(engine, org_id, tenant_org_pk):
+    """Phase 08.23.2.PGTEST LEAK-FIX: raeumt die von _seed_test_tenant committete Seed-Org + ihre
+    Trigger-tenant_orgs-Row wieder weg — aufzurufen im db_session/client-Teardown VOR engine.dispose().
+    OHNE das leakt JEDE fixture-nutzende Test-Funktion genau 1 organisations- + 1 tenant_orgs-Row, was
+    den autouse _baseline_cleanup_guard ueber die ganze Suite rot macht (Cascade). public.* -> kein
+    Tenant-GUC noetig; cleanup_rows loescht reverse-FK (tenant_orgs VOR organisations, _CLEANUP_FK_ORDER).
+    Best-effort: bei einem Cleanup-Fehler (z.B. ein Test liess FK-Kinder der Seed-Org liegen) emittiert
+    cleanup_rows seine laute [PGTEST-CLEANUP]-Warnung — der echte Test-Body-Leak bleibt damit sichtbar."""
+    sess = sessionmaker(bind=engine)()
+    try:
+        cleanup_rows(sess, {
+            "public.tenant_orgs": [tenant_org_pk],
+            "public.organisations": [org_id],
+        })
+    finally:
+        sess.close()
+
+
 # ── Phase 08.23.2.PGTEST Extension 2 — Baseline-Cleanup-Waechter (PUBLIC.*-only, HYBRID) ──────────
 # Relevante PUBLIC committed-data-Tabellen, deren {pk: xmin}-Mapping (#7 — per-Row-Change-Token, NICHT nur
 # das PK-Set) am Session-Start gefroren + nach jedem Test geprueft wird. crm.* + training.transcript_archive
@@ -387,7 +408,7 @@ def db_session(monkeypatch):
     engine = create_engine(dsn)
     monkeypatch.setattr(dbmod, "engine", engine)
     dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
-    tenant_uuid = _seed_test_tenant(engine)     # Trigger-Muster, gibt tenant_orgs.id zurueck
+    tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
     set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
     session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
     try:
@@ -396,6 +417,9 @@ def db_session(monkeypatch):
         session.rollback()
         session.close()
         clear_current_tenant()
+        # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+        # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+        _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
         dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
         engine.dispose()
 
@@ -419,7 +443,7 @@ def client(monkeypatch):
     engine = create_engine(dsn)
     monkeypatch.setattr(dbmod, "engine", engine)   # NUR engine monkeypatchen
     dbmod.SessionLocal.configure(bind=engine)      # MODUL-SessionLocal umbinden (Hook bleibt)
-    tenant_uuid = _seed_test_tenant(engine)
+    tenant_uuid, seed_org_id = _seed_test_tenant(engine)
     set_current_tenant(tenant_uuid)                # D-05, VOR dem app-Import-Pfad
     from app import app as flask_app               # erst NACH der Umbindung importieren
     flask_app.config['TESTING'] = True
@@ -439,6 +463,9 @@ def client(monkeypatch):
         except Exception:
             pass
         clear_current_tenant()
+        # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+        # VOR configure(bind=None)/dispose(). Sonst leakt jede client/db_from_client-Nutzung 1 org + 1 tenant_org.
+        _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
         dbmod.SessionLocal.configure(bind=None)    # Binding-Reset (Gemini-MEDIUM)
         engine.dispose()
 
