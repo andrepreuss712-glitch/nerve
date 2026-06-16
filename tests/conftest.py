@@ -230,6 +230,119 @@ def cleanup_rows(conn_or_session, spec, tenant=None):
             print(msg, file=sys.stderr)
 
 
+# ── Phase 08.23.2.PGTEST Extension 2 — Baseline-Cleanup-Waechter (PUBLIC.*-only, HYBRID) ──────────
+# Relevante PUBLIC committed-data-Tabellen, deren {pk: xmin}-Mapping (#7 — per-Row-Change-Token, NICHT nur
+# das PK-Set) am Session-Start gefroren + nach jedem Test geprueft wird. crm.* + training.transcript_archive
+# sind NICHT hier — sie werden POST-SUITE in deploy.sh (Plan 02) via `sudo -u postgres psql` geprueft
+# (nerve_app saehe crm.* nur tenant-gefiltert; HYBRID, André locked).
+_BASELINE_PUBLIC_TABLES = [
+    "organisations", "users", "tenant_orgs", "api_rates", "fixed_costs", "prompt_versions",
+    "training_scenarios", "changelog", "calls", "conversation_logs", "api_cost_log",
+    "revenue_log", "ewb_ratings", "profiles", "profile_opener", "exchange_rates",
+]
+
+
+def _snapshot_public_tables(read_engine):
+    """Lies pro relevanter PUBLIC Tabelle ein {pk: xmin_text}-Mapping (#7 per-Row-Change-Token) ueber die
+    EIGENE session-scoped Read-Engine (#2 — NICHT die per-Test umgebundene MODUL-SessionLocal, sonst
+    UnboundExecutionError im zuletzt-laufenden Waechter-Teardown). Tabellen, die (noch) nicht existieren,
+    werden best-effort uebersprungen. Liefert {tabelle: {pk: xmin_text}}."""
+    snap = {}
+    for tbl in _BASELINE_PUBLIC_TABLES:
+        try:
+            with read_engine.connect() as conn:
+                rows = conn.execute(
+                    text(f"SELECT id, xmin::text FROM public.{tbl}")
+                ).fetchall()
+            snap[tbl] = {r[0]: r[1] for r in rows}
+        except Exception:
+            # Tabelle existiert nicht / kein id-PK -> nicht Teil der Baseline-Pruefung.
+            continue
+    return snap
+
+
+def _diff_baseline(current, baseline):
+    """Vergleichs-Kern (DSN-frei testbar): liefert {tabelle: {'leaked':set,'missing':set,'mutated':set}}
+    fuer jede Tabelle mit Drift, sonst {}. leaked = extra-PKs (committed+nicht-aufgeraeumt), missing =
+    geloeschte Baseline-PKs, mutated = gleiche PK aber geaendertes xmin (#7 — committetes UPDATE)."""
+    drift = {}
+    for tbl, base_map in baseline.items():
+        cur_map = current.get(tbl, {})
+        cur_pks = set(cur_map)
+        base_pks = set(base_map)
+        leaked = cur_pks - base_pks
+        missing = base_pks - cur_pks
+        mutated = {pk for pk in (cur_pks & base_pks) if cur_map[pk] != base_map[pk]}
+        if leaked or missing or mutated:
+            drift[tbl] = {"leaked": leaked, "missing": missing, "mutated": mutated}
+    return drift
+
+
+@pytest.fixture(scope="session")
+def _baseline_guard_engine():
+    """EIGENE session-scoped Read-Engine (#2, Gemini-3.1-Pro-Fold): `create_engine(TEST_DATABASE_URL)`,
+    EINMAL bei Session-Start erstellt, am Session-ENDE disposed. ENTKOPPELT von der per-Test umgebundenen
+    MODUL-SessionLocal (db_session/client machen pro Test configure(bind=None)+engine.dispose() im finally;
+    der Waechter-Teardown laeuft ZULETZT -> ueber die MODUL-SessionLocal zu lesen waere UnboundExecutionError).
+    nerve_app-peer-socket, public.*-only (kein RLS auf public), KEINE Superuser/BYPASSRLS-Rolle."""
+    dsn = os.environ.get('TEST_DATABASE_URL')
+    if not dsn:
+        yield None
+        return
+    engine = create_engine(dsn)
+    try:
+        yield engine
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def _baseline_snapshot(_pgtest_base_seed, _baseline_guard_engine):
+    """Session-Start-Snapshot der PUBLIC.*-Baseline ({pk: xmin}, #7). Haengt am Base-Seed (Task 4) -> laeuft
+    danach. #9 (Delta-Review-6, BLOCKER): fuehrt als ALLERERSTE Aktion `from app import app` aus, BEVOR der
+    {pk:xmin}-Snapshot laeuft -> erzwingt die Modul-Top-Level-Seeder (_seed_prompt_versions/_seed_ewb_v2/
+    _seed_founder_dashboard_defaults) gegen nerve_test, sodass prompt_versions/api_rates/fixed_costs in der
+    Baseline enthalten sind (kein First-Test-False-Red durch leere Baseline). A-1: die MODUL-Engine ist beim
+    Import schon nerve_test-PG (DATABASE_URL=postgres) -> der fruehe Import seedet gegen die korrekte DB; der
+    spaetere client-Rebind ist unberuehrt; sys.modules-cached -> idempotent. Reihenfolge: Base-Seed commit ->
+    `import app` (Seeder feuern) -> {pk:xmin}-Snapshot ueber die eigene Read-Engine (#2)."""
+    if _baseline_guard_engine is None:
+        yield None
+        return
+    # #9: app-Import ERZWINGT die Modul-Top-Level-Seeder VOR dem Snapshot.
+    from app import app as _flask_app  # noqa: F401
+    baseline = _snapshot_public_tables(_baseline_guard_engine)
+    yield baseline
+
+
+@pytest.fixture(autouse=True)
+def _baseline_cleanup_guard(request, _baseline_snapshot, _baseline_guard_engine):
+    """Autouse Baseline-Cleanup-Waechter (Extension 2, PUBLIC.*-only). Frueh angefordert (autouse +
+    Dependency auf _baseline_snapshot) -> sein Teardown laeuft ZULETZT, NACH dem Test-eigenen cleanup_rows-
+    Teardown (sonst saehe er noch un-aufgeraeumte Rows -> False-Positive). Liest pro PUBLIC Tabelle das
+    aktuelle {pk: xmin}-Mapping (#7) ueber die EIGENE session-scoped Read-Engine (#2, NICHT die per-Test
+    disposed MODUL-SessionLocal) und asserted == Baseline. Drift (leaked/missing/mutated PKs) -> fail-closed
+    mit nodeid + Tabelle + PKs. crm.*/training.* werden NICHT hier geprueft — POST-SUITE in deploy.sh (Plan 02,
+    sudo -u postgres psql, peer-auth). Ordering-Fallback: falls per-test-Ordering nicht greift, wuerde der
+    Drift zwar gemeldet, aber ggf. dem falschen nodeid zugeschrieben (Tradeoff dokumentiert, D-08)."""
+    yield
+    if _baseline_snapshot is None or _baseline_guard_engine is None:
+        return
+    current = _snapshot_public_tables(_baseline_guard_engine)
+    drift = _diff_baseline(current, _baseline_snapshot)
+    if drift:
+        parts = []
+        for tbl, d in drift.items():
+            parts.append(
+                f"{tbl}: leaked={sorted(d['leaked'])}, missing={sorted(d['missing'])}, "
+                f"mutated={sorted(d['mutated'])}"
+            )
+        pytest.fail(
+            f"[BASELINE-GUARD] {request.node.nodeid}: PUBLIC-Baseline drifted -> "
+            + " | ".join(parts)
+        )
+
+
 @pytest.fixture
 def sample_state():
     """Factory returning a fresh state dict with all Phase 04.8 keys at defaults."""
