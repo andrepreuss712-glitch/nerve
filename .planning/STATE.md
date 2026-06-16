@@ -21,8 +21,9 @@ progress:
   total_phases: 96
   completed_phases: 55
   total_plans: 237
-  completed_plans: 226
-  percent: 95
+  completed_plans: 227
+  percent: 96
+pgtest_01_executed: "Phase 08.23.2.PGTEST Plan 01 (conftest-Fixtures) ✅ EXECUTED 2026-06-16 — Plan 01 von 4 fertig (Wave 1). 6 Tasks, 7 Commits (e35e031 db_session/client→nerve_test MODUL-SessionLocal-Rebind+_seed_test_tenant+TEST_TENANT_UUID+_test_session/_test_engine-Vertrag; fb171ce A-1-Tripwire test_rls_generic_smoke.py GUC-NON-null+crm-Read≥1; 8f7f9ee 3 Spezial-Fixture-DSN-Doku→nerve_test; f8caf0a Session-Base-Seed Org+User id=1 ORM-Pfad+trigger-aware+setval; 2d08318 cleanup_rows-Helfer Ext1 #6-rollback+#5-laute-Warnung+CLAUDE.md-Regel; 97341f6 Baseline-Waechter Ext2 PUBLIC-only eigene Read-Engine #2 + {pk:xmin} #7 + #9-app-Import + test_baseline_guard.py; 9a0f120 docs-Nachzug). Req-2/5/9 abgedeckt. **STATISCH verifiziert (HARD_OVERRIDE: kein deploy.sh, kein voller pytest — nerve_test existiert nur im Gate): py_compile aller 3 Test-Dateien OK, alle key_links present, NERVE_BASELINE_GUARD_DSN==0, kein aktiver sqlite/@nerve, _diff_baseline-Logik inline bestaetigt.** Voll-Beleg erst im orchestrator-deploy.sh-production-Lauf nach allen 4 Plans. crm.*/training.*-POST-SUITE-Check an Plan 02 delegiert (HYBRID, André locked). A-1-PRECONDITION = Plan-02-Gate exportiert DATABASE_URL=postgres. NÄCHSTER SCHRITT: Plan 02 (deploy.sh-Gate). SUMMARY: 08.23.2.PGTEST-01-SUMMARY.md. Multi-Segment-Gotcha: Pfade hardcoded, gsd-sdk/gsd-tools umgangen, STATE/ROADMAP hand-editiert."
 ---
 
 # Project State
