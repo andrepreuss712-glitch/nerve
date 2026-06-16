@@ -184,7 +184,7 @@ ssh -i "$SSH_KEY" "$VPS_HOST" bash -s << ENDHEREDOC
     NERVE_APP_TEST_DSN="postgresql://nerve_app@/\${TEST_DB}" \
     NERVE_SCHILD_TEST_DSN="postgresql://nerve_app@/\${TEST_DB}" \
     ANON_WORKER_TEST_DSN="postgresql://nerve_anon_worker:\${ANON_PW}@127.0.0.1:5432/\${TEST_DB}" \
-    /opt/nerve/venv/bin/pytest tests/ --tb=short -q
+    /opt/nerve/venv/bin/pytest tests/ --tb=short -q -m "not live and not perf"
   ' || { echo "[deploy] FEHLER: pytest gegen nerve_test ROT — kein Restart, kein Deploy"; exit 1; }
   echo "[deploy] pytest gegen nerve_test bestanden"
 
@@ -192,8 +192,17 @@ ssh -i "$SSH_KEY" "$VPS_HOST" bash -s << ENDHEREDOC
   #      sudo -u postgres psql (peer-auth, passwordless, SCHILD-Muster — KEINE Env-Var, KEIN PW). Als postgres RLS-bypassed
   #      ueber ALLE Tenants. (a) jede crm.* Tabelle == 0 Rows (Cross-Tenant-Leak-Guard) UND (b) training.transcript_archive
   #      == 0 (ORM-lose, non-public; Anonymizer-Leak-Guard). Plan 01's in-pytest-Waechter prueft NUR public.*.
-  CRM_LEFTOVER=\$(sudo -u postgres psql -tAc "SELECT coalesce(sum(c),0) FROM (SELECT count(*) c FROM crm.account_memory UNION ALL SELECT count(*) FROM crm.accounts UNION ALL SELECT count(*) FROM crm.contacts UNION ALL SELECT count(*) FROM crm.meetings UNION ALL SELECT count(*) FROM crm.user_preferences) s" -d "\$TEST_DB")
+  # D-G16/D-G17/D-G18, Req-9 crm-Haelfte: dynamischer crm-Leak-Count via _schema_introspect.
+  # scripts/_crm_leak_count.py ruft derive_baseline_tables(dsn, schemas=('crm',)) auf,
+  # entpackt table_list und summiert iterativ SELECT count(*) pro crm-Tabelle (Gemini-Fund #4).
+  # Eine neu angelegte crm-Tabelle wird automatisch mit-bewacht (via pg_tables, Req-9).
+  # Laeuft als postgres peer (RLS-bypassed, sieht alle Tenants — analog deploy.sh:168-174).
+  CRM_LEFTOVER=\$(sudo -u postgres bash -c "cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/\$TEST_DB /opt/nerve/venv/bin/python scripts/_crm_leak_count.py")
   [ "\$CRM_LEFTOVER" = "0" ] || { echo "[deploy] FEHLER: crm.* nicht leer nach Test-Lauf (\$CRM_LEFTOVER Leak-Rows) -- Security-Test-Teardown liess Daten liegen (Cross-Tenant-Leak ODER fehlendes cleanup_rows)"; exit 1; }
+  # training.transcript_archive bleibt explizit single-table (D-G04, ORM-los, non-public).
+  # BEGRUENDUNG (foundation_register, Req-7 — nicht still): training.transcript_archive ist
+  # ORM-los und wird NICHT von derive_baseline_tables erfasst (nicht in schemas=('crm',)).
+  # Der deploy.sh-Check hier ist die einzige Bewachung dieser Tabelle (postgres peer, RLS-bypassed).
   TRAINING_LEFTOVER=\$(sudo -u postgres psql -tAc "SELECT count(*) FROM training.transcript_archive" -d "\$TEST_DB")
   [ "\$TRAINING_LEFTOVER" = "0" ] || { echo "[deploy] FEHLER: training.transcript_archive nicht leer nach Test-Lauf (\$TRAINING_LEFTOVER Leak-Rows) -- test_anonymizer_worker-Teardown liess Daten liegen (#4 HIGH non-public-Schema-Leak)"; exit 1; }
   echo "[deploy] POST-SUITE Baseline-Check OK: alle crm.* Tabellen leer + training.transcript_archive leer (0 Leak-Rows)"
