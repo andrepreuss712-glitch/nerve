@@ -108,14 +108,18 @@ def _patched_session(monkeypatch):
             sess = dbmod.SessionLocal()
             try:
                 sess.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": tenant_uuid})
+                # Phase 08.23.2.PGTEST.GREEN crm-Leak-Fix: id ist uuid-Spalte, created[...] traegt str-UUIDs
+                # -> `id = ANY(:ids)` warf `operator does not exist: uuid = text`, die Teardown-TX brach ab,
+                # crm.account_memory + (FK-Eltern) crm.accounts leakten (2 Rows -> POST-SUITE-Gate rot).
+                # id::text = ANY(:ids) vergleicht str-zu-str (Muster wie cleanup_rows / D-G06).
                 if created["account_memory"]:
                     sess.execute(
-                        text("DELETE FROM crm.account_memory WHERE id = ANY(:ids)"),
+                        text("DELETE FROM crm.account_memory WHERE id::text = ANY(:ids)"),
                         {"ids": created["account_memory"]},
                     )
                 if created["accounts"]:
                     sess.execute(
-                        text("DELETE FROM crm.accounts WHERE id = ANY(:ids)"),
+                        text("DELETE FROM crm.accounts WHERE id::text = ANY(:ids)"),
                         {"ids": created["accounts"]},
                     )
                 sess.execute(
