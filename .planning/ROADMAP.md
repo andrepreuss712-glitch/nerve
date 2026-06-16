@@ -2094,6 +2094,13 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 **Blocker für:** TAXO1-Deploy (erbt die Gate-Rolle von PGTEST — ein grünes Tor ist die Voraussetzung für sicheren TAXO-Deploy).
 **🔴 → voll Spec → Discuss → Plan → Cross-AI (Gemini Pflicht) → Execute.** Multi-Segment-ID-Gotcha gilt (Pfade hardcoden).
 
+**Plans:** 5 Plans in 3 Wellen (geplant 2026-06-16; 🔴 Cross-AI/Gemini Pflicht VOR Execute)
+- [ ] 08.23.2.PGTEST.GREEN-01-introspect-autoreset-PLAN.md — Schema-Introspect-Modul + Auto-Reset gespaltener Baseline-Waechter (Wave 1, Req-2/3/9, D-G19-Kopplung)
+- [ ] 08.23.2.PGTEST.GREEN-02-deploy-crm-derivation-marker-wiring-PLAN.md — deploy.sh crm-Derivation + live/perf-Marker-Registrierung + Gate-Exklusion (Wave 1, Req-7/9/10)
+- [ ] 08.23.2.PGTEST.GREEN-03-triage-harness-PLAN.md — scripts/triage.sh (Gate-Provisioning 1:1, kein Restart, Ratchet) (Wave 2, Req-5)
+- [ ] 08.23.2.PGTEST.GREEN-04-empirical-triage-PLAN.md — empirische Triage der ~22 Fails + xfail(strict)+999.x-Policy (Wave 3, Req-5/6, autonomous:false)
+- [ ] 08.23.2.PGTEST.GREEN-05-markers-security-mocks-final-deploy-PLAN.md — live/perf-Marker-Anwendung + Security-Determinismus-Mocks + finaler deploy.sh production (Wave 3, Req-1/7/8/10, autonomous:false)
+
 ---
 
 ## TAXO-Bau — drei Teile (NEU 2026-06-10, aus `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md`)
