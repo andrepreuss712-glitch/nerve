@@ -37,7 +37,8 @@ def _schema_qualified(schema, table):
 def _kahn_topo_sort(nodes, edges):
     """Kahn-Algorithmus fuer einen gerichteten azyklischen Graphen.
     nodes: set von Knoten (Strings 'schema.table')
-    edges: list von (child, parent) Tupeln — Kind-Kanten (Kind zeigt auf Eltern).
+    edges: list von (child, parent, confdeltype) 3-Tupeln aus _fetch_fk_edges — Kind-Kanten
+           (Kind zeigt auf Eltern). confdeltype wird hier ignoriert (alle Kanten in den Sort).
     Rueckgabe: Liste der Knoten in der UMGEKEHRTEN topologischen Reihenfolge
     (Leaves zuerst, also Kinder vor Eltern = reverse-FK-Loeschorder).
 
@@ -60,39 +61,15 @@ def _kahn_topo_sort(nodes, edges):
     # allen beteiligten Schemas). self-ref ignorieren.
     valid_edges = [
         (child, parent)
-        for child, parent in edges
+        # edges sind 3-Tupel (child, parent, confdeltype) aus _fetch_fk_edges; confdeltype
+        # wird ignoriert -> ALLE Kanten gehen in den Sort (Gemini-Fund #1, auch CASCADE).
+        for child, parent, _ in edges
         if child in nodes and parent in nodes and child != parent
     ]
 
-    # in-degree fuer jeden Knoten (wie viele Eltern-Kanten zeigen auf ihn)
-    in_degree = {n: 0 for n in nodes}
-    children_of = {n: [] for n in nodes}  # parent -> list of children
-    for child, parent in valid_edges:
-        in_degree[parent] += 1  # parent wird von child "blockiert"
-        children_of[child].append(parent)
-
-    # Kahn: start mit Knoten, die keine Eltern-Kanten haben (echte Leaves = Children)
-    # In reversed-FK-order: Leaves (Kinder) kommen zuerst.
-    # Hier modellieren wir: child -> parent-Kante bedeutet child muss VOR parent geloescht werden.
-    # Kahn-Standardrichtung fuer die umgekehrte Loeschorder:
-    # "in_degree" zaehlt hier, wie viele *andere Tabellen* von dieser abhaengen (als Eltern).
-    # Knoten mit in_degree == 0 haben keine Kinder -> koennen zuletzt geloescht werden (echte Roots).
-    # Fuer reverse-FK-Loeschorder (Kinder zuerst) wollen wir Leaves zuerst:
-    # -> wir kehren die Perspektive um: Kanten child->parent, Kahn findet die topo-Order,
-    #    und wir drehen das Ergebnis um.
-    #
-    # Neuberechnung: fuer den Kahn-Algo in normaler topo-Order (fuer DAG child->parent):
-    # in_degree[parent] erhoeht sich fuer jede child->parent-Kante.
-    # "Blattknoten" im DAG sind die echten Leaves (Kinder ohne eigene Kinder) = in_degree==0 fuer sie als KIND.
-    # Aber wir wollen reverse-topo (Leaves zuerst, Roots zuletzt).
-    # Effizientester Weg: Kahn auf dem umgekehrten Graphen (parent->child), dann umdrehen.
-
-    # NOCHMALS: Klarheit ueber Richtung.
-    # Wir haben Kanten: child->parent (child haengt von parent ab = child hat FK auf parent).
-    # Loeschorder: child muss VOR parent geloescht werden (Kind vor Eltern).
-    # = topologische Sortierung im Graphen child->parent, aber in UMGEKEHRTER Reihenfolge.
-    # Oder: Kahn auf umgekehrtem Graphen (parent->child) liefert eine topo-Order wo Roots zuerst kommen,
-    #        und wir kehren das Ergebnis um -> Leaves (Kinder) zuerst.
+    # Reverse-FK-Loeschorder (Kinder VOR Eltern): Kahn-Topo-Sort auf dem UMGEKEHRTEN
+    # Graphen (parent->child) liefert Roots-zuerst; das Ergebnis wird am Ende umgedreht,
+    # sodass Leaves (Kinder) zuerst stehen = sichere reverse-FK-DELETE-Reihenfolge.
 
     # Umgekehrter Graph: parent->child-Kanten
     reverse_adj = {n: [] for n in nodes}  # parent -> [children]
