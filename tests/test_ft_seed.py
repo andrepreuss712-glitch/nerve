@@ -23,8 +23,13 @@ def test_prompt_seed(db_session):
 
 def test_seed_idempotent(db_session):
     _seed_prompt_versions(db_session)
-    count_after_first = db_session.query(PromptVersion).count()
+    # scope-fix (Gemini-3.1-Pro-Fold #3): app-import committet >=6 prompt_versions
+    # (_seed_prompt_versions=4 + _seed_ewb_v2=2) in die persistente nerve_test (D-03) -> globale
+    # count==4 waere deterministisch False-Red. Auf die test-eigenen EXPECTED_MODULES gescoped.
+    count_after_first = (db_session.query(PromptVersion)
+                         .filter(PromptVersion.module.in_(EXPECTED_MODULES)).count())
     _seed_prompt_versions(db_session)
-    count_after_second = db_session.query(PromptVersion).count()
+    count_after_second = (db_session.query(PromptVersion)
+                          .filter(PromptVersion.module.in_(EXPECTED_MODULES)).count())
     assert count_after_first == 4
     assert count_after_second == 4
