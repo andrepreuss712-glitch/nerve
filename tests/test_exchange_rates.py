@@ -11,6 +11,54 @@ from services.exchange_rates import (
     get_current_rate,
 )
 from database.models import ExchangeRate
+from tests.conftest import cleanup_rows
+
+
+# ── Phase 08.23.2.PGTEST Gruppe B — cleanup_rows-Teardown + Baseline-Restore (T-PGTEST-24) ──
+# update_daily_rate() committet auf einer EIGENEN get_session() (services/exchange_rates.py:49),
+# NICHT auf der function-scoped db_session → der D-03-Rollback raeumt das NICHT weg. ZWEI Faelle:
+#   (a) Es existiert KEINE heutige USD_EUR-Row → update_daily_rate INSERTet eine neue frankfurter-Row
+#       → leaked PK → cleanup_rows loescht sie.
+#   (b) Die Baseline traegt bereits eine heutige USD_EUR-Row (_seed_founder_dashboard_defaults seedet
+#       ExchangeRate(date=today, 'USD_EUR', rate=0.92, source='seed')) → update_daily_rate UPGRADEt sie
+#       IN-PLACE auf source='frankfurter'+neue rate (exchange_rates.py:56-64) → KEINE neue Row, aber die
+#       Baseline-Row MUTIERT (xmin-Drift, #7) → Guard rot. Loeschen waere falsch (→ missing-PK). FIX:
+#       Pre-State der heutigen USD_EUR-Row SICHERN, POST-yield RESTOREN (Baseline-Treue).
+# get_current_rate-/db_session-only-Tests sind rollback-covered (D-03) und brauchen das nicht.
+# Kanonische Mechanik: cleanup_tracker-FIXTURE (NIEMALS yield im plain Test-Body, T-PGTEST-34).
+@pytest.fixture
+def fx_cleanup(db_session):
+    from database.db import get_session
+    # Pre-State der heutigen USD_EUR-Rows sichern (id -> (rate, source)).
+    db = get_session()
+    try:
+        pre = {r.id: (r.rate, r.source) for r in (
+            db.query(ExchangeRate).filter_by(date=date.today(),
+                                              currency_pair='USD_EUR').all())}
+    finally:
+        db.close()
+    yield
+    teardown_db = get_session()
+    try:
+        rows = (teardown_db.query(ExchangeRate)
+                .filter_by(date=date.today(), currency_pair='USD_EUR').all())
+        new_ids = []
+        for r in rows:
+            if r.id in pre:
+                # Baseline-Row: Pre-State wiederherstellen (rate + source), kein DELETE.
+                orig_rate, orig_source = pre[r.id]
+                r.rate, r.source = orig_rate, orig_source
+            else:
+                new_ids.append(r.id)   # neu inserted → wegloeschen
+        teardown_db.commit()
+    finally:
+        teardown_db.close()
+    if new_ids:
+        cl_db = get_session()
+        try:
+            cleanup_rows(cl_db, {ExchangeRate: new_ids})
+        finally:
+            cl_db.close()
 
 
 # ── fetch_usd_eur() ─────────────────────────────────────────────────────────
@@ -39,7 +87,7 @@ def test_fetch_failure_returns_none():
 
 # ── update_daily_rate() ─────────────────────────────────────────────────────
 
-def test_update_daily_rate_skips_on_api_failure(db_session):
+def test_update_daily_rate_skips_on_api_failure(db_session, fx_cleanup):
     with patch('services.exchange_rates.fetch_usd_eur', return_value=None):
         update_daily_rate()
     rows = (
@@ -50,7 +98,7 @@ def test_update_daily_rate_skips_on_api_failure(db_session):
     assert len(rows) == 0
 
 
-def test_update_daily_rate_idempotent(db_session):
+def test_update_daily_rate_idempotent(db_session, fx_cleanup):
     with patch('services.exchange_rates.fetch_usd_eur', return_value=0.9168):
         update_daily_rate()
         update_daily_rate()  # 2nd run — no duplicate

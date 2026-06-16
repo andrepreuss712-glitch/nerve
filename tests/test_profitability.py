@@ -1,4 +1,11 @@
-"""Phase 04.7.2-05 — Profitability calc tests."""
+"""Phase 04.7.2-05 — Profitability calc tests.
+
+Phase 08.23.2.PGTEST Gruppe B (T-PGTEST-24): ALLE Commits laufen auf der function-scoped
+db_session → rollback-covered (D-03), KEIN cleanup_rows noetig. compute_org_profitability(db, org_id,
+start, end) ist zudem org_id- + zeitraum-gescoped (kein globaler unfiltered count) → keine Baseline-/
+Fremd-Row-Vergiftung der Aggregation. _mk_org flush()-t nur, die Tests committen auf db_session →
+beim Teardown-Rollback verschwinden org/revenue/api-Rows, Baseline bleibt unberuehrt (Waechter gruen).
+"""
 from datetime import date, datetime
 from decimal import Decimal
 from routes.admin_dashboard import classify_margin, compute_org_profitability
