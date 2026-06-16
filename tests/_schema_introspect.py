@@ -79,57 +79,76 @@ def _kahn_topo_sort(nodes, edges):
         reverse_adj[parent].append(child)
         reverse_in_degree[child] += 1
 
-    # Kahn auf umgekehrtem Graphen: Knoten mit reverse_in_degree==0 sind echte Roots (Tabellen ohne FK-Eltern)
+    # Kahn auf umgekehrtem Graphen: Knoten mit reverse_in_degree==0 sind echte Roots (Tabellen ohne FK-Eltern).
+    # MUTUAL-FK-ZYKLEN (Phase 08.23.2.PGTEST.GREEN Bug 3, empirisch via triage.sh): das reale Schema hat
+    # echte 2-Zyklen (public.users<->public.organisations, public.users<->public.profiles). Ein reiner
+    # Kahn-Sort kann einen Mutual-FK-Graphen NICHT linear ordnen -> frueher blieben users/organisations/
+    # profiles + ALLES transitiv davon Abhaengige (inkl. crm.* via accounts->tenant_orgs->organisations)
+    # als "Rest" und wurden alphabetisch ans Ende gehaengt = FALSCHE Loeschorder (test_06 rot). JETZT:
+    # wenn die Queue leer ist aber Knoten fehlen, wird EINE Zyklus-Kante bewusst gebrochen (der Rest-Knoten
+    # mit dem kleinsten residualen reverse_in_degree = am wenigsten gekoppelt wird freigegeben), dann Kahn
+    # fortgesetzt. So bleiben ALLE Nicht-Zyklus-Kanten (inkl. cross-schema crm->public) erhalten -> die
+    # crm-vor-public-Order stimmt; nur INNERHALB eines echten Mutual-FK-Zyklus gibt es keine perfekte Order
+    # (eine Kante MUSS brechen). Die daraus theoretisch moegliche FK-Violation faengt der Cleanup-Retry-Loop
+    # robust ab (conftest._fk_safe_delete_rows, Savepoint-pro-Tabelle).
     from collections import deque
     queue = deque(sorted(n for n in nodes if reverse_in_degree[n] == 0))
     topo_order = []  # Roots zuerst
+    diagnosed = False
 
-    while queue:
-        node = queue.popleft()
-        topo_order.append(node)
-        for child in sorted(reverse_adj[node]):
-            reverse_in_degree[child] -= 1
-            if reverse_in_degree[child] == 0:
-                queue.append(child)
+    while len(topo_order) < len(nodes):
+        while queue:
+            node = queue.popleft()
+            topo_order.append(node)
+            for child in sorted(reverse_adj[node]):
+                reverse_in_degree[child] -= 1
+                if reverse_in_degree[child] == 0:
+                    queue.append(child)
 
-    # Zyklen-Rest: Knoten die nicht in topo_order sind (wegen Zyklen)
-    remaining = sorted(n for n in nodes if n not in topo_order)
-    if remaining:
+        if len(topo_order) >= len(nodes):
+            break
+
+        # --- Queue leer, aber Knoten fehlen -> Mutual-FK-Zyklus. Eine Kante bewusst brechen. ---
+        done = set(topo_order)
+        stuck = sorted(n for n in nodes if n not in done)
+
+        if not diagnosed:
+            # EINMALIGE Diagnose des vollen Zyklus-Kerns (Logging-First, fuer triage.sh-Beleg).
+            diagnosed = True
+            stuck_set = set(stuck)
+            cycle_core_edges = sorted(
+                f"{child}->{parent}"
+                for child, parent in valid_edges
+                if child in stuck_set and parent in stuck_set
+            )
+            residual_in_degree = {n: reverse_in_degree[n] for n in stuck if reverse_in_degree[n] > 0}
+            blocking_parents = {}
+            for child, parent in valid_edges:
+                if child in stuck_set:
+                    blocking_parents.setdefault(child, []).append(parent)
+            log.warning(
+                "[PGTEST-INTROSPECT] Mutual-FK-Zyklus erkannt: %d Knoten blockiert. "
+                "Kern-Kanten (child->parent, beide im Rest) = %s",
+                len(stuck), cycle_core_edges,
+            )
+            log.warning(
+                "[PGTEST-INTROSPECT] Zyklus-Diagnose: Rest-Restgrad reverse_in_degree>0 = %s",
+                residual_in_degree,
+            )
+            log.warning(
+                "[PGTEST-INTROSPECT] Zyklus-Diagnose: FK-Eltern pro Rest-Knoten = %s",
+                {k: sorted(v) for k, v in sorted(blocking_parents.items())},
+            )
+
+        # Opfer-Knoten: kleinster residualer reverse_in_degree (am wenigsten gekoppelt), tie-break Name.
+        victim = min(stuck, key=lambda n: (reverse_in_degree[n], n))
         log.warning(
-            "[PGTEST-INTROSPECT] Topo-sort: %d Knoten mit Zyklen ans Ende angehaengt: %s",
-            len(remaining),
-            remaining,
+            "[PGTEST-INTROSPECT] Zyklus-Kante gebrochen: Knoten %s freigegeben "
+            "(residual reverse_in_degree=%d, %d Rest-Knoten) -> eine FK-Kante bewusst ignoriert.",
+            victim, reverse_in_degree[victim], len(stuck),
         )
-        # DIAGNOSE (Logging-First, Phase 08.23.2.PGTEST.GREEN Bug-3): bei Zyklen die
-        # tatsaechlichen FK-Kanten dumpen, die die haengenden Knoten blockieren — damit der
-        # naechste deploy.sh-Gate-Lauf den ECHTEN Zyklus-Kern zeigt (statt zu raten). Drei Sichten:
-        #  (a) Kanten INNERHALB des Rest-Sets (child UND parent haengen) = der eigentliche Zyklus-Kern.
-        #  (b) verbleibende reverse_in_degree pro Rest-Knoten = wie viele FK-Eltern noch unverarbeitet.
-        #  (c) blockierende Eltern pro Rest-Knoten = welche (evtl. selbst haengenden) Eltern ihn halten.
-        remaining_set = set(remaining)
-        cycle_core_edges = sorted(
-            f"{child}->{parent}"
-            for child, parent in valid_edges
-            if child in remaining_set and parent in remaining_set
-        )
-        residual_in_degree = {n: reverse_in_degree[n] for n in remaining if reverse_in_degree[n] > 0}
-        blocking_parents = {}
-        for child, parent in valid_edges:
-            if child in remaining_set:
-                blocking_parents.setdefault(child, []).append(parent)
-        log.warning(
-            "[PGTEST-INTROSPECT] Zyklus-Diagnose: Kern-Kanten (child->parent, beide im Rest) = %s",
-            cycle_core_edges,
-        )
-        log.warning(
-            "[PGTEST-INTROSPECT] Zyklus-Diagnose: Rest-Rest-Restgrad reverse_in_degree>0 = %s",
-            residual_in_degree,
-        )
-        log.warning(
-            "[PGTEST-INTROSPECT] Zyklus-Diagnose: FK-Eltern pro Rest-Knoten = %s",
-            {k: sorted(v) for k, v in sorted(blocking_parents.items())},
-        )
-    topo_order += remaining
+        reverse_in_degree[victim] = 0
+        queue.append(victim)
 
     # Umkehren: Roots waren zuerst, jetzt Leaves (Kinder) zuerst = reverse-FK-Loeschorder
     return list(reversed(topo_order))

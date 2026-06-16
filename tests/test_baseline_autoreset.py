@@ -197,7 +197,12 @@ def test_06_module_cache_cross_schema_and_non_empty(
         f"Aktuelle _DERIVED_FK_ORDER enthaelt keine crm.* Eintraege."
     )
 
-    # crm.accounts vor public.tenant_orgs (Fund #8, NERVE-spezifische cross-schema FK-Kante)
+    # crm.accounts vor public.tenant_orgs (Fund #8, NERVE-spezifische cross-schema FK-Kante).
+    # Bug 3 (Mutual-FK-Zyklen): diese Assertion bleibt gueltig, weil crm.accounts->tenant_orgs->
+    # organisations KEINE Zyklus-Kante ist — der echte Zyklus (SCC) ist rein public
+    # (users<->organisations, users<->profiles). Der zyklus-bewusste Topo-Sort bricht NUR eine
+    # intra-public-Zyklus-Kante; alle cross-schema-Kanten bleiben erhalten -> crm bleibt vor public.
+    # (Innerhalb der Mutual-FK-Paare selbst gibt es keine garantierte Order — das prueft test_06 nicht.)
     # Nur pruefbar wenn beide in der Order sind
     if 'crm.accounts' in fk_order and 'public.tenant_orgs' in fk_order:
         idx_crm = fk_order.index('crm.accounts')

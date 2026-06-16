@@ -120,7 +120,7 @@ _CLEANUP_FK_ORDER = [
     "crm.contacts",
     "crm.accounts",
     "crm.user_preferences",
-    "public.objection_event",
+    "public.objection_events",
     "public.conversation_logs",
     "public.calls",
     "public.api_cost_log",
@@ -150,6 +150,89 @@ def _normalize_table_name(key):
     elif isinstance(targs, dict):
         schema = targs.get("schema")
     return f"{schema}.{tname}" if schema else f"public.{tname}"
+
+
+def _fk_safe_delete_rows(conn_or_session, ordered_tables, ids_by_table, pk_for, tenant=None):
+    """FK-violation-ROBUSTES Loeschen einer Menge von PK-Rows trotz MUTUAL-FK-ZYKLEN
+    (Phase 08.23.2.PGTEST.GREEN Bug 3). Das reale Schema hat echte 2-Zyklen
+    (public.users<->public.organisations, public.users<->public.profiles); ein reiner Topo-Sort
+    kann sie nicht perfekt ordnen, also kann eine einzelne DELETE-Reihenfolge eine FK-Violation treffen.
+
+    Strategie: pro Tabelle ein SAVEPOINT (SQLAlchemy begin_nested / psycopg2 SAVEPOINT). Eine
+    FK-Violation rollt NUR den Savepoint zurueck (NICHT die ganze TX -> kein 'current transaction is
+    aborted'-Abbruch der Restschleife). Fehlgeschlagene Tabellen werden in Folge-Runden erneut versucht,
+    bis eine Runde 0 Fortschritt macht. Loest Zyklen OHNE Superuser/session_replication_role/DEFERRABLE.
+
+    Konvergenz: Test-Rows referenzieren fast nie EINANDER (meist Baseline id=1) -> der Retry-Loop raeumt
+    Kinder-vor-Eltern auf, auch wenn die Order innerhalb eines Zyklus imperfekt ist. Ein echter Hard-Stall
+    (Rows, die sich gegenseitig referenzieren) ist ohne DEFERRABLE-Constraint gar nicht einfuegbar; tritt
+    er dennoch auf, gibt die Funktion die nicht loeschbaren Tabellen zurueck -> der Caller loggt laut
+    (kein stiller Leak; der missing/mutated-Guard + POST-SUITE-Check bleiben fail-closed Backstop).
+
+    pk_for(tbl) -> PK-Spaltenname (katalog-abgeleitet, kein hardcoded 'id'). Der crm.*-Tenant-GUC wird
+    hier EINMAL gesetzt. Der Caller committet selbst (diese Funktion committet NICHT). Akzeptiert eine
+    SQLAlchemy-Connection/Session ODER eine psycopg2-Connection. Rueckgabe: Liste der nach 0-Fortschritt
+    verbleibenden (nicht loeschbaren) Tabellen.
+    """
+    from sqlalchemy import text as _sa_text
+    is_pg2 = hasattr(conn_or_session, "cursor") and not hasattr(conn_or_session, "execute")
+
+    if tenant is not None:
+        if is_pg2:
+            _c = conn_or_session.cursor()
+            _c.execute("SELECT set_config('app.tenant_id', %s, true)", (str(tenant),))
+            _c.close()
+        else:
+            conn_or_session.execute(
+                _sa_text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant)}
+            )
+
+    def _try_delete_one(tbl):
+        ids = ids_by_table.get(tbl) or []
+        if not ids:
+            return True
+        pk = pk_for(tbl)
+        id_list = [str(x) for x in ids]
+        if is_pg2:
+            cur = conn_or_session.cursor()
+            try:
+                cur.execute("SAVEPOINT pgtest_fk_sp")
+                # {pk}::text = ANY(...) traegt int-PK UND uuid-PK (D-G06).
+                cur.execute(f"DELETE FROM {tbl} WHERE {pk}::text = ANY(%s)", (id_list,))
+                cur.execute("RELEASE SAVEPOINT pgtest_fk_sp")
+                return True
+            except Exception:
+                try:
+                    cur.execute("ROLLBACK TO SAVEPOINT pgtest_fk_sp")
+                    cur.execute("RELEASE SAVEPOINT pgtest_fk_sp")
+                except Exception:
+                    pass
+                return False
+            finally:
+                cur.close()
+        else:
+            sp = conn_or_session.begin_nested()
+            try:
+                conn_or_session.execute(
+                    _sa_text(f"DELETE FROM {tbl} WHERE {pk}::text = ANY(:ids)"),
+                    {"ids": id_list},
+                )
+                sp.commit()
+                return True
+            except Exception:
+                try:
+                    sp.rollback()
+                except Exception:
+                    pass
+                return False
+
+    pending = [t for t in ordered_tables if (ids_by_table.get(t))]
+    while pending:
+        failed = [t for t in pending if not _try_delete_one(t)]
+        if len(failed) == len(pending):
+            return failed  # 0 Fortschritt -> Hard-Stall; Caller loggt laut
+        pending = failed
+    return []
 
 
 def cleanup_rows(conn_or_session, spec, tenant=None):
@@ -187,9 +270,6 @@ def cleanup_rows(conn_or_session, spec, tenant=None):
             "(DELETE wuerde 0 Rows treffen). tenant=<UUID-str> ist Pflicht."
         )
 
-    # psycopg2-Connection (hat .cursor(), keine .execute()) vs SQLAlchemy-Session.
-    is_psycopg2 = hasattr(conn_or_session, "cursor") and not hasattr(conn_or_session, "execute")
-
     # SCHRITT 1 (#6): unbedingter rollback — uncommitteten In-Flight-State verwerfen.
     try:
         conn_or_session.rollback()
@@ -206,31 +286,16 @@ def cleanup_rows(conn_or_session, spec, tenant=None):
     ordered += [t for t in norm if t not in _fk_order]
 
     try:
-        if is_psycopg2:
-            cur = conn_or_session.cursor()
-            if tenant is not None:
-                cur.execute("SELECT set_config('app.tenant_id', %s, true)", (str(tenant),))
-            for tbl in ordered:                 # SCHRITT 2: reverse-FK-DELETE der uebergebenen IDs
-                ids = norm[tbl]
-                if not ids:
-                    continue
-                # id::text-Vergleich (Phase 08.23.2.PGTEST): traegt int-PK (organisations/users/calls) UND
-                # uuid-PK (tenant_orgs/crm.*) — sonst `operator does not exist: uuid = text` bei uuid-PK-Tabellen.
-                cur.execute(f"DELETE FROM {tbl} WHERE id::text = ANY(%s)", ([str(x) for x in ids],))
-        else:
-            if tenant is not None:
-                conn_or_session.execute(
-                    text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant)}
-                )
-            for tbl in ordered:
-                ids = norm[tbl]
-                if not ids:
-                    continue
-                # id::text-Vergleich (Phase 08.23.2.PGTEST): traegt int-PK UND uuid-PK (tenant_orgs/crm.*).
-                conn_or_session.execute(
-                    text(f"DELETE FROM {tbl} WHERE id::text = ANY(:ids)"),
-                    {"ids": [str(x) for x in ids]},
-                )
+        # SCHRITT 2: reverse-FK-DELETE der uebergebenen IDs, FK-violation-ROBUST gegen Mutual-FK-Zyklen
+        # (Bug 3: _fk_safe_delete_rows = Savepoint-pro-Tabelle + Retry-Loop, ohne Superuser). PK-Spalte
+        # 'id' (cleanup_rows-Contract: int-PK organisations/users/calls UND uuid-PK tenant_orgs/crm.*
+        # heissen 'id'; id::text-Cast traegt beide). Der crm.*-Tenant-GUC (set_config) wird im Helfer gesetzt.
+        stalled = _fk_safe_delete_rows(conn_or_session, ordered, norm, lambda _t: 'id', tenant=tenant)
+        if stalled:
+            logging.getLogger(__name__).warning(
+                "[PGTEST-CLEANUP] cleanup_rows: %s nach Retry-Loop nicht loeschbar "
+                "(Mutual-FK-Hard-Stall?) spec=%s tenant=%s", stalled, norm, tenant,
+            )
         conn_or_session.commit()                # SCHRITT 3
     except Exception as e:
         try:
@@ -555,20 +620,21 @@ def _baseline_cleanup_guard(request, _baseline_snapshot, _baseline_guard_engine)
                 request.node.nodeid, tbl, sorted(ids),
             )
 
-        # Auto-Delete in engine.begin() (D-G05: TX-Hygiene, commit-on-exit)
+        # Auto-Delete in engine.begin() (D-G05: TX-Hygiene, commit-on-exit), FK-violation-ROBUST gegen
+        # Mutual-FK-Zyklen (Bug 3: _fk_safe_delete_rows = Savepoint-pro-Tabelle + Retry-Loop). PK-Spalte
+        # aus Katalog-abgeleitetem Cache (Fund #2: kein hardcoded 'id'). public-only -> kein Tenant-GUC.
         try:
             with _baseline_guard_engine.begin() as conn:
-                for tbl in delete_order:
-                    ids = leaked_by_tbl[tbl]
-                    if not ids:
-                        continue
-                    # PK-Spalte aus Katalog-abgeleitetem Cache (Fund #2: kein hardcoded 'id')
-                    pk_col = _DERIVED_PK_COLS.get(tbl, 'id')
-                    # {pk_col}::text = ANY(:ids) — uuid-Cast bleibt (D-G06, 10e5d0a-Fix)
-                    conn.execute(
-                        text(f"DELETE FROM {tbl} WHERE {pk_col}::text = ANY(:ids)"),
-                        {"ids": [str(x) for x in ids]},
-                    )
+                stalled = _fk_safe_delete_rows(
+                    conn, delete_order, leaked_by_tbl,
+                    lambda t: _DERIVED_PK_COLS.get(t, 'id'),
+                )
+            if stalled:
+                _log.warning(
+                    "[BASELINE-AUTO-FIX] %s: %s nach Retry-Loop nicht loeschbar "
+                    "(Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein",
+                    request.node.nodeid, stalled,
+                )
         except Exception as e:
             _log.warning(
                 "[BASELINE-AUTO-FIX] Auto-Delete fehlgeschlagen fuer %s: %r "

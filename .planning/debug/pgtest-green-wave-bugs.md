@@ -64,7 +64,38 @@ instrumentation: _baseline_schema (conftest.py) loggt jetzt nach dem Fill: `__na
   -> der naechste Lauf unterscheidet (a)/(b)/(c) eindeutig.
 status: instrumented — awaiting empirical evidence
 
-## Bug 3 — _kahn_topo_sort 31 Zyklen auf 38-Tabellen-Schema 🔬 INSTRUMENTIERT
+## Bug 3 — _kahn_topo_sort Zyklen auf echtem Schema ✅ FIX ANGEWENDET (awaiting triage.sh-Bestaetigung)
+
+ROOT-CAUSE (empirisch via triage.sh, instrumentierte Diagnose hat geliefert): das reale Schema hat
+ECHTE MUTUAL-FK-2-ZYKLEN: public.users<->public.organisations UND public.users<->public.profiles.
+Kahn setzt DAG voraus -> die SCC {users,organisations,profiles} + ALLES transitiv davon Abhaengige
+(36/43, inkl. alle crm.* via accounts->tenant_orgs->organisations) blieben "Rest" und wurden
+alphabetisch ans Ende gehaengt. Nach dem `reversed()` landete public.tenant_orgs VOR crm.accounts
+-> test_06-Assertion (crm vor public) rot + FK-Violation-Risiko beim Cleanup.
+
+FIX (Design (A)+(B), nerve_app ohne Superuser):
+  (A) _schema_introspect._kahn_topo_sort zyklus-bewusst: bei leerer Queue + Rest-Knoten wird EINE
+      Zyklus-Kante bewusst gebrochen (Rest-Knoten mit kleinstem residualem reverse_in_degree
+      freigegeben, geloggt), dann Kahn fortgesetzt. ALLE Nicht-Zyklus-Kanten (inkl. cross-schema
+      crm->public) bleiben erhalten -> crm-vor-public-Order korrekt (test_06 gruen); nur INNERHALB
+      eines Mutual-Paares keine perfekte Order.
+  (B) conftest._fk_safe_delete_rows (NEU): FK-violation-robustes Loeschen — SAVEPOINT pro Tabelle
+      (SQLAlchemy begin_nested / psycopg2 SAVEPOINT), FK-Violation rollt nur den Savepoint zurueck,
+      fehlgeschlagene Tabellen werden in Folge-Runden erneut versucht bis 0 Fortschritt. Loest Zyklen
+      OHNE Superuser/session_replication_role/DEFERRABLE. Beide DELETE-Pfade (autouse-Waechter
+      Auto-Delete + cleanup_rows) routen jetzt durch den Helfer (Duplikat-Delete-Loops entfernt).
+  Option (C) session_replication_role=replica verworfen (braucht Superuser, nerve_app hat das nicht).
+HARD-STALL (Q3, selbst aufgeloest, da Gemini-CLI headless nicht lief): Retry-Loop reicht fuer
+Test-Row-Cleanup (Test-Rows referenzieren ~nie einander; echte mutual-referencing Rows sind ohne
+DEFERRABLE gar nicht einfuegbar). Bei dennoch-Stall: laute Warnung + missing/mutated-Guard/POST-SUITE
+bleiben fail-closed Backstop. KEIN NULL-FK-Hack noetig.
+NEBENFIX: _CLEANUP_FK_ORDER-Fallback-Typo public.objection_event -> objection_events korrigiert.
+verification: py_compile OK; grep bestaetigt cycle-break + Helfer-Wiring beider Pfade. Voll-Gruen +
+keine-FK-Violation via Claudian-triage.sh test_06 (Server). Gemini-3.-Sicht-Konsult vorbereitet
+(_green_bug3_gemini_PROMPT.md im Phasen-Verzeichnis), CLI lief headless nicht -> optional interaktiv.
+status: fix-applied (awaiting empirical triage.sh confirmation)
+
+### (historisch) Bug 3 — vorherige Instrumentierungs-Phase
 
 symptom: `[PGTEST-INTROSPECT] 31 Knoten mit Zyklen ans Ende angehaengt` auf dem echten public-Schema.
 Unit-Tests (kleine Graphen) gruen, aber 31/38 Rest riecht nach echtem Mutual-FK-Zyklus nahe einem
