@@ -174,16 +174,20 @@ def primary_key_column(conn_or_cur, table, schema='public'):
             conn_or_cur.execute(pk_query, (qualified,))
             rows = conn_or_cur.fetchall()
         else:
-            # SQLAlchemy Connection
+            # SQLAlchemy Connection. WICHTIG: KEIN named-param mit ::cast mischen —
+            # `:tbl::regclass` laesst SQLAlchemy/psycopg2 mit "syntax error at or near ':'"
+            # crashen (empirisch via triage.sh gefunden, Phase 08.23.2.PGTEST.GREEN Bug 2:
+            # JEDE Tabelle warf -> pk_count=0 -> alles in foundation_register -> Cache leer).
+            # Stattdessen den katalog-abgeleiteten Namen inline interpolieren (injection-sicher,
+            # gleiche Technik wie _fetch_fk_edges) und das regclass-Cast als reines Literal lassen.
             from sqlalchemy import text as sa_text
             result = conn_or_cur.execute(
                 sa_text(
                     "SELECT a.attname FROM pg_index i "
                     "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) "
-                    "WHERE i.indrelid = :tbl::regclass AND i.indisprimary "
+                    f"WHERE i.indrelid = '{qualified}'::regclass AND i.indisprimary "
                     "ORDER BY a.attname"
-                ),
-                {"tbl": qualified},
+                )
             )
             rows = result.fetchall()
     except Exception as e:
@@ -460,46 +464,14 @@ def _fetch_pk_for_table(conn, schema, table):
     """Liefert (pk_col_name, pk_count) fuer eine einzelne Tabelle.
     pk_col_name: Spaltenname wenn pk_count==1, sonst None.
     pk_count: 0=kein PK, 1=single PK, >1=composite PK.
-    """
-    qualified = _schema_qualified(schema, table)
-    pk_query = (
-        "SELECT a.attname FROM pg_index i "
-        "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) "
-        "WHERE i.indrelid = %s::regclass AND i.indisprimary "
-        "ORDER BY a.attname"
-    )
-    try:
-        if _is_psycopg2_conn(conn):
-            cur = conn.cursor()
-            cur.execute(pk_query, (qualified,))
-            rows = cur.fetchall()
-            cur.close()
-        else:
-            from sqlalchemy import text as sa_text
-            result = conn.execute(
-                sa_text(
-                    "SELECT a.attname FROM pg_index i "
-                    "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) "
-                    "WHERE i.indrelid = :tbl::regclass AND i.indisprimary "
-                    "ORDER BY a.attname"
-                ),
-                {"tbl": qualified},
-            )
-            rows = result.fetchall()
-    except Exception as e:
-        log.warning(
-            "[PGTEST-INTROSPECT] _fetch_pk_for_table Fehler fuer %s: %r", qualified, e
-        )
-        return None, 0
 
-    pk_cols = [r[0] for r in rows]
-    count = len(pk_cols)
-    if count == 1:
-        return pk_cols[0], 1
-    elif count == 0:
-        return None, 0
-    else:
-        return None, count
+    KONSOLIDIERT (Phase 08.23.2.PGTEST.GREEN Bug 2): delegiert an primary_key_column —
+    EINE Quelle der Wahrheit fuer die PK-Katalog-Abfrage. Vorher war die Abfrage hier dupliziert
+    und trug denselben `:tbl::regclass`-named-param-Bug (-> Fehler-Flood -> leerer Cache).
+    Arg-Reihenfolge bewusst verschieden: hier (conn, schema, table), primary_key_column nimmt
+    (conn_or_cur, table, schema) — die Delegation mappt sie korrekt.
+    """
+    return primary_key_column(conn, table, schema)
 
 
 def _is_psycopg2_conn(conn):
