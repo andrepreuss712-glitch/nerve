@@ -55,6 +55,54 @@ def _seed_test_tenant(engine):
     return tenant_id
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _pgtest_base_seed():
+    """Session-Scope Base-Seed: 1 Organisation(id=1) + 1 User(id=1) gegen nerve_test fuer FK-tragende
+    generische Tests (user_id=1/org_id=1 auf PUBLIC-Tabellen) — sonst FK/NOT-NULL-Bruch auf der zero-data PG.
+
+    A-1-Abhaengigkeit: die MODUL-Engine (database.db.engine/SessionLocal) ist beim Import bereits nerve_test-PG,
+    weil das Gate (Plan 02 FIX1, T-PGTEST-18) DATABASE_URL=postgresql://nerve_app@/nerve_test exportiert
+    (commit d7d8358). Daher seedet diese Fixture gegen live nerve_test mit aktiver RLS-Machinerie.
+
+    ORM-Pfad PFLICHT (NICHT RAW-SQL): is_superadmin/is_test_user/market/language sind nullable=False mit nur
+    PYTHON-default= (kein server_default) -> ein RAW-INSERT wuerde sie NICHT fuellen -> NOT-NULL-Bruch
+    (models.py:19-135 verifiziert). Der Org-INSERT feuert trg_mk_tenant_org -> tenant_orgs-Row automatisch
+    (KEIN manueller Insert, sonst UNIQUE(legacy_org_id), F1-Lektion). Sequenz-Advance nach dem Insert
+    (PG-Gotcha: explizite id advanced die serial-Sequenz NICHT -> spaeterer serieller Insert retry'te id=1).
+    Commit auf eigener Session -> ueberlebt den function-scoped db_session-Rollback. Laeuft VOR dem
+    Baseline-Snapshot (Task 6) -> die Base-Rows gehoeren zur erlaubten Baseline (kein Leak).
+    """
+    if not os.environ.get('TEST_DATABASE_URL'):
+        # Kein Seed lokal (kein sqlite-Fallback) — nur im Gate scharf.
+        yield
+        return
+
+    import database.db as dbmod
+    from database.models import Organisation, User
+    session = dbmod.SessionLocal()
+    try:
+        # Idempotenz: falls die Base-Rows schon existieren (Re-Run gegen nicht frisch gedroppte DB) -> skip.
+        if session.get(Organisation, 1) is None:
+            org = Organisation(id=1, name="[PGTEST-BASE] org")
+            session.add(org)
+            session.flush()                 # feuert trg_mk_tenant_org -> tenant_orgs-Row auto
+            user = User(id=1, org_id=1, email="pgtest-base@nerve.local")
+            # is_superadmin/is_test_user/market/language kommen aus Python-default= (ORM-Pfad).
+            session.add(user)
+            session.commit()
+            # Sequenz-Advance (PG explicit-id-no-sequence-advance-Gotcha).
+            session.execute(text(
+                "SELECT setval('organisations_id_seq', (SELECT COALESCE(MAX(id),1) FROM organisations))"
+            ))
+            session.execute(text(
+                "SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id),1) FROM users))"
+            ))
+            session.commit()
+    finally:
+        session.close()
+    yield
+
+
 @pytest.fixture
 def sample_state():
     """Factory returning a fresh state dict with all Phase 04.8 keys at defaults."""
