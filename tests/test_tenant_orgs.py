@@ -1,111 +1,167 @@
 """Integration-Assertion tests for Wave 1 (Phase 08.23.2.G-MEET): tenant_orgs seed,
 dual-write contract, and calls.tenant_id backfill.
 
-CLAUDE.md Test-Qualitaets-Regel: every test below is an Integration-Assertion
-(DB-write/read with an assertion on the resulting row/state) against the in-memory
-SQLite schema built from database.models (the ORM is the test-schema source per
-CLAUDE.md Punkt 21). None is a source-presence false-green.
+PORTIERT auf nerve_test-PG (Phase 08.23.2.PGTEST Task 4, F1 + Delta-Review-2).
 
-SQLite-vs-Postgres boundary (HONEST note): SQLite in-memory has NO triggers and no
-`ON CONFLICT (col) DO NOTHING` DDL semantics, so the *live* Postgres dual-write trigger
-`trg_mk_tenant_org` and the migration's post-backfill `RAISE EXCEPTION` guard are NOT
-exercised here — they are verified server-side on Production via the plan's
-`<live>`/`<migrate>` inspect.sh / psql checks (migration 0011). What IS tested here:
-  - ORM/DDL schema parity: tenant_orgs builds from models.py with the right columns,
-    legacy_org_id is UNIQUE NOT NULL FK -> organisations.id (the ON CONFLICT target),
-    calls.tenant_id stays nullable.
-  - The seed invariant (1 tenant_org per organisation) and the backfill-join semantics
-    (calls.tenant_id = tenant_orgs.id bridged via users.org_id) as real row assertions.
-  - Idempotency: the UNIQUE(legacy_org_id) constraint that the trigger's ON CONFLICT
-    relies on actually rejects a duplicate bridge row (IntegrityError).
+CLAUDE.md Test-Qualitaets-Regel: every test below is an Integration-Assertion (DB-write/read with an
+assertion on the resulting row/state) against the REAL nerve_test-PG (db_session aus conftest, Plan 01).
+None is a source-presence false-green.
+
+PG-Trigger-Semantik (F1): auf nerve_test feuert der AFTER-INSERT-Trigger `trg_mk_tenant_org`
+(Migration 0011) bei JEDEM `INSERT organisations` automatisch die passende tenant_orgs-Row
+(ON CONFLICT (legacy_org_id) DO NOTHING). Daher ERWARTET dieser Test die Trigger-Row und liest sie
+zurueck (test_rls_isolation.py:33-54-Muster) statt sie Python-seitig zu doppeln — ein manueller
+TenantOrg-Insert wuerde sonst auf UNIQUE(legacy_org_id) kollidieren WO der Test es nicht erwartet.
+Der ECHTE Idempotenz-Test (erwarteter IntegrityError) bleibt: EIN forcierter Duplikat-Insert nach der
+schon vorhandenen Trigger-Row provoziert die UNIQUE-Verletzung.
+
+ID-Scoping (Delta-Review-2 BLOCKER): nerve_test ist PERSISTENT (D-03) + traegt den session-scoped
+Base-Seed (Org id=1 + dessen Trigger-tenant_org + User id=1) und generische [PGTEST-GENERIC]-Tenants.
+JEDE count/all-Assertion + die Helper sind daher auf die TEST-EIGENEN Org/User/TenantOrg-IDs gescoped
+(filter(...id.in_(own_ids))) — NIEMALS global, sonst sehen sie die Base-Seed-Rows -> False-Red.
+
+Reverse-FK-Teardown laeuft in der cleanup_tracker-Fixture-POST-yield-Sektion (MED-1, runs even on
+assertion failure) -> kein State-Leak in nerve_test; der Base-Seed (id=1) bleibt unangetastet.
 """
 import uuid
 
 import pytest
-from sqlalchemy import inspect as sa_inspect
+from sqlalchemy import inspect as sa_inspect, text
 from sqlalchemy.exc import IntegrityError
 
 from database.models import TenantOrg, Organisation, User, Call
 
 
-def _mk_org(db, name):
+@pytest.fixture
+def cleanup_tracker(db_session):
+    """Tracks test-created org/user/call/tenant_org IDs and reverse-FK-deletes them in its POST-yield
+    section (MED-1: runs even if a test asserts/fails). NEVER touches the Base-Seed (id=1). The fixture
+    yields a dict the test registers its created IDs into.
+
+    NOTE (#8, T-PGTEST-34): the teardown lives in THIS fixture (fixtures may yield), NEVER as a `yield`
+    in a plain test body (that would silently turn the test into a skipped generator = false-green)."""
+    ids = {"calls": [], "users": [], "org_ids": []}
+    yield ids
+    try:
+        # reverse-FK: calls -> users -> tenant_orgs (by legacy_org_id) -> organisations.
+        if ids["calls"]:
+            db_session.execute(
+                text("DELETE FROM public.calls WHERE id = ANY(:c)"),
+                {"c": [str(x) for x in ids["calls"]]},
+            )
+        if ids["users"]:
+            db_session.execute(
+                text("DELETE FROM public.users WHERE id = ANY(:u)"), {"u": list(ids["users"])}
+            )
+        if ids["org_ids"]:
+            db_session.execute(
+                text("DELETE FROM public.tenant_orgs WHERE legacy_org_id = ANY(:o)"),
+                {"o": list(ids["org_ids"])},
+            )
+            db_session.execute(
+                text("DELETE FROM public.organisations WHERE id = ANY(:o)"), {"o": list(ids["org_ids"])}
+            )
+        db_session.commit()
+    except Exception as _te:
+        print(f"[PGTEST-CLEANUP] tenant_orgs teardown failed (non-fatal): {_te!r}")
+        try:
+            db_session.rollback()
+        except Exception:
+            pass
+
+
+def _mk_org(db, name, track=None):
+    """INSERT organisations -> trg_mk_tenant_org auto-creates the tenant_orgs row. Returns the org
+    (with .id). NO manual TenantOrg insert (would collide on UNIQUE(legacy_org_id))."""
     o = Organisation(name=name)
     db.add(o)
-    db.flush()
+    db.flush()  # fires trg_mk_tenant_org -> tenant_orgs row auto-created
+    if track is not None:
+        track["org_ids"].append(o.id)
     return o
 
 
-def _seed_tenant_orgs(db):
-    """Python equivalent of migration 0011 step 2 (idempotent seed: one row per org)."""
-    existing = {t.legacy_org_id for t in db.query(TenantOrg).all()}
-    for org in db.query(Organisation).all():
-        if org.id in existing:
-            continue  # ON CONFLICT (legacy_org_id) DO NOTHING analogue
-        db.add(TenantOrg(id=str(uuid.uuid4()), legacy_org_id=org.id, name=org.name))
-    db.flush()
+def _read_back_tenant_org(db, org_id):
+    """Read the trigger-created tenant_orgs row for a given org (test_rls_isolation.py:33-54 pattern)."""
+    return db.query(TenantOrg).filter_by(legacy_org_id=org_id).one()
 
 
-def _backfill_calls_tenant_id(db):
-    """Python equivalent of migration 0011 step 4 (UPDATE join calls->users->orgs->tenant_orgs)."""
-    bridge = {t.legacy_org_id: t.id for t in db.query(TenantOrg).all()}
-    org_of_user = {u.id: u.org_id for u in db.query(User).all()}
-    for call in db.query(Call).filter(Call.tenant_id.is_(None)).all():
+def _backfill_calls_tenant_id(db, own_org_ids, own_user_ids):
+    """Python equivalent of migration 0011 step 4 (UPDATE join calls->users->orgs->tenant_orgs),
+    SCOPED to the test's own orgs/users (Delta-Review-2: never iterate global query(...).all())."""
+    bridge = {
+        t.legacy_org_id: t.id
+        for t in db.query(TenantOrg).filter(TenantOrg.legacy_org_id.in_(own_org_ids)).all()
+    }
+    org_of_user = {
+        u.id: u.org_id
+        for u in db.query(User).filter(User.id.in_(own_user_ids)).all()
+    }
+    for call in (db.query(Call)
+                   .filter(Call.user_id.in_(own_user_ids))
+                   .filter(Call.tenant_id.is_(None)).all()):
         org_id = org_of_user.get(call.user_id)
         if org_id is not None and org_id in bridge:
             call.tenant_id = bridge[org_id]
     db.flush()
 
 
-def test_seed_one_row_per_org(db_session):
-    a = _mk_org(db_session, "Org A")
-    b = _mk_org(db_session, "Org B")
-    c = _mk_org(db_session, "Org C")
-    _seed_tenant_orgs(db_session)
+def test_seed_one_row_per_org(db_session, cleanup_tracker):
+    """The Wave-1 trigger creates exactly one tenant_orgs row per organisation. Assertions are scoped
+    to the test's own 3 orgs (the persistent Base-Seed Org id=1 + generic tenants must NOT count)."""
+    a = _mk_org(db_session, "Org A", cleanup_tracker)
+    b = _mk_org(db_session, "Org B", cleanup_tracker)
+    c = _mk_org(db_session, "Org C", cleanup_tracker)
+    own_org_ids = [a.id, b.id, c.id]
 
-    assert db_session.query(TenantOrg).count() == db_session.query(Organisation).count() == 3
-    legacy_ids = sorted(t.legacy_org_id for t in db_session.query(TenantOrg).all())
-    assert legacy_ids == sorted([a.id, b.id, c.id])  # every org.id appears exactly once
+    # Scoped (Delta-Review-2): NOT a global count -> Base-Seed/generic tenants don't poison it.
+    assert (db_session.query(Organisation)
+            .filter(Organisation.id.in_(own_org_ids)).count() == 3)
+    assert (db_session.query(TenantOrg)
+            .filter(TenantOrg.legacy_org_id.in_(own_org_ids)).count() == 3)
+
+    legacy_ids = sorted(
+        t.legacy_org_id for t in
+        db_session.query(TenantOrg).filter(TenantOrg.legacy_org_id.in_(own_org_ids)).all()
+    )
+    assert legacy_ids == sorted(own_org_ids)  # every own org.id appears exactly once
 
 
-def test_dualwrite_trigger_fires(db_session):
-    """Dual-write CONTRACT (the live trigger is verified on Production): a freshly created
-    organisation gets exactly one bridged tenant_orgs row with legacy_org_id == new org id.
-    Here we drive the same INSERT the trigger would, then assert the bridge row exists."""
-    _seed_tenant_orgs(db_session)
-    new_org = _mk_org(db_session, "Brand New GmbH")
-    # trigger analogue: AFTER INSERT ON organisations -> INSERT tenant_orgs(...NEW.id, NEW.name)
-    db_session.add(TenantOrg(id=str(uuid.uuid4()), legacy_org_id=new_org.id, name=new_org.name))
-    db_session.flush()
+def test_dualwrite_trigger_fires(db_session, cleanup_tracker):
+    """Dual-write CONTRACT exercised on REAL PG: a freshly created organisation gets exactly one
+    bridged tenant_orgs row with legacy_org_id == new org id (the trigger fires; we read it back)."""
+    new_org = _mk_org(db_session, "Brand New GmbH", cleanup_tracker)
 
     rows = db_session.query(TenantOrg).filter_by(legacy_org_id=new_org.id).all()
-    assert len(rows) == 1
+    assert len(rows) == 1                       # trigger created exactly one row
     assert rows[0].name == "Brand New GmbH"
 
 
-def test_dualwrite_idempotent(db_session):
-    """The trigger uses ON CONFLICT (legacy_org_id) DO NOTHING, which REQUIRES a UNIQUE
-    constraint on legacy_org_id. Prove that constraint rejects a duplicate bridge row."""
-    org = _mk_org(db_session, "Solo Org")
-    db_session.add(TenantOrg(id=str(uuid.uuid4()), legacy_org_id=org.id, name=org.name))
-    db_session.flush()
+def test_dualwrite_idempotent(db_session, cleanup_tracker):
+    """The trigger uses ON CONFLICT (legacy_org_id) DO NOTHING, which REQUIRES a UNIQUE constraint on
+    legacy_org_id. On PG the trigger ALREADY created the row for the new org -> ONE forced duplicate
+    insert provokes the IntegrityError the ON CONFLICT relies on."""
+    org = _mk_org(db_session, "Solo Org", cleanup_tracker)
+    # Trigger already created tenant_orgs(legacy_org_id=org.id). One forced duplicate -> UNIQUE error.
     db_session.add(TenantOrg(id=str(uuid.uuid4()), legacy_org_id=org.id, name=org.name))
     with pytest.raises(IntegrityError):
         db_session.flush()
     db_session.rollback()
 
 
-def test_calls_tenant_id_backfilled(db_session):
-    org = _mk_org(db_session, "Backfill Org")
-    _seed_tenant_orgs(db_session)
-    tenant = db_session.query(TenantOrg).filter_by(legacy_org_id=org.id).one()
-    user = User(email="u@example.com", passwort_hash="x", org_id=org.id)
+def test_calls_tenant_id_backfilled(db_session, cleanup_tracker):
+    org = _mk_org(db_session, "Backfill Org", cleanup_tracker)
+    tenant = _read_back_tenant_org(db_session, org.id)
+    user = User(email=f"u-{uuid.uuid4().hex[:8]}@example.com", passwort_hash="x", org_id=org.id)
     db_session.add(user)
     db_session.flush()
+    cleanup_tracker["users"].append(user.id)
     call = Call(id=str(uuid.uuid4()), user_id=user.id, call_mode="cold_call", tenant_id=None)
     db_session.add(call)
     db_session.flush()
+    cleanup_tracker["calls"].append(call.id)
 
-    _backfill_calls_tenant_id(db_session)
+    _backfill_calls_tenant_id(db_session, [org.id], [user.id])
 
     db_session.refresh(call)
     assert call.tenant_id == tenant.id  # bridged via users.org_id -> tenant_orgs.id
@@ -118,23 +174,27 @@ def test_calls_tenant_id_stays_nullable(db_session):
     assert col.nullable is True
 
 
-def test_no_orphan_calls_after_backfill(db_session):
-    """Post-backfill ROW STATE: after a successful backfill over known-org users, no call
-    retains NULL tenant_id (the migration's RAISE guard would have aborted the deploy)."""
-    org = _mk_org(db_session, "Total Join Org")
-    _seed_tenant_orgs(db_session)
-    user = User(email="t@example.com", passwort_hash="x", org_id=org.id)
+def test_no_orphan_calls_after_backfill(db_session, cleanup_tracker):
+    """Post-backfill ROW STATE (scoped to the test's own calls): after a successful backfill over
+    known-org users, none of THIS TEST's calls retains NULL tenant_id."""
+    org = _mk_org(db_session, "Total Join Org", cleanup_tracker)
+    user = User(email=f"t-{uuid.uuid4().hex[:8]}@example.com", passwort_hash="x", org_id=org.id)
     db_session.add(user)
     db_session.flush()
+    cleanup_tracker["users"].append(user.id)
+    own_call_ids = []
     for _ in range(3):
-        db_session.add(Call(id=str(uuid.uuid4()), user_id=user.id, call_mode="cold_call", tenant_id=None))
-    db_session.flush()
+        call = Call(id=str(uuid.uuid4()), user_id=user.id, call_mode="cold_call", tenant_id=None)
+        db_session.add(call)
+        db_session.flush()
+        cleanup_tracker["calls"].append(call.id)
+        own_call_ids.append(call.id)
 
-    _backfill_calls_tenant_id(db_session)
+    _backfill_calls_tenant_id(db_session, [org.id], [user.id])
 
     orphan_count = (
         db_session.query(Call)
-        .join(User, Call.user_id == User.id)
+        .filter(Call.id.in_(own_call_ids))
         .filter(Call.tenant_id.is_(None))
         .count()
     )
