@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import uuid
@@ -5,6 +6,8 @@ import uuid
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+
+from tests._schema_introspect import derive_baseline_tables, primary_key_column
 
 # Ensure repo root is on sys.path so `from services.ki_logik import ...`
 # works regardless of pytest invocation directory.
@@ -193,8 +196,14 @@ def cleanup_rows(conn_or_session, spec, tenant=None):
     except Exception:
         pass
 
-    ordered = [t for t in _CLEANUP_FK_ORDER if t in norm]
-    ordered += [t for t in norm if t not in _CLEANUP_FK_ORDER]
+    # Loeschorder: Modul-Level-Cache _DERIVED_FK_ORDER (cross-schema, katalog-abgeleitet, Fund #8) hat
+    # Vorrang. Ist der Cache leer (non-PG/SQLite-Skip-Pfad), faellt cleanup_rows auf den hardcoded
+    # _CLEANUP_FK_ORDER zurueck (best-effort). KEINE Signatur-Aenderung, KEINE per-call DB-Query.
+    # Der dynamische Cache liefert dieselbe crm-vor-public-Order wie _CLEANUP_FK_ORDER (beide enthalten
+    # crm.accounts -> public.tenant_orgs als cross-schema FK-Kante).
+    _fk_order = _DERIVED_FK_ORDER if _DERIVED_FK_ORDER else _CLEANUP_FK_ORDER
+    ordered = [t for t in _fk_order if t in norm]
+    ordered += [t for t in norm if t not in _fk_order]
 
     try:
         if is_psycopg2:
@@ -231,7 +240,6 @@ def cleanup_rows(conn_or_session, spec, tenant=None):
         # #5: kaputter Teardown LAUT machen (Attribution), nicht still verschlucken.
         msg = f"[PGTEST-CLEANUP] cleanup_rows FEHLGESCHLAGEN fuer spec={norm} tenant={tenant}: {e!r}"
         try:
-            import logging
             logging.getLogger(__name__).warning(msg)
         except Exception:
             print(msg, file=sys.stderr)
@@ -255,31 +263,68 @@ def _leak_cleanup_seed_tenant(engine, org_id, tenant_org_pk):
         sess.close()
 
 
-# ── Phase 08.23.2.PGTEST Extension 2 — Baseline-Cleanup-Waechter (PUBLIC.*-only, HYBRID) ──────────
-# Relevante PUBLIC committed-data-Tabellen, deren {pk: xmin}-Mapping (#7 — per-Row-Change-Token, NICHT nur
-# das PK-Set) am Session-Start gefroren + nach jedem Test geprueft wird. crm.* + training.transcript_archive
-# sind NICHT hier — sie werden POST-SUITE in deploy.sh (Plan 02) via `sudo -u postgres psql` geprueft
-# (nerve_app saehe crm.* nur tenant-gefiltert; HYBRID, André locked).
-_BASELINE_PUBLIC_TABLES = [
-    "organisations", "users", "tenant_orgs", "api_rates", "fixed_costs", "prompt_versions",
-    "training_scenarios", "changelog", "calls", "conversation_logs", "api_cost_log",
-    "revenue_log", "ewb_ratings", "profiles", "profile_opener", "exchange_rates",
-]
+# ── Phase 08.23.2.PGTEST.GREEN Plan 01 — Katalog-abgeleiteter Baseline-Waechter (PUBLIC.*-only, HYBRID) ──
+# Ersetzt die hardcodierte _BASELINE_PUBLIC_TABLES-Liste durch Katalog-Ableitung aus pg_constraint
+# (Req-9, D-G16/D-G17/D-G18). Der Waechter snapshottet / loescht NUR public.* (D-G04 erhalten,
+# Fund #8). crm.* + training.transcript_archive bleiben UNVERAENDERT POST-SUITE-Check in deploy.sh
+# (Plan 02, sudo -u postgres psql, peer-auth) — nerve_app saehe crm.* nur tenant-gefiltert.
+#
+# CROSS-SCHEMA-CACHE (Fund #8): der Modul-Level-Cache wird EINMAL bei Session-Start ueber ALLE drei
+# Schemas (public+crm+training) gefuellt, damit cleanup_rows (das crm UND public raeumt) eine globale
+# crm-vor-public-Loeschorder bekommt. Wuerde man den Cache nur mit schema='public' fuellen, fehlten
+# crm-Tabellen im _DERIVED_FK_ORDER -> public wird zuerst geloescht -> crm.accounts->public.tenant_orgs
+# FK-Violation -> jeder crm+public-raeumende Test crasht (Regression #3-Fold).
+# Der Waechter-Snapshot (_snapshot_public_tables) filtert die table_list LOKAL auf startswith('public.').
+#
+# CACHE-FILL-GARANTIE (Fund #7): _baseline_snapshot fordert _baseline_schema als Fixture-PARAMETER
+# (Dependency) an -> pytest baut _baseline_schema (und damit den Cross-Schema-Modul-Cache) auf, BEVOR
+# _baseline_snapshot laeuft und BEVOR ein cleanup_rows-Fallback triggern kann. Ohne diese Dependency
+# faellt cleanup_rows still auf _CLEANUP_FK_ORDER zurueck -> Req-9 wirkungslos (Meta-False-Green).
+
+# Modul-Level-Globals (gesetzt von _baseline_schema-Fixture, EINMAL bei Session-Start).
+# _DERIVED_FK_ORDER: globale cross-schema reverse-FK-Loeschorder (Kind-vor-Eltern).
+#   crm.* VOR public.* (z.B. crm.accounts vor public.tenant_orgs — echte NERVE-Kante 2026-06-16).
+# _DERIVED_PK_COLS: {qualified_table: pk_col_name} NUR fuer single-PK-Tabellen (auto-delete-faehig).
+#   composite-PK + no-PK Tabellen sind NICHT enthalten (sie liegen im foundation_register, Fund #6/#9).
+_DERIVED_FK_ORDER = []  # Wird von _baseline_schema gefuellt (cross-schema, sessions-scoped)
+_DERIVED_PK_COLS = {}   # Wird von _baseline_schema gefuellt ({qualified_tbl: pk_col_name})
 
 
-def _snapshot_public_tables(read_engine):
+def _snapshot_public_tables(read_engine, public_table_list=None):
     """Lies pro relevanter PUBLIC Tabelle ein {pk: xmin_text}-Mapping (#7 per-Row-Change-Token) ueber die
     EIGENE session-scoped Read-Engine (#2 — NICHT die per-Test umgebundene MODUL-SessionLocal, sonst
     UnboundExecutionError im zuletzt-laufenden Waechter-Teardown). Tabellen, die (noch) nicht existieren,
-    werden best-effort uebersprungen. Liefert {tabelle: {pk: xmin_text}}."""
+    werden best-effort uebersprungen. Liefert {'schema.table': {pk: xmin_text}}.
+
+    Phase 08.23.2.PGTEST.GREEN Plan 01 (Req-9/D-G17/Fund #8):
+    public_table_list: KATALOG-ABGELEITETE Liste der schema-qualifizierten public-Tabellen aus
+    _baseline_schema. Falls None (Legacy/Skip-Pfad), nutzt den Modul-Cache oder leere Menge.
+
+    WAECHTER PUBLIC-ONLY (Fund #8, D-G04 erhalten): diese Funktion iteriert NUR public.* Eintraege,
+    selbst wenn public_table_list cross-schema Eintraege enthaelt — gefiltert via startswith('public.').
+    crm.*/training.* werden NICHT snapshot-ueberwacht (nerve_app saehe crm.* nur tenant-gefiltert).
+
+    PK-Spalte: aus _DERIVED_PK_COLS (katalog-abgeleitet). Fallback 'id' nur bei leerem Cache.
+    Composite-PK-Tabellen sind NICHT in _DERIVED_PK_COLS und daher NICHT snapshot-ueberwacht —
+    das ist eine bekannte, offen im foundation_register dokumentierte Tor-Luecke (Fund #9, heute leer).
+    """
     snap = {}
-    for tbl in _BASELINE_PUBLIC_TABLES:
+    # public_table_list ist die cross-schema list (crm+public+training), lokal auf public gefiltert
+    if public_table_list is not None:
+        watch_list = [t for t in public_table_list if t.startswith('public.')]
+    else:
+        # Legacy/Skip-Pfad: kein Cache verfuegbar -> leere Baseline (kein Watch)
+        watch_list = []
+
+    for qualified_tbl in watch_list:
+        # PK-Spalte aus Katalog-abgeleitetem Cache, Fallback 'id' bei leerem Cache
+        pk_col = _DERIVED_PK_COLS.get(qualified_tbl, 'id')
         try:
             with read_engine.connect() as conn:
                 rows = conn.execute(
-                    text(f"SELECT id, xmin::text FROM public.{tbl}")
+                    text(f"SELECT {pk_col}, xmin::text FROM {qualified_tbl}")
                 ).fetchall()
-            snap[tbl] = {r[0]: r[1] for r in rows}
+            snap[qualified_tbl] = {r[0]: r[1] for r in rows}
         except Exception:
             # Tabelle existiert nicht / kein id-PK -> nicht Teil der Baseline-Pruefung.
             continue
@@ -322,7 +367,73 @@ def _baseline_guard_engine():
 
 
 @pytest.fixture(scope="session")
-def _baseline_snapshot(_pgtest_base_seed, _baseline_guard_engine):
+def _baseline_schema(_baseline_guard_engine):
+    """Session-scoped Katalog-Ableitung: fuellt EINMAL die Modul-Level-Globals
+    _DERIVED_FK_ORDER und _DERIVED_PK_COLS aus pg_constraint (CROSS-SCHEMA, Fund #8).
+
+    CROSS-SCHEMA-CACHE (Fund #8): ruft derive_baseline_tables ueber ALLE drei Schemas
+    ('public','crm','training'). Damit enthaelt _DERIVED_FK_ORDER cross-schema Kanten
+    (z.B. crm.accounts -> public.tenant_orgs) und liefert crm-Kinder VOR public-Eltern —
+    exakt wie der hardcodierte _CLEANUP_FK_ORDER (cleanup_rows crm vor public fuer D-G04-crm-Writer).
+
+    CACHE-FILL-GARANTIE (Gemini-Re-Review R2 / Fund #7): diese Fixture wird als Dependency
+    von _baseline_snapshot angefordert -> der Cache ist garantiert gefuellt, BEVOR der erste
+    cleanup_rows-Fallback triggern kann. Ohne diese explizite Dependency wuerde cleanup_rows
+    still auf _CLEANUP_FK_ORDER zurueckfallen -> Req-9 wirkungslos (Meta-False-Green).
+
+    Liefert die public-gefilterte table_list (fuer _snapshot_public_tables).
+    """
+    global _DERIVED_FK_ORDER, _DERIVED_PK_COLS
+    if _baseline_guard_engine is None:
+        yield None
+        return
+
+    try:
+        with _baseline_guard_engine.connect() as conn:
+            table_list, fk_order, foundation_register = derive_baseline_tables(
+                conn,
+                schemas=('public', 'crm', 'training'),  # CROSS-SCHEMA (Fund #8)
+            )
+
+        # Modul-Level-Cache fuellen (einmal, CROSS-SCHEMA)
+        _DERIVED_FK_ORDER = fk_order
+        # PK-Cols: nur single-PK-Tabellen aus derive_baseline_tables (Ergebnis ist baseline_table_list)
+        # Wir brauchen die PK-Cols pro Tabelle. derive_baseline_tables liefert nur die Liste,
+        # nicht das pk_cols dict direkt. Wir rekonstruieren sie aus einer zweiten Pass:
+        pk_cols_built = {}
+        with _baseline_guard_engine.connect() as conn:
+            for qualified_tbl in table_list:
+                parts = qualified_tbl.split('.', 1)
+                if len(parts) == 2:
+                    schema_name, table_name = parts
+                    from tests._schema_introspect import _fetch_pk_for_table
+                    pk_col, pk_count = _fetch_pk_for_table(conn, schema_name, table_name)
+                    if pk_count == 1 and pk_col:
+                        pk_cols_built[qualified_tbl] = pk_col
+        _DERIVED_PK_COLS = pk_cols_built
+
+        # foundation_register loggen (Transparenz, Req-7)
+        if foundation_register:
+            _log = logging.getLogger(__name__)
+            _log.info(
+                "[PGTEST-INTROSPECT] Foundation-Register (exkludierte Tabellen): %s",
+                list(foundation_register.keys()),
+            )
+
+        yield table_list  # public-gefiltert wird in _baseline_snapshot gemacht
+
+    except Exception as e:
+        _log = logging.getLogger(__name__)
+        _log.warning(
+            "[PGTEST-INTROSPECT] _baseline_schema: derive_baseline_tables fehlgeschlagen (%r) "
+            "-> Modul-Cache bleibt leer, cleanup_rows faellt auf _CLEANUP_FK_ORDER zurueck (best-effort).",
+            e,
+        )
+        yield None
+
+
+@pytest.fixture(scope="session")
+def _baseline_snapshot(_pgtest_base_seed, _baseline_guard_engine, _baseline_schema):
     """Session-Start-Snapshot der PUBLIC.*-Baseline ({pk: xmin}, #7). Haengt am Base-Seed (Task 4) -> laeuft
     danach. #9 (Delta-Review-6, BLOCKER): fuehrt als ALLERERSTE Aktion `from app import app` aus, BEVOR der
     {pk:xmin}-Snapshot laeuft -> erzwingt die Modul-Top-Level-Seeder (_seed_prompt_versions/_seed_ewb_v2/
@@ -330,42 +441,116 @@ def _baseline_snapshot(_pgtest_base_seed, _baseline_guard_engine):
     Baseline enthalten sind (kein First-Test-False-Red durch leere Baseline). A-1: die MODUL-Engine ist beim
     Import schon nerve_test-PG (DATABASE_URL=postgres) -> der fruehe Import seedet gegen die korrekte DB; der
     spaetere client-Rebind ist unberuehrt; sys.modules-cached -> idempotent. Reihenfolge: Base-Seed commit ->
-    `import app` (Seeder feuern) -> {pk:xmin}-Snapshot ueber die eigene Read-Engine (#2)."""
+    `import app` (Seeder feuern) -> {pk:xmin}-Snapshot ueber die eigene Read-Engine (#2).
+
+    Phase 08.23.2.PGTEST.GREEN Plan 01: nimmt jetzt _baseline_schema als Dependency (Fund #7 Cache-Fill-Garantie).
+    _baseline_schema hat den Modul-Cache (_DERIVED_FK_ORDER / _DERIVED_PK_COLS) bereits gefuellt, BEVOR
+    dieser Snapshot laeuft. _baseline_schema liefert die katalog-abgeleitete public table_list."""
     if _baseline_guard_engine is None:
         yield None
         return
     # #9: app-Import ERZWINGT die Modul-Top-Level-Seeder VOR dem Snapshot.
     from app import app as _flask_app  # noqa: F401
-    baseline = _snapshot_public_tables(_baseline_guard_engine)
+    # _baseline_schema liefert die katalog-abgeleitete table_list (cross-schema, aber gefiltert in snapshot)
+    baseline = _snapshot_public_tables(_baseline_guard_engine, public_table_list=_baseline_schema)
     yield baseline
 
 
 @pytest.fixture(autouse=True)
 def _baseline_cleanup_guard(request, _baseline_snapshot, _baseline_guard_engine):
-    """Autouse Baseline-Cleanup-Waechter (Extension 2, PUBLIC.*-only). Frueh angefordert (autouse +
-    Dependency auf _baseline_snapshot) -> sein Teardown laeuft ZULETZT, NACH dem Test-eigenen cleanup_rows-
-    Teardown (sonst saehe er noch un-aufgeraeumte Rows -> False-Positive). Liest pro PUBLIC Tabelle das
-    aktuelle {pk: xmin}-Mapping (#7) ueber die EIGENE session-scoped Read-Engine (#2, NICHT die per-Test
-    disposed MODUL-SessionLocal) und asserted == Baseline. Drift (leaked/missing/mutated PKs) -> fail-closed
-    mit nodeid + Tabelle + PKs. crm.*/training.* werden NICHT hier geprueft — POST-SUITE in deploy.sh (Plan 02,
-    sudo -u postgres psql, peer-auth). Ordering-Fallback: falls per-test-Ordering nicht greift, wuerde der
-    Drift zwar gemeldet, aber ggf. dem falschen nodeid zugeschrieben (Tradeoff dokumentiert, D-08)."""
+    """Autouse Baseline-Cleanup-Waechter (Phase 08.23.2.PGTEST.GREEN Plan 01, PUBLIC.*-only, AUTO-RESET).
+
+    SPLIT (D-G01/D-G02): Drift in 3 Kategorien:
+    - leaked (Extra-Rows): AUTO-DELETE mit lauter [BASELINE-AUTO-FIX]-Warnung (D-G03). KEIN pytest.fail.
+      Loeschorder aus _DERIVED_FK_ORDER (cross-schema Katalog, Kind-vor-Eltern). PK-Spalte aus
+      _DERIVED_PK_COLS (katalog-abgeleitet, kein hardcoded 'id', Fund #2). uuid-Cast bleibt ({pk_col}::text).
+    - missing/mutated (Baseline-Verletzung): SOFORT pytest.fail mit nodeid (D-G02 hard-block).
+      KEIN Re-Insert (Re-Insert wuerde trg_mk_tenant_org feuern -> neue UUID -> Folge-Tests kaputt).
+
+    AUTO-DELETE-TX-HYGIENE (D-G05): DELETE laeuft in with engine.begin() as conn (commit-on-exit),
+    damit geloeschte Rows fuer den NAECHSTEN Test wirklich weg sind (kein uncommittetes Delete).
+
+    SCOPE (D-G04): Waechter snapshottet/loescht NUR public.* (table_list lokal public-gefiltert, Fund #8).
+    crm.* UNVERAENDERT POST-SUITE-Check in deploy.sh (Plan 02). _DERIVED_FK_ORDER enthaelt zwar cross-schema
+    Kanten (crm vor public), aber der Waechter-DELETE nutzt sie nur fuer public.*-Eintraege.
+
+    COMPOSITE-PK-TABELLEN (Fund #6/#9): kommen hier NICHT vor — sie sind nicht in der baseline_table_list
+    / nicht in _DERIVED_PK_COLS. Sie werden weder auto-geloescht noch snapshot-ueberwacht. Bekannte,
+    offen dokumentierte Tor-Luecke, heute leer (0 composite-PK-Tabellen, Prod-Katalog 2026-06-16).
+
+    Frueh angefordert (autouse + Dependency auf _baseline_snapshot) -> Teardown laeuft ZULETZT,
+    NACH dem Test-eigenen cleanup_rows-Teardown (sonst saehe er noch un-aufgeraeumte Rows -> False-Positive).
+    crm.*/training.* werden NICHT hier geprueft — POST-SUITE in deploy.sh (Plan 02, sudo -u postgres psql).
+    """
     yield
     if _baseline_snapshot is None or _baseline_guard_engine is None:
         return
-    current = _snapshot_public_tables(_baseline_guard_engine)
+    current = _snapshot_public_tables(_baseline_guard_engine, public_table_list=list(_baseline_snapshot.keys()))
     drift = _diff_baseline(current, _baseline_snapshot)
-    if drift:
-        parts = []
-        for tbl, d in drift.items():
-            parts.append(
-                f"{tbl}: leaked={sorted(d['leaked'])}, missing={sorted(d['missing'])}, "
-                f"mutated={sorted(d['mutated'])}"
+    if not drift:
+        return
+
+    _log = logging.getLogger(__name__)
+
+    # Trenne leaked von missing/mutated (D-G01/D-G02 STRICT SPLIT)
+    leaked_by_tbl = {}
+    hard_fail_parts = []
+
+    for tbl, d in drift.items():
+        if d['leaked']:
+            leaked_by_tbl[tbl] = d['leaked']
+        if d['missing'] or d['mutated']:
+            hard_fail_parts.append(
+                f"{tbl}: missing={sorted(d['missing'])}, mutated={sorted(d['mutated'])}"
             )
+
+    # 1. Zuerst: missing/mutated -> harter pytest.fail (D-G02, STRICT SPLIT)
+    if hard_fail_parts:
         pytest.fail(
-            f"[BASELINE-GUARD] {request.node.nodeid}: PUBLIC-Baseline drifted -> "
-            + " | ".join(parts)
+            f"[BASELINE-GUARD] {request.node.nodeid}: protected baseline drifted "
+            f"(missing/mutated) -> " + " | ".join(hard_fail_parts)
         )
+
+    # 2. Dann: leaked -> Auto-Delete mit lauter Warnung (D-G01/D-G03)
+    if leaked_by_tbl:
+        # Loeschorder aus _DERIVED_FK_ORDER (cross-schema, Kind-vor-Eltern, Fund #8).
+        # Nur public.*-Eintraege aus dem Waechter-Snapshot loeschen (D-G04 public-only).
+        if _DERIVED_FK_ORDER:
+            delete_order = [t for t in _DERIVED_FK_ORDER if t in leaked_by_tbl]
+            delete_order += [t for t in leaked_by_tbl if t not in _DERIVED_FK_ORDER]
+        else:
+            # Fallback: _CLEANUP_FK_ORDER (best-effort, bleibt erhalten)
+            delete_order = [t for t in _CLEANUP_FK_ORDER if t in leaked_by_tbl]
+            delete_order += [t for t in leaked_by_tbl if t not in _CLEANUP_FK_ORDER]
+
+        # Laut warnen (D-G03: jedes Auto-Delete emittiert Warnung mit nodeid + Tabelle + PKs)
+        for tbl in delete_order:
+            ids = leaked_by_tbl[tbl]
+            _log.warning(
+                "[BASELINE-AUTO-FIX] %s leaked rows in %s: %s",
+                request.node.nodeid, tbl, sorted(ids),
+            )
+
+        # Auto-Delete in engine.begin() (D-G05: TX-Hygiene, commit-on-exit)
+        try:
+            with _baseline_guard_engine.begin() as conn:
+                for tbl in delete_order:
+                    ids = leaked_by_tbl[tbl]
+                    if not ids:
+                        continue
+                    # PK-Spalte aus Katalog-abgeleitetem Cache (Fund #2: kein hardcoded 'id')
+                    pk_col = _DERIVED_PK_COLS.get(tbl, 'id')
+                    # {pk_col}::text = ANY(:ids) — uuid-Cast bleibt (D-G06, 10e5d0a-Fix)
+                    conn.execute(
+                        text(f"DELETE FROM {tbl} WHERE {pk_col}::text = ANY(:ids)"),
+                        {"ids": [str(x) for x in ids]},
+                    )
+        except Exception as e:
+            _log.warning(
+                "[BASELINE-AUTO-FIX] Auto-Delete fehlgeschlagen fuer %s: %r "
+                "(Folge-Tests koennen beeintraechtigt sein)",
+                request.node.nodeid, e,
+            )
 
 
 @pytest.fixture
