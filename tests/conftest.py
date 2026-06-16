@@ -205,7 +205,9 @@ def cleanup_rows(conn_or_session, spec, tenant=None):
                 ids = norm[tbl]
                 if not ids:
                     continue
-                cur.execute(f"DELETE FROM {tbl} WHERE id = ANY(%s)", (list(ids),))
+                # id::text-Vergleich (Phase 08.23.2.PGTEST): traegt int-PK (organisations/users/calls) UND
+                # uuid-PK (tenant_orgs/crm.*) — sonst `operator does not exist: uuid = text` bei uuid-PK-Tabellen.
+                cur.execute(f"DELETE FROM {tbl} WHERE id::text = ANY(%s)", ([str(x) for x in ids],))
         else:
             if tenant is not None:
                 conn_or_session.execute(
@@ -215,8 +217,10 @@ def cleanup_rows(conn_or_session, spec, tenant=None):
                 ids = norm[tbl]
                 if not ids:
                     continue
+                # id::text-Vergleich (Phase 08.23.2.PGTEST): traegt int-PK UND uuid-PK (tenant_orgs/crm.*).
                 conn_or_session.execute(
-                    text(f"DELETE FROM {tbl} WHERE id = ANY(:ids)"), {"ids": list(ids)}
+                    text(f"DELETE FROM {tbl} WHERE id::text = ANY(:ids)"),
+                    {"ids": [str(x) for x in ids]},
                 )
         conn_or_session.commit()                # SCHRITT 3
     except Exception as e:
