@@ -1,4 +1,10 @@
-"""Phase 04.7.2 — Schema-Smoke-Tests fuer die 6 neuen Models."""
+"""Phase 04.7.2 — Schema-Smoke-Tests fuer die 6 neuen Models.
+
+Phase 08.23.2.PGTEST Gruppe B (T-PGTEST-24): die Tests 1-6 sind reine Schema-Introspektion
+(__tablename__/__table__.columns/constraints) — KEIN DB-Write. test_insert_roundtrip_fixed_cost
+committet eine FixedCost auf der function-scoped db_session, loescht sie selbst wieder (delete+commit)
+UND ist zusaetzlich rollback-covered (D-03) → KEIN cleanup_rows noetig, kein Leak (Waechter gruen).
+"""
 import pytest
 from database.models import ApiCostLog, ApiRate, FixedCost, RevenueLog, ExchangeRate, PriceChangeLog
 

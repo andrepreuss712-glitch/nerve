@@ -1,6 +1,16 @@
 # tests/test_08_20_3.py
 # Phase 08.20.3: Tests fuer Briefing-Lebenszyklus + KI-Skript-Personalisierung
 # Prueft Runtime-Verhalten (CLAUDE.md-Regel) — keine inspect.getsource()-Tests.
+#
+# Phase 08.23.2.PGTEST Gruppe B (T-PGTEST-24): VERIFIZIERT 2026-06-16 — dieser Test committet NICHTS
+# in nerve_test. Die Route-Existenz-Tests sind reine HTTP-Reads (unauth → 302/401/404). Die
+# Schema-/Signatur-Tests sind reine Introspektion. test_migration_is_idempotent schreibt in eine
+# FRISCHE in-memory SQLite (sqlite:///:memory:, mem_engine) — NICHT in nerve_test.
+# test_existing_openers_have_null_parent_after_migration nutzt get_session() READ-ONLY (nur
+# db.query(ProfileOpener).all() + asserts, kein add/commit). → KEIN cleanup_rows noetig, kein Leak,
+# Waechter gruen. (Anmerkung: die Plan-04-Task-5-Annahme „raw single-table Insert/committet eine Row"
+# (T-PGTEST-17-Note) ist gegen die IST-Datei STALE — es gibt keinen nerve_test-Commit hier; im SUMMARY
+# als Deviation/Rule-1-Befund vermerkt.)
 
 import pytest
 from unittest.mock import MagicMock, patch

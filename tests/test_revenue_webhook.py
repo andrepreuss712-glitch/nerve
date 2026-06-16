@@ -1,4 +1,12 @@
-"""Phase 04.7.2 — Stripe invoice.payment_succeeded webhook handler tests."""
+"""Phase 04.7.2 — Stripe invoice.payment_succeeded webhook handler tests.
+
+Phase 08.23.2.PGTEST Gruppe B (T-PGTEST-24): _record_revenue(db, invoice) committet AUSSCHLIESSLICH
+auf der uebergebenen Session (routes/payments.py:248ff: db.query/db.add/db.commit). Die Tests
+uebergeben die function-scoped db_session → rollback-covered (D-03), KEIN cleanup_rows noetig.
+Die Idempotenz-/Klassifikations-Reads sind per stripe_invoice_id gescoped (UNIQUE) → keine globale
+unfiltered Aggregation, keine Baseline-/Fremd-Row-Vergiftung. Beim Teardown-Rollback verschwinden die
+RevenueLog-Rows, die Baseline bleibt unberuehrt (Waechter gruen).
+"""
 import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
