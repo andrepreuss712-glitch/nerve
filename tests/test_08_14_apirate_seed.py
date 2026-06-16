@@ -13,10 +13,19 @@ from sqlalchemy.orm import Session
 
 @pytest.fixture(scope='module')
 def fresh_engine():
-    """In-memory SQLite mit ApiRate-Tabelle, frisch erstellt."""
-    from database.models import Base
+    """In-memory SQLite mit NUR der public api_rates-Tabelle, frisch erstellt.
+
+    Phase 08.23.2.PGTEST Task 3 (Option B): frueher `Base.metadata.create_all(engine)` — das baute
+    ALLE Tabellen inkl. crm.*/training.* und funktionierte nur, weil der globale cf5de6d-ATTACH-
+    Listener crm/training auf jede SQLite-Verbindung ATTACHed. Dieser Listener ist in Plan 03 Task 1
+    entfernt -> `Base.metadata.create_all` wuerde jetzt "unknown database crm" werfen. ApiRate ist
+    eine PUBLIC-Tabelle (models.py: __tablename__='api_rates', KEIN {'schema':'crm'}), daher baut
+    `ApiRate.__table__.create(engine)` NUR die public api_rates-Tabelle -> kein crm/training, DSN-
+    unabhaengig (laeuft im Gate UND lokal, in-memory SQLite, nicht geskippt). Echte NOT-NULL-
+    last_checked_at-Runtime-Regression bleibt intakt."""
+    from database.models import ApiRate
     engine = create_engine('sqlite:///:memory:')
-    Base.metadata.create_all(engine)
+    ApiRate.__table__.create(engine)
     return engine
 
 
