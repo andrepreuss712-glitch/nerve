@@ -39,15 +39,47 @@ def _add_fc(db, name, amount, cycle='monthly', eur_line=57, vat=19.0):
                      eur_line=eur_line, active=True))
 
 
+# ── Phase 08.23.2.PGTEST Gruppe A — Baseline-Delta-Scoping (T-PGTEST-26) ──────────
+# compute_eur() summiert FixedCost GLOBAL (eur_calculator.py:84
+# `db.query(FixedCost).filter(FixedCost.active.is_(True))` — KEIN Zeitraum-Filter, da Fixkosten
+# zeitraum-unabhaengig periodisiert werden). Auf der persistenten nerve_test traegt fixed_costs
+# bereits die app-import-Baseline (_seed_founder_dashboard_defaults: 5 aktive Fixkosten auf
+# eur_line 52/57/65). Eine absolute Assertion auf den FixedCost-getriebenen Output (Z52/Z57/Z65,
+# inland_vst → zahllast, summe_ausgaben_netto) zoege diese Baseline-Rows mit rein → False-Red.
+# FIX (baseline-delta, Plan 04 Task 2): die FixedCost-freie Baseline VOR dem test-eigenen Insert
+# einmal messen, danach den DELTA gegen den Erwartungswert pruefen. Die RevenueLog/ApiCostLog-Tests
+# bleiben unberuehrt — die sind paid_at/created_at-zeitraum-gefiltert (Baseline-leer in ihrem Fenster).
+# db_session ist function-scoped + rollback-covered (D-03) → KEIN cleanup_rows noetig (rollback raeumt
+# die test-eigenen FixedCost-Rows weg; Baseline-Rows werden NIE angefasst).
+def _fc_baseline(db, start, end, home_days=0):
+    """FixedCost-getriebene Felder der Baseline (ohne test-eigene FixedCosts) — als Subtrahend."""
+    r = compute_eur(start, end, db, home_days=home_days)
+    a = r['ausgaben']
+    return {
+        'z52': a['Z52_miete_edv']['total_netto'],
+        'z57': a['Z57_uebrige']['total_netto'],
+        'z65': a['Z65_homeoffice']['total_netto'],
+        'summe_ausgaben': a['summe_ausgaben_netto'],
+        'inland_vst': a['Z72_vorsteuer']['inland_vst'],
+        'zahllast': r['ust_voranmeldung']['zahllast'],
+    }
+
+
 # ---------------------------------------------------------------------------
 
 def test_empty_period(db_session):
+    # Baseline-Delta: der EINNAHMEN-Pfad + §13b sind FixedCost-frei → absolute 0-Assertion bleibt.
+    # FixedCost-getriebene Felder (summe_ausgaben, zahllast) tragen die persistente Baseline → Delta=0
+    # statt absolut 0 (es wurden in DIESEM Test keine test-eigenen FixedCosts/Revenue/Api committet).
+    base = _fc_baseline(db_session, date(2026, 3, 1), date(2026, 4, 1), home_days=0)
     r = compute_eur(date(2026, 3, 1), date(2026, 4, 1), db_session, home_days=0)
     assert r['einnahmen']['summe_einnahmen_netto'] == 0
-    assert r['ausgaben']['summe_ausgaben_netto'] == 0
+    # FixedCost-Baseline-Delta == 0 (kein test-eigener Insert):
+    assert r['ausgaben']['summe_ausgaben_netto'] == base['summe_ausgaben']
     assert r['ust_voranmeldung']['KZ84_rc_bemessung'] == 0
     assert r['ust_voranmeldung']['KZ85_rc_ust'] == 0
-    assert r['ust_voranmeldung']['zahllast'] == 0
+    # zahllast haengt an inland_vst (FixedCost) → Delta gegen die FixedCost-freie Baseline:
+    assert r['ust_voranmeldung']['zahllast'] == base['zahllast']
 
 
 def test_line_mapping_einnahmen_splits(db_session):
@@ -81,24 +113,35 @@ def test_reverse_charge_13b(db_session):
 
 
 def test_ust_zahllast(db_session):
+    # Baseline-Delta: zahllast haengt an inland_vst (globaler FixedCost-Pfad). Auf nerve_test
+    # traegt die Baseline FixedCosts → absolute 18.24 zoege deren inland_vst mit rein. Die
+    # FixedCost-freie Baseline-zahllast vor dem test-eigenen Insert messen, danach den DELTA pruefen.
+    base = _fc_baseline(db_session, date(2026, 3, 1), date(2026, 4, 1))
     _add_rev(db_session, 'in_de', 10000, 1900, 'DE_19')
     _add_api(db_session, 'anthropic', 100.00)
     _add_fc(db_session, 'Hetzner', 4.00, cycle='monthly', eur_line=52, vat=19.0)
     db_session.commit()
     r = compute_eur(date(2026, 3, 1), date(2026, 4, 1), db_session)
-    # Zahllast = (19 + 19) - (0.76 + 19) = 18.24
-    assert r['ust_voranmeldung']['zahllast'] == 18.24
+    # Test-eigener Beitrag zur zahllast: (19 USt-DE + 19 §13b-RC) - (0.76 inland-VSt-Hetzner + 19 §13b-VSt)
+    # = 18.24. Der inland_vst-Anteil der Baseline-FixedCosts kuerzt sich via Delta heraus.
+    test_eigene_zahllast = r['ust_voranmeldung']['zahllast'] - base['zahllast']
+    assert round(test_eigene_zahllast, 2) == 18.24
 
 
 def test_line_mapping_ausgaben_fixedcost(db_session):
+    # Baseline-Delta: Z52/Z57/Z65 summieren GLOBAL alle aktiven FixedCosts der jeweiligen eur_line.
+    # Auf nerve_test traegt die Baseline schon Hetzner(52)/Domain+Kontist+count.tax(57)/Homeoffice(65)
+    # → absolute Assertions zoegen sie mit rein. Baseline pro Linie messen, danach den DELTA der
+    # test-eigenen Rows pruefen.
+    base = _fc_baseline(db_session, date(2026, 3, 1), date(2026, 4, 1), home_days=14)
     _add_fc(db_session, 'Hetzner',  4.00,  cycle='monthly', eur_line=52, vat=19.0)
     _add_fc(db_session, 'Domain',   1.25,  cycle='monthly', eur_line=57, vat=19.0)
     _add_fc(db_session, 'HomeOffice', 6.00, cycle='per_day', eur_line=65, vat=0.0)
     db_session.commit()
     r = compute_eur(date(2026, 3, 1), date(2026, 4, 1), db_session, home_days=14)
-    assert r['ausgaben']['Z52_miete_edv']['total_netto'] == 4.0
-    assert r['ausgaben']['Z57_uebrige']['total_netto'] == 1.25
-    assert r['ausgaben']['Z65_homeoffice']['total_netto'] == 84.0  # 14 * 6
+    assert round(r['ausgaben']['Z52_miete_edv']['total_netto'] - base['z52'], 2) == 4.0
+    assert round(r['ausgaben']['Z57_uebrige']['total_netto'] - base['z57'], 2) == 1.25
+    assert round(r['ausgaben']['Z65_homeoffice']['total_netto'] - base['z65'], 2) == 84.0  # 14 * 6
 
 
 def test_period_filter_excludes_out_of_range(db_session):
