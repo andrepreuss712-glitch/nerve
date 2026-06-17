@@ -34,6 +34,10 @@ def _make_ls_mock(line_id='line-42', user_id=1, anrede='Sie',
         'active_sid': active_sid,
     }
     # Phase 08.19.4: per-SID state dict (mirrors live_session._session_state)
+    # Phase 08.23.2.TAXO1-03: the live dispatch + matcher read/write line_id,
+    # kw_fired_for_line, slot1_variant_busy_until and session_anrede from the
+    # per-SID single source _session_state[sid]['state'] — NOT from the old global
+    # ls.state. The mock therefore seeds that 'state' sub-dict like the live path.
     ls._session_state_lock = threading.Lock()
     ls._session_state = {
         active_sid: {
@@ -41,6 +45,12 @@ def _make_ls_mock(line_id='line-42', user_id=1, anrede='Sie',
             'org_id': 1,
             'active_profile_id': active_profile_id,
             'active_sid': active_sid,
+            'state': {
+                'line_id': line_id,
+                'kw_fired_for_line': kw_fired_for_line,
+                'slot1_variant_busy_until': slot1_busy_until,
+                'session_anrede': anrede,
+            },
         }
     }
     return ls
@@ -65,7 +75,8 @@ class TestKwFiredForLineFlag(unittest.TestCase):
         from services.einwand_keyword_matcher import EinwandKeywordMatcher
         import services.live_session as ls_real
 
-        mock_ls = _make_ls_mock(line_id='line-42', kw_fired_for_line=None)
+        mock_ls = _make_ls_mock(line_id='line-42', kw_fired_for_line=None,
+                                active_sid='sid-test-123')
 
         matcher = EinwandKeywordMatcher()
 
@@ -75,11 +86,18 @@ class TestKwFiredForLineFlag(unittest.TestCase):
             profile_einwaende = [
                 {'kurzlabel': 'preis', 'gegenargument': 'Unser Preis ist gerechtfertigt.'}
             ]
-            result = matcher.match_with_dedup('Das ist viel zu teuer', profile_einwaende)
+            # Phase 08.23.2.TAXO1-03 (§0.1 P4 REVERSE): matcher writes kw_fired_for_line
+            # into the per-SID single source, so it needs the sid.
+            result = matcher.match_with_dedup('Das ist viel zu teuer', profile_einwaende,
+                                              sid='sid-test-123')
 
-        # If match returned, kw_fired_for_line should be set
+        # If match returned, kw_fired_for_line must be set in the per-SID single source
+        # (NOT the old global ls.state — that path was deleted in Wave 3).
         if result is not None:
-            self.assertEqual(mock_ls.state.get('kw_fired_for_line'), 'line-42')
+            self.assertEqual(
+                mock_ls._session_state['sid-test-123']['state'].get('kw_fired_for_line'),
+                'line-42',
+            )
 
     def test_no_match_does_not_overwrite_kw_fired_for_line(self):
         """Test 2: When match_with_dedup returns None, kw_fired_for_line is NOT changed."""
@@ -109,7 +127,8 @@ def _build_qa_dispatch_context(
     ls = _make_ls_mock(line_id=line_id, user_id=user_id, anrede=anrede,
                        kw_fired_for_line=kw_fired_for_line,
                        slot1_busy_until=slot1_busy_until,
-                       active_profile_id=active_profile_id)
+                       active_profile_id=active_profile_id,
+                       active_sid=active_sid)
     ls.state['active_sid'] = active_sid
     sio = MagicMock()
     return ls, sio
@@ -130,7 +149,7 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
             line_id='line-7', kw_fired_for_line='line-7'
         )
         with patch('services.qa_pipeline.classify_utterance') as mock_cls:
-            dispatch('Kunde sagt irgendwas', 'line-7', '', ls, sio)
+            dispatch('Kunde sagt irgendwas', 'line-7', '', ls, sio, sid='sid-test')
             mock_cls.assert_not_called()
 
     def test_kw_fired_different_calls_classify(self):
@@ -142,7 +161,7 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
         with patch('services.qa_pipeline.classify_utterance',
                    return_value={'kategorie': 'smalltalk_none', 'confidence': 0.9}) as mock_cls, \
              patch('services.claude_service._qa_load_tabu', return_value=[]):
-            dispatch('Hallo', 'line-8', '', ls, sio)
+            dispatch('Hallo', 'line-8', '', ls, sio, sid='sid-test')
             mock_cls.assert_called_once()
 
     def test_smalltalk_none_no_emit(self):
@@ -153,7 +172,7 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
                    return_value={'kategorie': 'smalltalk_none', 'confidence': 0.9}), \
              patch('services.qa_pipeline.generate_qa_response') as mock_gen, \
              patch('services.claude_service._qa_load_tabu', return_value=[]):
-            dispatch('Ja, okay', 'line-9', '', ls, sio)
+            dispatch('Ja, okay', 'line-9', '', ls, sio, sid='sid-test')
             mock_gen.assert_not_called()
             sio.emit.assert_not_called()
 
@@ -167,7 +186,7 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
                    return_value='Gute Antwort auf Einwand'), \
              patch('services.qa_pipeline.apply_tabu_filter', return_value=False), \
              patch('services.claude_service._qa_load_tabu', return_value=[]):
-            dispatch('Das ist zu teuer ohne Keyword', 'line-10', '', ls, sio)
+            dispatch('Das ist zu teuer ohne Keyword', 'line-10', '', ls, sio, sid='sid-test')
             # qa_slot1 must be emitted
             calls = [str(c) for c in sio.emit.call_args_list]
             self.assertTrue(
@@ -194,7 +213,7 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
              patch('services.claude_service._qa_load_tabu', return_value=[]), \
              patch('services.live_session.get_profile_for_sid',
                    return_value=('TestProfil', {'basis': {'produktbeschreibung': 'CRM'}})):
-            dispatch('Das ist zu teuer', 'line-20', '', ls, sio, sid='sid-test-123')
+            dispatch('Das ist zu teuer', 'line-20', '', ls, sio, sid='sid-test')
 
         self.assertTrue(len(captured_calls) > 0, "generate_qa_response wurde nicht aufgerufen")
         call_args = captured_calls[0]['args']
@@ -210,7 +229,7 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
         with patch('services.qa_pipeline.classify_utterance',
                    return_value={'kategorie': 'einwand_unknown', 'confidence': 0.3}), \
              patch('services.claude_service._qa_load_tabu', return_value=[]):
-            dispatch('Mhm', 'line-11', '', ls, sio)
+            dispatch('Mhm', 'line-11', '', ls, sio, sid='sid-test')
             emitted_events = [c.args[0] for c in sio.emit.call_args_list]
             self.assertIn('qa_soft_hint', emitted_events,
                           f"Expected qa_soft_hint, got: {emitted_events}")
@@ -231,7 +250,7 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
                    return_value='Antwort mit Competitor-Begriff'), \
              patch('services.qa_pipeline.apply_tabu_filter', return_value=True), \
              patch('services.claude_service._qa_load_tabu', return_value=['Competitor']):
-            dispatch('Haben Sie auch Competitor?', 'line-12', '', ls, sio)
+            dispatch('Haben Sie auch Competitor?', 'line-12', '', ls, sio, sid='sid-test')
             emitted_events = [c.args[0] for c in sio.emit.call_args_list]
             self.assertIn('qa_soft_hint', emitted_events)
             qa_slot1_calls = [c for c in sio.emit.call_args_list if c.args[0] == 'qa_slot1']
@@ -249,7 +268,7 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
              patch('services.qa_pipeline.apply_tabu_filter', return_value=False), \
              patch('services.claude_service._qa_load_tabu', return_value=[]), \
              patch('services.claude_service._qa_load_faqs', return_value=[mock_faq]):
-            dispatch('Wie teuer ist das?', 'line-13', '', ls, sio)
+            dispatch('Wie teuer ist das?', 'line-13', '', ls, sio, sid='sid-test')
             emitted_events = [c.args[0] for c in sio.emit.call_args_list]
             self.assertIn('qa_slot1', emitted_events,
                           f"Expected qa_slot1 for faq match, got: {emitted_events}")
