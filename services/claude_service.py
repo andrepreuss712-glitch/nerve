@@ -67,13 +67,29 @@ Erkenne ob es sich um einen echten Einwand oder einen Vorwand handelt (ist_vorwa
 - Vorwand: vage Formulierungen ohne konkreten Grund — "muss drüber schlafen", "melden uns dann", "müssen das intern besprechen" ohne Begründung, ausweichen ohne spezifisches Problem
 - Echter Einwand: konkretes Problem genannt, Preisnennung, spezifische Bedenken
 
+Ordne den erkannten Einwand zusätzlich in EINE der folgenden Schubladen ein (intent_type, geteilte Taxonomie):
+- echter_einwand: konkretes, faktenbasiertes, verhandelbares Problem
+- vorwand: vage/generisch, früh, Gesprächsabbruch-Schutz
+- reflexeinwand: automatische Abwehr auf die Unterbrechung selbst
+- kaufsignal: Detail-Frage = "überzeug mich"
+- aufschub: will vertagen
+- info_frage: Produktwissen-Frage, kein Einwand
+- gatekeeper: "stelle durch / darf nicht weitergeben"
+- wettbewerber_referenz: "nutzen schon X"
+- hard_opt_out: "löschen Sie meine Nummer / nie wieder anrufen"
+- commitment: nackte Zustimmung / grünes Licht
+- meta_kommunikation: "höre Sie schlecht / bin im Auto"
+Wähle den treffendsten Wert EXAKT aus dieser Liste (kleingeschrieben, mit Unterstrich).
+
 Antworte IMMER als valides JSON, nichts anderes:
 
 Falls KEIN Einwand:
 {"einwand": false, "notiz": "Kurze Beschreibung was stattdessen gesagt wurde (max 1 Satz)"}
 
 Falls Einwand erkannt:
-{"einwand": true, "typ": "Einwand-Typ", "intensitaet": "mittel oder hoch", "ist_vorwand": false, "einwand_zitat": "Wörtliches Zitat max 15 Wörter", "gegenargument_1": "Erster Ansatz, direkt, 2-3 Sätze reiner Text, mit offener Gegenfrage", "gegenargument_2": "Alternativer Ansatz, weicher oder aus anderer Perspektive, 2-3 Sätze reiner Text, mit offener Gegenfrage"}
+{"einwand": true, "typ": "Einwand-Typ", "intent_type": "echter_einwand", "confidence": 0.8, "intensitaet": "mittel oder hoch", "ist_vorwand": false, "einwand_zitat": "Wörtliches Zitat max 15 Wörter", "gegenargument_1": "Erster Ansatz, direkt, 2-3 Sätze reiner Text, mit offener Gegenfrage", "gegenargument_2": "Alternativer Ansatz, weicher oder aus anderer Perspektive, 2-3 Sätze reiner Text, mit offener Gegenfrage"}
+- intent_type: die treffendste Schublade aus der Liste oben
+- confidence: deine Sicherheit 0.0-1.0, dass dieser Einwand-Typ zutrifft
 
 Zusätzlich (Phase 04.8 — Score-Signale): In JEDER Antwort (egal ob Einwand oder nicht) darfst du die folgenden optionalen Boolean-Flags ergänzen. Alle Flags sind optional — bei Unsicherheit false. Antworte ausschließlich gültiges JSON.
 - "einwand_geloest": bool — true wenn der Kunde einen zuvor genannten Einwand in diesem Transcript-Fenster akzeptiert oder zurückgenommen hat
@@ -264,14 +280,56 @@ PHASE_CLASSIFIER_PROMPT = """Du klassifizierst die aktuelle Phase eines B2B-Verk
 Phasen fuer diesen Modus: {labels}
 Aktuelle Phase: {current_phase}, seit {elapsed_s}s im Gespräch.
 
+Anhaltspunkte je Phase (Cues):
+{cues}
+
 Letzte Gesprächsaussagen (chronologisch):
 {transcript_window}
 
 Bestimme die AKTUELLE Phase basierend auf den letzten Aussagen.
 Eine Phase kann bestehen bleiben. Wähle die wahrscheinlichste Phase.
+WICHTIG: Sobald ein Termin/Folgetermin vereinbart, gelegt oder bestaetigt wird
+(z.B. "machen wir Dienstag", "schicke Ihnen einen Kalender-Eintrag", "passt, dann
+sprechen wir naechste Woche"), ist die Phase Abschluss/Terminvereinbarung — bleibe
+NICHT auf Bedarfsanalyse/Discovery haengen.
 
 Antworte NUR als JSON:
 {{"phase": <1-N>, "confidence": <0.0-1.0>, "grund": "<max 10 Wörter>"}}"""
+
+# TAXO1-Welle 4 Addition B: Phasen-Cues je Modus — gibt dem Klassifikator klare
+# Anhaltspunkte (vorher nur nackte Label-Woerter). Besonders Phase 5
+# (Einwandbehandlung) + Phase 6 (Abschluss/Terminvereinbarung) explizit, damit ein
+# gebuchter Termin die Phase tatsaechlich auf 6 dreht (vorher blieb sie auf 3).
+_PHASE_CUES_COLD_CALL = {
+    1: 'Begruessung, Vorstellung, Aufhaenger',
+    2: 'Erlaubnis-Frage, "haben Sie kurz Zeit", Gespraechs-Rahmen abklaeren',
+    3: 'Grund des Anrufs, Nutzenversprechen, erste Einordnung',
+    4: 'Pitch/Loesung praesentieren, konkretes Angebot',
+    5: 'Einwandbehandlung: Kunde bringt Bedenken/Einwand, Berater entkraeftet',
+    6: 'Abschluss/Terminvereinbarung: Termin/Folgetermin vereinbart, gelegt, '
+       'bestaetigt; naechster konkreter Schritt; "machen wir Dienstag", '
+       '"schicke Ihnen einen Termin", "passt, dann telefonieren wir"',
+}
+_PHASE_CUES_MEETING = {
+    1: 'Begruessung, Smalltalk, Vorstellung',
+    2: 'Agenda/Ablauf abstimmen, Ziele des Termins',
+    3: 'Bedarfsanalyse, Fragen, Discovery, Situation des Kunden',
+    4: 'Pitch/Loesung praesentieren, Demo, konkretes Angebot',
+    5: 'Einwandbehandlung: Kunde bringt Bedenken/Einwand, Berater entkraeftet',
+    6: 'Abschluss/Terminvereinbarung: Termin/Folgetermin vereinbart, gelegt, '
+       'bestaetigt; naechster konkreter Schritt; Vertrag/Angebot-Zusage',
+}
+_PHASE_CUES_GATEKEEPER = {
+    1: 'Begruessung des Gatekeepers',
+    2: 'Identifikation, wen man erreichen will',
+    3: 'Bypass-Versuch, Durchstellen erbitten',
+    4: 'Uebergabe an Zielperson / Termin fuer Rueckruf',
+}
+_PHASE_CUES_BY_MODE = {
+    'cold_call':  _PHASE_CUES_COLD_CALL,
+    'meeting':    _PHASE_CUES_MEETING,
+    'gatekeeper': _PHASE_CUES_GATEKEEPER,
+}
 
 
 def classify_phase(transcript_window, current_phase, elapsed_s, mode, sid: str = None):
@@ -297,8 +355,13 @@ def classify_phase(transcript_window, current_phase, elapsed_s, mode, sid: str =
 
     labels_str = ', '.join(f'{i}={name}' for i, name in phase_names.items())
     formatted = "\n".join(f"- {t}" for t in transcript_window[-10:])
+    # Addition B: Phasen-Cues je Modus (Phase 5/6 explizit, Termin -> Phase 6).
+    _cue_map = _PHASE_CUES_BY_MODE.get(mode, _PHASE_CUES_COLD_CALL)
+    cues_str = "\n".join(f"- {i}={name}: {_cue_map.get(i, '')}"
+                         for i, name in phase_names.items())
     prompt = PHASE_CLASSIFIER_PROMPT.format(
         labels=labels_str,
+        cues=cues_str,
         current_phase=current_phase,
         elapsed_s=int(elapsed_s or 0),
         mode=mode or 'meeting',
@@ -910,6 +973,77 @@ def analyse_loop():
                     if sid not in ls._session_state:
                         print(f"[analyse_loop] SID {sid} gone during Claude call — silent drop")
                         continue
+
+                # ── TAXO1-Welle 4 (Task 2): Medium-Lane-Cutover (intent_event) ───
+                # mode-Quelle (bewiesen per-SID, deepgram_service.py:18/427):
+                # M-2/TAXO1-07: mode-Quelle — bei _session_modes-Konsolidierung (W7)
+                # DIESEN Read mit-migrieren (sonst leerer mode im intent_event nach W7).
+                import services.deepgram_service as _dg
+                _med_mode = _dg._session_modes.get(sid, 'meeting')
+                # FUND B (Gemini-R2): confidence aus dem neuen Haiku-JSON-Feld; NIE None
+                # (Default 0.7 — Haiku-Einwand-Erkennung ist konservativ getriggert,
+                # "eher sicher"; bewusster Interim, TAXO3 baut den EWB-Prompt ohnehin um).
+                _mc = ergebnis.get('confidence')
+                try:
+                    _med_conf = float(_mc)
+                    if not (0.0 <= _med_conf <= 1.0):
+                        _med_conf = 0.7
+                except (TypeError, ValueError):
+                    _med_conf = 0.7
+                if ergebnis.get('einwand'):
+                    # intent_type aus §1 (validiert); Fallback echter_einwand wenn Haiku
+                    # einen ungueltigen/fehlenden Wert liefert (kein Drop des Events).
+                    from services.intent_taxonomy import is_valid_intent_type
+                    _it = ergebnis.get('intent_type')
+                    if not (isinstance(_it, str) and is_valid_intent_type(_it)):
+                        _it = 'echter_einwand'
+                    # Per-SID-Kontext + Moment-Fenster oeffnen + IL-2-Write (alles unter
+                    # _session_state_lock; get_or_open_moment ist lock-frei). VOR dem
+                    # Antwort-Trigger (_qa_pipeline_dispatch) — IL-2-Vertrag.
+                    _iid = None
+                    _med_user_id = None
+                    _med_org_id = None
+                    _med_phase = None
+                    with ls._session_state_lock:
+                        _med_sd = ls._session_state.get(sid) or {}
+                        _med_user_id = _med_sd.get('user_id')
+                        _med_org_id = _med_sd.get('org_id')
+                        _med_st = _med_sd.get('state')
+                        if _med_st is not None:
+                            _med_phase = _med_st.get('current_phase')
+                            # IL-2: primary_intent + confidence per-SID VOR dem Trigger
+                            _med_st['primary_intent'] = _it
+                            _med_st['confidence'] = _med_conf
+                            _iid = ls.get_or_open_moment(
+                                sid, mode=_med_mode, now=time.monotonic())
+                    if _med_mode == 'cold_call':
+                        _med_speaker_role, _med_speaker_id = 'kunde', 'local'
+                        _med_basis = 'advisor_paraphrase'
+                    else:
+                        _med_speaker_role, _med_speaker_id = 'kunde', 'local'
+                        _med_basis = 'direct_customer_utterance'
+                    try:
+                        from services.intent_event_writer import emit_intent_event
+                        emit_intent_event(
+                            session_id=sid, mode=_med_mode, intent_type=_it,
+                            phase=_med_phase, source='llm_inferred',
+                            inference_basis=_med_basis, confidence=_med_conf,
+                            speaker_role=_med_speaker_role, speaker_id=_med_speaker_id,
+                            user_id=_med_user_id, org_id=_med_org_id,
+                            interaction_id=_iid,
+                        )
+                    except Exception as _emit_e:
+                        print(f"[intent_event] Medium-Lane emit skip (sid={sid}): {type(_emit_e).__name__}")
+                else:
+                    # Cold-Call-PRIMAER-Schliesser (FUND A): Single-Speaker -> kein
+                    # Einwand-Echo = der Berater ANTWORTET. Substanzielle Wendung
+                    # (>= SUBSTANTIAL_TURN_MIN_WORDS) schliesst das offene Fenster.
+                    from config import SUBSTANTIAL_TURN_MIN_WORDS
+                    _substantiell = len((neuer_text or '').split()) >= SUBSTANTIAL_TURN_MIN_WORDS
+                    if _med_mode == 'cold_call' and _substantiell:
+                        with ls._session_state_lock:
+                            ls.close_moment(sid, reason='advisor_answered')
+
                 # ── Phase 08.5: Universal Response Loop ──────────────────────────
                 # Classifies utterance via qa_pipeline when kw_fired_for_line != line_id
                 # (D-02 guard). Emits qa_slot1 or qa_soft_hint to active session.
@@ -968,11 +1102,18 @@ def analyse_loop():
                                 last['kb_delta']   = kb_vor_einwand - last['kb_vorher']
                                 last['erfolgreich'] = last['kb_delta'] > 0
                         # Neuen Eintrag anlegen (Freitext-Felder anonymisiert)
+                        # TAXO1-Welle 4 (§0.1): die alten parallelen D2-Keys (freier
+                        # typ-String + ist_vorwand-Boolean aus dem Haiku-Output) sind
+                        # auf intent_type (§1) MIGRIERT — nicht blind geloescht, weil
+                        # der gegenargument_log->ga_details->vorwaende_erkannt-Reader
+                        # (app_routes:354 + ConversationLog) live davon liest. einwand_typ
+                        # = intent_type; ist_vorwand wird aus intent_type=='vorwand'
+                        # ABGELEITET (eine Quelle, kein zweiter Haiku-Pfad).
                         ls.gegenargument_log.append({
                             'ts':               ts,
-                            'einwand_typ':      ergebnis.get('typ', ''),      # Typ-Label, kein Freitext
+                            'einwand_typ':      _it,                          # §1 intent_type (migriert)
                             'einwand_zitat':    _einwand_zitat_anon,          # anonymisiert
-                            'ist_vorwand':      ergebnis.get('ist_vorwand', False),
+                            'ist_vorwand':      (_it == 'vorwand'),           # abgeleitet aus §1, kein Haiku-Boolean
                             'gegenargument_1':  _gegenarg_1_anon,             # anonymisiert
                             'gegenargument_2':  _gegenarg_2_anon,             # anonymisiert
                             'gewaehlte_option': None,
@@ -994,8 +1135,19 @@ def analyse_loop():
                         _sid_li['line_id'] = line_id
                         _sid_li['kaufbereitschaft'] = kb_aktuell
                 # ── Phase 04.8: phase classifier (every 5th cycle) ────────────
-                _phase_cycle_counter = getattr(analyse_loop, '_phase_cycle_counter', 0) + 1
-                analyse_loop._phase_cycle_counter = _phase_cycle_counter
+                # TAXO1-Welle 4 Addition A (§0.1): phase_cycle_counter per-SID statt
+                # global function-attribute. analyse_loop ist EIN Daemon-Thread ueber
+                # ALLE SIDs (app.py:2302) -> der alte globale Zaehler wurde von allen
+                # parallelen Calls geteilt -> erratische Phasen-Kadenz. Jetzt single-
+                # source in _session_state[sid]['state'] (wie _phase_cycle_at_last_change,
+                # das schon per-SID ist -> die cycles_since_change-Arithmetik bleibt korrekt).
+                with ls._session_state_lock:
+                    _pcc_st = (ls._session_state.get(sid) or {}).get('state')
+                    if _pcc_st is not None:
+                        _phase_cycle_counter = (_pcc_st.get('phase_cycle_counter', 0) or 0) + 1
+                        _pcc_st['phase_cycle_counter'] = _phase_cycle_counter
+                    else:
+                        _phase_cycle_counter = 0
                 if _phase_cycle_counter % 5 == 0:
                     try:
                         from services.ki_logik import detect_phase
@@ -1031,6 +1183,13 @@ def analyse_loop():
                                     _sid_phase_st2['phase_confidence'] = new_conf
                                 else:
                                     phase_did_change = False
+                            # TAXO1-Welle 4 (Task 2 c3): Cold-Call-SEKUNDAER-Schliesser.
+                            # phase_did_change ist NICHT der Primaer-Schliesser (zu grob,
+                            # Gemini-R2) — nur ein zusaetzliches frueheres Close, wenn der
+                            # Phasenwechsel feuert (schliesst nur frueher, verklumpt nie).
+                            if phase_did_change and mode == 'cold_call':
+                                with ls._session_state_lock:
+                                    ls.close_moment(sid, reason='phase_shift')
                             # POLISH-39 + POLISH-42: propagate AI phase-change to phasen_log (for
                             # ConversationLog.phasen_details) and covered_phases (for skript_abdeckung).
                             # Done outside state_lock to avoid nested-lock stalls.
@@ -1357,6 +1516,42 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
             except Exception as _e:
                 print(f"[QA-INT] emit soft_hint skip: {_e}")
 
+        def _emit_abstain_event(intent_type):
+            """TAXO1-Welle 4 (K4/H-4): am ECHTEN low-conf-Drop ein intent_event mit
+            abstained festhalten (Funnel sichtbar, nicht droppen) — KEIN lauter Cue.
+            NUR an den echten Drops (:low_confidence / :no_faq_low_conf), NICHT am
+            kw_fired-/Mutex-/no-sid-Skip (die returnen VOR classify -> kein _conf)."""
+            try:
+                from config import should_abstain
+                from services.intent_event_writer import emit_intent_event
+                import services.deepgram_service as _dg2
+                _ab_mode = _dg2._session_modes.get(sid, 'meeting')
+                _ab_iid = None
+                _ab_phase = None
+                _ab_uid = None
+                _ab_oid = None
+                with ls._session_state_lock:
+                    _ab_sd = ls._session_state.get(sid) or {}
+                    _ab_uid = _ab_sd.get('user_id')
+                    _ab_oid = _ab_sd.get('org_id')
+                    _ab_st = _ab_sd.get('state')
+                    if _ab_st is not None:
+                        _ab_phase = _ab_st.get('current_phase')
+                        _ab_iid = ls.get_or_open_moment(
+                            sid, mode=_ab_mode, now=_time.monotonic())
+                emit_intent_event(
+                    session_id=sid, mode=_ab_mode, intent_type=intent_type,
+                    phase=_ab_phase, source='llm_inferred',
+                    inference_basis='advisor_paraphrase' if _ab_mode == 'cold_call'
+                        else 'direct_customer_utterance',
+                    confidence=_conf,
+                    abstained=should_abstain(_conf),
+                    speaker_role='kunde', speaker_id='local',
+                    user_id=_ab_uid, org_id=_ab_oid, interaction_id=_ab_iid,
+                )
+            except Exception as _ab_e:
+                print(f"[QA-INT] abstain emit skip (sid={sid}): {type(_ab_e).__name__}")
+
         def _emit_qa_slot1(text):
             try:
                 sio.emit('qa_slot1', {'text': text}, room=_active_sid)
@@ -1375,6 +1570,9 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
 
         if _kat == 'einwand_unknown':
             if _conf < CLASSIFIER_CONFIDENCE_THRESHOLD:
+                # H-4 ECHTER LOW-CONF-DROP (einwand_unknown): abstain-Event VOR dem
+                # Soft-Hint (kein Dead-Code). _conf ist echt (aus classify_utterance).
+                _emit_abstain_event('echter_einwand')
                 _emit_soft_hint(reason='low_confidence')
             else:
                 _antwort = generate_qa_response(
@@ -1417,6 +1615,9 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
             else:
                 # No FAQ match → fall back to generated response
                 if _conf < CLASSIFIER_CONFIDENCE_THRESHOLD:
+                    # H-4 ECHTER LOW-CONF-DROP (frage, kein FAQ): abstain-Event VOR
+                    # dem Soft-Hint (kein Dead-Code).
+                    _emit_abstain_event('info_frage')
                     _emit_soft_hint(reason='no_faq_low_conf')
                 else:
                     _antwort = generate_qa_response(
