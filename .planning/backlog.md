@@ -8,6 +8,21 @@
 
 ## Open
 
+### TZ-DISPLAY — Dashboard zeigt UTC statt lokaler Zeit (Europe/Berlin) — eigene kleine Phase nach TAXO1
+
+- **Severity:** low (Kosmetik/UX — gespeichert wird korrekt in UTC, nur Anzeige rechnet nicht um)
+- **Entdeckt:** TAXO1 Welle-3 Live-Test-Anruf (2026-06-17). André machte den Call ~12:12 lokal, Dashboard + Auswertung zeigen 10:12 (UTC, -2h CEST).
+- **Root-Cause:** Templates rendern Zeitstempel direkt via `.strftime(...)` OHNE Zeitzonen-Umrechnung. Betrifft ALLE Zeit-Anzeigen (analytics.html:22 `started_at`, admin/crm_overview, ewb_rating, coach_firma, changelog etc. — `grep -rn "strftime" templates/`).
+- **Fix-Richtung:** Anzeige-Zeitpunkte vor `strftime` nach Europe/Berlin konvertieren (zentral, z.B. Jinja-Filter `localtime`/`localdt`), Speicherung bleibt UTC. Eine kleine fokussierte Phase (viele Templates, aber mechanisch).
+- **Routing (André 2026-06-17):** eigener kleiner Fix BALD, nach TAXO1. Kein Daten-Schaden, nicht launch-blockierend.
+
+### PHASE-CLOSE-DETECT — Phasen-Erkennung erkennt Abschluss/Termin nicht → in Welle 4 (TAXO1-04) falten
+
+- **Severity:** medium (Erkennungs-Qualität — Kern-Feature Live-Erkennung)
+- **Entdeckt:** TAXO1 Welle-3 Live-Test-Anruf (2026-06-17). Termin am Call-Ende gelegt, Phase blieb auf „Bedarfsanalyse" (3). `classify_phase` erkannte den Abschluss nicht als Phase 5/6 (oder conf < 0.7 → von detect_phase-Hysterese geblockt). KEIN Trigger-Bug (läuft jede 5. Runde, claude_service.py:994), KEIN Welle-3-Regress (Welle 3 hat Phase überhaupt erst beweglich gemacht: 1→3 statt stuck-on-1).
+- **Scope für Welle 4 (TAXO1-04 Live-Cutover Taxonomie/Erkennung):** (1) Phasen-Erkennung muss Abschluss/Terminvereinbarung als Phase 5/6 erkennen (Prompt + Konfidenz-Schwelle prüfen). (2) Nebenbefund: `_phase_cycle_counter` ist noch GLOBAL (auf der `analyse_loop`-Funktion, claude_service.py:992) statt per-SID → bei Parallel-Anrufen erratischer Phasen-Takt; in die per-SID-Konsolidierung mitnehmen.
+- **Routing (André 2026-06-17):** in Welle 4 falten, kein separater Vorab-Fix.
+
 ### ART17-PURGE — Echte Art.17-Löschung (Hard-Delete + Cascade aufwecken) — 🔴 START-BLOCKER vor EA-Launch
 
 - **Severity:** critical (DSGVO-Pflicht, Launch-Blocker) — eigene 🔴-Phase mit Threat-Model, NICHT als Polish-Fix
