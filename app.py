@@ -1,6 +1,8 @@
+import atexit
 import json
 import logging
 import os
+import signal
 import threading
 from datetime import datetime, timedelta
 from flask import Flask
@@ -2299,6 +2301,43 @@ from services.claude_service   import analyse_loop, coaching_loop
 register_audio_handlers(socketio)
 threading.Thread(target=analyse_loop,     daemon=True).start()
 threading.Thread(target=coaching_loop,    daemon=True).start()
+
+# ── Phase 08.23.2.TAXO1: Slow Lane (3. Bahn) — Consumer + Graceful-Flush ──────────
+# REQ 3 / Geruest §5 Bau-Regel 2: EIN Daemon-Consumer neben analyse_loop/coaching_loop.
+# Laeuft in TAXO1 LEER (kein Producer angebunden) und benotet NICHTS (Scoring = TAXO2).
+from services.slow_lane import slow_lane_consumer, flush_to_db, request_shutdown
+
+threading.Thread(target=slow_lane_consumer, daemon=True).start()
+
+# atexit: Sentinel stoppt den Consumer, dann finaler Drain offener Items (Bau-Regel 2).
+atexit.register(lambda: (request_shutdown(), flush_to_db()))
+
+# SIGTERM-Handler (Finding #2): atexit feuert bei SIGTERM nicht zuverlaessig; SIGTERM ist
+# der HAEUFIGE Kill-Pfad (deploy.sh-Restart, systemd/gunicorn graceful stop).
+# N-1-GUARD: unter gunicorn gthread (1 Worker, --threads 4) laeuft der Bootstrap evtl. NICHT
+# im Prozess-Main-Thread -> signal.signal() wirft dann ValueError. Registrierung in
+# try/except ValueError -> KEIN Bootstrap-Crash, atexit-Fallback. Der Flush ist eine
+# Optimierung, KEINE Daten-Garantie (intent_event durabel + re-derivierbar, Design §0).
+_prev_sigterm = signal.getsignal(signal.SIGTERM)
+
+
+def _graceful_sigterm(signum, frame):
+    request_shutdown()
+    flush_to_db()  # idempotent: drained leere Queue beim Doppel-Aufruf (Edge 3)
+    if callable(_prev_sigterm):
+        _prev_sigterm(signum, frame)
+    else:
+        raise SystemExit(0)  # normalen Shutdown fortsetzen (atexit feuert dann ebenfalls, drained leer)
+
+
+try:
+    signal.signal(signal.SIGTERM, _graceful_sigterm)
+except ValueError as _sig_e:
+    # N-1: signal.signal nur im Prozess-Main-Thread erlaubt; unter gunicorn gthread
+    # kann der Bootstrap in einem Nicht-Main-Thread laufen -> KEIN Crash, atexit deckt
+    # den sauberen Restart als Fallback (Flush ist Optimierung, keine Daten-Garantie, §0).
+    print(f"[SLOW] SIGTERM-Handler nicht registriert (kein Main-Thread): {_sig_e}; atexit-Fallback aktiv")
+# ────────────────────────────────────────────────────────────────────────────────
 
 # ── Phase 08.23.2.B+C: Anonymisierungs-Pipeline Pre-Warm ─────────────────────
 # Ladet de_core_news_lg + GLiNER beim App-Start damit der erste echte Snippet
