@@ -37,11 +37,36 @@ CHUNK_SIZE        = 1024
 ANALYSE_INTERVALL = 4  # Phase 06.3: raised from 2s — analyse_loop is intelligence-only now, fewer calls = less 529 risk + lower cost
 
 # ── Phase 08.5: Klassifikator-Confidence-Schwelle (D-03) ─────────────────────
-# Default 0.80. Unter diesem Wert: keine Antwort-Generation, Soft-Hint statt Antwort.
-# Env-Var erlaubt Justierung ohne Code-Deploy (Admin-Panel-UI post-Launch).
+# TAXO1-Welle 4 (K4): Default 0.80 -> 0.55. RESEARCH §3: 0.80 unterdrueckte 13
+# legitime frage-Klassifikationen bei conf 0.45-0.75 (Haiku clustert ~0.65).
+# Unter diesem Wert: kein lauter Antwort-Cue, aber das intent_event wird mit
+# abstained=True festgehalten (Funnel sichtbar, K4 nicht ueberbaut).
+# Env-Var erlaubt Justierung ohne Code-Deploy (<30s reversibel, Punkt-12-Marge).
+# Im Test-Anruf empirisch nachkalibrieren.
 CLASSIFIER_CONFIDENCE_THRESHOLD = float(
-    os.environ.get('CLASSIFIER_CONFIDENCE_THRESHOLD', '0.80')
+    os.environ.get('CLASSIFIER_CONFIDENCE_THRESHOLD', '0.55')
 )
+
+
+def should_abstain(confidence, threshold=None) -> bool:
+    """TAXO1-Welle 4 (K4, Cross-AI Finding #4): reine Funnel-Entscheidung — KEIN
+    I/O, KEIN LLM, KEINE DB. low-conf (oder fehlende confidence) -> abstain
+    (Aufrufer schreibt das Event mit abstained=True statt es zu droppen).
+    Unit-testbar (tests/test_k4_threshold_funnel.py)."""
+    t = CLASSIFIER_CONFIDENCE_THRESHOLD if threshold is None else threshold
+    return confidence is None or confidence < t
+
+
+# ── TAXO1-Welle 4: Moment-Fenster (I-4-FOLD + Gemini-R2) ─────────────────────
+# NICHT-refreshender Max-Dauer-Deckel ab Fenster-OEFFNUNG (harte Notbremse gegen
+# Endlos-Momente, falls das "Berater-antwortet"-Signal mal nicht feuert). KEIN
+# refreshender Idle-Timer (der war Teil der Ueber-Verklumpung).
+MOMENT_WINDOW_MAX_S = float(os.environ.get('MOMENT_WINDOW_MAX_S', '90.0'))
+
+# Cold-Call-Primaer-Schliesser (FUND A): eine SUBSTANZIELLE Berater-Wendung
+# (>= N Woerter, NICHT als Einwand-Echo klassifiziert) = "Berater hat geantwortet"
+# -> Moment-Fenster schliessen. Kein Fueller/"aehm ja".
+SUBSTANTIAL_TURN_MIN_WORDS = int(os.environ.get('SUBSTANTIAL_TURN_MIN_WORDS', '6'))
 
 # ── Phase 08.13: MODEL-Konstanten (ENV-overridable, per CONTEXT.md D-01) ──────
 # Sonnet 4.5 fuer User-sichtbare Outputs — Alias ohne Date-Suffix (robuster gegen Date-Drift,

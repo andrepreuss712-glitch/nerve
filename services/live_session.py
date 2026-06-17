@@ -5,6 +5,7 @@ All globals and shared state lives here to avoid circular imports.
 import os
 import threading
 import time
+import uuid
 import logging as _logging
 from datetime import datetime
 from typing import Optional
@@ -368,6 +369,28 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 # False = keine aktive Warnung; True nach erstem Score<0.70-Emit,
                 # zurueck auf False sobald Score>0.80 (Hysterese - verhindert Spam).
                 'audio_warn_active':     False,
+                # ── TAXO1-Welle 4: Moment-Fenster (I-4-FOLD + Gemini-R2) ──────
+                # Ereignis-getriebenes Einwand-FENSTER pro-SID (KEIN line_id-Key,
+                # KEIN module-globaler state). interaction_id = offene UUID oder None;
+                # moment_opened_mode = mode bei OEFFNUNG (Downgrade-Erkennung);
+                # moment_opened_monotonic = OEFFNUNGS-Zeitpunkt (NIE refresht, nur
+                # fuer den Max-Dauer-Deckel). Gemini-R2: KEIN refreshender Idle-Timer
+                # (der war Teil der Ueber-Verklumpung — distinkte Zyklen klebten).
+                'interaction_id':           None,
+                'moment_opened_mode':       None,
+                'moment_opened_monotonic':  0.0,
+                # ── TAXO1-Welle 4: IL-2 Live-Uebergabe-Vertrag fuer TAXO3 ─────
+                # Medium-Lane schreibt primary_intent(=intent_type) + confidence
+                # per-SID VOR dem Antwort-Trigger; TAXO3 build_answer_context liest
+                # sie LIVE aus dem RAM (nicht aus der DB). Seed None (TAXO3 .get()
+                # toleriert None vor dem ersten Intent; danach immer ein float).
+                'primary_intent':           None,
+                'confidence':               None,
+                # ── TAXO1-Welle 4 Addition A (§0.1): phase_cycle_counter per-SID ──
+                # War global function-attribute analyse_loop._phase_cycle_counter
+                # (ueber ALLE SIDs geteilt -> erratische Phasen-Kadenz bei parallelen
+                # Calls). Jetzt per-SID single-source wie die Welle-3-Zaehler.
+                'phase_cycle_counter':      0,
             },
             # D-04: tracking logs — initialized as per-SID scaffolding for future migration.
             # NOTE (HIGH-2 coexistence): Services still WRITE to module-level globals
@@ -424,6 +447,82 @@ def pop_session_state(sid: str) -> None:
     with _per_sid_coaching_lock:
         _per_sid_coaching_buffer.pop(sid, None)
     drop_matcher(sid)
+    # I-4-FOLD: das Moment-Fenster (interaction_id/moment_opened_*) liegt in
+    # _session_state[sid]['state'] und wird mit dem pop oben automatisch entfernt
+    # (Gemini-Punkt: Memory-Cleanup der per-SID-Klammer bei Disconnect/Beenden).
+
+
+# ── TAXO1-Welle 4: Moment-FENSTER (I-4-FOLD + Gemini-R2) ──────────────────────
+# MOMENT-FENSTER (I-4-FOLD): ereignis-getriebenes Einwand-Fenster pro-SID; oeffnet
+# bei erstem Kunden-Einwand, schliesst wenn der Berater ANTWORTET (Task 2 c2) /
+# Meeting-Sprecher-Wechsel / Modus-Downgrade / Max-Dauer-Deckel. Hintergrund-
+# Etikett, GATET NICHT die Live-Reaktion (Soll-Verhalten §5: Speed gewinnt).
+#
+# LOCK-FREE (Gemini-Punkt a): beide Helfer NEHMEN KEINEN Lock — der AUFRUFER haelt
+# `_session_state_lock` (Muster matcher: caller holds lock, writes directly). KEIN
+# RLock. `state_lock` (module-global) und `_session_state_lock` NIE gleichzeitig
+# halten -> kein Lock-Ordering-Deadlock. KEIN line_id-Key, KEIN refreshender Timer.
+
+def get_or_open_moment(sid, *, mode, now) -> Optional[str]:
+    """Gibt die interaction_id des offenen Einwand-Fensters zurueck; oeffnet ein
+    neues beim ersten Kunden-Einwand. LOCK-FREE — Aufrufer haelt `_session_state_lock`.
+
+    - (d) Modus-Downgrade: offenes Fenster + moment_opened_mode != mode -> schliessen
+      (frisches Fenster fuer den neuen Modus, z.B. Meeting->Cold-Call bei Consent-Verweigerung).
+    - (b) NICHT-refreshender Max-Dauer-Deckel: offen + now-opened > MOMENT_WINDOW_MAX_S
+      -> harte Notbremse, schliessen. Gemessen ab OEFFNUNG, NICHT ab letzter Aktivitaet.
+    - OEFFNEN: interaction_id is None -> mint uuid4, setze 3 Keys, return id.
+    - FORTSETZEN (JOIN): sonst -> return bestehende id OHNE Timer-Refresh (mehrere
+      Einwand-Echos / pausen-gesplittete Fortsetzung desselben Einwands = EIN Moment).
+
+    Gibt None zurueck, falls die SID/State nicht (mehr) existiert (kein Crash).
+    """
+    from config import MOMENT_WINDOW_MAX_S
+    _sd = _session_state.get(sid)
+    if not _sd:
+        return None
+    st = _sd.get('state')
+    if st is None:
+        return None
+
+    # (d) Modus-Downgrade-Reset
+    if st.get('interaction_id') is not None and st.get('moment_opened_mode') != mode:
+        st['interaction_id'] = None
+        st['moment_opened_mode'] = None
+        st['moment_opened_monotonic'] = 0.0
+    # (b) NICHT-refreshender Max-Dauer-Deckel ab Oeffnung
+    elif (st.get('interaction_id') is not None
+          and (now - (st.get('moment_opened_monotonic') or 0.0)) > MOMENT_WINDOW_MAX_S):
+        st['interaction_id'] = None
+        st['moment_opened_mode'] = None
+        st['moment_opened_monotonic'] = 0.0
+
+    if st.get('interaction_id') is None:
+        # OEFFNEN
+        iid = str(uuid.uuid4())
+        st['interaction_id'] = iid
+        st['moment_opened_mode'] = mode
+        st['moment_opened_monotonic'] = now
+        return iid
+    # FORTSETZEN (JOIN) — KEIN Timer-Refresh (Gemini-R2)
+    return st['interaction_id']
+
+
+def close_moment(sid, *, reason) -> None:
+    """Schliesst das offene Einwand-Fenster (interaction_id=None) -> der naechste
+    Kunden-Einwand oeffnet ein neues. LOCK-FREE — Aufrufer haelt `_session_state_lock`.
+    Idempotent (schon None -> no-op)."""
+    _sd = _session_state.get(sid)
+    if not _sd:
+        return
+    st = _sd.get('state')
+    if st is None:
+        return
+    if st.get('interaction_id') is not None:
+        st['interaction_id'] = None
+        st['moment_opened_mode'] = None
+        st['moment_opened_monotonic'] = 0.0
+        print(f"[MOMENT] close sid={sid} reason={reason}")
 
 
 def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') -> Optional[str]:
