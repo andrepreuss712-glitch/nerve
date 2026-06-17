@@ -288,10 +288,18 @@ Letzte Gesprächsaussagen (chronologisch):
 
 Bestimme die AKTUELLE Phase basierend auf den letzten Aussagen.
 Eine Phase kann bestehen bleiben. Wähle die wahrscheinlichste Phase.
-WICHTIG: Sobald ein Termin/Folgetermin vereinbart, gelegt oder bestaetigt wird
-(z.B. "machen wir Dienstag", "schicke Ihnen einen Kalender-Eintrag", "passt, dann
-sprechen wir naechste Woche"), ist die Phase Abschluss/Terminvereinbarung — bleibe
-NICHT auf Bedarfsanalyse/Discovery haengen.
+WICHTIG — Termin: unterscheide VORSCHLAG von echter VEREINBARUNG.
+- VORGESCHLAGEN (Berater bietet an, noch KEINE Zusage): "darf ich Sie Donnerstag
+  anrufen?", "ich schicke Ihnen mal einen Termin/Kalender-Eintrag", "wir koennten
+  naechste Woche sprechen" → das ist NOCH NICHT Abschluss → bleibe Phase 4/5.
+- BESTAETIGT/VEREINBART (beidseitige, feste Zusage): "passt, machen wir", "ja,
+  Dienstag 10 Uhr", "abgemacht", oder der Berater fasst die feste Abmachung
+  zusammen ("super, dann Dienstag 10 Uhr, ich trage es ein") → Phase
+  Abschluss/Terminvereinbarung; bleibe dann NICHT auf Bedarfsanalyse haengen.
+Im COLD CALL hoerst du NUR den Berater (die Kunden-Zusage ist NICHT hoerbar) — sei
+KONSERVATIV: werte nur als Abschluss, wenn der Berater die Vereinbarung als
+BESTAETIGT formuliert/zusammenfasst. Berater-Optimismus oder ein blosser Vorschlag
+ist KEIN Abschluss.
 
 Antworte NUR als JSON:
 {{"phase": <1-N>, "confidence": <0.0-1.0>, "grund": "<max 10 Wörter>"}}"""
@@ -306,9 +314,11 @@ _PHASE_CUES_COLD_CALL = {
     3: 'Grund des Anrufs, Nutzenversprechen, erste Einordnung',
     4: 'Pitch/Loesung praesentieren, konkretes Angebot',
     5: 'Einwandbehandlung: Kunde bringt Bedenken/Einwand, Berater entkraeftet',
-    6: 'Abschluss/Terminvereinbarung: Termin/Folgetermin vereinbart, gelegt, '
-       'bestaetigt; naechster konkreter Schritt; "machen wir Dienstag", '
-       '"schicke Ihnen einen Termin", "passt, dann telefonieren wir"',
+    6: 'Abschluss/Terminvereinbarung: Termin BESTAETIGT/fest vereinbart, Berater '
+       'fasst die feste Abmachung zusammen ("passt, machen wir", "ja Dienstag '
+       '10 Uhr", "super, dann Dienstag, ich trage es ein"). NICHT bei blossem '
+       'Vorschlag ("darf ich anrufen?", "schicke Ihnen einen Termin") — der bleibt '
+       'Phase 4/5 (im Cold Call ist die Kunden-Zusage nicht hoerbar → konservativ)',
 }
 _PHASE_CUES_MEETING = {
     1: 'Begruessung, Smalltalk, Vorstellung',
@@ -316,8 +326,9 @@ _PHASE_CUES_MEETING = {
     3: 'Bedarfsanalyse, Fragen, Discovery, Situation des Kunden',
     4: 'Pitch/Loesung praesentieren, Demo, konkretes Angebot',
     5: 'Einwandbehandlung: Kunde bringt Bedenken/Einwand, Berater entkraeftet',
-    6: 'Abschluss/Terminvereinbarung: Termin/Folgetermin vereinbart, gelegt, '
-       'bestaetigt; naechster konkreter Schritt; Vertrag/Angebot-Zusage',
+    6: 'Abschluss/Terminvereinbarung: Termin/Folgetermin BEIDSEITIG bestaetigt/'
+       'vereinbart, Vertrag/Angebot-Zusage, fester naechster Schritt. Ein blosser '
+       'Vorschlag ohne Zusage ist noch Phase 4/5.',
 }
 _PHASE_CUES_GATEKEEPER = {
     1: 'Begruessung des Gatekeepers',

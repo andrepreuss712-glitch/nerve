@@ -166,12 +166,13 @@ def detect_phase(raw_phase: int, raw_confidence: float,
     Returns (accepted_phase, accepted_confidence).
 
     Rules:
+    - Phase 6 (Abschluss/Terminvereinbarung) is QUASI-TERMINAL: once reached, a
+      follow-up objection does NOT pull it back to Phase 5 (6<->5 flicker guard,
+      Welle-4 Addition-B). Phase 6 is the only phase above 5, so this also removes
+      the former regress-to-5 path by design.
     - Same phase → pass through
     - Forward advance requires confidence >= 0.7
-    - Regression is only allowed to Phase 5 (Einwandbehandlung) AND only with
-      confidence >= 0.8 AND cycles_since_change >= 3 (3-cycle debounce) AND
-      current_phase >= 2 (Phase 1 cannot regress).
-    - All other regressions are blocked (flicker suppression).
+    - All regressions are blocked (flicker suppression).
 
     K3 Defense-in-Depth (Phase 08.23.2.TAXO1-03 / Cross-AI Finding #4):
     current_phase wird am Eingang hart auf int erzwungen. Historisch konnte ein
@@ -180,18 +181,22 @@ def detect_phase(raw_phase: int, raw_confidence: float,
     `int(current_phase or 1)` deckt auch None/leer ab (Seed 1, RESEARCH §3).
     """
     current_phase = int(current_phase or 1)
+    # Welle-4 Addition-B (Gemini-Gegencheck Punkt 2): Phase 6 (Abschluss/
+    # Terminvereinbarung) ist QUASI-TERMINAL. Einmal erreicht, reisst ein kleiner
+    # Folge-Einwand die Phase NICHT zurueck auf 5 (6<->5-Flacker-Schutz). Da Phase 6
+    # die einzige Phase oberhalb von 5 ist, WAR sie der einzige Regress-zu-5-Quell —
+    # mit terminalem 6 entfaellt die fruehere Regress-zu-5-Logik bewusst (kein dead
+    # branch: die Regel ist hier explizit der terminale Stopp).
+    if current_phase == 6:
+        return 6, raw_confidence
     if raw_phase == current_phase:
         return current_phase, raw_confidence
     if raw_phase > current_phase:
         if raw_confidence < 0.7:
             return current_phase, raw_confidence
         return raw_phase, raw_confidence
-    # regression: only to phase 5, with strong evidence + debounce
-    if (raw_phase == 5
-            and raw_confidence >= 0.8
-            and cycles_since_change >= 3
-            and current_phase >= 2):
-        return 5, raw_confidence
+    # Alle uebrigen Regressionen blockiert (Flacker-Unterdbrueckung). Der einzige
+    # frueher erlaubte Regress (6->5) ist durch die terminale Phase-6-Regel oben weg.
     return current_phase, raw_confidence
 
 

@@ -47,19 +47,22 @@ def test_detect_phase_regress_to_5_allowed_with_debounce():
     assert conf == 0.85
 
 
-def test_detect_phase_regress_to_5_from_6_allowed():
+def test_detect_phase_6_terminal_blocks_regress_to_5_strong():
+    # Welle-4 Addition-B (Gemini Punkt 2): Phase 6 is quasi-terminal — a strong
+    # follow-up objection (conf 0.9, debounced) does NOT pull it back to Phase 5.
     new, _ = detect_phase(5, 0.9, current_phase=6, cycles_since_change=5)
-    assert new == 5
+    assert new == 6
 
 
-def test_detect_phase_regress_to_5_debounce_blocks():
-    # 6 → 5 with cycles_since_change < 3 → BLOCKED even with high conf
+def test_detect_phase_6_terminal_blocks_regress_to_5_debounce():
+    # 6 → 5 attempt with short debounce → still BLOCKED (phase 6 terminal)
     new, _ = detect_phase(5, 0.9, current_phase=6, cycles_since_change=2)
     assert new == 6
 
 
-def test_detect_phase_regress_to_5_low_conf_blocks():
-    # 6 → 5 with conf < 0.8 → BLOCKED
+def test_detect_phase_6_terminal_blocks_regress_to_5_weak():
+    # 6 → 5 attempt on a WEAK follow-up objection (conf 0.75) → BLOCKED
+    # (this is the Gemini-Punkt-2 "kleiner Folge-Einwand" regression guard)
     new, _ = detect_phase(5, 0.75, current_phase=6, cycles_since_change=5)
     assert new == 6
 
