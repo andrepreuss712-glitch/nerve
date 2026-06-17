@@ -979,14 +979,14 @@ def analyse_loop():
                     ls.state['ergebnis']        = ergebnis
                     ls.state['aktiv']           = False
                     ls.state['version']        += 1
-                    ls.state['kaufbereitschaft'] = kb_aktuell
-                # Phase 08.23.2.TAXO1-03 (§0.1 P4 / B-A): line_id per-SID single-source.
-                # War global ls.state['line_id'] — einziger Reader war der Keyword-Matcher
-                # (einwand_keyword_matcher:251), der jetzt per-SID liest. Globaler Write GELOESCHT.
+                # Phase 08.23.2.TAXO1-03 (§0.1 P4 B-A line_id / P7 kaufbereitschaft): per-SID.
+                # War global ls.state['line_id'] (einziger Reader Keyword-Matcher, jetzt per-SID)
+                # + ls.state['kaufbereitschaft'] (dict-key ohne Reader, Rider nur WRITE). GELOESCHT.
                 with ls._session_state_lock:
                     _sid_li = (ls._session_state.get(sid) or {}).get('state')
                     if _sid_li is not None:
                         _sid_li['line_id'] = line_id
+                        _sid_li['kaufbereitschaft'] = kb_aktuell
                 # ── Phase 04.8: phase classifier (every 5th cycle) ────────────
                 _phase_cycle_counter = getattr(analyse_loop, '_phase_cycle_counter', 0) + 1
                 analyse_loop._phase_cycle_counter = _phase_cycle_counter
@@ -1166,14 +1166,23 @@ def analyse_loop():
                                 _le_st_w['last_einwand_typ'] = ergebnis['typ']
                     ewb_buttons = dynamic_ewb_buttons(cur_phase_p4, base_buttons,
                                                       last_einwand_typ=_last_ewb_typ)
+                    # Phase 08.23.2.TAXO1-03 (§0.1 P5/P7/P8 Rider): noten-nahe Werte NUR
+                    # per-SID WRITE-konsistent — KEINE Scoring-Formel geaendert (compute_readiness_score
+                    # unveraendert; TAXO2 entscheidet Scoring). score_factors_seen-Read wurde in Task 1
+                    # bereits per-SID gemacht — hier der zugehoerige WRITE. Globale dict-Key-Writes
+                    # GELOESCHT. (active_hint/ewb_buttons NICHT in §0.1 → bleiben global; ls.kaufbereitschaft
+                    # Modul-Mirror bleibt — separater Reader app_routes:148.)
+                    with ls._session_state_lock:
+                        _sid_p4_w = (ls._session_state.get(sid) or {}).get('state')
+                        if _sid_p4_w is not None:
+                            _sid_p4_w['score_factors_seen'] = factors
+                            _sid_p4_w['readiness_score'] = score_p4
+                            _sid_p4_w['readiness_bucket'] = bucket_p4
+                            _sid_p4_w['kaufbereitschaft'] = score_p4  # legacy mirror (RESEARCH Q2 R2)
                     with ls.state_lock:
-                        ls.state['score_factors_seen'] = factors
-                        ls.state['readiness_score'] = score_p4
-                        ls.state['readiness_bucket'] = bucket_p4
-                        ls.state['kaufbereitschaft'] = score_p4  # legacy mirror (RESEARCH Q2 R2)
                         ls.state['active_hint'] = active_hint
                         ls.state['ewb_buttons'] = ewb_buttons
-                    ls.kaufbereitschaft = score_p4  # module global mirror
+                    ls.kaufbereitschaft = score_p4  # module global mirror (separater Pfad, app_routes:148)
                 except Exception as e:
                     print(f"[readiness/active_hint] loop error: {e}")
             except Exception as e:
@@ -1184,12 +1193,12 @@ def analyse_loop():
                     ls.state['ergebnis']         = {'einwand': False, 'notiz': f'Fehler: {e}'}
                     ls.state['aktiv']            = False
                     ls.state['version']         += 1
-                    ls.state['kaufbereitschaft'] = kb_aktuell
-                # Phase 08.23.2.TAXO1-03 (§0.1 P4 / B-A): line_id per-SID (Fehler-Pfad).
+                # Phase 08.23.2.TAXO1-03 (§0.1 P4 line_id / P7 kaufbereitschaft): per-SID (Fehler-Pfad).
                 with ls._session_state_lock:
                     _sid_li_err = (ls._session_state.get(sid) or {}).get('state')
                     if _sid_li_err is not None:
                         _sid_li_err['line_id'] = line_id
+                        _sid_li_err['kaufbereitschaft'] = kb_aktuell
 
 
 # ── Phase 08.5: QA-Pipeline Dispatch Helpers ─────────────────────────────────
@@ -1484,8 +1493,11 @@ def coaching_loop():
                     ls.update_kaufbereitschaft(int(kb_delta))
                     with ls.kb_lock:
                         kb_aktuell = ls.kaufbereitschaft
-                    with ls.state_lock:
-                        ls.state['kaufbereitschaft'] = kb_aktuell
+                    # Phase 08.23.2.TAXO1-03 (§0.1 P7 Rider): kaufbereitschaft dict-key per-SID.
+                    with ls._session_state_lock:
+                        _sid_kb_c = (ls._session_state.get(sid) or {}).get('state')
+                        if _sid_kb_c is not None:
+                            _sid_kb_c['kaufbereitschaft'] = kb_aktuell
 
                 if kategorie == 'frage' and bof_snapshot < 2:
                     tipp      = None
