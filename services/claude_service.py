@@ -528,6 +528,11 @@ def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: s
     Haiku bekommt den rohen Kunden-Satz + Profil-Einwaende-Liste als Kontext und baut
     eine knappe Gegenargument-Variante fuer Slot 1 (Slot 0 = analysiere_mit_claude).
     """
+    # _ewb_fallback_until ist modul-global (Z.19) und wird unten (Fallback-Zweig)
+    # zugewiesen → ohne diese Deklaration macht Python die Variable funktions-lokal,
+    # und der LESE-Zugriff im Circuit-Breaker-Check (vor der Zuweisung) wirft
+    # UnboundLocalError. global behebt das (einziger reassignierte Modul-Global hier).
+    global _ewb_fallback_until
     from extensions import socketio as sio
 
     # Profil-Einwaende als kompakte Referenz fuer Haiku aufbereiten
