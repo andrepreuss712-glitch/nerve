@@ -23,6 +23,16 @@
 - **Scope für Welle 4 (TAXO1-04 Live-Cutover Taxonomie/Erkennung):** (1) Phasen-Erkennung muss Abschluss/Terminvereinbarung als Phase 5/6 erkennen (Prompt + Konfidenz-Schwelle prüfen). (2) Nebenbefund: `_phase_cycle_counter` ist noch GLOBAL (auf der `analyse_loop`-Funktion, claude_service.py:992) statt per-SID → bei Parallel-Anrufen erratischer Phasen-Takt; in die per-SID-Konsolidierung mitnehmen.
 - **Routing (André 2026-06-17):** in Welle 4 falten, kein separater Vorab-Fix.
 
+### ANON-LIVE-ANSWER — Live-Antwort wird auf anonymisiertem Text gebaut → Unsinn im Ohr → TAXO3-Anforderung + 🔴 DSGVO-Entscheidung
+
+- **Severity:** high (Live-Antwort-Qualität — KI coacht mit [PERSON_A]/[ORG_B] statt echten Namen → inkohärente Antworten)
+- **Entdeckt:** TAXO1 Welle-3 Live-Test-Anruf (2026-06-17, André). Cold-Call-Antworten enthielten [ORG_B] (NERVEs eigener Kontext geschwärzt); Meeting-Antworten NICHT anonymisiert (Inkonsistenz). Log-Beleg: `[Claude-1] Analysiere (line 9): [PERSON_A], Sie arbeiten schon mit einem anderen Anbieter` — die Live-KI bekommt bereits ANONYMISIERTEN Text als EINGABE.
+- **Root-Cause (empirisch):** im Cold-Call wird der Transkript-Text anonymisiert BEVOR er an die Live-Antwort-KI geht (nicht erst beim Speichern). → die KI generiert ihre Live-Antwort auf Token-Basis.
+- **André-Argument:** der Berater hat die echten Namen im Gespräch gehört — das sind keine DSGVO-Geheimnisse, sondern Info „die man sich auf einen Zettel schreiben könnte". Die Live-Antwort (flüchtig, nicht gespeichert) sollte echte Namen nutzen; anonymisiert wird nur die SPEICHERUNG/Trainings-Kopie.
+- **🔴 DSGVO-Spannung (NICHT schnell schießen):** berührt den Fundament-Pfeiler „anonymisieren VOR KI-Verarbeitung" ([[04 Entscheidungen/NERVE DSGVO Analyse]]). Roh-Text an die Claude-API (AWS Bedrock Frankfurt) zu geben ist eine bewusste Architektur-Entscheidung, kein Bug-Fix.
+- **Routing (André 2026-06-17):** in TAXO3-Scope als explizite Anforderung (Live-Antwort = echter Text, Anonymisierung storage-only) + DSGVO-Doc-Abgleich + Gemini-Gegencheck. Auch die Cold-Call/Meeting-Inkonsistenz dort klären.
+- **Verwandt:** slot1-busy-Drossel unterdrückt Folge-Antworten (`[QA-INT] slot1 busy skip`) — Slot-Timing/Dedup ist ohnehin TAXO3-Scope (TAXO3-05, Slot B per line_id). Dort mitprüfen ob die Drossel zu aggressiv ist (Fragen gehen verloren wenn Slot belegt).
+
 ### ART17-PURGE — Echte Art.17-Löschung (Hard-Delete + Cascade aufwecken) — 🔴 START-BLOCKER vor EA-Launch
 
 - **Severity:** critical (DSGVO-Pflicht, Launch-Blocker) — eigene 🔴-Phase mit Threat-Model, NICHT als Polish-Fix
