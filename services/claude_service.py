@@ -532,14 +532,28 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         _anrede = 'Sie'
     if not _user_id:
         print("[Phase08] WARN: _session_state[sid]['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
-    _ewb_version = resolve_prompt_version('ewb', _user_id)
-    _system_prompt = build_ewb_prompt(
-        profile_data=None,
-        anrede=_anrede,
-        version=_ewb_version,
-        user_id=_user_id,
-        sid=sid,  # per-SID context (TAXO1-03): build_ewb_prompt liest per-SID statt global
-    )
+    # ── Phase 08.23.2.TAXO1.MEDFIX (Wurzel-Fix Welle-4-Cutover, Punkt 14) ──────
+    # WAR: _system_prompt = build_ewb_prompt(...) — der EWB-ANTWORT-Prompt (Prosa,
+    # "liefere EINE Gegenargumentation in 2-3 Saetzen") als Klassifikations-System-
+    # Prompt. Haiku schrieb deshalb PROSA → _parse_json → {} → ergebnis.get('einwand')
+    # IMMER falsy → Medium-Lane emit_intent_event (analyse_loop ~:1004/1038) feuerte
+    # NIE → intent_event blieb leer (Diagnose: taxo1-04-intent-event-empty-medium-lane).
+    # JETZT: SYSTEM_PROMPT_BASE (claude_service.py:33) — das JSON-Einwand-Schema
+    # (Welle 4 hat dort die intent_type-Liste + confidence bereits ergaenzt), bislang
+    # ungenutzt (nur Definition). analysiere_mit_claude KLASSIFIZIERT + reichert an
+    # (intent_event/kaufbereitschaft/Phase/Post-Call-gegenargument_log); die Live-
+    # ANTWORT-ANZEIGE bleibt allein beim QA-Slot/Matcher-Pfad (streame_auto_variante /
+    # qa_slot1 — Phase-06.3-Invariante "analyse_loop rendert nicht in PiP-Slots").
+    # Task 1b grep-belegt: analyse_loop hat KEIN sio.emit, kein /api/ergebnis-Route,
+    # kein Frontend-Poll; ls.state['ergebnis'] ist write-only (kein Reader) → kein
+    # Doppel-Cue durch die reaktivierten gegenargument_1/2.
+    # Profil-Kontext/anrede NICHT angehaengt: SYSTEM_PROMPT_BASE ist das vollstaendige
+    # Klassifikations-Schema; per-SID-Profil-Einwaende dienen der ANTWORT-Generierung
+    # (separater Matcher-/streame_auto_variante-Pfad), nicht der Klassifikation. Der
+    # fokussierte Prompt haelt die Klassifikations-Latenz niedrig (Punkt 25). Die per-SID
+    # user_id/anrede-Reads (Welle-3-Putzliste) bleiben unveraendert; build_ewb_prompt /
+    # resolve_prompt_version bleiben fuer die ECHTEN EWB-Antwort-Pfade unveraendert.
+    _system_prompt = SYSTEM_PROMPT_BASE
     # ── Phase 08.13: Prompt-Caching Analyse-Loop (CACHE_ANALYSE=False default) ──
     if config.CACHE_ANALYSE and len(_system_prompt) >= _CACHE_MIN_CHARS:
         _system = [{"type": "text", "text": _system_prompt, "cache_control": {"type": "ephemeral"}}]
