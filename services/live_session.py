@@ -767,26 +767,29 @@ def reset_session():
         state['version']          = 0
         state['aktiv']            = False
         state['ergebnis']         = None
-        state['line_id']          = None
         state['kaufbereitschaft'] = 30
         # ── Phase 04.8 field resets (R3: missing resets cause stale hints) ──
-        state['current_phase']       = 1
-        state['current_phase_name']  = 'Opener'
-        state['phase_confidence']    = 0.0
-        state['phase_changed_at']    = None
-        state['phase_change_count']  = 0
+        # Phase 08.23.2.TAXO1-03 (B-A Interlock): die per-SID-migrierten Anker werden
+        # NICHT mehr hier im Modul-globalen state genullt — das waeren tote Geister-Writes
+        # (Halbmigration → Doppel-Feuer-Schutz sporadisch wirkungslos). Der per-SID-Reset
+        # laeuft ueber den pop+init-Loop oben (746-755): init_session_state['state'] seedet
+        # line_id/kw_fired_for_line/current_phase/current_phase_name/phase_confidence/
+        # cold_call_inference frisch (live_session.py:332/351/335/336/337/345).
+        # GELOESCHT (B-A): line_id, kw_fired_for_line, current_phase, current_phase_name,
+        #   phase_confidence, phase_changed_at, phase_change_count, cold_call_inference.
+        # BLEIBEN (noch globaler Write-Pfad / nicht-§0.1-migriert): readiness_*,
+        #   score_factors_seen, kaufbereitschaft (Task 3 Rider), active_hint, ewb_buttons,
+        #   active_learning_cards, precall_briefing (HTTP-Pfad-Reader app_routes:111),
+        #   slot1_variant_busy_until, mic_muted, active_profile_id.
         state['readiness_score']     = 30
         state['readiness_bucket']    = 'cold'
         state['score_factors_seen']  = {}
         state['active_hint']         = None
         state['ewb_buttons']         = None
-        state['cold_call_inference'] = None
         state['active_learning_cards'] = []
         state['precall_briefing'] = None
         state['slot1_variant_busy_until'] = 0.0
         state['mic_muted'] = False
-        # WR-04: Phase 08.5 state keys — reset to avoid stale D-02 guard hits in next session
-        state['kw_fired_for_line'] = None
         state['active_profile_id'] = None  # re-set by set_active_profile_with_id at session start
     with _line_id_lock:
         _line_id_counter = 0

@@ -222,11 +222,17 @@ class EinwandKeywordMatcher:
         self,
         transcript: str,
         profile_einwaende: list,
+        sid: str = None,
     ) -> Optional[dict]:
         """
         Wie match_keyword(), aber mit Dedup-Guard:
         Gibt None zurueck wenn derselbe Keyword-Typ innerhalb
         des Dedup-Fensters bereits gefeuert hat.
+
+        sid (Phase 08.23.2.TAXO1-03, §0.1 P4 REVERSE): per-SID kw_fired_for_line-Write.
+            Der Matcher schrieb frueher global _ls.state['kw_fired_for_line'], waehrend
+            analyse_loop per-SID las (claude:1265) → der D-02-Doppel-Feuer-Schutz griff NIE.
+            Mit sid liest+schreibt der Matcher dieselbe per-SID-Quelle.
         """
         match = match_keyword(transcript, profile_einwaende)
         if not match:
@@ -244,14 +250,19 @@ class EinwandKeywordMatcher:
         # ── Phase 08.5 D-02: Set kw_fired_for_line flag ──────────────────────
         # Tells analyse_loop that this utterance was already handled by the
         # Keyword-Matcher — prevents qa_pipeline double-fire (529-loop guard).
+        # Phase 08.23.2.TAXO1-03 (§0.1 P4 REVERSE): per-SID statt global.
+        # line_id + kw_fired_for_line leben jetzt kanonisch in
+        # _session_state[sid]['state'] (analyse_loop schreibt line_id dort, claude:979).
         try:
             _ls = _get_ls()
-            if _ls and hasattr(_ls, 'state') and hasattr(_ls, 'state_lock'):
-                with _ls.state_lock:
-                    current_line = _ls.state.get('line_id')
-                    if current_line is not None:
-                        _ls.state['kw_fired_for_line'] = current_line
-                        print(f"[KW] kw_fired_for_line set to {current_line}")
+            if _ls and sid:
+                with _ls._session_state_lock:
+                    _sid_kw_state = (_ls._session_state.get(sid) or {}).get('state')
+                    if _sid_kw_state is not None:
+                        current_line = _sid_kw_state.get('line_id')
+                        if current_line is not None:
+                            _sid_kw_state['kw_fired_for_line'] = current_line
+                            print(f"[KW] kw_fired_for_line set to {current_line} (sid={sid})")
         except Exception as _kw_e:
             print(f"[KW] kw_fired_for_line set skip: {_kw_e}")
 

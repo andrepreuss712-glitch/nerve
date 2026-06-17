@@ -216,7 +216,7 @@ def _make_on_message(sid, mode='meeting'):
                     if not einwaende:
                         return
                     matcher = ls.get_matcher(sid)
-                    match = matcher.match_with_dedup(text, einwaende)
+                    match = matcher.match_with_dedup(text, einwaende, sid=sid)
                     if not match:
                         return
 

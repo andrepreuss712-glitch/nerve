@@ -432,7 +432,7 @@ def infer_customer_state(seller_transcript, phase):
         return None
 
 
-def analysiere_mit_claude(neuer_text: str, kontext: str) -> dict:
+def analysiere_mit_claude(neuer_text: str, kontext: str, sid: str = None) -> dict:
     user_msg = f"""Bisheriger Gesprächskontext (zur Orientierung, letzte Aussagen):
 {kontext if kontext else "(Kein vorheriger Kontext)"}
 
@@ -441,28 +441,29 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     # ── Phase 08 EWB-Pipeline Integration ──────────────────────────────────────
     # Routing ueber resolve_prompt_version (A/B-Router mit ENV-Override)
     # + build_ewb_prompt (Baustein-Struktur).
-    # user_id aus ls.state (W-6): deepgram_service.handle_start_live_session
-    # setzt ls.state['user_id'] bei Call-Start. Fallback auf 0 wenn leer —
-    # resolve_prompt_version wechselt dann auf variants[0] (deterministisch
-    # v1-legacy als sicherer Default).
+    # Phase 08.23.2.TAXO1-03 (§0.1 Putzliste P1): user_id/anrede per-SID single-source.
+    # War global ls.state.get('user_id') (:452, sid=None) → IMMER 0 (per-SID-Store war die
+    # echte Quelle) → 164x "user_id leer"-Warn + EWB-Routing auf v1-legacy gepinnt (Req 9).
+    # Jetzt aus _session_state[sid] (Muster claude:1262). Globaler Read GELOESCHT.
     import services.live_session as ls
-    # CR-01: reads under state_lock — deepgram_service writes session_anrede/user_id under same lock
-    if hasattr(ls, 'state') and hasattr(ls, 'state_lock'):
-        with ls.state_lock:
-            _user_id = ls.state.get('user_id') or 0
-            _anrede = ls.state.get('session_anrede') or 'Sie'
+    if sid:
+        with ls._session_state_lock:
+            _sid_amc = ls._session_state.get(sid) or {}
+            _sid_amc_state = _sid_amc.get('state') or {}
+            _user_id = _sid_amc.get('user_id') or 0
+            _anrede = _sid_amc_state.get('session_anrede') or 'Sie'
     else:
         _user_id = 0
         _anrede = 'Sie'
     if not _user_id:
-        print("[Phase08] WARN: ls.state['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
+        print("[Phase08] WARN: _session_state[sid]['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
     _ewb_version = resolve_prompt_version('ewb', _user_id)
     _system_prompt = build_ewb_prompt(
         profile_data=None,
         anrede=_anrede,
         version=_ewb_version,
         user_id=_user_id,
-        sid=None,  # analysiere_mit_claude has no SID context — uses global ls.state path
+        sid=sid,  # per-SID context (TAXO1-03): build_ewb_prompt liest per-SID statt global
     )
     # ── Phase 08.13: Prompt-Caching Analyse-Loop (CACHE_ANALYSE=False default) ──
     if config.CACHE_ANALYSE and len(_system_prompt) >= _CACHE_MIN_CHARS:
@@ -897,7 +898,7 @@ def analyse_loop():
                 # Keyword-Matcher (06.2) is sole primary for Slot 0 + Slot 1.
                 # Non-streaming call preserves ergebnis for FT-events, Kaufbereitschaft,
                 # Phase-Classifier, Cold-Call-Inference, Active-Hint-Orchestration.
-                ergebnis = analysiere_mit_claude(neuer_text, kontext)
+                ergebnis = analysiere_mit_claude(neuer_text, kontext, sid=sid)
                 # SID liveness check after Claude API call
                 with ls._session_state_lock:
                     if sid not in ls._session_state:
@@ -976,10 +977,16 @@ def analyse_loop():
                         })
                 with ls.state_lock:
                     ls.state['ergebnis']        = ergebnis
-                    ls.state['line_id']         = line_id
                     ls.state['aktiv']           = False
                     ls.state['version']        += 1
                     ls.state['kaufbereitschaft'] = kb_aktuell
+                # Phase 08.23.2.TAXO1-03 (§0.1 P4 / B-A): line_id per-SID single-source.
+                # War global ls.state['line_id'] — einziger Reader war der Keyword-Matcher
+                # (einwand_keyword_matcher:251), der jetzt per-SID liest. Globaler Write GELOESCHT.
+                with ls._session_state_lock:
+                    _sid_li = (ls._session_state.get(sid) or {}).get('state')
+                    if _sid_li is not None:
+                        _sid_li['line_id'] = line_id
                 # ── Phase 04.8: phase classifier (every 5th cycle) ────────────
                 _phase_cycle_counter = getattr(analyse_loop, '_phase_cycle_counter', 0) + 1
                 analyse_loop._phase_cycle_counter = _phase_cycle_counter
@@ -1141,16 +1148,22 @@ def analyse_loop():
                     except Exception:
                         base_buttons = None
                     # Track last objection type for context-based buttons
+                    # Phase 08.23.2.TAXO1-03 (§0.1 P6): last_einwand_typ per-SID single-source.
+                    # War global ls.state['last_einwand_typ'] (read+write) — Cross-Session-Leak
+                    # bei parallelen Calls. Jetzt _session_state[sid]['state']. Globale rw GELOESCHT.
                     _last_ewb_typ = None
                     if ergebnis.get('einwand') and ergebnis.get('typ'):
                         _last_ewb_typ = ergebnis['typ']
                     elif not ergebnis.get('einwand'):
-                        # No new objection — check if there's a recent one in state
-                        with ls.state_lock:
-                            _last_ewb_typ = ls.state.get('last_einwand_typ')
+                        # No new objection — check if there's a recent one in per-SID state
+                        with ls._session_state_lock:
+                            _le_st = (ls._session_state.get(sid) or {}).get('state') or {}
+                            _last_ewb_typ = _le_st.get('last_einwand_typ')
                     if ergebnis.get('einwand') and ergebnis.get('typ'):
-                        with ls.state_lock:
-                            ls.state['last_einwand_typ'] = ergebnis['typ']
+                        with ls._session_state_lock:
+                            _le_st_w = (ls._session_state.get(sid) or {}).get('state')
+                            if _le_st_w is not None:
+                                _le_st_w['last_einwand_typ'] = ergebnis['typ']
                     ewb_buttons = dynamic_ewb_buttons(cur_phase_p4, base_buttons,
                                                       last_einwand_typ=_last_ewb_typ)
                     with ls.state_lock:
@@ -1169,10 +1182,14 @@ def analyse_loop():
                     kb_aktuell = ls.kaufbereitschaft
                 with ls.state_lock:
                     ls.state['ergebnis']         = {'einwand': False, 'notiz': f'Fehler: {e}'}
-                    ls.state['line_id']          = line_id
                     ls.state['aktiv']            = False
                     ls.state['version']         += 1
                     ls.state['kaufbereitschaft'] = kb_aktuell
+                # Phase 08.23.2.TAXO1-03 (§0.1 P4 / B-A): line_id per-SID (Fehler-Pfad).
+                with ls._session_state_lock:
+                    _sid_li_err = (ls._session_state.get(sid) or {}).get('state')
+                    if _sid_li_err is not None:
+                        _sid_li_err['line_id'] = line_id
 
 
 # ── Phase 08.5: QA-Pipeline Dispatch Helpers ─────────────────────────────────
@@ -1260,24 +1277,23 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
     try:
         # Per-SID state reads (D-02 Phase 08.19.4 / WR-03 Phase 08.19.5.1)
         # WR-01/WR-03: read under _session_state_lock; guard against None (concurrent pop_session_state)
-        if sid:
-            with ls._session_state_lock:
-                _sid_st = ls._session_state.get(sid) or {}
-                _sid_st_state = _sid_st.get('state') or {}
-            _user_id = _sid_st.get('user_id') or 0
-            _active_sid = sid  # sid IS the active_sid
-            _active_profile_id = _sid_st.get('active_profile_id')
-            _kw_fired_for = _sid_st_state.get('kw_fired_for_line')
-            _anrede = _sid_st_state.get('session_anrede') or 'Sie'
-            _slot1_busy_until = _sid_st_state.get('slot1_variant_busy_until', 0.0)
-        else:
-            with ls.state_lock:
-                _user_id = ls.state.get('user_id') or 0
-                _active_sid = ls.state.get('active_sid')
-                _active_profile_id = ls.state.get('active_profile_id')
-                _kw_fired_for = ls.state.get('kw_fired_for_line')
-                _anrede = ls.state.get('session_anrede') or 'Sie'
-                _slot1_busy_until = ls.state.get('slot1_variant_busy_until', 0.0)
+        # Phase 08.23.2.TAXO1-03 (§0.1 P1/P4/P11): per-SID single-source.
+        # Der einzige Aufrufer (analyse_loop, claude:909) gibt IMMER sid mit. Der alte
+        # globale else-Fallback (ls.state.get user_id/active_sid/active_profile_id/
+        # kw_fired_for_line/anrede/slot1_busy_until) war strukturell tot UND ein
+        # Cross-Session-Leak-Risiko (las eine Fremd-Session). GELOESCHT — ohne sid
+        # gibt es keine aktive Session zu bedienen → früher Ausstieg (kein Raten).
+        if not sid:
+            return
+        with ls._session_state_lock:
+            _sid_st = ls._session_state.get(sid) or {}
+            _sid_st_state = _sid_st.get('state') or {}
+        _user_id = _sid_st.get('user_id') or 0
+        _active_sid = sid  # sid IS the active_sid
+        _active_profile_id = _sid_st.get('active_profile_id')
+        _kw_fired_for = _sid_st_state.get('kw_fired_for_line')
+        _anrede = _sid_st_state.get('session_anrede') or 'Sie'
+        _slot1_busy_until = _sid_st_state.get('slot1_variant_busy_until', 0.0)
 
         # D-02: Keyword-Matcher already fired for this utterance → skip
         if _kw_fired_for == line_id:
