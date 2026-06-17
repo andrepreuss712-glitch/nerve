@@ -28,40 +28,41 @@ def _get_current_fx_rate(db, rate_currency: str) -> Decimal:
     return Decimal('0.92')
 
 
-def _resolve_user_id_from_live_session() -> int | None:
-    """Liest user_id aus der aktiven per-SID-Session (Background-Thread-Kontext:
+def _resolve_user_id_from_live_session(sid: str | None = None) -> int | None:
+    """Liest user_id GEZIELT aus der per-SID-Session `sid` (Background-Thread-Kontext:
     analyse_loop, Deepgram-Close — kein Flask g.user verfuegbar).
 
-    K8-Fix: vorher globales ls.state.get('user_id') — das wird NIE befuellt (user_id
-    liegt nur per-SID in _session_state), daher Ghost-Read -> None.
-    ACHTUNG Multi-SID-Ambiguitaet: nimmt die erste aktive Session. Bei mehreren
-    parallelen Sessions ist die Zuordnung nicht eindeutig — vor EA-Launch durch
-    sid-Threading an log_api_cost(session_id=...) ersetzen (Option 2). Keine aktive
-    Session -> None (kein Raten, kein Crash)."""
+    Phase 08.23.2.TAXO1-03 (B-B Interlock — Option 2): der frühere
+    `for _st in _session_state.values(): return`-First-Session-Scan ist GELOESCHT.
+    Er lieferte bei mehreren parallelen Calls die ERSTE BELIEBIGE Session →
+    Call B's Kosten landeten unter Call A's user_id (Cross-Tenant-Kosten-Leak).
+    Jetzt: ohne sid -> None (KEIN Raten; besser NULL als Fehlzuordnung;
+    Multi-Tenancy-Integritaet > Vollstaendigkeit). Mit sid -> gezielte Lesung."""
+    if not sid:
+        return None
     try:
         import services.live_session as ls
         with ls._session_state_lock:
-            for _st in ls._session_state.values():
-                return _st.get('user_id')
+            _st = ls._session_state.get(sid)
+            return _st.get('user_id') if _st else None
     except Exception:
-        pass
-    return None
+        return None
 
 
-def _resolve_org_id_from_live_session() -> int | None:
-    """Liest org_id aus der aktiven per-SID-Session.
+def _resolve_org_id_from_live_session(sid: str | None = None) -> int | None:
+    """Liest org_id GEZIELT aus der per-SID-Session `sid`.
 
-    K8-Fix: vorher globales ls.state.get('org_id') (nie befuellt -> None). Siehe
-    _resolve_user_id_from_live_session fuer die Multi-SID-Ambiguitaet — vor EA-Launch
-    via sid-Threading (Option 2) ersetzen. Keine aktive Session -> None."""
+    Phase 08.23.2.TAXO1-03 (B-B Interlock — Option 2): values()-First-Session-Scan
+    GELOESCHT (siehe _resolve_user_id_from_live_session). Ohne sid -> None."""
+    if not sid:
+        return None
     try:
         import services.live_session as ls
         with ls._session_state_lock:
-            for _st in ls._session_state.values():
-                return _st.get('org_id')
+            _st = ls._session_state.get(sid)
+            return _st.get('org_id') if _st else None
     except Exception:
-        pass
-    return None
+        return None
 
 
 def log_api_cost(
@@ -91,10 +92,13 @@ def log_api_cost(
         import database.db as _db_mod
         from database.models import ApiCostLog, ApiRate
 
+        # Phase 08.23.2.TAXO1-03 (B-B): session_id an die Resolver durchreichen, damit
+        # selbst ein Aufrufer der NUR session_id (nicht user_id/org_id) mitgibt die
+        # KORREKTE Session trifft statt einer geratenen. Ohne session_id -> Resolver None.
         if user_id is None:
-            user_id = _resolve_user_id_from_live_session()
+            user_id = _resolve_user_id_from_live_session(session_id)
         if org_id is None:
-            org_id = _resolve_org_id_from_live_session()
+            org_id = _resolve_org_id_from_live_session(session_id)
 
         db = _db_mod.SessionLocal()
         try:

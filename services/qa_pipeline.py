@@ -289,10 +289,11 @@ def apply_tabu_safety_net(text: str, tabu_pairs: list,
 
 
 # ── Public: classify_utterance ───────────────────────────────────────────────
-def classify_utterance(text: str, kontext: str, user_id: int) -> dict:
+def classify_utterance(text: str, kontext: str, user_id: int, sid: str = None) -> dict:
     """Haiku-Call: Klassifiziert utterance in 4 Kategorien.
     Returns {"kategorie": str, "confidence": float, "einwand_zitat": str|None}.
     MUST NOT raise — fail-open zu {"kategorie": "smalltalk_none", "confidence": 0.0}.
+    sid (TAXO1-03 B-B): per-SID Kosten-Attribution (org_id ueber session_id-Resolver).
     """
     fallback = {"kategorie": "smalltalk_none", "confidence": 0.0, "einwand_zitat": None}
     if not text or not text.strip():
@@ -340,12 +341,12 @@ def classify_utterance(text: str, kontext: str, user_id: int) -> dict:
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', 'haiku-4-5', user_id=user_id or None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='qa_classifier')
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                             context_tag='qa_classifier', session_id=sid)
+                log_api_cost('anthropic', 'haiku-4-5', user_id=user_id or None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='qa_classifier')
+                             context_tag='qa_classifier', session_id=sid)
         except Exception as _e:
             print(f"[QA] cost-hook classifier skipped: {_e}")
 
@@ -499,23 +500,23 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', _cost_model, user_id=None,
+                log_api_cost('anthropic', _cost_model, user_id=user_id or None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='qa_response')
-                log_api_cost('anthropic', _cost_model, user_id=None,
+                             context_tag='qa_response', session_id=sid)
+                log_api_cost('anthropic', _cost_model, user_id=user_id or None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='qa_response')
+                             context_tag='qa_response', session_id=sid)
             # Cache-Token-Logging (B1 Review-Finding)
             _cache_hits = getattr(getattr(msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
             _cache_writes = getattr(getattr(msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
             if _cache_hits > 0:
-                log_api_cost('anthropic', _cost_model, user_id=None,
+                log_api_cost('anthropic', _cost_model, user_id=user_id or None,
                              units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
-                             context_tag='qa', call_site='qa')
+                             context_tag='qa', call_site='qa', session_id=sid)
             if _cache_writes > 0:
-                log_api_cost('anthropic', _cost_model, user_id=None,
+                log_api_cost('anthropic', _cost_model, user_id=user_id or None,
                              units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
-                             context_tag='qa', call_site='qa')
+                             context_tag='qa', call_site='qa', session_id=sid)
         except Exception as _e:
             print(f"[QA] cost-hook qa_response skipped: {_e}")
 

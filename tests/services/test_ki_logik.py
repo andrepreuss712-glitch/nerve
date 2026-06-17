@@ -273,12 +273,15 @@ def test_infer_cold_call_without_haiku_caller():
 def test_infer_cold_call_invokes_haiku_caller():
     from services.ki_logik import infer_cold_call_context
     captured = {}
-    def fake(seg, phase):
+    # TAXO1-03 B-B: haiku_caller-Contract traegt jetzt sid (per-SID Kosten-Attribution).
+    def fake(seg, phase, sid=None):
         captured['seg'] = seg
         captured['phase'] = phase
+        captured['sid'] = sid
         return {'likely_customer_action': 'einwand', 'confidence': 0.8,
                 'recommended_next': 'nachhaken', 'ts': 'x'}
-    out = infer_cold_call_context(['a', 'b'], 3, 'cold_call', haiku_caller=fake)
+    out = infer_cold_call_context(['a', 'b'], 3, 'cold_call', haiku_caller=fake, sid='sid-xyz')
     assert out['likely_customer_action'] == 'einwand'
     assert captured['seg'] == ['a', 'b']
     assert captured['phase'] == 3
+    assert captured['sid'] == 'sid-xyz'  # sid wird durchgereicht (B-B)

@@ -274,7 +274,7 @@ Antworte NUR als JSON:
 {{"phase": <1-N>, "confidence": <0.0-1.0>, "grund": "<max 10 Wörter>"}}"""
 
 
-def classify_phase(transcript_window, current_phase, elapsed_s, mode):
+def classify_phase(transcript_window, current_phase, elapsed_s, mode, sid: str = None):
     """Modus-bewusster Phasen-Klassifikator (Phase 08.23.2.C Req-2).
 
     Args:
@@ -319,10 +319,10 @@ def classify_phase(transcript_window, current_phase, elapsed_s, mode):
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='phase_classify')
+                             context_tag='phase_classify', session_id=sid)
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='phase_classify')
+                             context_tag='phase_classify', session_id=sid)
         except Exception as _e:
             print(f"[CostHook] claude phase_classify skipped: {_e}")
         # ────────────────────────────────────────────────────────────────────
@@ -373,9 +373,10 @@ Antworte NUR als JSON:
 {{"likely_customer_action": "<max 8 Wörter>", "confidence": <0.0-1.0>, "recommended_next": "<max 10 Wörter>"}}"""
 
 
-def infer_customer_state(seller_transcript, phase):
+def infer_customer_state(seller_transcript, phase, sid: str = None):
     """Haiku call for D-05 cold-call customer-state inference.
-    Returns dict or None on empty input / parse failure."""
+    Returns dict or None on empty input / parse failure.
+    sid (TAXO1-03 B-B): per-SID Kosten-Attribution an log_api_cost."""
     if not seller_transcript:
         return None
     formatted = "\n".join(f"- {t}" for t in seller_transcript[-6:])
@@ -395,10 +396,10 @@ def infer_customer_state(seller_transcript, phase):
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='coldcall_infer')
+                             context_tag='coldcall_infer', session_id=sid)
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='coldcall_infer')
+                             context_tag='coldcall_infer', session_id=sid)
         except Exception as _e:
             print(f"[CostHook] claude coldcall_infer skipped: {_e}")
         # ────────────────────────────────────────────────────────────────────
@@ -489,21 +490,21 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
             out_tok = getattr(u, 'output_tokens', 0) or 0
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                         context_tag='live_haiku')
+                         context_tag='live_haiku', session_id=sid)
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                         context_tag='live_haiku')
+                         context_tag='live_haiku', session_id=sid)
         # Cache-Token-Logging (B1 Review-Finding)
         _cache_hits = getattr(getattr(msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
         _cache_writes = getattr(getattr(msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
         if _cache_hits > 0:
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
-                         context_tag='analyse', call_site='analyse')
+                         context_tag='analyse', call_site='analyse', session_id=sid)
         if _cache_writes > 0:
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
-                         context_tag='analyse', call_site='analyse')
+                         context_tag='analyse', call_site='analyse', session_id=sid)
     except Exception as _e:
         print(f"[CostHook] claude live_haiku skipped: {_e}")
     # ────────────────────────────────────────────────────────────────────
@@ -626,21 +627,21 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='pip_autovar')
+                             context_tag='pip_autovar', session_id=sid)
                 log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='pip_autovar')
+                             context_tag='pip_autovar', session_id=sid)
             # Cache-Token-Logging (B1 Review-Finding)
             _cache_hits = getattr(getattr(final_msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
             _cache_writes = getattr(getattr(final_msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
             if _cache_hits > 0:
                 log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
-                             context_tag='ewb', call_site='ewb')
+                             context_tag='ewb', call_site='ewb', session_id=sid)
             if _cache_writes > 0:
                 log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
-                             context_tag='ewb', call_site='ewb')
+                             context_tag='ewb', call_site='ewb', session_id=sid)
         except Exception as _e:
             print(f"[CostHook] pip_autovar skipped: {_e}")
         return result
@@ -771,21 +772,21 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='pip_variante')
+                             context_tag='pip_variante', session_id=sid)
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                             context_tag='pip_variante')
+                             context_tag='pip_variante', session_id=sid)
             # Cache-Token-Logging (B1 Review-Finding)
             _cache_hits = getattr(getattr(final_msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
             _cache_writes = getattr(getattr(final_msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
             if _cache_hits > 0:
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
-                             context_tag='ewb', call_site='ewb')
+                             context_tag='ewb', call_site='ewb', session_id=sid)
             if _cache_writes > 0:
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
-                             context_tag='ewb', call_site='ewb')
+                             context_tag='ewb', call_site='ewb', session_id=sid)
         except Exception as _e:
             print(f"[CostHook] pip_variante skipped: {_e}")
         return result
@@ -805,7 +806,7 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
         return {}
 
 
-def analysiere_coaching(segmente: list, kontext: str) -> dict:
+def analysiere_coaching(segmente: list, kontext: str, sid: str = None) -> dict:
     gespraech = "\n".join(f"[{s['speaker']}] {s['text']}" for s in segmente)
     user_msg  = f"""Bisheriger Gesprächskontext:
 {kontext if kontext else "(Kein vorheriger Kontext)"}
@@ -816,7 +817,7 @@ Aktuelles Gesprächssegment:
     msg = claude_client.messages.create(
         model=config.MODEL_COACHING,
         max_tokens=200,
-        system=_build_coaching_prompt(),
+        system=_build_coaching_prompt(sid=sid),
         messages=[{"role": "user", "content": user_msg}]
     )
     # ── Phase 04.7.2 Cost-Hook (04.8 P07: Haiku) ────────────────────────
@@ -828,10 +829,10 @@ Aktuelles Gesprächssegment:
             out_tok = getattr(u, 'output_tokens', 0) or 0
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                         context_tag='coaching_haiku')
+                         context_tag='coaching_haiku', session_id=sid)
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=out_tok/1000.0, unit_type='per_1k_output_tokens',
-                         context_tag='coaching_haiku')
+                         context_tag='coaching_haiku', session_id=sid)
     except Exception as _e:
         print(f"[CostHook] claude coaching_haiku skipped: {_e}")
     # ────────────────────────────────────────────────────────────────────
@@ -1001,7 +1002,7 @@ def analyse_loop():
                             last_change_cycle = _sid_phase_st.get('_phase_cycle_at_last_change', 0) or 0
                             mode = (ls._session_state.get(sid) or {}).get('mode', 'meeting')
                         elapsed_s = (time.time() - ls.session_start_ts) if hasattr(ls, 'session_start_ts') else 0
-                        raw = classify_phase(transcript_window, cur_phase, elapsed_s, mode)
+                        raw = classify_phase(transcript_window, cur_phase, elapsed_s, mode, sid=sid)
                         if raw:
                             cycles_since_change = _phase_cycle_counter - last_change_cycle
                             new_phase, new_conf = detect_phase(
@@ -1071,6 +1072,7 @@ def analyse_loop():
                                 inference = infer_cold_call_context(
                                     seller_window, cc_phase, cc_mode,
                                     haiku_caller=infer_customer_state,
+                                    sid=sid,  # TAXO1-03 B-B: per-SID Kosten-Attribution
                                 )
                                 with ls._session_state_lock:
                                     _sid_cc_target = (ls._session_state.get(sid) or {}).get('state')
@@ -1334,7 +1336,7 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
 
         _tabu_begriffe = _qa_load_tabu(_active_profile_id, _profile_daten)
 
-        _qa_result = classify_utterance(neuer_text, kontext, _user_id)
+        _qa_result = classify_utterance(neuer_text, kontext, _user_id, sid=sid)
         _kat = _qa_result.get('kategorie', 'smalltalk_none')
         _conf = _qa_result.get('confidence', 0.0)
         print(f"[QA-INT] classify kategorie={_kat} conf={_conf:.2f} line={line_id}")
@@ -1475,7 +1477,7 @@ def coaching_loop():
 
             kontext = " ".join(sid_state.get('analysiert_bisher', [])[-10:])
             try:
-                result    = analysiere_coaching(segmente, kontext)
+                result    = analysiere_coaching(segmente, kontext, sid=sid)
                 # SID liveness check after Claude API call
                 with ls._session_state_lock:
                     if sid not in ls._session_state:

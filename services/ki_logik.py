@@ -196,12 +196,15 @@ def detect_phase(raw_phase: int, raw_confidence: float,
 
 
 def infer_cold_call_context(seller_transcript: list, current_phase: int,
-                             mode: str, haiku_caller=None) -> Optional[dict]:
+                             mode: str, haiku_caller=None,
+                             sid: str = None) -> Optional[dict]:
     """Thin wrapper around the Haiku cold-call inference helper (D-05).
 
     Skips entirely unless `mode == 'cold_call'` — meeting mode never triggers
     a Haiku call (zero cost impact). `haiku_caller` is injectable for unit
     tests; production wiring passes `claude_service.infer_customer_state`.
+
+    sid (TAXO1-03 B-B): per-SID Kosten-Attribution; an haiku_caller durchgereicht.
 
     Returns the caller's dict result, or None when skipped/unavailable.
     """
@@ -209,7 +212,7 @@ def infer_cold_call_context(seller_transcript: list, current_phase: int,
         return None
     if not haiku_caller:
         return None
-    return haiku_caller(seller_transcript, current_phase)
+    return haiku_caller(seller_transcript, current_phase, sid=sid)
 
 
 # ── Phase 08.23.2.C — Gatekeeper-Trigger-Phrasen (Req-7 + Req-8) ─────────────
