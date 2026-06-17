@@ -1080,10 +1080,15 @@ def analyse_loop():
                         select_active_hint,
                         dynamic_ewb_buttons,
                     )
-                    with ls.state_lock:
-                        factors = dict(ls.state.get('score_factors_seen') or {})
-                        cur_phase_p4 = ls.state.get('current_phase', 1) or 1
-                        cold_inf = ls.state.get('cold_call_inference')
+                    # Phase 08.23.2.TAXO1-03 (§0.1 Putzliste P2/P3/P5): per-SID single-source.
+                    # War global ls.state.get(...) (split-brain: phase_classify schrieb per-SID
+                    # :1012, dieser Block las den toten Global → cur_phase immer 1). Jetzt aus
+                    # _session_state[sid]['state'] (Muster claude:1061). Globaler Read geloescht.
+                    with ls._session_state_lock:
+                        _sid_p4_st = (ls._session_state.get(sid) or {}).get('state') or {}
+                        factors = dict(_sid_p4_st.get('score_factors_seen') or {})
+                        cur_phase_p4 = int(_sid_p4_st.get('current_phase', 1) or 1)
+                        cold_inf = _sid_p4_st.get('cold_call_inference')
                     # Tally factors from latest ergebnis (non-destructive — increments only)
                     if ergebnis:
                         if ergebnis.get('kaufsignal'):

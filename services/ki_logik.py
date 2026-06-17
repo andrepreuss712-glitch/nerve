@@ -172,7 +172,14 @@ def detect_phase(raw_phase: int, raw_confidence: float,
       confidence >= 0.8 AND cycles_since_change >= 3 (3-cycle debounce) AND
       current_phase >= 2 (Phase 1 cannot regress).
     - All other regressions are blocked (flicker suppression).
+
+    K3 Defense-in-Depth (Phase 08.23.2.TAXO1-03 / Cross-AI Finding #4):
+    current_phase wird am Eingang hart auf int erzwungen. Historisch konnte ein
+    String-current_phase ("1") in den `>`-Vergleich unten laufen und
+    `'>' not supported between 'int' and 'str'` werfen (phase_classify still tot).
+    `int(current_phase or 1)` deckt auch None/leer ab (Seed 1, RESEARCH §3).
     """
+    current_phase = int(current_phase or 1)
     if raw_phase == current_phase:
         return current_phase, raw_confidence
     if raw_phase > current_phase:
