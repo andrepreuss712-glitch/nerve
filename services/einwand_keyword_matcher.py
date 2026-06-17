@@ -266,6 +266,43 @@ class EinwandKeywordMatcher:
         except Exception as _kw_e:
             print(f"[KW] kw_fired_for_line set skip: {_kw_e}")
 
+        # ── TAXO1-Welle 4 (Task 3a): Fast-Lane-Emit (Keyword -> intent_event) ───
+        # Lokaler Treffer (<800ms, KEIN LLM) -> source=llm_inferred (lokal abgeleitet).
+        # Moment-Fenster (I-4-FOLD, KEIN line_id): get_or_open_moment oeffnet/setzt
+        # das offene Fenster fort -> dieselbe id wie Medium/Button desselben Fensters.
+        # Lock-Disziplin (Gemini-Punkt a): EIGENER `with _session_state_lock`-Block,
+        # NICHT genested mit state_lock (der Matcher haelt hier ohnehin kein state_lock;
+        # kw_fired oben nutzt bereits _session_state_lock) -> kein Lock-Ordering-Deadlock.
+        try:
+            _ls = _get_ls()
+            if _ls and sid:
+                import services.deepgram_service as _dg_kw
+                _kw_mode = _dg_kw._session_modes.get(sid, 'cold_call')
+                _kw_iid = None
+                _kw_uid = None
+                _kw_oid = None
+                _kw_phase = None
+                with _ls._session_state_lock:
+                    _kw_sd = _ls._session_state.get(sid) or {}
+                    _kw_uid = _kw_sd.get('user_id')
+                    _kw_oid = _kw_sd.get('org_id')
+                    _kw_st = _kw_sd.get('state')
+                    if _kw_st is not None:
+                        _kw_phase = _kw_st.get('current_phase')
+                        _kw_iid = _ls.get_or_open_moment(
+                            sid, mode=_kw_mode, now=now)
+                # Keyword-Treffer = erkannter konkreter Kunden-Einwand -> echter_einwand
+                # (§1). Die feinere vorwand/reflex-Nuance liefert die Medium Lane (LLM).
+                from services.intent_event_writer import emit_intent_event
+                emit_intent_event(
+                    session_id=sid, mode=_kw_mode, intent_type='echter_einwand',
+                    phase=_kw_phase, source='llm_inferred', inference_basis='advisor_label',
+                    confidence=0.9, speaker_role='kunde', speaker_id='local',
+                    user_id=_kw_uid, org_id=_kw_oid, interaction_id=_kw_iid,
+                )
+        except Exception as _kw_emit_e:
+            print(f"[KW] intent_event emit skip (sid={sid}): {type(_kw_emit_e).__name__}")
+
         return match
 
     def reset_keyword(self, keyword: str) -> None:

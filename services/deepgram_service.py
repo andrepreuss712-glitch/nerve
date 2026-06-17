@@ -93,6 +93,16 @@ def _make_on_message(sid, mode='meeting'):
                 sio.emit('transcript', {'type': 'final', 'text': text,
                                         'speaker': emit_speaker, 'line_id': line_id},
                          room=sid)
+                # ── TAXO1-Welle 4 (Task 3c): MOMENT-FENSTER Schliesser (I-4-FOLD §5) ──
+                # Meeting=Berater spricht wieder (Sprecher-Wechsel zum Berater) -> das
+                # Einwand-Fenster schliesst; der naechste Kunden-Einwand oeffnet ein neues.
+                # NUR meeting + FINALISIERT (kein Flackern). Cold-Call ist Single-Speaker
+                # (immer Berater) -> HIER NICHT schliessen (sonst schloesse jede Zeile);
+                # Cold-Call nutzt das "Berater-antwortet"-Signal (claude Task 2 c2).
+                # Sprecher-Detection NUR GELESEN (sp_label), NICHT veraendert (T-TAXO1-12).
+                if mode == 'meeting' and sp_label == 'Berater':
+                    with ls._session_state_lock:
+                        ls.close_moment(sid, reason='advisor_spoke')
                 # D-06: Du/Sie detection heuristic (2-trigger threshold per utterance)
                 _check_anrede_switch(sio, sid, text, ls)
                 # Phase 08.23.2.B: INPUT-PFAD Anonymisierung (D-01, Req-7)
@@ -812,6 +822,38 @@ def register_audio_handlers(sio):
         print(f"[PiP] manual_ewb (sid={_sid}): {typ[:80]}")
         import services.live_session as ls
 
+        # ── TAXO1-Welle 4 (Task 3b): EWB-Button -> intent_event (ui_asserted) ───
+        # SOFORT beim Klick (nicht erst bei Call-Ende). Der Button haengt am AKTUELL
+        # OFFENEN Moment (Punkt c: kein line_id-Race) — ist kein Fenster offen, oeffnet
+        # get_or_open_moment eines (Button-getriebener Moment erlaubt). Der bestehende
+        # ewb_clicks/record_ewb_click-Pfad bleibt (Welle-5 Dual-Write). Lock-Disziplin:
+        # eigener _session_state_lock-Block, NICHT mit state_lock genested.
+        # mode-Quelle EINHEITLICH mit Medium/Fast (deepgram _session_modes).
+        try:
+            _btn_mode = _session_modes.get(_sid, 'cold_call')
+            _btn_iid = None
+            _btn_uid = None
+            _btn_oid = None
+            _btn_phase = None
+            with ls._session_state_lock:
+                _btn_sd = ls._session_state.get(_sid) or {}
+                _btn_uid = _btn_sd.get('user_id')
+                _btn_oid = _btn_sd.get('org_id')
+                _btn_st = _btn_sd.get('state')
+                if _btn_st is not None:
+                    _btn_phase = _btn_st.get('current_phase')
+                    _btn_iid = ls.get_or_open_moment(
+                        _sid, mode=_btn_mode, now=time.monotonic())
+            from services.intent_event_writer import emit_intent_event
+            emit_intent_event(
+                session_id=_sid, mode=_btn_mode, intent_type='echter_einwand',
+                phase=_btn_phase, source='ui_asserted', inference_basis='ui_button',
+                confidence=1.0, speaker_role='kunde', speaker_id='local',
+                user_id=_btn_uid, org_id=_btn_oid, interaction_id=_btn_iid,
+            )
+        except Exception as _btn_emit_e:
+            print(f"[PiP] intent_event emit skip (sid={_sid}): {type(_btn_emit_e).__name__}")
+
         # Profil + Kontext fuer Haiku-Variante aufbereiten.
         # get_active_profile() returns tuple (name, daten) — unpack it.
         profile_daten = {}
@@ -911,6 +953,13 @@ def register_audio_handlers(sio):
                 st['pending_phase'] = None
                 import time as _t
                 st['phase_entered_at'] = _t.monotonic()
+                # ── TAXO1-Welle 4 (Task 3c b): Modus-Downgrade-Schliesser (Gemini-Punkt d) ──
+                # Modus aendert sich live (z.B. cold_call<->gatekeeper) -> offenen Moment
+                # des alten Modus SOFORT verwerfen (Belt-and-suspenders zum Helper-internen
+                # moment_opened_mode-Mismatch in get_or_open_moment). close_moment lock-frei,
+                # der bestehende _session_state_lock-Block (oben) haelt den Lock.
+                if new_mode != _old_mode:
+                    ls.close_moment(sid, reason='mode_downgrade')
         print(f"[Phase-C] manual_mode_toggle sid={sid} category={category} new_mode={new_mode}")
         # D-04a: Skip-Guard — kein INSERT wenn call_id nicht gesetzt (kein aktiver Anruf)
         if _call_id is None:
