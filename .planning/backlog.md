@@ -37,6 +37,14 @@
 - **Entdeckt:** MEDFIX-Test-Anrufe (André: „Worterkennung nicht so prall"). Transkript fragmentiert (Chunking + Wiederholungen), teils ungenau.
 - **Kontext:** Deepgram STT (EU-Endpoint). Mögliche Hebel: Chunk-/Endpointing-Parameter, Modell-Variante, Interim-vs-Final-Handling. Eigener STT-Tuning-Pass (nicht TAXO-Kern), aber Qualitäts-relevant weil alle Erkennung darauf aufbaut.
 
+### HANDLING-RECOGNITION — „behandelt" ≠ Knopfdruck: echte Behandlungs-Erkennung via Vorschlags-Nutzung (TAXO2, André-Insight 2026-06-18)
+
+- **Severity:** high (Mess-Korrektheit eines Kern-Zählers — „erfolgreich behandelt")
+- **André-Insight (2026-06-18, beim Welle-5-Brücken-Discuss):** Ein Knopfdruck (oder NERVE-Spracherkennung) bedeutet NUR „Einwand ERKANNT" → der „erkannt"-Zähler darf hoch. Es bedeutet NICHT „Einwand BEHANDELT". Für „behandelt/erfolgreich" braucht es eine eigene Erkennung: **NERVE gibt einen Vorschlag → NERVE prüft anhand dessen, was der Berater DANACH sagt, ob er den Vorschlag (so oder so ähnlich) tatsächlich aufgegriffen/vorgelesen hat.** Erst das ist „behandelt".
+- **Zwei getrennte Zähler (heute fälschlich vermischt, vgl. POLISH-38):** (1) `erkannt` = Detektion (Knopf ODER KI-Erkennung) → korrekt befüllbar. (2) `behandelt/erfolgreich` = braucht Vorschlags-Nutzungs-Erkennung (Abgleich Berater-Gesagtes ↔ NERVE-Vorschlag) + Behandlungs-Qualität.
+- **Wo es hingehört (TAXO2):** das ist genau `handling_score` (Behandlungs-Note 1-3) + `suggestion_reactions`/Vorschlags-Nutzung aus dem TAXO-Gerüst. André's „Lese-Erkennung" = der suggestion-usage-Abgleich. TAXO2-Plan MUSS: „behandelt" NICHT aus Knopfdruck ableiten, sondern aus erkannter Vorschlags-Nutzung + Behandlungs-Note. Verbindet mit LERN-VON-DEN-BESTEN (Outcome-verankert) + Active-Learning-Flywheel.
+- **Folge für Welle 5 (Brücke):** die Brücke hält nur die HEUTIGEN (bereits ungenauen, POLISH-38) Zähler am Leben während des Umbaus — sie macht „behandelt" NICHT richtig + soll nicht so tun. Die echte Behandlungs-Erkennung ist TAXO2.
+
 ### ANON-LIVE-ANSWER — Live-Antwort wird auf anonymisiertem Text gebaut → Unsinn im Ohr → TAXO3-Anforderung + 🔴 DSGVO-Entscheidung
 
 - **Severity:** high (Live-Antwort-Qualität — KI coacht mit [PERSON_A]/[ORG_B] statt echten Namen → inkohärente Antworten)
