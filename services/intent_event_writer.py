@@ -47,6 +47,7 @@ def emit_intent_event(
     abstained=False,
     is_simulation=False,
     origin_type='human_live',
+    triggering_text=None,
     extra_payload=None,
 ) -> int:
     """Schreibt EINE intent_event-Zeile (insert-only) und gibt event_id zurueck.
@@ -92,6 +93,12 @@ def emit_intent_event(
         'speaker_id': speaker_id,
         'is_simulation': bool(is_simulation),
         'origin_type': origin_type,
+        # FUND 3 (TAXO1-07): anonymisierter Ausloeser-Wortlaut (denormalisiert,
+        # Fundament TAXO2/3). Roh-PII wird NIE hier ankommen — die Aufrufer
+        # anonymisieren via anonymize_output + Sentinel->None VOR dem Aufruf.
+        # IMMER gesetzt (auch None) — symmetrisch zu inference_basis. JSON-Key in
+        # payload_jsonb, KEINE Schema-Migration.
+        'triggering_text': triggering_text,
     }
     if extra_payload:
         for _k, _v in extra_payload.items():
