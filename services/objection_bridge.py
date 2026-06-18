@@ -54,8 +54,12 @@ def mirror_ewb_clicks_to_objection_events(*, conversation_log_id, user_id, org_i
         return 0
 
     # ── IDEMPOTENZ-GUARD (Finding #3): eigene Spiegel-Zeilen dieser conv loeschen ──
+    # Cross-AI Welle-5 (Gemini, 2026-06-18): DELETE auf Call-Log-Daten (objection_events = "heilig",
+    # mandantenfaehig) MUSS org-scoped sein — Defense-in-Depth gegen mandantenuebergreifende Loeschung,
+    # selbst wenn je eine falsche conversation_log_id durchkaeme (conversation_log_id ist zwar eindeutig).
     db.query(ObjectionEvent).filter(
-        ObjectionEvent.conversation_log_id == conversation_log_id
+        ObjectionEvent.conversation_log_id == conversation_log_id,
+        ObjectionEvent.org_id == org_id,
     ).delete(synchronize_session=False)
 
     # ── Frisch spiegeln (insert-only, gleiche Felder wie der ersetzte Direkt-Write) ──
