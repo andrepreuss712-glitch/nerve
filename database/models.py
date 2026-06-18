@@ -426,11 +426,14 @@ class EwbRating(Base):
     Quality-Score-Formel (D-27): (klingt + 2*halluzi + trifft) / 4 * 100.
     Eindeutig pro (conversation_log_id, einwand_typ_key) -- 1 Rating pro EWB in einer Session.
     """
-    __tablename__ = 'ewb_ratings'
+    # TAXO1-Welle 5 (§0.1 Zombie-Rename): hart zu zombie_ewb_ratings umbenannt
+    # (0 Zeilen, NICHT gedroppt — Rueckhol-Sicherung). Gehoert thematisch zur
+    # Noten-Engine TAXO2 und schlaeft bis dahin. admin_ewb.py umgestellt (Migration 0017).
+    __tablename__ = 'zombie_ewb_ratings'
     __table_args__ = (
         UniqueConstraint('conversation_log_id', 'einwand_typ_key',
                          name='uq_ewb_rating_per_conv_ewb'),
-        {'comment': 'Manuelle EWB-Quality-Ratings (3 binaere Kriterien) pro EWB einer Session, fuer Quality-Score. Status: lebt. Schreibt routes/admin_ewb.py:192; liest routes/admin_ewb.py:65/181.'},
+        {'comment': 'Manuelle EWB-Qualitaets-Bewertungen (3 binaere Kriterien) pro EWB einer Session, fuer Quality-Score. Status: [ZOMBIE] — gehoert zur Noten-Engine TAXO2, schlaeft. Schreibt+liest routes/admin_ewb.py (umgestellt, TAXO1-Welle 5).'},
     )
     id                  = Column(Integer, primary_key=True)
     conversation_log_id = Column(Integer, ForeignKey('conversation_logs.id'), nullable=False)

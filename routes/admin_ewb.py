@@ -125,7 +125,7 @@ def ewb_rating_template():
                    r.trifft_einwand       AS trifft_einwand
             FROM objection_events oe
             JOIN conversation_logs cl ON cl.id = oe.conversation_log_id
-            LEFT JOIN ewb_ratings r
+            LEFT JOIN zombie_ewb_ratings r
               ON r.conversation_log_id = oe.conversation_log_id
              AND r.einwand_typ_key = oe.einwand_typ
             ORDER BY cl.created_at DESC, oe.id ASC
