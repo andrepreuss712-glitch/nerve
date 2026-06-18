@@ -377,19 +377,26 @@ def api_beenden():
         saved_conv_id = conv.id
         print(f"[DB] Gespräch gespeichert: conv.id={conv.id}")
 
-        # ── ObjectionEvents: granulare EWB-Klicks persistieren (Plan 03) ──────────
+        # ── ObjectionEvents: granulare EWB-Klicks persistieren ────────────────────
         # POLISH-38: ewb_clicks bereits weiter oben gelesen (vor ConversationLog-Insert).
-        from database.models import ObjectionEvent
-        for click in ewb_clicks:
-            db_conv.add(ObjectionEvent(
-                user_id=g.user.id,
-                org_id=g.org.id,
-                conversation_log_id=conv.id,
-                einwand_typ=click['einwand_typ'],
-                success=click['success'],
-                antwort_text=click.get('antwort_text'),
-                einwand_text=click.get('einwand_text'),
-            ))
+        # TAXO1-Welle 5 (D-04): der fruehere Direkt-Write (`for click in ewb_clicks: ...`)
+        # ist durch den EINEN gekapselten, befristeten Dual-Write-Shim ersetzt
+        # (services/objection_bridge.py, # SUNSET: TAXO2). Idempotent (keyed
+        # conversation_log_id, Finding #3): ein doppeltes /api/beenden fuer dieselbe
+        # Session zaehlt den Dashboard-Einwand-Zaehler nicht doppelt. Quelle bleibt
+        # ewb_clicks (RAM) — die einzige Schicht mit success/antwort_text/einwand_text
+        # (Punkt-21-Befund Welle 5, André-Entscheid 2026-06-18). KEIN Doppel-Write:
+        # der alte Direkt-Pfad existiert nicht mehr, die Bruecke ist der einzige Schreiber.
+        # ObjectionEvent-Symbol bleibt importiert — Re-Aggregation unten (:446/:471) nutzt es.
+        from database.models import ObjectionEvent  # noqa: F401  (downstream-genutzt)
+        from services.objection_bridge import mirror_ewb_clicks_to_objection_events
+        mirror_ewb_clicks_to_objection_events(
+            conversation_log_id=conv.id,
+            user_id=g.user.id,
+            org_id=g.org.id,
+            ewb_clicks=ewb_clicks,
+            db=db_conv,
+        )
         if ewb_clicks:
             db_conv.commit()
 
