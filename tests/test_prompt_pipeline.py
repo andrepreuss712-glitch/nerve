@@ -26,10 +26,10 @@ def _reset_caches(monkeypatch):
 
 
 # ── Phase 08.23.2.PGTEST Gruppe A — unique test-module gegen UNIQUE(version,module) ──────
-# resolve_prompt_version(module, user_id) nimmt das Modul als PARAMETER (anders als
-# ewb_pipeline._load_prompt_template, das hart 'ewb' liest). Auf der persistenten nerve_test
-# traegt prompt_versions schon die app-import-Baseline (_seed_ewb_v2: (ewb,v1-legacy)+(ewb,v2-modular)).
-# Ein Re-Seed unter module='ewb' braeche auf UNIQUE(version,module)=uq_prompt_version_module
+# resolve_prompt_version(module, user_id) nimmt das Modul als PARAMETER. Welle 6: der ewb-Seeder
+# _seed_ewb_v2 ist entfernt — die app-import-Baseline traegt 'ewb' nicht mehr. Trotzdem bleibt ein
+# UNIQUE test-eigener module-Name pro Run die robuste Wahl (baseline-unabhaengig, kollisionsfrei).
+# Ein Re-Seed unter einem bereits geseedeten Modul braeche auf UNIQUE(version,module)=uq_prompt_version_module
 # (models.py:483) UND machte das deterministische Routing von einer ggf. wachsenden Baseline-Varianten-
 # Menge abhaengig (Index-Shift bei kuenftiger 3. ewb-Variante). FIX: ein UNIQUE test-eigener
 # module-Name pro Run → keine Kollision, deterministisch genau 2 Varianten, baseline-unabhaengig.
@@ -75,9 +75,11 @@ def _bind(monkeypatch, db_session):
 # ─── 1. resolve_prompt_version: ENV-Override (First-Check) ──────────────────
 
 def test_env_override_first_check(monkeypatch):
-    monkeypatch.setenv('PROMPT_EWB_VERSION_OVERRIDE', 'v-override')
+    # Welle 6: generischer ENV-Override-Test (Mechanismus PROMPT_{MODULE}_VERSION_OVERRIDE),
+    # auf ein lebendes Modul (classifier) umgestellt — 'ewb' ist ausgemustert.
+    monkeypatch.setenv('PROMPT_CLASSIFIER_VERSION_OVERRIDE', 'v-override')
     # ENV wins — must never touch DB:
-    assert pp.resolve_prompt_version('ewb', user_id=42) == 'v-override'
+    assert pp.resolve_prompt_version('classifier', user_id=42) == 'v-override'
 
 
 # ─── 2. Deterministic routing (user_id % N) ─────────────────────────────────
@@ -119,8 +121,9 @@ def test_no_variants_returns_unknown(db_session, monkeypatch):
 # ─── 5. Cache invalidation ───────────────────────────────────────────────────
 
 def test_invalidate_resolver_cache_clears_both():
-    pp._RESOLVER_CACHE[('ewb', 0)] = 'cached'
-    pp._VARIANTS_CACHE['ewb'] = ['x', 'y']
+    # Welle 6: 'ewb' (ausgemustert) → 'classifier' als generischer Sample-Cache-Key.
+    pp._RESOLVER_CACHE[('classifier', 0)] = 'cached'
+    pp._VARIANTS_CACHE['classifier'] = ['x', 'y']
     pp.invalidate_resolver_cache()
     assert pp._RESOLVER_CACHE == {}
     assert pp._VARIANTS_CACHE == {}

@@ -525,7 +525,7 @@ def _baseline_schema(_baseline_guard_engine):
 def _baseline_snapshot(_pgtest_base_seed, _baseline_guard_engine, _baseline_schema):
     """Session-Start-Snapshot der PUBLIC.*-Baseline ({pk: xmin}, #7). Haengt am Base-Seed (Task 4) -> laeuft
     danach. #9 (Delta-Review-6, BLOCKER): fuehrt als ALLERERSTE Aktion `from app import app` aus, BEVOR der
-    {pk:xmin}-Snapshot laeuft -> erzwingt die Modul-Top-Level-Seeder (_seed_prompt_versions/_seed_ewb_v2/
+    {pk:xmin}-Snapshot laeuft -> erzwingt die Modul-Top-Level-Seeder (_seed_prompt_versions/
     _seed_founder_dashboard_defaults) gegen nerve_test, sodass prompt_versions/api_rates/fixed_costs in der
     Baseline enthalten sind (kein First-Test-False-Red durch leere Baseline). A-1: die MODUL-Engine ist beim
     Import schon nerve_test-PG (DATABASE_URL=postgres) -> der fruehe Import seedet gegen die korrekte DB; der
