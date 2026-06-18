@@ -2133,6 +2133,7 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 **Erbt aus TAXO1 (Spec-Lock 2026-06-10):** echte Zombifizierung von `objection_events` (Dual-Write-Brücke ablösen, Dashboard-Einwand-Zähler auf intent_event/rubric_score umziehen) + Konsolidierung des `conversation_logs`-Aggregats (Note/Bewertung).
 **Depends on:** 08.23.2.TAXO1 (`intent_event`-Schema + Slow Lane).
 **Komplexität:** 🔴 — Schema + Scoring-Logik (ersetzt 2 Systeme). Cross-AI **Pflicht**. Real-Daten-Validation Pflicht.
+**★ PFLICHT-PULL aus backlog.md bei TAXO2-Planung (Live-Test 2026-06-18):** `PHASE-CLOSE-DETECT` (Phasen-Takt: classify_phase nur jede 5. Runde → bestätigter Termin am Call-Ende verpasst Phase 6 → event-getriebener Takt bei zustimmung/naechster_schritt + per-SID-Takt-Zähler) + Redeanteil-100%-Cold-Call-Artefakt (Tipp im Single-Speaker unterdrücken, gehört zu K2/Proration §3).
 **Plans:** 7 Plans / 6 De-Risk-Wellen (GEPLANT 2026-06-11, Wellen-Schnitt):
 - [ ] 08.23.2.TAXO2-01-rubric-score-tabelle-PLAN.md — neue rubric_score-Tabelle (hybrid, Owner nerve_app, RLS FORCE, Schild, Training-Fit-Pass) [W1, Req 1/5/8/D-08/D-11]
 - [ ] 08.23.2.TAXO2-02-bars-engine-proration-PLAN.md — BARS-Engine + Proration + Modus-Gewichte + 2 D-02-Pflicht-Tests (reine Funktion) [W2, Req 2/3/5/9/D-01..05/D-08]
@@ -2152,6 +2153,7 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 
 **Depends on:** 08.23.2.TAXO1 (`intent_event`-Schema; nutzt primary_intent + confidence + mode).
 **Komplexität:** 🔴 — berührt jeden Live-Antwort-Pfad. Cross-AI **Pflicht**. Context7 für SDK-Calls (Anthropic). Real-Daten-Validation Pflicht.
+**★ PFLICHT-PULL aus backlog.md bei TAXO3-Planung (Live-Test 2026-06-17/18):** `ANON-LIVE-ANSWER` (Live-Antwort wird auf anonymisiertem Text gebaut → [ORG_B]/[PERSON_A] in der Antwort = Unsinn; DSGVO-Entscheidung „echter Text live, Anonymisierung storage-only" — berührt DSGVO-Pfeiler, mit Gemini + DSGVO-Doc) + `POSTCALL-COACH-QUALITY` (Antworten/Tipps schwach, Pitch-Floskeln, kein Profil-Bezug, verwirrende Beispiel-Termine — = Paradigma-Reset #4 in Aktion). TAXO3-Plan MUSS beide explizit adressieren.
 **Plans:** 5 plans / 5 De-Risk-Wellen (GEPLANT 2026-06-12, Wave-Cut RESEARCH: erst Ton, dann Tempo; W3 gated auf TAXO1-interaction_id-Interlock)
 
 Plans:
