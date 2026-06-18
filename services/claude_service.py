@@ -21,12 +21,11 @@ _ewb_circuit_lock = threading.Lock()
 # CLAUDE.md: MODEL_ANALYSE (analyse_loop) stays Haiku — not touched here.
 # This circuit-breaker only affects MODEL_PIP_AUTOVAR (EWB streaming).
 
-# Phase 08: EWB-Pipeline (A/B-Routing + Baustein-Struktur)
-# Nur der ewb-Modul-Pfad nutzt diese neue Pipeline. Die 4 anderen Module
-# (assistant_live, coaching_live, objection_trigger, api_frage, training_persona)
-# nutzen _ACTIVE_PROMPT_CACHE + build_ewb_prompt direkt.
-from services.prompt_pipeline import resolve_prompt_version
-from services.ewb_pipeline import build_ewb_prompt
+# Welle 6 (Aufraeumen 2026-06-18): die EWB-Prompt-Pipeline-Importe (build_ewb_prompt aus
+# services.ewb_pipeline, resolve_prompt_version aus services.prompt_pipeline) sind hier
+# entfernt — nach dem MEDFIX (SYSTEM_PROMPT_BASE) hatte dieser EWB-Pfad in claude_service
+# keinen lebenden Aufrufer mehr (grep-belegt). resolve_prompt_version lebt weiter in
+# services/prompt_pipeline.py (classifier/qa_pipeline + training_* nutzen es aktiv).
 
 claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -513,46 +512,14 @@ def analysiere_mit_claude(neuer_text: str, kontext: str, sid: str = None) -> dic
 
 Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
 {neuer_text}"""
-    # ── Phase 08 EWB-Pipeline Integration ──────────────────────────────────────
-    # Routing ueber resolve_prompt_version (A/B-Router mit ENV-Override)
-    # + build_ewb_prompt (Baustein-Struktur).
-    # Phase 08.23.2.TAXO1-03 (§0.1 Putzliste P1): user_id/anrede per-SID single-source.
-    # War global ls.state.get('user_id') (:452, sid=None) → IMMER 0 (per-SID-Store war die
-    # echte Quelle) → 164x "user_id leer"-Warn + EWB-Routing auf v1-legacy gepinnt (Req 9).
-    # Jetzt aus _session_state[sid] (Muster claude:1262). Globaler Read GELOESCHT.
-    import services.live_session as ls
-    if sid:
-        with ls._session_state_lock:
-            _sid_amc = ls._session_state.get(sid) or {}
-            _sid_amc_state = _sid_amc.get('state') or {}
-            _user_id = _sid_amc.get('user_id') or 0
-            _anrede = _sid_amc_state.get('session_anrede') or 'Sie'
-    else:
-        _user_id = 0
-        _anrede = 'Sie'
-    if not _user_id:
-        print("[Phase08] WARN: _session_state[sid]['user_id'] leer — faellt auf variants[0] zurueck (v1-legacy als Default)")
-    # ── Phase 08.23.2.TAXO1.MEDFIX (Wurzel-Fix Welle-4-Cutover, Punkt 14) ──────
-    # WAR: _system_prompt = build_ewb_prompt(...) — der EWB-ANTWORT-Prompt (Prosa,
-    # "liefere EINE Gegenargumentation in 2-3 Saetzen") als Klassifikations-System-
-    # Prompt. Haiku schrieb deshalb PROSA → _parse_json → {} → ergebnis.get('einwand')
-    # IMMER falsy → Medium-Lane emit_intent_event (analyse_loop ~:1004/1038) feuerte
-    # NIE → intent_event blieb leer (Diagnose: taxo1-04-intent-event-empty-medium-lane).
-    # JETZT: SYSTEM_PROMPT_BASE (claude_service.py:33) — das JSON-Einwand-Schema
-    # (Welle 4 hat dort die intent_type-Liste + confidence bereits ergaenzt), bislang
-    # ungenutzt (nur Definition). analysiere_mit_claude KLASSIFIZIERT + reichert an
-    # (intent_event/kaufbereitschaft/Phase/Post-Call-gegenargument_log); die Live-
-    # ANTWORT-ANZEIGE bleibt allein beim QA-Slot/Matcher-Pfad (streame_auto_variante /
-    # qa_slot1 — Phase-06.3-Invariante "analyse_loop rendert nicht in PiP-Slots").
-    # Task 1b grep-belegt: analyse_loop hat KEIN sio.emit, kein /api/ergebnis-Route,
-    # kein Frontend-Poll; ls.state['ergebnis'] ist write-only (kein Reader) → kein
-    # Doppel-Cue durch die reaktivierten gegenargument_1/2.
-    # Profil-Kontext/anrede NICHT angehaengt: SYSTEM_PROMPT_BASE ist das vollstaendige
-    # Klassifikations-Schema; per-SID-Profil-Einwaende dienen der ANTWORT-Generierung
-    # (separater Matcher-/streame_auto_variante-Pfad), nicht der Klassifikation. Der
-    # fokussierte Prompt haelt die Klassifikations-Latenz niedrig (Punkt 25). Die per-SID
-    # user_id/anrede-Reads (Welle-3-Putzliste) bleiben unveraendert; build_ewb_prompt /
-    # resolve_prompt_version bleiben fuer die ECHTEN EWB-Antwort-Pfade unveraendert.
+    # ── Klassifikations-System-Prompt ──────────────────────────────────────────
+    # MEDFIX (2026-06-18): SYSTEM_PROMPT_BASE (JSON-Einwand-Schema, oben) statt des
+    # frueheren build_ewb_prompt (EWB-ANTWORT-Prosa-Prompt) — sonst lieferte Haiku Prosa
+    # → _parse_json {} → Medium-Lane-Emit feuerte nie. Historie im Log (taxo1-04-Diagnose).
+    # Welle 6 (Aufraeumen 2026-06-18): der tote build_ewb_prompt-Pfad + die nur dafuer
+    # berechneten per-SID user_id/anrede-Reads sind entfernt (0 Reads nach MEDFIX, Punkt 14).
+    # analysiere_mit_claude KLASSIFIZIERT nur; die Live-ANTWORT laeuft separat
+    # (streame_auto_variante / Matcher), nicht hier (Phase-06.3-Invariante).
     _system_prompt = SYSTEM_PROMPT_BASE
     # ── Phase 08.13: Prompt-Caching Analyse-Loop (CACHE_ANALYSE=False default) ──
     if config.CACHE_ANALYSE and len(_system_prompt) >= _CACHE_MIN_CHARS:
