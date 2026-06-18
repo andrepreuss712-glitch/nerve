@@ -37,6 +37,14 @@
 - **Entdeckt:** MEDFIX-Test-Anrufe (André: „Worterkennung nicht so prall"). Transkript fragmentiert (Chunking + Wiederholungen), teils ungenau.
 - **Kontext:** Deepgram STT (EU-Endpoint). Mögliche Hebel: Chunk-/Endpointing-Parameter, Modell-Variante, Interim-vs-Final-Handling. Eigener STT-Tuning-Pass (nicht TAXO-Kern), aber Qualitäts-relevant weil alle Erkennung darauf aufbaut.
 
+### DEPLOY-CREATE-ALL-CRASH — Start-`create_all` crasht bei Migrations-Deploy in falscher Reihenfolge (Prozess-Lehre + Fix-Kandidat)
+
+- **Severity:** medium (Deploy-Robustheit — Crash-Fenster bei jedem Tabellen-anlegenden/-umbenennenden Deploy)
+- **Entdeckt:** TAXO1-Welle-5-Deploy (2026-06-18). Beim Neustart crash-loopte der Worker 3×: `permission denied for schema public — CREATE TABLE zombie_ewb_ratings` → „Worker failed to boot". Selbst-geheilt, sobald die Prod-Migration (Rename) durch war.
+- **Root-Cause:** `app.py:709` ruft beim Start `Base.metadata.create_all()`. Als `nerve_app` (kein CREATE-Recht auf public) ist das ein No-Op WENN alle Tabellen existieren — aber ein CRASH, wenn ein Model-Tabelle fehlt (z.B. im Fenster zwischen Code-Restart und Prod-Migration). Bei 0017 deployt-DANN-migriert → neuer Code (Model=zombie_ewb_ratings) sah die noch-nicht-umbenannte Tabelle als „fehlend" → CREATE → permission denied → Crash bis Migration durch.
+- **PROZESS-LEHRE (sofort befolgen):** Bei JEDER Migration (Tabelle anlegen/umbenennen) die **Prod-Migration VOR dem deploy.sh-Restart** fahren (so lief 0016 sauber: scp Migrations-Datei → alembic upgrade head Prod → DANN deploy.sh). NICHT „erst deploy, dann migrate" (= Crash-Fenster). **Gilt für TAXO2 (rubric_score = neue Tabelle) + alle künftigen Migrations-Deploys.**
+- **FIX-KANDIDAT (robuster als Disziplin):** `create_all()` auf Postgres abschalten (wie `_migrate` schon, app.py:137) — auf Postgres ist Schema = Alembic, `create_all` kann als nerve_app eh nichts anlegen → entweder No-Op oder Crash, beides unerwünscht. Gehört zur „Auto-Alembic"-Lücke (STAGING-Stufe-2) — dort mitfixen ODER eigener kleiner Fix vor TAXO2.
+
 ### HANDLING-RECOGNITION — „behandelt" ≠ Knopfdruck: echte Behandlungs-Erkennung via Vorschlags-Nutzung (TAXO2, André-Insight 2026-06-18)
 
 - **Severity:** high (Mess-Korrektheit eines Kern-Zählers — „erfolgreich behandelt")
