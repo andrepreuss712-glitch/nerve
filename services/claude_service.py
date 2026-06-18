@@ -1006,21 +1006,38 @@ def analyse_loop():
                             _med_st['confidence'] = _med_conf
                             _iid = ls.get_or_open_moment(
                                 sid, mode=_med_mode, now=time.monotonic())
-                    if _med_mode == 'cold_call':
-                        _med_speaker_role, _med_speaker_id = 'kunde', 'local'
-                        _med_basis = 'advisor_paraphrase'
-                    else:
-                        _med_speaker_role, _med_speaker_id = 'kunde', 'local'
-                        _med_basis = 'direct_customer_utterance'
+                    # TAXO1-07 (Task 3, Decision 2): Sprecher-Bug-Fix ueber die Registry.
+                    # cold_call -> berater/local/advisor_paraphrase (Berater-Paraphrase,
+                    # NICHT 'kunde'); meeting -> kunde/direct_customer_utterance (Medium-Lane
+                    # hat keinen pro-Sprecher-Wert -> speaker=None -> Default kunde).
+                    from services.mode_strategy import MODE_REGISTRY
+                    _med_strategy = MODE_REGISTRY.get(_med_mode) or MODE_REGISTRY['cold_call']
+                    try:
+                        _med_attr = _med_strategy.extract_intent(speaker=None, confidence=_med_conf)
+                    except Exception:
+                        # Edge 2 (Steckplatz/NotImplemented) -> cold_call-Default, kein Live-Crash.
+                        _med_attr = MODE_REGISTRY['cold_call'].extract_intent(speaker=None, confidence=_med_conf)
+                    _med_conf_out = _med_attr.get('confidence', _med_conf)
+                    # FUND 3 (TAXO1-07): anonymisierter Ausloeser-Wortlaut (defensiv, DSGVO).
+                    from services.anonymization import anonymize_output as _anon_out_med
+                    _med_trig = None
+                    try:
+                        _med_trig = _anon_out_med(neuer_text, ls.get_anonymisierer(sid))
+                        if not _med_trig or _med_trig in ('[ART9_REDACTED]', '[ANON_FEHLER]'):
+                            _med_trig = None
+                    except Exception:
+                        _med_trig = None
                     try:
                         from services.intent_event_writer import emit_intent_event
                         emit_intent_event(
                             session_id=sid, mode=_med_mode, intent_type=_it,
                             phase=_med_phase, source='llm_inferred',
-                            inference_basis=_med_basis, confidence=_med_conf,
-                            speaker_role=_med_speaker_role, speaker_id=_med_speaker_id,
+                            inference_basis=_med_attr['inference_basis'],
+                            confidence=_med_conf_out,
+                            speaker_role=_med_attr['speaker_role'],
+                            speaker_id=_med_attr['speaker_id'],
                             user_id=_med_user_id, org_id=_med_org_id,
-                            interaction_id=_iid,
+                            interaction_id=_iid, triggering_text=_med_trig,
                         )
                     except Exception as _emit_e:
                         print(f"[intent_event] Medium-Lane emit skip (sid={sid}): {type(_emit_e).__name__}")
@@ -1529,15 +1546,33 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
                         _ab_phase = _ab_st.get('current_phase')
                         _ab_iid = ls.get_or_open_moment(
                             sid, mode=_ab_mode, now=_time.monotonic())
+                # TAXO1-07 (Task 3, Decision 2): Sprecher-Bug-Fix ueber die Registry.
+                from services.mode_strategy import MODE_REGISTRY
+                _ab_strategy = MODE_REGISTRY.get(_ab_mode) or MODE_REGISTRY['cold_call']
+                try:
+                    _ab_attr = _ab_strategy.extract_intent(speaker=None, confidence=_conf)
+                except Exception:
+                    _ab_attr = MODE_REGISTRY['cold_call'].extract_intent(speaker=None, confidence=_conf)
+                # FUND 3 (TAXO1-07): anonymisierter Ausloeser-Wortlaut (neuer_text aus dem
+                # _qa_pipeline_dispatch-Closure-Scope). Defensiv, DSGVO.
+                from services.anonymization import anonymize_output as _anon_out_ab
+                _ab_trig = None
+                try:
+                    _ab_trig = _anon_out_ab(neuer_text, ls.get_anonymisierer(sid))
+                    if not _ab_trig or _ab_trig in ('[ART9_REDACTED]', '[ANON_FEHLER]'):
+                        _ab_trig = None
+                except Exception:
+                    _ab_trig = None
                 emit_intent_event(
                     session_id=sid, mode=_ab_mode, intent_type=intent_type,
                     phase=_ab_phase, source='llm_inferred',
-                    inference_basis='advisor_paraphrase' if _ab_mode == 'cold_call'
-                        else 'direct_customer_utterance',
+                    inference_basis=_ab_attr['inference_basis'],
                     confidence=_conf,
                     abstained=should_abstain(_conf),
-                    speaker_role='kunde', speaker_id='local',
+                    speaker_role=_ab_attr['speaker_role'],
+                    speaker_id=_ab_attr['speaker_id'],
                     user_id=_ab_uid, org_id=_ab_oid, interaction_id=_ab_iid,
+                    triggering_text=_ab_trig,
                 )
             except Exception as _ab_e:
                 print(f"[QA-INT] abstain emit skip (sid={sid}): {type(_ab_e).__name__}")

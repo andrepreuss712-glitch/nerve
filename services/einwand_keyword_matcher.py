@@ -293,12 +293,32 @@ class EinwandKeywordMatcher:
                             sid, mode=_kw_mode, now=now)
                 # Keyword-Treffer = erkannter konkreter Kunden-Einwand -> echter_einwand
                 # (§1). Die feinere vorwand/reflex-Nuance liefert die Medium Lane (LLM).
+                # TAXO1-07 (Task 3, Decision 2): Sprecher-Bug-Fix ueber die Registry.
+                # cold_call -> Keyword-Treffer = Berater nennt den Einwand-Typ -> berater.
+                from services.mode_strategy import MODE_REGISTRY
+                _kw_strategy = MODE_REGISTRY.get(_kw_mode) or MODE_REGISTRY['cold_call']
+                try:
+                    _kw_attr = _kw_strategy.extract_intent(speaker=None, confidence=0.9)
+                except Exception:
+                    _kw_attr = MODE_REGISTRY['cold_call'].extract_intent(speaker=None, confidence=0.9)
+                # FUND 3 (TAXO1-07): anonymisierter Ausloeser-Wortlaut = die matched
+                # utterance (transcript; match['keyword'] ist nur das getroffene Keyword).
+                from services.anonymization import anonymize_output as _anon_out_kw
+                _kw_trig = None
+                try:
+                    _kw_trig = _anon_out_kw(transcript, _ls.get_anonymisierer(sid))
+                    if not _kw_trig or _kw_trig in ('[ART9_REDACTED]', '[ANON_FEHLER]'):
+                        _kw_trig = None
+                except Exception:
+                    _kw_trig = None
                 from services.intent_event_writer import emit_intent_event
                 emit_intent_event(
                     session_id=sid, mode=_kw_mode, intent_type='echter_einwand',
-                    phase=_kw_phase, source='llm_inferred', inference_basis='advisor_label',
-                    confidence=0.9, speaker_role='kunde', speaker_id='local',
+                    phase=_kw_phase, source='llm_inferred', inference_basis=_kw_attr['inference_basis'],
+                    confidence=0.9, speaker_role=_kw_attr['speaker_role'],
+                    speaker_id=_kw_attr['speaker_id'],
                     user_id=_kw_uid, org_id=_kw_oid, interaction_id=_kw_iid,
+                    triggering_text=_kw_trig,
                 )
         except Exception as _kw_emit_e:
             print(f"[KW] intent_event emit skip (sid={sid}): {type(_kw_emit_e).__name__}")

@@ -859,15 +859,63 @@ def register_audio_handlers(sio):
                     _btn_phase = _btn_st.get('current_phase')
                     _btn_iid = ls.get_or_open_moment(
                         _sid, mode=_btn_mode, now=time.monotonic())
+            # FUND 3 (TAXO1-07): triggering_text = der Knopf-Typ-Label (typ, z.B. 'zu_teuer';
+            # KEIN PII). Defensiv durch anonymize_output (belt-and-suspenders, Sentinel->None).
+            from services.anonymization import anonymize_output as _anon_out_btn
+            _btn_trig = None
+            try:
+                _btn_trig = _anon_out_btn(typ, ls.get_anonymisierer(_sid))
+                if not _btn_trig or _btn_trig in ('[ART9_REDACTED]', '[ANON_FEHLER]'):
+                    _btn_trig = None
+            except Exception:
+                _btn_trig = None
+            # Decision 2: speaker_role='kunde' BLEIBT — der Button ist die EINZIGE erlaubte
+            # Kunde-Ausnahme im cold_call (Knopf-Druck = der Knopf-Text zaehlt als Kunde-Einwand,
+            # source='ui_asserted'). Daher NICHT ueber die Registry (die wuerde cold_call->berater
+            # erzwingen und die Ausnahme brechen).
             from services.intent_event_writer import emit_intent_event
             emit_intent_event(
                 session_id=_sid, mode=_btn_mode, intent_type='echter_einwand',
                 phase=_btn_phase, source='ui_asserted', inference_basis='ui_button',
                 confidence=1.0, speaker_role='kunde', speaker_id='local',
                 user_id=_btn_uid, org_id=_btn_oid, interaction_id=_btn_iid,
+                triggering_text=_btn_trig,
             )
         except Exception as _btn_emit_e:
             print(f"[PiP] intent_event emit skip (sid={_sid}): {type(_btn_emit_e).__name__}")
+
+        # ── NEU (TAXO1-07 Refinement 1 + FUND 1): markierte EWB-Transcript-Zeile ──────
+        # ZUSAETZLICH zum intent_event-Emit oben: EINE conversation_log-Transcript-Zeile,
+        # damit der Knopf-Einwand beim Export/Lesen sichtbar UND als Button-Einwand markiert
+        # ist. Spiegelt den kanonischen gesprochenen Append (oben im on_message-Pfad).
+        # Dies ist die EINZIGE Kunde-Zeile im Cold-Call-Transcript; gesprochene cold_call-
+        # Zeilen bleiben Berater. try-except: der Live-Loop crasht nie.
+        try:
+            from services.anonymization import anonymize as _anonymize_btn
+            _anon_cache_btn = ls.get_anonymisierer(_sid)
+            _anon_typ, _ = _anonymize_btn(typ, _anon_cache_btn)
+            if _anon_typ in ('[ART9_REDACTED]', '[ANON_FEHLER]'):
+                # Sentinel -> Zeile NICHT schreiben (kein DB-Spam, wie der gesprochene Pfad).
+                # Der intent_event-Emit (oben) BLEIBT trotzdem.
+                print(f"[PiP] EWB-Transcript-Zeile verworfen (Anon-Sentinel, sid={_sid})")
+            else:
+                # speaker=1 (INT) = Kunde-Label — wie der gesprochene Pfad (log_sp). Der
+                # Reader (pip-launcher.js:2295 + routes/app_routes.py:47 /api/transcript)
+                # mappt INT 0/1/None -> berater/kunde/system. VERIFIZIERT: INT 1 = Kunde.
+                # FUND 1: KANONISCHER Marker = `*ewb button*`-Text-Suffix im `text`-Feld
+                # (ueberlebt _build_log_content, das transcript-Eintraege NUR aus text+speaker
+                # rendert). Das data={'ewb_button':True}-Flag ist NON-load-bearing RAM-only
+                # (wird beim Persist verworfen — live_session:988-1020 liest data nur fuer
+                # analyse-Eintraege), NICHT der Export-Marker.
+                with ls.log_lock:
+                    ls.conversation_log.append({
+                        'ts': time.time(), 'type': 'transcript',
+                        'speaker': 1,
+                        'text': f"{_anon_typ} *ewb button*",
+                        'data': {'ewb_button': True},
+                    })
+        except Exception as _btn_log_e:
+            print(f"[PiP] EWB-Transcript-Zeile skip (sid={_sid}): {type(_btn_log_e).__name__}")
 
         # Profil + Kontext fuer Haiku-Variante aufbereiten.
         # get_active_profile() returns tuple (name, daten) — unpack it.
