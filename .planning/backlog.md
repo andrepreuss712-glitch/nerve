@@ -22,6 +22,20 @@
 - **Entdeckt:** TAXO1 Welle-3 Live-Test-Anruf (2026-06-17). Termin am Call-Ende gelegt, Phase blieb auf „Bedarfsanalyse" (3). `classify_phase` erkannte den Abschluss nicht als Phase 5/6 (oder conf < 0.7 → von detect_phase-Hysterese geblockt). KEIN Trigger-Bug (läuft jede 5. Runde, claude_service.py:994), KEIN Welle-3-Regress (Welle 3 hat Phase überhaupt erst beweglich gemacht: 1→3 statt stuck-on-1).
 - **Scope für Welle 4 (TAXO1-04 Live-Cutover Taxonomie/Erkennung):** (1) Phasen-Erkennung muss Abschluss/Terminvereinbarung als Phase 5/6 erkennen (Prompt + Konfidenz-Schwelle prüfen). (2) Nebenbefund: `_phase_cycle_counter` ist noch GLOBAL (auf der `analyse_loop`-Funktion, claude_service.py:992) statt per-SID → bei Parallel-Anrufen erratischer Phasen-Takt; in die per-SID-Konsolidierung mitnehmen.
 - **Routing (André 2026-06-17):** in Welle 4 falten, kein separater Vorab-Fix.
+- **UPDATE 2026-06-18 (MEDFIX-Test-Anruf):** Addition-B-Prompt wirkt (analysiere erfasst „Dienstag 14 Uhr + Zustimmung" korrekt), ABER die Phase blieb auf 3 — **Wurzel ist der TAKT, nicht der Prompt:** classify_phase läuft nur jede 5. Analyse-Runde (claude_service.py:994), der bestätigte Termin kam am Call-Ende → kein Takt mehr → Phase-6-Label zog nicht. Fix-Richtung für Welle 4/TAXO: Phasen-Takt am Call-Ende/bei Abschluss-Signal verdichten (z.B. event-getrieben bei zustimmung/naechster_schritt statt nur alle 5 Runden) + der schon notierte per-SID-Takt-Zähler.
+
+### POSTCALL-COACH-QUALITY — Coaching-Tipps + Post-Call-Auswertung schwach/verwirrend (TAXO2/TAXO3)
+
+- **Severity:** medium (Kern-Erlebnis-Qualität, kein Defekt)
+- **Entdeckt:** MEDFIX-Test-Anrufe (2026-06-17/18, André).
+- **Befunde:** (1) Live-Tipps schlagen Beispiel-Termine vor („morgen oder Donnerstag?"), die nicht zum echten ausgemachten Termin passen → wirkt wie „NERVE hat den Termin falsch". Transkript+analysiere haben den echten Termin (Dienstag) korrekt — reines Tipp-Formulierungs-Thema. (2) Antworten generell schwach/Pitch-floskelig + kein Profil-Bezug (schon ANON-LIVE-ANSWER + frühere Befunde). (3) „Redeanteil 100%"-Tipp feuert im Cold-Call sinnlos (NERVE hört nur den Berater → immer 100%; der Tipp gehört im Cold-Call unterdrückt).
+- **Routing:** Antwort-/Tipp-Qualität = **TAXO3** (Wissensversorgung, Paradigma-Reset). Redeanteil-Cold-Call-Artefakt = kleiner Fix (Tipp im Single-Speaker-Cold-Call unterdrücken) — TAXO2 (Scoring/Proration K2) oder eigener kleiner Fix.
+
+### STT-QUALITY — Worterkennung fragmentiert/ungenau (eigener Pass)
+
+- **Severity:** medium (beeinflusst alle Downstream-Erkennung)
+- **Entdeckt:** MEDFIX-Test-Anrufe (André: „Worterkennung nicht so prall"). Transkript fragmentiert (Chunking + Wiederholungen), teils ungenau.
+- **Kontext:** Deepgram STT (EU-Endpoint). Mögliche Hebel: Chunk-/Endpointing-Parameter, Modell-Variante, Interim-vs-Final-Handling. Eigener STT-Tuning-Pass (nicht TAXO-Kern), aber Qualitäts-relevant weil alle Erkennung darauf aufbaut.
 
 ### ANON-LIVE-ANSWER — Live-Antwort wird auf anonymisiertem Text gebaut → Unsinn im Ohr → TAXO3-Anforderung + 🔴 DSGVO-Entscheidung
 
