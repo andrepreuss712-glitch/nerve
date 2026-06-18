@@ -1221,86 +1221,12 @@ def _seed_prompt_versions(db=None):
 _seed_prompt_versions()
 
 
-def _seed_ewb_v2(db=None):
-    """Phase 08 D-26: Seed 2 prompt_versions Rows fuer module='ewb'.
-
-    Idempotent via existing-row-check. v1-legacy ist_default=True (Backward-
-    Compat-Baseline), v2-modular ist_default=False (A/B-Herausforderer).
-
-    Rufbar vom App-Startup (owns=True) oder aus Tests mit injizierter Session.
-    """
-    from database.db import SessionLocal
-    from database.models import PromptVersion
-
-    V1_LEGACY_TEXT = (
-        "Du bist NERVE, ein Vertriebs-KI-Assistent im Live-Call.\n\n"
-        "Wenn ein Einwand kommt, liefere EINE konkrete, sofort vorlesbare "
-        "Gegenargumentation in 2-3 Saetzen. Kein Fachjargon, keine Floskeln "
-        "wie 'Ich verstehe vollkommen'. Ende mit Gegenfrage.\n"
-    )
-
-    V2_MODULAR_TEXT = (
-        "Du bist NERVE, ein Vertriebs-KI-Assistent im Live-Call.\n\n"
-        "## Bausteine (Reihenfolge einhalten)\n"
-        "1. ANKER: Kurz bestaetigen was der Kunde gesagt hat "
-        "(kein 'Ich verstehe'-Floskel).\n"
-        "2. REFRAME: Perspektivwechsel - stelle den Einwand in einen neuen Kontext.\n"
-        "3. KERN-GEGENARGUMENT + BEWEIS: Ein konkretes Argument plus ein "
-        "Beweis-Element (Zahlen, Fallstudie, Kundenzitat aus dem Profil).\n"
-        "4. UEBERLEITUNG: Gegenfrage oder Alternativ-Close, "
-        "der den Dialog zurueckholt.\n\n"
-        "## Active Listening Block (D-47)\n"
-        "- Reagiere auf konkrete Phrasen des Kunden, nicht auf Kategorien.\n"
-        "- Wenn der Kunde korrigiert: korrigiere dich explizit "
-        "('Danke fuer die Klarstellung, ...').\n"
-        "- Wenn der Kunde ein Detail nennt: spiegele es zurueck "
-        "bevor du argumentierst.\n"
-        "- Bilde NIEMALS Hypothesen ueber Bedarf ohne Signal - frage nach.\n"
-        "- Beachte Geschlechts-Hinweise im Vornamen und halte sie konsistent.\n\n"
-        "## Harte Regeln\n"
-        "- Max 45 Woerter pro Antwort.\n"
-        "- NIEMALS apologetisch ('Ich verstehe, dass ...', 'Tut mir leid').\n"
-        "- Anrede-Constraint aus Kontext-Block strikt einhalten.\n"
-        "- Niemals Floskeln wie 'Das ist eine gute Frage'.\n"
-    )
-
-    owns = db is None
-    if owns:
-        db = SessionLocal()
-    try:
-        for version, ptext, is_default in [
-            ('v1-legacy', V1_LEGACY_TEXT, True),
-            ('v2-modular', V2_MODULAR_TEXT, False),
-        ]:
-            exists = (db.query(PromptVersion)
-                      .filter_by(module='ewb', version=version)
-                      .first())
-            if exists:
-                # Reconcile is_default vs. Plan 01 Block E backfill
-                # (UPDATE ... SET is_default=1 WHERE is_active=1 setzt alle
-                # ewb-Rows default=True beim App-Start — A/B-Semantik verlangt
-                # aber genau 1 Default pro module). Fix: Seed-Flags als Source
-                # of Truth bei jedem Start.
-                if exists.is_default != is_default:
-                    exists.is_default = is_default
-                    print(f"[DB] Seed v08: reconciled ewb/{version}.is_default={is_default}")
-                continue
-            db.add(PromptVersion(
-                module='ewb', version=version, prompt_text=ptext,
-                is_active=True, is_default=is_default,
-                changelog=f'Phase 08 Seed ({version})',
-            ))
-        db.commit()
-        print("[DB] Seed v08: module='ewb' v1-legacy + v2-modular seeded (idempotent)")
-    finally:
-        if owns:
-            db.close()
-
-
-try:
-    _seed_ewb_v2()
-except Exception as e:
-    print(f"[DB] _seed_ewb_v2 failed (non-fatal): {e}")
+# Welle 6 (Aufraeumen 2026-06-18): _seed_ewb_v2() ENTFERNT (Definition + Startup-Call).
+# Seedete die 2 toten ewb-prompt_versions-Rows (v1-legacy/v2-modular) fuer den ausgemusterten
+# build_ewb_prompt-Pfad (0 lebende Aufrufer nach MEDFIX, grep-belegt). Die Rows werden per
+# Migration 0018 entfernt; ohne Loeschen dieses idempotenten Seeders waeren sie beim naechsten
+# Boot wieder da (Persistenz-/Punkt-14-Konsistenz). _seed_prompt_versions (oben, andere Module)
+# und _seed_ewb_scenarios (Training-Szenarien, unten) bleiben unveraendert.
 
 
 def _seed_ewb_scenarios(db=None):
