@@ -125,7 +125,7 @@ _CLEANUP_FK_ORDER = [
     "public.calls",
     "public.api_cost_log",
     "public.revenue_log",
-    "public.ewb_ratings",
+    "public.zombie_ewb_ratings",  # TAXO1-Welle 5: ewb_ratings -> zombie_ewb_ratings (Migration 0017)
     "public.profiles",
     "public.users",
     "public.tenant_orgs",

@@ -35,7 +35,9 @@ def _ab_stats_cleanup():
         yield
         return
     eng = _ce(dsn)
-    tables = ("ewb_ratings", "conversation_logs", "users", "tenant_orgs", "organisations")
+    # TAXO1-Welle 5: ewb_ratings -> zombie_ewb_ratings (Migration 0017). EwbRating-ORM folgt
+    # automatisch dem neuen __tablename__; der Raw-SQL-Teardown unten muss den Namen mitziehen.
+    tables = ("zombie_ewb_ratings", "conversation_logs", "users", "tenant_orgs", "organisations")
     def _maxid(conn, tbl):
         try:
             return conn.execute(_sql(f"SELECT COALESCE(MAX(id),0) FROM public.{tbl}")).scalar()
@@ -48,8 +50,8 @@ def _ab_stats_cleanup():
     finally:
         try:
             with eng.begin() as conn:
-                conn.execute(_sql("DELETE FROM public.ewb_ratings WHERE id > :b"),
-                             {"b": base["ewb_ratings"]})
+                conn.execute(_sql("DELETE FROM public.zombie_ewb_ratings WHERE id > :b"),
+                             {"b": base["zombie_ewb_ratings"]})
                 conn.execute(_sql("DELETE FROM public.conversation_logs WHERE id > :b"),
                              {"b": base["conversation_logs"]})
                 conn.execute(
