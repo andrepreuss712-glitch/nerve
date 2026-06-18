@@ -299,7 +299,7 @@ def get_anonymisierer(sid: str):
 
 def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                        market: str = 'dach', language: str = 'de',
-                       mode: str = 'meeting') -> None:
+                       mode: str = 'cold_call') -> None:
     """Initialize _session_state[sid] for a new WebSocket connection (D-02)."""
     with _session_state_lock:
         _session_state[sid] = {

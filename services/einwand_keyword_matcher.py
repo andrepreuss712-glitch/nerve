@@ -276,8 +276,8 @@ class EinwandKeywordMatcher:
         try:
             _ls = _get_ls()
             if _ls and sid:
-                import services.deepgram_service as _dg_kw
-                _kw_mode = _dg_kw._session_modes.get(sid, 'cold_call')
+                # mode-Quelle per-SID (TAXO1-07: globales _session_modes geloescht).
+                _kw_mode = (_ls._session_state.get(sid) or {}).get('mode', 'cold_call')
                 _kw_iid = None
                 _kw_uid = None
                 _kw_oid = None

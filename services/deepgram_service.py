@@ -15,7 +15,8 @@ _ROLLING_WINDOW_MS        = 10_000
 
 # ── Per-session Deepgram connections ──────────────────────────────────────────
 _deepgram_sessions = {}        # {sid: connection}
-_session_modes = {}            # {sid: 'cold_call'|'meeting'}
+# _session_modes geloescht TAXO1-07: cold_call/meeting-Modus-Quelle ist per-SID
+# _session_state[sid]['mode'] (Call-Start-only, kein Live-Toggle). Alle Reads per-SID.
 _cost_opened_at = {}           # {sid: float} — Phase 04.7.2 STT-minute tracking (kept for clean dict)
 _stt_seconds_accumulated = {}  # {sid: float} — H-9: echte STT-Sekunden, nicht Socket-Lifetime
 _sessions_lock = threading.Lock()
@@ -383,7 +384,7 @@ def build_keyterms(profile_daten: dict, profile_branche: str, mode: str) -> list
     return terms
 
 
-def _open_deepgram_connection(sid, mode='meeting', keyterms=None):
+def _open_deepgram_connection(sid, mode='cold_call', keyterms=None):
     # POLISH-49: EU-Host-Override für DSGVO-konforme Audio-Verarbeitung.
     # Standardmäßig `api.eu.deepgram.com` (siehe config.py Default).
     client = DeepgramClient(
@@ -434,7 +435,9 @@ def _open_deepgram_connection(sid, mode='meeting', keyterms=None):
     connection.start(options)
     with _sessions_lock:
         _deepgram_sessions[sid] = connection
-        _session_modes[sid] = mode
+        # _session_modes[sid] = mode  ENTFERNT (TAXO1-07): cold_call/meeting-mode lebt
+        # per-SID in _session_state[sid]['mode'] (im Call-Start VOR _open_deepgram_connection
+        # gesetzt, FUND 2). Der `mode`-Parameter bleibt lokale Variable fuer diarize/keyterms.
         _cost_opened_at[sid] = time.time()
     print(f"[DG] Session gestartet (sid={sid}, mode={mode}, diarize={is_meeting})")
 
@@ -442,7 +445,7 @@ def _open_deepgram_connection(sid, mode='meeting', keyterms=None):
 def _close_deepgram_connection(sid):
     with _sessions_lock:
         connection = _deepgram_sessions.pop(sid, None)
-        _session_modes.pop(sid, None)
+        # _session_modes.pop(sid, None)  ENTFERNT (TAXO1-07): per-SID mode raeumt pop_session_state.
         _cost_opened_at.pop(sid, None)           # Dict sauber halten (H-9: nicht mehr als Basis)
         stt_sek = _stt_seconds_accumulated.pop(sid, 0.0)  # H-9: echte STT-Sekunden
     # ── H-9 Cost-Hook: echte STT-Sekunden statt Socket-Lifetime ────────
@@ -521,12 +524,19 @@ def register_audio_handlers(sio):
         # before init_session_state() completes (MEDIUM fix — 08.20 REVIEWS.md)
         with ls._session_state_lock:
             ls._session_state.setdefault(_sid, {})
-        mode = 'meeting'  # default for backward compatibility
+        mode = 'cold_call'  # default for backward compatibility (D4: sicherere Annahme)
         precall_briefing = None
         if isinstance(data, dict):
-            mode = data.get('mode', 'meeting')
+            mode = data.get('mode', 'cold_call')
             precall_briefing = data.get('precall_briefing', None)
         print(f"[DG] start_live_session received (sid={_sid}, mode={mode})")
+
+        # FUND 2 (TAXO1-07): mode per-SID VOR _open_deepgram_connection (unten) gesetzt —
+        # schliesst das Race-Fenster, in dem on_message-Reads sonst auf den Default fielen
+        # (das leere setdefault-dict oben hat KEINEN 'mode'-Key). init_session_state (unten)
+        # re-setzt denselben Wert beim wholesale-replace -> konsistent, kein Overwrite.
+        with ls._session_state_lock:
+            ls._session_state.setdefault(_sid, {})['mode'] = mode
 
         # Phase 08.23.2.STT: keyterm-Liste VOR Connection-Open ableiten (keyterm ist nova-3-only,
         # muss beim LiveOptions-Build vorliegen). Mini-Profil-Load (nur daten+branche) — der volle
@@ -828,9 +838,14 @@ def register_audio_handlers(sio):
         # get_or_open_moment eines (Button-getriebener Moment erlaubt). Der bestehende
         # ewb_clicks/record_ewb_click-Pfad bleibt (Welle-5 Dual-Write). Lock-Disziplin:
         # eigener _session_state_lock-Block, NICHT mit state_lock genested.
-        # mode-Quelle EINHEITLICH mit Medium/Fast (deepgram _session_modes).
+        # mode-Quelle EINHEITLICH mit Medium/Fast: per-SID _session_state[sid]['mode']
+        # (TAXO1-07: globales _session_modes geloescht).
+        # CAVEAT (TAXO1-07): 'cold_call' existiert in ZWEI orthogonalen Achsen —
+        # state['current_mode'] (Kontakt: cold_call vs gatekeeper, handle_manual_mode_toggle)
+        # und _session_state[sid]['mode'] (Hoerbarkeit: cold_call vs meeting, Registry, HIER).
+        # NICHT vermischen: die Kontakt-Achse wird NICHT ins Register migriert.
         try:
-            _btn_mode = _session_modes.get(_sid, 'cold_call')
+            _btn_mode = (ls._session_state.get(_sid) or {}).get('mode', 'cold_call')
             _btn_iid = None
             _btn_uid = None
             _btn_oid = None

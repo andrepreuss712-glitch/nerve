@@ -967,11 +967,9 @@ def analyse_loop():
                         continue
 
                 # ── TAXO1-Welle 4 (Task 2): Medium-Lane-Cutover (intent_event) ───
-                # mode-Quelle (bewiesen per-SID, deepgram_service.py:18/427):
-                # M-2/TAXO1-07: mode-Quelle — bei _session_modes-Konsolidierung (W7)
-                # DIESEN Read mit-migrieren (sonst leerer mode im intent_event nach W7).
-                import services.deepgram_service as _dg
-                _med_mode = _dg._session_modes.get(sid, 'meeting')
+                # mode-Quelle per-SID (TAXO1-07: W7 erledigt — globales _session_modes
+                # geloescht, dieser Read jetzt aus _session_state[sid]['mode']).
+                _med_mode = (ls._session_state.get(sid) or {}).get('mode', 'cold_call')
                 # FUND B (Gemini-R2): confidence aus dem neuen Haiku-JSON-Feld; NIE None
                 # (Default 0.7 — Haiku-Einwand-Erkennung ist konservativ getriggert,
                 # "eher sicher"; bewusster Interim, TAXO3 baut den EWB-Prompt ohnehin um).
@@ -1516,8 +1514,8 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
             try:
                 from config import should_abstain
                 from services.intent_event_writer import emit_intent_event
-                import services.deepgram_service as _dg2
-                _ab_mode = _dg2._session_modes.get(sid, 'meeting')
+                # mode-Quelle per-SID (TAXO1-07: globales _session_modes geloescht).
+                _ab_mode = (ls._session_state.get(sid) or {}).get('mode', 'cold_call')
                 _ab_iid = None
                 _ab_phase = None
                 _ab_uid = None
