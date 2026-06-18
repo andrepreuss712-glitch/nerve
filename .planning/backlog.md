@@ -8,6 +8,22 @@
 
 ## Open
 
+### DEPLOY-TAR-NO-DELETE — deploy.sh entfernt gelöschte Dateien NICHT auf dem Server (Datei-Leichen)
+
+- **Severity:** medium (Deploy-Korrektheit — bricht den Test-Gate bei jeder Datei-Löschung + lässt toten Code live)
+- **Entdeckt:** TAXO1 Welle-6 Cleanup-Deploy (2026-06-18). Cleanup löschte lokal `services/ewb_pipeline.py` + `tests/test_ewb_pipeline.py`; beide blieben als Leichen auf Prod (`/opt/nerve/app/...`), die stale Test-Datei (importiert entferntes `_seed_ewb_v2`) ließ den ersten `deploy.sh production`-Gate-Lauf ROT (ImportError). Manuell per `ssh rm` entfernt, dann grün.
+- **Root-Cause:** `deploy.sh:78-79` überträgt den Code per `tar -cf - ./ | ssh 'tar -xf - -C $APP_DIR'` — Extract ÜBERSCHREIBT vorhandene Dateien, **löscht aber nie** Dateien, die lokal entfernt wurden (kein `--delete`/rsync-Semantik). Folge: jede künftige Datei-Löschung lässt eine Leiche auf dem Server; importiert ein lebender Test die Leiche → Gate rot; sonst stiller toter Code.
+- **Fix-Richtung:** Delete-bewusster Sync — entweder `rsync --delete` (wenn auf dem Win-Git-Bash-Pfad verfügbar) ODER vor dem Extract die relevanten Ziel-Verzeichnisse (mind. `tests/`, `services/`) server-seitig leeren, ODER ein git-basierter Deploy (`git fetch + reset --hard`) statt tar-Overlay. Achtung: `.db`/Logs/venv sind heute via `tar --exclude` ausgenommen — Delete-Logik darf die nicht treffen.
+- **Routing:** Deploy-Härtung, STAGING-Stufe-2-Familie (zusammen mit Auto-Alembic-Lücke + DEPLOY-CREATE-ALL-CRASH). Nicht launch-blockierend, aber beißt bei jeder Lösch-Phase → bald.
+
+### AUDIT-TRIGGER-SYNTAX — Audit-Log-Trigger-Setup scheitert bei JEDEM Boot (SQL-Syntaxfehler)
+
+- **Severity:** medium (Tracking-Säule fehlt + DSGVO-nah — Änderungs-Protokollierung wird nicht installiert)
+- **Entdeckt:** TAXO1 Welle-6 Cleanup-Deploy-Sanity-Log (2026-06-18). `[DB] Audit-Log Trigger setup failed: (psycopg2.errors.SyntaxError) syntax error at or near "NOT"` bei JEDEM Boot (verifiziert: trat auch im Boot 09:32 VOR dem Cleanup-Deploy auf → **pre-existing, unabhängig vom Cleanup**). Dienst läuft trotzdem (Trigger-Setup ist non-fatal gefangen).
+- **Vermutete Root-Cause:** Trigger-DDL nutzt vermutlich `CREATE TRIGGER ... IF NOT EXISTS` o.ä. — Postgres unterstützt `IF NOT EXISTS` bei `CREATE TRIGGER` nicht (anders als bei TABLE/INDEX). `grep` nach dem Trigger-Setup-Code (Boot-Pfad, `[DB] Audit-Log Trigger`) + Syntax gegen Postgres-Version prüfen.
+- **Folge:** die DB-seitigen Audit-Log-Trigger werden NICHT installiert → Änderungs-Protokollierung (CLAUDE.md Punkt-12-Tracking-Säule, DSGVO-Nachvollziehbarkeit) greift evtl. nicht wie gedacht. Verifizieren ob Audit-Events anderweitig (App-seitig) geschrieben werden oder ob hier eine echte Lücke klafft.
+- **Routing:** eigenes Thema, vor Launch prüfen (Tracking/DSGVO). Erst diagnostizieren (greift Audit-Logging überhaupt?), dann Fix-Größe entscheiden.
+
 ### TZ-DISPLAY — Dashboard zeigt UTC statt lokaler Zeit (Europe/Berlin) — eigene kleine Phase nach TAXO1
 
 - **Severity:** low (Kosmetik/UX — gespeichert wird korrekt in UTC, nur Anzeige rechnet nicht um)
