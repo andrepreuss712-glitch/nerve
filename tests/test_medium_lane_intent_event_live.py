@@ -106,7 +106,6 @@ def test_medium_lane_live_dispatch_writes_intent_event(db_session, monkeypatch):
     Beweist den Emit AUS dem Dispatch (nicht emit_intent_event isoliert)."""
     import services.claude_service as cs
     import services.live_session as ls
-    import services.deepgram_service as dg
 
     sid = _sid()
 
@@ -143,7 +142,8 @@ def test_medium_lane_live_dispatch_writes_intent_event(db_session, monkeypatch):
     monkeypatch.setitem(ls._per_sid_transcript, sid, [
         {'text': 'Das ist mir zu teuer', 'line_id': 1, 't_start': time.monotonic()},
     ])
-    monkeypatch.setitem(dg._session_modes, sid, 'cold_call')
+    # TAXO1-07: globales _session_modes geloescht — der cold_call/meeting-Modus lebt
+    # jetzt per-SID (oben in _session_state[sid]['mode']='cold_call'). Kein Mock noetig.
 
     # 3. Daemon-Schleife auf genau EINEN Tick begrenzen.
     monkeypatch.setattr(ls, 'analyse_trigger', _OneShotTrigger())
