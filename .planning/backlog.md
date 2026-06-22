@@ -8,6 +8,16 @@
 
 ## Open
 
+### ANON-OVER-AGGRESSIVE — Anonymisierung schwärzt Normal-Wörter (z.B. "Ihnen" → [PERSON_A]), vergiftet DB + Live-Vorschlag
+
+- **Severity:** high (Daten-Qualität für Training/Auswertung + Live-Antwort-Lesbarkeit)
+- **Entdeckt:** André 2026-06-22 (TAXO1-Live-Test + Vorschlags-Erfassungs-Diskussion). Beleg: `intent_event.triggering_text` = "Verstehe, [PERSON_A] ist das gerade zu teuer" — das normale Wort "Ihnen" wurde fälschlich als Person erkannt + geschwärzt.
+- **Zwei getrennte Schichten (beide gehören gefixt):**
+  - **(1) Anonymisierer ist ÜBER-AGGRESSIV:** markiert Nicht-PII (Anrede-/Normal-Wörter wie "Ihnen", "Sie") als Person → vergiftet alle gespeicherten Trainings-/Auswertungs-Daten (DPO-Korpus + Coaching). Erkennungs-Tuning nötig (services/anonymization.py — Schwellen/Modell/Whitelist gängiger Anrede-/Funktionswörter).
+  - **(2) André-Direktive: der LIVE-Vorschlag an den Berater darf GAR NICHT anonymisiert sein.** Der Berater hat die echten Namen eh gehört; "[PERSON_A]" im vorgelesenen Vorschlag liest sich "komplett scheiße". → Live-Vorschlag mit ECHTEN Namen anzeigen; NUR die gespeicherte Kopie wird (sauber) anonymisiert, und zwar WÄHREND des Calls (Mapping noch aktiv), nicht am Call-Ende.
+- **Verwandt:** ANON-LIVE-ANSWER (dieselbe Wurzel — anonymisierter Text im Live-Pfad). Zusammen behandeln.
+- **Routing:** TAXO3 (Antwort-Qualität / Live-Pfad) + eigener Anonymisierungs-Tuning-Pass für Schicht (1). Wirkt auch auf die TAXO2-Vorschlags-Erfassung (Plan 08): gespeicherte suggestion_text-Kopie muss SAUBER anonymisiert sein, nicht über-geschwärzt.
+
 ### DEPLOY-TAR-NO-DELETE — deploy.sh entfernt gelöschte Dateien NICHT auf dem Server (Datei-Leichen)
 
 - **Severity:** medium (Deploy-Korrektheit — bricht den Test-Gate bei jeder Datei-Löschung + lässt toten Code live)
