@@ -672,13 +672,15 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
         # Frueher reassignte diese Stelle den Anzeige-Text via anonymize_output -> die ANZEIGE wurde
         # anon (Bug); der WR-01-Zweck (anonymisierte Persistenz) wandert in die Storage-Version unten.
         cleaned_display = full_text.strip()
-        result = {'einwand': True, 'typ': 'AUTO', 'gegenargument_1': cleaned_display}
         # Anzeige ZUERST emittieren (Punkt 25 Latenz: Berater hat die Antwort, bevor die
         # Hintergrund-Storage berechnet wird — der seltene frische Fallback verzoegert nie die Anzeige).
-        sio.emit('pip_token_done', {'slot': slot, 'result': result, 'raw_text': True}, room=sid)
+        # WICHTIG (DSGVO): EIGENES Payload-Dict fuer die Anzeige — NIE dasselbe Objekt wie das
+        # Rueckgabe-result mutieren. Sonst koennte (je nach SocketIO-Serialisierungs-Timing) die
+        # spaeter angehaengte anonymisierte Storage-Version ans Client-Payload leaken.
+        display_result = {'einwand': True, 'typ': 'AUTO', 'gegenargument_1': cleaned_display}
+        sio.emit('pip_token_done', {'slot': slot, 'result': display_result, 'raw_text': True}, room=sid)
         # Separate anonymisierte Storage-Version (Vertrag fuer Plan 08 record_suggestion_offer):
-        # anonymize_for_storage garantiert nie roh / nie verloren / Notweg geloggt. _storage_text wird
-        # NACH dem Emit gesetzt -> das Anzeige-Payload oben enthaelt die anonymisierte Version NICHT.
+        # anonymize_for_storage garantiert nie roh / nie verloren / Notweg geloggt.
         try:
             from services.anonymization import anonymize_for_storage
             cleaned_storage = anonymize_for_storage(cleaned_display, sid)
@@ -686,7 +688,9 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
             # Helfer faengt intern schon ab; dieser Guard ist Defense-in-depth (nie roh nach aussen).
             print(f"[ANON] anonymize_for_storage AutoVar failed (non-fatal): {_anon_av_err}")
             cleaned_storage = '[ANON_FEHLER]'
-        result['_storage_text'] = cleaned_storage
+        # Rueckgabe-result ist ein SEPARATES Dict (traegt _storage_text fuer Plan 08, geht NIE an die Anzeige).
+        result = {'einwand': True, 'typ': 'AUTO',
+                  'gegenargument_1': cleaned_display, '_storage_text': cleaned_storage}
         print(f"[PiP-AutoVar] DONE sid={sid} slot={slot} chars={len(cleaned_display)}")
         try:
             from services.cost_tracker import log_api_cost
