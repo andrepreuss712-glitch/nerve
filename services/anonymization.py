@@ -120,6 +120,11 @@ PRONOMEN_WHITELIST = frozenset({
     'er', 'es', 'ihm', 'ihn', 'seiner', 'sein', 'seine',
     'wir', 'uns', 'unser', 'unsere', 'unserer', 'unserem', 'unseren',
     'man', 'wer', 'wen', 'wem',
+    # Ueber-Schaerfe-Fix (Req 11/FOLD A-2): fehlende Dativ-/2.-Pers.-Pl.-/Reflexiv-Funktionswoerter
+    # nachgetragen ('Ihnen' wurde als PERSON->[PERSON_A] ueber-geschwaerzt, weil die Dativform fehlte).
+    # Deckt via _is_whitelisted automatisch alle 6 NER-Pfade (sequenziell+parallel, spaCy+GLiNER).
+    # DSGVO: keine realen Nachnamen, kein Heuristik-Lockern — reine Funktionswort-Whitelist.
+    'ihnen', 'euch', 'euer', 'eure', 'sich', 'einander',
 })
 
 # ── Generic-Berufs-/Org-Nomen-Whitelist (Phase 08.23.2.D.UX.3 Task R4) ────────
@@ -630,6 +635,49 @@ def anonymize_output(text: str, cache: Optional[AnrufAnonymisierer]) -> str:
         pattern = r'(?<!\w)' + re.escape(original) + r'(?!\w)'
         text = re.sub(pattern, lambda _m, _t=token: _t, text, flags=re.UNICODE)
     return text
+
+
+def anonymize_for_storage(text: str, sid: str) -> str:
+    """
+    FOLD A-2 / Req 11: GEMEINSAMER Storage-Anon-Helper — EINZIGE Quelle der Wahrheit
+    fuers "Text fuer die Speicherung saeubern" (wie _is_whitelisted; verhindert Drift
+    zwischen den Storage-Stellen Auto-Variante / Knopf-Pfad / Keyword).
+
+    Garantie: nie roh, nie verloren, jeder Notweg geloggt.
+      (a) Per-SID-Cache da   -> anonymize_output(text, cache)  (konsistente Tokens wie Transkript)
+      (b) Cache None / (a) wirft -> FRISCHE anonymize(text, cache_or_None) — liefert NIE rohe
+          Namen ('[PERSON_X]'/Sentinel, Audit-belegt :534/:574), auch ohne Mapping-Persistenz.
+      (c) auch (b) wirft     -> geschwaerzte Minimal-Form ('[ANON_FEHLER]') — Zeile bleibt schreibbar.
+      (d) bei (b)/(c)        -> '[ANON] storage-fallback ...' Log (Notweg nie still).
+    Gibt NIE den rohen Eingabetext zurueck. Die LIVE-Anzeige bleibt davon unberuehrt (immer roh).
+    """
+    if not text or not text.strip():
+        return ''
+    # (a) Cache-Replay — nur wenn der Per-SID-Merkzettel WIRKLICH da ist (cache=None-No-Op-Falle meiden)
+    cache = None
+    try:
+        import services.live_session as _ls  # lazy: vermeidet Modul-Zyklus (live_session importiert anon)
+        cache = _ls.get_anonymisierer(sid)
+    except Exception as _e:
+        print(f'[ANON] storage-fallback: get_anonymisierer warf sid={sid!r} grund={type(_e).__name__}')
+        cache = None
+    if cache is not None:
+        try:
+            return anonymize_output(text, cache)
+        except Exception as _e:
+            print(f'[ANON] storage-fallback: cache-replay warf sid={sid!r} '
+                  f'grund={type(_e).__name__} -> frische Saeuberung')
+    else:
+        print(f'[ANON] storage-fallback: kein Per-SID-Cache sid={sid!r} -> frische Saeuberung')
+    # (b) Frische Saeuberung — anonymize liefert auch mit cache=None nie rohe Namen
+    try:
+        anon_text, _tier = anonymize(text, cache)
+        return anon_text if anon_text else '[ANON_LEER]'
+    except Exception as _e:
+        # (c) Last-Resort: nie roh, nie verloren — geschwaerzt + markiert, Zeile bleibt schreibbar
+        print(f'[ANON] storage-fallback: frische Saeuberung warf sid={sid!r} '
+              f'grund={type(_e).__name__} -> geschwaerzt')
+        return '[ANON_FEHLER]'
 
 
 def register_briefing_pii(briefing_data: dict, cache: AnrufAnonymisierer) -> None:

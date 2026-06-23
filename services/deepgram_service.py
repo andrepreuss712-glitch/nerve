@@ -947,13 +947,11 @@ def register_audio_handlers(sio):
                 # einwand_text=typ ist ein Typ-Label ('zu_teuer') — kein Anonymisierungs-Bedarf (D-01)
                 # Finding 4: anonymize_output() gibt nie '[ART9_REDACTED]' zurueck — kein Skip-Check noetig.
                 if _antwort:
-                    try:
-                        from services.anonymization import anonymize_output
-                        _anon_cache = ls.get_anonymisierer(_sid)
-                        _antwort = anonymize_output(_antwort, _anon_cache)
-                    except Exception as _out_err:
-                        print(f'[ANON] anonymize_output Fehler (EWB, sid={_sid!r}): {type(_out_err).__name__}')
-                        # Fallback: _antwort bleibt unveraendert (fail-open fuer Output-Pfad)
+                    # FOLD A-2 / Req 11: gemeinsamer Storage-Anon-Helper (nie roh, nie verloren, geloggt).
+                    # Ersetzt den frueheren fail-OPENen Pfad (bei Anon-Fehler blieb _antwort ROH durch) —
+                    # Andre-Entscheidung 22.06.: Auto- UND Knopf-Pfad gleich behandeln, nie roh speichern.
+                    from services.anonymization import anonymize_for_storage
+                    _antwort = anonymize_for_storage(_antwort, _sid)
                 try:
                     ls.record_ewb_click(typ, success=True,
                                         antwort_text=_antwort, einwand_text=typ)

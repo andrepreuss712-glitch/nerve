@@ -666,18 +666,28 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                     print(f"[EWB-TTFT] {_ttft_ms:.0f}ms model={_model_autovar} sid={sid}")
                 full_text += token
                 sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
-        cleaned = full_text.strip()
-        # WR-01 fix: anonymize AI-generated output before persisting/emitting final result
-        try:
-            from services.anonymization import anonymize_output
-            import services.live_session as _ls_av
-            _anon_cache_av = _ls_av.get_anonymisierer(sid)
-            cleaned = anonymize_output(cleaned, _anon_cache_av)
-        except Exception as _anon_av_err:
-            print(f"[ANON] anonymize_output AutoVar failed (non-fatal): {_anon_av_err}")
-        result = {'einwand': True, 'typ': 'AUTO', 'gegenargument_1': cleaned}
+        # ── FOLD A-2 / Req 11: Anzeige roh (echte Namen, Live-Nutzen), Storage anonymisiert (DSGVO) ──
+        # Analog Knopf-Pfad (streame_manual_ewb_variante:823 + deepgram_service.py Knopf-Storage).
+        # Die dem Berater LIVE gezeigte Antwort behaelt die ECHTEN Namen — [PERSON_A] waere unbrauchbar.
+        # Frueher reassignte diese Stelle den Anzeige-Text via anonymize_output -> die ANZEIGE wurde
+        # anon (Bug); der WR-01-Zweck (anonymisierte Persistenz) wandert in die Storage-Version unten.
+        cleaned_display = full_text.strip()
+        result = {'einwand': True, 'typ': 'AUTO', 'gegenargument_1': cleaned_display}
+        # Anzeige ZUERST emittieren (Punkt 25 Latenz: Berater hat die Antwort, bevor die
+        # Hintergrund-Storage berechnet wird — der seltene frische Fallback verzoegert nie die Anzeige).
         sio.emit('pip_token_done', {'slot': slot, 'result': result, 'raw_text': True}, room=sid)
-        print(f"[PiP-AutoVar] DONE sid={sid} slot={slot} chars={len(cleaned)}")
+        # Separate anonymisierte Storage-Version (Vertrag fuer Plan 08 record_suggestion_offer):
+        # anonymize_for_storage garantiert nie roh / nie verloren / Notweg geloggt. _storage_text wird
+        # NACH dem Emit gesetzt -> das Anzeige-Payload oben enthaelt die anonymisierte Version NICHT.
+        try:
+            from services.anonymization import anonymize_for_storage
+            cleaned_storage = anonymize_for_storage(cleaned_display, sid)
+        except Exception as _anon_av_err:
+            # Helfer faengt intern schon ab; dieser Guard ist Defense-in-depth (nie roh nach aussen).
+            print(f"[ANON] anonymize_for_storage AutoVar failed (non-fatal): {_anon_av_err}")
+            cleaned_storage = '[ANON_FEHLER]'
+        result['_storage_text'] = cleaned_storage
+        print(f"[PiP-AutoVar] DONE sid={sid} slot={slot} chars={len(cleaned_display)}")
         try:
             from services.cost_tracker import log_api_cost
             final_msg = stream.get_final_message()
