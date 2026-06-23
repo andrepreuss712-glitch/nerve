@@ -2167,6 +2167,14 @@ Plans:
 
 > ⚠️ Multi-Segment-ID-Gotcha (wie SCHILD): Pfade auf `.planning/phases/08.23.2.TAXO1-*/` etc. hartkodieren. Verify=Production, kein Local-Dev. Plan-Pflicht-Sektionen Punkt 14 (Control-Flow) + Punkt 21 (Persistenz-Schicht) bei jedem Code-Insert.
 
+### Phase 08.23.2.SCORE-UI: Scoreboard + Auswertung Redesign (NEU 2026-06-23, aus TAXO2-Vorbau-Analyse) 🟡/🔴
+
+**Goal:** Komplettes Redesign von Scoreboard (PiP, live) + Auswertung (Full-Size, post-call) — neue Kacheln/Daten, nur Hilfreiches + AHA-Momente (André-Auftrag). Hier fällt die in TAXO2 vertagte Score-Philosophie-Entscheidung (Note = reines Verhalten vs. Kaufbereitschafts-gewichtet) an echten Kacheln.
+
+**Depends on:** 08.23.2.TAXO2 (Rohmaterial: 7 rubric-Dimensionen, handling_score, suggestion_reactions) + 08.23.2.TAXO3 (Antwort-Qualitäts-Daten).
+**Einzige Wahrheit (Pflicht-Pre-Read):** `Nerve-Vault/03 Planung/Scoreboard + Auswertung Redesign - Design-Brief.md` — vollständiges Daten-Inventar (heute angezeigt / TAXO-neu / bewahrt / Lücken / AHA-Kandidaten).
+**Anti-Abrieb:** TAXO baut nur ein rohes „Vorschau"-Panel (neue Note + 7 Dimensionen, ungestylt, read-only) zur End-zu-End-Verifikation — DIESE Phase veredelt es zu echten Kacheln + flippt die Anzeige bewusst. **Lücken aus dem Brief, hier zu lösen:** 7-Dim-Aufschlüsselung statt alter 4 (Gap A); KB/Skript als eigene Kacheln (bleiben Roh-Werte, Engine kann sie nicht herleiten); Training-6-Kat vs Live-7-Dim vereinheitlichen (Gap C). Cross-AI Pflicht. Multi-Segment-Gotcha (Pfade hardcoden).
+
 ### Phase SEC-USERDATA: App-weite Userdaten-Sicherheits-Prüfung (PFLICHT vor Launch, André 2026-06-12) 🔴
 
 **Goal:** Proportionierte (NICHT Fort-Knox) Sicherheits-Prüfung der sensiblen Userdaten über die ganze App — getrennt von TAXO (dort wird der Daten-Fußabdruck pro Phase inline gesichert; SEC-USERDATA prüft das Gesamtbild + den Rest + den äußeren Zaun).
