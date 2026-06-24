@@ -820,6 +820,41 @@ class SuggestionReaction(Base):
     )
 
 
+class RubricScore(Base):
+    # TAXO2-Plan 01 — DIE Single Source der Benotung (BARS + Proration), Live + Training
+    # (SPEC Req 1). Hybrid: indizierte Kern-Spalten + payload_jsonb-Reserve. KEIN Schreiber
+    # in dieser Welle — die Engine (Plan 02/04) ist der einzige Schreiber. call_id harter FK
+    # ON DELETE CASCADE (F-08/DD-01-Konvention wie CallEvent models.py:741). Partieller
+    # Unique-Index ux_rubric_score_live_call_id (call_id WHERE origin='live') macht Plan-04
+    # ON CONFLICT valide (F-03); Training-Zeilen (origin='training') bleiben frei.
+    # FORCE ROW LEVEL SECURITY (D-11) — greift auch fuer Owner nerve_app; die M-4-Daemon-GUC-
+    # Falle (Schreiber ohne Request-Context) ist hier nur dokumentiert/getestet, Fix = Plan 04.
+    __tablename__ = 'rubric_score'
+    id                    = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    call_id               = Column(UUID_TYPE, ForeignKey('calls.id', ondelete='CASCADE'), index=True, nullable=True, comment="Bezug zum Call. HARTER FK ON DELETE CASCADE (F-08/DD-01-Konvention wie CallEvent models.py:741) — geloeschter Call raeumt die Note DSGVO-sauber mit. nullable: Training-Zeilen ohne call_id.")
+    conversation_log_id   = Column(Integer, index=True, nullable=True, comment="Bezug zur Session/conversation_logs. Live=aus Call, Training=aus Trainings-Session.")
+    session_mode          = Column(String(32), index=True, nullable=False, comment="Modus der Bewertung: cold_call|meeting_consented|training (N-4, EXAKT calls.call_mode-Werte + training, kein 'meeting'-Kurzform). Bestimmt den Gewichtssatz (D-01/D-04).")
+    origin                = Column(String(16), index=True, nullable=False, comment="Herkunft der Note: live|training. SPEC Req 1 — eine Tabelle fuer beide Welten. Steuert den partiellen Unique-Index (F-03).")
+    coaching_score        = Column(Float, nullable=True, comment="Gesamt-Kopf-Zahl (0-100). NULL wenn <50% Gewicht messbar (Proration, D-02) oder not_gradable (D-09). Spiegel von calls.coaching_score (Plan 04).")
+    is_provisional        = Column(Boolean, nullable=False, default=False, comment="Vorlaeufig-Marker (D-08): Score ueber der 50%-Schwelle aber mit weggeprorateten Dimensionen. Anzeige 999.2.")
+    measured_weight_pct   = Column(Float, nullable=True, comment="Anteil messbaren Gewichts am modus-konfigurierten Maximum (D-02/D-08). <0.5 → coaching_score NULL.")
+    unmeasured_dimensions = Column(JSON_TYPE, nullable=True, comment="Liste der nicht gewerteten Dimensionen + Grund (n/a vs vergeigt, D-08). Goldstaub fuer 999.2-Erklaerung + ML.")
+    dimensions            = Column(JSON_TYPE, nullable=True, comment="Volle Aufschluesselung pro Dimension (D-05/Req 5): je Dim {score, weight, available, sample_size, beleg_ref, marker[]}. Beleg-Referenz = Transkript-/intent_event-Verweis, KEIN freier LLM-Text.")
+    status                = Column(String(24), nullable=True, comment="Bewertungs-Status: scored|pending|not_gradable (D-09 poor_audio_health). NULL = noch nicht gelaufen.")
+    tenant_id             = Column(UUID_TYPE, index=True, nullable=True, comment="Mandanten-Abschottung (D-11, RLS-ready). Abgeleitet aus calls.tenant_id. Policy erst COACH.")
+    payload_jsonb         = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment="Reserve + Training-only-Felder (was_correct, scenario_id, ground_truth_score) ohne spaetere Migration. SPEC Req 1.")
+    score_schema_version  = Column(SmallInteger, nullable=False, default=1, comment="Format-Version der Aufschluesselung fuer spaetere Bumps.")
+    created_at            = Column(DateTime, default=utcnow)
+    __table_args__ = (
+        # F-03 partieller Unique-Index: Plan 04 ON CONFLICT (call_id) WHERE origin='live'
+        # braucht genau diesen Index (index=True allein reicht NICHT). Partiell -> Training-Zeilen
+        # (origin='training', call_id NULL/mehrfach) kollidieren NICHT. `text` = Modul-Import
+        # (models.py:2), NICHT vom Spalten-Attribut ueberdeckt (vgl. TranscriptSegment-Hinweis).
+        Index('ux_rubric_score_live_call_id', 'call_id', unique=True, postgresql_where=text("origin = 'live'")),
+        {'comment': "Single Source der Benotung (BARS + Proration), Live + Training. Eine Zeile pro bewerteter Call/Session. Hybrid: indizierte Kern-Spalten + payload_jsonb. call_id harter FK CASCADE (F-08/DD-01). Partieller Unique-Index (call_id, origin=live) fuer idempotenten Upsert (F-03). Status: lebt (neu, TAXO2). Schreibt services/slow_lane.py (Engine, Plan 02/04); liest routes/dashboard.py + performance.py (999.2)."},
+    )
+
+
 class TranscriptSegment(Base):
     __tablename__ = 'transcript_segments'
     id                  = Column(BigInteger, primary_key=True, autoincrement=True)  # BIGSERIAL
