@@ -321,6 +321,9 @@ def api_beenden():
     # ConversationLog-Insert (moved up from line ~435).
     with ls.state_lock:
         ewb_clicks = list(ls.state.get('ewb_clicks', []))
+        # TAXO2-08: RAM-Puffer der NERVE-Vorschlaege (Auto/Knopf/Keyword) — wie ewb_clicks
+        # VOR dem Session-Reset lesen, fuer den Call-Ende-Flush nach suggestion_reactions.
+        suggestion_offers = list(ls.state.get('suggestion_offers', []))
     saved_conv_id = None
     stats = _stats
     kb_min_val = min((v['wert'] for v in kb_verlauf), default=30)
@@ -399,6 +402,45 @@ def api_beenden():
         )
         if ewb_clicks:
             db_conv.commit()
+
+        # ── TAXO2-08 (FOLD A): Vorschlags-Angebote nach suggestion_reactions flushen ──
+        # NEBEN der objection_bridge, in DERSELBEN Finalisierungs-Transaktion (db_conv).
+        # insert-only + idempotent (DELETE strikt org+call_id-scoped/B3); suggestion_text
+        # kommt BEREITS anonymisiert (Plan 09) — KEINE Anon im Flush. Ein Fehler hier bricht
+        # die Call-Finalisierung NIE (Muster ObjectionEvent/TranscriptSegment). KEIN
+        # Live-Loop-DB-Write (Punkt 25): der EINZIGE Write ist dieser Call-Ende-Flush.
+        # call_id = _phase_d_call_id (oben FRUEH atomar aus der Session resolved);
+        # tenant_id light aus der Call-Row (Call-Ende-Request-Kontext, kein Live-Loop).
+        try:
+            from services.suggestion_capture import flush_suggestion_offers
+            _sr_tenant_id = None
+            if _phase_d_call_id:
+                try:
+                    from database.models import Call as _CallTenant
+                    _sr_call_row = (db_conv.query(_CallTenant.tenant_id)
+                                    .filter(_CallTenant.id == _phase_d_call_id).first())
+                    if _sr_call_row is not None:
+                        _sr_tenant_id = _sr_call_row[0]
+                except Exception as _sr_tn_e:
+                    print(f"[TAXO2-08] tenant_id-Lookup skip (non-fatal): {_sr_tn_e}")
+            _sr_n = flush_suggestion_offers(
+                conversation_log_id=conv.id,
+                call_id=_phase_d_call_id,
+                user_id=g.user.id,
+                org_id=g.org.id,
+                tenant_id=_sr_tenant_id,
+                suggestion_offers=suggestion_offers,
+                db=db_conv,
+            )
+            if _sr_n:
+                db_conv.commit()
+                print(f"[TAXO2-08] {_sr_n} suggestion_reactions geflusht (call_id={_phase_d_call_id})")
+        except Exception as _sr_flush_e:
+            print(f"[TAXO2-08] flush_suggestion_offers skip (non-fatal): {_sr_flush_e}")
+            try:
+                db_conv.rollback()
+            except Exception:
+                pass
 
         # ── Phase 08.23.2.D.UX.1 (Bug A) — Transcript-Segments persistieren ──────────
         # Schreibt die anonymisierten RAM-Segmente (gleiche Quelle wie die TXT-Datei:
