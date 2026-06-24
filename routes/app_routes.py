@@ -413,16 +413,13 @@ def api_beenden():
         # tenant_id light aus der Call-Row (Call-Ende-Request-Kontext, kein Live-Loop).
         try:
             from services.suggestion_capture import flush_suggestion_offers
-            _sr_tenant_id = None
-            if _phase_d_call_id:
-                try:
-                    from database.models import Call as _CallTenant
-                    _sr_call_row = (db_conv.query(_CallTenant.tenant_id)
-                                    .filter(_CallTenant.id == _phase_d_call_id).first())
-                    if _sr_call_row is not None:
-                        _sr_tenant_id = _sr_call_row[0]
-                except Exception as _sr_tn_e:
-                    print(f"[TAXO2-08] tenant_id-Lookup skip (non-fatal): {_sr_tn_e}")
+            # tenant_id MUSS aus DERSELBEN Quelle kommen wie der RLS-GUC app.tenant_id:
+            # g.tenant_id (Session -> before_request -> contextvar -> after_begin set_config).
+            # NICHT aus calls.tenant_id — die ist bei den meisten Calls NULL (Live-Test-Fund
+            # 24.06.: row.tenant_id=NULL -> tenant_isolation WITH CHECK schlaegt fehl -> Flush
+            # blockiert). db_conv=get_session()=SessionLocal traegt den after_begin-GUC-Hook,
+            # also GUC == g.tenant_id -> row.tenant_id==GUC -> WITH CHECK ok.
+            _sr_tenant_id = getattr(g, 'tenant_id', None)
             _sr_n = flush_suggestion_offers(
                 conversation_log_id=conv.id,
                 call_id=_phase_d_call_id,
