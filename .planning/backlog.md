@@ -25,6 +25,14 @@
 - **Soll (André, kanonisch in Vault `Soll-Verhalten §2`):** NERVE darf den echten Namen statt des Platzhalters einsetzen — liest sich angenehmer. ABER die Wahrheit ist der im Call **GESPROCHENE** Name, NICHT stur der PreCall-Briefing-Name: nennt der Berater/Sekretär im Gespräch einen anderen Namen (oder lag das Briefing falsch) → gesprochener Name gewinnt, NERVE stellt um. NIE Briefing-Name über den im Call gehörten.
 - **Routing:** TAXO3 (Antwort-Qualität / `build_answer_context` — Namens-Slot, Quelle im-Call-Name > Briefing) + Sekretär→Entscheider-Übergabe (Roadmap Phase I `context_notes`). Nutzt den ohnehin pro Call geführten Anonymisierer-Namens-Bestand. Nicht launch-blockierend.
 
+### ANSWER-ECHO — NERVE-Vorschlag wiederholt die Quittung, die der Berater schon gesagt hat
+
+- **Severity:** medium (Antwort-Qualität / Gesprächs-Fluss — Kernfeature Live-Assistent)
+- **Entdeckt:** André 2026-06-24 (Plan-08-Live-Test). Erfasste Vorschläge starteten mit „Verstehe ich, gerade ist viel los…" / „Verstehe ich total. Gerade läuft viel…" — NERVE quittiert den Einwand nochmal, den der Berater gerade SELBST quittiert hat („Ich verstehe Herr Meier, Sie haben keine Zeit"). Doppelt, stört den Fluss, klingt nach Papagei.
+- **Soll (kanonisch Vault Soll-Verhalten §2):** NERVE wiederholt NICHT die Berater-Quittung, sondern knüpft AN — der nächste Zug (offene Gegenfrage/Haken), nicht die Empathie, die der Berater schon geliefert hat. Bsp: Berater „ich verstehe Herr Meier, keine Zeit" → NERVE „Darf ich kurz fragen: …".
+- **Mechanik:** Antwort-Engine hat `triggering_text` + Berater-Äußerung → prüft ob der Berater den Einwand schon quittiert hat → überspringt die Quittung.
+- **Routing:** TAXO3 (`build_answer_context`, Paradigma-Reset §4.5 — „verstehen+helfen statt Floskel"). Verwandt: POSTCALL-COACH-QUALITY (schwache/floskelhafte Antworten).
+
 ### DEPLOY-TAR-NO-DELETE — deploy.sh entfernt gelöschte Dateien NICHT auf dem Server (Datei-Leichen)
 
 - **Severity:** medium (Deploy-Korrektheit — bricht den Test-Gate bei jeder Datei-Löschung + lässt toten Code live)
