@@ -778,6 +778,48 @@ class IntentEvent(Base):
     )
 
 
+class SuggestionReaction(Base):
+    # TAXO2-Plan 08 (FOLD A) — Roh-Erfassung JEDES NERVE-Vorschlags pro Call
+    # (Auto-Variante Slot B + Manueller Knopf + Keyword-Slot A). insert-only,
+    # Call-Ende-Flush (KEIN Live-Write, Punkt 25). suggestion_text = die am ERFASSEN
+    # anonymisierte Storage-Version (Plan 09, lebender Per-SID-Cache; NIE cache=None).
+    # NUR das ANGEBOT wird befuellt; die Reaktions-Haelfte (adoption_value/...) ist
+    # DEFERRED (post-Launch neu-berechenbar) und bleibt JETZT NULL. interaction_id
+    # korreliert zu intent_event.interaction_id (Tuermoeffner-Naht models.py:774 /
+    # 0016:76) — KEIN harter FK (interaction_id ist kein PK).
+    __tablename__ = 'suggestion_reactions'
+    # ── Roh-Angebot-Spalten (JETZT befuellt) ──────────────────────────────────
+    id                     = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    call_id                = Column(UUID_TYPE, ForeignKey('calls.id', ondelete='CASCADE'), index=True, nullable=True, comment="Bezug zum Call. HARTER FK ON DELETE CASCADE (F-08/DD-01) — geloeschter Call raeumt das Angebot (suggestion_text=potenzieller Wortlaut) DSGVO-sauber mit. nullable: Edge ohne ermittelbare call_id.")
+    conversation_log_id    = Column(Integer, index=True, nullable=True, comment="Bezug zur Session. Korrelations-/Gruppier-Schluessel des Flushs.")
+    interaction_id         = Column(UUID_TYPE, index=True, nullable=True, comment="Moment-Klammer (Korrelation zu intent_event.interaction_id, TAXO1). Vom Capture-Pfad IMMER gesetzt (get_or_open_moment, FOLD A-2/B1); nullable nur als Defense. KEIN FK (kein PK). Naht fuer spaeteres Uebernahme-Scoring.")
+    org_id                 = Column(Integer, index=True, nullable=True, comment="Mandant (per-Berater-/Org-Filter, RLS-Ergaenzung).")
+    user_id                = Column(Integer, index=True, nullable=True, comment="Berater (per-Berater-Auswertung, DEFERRED).")
+    slot                   = Column(String(8), nullable=True, comment="Liefer-Kanal: A=Profil-Stichwort-instant (Keyword/Fast-Lane) | B=KI-gestreamt (Auto-Variante/Knopf-Antwort).")
+    source                 = Column(String(24), index=True, nullable=True, comment="Ausloeser des Angebots: auto_variante | manual_button | keyword. Fuer A/B-Test der Antwort-Engine + systematisch-ignoriert-Analyse (TAXO3).")
+    model                  = Column(String(48), nullable=True, comment="Antwort-Modell (z.B. haiku/sonnet) — A/B-Test + Selbst-Verbesserung.")
+    suggestion_text        = Column(Text, nullable=True, comment="Was NERVE ausgab — ANONYMISIERTE Storage-Version (Plan 09, am Erfassen mit lebendem Per-SID-Cache; NIE cache=None). DSGVO: Cascade-clean via call_id-FK.")
+    einwand_typ            = Column(String(64), nullable=True, comment="Einwand-Typ-Kontext des Angebots (Korrelation).")
+    ts_offered             = Column(DateTime, nullable=True, comment="Zeitpunkt des Angebots (Live-Latenz-Diagnose: ignoriert-weil-zu-spaet vs weil-schlecht).")
+    tenant_id              = Column(UUID_TYPE, index=True, nullable=True, comment="Mandanten-Abschottung (RLS FORCE, abgeleitet aus calls.tenant_id).")
+    payload_jsonb          = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment="Reserve fuer kuenftige Felder (confidence, einwand_typ-Detail) ohne Migration. FOLD A.")
+    created_at             = Column(DateTime, default=utcnow)
+    # ── DEFERRED-Reaktions-Spalten (nullable, JETZT NICHT befuellt) ───────────
+    adoption_value         = Column(Float, nullable=True, comment="[DEFERRED, post-Launch] Uebernahme-Grad 0-1 (1:1 / ~90% / ignoriert). In TAXO2 NICHT befuellt (Soll-Verhalten §6).")
+    following_utterance_ref = Column(String(128), nullable=True, comment="[DEFERRED, post-Launch] Verweis auf die folgende Berater-Aeusserung (Uebernahme-Skala). NICHT in TAXO2.")
+    reaction_class         = Column(String(24), nullable=True, comment="[DEFERRED, post-Launch] Klassifikation der Reaktion. NICHT in TAXO2.")
+    __table_args__ = (
+        Index('ix_suggestion_reactions_call_id', 'call_id'),
+        Index('ix_suggestion_reactions_interaction_id', 'interaction_id'),
+        Index('ix_suggestion_reactions_source', 'source'),
+        Index('ix_suggestion_reactions_conversation_log_id', 'conversation_log_id'),
+        Index('ix_suggestion_reactions_org_id', 'org_id'),
+        Index('ix_suggestion_reactions_user_id', 'user_id'),
+        Index('ix_suggestion_reactions_tenant_id', 'tenant_id'),
+        {'comment': "Roh-Erfassung jedes NERVE-Vorschlags pro Call (Auto-Variante Slot B + Manueller Knopf + Keyword), insert-only + anonymisiert, Call-Ende-Flush (KEIN Live-Write). NUR das ANGEBOT befuellt; Reaktions-Haelfte (adoption_value/...) DEFERRED post-Launch. call_id harter FK CASCADE (F-08). Status: lebt (neu, TAXO2 FOLD A). Schreibt services/suggestion_capture.py (Flush) + services/live_session.py (RAM); liest Uebernahme-Scoring (Post-Launch)."},
+    )
+
+
 class TranscriptSegment(Base):
     __tablename__ = 'transcript_segments'
     id                  = Column(BigInteger, primary_key=True, autoincrement=True)  # BIGSERIAL
