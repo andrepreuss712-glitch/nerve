@@ -18,6 +18,13 @@
 - **Verwandt:** ANON-LIVE-ANSWER (dieselbe Wurzel — anonymisierter Text im Live-Pfad). Zusammen behandeln.
 - **Routing:** TAXO3 (Antwort-Qualität / Live-Pfad) + eigener Anonymisierungs-Tuning-Pass für Schicht (1). Wirkt auch auf die TAXO2-Vorschlags-Erfassung (Plan 08): gespeicherte suggestion_text-Kopie muss SAUBER anonymisiert sein, nicht über-geschwärzt.
 
+### NAME-FILL — NERVE setzt echten Namen in Vorschläge ein (gesprochener Name schlägt Briefing)
+
+- **Severity:** low (UX/Lesbarkeit — heute zeigt NERVE den Platzhalter wörtlich)
+- **Entdeckt:** André 2026-06-24 (Plan-09-Live-Test, Nebenbefund). Der vermeintliche `[PERSON_A]`-Bug war KEIN Anonymisierungs-Leak (Logging zeigte alle Anzeige-Zeilen `anon=false`), sondern ein **wörtlicher Profil-Platzhalter** „[Name des Entscheiders]" / „[Name VL]" in den Gatekeeper-Vorschlägen (sieht aus wie ein Anonymisierungs-Token, ist aber eine Vorlagen-Lücke).
+- **Soll (André, kanonisch in Vault `Soll-Verhalten §2`):** NERVE darf den echten Namen statt des Platzhalters einsetzen — liest sich angenehmer. ABER die Wahrheit ist der im Call **GESPROCHENE** Name, NICHT stur der PreCall-Briefing-Name: nennt der Berater/Sekretär im Gespräch einen anderen Namen (oder lag das Briefing falsch) → gesprochener Name gewinnt, NERVE stellt um. NIE Briefing-Name über den im Call gehörten.
+- **Routing:** TAXO3 (Antwort-Qualität / `build_answer_context` — Namens-Slot, Quelle im-Call-Name > Briefing) + Sekretär→Entscheider-Übergabe (Roadmap Phase I `context_notes`). Nutzt den ohnehin pro Call geführten Anonymisierer-Namens-Bestand. Nicht launch-blockierend.
+
 ### DEPLOY-TAR-NO-DELETE — deploy.sh entfernt gelöschte Dateien NICHT auf dem Server (Datei-Leichen)
 
 - **Severity:** medium (Deploy-Korrektheit — bricht den Test-Gate bei jeder Datei-Löschung + lässt toten Code live)
