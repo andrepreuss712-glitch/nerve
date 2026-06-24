@@ -2183,6 +2183,12 @@ Plans:
 **Methodik (aus Claude-Chat 23.06., gegen Konstrukt geprüft):** (1) Antwort-FORM schlägt Modell-Wahl beim Tempo — ein kurzer Stichpunkt ist bei allen sofort komplett da. (2) VOR dem Modell klären: streamen vs fertigen Block (Überflieg-Modus → Block, Messgröße Time-to-Complete) + Output-Form (Stichpunkt/Satz = HINTS-Toggle). (3) Variable Latenz = Pipeline/Endpointing, NICHT Modell → Sonnet nicht vorschnell abschreiben, mit 4-Zeitstempel-Test isolieren (TTFT-Instrument existiert im Code). (4) Deepgram Flux für end-of-speech evaluieren. (5) Heißer Pfad = EIN Streaming-Call + Caching + Frankfurt-Endpoint. **Mess-Achsen:** Time-to-Complete bei echter kurzer Output-Länge + Deutsch-Qualität, 10-15 echte deutsche Call-Schnipsel, echtes Rendering.
 **Depends on:** TAXO1/2/3 komplett. **Verbindung:** CLAUDE.md-Latenz-Regel, Block E (Sonnet+Caching), HINTS, TAXO3.
 
+### Phase PROMPT-ADMIN: Superuser Prompt-Viewer/-Editor (NEU 2026-06-24) 🟡
+
+**Goal:** Superuser-Knopf, um die LIVE genutzten KI-Prompts (Antwort-Engine/EWB-Auto/QA/Klassifikator) jederzeit einzusehen UND zu editieren — ohne Code-Deploy.
+**Begründung (André):** direkte Sicht/Eingriff statt Vertrauen auf Claudian-Zusicherung — Transkript-Lehre: Claudian sagte „alles ok", erst der Sicht-Button zeigte den Müll, dann knickte er ein. = Eingriffs-Möglichkeit (CLAUDE.md Punkt 12) + Bauchgefühl-Sicherheits-Schicht.
+**Depends on:** TAXO3 (holt Prompts aus dem Hardcode in editierbare Config JSON/DB — der Editor ist die UI darauf). **Scope:** Admin-Maske: Liste / anzeigen / editieren / versionieren+Undo (kein stilles Überschreiben) / Nutzungs-Stelle pro Prompt. Cross-AI bei Bedarf. Verwandt: Backlog `ANSWER-PROMPT-OVERCONSTRAINED`.
+
 ### Phase SEC-USERDATA: App-weite Userdaten-Sicherheits-Prüfung (PFLICHT vor Launch, André 2026-06-12) 🔴
 
 **Goal:** Proportionierte (NICHT Fort-Knox) Sicherheits-Prüfung der sensiblen Userdaten über die ganze App — getrennt von TAXO (dort wird der Daten-Fußabdruck pro Phase inline gesichert; SEC-USERDATA prüft das Gesamtbild + den Rest + den äußeren Zaun).

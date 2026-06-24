@@ -25,6 +25,15 @@
 - **Soll (André, kanonisch in Vault `Soll-Verhalten §2`):** NERVE darf den echten Namen statt des Platzhalters einsetzen — liest sich angenehmer. ABER die Wahrheit ist der im Call **GESPROCHENE** Name, NICHT stur der PreCall-Briefing-Name: nennt der Berater/Sekretär im Gespräch einen anderen Namen (oder lag das Briefing falsch) → gesprochener Name gewinnt, NERVE stellt um. NIE Briefing-Name über den im Call gehörten.
 - **Routing:** TAXO3 (Antwort-Qualität / `build_answer_context` — Namens-Slot, Quelle im-Call-Name > Briefing) + Sekretär→Entscheider-Übergabe (Roadmap Phase I `context_notes`). Nutzt den ohnehin pro Call geführten Anonymisierer-Namens-Bestand. Nicht launch-blockierend.
 
+### ANSWER-PROMPT-OVERCONSTRAINED — NERVEs Antwort-Prompt erdrückt das Modell (Kürze-Hammer + Echo-Befehl) → kaputtes Deutsch (Wurzel von ANSWER-ECHO)
+
+- **Severity:** high (Kernfeature Live-Assistent / Antwort-Qualität — Wurzel mehrerer Symptome)
+- **Entdeckt:** André 2026-06-24 (Plan-08-Live-Test + Lesen des echten Prompts). Beispiel (auto_variante, Sonnet 4.5): „Genau deswegen bin ich ja so kurz: 90 Sekunden." — „bin ich ja so kurz" ist FALSCHES Deutsch (statt „ich fasse mich kurz"); „Genau deswegen" = rückbezüglicher Aufhänger ohne Referent.
+- **Wurzel (am echten Prompt belegt — claude_service.py `streame_auto_variante` ~603-622):** der Prompt presst VIERMAL auf Kürze (System „knapp… keine Füllwörter" + Auftrag „KURZE (2-3 Sätze)" + `max_tokens=200`) → das Modell staucht zusammen + lässt Wörter weg → geklippte/kaputte Konstruktionen. Plus „greif konkret das Gesagte auf" → befiehlt genau die Echo-Aufhänger. **Das Modell (Sonnet) KANN perfektes Deutsch — der Prompt erdrückt es.**
+- **★ André-Prinzip (kanonisch):** NICHT per Prompt-Regel gegen-patchen („sag X statt Y") — das ist **Whack-a-Mole**, die Kürze-Presse spuckt woanders neuen Käse aus. **Fix = Prompt ENTRÜMPELN:** Rolle + Absicht geben (verstehen+helfen, nächster guter Zug), dem Modell sein natürliches Deutsch lassen, Kürze aus EINER leichten Vorgabe statt vier. Beleg-Vergleich: Claude im Chat schreibt sauberes Deutsch, weil ihm niemand vier Kürze-Regeln vorsetzt.
+- **Test-Fall (Vorher/Nachher):** „Genau deswegen bin ich ja so kurz" → Ziel z.B. „Das verstehe ich — und genau deshalb fasse ich mich kurz: …". Die TAXO3-Antwort muss das natürlich treffen, ohne explizite Idiom-Regel.
+- **Routing:** TAXO3 **PFLICHT-PULL** (DER konkrete Beleg für den Paradigma-Reset §4.5). Plus: Prompts müssen aus dem Hardcode (claude_service.py) in **editierbare Config** raus — Voraussetzung für PROMPT-ADMIN (Superuser-Editor).
+
 ### ANSWER-ECHO — NERVE-Vorschlag wiederholt die Quittung, die der Berater schon gesagt hat
 
 - **Severity:** medium (Antwort-Qualität / Gesprächs-Fluss — Kernfeature Live-Assistent)
