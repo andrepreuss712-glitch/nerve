@@ -133,7 +133,7 @@ def test_flush_writes_storage_text_verbatim(db_session):
         written_ids.append(got.id)
         # VERBATIM: exakt der schon-anonymisierte Text, unveraendert.
         assert got.suggestion_text == storage_text
-        assert got.interaction_id == iid          # B1: gesetzt
+        assert str(got.interaction_id) == iid     # B1: gesetzt (UUID-Spalte -> UUID-Objekt; String-Vergleich)
         assert got.adoption_value is None         # DEFERRED
     finally:
         cleanup_rows(db_session,
