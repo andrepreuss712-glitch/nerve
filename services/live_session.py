@@ -119,6 +119,7 @@ state = {
     'line_id':          None,
     'kaufbereitschaft': 30,
     'ewb_clicks':       [],    # Liste von dicts: {'einwand_typ': str, 'success': bool, 'ts': iso, 'antwort_text': str|None, 'einwand_text': str|None}
+    'suggestion_offers': [],   # TAXO2-08: Liste von dicts {slot, source, model, suggestion_text(anon Storage/Plan 09), interaction_id, einwand_typ, ts} — Call-Ende-Flush
     # ── Phase 04.8: Conversation Phase Model (6-phase auto-detected) ──
     'current_phase':        1,
     'current_phase_name':   'Opener',
@@ -930,6 +931,7 @@ def reset_session():
         phasen_log.clear()
     with state_lock:
         state['ewb_clicks'] = []
+        state['suggestion_offers'] = []   # TAXO2-08: RAM-Puffer der NERVE-Vorschlaege (Call-Ende-Flush)
     with session_meta_lock:
         session_meta.update({
             'profil_name': '', 'profil_branche': '', 'schwierigkeit': None,
@@ -959,6 +961,34 @@ def record_ewb_click(einwand_typ: str, success: bool = False,
     }
     with state_lock:
         state.setdefault('ewb_clicks', []).append(entry)
+
+
+def record_suggestion_offer(slot, source, model, suggestion_text, interaction_id,
+                            einwand_typ=None):
+    """TAXO2-08 (FOLD A): Erfasst EINEN ausgegebenen NERVE-Vorschlag im RAM-Puffer
+    state['suggestion_offers'] (thread-safe Append, EXAKT das Muster von record_ewb_click).
+
+    LATENZ (Punkt 25, HART): NUR ein list.append unter state_lock — KEIN get_session/commit,
+    KEIN Netz, KEIN LLM. Der EINZIGE DB-Write ist der Call-Ende-Flush (suggestion_capture.py).
+
+    ANON-VERTRAG (FOLD A-2 / Plan 09 depends_on): `suggestion_text` ist die BEREITS am Erfassen
+    mit dem lebenden Per-SID-Cache anonymisierte Storage-Version (NICHT roh, NIE cache=None).
+    Diese Funktion reicht sie nur durch — KEIN eigener Anon-Aufruf hier.
+
+    B1 (FOLD A-2): `interaction_id` wird vom Capture-Hook via get_or_open_moment IMMER gesetzt
+    (nie None erwartet). Wird hier nur durchgereicht."""
+    import datetime as _dt
+    entry = {
+        'slot':            slot,
+        'source':          source,
+        'model':           model,
+        'suggestion_text': suggestion_text,   # bereits anonymisierte Storage-Version (Plan 09)
+        'interaction_id':  interaction_id,     # immer gesetzt (B1)
+        'einwand_typ':     einwand_typ,
+        'ts':              _dt.datetime.utcnow().isoformat(),
+    }
+    with state_lock:
+        state.setdefault('suggestion_offers', []).append(entry)
 
 
 def get_speech_stats(sid: str = None) -> dict:

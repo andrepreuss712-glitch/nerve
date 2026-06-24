@@ -718,6 +718,25 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                              context_tag='ewb', call_site='ewb', session_id=sid)
         except Exception as _e:
             print(f"[CostHook] pip_autovar skipped: {_e}")
+        # ── TAXO2-08 (FOLD A): Vorschlag erfassen (Slot B Auto-Variante) ──────────
+        # Latenz-neutral (Punkt 25): NUR ein RAM-Append in record_suggestion_offer.
+        # B1: interaction_id via get_or_open_moment IMMER setzen (RAM-Lookup, kein DB/Netz).
+        # Anon-Vertrag (Plan 09): suggestion_text = cleaned_storage (die anonymisierte
+        # Storage-Version, _storage_text) — NICHT der roh angezeigte cleaned_display.
+        # try/except: der Live-Loop crasht nie.
+        try:
+            import services.live_session as _ls_av
+            import time as _t_av
+            _av_mode = (_ls_av._session_state.get(sid) or {}).get('mode', 'cold_call')
+            _av_iid = None
+            with _ls_av._session_state_lock:
+                _av_iid = _ls_av.get_or_open_moment(sid, mode=_av_mode, now=_t_av.monotonic())
+            _ls_av.record_suggestion_offer(
+                slot='B', source='auto_variante', model=_model_autovar,
+                suggestion_text=cleaned_storage, interaction_id=_av_iid,
+            )
+        except Exception as _av_cap_e:
+            print(f"[PiP-AutoVar] record_suggestion_offer skip sid={sid}: {type(_av_cap_e).__name__}")
         return result
     except Exception as e:
         print(f"[PiP-AutoVar] Fehler sid={sid} slot={slot}: {e}")

@@ -320,6 +320,24 @@ class EinwandKeywordMatcher:
                     user_id=_kw_uid, org_id=_kw_oid, interaction_id=_kw_iid,
                     triggering_text=_kw_trig,
                 )
+                # ── TAXO2-08 (FOLD A): Vorschlag erfassen (Slot A Keyword/Fast-Lane) ──
+                # Latenz-neutral (Punkt 25): NUR ein RAM-Append. B1: _kw_iid ist via
+                # get_or_open_moment (:292) schon gesetzt. Anon-Vertrag (Plan 09): der
+                # gematchte Profil-Vorschlag ist profil-statisch/niedrig-PII -> via
+                # anonymize_for_storage mit lebendem Per-SID-Cache gesaeubert (nie roh,
+                # nie cache=None). try/except: Live-Loop crasht nie.
+                try:
+                    _kw_sugg = _profile_gegenargument(match.get('profile_einwand') or {})
+                    if _kw_sugg:
+                        from services.anonymization import anonymize_for_storage as _anon_store_kw
+                        _kw_sugg_storage = _anon_store_kw(_kw_sugg, sid)
+                        _ls.record_suggestion_offer(
+                            slot='A', source='keyword', model=None,
+                            suggestion_text=_kw_sugg_storage, interaction_id=_kw_iid,
+                            einwand_typ=match.get('matched_label'),
+                        )
+                except Exception as _kw_cap_e:
+                    print(f"[KW] record_suggestion_offer skip (sid={sid}): {type(_kw_cap_e).__name__}")
         except Exception as _kw_emit_e:
             print(f"[KW] intent_event emit skip (sid={sid}): {type(_kw_emit_e).__name__}")
 

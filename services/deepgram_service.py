@@ -957,6 +957,19 @@ def register_audio_handlers(sio):
                                         antwort_text=_antwort, einwand_text=typ)
                 except Exception as e:
                     print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
+                # ── TAXO2-08 (FOLD A): Vorschlag erfassen (Slot B Manueller Knopf) ──
+                # Latenz-neutral (Punkt 25): NUR ein RAM-Append. Anon-Vertrag (Plan 09):
+                # suggestion_text = _antwort (bereits via anonymize_for_storage gesaeubert,
+                # :954). B1: _btn_iid ist via get_or_open_moment (:860) schon gesetzt — KEIN
+                # zusaetzlicher Aufruf noetig. try/except: Live-Loop crasht nie.
+                try:
+                    import config as _cfg_btn
+                    ls.record_suggestion_offer(
+                        slot='B', source='manual_button', model=_cfg_btn.MODEL_PIP_VARIANTE,
+                        suggestion_text=_antwort, interaction_id=_btn_iid, einwand_typ=typ,
+                    )
+                except Exception as _btn_cap_e:
+                    print(f"[PiP] record_suggestion_offer skip (sid={_sid}): {type(_btn_cap_e).__name__}")
             except Exception as ex:
                 print(f"[PiP] manual_ewb variante error (sid={_sid}): {ex}")
                 try:
