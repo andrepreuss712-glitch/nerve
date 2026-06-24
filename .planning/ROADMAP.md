@@ -2177,6 +2177,12 @@ Plans:
 **Einzige Wahrheit (Pflicht-Pre-Read):** `Nerve-Vault/03 Planung/Scoreboard + Auswertung Redesign - Design-Brief.md` — vollständiges Daten-Inventar (heute angezeigt / TAXO-neu / bewahrt / Lücken / AHA-Kandidaten).
 **Anti-Abrieb:** TAXO baut nur ein rohes „Vorschau"-Panel (neue Note + 7 Dimensionen, ungestylt, read-only) zur End-zu-End-Verifikation — DIESE Phase veredelt es zu echten Kacheln + flippt die Anzeige bewusst. **Lücken aus dem Brief, hier zu lösen:** 7-Dim-Aufschlüsselung statt alter 4 (Gap A); KB/Skript als eigene Kacheln (bleiben Roh-Werte, Engine kann sie nicht herleiten); Training-6-Kat vs Live-7-Dim vereinheitlichen (Gap C). Cross-AI Pflicht. Multi-Segment-Gotcha (Pfade hardcoden).
 
+### Phase MODELL-TEST: Live-Modell-Vergleich + Latenz-Isolation (NACH TAXO komplett, André 2026-06-24) 🟡
+
+**Goal:** Haiku 4.x / Sonnet 4.x / Gemini Flash 3.x am echten Live-Pfad gegeneinander testen (Modell-Swap ist trivial — nur Modell tauschen). RICHTIG messen, sonst falsche Schlüsse.
+**Methodik (aus Claude-Chat 23.06., gegen Konstrukt geprüft):** (1) Antwort-FORM schlägt Modell-Wahl beim Tempo — ein kurzer Stichpunkt ist bei allen sofort komplett da. (2) VOR dem Modell klären: streamen vs fertigen Block (Überflieg-Modus → Block, Messgröße Time-to-Complete) + Output-Form (Stichpunkt/Satz = HINTS-Toggle). (3) Variable Latenz = Pipeline/Endpointing, NICHT Modell → Sonnet nicht vorschnell abschreiben, mit 4-Zeitstempel-Test isolieren (TTFT-Instrument existiert im Code). (4) Deepgram Flux für end-of-speech evaluieren. (5) Heißer Pfad = EIN Streaming-Call + Caching + Frankfurt-Endpoint. **Mess-Achsen:** Time-to-Complete bei echter kurzer Output-Länge + Deutsch-Qualität, 10-15 echte deutsche Call-Schnipsel, echtes Rendering.
+**Depends on:** TAXO1/2/3 komplett. **Verbindung:** CLAUDE.md-Latenz-Regel, Block E (Sonnet+Caching), HINTS, TAXO3.
+
 ### Phase SEC-USERDATA: App-weite Userdaten-Sicherheits-Prüfung (PFLICHT vor Launch, André 2026-06-12) 🔴
 
 **Goal:** Proportionierte (NICHT Fort-Knox) Sicherheits-Prüfung der sensiblen Userdaten über die ganze App — getrennt von TAXO (dort wird der Daten-Fußabdruck pro Phase inline gesichert; SEC-USERDATA prüft das Gesamtbild + den Rest + den äußeren Zaun).
