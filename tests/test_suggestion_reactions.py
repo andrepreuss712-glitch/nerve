@@ -300,3 +300,79 @@ def test_flush_empty_buffer_is_noop(db_session):
         cleanup_rows(db_session,
                      {"public.suggestion_reactions": [row_id], "public.calls": [call_id]},
                      tenant=tenant)
+
+
+# ── RLS-Mandanten-Regression: tenant_id MUSS dem GUC entsprechen (Live-Fund 24.06.) ──
+
+def test_flush_tenant_must_match_guc_rls(db_session):
+    """Regression fuer den RLS-Mandanten-Bug (Live-Test-Fund 24.06., Fix-Commit 13e1712).
+
+    BUG: Der Call-Ende-Aufrufer (routes/app_routes.py) holte tenant_id frueher aus
+    calls.tenant_id (bei 36/51 Calls NULL) statt aus der Session. Der RLS-GUC app.tenant_id
+    kommt aber aus g.tenant_id (before_request -> contextvar -> after_begin set_config).
+    Folge: row.tenant_id (NULL/falsch) != GUC -> tenant_isolation WITH CHECK wies den INSERT
+    LAUTLOS ab -> suggestion_reactions blieb leer. Fix: _sr_tenant_id = getattr(g,'tenant_id',None)
+    -> Quelle == GUC-Quelle.
+
+    WARUM die anderen Tests es nicht fingen: sie geben flush_suggestion_offers schon den
+    KORREKTEN tenant_id (TEST_TENANT_UUID == GUC) mit und stellen die Aufrufer-Fehlerquelle
+    (tenant != GUC) nie nach. Dieser Test stellt sie nach:
+
+    1. Negativ-Bein: flush mit tenant_id != GUC -> tenant_isolation WITH CHECK weist den INSERT
+       ab (DB-Error). Beweist: der Schutz ist echt + der alte Bug WAERE gefangen worden.
+    2. Positiv-Bein: flush mit tenant_id == GUC -> genau 1 Zeile, row.tenant_id == GUC.
+    """
+    from database.models import Call, SuggestionReaction  # noqa: F401
+    from services.suggestion_capture import flush_suggestion_offers
+    tenant = conftest.TEST_TENANT_UUID
+    assert tenant, "Fixture muss TEST_TENANT_UUID geseedet haben"
+    call_neg = _make_call(db_session, tenant)
+    call_pos = _make_call(db_session, tenant)
+    written = []
+    try:
+        # ── Negativ-Bein: tenant_id != GUC -> WITH CHECK weist den INSERT ab ──────────
+        foreign_tenant = str(uuid.uuid4())
+        assert foreign_tenant != str(tenant)
+        raised = False
+        try:
+            flush_suggestion_offers(
+                conversation_log_id=None, call_id=call_neg, user_id=1, org_id=1,
+                tenant_id=foreign_tenant,
+                suggestion_offers=[{'slot': 'B', 'source': 'auto_variante', 'model': 'haiku',
+                                    'suggestion_text': '[PERSON_A] falscher Mandant',
+                                    'interaction_id': str(uuid.uuid4())}],
+                db=db_session)
+            db_session.commit()
+        except Exception:
+            # RLS tenant_isolation WITH CHECK rejiziert -> TX abgebrochen -> rollback Pflicht.
+            raised = True
+            db_session.rollback()
+        assert raised, (
+            "RLS tenant_isolation WITH CHECK haette den INSERT mit tenant_id != GUC abweisen "
+            "muessen. Genau das war der Live-Fund 24.06.: der Aufrufer nahm calls.tenant_id "
+            "(NULL) statt g.tenant_id -> row.tenant_id != GUC -> INSERT lautlos verworfen -> "
+            "suggestion_reactions blieb leer (Fix-Commit 13e1712).")
+        # Keine Zeile fuer den Fremd-Mandanten-Call sichtbar/geschrieben.
+        assert db_session.query(SuggestionReaction).filter(
+            SuggestionReaction.call_id == call_neg).count() == 0
+
+        # ── Positiv-Bein: tenant_id == GUC -> genau 1 Zeile, row.tenant_id == GUC ─────
+        n = flush_suggestion_offers(
+            conversation_log_id=None, call_id=call_pos, user_id=1, org_id=1,
+            tenant_id=tenant,
+            suggestion_offers=[{'slot': 'B', 'source': 'auto_variante', 'model': 'haiku',
+                                'suggestion_text': '[PERSON_A] korrekter Mandant',
+                                'interaction_id': str(uuid.uuid4())}],
+            db=db_session)
+        db_session.commit()
+        assert n == 1
+        rows = db_session.query(SuggestionReaction).filter(
+            SuggestionReaction.call_id == call_pos).all()
+        assert len(rows) == 1, "tenant_id == GUC muss genau 1 Zeile schreiben (Positiv-Kontrolle)"
+        assert str(rows[0].tenant_id) == str(tenant)
+        written = [r.id for r in rows]
+    finally:
+        cleanup_rows(db_session,
+                     {"public.suggestion_reactions": written,
+                      "public.calls": [call_neg, call_pos]},
+                     tenant=tenant)
