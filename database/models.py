@@ -871,7 +871,7 @@ class RubricScore(Base):
     unmeasured_dimensions = Column(JSON_TYPE, nullable=True, comment="Liste der nicht gewerteten Dimensionen + Grund (n/a vs vergeigt, D-08). Goldstaub fuer 999.2-Erklaerung + ML.")
     dimensions            = Column(JSON_TYPE, nullable=True, comment="Volle Aufschluesselung pro Dimension (D-05/Req 5): je Dim {score, weight, available, sample_size, beleg_ref, marker[]}. Beleg-Referenz = Transkript-/intent_event-Verweis, KEIN freier LLM-Text.")
     status                = Column(String(24), nullable=True, comment="Bewertungs-Status: scored|pending|not_gradable (D-09 poor_audio_health). NULL = noch nicht gelaufen.")
-    tenant_id             = Column(UUID_TYPE, index=True, nullable=True, comment="Mandanten-Abschottung (D-11, RLS-ready). Abgeleitet aus calls.tenant_id. Policy erst COACH.")
+    tenant_id             = Column(UUID_TYPE, index=True, nullable=False, comment="Mandanten-Abschottung (D-11 FORCE RLS, NOT NULL). Abgeleitet aus calls.tenant_id via Daemon-GUC (Plan 04 erbt Plan-03-A1-Klammer).")
     payload_jsonb         = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment="Reserve + Training-only-Felder (was_correct, scenario_id, ground_truth_score) ohne spaetere Migration. SPEC Req 1.")
     score_schema_version  = Column(SmallInteger, nullable=False, default=1, comment="Format-Version der Aufschluesselung fuer spaetere Bumps.")
     created_at            = Column(DateTime, default=utcnow)
