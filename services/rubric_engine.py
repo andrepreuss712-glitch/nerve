@@ -24,18 +24,22 @@ ODER leitet ihn aus call.call_mode/origin ab. Kommt der mode_config-Lookup leer 
 Modus / kein Gewichtssatz) -> es wird ein Status 'no_weight_set' gesetzt + die Aufschluesselung
 traegt eine Spur (NICHT still 0/NULL ohne Trace).
 
-D-01 Zwei-Stufen-Mode-Gate, D-02 modus-relative <50%-Schwelle, D-08 N/A-vs-vergeigt-Guard +
-is_provisional. Siehe compute_rubric.
+D-01 Zwei-Stufen-Mode-Gate, D-02 modus-relative <50%-Schwelle, is_provisional. Siehe compute_rubric.
+
+ERGEBNIS-BLIND (Soll-Verhalten §6, Andre-Entscheid 2026-06-25): Die Note misst NUR Verhalten.
+Das Ergebnis (Ja/Nein, calls.outcome) zieht die Note NIE runter — ein Nein ist keine schlechte
+Leistung (Outcome-Bias vermeiden). compute_rubric liest calls.outcome NICHT mehr fuer die Benotung
+(die fruehere aborted_failure-Bestrafung ist entfernt). Der EINZIGE Schutz gegen Ueber-Bewertung
+duenner Calls ist Daten-Substanz (genug messbares Gewicht, measured_weight_pct >= Schwelle) —
+ERGEBNIS-BLIND. Verhaltens-Negativ-Signale (z.B. phasen_technik Festhaengen) BLEIBEN, die sind
+verhaltens-basiert, nicht outcome-basiert.
 """
 
 from services.rubric_dimensions import DIMENSIONS, DEFAULT_CONFIDENCE_GATE
 
 # D-02 Schwelle: messbares Gewicht / modus-konfiguriertes Gewicht < THRESHOLD -> kein Gesamtscore.
+# Das ist der EINZIGE Ueber-Bewertungs-Schutz (ergebnis-blind, Soll-Verhalten §6).
 MEASURED_WEIGHT_THRESHOLD = 0.5
-
-# D-08 N/A-vs-vergeigt-Guard: Outcomes die einen Abbruch markieren (+ kurze Dauer = vergeigt).
-ABORT_OUTCOMES = ('no_interest', 'gatekeeper_blocked', 'wrong_person')
-SHORT_CALL_SECONDS = 30  # unter dieser Dauer + Abbruch-Outcome = "vergeigt" (not_reached), nicht N/A
 
 
 def _get(obj, key, default=None):
@@ -61,17 +65,6 @@ def _resolve_mode_key(call, mode_key):
     return _get(call, 'call_mode', None)
 
 
-def _is_aborted_failure(call):
-    """D-08: vorzeitig abgebrochener Call = Abbruch-Outcome UND kurze Dauer -> vergeigt (not_reached)."""
-    outcome = _get(call, 'outcome', None)
-    if outcome not in ABORT_OUTCOMES:
-        return False
-    dauer = _get(call, 'dauer_sekunden', None)
-    if dauer is None:
-        return True  # Abbruch-Outcome ohne Dauer-Info -> konservativ als vergeigt behandeln
-    return dauer < SHORT_CALL_SECONDS
-
-
 def compute_rubric(events, speech_stats, call, mode_config, mode_key=None):
     """Berechnet die rubric-Aufschluesselung (reine Funktion).
 
@@ -81,7 +74,7 @@ def compute_rubric(events, speech_stats, call, mode_config, mode_key=None):
         dimensions: [ {dim, label, score, weight, available, sample_size, beleg_ref, marker[]} ],
         is_provisional: bool,              # D-08: ueber Schwelle, aber Dimensionen weggeprorated
         measured_weight_pct: float,        # messbares / modus-konfiguriertes Gewicht
-        unmeasured_dimensions: [ {dim, reason} ],   # reason: config_off|no_data|na|not_reached
+        unmeasured_dimensions: [ {dim, reason} ],   # reason: config_off|na (ergebnis-blind, kein not_reached)
         status: str,                       # scored|insufficient_data|no_weight_set
         mode_key: str|None,
       }
@@ -103,8 +96,6 @@ def compute_rubric(events, speech_stats, call, mode_config, mode_key=None):
             'mode_key': resolved_mode,
         }
 
-    aborted_failure = _is_aborted_failure(call)
-
     dimensions_out = []
     unmeasured = []
     config_on_weight = 0.0   # Summe Gewicht aller config-an Dimensionen des Modus (D-02-Nenner)
@@ -125,10 +116,10 @@ def compute_rubric(events, speech_stats, call, mode_config, mode_key=None):
         # ── Stufe (b): per-Call-Verfuegbarkeit (Proration, D-01) ─────────────────────────
         measurable = dim_def['is_measurable'](events, speech_stats, call, cfg)
         if not measurable:
-            # D-08 N/A vs vergeigt: bei vorzeitigem Abbruch ist eine fehlende Dimension NICHT
-            # benigne (not_reached = NEGATIV), sonst N/A (Situation verlangte sie nicht).
-            reason = 'not_reached' if aborted_failure else 'na'
-            unmeasured.append({'dim': dim_key, 'reason': reason})
+            # ERGEBNIS-BLIND (Soll-Verhalten §6): eine nicht-messbare config-an-Dimension faellt
+            # NEUTRAL raus (reason='na') — NIE ein outcome-getriebener Straf-Grund ('not_reached').
+            # Das Ergebnis (calls.outcome) darf die Note nicht runterziehen.
+            unmeasured.append({'dim': dim_key, 'reason': 'na'})
             # NIE als 0 werten — available=false faellt aus der Proration raus.
             continue
 
@@ -173,8 +164,9 @@ def compute_rubric(events, speech_stats, call, mode_config, mode_key=None):
     # ── Proration: Restgewichte der messbaren Dims auf 100% renormalisieren -> Gesamtscore ─
     coaching_score = _prorated_score(dimensions_out, measured_weight)
 
-    # D-08 is_provisional: ueber der Schwelle, aber Dimensionen weggeprorated (na/not_reached).
-    prorated_drop = any(u['reason'] in ('na', 'no_data', 'not_reached') for u in unmeasured)
+    # is_provisional: ueber der Schwelle, aber config-an Dimensionen weggeprorated (na/no_data).
+    # config_off zaehlt NICHT (Modus hatte die Dimension nie). Ergebnis-blind, kein not_reached.
+    prorated_drop = any(u['reason'] in ('na', 'no_data') for u in unmeasured)
     is_provisional = prorated_drop
 
     return {
@@ -220,7 +212,8 @@ def _sample_size_for(dim_key, events, cfg):
         if it != intent_type:
             continue
         conf = ev.get('confidence') if isinstance(ev, dict) else getattr(ev, 'confidence', None)
-        if conf is None or conf >= gate:
+        # Skeptisch (Gemini-Flag): Events OHNE Vertrauens-Wert (conf=None) NICHT als sicher zaehlen.
+        if conf is not None and conf >= gate:
             n += 1
     return n
 

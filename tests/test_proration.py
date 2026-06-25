@@ -38,6 +38,23 @@ def _lean_mode_config():
     }
 
 
+def _behavior_only_config():
+    """Rein verhaltens-basierte Dimensionen (KEIN outcome_progression) — fuer ergebnis-blinde Tests.
+
+    Soll-Verhalten §6: das Ergebnis (calls.outcome) darf die Note nicht veraendern.
+    outcome_progression ist die EINZIGE Dimension, die calls.outcome liest; sie ist hier bewusst
+    NICHT config-an, damit der Test rein das (ergebnis-blinde) Verhaltens-Scoring prueft. Ob
+    outcome_progression selbst mit §6 vereinbar ist, ist eine SEPARATE Entscheidung (nicht Teil
+    dieses Fixes; geflaggt fuer Claudian/Andre).
+    """
+    return {
+        'vorwand_behandlung': {'weight': 0.30, 'enabled': True, 'confidence_gate': 0.70},
+        'kaufsignal_nutzung': {'weight': 0.30, 'enabled': True, 'confidence_gate': 0.70},
+        'gespraechsfuehrung': {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70,
+                               'partial_marker': 'sprechdisziplin'},
+    }
+
+
 def _event(intent_type, confidence=0.9, handling_score=3, speaker='berater', text='', phase=None,
            event_id=1):
     return {
@@ -129,27 +146,72 @@ def test_cold_call_gespraechsfuehrung_unavailable_renormalizes():
         assert d['score'] in (1, 2, 3)
 
 
-# ── D-08 N/A-vs-vergeigt: vorzeitiger Abbruch -> KEIN selbstbewusster hoher Score ────────────
-def test_aborted_call_no_confident_high_score():
-    """Vorzeitig abgebrochener Call (outcome=no_interest + kurze Dauer) -> die nicht erreichten
-    Dimensionen zaehlen als 'not_reached' (NEGATIV), NICHT als benigner Proration-Drop. Eine
-    isoliert gute Begruessung skaliert NICHT auf einen hohen Gesamtscore (D-08).
+# ── Soll-Verhalten §6: ERGEBNIS-BLIND — das outcome zieht die Note NIE runter ────────────────
+def test_outcome_does_not_change_score():
+    """Soll-Verhalten §6 (Andre 2026-06-25): IDENTISCHE Verhaltens-/Event-Dicts, nur ein anderes
+    calls.outcome -> EXAKT gleicher coaching_score. Beweist: das Ergebnis ist blind.
+    (outcome_progression bewusst config_off — die einzige outcome-lesende Dimension.)
     """
-    mode_config = _full_meeting_config()
-    # Nur eine gute Vorwand-Behandlung frueh, dann legt der Kunde auf:
-    events = [_event('vorwand', confidence=0.95, handling_score=3, event_id=1)]
-    call = {'call_mode': 'meeting_consented', 'outcome': 'no_interest', 'dauer_sekunden': 12}
+    mode_config = _behavior_only_config()
+    events = [
+        _event('vorwand', confidence=0.95, handling_score=3, event_id=1),
+        _event('kaufsignal', confidence=0.95, handling_score=3, event_id=2),
+    ]
+    speech_stats = {'redeanteil': 0, 'tempo': 130, 'monolog': 8.0}
 
-    result = compute_rubric(events, {}, call, mode_config)
+    call_nein = {'call_mode': 'cold_call', 'outcome': 'no_interest', 'dauer_sekunden': 200}
+    call_ja = {'call_mode': 'cold_call', 'outcome': 'meeting_booked', 'dauer_sekunden': 200}
 
-    reasons = {u['dim']: u['reason'] for u in result['unmeasured_dimensions']}
-    # Mindestens eine nicht erreichte Dimension traegt 'not_reached' (vergeigt), nicht 'na'.
-    assert 'not_reached' in reasons.values(), \
-        "Abbruch-Call muss vergeigte Dimensionen als not_reached markieren (D-08)"
-    # Und: kein selbstbewusster hoher Gesamtscore — entweder None (zu wenig Gewicht) ...
-    if result['coaching_score'] is not None:
-        # ... oder, falls doch ueber Schwelle, dann als vorlaeufig markiert.
-        assert result['is_provisional'] is True
+    res_nein = compute_rubric(events, speech_stats, call_nein, mode_config)
+    res_ja = compute_rubric(events, speech_stats, call_ja, mode_config)
+
+    assert res_nein['coaching_score'] is not None
+    assert res_nein['coaching_score'] == res_ja['coaching_score'], \
+        "Das Ergebnis (calls.outcome) darf den coaching_score NICHT veraendern (Soll-Verhalten §6)"
+    assert res_nein['status'] == res_ja['status'] == 'scored'
+    # Kein outcome-getriebener Straf-Grund mehr (not_reached existiert nicht).
+    assert 'not_reached' not in {u['reason'] for u in res_nein['unmeasured_dimensions']}
+
+
+def test_thin_call_insufficient_not_high():
+    """Duenner Call (zu wenig messbares Gewicht <50%) -> status='insufficient_data',
+    coaching_score=None — UNABHAENGIG vom outcome. Daten-Substanz ist der EINZIGE
+    Ueber-Bewertungs-Schutz (ergebnis-blind); ein gutes Ergebnis erkauft KEINE hohe Note.
+    """
+    mode_config = _full_meeting_config()  # grosser Nenner (7 Dims config-an)
+    events = [_event('aufschub', confidence=0.95, handling_score=2, event_id=1)]  # nur 1 kleine Dim
+    speech_stats = {}  # gespraechsfuehrung weg
+    for oc in ('no_interest', 'meeting_booked', 'contract_signed'):
+        call = {'call_mode': 'meeting_consented', 'outcome': oc, 'dauer_sekunden': 8}
+        result = compute_rubric(events, speech_stats, call, mode_config)
+        assert result['status'] == 'insufficient_data', \
+            f"outcome={oc}: duenner Call darf nicht scoren (Daten-Substanz-Schutz)"
+        assert result['coaching_score'] is None, \
+            f"outcome={oc}: kein hoher Score bei duennem Call (ergebnis-blind)"
+
+
+def test_good_behavior_short_call_not_penalized():
+    """Gutes messbares Verhalten bei KURZEM Call + outcome='no_interest' -> die Note spiegelt das
+    VERHALTEN und wird NICHT vom (negativen) Ergebnis runtergezogen (Soll-Verhalten §6).
+    """
+    mode_config = _behavior_only_config()
+    events = [
+        _event('vorwand', confidence=0.95, handling_score=3, event_id=1),
+        _event('kaufsignal', confidence=0.95, handling_score=3, event_id=2),
+    ]
+    speech_stats = {'redeanteil': 0, 'tempo': 130, 'monolog': 6.0}
+    call_nein = {'call_mode': 'cold_call', 'outcome': 'no_interest', 'dauer_sekunden': 18}
+
+    result = compute_rubric(events, speech_stats, call_nein, mode_config)
+
+    assert result['coaching_score'] is not None, "gutes Verhalten muss eine Note ergeben"
+    # Alle messbaren Dims Stufe 3 -> hohe Note; das negative Ergebnis drueckt sie NICHT.
+    assert result['coaching_score'] >= 66, \
+        "gutes messbares Verhalten darf nicht vom negativen Ergebnis runtergezogen werden (§6)"
+    # Gegencheck: identisches Verhalten mit positivem Ergebnis -> selbe Note (ergebnis-blind).
+    call_ja = {'call_mode': 'cold_call', 'outcome': 'meeting_booked', 'dauer_sekunden': 18}
+    assert compute_rubric(events, speech_stats, call_ja, mode_config)['coaching_score'] \
+        == result['coaching_score']
 
 
 def test_no_measurable_dimension_is_ever_zero():

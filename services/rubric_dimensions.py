@@ -107,8 +107,9 @@ def _confident_events_of_type(events, intent_type, gate):
         if _event_field(ev, 'intent_type', None) != intent_type:
             continue
         conf = _event_field(ev, 'confidence', None)
-        if conf is None or conf >= gate:
-            # confidence None = ui_asserted/intern -> als sicher behandeln (TAXO1: ui_asserted=1.0)
+        # Skeptisch (Gemini-Flag, Andre-Entscheid 2026-06-25): ein Event OHNE Vertrauens-Wert
+        # (confidence=None) wird NICHT als sicher behandelt — None = nicht sicher, faellt aus Tor 1.
+        if conf is not None and conf >= gate:
             out.append(ev)
     return out
 
