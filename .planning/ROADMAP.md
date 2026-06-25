@@ -2148,7 +2148,10 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 
 **Depends on:** 08.23.2.TAXO1 (intent_event-Schema + Slow Lane, erfüllt). **Blocker für:** TAXO2-Plan-03-Deploy + TAXO2-Plan-04 (beide gated bis diese Phase live).
 **Komplexität:** 🔴 — DSGVO/RLS/Schema-Migration + Daemon-GUC-Mechanik. **Cross-AI Pflicht (Gemini-3-Sichten) + Real-Daten-Validation Pflicht.** create_all-Falle: Migration VOR Restart. KEIN Local-Dev.
-**Plans:** TBD (Plan-Phase) — NUR planen diese Runde, kein Execute, kein Deploy.
+**Plans:** 3 Plans / 3 Wellen (geplant 2026-06-25, NUR planen — kein Execute, kein Deploy diese Runde). Cross-AI Gemini PFLICHT vor Execute (🔴).
+- [ ] 08.23.2.TENANT-FOUND-01-anlage-tenant-backfill-PLAN.md — W1: resolve_tenant_uuid_for_user-Helper (db.py) + create_call_for_sid setzt tenant_id + idempotente Backfill-Migration 0023 (TF-1)
+- [ ] 08.23.2.TENANT-FOUND-02-rls-schloss-kinder-PLAN.md — W2: abstain_log RLS+NOT NULL in 0022 gefaltet + rubric_score NOT NULL (0024) + suggestion_reactions NOT NULL + fail-closed-Flush-Skip + Schilder (TF-2)
+- [ ] 08.23.2.TENANT-FOUND-03-daemon-guc-m4-PLAN.md — W3: Slow-Lane-Daemon set_current_tenant-Klammer (M-4 Variante A) + M-4-Negativ/Positiv-Test (abstain_log) + Slow-Lane-Integration-Test (TF-3)
 **Reihenfolge danach:** Plan → Claudian Pre-Execute-Audit + Gemini-3-Sichten → Execute (beaufsichtigter Deploy) → DANN TAXO2-Plan-03-Deploy + Test-Anruf → DANN Plan 04.
 **Multi-Segment-Gotcha:** Pfade hardcoden (`.planning/phases/08.23.2.TENANT-FOUND-mandanten-kennung-fundament-rls-schloss/`), gsd-tools/gsd-sdk/gsd-code-review/gsd-verifier umgehen, ROADMAP/STATE hand-editieren.
 
