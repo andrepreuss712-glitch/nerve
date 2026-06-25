@@ -4,9 +4,13 @@ Beweist Runtime-Verhalten (CLAUDE.md Test-Qualitaets-Regel — KEIN Source-Prese
   - Graceful-Shutdown drained ein offenes Queue-Item ueber den Flush-Pfad (Rueckgabewert +
     Queue-leer-State).
   - Sentinel stoppt den Consumer sauber (das vom Consumer gelesene Item IST das Sentinel).
-  - _persist_event_ref ist in TAXO1 ein echter No-Op auf intent_event (Bau-Regel 1 / Design §0):
-    weder INSERT einer neuen noch UPDATE einer bestehenden Zeile (Mock-Session faengt jeden
-    Schreib-Aufruf ab).
+  - Graceful-Shutdown + Sentinel-Stop bleiben unveraendert (Queue-/Flush-Mechanik).
+
+TAXO2-Plan 03 (2026-06-25): _persist_event_ref ist NICHT mehr No-Op — die Slow Lane benotet
+jetzt in-place (handling_status-Statemachine + abstain_log). Der frueher hier lebende
+`test_persist_event_ref_is_noop_on_intent_event` testete den TAXO1-No-Op-Vertrag und ist mit
+dem Wave-Wechsel obsolet (Contract-Change). Die neue Statemachine-Verhaltens-Abdeckung liegt
+in tests/test_handling_score_marker.py (scored/abstained/failed/Idempotenz/Poison-Pill).
 
 Kein echter Prod-/PG-Write: flush_to_db's get_session() wird durch eine Mock-Session ersetzt,
 sodass der Test DSN-frei laeuft (server-seitig wie lokal-skip-frei).
@@ -72,21 +76,3 @@ def test_drain_filters_out_sentinel(monkeypatch):
     assert {'event_id': 2} in items
     assert sl.SENTINEL not in items
     assert len(items) == 2
-
-
-def test_persist_event_ref_is_noop_on_intent_event(monkeypatch):
-    sl = _fresh_slow_lane(monkeypatch)
-
-    # Mock-Session faengt JEDEN potentiellen Schreib-Pfad auf intent_event ab.
-    mock_session = MagicMock()
-
-    sl._persist_event_ref({'event_id': 99}, mock_session)
-
-    # Bau-Regel 1 / Design §0: WEDER neuer INSERT ...
-    mock_session.add.assert_not_called()
-    mock_session.merge.assert_not_called()
-    # ... NOCH ein UPDATE/execute auf einer bestehenden Zeile.
-    mock_session.execute.assert_not_called()
-    mock_session.query.assert_not_called()
-    # No-Op committed/flusht in TAXO1 ebenfalls nichts aus dieser Funktion heraus.
-    mock_session.commit.assert_not_called()
