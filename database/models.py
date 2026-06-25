@@ -778,6 +778,36 @@ class IntentEvent(Base):
     )
 
 
+class AbstainLog(Base):
+    # TAXO2-Plan 03, Task 2 — Goodhart-/Bias-Schutz-Log (D-07 Rider 3): jede handling_score-
+    # Abstention der Slow Lane wird mit der nachfolgenden Berater-Aussage + interaction_id
+    # geloggt. Goldstaub fuer Post-Call-LLM-Nachbewertung (Flywheel/Active-Learning).
+    #
+    # SCHEMA-ABWEICHUNG vom PLAN (dokumentiert): der Plan spezifizierte event_id als
+    # UUID -> intent_event.id ON DELETE CASCADE. Der REALE TAXO1-Vertrag (models.py:763 /
+    # Migration 0016) hat KEIN id-UUID — der PK von intent_event ist event_id BIGSERIAL.
+    # Darum: event_id = BigInteger -> ForeignKey('intent_event.event_id', ondelete='CASCADE').
+    # Die F-08-DSGVO-Cascade-Kette calls->intent_event->abstain_log bleibt durchgehend
+    # (intent_event.call_id ist harter FK CASCADE, models.py:765 / I-2).
+    #
+    # F-08 DSGVO: next_advisor_sentence speichert gesprochenen Wortlaut (Berater-EIGENE Stimme).
+    # Harter FK ON DELETE CASCADE (DD-01-Konvention wie CallEvent models.py:741) sorgt dafuer,
+    # dass beim Call-Loeschen (calls -> intent_event CASCADE -> abstain_log CASCADE) KEINE
+    # verwaiste Wortlaut-Zeile bleibt. Kunden-PII faellt nicht an (Berater-Satz); falls doch
+    # moeglich, anonymisiert der Aufrufer via services/anonymization.py vor dem Insert.
+    __tablename__ = 'abstain_log'
+    id                    = Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    event_id              = Column(BigInteger, ForeignKey('intent_event.event_id', ondelete='CASCADE'), index=True, nullable=False, comment="HARTER FK -> intent_event.event_id ON DELETE CASCADE (F-08/DD-01). Schliesst die DSGVO-Loesch-Kette calls->intent_event->abstain_log: geloeschter Call raeumt die Wortlaut-Zeile mit. event_id = BigInteger (intent_event-PK ist BIGSERIAL, KEIN UUID — Plan-Abweichung dokumentiert).")
+    interaction_id        = Column(UUID_TYPE, index=True, nullable=True, comment="Moment-Klammer (Korrelation zu intent_event.interaction_id, TAXO1). Bindet die Abstention an den Kundenmoment fuer die Post-Call-Nachbewertung. KEIN FK (interaction_id ist kein PK).")
+    next_advisor_sentence = Column(Text, nullable=True, comment="Die nachfolgende Berater-Aussage zum abgewinkten Einwand (D-07 Rider 3, Goodhart-Beleg). Berater-EIGENE Stimme; bei moeglichem Kunden-PII anonymisiert (services/anonymization.py). DSGVO: Cascade-clean via event_id-FK.")
+    intent_type           = Column(String(64), nullable=True, comment="Einwand-Typ-Kontext der Abstention (Korrelation/Auswertung welche Intents oft abgewinkt werden).")
+    tenant_id             = Column(UUID_TYPE, index=True, nullable=True, comment="Mandanten-Abschottung (abgeleitet aus calls.tenant_id). Per-Tenant-Filter der Nachbewertung.")
+    created_at            = Column(DateTime, default=utcnow)
+    __table_args__ = (
+        {'comment': "Goodhart-/Bias-Schutz-Log (D-07 Rider 3): jede handling_score-Abstention mit nachfolgendem Berater-Satz + interaction_id. Harter FK event_id ON DELETE CASCADE (F-08, DSGVO-clean). Goldstaub fuer Post-Call-LLM-Nachbewertung (Flywheel). Status: lebt (neu, TAXO2). Schreibt services/slow_lane.py; liest Active-Learning (Post-Launch)."},
+    )
+
+
 class SuggestionReaction(Base):
     # TAXO2-Plan 08 (FOLD A) — Roh-Erfassung JEDES NERVE-Vorschlags pro Call
     # (Auto-Variante Slot B + Manueller Knopf + Keyword-Slot A). insert-only,
