@@ -420,18 +420,25 @@ def api_beenden():
             # blockiert). db_conv=get_session()=SessionLocal traegt den after_begin-GUC-Hook,
             # also GUC == g.tenant_id -> row.tenant_id==GUC -> WITH CHECK ok.
             _sr_tenant_id = getattr(g, 'tenant_id', None)
-            _sr_n = flush_suggestion_offers(
-                conversation_log_id=conv.id,
-                call_id=_phase_d_call_id,
-                user_id=g.user.id,
-                org_id=g.org.id,
-                tenant_id=_sr_tenant_id,
-                suggestion_offers=suggestion_offers,
-                db=db_conv,
-            )
-            if _sr_n:
-                db_conv.commit()
-                print(f"[TAXO2-08] {_sr_n} suggestion_reactions geflusht (call_id={_phase_d_call_id})")
+            # TENANT-FOUND Plan 02 Task 3: suggestion_reactions.tenant_id ist jetzt NOT NULL.
+            # Fehlt g.tenant_id (User ohne tenant_org), wuerde der INSERT einen IntegrityError
+            # werfen und die Call-Finalisierung brechen. fail-closed-Skip: kein Tenant -> kein
+            # Flush (statt Crash). Konsistent zur RLS-fail-closed-Semantik der Bewertungs-Kinder.
+            if not _sr_tenant_id:
+                print("[TAXO2-08] suggestion-flush skip: kein g.tenant_id (fail-closed, kein IntegrityError)")
+            else:
+                _sr_n = flush_suggestion_offers(
+                    conversation_log_id=conv.id,
+                    call_id=_phase_d_call_id,
+                    user_id=g.user.id,
+                    org_id=g.org.id,
+                    tenant_id=_sr_tenant_id,
+                    suggestion_offers=suggestion_offers,
+                    db=db_conv,
+                )
+                if _sr_n:
+                    db_conv.commit()
+                    print(f"[TAXO2-08] {_sr_n} suggestion_reactions geflusht (call_id={_phase_d_call_id})")
         except Exception as _sr_flush_e:
             print(f"[TAXO2-08] flush_suggestion_offers skip (non-fatal): {_sr_flush_e}")
             try:

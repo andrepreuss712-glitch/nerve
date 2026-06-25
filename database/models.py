@@ -831,7 +831,7 @@ class SuggestionReaction(Base):
     suggestion_text        = Column(Text, nullable=True, comment="Was NERVE ausgab — ANONYMISIERTE Storage-Version (Plan 09, am Erfassen mit lebendem Per-SID-Cache; NIE cache=None). DSGVO: Cascade-clean via call_id-FK.")
     einwand_typ            = Column(String(64), nullable=True, comment="Einwand-Typ-Kontext des Angebots (Korrelation).")
     ts_offered             = Column(DateTime, nullable=True, comment="Zeitpunkt des Angebots (Live-Latenz-Diagnose: ignoriert-weil-zu-spaet vs weil-schlecht).")
-    tenant_id              = Column(UUID_TYPE, index=True, nullable=True, comment="Mandanten-Abschottung (RLS FORCE, abgeleitet aus calls.tenant_id).")
+    tenant_id              = Column(UUID_TYPE, index=True, nullable=False, comment="Mandanten-Abschottung (FORCE RLS tenant_isolation, NOT NULL; abgeleitet aus calls.tenant_id). Request-Flush fail-closed bei fehlendem Tenant.")
     payload_jsonb          = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment="Reserve fuer kuenftige Felder (confidence, einwand_typ-Detail) ohne Migration. FOLD A.")
     created_at             = Column(DateTime, default=utcnow)
     # ── DEFERRED-Reaktions-Spalten (nullable, JETZT NICHT befuellt) ───────────
