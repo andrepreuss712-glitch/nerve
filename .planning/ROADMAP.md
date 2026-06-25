@@ -2124,6 +2124,34 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 **Komplexität:** 🔴 — Schema-weite Migration + Live-Pfad-Umbau + Single-Source-Konsolidierung. Cross-AI **Pflicht**. Real-Daten-Validation (Punkt 13) + Persistenz-Schicht-Audit (Punkt 21) + Pflicht-grep (Punkt 20) Pflicht.
 **Plans:** TBD (Plan-Phase)
 
+### Phase 08.23.2.TENANT-FOUND: Mandanten-Kennung Fundament + konsistentes RLS-Schloss (INSERTED 2026-06-25) 🔴
+
+**Eingefügt nach 08.23.2.TAXO1, VOR 08.23.2.TAXO2 (Plan-03-Deploy + Plan 04).** Roadmap-Sync — die Vault-Roadmap trägt den Eintrag schon. Gefunden von Claudian + Gemini-Cross-AI beim TAXO2-Plan-03-Audit (2026-06-25).
+
+**Goal:** Jeder `calls`-Datensatz trägt ab Anlage eine `tenant_id`, und die Bewertungs-Kinder (`rubric_score`, `abstain_log`, ggf. `suggestion_reactions`) haben ein KONSISTENTES `FORCE ROW LEVEL SECURITY` + `tenant_id NOT NULL`-Schloss. Der Slow-Lane-Daemon (kein Request-Kontext) setzt die Tenant-GUC vor RLS-geschützten Writes. Damit ist (a) die D-11-Inkonsistenz (abstain_log ohne RLS, rubric_score mit) aufgelöst und (b) die M-4-Falle entschärft, durch die Plan 04 `rubric_score` für NULL-Tenant-Calls LAUTLOS nie schreiben würde (FORCE WITH CHECK fail-closed → `coaching_score` ewig NULL).
+
+**Warum jetzt (Blocker):** `calls.tenant_id` wird bei Anlage NIE gesetzt — Prod-verifiziert 2026-06-25: **36/51 Calls NULL**. Einzige Anlage-Stelle `services/live_session.py:566 create_call_for_sid(sid, user_id, call_mode)` bekommt `user_id`, setzt aber kein `tenant_id`. Der Slow-Lane-Daemon hat ohne Request-Kontext (kein `g.tenant_id`) KEINE andere Tenant-Quelle. Ohne diese Phase ist konsistentes RLS auf den Bewertungs-Kindern unmöglich und Plan 04 schreibt fail-closed nie.
+
+**Verifizierte Fakten (Claudian, Prod 2026-06-25 — in Research bestätigen, nicht annehmen):**
+- `intent_event`: KEINE RLS (Daemon-Writes dorthin brauchen keinen GUC); PK = `event_id` BIGSERIAL; `call_id REFERENCES calls(id) ON DELETE CASCADE` vorhanden.
+- `rubric_score`: FORCE RLS + `tenant_isolation` (nullif-fail-closed) + `tenant_id` NULLABLE; Tabelle leer.
+- `abstain_log` (Migration 0022, NOCH NICHT deployt): KEINE RLS, `tenant_id` NULLABLE.
+- `suggestion_reactions`: FORCE RLS (Plan 08/09), wird am Call-Ende im REQUEST-Kontext via `g.tenant_id` geschrieben (kein Daemon) — im Plan prüfen, ob überhaupt betroffen.
+- Tenant-Quelle: `user_id → organisation → tenant_orgs (legacy_org_id)` — exakte Auflösung in der Research bestätigen.
+
+**Scope (planen, NICHT bauen diese Runde):**
+1. `calls.tenant_id` bei Anlage in `create_call_for_sid` aus `user_id` ableiten + setzen (kontext-unabhängig, da `user_id` immer da). + idempotente Backfill-Migration für bestehende NULL-Calls.
+2. Konsistentes FORCE RLS + `tenant_id NOT NULL` auf die Bewertungs-Kinder: `rubric_score` (leer → NOT NULL einfach), `abstain_log` (RLS + NOT NULL in die noch-nicht-deployte Migration 0022 falten), `suggestion_reactions` prüfen.
+3. Slow-Lane-Daemon ruft `set_current_tenant(str(call.tenant_id))` vor RLS-geschützten Writes (M-4-Muster, `db.py:43`) — Transaktions-Timing beachten (GUC im `after_begin`; per-Item-Commit). + M-4-Negativ/Positiv-Test pro betroffener Tabelle (wie `rubric_score` Plan 01).
+
+**Grau-Zonen für die Planung:** Backfill-Strategie (User ohne Org/Tenant? fail-closed vs. Default-Tenant); genaue Tenant-Auflösung; ob `suggestion_reactions` etwas braucht; GUC-Transaktions-Mechanik im Daemon (M-4 sauber gegen die per-Item-Commit-Struktur).
+
+**Depends on:** 08.23.2.TAXO1 (intent_event-Schema + Slow Lane, erfüllt). **Blocker für:** TAXO2-Plan-03-Deploy + TAXO2-Plan-04 (beide gated bis diese Phase live).
+**Komplexität:** 🔴 — DSGVO/RLS/Schema-Migration + Daemon-GUC-Mechanik. **Cross-AI Pflicht (Gemini-3-Sichten) + Real-Daten-Validation Pflicht.** create_all-Falle: Migration VOR Restart. KEIN Local-Dev.
+**Plans:** TBD (Plan-Phase) — NUR planen diese Runde, kein Execute, kein Deploy.
+**Reihenfolge danach:** Plan → Claudian Pre-Execute-Audit + Gemini-3-Sichten → Execute (beaufsichtigter Deploy) → DANN TAXO2-Plan-03-Deploy + Test-Anruf → DANN Plan 04.
+**Multi-Segment-Gotcha:** Pfade hardcoden (`.planning/phases/08.23.2.TENANT-FOUND-mandanten-kennung-fundament-rls-schloss/`), gsd-tools/gsd-sdk/gsd-code-review/gsd-verifier umgehen, ROADMAP/STATE hand-editieren.
+
 ### Phase 08.23.2.TAXO2: Bewerten — EINE Noten-Engine (NEU 2026-06-10) 🔴
 
 **Goal:** EINE rubrik-basierte Noten-Engine (BARS) ersetzt die ZWEI driftenden Alt-Systeme (Live-Formel `app_routes.py:735` + Training-7-Kategorien `training_service.py:1122`). Tötet den Redeanteil-0%-Bug an der Wurzel.
