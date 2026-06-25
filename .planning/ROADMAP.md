@@ -2170,8 +2170,13 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 - **CI-4:** Defensiv: Slow-Lane „call_id/Tenant nicht ermittelbar → `handling_status='failed'`" statt Endlos-Re-Queue, MIT lautem Log/Alarm (ein 'failed' NACH dem Fix = Regression/Race). + `flush_to_db` (services/slow_lane.py:340, zweiter ungesicherter Schreibpfad) kriegt dieselbe A1-`set_current_tenant`-Klammer wie der Consumer-Loop (:403).
 - **CI-5:** Tests gegen die ECHTEN Fälle: Moment MIT call_id (scored/abstained, abstain_log schreibt) / OHNE call_id (failed, kein Loop, kein abstain_log).
 **Grau-Zonen (für Discuss/Plan):** (a) warum feuern emits ohne call_id (nur Race am Call-Start, oder ein Pfad ohne Call?); (b) ob die 54 'failed' bereinigt/gelöscht werden (nicht rekonstruierbar — Pre-Launch-Testdaten); (c) Race-Fix-Mechanik (Reihenfolge-Garantie vs. defensiv).
-**Plans:** TBD — diese Runde NUR planen (discuss/research + plan), KEIN Execute, KEIN Deploy. Cross-AI Gemini PFLICHT vor Execute (🔴).
-**Reihenfolge danach:** Plan → Claudian Pre-Execute-Audit + Gemini-3-Sichten → Execute (beaufsichtigter Deploy) → DANN TAXO2-Plan-04.
+**Plans:** 4 Plans / 3 Wellen / 2 Deploys — ✅ GEPLANT 2026-06-25 (discuss/research + plan; RESEARCH + VALIDATION + 4 PLAN.md hand-authored, Code+Prod-Bug-Trace verifiziert). Locked: CI-2=Ordering-Gate/Single-Owner, CI-3=phased (2 Deploys), CI-4=54 löschen in Deploy 2. **NICHT execute-ready bis Cross-AI Gemini-3-Sichten + Claudian-Pre-Execute-Audit (🔴 Punkt 24).**
+- [ ] 08.23.2.CALLID-01-callid-threading-PLAN.md — W1/Deploy1: resolve_call_id_for_sid-Helfer (live_session) + emit_intent_event call_id PFLICHT-Param (Default raus) + 4 Aufrufer reichen durch + None→lauter Alarm (kein raise) (CI-1)
+- [ ] 08.23.2.CALLID-02-race-close-ordering-gate-PLAN.md — W2/Deploy1: Ordering-Gate (research_first: Reorder create_call_for_sid vor _open_deepgram_connection, sonst Per-SID-Puffer), Single-Owner, kein NULL-Emit im Start-Fenster (CI-2)
+- [ ] 08.23.2.CALLID-03-slowlane-defensive-flush-guard-PLAN.md — W2/Deploy1: defensiver Backstop (_persist_event_ref: tenant nicht ermittelbar → 'failed'+Alarm, kein Endlos-Loop, kein abstain_log) + flush_to_db A1-set_current_tenant-Klammer (CI-4)
+- [ ] 08.23.2.CALLID-04-notnull-migration-cleanup-PLAN.md — W3/Deploy2 (autonomous:false, gated by SOAK V-CI-6): Pre-Check (alle NULL=='failed', sonst STOP) → DELETE 54 NULL → intent_event.call_id SET NOT NULL + models.py (CI-3)
+**Deploy-Phasing:** Deploy 1 = W1+W2 (Code-Fix, Spalte nullable) → SOAK (0 neue NULLs, kein Alarm) → Deploy 2 = W3 (54 löschen + NOT NULL). create_all-Falle: Migration VOR Restart.
+**Reihenfolge danach:** Cross-AI Gemini-3-Sichten + Claudian Pre-Execute-Audit → Execute Deploy 1 → SOAK → Execute Deploy 2 → DANN TAXO2-Plan-04.
 **Multi-Segment-Gotcha:** Pfade hardcoden (`.planning/phases/08.23.2.CALLID-intent-event-call-id-durchreichen-integritaet/`), gsd-tools/gsd-sdk/gsd-code-review/gsd-verifier umgehen, ROADMAP/STATE hand-editieren.
 
 ### Phase 08.23.2.TAXO2: Bewerten — EINE Noten-Engine (NEU 2026-06-10) 🔴
