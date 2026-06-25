@@ -89,6 +89,24 @@ if 'sqlite' not in _DATABASE_URL:
         )
 
 
+def resolve_tenant_uuid_for_user(user_id, db):
+    """Loest die Mandanten-UUID kontext-unabhaengig aus user_id auf:
+    user_id -> users.org_id -> tenant_orgs.legacy_org_id -> tenant_orgs.id (UUID-str).
+    SINGLE SOURCE der user->tenant-Aufloesung (Anti-Drift, Punkt 22). Ersetzt die
+    eingebettete auth.py:117-Logik (Plan 01 Task 4) UND speist create_call_for_sid + Backfill —
+    genau EINE Quelle der Wahrheit. Im Deepgram-Callback-Thread nutzbar (kein
+    Request-Kontext, kein g). None bei nicht-aufloesbarem Edge (heute 0 Faelle,
+    prod §6) -> Aufrufer schreibt tenant_id NULL (fail-closed, KEIN Default-Tenant).
+
+    Latenz (Punkt 25): genau EINE indizierte Join-Query (tenant_orgs.legacy_org_id UNIQUE +
+    users.id PK -> sub-ms), kein N+1, nicht im Live-Antwort-Pfad."""
+    from database.models import TenantOrg, User
+    row = (db.query(TenantOrg.id)
+             .join(User, User.org_id == TenantOrg.legacy_org_id)
+             .filter(User.id == user_id).first())
+    return str(row[0]) if row else None
+
+
 class Base(DeclarativeBase):
     pass
 
