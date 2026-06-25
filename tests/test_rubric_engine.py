@@ -103,7 +103,7 @@ def test_indirekt_marker_present_for_cold_call():
     mode_config = {
         'vorwand_behandlung': {'weight': 0.60, 'enabled': True, 'confidence_gate': 0.70,
                                'indirekt_erkannt': True},
-        'outcome_progression': {'weight': 0.40, 'enabled': True, 'confidence_gate': 0.70},
+        'abschluss_fuehrung': {'weight': 0.40, 'enabled': True, 'confidence_gate': 0.70},
     }
     events = [_event('vorwand', event_id=1)]
     call = {'call_mode': 'cold_call', 'outcome': 'meeting_booked', 'dauer_sekunden': 200}
@@ -118,7 +118,7 @@ def test_beleg_ref_is_event_reference_not_text():
     """beleg_ref = Verweis auf intent_event (event_id), KEIN freier Text (Req 5)."""
     mode_config = {
         'vorwand_behandlung': {'weight': 0.60, 'enabled': True, 'confidence_gate': 0.70},
-        'outcome_progression': {'weight': 0.40, 'enabled': True, 'confidence_gate': 0.70},
+        'abschluss_fuehrung': {'weight': 0.40, 'enabled': True, 'confidence_gate': 0.70},
     }
     events = [_event('vorwand', event_id=42)]
     call = {'call_mode': 'cold_call', 'outcome': 'meeting_booked', 'dauer_sekunden': 200}

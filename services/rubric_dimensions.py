@@ -11,7 +11,7 @@ REINE DATEN/LOGIK — KEIN LLM (Bau-Regel 1), KEIN DB-Zugriff, KEINE Live-Schlei
 
 Dimensions-Keys sind ASCII (CLAUDE.md UTF-8-Regel: Code-Identifier ohne Umlaute):
   vorwand_behandlung, kaufsignal_nutzung, aufschub_behandlung, phasen_technik,
-  fragen_qualitaet, gespraechsfuehrung, outcome_progression
+  fragen_qualitaet, gespraechsfuehrung, abschluss_fuehrung
 Die BARS-Stufen-Texte sind user-facing -> echte Umlaute (ae/oe/ue/ss NICHT).
 
 Mess-Inputs (existieren, RESEARCH §E):
@@ -32,6 +32,13 @@ D-05-Mess-Regeln je Dimension siehe is_measurable-Funktion + DIMENSIONS-Eintrag.
 DEFAULT_CONFIDENCE_GATE = 0.70   # D-03 Tor-1-Default, falls mode_cfg.confidence_gate NULL
 MIN_PHASE_CALL_SECONDS = 60      # D-05: Phasen-Technik messbar ab plausibler Mindest-Dauer
 VERY_SHORT_PHASE_SECONDS = 3     # D-05: "sehr kurze Phasen" harter Schwellenwert (Negativ-Signal)
+
+# Abschluss-Fuehrung (Soll-Verhalten §6, verhaltens-basiert — liest NIE calls.outcome).
+# Phase 6 = Abschluss/Terminvereinbarung (quasi-terminal, ki_logik.py:169). intent_event.phase
+# (SmallInt 1-6, nullable, Quelle detect_phase Welle 4 — models.py:769) ist das EINZIGE Signal.
+CLOSING_PHASE = 6                # Phase 6 = aktiv initiierter Abschluss / naechster Schritt
+MIN_CLOSING_CHANCE_PHASE = 3     # mind. Phase 3 (Bedarf) erreicht = echte Abschluss-Chance (sonst n/a)
+MOMENTUM_VORWAND_MIN = 2         # gut behandelter Vorwand ab handling_score_numeric >= 2 (Momentum)
 
 # D-05 Sprechdisziplin-Baselines (cold_call Gespraechsfuehrung) — initiale Ziel-Werte aus Andres
 # Vertriebs-Wissen, post-launch kalibrieren (D-05 Plan-Flag: Messbarkeit != Benotbarkeit).
@@ -162,10 +169,20 @@ def _measurable_gespraechsfuehrung(events, speech_stats, call, mode_cfg):
     return (stats.get('monolog', 0) or 0) > 0 or (stats.get('tempo', 0) or 0) > 0
 
 
-def _measurable_outcome_progression(events, speech_stats, call, mode_cfg):
-    # D-05: messbar wenn calls.outcome klassifiziert (nicht NULL/'unknown').
-    outcome = _get(call, 'outcome', None)
-    return outcome is not None and outcome != 'unknown'
+def _max_reached_phase(events):
+    """Hoechste erreichte Gespraechs-Phase aus intent_event.phase (None wenn kein Signal)."""
+    phases = [p for p in (_event_field(e, 'phase', None) for e in (events or [])) if p is not None]
+    return max(phases) if phases else None
+
+
+def _measurable_abschluss_fuehrung(events, speech_stats, call, mode_cfg):
+    # Soll-Verhalten §6 (verhaltens-basiert, liest NIE calls.outcome): NUR messbar, wenn der Call
+    # eine echte Chance auf Abschluss-Verhalten hatte — d.h. mind. Phase 3 (Bedarf) erreicht.
+    # Fehlt das Phasen-Signal (None) ODER endete der Call in Phase 1-2 (Gatekeeper blockt /
+    # Frueh-Aufleger) -> NICHT messbar -> faellt als 'na' raus, NIE eine schlechte Note (kein
+    # Outcome-Bias beim Frueh-Aufleger, Gemini-Leitplanke). KEIN Raten ohne Signal.
+    mp = _max_reached_phase(events)
+    return mp is not None and mp >= MIN_CLOSING_CHANCE_PHASE
 
 
 # ── Score-Funktionen (D-05) — rein, geben int 1-3 fuer eine MESSBARE Dimension ──────────────
@@ -234,16 +251,39 @@ def _score_gespraechsfuehrung(events, speech_stats, call):
     return 1
 
 
-def _score_outcome_progression(events, speech_stats, call):
-    # Outcome-Klasse -> Stufe. Positive Outcomes hoeher; Abbruch/no_interest niedrig (konsistent D-08).
-    outcome = _get(call, 'outcome', None)
-    positiv = ('meeting_booked', 'contract_signed')
-    teilweise = ('callback', 'send_info')
-    if outcome in positiv:
-        return 3
-    if outcome in teilweise:
-        return 2
-    return 1  # no_interest/wrong_person/gatekeeper_blocked/unknown
+def _score_abschluss_fuehrung(events, speech_stats, call):
+    # REIN VERHALTENS-BASIERT (Soll-Verhalten §6): bewertet OB + WIE der Berater den Abschluss
+    # initiiert — liest NIEMALS calls.outcome. Phase 6 = aktiv initiierter Abschluss (ki_logik.py:169).
+    evs = list(events or [])
+    closing_idx = None
+    for i, ev in enumerate(evs):
+        if _event_field(ev, 'phase', None) == CLOSING_PHASE:
+            closing_idx = i
+            break
+
+    if closing_idx is None:
+        # Tiefe Phase erreicht (is_measurable garantiert >= 3), aber KEINE Phase-6-Initiierung /
+        # kein Call-to-Action -> verliert sich (z.B. Monolog) -> Stufe 1.
+        return 1
+
+    # Phase 6 initiiert. Gutes Timing = ein Momentum-Signal VOR der Abschluss-Initiierung:
+    # ein erkanntes (konfidentes) kaufsignal ODER ein mit handling_score >= 2 behandelter vorwand.
+    # Anti-Goodhart (Gemini-Leitplanke): Stufe 3 ist an den richtigen MOMENT gekoppelt (Signal +
+    # Timing), NICHT ans bloße Fragen — ein Abschluss OHNE Momentum davor erreicht nur Stufe 2.
+    for ev in evs[:closing_idx]:
+        it = _event_field(ev, 'intent_type', None)
+        if it == 'kaufsignal':
+            conf = _event_field(ev, 'confidence', None)
+            if conf is not None and conf >= DEFAULT_CONFIDENCE_GATE:
+                return 3
+        elif it == 'vorwand':
+            hs = _event_field(ev, 'handling_score_numeric', None)
+            if hs is not None and hs >= MOMENTUM_VORWAND_MIN:
+                return 3
+
+    # Phase 6 initiiert, aber ohne Momentum-Signal davor (ueberfaehrt einen offenen Aufschub /
+    # eine Kundenfrage, drueckt durch / stures Nachfragen ohne Kontext) -> Stufe 2.
+    return 2
 
 
 # ── DIMENSIONS — Single Source der 7 Dimensionen + 3 BARS-Stufen je Dimension ───────────────
@@ -310,14 +350,19 @@ DIMENSIONS = {
         'is_measurable': _measurable_gespraechsfuehrung,
         'score': _score_gespraechsfuehrung,
     },
-    'outcome_progression': {
-        'label': 'Outcome-Progression',
+    'abschluss_fuehrung': {
+        'label': 'Abschluss-Führung',
         'bars': {
-            1: 'Kein Fortschritt (kein Interesse / abgebrochen).',
-            2: 'Teil-Fortschritt (Rueckruf vereinbart, Infos angefragt).',
-            3: 'Klarer Fortschritt (Termin gebucht, Abschluss).',
+            1: 'Tiefe Gespraechsphase erreicht, aber kein Abschluss/naechster Schritt initiiert '
+               '(kein Call-to-Action, verliert sich z.B. im Monolog).',
+            2: 'Abschluss initiiert, aber mit unsauberem Timing (ueberfaehrt einen offenen Aufschub '
+               '/ eine Kundenfrage, drueckt durch — ohne Momentum-Signal davor).',
+            3: 'Abschluss/naechsten Schritt aktiv und zum richtigen Moment initiiert — direkt nach '
+               'einem erkannten Kaufsignal oder einem gut behandelten Vorwand (nutzt Momentum).',
         },
-        'is_measurable': _measurable_outcome_progression,
-        'score': _score_outcome_progression,
+        # Soll-Verhalten §6: rein verhaltens-basiert (intent_event.phase + Signal/Timing),
+        # liest NIE calls.outcome. Ersetzt die fruehere outcome-lesende 'outcome_progression'.
+        'is_measurable': _measurable_abschluss_fuehrung,
+        'score': _score_abschluss_fuehrung,
     },
 }

@@ -53,7 +53,7 @@ _SEED = [
     ('cold_call', 'kaufsignal_nutzung',   0.20, True,  None,            True,  0.70),
     ('cold_call', 'phasen_technik',       0.15, True,  None,            False, 0.70),
     ('cold_call', 'fragen_qualitaet',     0.15, True,  None,            False, 0.70),
-    ('cold_call', 'outcome_progression',  0.20, True,  None,            False, 0.70),
+    ('cold_call', 'abschluss_fuehrung',   0.20, True,  None,            False, 0.70),
     ('cold_call', 'gespraechsfuehrung',   0.20, True,  'sprechdisziplin', False, 0.70),
     # MEETING — alle 7 voll AN, kein indirekt, kein partial.
     ('meeting_consented', 'vorwand_behandlung',  0.25, True, None, False, 0.70),
@@ -61,7 +61,7 @@ _SEED = [
     ('meeting_consented', 'kaufsignal_nutzung',  0.20, True, None, False, 0.70),
     ('meeting_consented', 'phasen_technik',      0.15, True, None, False, 0.70),
     ('meeting_consented', 'fragen_qualitaet',    0.20, True, None, False, 0.70),
-    ('meeting_consented', 'outcome_progression', 0.20, True, None, False, 0.70),
+    ('meeting_consented', 'abschluss_fuehrung', 0.20, True, None, False, 0.70),
     ('meeting_consented', 'gespraechsfuehrung',  0.25, True, None, False, 0.70),
     # TRAINING — alle 7 AN (Ground-Truth-Score DEFERRED, hier nur die Gewichtszeilen).
     ('training', 'vorwand_behandlung',   0.20, True, None, False, 0.70),
@@ -69,7 +69,7 @@ _SEED = [
     ('training', 'kaufsignal_nutzung',   0.15, True, None, False, 0.70),
     ('training', 'phasen_technik',       0.15, True, None, False, 0.70),
     ('training', 'fragen_qualitaet',     0.20, True, None, False, 0.70),
-    ('training', 'outcome_progression',  0.15, True, None, False, 0.70),
+    ('training', 'abschluss_fuehrung',   0.15, True, None, False, 0.70),
     ('training', 'gespraechsfuehrung',   0.20, True, None, False, 0.70),
 ]
 
@@ -119,7 +119,7 @@ def upgrade() -> None:
     # Schilder (Punkt 23) — Single-Source = models.py comment=. Einfache Quotes verdoppelt.
     op.execute("COMMENT ON TABLE public.mode_weight_config IS 'Modus-Gewichtssatz fuer die Noten-Engine (D-01/D-04, laufzeit-tunbar Punkt 12). Pro Modus+Dimension: Gewicht, config-an/aus, Tor-1-Konfidenzschwelle. Globale Config (kein tenant_id, keine RLS). Status: lebt (neu, TAXO2). Liest services/rubric_engine.py; schreibt Admin/Seed (Migration).'")
     op.execute("COMMENT ON COLUMN public.mode_weight_config.session_mode IS 'Modus: cold_call|meeting_consented|training (N-4, EXAKT calls.call_mode-Werte + training, KEIN meeting-Kurzform). Lookup-Schluessel der Engine (aus calls.call_mode/origin=training).'")
-    op.execute("COMMENT ON COLUMN public.mode_weight_config.dimension IS 'Dimensions-Key (ASCII): vorwand_behandlung/kaufsignal_nutzung/aufschub_behandlung/phasen_technik/fragen_qualitaet/gespraechsfuehrung/outcome_progression. Korreliert mit services/rubric_dimensions.py DIMENSIONS.'")
+    op.execute("COMMENT ON COLUMN public.mode_weight_config.dimension IS 'Dimensions-Key (ASCII): vorwand_behandlung/kaufsignal_nutzung/aufschub_behandlung/phasen_technik/fragen_qualitaet/gespraechsfuehrung/abschluss_fuehrung. Korreliert mit services/rubric_dimensions.py DIMENSIONS.'")
     op.execute("COMMENT ON COLUMN public.mode_weight_config.weight IS 'Config-Gewicht der Dimension im Modus (D-01/D-04). 0 = config-AUS = Dimension gilt im Modus nicht (Ausschluss-Grund config_off, getrennt von Proration-Drop).'")
     op.execute("COMMENT ON COLUMN public.mode_weight_config.enabled IS 'config-an-Flag (D-01). enabled=false ODER weight<=0 -> Dimension config_off (faellt VOR der Messbarkeit raus, eigener Ausschluss-Grund).'")
     op.execute("COMMENT ON COLUMN public.mode_weight_config.partial_marker IS 'Teil-Messbarkeits-Marker (D-04), z.B. sprechdisziplin fuer Kaltakquise-Gespraechsfuehrung (nur Monolog/Tempo messbar, Talk-Share aus). NULL = voll messbar.'")

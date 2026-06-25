@@ -21,7 +21,7 @@ def _full_meeting_config():
         'phasen_technik':      {'weight': 0.15, 'enabled': True, 'confidence_gate': 0.70},
         'fragen_qualitaet':    {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70},
         'gespraechsfuehrung':  {'weight': 0.25, 'enabled': True, 'confidence_gate': 0.70},
-        'outcome_progression': {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70},
+        'abschluss_fuehrung':  {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70},
     }
 
 
@@ -39,19 +39,19 @@ def _lean_mode_config():
 
 
 def _behavior_only_config():
-    """Rein verhaltens-basierte Dimensionen (KEIN outcome_progression) — fuer ergebnis-blinde Tests.
+    """Rein verhaltens-basierte Dimensionen fuer ergebnis-blinde Tests — INKL. abschluss_fuehrung.
 
-    Soll-Verhalten §6: das Ergebnis (calls.outcome) darf die Note nicht veraendern.
-    outcome_progression ist die EINZIGE Dimension, die calls.outcome liest; sie ist hier bewusst
-    NICHT config-an, damit der Test rein das (ergebnis-blinde) Verhaltens-Scoring prueft. Ob
-    outcome_progression selbst mit §6 vereinbar ist, ist eine SEPARATE Entscheidung (nicht Teil
-    dieses Fixes; geflaggt fuer Claudian/Andre).
+    Soll-Verhalten §6: das Ergebnis (calls.outcome) darf die Note nicht veraendern. Seit dem Umbau
+    `outcome_progression -> abschluss_fuehrung` liest KEINE Dimension mehr calls.outcome — daher ist
+    abschluss_fuehrung jetzt config-AN (verhaltens-basiert: Phasen-Signal + Timing). Der Test ist
+    damit der STAERKERE Beweis: identisches Verhalten + anderes outcome -> exakt gleiche Note.
     """
     return {
         'vorwand_behandlung': {'weight': 0.30, 'enabled': True, 'confidence_gate': 0.70},
         'kaufsignal_nutzung': {'weight': 0.30, 'enabled': True, 'confidence_gate': 0.70},
         'gespraechsfuehrung': {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70,
                                'partial_marker': 'sprechdisziplin'},
+        'abschluss_fuehrung': {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70},
     }
 
 
@@ -124,11 +124,15 @@ def test_cold_call_gespraechsfuehrung_unavailable_renormalizes():
     mode_config = {
         'vorwand_behandlung':  {'weight': 0.30, 'enabled': True, 'confidence_gate': 0.70,
                                 'indirekt_erkannt': True},
-        'outcome_progression': {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70},
+        'abschluss_fuehrung':  {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70},
         'gespraechsfuehrung':  {'weight': 0.20, 'enabled': True, 'confidence_gate': 0.70,
                                 'partial_marker': 'sprechdisziplin'},
     }
-    events = [_event('vorwand', confidence=0.95, handling_score=3, event_id=1)]
+    # vorwand mit Phasen-Signal + ein Berater-Abschluss in Phase 6 -> abschluss_fuehrung messbar.
+    events = [
+        _event('vorwand', confidence=0.95, handling_score=3, phase=4, event_id=1),
+        _event('abschluss', confidence=0.95, phase=6, event_id=2),
+    ]
     # speech_stats leer (monolog=0, tempo=0) -> gespraechsfuehrung NICHT messbar im cold_call.
     speech_stats = {'redeanteil': 0, 'tempo': 0, 'monolog': 0}
     call = {'call_mode': 'cold_call', 'outcome': 'meeting_booked', 'dauer_sekunden': 200}
@@ -139,7 +143,7 @@ def test_cold_call_gespraechsfuehrung_unavailable_renormalizes():
     assert 'gespraechsfuehrung' in drops, "gespraechsfuehrung muss weggeprorated sein"
     assert drops['gespraechsfuehrung'] in ('na', 'no_data'), \
         "nicht-messbar bei nicht-Abbruch = N/A, KEIN Fixwert"
-    # messbar = vorwand(0.30)+outcome(0.20) = 0.50 von 0.70 = ~0.714 >= 0.5 -> scored.
+    # messbar = vorwand(0.30)+abschluss(0.20) = 0.50 von 0.70 = ~0.714 >= 0.5 -> scored.
     assert result['coaching_score'] is not None
     # KEINE messbare Dimension wird als 0 gewertet:
     for d in result['dimensions']:
@@ -148,14 +152,16 @@ def test_cold_call_gespraechsfuehrung_unavailable_renormalizes():
 
 # ── Soll-Verhalten §6: ERGEBNIS-BLIND — das outcome zieht die Note NIE runter ────────────────
 def test_outcome_does_not_change_score():
-    """Soll-Verhalten §6 (Andre 2026-06-25): IDENTISCHE Verhaltens-/Event-Dicts, nur ein anderes
-    calls.outcome -> EXAKT gleicher coaching_score. Beweist: das Ergebnis ist blind.
-    (outcome_progression bewusst config_off — die einzige outcome-lesende Dimension.)
+    """Soll-Verhalten §6 (Andre 2026-06-25): IDENTISCHE Verhaltens-/Phasen-/Event-Dicts, nur ein
+    anderes calls.outcome -> EXAKT gleicher coaching_score. Beweist: das Ergebnis ist blind.
+    abschluss_fuehrung ist jetzt CONFIG-ON (verhaltens-basiert) -> KEINE Dimension liest mehr das
+    Ergebnis (staerkerer Beweis als der fruehere config_off-Ausschluss).
     """
     mode_config = _behavior_only_config()
     events = [
-        _event('vorwand', confidence=0.95, handling_score=3, event_id=1),
-        _event('kaufsignal', confidence=0.95, handling_score=3, event_id=2),
+        _event('vorwand', confidence=0.95, handling_score=3, phase=3, event_id=1),
+        _event('kaufsignal', confidence=0.95, handling_score=3, phase=5, event_id=2),
+        _event('abschluss', confidence=0.95, phase=6, event_id=3),  # Berater initiiert Abschluss
     ]
     speech_stats = {'redeanteil': 0, 'tempo': 130, 'monolog': 8.0}
 
@@ -196,8 +202,9 @@ def test_good_behavior_short_call_not_penalized():
     """
     mode_config = _behavior_only_config()
     events = [
-        _event('vorwand', confidence=0.95, handling_score=3, event_id=1),
-        _event('kaufsignal', confidence=0.95, handling_score=3, event_id=2),
+        _event('vorwand', confidence=0.95, handling_score=3, phase=3, event_id=1),
+        _event('kaufsignal', confidence=0.95, handling_score=3, phase=5, event_id=2),
+        _event('abschluss', confidence=0.95, phase=6, event_id=3),  # Berater initiiert Abschluss
     ]
     speech_stats = {'redeanteil': 0, 'tempo': 130, 'monolog': 6.0}
     call_nein = {'call_mode': 'cold_call', 'outcome': 'no_interest', 'dauer_sekunden': 18}
@@ -212,6 +219,70 @@ def test_good_behavior_short_call_not_penalized():
     call_ja = {'call_mode': 'cold_call', 'outcome': 'meeting_booked', 'dauer_sekunden': 18}
     assert compute_rubric(events, speech_stats, call_ja, mode_config)['coaching_score'] \
         == result['coaching_score']
+
+
+# ── Abschluss-Fuehrung (verhaltens-basiert, ersetzt outcome_progression) — §6 ────────────────
+def test_early_hangup_closing_not_measurable():
+    """Soll-Verhalten §6: ein Call der nur bis Phase 1-2 kommt (Gatekeeper blockt / Frueh-Aufleger)
+    hatte KEINE echte Abschluss-Chance -> abschluss_fuehrung NICHT messbar (reason='na'), bekommt
+    KEINE niedrige Note. Toetet den Outcome-Bias beim Frueh-Aufleger (Gemini-Leitplanke): die
+    Dimension liest die Chance aus dem Phasen-Signal, NICHT aus dem Ergebnis.
+    """
+    mode_config = {
+        'vorwand_behandlung': {'weight': 0.50, 'enabled': True, 'confidence_gate': 0.70},
+        'abschluss_fuehrung': {'weight': 0.50, 'enabled': True, 'confidence_gate': 0.70},
+    }
+    # Call kommt nur bis Phase 2 -> keine echte Abschluss-Chance.
+    events = [_event('vorwand', confidence=0.95, handling_score=3, phase=2, event_id=1)]
+    call = {'call_mode': 'cold_call', 'outcome': 'no_interest', 'dauer_sekunden': 15}
+
+    result = compute_rubric(events, {}, call, mode_config)
+
+    reasons = {u['dim']: u['reason'] for u in result['unmeasured_dimensions']}
+    assert reasons.get('abschluss_fuehrung') == 'na', \
+        "Phase 1-2: abschluss_fuehrung NICHT messbar -> 'na' (keine schlechte Note, kein Outcome-Bias)"
+    # Wird NICHT als bewertete Dimension gefuehrt (kein erzwungener niedriger Score).
+    assert all(d['dim'] != 'abschluss_fuehrung' for d in result['dimensions'])
+
+
+def test_closing_after_signal_scores_high():
+    """abschluss_fuehrung Stufe 3: Berater initiiert Phase 6 (Abschluss) zum richtigen Moment —
+    direkt nach einem erkannten Kaufsignal (Momentum). Rein verhaltens-basiert: dasselbe Verhalten
+    ergibt mit positivem UND negativem outcome dieselbe Stufe 3 (liest kein calls.outcome).
+    """
+    mode_config = {'abschluss_fuehrung': {'weight': 1.0, 'enabled': True, 'confidence_gate': 0.70}}
+    events = [
+        _event('kaufsignal', confidence=0.95, handling_score=3, phase=5, event_id=1),
+        _event('abschluss', confidence=0.95, phase=6, event_id=2),  # Abschluss nach dem Signal
+    ]
+    call_nein = {'call_mode': 'cold_call', 'outcome': 'no_interest', 'dauer_sekunden': 120}
+    res_nein = compute_rubric(events, {}, call_nein, mode_config)
+    ab_nein = next(d for d in res_nein['dimensions'] if d['dim'] == 'abschluss_fuehrung')
+    assert ab_nein['score'] == 3, "Phase-6-Abschluss direkt nach Kaufsignal -> Stufe 3 (Momentum)"
+
+    call_ja = {'call_mode': 'cold_call', 'outcome': 'meeting_booked', 'dauer_sekunden': 120}
+    res_ja = compute_rubric(events, {}, call_ja, mode_config)
+    ab_ja = next(d for d in res_ja['dimensions'] if d['dim'] == 'abschluss_fuehrung')
+    assert ab_ja['score'] == 3, "ergebnis-blind: gleiche Stufe 3 trotz anderem outcome"
+
+
+def test_no_cta_fizzle_scores_low():
+    """abschluss_fuehrung Stufe 1: tiefe Phase (Bedarf/Pitch) erreicht, aber KEINE Phase-6-
+    Initiierung / kein Call-to-Action -> verliert sich (langer Monolog). Verhaltens-Negativ,
+    NICHT outcome-getrieben (outcome hier sogar positiv -> trotzdem Stufe 1).
+    """
+    mode_config = {'abschluss_fuehrung': {'weight': 1.0, 'enabled': True, 'confidence_gate': 0.70}}
+    # Erreicht Phase 4 (Pitch), aber NIE Phase 6 -> kein Abschluss initiiert.
+    events = [
+        _event('vorwand', confidence=0.95, handling_score=3, phase=3, event_id=1),
+        _event('kaufsignal', confidence=0.95, handling_score=3, phase=4, event_id=2),
+    ]
+    speech_stats = {'redeanteil': 0, 'tempo': 130, 'monolog': 40.0}  # langer Monolog, kein CTA
+    call = {'call_mode': 'cold_call', 'outcome': 'meeting_booked', 'dauer_sekunden': 300}
+
+    result = compute_rubric(events, speech_stats, call, mode_config)
+    ab = next(d for d in result['dimensions'] if d['dim'] == 'abschluss_fuehrung')
+    assert ab['score'] == 1, "kein Phase-6-Abschluss initiiert -> Stufe 1 (verhaltens-basiert)"
 
 
 def test_no_measurable_dimension_is_ever_zero():

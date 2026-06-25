@@ -867,7 +867,7 @@ class ModeWeightConfig(Base):
     __tablename__ = 'mode_weight_config'
     id               = Column(Integer, primary_key=True, autoincrement=True)
     session_mode     = Column(String(32), nullable=False, comment="Modus: cold_call|meeting_consented|training (N-4, EXAKT calls.call_mode-Werte + training, KEIN 'meeting'-Kurzform). Lookup-Schluessel der Engine (aus calls.call_mode/origin='training').")
-    dimension        = Column(String(48), nullable=False, comment="Dimensions-Key (ASCII): vorwand_behandlung/kaufsignal_nutzung/aufschub_behandlung/phasen_technik/fragen_qualitaet/gespraechsfuehrung/outcome_progression. Korreliert mit services/rubric_dimensions.py DIMENSIONS.")
+    dimension        = Column(String(48), nullable=False, comment="Dimensions-Key (ASCII): vorwand_behandlung/kaufsignal_nutzung/aufschub_behandlung/phasen_technik/fragen_qualitaet/gespraechsfuehrung/abschluss_fuehrung. Korreliert mit services/rubric_dimensions.py DIMENSIONS.")
     weight           = Column(Float, nullable=False, comment="Config-Gewicht der Dimension im Modus (D-01/D-04). 0 = config-AUS = Dimension gilt im Modus nicht (Ausschluss-Grund config_off, getrennt von Proration-Drop).")
     enabled          = Column(Boolean, nullable=False, server_default=text('true'), default=True, comment="config-an-Flag (D-01). enabled=false ODER weight<=0 -> Dimension config_off (faellt VOR der Messbarkeit raus, eigener Ausschluss-Grund).")
     partial_marker   = Column(String(48), nullable=True, comment="Teil-Messbarkeits-Marker (D-04), z.B. 'sprechdisziplin' fuer Kaltakquise-Gespraechsfuehrung (nur Monolog/Tempo messbar, Talk-Share aus). NULL = voll messbar.")
