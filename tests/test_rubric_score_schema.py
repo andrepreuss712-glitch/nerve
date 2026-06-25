@@ -205,6 +205,7 @@ def test_rubric_score_rls_requires_tenant_guc(db_session):
     rubric_score-Write). Server-seitig gegen Postgres (skip ohne TEST_DATABASE_URL -> kein
     False-Green; SQLite hat kein RLS). Schuetzt die teuerste stille Regression.
     """
+    from sqlalchemy import text
     from database.db import set_current_tenant, clear_current_tenant
     from database.models import RubricScore
     tenant = conftest.TEST_TENANT_UUID
@@ -213,9 +214,24 @@ def test_rubric_score_rls_requires_tenant_guc(db_session):
     written = []
     try:
         # ── (a) NEGATIV: GUC leer (Daemon ohne Request-Context) -> WITH CHECK weist ab ──
+        # WICHTIG (TX-Mechanik, database/db.py:73-89): der app.tenant_id-GUC wird vom after_begin-Hook
+        # bei TRANSAKTIONS-BEGINN aus dem contextvar gesetzt (SET LOCAL, auto-clear bei commit/rollback).
+        # clear_current_tenant() leert nur den contextvar fuer KUENFTIGE TX, NICHT die schon laufende
+        # db_session-TX (deren GUC steht bereits auf TEST_TENANT_UUID). Daher: nach dem Clear die laufende
+        # TX per rollback() beenden -> der naechste Statement-Block oeffnet eine FRISCHE TX, in der
+        # after_begin den geleerten contextvar liest -> KEIN SET -> GUC ungesetzt -> exakt die
+        # Daemon-ohne-Request-Context-Lage (Plan 04).
         clear_current_tenant()
+        db_session.rollback()
+        # BELEG (Anti-False-Green, PGTEST-Lehre): in der frischen TX ist der GUC WIRKLICH leer.
+        # Dieser SELECT oeffnet die neue TX (after_begin feuert mit leerem contextvar -> kein SET).
+        guc = db_session.execute(text("SELECT current_setting('app.tenant_id', true)")).scalar()
+        assert guc in (None, ''), (
+            f"Negativ-Bein-Vorbedingung: app.tenant_id-GUC MUSS leer sein, war {guc!r}. "
+            "Sonst stellt der Test die kein-Tenant-Lage NICHT nach (False-Green-Gefahr).")
         raised = False
         try:
+            # Laeuft in DERSELBEN frischen TX (leerer GUC) -> WITH CHECK greift beim commit.
             db_session.add(RubricScore(
                 id=id_neg, tenant_id=tenant,
                 session_mode='cold_call', origin='live', payload_jsonb={}))
@@ -230,11 +246,10 @@ def test_rubric_score_rls_requires_tenant_guc(db_session):
             "muessen. Genau das trifft den Plan-04-Daemon (Slow-Lane ohne Request-Context) -> "
             "rubric_score-INSERT lautlos verworfen -> coaching_score ewig NULL. Fix = Plan 04: "
             "set_current_tenant(str(call.tenant_id)) vor dem Write (db.py:43-Muster).")
-        # Keine Zeile geschrieben.
-        assert db_session.query(RubricScore).filter(RubricScore.id == id_neg).first() is None
 
         # ── (b) POSITIV: GUC gesetzt -> derselbe INSERT geht durch + ist lesbar ──
         set_current_tenant(str(tenant))
+        db_session.rollback()   # leere-GUC-TX beenden -> naechste TX laeuft mit GUC=tenant
         db_session.add(RubricScore(
             id=id_pos, tenant_id=tenant,
             session_mode='cold_call', origin='live', payload_jsonb={}))
@@ -244,7 +259,13 @@ def test_rubric_score_rls_requires_tenant_guc(db_session):
         assert got is not None, ("M-4: nach set_current_tenant muss der INSERT durchgehen "
                                  "(Positiv-Kontrolle -> Plan-04-Daemon-Vertrag).")
         assert str(got.tenant_id) == str(tenant)
+        # BEWEIS dass der GUC-lose Negativ-INSERT WIRKLICH nichts schrieb — gelesen unter dem
+        # KORREKTEN Tenant-GUC (sonst versteckt die USING-Klausel ohnehin alles -> kein echter Beleg).
+        assert db_session.query(RubricScore).filter(RubricScore.id == id_neg).first() is None, (
+            "M-4: der GUC-lose INSERT darf KEINE Zeile geschrieben haben (Lese unter korrektem "
+            "Tenant-GUC -> echte Absenz, nicht RLS-Read-Filter).")
     finally:
         # GUC fuer den Fixture-Teardown wiederherstellen (db_session erwartet gesetzten Tenant).
         set_current_tenant(str(tenant))
+        db_session.rollback()   # frische TX mit GUC=tenant fuer cleanup_rows
         cleanup_rows(db_session, {"public.rubric_score": written}, tenant=tenant)
