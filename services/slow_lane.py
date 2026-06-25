@@ -39,7 +39,7 @@ baut den Merge-Gate + GUC-Klammer drumherum und ruft run_call_end_steps darin).
 
 import queue
 
-from database.db import get_session
+from database.db import get_session, set_current_tenant, clear_current_tenant
 from database.models import IntentEvent, AbstainLog, Call, TranscriptSegment, ModeWeightConfig
 from services.handling_markers import grade_handling
 
@@ -165,6 +165,20 @@ def _tenant_id_for(ev, db):
             return None
         c = db.query(Call).filter(Call.id == ev.call_id).first()
         return getattr(c, 'tenant_id', None) if c is not None else None
+    except Exception:
+        return None
+
+
+def _tenant_id_for_item(item, db):
+    """TENANT-FOUND Plan 03 (A1): Tenant eines Queue-Items (dict {'event_id': eid}) ueber den
+    Call ermitteln — read-only, GUC-frei (calls/intent_event haben KEINE RLS). Laedt das Event
+    zum event_id und delegiert an _tenant_id_for. None, wenn nicht ermittelbar."""
+    try:
+        eid = item.get('event_id') if isinstance(item, dict) else None
+        if eid is None:
+            return None
+        ev = db.query(IntentEvent).filter(IntentEvent.event_id == eid).first()
+        return _tenant_id_for(ev, db) if ev is not None else None
     except Exception:
         return None
 
@@ -368,7 +382,23 @@ def slow_lane_consumer() -> None:
         if item is SENTINEL:
             flush_to_db()
             break
-        db = get_session()
+        # ── A1 (TENANT-FOUND Plan 03, GELOCKT): Tenant in SEPARATER read-only Session ermitteln ──
+        # (calls/intent_event haben KEINE RLS -> GUC-frei lesbar), Session SCHLIESSEN, GUC setzen,
+        # DANN die committende Schreib-Session oeffnen -> after_begin (db.py:73-89) liest den
+        # contextvar bei TX-Begin der Schreib-Session. KEIN db.rollback() zur TX-Steuerung (das
+        # waere A2, verworfen — Cross-AI MEDIUM #2). abstain_log (FORCE RLS, Plan 02) braucht den
+        # GUC; sonst weist WITH CHECK den INSERT fail-closed ab (M-4). Latenz: Slow Lane, Punkt 25.
+        _tid = None
+        _read_db = get_session()
+        try:
+            _tid = _tenant_id_for_item(item, _read_db)   # GUC-freier Lookup ueber calls.tenant_id
+        finally:
+            _read_db.close()                             # Read-Session zu, BEVOR set_current_tenant
+
+        if _tid is not None:
+            set_current_tenant(str(_tid))                # contextvar VOR der Schreib-TX
+
+        db = get_session()        # committende Schreib-Session — after_begin liest den GUC bei TX-Begin
         try:
             _persist_event_ref(item, db)
             db.commit()           # TAXO2: die In-Place-Benotung persistieren (TAXO1 war No-Op)
@@ -376,6 +406,7 @@ def slow_lane_consumer() -> None:
             db.rollback()         # Zeile bleibt 'pending' -> H-3 re-queued sie spaeter
             print(f"[SLOW] consumer error: {e}")
         finally:
+            clear_current_tenant()  # Thread-Reuse-Hygiene (analog app.py:2134-2138), IMMER
             db.close()
 
 
