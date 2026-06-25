@@ -256,13 +256,28 @@ def _persist_event_ref(event_ref, db) -> None:
     else:
         # Abstention (Tor 2, D-07): score None -> handling_score_numeric bleibt NULL;
         # handling_status='abstained' (F-01: NICHT nur NULL!) + Goodhart-Log (D-07 Rider 3).
+        # ── CALLID-Backstop (CI-4, primaeres Netz): Tenant/call_id MUSS aufloesbar sein, sonst
+        #    scheitert der abstain_log-INSERT gegen FORCE RLS fail-closed (RESEARCH §4) -> rollback
+        #    -> 'pending' bleibt -> H-3 re-queued ENDLOS. Nach Plan 01/02 darf das praktisch nie
+        #    feuern; tut es das, ist es Race/Regression -> TERMINAL 'failed' (aus der pending-
+        #    Arbeitsliste raus, F-01: H-3 re-queued nur 'pending') + LAUTER Alarm, KEIN abstain_log
+        #    (kein fail-closed-Crash), KEIN 'pending' (kein stiller Verlust, kein Endlos-Loop).
+        _bk_tenant = _tenant_id_for(ev, db)
+        if _bk_tenant is None:
+            ev.handling_status = 'failed'
+            print(
+                f"[CALLID-ALARM] slow-lane: tenant/call_id nicht ermittelbar fuer "
+                f"event_id={ev.event_id} (call_id={ev.call_id!r}) -> 'failed' "
+                f"(Race/Regression NACH dem Fix — untersuchen). Kein abstain_log, kein Re-Queue."
+            )
+            return
         ev.handling_status = 'abstained'
         db.add(AbstainLog(
             event_id=ev.event_id,
             interaction_id=ev.interaction_id,
             next_advisor_sentence=next_utt,
             intent_type=ev.intent_type,
-            tenant_id=_tenant_id_for(ev, db),
+            tenant_id=_bk_tenant,
         ))
 
 
@@ -334,17 +349,41 @@ def flush_to_db() -> int:
     (`WHERE handling_status='pending'`, H-3-Bootstrap beim naechsten Start).
     """
     items = slow_lane.drain()
-    db = get_session()
-    try:
-        for it in items:
+    flushed = 0
+    for it in items:
+        # ── A1-Klammer PRO ITEM (CI-5, symmetrisch zum Consumer-Loop slow_lane_consumer):
+        #    Tenant in SEPARATER read-only Session ermitteln (calls/intent_event haben KEINE RLS
+        #    -> GUC-frei), Session SCHLIESSEN, GUC setzen, DANN die committende Schreib-Session
+        #    oeffnen -> after_begin (db.py) liest den contextvar bei TX-Begin. OHNE diese Klammer
+        #    wuerde der abstain_log-INSERT beim SIGTERM/atexit-Flush gegen FORCE RLS fail-closed
+        #    abgewiesen (RESEARCH §5: bisherige Asymmetrie zum Consumer-Loop) — auch bei gueltiger
+        #    call_id. Per-Item-TX (KEIN Sammel-Commit ueber Tenant-Grenzen).
+        _tid = None
+        _read_db = get_session()
+        try:
+            _tid = _tenant_id_for_item(it, _read_db)
+        finally:
+            _read_db.close()
+
+        if _tid is not None:
+            set_current_tenant(str(_tid))
+
+        db = get_session()
+        try:
             _persist_event_ref(it, db)
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        print(f"[SLOW] flush_to_db error: {type(e).__name__}: {e}")
-    finally:
-        db.close()
-    print(f"[SLOW] flush_to_db: {len(items)} items drained")
+            db.commit()
+            flushed += 1
+        except Exception as e:
+            db.rollback()
+            # Per-Item-Fehler-Isolierung + EXPLIZITES Log (Gemini-Review-Fund 3): ein Item killt
+            # den Flush der ANDEREN NICHT, aber der Fehlschlag darf im Shutdown-Log nicht still
+            # verschwinden (kein `except: pass`) — sonst verdeckt er den erfolgreichen Flush der uebrigen.
+            _eid = it.get('event_id') if isinstance(it, dict) else getattr(it, 'event_id', None)
+            print(f"[SLOW] flush_to_db item-Fehler event_id={_eid}: {e!r} — uebersprungen, Flush laeuft weiter")
+        finally:
+            clear_current_tenant()  # Thread-Reuse-Hygiene (analog Consumer-Loop), IMMER
+            db.close()
+    print(f"[SLOW] flush_to_db: {len(items)} items drained, {flushed} persisted")
     return len(items)
 
 

@@ -526,6 +526,30 @@ def close_moment(sid, *, reason) -> None:
         print(f"[MOMENT] close sid={sid} reason={reason}")
 
 
+def _durable_call_id(raw):
+    """Reiner Sentinel-/None-Guard (KEIN Lock): durable UUID-str bleibt, None/'__call_pending__' -> None.
+
+    NIEMALS den Sentinel-String '__call_pending__' zurueckgeben (CI-1) — er wuerde sonst in eine
+    UUID-Spalte (intent_event.call_id) geschrieben. Single-Source der 'nie Sentinel'-Regel:
+    genutzt von BEIDEN — dem gesperrten Getter resolve_call_id_for_sid UND den 4 Live-emit-Aufrufern,
+    die call_id direkt aus dem schon-gehaltenen state lesen (kein 4x dupliziertes Guard).
+    """
+    return raw if (raw and raw != '__call_pending__') else None
+
+
+def resolve_call_id_for_sid(sid):
+    """Locking-Getter NUR fuer Kontexte OHNE gehaltene _session_state_lock-Sperre (Backfill/unlocked).
+
+    Die 4 Live-emit-Aufrufer (claude_service:1065/:1599, deepgram_service:877, einwand_keyword_matcher:315)
+    rufen DIESEN Getter NICHT — sie halten _session_state_lock bereits, ein Re-Lock auf den plain Lock
+    waere ein Deadlock. Sie lesen state['call_id'] direkt und wenden _durable_call_id an.
+    Race-Schliessung (call_id durable VOR Detection) ist Plan 02.
+    """
+    with _session_state_lock:
+        cid = _session_state.get(sid, {}).get('state', {}).get('call_id')
+    return _durable_call_id(cid)
+
+
 def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') -> Optional[str]:
     """Legt Call-Record an und speichert call_id im per-SID-State.
 

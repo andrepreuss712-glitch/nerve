@@ -35,6 +35,7 @@ def test_emit_inserts_row_with_payload(db_session):
         session_id=sid, mode='cold_call', intent_type='echter_einwand',
         phase=2, source='llm_inferred', confidence=0.7,
         speaker_role='kunde', speaker_id='local', user_id=1, org_id=1,
+        call_id=None,  # CI-1: call_id ist Pflicht-Param (kein Default); NULL hier OK (nullable)
     )
     assert isinstance(eid, int) and eid > 0
     try:
@@ -62,6 +63,7 @@ def test_emit_accepts_custom_objection(db_session):
     eid = emit_intent_event(
         session_id=sid, mode='meeting', intent_type='custom_objection_preis',
         source='llm_inferred', speaker_role='kunde', speaker_id='local',
+        call_id=None,
     )
     assert eid > 0
     try:
@@ -79,6 +81,7 @@ def test_emit_rejects_invalid_intent_type(db_session):
         emit_intent_event(
             session_id=_sid(), mode='cold_call', intent_type='quatsch_unbekannt',
             source='llm_inferred', speaker_role='kunde', speaker_id='local',
+            call_id=None,
         )
     db_session.rollback()
     after = db_session.query(IntentEvent).count()
@@ -92,7 +95,7 @@ def test_emit_abstain_low_conf_written(db_session):
     eid = emit_intent_event(
         session_id=_sid(), mode='meeting', intent_type='info_frage',
         source='llm_inferred', speaker_role='kunde', speaker_id='local',
-        confidence=0.40, abstained=True,
+        confidence=0.40, abstained=True, call_id=None,
     )
     assert eid > 0
     try:
@@ -111,10 +114,12 @@ def test_two_emits_two_inserts_no_update(db_session):
     eid1 = emit_intent_event(
         session_id=sid, mode='cold_call', intent_type='vorwand',
         source='llm_inferred', speaker_role='kunde', speaker_id='local',
+        call_id=None,
     )
     eid2 = emit_intent_event(
         session_id=sid, mode='cold_call', intent_type='aufschub',
         source='llm_inferred', speaker_role='kunde', speaker_id='local',
+        call_id=None,
     )
     assert eid1 != eid2  # zwei distinkte Zeilen, kein Overwrite
     try:
@@ -136,16 +141,17 @@ def test_shared_interaction_id_two_rows(db_session):
     eid_a = emit_intent_event(
         session_id=sid, mode='cold_call', intent_type='echter_einwand',
         source='llm_inferred', speaker_role='kunde', speaker_id='local',
-        interaction_id=iid,
+        interaction_id=iid, call_id=None,
     )
     eid_b = emit_intent_event(
         session_id=sid, mode='cold_call', intent_type='vorwand',
         source='ui_asserted', speaker_role='kunde', speaker_id='local',
-        interaction_id=iid,
+        interaction_id=iid, call_id=None,
     )
     eid_none = emit_intent_event(
         session_id=sid, mode='cold_call', intent_type='info_frage',
         source='llm_inferred', speaker_role='kunde', speaker_id='local',
+        call_id=None,
     )
     try:
         ra = db_session.query(IntentEvent).filter_by(event_id=eid_a).one()

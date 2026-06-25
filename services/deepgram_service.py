@@ -569,7 +569,14 @@ def register_audio_handlers(sio):
             print(f"[DG] keyterm-Profil-Load fehlgeschlagen (non-fatal, fallback Grundliste): {_kt_e}")
         _keyterms = build_keyterms(_kt_daten, _kt_branche, mode)
 
-        _open_deepgram_connection(_sid, mode=mode, keyterms=_keyterms)
+        # CI-2 Race-Close (Plan 02, Mechanik=REORDER): _open_deepgram_connection wird NICHT mehr
+        # hier (vor dem per-SID-Init) geoeffnet, sondern ERST NACH create_call_for_sid (unten, nach
+        # dem Init-try-Block). Damit ist die durable call_id im per-SID-state, BEVOR die Verbindung
+        # steht und on_message-Detection (Fast/Medium/Button-emit) fuer diese sid feuern kann ->
+        # kein NULL-call_id-Emit im Start-Fenster, kein verlorener erster Einwand (RESEARCH §3/§4).
+        # mode (:530) + _keyterms (oben) sind die EINZIGEN Connection-Open-Inputs und bleiben als
+        # Locals im Scope. Single-Owner gewahrt: create_call_for_sid bleibt in start_live_session,
+        # NIE im Detection-Thread.
 
         # Store precall briefing in live session state
         # (ls imported at module level — do not re-import here, causes UnboundLocalError
@@ -730,6 +737,17 @@ def register_audio_handlers(sio):
         except Exception as _pe:
             print(f"[08.19.4] per-SID init failed for {_sid}: {_pe}")
 
+        # CI-2 Race-Close (Plan 02, REORDER): JETZT — NACH create_call_for_sid (durable call_id im
+        # per-SID-state) — die Deepgram-Verbindung oeffnen. Erst ab hier ist Detection (on_message)
+        # freigeschaltet; jeder moegliche emit traegt die durable call_id (kein NULL-Start-Fenster).
+        # AUDIO-DROP-NOTIZ (Gemini-Review-Fund 2, bewusst akzeptiert): audio_chunk-Events, die feuern
+        # bevor die Connection offen ist (_deepgram_sessions[sid] noch None), werden von
+        # handle_audio_chunk verworfen -> die ersten ~50–200 ms Audio koennen gedroppt werden.
+        # OK: VoIP-Gespraechsanlauf ist i.d.R. Stille/Rauschen, und Detection laeuft ohnehin erst nach
+        # offener Connection -> kein Einwand-Verlust. Keine echte Vorwaerts-Abhaengigkeit (mode :530 +
+        # _keyterms bleiben als Locals im Scope; der Init-Block haengt NICHT an der STT-Connection).
+        _open_deepgram_connection(_sid, mode=mode, keyterms=_keyterms)
+
     @sio.on('stop_live_session')
     def handle_stop_live_session(sid=None):
         from flask import request
@@ -850,6 +868,7 @@ def register_audio_handlers(sio):
             _btn_uid = None
             _btn_oid = None
             _btn_phase = None
+            _btn_cid = None
             with ls._session_state_lock:
                 _btn_sd = ls._session_state.get(_sid) or {}
                 _btn_uid = _btn_sd.get('user_id')
@@ -857,6 +876,8 @@ def register_audio_handlers(sio):
                 _btn_st = _btn_sd.get('state')
                 if _btn_st is not None:
                     _btn_phase = _btn_st.get('current_phase')
+                    # CI-1: durable call_id direkt aus dem gehaltenen _sid-state (reiner Guard).
+                    _btn_cid = ls._durable_call_id(_btn_st.get('call_id'))
                     _btn_iid = ls.get_or_open_moment(
                         _sid, mode=_btn_mode, now=time.monotonic())
             # FUND 3 (TAXO1-07): triggering_text = der Knopf-Typ-Label (typ, z.B. 'zu_teuer';
@@ -879,6 +900,7 @@ def register_audio_handlers(sio):
                 phase=_btn_phase, source='ui_asserted', inference_basis='ui_button',
                 confidence=1.0, speaker_role='kunde', speaker_id='local',
                 user_id=_btn_uid, org_id=_btn_oid, interaction_id=_btn_iid,
+                call_id=_btn_cid,
                 triggering_text=_btn_trig,
             )
         except Exception as _btn_emit_e:

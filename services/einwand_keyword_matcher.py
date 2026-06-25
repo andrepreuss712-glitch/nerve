@@ -282,6 +282,7 @@ class EinwandKeywordMatcher:
                 _kw_uid = None
                 _kw_oid = None
                 _kw_phase = None
+                _kw_cid = None
                 with _ls._session_state_lock:
                     _kw_sd = _ls._session_state.get(sid) or {}
                     _kw_uid = _kw_sd.get('user_id')
@@ -289,6 +290,8 @@ class EinwandKeywordMatcher:
                     _kw_st = _kw_sd.get('state')
                     if _kw_st is not None:
                         _kw_phase = _kw_st.get('current_phase')
+                        # CI-1: durable call_id direkt aus dem gehaltenen state (reiner Guard).
+                        _kw_cid = _ls._durable_call_id(_kw_st.get('call_id'))
                         _kw_iid = _ls.get_or_open_moment(
                             sid, mode=_kw_mode, now=now)
                 # Keyword-Treffer = erkannter konkreter Kunden-Einwand -> echter_einwand
@@ -318,6 +321,7 @@ class EinwandKeywordMatcher:
                     confidence=0.9, speaker_role=_kw_attr['speaker_role'],
                     speaker_id=_kw_attr['speaker_id'],
                     user_id=_kw_uid, org_id=_kw_oid, interaction_id=_kw_iid,
+                    call_id=_kw_cid,
                     triggering_text=_kw_trig,
                 )
                 # ── TAXO2-08 (FOLD A): Vorschlag erfassen (Slot A Keyword/Fast-Lane) ──

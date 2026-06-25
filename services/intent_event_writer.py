@@ -41,7 +41,7 @@ def emit_intent_event(
     confidence=None,
     user_id=None,
     org_id=None,
-    call_id=None,
+    call_id,
     interaction_id=None,
     inference_basis=None,
     abstained=False,
@@ -72,6 +72,19 @@ def emit_intent_event(
         raise ValueError("emit_intent_event: source ist Pflicht")
     if not speaker_role:
         raise ValueError("emit_intent_event: speaker_role ist Pflicht")
+
+    # ── call_id-Backstop (CI-1): Pflicht-Param, aber KEIN raise im Live-Emit-Pfad ──
+    # call_id ist ein Pflicht-Keyword-Param (kein =None-Default mehr) — die 4 Aufrufer
+    # MUESSEN ihn uebergeben. Erreicht er trotzdem None (Rest-Race vor Plan 02 ODER
+    # eine Regression danach), wird NICHT geraist (ein raise braeche Detection/Latenz,
+    # Punkt 25): stattdessen ein LAUTER Alarm + Emit laeuft weiter (call_id NULL). So
+    # bleibt der Vorfall SICHTBAR; der defensive Backstop (Plan 03) faengt ihn downstream.
+    if call_id is None:
+        print(
+            "[CALLID-ALARM] emit_intent_event mit call_id=None — Race/Regression, "
+            f"intent_event wird NULL geschrieben, Slow-Lane markiert 'failed' "
+            f"(session_id={session_id!r} source={source!r} intent_type={intent_type!r})"
+        )
 
     # ── Taxonomie-Validierung (T-TAXO1-10): LLM-Output ist untrusted ────────
     # Entscheidung (Task 1 Test 3): ungueltiger intent_type → ValueError (hartes

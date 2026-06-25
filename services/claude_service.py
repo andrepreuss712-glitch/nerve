@@ -1027,6 +1027,7 @@ def analyse_loop():
                     _med_user_id = None
                     _med_org_id = None
                     _med_phase = None
+                    _med_cid = None
                     with ls._session_state_lock:
                         _med_sd = ls._session_state.get(sid) or {}
                         _med_user_id = _med_sd.get('user_id')
@@ -1034,6 +1035,9 @@ def analyse_loop():
                         _med_st = _med_sd.get('state')
                         if _med_st is not None:
                             _med_phase = _med_st.get('current_phase')
+                            # CI-1: durable call_id DIREKT aus dem schon-gehaltenen state lesen
+                            # (reiner Guard, kein Re-Lock — kein Deadlock auf den plain Lock).
+                            _med_cid = ls._durable_call_id(_med_st.get('call_id'))
                             # IL-2: primary_intent + confidence per-SID VOR dem Trigger
                             _med_st['primary_intent'] = _it
                             _med_st['confidence'] = _med_conf
@@ -1070,6 +1074,7 @@ def analyse_loop():
                             speaker_role=_med_attr['speaker_role'],
                             speaker_id=_med_attr['speaker_id'],
                             user_id=_med_user_id, org_id=_med_org_id,
+                            call_id=_med_cid,
                             interaction_id=_iid, triggering_text=_med_trig,
                         )
                     except Exception as _emit_e:
@@ -1570,6 +1575,7 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
                 _ab_phase = None
                 _ab_uid = None
                 _ab_oid = None
+                _ab_cid = None
                 with ls._session_state_lock:
                     _ab_sd = ls._session_state.get(sid) or {}
                     _ab_uid = _ab_sd.get('user_id')
@@ -1577,6 +1583,8 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
                     _ab_st = _ab_sd.get('state')
                     if _ab_st is not None:
                         _ab_phase = _ab_st.get('current_phase')
+                        # CI-1: durable call_id direkt aus dem gehaltenen state (reiner Guard).
+                        _ab_cid = ls._durable_call_id(_ab_st.get('call_id'))
                         _ab_iid = ls.get_or_open_moment(
                             sid, mode=_ab_mode, now=_time.monotonic())
                 # TAXO1-07 (Task 3, Decision 2): Sprecher-Bug-Fix ueber die Registry.
@@ -1605,6 +1613,7 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
                     speaker_role=_ab_attr['speaker_role'],
                     speaker_id=_ab_attr['speaker_id'],
                     user_id=_ab_uid, org_id=_ab_oid, interaction_id=_ab_iid,
+                    call_id=_ab_cid,
                     triggering_text=_ab_trig,
                 )
             except Exception as _ab_e:
