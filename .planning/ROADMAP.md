@@ -2148,11 +2148,11 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 
 **Depends on:** 08.23.2.TAXO1 (intent_event-Schema + Slow Lane, erfüllt). **Blocker für:** TAXO2-Plan-03-Deploy + TAXO2-Plan-04 (beide gated bis diese Phase live).
 **Komplexität:** 🔴 — DSGVO/RLS/Schema-Migration + Daemon-GUC-Mechanik. **Cross-AI Pflicht (Gemini-3-Sichten) + Real-Daten-Validation Pflicht.** create_all-Falle: Migration VOR Restart. KEIN Local-Dev.
-**Plans:** 3 Plans / 3 Wellen (geplant 2026-06-25, NUR planen — kein Execute, kein Deploy diese Runde). Cross-AI Gemini PFLICHT vor Execute (🔴).
-- [ ] 08.23.2.TENANT-FOUND-01-anlage-tenant-backfill-PLAN.md — W1: resolve_tenant_uuid_for_user-Helper (db.py) + create_call_for_sid setzt tenant_id + idempotente Backfill-Migration 0023 (TF-1)
-- [ ] 08.23.2.TENANT-FOUND-02-rls-schloss-kinder-PLAN.md — W2: abstain_log RLS+NOT NULL in 0022 gefaltet + rubric_score NOT NULL (0024) + suggestion_reactions NOT NULL + fail-closed-Flush-Skip + Schilder (TF-2)
-- [ ] 08.23.2.TENANT-FOUND-03-daemon-guc-m4-PLAN.md — W3: Slow-Lane-Daemon set_current_tenant-Klammer (M-4 Variante A) + M-4-Negativ/Positiv-Test (abstain_log) + Slow-Lane-Integration-Test (TF-3)
-**Reihenfolge danach:** Plan → Claudian Pre-Execute-Audit + Gemini-3-Sichten → Execute (beaufsichtigter Deploy) → DANN TAXO2-Plan-03-Deploy + Test-Anruf → DANN Plan 04.
+**Plans:** 3 Plans / 3 Wellen — **CODE-COMPLETE + gepusht 2026-06-25 (NICHT deployed, NICHT server-seitig verifiziert).** Cross-AI Gemini (3-Sichten) + Claudian-Pre-Execute-Audit GRÜN (head==0021 prod-verifiziert).
+- [x] 08.23.2.TENANT-FOUND-01-anlage-tenant-backfill-PLAN.md — W1: resolve_tenant_uuid_for_user-Helper (db.py) + create_call_for_sid setzt tenant_id + idempotente Backfill-Migration 0023 + auth.py single-source Refactor (TF-1) — commits 4b603a6/609277a/4193ffa/7cf7551, SUMMARY 01
+- [x] 08.23.2.TENANT-FOUND-02-rls-schloss-kinder-PLAN.md — W2: abstain_log RLS+NOT NULL in 0022 gefaltet + rubric_score NOT NULL (0024) + suggestion_reactions NOT NULL + fail-closed-Flush-Skip + Schilder (TF-2) — commits 0e02e51/462bb59/32b3513, SUMMARY 02
+- [x] 08.23.2.TENANT-FOUND-03-daemon-guc-m4-PLAN.md — W3: Slow-Lane-Daemon A1-set_current_tenant-Klammer (M-4 Variante A1 GELOCKT) + M-4-Negativ/Positiv-Test (abstain_log) + Slow-Lane-Integration-Test (TF-3) — commits ee4eb0f/eba0810/9c70466, SUMMARY 03
+**NÄCHSTER SCHRITT (André/Claudian — beaufsichtigter Deploy, NICHT auto):** head==0021 unmittelbar re-checken → Migrationen 0022(editiert)→0023→0024 als postgres VOR dem Gunicorn-Restart → `bash deploy.sh production` (Pytest-Gate server-seitig = Acceptance) → Backfill-Runbook (SUMMARY 01: count NULL==0 + 3-4-Zeilen-Stichprobe) → Test-Anruf (abstain_log-Row mit tenant_id) → VALIDATION V-TF-1..8 auf ✅ green flippen. **Dieser Deploy aktiviert W2+W3 ZUSAMMEN + den wartenden TAXO2-Plan-03 (gewollt).** DANN Plan 04.
 **Multi-Segment-Gotcha:** Pfade hardcoden (`.planning/phases/08.23.2.TENANT-FOUND-mandanten-kennung-fundament-rls-schloss/`), gsd-tools/gsd-sdk/gsd-code-review/gsd-verifier umgehen, ROADMAP/STATE hand-editieren.
 
 ### Phase 08.23.2.TAXO2: Bewerten — EINE Noten-Engine (NEU 2026-06-10) 🔴
