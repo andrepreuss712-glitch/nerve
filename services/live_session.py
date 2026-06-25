@@ -563,8 +563,16 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
     _db_mode = call_mode if call_mode in _allowed_modes else 'cold_call'
     _db = _SL()
     try:
+        # TENANT-FOUND Plan 01 Task 2: Tenant aus user_id aufloesen (Deepgram-Callback-Thread,
+        # KEIN Request-Kontext, kein g.tenant_id). calls hat KEINE RLS (RESEARCH §3) -> dieser
+        # INSERT braucht KEINEN set_current_tenant/GUC, nur den aufgeloesten Wert. Latenz (Punkt 25):
+        # 1x indizierter Join bei Call-Anlage, NICHT im Live-Antwort-Pfad. None bei Edge -> tenant_id
+        # NULL geschrieben, Call-Anlage bricht NICHT (Live-Schutz, fail-soft).
+        from database.db import resolve_tenant_uuid_for_user
+        _tid = resolve_tenant_uuid_for_user(user_id, _db)
         call = Call(
             user_id=user_id,
+            tenant_id=_tid,
             call_mode=_db_mode,
             started_at=datetime.now(_tz.utc),
             transcript_storage='none',
