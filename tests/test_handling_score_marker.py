@@ -123,7 +123,12 @@ def test_persist_scored_sets_score_and_status(monkeypatch):
 def test_persist_abstain_writes_abstain_log(monkeypatch):
     _patch_helpers(monkeypatch, next_utt="Das Wetter ist heute schoen.")
     monkeypatch.setattr(sl, 'grade_handling', lambda ev, utt, triggering_text=None: None)
-    ev = _make_event()
+    # CI-4-Backstop: der Abstain-Pfad schreibt abstain_log NUR wenn der Tenant aufloesbar ist
+    # (sonst terminal 'failed', kein fail-closed-INSERT — das prueft test_slowlane_callid_defensive).
+    # Hier wird der NORMALE Abstain-Fall geprueft: gueltige call_id + aufloesbarer Tenant.
+    _tenant = str(uuid.uuid4())
+    monkeypatch.setattr(sl, '_tenant_id_for', lambda ev, db: _tenant)
+    ev = _make_event(call_id=str(uuid.uuid4()))
     db = _db_returning(ev)
 
     sl._persist_event_ref({'event_id': 4711}, db)
@@ -139,6 +144,8 @@ def test_persist_abstain_writes_abstain_log(monkeypatch):
     assert logged.interaction_id == ev.interaction_id
     assert logged.next_advisor_sentence == "Das Wetter ist heute schoen."
     assert logged.intent_type == ev.intent_type
+    # CI-4: der vom Backstop aufgeloeste Tenant landet auf der abstain_log-Zeile (kein NULL-tenant).
+    assert str(logged.tenant_id) == _tenant
 
 
 def test_persist_poison_pill_sets_failed_no_log(monkeypatch):

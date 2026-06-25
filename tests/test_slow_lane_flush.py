@@ -32,9 +32,22 @@ def _fresh_slow_lane(monkeypatch):
 def test_graceful_shutdown_flushes_queue_to_db(monkeypatch):
     sl = _fresh_slow_lane(monkeypatch)
 
-    # get_session() durch eine Mock-Session ersetzen -> kein echter DB-Zugriff.
-    mock_session = MagicMock()
-    monkeypatch.setattr(sl, 'get_session', lambda: mock_session)
+    # CI-5 (08.23.2.CALLID Plan 03): flush_to_db ist jetzt A1-geklammert — PRO ITEM eine separate
+    # Read-Session (GUC-freier Tenant-Lookup) + eine Schreib-Session unter gesetztem Tenant-GUC
+    # (symmetrisch zum Consumer-Loop). get_session() liefert daher pro Aufruf eine FRISCHE
+    # Mock-Session; wir sammeln sie, um den Per-Item-Read+Write-Pfad zu pruefen. Kein echter DB-Zugriff.
+    sessions = []
+
+    def _fresh_session():
+        s = MagicMock()
+        sessions.append(s)
+        return s
+    monkeypatch.setattr(sl, 'get_session', _fresh_session)
+
+    # Tenant aufloesbar machen -> der Flush nimmt den echten A1-Pfad (set_current_tenant gesetzt),
+    # statt den GUC zu ueberspringen. _persist_event_ref ueberspringt die Benotung (Event-Stub
+    # handling_status != 'pending') -> dieser Test prueft die Flush-/Drain-Mechanik, nicht das Scoring.
+    monkeypatch.setattr(sl, '_tenant_id_for_item', lambda item, db: 'tenant-uuid-stub')
 
     # Ein offenes Arbeits-Item (leichter event_id-Verweis) in die Queue legen.
     sl.slow_lane.put({'event_id': 4711})
@@ -42,12 +55,17 @@ def test_graceful_shutdown_flushes_queue_to_db(monkeypatch):
     # Simulierter Shutdown-Flush.
     n = sl.flush_to_db()
 
-    # Integration-Assertion: genau 1 Item wurde gedrained ...
+    # Integration-Assertion (unveraendert): genau 1 Item wurde gedrained ...
     assert n == 1
     # ... und die Queue ist danach leer (kein Rest-Item).
     assert sl.slow_lane.drain() == []
-    # Session wurde sauber geschlossen (try-finally close, CLAUDE.md Database Patterns).
-    mock_session.close.assert_called_once()
+    # A1-Klammer: pro Item eine Read- + eine Schreib-Session (2 get_session-Aufrufe), beide sauber
+    # geschlossen (try-finally close, CLAUDE.md Database Patterns).
+    assert len(sessions) == 2
+    for s in sessions:
+        s.close.assert_called_once()
+    # Die Schreib-Session (zweite) committet den per-Item-Flush.
+    sessions[1].commit.assert_called_once()
 
 
 def test_sentinel_stops_consumer(monkeypatch):
