@@ -2155,6 +2155,25 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 **NÄCHSTER SCHRITT (André/Claudian — beaufsichtigter Deploy, NICHT auto):** head==0021 unmittelbar re-checken → Migrationen 0022(editiert)→0023→0024 als postgres VOR dem Gunicorn-Restart → `bash deploy.sh production` (Pytest-Gate server-seitig = Acceptance) → Backfill-Runbook (SUMMARY 01: count NULL==0 + 3-4-Zeilen-Stichprobe) → Test-Anruf (abstain_log-Row mit tenant_id) → VALIDATION V-TF-1..8 auf ✅ green flippen. **Dieser Deploy aktiviert W2+W3 ZUSAMMEN + den wartenden TAXO2-Plan-03 (gewollt).** DANN Plan 04.
 **Multi-Segment-Gotcha:** Pfade hardcoden (`.planning/phases/08.23.2.TENANT-FOUND-mandanten-kennung-fundament-rls-schloss/`), gsd-tools/gsd-sdk/gsd-code-review/gsd-verifier umgehen, ROADMAP/STATE hand-editieren.
 
+### Phase 08.23.2.CALLID: intent_event.call_id durchreichen + Integrität (INSERTED 2026-06-25) 🔴
+
+**Eingefügt nach 08.23.2.TENANT-FOUND, VOR 08.23.2.TAXO3 — PFLICHT VOR TAXO2-Plan-04.** Roadmap-Sync (Vault-Roadmap trägt den Eintrag schon). Fundament-Bug von Claudian am Code + Prod-DB verifiziert + Gemini-Cross-AI bestätigt (3× BLOCK, 2026-06-25).
+
+**Fundament-Bug (verifiziert):** `emit_intent_event(...)` HAT den Parameter `call_id=None` und schreibt ihn (intent_event_writer.py:44/122), ABER alle 4 Aufrufer übergeben ihn NICHT (claude_service.py:1065 + :1599, deepgram_service.py:877, einwand_keyword_matcher.py:315) → ALLE intent_event-Zeilen prod (54/54, 18.–24.06.) haben `call_id=NULL`. Live-Schaden NACH TENANT-FOUND-Deploy: Slow-Lane kann ohne call_id keinen Tenant auflösen → abstain_log-INSERT (FORCE RLS, NOT NULL) abgewiesen → Event 'pending' → H-3 endlos → 154 RLS-Fehler/90s (54 manuell auf 'failed' gestoppt, einmalig, nicht geheilt). `call_id` IST verfügbar: `create_call_for_sid` legt sie im per-SID-Zustand ab (live_session.py `state['call_id']`); die 4 Aufrufer haben die sid.
+
+**Depends on:** 08.23.2.TENANT-FOUND (Tenant-Auflösung über calls.tenant_id; CALLID liefert die call_id-Naht, ohne die die Slow-Lane fail-closed nichts schreibt). **Blocker für:** TAXO2-Plan-04 (rubric_score-Daemon-Write — braucht funktionierende call_id→tenant-Auflösung im Daemon).
+**Komplexität:** 🔴 — Live-Emit-Pfad + Schema-Migration (NOT NULL) + Race-am-Call-Start + Daemon-Integrität. **Cross-AI Pflicht (Gemini-3-Sichten) + Real-Daten-Validation Pflicht.** create_all-Falle: Migration VOR Restart. KEIN Local-Dev.
+**Scope (Gemini-geschärft — PLANEN, NICHT bauen diese Runde):**
+- **CI-1:** `call_id` PFLICHT-Param in `emit_intent_event` (Default `=None` ENTFERNEN) + gemeinsamer Helfer `resolve_call_id_for_sid(sid)` (aus per-SID-Zustand); die 4 Aufrufer geben `call_id` EXPLIZIT durch (kein verstecktes State-Koppeln in emit — Gemini).
+- **CI-2:** Race-Fenster Call-Start schließen: garantieren, dass `create_call_for_sid` abgeschlossen ist, BEVOR Erkennung/emit für die sid anläuft (sonst emit-vor-Call → call_id None → stiller Verlust). Start-Reihenfolge im Plan prüfen.
+- **CI-3:** `intent_event.call_id` → NOT NULL (DB-Wächter) — NACH Fix + Bereinigung bestehender NULL-Zeilen (die 54 sind 'failed'; NOT-NULL-Migration muss sie handhaben, nicht dran scheitern).
+- **CI-4:** Defensiv: Slow-Lane „call_id/Tenant nicht ermittelbar → `handling_status='failed'`" statt Endlos-Re-Queue, MIT lautem Log/Alarm (ein 'failed' NACH dem Fix = Regression/Race). + `flush_to_db` (services/slow_lane.py:340, zweiter ungesicherter Schreibpfad) kriegt dieselbe A1-`set_current_tenant`-Klammer wie der Consumer-Loop (:403).
+- **CI-5:** Tests gegen die ECHTEN Fälle: Moment MIT call_id (scored/abstained, abstain_log schreibt) / OHNE call_id (failed, kein Loop, kein abstain_log).
+**Grau-Zonen (für Discuss/Plan):** (a) warum feuern emits ohne call_id (nur Race am Call-Start, oder ein Pfad ohne Call?); (b) ob die 54 'failed' bereinigt/gelöscht werden (nicht rekonstruierbar — Pre-Launch-Testdaten); (c) Race-Fix-Mechanik (Reihenfolge-Garantie vs. defensiv).
+**Plans:** TBD — diese Runde NUR planen (discuss/research + plan), KEIN Execute, KEIN Deploy. Cross-AI Gemini PFLICHT vor Execute (🔴).
+**Reihenfolge danach:** Plan → Claudian Pre-Execute-Audit + Gemini-3-Sichten → Execute (beaufsichtigter Deploy) → DANN TAXO2-Plan-04.
+**Multi-Segment-Gotcha:** Pfade hardcoden (`.planning/phases/08.23.2.CALLID-intent-event-call-id-durchreichen-integritaet/`), gsd-tools/gsd-sdk/gsd-code-review/gsd-verifier umgehen, ROADMAP/STATE hand-editieren.
+
 ### Phase 08.23.2.TAXO2: Bewerten — EINE Noten-Engine (NEU 2026-06-10) 🔴
 
 **Goal:** EINE rubrik-basierte Noten-Engine (BARS) ersetzt die ZWEI driftenden Alt-Systeme (Live-Formel `app_routes.py:735` + Training-7-Kategorien `training_service.py:1122`). Tötet den Redeanteil-0%-Bug an der Wurzel.
