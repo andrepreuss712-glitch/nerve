@@ -17,9 +17,10 @@ calls -> intent_event (call_id CASCADE, I-2) -> abstain_log. Ein geloeschter Cal
 0 Waisen-Zeilen (next_advisor_sentence = potenzieller Wortlaut). Berater-EIGENE Stimme; bei
 moeglichem Kunden-PII anonymisiert der Aufrufer (services/anonymization.py).
 
-KEINE RLS auf dieser Tabelle (Plan-Scope: nur Listen-/Status-Felder + Wortlaut; tenant_id ist
-Filter-Spalte, keine RLS-Wall — bewusst minimal, kein Over-Engineering). tenant_id ohne FK
-(tenant_orgs-Aktivierung erst Phase F).
+FORCE RLS + tenant_isolation (D-11, konsistent mit rubric_score/suggestion_reactions,
+TENANT-FOUND Plan 02); tenant_id NOT NULL. Die Tabelle startet leer (head=0021, prod noch nicht
+deployt) -> SET NOT NULL + RLS-FALTUNG ohne Backfill, kein Migration-on-Migration. tenant_id
+ohne FK (tenant_orgs-FK-Aktivierung erst Phase F).
 
 DEPLOY-REIHENFOLGE (DEPLOY-CREATE-ALL-Lehre 18.06 / 0020): diese Migration MUSS VOR dem
 Gunicorn-Restart laufen (deploy.sh fuehrt Migration server-seitig vor dem Restart aus). Sonst
@@ -50,7 +51,7 @@ def upgrade() -> None:
         sa.Column('interaction_id', postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column('next_advisor_sentence', sa.Text(), nullable=True),
         sa.Column('intent_type', sa.String(length=64), nullable=True),
-        sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=True),
     )
 
@@ -61,15 +62,28 @@ def upgrade() -> None:
     # Owner umlegen (Migration laeuft als postgres, nerve_app hat kein CREATE auf public).
     op.execute("ALTER TABLE public.abstain_log OWNER TO nerve_app")
 
+    # RLS (D-11, TENANT-FOUND Plan 02): ENABLE + FORCE + tenant_isolation (nullif-fail-closed,
+    # 0020:91-98-Muster verbatim). FORCE greift auch fuer den Owner nerve_app -> kein Bypass.
+    # Konsistent mit rubric_score/suggestion_reactions. M-4-Daemon-GUC-Fix = Plan 03 (slow_lane A1).
+    op.execute("ALTER TABLE public.abstain_log ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE public.abstain_log FORCE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY tenant_isolation ON public.abstain_log
+          USING (tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid)
+          WITH CHECK (tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid)
+    """)
+
     # Schilder (Punkt 23) — Single-Source = models.py comment=. Einfache Quotes verdoppelt.
     op.execute("COMMENT ON TABLE public.abstain_log IS 'Goodhart-/Bias-Schutz-Log (D-07 Rider 3): jede handling_score-Abstention mit nachfolgendem Berater-Satz + interaction_id. Harter FK event_id ON DELETE CASCADE (F-08, DSGVO-clean). Goldstaub fuer Post-Call-LLM-Nachbewertung (Flywheel). Status: lebt (neu, TAXO2). Schreibt services/slow_lane.py; liest Active-Learning (Post-Launch).'")
     op.execute("COMMENT ON COLUMN public.abstain_log.event_id IS 'HARTER FK -> intent_event.event_id ON DELETE CASCADE (F-08/DD-01). Schliesst die DSGVO-Loesch-Kette calls->intent_event->abstain_log: geloeschter Call raeumt die Wortlaut-Zeile mit. event_id = BigInteger (intent_event-PK ist BIGSERIAL, KEIN UUID — Plan-Abweichung dokumentiert).'")
     op.execute("COMMENT ON COLUMN public.abstain_log.interaction_id IS 'Moment-Klammer (Korrelation zu intent_event.interaction_id, TAXO1). Bindet die Abstention an den Kundenmoment fuer die Post-Call-Nachbewertung. KEIN FK (interaction_id ist kein PK).'")
     op.execute("COMMENT ON COLUMN public.abstain_log.next_advisor_sentence IS 'Die nachfolgende Berater-Aussage zum abgewinkten Einwand (D-07 Rider 3, Goodhart-Beleg). Berater-EIGENE Stimme; bei moeglichem Kunden-PII anonymisiert (services/anonymization.py). DSGVO: Cascade-clean via event_id-FK.'")
     op.execute("COMMENT ON COLUMN public.abstain_log.intent_type IS 'Einwand-Typ-Kontext der Abstention (Korrelation/Auswertung welche Intents oft abgewinkt werden).'")
-    op.execute("COMMENT ON COLUMN public.abstain_log.tenant_id IS 'Mandanten-Abschottung (abgeleitet aus calls.tenant_id). Per-Tenant-Filter der Nachbewertung.'")
+    op.execute("COMMENT ON COLUMN public.abstain_log.tenant_id IS 'Mandanten-Abschottung (FORCE RLS tenant_isolation, NOT NULL; abgeleitet aus calls.tenant_id via Daemon-GUC Plan 03). Per-Tenant-Wall der Nachbewertung.'")
 
 
 def downgrade() -> None:
-    # Reversibel: Tabelle startet leer -> kein Datenverlust. Indizes + FK fallen mit der Tabelle.
+    # Reversibel: Tabelle startet leer -> kein Datenverlust. Policy explizit zuerst (0020:120-Muster),
+    # Indizes + FK fallen mit der Tabelle.
+    op.execute("DROP POLICY IF EXISTS tenant_isolation ON public.abstain_log")
     op.drop_table('abstain_log')

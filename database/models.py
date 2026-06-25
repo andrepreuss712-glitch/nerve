@@ -801,7 +801,7 @@ class AbstainLog(Base):
     interaction_id        = Column(UUID_TYPE, index=True, nullable=True, comment="Moment-Klammer (Korrelation zu intent_event.interaction_id, TAXO1). Bindet die Abstention an den Kundenmoment fuer die Post-Call-Nachbewertung. KEIN FK (interaction_id ist kein PK).")
     next_advisor_sentence = Column(Text, nullable=True, comment="Die nachfolgende Berater-Aussage zum abgewinkten Einwand (D-07 Rider 3, Goodhart-Beleg). Berater-EIGENE Stimme; bei moeglichem Kunden-PII anonymisiert (services/anonymization.py). DSGVO: Cascade-clean via event_id-FK.")
     intent_type           = Column(String(64), nullable=True, comment="Einwand-Typ-Kontext der Abstention (Korrelation/Auswertung welche Intents oft abgewinkt werden).")
-    tenant_id             = Column(UUID_TYPE, index=True, nullable=True, comment="Mandanten-Abschottung (abgeleitet aus calls.tenant_id). Per-Tenant-Filter der Nachbewertung.")
+    tenant_id             = Column(UUID_TYPE, index=True, nullable=False, comment="Mandanten-Abschottung (FORCE RLS tenant_isolation, NOT NULL; abgeleitet aus calls.tenant_id via Daemon-GUC Plan 03). Per-Tenant-Wall der Nachbewertung.")
     created_at            = Column(DateTime, default=utcnow)
     __table_args__ = (
         {'comment': "Goodhart-/Bias-Schutz-Log (D-07 Rider 3): jede handling_score-Abstention mit nachfolgendem Berater-Satz + interaction_id. Harter FK event_id ON DELETE CASCADE (F-08, DSGVO-clean). Goldstaub fuer Post-Call-LLM-Nachbewertung (Flywheel). Status: lebt (neu, TAXO2). Schreibt services/slow_lane.py; liest Active-Learning (Post-Launch)."},
