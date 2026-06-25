@@ -111,15 +111,15 @@ def _login_user(db, user):
     # Phase 08.23.2.G-MEET Wave 2 (D-11): resolve the tenant UUID ONCE at login (avoids a
     # per-request tenant_orgs bridge reload). Stored in the session as a string UUID alongside
     # org_id; before_request publishes it into the RLS contextvar each request.
-    tenant_id_str = None
+    # TENANT-FOUND Plan 01 Task 4 (Single Source of Truth, Punkt 22 / Cross-AI LOW #3):
+    # zentrale user->org->tenant_orgs-Aufloesung statt der frueheren Inline-Query.
+    # Genau EINE Quelle (db.resolve_tenant_uuid_for_user) fuer Login + create_call_for_sid
+    # + Backfill -> kein Drift. fail-soft: None laesst RLS fail-closed (0 crm rows), Login geht durch.
+    from database.db import resolve_tenant_uuid_for_user
     try:
-        from database.models import TenantOrg as _TenantOrg
-        _to = db.query(_TenantOrg).filter_by(legacy_org_id=user_org_id).first()
-        if _to is not None:
-            tenant_id_str = str(_to.id)
+        tenant_id_str = resolve_tenant_uuid_for_user(user_id, db)
     except Exception as _te:
-        # Non-fatal: a missing tenant_orgs row leaves tenant_id unset -> RLS fails closed
-        # (0 crm rows) rather than leaking. Login still succeeds.
+        tenant_id_str = None
         print(f"[AUTH] tenant_id resolve failed (non-fatal): {_te}")
 
     session.clear()      # H-17: Session-Fixation-Praevention — neue Session-ID vor Key-Writes
