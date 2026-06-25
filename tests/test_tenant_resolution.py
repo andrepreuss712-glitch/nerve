@@ -61,3 +61,51 @@ def test_resolve_tenant_uuid_for_user_positive_and_negative(db_session):
             "Nicht-aufloesbarer user_id MUSS None liefern (fail-closed, kein Default).")
     finally:
         cleanup_rows(db_session, {"public.users": [uid] if uid else []})
+
+
+# ── Task 3: Backfill-Idempotenz (0023 UPDATE-Body 2x) ────────────────────────
+
+# Exakt der upgrade()-Body aus alembic/versions/0023_backfill_calls_tenant_id.py, auf die
+# Test-Call-Row gescoped (AND c.id = :cid) — testet die WHERE-tenant_id-IS-NULL-Idempotenz
+# ohne fremde Baseline-NULL-Calls in nerve_test anzufassen.
+_BACKFILL_SCOPED = text("""
+    UPDATE calls c
+    SET tenant_id = t.id
+    FROM users u JOIN tenant_orgs t ON t.legacy_org_id = u.org_id
+    WHERE c.user_id = u.id AND c.tenant_id IS NULL AND c.id = :cid
+""")
+
+
+def test_backfill_calls_tenant_id_idempotent(db_session):
+    """0023-Backfill: Lauf 1 setzt den Tenant einer NULL-Call-Row (== erwarteter Tenant),
+    Lauf 2 trifft 0 Rows (idempotent, WHERE tenant_id IS NULL). Echte Row-Assertion."""
+    from database.models import Call
+    tenant = conftest.TEST_TENANT_UUID
+    assert tenant, "Fixture muss TEST_TENANT_UUID geseedet haben"
+    uid = None
+    cid = str(uuid.uuid4())
+    try:
+        uid = _make_user_in_tenant(db_session, tenant)
+        # Call-Row OHNE tenant_id (der vor-Backfill-Zustand: Anlage setzte tenant_id nie).
+        db_session.add(Call(
+            id=cid, user_id=uid, tenant_id=None,
+            call_mode='cold_call', started_at=datetime.now(timezone.utc),
+            transcript_storage='none'))
+        db_session.commit()
+
+        # ── Lauf 1: setzt den Tenant ──
+        r1 = db_session.execute(_BACKFILL_SCOPED, {"cid": cid})
+        db_session.commit()
+        assert r1.rowcount == 1, f"Lauf 1 muss genau die NULL-Row treffen, war rowcount={r1.rowcount}"
+        got = db_session.query(Call.tenant_id).filter(Call.id == cid).first()
+        assert got is not None and str(got[0]) == str(tenant), (
+            f"Backfill muss den korrekten Tenant setzen, war {got!r} (erwartet {tenant!r})")
+
+        # ── Lauf 2: idempotent -> 0 Rows (tenant_id ist nicht mehr NULL) ──
+        r2 = db_session.execute(_BACKFILL_SCOPED, {"cid": cid})
+        db_session.commit()
+        assert r2.rowcount == 0, f"Lauf 2 muss idempotent 0 Rows treffen, war rowcount={r2.rowcount}"
+        still = db_session.query(Call.tenant_id).filter(Call.id == cid).first()
+        assert str(still[0]) == str(tenant), "Tenant unveraendert nach Lauf 2 (kein Doppel-Schreiben)"
+    finally:
+        cleanup_rows(db_session, {"public.calls": [cid], "public.users": [uid] if uid else []})
