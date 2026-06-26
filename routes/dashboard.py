@@ -913,10 +913,39 @@ def session_detail(sid):
             _pp_raw = []
         painpoints = _dedupe_painpoints(_pp_raw)
 
+        # ── TAXO2-Plan 04 (FOLD 26.06.) — "Neu — Vorschau"-Panel (ADDITIV, read-only) ──────────
+        # Die zum Call gehoerende live-rubric_score-Zeile lesen (NEUE Note, Option B: NICHT
+        # calls.coaching_score) + outcome_confirmed (ANZEIGE-Sperre: Note erst zeigen, wenn
+        # calls.outcome bestaetigt). Reines Display-Gate via call_id-Join — KEIN Merge-Gate;
+        # outcome wird NICHT in rubric_score dupliziert. Das alte Score-Hero (_calc_call_score,
+        # oben) bleibt UNANGETASTET (Re-Scope — Umstellen = SCORE-UI). rubric_score hat FORCE RLS;
+        # der Request-Pfad-GUC (g.tenant_id -> after_begin) erlaubt das Lesen der eigenen Zeile.
+        rubric_preview = None
+        outcome_confirmed = False
+        try:
+            from database.models import Call as _Call, RubricScore as _RubricScore
+            _call_row = (db.query(_Call)
+                           .filter(_Call.conversation_log_id == sid,
+                                   _Call.user_id == g.user.id)
+                           .order_by(_Call.started_at.desc())
+                           .first())
+            if _call_row is not None:
+                outcome_confirmed = (_call_row.outcome is not None)
+                rubric_preview = (db.query(_RubricScore)
+                                    .filter(_RubricScore.call_id == _call_row.id,
+                                            _RubricScore.origin == 'live')
+                                    .first())
+        except Exception as _e_preview:
+            # Vorschau-Panel ist nice-to-have — ein Fehler darf session_detail NIE brechen.
+            print(f'[TAXO2-04] rubric_preview Lese-Fehler (non-fatal) sid={sid}: {_e_preview}')
+            rubric_preview = None
+
         return render_template(
             'session_detail.html',
             conv=conv,
             events=events,
+            rubric_preview=rubric_preview,        # TAXO2-04: live-rubric_score-Zeile (neue Note)
+            outcome_confirmed=outcome_confirmed,  # TAXO2-04: ANZEIGE-Sperre (calls.outcome IS NOT NULL)
             pt=pt,
             trend_avg=trend_avg,
             chart_data_json=chart_data_json,

@@ -116,6 +116,76 @@
     </div>
   </section>
 
+  {# ── Section 2b: "Neu — Vorschau" (TAXO2-04, read-only, bewusst roh/ungestylt) ──────────
+     Zweck: die neue rubrik-basierte Note (Quelle = rubric_preview = rubric_score-Zeile,
+     NICHT calls.coaching_score — Option B) EINMAL end-to-end verifizieren, NEBEN der alten
+     Anzeige (oben, unveraendert). KEIN Display-Cutover (das ist SCORE-UI). Edge-Reihenfolge
+     (FOLD 23.06./26.06.): (0) ANZEIGE-Sperre outcome -> (a) failed -> (b) not_gradable ->
+     (c) coaching_score NULL -> (d) row-absent -> (e) Score + Dimensionen. Kein hardcoded Hex
+     (nur .n-*-Klassen + CSS-Variablen, CLAUDE.md). #}
+  {% if conv.typ == 'live' %}
+  <section class="n-session-detail-card" aria-label="Neu — Vorschau (Beta)">
+    <h2 class="n-session-detail-card-title">
+      🧪 Neu — Vorschau <span class="n-badge n-badge-neutral">Beta</span>
+    </h2>
+    <p class="n-label">Neues Scoring — weicht bewusst von der alten Zahl oben ab. Read-only, nur zur Verifikation.</p>
+    {% if not outcome_confirmed %}
+      {# (0) ANZEIGE-Sperre: Note erst NACH Outcome-Bestaetigung (André 'nachdem'-Wunsch). #}
+      <p>Ergebnis bestätigen, dann erscheint die Note.</p>
+    {% elif rubric_preview and rubric_preview.status == 'failed' %}
+      {# (a) Dead-Letter #}
+      <p>Berechnung fehlgeschlagen (Admin benachrichtigt).</p>
+    {% elif rubric_preview and rubric_preview.status == 'not_gradable' %}
+      {# (b) Audio-Gate D-09 #}
+      <p>
+        {% set _reason = (rubric_preview.payload_jsonb or {}).get('reason') %}
+        {% if _reason == 'too_few_high_confidence_events' %}
+          Zu wenig auswertbare Momente.
+        {% else %}
+          Audio zu schlecht zum Bewerten.
+        {% endif %}
+      </p>
+    {% elif rubric_preview and rubric_preview.coaching_score is none %}
+      {# (c) <50% messbares Gewicht (Proration) -> kein Gesamtscore. #}
+      <p>Nicht genug Daten für eine Gesamtnote.</p>
+    {% elif not rubric_preview %}
+      {# (d) row-absent: async-Merge noch nicht durch. #}
+      <p>Score wird im Hintergrund berechnet …</p>
+    {% else %}
+      {# (e) Score + 7 Dimensionen + "nicht messbar weil…"-Gründe. #}
+      <div class="n-session-detail-score">{{ rubric_preview.coaching_score | round(1) }}</div>
+      {% if rubric_preview.is_provisional %}
+        <p class="n-label">Vorläufig — {{ (rubric_preview.measured_weight_pct * 100) | round(0, 'floor') if rubric_preview.measured_weight_pct is not none else 0 }}% des Gewichts messbar.</p>
+      {% endif %}
+      {% if rubric_preview.dimensions %}
+        <table>
+          <thead>
+            <tr><th>Dimension</th><th>Wert</th><th>Gewicht</th><th>messbar?</th></tr>
+          </thead>
+          <tbody>
+            {% for d in rubric_preview.dimensions %}
+              <tr>
+                <td>{{ d.get('label') or d.get('dim') }}</td>
+                <td>{{ d.get('score') if d.get('score') is not none else '–' }}</td>
+                <td>{{ (d.get('weight') * 100) | round(0, 'floor') if d.get('weight') is not none else '–' }}%</td>
+                <td>{{ 'ja' if d.get('available') else 'nein' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+      {% if rubric_preview.unmeasured_dimensions %}
+        <p class="n-label">Nicht messbar:</p>
+        <ul>
+          {% for u in rubric_preview.unmeasured_dimensions %}
+            <li>{{ u.get('dim') }} — {{ u.get('reason') }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+  </section>
+  {% endif %}
+
   {# ── Section 3: Chart (kb_verlauf oder stimmung_history) ──────── #}
   <section class="n-session-detail-card">
     <h2 class="n-session-detail-card-title">
