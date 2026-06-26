@@ -737,6 +737,12 @@ Quelle: `Nerve-Vault/04 Entscheidungen/NERVE TAXO-Gerüst (verriegelt).md` §0.2
 
 **Workflow-Pflicht (Anti-Abrieb):** Wer einen Code-Pfad ändert, der eine Tabelle/Spalte liest/schreibt, oder eine neue Tabelle/Spalte anlegt, **zieht das Schild in DERSELBEN Änderung nach** (`comment=` in models.py + COMMENT-Migration).
 
+**Schild-AKTUALITÄTS-Pflicht (André 2026-06-25, kanonisch):** Ein Schild, das **nicht aktuell** ist ODER **nicht alle relevanten Leser/Schreiber abdeckt**, ist **NUTZLOS** — schlimmer als kein Schild, weil es eine falsche Wahrheit vortäuscht (jemand liest „Schreibt X" und vertraut darauf, obwohl längst auch Y schreibt). Der SCHILD-Guard (`test_schild_guard.py`) erzwingt nur **Vorhandensein + Länge ≥10**, **NICHT Aktualität** — er kann ein veraltetes/unvollständiges Schild nicht fangen. Daher:
+
+- **Pflicht:** Wer den **Lese-/Schreib-Pfad** einer Tabelle ändert — neuer Schreiber, geänderter Mechanismus (z.B. separates Objekt → In-Place-Update), neue Konsum-Stelle — zieht das Tabellen-/Spalten-Schild (Zweck/Business-Logik + Status + Schreibt/liest-Liste, §0.2 Punkt 2) im **SELBEN Commit** nach. Das ist die Aktualitäts-Hälfte der Anti-Abrieb-Regel: nicht nur „ein Schild existiert", sondern „das Schild **stimmt noch**".
+- **Vollständigkeit:** die `Schreibt <datei.py>; liest <datei.py>`-Liste muss **ALLE** aktiven Produktiv-Pfade nennen (grep-belegt, wie Punkt 22) — ein vergessener zweiter Schreiber macht das Schild irreführend.
+- **Kontroll-Mechanismus:** Pre-Execute-Audit (Punkt 19) + Code-Review prüfen bei **daten-anfassenden Phasen** explizit die **Schild-Aktualität** (deckt der Schild-Text die im Plan geänderten/neuen Leser/Schreiber + den Mechanismus ab?). Diskrepanz = Schild nachziehen, BEVOR die Phase als fertig gilt.
+
 **Guard (Deploy-Block):** `tests/test_schild_guard.py` prüft server-side gegen Postgres über `pg_description` aller 3 Schemas (public/crm/training), dass jede Tabelle + nicht-triviale Spalte ein Schild ≥10 Zeichen hat. Läuft als OS-User `nerve_app` (peer-auth, Catalog-Read braucht KEINEN GRANT) mit `NERVE_SCHILD_TEST_DSN`; skippt lokal/SQLite (kein False-Green). Fängt auch ORM-lose Tabellen (z.B. `training.transcript_archive`), weil er die DB prüft, nicht models.py.
 
 **Werkzeug:** `inspect.sh schilder <tabelle>` zeigt Tabellen-Schild + Spalten-Schilder + best-effort Migrations-Historie (für public UND crm/training).
