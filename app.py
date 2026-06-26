@@ -1327,27 +1327,13 @@ try:
 except Exception as e:
     print(f"[DB] _seed_ewb_scenarios failed (non-fatal): {e}")
 
-# ── Audit-Log Immutable Trigger (Defense-in-Depth, nach create_all + migrate) ─
-try:
-    with engine.connect() as conn:
-        conn.exec_driver_sql("""
-            CREATE TRIGGER IF NOT EXISTS audit_log_no_update
-            BEFORE UPDATE ON audit_log
-            BEGIN
-              SELECT RAISE(ABORT, 'audit_log is immutable');
-            END;
-        """)
-        conn.exec_driver_sql("""
-            CREATE TRIGGER IF NOT EXISTS audit_log_no_delete
-            BEFORE DELETE ON audit_log
-            BEGIN
-              SELECT RAISE(ABORT, 'audit_log is immutable');
-            END;
-        """)
-        conn.commit()
-        print("[DB] Audit-Log Trigger installed")
-except Exception as e:
-    print(f"[DB] Audit-Log Trigger setup failed: {e}")
+# ── Audit-Log Immutable Trigger ──────────────────────────────────────────────
+# VERSCHOBEN nach alembic-Migration 0026 (audit_log_immutable_trigger). Der frueher hier
+# stehende App-Start-Block war SQLite-Dialekt (CREATE TRIGGER IF NOT EXISTS ... RAISE(ABORT,...))
+# und warf auf Production-Postgres bei JEDEM Boot 'syntax error at or near "NOT"' (non-fatal
+# gefangen) -> 0 Trigger auf audit_log. Korrektur: Postgres-Trigger (BEFORE UPDATE OR DELETE ->
+# RAISE EXCEPTION 'audit_log is immutable') in Migration 0026, ausgefuehrt als postgres (Owner-Recht;
+# nerve_app darf keinen Trigger anlegen). Siehe tests/test_audit_log_immutable.py (Deploy-Gate).
 
 # ── Plan definitions ──────────────────────────────────────────────────────────
 PLANS = {
