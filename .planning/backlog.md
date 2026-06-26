@@ -8,6 +8,15 @@
 
 ## Open
 
+### RECUR-EWB-DEEPER — wiederkehrender Einwand → NERVE soll TIEFER gehen (Pain freilegen) statt dieselbe Hilfe nochmal
+
+- **Severity:** medium-high (Kern-Qualität der Live-Hilfe + ehrliches Scoring-Signal)
+- **Entdeckt:** André 2026-06-26 (eigene Cold-Call-Erfahrung, im HANDLING-TIMING-Kontext). Beobachtung: Einwand kommt → Berater behandelt ihn → **derselbe Einwand kommt nochmal**, weil die erste Behandlung nicht zündete.
+- **Soll-Verhalten (kanonisch, [[Nerve-Vault]] Konstrukt §2):** Beim **zweiten** Auftreten desselben Einwand-Typs im selben Call darf NERVE NICHT dieselbe/ähnliche Floskel wiederholen, sondern soll eine **tiefere Einwand-Behandlung** liefern — den **echten Schmerz/das eigentliche Bedenken des Kunden freilegen** (offene Tiefen-Frage / Pain-Aufdeckung).
+- **Zwei Verwendungen derselben Erkennung:** (a) **Live** — Antwort-Engine schaltet beim 2. Vorkommen auf „tiefer statt Wiederholung"; (b) **Benotung** — ein wiederkehrender Einwand = ehrliche Info „erste Behandlung nicht erfolgreich".
+- **Mechanik-Verbindung (wichtig):** „erkennen, dass derselbe Intent-Typ WIEDER kommt" ist exakt die Wiederholungs-Erkennung, die die Handling-Benotung ohnehin braucht (Einwand Nr. 2 ≠ Nr. 1, siehe HANDLING-TIMING Anker-Disambiguierung) — EINE Erkennung speist beides. `build_answer_context()` prüft, ob der Intent-Typ in diesem Call schon behandelt wurde, und schaltet den Tiefen-Modus.
+- **Routing:** TAXO3 **PFLICHT-PULL** (Paradigma-Reset §4.5 „verstehen + helfen statt Floskel"; Recurrence-Aware-Antwort). Nutzt die Wiederholungs-Erkennung aus HANDLING-TIMING. Nicht launch-blockierend, aber Kern der Live-Hilfe-Qualität.
+
 ### ANON-OVER-AGGRESSIVE — Anonymisierung schwärzt Normal-Wörter (z.B. "Ihnen" → [PERSON_A]), vergiftet DB + Live-Vorschlag
 
 - **Severity:** high (Daten-Qualität für Training/Auswertung + Live-Antwort-Lesbarkeit)
