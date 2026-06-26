@@ -714,6 +714,14 @@ def api_beenden():
                     _call_row.score_schema_version = 1
                 except Exception as _e_stash:
                     print(f'[08.23.2.D.UX.4] process-score stash Fehler: {_e_stash}')
+                # ── TAXO2-04 Fan-In-Join (Audio-Race-Fix): wird KEIN _audio_health_bg-Thread
+                #    gestartet (kein word-confidence-Buffer -> kein Audio kommt, siehe Bedingung
+                #    am Thread-Start unten), dann gibt es keinen Audio-Schreiber, der resolved=True
+                #    setzen koennte -> der Merge wuerde ewig warten. Hier resolved-als-absent setzen
+                #    (im SELBEN calls-commit, bevor der Score-Anstoss-put@unten den Merge unblockt).
+                #    Ist der Buffer DA, bleibt resolved False -> der Thread-finally setzt es + re-putet.
+                if not _phase_d_word_confidences:
+                    _call_row.audio_health_resolved = True
                 _db_calls.commit()
         except Exception as _e_upd:
             print(f'[Phase08.23.2.D] calls-UPDATE Fehler: {_e_upd}')
@@ -750,15 +758,15 @@ def api_beenden():
             from services import outcome_service as _os_ah
             try:
                 metrics = _os_ah.calculate_audio_health(wc_buffer)
-                if metrics.get('score') is None:
-                    return  # Kein Buffer -> nichts zu schreiben
+                _has_score = metrics.get('score') is not None
                 _db_ah = _gs_ah()
                 try:
                     _row = _db_ah.query(_CallAH).filter(
                         _CallAH.id == call_id_val,
                         _CallAH.user_id == user_id_val
                     ).first()
-                    if _row is not None:
+                    if _row is not None and _has_score:
+                        # Erfolg: Score schreiben + Audit-Event (CallEvent NUR im Success-Branch).
                         _row.audio_health_score = float(metrics['score'])
                         _db_ah.add(_CallEventAH(
                             call_id=call_id_val,
@@ -781,6 +789,38 @@ def api_beenden():
                     _db_ah.close()
             except Exception as _e_outer:
                 print(f'[AudioHealth] Thread Fehler: {_e_outer}')
+            finally:
+                # ── TAXO2-04 Fan-In-Join (Audio-Race-Fix): auf JEDEM Pfad (Erfolg / kein-Buffer
+                #    early-None / Exception) das Resolved-Flag setzen UND den Merge re-triggern.
+                #    Erst danach darf der Slow-Lane-Merge ein NULL-audio_health_score als
+                #    'wirklich kein Audio' werten. Idempotentes UPDATE (id + user_id), eigene
+                #    kurze Session, eigener commit. calls ist NICHT FORCE-RLS -> kein M-4-GUC noetig
+                #    (wie der bestehende audio_health_score-Write hier). Best-effort: Fehler hier
+                #    duerfen den Thread nicht crashen. ───────────────────────────────────────────
+                try:
+                    from database.db import get_session as _gs_res
+                    from database.models import Call as _CallRes
+                    _db_res = _gs_res()
+                    try:
+                        _db_res.query(_CallRes).filter(
+                            _CallRes.id == call_id_val,
+                            _CallRes.user_id == user_id_val,
+                        ).update({_CallRes.audio_health_resolved: True})
+                        _db_res.commit()
+                    except Exception as _e_res:
+                        print(f'[AudioHealth] resolved-flag Fehler: {_e_res}')
+                        _db_res.rollback()
+                    finally:
+                        _db_res.close()
+                except Exception as _e_res_outer:
+                    print(f'[AudioHealth] resolved-flag Outer-Fehler: {_e_res_outer}')
+                # Re-Trigger des Call-Ende-Merge (Fan-In-Join): der erste put@api_beenden no-opte,
+                # solange resolved=False war; dieser put feuert NACH committed resolved=True.
+                try:
+                    from services.slow_lane import slow_lane as _slow_lane_res
+                    _slow_lane_res.put({'call_id': call_id_val})
+                except Exception as _e_kick:
+                    print(f'[AudioHealth] merge re-put Fehler (non-fatal): {_e_kick}')
 
     if _phase_d_call_id and _phase_d_word_confidences:
         threading.Thread(
