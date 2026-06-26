@@ -129,9 +129,14 @@ def test_emit_with_durable_call_id_from_state_writes_call_id(db_session):
             cleanup_rows(db_session, {"public.calls": [cid]}, tenant=tenant)
 
 
-def test_emit_alarm_on_none_call_id_still_writes(db_session, capsys):
-    """call_id=None (Rest-Race/Regression) -> LAUTER [CALLID-ALARM]-Log + Emit laeuft weiter
-    (kein raise, Punkt 25); die Row wird mit call_id NULL geschrieben (sichtbar statt still). V-CI-1."""
+def test_emit_alarm_on_none_call_id_fails_closed(db_session, capsys):
+    """call_id=None (Rest-Race/Regression) -> LAUTER [CALLID-ALARM]-Log + KEIN raise (Punkt 25,
+    Live-Pfad bricht nicht). AB CALLID Deploy 2 (Migration 0025, call_id NOT NULL): der INSERT
+    wird von der DB fail-closed abgewiesen -> emit faengt den IntegrityError (Edge 3) -> Rueckgabe -1,
+    KEINE Row. Der Alarm bleibt sichtbar (vor dem INSERT geloggt). V-CI-1.
+
+    (Vor Deploy 2 schrieb dieser Pfad eine NULL-Row; NOT NULL macht den Regress jetzt zusaetzlich
+    am DB-Waechter sichtbar, ohne den Live-Loop zu brechen — der Backstop Plan 03 bleibt primaer.)"""
     from database.models import IntentEvent
     from services.intent_event_writer import emit_intent_event
 
@@ -141,12 +146,9 @@ def test_emit_alarm_on_none_call_id_still_writes(db_session, capsys):
         source='llm_inferred', speaker_role='kunde', speaker_id='local',
         confidence=0.9, call_id=None,
     )
-    try:
-        assert isinstance(eid, int) and eid > 0  # KEIN raise — Live-Pfad bricht nicht
-        out = capsys.readouterr().out
-        assert '[CALLID-ALARM]' in out  # lauter Alarm, sichtbar
-        db_session.rollback()
-        row = db_session.query(IntentEvent).filter_by(event_id=eid).one()
-        assert row.call_id is None  # NULL geschrieben (Backstop Plan 03 faengt downstream)
-    finally:
-        cleanup_rows(db_session, {"public.intent_event": [eid]})
+    out = capsys.readouterr().out
+    assert '[CALLID-ALARM]' in out          # lauter Alarm, sichtbar (vor dem INSERT)
+    assert eid == -1                          # NOT NULL -> INSERT fail-closed -> -1 (kein raise, Edge 3)
+    # KEINE Row mit dieser session_id geschrieben (fail-closed, nicht still NULL).
+    db_session.rollback()
+    assert db_session.query(IntentEvent).filter_by(session_id=sid).count() == 0

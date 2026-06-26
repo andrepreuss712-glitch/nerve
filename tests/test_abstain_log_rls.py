@@ -25,13 +25,18 @@ import tests.conftest as conftest
 from tests.conftest import cleanup_rows
 
 
-def _seed_intent_event(db):
-    """Gueltige intent_event-Row seeden (NOT-NULL: session_id/mode/intent_type; timestamp/
-    payload_jsonb/handling_status haben Defaults). intent_event hat KEINE RLS -> GUC-frei.
-    Gibt event_id (int) zurueck."""
-    from database.models import IntentEvent
+def _seed_intent_event(db, tenant):
+    """Gueltige calls-Row (FK-Ziel) + intent_event-Row seeden. intent_event.call_id ist NOT NULL
+    ab CALLID Deploy 2 (Migration 0025) -> der Event MUSS auf eine echte calls.id zeigen. calls hat
+    KEINE RLS -> tenant_id GUC-frei setzbar. Gibt (call_id, event_id) zurueck."""
+    from database.models import IntentEvent, Call
+    cid = str(uuid.uuid4())
+    db.add(Call(id=cid, user_id=1, tenant_id=tenant, call_mode='cold_call',
+                started_at=datetime.now(timezone.utc), transcript_storage='none'))
+    db.commit()
     ev = IntentEvent(
         session_id=f"tf-rls-{uuid.uuid4().hex[:10]}",
+        call_id=cid,
         mode='cold_call',
         intent_type='preis',
         timestamp=datetime.now(timezone.utc),
@@ -39,7 +44,7 @@ def _seed_intent_event(db):
     db.add(ev)
     db.commit()
     db.refresh(ev)
-    return ev.event_id
+    return cid, ev.event_id
 
 
 def test_abstain_log_rls_requires_tenant_guc(db_session):
@@ -51,7 +56,7 @@ def test_abstain_log_rls_requires_tenant_guc(db_session):
     tenant = conftest.TEST_TENANT_UUID
     assert tenant, "Fixture muss TEST_TENANT_UUID geseedet haben"
 
-    eid = _seed_intent_event(db_session)
+    cid, eid = _seed_intent_event(db_session, tenant)
     id_neg, id_pos = str(uuid.uuid4()), str(uuid.uuid4())
     written = []
     try:
@@ -97,5 +102,6 @@ def test_abstain_log_rls_requires_tenant_guc(db_session):
         set_current_tenant(str(tenant))
         db_session.rollback()   # frische TX mit GUC=tenant fuer cleanup_rows (abstain_log FORCE RLS)
         cleanup_rows(db_session,
-                     {"public.abstain_log": written, "public.intent_event": [eid]},
+                     {"public.abstain_log": written, "public.intent_event": [eid],
+                      "public.calls": [cid]},
                      tenant=tenant)

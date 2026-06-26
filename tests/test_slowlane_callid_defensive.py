@@ -31,7 +31,8 @@ def _seed_call(db, tenant):
 
 def _seed_event(db, call_id):
     """pending intent_event (confidence=None -> Tor 1 skippt -> Abstain-Pfad erreichbar).
-    call_id kann None sein (Backstop-Fall) oder eine echte calls.id (flush-Fall)."""
+    call_id MUSS auf eine echte calls.id zeigen (intent_event.call_id ist NOT NULL ab Deploy 2 / 0025).
+    Der Backstop wird ueber einen Call mit tenant_id=NULL erreicht (nicht mehr via call_id=NULL)."""
     from database.models import IntentEvent
     ev = IntentEvent(
         session_id=f"callid-sl-{uuid.uuid4().hex[:10]}",
@@ -48,16 +49,22 @@ def _seed_event(db, call_id):
     return ev.event_id
 
 
-def test_backstop_no_call_id_sets_failed_no_abstain_log(db_session, monkeypatch, capsys):
-    """V-CI-4: abstain-faehiges Event OHNE call_id -> _persist_event_ref setzt 'failed' (terminal),
-    KEIN abstain_log, lauter [CALLID-ALARM], KEIN 'pending' (H-3 wuerde nicht re-queuen)."""
+def test_backstop_unresolvable_tenant_sets_failed_no_abstain_log(db_session, monkeypatch, capsys):
+    """V-CI-4: abstain-faehiges Event, dessen Tenant NICHT aufloesbar ist -> _persist_event_ref setzt
+    'failed' (terminal), KEIN abstain_log, lauter [CALLID-ALARM], KEIN 'pending' (H-3 re-queued nicht).
+
+    AB CALLID Deploy 2 (Migration 0025) ist intent_event.call_id NOT NULL -> der Backstop wird NICHT
+    mehr ueber call_id=NULL erreicht, sondern ueber eine GUELTIGE call_id, deren calls.tenant_id NULL ist
+    -> _tenant_id_for liefert None. Der fail-closed-Schutz (kein abstain_log gegen FORCE RLS) bleibt
+    identisch: nicht-aufloesbarer Tenant => terminal 'failed' + Alarm, kein Endlos-Loop."""
     import services.slow_lane as sl
     from database.models import IntentEvent, AbstainLog
 
     monkeypatch.setattr(sl, "grade_handling", lambda *a, **k: None)            # Abstention erzwingen
     monkeypatch.setattr(sl, "_find_next_advisor_utterance", lambda *a, **k: None)
 
-    eid = _seed_event(db_session, call_id=None)   # KEIN call_id -> _tenant_id_for -> None
+    cid = _seed_call(db_session, tenant=None)     # calls.tenant_id IS NULL -> Tenant nicht aufloesbar
+    eid = _seed_event(db_session, call_id=cid)    # gueltige call_id (NOT NULL erfuellt)
     try:
         sl._persist_event_ref({'event_id': eid}, db_session)
         db_session.commit()
@@ -74,7 +81,7 @@ def test_backstop_no_call_id_sets_failed_no_abstain_log(db_session, monkeypatch,
         out = capsys.readouterr().out
         assert '[CALLID-ALARM]' in out, "Backstop muss LAUT alarmieren (sichtbar, nicht still)"
     finally:
-        cleanup_rows(db_session, {"public.intent_event": [eid]})
+        cleanup_rows(db_session, {"public.intent_event": [eid], "public.calls": [cid]})
 
 
 def test_flush_to_db_writes_abstain_log_with_guc(db_session, monkeypatch):

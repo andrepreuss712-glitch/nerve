@@ -57,6 +57,19 @@ def _sid():
     return f"test-medlane-{uuid.uuid4().hex[:12]}"
 
 
+def _seed_call(db):
+    """calls-Row = FK-Ziel fuer intent_event.call_id (NOT NULL ab CALLID Deploy 2 / Migration 0025).
+    Der Medium-Lane-Dispatch liest call_id aus dem gehaltenen state -> die Naht braucht eine echte
+    calls.id + call_id im State (wie nach create_call_for_sid auf dem Produktiv-Pfad)."""
+    from datetime import datetime, timezone
+    from database.models import Call
+    cid = str(uuid.uuid4())
+    db.add(Call(id=cid, user_id=1, call_mode='cold_call',
+                started_at=datetime.now(timezone.utc), transcript_storage='none'))
+    db.commit()
+    return cid
+
+
 def test_analysiere_uses_classification_schema_returns_structured_dict(monkeypatch):
     """MEDFIX-1 (Wurzel-Fix, reine Function-Call-Assertion, kein DB/Netz):
     analysiere_mit_claude reicht SYSTEM_PROMPT_BASE (JSON-Einwand-Schema) als
@@ -108,6 +121,9 @@ def test_medium_lane_live_dispatch_writes_intent_event(db_session, monkeypatch):
     import services.live_session as ls
 
     sid = _sid()
+    # intent_event.call_id ist NOT NULL ab Deploy 2 (0025): echte calls-Row + call_id im State,
+    # damit der Dispatch (_durable_call_id(state['call_id'])) eine gueltige call_id durchreicht.
+    cid = _seed_call(db_session)
 
     # 1. Haiku-Klassifikation mocken: das strukturierte Einwand-JSON, das
     #    SYSTEM_PROMPT_BASE nach dem Wurzel-Fix liefert (Plan-sanktioniert).
@@ -137,6 +153,7 @@ def test_medium_lane_live_dispatch_writes_intent_event(db_session, monkeypatch):
             'analysiert_bisher': [],
             'current_phase': 2,
             'active_learning_cards': [],
+            'call_id': cid,   # durable call_id (wie nach create_call_for_sid) -> Dispatch reicht sie durch
         },
     })
     monkeypatch.setitem(ls._per_sid_transcript, sid, [
@@ -163,8 +180,9 @@ def test_medium_lane_live_dispatch_writes_intent_event(db_session, monkeypatch):
         assert row.intent_type == 'echter_einwand'
         assert row.mode == 'cold_call'
         assert row.phase == 2
+        assert str(row.call_id) == cid  # Dispatch reicht die durable call_id durch (NOT NULL, CI-1)
         assert (row.payload_jsonb or {}).get('source') == 'llm_inferred'
         assert row.interaction_id is not None  # Moment-Fenster vom Dispatch geoeffnet
     finally:
         from tests.conftest import cleanup_rows
-        cleanup_rows(db_session, {IntentEvent: eids})
+        cleanup_rows(db_session, {"public.intent_event": eids, "public.calls": [cid]})
