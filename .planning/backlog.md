@@ -301,6 +301,31 @@
 - **Scope-Impact:** nicht-trivial — neue Komponenten-Architektur, UX-Spec-Runde, Template + CSS + JS-State-Management. Gehört als **Phase 07.5** separat geplant (nicht Teil von 07.4).
 - **Planung:** via `/gsd-plan-phase 07.5` sobald 07.4-Follow-up abgeschlossen.
 
+### MISSTRAUEN-INTENT — Erkennung deckt "Misstrauen/Skepsis" als Einwand-Typ NICHT ab
+
+- **Severity:** high (Erkennungs-Lücke im Kernfeature — ein ganzer Einwand-Typ fällt durch)
+- **Entdeckt:** André 2026-06-26 (Live-Test). Erkannt wurden u.a. keine Zeit / zu teuer / kein Bedarf / kein Interesse — aber **"Misstrauen/Skepsis"** wurde trotz mehrfacher Wiederholung im Gespräch NICHT als Einwand erkannt.
+- **Soll:** Misstrauen/Skepsis ist ein häufiger, eigenständiger Einwand-Typ (Vertrauen fehlt, „klingt zu gut", „kenne ich nicht", „wer seid ihr überhaupt") und MUSS erkannt + behandelt werden.
+- **Mechanik-Hinweis:** Lücke liegt in der Taxonomie-Abdeckung (`services/intent_taxonomy.py` Kern-Werte) und/oder dem Erkennungs-Prompt/Keyword-Set. Prüfen ob ein passender Kern-Intent fehlt oder nur das Detection-Mapping ihn nicht trifft.
+- **Routing:** **TAXO3 PFLICHT-PULL** — der TAXO3-Plan MUSS die Einwand-/Intent-Taxonomie-Abdeckung gegen reale Einwand-Typen prüfen und Misstrauen/Skepsis ergänzen (Kern-Taxonomie + Detection + Antwort-Paradigma).
+
+### OUTCOME-CONFIRM — Call-Ende-Outcome IMMER vom User bestätigen lassen, NIE still auto-setzen
+
+- **Severity:** critical (Daten-Integrität + verlorener Folge-Daten-Moment — kritisch VOR Launch)
+- **Entdeckt:** André 2026-06-26 (Live-Test). Kanonisch in **Nerve-Vault Soll-Verhalten §6**.
+- **Soll (kanonisch §6):** Am Call-Ende füllt die KI das Outcome VOR, aber der User **bestätigt/korrigiert IMMER** (ein Klick) — plus Folge-Meeting-Daten erfassbar. NERVE setzt das Outcome **NIE still automatisch**.
+- **Begründung:** ein falsches Auto-Outcome vergiftet **still** die account-wide-wisdom / den Trainings-Korpus (DPO-Foundation) UND der User verliert den Moment, Folge-Daten (Termin, nächster Schritt) zu erfassen. Beides irreversibel/teuer.
+- **Verwandt:** OUTCOME-ORDER (Score läuft vor Outcome-Bestätigung — Reihenfolge/Timing) + MEETSTEP (Termin-Formular vor Score, bereits live). Zusammen denken: Reihenfolge = Outcome-Confirm VOR Score-Reveal.
+- **Routing:** **SCORE-UI / D.UX PFLICHT-PULL** (Call-Ende-Flow). Kritisch vor EA-Launch — der Bestätigungs-Klick ist die Schranke gegen stille Korpus-Vergiftung.
+
+### OLD-SCORE-INCONSISTENT — alter coaching_score erscheint uneinheitlich (mal 32.555, mal gar nicht)
+
+- **Severity:** medium (Anzeige-/Substanz-Inkonsistenz am Call-Ende; Wurzel teils im Alt-Score, der beim TAXO-Cutover ersetzt wird)
+- **Entdeckt:** André 2026-06-26 (Live-Test). Der alte `coaching_score` erscheint uneinheitlich — mal als roher Wert (z.B. `32.555`), mal **gar nicht** bei einem dünnen Call (stille Leerstelle, kein Hinweis warum).
+- **Soll (kanonisch Vault §6 Substanz-Regel):** entweder erscheint eine Note **konsistent**, ODER es steht sauber **„nicht genug zum Bewerten"** da — NIE eine stille Leerstelle und kein roher Float ohne Kontext.
+- **Mechanik-Hinweis:** der Alt-Score (`app_routes.py` Live-Formel / `calls.coaching_score`) wird beim TAXO2-Noten-Cutover (Plan 04) durch die rubrik-basierte Note ersetzt — die Proration/Abstention-Regel (<50% messbar → „nicht gewertet" statt 0) löst genau diesen Fall, MUSS aber im UI sauber gerendert werden (kein roher Wert, kein leeres Feld).
+- **Routing:** **SCORE-UI PFLICHT-PULL** (zusammen mit TAXO2-Note-Cutover Plan 04): sicherstellen, dass die neue Note konsistent erscheint ODER „nicht genug zum Bewerten" zeigt — keine stille Leerstelle, kein ungerundeter Float.
+
 ---
 
 ## Referenzen
