@@ -126,3 +126,20 @@ KATEGORIE_LABEL = {
 
 # ── Phase 08.20.3: Cap für personalisierte Skripte ────────────────────────
 PERSONALIZED_SCRIPTS_CAP = int(os.environ.get('PERSONALIZED_SCRIPTS_CAP', 20))
+
+# ── Phase 08.23.2.TAXO2 Plan 04: Call-Ende-Merge — Audio-Gate (D-09) + Retry (F-07) ──
+# Post-launch tunbar ohne Code-Deploy (Punkt 12, <30s reversibel per ENV).
+# AUDIO_HEALTH_GATE_THRESHOLD: calls.audio_health_score liegt auf der 0.0-1.0-Skala
+#   (NICHT 0-100!). Unter dieser Schwelle ODER NULL -> Call not_gradable (D-09): die Note
+#   wuerde auf halluziniertem STT-Muell aufsetzen (False-Confidence-Schutz, T-TAXO2-04-01).
+AUDIO_HEALTH_GATE_THRESHOLD = float(os.getenv('AUDIO_HEALTH_GATE_THRESHOLD', '0.5'))
+# MIN_HIGH_CONFIDENCE_EVENTS: D-09 "zu wenig hoch-konfidente Events" — weniger als N Events
+#   ueber der Tor-1-Konfidenzschwelle -> not_gradable. Die Zaehlung passiert SELBST aus der
+#   geladenen intent_event-Liste (confidence >= Tor-1-Gate), NICHT aus einem compute_rubric-
+#   Rueckgabefeld (FOLD 26.06.: n_high_confidence_events existiert im Engine-Dict NICHT).
+MIN_HIGH_CONFIDENCE_EVENTS = int(os.getenv('MIN_HIGH_CONFIDENCE_EVENTS', '3'))
+# SCORE_MAX_RETRIES: Merge-Job-Retry-Cap. Scheitert der rubric_score-Write
+#   (RLS/permission-denied/IntegrityError/compute_rubric-Fehler) -> gedeckelter Re-Queue
+#   (attempts+1) bis zu diesem Cap, danach Dead-Letter (laut loggen, Job aus der Queue).
+#   KEIN Silent-Drop, KEIN Endlos-Block (T-TAXO2-04-13). KEIN SCORE_SWEEP_AFTER_S (H-2 gestrichen).
+SCORE_MAX_RETRIES = int(os.getenv('SCORE_MAX_RETRIES', '3'))

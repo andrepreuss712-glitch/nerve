@@ -39,8 +39,11 @@ baut den Merge-Gate + GUC-Klammer drumherum und ruft run_call_end_steps darin).
 
 import queue
 
+from sqlalchemy import text as _sa_text
+from sqlalchemy.dialects.postgresql import insert as _pg_insert
+
 from database.db import get_session, set_current_tenant, clear_current_tenant
-from database.models import IntentEvent, AbstainLog, Call, TranscriptSegment, ModeWeightConfig
+from database.models import IntentEvent, AbstainLog, Call, TranscriptSegment, ModeWeightConfig, RubricScore
 from services.handling_markers import grade_handling
 
 
@@ -340,6 +343,313 @@ def _periodic_tick() -> None:
             print(f"[SLOW] periodic hook {getattr(hook, '__name__', '?')} failed: {type(e).__name__}: {e}")
 
 
+# ════════════════════════════════════════════════════════════════════════════════════
+# TAXO2-Plan 04 — Call-Ende-Merge (Option B + FOLD 26.06.)
+#
+# Die Engine rechnet am Call-Ende die rubric_score-Aufschluesselung + Kopf-Zahl und schreibt
+# sie ASYNC (Slow Lane, D-10) in die EINZIGE Engine-Schreib-Tabelle: rubric_score (Option B —
+# KEIN calls.coaching_score-Write, KEIN outcome in rubric_score). Anstoss = api_beenden
+# (slow_lane.put({'call_id': ...})). Harte Vorbedingung F-02: Call ended (ended_at IS NOT NULL)
+# UND pending_events(call_id)==0. KEINE outcome-Vorbedingung (F-09 gestrichen — Engine
+# ergebnis-blind). KEIN H-2-Sweep. M-4-GUC-Klammer (set/clear_current_tenant, finally) um JEDEN
+# rubric_score-Write. Audio-Gate D-09 VOR dem Scoring. Retry/Dead-Letter (SCORE_MAX_RETRIES).
+# ════════════════════════════════════════════════════════════════════════════════════
+
+# Status-/origin-/Reason-Konstanten (ASCII-Identifier, CLAUDE.md Umlaut-Regel).
+_ORIGIN_LIVE = 'live'
+_STATUS_SCORED = 'scored'
+_STATUS_NOT_GRADABLE = 'not_gradable'
+_STATUS_FAILED = 'failed'
+
+
+def _pending_events(call_id, db) -> int:
+    """F-02: Anzahl noch OFFENER Momente eines Calls. Zaehlt NUR handling_status='pending' —
+    scored/abstained/failed sind TERMINAL (F-01/F-05, 'failed'-Setzpunkte :236/:248/:267) und
+    blockieren den Merge NICHT (sonst drainte pending nie auf 0 bei einem Poison-Pill-Event)."""
+    return (db.query(IntentEvent)
+              .filter(IntentEvent.call_id == call_id,
+                      IntentEvent.handling_status == 'pending')
+              .count())
+
+
+def _events_for_call(call_id, db) -> list:
+    """Laedt alle intent_event-Rows eines Calls (Aggregations-Eingang fuer compute_rubric +
+    D-09-high-conf-Zaehlung). Read-only; calls/intent_event haben KEINE RLS -> GUC-frei."""
+    return (db.query(IntentEvent)
+              .filter(IntentEvent.call_id == call_id)
+              .order_by(IntentEvent.timestamp.asc())
+              .all())
+
+
+def _count_high_confidence(events, db) -> int:
+    """D-09 (F-07, FOLD 26.06.): zaehlt die hoch-konfidenten Events SELBST aus der events-Liste
+    (confidence >= Tor-1-Schwelle) — NICHT aus einem compute_rubric-Rueckgabefeld (das Engine-Dict
+    fuehrt keine solche Zaehlung). Pro Event wird die Tor-1-Schwelle aus mode_weight_config
+    (mode, vorwand_behandlung) gelesen (DEFAULT_CONFIDENCE_GATE-Fallback). confidence=None zaehlt
+    NICHT als sicher (Gemini-Skepsis, konsistent zu rubric_engine._sample_size_for)."""
+    n = 0
+    for ev in (events or []):
+        conf = getattr(ev, 'confidence', None)
+        if conf is None:
+            continue
+        gate = _confidence_gate_for(ev, db)
+        if conf >= gate:
+            n += 1
+    return n
+
+
+def _mode_config_for(mode_key, db) -> dict:
+    """Laedt den modus-spezifischen Gewichtssatz aus mode_weight_config als
+    {dimension: {weight, enabled, partial_marker, indirekt_erkannt, confidence_gate}} — die
+    Form, die compute_rubric (Plan 02) erwartet. Leerer Lookup -> {} (Engine setzt dann
+    status='no_weight_set' mit Trace, NICHT still NULL)."""
+    out = {}
+    if not mode_key:
+        return out
+    rows = (db.query(ModeWeightConfig)
+              .filter(ModeWeightConfig.session_mode == mode_key)
+              .all())
+    for r in rows:
+        out[r.dimension] = {
+            'weight': r.weight,
+            'enabled': r.enabled,
+            'partial_marker': r.partial_marker,
+            'indirekt_erkannt': r.indirekt_erkannt,
+            'confidence_gate': r.confidence_gate,
+        }
+    return out
+
+
+def _upsert_rubric_score(db, *, call_id, conversation_log_id, session_mode, tenant_id,
+                         coaching_score, is_provisional, measured_weight_pct,
+                         unmeasured_dimensions, dimensions, status, payload) -> None:
+    """F-03 idempotenter UPSERT in rubric_score (DER EINZIGE Engine-Write, Option B).
+    ON CONFLICT (call_id) WHERE origin='live' DO UPDATE — referenziert den partiellen Unique-Index
+    ux_rubric_score_live_call_id (Plan 01). KEIN calls.coaching_score-Write, KEIN outcome-Feld
+    (FOLD 26.06. — outcome bleibt in calls, die Anzeige-Sperre liest es per Join)."""
+    values = {
+        'call_id': call_id,
+        'conversation_log_id': conversation_log_id,
+        'session_mode': session_mode,
+        'origin': _ORIGIN_LIVE,
+        'coaching_score': coaching_score,
+        'is_provisional': is_provisional,
+        'measured_weight_pct': measured_weight_pct,
+        'unmeasured_dimensions': unmeasured_dimensions,
+        'dimensions': dimensions,
+        'status': status,
+        'tenant_id': tenant_id,
+        'payload_jsonb': payload or {},
+    }
+    stmt = _pg_insert(RubricScore.__table__).values(**values)
+    update_cols = {k: stmt.excluded[k] for k in (
+        'conversation_log_id', 'session_mode', 'coaching_score', 'is_provisional',
+        'measured_weight_pct', 'unmeasured_dimensions', 'dimensions', 'status',
+        'tenant_id', 'payload_jsonb',
+    )}
+    stmt = stmt.on_conflict_do_update(
+        index_elements=['call_id'],
+        index_where=_sa_text("origin = 'live'"),
+        set_=update_cols,
+    )
+    db.execute(stmt)
+
+
+def _compute_rubric_step(ctx) -> None:
+    """Registrierter Call-Ende-Schritt (run_call_end_steps): rechnet die Note + UPSERTet sie in
+    rubric_score. Laeuft INNERHALB der M-4-GUC-Klammer des Merge-Gates (set_current_tenant ist
+    bereits gesetzt -> after_begin publiziert app.tenant_id fuer den FORCE-RLS-Write).
+
+    ctx (vom Merge-Gate gefuellt): {call, events, db, high_conf, not_gradable_reason}.
+    """
+    from services.rubric_engine import compute_rubric
+    from services.live_session import get_speech_stats
+
+    call = ctx['call']
+    events = ctx['events']
+    db = ctx['db']
+    mode_key = call.call_mode  # N-4: QUELLE DER WAHRHEIT = calls.call_mode (NIE session_mode)
+    tenant_id = call.tenant_id
+
+    # ── Audio-Gate D-09 (VOR dem Scoring): not_gradable speichern+flaggen (Option B: in
+    #    rubric_score, NICHT calls). Auch dieser Write geht unter Tenant-GUC (M-4 gilt fuer JEDEN
+    #    rubric_score-Write — die GUC ist im Merge-Gate gesetzt). ───────────────────────────────
+    reason = ctx.get('not_gradable_reason')
+    if reason is not None:
+        _upsert_rubric_score(
+            db,
+            call_id=call.id,
+            conversation_log_id=call.conversation_log_id,
+            session_mode=mode_key,
+            tenant_id=tenant_id,
+            coaching_score=None,
+            is_provisional=False,
+            measured_weight_pct=None,
+            unmeasured_dimensions=None,
+            dimensions=None,
+            status=_STATUS_NOT_GRADABLE,
+            payload={'reason': reason},
+        )
+        db.commit()
+        return
+
+    # ── Scoring (compute_rubric, Plan 02 — reine Funktion) ──────────────────────────────────
+    # speech_stats: Req-9-Verkabelung ueber get_speech_stats(sid) per-SID (K1). Im post-call
+    # Daemon ist die Live-Session ueblicherweise schon abgeraeumt -> {0,0,0}; die belastbaren
+    # Werte stehen in conversation_logs (redeanteil_avg/tempo_avg/laengster_monolog, an
+    # /api/beenden FRUEH festgehalten). sid = intent_event.session_id (per-Call konstant).
+    sid = events[0].session_id if events else None
+    speech_stats = get_speech_stats(sid)
+    mode_config = _mode_config_for(mode_key, db)
+    result = compute_rubric(events, speech_stats, call, mode_config)
+
+    # ≥1 failed-Event -> transparenter Marker (F-05), additiv im payload (keine Score-Strafe).
+    n_failed = sum(1 for e in events if getattr(e, 'handling_status', None) == 'failed')
+    payload = {}
+    if n_failed:
+        payload['failed_events'] = n_failed
+        payload['note'] = f"{n_failed} Events nicht bewertbar"
+
+    _upsert_rubric_score(
+        db,
+        call_id=call.id,
+        conversation_log_id=call.conversation_log_id,
+        session_mode=result.get('mode_key') or mode_key,
+        tenant_id=tenant_id,
+        coaching_score=result.get('coaching_score'),
+        is_provisional=bool(result.get('is_provisional')),
+        measured_weight_pct=result.get('measured_weight_pct'),
+        unmeasured_dimensions=result.get('unmeasured_dimensions'),
+        dimensions=result.get('dimensions'),
+        status=result.get('status') or _STATUS_SCORED,
+        payload=payload,
+    )
+    db.commit()
+
+
+def _call_end_merge(item) -> None:
+    """Konsumiert ein api_beenden-Anstoss-Item ({'call_id': ..., 'attempts': N}) und fuehrt den
+    Call-Ende-Merge aus — MIT harter Vorbedingung (F-02), Audio-Gate (D-09), M-4-GUC-Klammer und
+    Retry/Dead-Letter (SCORE_MAX_RETRIES). Ein Fehler failt NUR diesen Call (der Consumer-Loop
+    faengt die Exception und der Daemon stirbt nie); der Re-Queue-mit-Cap haengt hier drin.
+
+    Datenfluss: api_beenden -> slow_lane.put({'call_id': ...}) -> Consumer -> _call_end_merge.
+    """
+    from config import (AUDIO_HEALTH_GATE_THRESHOLD, MIN_HIGH_CONFIDENCE_EVENTS,
+                        SCORE_MAX_RETRIES)
+
+    call_id = item.get('call_id') if isinstance(item, dict) else None
+    if call_id is None:
+        return
+    attempts = item.get('attempts', 0) if isinstance(item, dict) else 0
+
+    # ── F-02 Vorbedingung lesen (GUC-frei: calls/intent_event haben KEINE RLS) ──────────────
+    read_db = get_session()
+    try:
+        call = read_db.query(Call).filter(Call.id == call_id).first()
+        if call is None:
+            return
+        # call_status=='ended' == ended_at IS NOT NULL (das Feld, das api_beenden setzt, :696).
+        if call.ended_at is None:
+            return  # Call laeuft noch -> KEIN vorzeitiger Merge (transient-WAHR-Schutz)
+        if _pending_events(call_id, read_db) != 0:
+            return  # noch offene Momente -> warten (drainen scored/abstained/failed terminal)
+
+        # ── M-4: tenant_id ZUERST lesen (calls nicht FORCE-RLS), bevor die GUC gesetzt wird ──
+        tenant_id = call.tenant_id
+        # ── Audio-Gate D-09 (VOR dem Scoring): events laden + high-conf SELBST zaehlen ──────
+        events = _events_for_call(call_id, read_db)
+        n_high_conf = _count_high_confidence(events, read_db)
+        not_gradable_reason = None
+        if call.audio_health_score is None or call.audio_health_score < AUDIO_HEALTH_GATE_THRESHOLD:
+            not_gradable_reason = 'poor_audio_health'
+        elif n_high_conf < MIN_HIGH_CONFIDENCE_EVENTS:
+            not_gradable_reason = 'too_few_high_confidence_events'
+    finally:
+        read_db.close()
+
+    if tenant_id is None:
+        # Alt-Call ohne Tenant -> der FORCE-RLS-Write wuerde fail-closed abgelehnt. LAUT loggen,
+        # kein stiller Abbruch, kein Re-Queue (Re-Queue wuerde ewig scheitern -> Dead-Letter-Spam).
+        print(f"[SLOW] merge skip call={call_id}: tenant_id NULL (Alt-Call ohne Tenant) — kein rubric_score-Write")
+        return
+
+    # ── M-4 GUC-Klammer (KRITISCH gegen FORCE-RLS-fail-closed + Cross-Tenant-Leak) ──────────
+    # set_current_tenant VOR dem Txn-Begin der Schreib-Session (after_begin liest den contextvar).
+    # clear_current_tenant() ZWINGEND im finally: der Endlos-Daemon-Thread leakt sonst nach einer
+    # Exception die tenant_id in die naechste Iteration -> Cross-Tenant-Write.
+    set_current_tenant(str(tenant_id))
+    write_db = get_session()
+    try:
+        # frische, GUC-gebundene Schreib-Session (after_begin set_config app.tenant_id bei TX-Begin)
+        call_w = write_db.query(Call).filter(Call.id == call_id).first()
+        events_w = _events_for_call(call_id, write_db)
+        ctx = {
+            'call': call_w,
+            'events': events_w,
+            'db': write_db,
+            'high_conf': n_high_conf,
+            'not_gradable_reason': not_gradable_reason,
+            'results': {},
+        }
+        # Eigener Schritt via Registry (Plan 06/07 registrieren spaeter EBENSO).
+        run_call_end_steps(ctx)
+        # optional SocketIO 'score_ready' (Display-Mechanik = 999.2; hier nur der Punkt) — NACH commit
+    except Exception as e:
+        write_db.rollback()
+        # M-4-VERSCHAERFUNG: RLS/permission-denied/IntegrityError/compute_rubric-Fehler -> der Call
+        # wird NICHT als erledigt markiert. Gedeckelter Re-Queue (attempts+1) bis SCORE_MAX_RETRIES,
+        # danach Dead-Letter (laut, Job aus der Queue). KEIN Silent-Drop, KEIN Endlos-Block.
+        next_attempt = attempts + 1
+        if next_attempt >= SCORE_MAX_RETRIES:
+            print(f"[SLOW] DEAD-LETTER call={call_id} after {next_attempt} attempts: {type(e).__name__}: {e}")
+            # Best-effort: rubric_score.status='failed' markieren (eigene GUC-Klammer-Session).
+            _mark_merge_failed(call_id, tenant_id)
+        else:
+            print(f"[SLOW] merge failed call={call_id} attempt={next_attempt}/{SCORE_MAX_RETRIES}: {type(e).__name__}: {e}")
+            slow_lane.put({'call_id': call_id, 'attempts': next_attempt})
+        # Propagiert NICHT weiter — _call_end_merge hat den Fehler isoliert behandelt; der
+        # Consumer-Loop laeuft sauber weiter (Daemon ueberlebt).
+    finally:
+        clear_current_tenant()  # LAEUFT IMMER — auch bei Exception (Cross-Tenant-Leak-Schutz)
+        write_db.close()
+
+
+def _mark_merge_failed(call_id, tenant_id) -> None:
+    """Dead-Letter best-effort: rubric_score-Zeile mit status='failed' schreiben (das Vorschau-Panel
+    zeigt dann 'Berechnung fehlgeschlagen'). Eigene M-4-GUC-Klammer; Fehler hier wird nur geloggt
+    (kein Re-Throw — der Call ist bereits Dead-Letter)."""
+    if tenant_id is None:
+        return
+    set_current_tenant(str(tenant_id))
+    db = get_session()
+    try:
+        call = db.query(Call).filter(Call.id == call_id).first()
+        if call is None:
+            return
+        _upsert_rubric_score(
+            db,
+            call_id=call.id,
+            conversation_log_id=call.conversation_log_id,
+            session_mode=call.call_mode,
+            tenant_id=tenant_id,
+            coaching_score=None,
+            is_provisional=False,
+            measured_weight_pct=None,
+            unmeasured_dimensions=None,
+            dimensions=None,
+            status=_STATUS_FAILED,
+            payload={'reason': 'dead_letter'},
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[SLOW] dead-letter status-write failed call={call_id}: {type(e).__name__}: {e}")
+    finally:
+        clear_current_tenant()
+        db.close()
+
+
 def flush_to_db() -> int:
     """Shutdown-Hook (atexit + SIGTERM): drained offene Queue-Items und benotet sie durch den
     Persist-Pfad. Gibt die Anzahl gedrainter Items zurueck.
@@ -397,7 +707,9 @@ def slow_lane_consumer() -> None:
     # importiert werden — sonst bleibt die Registry LAUTLOS leer (kein Schritt laeuft). Plan
     # 04/06/07 ergaenzen hier ihren Import. In Plan 03 ist der Block leer/vorbereitet (H-3 ist
     # modul-intern bereits registriert, s.u.).
-    # (Plan 04: import services.rubric_engine  # registriert compute_rubric -> rubric_score)
+    # (Plan 04: compute_rubric->rubric_score ist MODUL-INTERN registriert, s.u. am Datei-Ende
+    #  register_call_end_step(_compute_rubric_step) — laeuft beim Import von slow_lane selbst,
+    #  also keine Import-Falle. compute_rubric/get_speech_stats werden lazy im Schritt importiert.)
     # (Plan 06: import services.shadow_aggregate  # registriert Schatten-Vergleich)
     # (Plan 07: import services.aggregate_writer  # registriert Aggregat-Write)
 
@@ -421,6 +733,16 @@ def slow_lane_consumer() -> None:
         if item is SENTINEL:
             flush_to_db()
             break
+        # ── TAXO2-Plan 04: Call-Ende-Anstoss ({'call_id': ...}) -> Merge-Gate (F-02/M-4/D-09) ──
+        # api_beenden legt {'call_id': ...} ab (Scoring-Anstoss, FOLD 26.06.). _call_end_merge
+        # isoliert seine Fehler selbst (Retry/Dead-Letter), darum hier nur ein Schutz-Klammer
+        # gegen unerwartete Exceptions (Daemon ueberlebt IMMER — pro-Item-Isolierung).
+        if isinstance(item, dict) and 'call_id' in item:
+            try:
+                _call_end_merge(item)
+            except Exception as e:
+                print(f"[SLOW] call-end merge unexpected error call={item.get('call_id')}: {type(e).__name__}: {e}")
+            continue
         # ── A1 (TENANT-FOUND Plan 03, GELOCKT): Tenant in SEPARATER read-only Session ermitteln ──
         # (calls/intent_event haben KEINE RLS -> GUC-frei lesbar), Session SCHLIESSEN, GUC setzen,
         # DANN die committende Schreib-Session oeffnen -> after_begin (db.py:73-89) liest den
@@ -438,15 +760,38 @@ def slow_lane_consumer() -> None:
             set_current_tenant(str(_tid))                # contextvar VOR der Schreib-TX
 
         db = get_session()        # committende Schreib-Session — after_begin liest den GUC bei TX-Begin
+        _persisted_call_id = None
         try:
             _persist_event_ref(item, db)
             db.commit()           # TAXO2: die In-Place-Benotung persistieren (TAXO1 war No-Op)
+            # TAXO2-Plan 04 (F-02-Trigger): merke die call_id des gerade benoteten Events, um
+            # NACH dem commit zu pruefen, ob dieses Event das LETZTE offene war (pending->0) und
+            # der Call bereits ended ist -> dann den Merge anstossen. Schliesst die Ordering-Race:
+            # api_beenden kann VOR dem letzten Event ankommen (sah dann pending!=0, kein Merge) ->
+            # ohne dieses Re-Enqueue feuerte der Merge nie (KEIN H-2-Sweep deckt das ab).
+            _ev_row = (db.query(IntentEvent.call_id)
+                         .filter(IntentEvent.event_id == (item.get('event_id') if isinstance(item, dict) else None))
+                         .first())
+            _persisted_call_id = _ev_row[0] if _ev_row else None
         except Exception as e:
             db.rollback()         # Zeile bleibt 'pending' -> H-3 re-queued sie spaeter
             print(f"[SLOW] consumer error: {e}")
         finally:
             clear_current_tenant()  # Thread-Reuse-Hygiene (analog app.py:2134-2138), IMMER
             db.close()
+
+        # ── F-02 Trigger-nach-Event: war das das letzte offene Event eines ended Calls? ──────
+        if _persisted_call_id is not None:
+            _check_db = get_session()
+            try:
+                _c = _check_db.query(Call).filter(Call.id == _persisted_call_id).first()
+                if (_c is not None and _c.ended_at is not None
+                        and _pending_events(_persisted_call_id, _check_db) == 0):
+                    slow_lane.put({'call_id': _persisted_call_id})
+            except Exception as e:
+                print(f"[SLOW] post-persist merge-check error call={_persisted_call_id}: {type(e).__name__}: {e}")
+            finally:
+                _check_db.close()
 
 
 def request_shutdown() -> None:
@@ -456,6 +801,10 @@ def request_shutdown() -> None:
 
 
 # ── H-3 als erster periodischer Tick-Hook registrieren (Task 4 via Task-5-Registry) ──
-# Plan 04 registriert H-2-Sweep + M-4-GUC genauso (register_periodic_tick_hook), ohne
-# _periodic_tick neu zu schreiben.
 register_periodic_tick_hook(_requeue_pending_safety_net)
+
+# ── TAXO2-Plan 04: compute_rubric->rubric_score als Call-Ende-Schritt registrieren (FOLD 26.06.) ──
+# Plan 04 haengt sich NUR via register_call_end_step ein (KEIN register_periodic_tick_hook mehr —
+# H-2-Sweep gestrichen). Der Merge-Gate + die M-4-GUC-Klammer + Retry/Dead-Letter sitzen in
+# _call_end_merge (Consumer-Pfad), das run_call_end_steps INNERHALB der GUC-Klammer ruft.
+register_call_end_step(_compute_rubric_step)
