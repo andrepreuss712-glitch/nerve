@@ -21,6 +21,12 @@ Beweist Runtime-Verhalten (CLAUDE.md Test-Qualitaets-Regel — KEIN Source-Prese
   Robustheit  Merge-Fehler -> gedeckelter Re-Queue (attempts+1) bis SCORE_MAX_RETRIES, dann
               Dead-Letter (laut). Call NICHT als erledigt markiert. Daemon stirbt NIE.
 
+  TAXO2-04 Gap-Fix (Audio-Race / Fan-In-Join)  der Merge wartet auf audio_health_resolved==True,
+              bevor er ein NULL-audio_health_score als poor_audio_health wertet.
+        - resolved=False -> Merge wartet (kein false-poor durch async-Ordering).
+        - kein-Buffer (resolved=True + score=None) -> korrekt poor_audio_health (KEIN false-negative).
+        - gutes Audio (resolved=True + score>=Schwelle) -> NICHT poor_audio_health (der Live-Bug).
+
 Kein echter Prod-/PG-Write: db-Zugriffe laufen ueber Fake-/Mock-Sessions, Test laeuft DSN-frei.
 Der scharfe Postgres-Lauf (RLS-fail-closed, echter UPSERT) faellt im deploy.sh-Pytest-Gate an.
 """
@@ -44,9 +50,10 @@ def _make_call(**overrides):
         id=str(uuid.uuid4()),
         tenant_id=str(uuid.uuid4()),
         call_mode='cold_call',
-        ended_at=object(),          # != None -> ended
+        ended_at=object(),              # != None -> ended
         conversation_log_id=42,
-        audio_health_score=0.9,     # > Schwelle (gutes Audio)
+        audio_health_score=0.9,         # > Schwelle (gutes Audio)
+        audio_health_resolved=True,     # TAXO2-04 Fan-In-Join: Audio-Zustand festgeschrieben (Default)
     )
     base.update(overrides)
     return SimpleNamespace(**base)
@@ -432,3 +439,57 @@ def test_compute_step_marks_failed_events(monkeypatch):
     sl._compute_rubric_step(ctx)
 
     assert captured['payload']['failed_events'] == 1
+
+
+# ════════════════════════════════════════════════════════════════════════════════════
+# TAXO2-04 Gap-Fix — Audio-Race / Fan-In-Join (audio_health_resolved)
+#
+# Wurzel: der Merge las calls.audio_health_score, BEVOR der async _audio_health_bg-Thread ihn
+# schrieb -> NULL -> faelschlich poor_audio_health (live verifiziert: Call mit score=0.93 trug
+# trotzdem reason='poor_audio_health'). Fix: ein explizites Fan-In-Join-Flag
+# calls.audio_health_resolved; der Merge wartet darauf, bevor er ein NULL-Audio als 'kein Audio' wertet.
+# ════════════════════════════════════════════════════════════════════════════════════
+
+def test_merge_waits_for_audio_resolved(monkeypatch, guc_spy):
+    # ended + 0 pending, ABER audio_health_resolved=False -> der Merge feuert NICHT (er wartet auf
+    # den Audio-Pfad, der resolved=True setzt + re-putet). KEIN GUC, KEIN Schritt — die Race-Wurzel.
+    call = _make_call(audio_health_resolved=False)
+    _install_merge_doubles(monkeypatch, call, pending=0)
+    step = MagicMock()
+    monkeypatch.setattr(sl, '_CALL_END_MERGE_STEPS', [step])
+
+    sl._call_end_merge({'call_id': call.id})
+
+    step.assert_not_called()              # Merge wartet -> kein compute-Schritt
+    assert guc_spy['set'] == []           # kein Write -> keine GUC
+
+
+def test_no_buffer_sets_resolved_true(monkeypatch):
+    # Kein-Buffer-Pfad: resolved=True (api_beenden-als-absent) UND audio_health_score=None.
+    # Erwartung: das ist KEIN false-negative — ein NULL-Score NACH resolved==True ist korrekt
+    # 'wirklich kein Audio' -> poor_audio_health (richtig, nicht faelschlich). Der Merge feuert
+    # (resolved erfuellt), das Audio-Gate setzt den korrekten not_gradable_reason.
+    call = _make_call(audio_health_resolved=True, audio_health_score=None)
+    _install_merge_doubles(monkeypatch, call, pending=0)
+    seen = {}
+    monkeypatch.setattr(sl, '_CALL_END_MERGE_STEPS', [lambda ctx: seen.update(ctx)])
+
+    sl._call_end_merge({'call_id': call.id})
+
+    assert seen.get('call') is call                              # Merge ist gefeuert (resolved erfuellt)
+    assert seen.get('not_gradable_reason') == 'poor_audio_health'  # korrekt, KEIN false-negative
+
+
+def test_good_audio_not_marked_poor(monkeypatch):
+    # Der eigentliche Live-Bug: gutes Audio (>= Schwelle) + resolved==True + genug high-conf
+    # -> NICHT poor_audio_health. Vorher las der Merge ein noch-NULL-Audio (Race) und flaggte
+    # faelschlich poor_audio_health trotz spaeterem score=0.93.
+    call = _make_call(audio_health_resolved=True, audio_health_score=0.93)
+    _install_merge_doubles(monkeypatch, call, pending=0, high_conf=5)
+    seen = {}
+    monkeypatch.setattr(sl, '_CALL_END_MERGE_STEPS', [lambda ctx: seen.update(ctx)])
+
+    sl._call_end_merge({'call_id': call.id})
+
+    assert seen.get('call') is call                  # Merge gefeuert
+    assert seen.get('not_gradable_reason') is None   # gutes Audio -> NICHT poor_audio_health
