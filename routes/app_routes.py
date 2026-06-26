@@ -721,6 +721,19 @@ def api_beenden():
         finally:
             _db_calls.close()
 
+        # ── TAXO2-Plan 04 (FOLD 26.06.) — async Engine-Anstoss (ADDITIV) ──────────────────
+        # NACHDEM der Call ended ist (ended_at oben gesetzt, das F-02-Call-Ende-Signal): den
+        # Call-Ende-Merge in der Slow Lane ANSTOSSEN. Der Consumer prueft dann F-02 (ended +
+        # 0 pending, KEINE outcome-Bedingung — F-09 gestrichen, Engine ergebnis-blind) und
+        # schreibt async die Note NUR in rubric_score (Option B). KEIN Block des Call-Endes
+        # (D-10, Latenz Punkt 25 — nur ein leichtes Queue-put). correct_outcome ist ENTKOPPELT
+        # (kein Anstoss dort, FOLD 26.06.). Best-effort: ein Fehler hier bricht /api/beenden NIE.
+        try:
+            from services.slow_lane import slow_lane as _slow_lane
+            _slow_lane.put({'call_id': _phase_d_call_id})
+        except Exception as _e_merge_kick:
+            print(f'[TAXO2-04] slow_lane.put (Score-Anstoss) Fehler (non-fatal): {_e_merge_kick}')
+
     # -- Phase 08.23.2.D REQ-D-6 - Audio-Health-Background-Thread --
     # Liest _phase_d_word_confidences (bereits oben kopiert VOR reset_session),
     # berechnet 5 Metriken via outcome_service.calculate_audio_health,
