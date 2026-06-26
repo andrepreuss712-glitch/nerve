@@ -2202,6 +2202,25 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 
 **🔴 → Cross-AI PFLICHT vor Execute** (André-Direktive: TAXO1/2/3 alle bis kurz vor Execute, dann Ineinandergreifen prüfen, dann TAXO1→TAXO2→TAXO3). NÄCHSTER SCHRITT: /gsd-review --phase 08.23.2.TAXO2 --all. Alle 9 SPEC-Requirements abgedeckt. Multi-Segment-Gotcha: Pfade hardcoded, gsd-tools umgangen, STATE/ROADMAP hand-editiert.
 
+> ⚠️ **TAXO2-04 BLEIBT OFFEN** (Stand 2026-06-26): Plan 04 ist gebaut + der Audio-Race-Fan-In-Fix (`audio_health_resolved`, Migration 0027) ist gebaut, aber Plan 04 ist NICHT abgeschlossen. Der Live-Test 26.06. deckte einen ZWEITEN, tieferen Defekt auf (Handling-Benotung NIE benotet → `insufficient_data`), Wurzel in **Plan 03** (Timing-Race). → Fix-Phase **08.23.2.TAXO2.HANDLING-TIMING** (unten). Plan 04 erst fertig, wenn HANDLING-TIMING live+grün UND Plan-04-Live-Test re-verifiziert.
+
+### Phase 08.23.2.TAXO2.HANDLING-TIMING: Handling-Benotung Timing-Fix (Deferred Scoring) (INSERTED 2026-06-26, aus TAXO2-04-Live-Test) 🔴
+
+**Goal:** Die Einwand-Behandlung (`handling_score`) wird wieder korrekt benotet, statt dass jeder Call systemisch auf `insufficient_data`/`abstained` landet. Wurzel = Timing-Race im Handling-Benoter (**Plan 03**, `services/slow_lane.py`), NICHT Plan 04.
+
+**Problem (Prod-verifiziert, Live-Test 2026-06-26):** Die Handling-Benotung läuft LIVE beim Einwand-Emit, aber `transcript_segments` werden gebündelt am Call-Ende geschrieben (25–58s später). `_find_next_advisor_utterance` (slow_lane.py:189-213) sucht auf `transcript_segments.created_at` (Batch-Schreibzeit), nicht `ts_ms` (Sprech-Zeit) — zum Benotungs-Zeitpunkt existieren die Segmente gar nicht → `grade_handling` abstainiert (D-07) → Event terminal `'abstained'` → Idempotenz (`_persist_event_ref` re-prozessiert nur `'pending'`) verhindert Re-Scoring. Systemisch.
+
+**Fix-Richtung (Empfehlung, Fork von Cross-AI/Gemini zu bewerten):** (1) Handling-Benotung der Einwand-Events **DEFERRED bis nach dem transcript_segments-Write (Call-Ende)** — Events bleiben `'pending'`; ein Fan-In-Signal (analog `audio_health_resolved`) stößt die Benotung an, sobald das Transkript persistiert ist (passt zur Plan-04-Merge-Vorbedingung pending_events==0). (2) `_find_next_advisor_utterance` auf **Sprech-Zeit `ts_ms`** verankern (Bezug = `calls.started_at`), nicht `created_at`. Alternative (zu bewerten): transcript_segments real-time statt Batch schreiben (teurer/riskanter — Anon-Pipeline B am Call-Ende).
+
+**Depends on:** 08.23.2.TAXO2 Plan 03 (Handling-Benoter) + Plan 04 (Merge-Vorbedingung + `audio_health_resolved`-Fan-In). **Blocker für:** Abschluss von TAXO2 Plan 04.
+**Komplexität:** 🔴 — Slow-Lane-Timing/Race + Persistenz-Schicht. Cross-AI (Gemini) **Pflicht vor Execute** (insb. den Fork bewerten). Real-Daten-Validation Pflicht.
+**Pflicht-Sektionen im Plan:** Punkt 14 (Control-Flow/Race-Fragen: Transkript-Write-Fehler → kein Hang, Idempotenz, Doppel-Trigger), Punkt 21 (Persistenz-Schicht: transcript_segments/intent_event/calls-Brücke), Punkt 25 (Latenz — Benotung bleibt async, kein Block des Call-Endes), Punkt 23 (Schild, falls Tabelle/Spalte berührt).
+**Status:** 🟡 GEPLANT 2026-06-26 (Research→Plan→Checker), Cross-AI ausstehend. CONTEXT.md + RESEARCH.md im Phase-Dir.
+
+**Plans:** TBD (nach Research/Planung).
+
+**🔴 → Cross-AI PFLICHT vor Execute.** NÄCHSTER SCHRITT nach Planung: /gsd-review --phase 08.23.2.TAXO2.HANDLING-TIMING --all. Multi-Segment-Gotcha: Pfade hardcoded, gsd-tools umgangen, STATE/ROADMAP hand-editiert.
+
 ### Phase 08.23.2.TAXO3: Antworten — EINE Wissensversorgung (Säule 3) (NEU 2026-06-10) 🔴
 
 **Goal:** EINE `build_answer_context()`-Funktion für ALLE KI-Antwort-Pfade (QA-Pipeline, manueller Knopf, Auto-Variante) — kein Antwort-Pfad mehr ohne Profil-Persona + Voice-Anker. Die kontext-arme hardcoded Auto-Variante stirbt.
