@@ -699,6 +699,16 @@ class Call(Base):
     call_summary = Column(Text, nullable=True, comment='Post-Call-Zusammenfassung')
     outcome = Column(Text, nullable=True, comment='Call-Ergebnis (CHECK ck_calls_outcome, z.B. meeting_booked/no_interest)')
     audio_health_score = Column(Float, nullable=True, comment='Audio-Qualitaets-Score des Calls')
+    # --- Phase 08.23.2.TAXO2-04 Gap-Fix — Fan-In-Join-Flag gegen die Audio-Race (Migration 0027) ---
+    audio_health_resolved = Column(
+        Boolean, nullable=False, server_default=text('false'),
+        comment="Fan-In-Join-Flag (TAXO2-04 Audio-Race-Fix): TRUE sobald der async Audio-Zustand "
+                "endgueltig festgeschrieben ist (Score gesetzt ODER bewiesen kein Buffer). Der "
+                "Call-Ende-Merge wartet darauf, BEVOR er ein NULL-audio_health_score als "
+                "poor_audio_health wertet — verhindert die Race, in der der Merge VOR dem "
+                "Audio-Thread liest. Schreibt routes/app_routes.py (api_beenden / _audio_health_bg); "
+                "liest services/slow_lane.py (Merge-Gate).",
+    )
     coaching_score = Column(Float, nullable=True, comment='Gesamt-Coaching-Score des Calls')
     # --- Phase 08.23.2.D.UX — Score-Breakdown (REQ-D.UX-11, Migration 0007) ---
     score_breakdown = Column(JSON_TYPE, nullable=True, comment='JSON: Aufschluesselung des Coaching-Scores')
@@ -731,7 +741,7 @@ class Call(Base):
         Index('idx_calls_account_time', 'account_id', 'started_at'),
         Index('idx_calls_user_time', 'user_id', 'started_at'),
         Index('idx_calls_mode_outcome', 'call_mode', 'outcome', postgresql_where=text('outcome IS NOT NULL')),
-        {'comment': 'Zentraler Call-Datensatz der neuen Architektur (UUID-PK, Outcome/Coaching/Transkript-Storage). Status: lebt (neue Architektur Phase 08.23.2.A+). Schreibt/liest services/+routes/ der neuen Call-Pipeline.'},
+        {'comment': 'Zentraler Call-Datensatz der neuen Architektur (UUID-PK, Outcome/Coaching/Transkript-Storage). Status: lebt (neue Architektur Phase 08.23.2.A+). Schreibt/liest services/+routes/ der neuen Call-Pipeline; audio_health_resolved geschrieben routes/app_routes.py (api_beenden/_audio_health_bg), gelesen services/slow_lane.py (Call-Ende-Merge-Gate, TAXO2-04 Audio-Race-Fix).'},
     )
 
 
