@@ -2217,7 +2217,9 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 **Pflicht-Sektionen im Plan:** Punkt 14 (Control-Flow/Race-Fragen: Transkript-Write-Fehler → kein Hang, Idempotenz, Doppel-Trigger), Punkt 21 (Persistenz-Schicht: transcript_segments/intent_event/calls-Brücke), Punkt 25 (Latenz — Benotung bleibt async, kein Block des Call-Endes), Punkt 23 (Schild, falls Tabelle/Spalte berührt).
 **Status:** 🟡 GEPLANT 2026-06-26 (Research→Plan→Checker), Cross-AI ausstehend. CONTEXT.md + RESEARCH.md im Phase-Dir.
 
-**Plans:** TBD (nach Research/Planung).
+**Plans:** 2 Pläne in 2 Wellen (PLANNED 2026-06-26).
+- [ ] 08.23.2.TAXO2.HANDLING-TIMING-01-fan-in-flag-und-schild-PLAN.md (Welle 1) — Migration 0028 `calls.transcript_resolved` (Fan-In-Flag analog `audio_health_resolved`) + ts_ms-Schild-Korrektur ("ms ab erster Aussage") + calls-Tabellen-Schild. Foundation, autonom.
+- [ ] 08.23.2.TAXO2.HANDLING-TIMING-02-deferred-scoring-und-ts-ms-anchor-PLAN.md (Welle 2, depends_on 01) — Deferred Scoring (Live-emit-Grade-Trigger raus, Defer-Guard) + `_find_next_advisor_utterance` auf `ts_ms` verankern (Strategie B) + `transcript_resolved`-Merge-Gate + `api_beenden`-Setpoint (resolved-als-absent) + Re-Queue + Tests. **Schluss-Task = BLOCKENDER human-verify-Checkpoint** (André: Migration als postgres VOR Restart → `deploy.sh production` → Live-Test → Plan-04-Re-Verifikation). autonomous:false.
 
 **🔴 → Cross-AI PFLICHT vor Execute.** NÄCHSTER SCHRITT nach Planung: /gsd-review --phase 08.23.2.TAXO2.HANDLING-TIMING --all. Multi-Segment-Gotcha: Pfade hardcoded, gsd-tools umgangen, STATE/ROADMAP hand-editiert.
 
