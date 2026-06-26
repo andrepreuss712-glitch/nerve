@@ -350,7 +350,10 @@ def _periodic_tick() -> None:
 # sie ASYNC (Slow Lane, D-10) in die EINZIGE Engine-Schreib-Tabelle: rubric_score (Option B —
 # KEIN calls.coaching_score-Write, KEIN outcome in rubric_score). Anstoss = api_beenden
 # (slow_lane.put({'call_id': ...})). Harte Vorbedingung F-02: Call ended (ended_at IS NOT NULL)
-# UND pending_events(call_id)==0. KEINE outcome-Vorbedingung (F-09 gestrichen — Engine
+# UND pending_events(call_id)==0 UND audio_health_resolved==True (TAXO2-04 Fan-In-Join gegen die
+# Audio-Race: der Merge wartet, bis der async Audio-Zustand festgeschrieben ist, sonst liest er ein
+# noch-nicht-geschriebenes NULL-audio_health_score und flaggt faelschlich poor_audio_health).
+# KEINE outcome-Vorbedingung (F-09 gestrichen — Engine
 # ergebnis-blind). KEIN H-2-Sweep. M-4-GUC-Klammer (set/clear_current_tenant, finally) um JEDEN
 # rubric_score-Write. Audio-Gate D-09 VOR dem Scoring. Retry/Dead-Letter (SCORE_MAX_RETRIES).
 # ════════════════════════════════════════════════════════════════════════════════════
@@ -554,6 +557,14 @@ def _call_end_merge(item) -> None:
             return  # Call laeuft noch -> KEIN vorzeitiger Merge (transient-WAHR-Schutz)
         if _pending_events(call_id, read_db) != 0:
             return  # noch offene Momente -> warten (drainen scored/abstained/failed terminal)
+        # ── TAXO2-04 Fan-In-Join (Audio-Race-Fix): der Merge wartet ZUSAETZLICH darauf, dass der
+        #    async Audio-Zustand endgueltig festgeschrieben ist (audio_health_resolved==True). VOR
+        #    diesem Gate konnte der Merge calls.audio_health_score lesen, BEVOR der _audio_health_bg-
+        #    Thread ihn schrieb -> NULL -> faelschlich poor_audio_health. JETZT bedeutet ein NULL-
+        #    Score NACH resolved==True korrekt 'wirklich kein Audio'. Den Flag setzt api_beenden
+        #    (kein Buffer) ODER der Thread-finally (Buffer da) — beide re-putten danach. ───────────
+        if not getattr(call, 'audio_health_resolved', False):
+            return  # Audio-Zustand noch nicht festgeschrieben -> warten (Re-Put folgt vom Audio-Pfad)
 
         # ── M-4: tenant_id ZUERST lesen (calls nicht FORCE-RLS), bevor die GUC gesetzt wird ──
         tenant_id = call.tenant_id
