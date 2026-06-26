@@ -793,3 +793,25 @@ Quelle: `Nerve-Vault/CLAUDE.md` → „HART: Latenz ist ein Dealbreaker". Andre-
 - **Pre-Execute-Audit Pflicht-Frage (Punkt 19 ergänzt):** „Erhöht dieser Pfad die spürbare Antwort-Latenz? Um wie viel? Im Budget?" Deutlicher Anstieg → Dealbreaker, umdesignen, NICHT „bauen + später optimieren".
 
 **Gilt besonders für TAXO3:** die Qualitäts-Verbesserung (gutes Antwort-Paradigma, Rollen-Bewusstsein, ggf. stärkeres Modell) darf das Tempo nicht opfern — die Latenz-Lösung (Slot-A-Sofortnetz + Caching + Modell-Abwägung) ist Teil des Scope, kein Nachgedanke.
+
+## Punkt 26 — Async-Daten-Bereitschafts-Naht: vor jedem Lese-Schritt prüfen WANN die Daten geschrieben werden (verankert 2026-06-26)
+
+Quelle: `Nerve-Vault/CLAUDE.md` → Punkt 22. Dort die volle Begründung; hier die GSD-relevante Kurzfassung. **Dritter Vorfall derselben Klasse → Regel.**
+
+**Die Falle:** Ein Schritt (Live-Benoter, Slow-Lane-Consumer, Merge, Hintergrund-Job) LIEST Daten, die ein ANDERER Pfad (Hintergrund-Thread, Batch-Job, separate Pipeline) erst SPÄTER schreibt. Läuft der Leser bevor der Schreiber geschrieben hat → er liest NULL/leer/stale und schließt daraus **still falsch** (kein Fehler im Log, nur ein falsches Ergebnis). Spezialfall von Race-Condition (Punkt 14): zeitlicher Versatz zwischen Schreib- und Lese-Pipeline.
+
+**Drei Vorfälle (Trigger):**
+- **CALLID (24.-25.06.):** Hintergrund-Schleifen reichten `call_id`/Tenant nicht durch → leer beim Lesen.
+- **Audio-Race (26.06.):** Call-Ende-Merge las `calls.audio_health_score` BEVOR der `_audio_health_bg`-Thread (Start bei `api_beenden`) ihn schrieb → NULL → fälschlich `poor_audio_health` bei Audio=0.93. Fix: Fan-In-Flag `calls.audio_health_resolved` (Migration 0027).
+- **Handling-Timing (26.06.):** `_persist_event_ref`→`_find_next_advisor_utterance` benotet ~30ms nach Einwand-Emit (LIVE), aber `transcript_segments` werden gebündelt am Call-Ende geschrieben (~25-58s später, alle `created_at` identisch) → Benoter findet nie den Berater-Antwort-Satz → enthält sich IMMER → Einwand-Behandlung nie benotet. Plus: Lookup ankerte auf `created_at` (Batch-Schreibzeit) statt `ts_ms` (Sprech-Zeit).
+
+**Pflicht-Check für Plan-Author + Plan-Checker + Cross-AI — bei JEDEM Schritt der Daten eines anderen Pfades liest:**
+1. **„Wann wird diese Quelle TATSÄCHLICH geschrieben?"** — live/inkrementell, Batch-am-Call-Ende, oder Hintergrund-Thread/Job? Am echten Code + an Prod-Daten belegen (z.B. `inspect.sh` — identische `created_at` einer Zeilen-Gruppe = Batch-Write; Schreibstelle greppen). NICHT annehmen.
+2. **„Kann mein Leser dem Schreiber vorauslaufen? Was liest er dann (NULL/leer/stale) und was schließt der Code daraus fälschlich?"**
+3. **Zeit-Anker:** Sortiert/filtert der Leser nach Zeit → nutzt er die **Sprech-/Ereignis-Zeit** (fachlich korrekt) oder die **DB-Schreib-Zeit** (`created_at`, bei Batch-Write wertlos)?
+
+**Wenn der Leser vorauslaufen kann → Fan-In-Bereitschafts-Naht bauen** (Muster `audio_health_resolved`): Leser wartet auf ein explizites „X resolved"-Signal (Flag/Marker), ODER wird vom Schreiber-Abschluss neu angestoßen. „NULL" erst NACH „resolved" als „wirklich absent" werten. Signal IMMER setzen (try/finally + Nicht-gestartet-Pfad) → kein Hang, aber OHNE neuen Zeit-Sweep.
+
+**Plan-Sektion-Pflicht:** Bei daten-lesenden Schritten in der Persistenz-Schicht-Verifikation (Punkt 21, Sektion 5) zusätzlich eine Spalte/Zeile „**Schreib-Zeitpunkt** (live/batch/bg-thread) + kann Leser vorauslaufen?". Fehlt sie bei einem Schritt der fremd-geschriebene Daten liest → Plan-Checker BLOCK.
+
+**Verhältnis:** Erweitert Punkt 14 (Race-Fragen, allgemein) + Punkt 21 (Cross-Layer — „existiert die Spalte?" → hier „ist sie zum Lese-Zeitpunkt BEFÜLLT?"). Pre-Execute-Audit (Claudian) prüft das mit.
