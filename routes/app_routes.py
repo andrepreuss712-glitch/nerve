@@ -722,6 +722,7 @@ def api_beenden():
                 #    Ist der Buffer DA, bleibt resolved False -> der Thread-finally setzt es + re-putet.
                 if not _phase_d_word_confidences:
                     _call_row.audio_health_resolved = True
+                _call_row.transcript_resolved = True  # Fan-In-Anstoss: Transkript festgeschrieben oder bewiesen leer (resolved-als-absent, Punkt 26)
                 _db_calls.commit()
         except Exception as _e_upd:
             print(f'[Phase08.23.2.D] calls-UPDATE Fehler: {_e_upd}')
