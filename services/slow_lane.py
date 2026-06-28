@@ -862,3 +862,43 @@ register_periodic_tick_hook(_requeue_pending_safety_net)
 # Der Merge-Gate + M-4-GUC-Klammer + Retry/Dead-Letter sitzen in _call_end_merge (Consumer-Pfad),
 # das run_call_end_steps INNERHALB der GUC-Klammer ruft. Bau-Regel 1: der Judge laeuft nur hier.
 register_call_end_step(_judge_step)
+
+
+# ── TAXO2-Plan 04: Uebernahme-/Adoption-Call als zweiter Call-Ende-Schritt registrieren ─────────
+# SEPARATER Schritt NACH dem Verhaltens-Judge (_judge_step): der Adoption-Judge kennt die
+# NERVE-Vorschlaege (suggestion_reactions.suggestion_text), der Verhaltens-Judge NICHT
+# (Bias-Schutz, Soll-Verhalten §6). Beide laufen in DERSELBEN M-4-GUC-Klammer (ctx).
+# Reihenfolge: _judge_step zuerst (Verhalten), _adoption_step danach (Uebernahme) —
+# unabhaengig voneinander, stabile Reihenfolge erleichtert Debugging.
+# Bau-Regel 1: kein LLM in der Fast/Live-Lane. Dieser Schritt laeuft NUR hier (async,
+# Slow-Lane-Consumer, post-call).
+
+def _adoption_step(ctx) -> None:
+    """Registrierter Call-Ende-Schritt (run_call_end_steps): stoesst den Uebernahme-/Adoption-
+    Judge an + schreibt adoption_value / reaction_class / following_utterance_ref in
+    suggestion_reactions (DEFERRED-Spalten, jetzt befuellt). Laeuft INNERHALB der M-4-GUC-Klammer
+    des Merge-Gates (set_current_tenant ist bereits gesetzt -> FORCE-RLS-Write valide, M-4).
+
+    Audio-Gate D-09 konsistent: kein Adoption-Call auf not_gradable Audio (Muell-Audio = keine
+    Vorschlaege sinnvoll bewertbar — konsistent mit _judge_step).
+
+    ctx (vom Merge-Gate gefuellt): {call, events, db, high_conf, not_gradable_reason}.
+    """
+    from services.adoption_runner import run_adoption_judge
+
+    call = ctx['call']
+    db = ctx['db']
+
+    # ── Audio-Gate D-09 (VOR dem Adoption-Call): kein LLM auf Muell-Audio ───────────────────
+    reason = ctx.get('not_gradable_reason')
+    if reason is not None:
+        call_id = getattr(call, 'id', '?')
+        print(f'[ADOPTION] skip call={call_id}: not_gradable ({reason}) — kein Adoption-Call auf Muell-Audio')
+        return
+
+    # ── Uebernahme-Judge (run_adoption_judge, Plan 04) ────────────────────────────────────────
+    run_adoption_judge(call, db)
+    db.commit()
+
+
+register_call_end_step(_adoption_step)
