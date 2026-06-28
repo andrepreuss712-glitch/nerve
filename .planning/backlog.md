@@ -8,6 +8,15 @@
 
 ## Open
 
+### EWB-DISPLAY-RACE — Live: NERVEs EWB-Vorschlag im PiP wird gelöscht/überschrieben WÄHREND der User ihn vorliest
+
+- **Severity:** high (Live-UX-Kernpfad; macht den Live-Assistenten im Cold-Call unbrauchbar + versaut jeden Post-Call-Bewerter-Test)
+- **Entdeckt:** André-Live-Test 2026-06-28 (Prod, Cold-Call, sid EzUqxD59WIBgxD2oAAAB, ~15:36-15:39). „während ich nerves EWB antworten am vorlesen war hat er einfach das fenster gelöscht, was neues geschrieben oder unfug gemacht."
+- **Log-Belege (Prod):** `[coldcall_infer] error: Extra data: line 6 column 1 (char 177)` (kaputtes JSON aus der Live-Erkennung) + `[analyse_loop] SID ... gone during Claude call — silent drop` + `manual_ewb` feuerte DOPPELT (`Keine Zeit` 2×).
+- **Verdacht:** der `analyse_loop` / die Auto-Erkennung überschreibt den manuellen EWB-Vorschlag im selben PiP-Anzeige-Bereich (Race um die Anzeige), evtl. verstärkt durch den JSON-Parse-Fehler + Doppel-Emit.
+- **Vorgehen:** **`/gsd-debug` Logging-First (CLAUDE.md Punkt 15) — KEIN Blind-Fix.** Log-Punkte an: EWB-Vorschlag-Render, analyse_loop-Render-Update, SID-Lifecycle, coldcall_infer-JSON-Parse → reproduzieren → diagnostizieren. Kein Refactor im Fix (Punkt 17).
+- **Routing:** Live-Pfad (PiP/pip-launcher.js + analyse_loop + claude_service coldcall_infer). NICHT der heutige TAXO2-Bewerter-Bau (separates Subsystem). Blocker für einen sauberen Bewerter-Qualitäts-Test.
+
 ### RECUR-EWB-DEEPER — wiederkehrender Einwand → NERVE soll TIEFER gehen (Pain freilegen) statt dieselbe Hilfe nochmal
 
 - **Severity:** medium-high (Kern-Qualität der Live-Hilfe + ehrliches Scoring-Signal)
