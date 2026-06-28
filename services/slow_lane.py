@@ -363,6 +363,7 @@ _ORIGIN_LIVE = 'live'
 _STATUS_SCORED = 'scored'
 _STATUS_NOT_GRADABLE = 'not_gradable'
 _STATUS_FAILED = 'failed'
+_STATUS_JUDGED = 'judged'  # TAXO2-Plan 03: LLM-Bewerter-Ergebnis
 
 
 def _pending_events(call_id, db) -> int:
@@ -424,17 +425,25 @@ def _mode_config_for(mode_key, db) -> dict:
 
 
 def _upsert_rubric_score(db, *, call_id, conversation_log_id, session_mode, tenant_id,
-                         coaching_score, is_provisional, measured_weight_pct,
-                         unmeasured_dimensions, dimensions, status, payload) -> None:
+                         coaching_score=None, is_provisional=False, measured_weight_pct=None,
+                         unmeasured_dimensions=None, dimensions=None, status, payload=None,
+                         observations=None, ratings=None, dimensions_version=None) -> None:
     """F-03 idempotenter UPSERT in rubric_score (DER EINZIGE Engine-Write, Option B).
     ON CONFLICT (call_id) WHERE origin='live' DO UPDATE — referenziert den partiellen Unique-Index
     ux_rubric_score_live_call_id (Plan 01). KEIN calls.coaching_score-Write, KEIN outcome-Feld
-    (FOLD 26.06. — outcome bleibt in calls, die Anzeige-Sperre liest es per Join)."""
+    (FOLD 26.06. — outcome bleibt in calls, die Anzeige-Sperre liest es per Join).
+
+    TAXO2-Plan 03 Erweiterung: observations/ratings/dimensions_version fuer den LLM-Bewerter.
+    ALT-Spalten (coaching_score/is_provisional/measured_weight_pct/unmeasured_dimensions/dimensions)
+    bleiben als kwargs (write-stop: Werte sind None/falsy, werden nicht mehr befuellt — Punkt 20).
+    """
     values = {
         'call_id': call_id,
         'conversation_log_id': conversation_log_id,
         'session_mode': session_mode,
         'origin': _ORIGIN_LIVE,
+        # ALT-Spalten (write-stop ab LLM-Bewerter TAXO2 — Punkt 20, Foundation-Register):
+        # werden nicht mehr befuellt; bleiben als kwargs fuer Rueckwaerts-Kompatibilitaet.
         'coaching_score': coaching_score,
         'is_provisional': is_provisional,
         'measured_weight_pct': measured_weight_pct,
@@ -443,13 +452,21 @@ def _upsert_rubric_score(db, *, call_id, conversation_log_id, session_mode, tena
         'status': status,
         'tenant_id': tenant_id,
         'payload_jsonb': payload or {},
+        # LLM-Bewerter-Spalten (TAXO2-Plan 03, Migration 0029):
+        'observations_jsonb': observations or {},
+        'ratings_jsonb': ratings or {},
     }
+    if dimensions_version is not None:
+        values['score_schema_version'] = dimensions_version
+
     stmt = _pg_insert(RubricScore.__table__).values(**values)
     update_cols = {k: stmt.excluded[k] for k in (
         'conversation_log_id', 'session_mode', 'coaching_score', 'is_provisional',
         'measured_weight_pct', 'unmeasured_dimensions', 'dimensions', 'status',
-        'tenant_id', 'payload_jsonb',
+        'tenant_id', 'payload_jsonb', 'observations_jsonb', 'ratings_jsonb',
     )}
+    if dimensions_version is not None:
+        update_cols['score_schema_version'] = stmt.excluded['score_schema_version']
     stmt = stmt.on_conflict_do_update(
         index_elements=['call_id'],
         index_where=_sa_text("origin = 'live'"),
@@ -458,15 +475,23 @@ def _upsert_rubric_score(db, *, call_id, conversation_log_id, session_mode, tena
     db.execute(stmt)
 
 
-def _compute_rubric_step(ctx) -> None:
-    """Registrierter Call-Ende-Schritt (run_call_end_steps): rechnet die Note + UPSERTet sie in
-    rubric_score. Laeuft INNERHALB der M-4-GUC-Klammer des Merge-Gates (set_current_tenant ist
-    bereits gesetzt -> after_begin publiziert app.tenant_id fuer den FORCE-RLS-Write).
+def _judge_step(ctx) -> None:
+    """Registrierter Call-Ende-Schritt (run_call_end_steps): stoesst den LLM-Verhaltens-Judge an
+    + UPSERTet observations_jsonb / ratings_jsonb in rubric_score. Laeuft INNERHALB der
+    M-4-GUC-Klammer des Merge-Gates (set_current_tenant ist bereits gesetzt -> after_begin
+    publiziert app.tenant_id fuer den FORCE-RLS-Write, M-4).
+
+    TAXO2-Plan 03 CUTOVER (Punkt 20): compute_rubric (Marker-Engine) als Noten-Quelle
+    abgeloest durch run_behavior_judge (LLM-Bewerter, Soll-Verhalten §6).
+    rubric_engine.py bleibt im Baum als Foundation (nicht geloescht — Punkt 20,
+    Foundation-Code-Register); kein lebender Noten-Aufruf mehr in slow_lane.py.
+
+    Bau-Regel 1: der Judge laeuft NUR hier (Slow-Lane-Consumer, async) — KEIN LLM in der
+    Fast/Live-Lane. Latenz egal (Punkt 25, Slow Lane).
 
     ctx (vom Merge-Gate gefuellt): {call, events, db, high_conf, not_gradable_reason}.
     """
-    from services.rubric_engine import compute_rubric
-    from services.live_session import get_speech_stats
+    from services.judge_runner import run_behavior_judge
 
     call = ctx['call']
     events = ctx['events']
@@ -474,9 +499,9 @@ def _compute_rubric_step(ctx) -> None:
     mode_key = call.call_mode  # N-4: QUELLE DER WAHRHEIT = calls.call_mode (NIE session_mode)
     tenant_id = call.tenant_id
 
-    # ── Audio-Gate D-09 (VOR dem Scoring): not_gradable speichern+flaggen (Option B: in
-    #    rubric_score, NICHT calls). Auch dieser Write geht unter Tenant-GUC (M-4 gilt fuer JEDEN
-    #    rubric_score-Write — die GUC ist im Merge-Gate gesetzt). ───────────────────────────────
+    # ── Audio-Gate D-09 (VOR dem Judge-Call): not_gradable speichern+flaggen (Option B: in
+    #    rubric_score, NICHT calls). Kein LLM auf Muell-Audio.
+    #    Auch dieser Write geht unter Tenant-GUC (M-4 gilt fuer JEDEN rubric_score-Write). ──────
     reason = ctx.get('not_gradable_reason')
     if reason is not None:
         _upsert_rubric_score(
@@ -485,49 +510,58 @@ def _compute_rubric_step(ctx) -> None:
             conversation_log_id=call.conversation_log_id,
             session_mode=mode_key,
             tenant_id=tenant_id,
-            coaching_score=None,
-            is_provisional=False,
-            measured_weight_pct=None,
-            unmeasured_dimensions=None,
-            dimensions=None,
             status=_STATUS_NOT_GRADABLE,
             payload={'reason': reason},
         )
         db.commit()
         return
 
-    # ── Scoring (compute_rubric, Plan 02 — reine Funktion) ──────────────────────────────────
-    # speech_stats: Req-9-Verkabelung ueber get_speech_stats(sid) per-SID (K1). Im post-call
-    # Daemon ist die Live-Session ueblicherweise schon abgeraeumt -> {0,0,0}; die belastbaren
-    # Werte stehen in conversation_logs (redeanteil_avg/tempo_avg/laengster_monolog, an
-    # /api/beenden FRUEH festgehalten). sid = intent_event.session_id (per-Call konstant).
-    sid = events[0].session_id if events else None
-    speech_stats = get_speech_stats(sid)
-    mode_config = _mode_config_for(mode_key, db)
-    result = compute_rubric(events, speech_stats, call, mode_config)
+    # ── LLM-Verhaltens-Judge (run_behavior_judge, Plan 03) ──────────────────────────────────
+    # compute_rubric (Marker-Engine) als Noten-Quelle abgeloest (Punkt 20 Cutover).
+    # rubric_engine.py + compute_rubric bleiben im Baum als Foundation — kein lebender Aufruf.
+    result = run_behavior_judge(call, events, db)
 
-    # ≥1 failed-Event -> transparenter Marker (F-05), additiv im payload (keine Score-Strafe).
-    n_failed = sum(1 for e in events if getattr(e, 'handling_status', None) == 'failed')
-    payload = {}
-    if n_failed:
-        payload['failed_events'] = n_failed
-        payload['note'] = f"{n_failed} Events nicht bewertbar"
-
+    # ── UPSERT: Beobachtungen + interne Auspraegung (KEINE Zahl) unter M-4-GUC ──────────────
+    # observations_jsonb enthaelt auch den '_compliance'-Hard-Gate-Schluessel (Finding 2).
+    # Laeuft unter der bestehenden GUC-Klammer des Merge-Gates (M-4, gesetzt von _call_end_merge).
     _upsert_rubric_score(
         db,
         call_id=call.id,
         conversation_log_id=call.conversation_log_id,
-        session_mode=result.get('mode_key') or mode_key,
+        session_mode=mode_key,
         tenant_id=tenant_id,
-        coaching_score=result.get('coaching_score'),
-        is_provisional=bool(result.get('is_provisional')),
-        measured_weight_pct=result.get('measured_weight_pct'),
-        unmeasured_dimensions=result.get('unmeasured_dimensions'),
-        dimensions=result.get('dimensions'),
-        status=result.get('status') or _STATUS_SCORED,
-        payload=payload,
+        observations=result.get('observations_jsonb') or {},
+        ratings=result.get('ratings_jsonb') or {},
+        dimensions_version=result.get('dimensions_version'),
+        status=result.get('status') or _STATUS_JUDGED,
     )
     db.commit()
+
+
+# ── Foundation-Code-Register (Punkt 20, Pruning-Notiz 3a/3b) ────────────────────────────
+# compute_rubric / rubric_engine.py: Marker-Engine als Noten-Quelle abgeloest durch
+# run_behavior_judge (LLM-Bewerter, TAXO2-Plan 03, Soll-Verhalten §6 Cutover Punkt 20).
+# rubric_engine.py + die Funktion compute_rubric bleiben UNBERUEHRT im Baum — Foundation-Code
+# fuer spaetere Verwendung (z.B. Hybrid-Ansatz, Audit-Vergleich). Kein lebender Noten-Aufruf
+# mehr in slow_lane.py (register_call_end_step zeigt auf _judge_step, nicht mehr auf
+# _compute_rubric_step). Das models.py ALT-Spalten-Schild (coaching_score etc.) bleibt
+# (write-stop, Plan 02) — wird nicht geloescht.
+# _compute_rubric_step bleibt als toter Code (NICHT registriert) fuer Cross-Referenz-Suchen.
+
+def _compute_rubric_step(ctx) -> None:
+    """TAXO2-Plan 03 CUTOVER: NICHT mehr registriert — abgeloest durch _judge_step.
+    Verbleib: toter Code fuer Cross-Referenz (grep-Schutz gegen Verweis-Breakage).
+    compute_rubric (Marker-Engine) als Noten-Quelle durch LLM-Bewerter ersetzt (Punkt 20).
+    rubric_engine.py bleibt als Foundation im Baum (nicht geloescht, Pruning-Notiz 3a/3b).
+
+    ctx (NICHT mehr aufgerufen): {call, events, db, high_conf, not_gradable_reason}.
+    """
+    # Toter Code — kein lebender Aufruf mehr (register_call_end_step zeigt auf _judge_step).
+    # compute_rubric bleibt als Foundation: from services.rubric_engine import compute_rubric
+    raise RuntimeError(
+        '_compute_rubric_step ist nicht mehr registriert (TAXO2-Plan 03 Cutover). '
+        'Registrierter Schritt: _judge_step.'
+    )
 
 
 def _call_end_merge(item) -> None:
@@ -565,6 +599,14 @@ def _call_end_merge(item) -> None:
         #    (kein Buffer) ODER der Thread-finally (Buffer da) — beide re-putten danach. ───────────
         if not getattr(call, 'audio_health_resolved', False):
             return  # Audio-Zustand noch nicht festgeschrieben -> warten (Re-Put folgt vom Audio-Pfad)
+
+        # ── TAXO2-Plan 03 Fan-In (Punkt 26 / transcript_resolved): der Judge laeuft ERST,
+        #    nachdem api_beenden das Transkript committed hat (transcript_resolved=True).
+        #    Ohne dieses Gate koennte der Judge gegen ein noch-leeres transcript_segments lesen.
+        #    api_beenden setzt transcript_resolved IMMER True (resolved-als-absent) -> kein Hang.
+        #    Jetzt VIER Vorbedingungen: ended + 0 pending + audio_resolved + transcript_resolved.
+        if not getattr(call, 'transcript_resolved', False):
+            return  # Transkript noch nicht festgeschrieben -> Judge wuerde leer lesen (Punkt 26)
 
         # ── M-4: tenant_id ZUERST lesen (calls nicht FORCE-RLS), bevor die GUC gesetzt wird ──
         tenant_id = call.tenant_id
@@ -814,8 +856,9 @@ def request_shutdown() -> None:
 # ── H-3 als erster periodischer Tick-Hook registrieren (Task 4 via Task-5-Registry) ──
 register_periodic_tick_hook(_requeue_pending_safety_net)
 
-# ── TAXO2-Plan 04: compute_rubric->rubric_score als Call-Ende-Schritt registrieren (FOLD 26.06.) ──
-# Plan 04 haengt sich NUR via register_call_end_step ein (KEIN register_periodic_tick_hook mehr —
-# H-2-Sweep gestrichen). Der Merge-Gate + die M-4-GUC-Klammer + Retry/Dead-Letter sitzen in
-# _call_end_merge (Consumer-Pfad), das run_call_end_steps INNERHALB der GUC-Klammer ruft.
-register_call_end_step(_compute_rubric_step)
+# ── TAXO2-Plan 03 CUTOVER: run_behavior_judge->rubric_score als Call-Ende-Schritt registrieren ──
+# Cutover von compute_rubric (Marker-Engine, Punkt 20) auf _judge_step (LLM-Bewerter, Plan 03).
+# _compute_rubric_step ist NOT MORE registriert — sie bleibt als toter Code fuer grep-Schutz.
+# Der Merge-Gate + M-4-GUC-Klammer + Retry/Dead-Letter sitzen in _call_end_merge (Consumer-Pfad),
+# das run_call_end_steps INNERHALB der GUC-Klammer ruft. Bau-Regel 1: der Judge laeuft nur hier.
+register_call_end_step(_judge_step)

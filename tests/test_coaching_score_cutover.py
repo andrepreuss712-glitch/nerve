@@ -1,19 +1,21 @@
-"""TAXO2-Plan 04 — Integration-Assertions fuer den Call-Ende-Merge (Slow Lane, async).
+"""TAXO2-Plan 04 + Plan 03 — Integration-Assertions fuer den Call-Ende-Merge (Slow Lane, async).
 
 Beweist Runtime-Verhalten (CLAUDE.md Test-Qualitaets-Regel — KEIN Source-Presence):
 
-  F-02  Merge feuert NUR wenn Call ended (ended_at IS NOT NULL) UND pending_events==0.
-        - laeuft noch (ended_at None)        -> KEIN rubric_score-Write
-        - noch offene 'pending'-Events       -> KEIN rubric_score-Write
-        - ended + 0 pending                  -> compute_rubric-Schritt laeuft (UPSERT)
-        - scored/abstained/failed terminal   -> zaehlen NICHT als pending (Merge feuert)
+  F-02  Merge feuert NUR wenn Call ended (ended_at IS NOT NULL) UND pending_events==0
+        UND audio_health_resolved==True UND transcript_resolved==True (4 Fan-In-Gates).
+        - laeuft noch (ended_at None)              -> KEIN rubric_score-Write
+        - noch offene 'pending'-Events             -> KEIN rubric_score-Write
+        - transcript_resolved=False                -> Merge wartet (Plan-03-Fan-In, Punkt 26)
+        - ended + 0 pending + beide resolved       -> Judge-Schritt laeuft (UPSERT)
+        - scored/abstained/failed terminal         -> zaehlen NICHT als pending (Merge feuert)
 
   F-09 GESTRICHEN  Merge braucht KEINE outcome-Vorbedingung (Engine ergebnis-blind).
 
-  F-07/D-09  Audio-Gate VOR dem Scoring; high-conf-Events SELBST aus der events-Liste gezaehlt
+  F-07/D-09  Audio-Gate VOR dem Judge-Call; high-conf-Events SELBST aus der events-Liste gezaehlt
              (confidence >= Tor-1), NICHT aus dem Engine-Dict.
-        - audio_health_score < Schwelle ODER NULL  -> status='not_gradable'
-        - < MIN_HIGH_CONFIDENCE_EVENTS hoch-konf.   -> status='not_gradable'
+        - audio_health_score < Schwelle ODER NULL  -> status='not_gradable', KEIN Judge-Call
+        - < MIN_HIGH_CONFIDENCE_EVENTS hoch-konf.  -> status='not_gradable', KEIN Judge-Call
 
   M-4  set_current_tenant(call.tenant_id) VOR dem Write; clear_current_tenant() im finally
        (auch bei Exception — Cross-Tenant-Leak-Schutz). tenant_id NULL -> skip + lautes Log.
@@ -21,11 +23,15 @@ Beweist Runtime-Verhalten (CLAUDE.md Test-Qualitaets-Regel — KEIN Source-Prese
   Robustheit  Merge-Fehler -> gedeckelter Re-Queue (attempts+1) bis SCORE_MAX_RETRIES, dann
               Dead-Letter (laut). Call NICHT als erledigt markiert. Daemon stirbt NIE.
 
-  TAXO2-04 Gap-Fix (Audio-Race / Fan-In-Join)  der Merge wartet auf audio_health_resolved==True,
-              bevor er ein NULL-audio_health_score als poor_audio_health wertet.
+  TAXO2-04 Gap-Fix (Audio-Race / Fan-In-Join)  der Merge wartet auf audio_health_resolved==True.
         - resolved=False -> Merge wartet (kein false-poor durch async-Ordering).
         - kein-Buffer (resolved=True + score=None) -> korrekt poor_audio_health (KEIN false-negative).
         - gutes Audio (resolved=True + score>=Schwelle) -> NICHT poor_audio_health (der Live-Bug).
+
+  TAXO2-Plan 03 Cutover  der registrierte Schritt ist jetzt _judge_step (LLM-Bewerter).
+        - compute_rubric (Marker-Engine) als Noten-Quelle abgeloest (Punkt 20).
+        - _judge_step UPSERTet observations/ratings (NICHT coaching_score/dimensions der Alt-Engine).
+        - Compliance-Hard-Gate persists in observations_jsonb['_compliance'] (Finding 2).
 
 Kein echter Prod-/PG-Write: db-Zugriffe laufen ueber Fake-/Mock-Sessions, Test laeuft DSN-frei.
 Der scharfe Postgres-Lauf (RLS-fail-closed, echter UPSERT) faellt im deploy.sh-Pytest-Gate an.
@@ -54,6 +60,7 @@ def _make_call(**overrides):
         conversation_log_id=42,
         audio_health_score=0.9,         # > Schwelle (gutes Audio)
         audio_health_resolved=True,     # TAXO2-04 Fan-In-Join: Audio-Zustand festgeschrieben (Default)
+        transcript_resolved=True,       # TAXO2-Plan-03 Fan-In: Transkript festgeschrieben (Punkt 26)
     )
     base.update(overrides)
     return SimpleNamespace(**base)
@@ -358,25 +365,30 @@ def test_daemon_survives_step_exception(monkeypatch, guc_spy):
 
 
 # ════════════════════════════════════════════════════════════════════════════════════
-# Registry — compute_rubric-Schritt ist eingehaengt (kein periodic-tick-Hook)
+# Registry — _judge_step (LLM-Bewerter) ist eingehaengt (Cutover von _compute_rubric_step)
+# TAXO2-Plan 03 Cutover (Punkt 20): _judge_step ersetzt _compute_rubric_step.
 # ════════════════════════════════════════════════════════════════════════════════════
 
 def test_compute_rubric_step_registered():
-    # Plan 04 haengt compute_rubric->rubric_score via register_call_end_step ein.
-    assert sl._compute_rubric_step in sl._CALL_END_MERGE_STEPS
+    # TAXO2-Plan 03 CUTOVER: _judge_step ist registriert, NICHT _compute_rubric_step.
+    # Der LLM-Bewerter hat die Marker-Engine als Noten-Quelle abgeloest (Punkt 20).
+    assert sl._judge_step in sl._CALL_END_MERGE_STEPS
+    assert sl._compute_rubric_step not in sl._CALL_END_MERGE_STEPS
 
 
 def test_compute_rubric_step_not_a_periodic_hook():
-    # FOLD 26.06.: KEIN _periodic_tick-Hook mehr (H-2-Sweep gestrichen).
+    # FOLD 26.06. + Cutover Plan 03: KEIN _periodic_tick-Hook (H-2-Sweep gestrichen, Punkt 20).
+    assert sl._judge_step not in sl._PERIODIC_TICK_HOOKS
     assert sl._compute_rubric_step not in sl._PERIODIC_TICK_HOOKS
 
 
 # ════════════════════════════════════════════════════════════════════════════════════
-# _compute_rubric_step — UPSERT-Aufruf (Option B: nur rubric_score, ergebnis-blind)
+# _judge_step — UPSERT-Aufruf (TAXO2-Plan 03 Cutover: LLM-Bewerter statt compute_rubric)
 # ════════════════════════════════════════════════════════════════════════════════════
 
 def test_compute_step_not_gradable_writes_status_only(monkeypatch):
-    # not_gradable_reason gesetzt -> rubric_score-Zeile mit status='not_gradable', coaching_score=None.
+    # not_gradable_reason gesetzt -> rubric_score-Zeile mit status='not_gradable', KEIN Judge-Call.
+    # (Kein LLM auf Muell-Audio — Audio-Gate D-09 bleibt unveraendert.)
     call = _make_call()
     captured = {}
     monkeypatch.setattr(sl, '_upsert_rubric_score',
@@ -384,61 +396,64 @@ def test_compute_step_not_gradable_writes_status_only(monkeypatch):
     db = MagicMock()
     ctx = {'call': call, 'events': [], 'db': db, 'not_gradable_reason': 'poor_audio_health'}
 
-    sl._compute_rubric_step(ctx)
+    sl._judge_step(ctx)
 
     assert captured['status'] == 'not_gradable'
-    assert captured['coaching_score'] is None
+    # Kein coaching_score (write-stop, ALT-Spalte) — judge_step setzt ihn nicht mehr
+    assert captured.get('coaching_score') is None
     db.commit.assert_called_once()
 
 
 def test_compute_step_scored_upserts_engine_result(monkeypatch):
-    # Normaler Pfad: compute_rubric-Ergebnis landet 1:1 im UPSERT (Option B: nur rubric_score).
+    # Normaler Pfad: run_behavior_judge-Ergebnis landet im UPSERT mit observations/ratings.
+    # TAXO2-Plan 03 Cutover: compute_rubric NICHT mehr aufgerufen — nur run_behavior_judge.
+    import unittest.mock as _mock
     call = _make_call()
-    fake_result = {
-        'coaching_score': 72.5, 'dimensions': [{'dim': 'x'}],
-        'is_provisional': True, 'measured_weight_pct': 0.8,
-        'unmeasured_dimensions': [{'dim': 'y', 'reason': 'na'}],
-        'status': 'scored', 'mode_key': 'cold_call',
+    fake_judge_result = {
+        'observations_jsonb': {
+            'bedarfs_ermittlung': [{'beobachtung': 'Gut.', 'beleg_zitat': 'Wie geht das?'}],
+            '_compliance': {'verletzt': False, 'beleg_zitat': ''},
+        },
+        'ratings_jsonb': {'bedarfs_ermittlung': 'stark'},
+        'dimensions_version': 2,
+        'status': 'judged',
     }
-    monkeypatch.setattr('services.rubric_engine.compute_rubric',
-                        lambda *a, **k: fake_result)
-    monkeypatch.setattr('services.live_session.get_speech_stats',
-                        lambda sid: {'redeanteil': 50, 'tempo': 100, 'monolog': 1.0})
     captured = {}
     monkeypatch.setattr(sl, '_upsert_rubric_score', lambda db, **kw: captured.update(kw))
-    monkeypatch.setattr(sl, '_mode_config_for', lambda mk, db: {'vorwand_behandlung': {'weight': 1, 'enabled': True}})
     db = MagicMock()
     events = [_make_event(session_id='sid-9', handling_status='scored')]
     ctx = {'call': call, 'events': events, 'db': db, 'not_gradable_reason': None}
 
-    sl._compute_rubric_step(ctx)
+    # Patch den lazy-import in _judge_step via services.judge_runner-Modul-Attribut
+    with _mock.patch('services.judge_runner.run_behavior_judge', return_value=fake_judge_result):
+        sl._judge_step(ctx)
 
-    assert captured['coaching_score'] == 72.5
-    assert captured['status'] == 'scored'
-    assert captured['is_provisional'] is True
+    assert captured['status'] == 'judged'
+    assert captured['observations'] == fake_judge_result['observations_jsonb']
+    assert captured['ratings'] == fake_judge_result['ratings_jsonb']
+    assert captured['dimensions_version'] == 2
     assert captured['session_mode'] == 'cold_call'
     db.commit.assert_called_once()
 
 
 def test_compute_step_marks_failed_events(monkeypatch):
-    # >=1 failed-Event -> transparenter Marker im payload (additive Info, keine Score-Strafe).
+    # judge_failed: run_behavior_judge gibt status=judge_failed zurueck ->
+    # rubric_score.status=judge_failed (kein Crash, idempotenter Re-Run).
+    import unittest.mock as _mock
     call = _make_call()
-    monkeypatch.setattr('services.rubric_engine.compute_rubric',
-                        lambda *a, **k: {'coaching_score': 60, 'status': 'scored', 'mode_key': 'cold_call'})
-    monkeypatch.setattr('services.live_session.get_speech_stats', lambda sid: {})
-    monkeypatch.setattr(sl, '_mode_config_for', lambda mk, db: {'x': {}})
+    fake_fail_result = {'status': 'judge_failed', 'error': 'LLM-Timeout'}
     captured = {}
     monkeypatch.setattr(sl, '_upsert_rubric_score', lambda db, **kw: captured.update(kw))
     db = MagicMock()
-    events = [
-        _make_event(event_id=1, handling_status='scored'),
-        _make_event(event_id=2, handling_status='failed'),
-    ]
+    events = [_make_event(event_id=1, handling_status='scored')]
     ctx = {'call': call, 'events': events, 'db': db, 'not_gradable_reason': None}
 
-    sl._compute_rubric_step(ctx)
+    with _mock.patch('services.judge_runner.run_behavior_judge', return_value=fake_fail_result):
+        sl._judge_step(ctx)
 
-    assert captured['payload']['failed_events'] == 1
+    # status=judge_failed geschrieben (Fehler-Mantel)
+    assert captured['status'] == 'judge_failed'
+    db.commit.assert_called_once()
 
 
 # ════════════════════════════════════════════════════════════════════════════════════
@@ -493,3 +508,79 @@ def test_good_audio_not_marked_poor(monkeypatch):
 
     assert seen.get('call') is call                  # Merge gefeuert
     assert seen.get('not_gradable_reason') is None   # gutes Audio -> NICHT poor_audio_health
+
+
+# ════════════════════════════════════════════════════════════════════════════════════
+# TAXO2-Plan 03 — transcript_resolved-Gate (Punkt 26 / Plan-01-Fan-In)
+# ════════════════════════════════════════════════════════════════════════════════════
+
+def test_merge_waits_for_transcript_resolved(monkeypatch, guc_spy):
+    # ended + 0 pending + audio_resolved=True, ABER transcript_resolved=False ->
+    # Merge feuert NICHT (wuerde gegen leeres Transkript bewerten, Punkt 26).
+    call = _make_call(transcript_resolved=False)
+    _install_merge_doubles(monkeypatch, call, pending=0)
+    step = MagicMock()
+    monkeypatch.setattr(sl, '_CALL_END_MERGE_STEPS', [step])
+
+    sl._call_end_merge({'call_id': call.id})
+
+    step.assert_not_called()                 # Merge wartet -> kein Judge-Schritt
+    assert guc_spy['set'] == []              # kein Write -> keine GUC
+
+
+def test_judge_step_skips_on_not_gradable(monkeypatch):
+    # not_gradable_reason gesetzt -> status=not_gradable, run_behavior_judge NICHT aufgerufen
+    # (kein LLM auf Muell-Audio — Audio-Gate D-09 bleibt unveraendert).
+    import unittest.mock as _mock
+    call = _make_call()
+    captured = {}
+    monkeypatch.setattr(sl, '_upsert_rubric_score', lambda db, **kw: captured.update(kw))
+    db = MagicMock()
+    ctx = {'call': call, 'events': [], 'db': db, 'not_gradable_reason': 'poor_audio_health'}
+
+    with _mock.patch('services.judge_runner.run_behavior_judge') as mock_judge:
+        sl._judge_step(ctx)
+        mock_judge.assert_not_called()  # kein LLM-Call bei not_gradable
+
+    assert captured['status'] == 'not_gradable'
+
+
+def test_compliance_persisted_in_observations(monkeypatch):
+    # run_behavior_judge gibt observations_jsonb['_compliance']={'verletzt':True,...} zurueck ->
+    # _upsert_rubric_score schreibt observations inkl. '_compliance' (Hard-Gate persistiert, Finding 2).
+    # ratings_jsonb enthaelt KEIN '_compliance' (kein Mittelwert-Beitrag).
+    import unittest.mock as _mock
+    call = _make_call()
+    fake_judge_result = {
+        'observations_jsonb': {
+            'bedarfs_ermittlung': [{'beobachtung': 'Schwach.', 'beleg_zitat': 'Gar keine Fragen.'}],
+            'gespraechs_eroeffnung': [{'beobachtung': 'OK.', 'beleg_zitat': 'Guten Tag.'}],
+            'einwand_behandlung': [{'beobachtung': 'Uebergangen.', 'beleg_zitat': 'Nein danke!'}],
+            'gespraechsfuehrung': [{'beobachtung': 'Grenze ueberschritten.', 'beleg_zitat': 'Dreimal Nein.'}],
+            '_compliance': {'verletzt': True, 'beleg_zitat': 'Nein danke! Dreimal!'},
+        },
+        'ratings_jsonb': {
+            'bedarfs_ermittlung': 'schwach',
+            'gespraechs_eroeffnung': 'ok',
+            'einwand_behandlung': 'schwach',
+            'gespraechsfuehrung': 'schwach',
+        },
+        'dimensions_version': 2,
+        'status': 'judged',
+    }
+    captured = {}
+    monkeypatch.setattr(sl, '_upsert_rubric_score', lambda db, **kw: captured.update(kw))
+    db = MagicMock()
+    ctx = {'call': call, 'events': [], 'db': db, 'not_gradable_reason': None}
+
+    with _mock.patch('services.judge_runner.run_behavior_judge', return_value=fake_judge_result):
+        sl._judge_step(ctx)
+
+    # Compliance in observations (Hard-Gate persistiert, Finding 2)
+    assert '_compliance' in captured['observations'], "'_compliance' fehlt in observations_jsonb"
+    assert captured['observations']['_compliance']['verletzt'] is True
+
+    # Compliance NICHT in ratings (Hard-Gate, nicht aufmittelbar)
+    assert '_compliance' not in captured['ratings'], "'_compliance' darf NICHT in ratings_jsonb stehen"
+
+    db.commit.assert_called_once()
