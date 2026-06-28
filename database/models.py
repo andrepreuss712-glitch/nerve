@@ -885,15 +885,20 @@ class RubricScore(Base):
     conversation_log_id   = Column(Integer, index=True, nullable=True, comment="Bezug zur Session/conversation_logs. Live=aus Call, Training=aus Trainings-Session.")
     session_mode          = Column(String(32), index=True, nullable=False, comment="Modus der Bewertung: cold_call|meeting_consented|training (N-4, EXAKT calls.call_mode-Werte + training, kein 'meeting'-Kurzform). Bestimmt den Gewichtssatz (D-01/D-04).")
     origin                = Column(String(16), index=True, nullable=False, comment="Herkunft der Note: live|training. SPEC Req 1 — eine Tabelle fuer beide Welten. Steuert den partiellen Unique-Index (F-03).")
-    coaching_score        = Column(Float, nullable=True, comment="Gesamt-Kopf-Zahl (0-100). NULL wenn <50% Gewicht messbar (Proration, D-02) oder not_gradable (D-09). Spiegel von calls.coaching_score (Plan 04).")
-    is_provisional        = Column(Boolean, nullable=False, default=False, comment="Vorlaeufig-Marker (D-08): Score ueber der 50%-Schwelle aber mit weggeprorateten Dimensionen. Anzeige 999.2.")
-    measured_weight_pct   = Column(Float, nullable=True, comment="Anteil messbaren Gewichts am modus-konfigurierten Maximum (D-02/D-08). <0.5 → coaching_score NULL.")
-    unmeasured_dimensions = Column(JSON_TYPE, nullable=True, comment="Liste der nicht gewerteten Dimensionen + Grund (n/a vs vergeigt, D-08). Goldstaub fuer 999.2-Erklaerung + ML.")
-    dimensions            = Column(JSON_TYPE, nullable=True, comment="Volle Aufschluesselung pro Dimension (D-05/Req 5): je Dim {score, weight, available, sample_size, beleg_ref, marker[]}. Beleg-Referenz = Transkript-/intent_event-Verweis, KEIN freier LLM-Text.")
+    coaching_score        = Column(Float, nullable=True, comment="Gesamt-Kopf-Zahl (0-100). NULL wenn <50% Gewicht messbar (Proration, D-02) oder not_gradable (D-09). Spiegel von calls.coaching_score (Plan 04). [ALT-Marker-Engine, write-stop ab LLM-Bewerter TAXO2 — nicht mehr befuellt; Cutover services/slow_lane.py Plan 03; nicht geloescht (Foundation-Register/Punkt 20)].")
+    is_provisional        = Column(Boolean, nullable=False, default=False, comment="Vorlaeufig-Marker (D-08): Score ueber der 50%-Schwelle aber mit weggeprorateten Dimensionen. Anzeige 999.2. [ALT-Marker-Engine, write-stop ab LLM-Bewerter TAXO2 — nicht mehr befuellt; Cutover services/slow_lane.py Plan 03; nicht geloescht (Foundation-Register/Punkt 20)].")
+    measured_weight_pct   = Column(Float, nullable=True, comment="Anteil messbaren Gewichts am modus-konfigurierten Maximum (D-02/D-08). <0.5 -> coaching_score NULL. [ALT-Marker-Engine, write-stop ab LLM-Bewerter TAXO2 — nicht mehr befuellt; Cutover services/slow_lane.py Plan 03; nicht geloescht (Foundation-Register/Punkt 20)].")
+    unmeasured_dimensions = Column(JSON_TYPE, nullable=True, comment="Liste der nicht gewerteten Dimensionen + Grund (n/a vs vergeigt, D-08). Goldstaub fuer 999.2-Erklaerung + ML. [ALT-Marker-Engine, write-stop ab LLM-Bewerter TAXO2 — nicht mehr befuellt; Cutover services/slow_lane.py Plan 03; nicht geloescht (Foundation-Register/Punkt 20)].")
+    dimensions            = Column(JSON_TYPE, nullable=True, comment="Volle Aufschluesselung pro Dimension (D-05/Req 5): je Dim {score, weight, available, sample_size, beleg_ref, marker[]}. Beleg-Referenz = Transkript-/intent_event-Verweis, KEIN freier LLM-Text. [ALT-Marker-Engine, write-stop ab LLM-Bewerter TAXO2 — nicht mehr befuellt; Cutover services/slow_lane.py Plan 03; nicht geloescht (Foundation-Register/Punkt 20)].")
     status                = Column(String(24), nullable=True, comment="Bewertungs-Status: scored|pending|not_gradable (D-09 poor_audio_health). NULL = noch nicht gelaufen.")
     tenant_id             = Column(UUID_TYPE, index=True, nullable=False, comment="Mandanten-Abschottung (D-11 FORCE RLS, NOT NULL). Abgeleitet aus calls.tenant_id via Daemon-GUC (Plan 04 erbt Plan-03-A1-Klammer).")
     payload_jsonb         = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment="Reserve + Training-only-Felder (was_correct, scenario_id, ground_truth_score) ohne spaetere Migration. SPEC Req 1.")
     score_schema_version  = Column(SmallInteger, nullable=False, default=1, comment="Format-Version der Aufschluesselung fuer spaetere Bumps.")
+    # ── TAXO2 LLM-Bewerter — Beobachtung statt Note (Plan 02, Migration 0029) ─────────────────
+    observations_jsonb    = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}',
+                                   comment="Beobachtungen + WOERTLICHE Beleg-Zitate je fester Dimension (LLM-Verhaltens-Bewerter, Beobachtung statt Note). Form {dim_key:[{beobachtung,beleg_zitat}]}. SICHTBAR fuer den Nutzer (als KI-Einschaetzung gelabelt). Status: lebt (TAXO2 LLM-Bewerter). Schreibt services/judge_runner.py; liest routes/dashboard.py (Preview).")
+    ratings_jsonb         = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}',
+                                   comment="INTERNE grobe Auspraegung schwach/ok/stark je Dimension (Lern-Signal, Soll-Verhalten §6). NIE an den Nutzer ausgegeben. Form {dim_key:'schwach'|'ok'|'stark'}. Status: lebt (TAXO2 LLM-Bewerter, intern). Schreibt services/judge_runner.py; liest spaeter Korrelation/Lernen (post-Launch).")
     created_at            = Column(DateTime, default=utcnow)
     __table_args__ = (
         # F-03 partieller Unique-Index: Plan 04 ON CONFLICT (call_id) WHERE origin='live'
@@ -901,7 +906,7 @@ class RubricScore(Base):
         # (origin='training', call_id NULL/mehrfach) kollidieren NICHT. `text` = Modul-Import
         # (models.py:2), NICHT vom Spalten-Attribut ueberdeckt (vgl. TranscriptSegment-Hinweis).
         Index('ux_rubric_score_live_call_id', 'call_id', unique=True, postgresql_where=text("origin = 'live'")),
-        {'comment': "Single Source der Benotung (BARS + Proration), Live + Training. Eine Zeile pro bewerteter Call/Session. Hybrid: indizierte Kern-Spalten + payload_jsonb. call_id harter FK CASCADE (F-08/DD-01). Partieller Unique-Index (call_id, origin=live) fuer idempotenten Upsert (F-03). Status: lebt (neu, TAXO2). Schreibt services/slow_lane.py (Engine, Plan 02/04); liest routes/dashboard.py + performance.py (999.2)."},
+        {'comment': "Beobachtungen + Beleg-Zitate + interne Auspraegung (LLM-Bewerter, Soll-Verhalten §6), nicht mehr maschinelle Note. Eine Zeile pro bewerteter Call/Session. Hybrid: indizierte Kern-Spalten + observations_jsonb/ratings_jsonb + payload_jsonb. call_id harter FK CASCADE (F-08/DD-01). Partieller Unique-Index (call_id, origin=live) fuer idempotenten Upsert (F-03). FORCE ROW LEVEL SECURITY (D-11). Status: lebt (TAXO2 LLM-Bewerter). Schreibt services/judge_runner.py (Plan 03); liest routes/dashboard.py (Preview Plan 05)."},
     )
 
 
