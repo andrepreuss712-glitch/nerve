@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""TAXO2-Plan 04 — Integration-Assertions fuer den Uebernahme-/Adoption-Judge
+"""TAXO2-Plan 04/06 — Integration-Assertions fuer den Uebernahme-/Adoption-Judge
 (adoption_runner.py).
 
 Beweist Runtime-Verhalten (CLAUDE.md Test-Qualitaets-Regel — KEIN Source-Presence):
@@ -7,23 +7,25 @@ Beweist Runtime-Verhalten (CLAUDE.md Test-Qualitaets-Regel — KEIN Source-Prese
   test_no_word_match: adoption_runner enthaelt KEINEN mechanischen Text-Vergleich
       (difflib/SequenceMatcher/bleu/rouge/cosine); die Einstufung kommt AUSSCHLIESSLICH
       vom LLM (Tool-Use). Testbar: kein verbotenes Symbol wird ins Modulregister importiert.
-      Beginn des test_no_word_match-Kommentars: Grenzfall-Notiz — Source-Presence nur wenn
-      kein Function-Call-Mock die Constraint direkt testbar macht; hier ist kein Function-Call
-      denkbar, der den mechanischen Vergleich *im Runtme-Pfad* sichtbar machte, ohne dafuer
-      den Modulimport zu belegen. Modulimport ist die einzige beweisbare Grenze.
+      Grenzfall-Notiz — kein Function-Call-Mock macht die Abwesenheit mechanischer
+      Text-Vergleichs-Module im Laufzeit-Pfad direkt testbar; nur ueber Modulimport-Status.
 
-  test_pair_build: _build_adoption_pairs baut je interaction_id das Roh-Paar
-      (suggestion_text + erste folgende berater-Aeusserung aus transcript_segments).
-      Kein folgende Berater-Satz -> following=None (kein Crash). Assertion auf Rueckgabeliste.
+  test_whole_transcript_and_suggestion_list (ersetzt test_pair_build ab Plan 06):
+      run_adoption_judge gibt dem LLM das GANZE Transkript (alle segments ts_ms ASC)
+      UND die Vorschlags-Liste (interaction_id + suggestion_text). Kein mechanisches
+      Pairing (_build_adoption_pairs darf nicht existieren). Genau 1 LLM-Call (gebuendelt).
 
   test_bundled_single_call: run_adoption_judge feuert GENAU 1 messages.create-Aufruf
-      fuer ALLE Paare (NICHT einen pro Paar). Monkeypatch-Assertion auf Call-Zaehler.
+      fuer ALLE Vorschlaege (NICHT einen pro Vorschlag). Direct-DB-Mock (kein
+      _build_adoption_pairs-Mock, da Funktion entfernt).
 
   test_prompt_has_no_outcome: der Adoption-Prompt enthaelt KEIN calls.outcome
       (outcome-blind, T-HT-04-03). Assertion auf den Prompt-Text des messages.create-Aufrufs.
+      Direct-DB-Mock.
 
   test_write_adoption: die Einstufung (adoption_value/reaction_class/following_utterance_ref)
       landet per UPDATE in suggestion_reactions (Assertion auf DB-Schreib-Aufruf).
+      Direct-DB-Mock.
 
 Kein echter LLM-/DB-Zugriff: anthropic.client + DB-Session werden monkeypatcht.
 """
@@ -137,97 +139,95 @@ def test_no_word_match():
 
 
 # ════════════════════════════════════════════════════════════════════════════════════
-# Test 2: Roh-Paar-Bau aus committeten Daten
+# Test 2: run_adoption_judge gibt LLM ganzes Transkript + Vorschlags-Liste (Plan 06)
 # ════════════════════════════════════════════════════════════════════════════════════
 
-def test_pair_build():
-    """_build_adoption_pairs baut Roh-Paare (interaction_id, suggestion_text, following_text).
-
-    Fall A: ein Vorschlag mit folgender Berater-Aeusserung -> Paar mit following_text gesetzt.
-    Fall B: ein Vorschlag OHNE folgende Berater-Aeusserung -> Paar mit following_text=None.
-    Kein Crash in beiden Faellen.
+def test_whole_transcript_and_suggestion_list(monkeypatch):
+    """run_adoption_judge gibt dem LLM das GANZE Transkript (alle segments ts_ms ASC)
+    UND die Vorschlags-Liste (interaction_id + suggestion_text).
+    Kein mechanisches Pairing (_build_adoption_pairs darf nicht existieren).
+    Genau 1 LLM-Call (gebuendelt).
     """
     import services.adoption_runner as ar
+    from database.models import SuggestionReaction, TranscriptSegment
 
-    iid_a = str(uuid.uuid4())
-    iid_b = str(uuid.uuid4())
-
+    iid1 = str(uuid.uuid4())
     call = _make_call(conversation_log_id=99)
 
-    suggestion_a = _make_suggestion(iid=iid_a, text='Nennen Sie die ROI-Zahlen.')
-    suggestion_b = _make_suggestion(iid=iid_b, text='Fragen Sie nach dem Budget.')
+    # Test-Double fuer Vorschlag
+    sug1 = _make_suggestion(iid=iid1, text='Erwaehnen Sie die Erfolgsrate.')
 
-    # ts_offered fuer suggestion_a (wann der Vorschlag gezeigt wurde)
-    from datetime import datetime
-    suggestion_a.ts_offered = datetime(2025, 1, 1, 10, 0, 0)
-    suggestion_b.ts_offered = datetime(2025, 1, 1, 10, 5, 0)
+    # Test-Double fuer Transkript (3 Segmente, verschiedene speaker)
+    seg_kunde = _make_segment(idx=1, speaker='kunde', ts_ms=1000, text='Was kostet das?')
+    seg_berater1 = _make_segment(idx=2, speaker='berater', ts_ms=2000, text='Das kostet 500 Euro.')
+    seg_berater2 = _make_segment(idx=3, speaker='berater', ts_ms=4000, text='Unsere Erfolgsrate ist 85 Prozent.')
+    all_segments = [seg_kunde, seg_berater1, seg_berater2]
 
-    # TranscriptSegments: ein berater-Satz nach suggestion_a, keiner nach suggestion_b
-    seg_berater_after_a = _make_segment(
-        idx=3, speaker='berater', ts_ms=3000,
-        text='Unser ROI liegt bei 200 Prozent fuer diesen Fall.'
-    )
-    seg_kunde = _make_segment(idx=1, speaker='kunde', ts_ms=1000, text='Interessant.')
-    # suggestion_b hat kein folgendes Berater-Segment -> following_text=None
+    # Mock LLM
+    fake_client = MagicMock()
+    fake_client.messages.create.return_value = _make_adoption_tool_response([
+        {'interaction_id': iid1, 'beleg': 'Unsere Erfolgsrate ist 85 Prozent.', 'urteil': 'voll', 'adoption_value': 1.0}
+    ])
+    monkeypatch.setattr(ar, 'claude_client', fake_client)
 
-    # Mock DB: suggestion_reactions-Query gibt A+B zurueck; transcript_segments-Query
-    # gibt verschiedene Ergebnisse je nach Filter (simplified: first() per Vorschlag)
-    def fake_query_side_effect(model_class):
-        """Gibt je nach abgefragetem Modell passende Filter-Chains zurueck."""
-        from database.models import SuggestionReaction, TranscriptSegment
+    # Mock DB: SuggestionReaction -> [sug1], TranscriptSegment -> all_segments
+    def fake_query(model_class):
         mock_q = MagicMock()
         if model_class is SuggestionReaction:
-            # filter(...).all() -> [suggestion_a, suggestion_b]
-            mock_q.filter.return_value.all.return_value = [suggestion_a, suggestion_b]
+            # filter(...).all() -> [sug1]
+            mock_q.filter.return_value.all.return_value = [sug1]
+            # filter(...).first() -> sug1 (fuer die Write-Schleife)
+            mock_q.filter.return_value.first.return_value = sug1
         elif model_class is TranscriptSegment:
-            # Wir emulieren: fuer suggestion_a gibt es einen Berater-Satz (ts_ms > ts_offered),
-            # fuer suggestion_b nicht. Hier vereinfacht via side_effect auf first().
-            call_count = [0]
-            def first_side_effect():
-                call_count[0] += 1
-                if call_count[0] == 1:
-                    return seg_berater_after_a   # suggestion_a hat Folge-Satz
-                return None                       # suggestion_b hat keinen
-            filter_mock = MagicMock()
-            filter_mock.filter.return_value = filter_mock
-            filter_mock.order_by.return_value = filter_mock
-            filter_mock.first.side_effect = first_side_effect
-            mock_q.filter.return_value = filter_mock
+            # filter(...).order_by(...).all() -> all_segments
+            mock_q.filter.return_value.order_by.return_value.all.return_value = all_segments
         return mock_q
 
     fake_db = MagicMock()
-    fake_db.query.side_effect = fake_query_side_effect
+    fake_db.query.side_effect = fake_query
 
-    pairs = ar._build_adoption_pairs(call, fake_db)
+    result = ar.run_adoption_judge(call, fake_db)
 
-    assert len(pairs) == 2, f"Erwartet 2 Paare, erhalten: {len(pairs)}"
+    # (a) Genau 1 LLM-Call (gebuendelt, Soll-Verhalten §6 Schaerfung b)
+    assert fake_client.messages.create.call_count == 1
 
-    # Pair fuer suggestion_a: following_text gesetzt
-    pair_a = next((p for p in pairs if p['interaction_id'] == iid_a), None)
-    assert pair_a is not None, "Paar fuer interaction_id_a fehlt"
-    assert pair_a['suggestion_text'] == 'Nennen Sie die ROI-Zahlen.'
-    assert pair_a['following_text'] == 'Unser ROI liegt bei 200 Prozent fuer diesen Fall.'
+    # (b) Prompt enthaelt das ganze Transkript (alle 3 Segmente)
+    kwargs = fake_client.messages.create.call_args[1]
+    user_str = ' '.join(str(m.get('content', '')) for m in kwargs.get('messages', []))
+    full_prompt = kwargs.get('system', '') + ' ' + user_str
 
-    # Pair fuer suggestion_b: following_text=None (kein Crash)
-    pair_b = next((p for p in pairs if p['interaction_id'] == iid_b), None)
-    assert pair_b is not None, "Paar fuer interaction_id_b fehlt"
-    assert pair_b['following_text'] is None
+    assert 'Was kostet das?' in full_prompt, "Transkript-Segment 1 fehlt im Prompt"
+    assert 'Das kostet 500 Euro.' in full_prompt, "Transkript-Segment 2 fehlt im Prompt"
+    assert 'Unsere Erfolgsrate ist 85 Prozent.' in full_prompt, "Transkript-Segment 3 fehlt im Prompt"
+
+    # (c) Prompt enthaelt die Vorschlags-Liste (interaction_id + suggestion_text)
+    assert iid1 in full_prompt, "interaction_id fehlt im Prompt"
+    assert 'Erwaehnen Sie die Erfolgsrate.' in full_prompt, "suggestion_text fehlt im Prompt"
+
+    # (d) _build_adoption_pairs darf NICHT existieren (Negativguard — Funktion ist entfernt)
+    # CLAUDE.md Grenzfall: Abwesenheit einer Funktion ist nur ueber hasattr beweisbar.
+    assert not hasattr(ar, '_build_adoption_pairs'), (
+        "_build_adoption_pairs existiert noch — muss entfernt sein (Wall-Clock/ts_ms-Fragilitaet)"
+    )
+
+    # (e) Status OK
+    assert result.get('status') == 'adoption_done'
 
 
 # ════════════════════════════════════════════════════════════════════════════════════
-# Test 3: EIN gebuendelter Call fuer ALLE Paare (Soll-Verhalten §6 Schaerfung b)
+# Test 3: EIN gebuendelter Call fuer ALLE Vorschlaege (Soll-Verhalten §6 Schaerfung b)
 # ════════════════════════════════════════════════════════════════════════════════════
 
 def test_bundled_single_call(monkeypatch):
-    """run_adoption_judge feuert GENAU 1 messages.create-Aufruf fuer alle Paare
-    (NICHT einen Call pro Paar — gebuendelt, Soll-Verhalten §6 Schaerfung b).
+    """run_adoption_judge feuert GENAU 1 messages.create-Aufruf fuer alle Vorschlaege
+    (NICHT einen Call pro Vorschlag — gebuendelt, Soll-Verhalten §6 Schaerfung b).
     """
     import services.adoption_runner as ar
     from database.models import SuggestionReaction, TranscriptSegment
 
     iid1 = str(uuid.uuid4())
     iid2 = str(uuid.uuid4())
-    call = _make_call()
+    call_obj = _make_call()
 
     sug1 = _make_suggestion(iid=iid1, text='Vorschlag 1')
     sug2 = _make_suggestion(iid=iid2, text='Vorschlag 2')
@@ -244,20 +244,16 @@ def test_bundled_single_call(monkeypatch):
     fake_client.messages.create.return_value = _make_adoption_tool_response(pair_results)
     monkeypatch.setattr(ar, 'claude_client', fake_client)
 
-    # Mock _build_adoption_pairs: gibt 2 Paare zurueck (kein echter DB-Call)
-    monkeypatch.setattr(ar, '_build_adoption_pairs', lambda c, db: [
-        {'interaction_id': iid1, 'suggestion_text': 'Vorschlag 1', 'following_text': 'Antwort 1'},
-        {'interaction_id': iid2, 'suggestion_text': 'Vorschlag 2', 'following_text': 'Antwort 2'},
-    ])
-
-    # Mock DB (wird nur fuer UPDATE gebraucht)
-    fake_db = MagicMock()
+    # Mock DB direkt fuer SuggestionReaction-Query und TranscriptSegment-Query
     sug1_db = _make_suggestion(iid=iid1, text='Vorschlag 1')
     sug2_db = _make_suggestion(iid=iid2, text='Vorschlag 2')
 
     def fake_query_side(model_class):
         mock_q = MagicMock()
         if model_class is SuggestionReaction:
+            # filter().all() fuer den Vorschlaege-Load
+            mock_q.filter.return_value.all.return_value = [sug1, sug2]
+            # filter().first() fuer die Write-Schleife (per interaction_id)
             call_count = [0]
             def first_side():
                 call_count[0] += 1
@@ -265,16 +261,20 @@ def test_bundled_single_call(monkeypatch):
                     return sug1_db
                 return sug2_db
             mock_q.filter.return_value.first.side_effect = first_side
+        elif model_class is TranscriptSegment:
+            # filter().order_by().all() -> Segmente
+            mock_q.filter.return_value.order_by.return_value.all.return_value = [seg1, seg2]
         return mock_q
 
+    fake_db = MagicMock()
     fake_db.query.side_effect = fake_query_side
 
-    result = ar.run_adoption_judge(call, fake_db)
+    result = ar.run_adoption_judge(call_obj, fake_db)
 
-    # Genau 1 LLM-Call fuer ALLE Paare (gebuendelt)
+    # Genau 1 LLM-Call fuer ALLE Vorschlaege (gebuendelt)
     assert fake_client.messages.create.call_count == 1, (
         f"Erwartet genau 1 LLM-Call, aber {fake_client.messages.create.call_count} gemacht — "
-        "gebuendelt, NICHT pro Paar!"
+        "gebuendelt, NICHT pro Vorschlag!"
     )
     assert result.get('status') == 'adoption_done'
 
@@ -288,12 +288,12 @@ def test_prompt_has_no_outcome(monkeypatch):
     Assertion auf den tatsaechlichen Prompt-Text des messages.create-Aufrufs.
     """
     import services.adoption_runner as ar
-    from database.models import SuggestionReaction
+    from database.models import SuggestionReaction, TranscriptSegment
 
     iid = str(uuid.uuid4())
-    call = _make_call()
+    call_obj = _make_call()
     # outcome-Feld explizit auf einem Wert — darf NICHT im Prompt erscheinen
-    call.outcome = 'meeting_booked'
+    call_obj.outcome = 'meeting_booked'
 
     fake_client = MagicMock()
     fake_client.messages.create.return_value = _make_adoption_tool_response([
@@ -301,22 +301,22 @@ def test_prompt_has_no_outcome(monkeypatch):
     ])
     monkeypatch.setattr(ar, 'claude_client', fake_client)
 
-    monkeypatch.setattr(ar, '_build_adoption_pairs', lambda c, db: [
-        {'interaction_id': iid, 'suggestion_text': 'Test-Vorschlag', 'following_text': 'Test-Antwort'},
-    ])
-
-    fake_db = MagicMock()
+    sug = _make_suggestion(iid=iid, text='Test-Vorschlag')
     sug_db = _make_suggestion(iid=iid, text='Test-Vorschlag')
 
     def fake_query_side(model_class):
         mock_q = MagicMock()
         if model_class is SuggestionReaction:
+            mock_q.filter.return_value.all.return_value = [sug]
             mock_q.filter.return_value.first.return_value = sug_db
+        elif model_class is TranscriptSegment:
+            mock_q.filter.return_value.order_by.return_value.all.return_value = []
         return mock_q
 
+    fake_db = MagicMock()
     fake_db.query.side_effect = fake_query_side
 
-    ar.run_adoption_judge(call, fake_db)
+    ar.run_adoption_judge(call_obj, fake_db)
 
     # Prompt extrahieren (system + messages)
     assert fake_client.messages.create.called
@@ -344,10 +344,10 @@ def test_write_adoption(monkeypatch):
     Assertion auf ORM-Attribut-Schreibung (state mutation nach run_adoption_judge).
     """
     import services.adoption_runner as ar
-    from database.models import SuggestionReaction
+    from database.models import SuggestionReaction, TranscriptSegment
 
     iid = str(uuid.uuid4())
-    call = _make_call()
+    call_obj = _make_call()
 
     pair_results = [
         {'interaction_id': iid, 'beleg': 'Wir setzen das so um.', 'urteil': 'voll', 'adoption_value': 1.0}
@@ -356,10 +356,6 @@ def test_write_adoption(monkeypatch):
     fake_client.messages.create.return_value = _make_adoption_tool_response(pair_results)
     monkeypatch.setattr(ar, 'claude_client', fake_client)
 
-    monkeypatch.setattr(ar, '_build_adoption_pairs', lambda c, db: [
-        {'interaction_id': iid, 'suggestion_text': 'Setzen Sie das um.', 'following_text': 'Wir setzen das so um.'},
-    ])
-
     # Echte Suggestion-Row-Attrappe (mutierbares SimpleNamespace)
     sug_row = _make_suggestion(iid=iid, text='Setzen Sie das um.')
     # Zeile initialisiert mit None-Werten (DEFERRED)
@@ -367,17 +363,19 @@ def test_write_adoption(monkeypatch):
     assert sug_row.reaction_class is None
     assert sug_row.following_utterance_ref is None
 
-    fake_db = MagicMock()
-
     def fake_query_side(model_class):
         mock_q = MagicMock()
         if model_class is SuggestionReaction:
+            mock_q.filter.return_value.all.return_value = [sug_row]
             mock_q.filter.return_value.first.return_value = sug_row
+        elif model_class is TranscriptSegment:
+            mock_q.filter.return_value.order_by.return_value.all.return_value = []
         return mock_q
 
+    fake_db = MagicMock()
     fake_db.query.side_effect = fake_query_side
 
-    result = ar.run_adoption_judge(call, fake_db)
+    result = ar.run_adoption_judge(call_obj, fake_db)
 
     # Die DEFERRED-Spalten muessen jetzt befuellt sein
     assert sug_row.adoption_value == 1.0, (
