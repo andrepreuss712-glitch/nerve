@@ -833,8 +833,8 @@ class SuggestionReaction(Base):
     # (Auto-Variante Slot B + Manueller Knopf + Keyword-Slot A). insert-only,
     # Call-Ende-Flush (KEIN Live-Write, Punkt 25). suggestion_text = die am ERFASSEN
     # anonymisierte Storage-Version (Plan 09, lebender Per-SID-Cache; NIE cache=None).
-    # NUR das ANGEBOT wird befuellt; die Reaktions-Haelfte (adoption_value/...) ist
-    # DEFERRED (post-Launch neu-berechenbar) und bleibt JETZT NULL. interaction_id
+    # ANGEBOT-Haelfte befuellt (FOLD A); Reaktions-Haelfte (adoption_value/...) wird
+    # ab TAXO2 vom LLM-Uebernahme-Call befuellt (services/adoption_runner.py). interaction_id
     # korreliert zu intent_event.interaction_id (Tuermoeffner-Naht models.py:774 /
     # 0016:76) — KEIN harter FK (interaction_id ist kein PK).
     __tablename__ = 'suggestion_reactions'
@@ -854,10 +854,10 @@ class SuggestionReaction(Base):
     tenant_id              = Column(UUID_TYPE, index=True, nullable=False, comment="Mandanten-Abschottung (FORCE RLS tenant_isolation, NOT NULL; abgeleitet aus calls.tenant_id). Request-Flush fail-closed bei fehlendem Tenant.")
     payload_jsonb          = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment="Reserve fuer kuenftige Felder (confidence, einwand_typ-Detail) ohne Migration. FOLD A.")
     created_at             = Column(DateTime, default=utcnow)
-    # ── DEFERRED-Reaktions-Spalten (nullable, JETZT NICHT befuellt) ───────────
-    adoption_value         = Column(Float, nullable=True, comment="[DEFERRED, post-Launch] Uebernahme-Grad 0-1 (1:1 / ~90% / ignoriert). In TAXO2 NICHT befuellt (Soll-Verhalten §6).")
-    following_utterance_ref = Column(String(128), nullable=True, comment="[DEFERRED, post-Launch] Verweis auf die folgende Berater-Aeusserung (Uebernahme-Skala). NICHT in TAXO2.")
-    reaction_class         = Column(String(24), nullable=True, comment="[DEFERRED, post-Launch] Klassifikation der Reaktion. NICHT in TAXO2.")
+    # ── Reaktions-Spalten (nullable; ab TAXO2 vom LLM-Uebernahme-Call befuellt) ──
+    adoption_value         = Column(Float, nullable=True, comment="Uebernahme-Grad 0-1 (voll/teilweise/ignoriert). Befuellt ab TAXO2 LLM-Uebernahme-Call. Schreibt services/adoption_runner.py (gebuendelter Sonnet-Call am Call-Ende); gelesen: Uebernahme-Auswertung post-Launch.")
+    following_utterance_ref = Column(String(128), nullable=True, comment="Verweis/Hash auf die folgende Berater-Aeusserung (Uebernahme-Beleg). Befuellt ab TAXO2 LLM-Uebernahme-Call (services/adoption_runner.py); gelesen: Auswertung post-Launch.")
+    reaction_class         = Column(String(24), nullable=True, comment="Klassifikation der Reaktion (voll|teilweise|ignoriert). Befuellt ab TAXO2 LLM-Uebernahme-Call (services/adoption_runner.py); gelesen: Auswertung post-Launch.")
     __table_args__ = (
         Index('ix_suggestion_reactions_call_id', 'call_id'),
         Index('ix_suggestion_reactions_interaction_id', 'interaction_id'),
@@ -866,7 +866,7 @@ class SuggestionReaction(Base):
         Index('ix_suggestion_reactions_org_id', 'org_id'),
         Index('ix_suggestion_reactions_user_id', 'user_id'),
         Index('ix_suggestion_reactions_tenant_id', 'tenant_id'),
-        {'comment': "Roh-Erfassung jedes NERVE-Vorschlags pro Call (Auto-Variante Slot B + Manueller Knopf + Keyword), insert-only + anonymisiert, Call-Ende-Flush (KEIN Live-Write). NUR das ANGEBOT befuellt; Reaktions-Haelfte (adoption_value/...) DEFERRED post-Launch. call_id harter FK CASCADE (F-08). Status: lebt (neu, TAXO2 FOLD A). Schreibt services/suggestion_capture.py (Flush) + services/live_session.py (RAM); liest Uebernahme-Scoring (Post-Launch)."},
+        {'comment': "Roh-Erfassung jedes NERVE-Vorschlags pro Call (Auto-Variante Slot B + Manueller Knopf + Keyword), insert-only + anonymisiert, Call-Ende-Flush (KEIN Live-Write). ANGEBOT-Haelfte befuellt (FOLD A); Reaktions-Haelfte (adoption_value/reaction_class/following_utterance_ref) ab TAXO2 vom LLM-Uebernahme-Call befuellt. call_id harter FK CASCADE (F-08). Status: lebt (neu, TAXO2 FOLD A). Schreibt services/suggestion_capture.py (Flush) + services/live_session.py (RAM) + services/adoption_runner.py (Reaktions-Haelfte adoption_value/reaction_class/following_utterance_ref, gebuendelter LLM-Uebernahme-Call am Call-Ende); liest Uebernahme-Auswertung (post-Launch)."},
     )
 
 
