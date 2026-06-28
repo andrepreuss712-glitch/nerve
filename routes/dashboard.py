@@ -913,17 +913,22 @@ def session_detail(sid):
             _pp_raw = []
         painpoints = _dedupe_painpoints(_pp_raw)
 
-        # ── TAXO2-Plan 04 (FOLD 26.06.) — "Neu — Vorschau"-Panel (ADDITIV, read-only) ──────────
-        # Die zum Call gehoerende live-rubric_score-Zeile lesen (NEUE Note, Option B: NICHT
-        # calls.coaching_score) + outcome_confirmed (ANZEIGE-Sperre: Note erst zeigen, wenn
-        # calls.outcome bestaetigt). Reines Display-Gate via call_id-Join — KEIN Merge-Gate;
-        # outcome wird NICHT in rubric_score dupliziert. Das alte Score-Hero (_calc_call_score,
-        # oben) bleibt UNANGETASTET (Re-Scope — Umstellen = SCORE-UI). rubric_score hat FORCE RLS;
-        # der Request-Pfad-GUC (g.tenant_id -> after_begin) erlaubt das Lesen der eigenen Zeile.
+        # ── TAXO2-Plan 04/05 (FOLD 26.06.) — "Neu — Vorschau"-Panel (ADDITIV, read-only) ──────────
+        # Die zum Call gehoerende live-rubric_score-Zeile lesen (Beobachtungen statt Zahl,
+        # TAXO2-Plan 05) + outcome_confirmed (ANZEIGE-Sperre: Beobachtungen erst zeigen, wenn
+        # calls.outcome bestaetigt — Leakage-Schutz). Reines Display-Gate via call_id-Join.
+        # Plan 05: observations_jsonb + _compliance werden SEPARAT extrahiert und als
+        # observations_display (geordnet nach DIMENSIONS) + compliance_verletzt/compliance_beleg
+        # ans Template gegeben — Template bleibt dumm (Punkt 27: einfachster tragfaehiger Weg).
+        # rubric_score hat FORCE RLS; Request-Pfad-GUC (g.tenant_id) erlaubt das Lesen der Zeile.
         rubric_preview = None
         outcome_confirmed = False
+        observations_display = []   # [{name, items:[{beobachtung, beleg_zitat}]}] je Dimension
+        compliance_verletzt = False
+        compliance_beleg = ''
         try:
             from database.models import Call as _Call, RubricScore as _RubricScore
+            from services.judge_dimensions import DIMENSIONS as _DIMENSIONS
             _call_row = (db.query(_Call)
                            .filter(_Call.conversation_log_id == sid,
                                    _Call.user_id == g.user.id)
@@ -935,17 +940,37 @@ def session_detail(sid):
                                     .filter(_RubricScore.call_id == _call_row.id,
                                             _RubricScore.origin == 'live')
                                     .first())
+            if rubric_preview is not None:
+                _obs = rubric_preview.observations_jsonb or {}
+                # _compliance separat extrahieren — NICHT in die Dimensions-Schleife mischen
+                _compliance = _obs.get('_compliance') or {}
+                compliance_verletzt = bool(_compliance.get('verletzt'))
+                compliance_beleg = _compliance.get('beleg_zitat') or ''
+                # observations_display: geordnet nach fester DIMENSIONS-Reihenfolge
+                for _dim in _DIMENSIONS:
+                    _key = _dim['key']
+                    _items = _obs.get(_key) or []
+                    observations_display.append({
+                        'name': _dim['name'],
+                        'items': _items,
+                    })
         except Exception as _e_preview:
             # Vorschau-Panel ist nice-to-have — ein Fehler darf session_detail NIE brechen.
-            print(f'[TAXO2-04] rubric_preview Lese-Fehler (non-fatal) sid={sid}: {_e_preview}')
+            print(f'[TAXO2-05] rubric_preview Lese-Fehler (non-fatal) sid={sid}: {_e_preview}')
             rubric_preview = None
+            observations_display = []
+            compliance_verletzt = False
+            compliance_beleg = ''
 
         return render_template(
             'session_detail.html',
             conv=conv,
             events=events,
-            rubric_preview=rubric_preview,        # TAXO2-04: live-rubric_score-Zeile (neue Note)
-            outcome_confirmed=outcome_confirmed,  # TAXO2-04: ANZEIGE-Sperre (calls.outcome IS NOT NULL)
+            rubric_preview=rubric_preview,        # TAXO2-05: live-rubric_score-Zeile (status + guard)
+            outcome_confirmed=outcome_confirmed,  # TAXO2-05: ANZEIGE-Sperre (calls.outcome IS NOT NULL)
+            observations_display=observations_display,   # TAXO2-05: [{name, items}] je Dimension
+            compliance_verletzt=compliance_verletzt,     # TAXO2-05: _compliance.verletzt bool
+            compliance_beleg=compliance_beleg,           # TAXO2-05: _compliance.beleg_zitat str
             pt=pt,
             trend_avg=trend_avg,
             chart_data_json=chart_data_json,

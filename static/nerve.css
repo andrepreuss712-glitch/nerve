@@ -2440,6 +2440,65 @@ input[type="range"].perf-slider::-moz-range-thumb {
   font-size: 14px;
 }
 
+/* -- TAXO2 Plan 05: Beobachtungs-Panel + Compliance-Notiz ------------ */
+
+/* Compliance-Alert (Cross-AI-Finding 2): PROMINENT oben, Ton-Wechsel.
+   Nutzt danger-red-Semantik via CSS-Variable — KEIN hardcoded Hex. */
+.n-compliance-alert {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1.5px solid var(--danger-red);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.n-compliance-alert-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--danger-red);
+  margin-bottom: 6px;
+}
+.n-compliance-alert-body {
+  font-size: 14px;
+  color: var(--page-text-color);
+  margin-bottom: 10px;
+}
+
+/* Einzelne Dimension im Beobachtungs-Panel */
+.n-observation-dim {
+  margin-bottom: 18px;
+}
+.n-observation-dim:last-child { margin-bottom: 0; }
+.n-observation-dim-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--page-text-color);
+  margin-bottom: 6px;
+}
+/* Beobachtungs-Text (Klartext-Einschätzung) */
+.n-observation-text {
+  font-size: 14px;
+  color: var(--page-text-secondary);
+  margin-bottom: 6px;
+}
+/* Wörtliches Beleg-Zitat aus dem Transkript */
+.n-observation-quote {
+  display: block;
+  margin: 4px 0 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--glass-border);
+  background: var(--glass-bg);
+  font-size: 13px;
+  color: var(--page-text-secondary);
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
+}
+/* Leer-Zustand: keine auffällige Beobachtung */
+.n-observation-empty {
+  font-size: 14px;
+  color: var(--page-text-muted);
+  font-style: italic;
+}
+
 /* -- Phase 07.2 Sektion 12: Wendepunkt-Analyse ----------------------- */
 
 .n-session-detail-wendepunkt-list {
