@@ -898,7 +898,7 @@ class RubricScore(Base):
     observations_jsonb    = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}',
                                    comment="Beobachtungen + WOERTLICHE Beleg-Zitate je fester Dimension (LLM-Verhaltens-Bewerter, Beobachtung statt Note). Form {dim_key:[{beobachtung,beleg_zitat}]}. SICHTBAR fuer den Nutzer (als KI-Einschaetzung gelabelt). Status: lebt (TAXO2 LLM-Bewerter). Schreibt services/judge_runner.py; liest routes/dashboard.py (Preview).")
     ratings_jsonb         = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}',
-                                   comment="INTERNE grobe Auspraegung schwach/ok/stark je Dimension (Lern-Signal, Soll-Verhalten §6). NIE an den Nutzer ausgegeben. Form {dim_key:'schwach'|'ok'|'stark'}. Status: lebt (TAXO2 LLM-Bewerter, intern). Schreibt services/judge_runner.py; liest spaeter Korrelation/Lernen (post-Launch).")
+                                   comment="INTERNE grobe Auspraegung schwach/ok/stark je Dimension (Lern-Signal, Soll-Verhalten §6). NIE an den Nutzer ausgegeben. Form {dim_key:schwach|ok|stark}. Status: lebt (TAXO2 LLM-Bewerter, intern). Schreibt services/judge_runner.py; liest spaeter Korrelation/Lernen (post-Launch).")
     created_at            = Column(DateTime, default=utcnow)
     __table_args__ = (
         # F-03 partieller Unique-Index: Plan 04 ON CONFLICT (call_id) WHERE origin='live'

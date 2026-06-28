@@ -5,7 +5,7 @@ Erweitert rubric_score um zwei JSONB-Spalten fuer den LLM-Verhaltens-Bewerter
   - observations_jsonb: Beobachtungen + woertliche Beleg-Zitate je fester Dimension
     (Form {dim_key:[{beobachtung,beleg_zitat}]}). Sichtbar fuer den Nutzer.
   - ratings_jsonb: INTERNE grobe Auspraegung schwach/ok/stark je Dimension
-    (Form {dim_key:'schwach'|'ok'|'stark'}). NIE an den Nutzer ausgegeben.
+    (Form {dim_key:schwach|ok|stark}). NIE an den Nutzer ausgegeben.
 
 Die alten Noten-Spalten (coaching_score, measured_weight_pct, unmeasured_dimensions,
 dimensions, is_provisional) BLEIBEN als Spalten (kein blindes Drop, Punkt 20) aber
@@ -38,7 +38,7 @@ _COMMENT_OBSERVATIONS_JSONB = (
 
 _COMMENT_RATINGS_JSONB = (
     "INTERNE grobe Auspraegung schwach/ok/stark je Dimension (Lern-Signal, Soll-Verhalten §6). "
-    "NIE an den Nutzer ausgegeben. Form {dim_key:'schwach'|'ok'|'stark'}. "
+    "NIE an den Nutzer ausgegeben. Form {dim_key:schwach|ok|stark}. "
     "Status: lebt (TAXO2 LLM-Bewerter, intern). "
     "Schreibt services/judge_runner.py; liest spaeter Korrelation/Lernen (post-Launch)."
 )
