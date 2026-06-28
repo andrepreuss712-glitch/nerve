@@ -709,6 +709,16 @@ class Call(Base):
                 "Audio-Thread liest. Schreibt routes/app_routes.py (api_beenden / _audio_health_bg); "
                 "liest services/slow_lane.py (Merge-Gate).",
     )
+    # --- Phase 08.23.2.TAXO2 LLM-Bewerter — Fan-In-Anstoss-Signal fuer den Verhaltens-Call (Migration 0028) ---
+    transcript_resolved = Column(
+        Boolean, nullable=False, server_default=text('false'),
+        comment="Fan-In-Anstoss-Signal fuer den LLM-Verhaltens-Bewerter (Beobachtung statt Note): TRUE sobald "
+                "das Transkript am Call-Ende festgeschrieben ist (Segmente geschrieben ODER bewiesen leer = "
+                "resolved-als-absent). Der Judge-Anstoss (slow_lane Call-Ende-Schritt) wartet darauf, BEVOR er "
+                "das Transkript an Sonnet gibt — verhindert die Race, in der gegen ein noch nicht geschriebenes "
+                "Transkript bewertet wird (Punkt 26, analog audio_health_resolved). Status: lebt (TAXO2 LLM-Bewerter). "
+                "Schreibt routes/app_routes.py (api_beenden); liest services/slow_lane.py (Judge-Anstoss-Gate + Merge-Gate).",
+    )
     coaching_score = Column(Float, nullable=True, comment='Gesamt-Coaching-Score des Calls')
     # --- Phase 08.23.2.D.UX — Score-Breakdown (REQ-D.UX-11, Migration 0007) ---
     score_breakdown = Column(JSON_TYPE, nullable=True, comment='JSON: Aufschluesselung des Coaching-Scores')
@@ -741,7 +751,7 @@ class Call(Base):
         Index('idx_calls_account_time', 'account_id', 'started_at'),
         Index('idx_calls_user_time', 'user_id', 'started_at'),
         Index('idx_calls_mode_outcome', 'call_mode', 'outcome', postgresql_where=text('outcome IS NOT NULL')),
-        {'comment': 'Zentraler Call-Datensatz der neuen Architektur (UUID-PK, Outcome/Coaching/Transkript-Storage). Status: lebt (neue Architektur Phase 08.23.2.A+). Schreibt/liest services/+routes/ der neuen Call-Pipeline; audio_health_resolved geschrieben routes/app_routes.py (api_beenden/_audio_health_bg), gelesen services/slow_lane.py (Call-Ende-Merge-Gate, TAXO2-04 Audio-Race-Fix).'},
+        {'comment': 'Zentraler Call-Datensatz der neuen Architektur (UUID-PK, Outcome/Coaching/Transkript-Storage). Status: lebt (neue Architektur Phase 08.23.2.A+). Schreibt/liest services/+routes/ der neuen Call-Pipeline; audio_health_resolved geschrieben routes/app_routes.py (api_beenden/_audio_health_bg), gelesen services/slow_lane.py (Call-Ende-Merge-Gate, TAXO2-04 Audio-Race-Fix); transcript_resolved geschrieben routes/app_routes.py (api_beenden), gelesen services/slow_lane.py (LLM-Judge-Anstoss-Gate + Merge-Gate).'},
     )
 
 
