@@ -815,3 +815,13 @@ Quelle: `Nerve-Vault/CLAUDE.md` → Punkt 22. Dort die volle Begründung; hier d
 **Plan-Sektion-Pflicht:** Bei daten-lesenden Schritten in der Persistenz-Schicht-Verifikation (Punkt 21, Sektion 5) zusätzlich eine Spalte/Zeile „**Schreib-Zeitpunkt** (live/batch/bg-thread) + kann Leser vorauslaufen?". Fehlt sie bei einem Schritt der fremd-geschriebene Daten liest → Plan-Checker BLOCK.
 
 **Verhältnis:** Erweitert Punkt 14 (Race-Fragen, allgemein) + Punkt 21 (Cross-Layer — „existiert die Spalte?" → hier „ist sie zum Lese-Zeitpunkt BEFÜLLT?"). Pre-Execute-Audit (Claudian) prüft das mit.
+
+## Punkt 27 — Einfachster tragfähiger Weg zuerst (verankert 2026-06-28)
+
+Quelle: `Nerve-Vault/CLAUDE.md` → „Leitsatz 2". Hier die GSD-relevante Kurzfassung.
+
+**Regel:** Vor jedem Plan/Bau die Pflicht-Frage: *Gibt es einen einfacheren Weg, der das Problem genauso richtig löst?* Den einfachsten **tragfähigen** Ansatz wählen — nicht den billigsten Hack, den einfachsten, der wirklich funktioniert. Erst wenn der auf eine echte Wand stößt → Plan B. **Über-Engineering ist eine Form von Abrieb** (komplexe Mechanik, die ein einfacherer Ansatz auflöst), gleichrangig mit der „lieber einmal richtig"-Regel.
+
+**Beleg-Fall:** Zwei Tage maschinelle Einwand-zu-Antwort-Anker-Mechanik (PATH B / Wartenummer / ordinale Zuordnung) gebaut — bis die Frage „denken wir zu kompliziert?" kam. Ein LLM, das am Call-Ende das ganze Transkript liest, löst die Zuordnung von selbst → die ganze Mechanik überflüssig.
+
+**Pflicht für Plan-Author + Plan-Checker:** Wenn ein Plan eine wachsende, mehrstufige Mechanik baut (mehrere Anker-Strategien, Spezialfall-Ketten, „Härtung der Härtung"), EINMAL explizit prüfen + im Plan beantworten: *„Gibt es einen radikal einfacheren Ansatz (z.B. ein LLM-Gesamturteil statt mechanischer Verkettung), der das Problem auflöst statt es zu verwalten?"* Plan-Checker FLAG bei un-beantworteter wachsender Komplexität. „richtig" heißt **angemessen einfach**, nicht maximal ausgebaut.
