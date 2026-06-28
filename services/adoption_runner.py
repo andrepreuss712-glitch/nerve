@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Uebernahme-/Adoption-Judge (LLM-as-a-Judge, Soll-Verhalten §6, TAXO2-Plan 04).
+"""Uebernahme-/Adoption-Judge (LLM-as-a-Judge, Soll-Verhalten §6, TAXO2-Plan 04/06).
 
 EIN gebuendelter Sonnet-Tool-Use-Call am Call-Ende (async, Slow Lane — Latenz egal, Punkt 25):
-  - Roh-Paare bauen: suggestion_reactions.suggestion_text + folgende Berater-Aeusserung
-    aus transcript_segments (per interaction_id / ts_ms-Reihenfolge).
+  - Ganzes anonymisiertes Transkript (transcript_segments ts_ms ASC) UND
+    Vorschlags-Liste (interaction_id + suggestion_text) an den LLM senden.
   - EINEN gebuendelten forced-Tool-Use-Sonnet-Call feuern (NICHT einen Call pro Moment —
     Soll-Verhalten §6 Schaerfung b: gebuendelt/gesampelt, nie pro Moment live).
-  - Intent-Urteil: voll / teilweise / ignoriert — auf INTENT, NIE mechanisch
-    (kein BLEU/ROUGE/Cosine/difflib, Soll-Verhalten §6).
+  - LLM urteilt selbst je interaction_id (voll/teilweise/ignoriert + Beleg-Zitat) auf
+    Basis des Gesamttranskripts — KEIN mechanisches Pairing, KEIN BLEU/ROUGE/Cosine/difflib.
   - Einstufung in die DEFERRED-Spalten von suggestion_reactions schreiben:
     adoption_value / reaction_class / following_utterance_ref (keine neue Tabelle).
   - Outcome (calls.outcome) physisch NICHT im Prompt (T-HT-04-03, grep-verifizierbar).
@@ -18,14 +18,14 @@ Bau-Regel 1 (NERVE TAXO-Geruest §5): KEIN LLM in der Live/Fast-Lane. Dieser Ado
 laeuft NUR async im Slow-Lane-Call-Ende-Schritt (_adoption_step in slow_lane.py) und NUR nach
 transcript_resolved==True (Punkt 26 Fan-In-Gate, via _call_end_merge-Vorbedingung).
 
-Roh-Paar-Bau (Punkt 26): liest transcript_segments NUR nach transcript_resolved==True
+Transkript-Laden (Punkt 26): liest transcript_segments NUR nach transcript_resolved==True
 (Merge-Gate in _call_end_merge). Anker: ts_ms-Reihenfolge (Sprech-Zeit, NICHT created_at
 Batch-Schreibzeit — Lehre Punkt 26 CALLID/Audio-Race-Analogie).
 
 D-RESIDENZ: claude_client = anthropic.Anthropic direkt (konsistent mit judge_runner.py;
 Bedrock-Frankfurt-Migration = eigene Phase, nicht hier erfunden).
 
-Phase: 08.23.2.TAXO2.HANDLING-TIMING Plan 04
+Phase: 08.23.2.TAXO2.HANDLING-TIMING Plan 04/06 (Gap-Closure: _build_adoption_pairs entfernt)
 """
 
 import os
@@ -50,16 +50,17 @@ _STATUS_ADOPTION_FAILED = 'adoption_failed'
 _FOLLOWING_REF_MAX = 120
 
 # ── ADOPTION_TOOL: erzwungenes JSON-Schema (Anthropic Tool-Use / forced tool_choice) ──────────
-# Schema: ein Ergebnis-Array — pro Paar: interaction_id + beleg(folgende Aeusserung, kurz) +
-# urteil(enum voll|teilweise|ignoriert) + adoption_value(0|0.5|1).
+# Schema: ein Ergebnis-Array — pro Vorschlag: interaction_id + beleg(LLM-identifiziertes Zitat,
+# kurz) + urteil(enum voll|teilweise|ignoriert) + adoption_value(0|0.5|1).
 # KEIN Outcome. KEINE mechanischen Score-Felder.
 
 ADOPTION_TOOL = {
     'name': 'record_adoption',
     'description': (
-        'Erfasst das Uebernahme-Urteil fuer jedes Vorschlags-Berater-Paar. '
-        'ALLE Paare in EINEM Ergebnis-Array. Pro Paar: erst den Beleg (kurze folgende Aeusserung), '
-        'dann das Urteil (voll/teilweise/ignoriert), dann der adoption_value (1.0/0.5/0.0). '
+        'Erfasst das Uebernahme-Urteil fuer jeden NERVE-Vorschlag. '
+        'ALLE Vorschlaege in EINEM Ergebnis-Array. Pro Vorschlag: erst den Beleg (woertliches '
+        'Zitat aus dem Transkript), dann das Urteil (voll/teilweise/ignoriert), '
+        'dann der adoption_value (1.0/0.5/0.0). '
         'Beleg-VOR-Urteil (kein Urteil ohne Beleg). '
         'KEIN Ergebnis/Outcome. NUR Intention pruefen.'
     ),
@@ -68,7 +69,7 @@ ADOPTION_TOOL = {
         'properties': {
             'ergebnisse': {
                 'type': 'array',
-                'description': 'Urteil fuer jedes Paar (in der Reihenfolge des Inputs).',
+                'description': 'Urteil fuer jeden Vorschlag (in der Reihenfolge des Inputs).',
                 'items': {
                     'type': 'object',
                     'properties': {
@@ -79,8 +80,8 @@ ADOPTION_TOOL = {
                         'beleg': {
                             'type': 'string',
                             'description': (
-                                'Kurze folgende Berater-Aeusserung als Beleg (max. 120 Zeichen). '
-                                'Muss aus dem Input stammen. Leer wenn folgende Aeusserung unbekannt.'
+                                'Woertliches Zitat aus dem Transkript als Beleg (max. 120 Zeichen). '
+                                'Muss aus dem Transkript stammen. Leer wenn Berater danach gar nicht gesprochen hat.'
                             ),
                         },
                         'urteil': {
@@ -91,7 +92,7 @@ ADOPTION_TOOL = {
                                 'auf (Paraphrase/Stichpunkt-Stil zaehlt — NUR Intent, nicht Wortlaut). '
                                 'teilweise = Teilaspekte aufgegriffen. '
                                 'ignoriert = kein erkennbarer Bezug zur Intention; auch wenn '
-                                'folgende Aeusserung unbekannt.'
+                                'Berater danach gar nicht gesprochen hat.'
                             ),
                         },
                         'adoption_value': {
@@ -110,108 +111,25 @@ ADOPTION_TOOL = {
 }
 
 
-# ── Roh-Paar-Bau ─────────────────────────────────────────────────────────────────
-
-def _build_adoption_pairs(call, db) -> list:
-    """Baut Roh-Paare (suggestion_text + folgende Berater-Aeusserung) aus committeten Daten.
-
-    Laedt suggestion_reactions des Calls (nur Zeilen mit suggestion_text).
-    Fuer jeden Vorschlag: sucht die erste Berater-Aeusserung in transcript_segments
-    NACH dem Angebots-Zeitpunkt (ts_ms-Reihenfolge, Sprech-Zeit — NICHT created_at
-    Batch-Schreibzeit, Lehre Punkt 26).
-
-    Wenn keine folgende Berater-Aeusserung gefunden: following_text=None
-    (konservativ; LLM bekommt 'unbekannt', urteilt 'ignoriert' — kein Crash).
-
-    Nur nach transcript_resolved==True erreichbar (der Adoption-Schritt sitzt
-    hinter dem Merge-Gate, Punkt 26). Liest committete Daten.
-
-    Args:
-        call: Call-ORM-Objekt (id, conversation_log_id).
-        db: SQLAlchemy-Session (GUC bereits gesetzt vom Merge-Gate, M-4).
-
-    Returns:
-        list of {interaction_id, suggestion_text, following_text}
-        oder [] wenn keine Vorschlaege mit suggestion_text vorhanden.
-    """
-    # Alle Vorschlaege des Calls laden (nur mit suggestion_text — das Angebot)
-    suggestions = (
-        db.query(SuggestionReaction)
-        .filter(
-            SuggestionReaction.call_id == call.id,
-            SuggestionReaction.suggestion_text.isnot(None),
-        )
-        .all()
-    )
-
-    if not suggestions:
-        return []
-
-    pairs = []
-    conv_log_id = call.conversation_log_id
-
-    for sug in suggestions:
-        following_text = None
-
-        if conv_log_id is not None and sug.interaction_id is not None:
-            # Folgende Berater-Aeusserung: erstes berater-Segment in transcript_segments
-            # NACH dem Angebots-Zeitpunkt des Vorschlags.
-            # Anker: ts_offered -> ts_ms-Reihenfolge (Sprech-Zeit, NICHT created_at).
-            # Wenn ts_offered nicht gesetzt: erste berater-Aeusserung nach ALL Segmenten
-            # in diesem conversation_log (conservative fallback: following=None weil
-            # keine saubere Zuordnung ohne ts_offered — lieber kein Urteil als falsches).
-            ts_offered = getattr(sug, 'ts_offered', None)
-
-            if ts_offered is not None:
-                # ts_offered ist ein Datetime; transcript_segments.ts_ms ist Millisekunden
-                # seit Call-Start (Integer). Anker: suche berater-Segment nach der Angebots-Zeit.
-                # Da ts_ms die Sprech-Position ist und ts_offered die Wall-Clock-Zeit, bauen wir
-                # einen konservativen Lookup: das frueheste berater-Segment nach dem letzten
-                # kunden-Segment das NACH ts_offered liegt (Executor's Discretion, kein
-                # Wall-Clock-Bruecke — wir nehmen alle berater-Segmente und nehmen das erste
-                # NACH einem Kunden-Segment das nach ts_offered ist).
-                # Vereinfachter konservativer Ansatz: das erste berater-Segment ueberhaupt
-                # im conversation_log (Sprech-Zeit-Reihenfolge ts_ms ASC) — weil ts_offered
-                # und ts_ms nicht direkt vergleichbar sind (Wall-Clock vs. Call-intern-ms),
-                # nehmen wir das erste berater-Segment aus dem ganzen Call als Anker.
-                # Das ist konservativ aber sauber: wenn kein berater-Satz -> None.
-                # Punkt 26: kein Wall-Clock-Bruecke erfinden (Leitsatz 2).
-                try:
-                    seg = (
-                        db.query(TranscriptSegment)
-                        .filter(
-                            TranscriptSegment.conversation_log_id == conv_log_id,
-                            TranscriptSegment.speaker == 'berater',
-                        )
-                        .order_by(TranscriptSegment.ts_ms.asc())
-                        .first()
-                    )
-                    following_text = seg.text if seg is not None else None
-                except Exception:
-                    following_text = None
-            # else: ts_offered fehlt -> following=None (konservativ, kein Wall-Clock-Anker)
-
-        pairs.append({
-            'interaction_id': str(sug.interaction_id) if sug.interaction_id is not None else '',
-            'suggestion_text': sug.suggestion_text or '',
-            'following_text': following_text,
-        })
-
-    return pairs
-
-
 # ── Prompt-Bau ───────────────────────────────────────────────────────────────────
 
-def _build_adoption_prompt(pairs: list) -> tuple:
+def _build_adoption_prompt(transcript_segments, suggestions) -> tuple:
     """Baut System-Prompt + User-Prompt fuer den gebuendelten Adoption-Judge.
+
+    Empfaengt das GANZE anonymisierte Transkript (transcript_segments ts_ms ASC, alle
+    speaker+text+ts_ms) und die Vorschlags-Liste (interaction_id + suggestion_text).
+    Das LLM selbst urteilt je interaction_id auf Basis des Gesamt-Transkripts —
+    KEIN mechanisches Pairing, KEIN Wall-Clock/ts_ms-Anker.
 
     Invarianten (grep-verifizierbar):
       - Kein calls.outcome im Prompt (T-HT-04-03)
       - Kein mechanischer Vergleich (kein BLEU/ROUGE/Cosine/difflib)
       - Beleg-VOR-Urteil
+      - ts_offered wird NICHT in den Prompt eingebettet (Wall-Clock vs. ts_ms unvergleichbar)
 
     Args:
-        pairs: Liste von {interaction_id, suggestion_text, following_text}
+        transcript_segments: Liste von TranscriptSegment-Objekten (ts_ms ASC vorsortiert)
+        suggestions: Liste von SuggestionReaction-Objekten (mit interaction_id + suggestion_text)
 
     Returns:
         (system_str, user_str): beide Strings fuer den Anthropic-Call.
@@ -219,67 +137,67 @@ def _build_adoption_prompt(pairs: list) -> tuple:
     system_lines = [
         '== DEINE ROLLE ==',
         (
-            'Du beurteilst fuer jeden NERVE-Vorschlag, ob der Berater die STRATEGISCHE INTENTION '
-            'des Vorschlags in seiner folgenden Aeusserung aufgegriffen hat. '
-            'Urteile auf INTENT, NICHT auf Wort-Ueberlappung: '
-            'Paraphrase, Stichpunkt-Stil und eigene Formulierung zaehlen als Uebernahme, '
-            'wenn die Kernidee (das strategische Angebot) aufgegriffen wurde. '
-            'BLEU/ROUGE/Wort-Matching ist FALSCH — ein Berater soll die Idee aufgreifen, '
-            'nicht den Wortlaut kopieren.'
+            'Du beurteilst fuer jeden NERVE-Vorschlag im Transkript, ob der Berater die '
+            'STRATEGISCHE INTENTION des Vorschlags aufgegriffen hat. Urteile auf INTENT, '
+            'NICHT auf Wort-Ueberlappung: Paraphrase und eigene Formulierung zaehlen als '
+            'Uebernahme, wenn die Kernidee aufgegriffen wurde.'
         ),
         '',
         '== BEWERTUNGS-PRINZIPIEN ==',
         (
-            '1. Erst den Beleg lesen (die folgende Berater-Aeusserung), DANN urteilen. '
-            'Kein Urteil ohne Beleg (Beleg-VOR-Urteil).'
+            '1. Lese das GANZE Transkript der Reihe nach. Beurteile je Vorschlag was der '
+            'Berater DANACH gesagt hat (nicht nur der naechste Satz — auch spaetere '
+            'Saetze koennen die Intention aufgreifen).'
+        ),
+        '2. voll (1.0): Kernidee klar aufgegriffen — auch bei abweichender Formulierung.',
+        '3. teilweise (0.5): Aspekte aufgegriffen, wesentliche Teile der Intention fehlen.',
+        (
+            '4. ignoriert (0.0): kein erkennbarer Bezug zur Intention; auch wenn der Berater '
+            'nach dem Vorschlag schweigt oder das Gespraech abbricht.'
         ),
         (
-            '2. voll: Kernidee des Vorschlags klar erkennbar in der Antwort — '
-            'auch wenn Formulierung abweicht (Paraphrase zaehlt). '
-            'Adoption-Value: 1.0'
-        ),
-        (
-            '3. teilweise: Aspekte aufgegriffen, aber wesentliche Teile der Intention fehlen. '
-            'Adoption-Value: 0.5'
-        ),
-        (
-            '4. ignoriert: kein erkennbarer Bezug zur Intention des Vorschlags; '
-            'auch wenn folgende Aeusserung unbekannt. '
-            'Adoption-Value: 0.0'
+            '5. Beleg-VOR-Urteil: erst das woertliche Zitat aus dem Transkript, dann das Urteil. '
+            'Kein Urteil ohne Beleg (leeres beleg nur wenn Berater danach gar nicht gesprochen hat).'
         ),
         '',
         '== WICHTIG ==',
         (
-            'Du siehst WEDER das Ergebnis des Gespraechs (ob ein Abschluss zustande kam) '
+            'Du siehst WEDER das Ergebnis des Gespraechs (kein Abschluss/Ablehnung-Info) '
             'NOCH andere Bewertungen. Beurteile NUR die Uebernahme der Intention.'
         ),
     ]
     system_str = '\n'.join(system_lines)
 
-    user_lines = [
-        '== VORSCHLAGS-BERATER-PAARE ==',
-        'Beurteile fuer jedes Paar die Uebernahme der Intention.',
-        '',
-    ]
+    user_lines = []
 
-    for i, pair in enumerate(pairs, start=1):
-        iid = pair.get('interaction_id', '')
-        sug_text = pair.get('suggestion_text', '')
-        following = pair.get('following_text')
+    # Sektion 1 — ganzes Transkript (chronologisch, ts_ms ASC)
+    user_lines.append('== TRANSKRIPT (chronologisch, ts_ms ASC) ==')
+    if transcript_segments:
+        for i, seg in enumerate(transcript_segments, start=1):
+            speaker = getattr(seg, 'speaker', 'unbekannt')
+            ts_ms = getattr(seg, 'ts_ms', 0)
+            text = getattr(seg, 'text', '')
+            user_lines.append(f'[#{i} {speaker} {ts_ms}ms] {text}')
+    else:
+        user_lines.append('(Kein Transkript verfuegbar — kein Urteil moeglich)')
+    user_lines.append('')
 
-        user_lines.append(f'--- Paar {i} ---')
-        user_lines.append(f'interaction_id: {iid}')
-        user_lines.append(f'NERVE-Vorschlag (was ausgegeben wurde): {sug_text}')
-        if following:
-            user_lines.append(f'Folgende Berater-Aeusserung: {following}')
-        else:
-            user_lines.append('Folgende Berater-Aeusserung: (unbekannt — kein Berater-Satz nach dem Vorschlag)')
-        user_lines.append('')
+    # Sektion 2 — Vorschlags-Liste (interaction_id + suggestion_text)
+    # ts_offered wird NICHT eingebettet: Wall-Clock vs. ts_ms unvergleichbar (Punkt 27)
+    user_lines.append('== NERVE-VORSCHLAEGE (zu beurteilen) ==')
+    for i, sug in enumerate(suggestions, start=1):
+        iid = str(sug.interaction_id) if sug.interaction_id is not None else ''
+        sug_text = sug.suggestion_text or ''
+        user_lines.append(f'Vorschlag #{i}: interaction_id={iid} | Text: "{sug_text}"')
+    user_lines.append('')
 
+    # Sektion 3 — Aufgabe
     user_lines.append('== AUFGABE ==')
     user_lines.append(
-        'Befuelle das Werkzeug record_adoption mit deinen Urteilen fuer ALLE Paare. '
-        'Pro Paar: Beleg -> Urteil -> adoption_value. ALLE Paare in EINEM Aufruf.'
+        'Lies das Transkript von oben nach unten. Finde fuer jeden NERVE-Vorschlag, '
+        'ob und wie der Berater die strategische Intention danach aufgegriffen hat. '
+        'Befuelle das Werkzeug record_adoption mit einem Urteil pro Vorschlag. '
+        'Alle Vorschlaege in EINEM Aufruf. Beleg -> Urteil -> adoption_value.'
     )
 
     user_str = '\n'.join(user_lines)
@@ -291,9 +209,13 @@ def _build_adoption_prompt(pairs: list) -> tuple:
 def run_adoption_judge(call, db) -> dict:
     """Fuehrt den LLM-Uebernahme-Judge fuer einen abgeschlossenen Call aus.
 
-    Laedt Roh-Paare (suggestion_text + folgende Berater-Aeusserung), baut den Prompt,
-    feuert EINEN gebuendelten forced-Tool-Use-Sonnet-Call (temp=0), parst die Antwort,
-    schreibt die Einstufung in suggestion_reactions' DEFERRED-Spalten.
+    Laedt das GANZE anonymisierte Transkript (transcript_segments ts_ms ASC) und die
+    Vorschlags-Liste (interaction_id + suggestion_text), baut den Prompt, feuert EINEN
+    gebuendelten forced-Tool-Use-Sonnet-Call (temp=0), parst die Antwort und schreibt
+    die Einstufung in suggestion_reactions' DEFERRED-Spalten.
+
+    Das LLM selbst urteilt je interaction_id auf Basis des Gesamttranskripts —
+    KEIN mechanisches Pairing (Punkt 27: einfachster tragfaehiger Weg).
 
     Trennung vom Verhaltens-Call (Plan 03, Bias-Schutz):
       - Dieser Call kennt die NERVE-Vorschlaege (suggestion_text).
@@ -304,9 +226,11 @@ def run_adoption_judge(call, db) -> dict:
       - Nur laeuft nach transcript_resolved==True (Punkt 26, via _call_end_merge-Gate).
       - Kein Outcome im Prompt (T-HT-04-03, grep == 0).
       - Kein mechanischer Vergleich (kein difflib/BLEU/ROUGE/Cosine).
-      - EIN Call fuer ALLE Paare (gebuendelt, Soll-Verhalten §6 Schaerfung b).
+      - EIN Call fuer ALLE Vorschlaege (gebuendelt, Soll-Verhalten §6 Schaerfung b).
       - Schreibt in suggestion_reactions.adoption_value / reaction_class / following_utterance_ref.
       - KEINE neue Tabelle.
+      - following_utterance_ref: LLM-identifiziertes woertliches Zitat aus dem Gesamttranskript
+        (max. 120 Zeichen, DSGVO).
 
     Args:
         call: Call-ORM-Objekt (id, conversation_log_id, tenant_id, ...)
@@ -318,21 +242,40 @@ def run_adoption_judge(call, db) -> dict:
         oder {status: 'adoption_failed', error: str}
     """
     try:
-        # ── Roh-Paar-Bau ─────────────────────────────────────────────────────────────
+        # ── Vorschlaege laden (suggestion_text gesetzt, FOLD A) ───────────────────────
         # Punkt 26: nur nach transcript_resolved==True (das Gate sitzt im _call_end_merge —
         # hier kein zweites Gate noetig, konsistent mit _judge_step-Muster).
-        pairs = _build_adoption_pairs(call, db)
+        suggestions = (
+            db.query(SuggestionReaction)
+            .filter(
+                SuggestionReaction.call_id == call.id,
+                SuggestionReaction.suggestion_text.isnot(None),
+            )
+            .all()
+        )
 
-        if not pairs:
+        if not suggestions:
             call_id = getattr(call, 'id', '?')
             print(f'[ADOPTION] no_suggestions call={call_id}: keine Vorschlaege mit suggestion_text')
             return {'status': _STATUS_NO_SUGGESTIONS, 'written': 0}
 
+        # ── Ganzes Transkript laden (ts_ms ASC — Sprech-Zeit, NICHT created_at) ──────
+        # Punkt 26: nur nach transcript_resolved==True (Gate im _call_end_merge).
+        # Anker: ts_ms (Sprech-Zeit), NICHT created_at (Batch-Schreibzeit wertlos).
+        segments = (
+            db.query(TranscriptSegment)
+            .filter(
+                TranscriptSegment.conversation_log_id == call.conversation_log_id,
+            )
+            .order_by(TranscriptSegment.ts_ms.asc())
+            .all()
+        ) if call.conversation_log_id else []
+
         # ── Prompt-Bau ────────────────────────────────────────────────────────────────
-        system_str, user_str = _build_adoption_prompt(pairs)
+        system_str, user_str = _build_adoption_prompt(segments, suggestions)
 
         # ── EIN gebuendelter forced-Tool-Use-Sonnet-Call (temp=0) ────────────────────
-        # ALLE Paare in EINEM Call (Soll-Verhalten §6 Schaerfung b: gebuendelt, nie pro
+        # ALLE Vorschlaege in EINEM Call (Soll-Verhalten §6 Schaerfung b: gebuendelt, nie pro
         # Moment live). KEIN Outcome. KEIN mechanischer Vergleich.
         # D-RESIDENZ: claude_client = anthropic.Anthropic direkt (Plan 05-Checkpoint).
         response = claude_client.messages.create(
@@ -361,7 +304,7 @@ def run_adoption_judge(call, db) -> dict:
         # ── Write: Einstufung in suggestion_reactions (DEFERRED-Spalten) ─────────────
         # Under Tenant-GUC (der Schritt laeuft in der M-4-GUC-Klammer von _call_end_merge).
         # IN-PLACE-UPDATE der existing Zeilen (per interaction_id).
-        # following_utterance_ref: KEIN voller Roh-Text (DSGVO), nur kurzer Beleg-Verweis.
+        # following_utterance_ref: LLM-identifiziertes woertliches Zitat (DSGVO, max. 120 Zeichen).
         written = 0
         for res in ergebnisse:
             iid = res.get('interaction_id')
