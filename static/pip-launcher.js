@@ -2278,7 +2278,13 @@
     // Klick + Variante-Request ans Backend. Backend loggt Klick (ewb_clicks für
     // postcall-Analytics) UND streamt kontextbezogene Haiku-Variante in Slot 1.
     if (state.socket && state.socket.connected) {
-      state.socket.emit('manual_ewb', { text: typ, line_id: 'ewb_pip_' + Date.now(), slot: 1 });
+      // [BUGB-EWB] MP1 — per-CLICK id generiert VOR jedem emit (synchron im Klick-Pfad,
+      // KEIN async dazwischen). Wenn ein physischer Klick N emits erzeugt, taucht dieselbe
+      // click_id N-mal auf (Bubbling/Doppel-Bind). Wenn N verschiedene click_ids auftauchen,
+      // sind es N physische Trigger (Reconnect-Replay / Mehrfach-Klick). Logging-only.
+      var _bugbClickId = 'clk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      console.log('[BUGB-EWB] MP1 manual_ewb emit click_id=' + _bugbClickId + ' typ=' + typ + ' ts=' + Date.now());
+      state.socket.emit('manual_ewb', { text: typ, line_id: 'ewb_pip_' + Date.now(), slot: 1, click_id: _bugbClickId });
     }
   }
 

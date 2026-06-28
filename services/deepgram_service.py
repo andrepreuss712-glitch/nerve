@@ -246,11 +246,23 @@ def _make_on_message(sid, mode='meeting'):
                     with ls.state_lock:
                         _busy = ls.state.get('slot1_variant_busy_until', 0)
                     _now = _time_mod.monotonic()
+                    # [BUGB-EWB] MP3 — LESEN von slot1_variant_busy_until im KEYWORD-Pfad.
+                    # ACHTUNG (Lead B): dieser Pfad liest GLOBAL ls.state[...], waehrend der
+                    # analyse_loop/QA-Pfad PER-SID _session_state[sid]['state'][...] liest/setzt
+                    # (claude_service.py:1516/1630). Zwei verschiedene Speicher -> Lock evtl. NICHT
+                    # geteilt. Logging-only.
+                    print(f"[BUGB-EWB] MP3 lock READ src=keyword sid={sid} busy_until={_busy} now={_now:.1f} blocked={_now < _busy}")
                     if _now >= _busy:
                         with ls.state_lock:
                             ls.state['slot1_variant_busy_until'] = _now + 6
+                        # [BUGB-EWB] MP3 — SETZEN (GLOBAL ls.state) durch Keyword-Pfad.
+                        print(f"[BUGB-EWB] MP3 lock SET src=keyword sid={sid} new_busy_until={_now + 6:.1f}")
                         _kontext = " ".join(ls._session_state.get(sid, {}).get('analysiert_bisher', [])[-20:])
                         from services.claude_service import streame_auto_variante
+                        # [BUGB-EWB] MP4 — Slot-1 WRITE-Quelle (auto, keyword-getriggert). Lock
+                        # war frei (sonst skip). Wenn dies ZWISCHEN manual_ewb-Stream-Start und
+                        # -Ende feuert -> Ueberschreiben des Knopf-Vorschlags (Hypothese B).
+                        print(f"[BUGB-EWB] MP4 slot1 WRITE source=streame_auto_variante(keyword) sid={sid} lock_was_active=False")
                         sio.start_background_task(
                             streame_auto_variante,
                             text, einwaende, _kontext, sid, 1, "keyword"
@@ -848,6 +860,12 @@ def register_audio_handlers(sio):
         if not typ:
             return
         print(f"[PiP] manual_ewb (sid={_sid}): {typ[:80]}")
+        # [BUGB-EWB] MP2 — jeder manual_ewb-EMPFANG (SID, click_id aus FE-MP1, button-key,
+        # empfangs-ts). Reconciliation FE-emits vs BE-receives: gleiche click_id N-mal =
+        # Bubbling/Doppel-Bind im FE; N verschiedene click_ids = N echte Trigger
+        # (Reconnect-Replay/Doppel-Klick). Logging-only, kein Verhalten geaendert.
+        _bugb_click_id = (data.get('click_id') if isinstance(data, dict) else None) or '(none)'
+        print(f"[BUGB-EWB] MP2 manual_ewb RECV sid={_sid} click_id={_bugb_click_id} typ={typ[:40]!r} recv_ts={time.time():.3f}")
         import services.live_session as ls
 
         # ── TAXO1-Welle 4 (Task 3b): EWB-Button -> intent_event (ui_asserted) ───

@@ -489,6 +489,11 @@ def infer_customer_state(seller_transcript, phase, sid: str = None):
             text = text.strip()
         if text.startswith('json'):
             text = text[4:].strip()
+        # [BUGB-EWB] MP5 — Roh-Input DIREKT VOR json.loads, das "Extra data line 6" wirft.
+        # repr() macht Newlines/Steuerzeichen sichtbar; len + line-count zeigen ob Haiku
+        # mehrere JSON-Objekte/Trailing-Prosa lieferte (Ursache von "Extra data"). Auf 600
+        # Zeichen gekappt (latenz-/log-schonend). Logging-only, Parse-Verhalten unveraendert.
+        print(f"[BUGB-EWB] MP5 coldcall_infer pre-parse sid={sid} len={len(text)} lines={text.count(chr(10)) + 1} raw={text[:600]!r}")
         data = json.loads(text)
         if not isinstance(data.get('likely_customer_action'), str):
             return None
@@ -816,6 +821,18 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
           f"cache={'on' if len(_ewb_manual_system) >= _CACHE_MIN_CHARS else 'off'}")
     # ──────────────────────────────────────────────────────────────────────────
     print(f"[PiP-Variante] ENTRY sid={sid} slot={slot} typ={typ!r}")
+    # [BUGB-EWB] MP3+MP4 — Slot-1 WRITE-Quelle MANUAL (Knopf). Dieser Pfad prueft/setzt
+    # slot1_variant_busy_until per Design NICHT (Docstring oben, :760). D.h. waehrend dieser
+    # Stream laeuft, bleibt der Lock auf seinem Altwert -> keyword/analyse_loop koennen
+    # parallel in Slot 1 schreiben (Hypothese B). Aktuellen busy_until-Wert mitloggen, um
+    # zu belegen DASS der manual-Pfad ihn nicht hochsetzt. Logging-only.
+    _bugb_busy_manual = 0.0
+    try:
+        import services.live_session as _ls_bugb
+        _bugb_busy_manual = ((_ls_bugb._session_state.get(sid) or {}).get('state') or {}).get('slot1_variant_busy_until', 0.0)
+    except Exception:
+        pass
+    print(f"[BUGB-EWB] MP4 slot1 WRITE source=streame_manual_ewb_variante(manual_button) sid={sid} sets_lock=False busy_until_now={_bugb_busy_manual}")
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
     full_text = ''
     # 06.1-r2 r6: Retry bei 529 overloaded_error — Anthropic hat stossweise Spitzen,
@@ -1514,6 +1531,12 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
         _kw_fired_for = _sid_st_state.get('kw_fired_for_line')
         _anrede = _sid_st_state.get('session_anrede') or 'Sie'
         _slot1_busy_until = _sid_st_state.get('slot1_variant_busy_until', 0.0)
+        # [BUGB-EWB] MP3 — LESEN von slot1_variant_busy_until im ANALYSE_LOOP/QA-Pfad.
+        # Quelle PER-SID _session_state[sid]['state'] (NICHT global ls.state wie der
+        # Keyword-Pfad). Lead B: der manual_ewb-Pfad (streame_manual_ewb_variante) setzt
+        # diesen Wert NIE -> ein laufender Knopf-Stream macht busy_until hier nicht zukuenftig
+        # -> analyse_loop sieht "frei" und schreibt qa_slot1 in denselben Slot. Logging-only.
+        print(f"[BUGB-EWB] MP3 lock READ src=analyse_loop sid={sid} busy_until={_slot1_busy_until} line={line_id}")
 
         # D-02: Keyword-Matcher already fired for this utterance → skip
         if _kw_fired_for == line_id:
@@ -1621,6 +1644,19 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
 
         def _emit_qa_slot1(text):
             try:
+                # [BUGB-EWB] MP4 — Slot-1 WRITE-Quelle (auto, analyse_loop/QA -> qa_slot1).
+                # qa_slot1 ueberschreibt im FE pip-slot-body-1 per textContent (pip-launcher.js
+                # :2495), DENSELBEN Node den der Knopf-Stream via pip_token beschreibt. Wenn
+                # dies waehrend eines aktiven manual_ewb-Streams feuert -> Ueberschreiben (B).
+                # busy_until-Wert beim Schreiben mitloggen, um zu sehen ob der manual-Pfad ihn
+                # je gesetzt hat. Logging-only.
+                _bugb_busy_now = 0.0
+                try:
+                    if sid:
+                        _bugb_busy_now = ((ls._session_state.get(sid) or {}).get('state') or {}).get('slot1_variant_busy_until', 0.0)
+                except Exception:
+                    pass
+                print(f"[BUGB-EWB] MP4 slot1 WRITE source=qa_slot1(analyse_loop) sid={sid} busy_until_at_write={_bugb_busy_now} now={_time.monotonic():.1f}")
                 sio.emit('qa_slot1', {'text': text}, room=_active_sid)
                 # Mark Slot 1 busy for ~8s (Phase 06.2 mutex pattern — WR-03 per-SID)
                 if sid:

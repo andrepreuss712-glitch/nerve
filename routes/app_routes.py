@@ -57,13 +57,22 @@ def _transcript_entries_to_segments(log_entries):
         _txt = _entry.get('text') or ''
         if not _txt:
             continue
-        _abs = _ts_to_ms_of_day(_entry.get('ts'))
+        _raw_ts = _entry.get('ts')
+        _abs = _ts_to_ms_of_day(_raw_ts)
         if base is None:
             base = _abs
         _rel = _abs - base
         if _rel < running:          # Clock-Skew / Mitternachts-Wrap -> Ordnung wahren
             _rel = running
         running = _rel
+        # [BUGB-EWB] MP6 — ts_ms-Setzpunkt fuer JEDEN Transcript-Entry. Lead C: gesprochene
+        # Zeilen tragen ts='HH:MM:SS' (str, deepgram_service.py:66), Knopf-Zeilen tragen
+        # ts=time.time() (float-epoch, deepgram_service.py:934). _ts_to_ms_of_day kann nur
+        # 'HH:MM:SS' parsen -> float-epoch -> ValueError -> 0 (=> alle Knopf-Events ts_ms=0).
+        # Und: ist der ERSTE Entry ein Knopf (abs=0=base), wird eine spaetere gesprochene
+        # Zeile rel=ms-of-day (~17h, der unmoegliche 61019000-Wert). type+raw+abs+rel loggen.
+        _bugb_is_btn = '*ewb button*' in (_txt or '')
+        print(f"[BUGB-EWB] MP6 ts_ms btn={_bugb_is_btn} raw_ts_type={type(_raw_ts).__name__} raw_ts={_raw_ts!r} abs_ms={_abs} base={base} rel_ts_ms={_rel}")
         out.append({
             'ts_ms': _rel,
             'speaker': _sp_map.get(_entry.get('speaker'), 'system'),  # None/unbekannt -> 'system' (CHECK-safe)
