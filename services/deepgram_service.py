@@ -242,33 +242,32 @@ def _make_on_message(sid, mode='meeting'):
                     }, room=sid)
                     print(f"[KeywordMatch] sid={sid} keyword={match['keyword']} label={_label} text={text[:60]!r}")
 
-                    # Slot 1: parallele Haiku-Variante, shared busy_until via ls.state
-                    with ls.state_lock:
-                        _busy = ls.state.get('slot1_variant_busy_until', 0)
-                    _now = _time_mod.monotonic()
-                    # [BUGB-EWB] MP3 — LESEN von slot1_variant_busy_until im KEYWORD-Pfad.
-                    # ACHTUNG (Lead B): dieser Pfad liest GLOBAL ls.state[...], waehrend der
-                    # analyse_loop/QA-Pfad PER-SID _session_state[sid]['state'][...] liest/setzt
-                    # (claude_service.py:1516/1630). Zwei verschiedene Speicher -> Lock evtl. NICHT
-                    # geteilt. Logging-only.
-                    print(f"[BUGB-EWB] MP3 lock READ src=keyword sid={sid} busy_until={_busy} now={_now:.1f} blocked={_now < _busy}")
-                    if _now >= _busy:
-                        with ls.state_lock:
-                            ls.state['slot1_variant_busy_until'] = _now + 6
-                        # [BUGB-EWB] MP3 — SETZEN (GLOBAL ls.state) durch Keyword-Pfad.
-                        print(f"[BUGB-EWB] MP3 lock SET src=keyword sid={sid} new_busy_until={_now + 6:.1f}")
-                        _kontext = " ".join(ls._session_state.get(sid, {}).get('analysiert_bisher', [])[-20:])
-                        from services.claude_service import streame_auto_variante
-                        # [BUGB-EWB] MP4 — Slot-1 WRITE-Quelle (auto, keyword-getriggert). Lock
-                        # war frei (sonst skip). Wenn dies ZWISCHEN manual_ewb-Stream-Start und
-                        # -Ende feuert -> Ueberschreiben des Knopf-Vorschlags (Hypothese B).
-                        print(f"[BUGB-EWB] MP4 slot1 WRITE source=streame_auto_variante(keyword) sid={sid} lock_was_active=False")
-                        sio.start_background_task(
-                            streame_auto_variante,
-                            text, einwaende, _kontext, sid, 1, "keyword"
-                        )
-                    else:
-                        print(f"[KeywordMatch] Slot-1 busy — skip (busy_until={_busy:.1f}, now={_now:.1f})")
+                    # Phase 08.23.2.PIP-01 (Item a, Anzeige-Trennung): Der Auto-Erkenner
+                    # schreibt NICHT mehr in die Lese-Zone (slot 1). Frueher feuerte hier
+                    # start_background_task(streame_auto_variante, ...) einen parallelen
+                    # Haiku-Stream in slot 1 -> ueberschrieb den manuell geklickten Vorschlag
+                    # mitten im Vorlesen (Bug B, Wurzel). Jetzt: nur ein Button-Signal an die
+                    # EWB-Zone (bekannter Profil-Einwand -> bestehenden Button aufleuchten).
+                    # - KEIN Haiku im Live-Highlight-Pfad (Punkt 25 Latenz — ein Highlight
+                    #   braucht keine LLM-Antwort).
+                    # - KEIN slot1_variant_busy_until-Lock mehr (GLOBAL ls.state-Zugriff
+                    #   entfaellt — der Lese-Zonen-Lock ist obsolet, da Auto slot 1 nicht mehr
+                    #   beschreibt). live_session.py-Default bleibt als Foundation unberuehrt.
+                    # - streame_auto_variante wird damit nicht mehr aufgerufen (PIP.4-Foundation,
+                    #   write-only/dormant, inkl. dem self-contained TTFT-Circuit-Breaker —
+                    #   grep-belegt 0 externe Produktiv-Reader, MEDIUM #1).
+                    # typ = _label (matched_label = das data-typ der gerenderten Profil-Buttons,
+                    # gleicher Wert wie im keyword_einwand_match oben), Fallback keyword.
+                    # known=True (Profil-Keyword-Treffer -> Button existiert). NIE der Roh-
+                    # Transkript-Text, NIE ein Roh-Enum-Wert (Cross-AI HIGH/LOW).
+                    _ewb_typ = _label or match.get('keyword', '')
+                    if _ewb_typ:
+                        sio.emit('ewb_signal', {
+                            'typ':    _ewb_typ,
+                            'known':  True,
+                            'source': 'keyword',
+                        }, room=sid)
+                        print(f"[PIP-EWB] ewb_signal emit source=keyword sid={sid} typ={_ewb_typ!r} known=True")
                 except Exception as _kw_err:
                     print(f"[KeywordMatch] error sid={sid}: {_kw_err}")
         except Exception as e:

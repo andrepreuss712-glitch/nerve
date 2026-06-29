@@ -833,7 +833,10 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
     except Exception:
         pass
     print(f"[BUGB-EWB] MP4 slot1 WRITE source=streame_manual_ewb_variante(manual_button) sid={sid} sets_lock=False busy_until_now={_bugb_busy_manual}")
-    sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
+    # Phase 08.23.2.PIP-01 (Item a): source=manual_button kennzeichnet den EINZIGEN
+    # legitimen Lese-Zonen-(slot 1)-Schreiber. Das FE-Source-Gate (pip-launcher.js)
+    # laesst NUR diese Quelle in pip-slot-body-1 schreiben (zweite Verteidigungslinie).
+    sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True, 'source': 'manual_button'}, room=sid)
     full_text = ''
     # 06.1-r2 r6: Retry bei 529 overloaded_error — Anthropic hat stossweise Spitzen,
     # ein kurzer Backoff rettet i.d.R. den zweiten Versuch. Max 2 Retries, dann graceful fallback.
@@ -853,7 +856,7 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
                 stream_ctx = stream
                 for token in stream.text_stream:
                     full_text += token
-                    sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
+                    sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True, 'source': 'manual_button'}, room=sid)
             break  # Erfolg — raus aus Retry-Loop
         except Exception as e:
             last_err = e
@@ -870,7 +873,7 @@ Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kom
     try:
         cleaned = full_text.strip()
         result = {'einwand': True, 'typ': typ, 'gegenargument_1': cleaned}
-        sio.emit('pip_token_done', {'slot': slot, 'result': result, 'raw_text': True}, room=sid)
+        sio.emit('pip_token_done', {'slot': slot, 'result': result, 'raw_text': True, 'source': 'manual_button'}, room=sid)
         print(f"[PiP-Variante] DONE sid={sid} slot={slot} chars={len(cleaned)} (attempts={attempts})")
         # Cost-Hook
         try:
@@ -1574,15 +1577,16 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
         print(f"[QA-INT] classify kategorie={_kat} conf={_conf:.2f} line={line_id}")
 
         def _emit_soft_hint(reason=''):
-            """Emit D-04 LOCKED soft-hint text to active session."""
-            try:
-                sio.emit('qa_soft_hint', {
-                    'text': 'Neuer Einwand \u2014 noch kein Vorschlag',
-                    'reason': reason,
-                }, room=_active_sid)
-                print(f"[QA-INT] soft_hint emitted reason={reason}")
-            except Exception as _e:
-                print(f"[QA-INT] emit soft_hint skip: {_e}")
+            """Phase 08.23.2.PIP-01 (Item a, Anzeige-Trennung): Der Auto-Erkenner darf
+            die Lese-Zone (slot 1) NICHT mehr beschreiben. Frueher emittierte dieser Pfad
+            den Literal-Hint 'Neuer Einwand \u2014 noch kein Vorschlag' via qa_soft_hint in
+            pip-slot-body-1 (Mit-Ursache Bug B: Ueberschreiben des manuellen Vorschlags).
+            Im analyse_loop/QA-Pfad liegt KEIN sauberes kurzes Einwand-Label vor \u2014 nur
+            der Literal-Hint-String ODER die _kat-Roh-Enum-Kategorie, beide als
+            ewb_signal-typ verboten (Cross-AI HIGH #2 + LOW Geister-Button). Daher: KEIN
+            Emit (kein Lese-Zonen-Text, kein Geister-Button). Die abstain-/intent_event-
+            Logik liegt im Caller (vor dem Aufruf) und bleibt unangetastet (DSGVO/TAXO)."""
+            print(f"[QA-INT] soft_hint suppressed (PIP-01 anzeige-trennung) reason={reason}")
 
         def _emit_abstain_event(intent_type):
             """TAXO1-Welle 4 (K4/H-4): am ECHTEN low-conf-Drop ein intent_event mit
@@ -1643,33 +1647,20 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
                 print(f"[QA-INT] abstain emit skip (sid={sid}): {type(_ab_e).__name__}")
 
         def _emit_qa_slot1(text):
-            try:
-                # [BUGB-EWB] MP4 — Slot-1 WRITE-Quelle (auto, analyse_loop/QA -> qa_slot1).
-                # qa_slot1 ueberschreibt im FE pip-slot-body-1 per textContent (pip-launcher.js
-                # :2495), DENSELBEN Node den der Knopf-Stream via pip_token beschreibt. Wenn
-                # dies waehrend eines aktiven manual_ewb-Streams feuert -> Ueberschreiben (B).
-                # busy_until-Wert beim Schreiben mitloggen, um zu sehen ob der manual-Pfad ihn
-                # je gesetzt hat. Logging-only.
-                _bugb_busy_now = 0.0
-                try:
-                    if sid:
-                        _bugb_busy_now = ((ls._session_state.get(sid) or {}).get('state') or {}).get('slot1_variant_busy_until', 0.0)
-                except Exception:
-                    pass
-                print(f"[BUGB-EWB] MP4 slot1 WRITE source=qa_slot1(analyse_loop) sid={sid} busy_until_at_write={_bugb_busy_now} now={_time.monotonic():.1f}")
-                sio.emit('qa_slot1', {'text': text}, room=_active_sid)
-                # Mark Slot 1 busy for ~8s (Phase 06.2 mutex pattern — WR-03 per-SID)
-                if sid:
-                    with ls._session_state_lock:
-                        _s1_target = (ls._session_state.get(sid) or {}).get('state')
-                        if _s1_target is not None:
-                            _s1_target['slot1_variant_busy_until'] = _time.monotonic() + 8.0
-                else:
-                    with ls.state_lock:
-                        ls.state['slot1_variant_busy_until'] = _time.monotonic() + 8.0
-                print(f"[QA-INT] qa_slot1 emitted len={len(text)}")
-            except Exception as _e:
-                print(f"[QA-INT] emit qa_slot1 skip: {_e}")
+            # Phase 08.23.2.PIP-01 (Item a, Anzeige-Trennung): Der Auto-Erkenner darf die
+            # Lese-Zone (slot 1) NICHT mehr beschreiben. Frueher emittierte dieser Pfad
+            # qa_slot1 -> FE schrieb pip-slot-body-1 per textContent (DENSELBEN Node den der
+            # manual_ewb-Stream via pip_token beschreibt) -> Ueberschreiben des Knopf-
+            # Vorschlags im Vorlesen (Bug B, Wurzel). Hier liegt KEIN sauberes kurzes
+            # Einwand-Label vor (nur der volle Haiku-Absatz `text` ODER die _kat-Roh-Enum-
+            # Kategorie) — beide als ewb_signal-typ verboten (Cross-AI HIGH #1 + LOW
+            # Geister-Button). Daher: KEIN Emit. Der slot1_variant_busy_until-SET entfaellt
+            # (Lese-Zonen-Lock obsolet — Auto schreibt slot 1 nicht mehr). Die MP4-WRITE-
+            # Instrumentierung entfaellt fuer diesen Pfad, weil hier kein Write mehr passiert
+            # (sonst wuerde MP4 einen nicht-existenten Auto-Write vortaeuschen). Der Caller-
+            # Pfad (generate_qa_response / FAQ) bleibt unveraendert; nur der Lese-Zonen-
+            # Schreib-Seiteneffekt ist entfernt.
+            print(f"[QA-INT] qa_slot1 suppressed (PIP-01 anzeige-trennung) len={len(text) if text else 0}")
 
         if _kat == 'einwand_unknown':
             if _conf < CLASSIFIER_CONFIDENCE_THRESHOLD:

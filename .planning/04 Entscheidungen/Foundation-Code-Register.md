@@ -109,4 +109,20 @@
 | Anti-Abrieb-Regel | Diese Pipeline (Compute/Emit/Datenfluss) NICHT loeschen/prunen/kappen. Wer den slot-0-Analyse-Pfad oder die pip_token_done-Felder anfasst, prueft dass `result.phase`/`result.kb` weiter ankommen. Tagline: **"Text → Symbol re-render; pipeline must stay alive, do not rebuild."** |
 
 **Rationale (Phase 08.23.2.PIP, André-Direktive 2026-06-29):** Item (d) sollte NUR den Coaching-TEXT aus der Lese-Zone (slot 1) entfernen, NICHT die Coaching-Signal-Datenpipeline. PIP.2 (Coaching als Symbole/Rahmenfarbe) soll die Daten nur anders rendern, nicht die Pipeline neu aufbauen. grep-Beleg (2026-06-29): `streame_auto_variante`/`streame_manual_ewb_variante` emittieren ihr result IMMER mit `einwand:True` und tragen kein phase/kb → die in PIP.1 Plan 01 Task 1 geprunten Auto-Lese-Zonen-Pfade beruehren die Coaching-Daten NICHT. Eintrag verhindert versehentliches Prunen der Foundation. Referenziert von `.planning/phases/08.23.2.PIP-.../08.23.2.PIP-01-anzeige-trennung-PLAN.md` (Task 2 C).
+
+---
+
+## Eintrag: PIP.4 — `streame_auto_variante` (inkl. dormanter TTFT-Circuit-Breaker)
+
+| Feld | Wert |
+|------|------|
+| Foundation-Code | `streame_auto_variante(neuer_text, einwaende, kontext, sid, slot, trigger)` (services/claude_service.py:577) + die modul-globalen `_ewb_ttft_history` (Z.18), `_ewb_fallback_until` (Z.19), `_ewb_circuit_lock` (Z.20) + das Cost-Tracking (`log_api_cost`-Hooks, `_cache_writes`) im Funktions-Body |
+| Angelegt von | urspruenglich BUG-10 r3 (Auto-Variante Slot 1); als Foundation markiert in Phase 08.23.2.PIP (Plan 01, Item a) |
+| Aktiviert von | **Phase PIP.4 (KI-Antwort-Default + Vorgenerierung/Caching bekannter Einwaende, TAXO3-gegated)** |
+| Aktueller Stand (nach PIP.1) | **Write-only / dormant — KEIN Aufrufer im Produktiv-Pfad.** Der einzige bisherige Caller (deepgram_service.py Keyword-Pfad) wurde in Plan 01 durch ein direktes `ewb_signal`-Button-Signal ersetzt (kein Haiku im Live-Highlight-Pfad, Punkt 25 Latenz). Funktions-Body + Circuit-Breaker bleiben UNVERAENDERT erhalten (kein Prune, kein Refactor — Punkt 17). |
+| Circuit-Breaker-Removal-Audit (Cross-AI MEDIUM #1) | grep gegen den Produktiv-Code (2026-06-29): `_ewb_fallback_until` / `_ewb_ttft_history` / `_ewb_circuit_lock` werden **ausschliesslich innerhalb von `streame_auto_variante`** gelesen/gesetzt (claude_service.py:18-20 Defs + 591/595/638/639/661-668 Body). **KEIN externer Produktiv-Reader/-Schreiber.** Einzige weitere Referenz: `tests/test_ewb_autovar_global_regression.py` (Regressions-Test fuer den `global _ewb_fallback_until`-Bug). → Kalt-Stellen ist sicher: der dormante Circuit-Breaker hat keine lebenden Abhaengigen. |
+| Konsequenz / Anti-Abrieb-Hinweis | Mit dem Kalt-Stellen entfaellt auch der `record_suggestion_offer(slot='B', source='auto_variante')`-Capture (claude_service.py:739) — es wird keine Auto-Variante mehr generiert, also gibt es keine Auto-Suggestion mehr zu erfassen (inhaerent durch die LOCKED-Decision (a): Auto = nur Highlight, keine Generierung). Falls der TAXO2/DPO-Korpus die `slot='B'/auto_variante`-Vorschlaege spaeter doch braucht, ist das in PIP.4 (Vorgenerierung) oder separat wieder zu aktivieren. **NICHT loeschen** (Zombie-Regel CLAUDE.md Punkt 23). |
+| Aktivierungs-Trigger (PIP.4) | PIP.4 ruft `streame_auto_variante` wieder auf (oder eine Vorgenerierungs-Variante davon) fuer das KI-Antwort-Default + Caching bekannter Einwaende — der Circuit-Breaker wird dann automatisch wieder aktiv. |
+
+**Rationale (Phase 08.23.2.PIP, Plan 01, Cross-AI MEDIUM #1):** Beim strukturellen Kappen des Auto→slot-1-Schreibpfads wird `streame_auto_variante` nicht mehr aufgerufen. Statt es als toten Code zu loeschen (es traegt den TTFT-Circuit-Breaker + ist PIP.4-Vorgenerierungs-Fundament), wird es per Audit als reader-frei belegt und als dormante Foundation markiert. Tagline: **"dormant auto-generator — wake in PIP.4, do not delete."**
 </content>
