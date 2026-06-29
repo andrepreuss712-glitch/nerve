@@ -2300,6 +2300,15 @@ Plans:
 - **PIP.4 (TAXO3-gegated, SPÄTER):** KI-Antwort als Default + fixe Antwort hinter „meine Antwort"-Button; Vorgenerierung + Caching bekannter Einwände im Precall-Briefing (mit Briefing-Kontext); Latenz-Tests auf echten Calls. **⚠ HART: NICHT auf KI-Default flippen BEVOR Caching steht — sonst Live-Generierungs-Latenz bei jedem bekannten Einwand = Latenz-Dealbreaker (CLAUDE.md). Bis dahin bleibt die sofortige fixe Antwort Default.**
 **Depends on:** PIP.4 hängt an TAXO3 (Briefing-Kontext + Prompt-Caching); PIP.1-3 unabhängig. **Quell:** [[05 Log]] 2026-06-28/29, /gsd-debug `ewb-pip-overwrite-multifire`.
 
+**PIP.1 Plans:** 5 plans in 4 Wellen (geplant 2026-06-29). Cross-AI Pflicht VOR Execute (🟡 + Live-Verhalten/Race + FE+BE gleichzeitig).
+
+Plans:
+- [ ] 08.23.2.PIP-01-PLAN.md — Anzeige-Trennung: Auto raus aus der Lese-Zone (BE-Cut + FE-Source-Gate) + ewb_signal (highlight/neuer Button) + Newest-wins 1 + Coaching-Text raus [a,d] (Welle 1)
+- [ ] 08.23.2.PIP-02-PLAN.md — Pin-Lifecycle ereignisbasiert + Selbst-Trigger-Gating (kein Sprachabgleich, keine Timer) [b,c] (Welle 2)
+- [ ] 08.23.2.PIP-03-PLAN.md — Zeitstempel-Fix C (Knopf-ts als HH:MM:SS), eigener atomarer Commit [e] (Welle 2)
+- [ ] 08.23.2.PIP-04-PLAN.md — Mehrfach-Feuern bewusst entscheiden (MP1/MP2-Logabgleich): fix-now vs separater Punkt [a] (Welle 3)
+- [ ] 08.23.2.PIP-05-PLAN.md — [BUGB-EWB]-Instrumentierung entfernen (End-of-phase Cleanup) [a,e] (Welle 4)
+
 ---
 
 ## Backlog
