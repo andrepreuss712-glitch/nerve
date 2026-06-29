@@ -1,0 +1,450 @@
+==================================== ERRORS ====================================
+_____________ ERROR at teardown of test_build_ewb_prompt_v1_legacy _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e591380d40>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[EWB] vv1-legacy-test-05fdb115 assembled user_id=0 sid=None len=668 context_len=613 cache_miss
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_v1_legacy leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_v1_legacy leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_v1_legacy leaked rows in public.prompt_versions: [7, 8]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_v1_legacy: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
+_______ ERROR at teardown of test_build_ewb_prompt_v2_modular_bausteine ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e591a5c7a0>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[EWB] vv2-modular-test-2628d426 assembled user_id=1 sid=None len=2425 context_len=2298 cache_miss
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_v2_modular_bausteine leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_v2_modular_bausteine leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_v2_modular_bausteine leaked rows in public.prompt_versions: [9, 10]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_v2_modular_bausteine: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
+_____________ ERROR at teardown of test_build_ewb_prompt_anrede_du _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e590fff7d0>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[EWB] vv1-legacy-test-4c8bb833 assembled user_id=0 sid=None len=668 context_len=613 cache_miss
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_anrede_du leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_anrede_du leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_anrede_du leaked rows in public.prompt_versions: [11, 12]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_anrede_du: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
+_____ ERROR at teardown of test_build_ewb_prompt_fallback_unknown_version ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e591b19c10>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[EWB] template miss version=nonexistent — using fallback
+[EWB] vnonexistent assembled user_id=0 sid=None len=857 context_len=613 cache_miss
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_fallback_unknown_version leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_fallback_unknown_version leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_fallback_unknown_version leaked rows in public.prompt_versions: [13, 14]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_ewb_pipeline.py::test_build_ewb_prompt_fallback_unknown_version: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
+__________ ERROR at teardown of test_load_profile_cache_populates_sid __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e591f64e60>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[Cache] _profile_cache loaded for sid=test-cache-sid: opener=no, faqs=0
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_per_sid_migration.py::test_load_profile_cache_populates_sid leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('3bcde885-c31f-4011-a783-7b7fcc0cba0f'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('48975426-0468-466f-a395-4e0999f2b1bd'), UUID('4e9ddbbb-6abf-4470-9d1c-96f5e6d2c9a2'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('5c8a6c49-4b1f-4f49-9869-8cef9c009824'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('6687f1e1-4cf3-40a3-8215-ac7db3c669d3'), UUID('78c1c38f-791f-40c3-8b7e-1ff79972bba8'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8355166e-85f4-42df-a54a-97a31a8bcbf4'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('ceba1129-61ce-4005-8849-5d3a9969f2cd'), UUID('d3e411c9-1d9a-4f21-aa01-031a04b3095e'), UUID('d4db874e-e9cb-498c-a881-fdfe2aa2be32'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('dfe6d48d-6083-4c3f-9ebd-f46978d32514'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_per_sid_migration.py::test_load_profile_cache_populates_sid leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66, 85, 87, 89, 91, 93, 95, 97, 99, 100, 102, 104]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_per_sid_migration.py::test_load_profile_cache_populates_sid: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
+__________ ERROR at teardown of test_deterministic_routing_even_user ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e591a6a450>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[Pipeline] variants loaded module=ewb-test-85f54839 count=2
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_deterministic_routing_even_user leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('2d9ec9fc-2919-4fbb-ac6e-7b45005153d0'), UUID('2fd555f7-64b3-43aa-8489-cdbd74af3f89'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('350d9ee6-a5ae-4152-9068-50a2e1bb49bf'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('3bcde885-c31f-4011-a783-7b7fcc0cba0f'), UUID('44306fa9-e1ca-44a0-a448-778cf6c5f637'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('48975426-0468-466f-a395-4e0999f2b1bd'), UUID('4e9ddbbb-6abf-4470-9d1c-96f5e6d2c9a2'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('5c8a6c49-4b1f-4f49-9869-8cef9c009824'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('6687f1e1-4cf3-40a3-8215-ac7db3c669d3'), UUID('78c1c38f-791f-40c3-8b7e-1ff79972bba8'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8355166e-85f4-42df-a54a-97a31a8bcbf4'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('94f1ba74-c410-49f9-97c0-06ba7c052a2e'), UUID('b210fb95-09bc-4432-938e-7f7857be36d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('ce782608-2308-4ef4-a34e-a609efb2e0fc'), UUID('ceba1129-61ce-4005-8849-5d3a9969f2cd'), UUID('d3e411c9-1d9a-4f21-aa01-031a04b3095e'), UUID('d4db874e-e9cb-498c-a881-fdfe2aa2be32'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('dfe6d48d-6083-4c3f-9ebd-f46978d32514'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_deterministic_routing_even_user leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66, 85, 87, 89, 91, 93, 95, 97, 99, 100, 102, 104, 136, 138, 140, 142, 144, 146, 148]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_deterministic_routing_even_user leaked rows in public.prompt_versions: [15, 16]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_deterministic_routing_even_user: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
+___________ ERROR at teardown of test_deterministic_routing_odd_user ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e6b8f5b0e0>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[Pipeline] variants loaded module=ewb-test-f15f0d14 count=2
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_deterministic_routing_odd_user leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('2d9ec9fc-2919-4fbb-ac6e-7b45005153d0'), UUID('2fd555f7-64b3-43aa-8489-cdbd74af3f89'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('350d9ee6-a5ae-4152-9068-50a2e1bb49bf'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('3bcde885-c31f-4011-a783-7b7fcc0cba0f'), UUID('44306fa9-e1ca-44a0-a448-778cf6c5f637'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('48975426-0468-466f-a395-4e0999f2b1bd'), UUID('4e9ddbbb-6abf-4470-9d1c-96f5e6d2c9a2'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('5c8a6c49-4b1f-4f49-9869-8cef9c009824'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('6687f1e1-4cf3-40a3-8215-ac7db3c669d3'), UUID('78c1c38f-791f-40c3-8b7e-1ff79972bba8'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8355166e-85f4-42df-a54a-97a31a8bcbf4'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('94f1ba74-c410-49f9-97c0-06ba7c052a2e'), UUID('b210fb95-09bc-4432-938e-7f7857be36d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('ce782608-2308-4ef4-a34e-a609efb2e0fc'), UUID('ceba1129-61ce-4005-8849-5d3a9969f2cd'), UUID('d3e411c9-1d9a-4f21-aa01-031a04b3095e'), UUID('d4db874e-e9cb-498c-a881-fdfe2aa2be32'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('dfe6d48d-6083-4c3f-9ebd-f46978d32514'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_deterministic_routing_odd_user leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66, 85, 87, 89, 91, 93, 95, 97, 99, 100, 102, 104, 136, 138, 140, 142, 144, 146, 148]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_deterministic_routing_odd_user leaked rows in public.prompt_versions: [17, 18]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_deterministic_routing_odd_user: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
+_________________ ERROR at teardown of test_cache_per_user_key _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e5917db950>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[Pipeline] variants loaded module=ewb-test-051f73be count=2
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_cache_per_user_key leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('2d9ec9fc-2919-4fbb-ac6e-7b45005153d0'), UUID('2fd555f7-64b3-43aa-8489-cdbd74af3f89'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('350d9ee6-a5ae-4152-9068-50a2e1bb49bf'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('3bcde885-c31f-4011-a783-7b7fcc0cba0f'), UUID('44306fa9-e1ca-44a0-a448-778cf6c5f637'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('48975426-0468-466f-a395-4e0999f2b1bd'), UUID('4e9ddbbb-6abf-4470-9d1c-96f5e6d2c9a2'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('5c8a6c49-4b1f-4f49-9869-8cef9c009824'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('6687f1e1-4cf3-40a3-8215-ac7db3c669d3'), UUID('78c1c38f-791f-40c3-8b7e-1ff79972bba8'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8355166e-85f4-42df-a54a-97a31a8bcbf4'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('94f1ba74-c410-49f9-97c0-06ba7c052a2e'), UUID('b210fb95-09bc-4432-938e-7f7857be36d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('ce782608-2308-4ef4-a34e-a609efb2e0fc'), UUID('ceba1129-61ce-4005-8849-5d3a9969f2cd'), UUID('d3e411c9-1d9a-4f21-aa01-031a04b3095e'), UUID('d4db874e-e9cb-498c-a881-fdfe2aa2be32'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('dfe6d48d-6083-4c3f-9ebd-f46978d32514'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_cache_per_user_key leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66, 85, 87, 89, 91, 93, 95, 97, 99, 100, 102, 104, 136, 138, 140, 142, 144, 146, 148]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_cache_per_user_key leaked rows in public.prompt_versions: [19, 20]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_cache_per_user_key: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
+____________ ERROR at teardown of test_no_variants_returns_unknown _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x70e591470f50>
+
+    @pytest.fixture
+    def db_session(monkeypatch):
+        """Generische Session gegen REAL-PG nerve_test (Phase 08.23.2.PGTEST, kein sqlite-Fallback).
+    
+        Bindet das MODUL-`database.db.SessionLocal` via `configure(bind=engine)` an die nerve_test-Engine um
+        (NICHT eine frische sessionmaker — die truege den after_begin-RLS-Hook nicht, db.py:87), seedet einen
+        Test-Mandanten (Trigger-Muster) und ruft set_current_tenant(TEST_TENANT_UUID) (D-05), damit crm.*-Reads
+        nicht RLS-fail-closed 0 Zeilen liefern. configure(bind=engine) BEWAHRT einen import-registrierten Hook,
+        ERZEUGT aber keinen — ist DATABASE_URL beim Import sqlite, schlaegt der A-1-Tripwire (test_rls_generic_smoke)
+        loud-red an. #2: dieser per-Test-`configure(bind=None)`+`engine.dispose()`-Zyklus ist der Grund, warum der
+        Baseline-Waechter (Task 6) eine EIGENE session-scoped Read-Engine nutzt — er liest NICHT ueber diese
+        pro Test disposed MODUL-SessionLocal.
+        """
+        dsn = os.environ.get('TEST_DATABASE_URL')
+        if not dsn:
+            pytest.skip("TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test "
+                        "(no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.")
+        import database.db as dbmod
+        from database.db import set_current_tenant, clear_current_tenant
+        engine = create_engine(dsn)
+        monkeypatch.setattr(dbmod, "engine", engine)
+        dbmod.SessionLocal.configure(bind=engine)   # behaelt den auf SessionLocal registrierten after_begin-Hook
+        tenant_uuid, seed_org_id = _seed_test_tenant(engine)  # Trigger-Muster; tenant_orgs.id + organisations.id
+        set_current_tenant(tenant_uuid)             # D-05: GUC fuer crm.* reads
+        session = dbmod.SessionLocal()              # MODUL-SessionLocal -> Hook feuert auf BEGIN
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+            clear_current_tenant()
+            # Phase 08.23.2.PGTEST LEAK-FIX: Seed-Org + Trigger-tenant_org wegraeumen (tenant_uuid == tenant_orgs.id),
+            # VOR configure(bind=None)/dispose() solange die Engine noch lebt. Sonst leakt jede db_session-Nutzung.
+            _leak_cleanup_seed_tenant(engine, seed_org_id, tenant_uuid)
+>           dbmod.SessionLocal.configure(bind=None)  # Binding-Reset (Gemini-MEDIUM): keine tote Engine-Bindung
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'function' object has no attribute 'configure'
+
+tests/conftest.py:702: AttributeError
+----------------------------- Captured stdout call -----------------------------
+[Pipeline] variants empty module=nonexistent_module fallback=unknown
+---------------------------- Captured log teardown -----------------------------
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_no_variants_returns_unknown leaked rows in public.tenant_orgs: [UUID('0667978e-6cab-4d17-b03b-1aa7a7f83633'), UUID('16f5e3b4-9cb5-4cf4-adb0-1103a06d6fea'), UUID('1c8898c9-e630-48ce-80f6-47400318abd5'), UUID('2d9ec9fc-2919-4fbb-ac6e-7b45005153d0'), UUID('2fd555f7-64b3-43aa-8489-cdbd74af3f89'), UUID('34d4a3fc-d48a-4bfd-b6f2-347548879fa4'), UUID('350d9ee6-a5ae-4152-9068-50a2e1bb49bf'), UUID('35e7d6bf-5e95-4893-8715-7bbf41f8204d'), UUID('3bcde885-c31f-4011-a783-7b7fcc0cba0f'), UUID('44306fa9-e1ca-44a0-a448-778cf6c5f637'), UUID('4632c125-3273-49f8-ba1b-dbc67e86aabf'), UUID('48975426-0468-466f-a395-4e0999f2b1bd'), UUID('4e9ddbbb-6abf-4470-9d1c-96f5e6d2c9a2'), UUID('594cf514-a43f-47e2-abc0-5bd75e581138'), UUID('5c8a6c49-4b1f-4f49-9869-8cef9c009824'), UUID('637017db-ab52-4ef8-b0bd-d3adfc914719'), UUID('6687f1e1-4cf3-40a3-8215-ac7db3c669d3'), UUID('78c1c38f-791f-40c3-8b7e-1ff79972bba8'), UUID('7e1a6c17-cf8d-42bb-bd96-33f63b064b55'), UUID('82e317f3-a292-42ee-ac4e-ec89bd8ff158'), UUID('8355166e-85f4-42df-a54a-97a31a8bcbf4'), UUID('8eb4a03e-2370-4148-acf6-e5ca029447d0'), UUID('94f1ba74-c410-49f9-97c0-06ba7c052a2e'), UUID('b210fb95-09bc-4432-938e-7f7857be36d0'), UUID('b400bc3e-20da-4b8d-8e4f-4355ee8a6a84'), UUID('ce782608-2308-4ef4-a34e-a609efb2e0fc'), UUID('ceba1129-61ce-4005-8849-5d3a9969f2cd'), UUID('d3e411c9-1d9a-4f21-aa01-031a04b3095e'), UUID('d4db874e-e9cb-498c-a881-fdfe2aa2be32'), UUID('d82dbdce-b632-41eb-8448-21b9aaa4d7bd'), UUID('dfe6d48d-6083-4c3f-9ebd-f46978d32514'), UUID('e265aece-37fa-4836-8bf0-e8e847a34743'), UUID('eb9a77c1-310b-462c-b4cf-bfe9399345b8')]
+WARNING  tests.conftest:conftest.py:618 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_no_variants_returns_unknown leaked rows in public.organisations: [25, 31, 33, 35, 37, 38, 40, 42, 44, 46, 58, 60, 62, 64, 66, 85, 87, 89, 91, 93, 95, 97, 99, 100, 102, 104, 136, 138, 140, 142, 144, 146, 148]
+WARNING  tests.conftest:conftest.py:633 [BASELINE-AUTO-FIX] tests/test_prompt_pipeline.py::test_no_variants_returns_unknown: ['public.tenant_orgs', 'public.organisations'] nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?) -> Folge-Tests koennen beeintraechtigt sein
