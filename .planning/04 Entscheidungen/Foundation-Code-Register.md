@@ -93,3 +93,20 @@
 | Nullable-Rationale | Early-Call-Records aus `create_call_for_sid()` haben noch keinen ConvLog — FK wird erst in `api_beenden` gesetzt |
 
 **Rationale (Phase 08.23.2.D):** FK ist die einzige Bruecke zwischen `calls` (Outcome-Welt) und `conversation_logs` (Transcript-Welt). Phase E benoetigt diese Verbindung fuer DPO-Paar-Erstellung — daher kanonisch dokumentiert.
+
+---
+
+## Eintrag: PIP.2 — Coaching-Signal-Anzeige (`_showProactiveContent` / `_showProactiveTipp` + Datenversorgung)
+
+| Feld | Wert |
+|------|------|
+| Foundation-Code | `_showProactiveContent(slot, result)` (static/pip-launcher.js:2754) + `_showProactiveTipp(slot, tipp)` (:2773) — FE-Funktionen die heute Phase/Kaufbereitschaft als TEXT rendern |
+| Datenversorgung | `pip_token_done`-Payload-Felder `result.phase` / `result.kb` (gelesen @ pip-launcher.js:2407-2408 im Zweig `if (!d.result.einwand)`). BE-Compute: `phase` in `services/claude_service.py::analysiere_mit_claude` (Z.418-423); Kaufbereitschaft/readiness via `compute_readiness_score` (1339) / `ls.kaufbereitschaft` / `score_p4` (1407-1419) — **slot-0-Analyse-Pfad**, NICHT die EWB-Auto-Streamer |
+| Angelegt von | Phase 08.23.2.PIP (Plan 01, Item d) — beim Anzeige-Trennungs-Umbau erhalten gehalten |
+| Aktiviert von | **Phase PIP.2 (Coaching als Symbole / Rahmenfarbe)** |
+| Aktueller Stand (nach PIP.1) | Funktions-DEFINITIONEN + der Aufruf @2408 BLEIBEN. NUR der Schreib-Seiteneffekt in die Lese-Zone (slot 1) ist per Guard `if (slot === 1) return;` (erste Zeile beider Funktionen) abgeschaltet. Coaching-Text erscheint nicht mehr in slot 1; in slot 0 (1-slot===0) unveraendert. Die Daten (`result.phase`/`result.kb`) kommen weiterhin im FE-Payload an und werden den Funktionen uebergeben. |
+| Aktivierungs-Trigger (PIP.2) | PIP.2 rendert die bereits ankommenden Coaching-Daten **Text → Symbol/Rahmenfarbe** um — d.h. die Body-Logik von `_showProactiveContent`/`_showProactiveTipp` wird auf Symbol-Darstellung umgebaut. **Die Daten-Pipeline (Compute + Emit + result.phase/result.kb) ist bereits live und muss NICHT neu gebaut werden** — nur die Render-Schicht wechselt. |
+| Anti-Abrieb-Regel | Diese Pipeline (Compute/Emit/Datenfluss) NICHT loeschen/prunen/kappen. Wer den slot-0-Analyse-Pfad oder die pip_token_done-Felder anfasst, prueft dass `result.phase`/`result.kb` weiter ankommen. Tagline: **"Text → Symbol re-render; pipeline must stay alive, do not rebuild."** |
+
+**Rationale (Phase 08.23.2.PIP, André-Direktive 2026-06-29):** Item (d) sollte NUR den Coaching-TEXT aus der Lese-Zone (slot 1) entfernen, NICHT die Coaching-Signal-Datenpipeline. PIP.2 (Coaching als Symbole/Rahmenfarbe) soll die Daten nur anders rendern, nicht die Pipeline neu aufbauen. grep-Beleg (2026-06-29): `streame_auto_variante`/`streame_manual_ewb_variante` emittieren ihr result IMMER mit `einwand:True` und tragen kein phase/kb → die in PIP.1 Plan 01 Task 1 geprunten Auto-Lese-Zonen-Pfade beruehren die Coaching-Daten NICHT. Eintrag verhindert versehentliches Prunen der Foundation. Referenziert von `.planning/phases/08.23.2.PIP-.../08.23.2.PIP-01-anzeige-trennung-PLAN.md` (Task 2 C).
+</content>
