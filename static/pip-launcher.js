@@ -2309,6 +2309,12 @@
     state.socket.on('pip_stream_start', function (d) {
       if (!d) return;
       var slot = d.slot || 0;
+      // Phase 08.23.2.PIP-01 (Item a, T-PIP-01): die Lese-Zone (slot 1) darf NUR vom
+      // manuellen Knopf-Stream (source=manual_button) beschrieben werden. Ein Auto-Stream
+      // (kein/anderer source) wird verworfen — zweite Verteidigungslinie zum BE-Cut, damit
+      // ein evtl. durchgerutschter/Reconnect-Replay-Emit den Pin nie ueberschreibt. slot 0
+      // (Profil-Antwort A) bleibt unveraendert.
+      if (slot === 1 && (!d.source || d.source !== 'manual_button')) return;
       // 06.2: Latenz-Log für Slot 1 (erstes Token nach keyword_einwand_match)
       if (slot === 1 && state.slot0LastKeywordAt) {
         var slot1Delta = Date.now() - state.slot0LastKeywordAt;
@@ -2351,6 +2357,8 @@
     state.socket.on('pip_token', function (d) {
       if (!d) return;
       var slot = d.slot || 0;
+      // PIP-01 (T-PIP-01): slot 1 (Lese-Zone) nur fuer source=manual_button (Auto verworfen).
+      if (slot === 1 && (!d.source || d.source !== 'manual_button')) return;
       if (!state.pipSlots[slot].streaming) return; // discard if slot was cleared (topic switch)
       state.pipSlots[slot].text += d.token;
       var body = pipEl('pip-slot-body-' + slot);
@@ -2367,6 +2375,10 @@
     state.socket.on('pip_token_done', function (d) {
       if (!d) return;
       var slot = d.slot || 0;
+      // PIP-01 (T-PIP-01): slot 1 (Lese-Zone) nur fuer source=manual_button (Auto verworfen).
+      // Betrifft NUR slot-1-done-Events; der slot-0-Analyse-done (mit result.phase/result.kb,
+      // der unten _showProactiveContent fuettert) hat slot===0 und passiert dieses Gate.
+      if (slot === 1 && (!d.source || d.source !== 'manual_button')) return;
       state.pipSlots[slot].streaming = false;
       state.pipSlots[slot].result = d.result || {};
       var body = pipEl('pip-slot-body-' + slot);
@@ -2489,59 +2501,42 @@
       console.log('[Latency] Slot0 render took', (performance.now() - t0).toFixed(1), 'ms');
     });
 
-    // ── Phase 08.5: Universal Response Loop events ──────────────────────────
-    // qa_slot1: full Haiku-generated response for Slot 1 (unknown objection / FAQ / Rückfrage)
-    state.socket.on('qa_slot1', function (d) {
+    // ── Phase 08.23.2.PIP-01 (Item a): Auto-Erkenner-Button-Signal ───────────
+    // Auto (keyword/analyse_loop) schreibt NIE mehr die Lese-Zone (slot 1). Es
+    // signalisiert nur ueber die EWB-Button-Zone: bekannten Button aufleuchten ODER
+    // (kein Button) einen neuen erzeugen. Newest-wins Groesse 1 (lossy by design).
+    state.socket.on('ewb_signal', function (d) {
       try {
-        var txt = (d && d.text) ? String(d.text) : '';
-        if (!txt) return;
-        var body = pipEl('pip-slot-body-1');
-        if (body) {
-          // textContent only — XSS-safe (T-08.5-03-03)
-          body.textContent = txt;
-          // Rückfrage visual differentiation (Phase 08.5 Korrektur 3)
-          if (txt.indexOf('Frag nach:') === 0) {
-            body.classList.add('pip-rueckfrage');
-          } else {
-            body.classList.remove('pip-rueckfrage');
-          }
-          body.classList.remove('pip-streaming');
-          var container = pipEl('pip-slot-1');
-          if (container) container.classList.remove('pip-slot-streaming');
-          var label = pipEl('pip-slot-label-1');
-          if (label) label.textContent = txt.indexOf('Frag nach:') === 0 ? 'RÜCKFRAGE' : 'ANTWORT';
-          console.log('[QA] qa_slot1 rendered len=' + txt.length);
-        }
+        if (!d || !d.typ) return;
+        var typ = String(d.typ);
+        // Eingangs-Guard (Cross-AI HIGH #1/#2 + LOW — FE-seitige zweite Verteidigungslinie):
+        // kein Paragraph/Langstring (>40 Zeichen) und kein Roh-Enum-Wert als Button-Label.
+        // Das BE sendet nur echte kurze Labels; dieser Guard faengt versehentlich
+        // durchgerutschte Langstrings/Roh-Enum-Werte ab (kein Paragraph-/Geister-Button).
+        if (typ.length > 40) return;
+        if (['smalltalk_none', 'frage', 'einwand_known', 'einwand_unknown'].indexOf(typ) !== -1) return;
+        var sig = { typ: typ, known: d.known, source: d.source };
+        // Gating (Kopplung an Plan 02): bei aktivem Pin nur puffern, nicht sofort anzeigen.
+        // state.pinActive ist in Plan 01 immer falsy -> kein Gating (korrekt fuer Welle 1).
+        // Plan 02 ruft beim Pin-Ende _applyBufferedAutoSignal() auf.
+        if (state.pinActive === true) { state.lastAutoSignal = sig; return; }
+        _applyEwbSignal(sig);
       } catch (e) {
-        console.warn('[QA] qa_slot1 handler error', e);
+        console.warn('[PIP-EWB] ewb_signal handler error', e);
       }
     });
 
-    // qa_soft_hint: Phase 08.5 Korrektur 3 — Soft-Hint removed.
-    // Low-confidence now always produces a Rückfrage from the backend.
-    // If legacy event still emitted, render as normal answer (never silent).
-    state.socket.on('qa_soft_hint', function (d) {
-      try {
-        var txt = (d && d.text) ? String(d.text) : '';
-        if (!txt) return; // no text → ignore silently (backend now always sends text)
-        var body = pipEl('pip-slot-body-1');
-        if (body) {
-          body.textContent = txt;
-          // Add pip-rueckfrage class for visual differentiation if text is a Rückfrage
-          if (txt.indexOf('Frag nach:') === 0) {
-            body.classList.add('pip-rueckfrage');
-          } else {
-            body.classList.remove('pip-rueckfrage');
-          }
-          body.classList.remove('pip-streaming');
-          var container = pipEl('pip-slot-1');
-          if (container) container.classList.remove('pip-slot-streaming');
-          console.log('[QA] qa_soft_hint (Rückfrage) rendered len=' + txt.length);
-        }
-      } catch (e) {
-        console.warn('[QA] qa_soft_hint handler error', e);
-      }
-    });
+    // ── Phase 08.23.2.PIP-01 (Item a): qa_slot1 / qa_soft_hint stillgelegt ───
+    // Diese beiden Auto-Antwort-Events haben frueher pip-slot-body-1 (Lese-Zone) per
+    // textContent ueberschrieben — DENSELBEN Node wie der manuelle Knopf-Stream (Bug B).
+    // Das BE emittiert sie nicht mehr (claude_service.py _emit_qa_slot1/_emit_soft_hint
+    // stillgelegt). Handler bleiben als bewusste No-Ops bestehen, damit ein evtl.
+    // verspaeteter Legacy-/Reconnect-Replay-Emit die Lese-Zone NICHT mehr ueberschreibt
+    // (zweite Verteidigungslinie, analog zum Source-Gate). KEIN Render, kein Console-Log.
+    // ABGRENZUNG: das ist NICHT die Coaching-Pipeline (_showProactiveContent/_showProactiveTipp
+    // bleiben erhalten, nur slot-1-Guard) — qa_slot1/qa_soft_hint waren die Auto-Antwort-Texte.
+    state.socket.on('qa_slot1', function () { /* PIP-01: no-op — slot 1 nur via source=manual_button */ });
+    state.socket.on('qa_soft_hint', function () { /* PIP-01: no-op — slot 1 nur via source=manual_button */ });
 
     // ── Phase 08.23.2.C.R — Gatekeeper Socket-Subscriptions ─────────────────
     state.socket.on('contact_category_update', function (data) {
@@ -2751,7 +2746,52 @@
     });
   }
 
+  // ── Phase 08.23.2.PIP-01 (Item a): Auto-Erkenner-Signal anwenden ──────────
+  // Newest-wins Groesse 1: nur das juengste Auto-Signal hinterlaesst ein Highlight
+  // bzw. einen Auto-erzeugten Button. Bekannt -> bestehenden Button aufleuchten;
+  // neu (kein Button) -> einen zusaetzlichen Button erzeugen. FE ist alleinige
+  // Autoritaet (W-2 Single Source of Truth): findet sie einen gerenderten Button
+  // mit passendem data-typ, gewinnt re-highlight — egal was das BE-`known` sagte.
+  // _highlightEwbButton setzt genau den passenden Button aktiv und ALLE anderen
+  // inaktiv -> der Highlight-Zustand ist damit inhaerent Newest-wins (Groesse 1).
+  function _applyEwbSignal(sig) {
+    if (!sig || !sig.typ) return;
+    var row = pipEl('nlp-ewb-row');
+    if (!row) return;
+    // Newest-wins fuer Auto-erzeugte Buttons: vorigen Auto-new-Button (anderer typ) entfernen.
+    var prevAuto = row.querySelector('.pip-ewb-auto-new');
+    if (prevAuto && prevAuto.getAttribute('data-typ') !== sig.typ) prevAuto.remove();
+    // Gibt es bereits einen Button (Profil ODER Auto-new) mit diesem data-typ?
+    var existing = null;
+    row.querySelectorAll('.pip-ewb-btn').forEach(function (b) {
+      if (b.getAttribute('data-typ') === sig.typ) existing = b;
+    });
+    if (!existing) {
+      // neu -> zusaetzlichen Button erzeugen (CSS-Klasse, kein Inline-Hex). Voll klickbar
+      // ueber die bestehende .pip-ewb-btn-Delegation (_wirePipButtons, document-level) ->
+      // bei Klick wird daraus ein echter Pin (Plan 02).
+      row.insertAdjacentHTML('beforeend',
+        '<button type="button" class="pip-ewb-btn pip-ewb-auto-new" data-typ="'
+        + escHtml(sig.typ) + '">' + escHtml(sig.typ) + '</button>');
+    }
+    _highlightEwbButton(sig.typ);
+    state.lastAutoSignal = sig;
+  }
+
+  // Plan 02 (Pin-Lifecycle) ruft dies beim Pin-Ende auf, um das waehrend des Pins
+  // gepufferte juengste Auto-Signal nachzuziehen. In Plan 01 noch ungenutzt:
+  // state.pinActive ist hier immer falsy -> Signale werden sofort angewandt.
+  function _applyBufferedAutoSignal() {
+    if (state.lastAutoSignal) _applyEwbSignal(state.lastAutoSignal);
+  }
+
   function _showProactiveContent(slot, result) {
+    // Phase 08.23.2.PIP-01 (Item d): Coaching-TEXT (Phase/Kaufbereitschaft/Tipp) erscheint
+    // NICHT mehr in der Lese-Zone (slot 1). NUR die Text-Ausgabe in slot 1 wird gestoppt —
+    // die Coaching-Daten-Pipeline (result.phase/result.kb im pip_token_done-Payload) bleibt
+    // intakt und kommt weiter an (PIP.2-Foundation; Text->Symbol-Rendering ist PIP.2, nicht
+    // hier). Definition + Aufrufstelle bleiben erhalten (kein Prune). slot 0 unveraendert.
+    if (slot === 1) return;
     // D-02: Between einwaende, show contextual tips
     if (result.phase) {
       _showProactiveTipp(slot, 'Phase wechselt: ' + result.phase);
@@ -2771,6 +2811,9 @@
   }
 
   function _showProactiveTipp(slot, tipp) {
+    // PIP-01 (Item d): kein Coaching-Text in der Lese-Zone (slot 1). Zweite Verteidigungs-
+    // linie, deckt alle Aufrufer ab. Datenfluss unangetastet (PIP.2-Foundation).
+    if (slot === 1) return;
     var body = pipEl('pip-slot-body-' + slot);
     if (body) body.textContent = tipp;
     var label = pipEl('pip-slot-label-' + slot);
