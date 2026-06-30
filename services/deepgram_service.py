@@ -959,7 +959,13 @@ def register_audio_handlers(sio):
                 # analyse-Eintraege), NICHT der Export-Marker.
                 with ls.log_lock:
                     ls.conversation_log.append({
-                        'ts': time.time(), 'type': 'transcript',
+                        # Phase 08.23.2.PIP-03 (Bug C, Item e): ts im selben 'HH:MM:SS'-Format
+                        # wie die gesprochene Zeile (Z.66) — NICHT float-epoch (time.time()).
+                        # Frueher: time.time() -> _ts_to_ms_of_day (app_routes.py:36) macht
+                        # str(ts).split(':') ohne ':' -> ValueError -> ts_ms=0; war der erste
+                        # Entry ein Knopf (abs=0 -> base=0), ergab eine spaetere gesprochene
+                        # Zeile einen unmoeglichen Folge-Timestamp (~17h). Ein Format, kein ts_ms=0.
+                        'ts': datetime.now().strftime('%H:%M:%S'), 'type': 'transcript',
                         'speaker': 1,
                         'text': f"{_anon_typ} *ewb button*",
                         'data': {'ewb_button': True},
