@@ -218,6 +218,17 @@ def _make_on_message(sid, mode='meeting'):
 
                 # ── BUG-10-LAT Wave 2: Keyword-Match auf Interim-Transcript ──────
                 try:
+                    # Phase 08.23.2.PIP (Entscheidungs-Update 2026-06-30, André): Im Cold-Call
+                    # gibt es KEINE Auto-Erkennung von Einwaenden mehr. NERVE hoert dort nur den
+                    # Berater (Single-Speaker) -> eine Keyword-Auto-Reaktion (Slot-0-Profil-
+                    # Antwort-Render via keyword_einwand_match + EWB-Knopf-Highlight + ewb_signal)
+                    # kann nur auf die EIGENEN Worte des Beraters reagieren = Selbst-Trigger-
+                    # Rauschen, nichts Neues. Modell Cold-Call: Berater hoert Einwand -> klickt
+                    # Knopf -> liest Antwort. Die Auto-Erkennung lebt NUR im Meeting-Modus (da
+                    # hoert NERVE den Kunden). Werkzeug bleibt erhalten, im Cold-Call abgeschaltet.
+                    # (analyse_loop/QA emittiert seit PIP.1 ohnehin kein ewb_signal.)
+                    if mode == 'cold_call':
+                        return
                     with ls.state_lock:
                         _muted = ls.state.get('mic_muted', False)
                     if _muted:
