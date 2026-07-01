@@ -870,12 +870,6 @@ def register_audio_handlers(sio):
         if not typ:
             return
         print(f"[PiP] manual_ewb (sid={_sid}): {typ[:80]}")
-        # [BUGB-EWB] MP2 — jeder manual_ewb-EMPFANG (SID, click_id aus FE-MP1, button-key,
-        # empfangs-ts). Reconciliation FE-emits vs BE-receives: gleiche click_id N-mal =
-        # Bubbling/Doppel-Bind im FE; N verschiedene click_ids = N echte Trigger
-        # (Reconnect-Replay/Doppel-Klick). Logging-only, kein Verhalten geaendert.
-        _bugb_click_id = (data.get('click_id') if isinstance(data, dict) else None) or '(none)'
-        print(f"[BUGB-EWB] MP2 manual_ewb RECV sid={_sid} click_id={_bugb_click_id} typ={typ[:40]!r} recv_ts={time.time():.3f}")
         import services.live_session as ls
 
         # ── TAXO1-Welle 4 (Task 3b): EWB-Button -> intent_event (ui_asserted) ───
