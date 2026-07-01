@@ -2299,6 +2299,7 @@ Plans:
 - **PIP.3:** Skript-Steuerung (Auto-Scroll ENTFERNEN; manuelles Weiterschalten NUR per Maus-Klick — KEIN Tastendruck/Leertaste, Fokus-Problem schon gescheitert; Mini-Positionsanzeige persistent). → berührt Teleprompter-Vorarbeit (prüfen).
 - **PIP.4 (TAXO3-gegated, SPÄTER):** KI-Antwort als Default + fixe Antwort hinter „meine Antwort"-Button; Vorgenerierung + Caching bekannter Einwände im Precall-Briefing (mit Briefing-Kontext); Latenz-Tests auf echten Calls. **⚠ HART: NICHT auf KI-Default flippen BEVOR Caching steht — sonst Live-Generierungs-Latenz bei jedem bekannten Einwand = Latenz-Dealbreaker (CLAUDE.md). Bis dahin bleibt die sofortige fixe Antwort Default.**
 **Depends on:** PIP.4 hängt an TAXO3 (Briefing-Kontext + Prompt-Caching); PIP.1-3 unabhängig. **Quell:** [[05 Log]] 2026-06-28/29, /gsd-debug `ewb-pip-overwrite-multifire`.
+**★ STATUS 2026-07-01: PIP.1 (Lese-Zone nie überschrieben) + Cold-Call-Vereinfachung (Auto-`ewb_signal`+`keyword_einwand_match` aus, Zeitstempel-Fix, Instrumentierung raus) LIVE + verifiziert (Commits …43edca4, Call 136edf7f). Plan 02 (Pin-Lifecycle) + Plan 04 (Multifire) DEFERRED (Foundation fürs Meeting). PiP-Baustelle für jetzt ZU. GEPARKT (spätere Scheiben, TAXO3/PIP.4-gegated): PIP.2 (ein Fenster + Coaching-Symbole), Namens-Slot + Auto-Namens-Bestätigen, Live-Transkript-Antworten, Vorgenerierung.**
 
 **PIP.1 Plans:** 5 plans in 4 Wellen (geplant 2026-06-29). Cross-AI Pflicht VOR Execute (🟡 + Live-Verhalten/Race + FE+BE gleichzeitig).
 
