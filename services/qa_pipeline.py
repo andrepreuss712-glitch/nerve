@@ -445,7 +445,7 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
 
         msg = claude_client.messages.create(
             model=config.MODEL_QA,
-            max_tokens=400,
+            max_tokens=500,  # TAXO3: Headroom gegen mid-Satz-Clipping (Laenge steuert die 2-3-Saetze-Paradigma-Regel, nicht die Kappe)
             system=_system,
             messages=[{"role": "user", "content": user_msg}]
         )

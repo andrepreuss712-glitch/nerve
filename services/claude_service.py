@@ -633,7 +633,7 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
         _t_stream_start = _time_autovar.monotonic()
         with claude_client.messages.stream(
             model=_model_autovar,
-            max_tokens=200,
+            max_tokens=500,  # TAXO3: Headroom gegen mid-Satz-Clipping (Laenge steuert die 2-3-Saetze-Paradigma-Regel, nicht die Kappe)
             system=_system_autovar,
             messages=[{'role': 'user', 'content': user_msg}]
         ) as stream:
@@ -795,7 +795,7 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
         try:
             with claude_client.messages.stream(
                 model=config.MODEL_PIP_VARIANTE,
-                max_tokens=250,
+                max_tokens=500,  # TAXO3: Headroom gegen mid-Satz-Clipping (Laenge steuert die 2-3-Saetze-Paradigma-Regel, nicht die Kappe)
                 system=_system_manual,
                 messages=[{'role': 'user', 'content': user_msg}]
             ) as stream:
