@@ -109,7 +109,7 @@ def invalidate_resolver_cache() -> None:
 # ── Profil-Kontext-Assembly: build_profile_context ─────────────────────────
 
 def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None,
-                          profile_id: int = None) -> str:
+                          profile_id: int = None, return_blocks: bool = False):
     """Build a 9-section Markdown profile-context string for system-prompts (D-01).
 
     9-section canonical order (LOCKED — cache stability):
@@ -142,7 +142,7 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
         import services.live_session as ls
     except Exception as e:
         print(f"[Pipeline] live_session import failed: {e}")
-        return ''
+        return ('', '') if return_blocks else ''
 
     lines: list[str] = []
 
@@ -459,6 +459,28 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
     except Exception as _e:
         print(f"[Pipeline] Lead-Kontext-Block skip: {_e}")
 
+    if return_blocks:
+        # ── Block-Split (TAXO3 P1-01, Gemini HIGH-Fix) ──────────────────────
+        # Trenn-Grenze = Text-Anker '## PreCall-Briefing' (erste volatile Sektion),
+        # NICHT eine hartcodierte Sektions-Nummer. Alles davor = stabil, ab dort =
+        # volatil. Fehlt der Anker (z.B. sid=None ohne volatile Sektionen) →
+        # volatil = '' , alles stabil (fail-open, kein raise).
+        try:
+            _split_idx = lines.index('## PreCall-Briefing')
+        except ValueError:
+            _split_idx = len(lines)
+        _stable_lines = lines[:_split_idx]
+        _volatile_lines = lines[_split_idx:]
+        # ANTI-CACHE-POISON (Gemini HIGH): die per-SID Anrede-Zeile aus Sektion 7
+        # (:402, 'Anrede: ... WICHTIG: Nutze konsequent ...') darf NICHT in den
+        # Stabil-Block (Cache-Prefix) — Anrede bleibt ausschliesslich volatil in
+        # Sektion 9. Der Alt-String-Pfad (return_blocks=False) behaelt sie.
+        _stable_lines = [
+            _l for _l in _stable_lines
+            if not (_l.startswith('Anrede: ') and 'WICHTIG: Nutze konsequent' in _l)
+        ]
+        return '\n'.join(_stable_lines), '\n'.join(_volatile_lines)
+
     return '\n'.join(lines)
 
 
@@ -497,3 +519,118 @@ def _resolve_anrede(ls: Any, ki: dict, sid: str = None) -> str:
     except Exception:
         pass
     return ki.get('ansprache') or 'Sie'
+
+
+# ── TAXO3 P1-01: Antwort-Versorgung (Weg 3, Andock-Stelle + EINE Quelle) ─────
+# Foundation-Code-Register: 'TAXO3 answer-config Andock-Stelle (Weg 3)'.
+# load_answer_config ist der EINE dokumentierte Naht-Punkt: heute Datei-Default
+# (answer_paradigm.py), spaeter klinkt hier die Coach-Tuer-DB ein — build_answer_context
+# wird dafuer NICHT umgebaut.
+
+def load_answer_config(user_id: int, sid: str | None = None) -> dict:
+    """Andock-Stelle fuer die Antwort-Konfiguration (Weg 3, Foundation).
+
+    HEUTE: der NERVE-Standard aus answer_paradigm.get_answer_config() (reiner
+    Speicher-Zugriff, 0 DB — Latenz-Garantie Punkt 25).
+    SPAETER (Coach-Tuer, eigene Scheibe): hier laedt die method_packs/pack_assignments-DB
+    (pack_assignment -> pack -> stiller NERVE-Default); dann per-User cachen wie
+    _profile_cache. build_answer_context bleibt unveraendert.
+    Fail-open: jede Stoerung -> Minimal-NERVE-Standard (nie raise, Live-Loop-Garantie).
+    """
+    try:
+        from services.answer_paradigm import get_answer_config
+        return get_answer_config()
+    except Exception as _e:
+        print(f"[AnswerConfig] load fail-open -> minimal default: {type(_e).__name__}")
+        return {
+            'paradigm': ['Verstehen und helfen, nie druecken.'],
+            'roles': {},
+            'grounding': 'Nur aus gegebenem Wissen; fehlt der Fakt -> sagen + Follow-up.',
+            'intent_hints': {},
+            'default_intent_hint': {'register': '', 'hebel': ''},
+        }
+
+
+def _profile_blocks(user_id: int, mode: str = 'cold_call', sid: str | None = None,
+                    profile_id: int | None = None) -> tuple[str, str]:
+    """Schmaler Wrapper: (stabil_text = Sek. 1–7, volatil_text = Sek. 8–9) getrennt.
+
+    Nutzt build_profile_context(..., return_blocks=True) — KEIN Neubau. Split am
+    Text-Anker '## PreCall-Briefing'; die per-SID Anrede-Zeile (Sek. 7) ist aus dem
+    Stabil-Block entfernt (Anti-Cache-Poison). Fail-open: jede Stoerung -> ('', '').
+    """
+    try:
+        result = build_profile_context(user_id, mode, sid, profile_id, return_blocks=True)
+        if isinstance(result, tuple) and len(result) == 2:
+            return result
+        # Defensive: sollte build_profile_context je einen String liefern
+        return (str(result), '')
+    except Exception as _e:
+        print(f"[Pipeline] _profile_blocks fail-open: {type(_e).__name__}")
+        return ('', '')
+
+
+def _confidence_register(mode: str, confidence: float | None,
+                         is_auto_triggered: bool) -> str:
+    """EIN kurzer Register-Text aus Modus/Konfidenz — rein aus Parametern.
+
+    KEIN 'if mode==' der einen eigenen Prompt zusammenbaut (SPEC Req 6): nur ein
+    kurzer Steuer-Satz, der Vorsicht/Substanz je nach Signal-Staerke setzt.
+    """
+    # Konfidenz-Schwelle: niedrig = vorsichtiger + kuerzer + eher eine Frage.
+    if confidence is not None and confidence < 0.5:
+        return ('Register: unsicheres Signal — vorsichtiger, kuerzer, eher eine offene Frage '
+                'als eine feste Antwort.')
+    if mode == 'meeting':
+        return ('Register: Meeting, beide Seiten hoerbar — mehr Substanz, konkret auf das '
+                'tatsaechlich Gesagte.')
+    # Cold-Call / Default: mittlere Vorsicht.
+    return 'Register: knapp und konkret; im Zweifel lieber eine kurze Rueckfrage.'
+
+
+def build_answer_context(*, user_id: int, sid: str | None, primary_intent: str | None,
+                         mode: str = 'cold_call', confidence: float | None = None,
+                         role: str = 'interessent', is_auto_triggered: bool = False) -> list[dict]:
+    """EINE Quelle des Antwort-System-Prompts fuer Auto/Knopf/QA (SPEC Req 1).
+
+    Rueckgabe: LISTE von System-Bloecken — STABIL vorne (Paradigma + Rollen-Ziel +
+    Grounding + Profil-Stabilteil), VOLATIL hinten (EIN Intent-Hinweis +
+    Modus/Konfidenz-Register + volatiler Profilteil). Strukturell cache-faehig
+    getrennt (_layer-Marker), Caching NICHT aktiviert (Phase 2).
+
+    Rolle/Modus/Konfidenz/EIN-Intent sind PARAMETER (kein if-Prompt-Zweig, Req 3/5/6).
+    MUST NOT raise: jeder Teil fail-open (.get-Defaults, _profile_blocks -> ('','')).
+    Kein DB-Call im Hot-Path (load_answer_config = reiner Speicher-Zugriff).
+
+    KEIN Live-Aufrufer in P1-01 — P1-02 verdrahtet Auto/Knopf/QA auf diese Funktion.
+    """
+    cfg = load_answer_config(user_id, sid)
+    stabil, volatil = _profile_blocks(user_id, mode, sid)
+
+    # ── STABIL-Block: Paradigma + Rollen-Ziel + Grounding + Profil-Stabilteil ──
+    role_goal = (cfg.get('roles') or {}).get(role) or (cfg.get('roles') or {}).get('interessent', '')
+    _stabil_parts = list(cfg.get('paradigm') or [])
+    if role_goal:
+        _stabil_parts.append(f'Rolle: {role_goal}')
+    if cfg.get('grounding'):
+        _stabil_parts.append(cfg['grounding'])
+    if stabil:
+        _stabil_parts.append(stabil)
+    stabil_block = '\n'.join(_stabil_parts)
+
+    # ── VOLATIL-Block: EIN Intent-Hinweis + Register + volatiler Profilteil ────
+    hint = (cfg.get('intent_hints') or {}).get(primary_intent) or cfg.get('default_intent_hint') or {}
+    conf_register = _confidence_register(mode, confidence, is_auto_triggered)
+    _volatil_parts = [
+        f"Erkannter Punkt: {primary_intent or '(unklar)'} — "
+        f"{hint.get('register', '')}; {hint.get('hebel', '')}",
+        conf_register,
+    ]
+    if volatil:
+        _volatil_parts.append(volatil)
+    volatil_block = '\n'.join(_volatil_parts)
+
+    return [
+        {'role': 'system', 'text': stabil_block, '_layer': 'stable'},    # _layer -> Phase-2-Caching-Marker
+        {'role': 'system', 'text': volatil_block, '_layer': 'volatile'},
+    ]
