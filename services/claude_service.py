@@ -569,7 +569,7 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     return _parse_json(msg.content[0].text.strip())
 
 
-def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: str, slot: int = 1, trigger: str = "analyse_loop") -> dict:
+def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: str, slot: int = 1, trigger: str = "analyse_loop", primary_intent: str | None = None) -> dict:
     # ── Shared-Lock Design ────────────────────────────────────────────────────
     # Der Anti-Overlap-Guard fuer Slot 1 laeuft ueber ls.state['slot1_variant_busy_until']
     # (geschuetzt durch ls.state_lock). BEIDE automatischen Caller nutzen DENSELBEN Key:
@@ -590,27 +590,16 @@ def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: s
     global _ewb_fallback_until
     from extensions import socketio as sio
 
-    # Profil-Einwaende als kompakte Referenz fuer Haiku aufbereiten
-    _profile_lines = []
-    for _e in (einwaende or [])[:10]:
-        if isinstance(_e, dict):
-            _lbl = (_e.get('kurzlabel') or _e.get('kategorie') or _e.get('typ') or _e.get('einwand') or '').strip()
-            _ga = (_e.get('gegenargument_1') or _e.get('gegenargument') or '').strip()
-            if _lbl and _ga:
-                _profile_lines.append(f"- {_lbl}: {_ga[:160]}")
-    _profile_block = "\n".join(_profile_lines) if _profile_lines else "(keine hinterlegten Einwaende)"
-
+    # TAXO3 P1-02: Few-Shot-Anker RAUS (Req 2). Die einwaende-Liste bleibt Profil-Kontext
+    # (via build_answer_context), ist aber KEINE woertliche Vorlage/Intent-Quelle mehr.
     user_msg = f"""Kunde hat gerade gesagt:
 "{neuer_text}"
 
 Bisheriger Gespraechsverlauf:
 {kontext if kontext else "(Call gerade gestartet)"}
 
-Hinterlegte Einwand-Gegenargumente (als Orientierung, nicht woertlich kopieren):
-{_profile_block}
-
 Falls der Kunde einen Einwand geaeussert hat: Baue eine KURZE (2-3 Saetze) kontextbezogene
-Gegenargument-Variante — greif konkret das Gesagte auf, authentisch und direkt.
+Antwort — greif konkret das Gesagte auf, authentisch und direkt.
 
 Falls kein Einwand: Formuliere eine knappe gespraechsfuehrende Reaktion / naechste Frage
 (1-2 Saetze) die den Rapport-Aufbau weitertraegt.
@@ -618,16 +607,15 @@ Falls kein Einwand: Formuliere eine knappe gespraechsfuehrende Reaktion / naechs
 Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
 """
 
-    # ── Phase 08.13: Prompt-Caching EWB AutoVar (CACHE_EWB=True default) ─────────
-    _ewb_autovar_system = "Du bist ein erfahrener Sales-Coach im DACH-B2B. Antworte knapp, praktisch, menschlich — keine Fuellwoerter."
-    if config.CACHE_EWB and len(_ewb_autovar_system) >= _CACHE_MIN_CHARS:
-        _system_autovar = [{"type": "text", "text": _ewb_autovar_system, "cache_control": {"type": "ephemeral"}}]
-    else:
-        _system_autovar = _ewb_autovar_system
-    if config.CACHE_EWB:
-        print(f"[Cache-Check] ewb system_prompt: {len(_ewb_autovar_system)} chars, "
-              f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(_ewb_autovar_system) >= _CACHE_MIN_CHARS else 'off'}")
-    # ──────────────────────────────────────────────────────────────────────────
+    # ── System-Prompt aus der EINEN Quelle (TAXO3 P1-02, Req 1/2/3/6) ──────────
+    # _ewb_autovar_system (kontext-armer 14-Token-Prompt) GELOESCHT. Auto zieht jetzt
+    # aus build_answer_context (Paradigma + Rollen-Ziel + Grounding + Profil-Kontext).
+    # is_auto_triggered=True KONSTANT; primary_intent durchgereicht (keyword: matched_label;
+    # analyse_loop: per-SID). Phase 1: PLAIN Bloecke ohne cache_control (Caching = Phase 2).
+    # HINWEIS (P1-02-Deviation): dieser Pfad ist seit PIP-01 DORMANT (0 Produktiv-Caller,
+    # nur Tests) — die Umlenkung haelt ihn paradigma-korrekt fuer eine spaetere Reaktivierung.
+    from services.prompt_pipeline import answer_system_content as _asc_auto
+    _system_autovar = _asc_auto(sid, is_auto_triggered=True, primary_intent=primary_intent)
     # D-07 Circuit-Breaker: check if TTFT fallback is active
     import time as _time_autovar
     with _ewb_circuit_lock:
@@ -761,60 +749,35 @@ def streame_manual_ewb_variante(typ: str, profile_einwand: dict, kontext: str, s
     automatischen Anti-Overlap-Guard geblockt werden. By design unabhaengig.
     """
     from extensions import socketio as sio
-    standard_ga = ''
-    if isinstance(profile_einwand, dict):
-        standard_ga = (profile_einwand.get('gegenargument_1')
-                       or profile_einwand.get('gegenargument')
-                       or profile_einwand.get('text')
-                       or '')
 
+    # TAXO3 P1-02: standard_ga-Vorlage RAUS (Req 2 Few-Shot). Das Profil-Gegenargument
+    # steckt ohnehin im Profil-Kontext (via build_answer_context), nicht als Nachbau-Vorlage.
     user_msg = f"""Der Berater hat im PiP-Live-Fenster den Einwand-Button "{typ}" geklickt.
-
-Standard-Gegenargument aus Profil:
-{standard_ga or "(keines hinterlegt)"}
 
 Bisheriger Gespraechsverlauf (letzte Aussagen):
 {kontext if kontext else "(kein Kontext — Call ist gerade gestartet)"}
 
-Baue eine KURZE, kontextbezogene Variante des Gegenarguments:
+Baue eine KURZE, kontextbezogene Antwort:
 - 2-3 Saetze maximal
 - Greif konkret den Gespraechsverlauf auf (falls Kontext vorhanden)
 - Authentischer Ton, wie der Berater wirklich sprechen wuerde
 - Kein Jargon, direkt und glaubwuerdig
 
-Antworte NUR mit dem Gegenargument-Text. Kein JSON, keine Labels, keine Meta-Kommentare.
+Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
 """
 
-    # ── Phase 08.20: _user_id fuer build_profile_context (per-SID — WR-01) ──────
+    # ── System-Prompt aus der EINEN Quelle (TAXO3 P1-02, Req 1/2/3/6) ──────────
+    # build_answer_context: Paradigma + Rollen-Ziel + Grounding + Profil-Kontext.
+    # Knopf = bewusster Klick -> is_auto_triggered=False, confidence hoch (1.0);
+    # primary_intent = der geklickte typ als Label. Rolle/Modus aus per-SID abgeleitet.
+    # Phase 1: PLAIN Content-Bloecke ohne cache_control (Caching = Phase 2/Plan 04).
     try:
-        import services.live_session as _ls_manual
-        with _ls_manual._session_state_lock:
-            _user_id = (_ls_manual._session_state.get(sid) or {}).get('user_id') or 0
-    except Exception:
-        _user_id = 0
-
-    # ── Phase 08.13/08.20: Prompt-Caching EWB Manual (CACHE_EWB=True default) ───
-    # D-01/08.20: Replace hardcoded system prompt with Voll-Profil context
-    # build_profile_context() reads from _session_state[sid]['_profile_cache'] — no DB in hot path
-    try:
-        from services.prompt_pipeline import build_profile_context as _bpc_manual
-        _ewb_manual_system = _bpc_manual(user_id=_user_id or 0, sid=sid)
-        if not _ewb_manual_system:
-            _ewb_manual_system = (
-                "Du bist NERVE, ein Vertriebs-KI-Assistent im DACH-B2B. "
-                "Liefere EINE sofort vorlesbare Gegenargumentation in 2-3 Saetzen. "
-                "Kein Fachjargon, keine Floskeln. Ende mit Gegenfrage."
-            )
+        from services.prompt_pipeline import answer_system_content as _asc_manual
+        _system_manual = _asc_manual(sid, is_auto_triggered=False,
+                                     primary_intent=typ, confidence=1.0)
     except Exception as _bpc_e:
-        print(f"[EWB] profile_context error: {_bpc_e}")
-        return {'error': f'profile_context failed: {_bpc_e}', 'gegenargument_1': None}
-    if config.CACHE_EWB and len(_ewb_manual_system) >= _CACHE_MIN_CHARS:
-        _system_manual = [{"type": "text", "text": _ewb_manual_system, "cache_control": {"type": "ephemeral"}}]
-    else:
-        _system_manual = _ewb_manual_system
-    print(f"[Cache-Check] manual-ewb: {len(_ewb_manual_system)} chars, "
-          f"cache={'on' if len(_ewb_manual_system) >= _CACHE_MIN_CHARS else 'off'}")
-    # ──────────────────────────────────────────────────────────────────────────
+        print(f"[EWB] answer_context error: {_bpc_e}")
+        return {'error': f'answer_context failed: {_bpc_e}', 'gegenargument_1': None}
     print(f"[PiP-Variante] ENTRY sid={sid} slot={slot} typ={typ!r}")
     # Phase 08.23.2.PIP-01 (Item a): source=manual_button kennzeichnet den EINZIGEN
     # legitimen Lese-Zonen-(slot 1)-Schreiber. Das FE-Source-Gate (pip-launcher.js)

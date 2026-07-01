@@ -634,3 +634,68 @@ def build_answer_context(*, user_id: int, sid: str | None, primary_intent: str |
         {'role': 'system', 'text': stabil_block, '_layer': 'stable'},    # _layer -> Phase-2-Caching-Marker
         {'role': 'system', 'text': volatil_block, '_layer': 'volatile'},
     ]
+
+
+# ── TAXO3 P1-02: Live-Wiring der EINEN Quelle in die 3 Antwort-Pfade ─────────
+# Duenne Verdrahtungs-Schicht (liest per-SID-State) um build_answer_context (rein/
+# testbar). Hier, weil beide Konsumenten (claude_service, qa_pipeline) prompt_pipeline
+# schon importieren — vermeidet eine qa->claude_service-Kopplung nur fuer die Prompt-
+# Assembly. P1-02-Deviation: dieser Plan fasst prompt_pipeline.py mit an (nur diese
+# Wiring-Helfer, build_answer_context selbst bleibt unveraendert).
+
+def derive_answer_params(sid: str | None) -> dict:
+    """Leitet user_id/Rolle/Modus/EIN-Intent/Konfidenz aus dem per-SID-State ab (Req 3/5/6).
+
+    Rolle (Parameter, kein Code-Zweig): mode=='meeting' -> 'meeting'; sonst
+    contact_category 'gatekeeper' -> 'gatekeeper', 'target' -> 'interessent'.
+    primary_intent + confidence: per-SID (TAXO1-Live). Punkt 26: der Wert wird zum
+    Aufruf-Zeitpunkt gelesen; laeuft der Leser dem Schreiber voraus -> None ->
+    fail-open Default-Intent (NIE falscher Intent). Reiner Lese-Zugriff, nie raise.
+    """
+    user_id = 0
+    mode = 'cold_call'
+    role = 'interessent'
+    primary_intent = None
+    confidence = None
+    try:
+        import services.live_session as _ls
+        _st: dict = {}
+        if sid:
+            with _ls._session_state_lock:
+                _st = dict(_ls._session_state.get(sid) or {})
+        user_id = _st.get('user_id') or 0
+        mode = _st.get('mode') or 'cold_call'
+        _sub = _st.get('state') or {}
+        _cat = _sub.get('contact_category') or 'gatekeeper'
+        role = 'meeting' if mode == 'meeting' else ('gatekeeper' if _cat == 'gatekeeper' else 'interessent')
+        primary_intent = _sub.get('primary_intent')
+        _conf = _sub.get('confidence')
+        confidence = float(_conf) if _conf is not None else None
+    except Exception as _e:
+        print(f"[AnswerParams] fail-open default: {type(_e).__name__}")
+    return {'user_id': user_id, 'role': role, 'mode': mode,
+            'primary_intent': primary_intent, 'confidence': confidence}
+
+
+def answer_system_content(sid: str | None, *, is_auto_triggered: bool,
+                          primary_intent: str | None = None,
+                          confidence: float | None = None) -> list[dict]:
+    """System-Content-Liste (Anthropic-Format) aus build_answer_context fuer die Live-Pfade.
+
+    PHASE 1: PLAIN Content-Bloecke [{'type':'text','text':...}] OHNE cache_control —
+    Caching (cache_control-Layering auf dem stabilen Prefix) ist Phase 2 (Plan 04).
+    primary_intent/confidence: explizit uebergeben (z.B. geklickter typ, QA-confidence)
+    ODER aus per-SID abgeleitet (None -> derive). Fail-open: nie leer, nie raise.
+    """
+    p = derive_answer_params(sid)
+    _intent = primary_intent if primary_intent is not None else p['primary_intent']
+    _conf = confidence if confidence is not None else p['confidence']
+    blocks = build_answer_context(
+        user_id=p['user_id'], sid=sid, primary_intent=_intent,
+        mode=p['mode'], confidence=_conf, role=p['role'],
+        is_auto_triggered=is_auto_triggered,
+    )
+    content = [{'type': 'text', 'text': b['text']} for b in blocks if b.get('text')]
+    if not content:
+        content = [{'type': 'text', 'text': 'Verstehen und helfen, nie druecken.'}]
+    return content

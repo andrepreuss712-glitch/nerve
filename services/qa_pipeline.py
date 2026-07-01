@@ -39,7 +39,7 @@ import threading as _threading
 import config
 
 from services.prompt_pipeline import (
-    build_profile_context, resolve_prompt_version
+    build_profile_context, resolve_prompt_version, answer_system_content
 )
 
 # ── Confidence threshold (Korrektur 3) ───────────────────────────────────────
@@ -75,22 +75,14 @@ _FALLBACK_QA_RESPONSE_PROMPT = (
     "- Antworte NUR als Klartext (keine JSON-Wrapper)"
 )
 
-_SYSTEM_PROMPT_QA = """\
-{profile_context}
-
-Analysiere den Einwand. Entscheide:
-1. Wenn Einwand klar ist UND Profil-Daten passen → direkte Antwort aus Profil (mit Tabu-Alternativen).
-2. Wenn Einwand unklar ODER Profil-Daten dünn ODER Klassifikator unsicher → KEINE Antwort erfinden. Stattdessen eine offene Rückfrage vorschlagen die den Kunden zur Konkretisierung zwingt.
-   Format: 'Frag nach: <konkrete Rückfrage>'
-   Beispiele:
-   - 'Frag nach: Wie meinen Sie das genau?'
-   - 'Frag nach: Was müsste passieren damit das für Sie in Frage kommt?'
-   - 'Frag nach: Ist das ein Budget-Thema oder fehlt noch die Überzeugung?'
-3. NIEMALS stumm bleiben. NIEMALS halluzinierte konkrete Behauptungen über Produkt/Firma/Zahlen.
-
-{tabu_block}
-Anrede: {anrede}. Nutze konsequent {anrede}-Form. Max. 45 Wörter.
-Antworte als reiner Fließtext. Kein Markdown, keine Code-Blocks, keine Sternchen, kein --- Separator, kein Reasoning-Trace, keine Begründungen — nur was der Berater wörtlich sagen soll."""
+# TAXO3 P1-02: _SYSTEM_PROMPT_QA ENTFERNT (Selbstbau tot). Der System-Prompt kommt
+# jetzt aus build_answer_context (via answer_system_content) — EINE Quelle fuer alle
+# 3 Antwort-Pfade. Die drueckerische Formulierung ("...die den Kunden zur
+# Konkretisierung ZWINGT") + die hartcodierten "Frag nach:"-Beispiele (Few-Shot) sind
+# damit weg; das Paradigma (offene Frage statt Druck) + die Grounding-Regel (fehlt Fakt
+# -> ehrlich sagen + Rueckfrage vorschlagen) ersetzen sie inhaltlich sauberer.
+# Die Low-Confidence-Mechanik (klaerende Rueckfrage im user_msg + "Frag nach:"-Prefix
+# als FE-Format-Kontrakt) bleibt strukturell erhalten (siehe generate_qa_response).
 
 _FALLBACK_RUECKFRAGE = "Frag nach: Wie meinen Sie das genau?"
 
@@ -418,21 +410,15 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         # ── Determine branch by confidence ────────────────────────────────────
         is_low_confidence = float(confidence) < CONFIDENCE_THRESHOLD
 
-        # ── Build Voll-Profil context (LB-3-Fix: QA now sees full profile — 08.20 D-01) ──
-        # build_profile_context() reads from _session_state[sid]['_profile_cache'] when sid is set (no DB in hot path)
-        _profile_context = ''
-        try:
-            _profile_context = build_profile_context(user_id=user_id, sid=sid)
-        except Exception as _pce:
-            print(f"[QA] build_profile_context failed (non-fatal): {_pce}")
-
-        # ── Build system prompt ────────────────────────────────────────────────
-        anrede_str = anrede or 'Sie'
-        system_prompt = _SYSTEM_PROMPT_QA.format(
-            profile_context=_profile_context,
-            tabu_block=(tabu_block + '\n') if tabu_block else '',
-            anrede=anrede_str,
-        )
+        # ── System-Prompt aus der EINEN Quelle (TAXO3 P1-02, Req 1/2/3/6/7) ────
+        # build_answer_context: Paradigma + Rollen-Ziel + Grounding + Profil-Kontext,
+        # Rolle/Modus/EIN-Intent/Konfidenz als Parameter (kein Selbstbau, kein "zwingt").
+        # Phase 1: PLAIN Content-Bloecke ohne cache_control (Caching = Phase 2/Plan 04).
+        # primary_intent = per-SID (Punkt 26 fail-open); confidence durchgereicht.
+        _system = answer_system_content(sid, is_auto_triggered=False, confidence=float(confidence))
+        # Tabu-Instruktion (Produkt-Verbote) bleibt als eigener System-Block erhalten.
+        if tabu_block:
+            _system = _system + [{'type': 'text', 'text': tabu_block}]
 
         # ── User message ───────────────────────────────────────────────────────
         kat_hint = "unbekannten Einwand" if category == 'einwand_unknown' else "offene Frage"
@@ -450,18 +436,10 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
             f"Formuliere eine kurze, konkrete Antwort (max. 45 Wörter)."
         )
 
-        # ── Phase 08.13: Prompt-Caching QA (CACHE_QA=True default) ───────────────────
-        # PITFALL: generate_qa_response() baut System-Prompt aus profile_data — pro User
-        # unterschiedlich. Cache-Hit nur session-intern (gleicher User, <= 5 Min TTL).
-        # Cross-Session-Cache-Hit ist NICHT erwartet. Normales Design, KEIN Bug.
-        if config.CACHE_QA and len(system_prompt) >= _CACHE_MIN_CHARS:
-            _system = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
-        else:
-            _system = system_prompt
-        if config.CACHE_QA:
-            print(f"[Cache-Check] qa system_prompt: {len(system_prompt)} chars, "
-                  f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(system_prompt) >= _CACHE_MIN_CHARS else 'off'}")
-        # ──────────────────────────────────────────────────────────────────────────
+        # TAXO3 P1-02: cache_control-Layering ENTFERNT (Phase 2/Plan 04 baut es korrekt
+        # auf dem stabilen Prefix wieder auf). _system ist die PLAIN Block-Liste aus
+        # answer_system_content (+ Tabu-Block). anrede kommt jetzt aus dem Profil-Kontext
+        # (build_answer_context Volatil-Block), nicht mehr aus einer eigenen Prompt-Zeile.
 
         from services.claude_service import claude_client
 
