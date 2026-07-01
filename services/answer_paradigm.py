@@ -21,7 +21,7 @@ freigegeben (2026-07-01, unveraendert).
 from __future__ import annotations
 
 
-# ── PARADIGMA: das unsichtbare Geruest (11 Verhaltensregeln: 9 D-01 + 2 Nachschaerfung 2026-07-01) ──
+# ── PARADIGMA: das unsichtbare Geruest (10 Verhaltensregeln: 9 D-01 + 1 Nachschaerfung 2026-07-01; Anti-Tic-Nudge in Regel 5 gefaltet) ──
 # Die 3 harten Tabus (D-02) sind eingebaut: (a) kein falsches Produkt-Versprechen
 # (Regel 8), (b) kein Druck-/Dringlichkeits-Sprech (Regel 7), (c) keine Mini-Romane
 # (Regel 4). Keine Beispielsaetze, keine Technik-Vokabel.
@@ -32,7 +32,9 @@ NERVE_PARADIGM: list[str] = [
     "Bevorzuge eine kurze, offene Frage gegenüber einem Gegenargument — die Frage verlagert das "
     "Nachdenken zum Kunden.",
     "Halte es kurz: zwei, drei Sätze zum lauten Vorlesen; lieber eine Frage als ein Monolog.",
-    "Bleib in der Stimme des Verkäufers (Stil aus dem Profil); keine Fachwörter, keine Floskeln.",
+    "Bleib in der Stimme des Verkäufers (Stil aus dem Profil); keine Fachwörter, keine Floskeln. "
+    "Öffne nicht jede Antwort mit einer Bestätigung („Verstehe“ o.ä.) — sparsam, oft direkt zur Frage; "
+    "vermeide unterwürfige Füllwörter wie „ganz kurz“/„kurze Frage“.",
     "Antworte nur aus dem gegebenen Wissen. Fehlt ein Fakt, sag das ehrlich und schlage ein Follow-up "
     "vor — nie etwas erfinden.",
     "Kein Druck- oder Dringlichkeits-Sprech („nur heute“, „letzte Chance“, „Sie verpassen sonst“).",
@@ -44,9 +46,6 @@ NERVE_PARADIGM: list[str] = [
     "Bei harten Einwänden (Preis/zu teuer, keine Zeit, Wettbewerber, kein Bedarf): kein Gegenargument, "
     "keine ROI-/Kosten-Rechnung, kein Pitch. Stelle eine offene Frage, die den echten Grund freilegt — "
     "fehlt Budget, ist der Wert noch nicht klar, ist der Zeitpunkt falsch, womit vergleicht er?",
-    "Öffne nicht jede Antwort mit einer Bestätigung („Verstehe“ o.ä.) — sparsam, oft direkt mit der "
-    "Frage oder Sache beginnen. Zeig Verständnis durch den Inhalt deiner Frage, nicht durch eine Floskel "
-    "vorne. Vermeide unterwürfige Füllwörter wie „ganz kurz“/„kurze Frage“.",
 ]
 
 
