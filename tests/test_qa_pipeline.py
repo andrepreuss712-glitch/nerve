@@ -187,10 +187,11 @@ class TestGenerateQaResponse(unittest.TestCase):
         self.assertEqual(generate_qa_response('x', 'einwand_known', {}, 'Sie', 'v1', 0), '')
 
     def test_fail_closed_on_exception(self):
-        """When build_profile_context raises, error is caught non-fatally.
+        """When the system-prompt source raises, error is caught non-fatally.
         Function continues and returns fallback Rueckfrage (never empty, never propagates).
-        LB-3-Fix (08.20-03): build_profile_context errors are explicitly non-fatal."""
-        with patch('services.qa_pipeline.build_profile_context', side_effect=RuntimeError("boom")):
+        LB-3-Fix (08.20-03) + TAXO3 P1-02: QA baut den System-Prompt jetzt aus
+        answer_system_content (build_answer_context) — dessen Fehler bleiben non-fatal."""
+        with patch('services.qa_pipeline.answer_system_content', side_effect=RuntimeError("boom")):
             result = generate_qa_response(
                 'wie teuer?', 'frage', {}, 'Sie',
                 confidence=1.0, version='', user_id=0

@@ -118,14 +118,19 @@ def test_vorwissen_level_flows_into_profile_context():
 # ── REQ-08: streame_manual_ewb_variante() Error-Propagation ──────────────────
 
 def test_ewb_variante_propagates_profile_context_error(monkeypatch):
-    """build_profile_context Exception fuehrt zu Error-Dict — kein silent fail (REQ-08)."""
+    """answer_system_content Exception fuehrt zu Error-Dict — kein silent fail (REQ-08).
+
+    TAXO3 P1-02: der Manual-Pfad bezieht den System-Prompt jetzt aus answer_system_content
+    (build_answer_context, EINE Quelle) statt direkt build_profile_context. Der
+    Error-Dict-Kontrakt (kein silent fail) bleibt — jetzt auf answer_system_content bezogen.
+    """
     from services.claude_service import streame_manual_ewb_variante
     import services.prompt_pipeline as pp
 
     def _raise(*args, **kwargs):
-        raise RuntimeError("profile_context kaboom")
+        raise RuntimeError("answer_context kaboom")
 
-    monkeypatch.setattr(pp, 'build_profile_context', _raise)
+    monkeypatch.setattr(pp, 'answer_system_content', _raise)
 
     result = streame_manual_ewb_variante('zu_teuer', {}, '', 'test-ewb-sid', slot=1)
     assert isinstance(result, dict), \
