@@ -2259,6 +2259,14 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 **Komplexität:** 🔴 — heißester Live-Code. Cross-AI/3-Sichten **Pflicht**. Punkt 14 (Control-Flow) + Punkt 22 (Async-Naht) + Race-Fragen HART. Kein Refactor huckepack (Punkt 17). **Verify=Production mit 2 parallelen Test-Sessions** (der eigentliche Beweis). Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
 **Blocker für:** 08.23.2.TAXO3-b (geparkt bis PERSID grün).
 
+### Phase 08.23.2.PROMPTGUARD: Prompt-Zusammenbau-Live-Naht-Wächter (NEU 2026-07-03) 🟡 — NACH PERSID
+
+**Herkunft:** Fable-Bewertung von Geminis Wächter-Ideen (Vault `05 Log` 2026-07-03). Von Geminis 3 Wächtern + 4 blinden Flecken die EINZIGE genuine Lücke — und zu ~70% schon getestet.
+**Goal:** Deterministischer Offline-Gate-Test, der beweist, dass der fertig zusammengebaute Antwort-Prompt UNVERFÄLSCHT beim Modell ankommt (Live-Naht qa_pipeline→build_answer_context→echter Claude-Call). Schließt die „Test grün ≠ live durchgereicht"-Lücke für den Prompt-Pfad (gleiche Klasse wie der intent_event-Defekt, den test_medium_lane_intent_event_live.py schloss).
+**Scope:** bestehende `tests/test_build_answer_context.py` + `tests/test_qa_pipeline.py` ERWEITERN (keine neue Datei). 3 Assertions: (a) gemockter Claude-Client fängt das System-Prompt-Argument → alle 9 Sektionen + stable/volatile-Layering in geLOCKter Reihenfolge (prompt_pipeline.py:115), kein abgeschnittenes Fragment; (b) kein buchstäblich leerer Slot (jeder der 9 Header hat nicht-leeren Body); (c) jede aktive resolve_prompt_version-Variante (prompt_pipeline.py:30) baut valides 9-Sektionen-Schema. Mock-Muster: `_OneShotTrigger` + gemockter Claude aus test_medium_lane_intent_event_live.py. **Falle (Pflicht-Pre-grep, Punkt 20):** qa_pipeline hat mehrere Ausgangspfade — nur den MODELL-Pfad fangen; Slot A (lokales Sofortnetz) baut keinen 9-Sektionen-Prompt und darf NICHT fälschlich rot werden.
+**Komplexität:** 🟡. Berührt Antwort-Pipeline (≠ Isolation) → NACH PERSID, nicht huckepack (Punkt 17). Einhängen: normales Gate (`pytest -m "not live and not perf"`).
+**VERWORFEN:** Geminis Live-Modell-„Unsinn?"-Check (nicht-deterministisch, Kosten/Netz im Gate — Eval-Territorium, nicht Deploy-Gate).
+
 ---
 
 ### Phase 08.23.2.TAXO3: Antworten — EINE Wissensversorgung (Säule 3) (NEU 2026-06-10) 🔴
