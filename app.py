@@ -2207,22 +2207,29 @@ import extensions as _ext
 _ext.socketio = socketio
 
 # ── Start background threads ──────────────────────────────────────────────────
-from services.deepgram_service import register_audio_handlers
-from services.claude_service   import analyse_loop, coaching_loop
+# S1 (Phase 08.23.2.PERSID Plan 01): ENV-basierter TESTING-Guard.
+# Daemons starten auf MODUL-Ebene bei `import app`. Da app.config['TESTING'] erst
+# NACH dem Import gesetzt werden kann, waere ein app.config-Check hier wirkungslos
+# (zu spaet). Stattdessen ENV-Var NERVE_TESTING=1 — wird in conftest.py VOR dem
+# Import gesetzt und greift beim Import-Zeitpunkt. Prod: ENV nicht gesetzt → normal.
+import os as _os_guard
+if _os_guard.environ.get('NERVE_TESTING') != '1':
+    from services.deepgram_service import register_audio_handlers
+    from services.claude_service   import analyse_loop, coaching_loop
 
-register_audio_handlers(socketio)
-threading.Thread(target=analyse_loop,     daemon=True).start()
-threading.Thread(target=coaching_loop,    daemon=True).start()
+    register_audio_handlers(socketio)
+    threading.Thread(target=analyse_loop,     daemon=True).start()
+    threading.Thread(target=coaching_loop,    daemon=True).start()
 
-# ── Phase 08.23.2.TAXO1: Slow Lane (3. Bahn) — Consumer + Graceful-Flush ──────────
-# REQ 3 / Geruest §5 Bau-Regel 2: EIN Daemon-Consumer neben analyse_loop/coaching_loop.
-# Laeuft in TAXO1 LEER (kein Producer angebunden) und benotet NICHTS (Scoring = TAXO2).
-from services.slow_lane import slow_lane_consumer, flush_to_db, request_shutdown
+    # ── Phase 08.23.2.TAXO1: Slow Lane (3. Bahn) — Consumer + Graceful-Flush ──────
+    # REQ 3 / Geruest §5 Bau-Regel 2: EIN Daemon-Consumer neben analyse_loop/coaching_loop.
+    # Laeuft in TAXO1 LEER (kein Producer angebunden) und benotet NICHTS (Scoring = TAXO2).
+    from services.slow_lane import slow_lane_consumer, flush_to_db, request_shutdown
 
-threading.Thread(target=slow_lane_consumer, daemon=True).start()
+    threading.Thread(target=slow_lane_consumer, daemon=True).start()
 
-# atexit: Sentinel stoppt den Consumer, dann finaler Drain offener Items (Bau-Regel 2).
-atexit.register(lambda: (request_shutdown(), flush_to_db()))
+    # atexit: Sentinel stoppt den Consumer, dann finaler Drain offener Items (Bau-Regel 2).
+    atexit.register(lambda: (request_shutdown(), flush_to_db()))
 
 # SIGTERM-Handler (Finding #2): atexit feuert bei SIGTERM nicht zuverlaessig; SIGTERM ist
 # der HAEUFIGE Kill-Pfad (deploy.sh-Restart, systemd/gunicorn graceful stop).
@@ -2230,25 +2237,26 @@ atexit.register(lambda: (request_shutdown(), flush_to_db()))
 # im Prozess-Main-Thread -> signal.signal() wirft dann ValueError. Registrierung in
 # try/except ValueError -> KEIN Bootstrap-Crash, atexit-Fallback. Der Flush ist eine
 # Optimierung, KEINE Daten-Garantie (intent_event durabel + re-derivierbar, Design §0).
-_prev_sigterm = signal.getsignal(signal.SIGTERM)
+# S1 TESTING-Guard: SIGTERM-Handler und atexit nur wenn Daemons wirklich laufen.
+# Im TESTING-Modus sind request_shutdown/flush_to_db nicht importiert → kein NameError.
+if _os_guard.environ.get('NERVE_TESTING') != '1':
+    _prev_sigterm = signal.getsignal(signal.SIGTERM)
 
+    def _graceful_sigterm(signum, frame):
+        request_shutdown()
+        flush_to_db()  # idempotent: drained leere Queue beim Doppel-Aufruf (Edge 3)
+        if callable(_prev_sigterm):
+            _prev_sigterm(signum, frame)
+        else:
+            raise SystemExit(0)  # normalen Shutdown fortsetzen (atexit feuert dann ebenfalls, drained leer)
 
-def _graceful_sigterm(signum, frame):
-    request_shutdown()
-    flush_to_db()  # idempotent: drained leere Queue beim Doppel-Aufruf (Edge 3)
-    if callable(_prev_sigterm):
-        _prev_sigterm(signum, frame)
-    else:
-        raise SystemExit(0)  # normalen Shutdown fortsetzen (atexit feuert dann ebenfalls, drained leer)
-
-
-try:
-    signal.signal(signal.SIGTERM, _graceful_sigterm)
-except ValueError as _sig_e:
-    # N-1: signal.signal nur im Prozess-Main-Thread erlaubt; unter gunicorn gthread
-    # kann der Bootstrap in einem Nicht-Main-Thread laufen -> KEIN Crash, atexit deckt
-    # den sauberen Restart als Fallback (Flush ist Optimierung, keine Daten-Garantie, §0).
-    print(f"[SLOW] SIGTERM-Handler nicht registriert (kein Main-Thread): {_sig_e}; atexit-Fallback aktiv")
+    try:
+        signal.signal(signal.SIGTERM, _graceful_sigterm)
+    except ValueError as _sig_e:
+        # N-1: signal.signal nur im Prozess-Main-Thread erlaubt; unter gunicorn gthread
+        # kann der Bootstrap in einem Nicht-Main-Thread laufen -> KEIN Crash, atexit deckt
+        # den sauberen Restart als Fallback (Flush ist Optimierung, keine Daten-Garantie, §0).
+        print(f"[SLOW] SIGTERM-Handler nicht registriert (kein Main-Thread): {_sig_e}; atexit-Fallback aktiv")
 # ────────────────────────────────────────────────────────────────────────────────
 
 # ── Phase 08.23.2.B+C: Anonymisierungs-Pipeline Pre-Warm ─────────────────────
