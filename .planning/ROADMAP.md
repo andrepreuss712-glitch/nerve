@@ -2268,6 +2268,14 @@ Plans:
 - [ ] 08.23.2.PERSID-05-PLAN.md — Welle 4 Familie C CONVERSATION/RESULT (größte Welle): ~7 Familien-Quellen + _build_log_content + api_beenden pro sid (Req 3/7)
 - [ ] 08.23.2.PERSID-06-PLAN.md — Welle 5 Familie D+E: ewb/suggestion + Speaker + reset_session(sid) + Voll-Concurrency-Test GRÜN committet (D-10) + Founder-UAT (Req 2/4/7/12)
 
+### Phase 08.23.2.PHASE-CUE: Gesprächsphase in die Live-Antwort geben (NEU 2026-07-03) 🟡 — NACH PERSID + NACH TAXO3-b
+**Herkunft:** `aktive_phase_idx`-Fund im PERSID-Execute + Code-Analyse (Vault `05 Log` 2026-07-03).
+**Befund (Split-Brain):** Phase wird schon erkannt — `state['current_phase']` (per-SID, INT 1-6, vom Hintergrund-Klassifikator `claude_service.py:1188` geschrieben, als `intent_event.phase` persistiert). ABER der schnelle Antwort-Prompt `build_answer_context` liest sie GAR NICHT → Live-Antwort phasen-blind. Toter Zwilling `aktive_phase_idx` (kein Writer, =0) füttert nur Coaching-Prompt (claude:206) + Skript-Abdeckung (app_routes:244) mit „immer Eröffnung".
+**Goal:** die vorhandene per-SID-Phase in die Live-Antwort geben, ohne Latenz.
+**Scope:** (A) Erkennung = **A1: bestehenden `current_phase` nur mitlesen** in `derive_answer_params` (null Live-Latenz, kein neuer LLM-Call, fail-open None). (B) Verhalten = **Weg 2: Phase als EINE Zeile im VOLATIL-Block** (analog Intent, `prompt_pipeline.py:622`; die 3 Rollen schalten heute schon so = EIN Dict-Eintrag). Optional Weg 3 (config-Fokus-Satz pro Phase, volatil) nur falls Live-Test zu schwach. (C) toten `aktive_phase_idx` konsolidieren: an `current_phase` andocken ODER löschen (Coaching+Skript-Abdeckung auf `current_phase`). **⚠ HART: KEIN voller Prompt-Tausch pro Phase** — ändert den stabilen Cache-Prefix → Cache-Miss → Latenz-Dealbreaker (belegt am 3-Rollen-Präzedenzfall: Rolle schaltet Block-Zeile, nicht Prompt).
+**Vorab-Pflicht (Real-Daten):** an echtem Test-Call per `inspect.sh` prüfen ob `intent_event.phase` wirklich 1→6 steigt (Backlog `PHASE-CLOSE-DETECT`: 5-Runden-Takt verpasst evtl. Phase 6 am Call-Ende).
+**Komplexität:** 🟡, berührt Live-Antwort-Pfad → Cross-AI Pflicht, nach PERSID (gräbt diese Felder um) + nach TAXO3-b, nicht huckepack (Punkt 17). Kernfeature-Polish (Live-Assistent). Sichtbare Phasen-Leiste (PiP) bleibt getrennt in LIVE-VISUAL-CUES/Post-Launch.
+
 ### Phase 08.23.2.PROMPTGUARD: Prompt-Zusammenbau-Live-Naht-Wächter (NEU 2026-07-03) 🟡 — NACH PERSID
 
 **Herkunft:** Fable-Bewertung von Geminis Wächter-Ideen (Vault `05 Log` 2026-07-03). Von Geminis 3 Wächtern + 4 blinden Flecken die EINZIGE genuine Lücke — und zu ~70% schon getestet.
