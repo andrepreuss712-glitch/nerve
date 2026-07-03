@@ -2259,6 +2259,15 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 **Komplexität:** 🔴 — heißester Live-Code. Cross-AI/3-Sichten **Pflicht**. Punkt 14 (Control-Flow) + Punkt 22 (Async-Naht) + Race-Fragen HART. Kein Refactor huckepack (Punkt 17). **Verify=Production mit 2 parallelen Test-Sessions** (der eigentliche Beweis). Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
 **Blocker für:** 08.23.2.TAXO3-b (geparkt bis PERSID grün).
 
+**Plans:** 6 plans in 6 waves (Welle 0 + 5 Fix-Wellen nach Daten-Familie D-07/D-08). Geplant 2026-07-03 (Pfade hardcoded, gsd-tools umgangen). **🔴 → Cross-AI PFLICHT vor Execute:** `/gsd-review --phase 08.23.2.PERSID --all`.
+Plans:
+- [ ] 08.23.2.PERSID-01-PLAN.md — Welle 0 Fundament: Zombie-Deletes (D-09) + statischer Global-Wächter + Concurrency-Skeleton + app.py TESTING-Guard + 3 UNKLAR-Globale-Entscheidung (Req 5/7/12)
+- [ ] 08.23.2.PERSID-02-PLAN.md — Welle 1 Quer-Cluster: F2 stilllegen (not_gradable, deadlock-frei) + 3 Wächter a/b/c (build_intent_payload + TTFT Knopf-Pfad + Heiler) (Req 8/9/10/11)
+- [ ] 08.23.2.PERSID-03-PLAN.md — Welle 2 Familie A CONFIG: session_anrede/mic_muted/precall_briefing pro sid, Split-Brain schließen (Req 6)
+- [ ] 08.23.2.PERSID-04-PLAN.md — Welle 3 Familie B RAW-TRANSCRIPT: _merge_pending pro sid (schwerster Fund, rohes Transkript) (Req 1)
+- [ ] 08.23.2.PERSID-05-PLAN.md — Welle 4 Familie C CONVERSATION/RESULT (größte Welle): ~7 Familien-Quellen + _build_log_content + api_beenden pro sid (Req 3/7)
+- [ ] 08.23.2.PERSID-06-PLAN.md — Welle 5 Familie D+E: ewb/suggestion + Speaker + reset_session(sid) + Voll-Concurrency-Test GRÜN committet (D-10) + Founder-UAT (Req 2/4/7/12)
+
 ### Phase 08.23.2.PROMPTGUARD: Prompt-Zusammenbau-Live-Naht-Wächter (NEU 2026-07-03) 🟡 — NACH PERSID
 
 **Herkunft:** Fable-Bewertung von Geminis Wächter-Ideen (Vault `05 Log` 2026-07-03). Von Geminis 3 Wächtern + 4 blinden Flecken die EINZIGE genuine Lücke — und zu ~70% schon getestet.
