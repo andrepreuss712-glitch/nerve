@@ -2244,6 +2244,8 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 
 **Herkunft:** 2 Fable-Code-Audits (Architektur + Blast-Radius) + Claudian-Verifikation am Code + Prod. Vault-Bau-Vorgabe (Pflicht-Pre-Read): `03 Planung/NERVE Live-Pfad per-Session — Fundament-Phase Bau-Vorgabe.md`. Voller Hergang: Vault `05 Log` 2026-07-02 (Forts.).
 
+**SPEC:** ✅ 2026-07-03 (12 Reqs, Ambiguity 0.09 — Gate bestanden). Verzeichnis hartkodiert `.planning/phases/08.23.2.PERSID-live-pfad-pro-session-umstellen/08.23.2.PERSID-SPEC.md`. Runde 1 gelockt: Akzeptanz = deterministisches 2-Teil-Deploy-Gate (`test_persid_concurrency.py` 2-Tenant + statischer Global-Wächter, gepaarte Assertions, rot-vor-Fix; Founder-Doppel-Anruf = UAT NACH Fix, nie Gate); `schema_version` RAUS (b bringt sie additiv), Wächter (a) = `build_intent_payload()` + Whitelist; F2-Schnitt = `'not_gradable'`-Terminal in `_persist_event_ref` (deadlock-frei). **Next:** /gsd-discuss-phase 08.23.2.PERSID (🔴 3-Sichten Pflicht).
+
 **Goal:** Den kompletten Live-Anruf-Pfad von modul-globalem auf pro-Session-Zustand (`_session_state[sid]`) umstellen, sodass parallele EA-User sich NICHT vermischen (heute: globale Puffer → Daten-Vermischung bis ins rohe Transkript + persistierten Call-Record, cross-tenant, RLS fängt es nicht; `reset_session` killt alle aktiven Sessions). Launch-Blocker + Vorbedingung für TAXO3-b (Gedächtnis liest `suggestion_offers`).
 
 **Blast-Radius (Fable-2, verifiziert):** „Live-Pfad-weit" über 4 Module — NICHT app-weit (Tenant-GUC/RLS, Auth, Slow-Lane, Billing-Zuordnung sind schon sauber pro-Kontext, KEINE Neuverdrahtung nötig).
