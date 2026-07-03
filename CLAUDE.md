@@ -825,3 +825,23 @@ Quelle: `Nerve-Vault/CLAUDE.md` → „Leitsatz 2". Hier die GSD-relevante Kurzf
 **Beleg-Fall:** Zwei Tage maschinelle Einwand-zu-Antwort-Anker-Mechanik (PATH B / Wartenummer / ordinale Zuordnung) gebaut — bis die Frage „denken wir zu kompliziert?" kam. Ein LLM, das am Call-Ende das ganze Transkript liest, löst die Zuordnung von selbst → die ganze Mechanik überflüssig.
 
 **Pflicht für Plan-Author + Plan-Checker:** Wenn ein Plan eine wachsende, mehrstufige Mechanik baut (mehrere Anker-Strategien, Spezialfall-Ketten, „Härtung der Härtung"), EINMAL explizit prüfen + im Plan beantworten: *„Gibt es einen radikal einfacheren Ansatz (z.B. ein LLM-Gesamturteil statt mechanischer Verkettung), der das Problem auflöst statt es zu verwalten?"* Plan-Checker FLAG bei un-beantworteter wachsender Komplexität. „richtig" heißt **angemessen einfach**, nicht maximal ausgebaut.
+
+## Punkt 28 — Mehr-Nutzer-Pflicht: kein globaler Live-Zustand für pro-Nutzer-Daten (verankert 2026-07-03)
+
+Quelle: `Nerve-Vault/CLAUDE.md` → „Fable-Audit-Lehren". Beleg: Launch-Blocker — modul-globaler Live-Zustand → Cross-Tenant-Vermischung bei parallelen Calls (Phase 08.23.2.PERSID räumt es auf).
+
+**Regel:** Kein **modul-globaler veränderlicher Zustand** für pro-Nutzer-/pro-Call-Daten. Alles im Live-Pfad (Session-State, Puffer, Zähler, Merge-Dicts, Logs) MUSS pro-sid/pro-Tenant gekeyt sein (`_session_state[sid][...]`) — NIE ein modul-global `x = {}` / `x = []`, in das mehrere gleichzeitige Sessions schreiben. **Ausnahme nur** für unveränderliche Konstanten + tenant-neutrale Caches → **expliziter Whitelist-Eintrag** im Global-Wächter, kein stilles Durchrutschen. **Grund:** solo getestet unsichtbar; 2 gleichzeitige EA-User → Daten vermischen sich (bis ins rohe Transkript + den persistierten Call-Record, cross-tenant, RLS fängt es NICHT).
+
+**→ Wächter (Test-Netz-Ratsche, Deploy-Gate):** `tests/test_no_live_global_state.py` — statischer Sweep über `services/` + `routes/` auf das Zuweisungs-Muster `ls.<GLOBAL> = ...` im Live-Pfad; rot bei jedem nicht-per-sid-gekeyten veränderlichen Modul-Global (Whitelist für Konstanten/neutrale Caches). Muster: `test_ewb_autovar_global_regression.py` / `test_schild_guard.py`.
+
+**→ Verify=Production-Pflicht** bei jeder Live-Pfad-Änderung: ein deterministischer Zwei-Tenant-Concurrency-Test (zwei SocketIO-Test-Clients, zwei Orgs, gemockte Deepgram/Haiku/Anon-Seams, gepaarte Positiv+Isolations-Assertions). Der echte Doppel-Anruf ist einmalige UAT, NIE das Gate.
+
+**Plan-Author + Plan-Checker:** bei jedem user-/call-Daten-Feature explizit prüfen „schreibt hier irgendwas in einen modul-globalen Zustand statt per-sid?" — FLAG wenn ja.
+
+## Punkt 29 — Halb-Migration-Falle: nie das Alt-Muster für neuen Code kopieren (verankert 2026-07-03)
+
+Quelle: `Nerve-Vault/CLAUDE.md` → „Fable-Audit-Lehren". Beleg-Fall: die per-sid-Migration war halb gemacht; NEUER TAXO2-Code kopierte das verbotene globale Muster („EXAKT das Muster von record_ewb_click") — der Bug wanderte ins neue Feature.
+
+**Regel:** Eine Migration/Refactor wird **fertig gemacht ODER der Rest wird im Foundation-Code-Register mit Aktivierungs-/Lösch-Trigger eingetragen** — kein halb-migrierter Zustand ohne Register. **Kern:** vor dem Kopieren eines bestehenden Musters/einer Funktion/einer Global prüfen, ob es das **ZIEL-Muster oder das ALT-Muster** ist — grep, ob die Vorlage einen Deprecated-Marker trägt. Nie ein deprecated Muster kopieren, weil es „noch da ist".
+
+**→ Wächter (Deploy-Gate, im selben Test wie Punkt 28 oder daneben):** jede als abgelöst markierte Global/Funktion bekommt einen `# DEPRECATED-GLOBAL`-Marker; der Test macht jeden NEUEN Schreib-Zugriff darauf rot (erzwingt „Migration fertig ODER registriert + geschrieben-verboten").
