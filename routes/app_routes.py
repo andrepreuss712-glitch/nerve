@@ -292,10 +292,10 @@ def api_beenden():
             ga_details[-1]['erfolgreich'] = ga_details[-1]['kb_delta'] > 0
     with ls.phasen_log_lock:
         ph_details = list(ls.phasen_log)
-    with ls.hilfe_log_lock:
-        hilfe_count = len(ls.hilfe_log)
-    with ls.quick_action_log_lock:
-        qa_count = len(ls.quick_action_log)
+    # D-09 PERSID Plan 01: hilfe_log/quick_action_log Modul-Globale hatten 0 .append()-Schreiber
+    # (RESEARCH §1) → werden per Plan 03 vollstaendig migriert; bis dahin Literal 0 (kein Fehler).
+    hilfe_count = 0
+    qa_count = 0
 
     content  = _build_log_content(user_email=g.user.email, profile_name=profile_name)
     filename = f"nerve_log_U{g.user.id}_{datetime.now().strftime('%Y-%m-%dT%H-%M-%S')}.txt"
@@ -636,10 +636,7 @@ def api_beenden():
     finally:
         db_conv.close()
 
-    # Postcall-Snapshot speichern (bleibt nach reset erhalten)
-    with ls.last_postcall_lock:
-        ls.last_postcall = {'filename': filename, **postcall}
-
+    # D-09 PERSID Plan 01: last_postcall Modul-Global geloescht (0 Prod-Reader, RESEARCH §1).
     # Add additional fields for async postcall analysis
     postcall['redeanteil_berater'] = redeanteil_berater
     postcall['redeanteil_kunde'] = redeanteil_kunde

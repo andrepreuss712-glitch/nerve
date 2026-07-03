@@ -632,15 +632,9 @@ def register_audio_handlers(sio):
                 precall_briefing = precall_briefing[:2000]
             # truncated above — bridged to _session_state[sid] via set_briefing_for_sid after init_session_state
 
-        skript_inhalt = data.get('skript_inhalt') if isinstance(data, dict) else None
-        if skript_inhalt and isinstance(skript_inhalt, str):
-            # T-06-07: Truncate to 50000 chars max to prevent DoS
-            skript_inhalt = skript_inhalt[:50000]
-            bloecke = [b.strip() for b in skript_inhalt.split('\n\n') if b.strip()]
-            with ls.state_lock:
-                ls.state['aktives_skript_inhalt'] = skript_inhalt
-                ls.state['skript_bloecke'] = bloecke
-            print(f"[PiP] Skript geladen ({len(bloecke)} Bloecke)")
+        # D-09 PERSID Plan 01: aktives_skript_inhalt/skript_bloecke Writer GELOESCHT.
+        # Task-1-Verdikt DELETE (0 Prod-Reader belegt, RESEARCH §1, 2026-07-03).
+        # Skript-Inhalt war write-only (nie gelesen nach dem Set).
 
         from flask import session as flask_session
         user_id = flask_session.get('user_id')

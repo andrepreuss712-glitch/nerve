@@ -951,8 +951,7 @@ def analyse_loop():
                     _lk_ctx += f"- [{_c['category']}] {_c['final_text'][:80]}\n"
                 kontext = kontext + _lk_ctx
             print(f"[Claude-1] SID={sid} Analysiere (line {line_id}): {neuer_text[:80]}…")
-            with ls.state_lock:
-                ls.state['aktiv'] = True
+            # D-09 PERSID Plan 01: ls.state['aktiv'] Zombie-Key geloescht (0 Prod-Reader).
             try:
                 # Phase 06.3: analyse_loop no longer renders into PiP slots.
                 # Keyword-Matcher (06.2) is sole primary for Slot 0 + Slot 1.
@@ -1133,10 +1132,8 @@ def analyse_loop():
                             'kb_delta':         None,
                             'erfolgreich':      None,
                         })
-                with ls.state_lock:
-                    ls.state['ergebnis']        = ergebnis
-                    ls.state['aktiv']           = False
-                    ls.state['version']        += 1
+                # D-09 PERSID Plan 01: ls.state['ergebnis'/'aktiv'/'version'] Zombie-Keys geloescht
+                # (0 Prod-Reader; Auslieferung laeuft via sio.emit(room=sid)).
                 # Phase 08.23.2.TAXO1-03 (§0.1 P4 B-A line_id / P7 kaufbereitschaft): per-SID.
                 # War global ls.state['line_id'] (einziger Reader Keyword-Matcher, jetzt per-SID)
                 # + ls.state['kaufbereitschaft'] (dict-key ohne Reader, Rider nur WRITE). GELOESCHT.
@@ -1356,9 +1353,8 @@ def analyse_loop():
                             _sid_p4_w['readiness_score'] = score_p4
                             _sid_p4_w['readiness_bucket'] = bucket_p4
                             _sid_p4_w['kaufbereitschaft'] = score_p4  # legacy mirror (RESEARCH Q2 R2)
-                    with ls.state_lock:
-                        ls.state['active_hint'] = active_hint
-                        ls.state['ewb_buttons'] = ewb_buttons
+                    # D-09 PERSID Plan 01: ls.state['active_hint'/'ewb_buttons'] Zombie-Keys geloescht
+                    # (0 Prod-Reader — RESEARCH §1). Werte in per-SID state[sid] oben geschrieben.
                     ls.kaufbereitschaft = score_p4  # module global mirror (separater Pfad, app_routes:148)
                 except Exception as e:
                     print(f"[readiness/active_hint] loop error: {e}")
@@ -1366,10 +1362,8 @@ def analyse_loop():
                 print(f"[Claude-1] SID={sid} Fehler: {e}")
                 with ls.kb_lock:
                     kb_aktuell = ls.kaufbereitschaft
-                with ls.state_lock:
-                    ls.state['ergebnis']         = {'einwand': False, 'notiz': f'Fehler: {e}'}
-                    ls.state['aktiv']            = False
-                    ls.state['version']         += 1
+                # D-09 PERSID Plan 01: ls.state['ergebnis'/'aktiv'/'version'] Zombie-Keys geloescht.
+                # Fehler-Pfad schreibt nur noch per-SID state unten.
                 # Phase 08.23.2.TAXO1-03 (§0.1 P4 line_id / P7 kaufbereitschaft): per-SID (Fehler-Pfad).
                 with ls._session_state_lock:
                     _sid_li_err = (ls._session_state.get(sid) or {}).get('state')

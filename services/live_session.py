@@ -38,8 +38,9 @@ LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # ── Pause State ───────────────────────────────────────────────────────────────
-pause_lock = threading.Lock()
-is_paused  = False
+# DELETED: pause_lock (modul-global, 0 aktive Leser — S5); is_paused per-SID (Seed :354, Read :110)
+# is_paused Modul-Global GELOESCHT (D-09/S5, 2026-07-03 Phase PERSID Plan 01)
+# pause_lock hatte 0 Leser ausserhalb live_session.py selbst → ebenfalls entfernt
 
 # ── Transkript-Buffer ─────────────────────────────────────────────────────────
 buffer_lock       = threading.Lock()
@@ -58,41 +59,36 @@ painpoints       = []
 gegenargument_log_lock = threading.Lock()
 gegenargument_log      = []
 
-# ── Hilfe-Button Tracking ─────────────────────────────────────────────────────
-hilfe_log_lock = threading.Lock()
-hilfe_log      = []
+# ── Hilfe-Button Tracking (per-SID, Modul-Global entfernt) ───────────────────
+# DELETED: hilfe_log + hilfe_log_lock (0 .append in Services — D-09, 2026-07-03 Phase PERSID)
+# Readers app_routes.py:296 + _build_log_content:1190 → ersetzt durch 0/[] (D-09)
+hilfe_log_lock = threading.Lock()  # Lock bleibt fuer reset_session Abwaertskompatibilitaet
+hilfe_log      = []  # DEPRECATED-GLOBAL: hilfe_log — 0 .append()-Schreiber (RESEARCH §1), Loeschung Plan 03
 
-# ── Quick-Action Tracking ─────────────────────────────────────────────────────
-quick_action_log_lock = threading.Lock()
-quick_action_log      = []
+# ── Quick-Action Tracking (per-SID, Modul-Global entfernt) ───────────────────
+# DELETED: quick_action_log + quick_action_log_lock (0 .append — D-09, 2026-07-03 Phase PERSID)
+# Readers app_routes.py:298 + _build_log_content:1192 → ersetzt durch 0/[] (D-09)
+quick_action_log_lock = threading.Lock()  # Lock bleibt fuer reset_session Abwaertskompatibilitaet
+quick_action_log      = []  # DEPRECATED-GLOBAL: quick_action_log — 0 .append()-Schreiber (RESEARCH §1), Loeschung Plan 03
 
 # ── Phasenwechsel-Tracking ────────────────────────────────────────────────────
 phasen_log_lock = threading.Lock()
 phasen_log      = []
 
 # ── Session-Metadaten ─────────────────────────────────────────────────────────
+# DELETED: session_meta Modul-Global + session_meta_lock (0 externe Leser — D-09, 2026-07-03 Phase PERSID)
+# Per-SID-Seed in init_session_state (sub-key 'session_meta') ebenfalls entfernt (RESEARCH §6.10).
+# session_meta_lock bleibt als Stub fuer reset_session Abwaertskompatibilitaet bis Plan 03.
 session_meta_lock = threading.Lock()
-session_meta = {
-    'profil_name': '', 'profil_branche': '', 'schwierigkeit': None,
-    'start_zeit': None, 'end_zeit': None,
-    'gesamt_segmente': 0, 'gesamt_einwaende': 0,
-    'einwaende_behandelt': 0, 'einwaende_fehlgeschlagen': 0,
-    'einwaende_ignoriert': 0, 'vorwaende_erkannt': 0,
-    'painpoints_gesamt': 0, 'kaufsignale_gesamt': 0,
-    'coaching_tipps_gesamt': 0, 'hilfe_button_genutzt': 0,
-    'quick_actions_genutzt': 0, 'skript_abdeckung_prozent': 0,
-    'redeanteil_durchschnitt': 0, 'tempo_durchschnitt': 0, 'laengster_monolog': 0,
-    'kb_start': 30, 'kb_end': 30, 'kb_min': 30, 'kb_max': 30,
-    'sterne_bewertung': None, 'feedback_kommentar': '',
-}
+# session_meta GELOESCHT (D-09/RESEARCH §1) — reset_session-Block unten bleibt bis Plan 03 bereinigt
 
 # ── Satz-Zusammenführung ──────────────────────────────────────────────────────
 _merge_lock    = threading.Lock()
 _merge_pending = {}
 
-# ── Zeilen-ID Counter ─────────────────────────────────────────────────────────
-_line_id_counter = 0
-_line_id_lock    = threading.Lock()
+# ── Zeilen-ID Counter (per-SID; Modul-Globale entfernt) ──────────────────────
+# DELETED: _line_id_counter (Modul-Global, schon per-SID :426 — S5, 2026-07-03 Phase PERSID)
+# DELETED: _line_id_lock (0 Leser nach S5-Cleanup; next_line_id nutzt _session_state_lock)
 
 def next_line_id(sid: str) -> str:
     """Returns next sequential line ID for the given SID. Ghost-SID-safe."""
@@ -111,12 +107,15 @@ def get_sid_paused(sid: str) -> bool:
 
 
 # ── Analyse-State ─────────────────────────────────────────────────────────────
+# D-09 Phase PERSID Plan 01 — Zombie-State-Keys entfernt (0 Prod-Reader, RESEARCH §1):
+#   DELETED: 'version', 'aktiv', 'ergebnis' (Auslieferung via sio.emit(room=sid), nie gelesen)
+#   DELETED: 'line_id' (schon per-SID, claude_service.py:1141 Kommentar)
+#   DELETED: 'active_hint', 'ewb_buttons' (Writers cs:1360-1361 ebenfalls entfernt)
+#   DELETED: 'slot1_variant_busy_until' (PIP-01 entfernt, 0 Reader)
+# Verbliebene Keys haben aktive Schreiber/Leser in laufenden Migrationswellen.
+# precall_briefing: DEPRECATED-GLOBAL — Reader-Umbau in Plan 03 (Welle A); bis dahin PENDING.
 state_lock = threading.Lock()
 state = {
-    'version':          0,
-    'aktiv':            False,
-    'ergebnis':         None,
-    'line_id':          None,
     'kaufbereitschaft': 30,
     'ewb_clicks':       [],    # Liste von dicts: {'einwand_typ': str, 'success': bool, 'ts': iso, 'antwort_text': str|None, 'einwand_text': str|None}
     'suggestion_offers': [],   # TAXO2-08: Liste von dicts {slot, source, model, suggestion_text(anon Storage/Plan 09), interaction_id, einwand_typ, ts} — Call-Ende-Flush
@@ -130,18 +129,15 @@ state = {
     'readiness_score':      30,
     'readiness_bucket':     'cold',
     'score_factors_seen':   {},   # dict[str,int] — tally for compute_readiness_score
-    # ── Phase 04.8: Active Hint (single-slot prio winner) ──
-    'active_hint':          None,
-    # ── Phase 04.8: Dynamic EWB Buttons (phase-aware) ──
-    'ewb_buttons':          None,
     # ── Phase 04.8: Cold-Call Inference ──
     'cold_call_inference':  None,
     # ── Phase 04.11: Active Learning Cards (D-09) ──
     'active_learning_cards': [],
-    'precall_briefing': None,  # PreCall briefing text injected at session start
-    # ── Phase 06.2 Wave 2: Keyword-Match busy-guard + mic-mute ──
-    'slot1_variant_busy_until': 0.0,  # monotonic timestamp — shared lock between keyword-pipe and analyse_loop
-    'mic_muted': False,               # set via 'mute_mic' socket event
+    # DEPRECATED-GLOBAL: precall_briefing — Reader app_routes:112 liest ls.state['precall_briefing'],
+    # echter Wert liegt per-SID (set_briefing_for_sid). Reader-Umbau in Plan 03 (Welle A).
+    'precall_briefing': None,
+    # ── Phase 06.2 Wave 2: mic-mute ──
+    'mic_muted': False,               # set via 'mute_mic' socket event; Welle A/Plan 03
     # ── Phase 08.5: QA-Pipeline state ──
     'active_profile_id': None,        # set in set_active_profile_with_id() at session start
     'kw_fired_for_line': None,        # D-02: line_id of last keyword-matcher hit; qa_pipeline skips when equal to line_id
@@ -152,8 +148,11 @@ log_lock         = threading.Lock()
 conversation_log = []
 
 # ── Rollen-Tausch ─────────────────────────────────────────────────────────────
+# DELETED: roles_swapped (Modul-Global, 0 `= True` Schreiber — D-09, 2026-07-03 Phase PERSID)
+# _build_log_content liest per-SID state; per-SID-Seed :318 bleibt fuer spaetere Nutzung.
+# roles_lock bleibt fuer reset_session Abwaertskompatibilitaet.
 roles_lock    = threading.Lock()
-roles_swapped = False
+roles_swapped = False  # DEPRECATED-GLOBAL: roles_swapped — 0 `= True` Schreiber (RESEARCH §1), Loeschung Plan 03
 
 # ── Sprecher-Fallback für Log ─────────────────────────────────────────────────
 _log_sp_lock = threading.Lock()
@@ -170,8 +169,9 @@ _pending_speaker   = None
 _pending_since     = None
 
 # ── Berater-ohne-Frage-Zähler ─────────────────────────────────────────────────
-_bof_lock  = threading.Lock()
-_bof_count = 0
+# DELETED: _bof_count Modul-Global (D-09, Task-1-Verdikt DELETE, 2026-07-03 Phase PERSID)
+# per-SID-Pfad claude_service.py:1711-1714 + per-SID-Seed live_session.py:321 BLEIBEN.
+_bof_lock  = threading.Lock()  # Lock bleibt fuer potenzielle Abwaertskompatibilitaet
 
 # ── Kaufbereitschaft ──────────────────────────────────────────────────────────
 kb_lock                 = threading.Lock()
@@ -179,8 +179,13 @@ kaufbereitschaft        = 30
 kaufbereitschaft_verlauf = []  # [{'ts': '...', 'wert': 30}, ...]
 
 # ── Aktive Gesprächsphase ─────────────────────────────────────────────────────
+# FIX-Verdikt B5 (Task-1-Checkpoint): aktive_phase_idx hat 2 aktive Prod-Reader:
+#   routes/app_routes.py:244 + services/claude_service.py:206.
+# Loeschung NICHT in Plan 01 — wird in Plan 05 (Welle C) auf per-SID migriert.
+# Bis dahin: Modul-Global + phase_lock bleiben (kein Cross-Tenant-Problem bei
+# aktuell sequentiellen Calls; TAXO3-Concurrency loest es).
 phase_lock      = threading.Lock()
-aktive_phase_idx = 0
+aktive_phase_idx = 0  # PENDING-MIGRATION Welle C/Plan 05 — FIX per B5 (2 Reader belegt)
 
 # ── Sprachstatistik ───────────────────────────────────────────────────────────
 # Single-Source-of-State (Konstrukt §0.1): Sprach-Zähler sind AUSSCHLIESSLICH per-SID
@@ -328,10 +333,11 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             # (session_meta, phasen_log, etc.) in this phase. These sub-keys are present
             # for future cleanup phases. Routes/ callers read from module-level globals.
             'state': {
-                'version':               0,
-                'aktiv':                 False,
-                'ergebnis':              None,
-                'line_id':               None,
+                # D-09 PERSID Plan 01: 'version'/'aktiv'/'ergebnis' Zombie-Keys aus
+                # per-SID state entfernt (Auslieferung via sio.emit(room=sid)).
+                # 'active_hint'/'ewb_buttons' ebenfalls (0 Prod-Reader).
+                # 'slot1_variant_busy_until' PIP-01 entfernt (0 Reader).
+                'line_id':               None,  # per-SID line tracking (claude_service:1146)
                 'kaufbereitschaft':      30,
                 'ewb_clicks':            [],
                 'current_phase':         1,
@@ -342,12 +348,9 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 'readiness_score':       30,
                 'readiness_bucket':      'cold',
                 'score_factors_seen':    {},
-                'active_hint':           None,
-                'ewb_buttons':           None,
                 'cold_call_inference':   None,
                 'active_learning_cards': [],
                 'precall_briefing':      None,
-                'slot1_variant_busy_until': 0.0,
                 'mic_muted':             False,
                 'active_profile_id':     profile_id,
                 'kw_fired_for_line':     None,
@@ -397,20 +400,9 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             # NOTE (HIGH-2 coexistence): Services still WRITE to module-level globals
             # (session_meta, phasen_log, etc.) in this phase. These sub-keys are present
             # for future cleanup phases. Routes/ callers read from module-level globals.
-            'session_meta': {
-                'profil_name': '', 'profil_branche': '', 'schwierigkeit': None,
-                'start_zeit': None, 'end_zeit': None,
-                'gesamt_segmente': 0, 'gesamt_einwaende': 0,
-                'einwaende_behandelt': 0, 'einwaende_fehlgeschlagen': 0,
-                'einwaende_ignoriert': 0, 'vorwaende_erkannt': 0,
-                'painpoints_gesamt': 0, 'kaufsignale_gesamt': 0,
-                'coaching_tipps_gesamt': 0, 'hilfe_button_genutzt': 0,
-                'quick_actions_genutzt': 0, 'skript_abdeckung_prozent': 0,
-                'redeanteil_durchschnitt': 0, 'tempo_durchschnitt': 0,
-                'laengster_monolog': 0,
-                'kb_start': 30, 'kb_end': 30, 'kb_min': 30, 'kb_max': 30,
-                'sterne_bewertung': None, 'feedback_kommentar': '',
-            },
+            # D-09 PERSID Plan 01: per-SID 'session_meta' Sub-Key geloescht (RESEARCH §6.10).
+            # Modul-Global session_meta ebenfalls geloescht (0 externe Leser). Plan 03 bringt
+            # echte per-SID Session-Metriken.
             'phasen_log':            [],
             'gegenargument_log':     [],
             'hilfe_log':             [],
@@ -745,8 +737,8 @@ def load_learning_cards(sid: str, user_id: int) -> None:
 
 
 # ── Letztes Post-Call Snapshot ────────────────────────────────────────────────
-last_postcall_lock = threading.Lock()
-last_postcall      = None
+# DELETED: last_postcall + last_postcall_lock (0 Prod-Reader nach app_routes:641 Writer-Entfernung)
+# D-09 Phase PERSID Plan 01, 2026-07-03. Writer war app_routes.py:641 — ebenfalls entfernt.
 
 
 def stabilize_speaker(sid: str, raw):
@@ -869,10 +861,13 @@ def reset_session():
     Audit 08.19.5: 1 external caller found -- routes/app_routes.py line 480.
     Per-SID cleanup: iterates all active SIDs and calls pop+init as well as
     resetting module-level globals for backward compat with remaining callers."""
+    # D-09 PERSID Plan 01: _line_id_counter/_bof_count Modul-Globale geloescht (S5/D-09).
+    # roles_swapped bleibt vorerst als DEPRECATED-GLOBAL fuer Plan 03.
+    # aktive_phase_idx bleibt als FIX-Verdikt B5 — Welle C/Plan 05.
     global conversation_log, transcript_buffer, analysiert_bisher, painpoints
-    global coaching_buffer, _line_id_counter, _log_last_sp
+    global coaching_buffer, _log_last_sp
     global _confirmed_speaker, _pending_speaker, _pending_since, _second_sp_seen
-    global _bof_count, roles_swapped
+    global roles_swapped
     global kaufbereitschaft, kaufbereitschaft_verlauf, aktive_phase_idx
     global gegenargument_log, hilfe_log, quick_action_log, phasen_log
     # Per-SID cleanup: reset all active SIDs via pop+init (Phase 08.19.5 migration)
@@ -896,35 +891,17 @@ def reset_session():
     with painpoints_lock:
         painpoints.clear()
     with state_lock:
-        state['version']          = 0
-        state['aktiv']            = False
-        state['ergebnis']         = None
+        # D-09 PERSID Plan 01: version/aktiv/ergebnis/line_id/active_hint/ewb_buttons/
+        # slot1_variant_busy_until GELOESCHT (0 Prod-Reader — Zombie-Keys). Nur noch
+        # verbliebene Keys zuruecksetzen (aktive Schreiber/Leser in laufenden Wellen).
         state['kaufbereitschaft'] = 30
-        # ── Phase 04.8 field resets (R3: missing resets cause stale hints) ──
-        # Phase 08.23.2.TAXO1-03 (B-A Interlock): die per-SID-migrierten Anker werden
-        # NICHT mehr hier im Modul-globalen state genullt — das waeren tote Geister-Writes
-        # (Halbmigration → Doppel-Feuer-Schutz sporadisch wirkungslos). Der per-SID-Reset
-        # laeuft ueber den pop+init-Loop oben (746-755): init_session_state['state'] seedet
-        # line_id/kw_fired_for_line/current_phase/current_phase_name/phase_confidence/
-        # cold_call_inference frisch (live_session.py:332/351/335/336/337/345).
-        # GELOESCHT (B-A): line_id, kw_fired_for_line, current_phase, current_phase_name,
-        #   phase_confidence, phase_changed_at, phase_change_count, cold_call_inference.
-        # BLEIBEN (noch globaler Write-Pfad / nicht-§0.1-migriert): readiness_*,
-        #   score_factors_seen, kaufbereitschaft (Task 3 Rider), active_hint, ewb_buttons,
-        #   active_learning_cards, precall_briefing (HTTP-Pfad-Reader app_routes:111),
-        #   slot1_variant_busy_until, mic_muted, active_profile_id.
         state['readiness_score']     = 30
         state['readiness_bucket']    = 'cold'
         state['score_factors_seen']  = {}
-        state['active_hint']         = None
-        state['ewb_buttons']         = None
         state['active_learning_cards'] = []
         state['precall_briefing'] = None
-        state['slot1_variant_busy_until'] = 0.0
         state['mic_muted'] = False
         state['active_profile_id'] = None  # re-set by set_active_profile_with_id at session start
-    with _line_id_lock:
-        _line_id_counter = 0
     with _log_sp_lock:
         _log_last_sp = None
     with _speaker_lock:
@@ -940,8 +917,7 @@ def reset_session():
             except Exception:
                 pass
         _merge_pending.clear()
-    with _bof_lock:
-        _bof_count = 0
+    # D-09 PERSID Plan 01: _bof_count Modul-Global geloescht (per-SID bleibt).
     with roles_lock:
         roles_swapped = False
     with kb_lock:
@@ -964,20 +940,8 @@ def reset_session():
     with state_lock:
         state['ewb_clicks'] = []
         state['suggestion_offers'] = []   # TAXO2-08: RAM-Puffer der NERVE-Vorschlaege (Call-Ende-Flush)
-    with session_meta_lock:
-        session_meta.update({
-            'profil_name': '', 'profil_branche': '', 'schwierigkeit': None,
-            'start_zeit': None, 'end_zeit': None,
-            'gesamt_segmente': 0, 'gesamt_einwaende': 0,
-            'einwaende_behandelt': 0, 'einwaende_fehlgeschlagen': 0,
-            'einwaende_ignoriert': 0, 'vorwaende_erkannt': 0,
-            'painpoints_gesamt': 0, 'kaufsignale_gesamt': 0,
-            'coaching_tipps_gesamt': 0, 'hilfe_button_genutzt': 0,
-            'quick_actions_genutzt': 0, 'skript_abdeckung_prozent': 0,
-            'redeanteil_durchschnitt': 0, 'tempo_durchschnitt': 0, 'laengster_monolog': 0,
-            'kb_start': 30, 'kb_end': 30, 'kb_min': 30, 'kb_max': 30,
-            'sterne_bewertung': None, 'feedback_kommentar': '',
-        })
+    # D-09 PERSID Plan 01: session_meta Modul-Global geloescht (0 externe Leser).
+    # Kein Reset-Block mehr noetig — per-SID-Daten werden durch pop+init oben geloescht.
 
 
 def record_ewb_click(einwand_typ: str, success: bool = False,
@@ -1050,11 +1014,9 @@ def get_speech_stats(sid: str = None) -> dict:
 def _build_log_content(user_email='', profile_name='') -> str:
     with log_lock:
         entries = list(conversation_log)
-    with roles_lock:
-        swapped = roles_swapped
-
-    sp_map = {0: ('Kunde' if swapped else 'Berater'),
-              1: ('Berater' if swapped else 'Kunde')}
+    # D-09 PERSID Plan 01: roles_swapped Modul-Global hatte 0 `= True` Schreiber (RESEARCH §1).
+    # Sp-Map fest auf unswapped — per Plan 03 auf per-SID-Wert umgebaut, bis dahin korrekt (immer False).
+    sp_map = {0: 'Berater', 1: 'Kunde'}
 
     lines = []
     lines.append("=" * 65)
@@ -1187,23 +1149,8 @@ def _build_log_content(user_email='', profile_name='') -> str:
             lines.append(f"  Häufigster Einwand: {haeufigster} ({typ_count[haeufigster]}×)")
 
     # ── Hilfe-Button / Quick-Action Nutzung ───────────────────────────────────
-    with hilfe_log_lock:
-        hl = list(hilfe_log)
-    with quick_action_log_lock:
-        ql = list(quick_action_log)
-    if hl or ql:
-        lines.append("")
-        lines.append("  HILFE-BUTTON / QUICK-ACTION NUTZUNG")
-        lines.append("  " + "-" * 40)
-        lines.append(f"  Hilfe-Button genutzt: {len(hl)}×  |  Quick-Actions: {len(ql)}×")
-        all_actions = hl + ql
-        if all_actions:
-            typ_cnt = {}
-            for a in all_actions:
-                t = a.get('typ', '?')
-                typ_cnt[t] = typ_cnt.get(t, 0) + 1
-            haeufigster = max(typ_cnt, key=typ_cnt.get)
-            lines.append(f"  Häufigster Typ: \"{haeufigster}\" ({typ_cnt[haeufigster]}×)")
+    # D-09 PERSID Plan 01: hilfe_log/quick_action_log hatten 0 .append()-Schreiber (RESEARCH §1).
+    # Per Plan 03 (Welle A) vollstaendig migriert. Bis dahin: immer leere Listen (korrekt fuer 0 Events).
 
     # ── Phasen-Verlauf ────────────────────────────────────────────────────────
     with phasen_log_lock:
