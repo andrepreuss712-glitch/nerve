@@ -33,6 +33,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from database.models import Call
+from tests.conftest import cleanup_rows
 
 
 def _seed_call(db, ended_at=None, audio_health_resolved=False, transcript_resolved=False):
@@ -61,18 +62,17 @@ class TestTTFT:
     def test_ttft_log_emitted_on_first_token(self, monkeypatch, capsys):
         """Test 1: streame_manual_ewb_variante gibt [EWB-TTFT] path=manual aus.
 
-        RED: ohne die TTFT-Messung im Stream-Loop fehlt der Print.
-        Wir mocken: extensions.socketio (lokal in Funktion importiert),
-        claude_client.messages.stream, services.prompt_pipeline.answer_system_content.
+        Wir mocken: extensions.socketio (real-Extension wird gepacht), claude_client.messages.stream,
+        services.prompt_pipeline.answer_system_content, services.cost_tracker.
         """
         import services.claude_service as cs
         import sys
+        import extensions as _real_ext
 
-        # Mock: extensions.socketio (wird per 'from extensions import socketio as sio' lokal
-        # in streame_manual_ewb_variante importiert — extensions-Modul mocken).
-        mock_ext = MagicMock()
-        mock_ext.socketio = MagicMock()
-        monkeypatch.setitem(sys.modules, 'extensions', mock_ext)
+        # Mock: extensions.socketio direkt auf dem ECHTEN extensions-Modul patchen
+        # (da 'from extensions import socketio as sio' den already-cached extensions-Import
+        # aus sys.modules nutzt, genuegt ein setattr auf das ECHTE Modul).
+        monkeypatch.setattr(_real_ext, 'socketio', MagicMock())
 
         # Mock: services.prompt_pipeline.answer_system_content
         mock_pp = MagicMock()
@@ -138,7 +138,7 @@ class TestHeilerInline:
     """Waechter (c): inline-Heiler loest haengenden Call auf (app_routes.py except-Zweig)."""
 
     @pytest.mark.usefixtures('_pgtest_base_seed')
-    def test_heiler_inline_setzt_flags_bei_commit_fehler(self, db_session, cleanup_rows):
+    def test_heiler_inline_setzt_flags_bei_commit_fehler(self, db_session):
         """Test 2: kuenstlich haengender Call + simulierter UPDATE-Fehler ->
         Heiler-Block setzt beide resolved-Flags terminal auf True.
 
@@ -193,7 +193,7 @@ class TestHeilerBootSweep:
     """Waechter (c) S2: einmaliger Boot-Sweep loest haengende Alt-Calls auf."""
 
     @pytest.mark.usefixtures('_pgtest_base_seed')
-    def test_boot_sweep_heilt_beendete_calls(self, db_session, cleanup_rows):
+    def test_boot_sweep_heilt_beendete_calls(self, db_session):
         """Test 3a: beendeter Call (ended_at IS NOT NULL) mit Flags False ->
         Boot-Sweep setzt beide Flags True.
 
@@ -251,7 +251,7 @@ class TestHeilerBootSweep:
         cleanup_rows(db_session, {'public.calls': [cid]})
 
     @pytest.mark.usefixtures('_pgtest_base_seed')
-    def test_boot_sweep_laesst_laufende_calls_unveraendert(self, db_session, cleanup_rows):
+    def test_boot_sweep_laesst_laufende_calls_unveraendert(self, db_session):
         """Test 3b: laufender Call (ended_at IS NULL) bleibt unangetastet.
 
         Der Boot-Sweep filtert NUR beendete Calls (ended_at IS NOT NULL).

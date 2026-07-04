@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 import pytest
 
 from database.models import IntentEvent, Call
+from tests.conftest import cleanup_rows
 
 
 def _seed_call(db):
@@ -65,14 +66,13 @@ def _seed_event(db, call_id, handling_status='pending', confidence=None):
 
 
 @pytest.mark.usefixtures('_pgtest_base_seed')
-def test_f2_persist_event_sets_not_gradable(db_session, cleanup_rows):
+def test_f2_persist_event_sets_not_gradable(db_session):
     """Test 1: _persist_event_ref setzt handling_status='not_gradable' fuer 'pending'-Events.
     KEIN grade_handling (kein Score), KEIN AbstainLog-INSERT.
 
     RED-Phase: ohne die neue Terminal-Setzung in _persist_event_ref landet der Event
     entweder bei 'scored'/'abstained'/'failed' — NICHT bei 'not_gradable'.
     """
-    from tests.conftest import cleanup_rows as _cleanup
     from services.slow_lane import _persist_event_ref
     from database.models import AbstainLog
 
@@ -119,7 +119,7 @@ def test_f2_persist_event_sets_not_gradable(db_session, cleanup_rows):
 
 
 @pytest.mark.usefixtures('_pgtest_base_seed')
-def test_f2_not_gradable_drains_pending_events(db_session, cleanup_rows):
+def test_f2_not_gradable_drains_pending_events(db_session):
     """Test 2: nach not_gradable zaehlt _pending_events dieses Event NICHT (drainet auf 0).
 
     _pending_events zaehlt NUR handling_status='pending'. not_gradable ist terminal
@@ -154,7 +154,7 @@ def test_f2_not_gradable_drains_pending_events(db_session, cleanup_rows):
 
 
 @pytest.mark.usefixtures('_pgtest_base_seed')
-def test_f2_idempotenz_non_pending_bleibt_unveraendert(db_session, cleanup_rows):
+def test_f2_idempotenz_non_pending_bleibt_unveraendert(db_session):
     """Test 3: Event mit handling_status != 'pending' bleibt unveraendert.
 
     Der Idempotenz-Skip (:230) greift VOR der neuen Terminal-Setzung —
