@@ -607,17 +607,18 @@ def register_audio_handlers(sio):
         # init_session_state() weiter unten (init überschreibt _session_state[sid]
         # und würde einen hier gesetzten Wert wieder auf None zurücksetzen).
         # berater_words/kunde_words werden von init_session_state() auf 0 initialisiert.
-        # ── Phase 08 D-14: PreCall-Anrede-Override in ls.state persistieren ───
-        # Whitelist {'Du', 'Sie'} schuetzt vor Prompt-Injection (T-08-05-01).
-        # CR-02: Raw-Input wird zuerst via strip().title() normalisiert, damit
-        # 'du', ' Du', 'DU' als 'Du' erkannt werden. Ungueltige Werte bleiben
-        # rejected — build_profile_context faellt auf Profile-Default oder 'Sie'.
+        # ── Phase 08 D-14 / PERSID Plan 03 N-4: PreCall-Anrede capturen ────────
+        # Whitelist {'du', 'sie'} (lowercase-kanonisch) schuetzt vor Prompt-Injection.
+        # CR-02: Raw-Input wird zuerst via strip().lower() normalisiert.
+        # N-4: der globale ls.state-Write WIRD ENTFERNT. Das Local `_anrede_local`
+        # wird unten NACH init_session_state per-SID geschrieben (Muster :687-690).
         anrede_raw = (data or {}).get('anrede') if isinstance(data, dict) else None
-        anrede_norm = anrede_raw.strip().title() if isinstance(anrede_raw, str) else None
-        if anrede_norm in ('Du', 'Sie'):
-            with ls.state_lock:
-                ls.state['session_anrede'] = anrede_norm
-            print(f"[Phase08] session_anrede={anrede_norm} set from PreCall (raw={anrede_raw!r})")
+        # Capturen: strip().lower() (lowercase-kanonisch, wie Toggle :827)
+        _anrede_local = anrede_raw.strip().lower() if isinstance(anrede_raw, str) else None
+        if _anrede_local not in ('du', 'sie'):
+            _anrede_local = None
+        # N-4-ENTFERNT: globaler ls.state['session_anrede']-Write ist weg.
+        # Per-SID-Write erfolgt NACH init_session_state weiter unten.
 
         # ── Phase 08.20 D-05: vorwissen_level aus session-start Payload ───────────
         _vorwissen = (data or {}).get('vorwissen_level') if isinstance(data, dict) else None
@@ -709,6 +710,15 @@ def register_audio_handlers(sio):
             if precall_briefing and isinstance(precall_briefing, str):
                 ls.set_briefing_for_sid(_sid, precall_briefing)
                 print(f"[DG] PreCall-Briefing bridged to _session_state[sid] ({len(precall_briefing)} Zeichen)")
+            # PERSID Plan 03 N-4: Start-Anrede per-SID NACH init_session_state schreiben.
+            # Muster analog session_start_time :687-690 / Briefing-Bridge :713-714 — beide
+            # MUESSEN nach init sitzen weil init _session_state[sid] neu anlegt.
+            # _anrede_local wurde oben gecaptured (strip().lower(), Whitelist 'du'/'sie').
+            if _anrede_local in ('du', 'sie'):
+                with ls._session_state_lock:
+                    if _sid in ls._session_state:
+                        ls._session_state[_sid]['session_anrede'] = _anrede_local
+                print(f"[Phase08] session_anrede={_anrede_local} set per-sid={_sid} (start, nach init N-4)")
             print(f"[08.19.4] SID {_sid}: profile={_profile_name2!r} pid={_profile_id2} org={_org_id2}")
             # HIGH-3 fix: pre-load profile extras (Opener, FAQ) into session cache
             # build_profile_context() reads from cache — no DB queries in streaming hot path

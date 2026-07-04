@@ -289,97 +289,83 @@ def test_rate_without_login_redirects(client, db_from_client):
 
 # ── Anrede-Override Tests ────────────────────────────────────────────────
 
-@pytest.fixture(autouse=True)
-def _cleanup_session_anrede():
-    """Autouse fixture: ensure ls.state['session_anrede'] is always clean
-    before AND after each test in this module. Prevents cross-test leakage
-    into test_ewb_pipeline.py which reads session_anrede via build_profile_context.
+def _apply_anrede_whitelist_per_sid(anrede_raw, sid='__test_anrede_sid__'):
+    """PERSID Plan 03 W-2: per-SID lowercase Logik (migriert von globalem title-case).
+
+    Spiegelt NEUE Prod-Logik aus services/deepgram_service.py (NACH N-4-Migration):
+    lowercase-kanonisch, per-SID in _session_state[sid]['session_anrede'].
     """
-    import threading
     import services.live_session as ls
-    if not hasattr(ls, 'state_lock'):
-        ls.state_lock = threading.Lock()
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-    yield
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-
-
-def _apply_anrede_whitelist(anrede_raw):
-    """Mirror production logic from services/deepgram_service.py (CR-02)."""
-    import services.live_session as ls
-    anrede_norm = anrede_raw.strip().title() if isinstance(anrede_raw, str) else None
-    if anrede_norm in ('Du', 'Sie'):
-        with ls.state_lock:
-            ls.state['session_anrede'] = anrede_norm
+    anrede_norm = anrede_raw.strip().lower() if isinstance(anrede_raw, str) else None
+    if anrede_norm in ('du', 'sie'):
+        with ls._session_state_lock:
+            if sid in ls._session_state:
+                ls._session_state[sid]['session_anrede'] = anrede_norm
         return anrede_norm
     return None
 
 
-def test_anrede_whitelist_du():
-    """Whitelist akzeptiert 'Du' exakt."""
+@pytest.fixture
+def _anrede_sid():
+    """Fixture: erzeugt tmp per-SID State fuer Anrede-Tests."""
     import services.live_session as ls
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-    _apply_anrede_whitelist('Du')
-    assert ls.state.get('session_anrede') == 'Du'
+    sid = '__test_anrede_sid__'
+    with ls._session_state_lock:
+        ls._session_state[sid] = {}
+    yield sid
+    with ls._session_state_lock:
+        ls._session_state.pop(sid, None)
 
 
-def test_anrede_whitelist_accepts_lowercase():
-    """CR-02: 'du' wird als 'Du' normalisiert und akzeptiert."""
+def test_anrede_whitelist_du(_anrede_sid):
+    """W-2 (migriert): Whitelist akzeptiert 'Du' — per-SID lowercase."""
     import services.live_session as ls
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-    _apply_anrede_whitelist('du')
-    assert ls.state.get('session_anrede') == 'Du'
+    _apply_anrede_whitelist_per_sid('Du', _anrede_sid)
+    assert ls._session_state.get(_anrede_sid, {}).get('session_anrede') == 'du'
 
 
-def test_anrede_whitelist_accepts_whitespace():
-    """CR-02: ' Du' (mit Whitespace) wird normalisiert und akzeptiert."""
+def test_anrede_whitelist_accepts_lowercase(_anrede_sid):
+    """W-2 (migriert): CR-02: 'du' wird lowercase akzeptiert per-SID."""
     import services.live_session as ls
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-    _apply_anrede_whitelist(' Du ')
-    assert ls.state.get('session_anrede') == 'Du'
+    _apply_anrede_whitelist_per_sid('du', _anrede_sid)
+    assert ls._session_state.get(_anrede_sid, {}).get('session_anrede') == 'du'
 
 
-def test_anrede_whitelist_accepts_uppercase():
-    """CR-02: 'DU' wird als 'Du' normalisiert und akzeptiert."""
+def test_anrede_whitelist_accepts_whitespace(_anrede_sid):
+    """W-2 (migriert): CR-02: ' Du ' (mit Whitespace) wird per-SID lowercase akzeptiert."""
     import services.live_session as ls
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-    _apply_anrede_whitelist('DU')
-    assert ls.state.get('session_anrede') == 'Du'
+    _apply_anrede_whitelist_per_sid(' Du ', _anrede_sid)
+    assert ls._session_state.get(_anrede_sid, {}).get('session_anrede') == 'du'
 
 
-def test_anrede_whitelist_accepts_sie_lowercase():
-    """CR-02: 'sie' wird als 'Sie' normalisiert und akzeptiert."""
+def test_anrede_whitelist_accepts_uppercase(_anrede_sid):
+    """W-2 (migriert): CR-02: 'DU' wird per-SID lowercase akzeptiert."""
     import services.live_session as ls
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-    _apply_anrede_whitelist('sie')
-    assert ls.state.get('session_anrede') == 'Sie'
+    _apply_anrede_whitelist_per_sid('DU', _anrede_sid)
+    assert ls._session_state.get(_anrede_sid, {}).get('session_anrede') == 'du'
 
 
-def test_anrede_whitelist_rejects_invalid():
-    """'Hallo; drop table' oder anderes → wird NICHT in ls.state geschrieben."""
+def test_anrede_whitelist_accepts_sie_lowercase(_anrede_sid):
+    """W-2 (migriert): CR-02: 'sie' wird per-SID lowercase akzeptiert."""
     import services.live_session as ls
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-    _apply_anrede_whitelist('Hallo; drop table')  # attempt prompt injection
-    assert ls.state.get('session_anrede') is None
+    _apply_anrede_whitelist_per_sid('sie', _anrede_sid)
+    assert ls._session_state.get(_anrede_sid, {}).get('session_anrede') == 'sie'
 
 
-def test_anrede_whitelist_rejects_partial_match():
-    """CR-02: 'Duo' oder 'Sieb' fallen trotz Normalisierung raus."""
+def test_anrede_whitelist_rejects_invalid(_anrede_sid):
+    """W-2 (migriert): Injection wird per-SID NICHT geschrieben."""
     import services.live_session as ls
-    with ls.state_lock:
-        ls.state.pop('session_anrede', None)
-    _apply_anrede_whitelist('Duo')
-    assert ls.state.get('session_anrede') is None
-    _apply_anrede_whitelist('sieb')
-    assert ls.state.get('session_anrede') is None
+    _apply_anrede_whitelist_per_sid('Hallo; drop table', _anrede_sid)
+    assert ls._session_state.get(_anrede_sid, {}).get('session_anrede') is None
+
+
+def test_anrede_whitelist_rejects_partial_match(_anrede_sid):
+    """W-2 (migriert): 'Duo'/'Sieb' werden per-SID abgelehnt."""
+    import services.live_session as ls
+    _apply_anrede_whitelist_per_sid('Duo', _anrede_sid)
+    assert ls._session_state.get(_anrede_sid, {}).get('session_anrede') is None
+    _apply_anrede_whitelist_per_sid('sieb', _anrede_sid)
+    assert ls._session_state.get(_anrede_sid, {}).get('session_anrede') is None
 
 
 def test_conv_log_persists_anrede(db_session):

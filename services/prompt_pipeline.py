@@ -485,12 +485,13 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
 
 
 def _resolve_anrede(ls: Any, ki: dict, sid: str = None) -> str:
-    """Anrede priority: session_anrede > ki.ansprache > 'Sie' (D-14 + D-15).
+    """Anrede priority: session_anrede (per-sid top-level) > ki.ansprache > 'Sie'.
 
-    Hot path: reads from _session_state[sid]['session_anrede'] when sid provided.
-    Fallback: reads ls.state['session_anrede'] (legacy global state, HTTP paths).
+    PERSID Plan 03 B2: liest AUSSCHLIESSLICH per-SID (_session_state[sid]['session_anrede'],
+    top-level, lazy). Der globale ls.state-Fallback ist entfernt (B2-Split-Brain-Fix).
+    Faellt auf ki.ansprache / 'Sie' zurueck wenn sid=None oder kein Eintrag.
     """
-    # Hot path: per-SID session state (preferred — avoids global state_lock)
+    # Per-SID session state (einzige kanonische Quelle, top-level)
     if sid:
         try:
             lock = getattr(ls, '_session_state_lock', None)
@@ -502,22 +503,6 @@ def _resolve_anrede(ls: Any, ki: dict, sid: str = None) -> str:
                     return _sid_anrede
         except Exception:
             pass
-
-    # Fallback: legacy global state (HTTP callers without SID)
-    try:
-        session_anrede = None
-        state = getattr(ls, 'state', None)
-        lock = getattr(ls, 'state_lock', None)
-        if isinstance(state, dict):
-            if lock is not None:
-                with lock:
-                    session_anrede = state.get('session_anrede')
-            else:
-                session_anrede = state.get('session_anrede')
-        if session_anrede:
-            return session_anrede
-    except Exception:
-        pass
     return ki.get('ansprache') or 'Sie'
 
 

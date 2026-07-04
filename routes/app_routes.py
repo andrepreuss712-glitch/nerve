@@ -106,16 +106,11 @@ def api_beenden():
     if isinstance(precall_briefing, dict):
         precall_briefing = precall_briefing.get('text') or None
     if not isinstance(precall_briefing, str) or not precall_briefing.strip():
-        # Fall back to runtime state (set in services/deepgram_service.py)
-        try:
-            with ls.state_lock:
-                state_pb = ls.state.get('precall_briefing')
-            if isinstance(state_pb, str) and state_pb.strip():
-                precall_briefing = state_pb
-            else:
-                precall_briefing = None
-        except Exception:
-            precall_briefing = None
+        # PERSID Plan 03 §6.9: per-SID Briefing via get_briefing_for_sid (Snapshot-faehig via _bs).
+        # _beenden_sid noch nicht gesetzt hier (wird weiter unten aufgeloest), daher
+        # verzoegerter Read: _pb_from_sid wird nach _bs gesetzt (unten in precall_briefing-Block).
+        # Vorlaeufig: _pb_placeholder fuer spaetere Auflosung merken.
+        precall_briefing = None  # wird nach _bs-Aufloesung gesetzt (s. Block unten)
     if isinstance(precall_briefing, str) and len(precall_briefing) > 2000:
         precall_briefing = precall_briefing[:2000]
     # Phase 08.20.2: Schicht-1 structured fields (T-08.20.2-06: isinstance check before dumps)
@@ -201,6 +196,17 @@ def api_beenden():
         return None
 
     _bs = _load_beenden_state(_beenden_sid)
+
+    # ── precall_briefing per-SID aus _bs (PERSID Plan 03 §6.9) ────────────────
+    # Vorher: ls.state.get('precall_briefing') — DEPRECATED-GLOBAL.
+    # Jetzt: per-SID via _bs.get('_briefing') (Snapshot-faehig).
+    if precall_briefing is None:
+        try:
+            _pb_sid = _bs.get('_briefing') if _bs else None
+            if isinstance(_pb_sid, str) and _pb_sid.strip():
+                precall_briefing = _pb_sid[:2000]
+        except Exception:
+            pass
 
     # ── N-2: Speech-Stats aus _bs (statt direkt aus _session_state) ───────────
     # Vorher leses :172-177 direkt aus _session_state -> nach stash(:779) immer leer.
@@ -355,14 +361,10 @@ def api_beenden():
     kb_start_val = kb_verlauf[0]['wert'] if kb_verlauf else 30
     skript_pct = postcall.get('skript_abdeckung', {}).get('gesamt_prozent', 0)
     started = datetime.now()  # approximation — real start tracked via session_start_time
-    # Phase 08 D-14: session_anrede aus ls.state lesen (gesetzt in deepgram_service.py
-    # handle_start_live_session bei whitelist-Werten 'Du'|'Sie'). None wenn nicht gesetzt
-    # → ConversationLog.anrede bleibt NULL → build_profile_context nutzt Profile-Default.
-    try:
-        with ls.state_lock:
-            _session_anrede = ls.state.get('session_anrede')
-    except Exception:
-        _session_anrede = None
+    # PERSID Plan 03 B2/N-3: session_anrede per-SID aus _bs lesen (EINEM _load_beenden_state-Peek).
+    # Vorher: ls.state.get('session_anrede') — tote globale, Toggle landete NIE in ConversationLog.
+    # Jetzt: per-sid top-level aus _bs (Snapshot-faehig, B1). Toggle landet jetzt korrekt.
+    _session_anrede = (_bs.get('session_anrede') if _bs else None)
     db_conv = get_session()
     try:
         conv = ConversationLog(

@@ -133,11 +133,10 @@ state = {
     'cold_call_inference':  None,
     # ── Phase 04.11: Active Learning Cards (D-09) ──
     'active_learning_cards': [],
-    # DEPRECATED-GLOBAL: precall_briefing — Reader app_routes:112 liest ls.state['precall_briefing'],
-    # echter Wert liegt per-SID (set_briefing_for_sid). Reader-Umbau in Plan 03 (Welle A).
-    'precall_briefing': None,
-    # ── Phase 06.2 Wave 2: mic-mute ──
-    'mic_muted': False,               # set via 'mute_mic' socket event; Welle A/Plan 03
+    # PERSID Plan 03 W-A: precall_briefing Modul-Key ENTFERNT.
+    # Reader app_routes:112 liest jetzt per-SID via _bs.get('_briefing') (N-3).
+    # PERSID Plan 03 W-A: mic_muted Modul-Key ENTFERNT.
+    # Liegt jetzt top-level per-SID: _session_state[sid]['mic_muted'].
     # ── Phase 08.5: QA-Pipeline state ──
     'active_profile_id': None,        # set in set_active_profile_with_id() at session start
     'kw_fired_for_line': None,        # D-02: line_id of last keyword-matcher hit; qa_pipeline skips when equal to line_id
@@ -361,12 +360,15 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 'cold_call_inference':   None,
                 'active_learning_cards': [],
                 'precall_briefing':      None,
-                'mic_muted':             False,
+                # W-1 PERSID Plan 03: 'mic_muted' aus 'state'-Subdict ENTFERNT.
+                # Liegt jetzt top-level: _session_state[sid]['mic_muted'] = False (unten).
                 'active_profile_id':     profile_id,
                 'kw_fired_for_line':     None,
                 'is_paused':             False,   # REQ-01
                 'ft_session_id':         None,
-                'session_anrede':        None,
+                # W-1 PERSID Plan 03: 'session_anrede' aus 'state'-Subdict ENTFERNT.
+                # Liegt top-level lazy: _session_state[sid]['session_anrede'] (kein Seed,
+                # LAZY erzeugt durch per-SID Start-Write NACH init N-4 oder Toggle :827).
                 # Phase 08.23.2.C.R — Gatekeeper-State (Default: Sekretaer-Modus, DSGVO Single-Speaker)
                 'contact_category':      'gatekeeper', # 'target' | 'gatekeeper' — Default gatekeeper (REQ-5)
                 'current_mode':          'gatekeeper',  # Default gatekeeper; manuell via pip-mode-indicator aenderbar
@@ -431,6 +433,9 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             # Liste von (ts_ms: int, confidence: float) Tuples;
             # cleared bei reset_session/pop_session_state automatisch.
             'word_confidences':      [],
+            # PERSID Plan 03 W-1: mic_muted top-level (kanonische Ebene fuer Writer+Reader).
+            # Vorher im 'state'-Subdict (:364, jetzt entfernt). Seed False (Default stumm=False).
+            'mic_muted':             False,
         }
     # WR-03: init per-SID coaching buffer (separate lock — same lifecycle as transcript)
     with _per_sid_coaching_lock:
@@ -984,8 +989,8 @@ def reset_session():
         state['readiness_bucket']    = 'cold'
         state['score_factors_seen']  = {}
         state['active_learning_cards'] = []
-        state['precall_briefing'] = None
-        state['mic_muted'] = False
+        # PERSID Plan 03 W-A: precall_briefing + mic_muted Modul-Keys ENTFERNT.
+        # Per-SID-Werte werden durch pop_session_state + init_session_state zurueckgesetzt.
         state['active_profile_id'] = None  # re-set by set_active_profile_with_id at session start
     with _log_sp_lock:
         _log_last_sp = None

@@ -1483,7 +1483,9 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
         _active_sid = sid  # sid IS the active_sid
         _active_profile_id = _sid_st.get('active_profile_id')
         _kw_fired_for = _sid_st_state.get('kw_fired_for_line')
-        _anrede = _sid_st_state.get('session_anrede') or 'Sie'
+        # PERSID Plan 03 W-a: session_anrede liegt top-level in _sid_st (NICHT im 'state'-Subdict).
+        # _sid_st_state hat kein 'session_anrede' mehr (W-1 Subdict-Seed entfernt).
+        _anrede = (_sid_st.get('session_anrede') or 'Sie')
         _slot1_busy_until = _sid_st_state.get('slot1_variant_busy_until', 0.0)
 
         # D-02: Keyword-Matcher already fired for this utterance → skip

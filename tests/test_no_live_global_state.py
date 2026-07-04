@@ -162,13 +162,8 @@ _WHITELIST: frozenset = frozenset({
 # Plan 06 Task 3 assertiert _PENDING_MIGRATION == frozenset() (alle migriert).
 _PENDING_MIGRATION: frozenset = frozenset({
     # ── Welle A / Plan 03 ─────────────────────────────────────────────────────
-    # session_anrede: Start-Writer in deepgram_service (Welle A bringt per-SID-Umbau)
-    ('services/deepgram_service.py', "state['session_anrede']", 'A'),
-    # mic_muted: Write via mute_mic-Event (Welle A)
-    ('services/deepgram_service.py', "state['mic_muted']", 'A'),
-    # precall_briefing: Reader app_routes:112 liest ls.state['precall_briefing'];
-    #   echter Wert liegt per-SID (set_briefing_for_sid). Reader-Umbau Plan 03 (Welle A).
-    ('services/live_session.py', "state['precall_briefing']", 'A'),
+    # PERSID Plan 03: session_anrede, mic_muted, precall_briefing MIGRIERT (Welle A fertig).
+    # Alle drei Eintraege entfernt — Liste schrumpft monoton (D-10).
     # ── Welle B / Plan 04 ─────────────────────────────────────────────────────
     # _merge_pending: Zusammenfuehrungs-Dict — Welle B bringt per-SID-Migration
     ('services/deepgram_service.py', '_merge_pending', 'B'),
