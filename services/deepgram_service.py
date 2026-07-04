@@ -229,8 +229,9 @@ def _make_on_message(sid, mode='meeting'):
                     # (analyse_loop/QA emittiert seit PIP.1 ohnehin kein ewb_signal.)
                     if mode == 'cold_call':
                         return
-                    with ls.state_lock:
-                        _muted = ls.state.get('mic_muted', False)
+                    # PERSID Plan 03 W-A: mic_muted per-SID top-level lesen (Ghost-SID: False).
+                    with ls._session_state_lock:
+                        _muted = ls._session_state.get(sid, {}).get('mic_muted', False)
                     if _muted:
                         return
                     _profile_name, _profile_daten = ls.get_profile_for_sid(sid)
@@ -863,8 +864,10 @@ def register_audio_handlers(sio):
         from flask import request
         _sid = request.sid if sid is None else sid
         muted = bool(data.get('muted', True)) if isinstance(data, dict) else True
-        with ls.state_lock:
-            ls.state['mic_muted'] = muted
+        # PERSID Plan 03 W-A: mic_muted per-SID top-level (Ghost-SID-Guard, D-02).
+        with ls._session_state_lock:
+            if _sid in ls._session_state:
+                ls._session_state[_sid]['mic_muted'] = muted
         print(f"[DG] mute_mic sid={_sid} muted={muted}")
 
     # 06.1-r2 r4: Dual-Slot Manual EWB
