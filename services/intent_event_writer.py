@@ -27,6 +27,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from services.intent_taxonomy import is_valid_intent_type, TAXONOMY_VERSION
+from services.intent_payload import build_intent_payload
 
 
 def emit_intent_event(
@@ -97,25 +98,19 @@ def emit_intent_event(
         )
 
     # ── payload_jsonb (Hybrid §3): taxonomy_version Pflicht non-null ────────
-    payload = {
-        'source': source,
-        'inference_basis': inference_basis,
-        'taxonomy_version': TAXONOMY_VERSION,
-        'abstained': bool(abstained),
-        'speaker_role': speaker_role,
-        'speaker_id': speaker_id,
-        'is_simulation': bool(is_simulation),
-        'origin_type': origin_type,
-        # FUND 3 (TAXO1-07): anonymisierter Ausloeser-Wortlaut (denormalisiert,
-        # Fundament TAXO2/3). Roh-PII wird NIE hier ankommen — die Aufrufer
-        # anonymisieren via anonymize_output + Sentinel->None VOR dem Aufruf.
-        # IMMER gesetzt (auch None) — symmetrisch zu inference_basis. JSON-Key in
-        # payload_jsonb, KEINE Schema-Migration.
-        'triggering_text': triggering_text,
-    }
-    if extra_payload:
-        for _k, _v in extra_payload.items():
-            payload[_k] = _v
+    # PERSID Req 9 / Waechter (a): Payload-Bau ausgelagert nach services/intent_payload.py
+    # (die EINE abgenickte Nicht-Isolations-Naht; reine Auslagerung, KEIN Verhaltens-Change).
+    payload = build_intent_payload(
+        source=source,
+        inference_basis=inference_basis,
+        abstained=bool(abstained),
+        speaker_role=speaker_role,
+        speaker_id=speaker_id,
+        is_simulation=bool(is_simulation),
+        origin_type=origin_type,
+        triggering_text=triggering_text,
+        extra_payload=extra_payload,
+    )
 
     # ── INSERT (insert-only, Bau-Regel 1; eigene get_session pro Call =
     #    thread-safe im Daemon-/Matcher-/Socket-Kontext). Keine Row-Mutation,
