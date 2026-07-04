@@ -2,12 +2,14 @@
 
 Beweist Runtime-Verhalten (CLAUDE.md Test-Qualitaets-Regel — KEIN Source-Presence):
   Task 1: grade_handling (reine Marker-Regeln) liefert 1-3 oder Abstention (None).
-  Task 3: _persist_event_ref Statemachine pending->scored/abstained/failed (Mock-Session):
-          - score      -> handling_score_numeric gesetzt + handling_status='scored'
-          - None        -> handling_score_numeric NULL + handling_status='abstained' + abstain_log-add (F-01)
-          - Exception   -> handling_status='failed', KEIN abstain_log, kein Crash (F-05)
-          - Tor-1 low   -> handling_status='failed', KEIN abstain_log (D-03, getrennt von Abstention)
-          - Idempotenz  -> handling_status != 'pending' wird uebersprungen (F-01)
+  Task 3: _persist_event_ref Statemachine — PERSID Req 8 (F2-Stilllegung):
+          ALLE 'pending'-Events erhalten jetzt 'not_gradable' (Terminal, deadlock-frei).
+          Die alten scored/abstained/failed-Pfade sind DEAD CODE — F2-Stilllegung greift
+          direkt nach dem Idempotenz-Skip, VOR Confidence-Gate/grade_handling.
+          Verbleibende Tests:
+          - not_gradable -> handling_status='not_gradable', kein score, kein abstain_log
+          - Idempotenz   -> handling_status != 'pending' bleibt unveraendert (F-01)
+          - missing_row  -> No-Op (kein Crash)
   Task 4: _requeue_pending legt NUR 'pending'-Events in die Queue; Consumer-Bootstrap ruft es auf.
   Task 5: Hook-/Registrierungs-Schicht (per-Hook-Isolierung im Tick; all-or-nothing im Call-End).
 
@@ -107,81 +109,62 @@ def _patch_helpers(monkeypatch, next_utt="Wenn ich Sie richtig verstehe ...", ga
     monkeypatch.setattr(sl, '_tenant_id_for', lambda ev, db: None)
 
 
-def test_persist_scored_sets_score_and_status(monkeypatch):
+def test_persist_pending_sets_not_gradable(monkeypatch):
+    """PERSID Req 8 (F2-Stilllegung): _persist_event_ref setzt 'not_gradable' fuer alle
+    'pending'-Events — direkt nach dem Idempotenz-Skip, VOR grade_handling. Kein Score,
+    kein abstain_log. Dead Code: die alten scored/abstained/failed-Pfade sind nicht mehr
+    erreichbar fuer 'pending'-Events.
+    """
     _patch_helpers(monkeypatch)
-    monkeypatch.setattr(sl, 'grade_handling', lambda ev, utt, triggering_text=None: 3)
     ev = _make_event()
     db = _db_returning(ev)
 
     sl._persist_event_ref({'event_id': 4711}, db)
 
-    assert ev.handling_score_numeric == 3
-    assert ev.handling_status == 'scored'
-    db.add.assert_not_called()          # kein abstain_log bei score
+    assert ev.handling_status == 'not_gradable', (
+        f"Erwartet 'not_gradable' (F2-Stilllegung), bekam '{ev.handling_status}'"
+    )
+    assert ev.handling_score_numeric is None  # kein Score
+    db.add.assert_not_called()  # kein abstain_log
 
 
-def test_persist_abstain_writes_abstain_log(monkeypatch):
-    _patch_helpers(monkeypatch, next_utt="Das Wetter ist heute schoen.")
-    monkeypatch.setattr(sl, 'grade_handling', lambda ev, utt, triggering_text=None: None)
-    # CI-4-Backstop: der Abstain-Pfad schreibt abstain_log NUR wenn der Tenant aufloesbar ist
-    # (sonst terminal 'failed', kein fail-closed-INSERT — das prueft test_slowlane_callid_defensive).
-    # Hier wird der NORMALE Abstain-Fall geprueft: gueltige call_id + aufloesbarer Tenant.
-    _tenant = str(uuid.uuid4())
-    monkeypatch.setattr(sl, '_tenant_id_for', lambda ev, db: _tenant)
-    ev = _make_event(call_id=str(uuid.uuid4()))
-    db = _db_returning(ev)
-
-    sl._persist_event_ref({'event_id': 4711}, db)
-
-    # F-01: NICHT nur NULL — handling_status='abstained'; handling_score_numeric bleibt NULL.
-    assert ev.handling_score_numeric is None
-    assert ev.handling_status == 'abstained'
-    # Goodhart-Log (D-07 Rider 3): genau eine abstain_log-Zeile mit dem Satz + interaction_id.
-    db.add.assert_called_once()
-    logged = db.add.call_args[0][0]
-    assert isinstance(logged, sl.AbstainLog)
-    assert logged.event_id == ev.event_id
-    assert logged.interaction_id == ev.interaction_id
-    assert logged.next_advisor_sentence == "Das Wetter ist heute schoen."
-    assert logged.intent_type == ev.intent_type
-    # CI-4: der vom Backstop aufgeloeste Tenant landet auf der abstain_log-Zeile (kein NULL-tenant).
-    assert str(logged.tenant_id) == _tenant
-
-
-def test_persist_poison_pill_sets_failed_no_log(monkeypatch):
+def test_persist_not_gradable_with_mock_grade_still_not_gradable(monkeypatch):
+    """F2-Stilllegung greift VOR grade_handling: auch wenn grade_handling einen Score
+    liefern wuerde, kommt er nicht zum Zug. Der 'not_gradable'-Terminal ist ERSTE Guard.
+    """
     _patch_helpers(monkeypatch)
-
-    def _boom(ev, utt, triggering_text=None):
-        raise RuntimeError("Marker-Engine kaputt")
-    monkeypatch.setattr(sl, 'grade_handling', _boom)
-    ev = _make_event()
-    db = _db_returning(ev)
-
-    # Kein Crash (F-05): Exception wird in 'failed' uebersetzt.
-    sl._persist_event_ref({'event_id': 4711}, db)
-
-    assert ev.handling_status == 'failed'
-    assert ev.handling_score_numeric is None
-    db.add.assert_not_called()          # KEIN abstain_log bei Poison-Pill
-
-
-def test_persist_tor1_low_confidence_sets_failed_no_log(monkeypatch):
-    # D-03: confidence < gate -> 'failed' (Ereignis garbage), KEIN abstain_log (Tor 1, nicht Tor 2).
-    _patch_helpers(monkeypatch, gate=0.70)
-    called = {'graded': False}
+    grade_called = {'called': False}
 
     def _grade(ev, utt, triggering_text=None):
-        called['graded'] = True
-        return 3
+        grade_called['called'] = True
+        return 3  # wuerde 'scored' setzen — aber wird nie erreicht
+
     monkeypatch.setattr(sl, 'grade_handling', _grade)
+    ev = _make_event()
+    db = _db_returning(ev)
+
+    sl._persist_event_ref({'event_id': 4711}, db)
+
+    assert ev.handling_status == 'not_gradable'
+    assert grade_called['called'] is False, (
+        "grade_handling wurde aufgerufen — F2-Stilllegung muss VOR grade_handling terminieren"
+    )
+    db.add.assert_not_called()
+
+
+def test_persist_pending_low_confidence_still_not_gradable(monkeypatch):
+    """F2-Stilllegung greift auch vor dem Confidence-Gate. Low-confidence-Events erhalten
+    'not_gradable', NICHT 'failed'. Alle Sub-Pfade sind obsolet.
+    """
+    _patch_helpers(monkeypatch, gate=0.70)
     ev = _make_event(confidence=0.4)
     db = _db_returning(ev)
 
     sl._persist_event_ref({'event_id': 4711}, db)
 
-    assert ev.handling_status == 'failed'
-    assert ev.handling_score_numeric is None
-    assert called['graded'] is False    # gar nicht erst benotet
+    assert ev.handling_status == 'not_gradable', (
+        "Low-confidence-Events erhalten jetzt 'not_gradable' (F2-Stilllegung), nicht 'failed'"
+    )
     db.add.assert_not_called()
 
 

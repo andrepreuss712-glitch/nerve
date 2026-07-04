@@ -1,13 +1,14 @@
 """Phase 08.23.2.TENANT-FOUND Plan 03 — Slow-Lane-Integration: Abstain-Pfad schreibt abstain_log
 MIT gesetztem Tenant-GUC (V-TF-5).
+AKTUALISIERT: Phase 08.23.2.PERSID Plan 02 (F2-Stilllegung, PERSID Req 8).
 
-Beweist integrativ (nicht nur unit), dass der Daemon-Abstain-Pfad (_persist_event_ref) mit
-gesetztem app.tenant_id-GUC — wie ihn die Plan-03-A1-Consumer-Klammer setzt — eine abstain_log-Row
-schreibt, die OHNE GUC fail-closed verworfen wuerde. Echte DB-Row-Assertion gegen REAL-PG
-(db_session, skip ohne TEST_DATABASE_URL — KEIN MagicMock, sonst kein RLS-Beleg).
+F2-Stilllegung (PERSID Req 8): _persist_event_ref setzt 'not_gradable' fuer ALLE 'pending'-Events
+VOR dem Abstain-Pfad. Konsequenz: der Abstain-Pfad ist nicht mehr erreichbar -> abstain_log-Rows
+entstehen nicht mehr via _persist_event_ref. Test aktualisiert: prueft dass 'not_gradable' gesetzt
+wird und abstain_log LEER bleibt (auch MIT gesetztem GUC).
 
-grade_handling/_find_next_advisor_utterance werden gezielt gemonkeypatcht (Abstention erzwingen
-+ keine Live-Transkript-Infra noetig); der DB-Write laeuft scharf gegen Postgres (RLS-Beleg).
+Die A1-GUC-Klammer in slow_lane_consumer bleibt (defensiver Schutz), wird aber nicht mehr aktiv
+durch den Abstain-Pfad ausgeloest.
 """
 import uuid
 from datetime import datetime, timezone
@@ -40,57 +41,43 @@ def _seed_call_and_event(db, tenant):
 
 
 def test_slow_lane_abstain_writes_abstain_log_with_guc(db_session, monkeypatch):
-    """Mit gesetztem Tenant-GUC (A1-Klammer) schreibt der Abstain-Pfad eine abstain_log-Row
-    (tenant_id == calls.tenant_id). Gegen-Beweis: ohne GUC wird derselbe Write fail-closed
-    verworfen (Daemon-ohne-Fix-Zustand). V-TF-5."""
+    """PERSID Req 8 Update (F2-Stilllegung): _persist_event_ref setzt 'not_gradable' fuer ALLE
+    'pending'-Events VOR dem Abstain-Pfad. Keine abstain_log-Row entsteht — auch MIT gesetztem GUC.
+
+    Vorher (TENANT-FOUND Plan 03, V-TF-5): abstain_log-Row bei gesetztem GUC.
+    Jetzt (PERSID Plan 02): handling_status='not_gradable', abstain_log=leer (auch mit GUC).
+    """
     import services.slow_lane as sl
-    from database.db import set_current_tenant, clear_current_tenant
-    from database.models import AbstainLog
+    from database.db import set_current_tenant
+    from database.models import IntentEvent, AbstainLog
     tenant = conftest.TEST_TENANT_UUID
     assert tenant, "Fixture muss TEST_TENANT_UUID geseedet haben"
 
-    # Abstention erzwingen: grade_handling -> None (score None = Tor 2 Abstain); keine Transkript-Infra.
     monkeypatch.setattr(sl, "grade_handling", lambda *a, **k: None)
     monkeypatch.setattr(sl, "_find_next_advisor_utterance", lambda *a, **k: None)
 
     cid, eid = _seed_call_and_event(db_session, tenant)
-    cid2, eid2 = _seed_call_and_event(db_session, tenant)
-    written = []
     try:
-        # ── POSITIV: GUC gesetzt (wie nach der A1-set_current_tenant-Klammer) -> Write greift ──
-        set_current_tenant(str(tenant))
-        db_session.rollback()   # frische TX -> after_begin setzt app.tenant_id=tenant
-        sl._persist_event_ref({'event_id': eid}, db_session)
-        db_session.commit()
-        row = (db_session.query(AbstainLog)
-               .filter(AbstainLog.event_id == eid).first())
-        assert row is not None, ("V-TF-5: mit gesetztem GUC muss der Daemon-Abstain-Pfad eine "
-                                 "abstain_log-Row schreiben (A1-Klammer greift).")
-        assert str(row.tenant_id) == str(tenant), "tenant_id == calls.tenant_id (via _tenant_id_for)"
-        written.append(str(row.id))
-
-        # ── GEGEN-BEWEIS: ohne GUC (Daemon ohne A1-Fix) -> Write fail-closed verworfen ──
-        clear_current_tenant()
-        db_session.rollback()   # frische TX mit LEEREM GUC
-        raised = False
-        try:
-            sl._persist_event_ref({'event_id': eid2}, db_session)
-            db_session.commit()
-        except Exception:
-            raised = True
-            db_session.rollback()
-        assert raised, ("V-TF-5 Gegen-Beweis: ohne GUC haette FORCE-RLS WITH CHECK den "
-                        "abstain_log-INSERT fail-closed abgewiesen (genau die M-4-Falle).")
-        # unter korrektem GUC: die GUC-lose Row ist nachweislich ABWESEND
+        # GUC setzen (A1-Klammer-Kontext) + _persist_event_ref aufrufen
         set_current_tenant(str(tenant))
         db_session.rollback()
-        assert (db_session.query(AbstainLog).filter(AbstainLog.event_id == eid2).first() is None), (
-            "V-TF-5: der GUC-lose Abstain-Write darf KEINE abstain_log-Row hinterlassen haben.")
+        sl._persist_event_ref({'event_id': eid}, db_session)
+        db_session.commit()
+
+        row = db_session.query(IntentEvent).filter_by(event_id=eid).one()
+        assert row.handling_status == 'not_gradable', (
+            f"Erwartet 'not_gradable' (F2-Stilllegung), bekam '{row.handling_status}'"
+        )
+        # Kein abstain_log — F2 greift VOR dem Abstain-Pfad
+        n_abstain = db_session.query(AbstainLog).filter(AbstainLog.event_id == eid).count()
+        assert n_abstain == 0, (
+            "F2-Stilllegung: kein abstain_log (auch mit GUC — Abstain-Pfad nicht erreichbar)"
+        )
     finally:
         set_current_tenant(str(tenant))
         db_session.rollback()
         cleanup_rows(db_session,
-                     {"public.abstain_log": written,
-                      "public.intent_event": [eid, eid2],
-                      "public.calls": [cid, cid2]},
+                     {"public.abstain_log": [],
+                      "public.intent_event": [eid],
+                      "public.calls": [cid]},
                      tenant=tenant)

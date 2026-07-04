@@ -1,17 +1,21 @@
 """
 tests/test_slowlane_callid_defensive.py
 ────────────────────────────────────────────────────────────────────
-Phase 08.23.2.CALLID Plan 03 — defensiver Backstop + flush_to_db A1-GUC-Klammer (CI-4/CI-5).
+Phase 08.23.2.CALLID Plan 03 — urspruenglich: defensiver Backstop + flush_to_db A1-GUC-Klammer.
+AKTUALISIERT: Phase 08.23.2.PERSID Plan 02 (F2-Stilllegung, PERSID Req 8).
 
-(a) Backstop: ein abstain-faehiges intent_event OHNE call_id (Tenant nicht ermittelbar) ->
-    _persist_event_ref setzt handling_status='failed' (TERMINAL, kein 'pending', kein H-3-Re-Queue),
-    schreibt KEIN abstain_log (kein fail-closed-Crash), loggt [CALLID-ALARM]. (V-CI-4)
-(b) flush-mit-GUC: ein abstain-faehiges Item MIT gueltiger call_id (seeded calls.tenant_id) ->
-    flush_to_db setzt PRO ITEM den Tenant-GUC und schreibt die abstain_log-Row (NICHT fail-closed). (V-CI-5)
+F2-Stilllegung (PERSID Req 8): _persist_event_ref setzt 'not_gradable' fuer ALLE 'pending'-Events
+direkt nach dem Idempotenz-Skip, VOR Confidence-Gate/grade_handling/Backstop.
 
-Echte DB-Row-Assertionen gegen REAL-PG (db_session, skip ohne TEST_DATABASE_URL — KEIN Mock,
-sonst kein RLS-Beleg). grade_handling/_find_next_advisor_utterance gemonkeypatcht (Abstention
-erzwingen, keine Live-Transkript-Infra). Committende Tests raeumen ihre Rows via cleanup_rows.
+Konsequenz:
+  (a) Backstop-Test (V-CI-4): Event mit nicht-aufloesbarem Tenant bekommt jetzt 'not_gradable'
+      (nicht mehr 'failed' — F2-Stilllegung greift vorher). Kein [CALLID-ALARM] mehr.
+      Backward-Beleg: Event ist terminal und blockiert _pending_events nicht (Ziel bleibt gleich).
+  (b) flush-mit-GUC (V-CI-5): flush_to_db schreibt KEINE abstain_log-Row mehr (F2-Pfad).
+      Test aktualisiert: prueft dass das Event 'not_gradable' und abstain_log LEER bleibt.
+
+Echte DB-Row-Assertionen gegen REAL-PG (db_session, skip ohne TEST_DATABASE_URL).
+Committende Tests raeumen ihre Rows via cleanup_rows.
 """
 import uuid
 from datetime import datetime, timezone
@@ -49,80 +53,84 @@ def _seed_event(db, call_id):
     return ev.event_id
 
 
-def test_backstop_unresolvable_tenant_sets_failed_no_abstain_log(db_session, monkeypatch, capsys):
-    """V-CI-4: abstain-faehiges Event, dessen Tenant NICHT aufloesbar ist -> _persist_event_ref setzt
-    'failed' (terminal), KEIN abstain_log, lauter [CALLID-ALARM], KEIN 'pending' (H-3 re-queued nicht).
+def test_backstop_unresolvable_tenant_sets_not_gradable(db_session, monkeypatch, capsys):
+    """PERSID Req 8 Update (F2-Stilllegung): Event mit nicht-aufloesbarem Tenant bekommt
+    'not_gradable' (F2 greift VOR dem Backstop/grade_handling).
 
-    AB CALLID Deploy 2 (Migration 0025) ist intent_event.call_id NOT NULL -> der Backstop wird NICHT
-    mehr ueber call_id=NULL erreicht, sondern ueber eine GUELTIGE call_id, deren calls.tenant_id NULL ist
-    -> _tenant_id_for liefert None. Der fail-closed-Schutz (kein abstain_log gegen FORCE RLS) bleibt
-    identisch: nicht-aufloesbarer Tenant => terminal 'failed' + Alarm, kein Endlos-Loop."""
+    Vorher (CALLID Plan 03): handling_status='failed' + [CALLID-ALARM].
+    Jetzt (PERSID Plan 02): handling_status='not_gradable' + kein [CALLID-ALARM]
+    (F2-Terminal ist VOR dem CALLID-Backstop).
+
+    Das Kern-Ziel bleibt: Event ist TERMINAL und blockiert _pending_events NICHT.
+    """
     import services.slow_lane as sl
     from database.models import IntentEvent, AbstainLog
 
-    monkeypatch.setattr(sl, "grade_handling", lambda *a, **k: None)            # Abstention erzwingen
+    monkeypatch.setattr(sl, "grade_handling", lambda *a, **k: None)
     monkeypatch.setattr(sl, "_find_next_advisor_utterance", lambda *a, **k: None)
 
-    cid = _seed_call(db_session, tenant=None)     # calls.tenant_id IS NULL -> Tenant nicht aufloesbar
-    eid = _seed_event(db_session, call_id=cid)    # gueltige call_id (NOT NULL erfuellt)
+    cid = _seed_call(db_session, tenant=None)
+    eid = _seed_event(db_session, call_id=cid)
     try:
         sl._persist_event_ref({'event_id': eid}, db_session)
         db_session.commit()
 
         row = db_session.query(IntentEvent).filter_by(event_id=eid).one()
-        assert row.handling_status == 'failed', (
-            "Backstop: nicht-aufloesbarer Abstain muss TERMINAL 'failed' werden (nicht 'pending')")
-        assert row.handling_status != 'pending'   # kein H-3-Endlos-Re-Queue
+        assert row.handling_status == 'not_gradable', (
+            f"Erwartet 'not_gradable' (F2-Stilllegung), bekam '{row.handling_status}'"
+        )
+        assert row.handling_status != 'pending'  # kein H-3-Endlos-Re-Queue
 
-        # KEIN abstain_log fuer dieses Event (kein fail-closed INSERT-Versuch)
+        # KEIN abstain_log (F2 tritt VOR dem Abstain-Pfad auf)
         n_abstain = db_session.query(AbstainLog).filter(AbstainLog.event_id == eid).count()
-        assert n_abstain == 0, "Backstop darf KEIN abstain_log schreiben (fail-closed vermieden)"
-
-        out = capsys.readouterr().out
-        assert '[CALLID-ALARM]' in out, "Backstop muss LAUT alarmieren (sichtbar, nicht still)"
+        assert n_abstain == 0, "F2-Stilllegung: kein abstain_log (nicht-erreichbarer Abstain-Pfad)"
     finally:
         cleanup_rows(db_session, {"public.intent_event": [eid], "public.calls": [cid]})
 
 
-def test_flush_to_db_writes_abstain_log_with_guc(db_session, monkeypatch):
-    """V-CI-5: flush_to_db setzt PRO ITEM den Tenant-GUC (A1-Klammer, symmetrisch zum Consumer-Loop)
-    und schreibt die abstain_log-Row bei gueltiger call_id — NICHT fail-closed (Shutdown-Flush-Pfad)."""
+def test_flush_to_db_sets_not_gradable_no_abstain_log(db_session, monkeypatch):
+    """PERSID Req 8 Update (F2-Stilllegung): flush_to_db schreibt KEINE abstain_log-Row mehr.
+    F2-Terminal greift in _persist_event_ref VOR dem Abstain-Pfad -> Event bekommt 'not_gradable'.
+
+    Vorher (CALLID Plan 03, V-CI-5): flush_to_db schreibt abstain_log-Row mit GUC.
+    Jetzt (PERSID Plan 02): Event = 'not_gradable', abstain_log = leer.
+    Die A1-GUC-Klammer in flush_to_db bleibt (defensiver Schutz falls abstain-Pfad reaktiviert wird).
+    """
     import services.slow_lane as sl
     from services.slow_lane import slow_lane
     from database.db import set_current_tenant
-    from database.models import AbstainLog
+    from database.models import IntentEvent, AbstainLog
     tenant = conftest.TEST_TENANT_UUID
     assert tenant, "Fixture muss TEST_TENANT_UUID geseedet haben"
 
-    monkeypatch.setattr(sl, "grade_handling", lambda *a, **k: None)            # Abstention erzwingen
+    monkeypatch.setattr(sl, "grade_handling", lambda *a, **k: None)
     monkeypatch.setattr(sl, "_find_next_advisor_utterance", lambda *a, **k: None)
 
     cid = _seed_call(db_session, tenant)
     eid = _seed_event(db_session, call_id=cid)
 
-    written = []
     try:
-        # Item in die ECHTE Slow-Lane-Queue legen; flush_to_db drained + benotet es (eigene Sessions,
-        # nerve_test-gebunden via db_session-Fixture). Die A1-Klammer setzt den GUC pro Item.
         slow_lane.put({'event_id': eid})
         drained = sl.flush_to_db()
         assert drained >= 1
 
-        # abstain_log-Row unter korrektem GUC lesen (FORCE RLS -> GUC noetig).
+        # Event muss 'not_gradable' sein (F2-Terminal)
         set_current_tenant(str(tenant))
         db_session.rollback()
-        row = (db_session.query(AbstainLog)
-               .filter(AbstainLog.event_id == eid).first())
-        assert row is not None, (
-            "V-CI-5: flush_to_db muss die abstain_log-Row mit gesetztem GUC schreiben "
-            "(A1-Klammer greift, kein fail-closed beim Shutdown-Flush).")
-        assert str(row.tenant_id) == str(tenant), "tenant_id == calls.tenant_id (via _tenant_id_for)"
-        written.append(str(row.id))
+        row = db_session.query(IntentEvent).filter_by(event_id=eid).first()
+        assert row is not None
+        assert row.handling_status == 'not_gradable', (
+            f"Erwartet 'not_gradable' (F2-Stilllegung), bekam '{row.handling_status}'"
+        )
+
+        # KEIN abstain_log (F2-Pfad: grade_handling wird nicht erreicht)
+        n_abstain = db_session.query(AbstainLog).filter(AbstainLog.event_id == eid).count()
+        assert n_abstain == 0, "F2-Stilllegung: kein abstain_log (Abstain-Pfad nicht erreichbar)"
     finally:
         set_current_tenant(str(tenant))
         db_session.rollback()
         cleanup_rows(db_session,
-                     {"public.abstain_log": written,
+                     {"public.abstain_log": [],
                       "public.intent_event": [eid],
                       "public.calls": [cid]},
                      tenant=tenant)
