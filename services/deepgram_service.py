@@ -128,12 +128,14 @@ def _make_on_message(sid, mode='meeting'):
                         _text_for_analysis = None
                     else:
                         _text_for_analysis = _anon_text
-                        with ls.log_lock:
-                            ls.conversation_log.append({
-                                'ts': ts, 'type': 'transcript',
-                                'speaker': log_sp if roles_confirmed else None,
-                                'text': _anon_text, 'data': None,
-                            })
+                        # conversation_log per-SID (PERSID Plan 05, deepgram on_message Writer)
+                        with ls._session_state_lock:
+                            if sid in ls._session_state:
+                                ls._session_state[sid]['conversation_log'].append({
+                                    'ts': ts, 'type': 'transcript',
+                                    'speaker': log_sp if roles_confirmed else None,
+                                    'text': _anon_text, 'data': None,
+                                })
                 except AnonymizationPipelineUnavailable:
                     # D-08 Kat. A: Pipeline unavailable — kein Insert, Live-Call laeuft weiter
                     print(f'[ANON] Pipeline unavailable, Transcript-Snippet verworfen (sid={sid!r})')
@@ -973,19 +975,21 @@ def register_audio_handlers(sio):
                 # rendert). Das data={'ewb_button':True}-Flag ist NON-load-bearing RAM-only
                 # (wird beim Persist verworfen — live_session:988-1020 liest data nur fuer
                 # analyse-Eintraege), NICHT der Export-Marker.
-                with ls.log_lock:
-                    ls.conversation_log.append({
-                        # Phase 08.23.2.PIP-03 (Bug C, Item e): ts im selben 'HH:MM:SS'-Format
-                        # wie die gesprochene Zeile (Z.66) — NICHT float-epoch (time.time()).
-                        # Frueher: time.time() -> _ts_to_ms_of_day (app_routes.py:36) macht
-                        # str(ts).split(':') ohne ':' -> ValueError -> ts_ms=0; war der erste
-                        # Entry ein Knopf (abs=0 -> base=0), ergab eine spaetere gesprochene
-                        # Zeile einen unmoeglichen Folge-Timestamp (~17h). Ein Format, kein ts_ms=0.
-                        'ts': datetime.now().strftime('%H:%M:%S'), 'type': 'transcript',
-                        'speaker': 1,
-                        'text': f"{_anon_typ} *ewb button*",
-                        'data': {'ewb_button': True},
-                    })
+                # conversation_log per-SID (EWB button, PERSID Plan 05, deepgram Writer 2)
+                with ls._session_state_lock:
+                    if _sid in ls._session_state:
+                        ls._session_state[_sid]['conversation_log'].append({
+                            # Phase 08.23.2.PIP-03 (Bug C, Item e): ts im selben 'HH:MM:SS'-Format
+                            # wie die gesprochene Zeile (Z.66) — NICHT float-epoch (time.time()).
+                            # Frueher: time.time() -> _ts_to_ms_of_day (app_routes.py:36) macht
+                            # str(ts).split(':') ohne ':' -> ValueError -> ts_ms=0; war der erste
+                            # Entry ein Knopf (abs=0 -> base=0), ergab eine spaetere gesprochene
+                            # Zeile einen unmoeglichen Folge-Timestamp (~17h). Ein Format, kein ts_ms=0.
+                            'ts': datetime.now().strftime('%H:%M:%S'), 'type': 'transcript',
+                            'speaker': 1,
+                            'text': f"{_anon_typ} *ewb button*",
+                            'data': {'ewb_button': True},
+                        })
         except Exception as _btn_log_e:
             print(f"[PiP] EWB-Transcript-Zeile skip (sid={_sid}): {type(_btn_log_e).__name__}")
 

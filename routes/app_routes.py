@@ -134,14 +134,8 @@ def api_beenden():
         finally:
             db2.close()
 
-    # Post-Call-Daten vor Reset sammeln
-    with ls.log_lock:
-        log_entries = list(ls.conversation_log)
-    with ls.painpoints_lock:
-        pp_snapshot = list(ls.painpoints)
-    with ls.kb_lock:
-        kb_verlauf  = list(ls.kaufbereitschaft_verlauf)
-        kb_end      = ls.kaufbereitschaft
+    # Post-Call-Daten vor Reset sammeln — WERDEN unten aus _bs gelesen (N-3, PERSID Plan 05).
+    # log_entries, pp_snapshot, kb_verlauf, kb_end: nach _bs-Aufloesung per-SID gesetzt.
     import time as _time
     # ── _beenden_sid-Aufloesungs-Vertrag (S3, PERSID Plan 03) ──────────────────
     # Geteilt von Plan 05/06. Drei-Stufen-Aufloesungs-Vertrag:
@@ -237,6 +231,14 @@ def api_beenden():
     except Exception as _e_lookup:
         print(f'[Phase08.23.2.D] call_id/word_confidences-Lookup Fehler (non-fatal): {_e_lookup}')
 
+    # ── Famile C per-SID Reads aus dem EINEN _bs (N-3, PERSID Plan 05) ───────────
+    # conversation_log, painpoints, kaufbereitschaft(_verlauf) alle per-SID.
+    # D-02: ohne _bs → leere Listen/Default (kein Crash).
+    log_entries     = list(_bs.get('conversation_log', []))  if _bs else []
+    pp_snapshot     = list(_bs.get('painpoints', []))         if _bs else []
+    kb_verlauf      = list(_bs.get('kaufbereitschaft_verlauf', [])) if _bs else []
+    kb_end          = (_bs.get('kaufbereitschaft', 30))        if _bs else 30
+
     einwaende_liste = []
     kaufsignale_liste = []
     for e in log_entries:
@@ -267,10 +269,12 @@ def api_beenden():
     except Exception:
         pdata = {}
     phasen_list = pdata.get('phasen', []) if pdata else []
-    with ls.covered_phases_lock:
-        cp_snapshot = set(ls.covered_phases)
-    with ls.phase_lock:
-        cp_snapshot.add(ls.aktive_phase_idx)
+    # covered_phases + aktive_phase_idx aus _bs (per-SID, N-3, PERSID Plan 05).
+    # phase_lock entfernt (B5: BEIDE Reader jetzt per-SID, kein Modul-Global mehr).
+    # D-02: ohne _bs → leere set/0-Default.
+    cp_snapshot = set(_bs.get('covered_phases', set())) if _bs else set()
+    _aktive_idx = _bs.get('aktive_phase_idx', 0) if _bs else 0
+    cp_snapshot.add(_aktive_idx)
     if phasen_list:
         phasen_abdeckung = [
             {'name': ph.get('name', '?'), 'abgedeckt': i in cp_snapshot}
@@ -311,22 +315,22 @@ def api_beenden():
         postcall['followup_email']  = ''
         postcall['naechste_schritte'] = []
 
-    # Sammle Tracking-Daten vor dem Reset
-    with ls.gegenargument_log_lock:
-        ga_details = list(ls.gegenargument_log)
-        # Letzten Eintrag abschließen
-        if ga_details and ga_details[-1]['kb_nachher'] is None:
-            ga_details[-1]['kb_nachher'] = kb_end
-            ga_details[-1]['kb_delta']   = kb_end - ga_details[-1]['kb_vorher']
-            ga_details[-1]['erfolgreich'] = ga_details[-1]['kb_delta'] > 0
-    with ls.phasen_log_lock:
-        ph_details = list(ls.phasen_log)
-    # D-09 PERSID Plan 01: hilfe_log/quick_action_log Modul-Globale hatten 0 .append()-Schreiber
-    # (RESEARCH §1) → werden per Plan 03 vollstaendig migriert; bis dahin Literal 0 (kein Fehler).
+    # Sammle Tracking-Daten aus _bs (per-SID, N-3, PERSID Plan 05).
+    # gegenargument_log und phasen_log aus dem EINEN _bs — kein Lock noetig (eigene Kopie).
+    ga_details = list(_bs.get('gegenargument_log', []) if _bs else [])
+    # Letzten Eintrag abschließen (finalize last — S4 atomarer Snapshot-Block hier OK,
+    # da wir aus _bs lesen, nicht live in _session_state schreiben)
+    if ga_details and ga_details[-1]['kb_nachher'] is None:
+        ga_details[-1]['kb_nachher'] = kb_end
+        ga_details[-1]['kb_delta']   = kb_end - ga_details[-1]['kb_vorher']
+        ga_details[-1]['erfolgreich'] = ga_details[-1]['kb_delta'] > 0
+    ph_details = list(_bs.get('phasen_log', []) if _bs else [])
+    # D-09 PERSID Plan 01: hilfe_log/quick_action_log hatten 0 .append()-Schreiber → Literal 0.
     hilfe_count = 0
     qa_count = 0
 
-    content  = _build_log_content(user_email=g.user.email, profile_name=profile_name)
+    # N-3: _build_log_content bekommt _bs als Parameter (KEIN eigener _load_beenden_state-Aufruf)
+    content  = _build_log_content(_bs, user_email=g.user.email, profile_name=profile_name)
     filename = f"nerve_log_U{g.user.id}_{datetime.now().strftime('%Y-%m-%dT%H-%M-%S')}.txt"
     filepath = os.path.join(LOG_DIR, filename)
     # 06.1-r2: Log-Write ist nice-to-have — darf Call-Beendigung nicht blockieren.

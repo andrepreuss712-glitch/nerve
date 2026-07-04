@@ -53,12 +53,12 @@ analyse_trigger   = threading.Event()
 coaching_lock    = threading.Lock()
 coaching_buffer  = []
 coaching_trigger = threading.Event()
-painpoints_lock  = threading.Lock()
-painpoints       = []
+# painpoints_lock + painpoints GELOESCHT (PERSID Plan 05, Familie C per-SID):
+# liegt unter _session_state[sid]['painpoints'] (seeded init_session_state:424).
 
 # ── Gegenargument-Tracking ────────────────────────────────────────────────────
-gegenargument_log_lock = threading.Lock()
-gegenargument_log      = []
+# gegenargument_log_lock + gegenargument_log GELOESCHT (PERSID Plan 05, Familie C):
+# liegt unter _session_state[sid]['gegenargument_log'] (seeded init_session_state:421).
 
 # ── Hilfe-Button Tracking (per-SID, Modul-Global entfernt) ───────────────────
 # DELETED: hilfe_log + hilfe_log_lock (0 .append in Services — D-09, 2026-07-03 Phase PERSID)
@@ -73,8 +73,8 @@ quick_action_log_lock = threading.Lock()  # Lock bleibt fuer reset_session Abwae
 quick_action_log      = []  # DEPRECATED-GLOBAL: quick_action_log — 0 .append()-Schreiber (RESEARCH §1), Loeschung Plan 03
 
 # ── Phasenwechsel-Tracking ────────────────────────────────────────────────────
-phasen_log_lock = threading.Lock()
-phasen_log      = []
+# phasen_log_lock + phasen_log GELOESCHT (PERSID Plan 05, Familie C):
+# liegt unter _session_state[sid]['phasen_log'] (seeded init_session_state:420).
 
 # ── Session-Metadaten ─────────────────────────────────────────────────────────
 # DELETED: session_meta Modul-Global + session_meta_lock (0 externe Leser — D-09, 2026-07-03 Phase PERSID)
@@ -145,8 +145,9 @@ state = {
 }
 
 # ── Conversation Log ──────────────────────────────────────────────────────────
-log_lock         = threading.Lock()
-conversation_log = []
+# log_lock + conversation_log GELOESCHT (PERSID Plan 05, Familie C):
+# liegt unter _session_state[sid]['conversation_log'] (seeded init_session_state:331).
+# ALLE 6 Writer (deepgram:2, claude:4) schreiben per-SID unter _session_state_lock.
 
 # ── Rollen-Tausch ─────────────────────────────────────────────────────────────
 # DELETED: roles_swapped (Modul-Global, 0 `= True` Schreiber — D-09, 2026-07-03 Phase PERSID)
@@ -175,18 +176,14 @@ _pending_since     = None
 _bof_lock  = threading.Lock()  # Lock bleibt fuer potenzielle Abwaertskompatibilitaet
 
 # ── Kaufbereitschaft ──────────────────────────────────────────────────────────
-kb_lock                 = threading.Lock()
-kaufbereitschaft        = 30
-kaufbereitschaft_verlauf = []  # [{'ts': '...', 'wert': 30}, ...]
+# kb_lock + kaufbereitschaft + kaufbereitschaft_verlauf GELOESCHT (PERSID Plan 05, Familie C):
+# liegt unter _session_state[sid]['kaufbereitschaft'] + ['kaufbereitschaft_verlauf'].
+# update_kaufbereitschaft(sid, delta) schreibt atomar unter _session_state_lock (S4).
 
 # ── Aktive Gesprächsphase ─────────────────────────────────────────────────────
-# FIX-Verdikt B5 (Task-1-Checkpoint): aktive_phase_idx hat 2 aktive Prod-Reader:
-#   routes/app_routes.py:244 + services/claude_service.py:206.
-# Loeschung NICHT in Plan 01 — wird in Plan 05 (Welle C) auf per-SID migriert.
-# Bis dahin: Modul-Global + phase_lock bleiben (kein Cross-Tenant-Problem bei
-# aktuell sequentiellen Calls; TAXO3-Concurrency loest es).
-phase_lock      = threading.Lock()
-aktive_phase_idx = 0  # PENDING-MIGRATION Welle C/Plan 05 — FIX per B5 (2 Reader belegt)
+# phase_lock + aktive_phase_idx GELOESCHT (PERSID Plan 05, B5):
+# BEIDE Reader (app_routes:244 + claude:206) jetzt per-SID unter _session_state_lock.
+# liegt unter _session_state[sid]['aktive_phase_idx'] (seeded init_session_state:428).
 
 # ── Sprachstatistik ───────────────────────────────────────────────────────────
 # Single-Source-of-State (Konstrukt §0.1): Sprach-Zähler sind AUSSCHLIESSLICH per-SID
@@ -197,8 +194,8 @@ aktive_phase_idx = 0  # PENDING-MIGRATION Welle C/Plan 05 — FIX per B5 (2 Read
 # komplett entfernt.
 
 # ── Abgedeckte Phasen ─────────────────────────────────────────────────────────
-covered_phases_lock = threading.Lock()
-covered_phases      = set()
+# covered_phases_lock + covered_phases GELOESCHT (PERSID Plan 05, Familie C):
+# liegt unter _session_state[sid]['covered_phases'] (seeded init_session_state:335).
 
 # set_active_profile / get_active_profile deleted Phase 08.19.4 D-04/D-05 — use set_profile_for_sid / get_profile_for_sid
 
@@ -954,14 +951,22 @@ def _flush_segment(sid: str, key: str):
     coaching_trigger.set()
 
 
-def update_kaufbereitschaft(delta: int):
-    """Aktualisiert Kaufbereitschaft mit Delta, clamped to [5, 100]."""
-    global kaufbereitschaft
-    with kb_lock:
-        kaufbereitschaft = max(5, min(100, kaufbereitschaft + delta))
-        ts = datetime.now().strftime('%H:%M:%S')
-        kaufbereitschaft_verlauf.append({'ts': ts, 'wert': kaufbereitschaft})
-        return kaufbereitschaft
+def update_kaufbereitschaft(sid: str, delta: int):
+    """Aktualisiert Kaufbereitschaft per-SID mit Delta, clamped to [5, 100].
+
+    S4 RMW (PERSID Plan 05): clamp + verlauf.append als EIN atomarer Block unter
+    _session_state_lock (kein Zwischen-Release, kein Lost-Update bei parallelen Ticks).
+    D-02: ohne sid oder unbekannte sid → No-Op (kein Crash, kein Fehlzuordnung).
+    """
+    if not sid:
+        return
+    ts = datetime.now().strftime('%H:%M:%S')
+    with _session_state_lock:
+        if sid not in _session_state:
+            return  # Ghost-SID Guard (D-02)
+        _st = _session_state[sid]
+        _st['kaufbereitschaft'] = max(5, min(100, _st.get('kaufbereitschaft', 30) + delta))
+        _st['kaufbereitschaft_verlauf'].append({'ts': ts, 'wert': _st['kaufbereitschaft']})
 
 
 def reset_session():
@@ -972,17 +977,15 @@ def reset_session():
     Audit 08.19.5: 1 external caller found -- routes/app_routes.py line 480.
     Per-SID cleanup: iterates all active SIDs and calls pop+init as well as
     resetting module-level globals for backward compat with remaining callers."""
+    # PERSID Plan 05 (Familie C): conversation_log, painpoints, gegenargument_log,
+    # phasen_log, covered_phases, kaufbereitschaft(_verlauf), aktive_phase_idx, phase_lock
+    # ALLE Modul-Globale entfernt — per-SID via _session_state[sid].
+    # Per-SID-Daten werden durch pop_session_state+init_session_state unten zurueckgesetzt.
     # D-09 PERSID Plan 01: _line_id_counter/_bof_count Modul-Globale geloescht (S5/D-09).
-    # PERSID Plan 04: transcript_buffer/analysiert_bisher/coaching_buffer Modul-Globale entfernt
-    #   (toter Post-Migration-Code; per-SID-Puffer werden durch pop+init unten zurueckgesetzt).
-    # roles_swapped bleibt vorerst als DEPRECATED-GLOBAL fuer Plan 03.
-    # aktive_phase_idx bleibt als FIX-Verdikt B5 — Welle C/Plan 05.
-    global conversation_log, painpoints
+    # PERSID Plan 04: transcript_buffer/analysiert_bisher/coaching_buffer Modul-Globale entfernt.
     global _log_last_sp
     global _confirmed_speaker, _pending_speaker, _pending_since, _second_sp_seen
     global roles_swapped
-    global kaufbereitschaft, kaufbereitschaft_verlauf, aktive_phase_idx
-    global gegenargument_log, hilfe_log, quick_action_log, phasen_log
     # Per-SID cleanup: reset all active SIDs via pop+init (Phase 08.19.5 migration)
     # pop_session_state cancelt jetzt auch offene _merge_pending-Timer (Plan 04).
     with _session_state_lock:
@@ -995,12 +998,8 @@ def reset_session():
         pop_session_state(_rsid)
         init_session_state(_rsid, user_id=_uid, org_id=_oid, profile_id=_pid)
 
-    with log_lock:
-        conversation_log.clear()
-    # buffer_lock + transcript_buffer/analysiert_bisher Modul-Globale entfernt (Plan 04, Familie B).
-    # coaching_buffer Modul-Global entfernt (Plan 04, 0 externe Reader).
-    with painpoints_lock:
-        painpoints.clear()
+    # Familie C Modul-Globale ENTFERNT (Plan 05): keine .clear()-Aufrufe mehr noetig.
+    # Per-SID-Werte werden durch pop_session_state + init_session_state oben zurueckgesetzt.
     with state_lock:
         # D-09 PERSID Plan 01: version/aktiv/ergebnis/line_id/active_hint/ewb_buttons/
         # slot1_variant_busy_until GELOESCHT (0 Prod-Reader — Zombie-Keys). Nur noch
@@ -1011,7 +1010,6 @@ def reset_session():
         state['score_factors_seen']  = {}
         state['active_learning_cards'] = []
         # PERSID Plan 03 W-A: precall_briefing + mic_muted Modul-Keys ENTFERNT.
-        # Per-SID-Werte werden durch pop_session_state + init_session_state zurueckgesetzt.
         state['active_profile_id'] = None  # re-set by set_active_profile_with_id at session start
     with _log_sp_lock:
         _log_last_sp = None
@@ -1023,29 +1021,18 @@ def reset_session():
         _second_sp_seen = False
     # _merge_lock/_merge_pending Modul-Global entfernt (Plan 04, S4).
     # Per-SID-Timer-Cancel erfolgt durch pop_session_state (oben) — kein separater Block noetig.
-    # D-09 PERSID Plan 01: _bof_count Modul-Global geloescht (per-SID bleibt).
     with roles_lock:
         roles_swapped = False
-    with kb_lock:
-        kaufbereitschaft = 30
-        kaufbereitschaft_verlauf.clear()
-    with phase_lock:
-        aktive_phase_idx = 0
-    # Sprach-Zähler werden per-SID via pop_session_state+init_session_state oben
-    # zurückgesetzt (Single-Source-of-State); keine Modul-Globalen mehr.
-    with covered_phases_lock:
-        covered_phases.clear()
-    with gegenargument_log_lock:
-        gegenargument_log.clear()
     with hilfe_log_lock:
         hilfe_log.clear()
     with quick_action_log_lock:
         quick_action_log.clear()
-    with phasen_log_lock:
-        phasen_log.clear()
     with state_lock:
         state['ewb_clicks'] = []
         state['suggestion_offers'] = []   # TAXO2-08: RAM-Puffer der NERVE-Vorschlaege (Call-Ende-Flush)
+    # Sprach-Zähler, Familie C (conv_log/painpoints/gegenargument/phasen/covered_phases/
+    # kaufbereitschaft/aktive_phase_idx) werden per-SID via pop_session_state+init_session_state
+    # zurueckgesetzt (Single-Source-of-State) — keine Modul-Globalen mehr.
     # D-09 PERSID Plan 01: session_meta Modul-Global geloescht (0 externe Leser).
     # Kein Reset-Block mehr noetig — per-SID-Daten werden durch pop+init oben geloescht.
 
@@ -1117,11 +1104,19 @@ def get_speech_stats(sid: str = None) -> dict:
     return {'redeanteil': redeanteil, 'tempo': tempo, 'monolog': monolog}
 
 
-def _build_log_content(user_email='', profile_name='') -> str:
-    with log_lock:
-        entries = list(conversation_log)
-    # D-09 PERSID Plan 01: roles_swapped Modul-Global hatte 0 `= True` Schreiber (RESEARCH §1).
-    # Sp-Map fest auf unswapped — per Plan 03 auf per-SID-Wert umgebaut, bis dahin korrekt (immer False).
+def _build_log_content(bs, user_email='', profile_name='') -> str:
+    """Baut TXT-Log-Content aus dem uebergebenen per-SID-State (bs/dict).
+
+    N-3 (PERSID Plan 05): KEIN eigener _load_beenden_state-Aufruf — Caller
+    (app_routes.api_beenden) reicht das EINE `_bs` als Parameter durch.
+    Liest conversation_log, painpoints, gegenargument_log, phasen_log aus `bs`.
+    bs darf None sein (leere Ausgabe, kein Crash — D-02 defensiv).
+    """
+    if bs is None:
+        bs = {}
+    entries = list(bs.get('conversation_log', []))
+    # roles_swapped: per-SID aus bs lesen (PERSID Plan 05).
+    # Hatte immer 0 `=True`-Schreiber (RESEARCH §1) → sp_map fest unswapped korrekt.
     sp_map = {0: 'Berater', 1: 'Kunde'}
 
     lines = []
@@ -1185,8 +1180,8 @@ def _build_log_content(user_email='', profile_name='') -> str:
             kat_str = KATEGORIE_LABEL.get(entry.get('kategorie', ''), 'Tipp')
             lines.append(f"[{entry['ts']}] [TIPP – {kat_str}]  {entry.get('text','')}")
 
-    with painpoints_lock:
-        pp_snapshot = list(painpoints)
+    # painpoints aus bs (per-SID, N-3 — PERSID Plan 05)
+    pp_snapshot = list(bs.get('painpoints', []))
 
     lines.append("")
     lines.append("=" * 65)
@@ -1223,8 +1218,8 @@ def _build_log_content(user_email='', profile_name='') -> str:
             lines.append(f"  Längste Analyse:              {laengste_latenz}s  — {snippet}")
 
     # ── Gegenargument-Analyse ─────────────────────────────────────────────────
-    with gegenargument_log_lock:
-        ga_log = list(gegenargument_log)
+    # gegenargument_log aus bs (per-SID, N-3 — PERSID Plan 05)
+    ga_log = list(bs.get('gegenargument_log', []))
     if ga_log:
         lines.append("")
         lines.append("  GEGENARGUMENT-ANALYSE")
@@ -1259,8 +1254,8 @@ def _build_log_content(user_email='', profile_name='') -> str:
     # Per Plan 03 (Welle A) vollstaendig migriert. Bis dahin: immer leere Listen (korrekt fuer 0 Events).
 
     # ── Phasen-Verlauf ────────────────────────────────────────────────────────
-    with phasen_log_lock:
-        ph_log = list(phasen_log)
+    # phasen_log aus bs (per-SID, N-3 — PERSID Plan 05)
+    ph_log = list(bs.get('phasen_log', []))
     if ph_log:
         lines.append("")
         lines.append("  PHASEN-VERLAUF")

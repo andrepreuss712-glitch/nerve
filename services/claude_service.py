@@ -202,8 +202,11 @@ def _build_coaching_prompt(sid: str = None) -> str:
             if u.get('von') or u.get('nach'):
                 lines.append(f'- {u.get("von","")} → {u.get("nach","")}: "{u.get("bruecke","")}"')
     if phasen:
-        with ls.phase_lock:
-            idx = ls.aktive_phase_idx
+        # B5 (PERSID Plan 05): aktive_phase_idx per-SID lesen, phase_lock entfernt.
+        # sid wird vom Prompt-Builder-Kontext mitgebracht (Parameter-Scope).
+        # D-02: ohne sid oder unbekannte sid → 0 (Default, kein Crash).
+        with ls._session_state_lock:
+            idx = (ls._session_state.get(sid) or {}).get('aktive_phase_idx', 0) if sid else 0
         if 0 <= idx < len(phasen):
             ph = phasen[idx]
             lines.append(f'\nAktuelle Gesprächsphase: {ph.get("name","")} — {ph.get("ziel","") or ph.get("beschreibung","")}')
@@ -1077,20 +1080,25 @@ def analyse_loop():
                 latency_e = round(time.monotonic() - t_start, 2)
                 print(f"[Claude-1] SID={sid} Ergebnis (Latenz {latency_e}s): {ergebnis}")
                 ts = datetime.now().strftime('%H:%M:%S')
-                # Kaufbereitschaft deterministisch anpassen
-                with ls.kb_lock:
-                    kb_vor_einwand = ls.kaufbereitschaft
+                # Kaufbereitschaft deterministisch anpassen (S4 RMW, PERSID Plan 05).
+                # kb-Sequenz per-SID: Read(kb_vor) → update(delta) → Read(kb_aktuell).
+                # Snapshot-Semantik: kb_vor_einwand = Anzeige-Delta-Basis (vor update);
+                # kb_aktuell = Endwert (nach update). Beide consistent per-SID unter Lock.
+                with ls._session_state_lock:
+                    kb_vor_einwand = (ls._session_state.get(sid) or {}).get('kaufbereitschaft', 30)
                 if ergebnis.get('einwand'):
                     delta = -5 if ergebnis.get('intensitaet') == 'hoch' else -3
-                    ls.update_kaufbereitschaft(delta)
-                with ls.log_lock:
-                    ls.conversation_log.append({
-                        'ts': ts, 'type': 'analyse',
-                        'speaker': None, 'text': neuer_text, 'data': ergebnis,
-                        'latency': latency_e,
-                    })
-                with ls.kb_lock:
-                    kb_aktuell = ls.kaufbereitschaft
+                    ls.update_kaufbereitschaft(sid, delta)
+                with ls._session_state_lock:
+                    kb_aktuell = (ls._session_state.get(sid) or {}).get('kaufbereitschaft', 30)
+                # conversation_log per-SID (PERSID Plan 05, ALLE 6 Writer)
+                with ls._session_state_lock:
+                    if sid in ls._session_state:
+                        ls._session_state[sid]['conversation_log'].append({
+                            'ts': ts, 'type': 'analyse',
+                            'speaker': None, 'text': neuer_text, 'data': ergebnis,
+                            'latency': latency_e,
+                        })
                 # Gegenargument-Tracking
                 if ergebnis.get('einwand'):
                     # Phase 08.23.2.B: OUTPUT-PFAD Anonymisierung (D-01, Req-8)
@@ -1114,35 +1122,41 @@ def analyse_loop():
                         _einwand_zitat_anon = ergebnis.get('einwand_zitat', '')
                         _gegenarg_1_anon = ergebnis.get('gegenargument_1', '')
                         _gegenarg_2_anon = ergebnis.get('gegenargument_2', '')
-                    with ls.gegenargument_log_lock:
-                        # Vorherigen Eintrag mit kb_nachher aktualisieren
-                        if ls.gegenargument_log:
-                            last = ls.gegenargument_log[-1]
-                            if last['kb_nachher'] is None:
-                                last['kb_nachher'] = kb_vor_einwand
-                                last['kb_delta']   = kb_vor_einwand - last['kb_vorher']
-                                last['erfolgreich'] = last['kb_delta'] > 0
-                        # Neuen Eintrag anlegen (Freitext-Felder anonymisiert)
-                        # TAXO1-Welle 4 (§0.1): die alten parallelen D2-Keys (freier
-                        # typ-String + ist_vorwand-Boolean aus dem Haiku-Output) sind
-                        # auf intent_type (§1) MIGRIERT — nicht blind geloescht, weil
-                        # der gegenargument_log->ga_details->vorwaende_erkannt-Reader
-                        # (app_routes:354 + ConversationLog) live davon liest. einwand_typ
-                        # = intent_type; ist_vorwand wird aus intent_type=='vorwand'
-                        # ABGELEITET (eine Quelle, kein zweiter Haiku-Pfad).
-                        ls.gegenargument_log.append({
-                            'ts':               ts,
-                            'einwand_typ':      _it,                          # §1 intent_type (migriert)
-                            'einwand_zitat':    _einwand_zitat_anon,          # anonymisiert
-                            'ist_vorwand':      (_it == 'vorwand'),           # abgeleitet aus §1, kein Haiku-Boolean
-                            'gegenargument_1':  _gegenarg_1_anon,             # anonymisiert
-                            'gegenargument_2':  _gegenarg_2_anon,             # anonymisiert
-                            'gewaehlte_option': None,
-                            'kb_vorher':        kb_aktuell,
-                            'kb_nachher':       None,
-                            'kb_delta':         None,
-                            'erfolgreich':      None,
-                        })
+                    # S4 RMW (PERSID Plan 05): gegenargument finalize+append als EIN
+                    # atomarer per-SID-Block unter _session_state_lock (ersetzt gegenargument_log_lock).
+                    # finalize-des-letzten + append muessen unter DEMSELBEN Lock-Halt passieren,
+                    # sonst schiebt ein paralleler Tick dazwischen.
+                    with ls._session_state_lock:
+                        if sid in ls._session_state:
+                            _ga_log = ls._session_state[sid]['gegenargument_log']
+                            # Vorherigen Eintrag mit kb_nachher aktualisieren
+                            if _ga_log:
+                                last = _ga_log[-1]
+                                if last['kb_nachher'] is None:
+                                    last['kb_nachher'] = kb_vor_einwand
+                                    last['kb_delta']   = kb_vor_einwand - last['kb_vorher']
+                                    last['erfolgreich'] = last['kb_delta'] > 0
+                            # Neuen Eintrag anlegen (Freitext-Felder anonymisiert)
+                            # TAXO1-Welle 4 (§0.1): die alten parallelen D2-Keys (freier
+                            # typ-String + ist_vorwand-Boolean aus dem Haiku-Output) sind
+                            # auf intent_type (§1) MIGRIERT — nicht blind geloescht, weil
+                            # der gegenargument_log->ga_details->vorwaende_erkannt-Reader
+                            # (app_routes:354 + ConversationLog) live davon liest. einwand_typ
+                            # = intent_type; ist_vorwand wird aus intent_type=='vorwand'
+                            # ABGELEITET (eine Quelle, kein zweiter Haiku-Pfad).
+                            _ga_log.append({
+                                'ts':               ts,
+                                'einwand_typ':      _it,                          # §1 intent_type (migriert)
+                                'einwand_zitat':    _einwand_zitat_anon,          # anonymisiert
+                                'ist_vorwand':      (_it == 'vorwand'),           # abgeleitet aus §1, kein Haiku-Boolean
+                                'gegenargument_1':  _gegenarg_1_anon,             # anonymisiert
+                                'gegenargument_2':  _gegenarg_2_anon,             # anonymisiert
+                                'gewaehlte_option': None,
+                                'kb_vorher':        kb_aktuell,
+                                'kb_nachher':       None,
+                                'kb_delta':         None,
+                                'erfolgreich':      None,
+                            })
                 # D-09 PERSID Plan 01: ls.state['ergebnis'/'aktiv'/'version'] Zombie-Keys geloescht
                 # (0 Prod-Reader; Auslieferung laeuft via sio.emit(room=sid)).
                 # Phase 08.23.2.TAXO1-03 (§0.1 P4 B-A line_id / P7 kaufbereitschaft): per-SID.
@@ -1218,27 +1232,31 @@ def analyse_loop():
                                     new_phase_name = _PHASE_NAMES.get(new_phase, str(new_phase))
                                     ts = datetime.now().strftime('%H:%M:%S')
                                     seg_count = len(sid_state.get('analysiert_bisher', []))
-                                    with ls.phasen_log_lock:
-                                        ls.phasen_log.append({
-                                            'ts':            ts,
-                                            'name':          new_phase_name,  # Template uses ph.name
-                                            'typ':           new_phase_name.lower(),
-                                            'von_phase':     old_phase_name,
-                                            'nach_phase':    new_phase_name,
-                                            'segment_count': seg_count,
-                                            'source':        'ai_classifier',
-                                            'confidence':    round(float(new_conf), 2),
-                                        })
+                                    # phasen_log per-SID (PERSID Plan 05)
+                                    with ls._session_state_lock:
+                                        if sid in ls._session_state:
+                                            ls._session_state[sid]['phasen_log'].append({
+                                                'ts':            ts,
+                                                'name':          new_phase_name,  # Template uses ph.name
+                                                'typ':           new_phase_name.lower(),
+                                                'von_phase':     old_phase_name,
+                                                'nach_phase':    new_phase_name,
+                                                'segment_count': seg_count,
+                                                'source':        'ai_classifier',
+                                                'confidence':    round(float(new_conf), 2),
+                                            })
                                     # POLISH-42: map AI-phase (1-6) -> profile-phase index (0-based),
                                     # capped to profile's actual phase count so skript_abdeckung
                                     # can't overflow when profile has <6 phases.
+                                    # covered_phases per-SID (PERSID Plan 05)
                                     try:
                                         _, _pdata = ls.get_profile_for_sid(sid)
                                         _ph_list = _pdata.get('phasen', []) if _pdata else []
                                         if _ph_list:
                                             _idx = max(0, min(int(new_phase) - 1, len(_ph_list) - 1))
-                                            with ls.covered_phases_lock:
-                                                ls.covered_phases.add(_idx)
+                                            with ls._session_state_lock:
+                                                if sid in ls._session_state:
+                                                    ls._session_state[sid]['covered_phases'].add(_idx)
                                     except Exception as _ce:
                                         print(f"[phase_classify] covered_phases propagate error: {_ce}")
                                 except Exception as _pe:
@@ -1364,15 +1382,18 @@ def analyse_loop():
                             _sid_p4_w['readiness_score'] = score_p4
                             _sid_p4_w['readiness_bucket'] = bucket_p4
                             _sid_p4_w['kaufbereitschaft'] = score_p4  # legacy mirror (RESEARCH Q2 R2)
-                    # D-09 PERSID Plan 01: ls.state['active_hint'/'ewb_buttons'] Zombie-Keys geloescht
-                    # (0 Prod-Reader — RESEARCH §1). Werte in per-SID state[sid] oben geschrieben.
-                    ls.kaufbereitschaft = score_p4  # module global mirror (separater Pfad, app_routes:148)
+                    # D-09 PERSID Plan 01: ls.state['active_hint'/'ewb_buttons'] Zombie-Keys geloescht.
+                    # PERSID Plan 05: per-SID kaufbereitschaft top-level (als Anzeige-Wert).
+                    # ls.kaufbereitschaft Modul-Global WIRD in Task 3 entfernt.
+                    with ls._session_state_lock:
+                        if sid in ls._session_state:
+                            ls._session_state[sid]['kaufbereitschaft'] = score_p4
                 except Exception as e:
                     print(f"[readiness/active_hint] loop error: {e}")
             except Exception as e:
                 print(f"[Claude-1] SID={sid} Fehler: {e}")
-                with ls.kb_lock:
-                    kb_aktuell = ls.kaufbereitschaft
+                with ls._session_state_lock:
+                    kb_aktuell = (ls._session_state.get(sid) or {}).get('kaufbereitschaft', 30)
                 # D-09 PERSID Plan 01: ls.state['ergebnis'/'aktiv'/'version'] Zombie-Keys geloescht.
                 # Fehler-Pfad schreibt nur noch per-SID state unten.
                 # Phase 08.23.2.TAXO1-03 (§0.1 P4 line_id / P7 kaufbereitschaft): per-SID (Fehler-Pfad).
@@ -1737,11 +1758,11 @@ def coaching_loop():
                 kategorie = result.get('kategorie') or ''
                 kb_delta  = result.get('kb_delta', 0) or 0
 
-                # Kaufbereitschaft via Claude-Delta anpassen
+                # Kaufbereitschaft via Claude-Delta anpassen (per-SID, PERSID Plan 05)
                 if isinstance(kb_delta, (int, float)) and kb_delta != 0:
-                    ls.update_kaufbereitschaft(int(kb_delta))
-                    with ls.kb_lock:
-                        kb_aktuell = ls.kaufbereitschaft
+                    ls.update_kaufbereitschaft(sid, int(kb_delta))
+                    with ls._session_state_lock:
+                        kb_aktuell = (ls._session_state.get(sid) or {}).get('kaufbereitschaft', 30)
                     # Phase 08.23.2.TAXO1-03 (§0.1 P7 Rider): kaufbereitschaft dict-key per-SID.
                     with ls._session_state_lock:
                         _sid_kb_c = (ls._session_state.get(sid) or {}).get('state')
@@ -1772,30 +1793,38 @@ def coaching_loop():
 
                 print(f"[Claude-2] SID={sid} tipp={tipp!r}  pain={painpoint!r}  Latenz={latency_c}s")
 
-                with ls.log_lock:
-                    ls.conversation_log.append({
-                        'ts': ts, 'type': 'latenz_coaching', 'latency': latency_c,
-                    })
+                # conversation_log per-SID (latenz_coaching, PERSID Plan 05)
+                with ls._session_state_lock:
+                    if sid in ls._session_state:
+                        ls._session_state[sid]['conversation_log'].append({
+                            'ts': ts, 'type': 'latenz_coaching', 'latency': latency_c,
+                        })
 
                 if painpoint:
-                    with ls.painpoints_lock:
-                        if ls.ist_painpoint_duplikat(painpoint, ls.painpoints):
-                            print(f"[Claude-2] Painpoint Duplikat: {painpoint!r}")
-                            painpoint = None
+                    # painpoints per-SID (PERSID Plan 05). Duplikat-Check + append atomar
+                    # unter _session_state_lock (S4 RMW: lese bestehende Liste, pruefe Duplikat, appende).
+                    with ls._session_state_lock:
+                        _sid_pp_state = ls._session_state.get(sid)
+                        if _sid_pp_state is not None:
+                            if ls.ist_painpoint_duplikat(painpoint, _sid_pp_state['painpoints']):
+                                print(f"[Claude-2] Painpoint Duplikat: {painpoint!r}")
+                                painpoint = None
+                            else:
+                                # Phase 08.23.2.B: OUTPUT-PFAD Anonymisierung (D-01, Req-8)
+                                # Duplikat-Check auf Original-Text (korrekt — vor Anonymisierung)
+                                # painpoint IS Claude-Paraphrase von STT-Content und kann Namen enthalten
+                                # (D-01 OUTPUT-PFAD: anonymize_output() Pflicht, DSGVO-Blocker-Fix)
+                                # Finding 4: anonymize_output() gibt keine Sentinel-Werte zurueck
+                                try:
+                                    from services.anonymization import anonymize_output
+                                    _anon_cache = ls.get_anonymisierer(sid)
+                                    _painpoint_anon = anonymize_output(painpoint, _anon_cache)
+                                except Exception as _anon_err:
+                                    print(f'[ANON] anonymize_output Fehler (painpoint, sid={sid!r}): {type(_anon_err).__name__}')
+                                    _painpoint_anon = painpoint  # Fallback: Original-Text
+                                _sid_pp_state['painpoints'].append({'ts': ts, 'text': _painpoint_anon})
                         else:
-                            # Phase 08.23.2.B: OUTPUT-PFAD Anonymisierung (D-01, Req-8)
-                            # Duplikat-Check auf Original-Text (korrekt — vor Anonymisierung)
-                            # painpoint IS Claude-Paraphrase von STT-Content und kann Namen enthalten
-                            # (D-01 OUTPUT-PFAD: anonymize_output() Pflicht, DSGVO-Blocker-Fix)
-                            # Finding 4: anonymize_output() gibt keine Sentinel-Werte zurueck — kein Skip-Check noetig.
-                            try:
-                                from services.anonymization import anonymize_output
-                                _anon_cache = ls.get_anonymisierer(sid)
-                                _painpoint_anon = anonymize_output(painpoint, _anon_cache)
-                            except Exception as _anon_err:
-                                print(f'[ANON] anonymize_output Fehler (painpoint, sid={sid!r}): {type(_anon_err).__name__}')
-                                _painpoint_anon = painpoint  # Fallback: Original-Text
-                            ls.painpoints.append({'ts': ts, 'text': _painpoint_anon})
+                            painpoint = None
                     if painpoint:
                         # Phase 08.23.2.B: conversation_log[type=painpoint] ebenfalls anonymisieren
                         # painpoint-Text ist Claude-Paraphrase von STT-Content (OUTPUT-PFAD per D-01)
@@ -1807,16 +1836,20 @@ def coaching_loop():
                         except Exception as _anon_err:
                             print(f'[ANON] anonymize_output Fehler (conv_log painpoint, sid={sid!r}): {type(_anon_err).__name__}')
                             _painpoint_log_anon = painpoint  # Fallback: Original-Text
-                        with ls.log_lock:
-                            ls.conversation_log.append({
-                                'ts': ts, 'type': 'painpoint', 'text': _painpoint_log_anon,
-                            })
+                        # conversation_log per-SID (painpoint, PERSID Plan 05)
+                        with ls._session_state_lock:
+                            if sid in ls._session_state:
+                                ls._session_state[sid]['conversation_log'].append({
+                                    'ts': ts, 'type': 'painpoint', 'text': _painpoint_log_anon,
+                                })
 
                 if tipp:
-                    with ls.log_lock:
-                        ls.conversation_log.append({
-                            'ts': ts, 'type': 'tipp', 'text': tipp, 'kategorie': kategorie,
-                        })
+                    # conversation_log per-SID (tipp, PERSID Plan 05)
+                    with ls._session_state_lock:
+                        if sid in ls._session_state:
+                            ls._session_state[sid]['conversation_log'].append({
+                                'ts': ts, 'type': 'tipp', 'text': tipp, 'kategorie': kategorie,
+                            })
 
                 # ── Coaching-WebSocket-Emit entfernt (Phase 06.6 / RULE-01-Erweiterung) ──
                 # Der coaching-Channel landete im Frontend via _showProactiveTipp auf Slot 1

@@ -52,6 +52,22 @@ _KILLED_MODULE_GLOBALS: frozenset = frozenset({
     # Plan 04: toter Post-Migration-Code (0 externe Reader nach per-SID-Migration)
     'transcript_buffer',
     'analysiert_bisher',
+    # Plan 05 Familie C: alle per-SID migriert; Modul-Globale + ihre Locks geloescht
+    'conversation_log',
+    'log_lock',
+    'painpoints',
+    'painpoints_lock',
+    'gegenargument_log',
+    'gegenargument_log_lock',
+    'phasen_log',
+    'phasen_log_lock',
+    'covered_phases',
+    'covered_phases_lock',
+    'kaufbereitschaft',
+    'kaufbereitschaft_verlauf',
+    'kb_lock',
+    'aktive_phase_idx',
+    'phase_lock',
 })
 
 # ── _KILLED_STATE_KEYS: In Task 2 geloeschte state{}-Keys ────────────────────
@@ -80,21 +96,21 @@ _WHITELIST: frozenset = frozenset({
     'buffer_lock',
     'state_lock',
     'coaching_lock',
-    'painpoints_lock',
-    'gegenargument_log_lock',
+    # painpoints_lock GELOESCHT (Plan 05, Familie C per-SID migriert)
+    # gegenargument_log_lock GELOESCHT (Plan 05, Familie C per-SID migriert)
     'hilfe_log_lock',
     'quick_action_log_lock',
-    'phasen_log_lock',
+    # phasen_log_lock GELOESCHT (Plan 05, Familie C per-SID migriert)
     'session_meta_lock',
-    'log_lock',
+    # log_lock GELOESCHT (Plan 05, Familie C: conversation_log per-SID migriert)
     'roles_lock',
     '_log_sp_lock',
     '_sp2_lock',
     '_speaker_lock',
     '_bof_lock',
-    'kb_lock',
-    'phase_lock',
-    'covered_phases_lock',
+    # kb_lock GELOESCHT (Plan 05, Familie C: kaufbereitschaft per-SID migriert)
+    # phase_lock GELOESCHT (Plan 05, Familie C: aktive_phase_idx per-SID migriert — B5)
+    # covered_phases_lock GELOESCHT (Plan 05, Familie C: covered_phases per-SID migriert)
     # _merge_lock GELOESCHT (Plan 04, S4: EIN Lock = _session_state_lock)
     '_per_sid_lock',
     '_session_state_lock',
@@ -128,19 +144,18 @@ _WHITELIST: frozenset = frozenset({
     # Modul-Globale Buffer/Listen (PENDING auf Welle A-E-Migration)
     # transcript_buffer/analysiert_bisher ENTFERNT (Plan 04 geloescht — in _KILLED_MODULE_GLOBALS)
     # _merge_pending ENTFERNT (Plan 04 geloescht — in _KILLED_MODULE_GLOBALS)
+    # painpoints ENTFERNT (Plan 05 Familie C — in _KILLED_MODULE_GLOBALS)
+    # gegenargument_log ENTFERNT (Plan 05 Familie C — in _KILLED_MODULE_GLOBALS)
+    # phasen_log ENTFERNT (Plan 05 Familie C — in _KILLED_MODULE_GLOBALS)
+    # conversation_log ENTFERNT (Plan 05 Familie C — in _KILLED_MODULE_GLOBALS)
+    # covered_phases ENTFERNT (Plan 05 Familie C — in _KILLED_MODULE_GLOBALS)
     'coaching_buffer',
-    'painpoints',
-    'gegenargument_log',
     'hilfe_log',
     'quick_action_log',
-    'phasen_log',
-    'conversation_log',
-    'covered_phases',
     # State-Dict (Modul-Global, PENDING-MIGRATION — Zustand wird schrittweise per-SID)
     'state',
-    # Kaufbereitschaft (Modul-Global Mirror — separater Pfad app_routes:148, PENDING Welle C)
-    'kaufbereitschaft',
-    'kaufbereitschaft_verlauf',
+    # Kaufbereitschaft ENTFERNT (Plan 05 Familie C — in _KILLED_MODULE_GLOBALS)
+    # aktive_phase_idx ENTFERNT (Plan 05 Familie C B5 — in _KILLED_MODULE_GLOBALS)
     # Sprecher-Tracking (PENDING Welle E)
     '_log_last_sp',
     '_second_sp_seen',
@@ -156,8 +171,7 @@ _WHITELIST: frozenset = frozenset({
     'coaching_trigger',
     # DEPRECATED-GLOBAL mit explizitem Pending (in _PENDING_MIGRATION aufgenommen)
     'roles_swapped',
-    # aktive_phase_idx: FIX-Verdikt B5 (2 Reader belegt) — in _PENDING_MIGRATION Welle C
-    'aktive_phase_idx',
+    # aktive_phase_idx ENTFERNT (Plan 05 Familie C B5 — per-SID migriert, in _KILLED_MODULE_GLOBALS)
 })
 
 # ── _PENDING_MIGRATION: wave-getaggte legitimierte noch-unmigrierte Schreiber ─
@@ -172,14 +186,8 @@ _PENDING_MIGRATION: frozenset = frozenset({
     # ── Welle B / Plan 04 ─────────────────────────────────────────────────────
     # _merge_pending MIGRIERT (Plan 04, Familie B fertig — Liste schrumpft monoton).
     # ── Welle C / Plan 05 ─────────────────────────────────────────────────────
-    # conversation_log: Modul-Globale Liste (claude_service + deepgram_service schreiben)
-    ('services/claude_service.py', 'conversation_log', 'C'),
-    ('services/deepgram_service.py', 'conversation_log', 'C'),
-    # kaufbereitschaft: Modul-Globaler Mirror (claude_service:1358 app_routes:148-Pfad)
-    ('services/claude_service.py', 'kaufbereitschaft', 'C'),
-    # aktive_phase_idx: FIX-Verdikt B5 (2 Reader: app_routes:244 + claude:206)
-    #   → per-SID Migration Plan 05 Welle C; bis dahin legitimer Modul-Global-Schreiber
-    ('services/live_session.py', 'aktive_phase_idx', 'C'),
+    # MIGRIERT (Plan 05, Familie C fertig — Liste schrumpft monoton).
+    # conversation_log, kaufbereitschaft, aktive_phase_idx alle per-SID; Eintraege entfernt.
     # ── Welle D / Plan 06 ─────────────────────────────────────────────────────
     # ewb_clicks/suggestion_offers: state[]-Keys mit noch globalem Write-Pfad
     ('services/live_session.py', "state['ewb_clicks']", 'D'),
@@ -188,11 +196,8 @@ _PENDING_MIGRATION: frozenset = frozenset({
     # Sprecher-Tracking: _second_sp_seen/_log_last_sp (deepgram schreibt Modul-Global)
     ('services/deepgram_service.py', '_second_sp_seen', 'E'),
     ('services/deepgram_service.py', '_log_last_sp', 'E'),
-    # phasen_log/covered_phases/gegenargument_log (noch globalem Write-Pfad)
-    ('services/claude_service.py', 'phasen_log', 'E'),
-    ('services/claude_service.py', 'covered_phases', 'E'),
-    ('services/claude_service.py', 'gegenargument_log', 'E'),
-    ('services/deepgram_service.py', 'phasen_log', 'E'),
+    # phasen_log/covered_phases/gegenargument_log: MIGRIERT in Plan 05 Familie C (Welle C, nicht E)
+    # — Eintraege aus _PENDING_MIGRATION entfernt (monoton schrumpfend, D-10)
     # analysiert_bisher (deepgram schreibt noch Modul-Global in Welle E)
     ('services/deepgram_service.py', 'analysiert_bisher', 'E'),
 })
