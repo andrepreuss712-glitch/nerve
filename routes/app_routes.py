@@ -147,34 +147,68 @@ def api_beenden():
     with ls.kb_lock:
         kb_verlauf  = list(ls.kaufbereitschaft_verlauf)
         kb_end      = ls.kaufbereitschaft
-    # K1: /api/beenden ist eine globale HTTP-Route ohne sid. Die Speech-Zähler liegen
-    # per-SID in _session_state (nur dort befüllt _flush_segment sie). sid via
-    # user_id-Scan auflösen; bei mehreren aktiven Sessions desselben Users die zuletzt
-    # gestartete (max session_start_time) wählen; keine Session → Null-Werte (kein Crash).
+    import time as _time
+    # ── _beenden_sid-Aufloesungs-Vertrag (S3, PERSID Plan 03) ──────────────────
+    # Geteilt von Plan 05/06. Drei-Stufen-Aufloesungs-Vertrag:
+    #   1. Exakt via posted call_id (S3 — deterministisch, multi-session-sicher)
+    #   2. User-id-Scan (K1-Fallback, maximale session_start_time)
+    #   3. None (D-02 — kein Raten)
+    # Quellen: lebende _session_state SOWIE _ended_session_snapshots (B1-Snapshot-faehig).
     _beenden_sid = None
+    _posted_call_id = req_data.get('call_id') if isinstance(req_data, dict) else None
     try:
         _my_uid = g.user.id
-        with ls._session_state_lock:
-            _cands = [(s, (st.get('session_start_time') or 0.0))
-                      for s, st in ls._session_state.items()
-                      if st.get('user_id') == _my_uid]
-        if _cands:
-            _beenden_sid = max(_cands, key=lambda x: x[1])[0]
+        # Stufe 1: exakte Aufloesung via posted call_id (S3)
+        if _posted_call_id:
+            with ls._session_state_lock:
+                for _s, _sd in ls._session_state.items():
+                    if _sd.get('state', {}).get('call_id') and \
+                       str(_sd['state']['call_id']) == str(_posted_call_id):
+                        _beenden_sid = _s
+                        break
+            # Auch im Snapshot suchen (B1 — fuer den Fall dass :779 schon gestasht hat)
+            if _beenden_sid is None:
+                _snap_s3 = ls.consume_ended_session_by_call_id(_posted_call_id) \
+                    if hasattr(ls, 'consume_ended_session_by_call_id') else None
+                if _snap_s3 is not None:
+                    _beenden_sid = _snap_s3
+        # Stufe 2: user_id-Scan (K1-Fallback, maximale session_start_time)
+        if _beenden_sid is None:
+            with ls._session_state_lock:
+                _cands = [(s, (st.get('session_start_time') or 0.0))
+                          for s, st in ls._session_state.items()
+                          if st.get('user_id') == _my_uid]
+            if _cands:
+                _beenden_sid = max(_cands, key=lambda x: x[1])[0]
     except Exception:
         _beenden_sid = None
-    import time as _time
-    # K1-Fix: Speech-Stats HIER früh lesen+berechnen, solange die Session noch in
-    # _session_state liegt. Der WebSocket-disconnect-Handler (deepgram_service.py →
-    # pop_session_state) räumt _session_state[sid] vor dem späten Persistenz-Punkt ab;
-    # ein dortiger get_speech_stats(sid) läse die leere Session → {0,0,0} (per Logging
-    # diagnostiziert: früher Read bw=150, später Read leer). Berechnung spiegelt
-    # live_session.get_speech_stats (das für coaching_loop erhalten bleibt).
-    with ls._session_state_lock:
-        _ss_b = ls._session_state.get(_beenden_sid) if _beenden_sid else None
-        bw = _ss_b.get('berater_words', 0) if _ss_b else 0
-        kw = _ss_b.get('kunde_words', 0) if _ss_b else 0
-        _st = _ss_b.get('session_start_time') if _ss_b else None
-        _monolog = round(_ss_b.get('laengster_monolog_sek', 0.0), 1) if _ss_b else 0.0
+
+    # ── GENAU EIN _load_beenden_state-Aufruf am Kopf (N-3) ─────────────────────
+    # _bs ist der nicht-destruktive Peek des per-SID-State (lebend ODER Snapshot).
+    # Alle downstream-Reads (N-2, session_anrede, word_confidences, precall_briefing)
+    # lesen aus diesem EINEN _bs. Kein zweiter _load_beenden_state-Aufruf (N-3-Invariante).
+    def _load_beenden_state(_sid):
+        """Liefert per-SID-State: zuerst lebend, sonst Snapshot (PEEK, N-3).
+        Von Plan 05/06 als geteilter Vertrag referenziert."""
+        # Lebende Session bevorzugt
+        with ls._session_state_lock:
+            _live = ls._session_state.get(_sid) if _sid else None
+        if _live:
+            return _live
+        # Snapshot (B1) — NICHT-destruktiver PEEK
+        if _sid:
+            return ls.consume_ended_session(_sid)
+        return None
+
+    _bs = _load_beenden_state(_beenden_sid)
+
+    # ── N-2: Speech-Stats aus _bs (statt direkt aus _session_state) ───────────
+    # Vorher leses :172-177 direkt aus _session_state -> nach stash(:779) immer leer.
+    # Jetzt aus _bs -> Snapshot-faehig (B1-Fundament).
+    bw = _bs.get('berater_words', 0) if _bs else 0
+    kw = _bs.get('kunde_words', 0) if _bs else 0
+    _st = _bs.get('session_start_time') if _bs else None
+    _monolog = round(_bs.get('laengster_monolog_sek', 0.0), 1) if _bs else 0.0
     dauer_sek = int(_time.monotonic() - _st) if _st else 0
     _total_w = bw + kw
     _redeanteil = round(bw / _total_w * 100) if _total_w > 0 else 0
@@ -182,31 +216,20 @@ def api_beenden():
     _tempo = round(bw / max(_elapsed_min, 0.1))
     _stats = {'redeanteil': _redeanteil, 'tempo': _tempo, 'monolog': _monolog}
 
-    # Phase 08.23.2.D REQ-D-6 — word_confidences + call_id HIER FRÜH erfassen (gleiche Wurzel
-    # wie Speech-Stats: der WebSocket-disconnect-Handler poppt _session_state[sid] vor dem
-    # späten Audio-Health-Punkt; ein dortiger Read läse leer → Buffer=[] → Thread startet nie
-    # → audio_health_score bleibt NULL). Buffer UND call_id atomar aus DERSELBEN Session
-    # (kein Mismatch); Auflösung bevorzugt _posted_call_id (deterministisch für genau den
-    # beendeten Call, multi-session-sicher), sonst user_id. DB-Fallback für call_id bleibt unten.
+    # ── N-2: word_confidences + call_id aus _bs (statt direkt aus _session_state) ─
+    # Vorher lasen :193-207 direkt -> nach stash(:779) immer leer -> Buffer=[] ->
+    # Audio-Health-Thread startet nie. Jetzt aus _bs (Snapshot-faehig).
     _phase_d_call_id = None
     _phase_d_word_confidences = []
     try:
-        _posted_call_id = req_data.get('call_id') if isinstance(req_data, dict) else None
-        with ls._session_state_lock:
-            if _posted_call_id:
-                for _sid, _sd in ls._session_state.items():
-                    if _sd.get('state', {}).get('call_id') and str(_sd['state']['call_id']) == str(_posted_call_id):
-                        _phase_d_call_id = _sd['state']['call_id']
-                        _phase_d_word_confidences = list(_sd.get('word_confidences', []))
-                        break
-            if not _phase_d_call_id:
-                for _sid, _sd in ls._session_state.items():
-                    if _sd.get('user_id') == g.user.id and _sd.get('state', {}).get('call_id'):
-                        _phase_d_call_id = _sd['state']['call_id']
-                        _phase_d_word_confidences = list(_sd.get('word_confidences', []))
-                        break
+        if _bs:
+            _phase_d_call_id = _bs.get('state', {}).get('call_id')
+            _phase_d_word_confidences = list(_bs.get('word_confidences', []))
+        # Fallback fuer word_confidences falls _bs keinen Eintrag hat (defensiv)
+        if not _phase_d_call_id and _posted_call_id:
+            _phase_d_call_id = _posted_call_id
     except Exception as _e_lookup:
-        print(f'[Phase08.23.2.D] call_id-Lookup Fehler (non-fatal): {_e_lookup}')
+        print(f'[Phase08.23.2.D] call_id/word_confidences-Lookup Fehler (non-fatal): {_e_lookup}')
 
     einwaende_liste = []
     kaufsignale_liste = []

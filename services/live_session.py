@@ -209,6 +209,16 @@ covered_phases      = set()
 
 # ── Per-SID Profil-Cache (D-01) — analog _deepgram_sessions Pattern ──────────
 _per_sid_profile: dict = {}     # {sid: (name, daten)}
+
+# ── B1: _ended_session_snapshots — Beenden-Naht-Stash (PERSID Plan 03) ───────
+# Wenn stop_live_session (:779) ODER handle_disconnect (:815) den per-SID-State
+# aufraeumt, wird ZUERST eine flache Kopie gestasht (TTL=300s).
+# api_beenden liest via consume_ended_session (NICHT-destruktiver PEEK, N-3).
+# :674 (reconnect re-init) ist B1-EXEMPT: init_session_state folgt sofort.
+# Whitelist-Eintrag (Punkt 28): sid-gekeyt -> per-sid-safe.
+_ended_session_snapshots: dict = {}   # {sid: {'state': <kopie>, 'ts': monotonic()}}
+_ended_snapshots_lock = threading.Lock()
+_SNAPSHOT_TTL_S: float = 300.0       # 5 Minuten TTL
 _per_sid_lock = threading.Lock()
 
 # ── Per-SID Session-State (D-02) ─────────────────────────────────────────────
@@ -443,6 +453,81 @@ def pop_session_state(sid: str) -> None:
     # I-4-FOLD: das Moment-Fenster (interaction_id/moment_opened_*) liegt in
     # _session_state[sid]['state'] und wird mit dem pop oben automatisch entfernt
     # (Gemini-Punkt: Memory-Cleanup der per-SID-Klammer bei Disconnect/Beenden).
+
+
+# ── B1: Beenden-Naht-Stash-Helfer (PERSID Plan 03) ────────────────────────────
+
+def stash_ended_session(sid: str) -> None:
+    """Stasht eine flache Kopie des per-SID-State in _ended_session_snapshots, dann pop.
+
+    Wird an BEIDEN Beenden-Naehten aufgerufen:
+      - stop_live_session (~:779, normaler Hangup)  — Haupt-Pfad
+      - handle_disconnect (~:815, Netz-Blip/Tab-Zu) — Edge-Case
+
+    N-1 Schutzmassnahmen (gegen setdefault :810-811 in handle_disconnect):
+      1. Leer-/Fehlend-Skip: leeres oder fehlendes _session_state[sid] wird NICHT gestasht.
+      2. first-stash-wins: ist bereits ein TTL-frischer Snapshot vorhanden, NICHT
+         ueberschreiben. Der volle :779-Snapshot gewinnt gegen einen spaeteren leeren
+         :815-Stash-Versuch.
+    """
+    # N-1 Pruefung 1: leeres oder fehlendes Dict NICHT stashen
+    with _session_state_lock:
+        state_copy = _session_state.get(sid)
+        if not state_copy:
+            # Leer-/Fehlend-Skip — kein Stash (verhindert Ueberschreiben mit leerem Dict)
+            return
+        # Flache Kopie unter Lock nehmen (D-03: Snapshot unter Lock, dann Lock freigeben)
+        state_copy = dict(state_copy)
+
+    # Lazy TTL-Sweep: alte Snapshots entfernen
+    _now = time.monotonic()
+    with _ended_snapshots_lock:
+        # N-1 Pruefung 2: first-stash-wins (kein Ueberschreiben eines TTL-frischen Snapshots)
+        existing = _ended_session_snapshots.get(sid)
+        if existing is not None and (_now - existing['ts']) <= _SNAPSHOT_TTL_S:
+            # Frischer Snapshot bereits vorhanden — NICHT ueberschreiben
+            # pop_session_state trotzdem aufrufen (State aufraumen)
+            pass
+        else:
+            # Lazy TTL-Sweep fuer alle alten Eintraege
+            _expired = [s for s, v in _ended_session_snapshots.items()
+                        if _now - v['ts'] > _SNAPSHOT_TTL_S]
+            for _s in _expired:
+                _ended_session_snapshots.pop(_s, None)
+            # Snapshot stashen
+            _ended_session_snapshots[sid] = {'state': state_copy, 'ts': _now}
+
+    # State aufraumen (NACH Snapshot-Stash)
+    pop_session_state(sid)
+
+
+def consume_ended_session(sid: str) -> 'dict | None':
+    """N-3 NICHT-destruktiver PEEK: gibt den gestashten State zurueck OHNE zu loeschen.
+
+    Mehrfaches Lesen liefert denselben Inhalt (Doppel-Beenden bleibt gutartig).
+    TTL-Check: abgelaufene Snapshots gelten als nicht vorhanden.
+    Aufraeumen: via pop_ended_session (Plan 06 Task 2c in reset_session).
+    """
+    _now = time.monotonic()
+    with _ended_snapshots_lock:
+        entry = _ended_session_snapshots.get(sid)
+        if entry is None:
+            return None
+        if _now - entry['ts'] > _SNAPSHOT_TTL_S:
+            # Abgelaufen
+            _ended_session_snapshots.pop(sid, None)
+            return None
+        return entry['state']
+
+
+def pop_ended_session(sid: str) -> None:
+    """Expliziter Snapshot-Pop (Plan 06 Task 2c: reset_session ruft ihn auf).
+
+    Entfernt den Snapshot final. Wird NACH dem Persistieren des Call-Records
+    aufgerufen (in reset_session(_beenden_sid)), nicht vorher.
+    """
+    with _ended_snapshots_lock:
+        _ended_session_snapshots.pop(sid, None)
 
 
 # ── TAXO1-Welle 4: Moment-FENSTER (I-4-FOLD + Gemini-R2) ──────────────────────

@@ -105,6 +105,8 @@ _WHITELIST: frozenset = frozenset({
     '_deepgram_sessions',
     '_cost_opened_at',
     '_stt_seconds_accumulated',
+    # B1 PERSID Plan 03: Beenden-Naht-Stash (sid-gekeyt -> per-sid-safe)
+    '_ended_session_snapshots',
     # Konstanten (nie mutiert nach Init)
     'LOG_DIR',
     '_DU_FORMS',

@@ -664,6 +664,8 @@ def register_audio_handlers(sio):
             finally:
                 _db2.close()
             # Idempotent: pop stale state if SID already exists (reconnect without disconnect)
+            # B1-EXEMPT: re-init folgt sofort (init_session_state :675), kein api_beenden-Read
+            # gegen diese sid -> kein Snapshot noetig. RAW-pop bleibt.
             if _sid in ls._session_state:
                 ls.pop_session_state(_sid)
             ls.init_session_state(
@@ -770,7 +772,9 @@ def register_audio_handlers(sio):
         _sid = request.sid if sid is None else sid
         print(f"[DG] stop_live_session event received (sid={_sid})")
         _close_deepgram_connection(_sid)
-        ls.pop_session_state(_sid)
+        # B1: stash_ended_session statt raw pop — api_beenden liest via consume_ended_session (N-3)
+        # :674 (reconnect re-init) bleibt RAW-pop (B1-EXEMPT).
+        ls.stash_ended_session(_sid)
 
     # POLISH-48: Chunk-Counter statt one-shot-Logs. Vorher `_first_chunk_logged`
     # loggte nur den ersten Chunk pro sid — was User-Observation "nur ein Chunk"
@@ -801,12 +805,15 @@ def register_audio_handlers(sio):
         from flask import request
         _sid = request.sid if sid is None else sid
         # setdefault race guard: disconnect may fire before start_live_session fully initializes
+        # N-1: stash_ended_session hat Leer-Skip — ein leeres {} vom setdefault wird NICHT gestasht.
         with ls._session_state_lock:
             ls._session_state.setdefault(_sid, {})
         print(f"[DG] socket.io disconnect event (sid={_sid})")
         _chunk_counts.pop(_sid, None)
         _close_deepgram_connection(_sid)
-        ls.pop_session_state(_sid)
+        # B1: stash_ended_session statt raw pop — Leer-Skip (N-1) faengt das setdefault-{} ab.
+        # first-stash-wins: falls stop_live_session (:779) schon stashte, bleibt sein voller Snapshot.
+        ls.stash_ended_session(_sid)
 
     @sio.on('set_anrede')
     def handle_set_anrede(data):
