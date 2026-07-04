@@ -68,6 +68,11 @@ _KILLED_MODULE_GLOBALS: frozenset = frozenset({
     'kb_lock',
     'aktive_phase_idx',
     'phase_lock',
+    # Plan 06 Familie E: Speaker-Globale per-SID migriert (2026-07-04)
+    '_log_last_sp',
+    '_log_sp_lock',
+    '_second_sp_seen',
+    '_sp2_lock',
 })
 
 # ── _KILLED_STATE_KEYS: In Task 2 geloeschte state{}-Keys ────────────────────
@@ -156,12 +161,15 @@ _WHITELIST: frozenset = frozenset({
     'state',
     # Kaufbereitschaft ENTFERNT (Plan 05 Familie C — in _KILLED_MODULE_GLOBALS)
     # aktive_phase_idx ENTFERNT (Plan 05 Familie C B5 — in _KILLED_MODULE_GLOBALS)
-    # Sprecher-Tracking (PENDING Welle E)
-    '_log_last_sp',
-    '_second_sp_seen',
+    # Sprecher-Stabilisierung (noch Modul-Global — _confirmed_speaker/_pending_speaker/_pending_since
+    # sind per-SID-Seed vorhanden UND Modul-Global fuer stabilize_speaker; Plan 06 hat sie nicht migriert).
     '_confirmed_speaker',
     '_pending_speaker',
     '_pending_since',
+    # _log_last_sp GELOESCHT (Plan 06 Familie E: per-SID) — in _KILLED_MODULE_GLOBALS
+    # _second_sp_seen GELOESCHT (Plan 06 Familie E: per-SID) — in _KILLED_MODULE_GLOBALS
+    # _log_sp_lock GELOESCHT — in _KILLED_MODULE_GLOBALS
+    # _sp2_lock GELOESCHT — in _KILLED_MODULE_GLOBALS
     # Tenant-neutrale Latenz-Caches (S6 — explizit gewhitelistet)
     # self-contained TTFT-Circuit-Breaker, kein Cross-Tenant-Zustand, 0 externe Reader
     '_ewb_ttft_history',
@@ -181,25 +189,18 @@ _WHITELIST: frozenset = frozenset({
 # Plan 06 Task 3 assertiert _PENDING_MIGRATION == frozenset() (alle migriert).
 _PENDING_MIGRATION: frozenset = frozenset({
     # ── Welle A / Plan 03 ─────────────────────────────────────────────────────
-    # PERSID Plan 03: session_anrede, mic_muted, precall_briefing MIGRIERT (Welle A fertig).
-    # Alle drei Eintraege entfernt — Liste schrumpft monoton (D-10).
+    # MIGRIERT (Plan 03): session_anrede, mic_muted, precall_briefing — Eintraege entfernt.
     # ── Welle B / Plan 04 ─────────────────────────────────────────────────────
-    # _merge_pending MIGRIERT (Plan 04, Familie B fertig — Liste schrumpft monoton).
+    # MIGRIERT (Plan 04): _merge_pending — Eintrag entfernt.
     # ── Welle C / Plan 05 ─────────────────────────────────────────────────────
-    # MIGRIERT (Plan 05, Familie C fertig — Liste schrumpft monoton).
-    # conversation_log, kaufbereitschaft, aktive_phase_idx alle per-SID; Eintraege entfernt.
+    # MIGRIERT (Plan 05): conversation_log, kaufbereitschaft, aktive_phase_idx — Eintraege entfernt.
     # ── Welle D / Plan 06 ─────────────────────────────────────────────────────
-    # MIGRIERT (Plan 06 Familie D): ewb_clicks + suggestion_offers per-SID; Modul-Global-Keys ENTFERNT.
-    # record_ewb_click(sid,...) + record_suggestion_offer(sid,...) schreiben in _session_state[sid]['state'].
-    # Eintraege entfernt — Liste schrumpft monoton (D-10).
+    # MIGRIERT (Plan 06 Familie D): ewb_clicks, suggestion_offers — Eintraege entfernt.
     # ── Welle E / Plan 06 ─────────────────────────────────────────────────────
-    # Sprecher-Tracking: _second_sp_seen/_log_last_sp (deepgram schreibt Modul-Global)
-    ('services/deepgram_service.py', '_second_sp_seen', 'E'),
-    ('services/deepgram_service.py', '_log_last_sp', 'E'),
-    # phasen_log/covered_phases/gegenargument_log: MIGRIERT in Plan 05 Familie C (Welle C, nicht E)
-    # — Eintraege aus _PENDING_MIGRATION entfernt (monoton schrumpfend, D-10)
-    # analysiert_bisher (deepgram schreibt noch Modul-Global in Welle E)
-    ('services/deepgram_service.py', 'analysiert_bisher', 'E'),
+    # MIGRIERT (Plan 06 Familie E): _second_sp_seen, _log_last_sp, analysiert_bisher — Eintraege entfernt.
+    # _second_sp_seen + _log_last_sp: deepgram schreibt jetzt per-SID (2026-07-04).
+    # analysiert_bisher: war bereits per-SID (kein globaler Write-Pfad), Eintrag war stale.
+    # B3 (Plan 06 Task 3): _PENDING_MIGRATION MUSS == frozenset() sein — alle Wellen migriert.
 })
 
 
@@ -368,4 +369,24 @@ def test_pending_migration_wave_tags_are_valid():
     assert not invalid, (
         f"Ungueltige Wellen-Tags in _PENDING_MIGRATION:\n  "
         + "\n  ".join(f"{p} [{m}] -> '{w}'" for (p, m, w) in invalid)
+    )
+
+
+# ── Test 5 (B3): _PENDING_MIGRATION MUSS leer sein (Plan 06 Task 3) ───────────
+
+def test_pending_migration_is_empty():
+    """B3: _PENDING_MIGRATION MUSS == frozenset() sein (alle Wellen A-E migriert).
+
+    Plan 06 Welle E (letzte Welle) hat alle noch verbliebenen Eintraege geloescht:
+    - Welle E: _second_sp_seen, _log_last_sp per-SID (2026-07-04)
+    - Welle E: analysiert_bisher war bereits per-SID (Eintrag stale, jetzt entfernt)
+
+    Ab jetzt ist JEDE neue nicht-per-sid Live-Zuweisung sofort rot (kein Pending-Puffer).
+    Punkt 29 Halb-Migration-Falle ist vollstaendig geschlossen.
+    """
+    assert _PENDING_MIGRATION == frozenset(), (
+        f"_PENDING_MIGRATION ist NICHT leer — {len(_PENDING_MIGRATION)} Eintrag/Eintraege:\n  "
+        + "\n  ".join(f"{p} [{m}] Welle={w}" for (p, m, w) in _PENDING_MIGRATION)
+        + "\n\nB3: Plan 06 Task 3 verlangt _PENDING_MIGRATION == frozenset()."
+        " Alle Wellen A-E muessen vollstaendig migriert sein."
     )

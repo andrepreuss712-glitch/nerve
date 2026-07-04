@@ -881,7 +881,7 @@ def api_beenden():
             daemon=True,
         ).start()
 
-    reset_session()
+    reset_session(_beenden_sid)  # PERSID Plan 06 Familie E: nur eigene sid (N-3 Snapshot-Pop)
     print("[Beenden] State zurückgesetzt.")
     return jsonify({
         'ok': True,

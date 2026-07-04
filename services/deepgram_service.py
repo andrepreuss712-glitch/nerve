@@ -65,17 +65,25 @@ def _make_on_message(sid, mode='meeting'):
                 line_id = ls.next_line_id(sid)
                 ts      = datetime.now().strftime('%H:%M:%S')
 
-                # Zweiter Sprecher gesehen?
-                with ls._sp2_lock:
-                    if speaker == 1:
-                        ls._second_sp_seen = True
-                    roles_confirmed = ls._second_sp_seen
+                # Zweiter Sprecher gesehen? (PERSID Plan 06 Familie E: per-SID)
+                with ls._session_state_lock:
+                    _sp_ss = ls._session_state.get(sid)
+                    if _sp_ss is not None:
+                        if speaker == 1:
+                            _sp_ss['_second_sp_seen'] = True
+                        roles_confirmed = _sp_ss.get('_second_sp_seen', False)
+                    else:
+                        roles_confirmed = False
 
-                # Sprecher-Fallback für Log
-                with ls._log_sp_lock:
-                    if speaker is not None:
-                        ls._log_last_sp = speaker
-                    log_sp = speaker if speaker is not None else ls._log_last_sp
+                # Sprecher-Fallback fuer Log (PERSID Plan 06 Familie E: per-SID)
+                with ls._session_state_lock:
+                    _sp_ss2 = ls._session_state.get(sid)
+                    if _sp_ss2 is not None:
+                        if speaker is not None:
+                            _sp_ss2['_log_last_sp'] = speaker
+                        log_sp = speaker if speaker is not None else _sp_ss2.get('_log_last_sp')
+                    else:
+                        log_sp = speaker  # Ghost-SID: kein Fallback-Wert
 
                 if mode == 'cold_call':
                     # Cold-Call ist Single-Speaker: immer der Berater (diarize=False -> keine .speaker-Attribute).

@@ -157,13 +157,15 @@ state = {
 roles_lock    = threading.Lock()
 roles_swapped = False  # DEPRECATED-GLOBAL: roles_swapped — 0 `= True` Schreiber (RESEARCH §1), Loeschung Plan 03
 
-# ── Sprecher-Fallback für Log ─────────────────────────────────────────────────
-_log_sp_lock = threading.Lock()
-_log_last_sp = None
+# ── Sprecher-Fallback für Log (PERSID Plan 06 Familie E: per-SID) ───────────
+# _log_last_sp GELOESCHT (Modul-Global DELETE, 2026-07-04): Lag unter _session_state[sid]['_log_last_sp'].
+# _log_sp_lock GELOESCHT: kein Modul-Global mehr; Lock unnoetig.
+# Seed in init_session_state :339 ('_log_last_sp': None) bleibt.
 
-# ── Zweiter Sprecher gesehen? ─────────────────────────────────────────────────
-_sp2_lock       = threading.Lock()
-_second_sp_seen = False
+# ── Zweiter Sprecher gesehen? (PERSID Plan 06 Familie E: per-SID) ────────────
+# _second_sp_seen GELOESCHT (Modul-Global DELETE, 2026-07-04): liegt unter _session_state[sid]['_second_sp_seen'].
+# _sp2_lock GELOESCHT: kein Modul-Global mehr; Lock unnoetig.
+# Seed in init_session_state :426 ('_second_sp_seen': False) bleibt.
 
 # ── Sprecher-Stabilisierung ───────────────────────────────────────────────────
 _speaker_lock      = threading.Lock()
@@ -971,72 +973,28 @@ def update_kaufbereitschaft(sid: str, delta: int):
         _st['kaufbereitschaft_verlauf'].append({'ts': ts, 'wert': _st['kaufbereitschaft']})
 
 
-def reset_session():
-    """Setzt den kompletten Live-State zurück (nach 'Gespräch beenden').
-    Deprecated -- after per-SID migration this is a thin wrapper.
-    Prefer pop_session_state(sid) + init_session_state(sid, ...) directly.
-    Kept for backward compatibility with routes/ callers (Phase 08.19.5).
-    Audit 08.19.5: 1 external caller found -- routes/app_routes.py line 480.
-    Per-SID cleanup: iterates all active SIDs and calls pop+init as well as
-    resetting module-level globals for backward compat with remaining callers."""
-    # PERSID Plan 05 (Familie C): conversation_log, painpoints, gegenargument_log,
-    # phasen_log, covered_phases, kaufbereitschaft(_verlauf), aktive_phase_idx, phase_lock
-    # ALLE Modul-Globale entfernt — per-SID via _session_state[sid].
-    # Per-SID-Daten werden durch pop_session_state+init_session_state unten zurueckgesetzt.
-    # D-09 PERSID Plan 01: _line_id_counter/_bof_count Modul-Globale geloescht (S5/D-09).
-    # PERSID Plan 04: transcript_buffer/analysiert_bisher/coaching_buffer Modul-Globale entfernt.
-    global _log_last_sp
-    global _confirmed_speaker, _pending_speaker, _pending_since, _second_sp_seen
-    global roles_swapped
-    # Per-SID cleanup: reset all active SIDs via pop+init (Phase 08.19.5 migration)
-    # pop_session_state cancelt jetzt auch offene _merge_pending-Timer (Plan 04).
-    with _session_state_lock:
-        active = list(_session_state.keys())
-    for _rsid in active:
-        _ss = _session_state.get(_rsid, {})
-        _uid = _ss.get('user_id') or _ss.get('_user_id', 0)
-        _oid = _ss.get('org_id', 0)
-        _pid = _ss.get('active_profile_id')
-        pop_session_state(_rsid)
-        init_session_state(_rsid, user_id=_uid, org_id=_oid, profile_id=_pid)
+def reset_session(sid: str) -> None:
+    """Raeume NUR die eigene sid auf + poppe deren Snapshot (N-3 finales Cleanup).
 
-    # Familie C Modul-Globale ENTFERNT (Plan 05): keine .clear()-Aufrufe mehr noetig.
-    # Per-SID-Werte werden durch pop_session_state + init_session_state oben zurueckgesetzt.
-    with state_lock:
-        # D-09 PERSID Plan 01: version/aktiv/ergebnis/line_id/active_hint/ewb_buttons/
-        # slot1_variant_busy_until GELOESCHT (0 Prod-Reader — Zombie-Keys). Nur noch
-        # verbliebene Keys zuruecksetzen (aktive Schreiber/Leser in laufenden Wellen).
-        state['kaufbereitschaft'] = 30
-        state['readiness_score']     = 30
-        state['readiness_bucket']    = 'cold'
-        state['score_factors_seen']  = {}
-        state['active_learning_cards'] = []
-        # PERSID Plan 03 W-A: precall_briefing + mic_muted Modul-Keys ENTFERNT.
-        state['active_profile_id'] = None  # re-set by set_active_profile_with_id at session start
-    with _log_sp_lock:
-        _log_last_sp = None
-    with _speaker_lock:
-        _confirmed_speaker = None
-        _pending_speaker   = None
-        _pending_since     = None
-    with _sp2_lock:
-        _second_sp_seen = False
-    # _merge_lock/_merge_pending Modul-Global entfernt (Plan 04, S4).
-    # Per-SID-Timer-Cancel erfolgt durch pop_session_state (oben) — kein separater Block noetig.
-    with roles_lock:
-        roles_swapped = False
-    with hilfe_log_lock:
-        hilfe_log.clear()
-    with quick_action_log_lock:
-        quick_action_log.clear()
-    # PERSID Plan 06 Familie D: ewb_clicks + suggestion_offers sind per-SID migriert —
-    # Modul-Global-Reset-Bloecke entfernt. Per-SID-Daten werden durch pop_session_state+init_session_state
-    # oben zurueckgesetzt (Single-Source-of-State).
-    # Sprach-Zähler, Familie C (conv_log/painpoints/gegenargument/phasen/covered_phases/
-    # kaufbereitschaft/aktive_phase_idx) werden per-SID via pop_session_state+init_session_state
-    # zurueckgesetzt (Single-Source-of-State) — keine Modul-Globalen mehr.
-    # D-09 PERSID Plan 01: session_meta Modul-Global geloescht (0 externe Leser).
-    # Kein Reset-Block mehr noetig — per-SID-Daten werden durch pop+init oben geloescht.
+    PERSID Plan 06 Familie E (Task 2c):
+    - Signatur nimmt jetzt sid als Pflicht-Arg (NICHT no-arg all-reset).
+    - D-02: sid=None → skip (kein All-Reset, kein Crash).
+    - Raeumt pop_session_state(sid) — cancelt offene _merge_pending-Timer der sid.
+    - N-3: poppt AUCH den gestashten Snapshot via pop_ended_session(sid).
+      Doppel-Beenden bleibt gutartig (Snapshot schon weg nach erstem reset → kein Fehler).
+    - Andere aktive Sessions (sidB, sidC …) bleiben VOLLSTAENDIG unangetastet.
+    - Reset-Ueberlebens-Check (SPEC Req 4): get_anonymisierer(sidB) is anon_b_before.
+
+    Caller: routes/app_routes.py:884 (FRESH-GREP 2026-07-04).
+    Alle Modul-Global-Reset-Bloecke (Speaker-Familie, state-Keys, roles_swapped etc.) sind
+    nach Plan 06 Familie E geloescht — per-SID-Daten liegen in _session_state[sid].
+    """
+    if not sid:
+        return  # D-02: None-sid → No-Op (kein All-Reset)
+    # per-SID-Cleanup: cancelt offene _merge_pending-Timer + popt den SID-Bucket
+    pop_session_state(sid)
+    # N-3: finales Snapshot-Cleanup (PEEK-Gegenstueck aus Plan 03 stash_ended_session)
+    pop_ended_session(sid)
 
 
 def record_ewb_click(sid: str, einwand_typ: str, success: bool = False,
