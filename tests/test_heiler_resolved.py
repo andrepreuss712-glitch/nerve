@@ -100,10 +100,12 @@ class TestTTFT:
                 msg.usage.cache_creation_input_tokens = 0
                 return msg
 
-        monkeypatch.setattr(
-            cs.claude_client.messages, 'stream',
-            lambda **kw: _MockStream(['Hallo', ' Welt', '!'])
-        )
+        # claude_client koennte in Abhaengigkeit von Test-Reihenfolge ein _FakeAnthropic-
+        # Objekt ohne .messages sein (test_08_5_05_training_pipeline_t1 setzt anthropic-Stub
+        # via sys.modules.setdefault). Daher cs.claude_client VOLLSTAENDIG ersetzen.
+        mock_client = MagicMock()
+        mock_client.messages.stream.side_effect = lambda **kw: _MockStream(['Hallo', ' Welt', '!'])
+        monkeypatch.setattr(cs, 'claude_client', mock_client)
 
         # Mock: services.cost_tracker (kein Netz)
         mock_cost = MagicMock()
