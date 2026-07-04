@@ -353,11 +353,12 @@ def api_beenden():
     # POLISH-38: einwaende_gesamt = len(ewb_clicks) (User-Definition POLISH-29:
     # "EWB-Button gedrueckt = behandelt"). Read here so it's available before
     # ConversationLog-Insert (moved up from line ~435).
-    with ls.state_lock:
-        ewb_clicks = list(ls.state.get('ewb_clicks', []))
-        # TAXO2-08: RAM-Puffer der NERVE-Vorschlaege (Auto/Knopf/Keyword) — wie ewb_clicks
-        # VOR dem Session-Reset lesen, fuer den Call-Ende-Flush nach suggestion_reactions.
-        suggestion_offers = list(ls.state.get('suggestion_offers', []))
+    # PERSID Plan 06 Familie D: ewb_clicks + suggestion_offers per-SID aus _bs (Snapshot-faehig).
+    # Vorher: ls.state.get('ewb_clicks') (global) — tote globale, Multi-Tenant-Vermischung.
+    # Jetzt: _bs.get('state', {}).get('ewb_clicks', []) — per-SID via N-3-Snapshot.
+    ewb_clicks = list(_bs.get('state', {}).get('ewb_clicks', [])) if _bs else []
+    # TAXO2-08: RAM-Puffer der NERVE-Vorschlaege (Auto/Knopf/Keyword) — wie ewb_clicks.
+    suggestion_offers = list(_bs.get('state', {}).get('suggestion_offers', [])) if _bs else []
     saved_conv_id = None
     stats = _stats
     kb_min_val = min((v['wert'] for v in kb_verlauf), default=30)

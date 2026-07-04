@@ -1029,7 +1029,7 @@ def register_audio_handlers(sio):
                     from services.anonymization import anonymize_for_storage
                     _antwort = anonymize_for_storage(_antwort, _sid)
                 try:
-                    ls.record_ewb_click(typ, success=True,
+                    ls.record_ewb_click(_sid, typ, success=True,
                                         antwort_text=_antwort, einwand_text=typ)
                 except Exception as e:
                     print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
@@ -1041,7 +1041,7 @@ def register_audio_handlers(sio):
                 try:
                     import config as _cfg_btn
                     ls.record_suggestion_offer(
-                        slot='B', source='manual_button', model=_cfg_btn.MODEL_PIP_VARIANTE,
+                        _sid, slot='B', source='manual_button', model=_cfg_btn.MODEL_PIP_VARIANTE,
                         suggestion_text=_antwort, interaction_id=_btn_iid, einwand_typ=typ,
                     )
                 except Exception as _btn_cap_e:
@@ -1049,7 +1049,7 @@ def register_audio_handlers(sio):
             except Exception as ex:
                 print(f"[PiP] manual_ewb variante error (sid={_sid}): {ex}")
                 try:
-                    ls.record_ewb_click(typ, success=False, einwand_text=typ)
+                    ls.record_ewb_click(_sid, typ, success=False, einwand_text=typ)
                 except Exception as e:
                     print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
                 try:
@@ -1064,7 +1064,7 @@ def register_audio_handlers(sio):
         except Exception as _spawn_err:
             print(f"[PiP] manual_ewb spawn error (sid={_sid}): {_spawn_err}")
             try:
-                ls.record_ewb_click(typ, success=False, einwand_text=typ)
+                ls.record_ewb_click(_sid, typ, success=False, einwand_text=typ)
             except Exception as e:
                 print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
 

@@ -336,7 +336,7 @@ class EinwandKeywordMatcher:
                         from services.anonymization import anonymize_for_storage as _anon_store_kw
                         _kw_sugg_storage = _anon_store_kw(_kw_sugg, sid)
                         _ls.record_suggestion_offer(
-                            slot='A', source='keyword', model=None,
+                            sid, slot='A', source='keyword', model=None,
                             suggestion_text=_kw_sugg_storage, interaction_id=_kw_iid,
                             einwand_typ=match.get('matched_label'),
                         )

@@ -723,7 +723,7 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
             with _ls_av._session_state_lock:
                 _av_iid = _ls_av.get_or_open_moment(sid, mode=_av_mode, now=_t_av.monotonic())
             _ls_av.record_suggestion_offer(
-                slot='B', source='auto_variante', model=_model_autovar,
+                sid, slot='B', source='auto_variante', model=_model_autovar,
                 suggestion_text=cleaned_storage, interaction_id=_av_iid,
             )
         except Exception as _av_cap_e:

@@ -119,8 +119,9 @@ def get_sid_paused(sid: str) -> bool:
 state_lock = threading.Lock()
 state = {
     'kaufbereitschaft': 30,
-    'ewb_clicks':       [],    # Liste von dicts: {'einwand_typ': str, 'success': bool, 'ts': iso, 'antwort_text': str|None, 'einwand_text': str|None}
-    'suggestion_offers': [],   # TAXO2-08: Liste von dicts {slot, source, model, suggestion_text(anon Storage/Plan 09), interaction_id, einwand_typ, ts} — Call-Ende-Flush
+    # PERSID Plan 06 Familie D: ewb_clicks + suggestion_offers per-SID migriert — Modul-Global-Keys ENTFERNT.
+    # Schreiber: record_ewb_click(sid,...) / record_suggestion_offer(sid,...) schreiben NUR noch per-SID.
+    # Reader: app_routes api_beenden liest via _bs.get('state',{}).get('ewb_clicks',[]). (D-10)
     # ── Phase 04.8: Conversation Phase Model (6-phase auto-detected) ──
     'current_phase':        1,
     'current_phase_name':   'Opener',
@@ -347,7 +348,8 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 # 'slot1_variant_busy_until' PIP-01 entfernt (0 Reader).
                 'line_id':               None,  # per-SID line tracking (claude_service:1146)
                 'kaufbereitschaft':      30,
-                'ewb_clicks':            [],
+                'ewb_clicks':            [],  # PERSID Plan 06 Familie D per-SID (B4)
+                'suggestion_offers':     [],  # PERSID Plan 06 Familie D per-SID (B4, TAXO2-08)
                 'current_phase':         1,
                 'current_phase_name':    'Opener',
                 'phase_confidence':      0.0,
@@ -1027,9 +1029,9 @@ def reset_session():
         hilfe_log.clear()
     with quick_action_log_lock:
         quick_action_log.clear()
-    with state_lock:
-        state['ewb_clicks'] = []
-        state['suggestion_offers'] = []   # TAXO2-08: RAM-Puffer der NERVE-Vorschlaege (Call-Ende-Flush)
+    # PERSID Plan 06 Familie D: ewb_clicks + suggestion_offers sind per-SID migriert —
+    # Modul-Global-Reset-Bloecke entfernt. Per-SID-Daten werden durch pop_session_state+init_session_state
+    # oben zurueckgesetzt (Single-Source-of-State).
     # Sprach-Zähler, Familie C (conv_log/painpoints/gegenargument/phasen/covered_phases/
     # kaufbereitschaft/aktive_phase_idx) werden per-SID via pop_session_state+init_session_state
     # zurueckgesetzt (Single-Source-of-State) — keine Modul-Globalen mehr.
@@ -1037,9 +1039,16 @@ def reset_session():
     # Kein Reset-Block mehr noetig — per-SID-Daten werden durch pop+init oben geloescht.
 
 
-def record_ewb_click(einwand_typ: str, success: bool = False,
+def record_ewb_click(sid: str, einwand_typ: str, success: bool = False,
                      antwort_text: str = None, einwand_text: str = None):
-    """Erfasst einen EWB-Button-Klick im Session-State (thread-safe)."""
+    """Erfasst einen EWB-Button-Klick im per-SID-State (thread-safe).
+
+    PERSID Plan 06 Familie D: schreibt in _session_state[sid]['state']['ewb_clicks'].
+    D-02 Ghost-SID-Guard: sid=None oder tote sid -> No-Op (kein globaler Fallback).
+    LATENZ (Punkt 25, HART): NUR ein list.append unter _session_state_lock.
+    """
+    if not sid:
+        return  # D-02: None-sid -> No-Op
     import datetime as _dt
     entry = {
         'einwand_typ':  einwand_typ,
@@ -1048,16 +1057,21 @@ def record_ewb_click(einwand_typ: str, success: bool = False,
         'antwort_text': antwort_text or None,
         'einwand_text': einwand_text or None,
     }
-    with state_lock:
-        state.setdefault('ewb_clicks', []).append(entry)
+    with _session_state_lock:
+        if sid not in _session_state:
+            return  # Ghost-SID-Guard: tote/nicht-existente sid -> No-Op
+        _session_state[sid]['state'].setdefault('ewb_clicks', []).append(entry)
 
 
-def record_suggestion_offer(slot, source, model, suggestion_text, interaction_id,
+def record_suggestion_offer(sid: str, slot, source, model, suggestion_text, interaction_id,
                             einwand_typ=None):
-    """TAXO2-08 (FOLD A): Erfasst EINEN ausgegebenen NERVE-Vorschlag im RAM-Puffer
-    state['suggestion_offers'] (thread-safe Append, EXAKT das Muster von record_ewb_click).
+    """TAXO2-08 (FOLD A): Erfasst EINEN ausgegebenen NERVE-Vorschlag im per-SID-RAM-Puffer
+    _session_state[sid]['state']['suggestion_offers'] (thread-safe Append).
 
-    LATENZ (Punkt 25, HART): NUR ein list.append unter state_lock — KEIN get_session/commit,
+    PERSID Plan 06 Familie D: sid als erstes Arg — alle 3 Caller (deepgram:1017,
+    matcher:338, claude:722) reichen sid durch (B4).
+
+    LATENZ (Punkt 25, HART): NUR ein list.append unter _session_state_lock — KEIN get_session/commit,
     KEIN Netz, KEIN LLM. Der EINZIGE DB-Write ist der Call-Ende-Flush (suggestion_capture.py).
 
     ANON-VERTRAG (FOLD A-2 / Plan 09 depends_on): `suggestion_text` ist die BEREITS am Erfassen
@@ -1065,7 +1079,12 @@ def record_suggestion_offer(slot, source, model, suggestion_text, interaction_id
     Diese Funktion reicht sie nur durch — KEIN eigener Anon-Aufruf hier.
 
     B1 (FOLD A-2): `interaction_id` wird vom Capture-Hook via get_or_open_moment IMMER gesetzt
-    (nie None erwartet). Wird hier nur durchgereicht."""
+    (nie None erwartet). Wird hier nur durchgereicht.
+
+    D-02 Ghost-SID-Guard: sid=None oder tote sid -> No-Op (kein globaler Fallback).
+    """
+    if not sid:
+        return  # D-02: None-sid -> No-Op
     import datetime as _dt
     entry = {
         'slot':            slot,
@@ -1076,8 +1095,10 @@ def record_suggestion_offer(slot, source, model, suggestion_text, interaction_id
         'einwand_typ':     einwand_typ,
         'ts':              _dt.datetime.utcnow().isoformat(),
     }
-    with state_lock:
-        state.setdefault('suggestion_offers', []).append(entry)
+    with _session_state_lock:
+        if sid not in _session_state:
+            return  # Ghost-SID-Guard: tote/nicht-existente sid -> No-Op
+        _session_state[sid]['state'].setdefault('suggestion_offers', []).append(entry)
 
 
 def get_speech_stats(sid: str = None) -> dict:

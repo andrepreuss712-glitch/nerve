@@ -189,9 +189,9 @@ _PENDING_MIGRATION: frozenset = frozenset({
     # MIGRIERT (Plan 05, Familie C fertig — Liste schrumpft monoton).
     # conversation_log, kaufbereitschaft, aktive_phase_idx alle per-SID; Eintraege entfernt.
     # ── Welle D / Plan 06 ─────────────────────────────────────────────────────
-    # ewb_clicks/suggestion_offers: state[]-Keys mit noch globalem Write-Pfad
-    ('services/live_session.py', "state['ewb_clicks']", 'D'),
-    ('services/live_session.py', "state['suggestion_offers']", 'D'),
+    # MIGRIERT (Plan 06 Familie D): ewb_clicks + suggestion_offers per-SID; Modul-Global-Keys ENTFERNT.
+    # record_ewb_click(sid,...) + record_suggestion_offer(sid,...) schreiben in _session_state[sid]['state'].
+    # Eintraege entfernt — Liste schrumpft monoton (D-10).
     # ── Welle E / Plan 06 ─────────────────────────────────────────────────────
     # Sprecher-Tracking: _second_sp_seen/_log_last_sp (deepgram schreibt Modul-Global)
     ('services/deepgram_service.py', '_second_sp_seen', 'E'),

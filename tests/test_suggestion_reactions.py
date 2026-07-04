@@ -197,25 +197,34 @@ def test_flush_delete_scoped_to_call(db_session):
 
 def test_record_suggestion_offer_always_sets_interaction_id():
     """B1: record_suggestion_offer mit gesetztem interaction_id -> der RAM-entry traegt es.
-    (Der Capture-Hook setzt es via get_or_open_moment immer; hier der Durchreich-Beleg.)"""
+    (Der Capture-Hook setzt es via get_or_open_moment immer; hier der Durchreich-Beleg.)
+
+    W-2 PERSID Plan 06: auf neue sid-erste Signatur + per-SID-Bucket migriert.
+    """
     import services.live_session as ls
-    with ls.state_lock:
-        ls.state['suggestion_offers'] = []
-    iid = str(uuid.uuid4())
-    ls.record_suggestion_offer(slot='B', source='auto_variante', model='haiku',
-                               suggestion_text='[PERSON_A] x', interaction_id=iid)
-    with ls.state_lock:
-        offers = list(ls.state.get('suggestion_offers', []))
-    assert len(offers) == 1
-    assert offers[0]['interaction_id'] == iid
-    assert offers[0]['interaction_id'] is not None
+    test_sid = f"test-sr-iid-{uuid.uuid4().hex[:8]}"
+    ls.init_session_state(test_sid, user_id=1, org_id=1)
+    try:
+        iid = str(uuid.uuid4())
+        ls.record_suggestion_offer(test_sid, slot='B', source='auto_variante', model='haiku',
+                                   suggestion_text='[PERSON_A] x', interaction_id=iid)
+        with ls._session_state_lock:
+            offers = list(ls._session_state[test_sid]['state'].get('suggestion_offers', []))
+        assert len(offers) == 1
+        assert offers[0]['interaction_id'] == iid
+        assert offers[0]['interaction_id'] is not None
+    finally:
+        ls.pop_session_state(test_sid)
 
 
 # ── Punkt 25 (Latenz): record_suggestion_offer macht KEINEN DB-Write ─────────
 
 def test_record_suggestion_offer_does_no_db_write(monkeypatch):
     """Punkt 25: monkeypatch/Spy auf get_session -> record_suggestion_offer ruft KEINE DB;
-    der RAM-Puffer waechst um 1, get_session wird NICHT aufgerufen (Latenz-Beleg)."""
+    der RAM-Puffer waechst um 1, get_session wird NICHT aufgerufen (Latenz-Beleg).
+
+    W-2 PERSID Plan 06: auf neue sid-erste Signatur + per-SID-Bucket migriert.
+    """
     import services.live_session as ls
     import database.db as dbmod
 
@@ -228,13 +237,17 @@ def test_record_suggestion_offer_does_no_db_write(monkeypatch):
 
     monkeypatch.setattr(dbmod, 'get_session', _spy)
 
-    with ls.state_lock:
-        ls.state['suggestion_offers'] = []
-        before = len(ls.state['suggestion_offers'])
-    ls.record_suggestion_offer(slot='A', source='keyword', model=None,
-                               suggestion_text='[PERSON_A] y', interaction_id=str(uuid.uuid4()))
-    with ls.state_lock:
-        after = len(ls.state.get('suggestion_offers', []))
+    test_sid = f"test-sr-nodbwrite-{uuid.uuid4().hex[:8]}"
+    ls.init_session_state(test_sid, user_id=1, org_id=1)
+    try:
+        with ls._session_state_lock:
+            before = len(ls._session_state[test_sid]['state'].get('suggestion_offers', []))
+        ls.record_suggestion_offer(test_sid, slot='A', source='keyword', model=None,
+                                   suggestion_text='[PERSON_A] y', interaction_id=str(uuid.uuid4()))
+        with ls._session_state_lock:
+            after = len(ls._session_state[test_sid]['state'].get('suggestion_offers', []))
+    finally:
+        ls.pop_session_state(test_sid)
 
     assert after == before + 1, "RAM-Puffer muss um genau 1 wachsen"
     assert called['get_session'] == 0, "Punkt 25: record_suggestion_offer DARF KEINE DB anfassen"
