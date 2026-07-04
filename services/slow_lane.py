@@ -230,6 +230,16 @@ def _persist_event_ref(event_ref, db) -> None:
     if ev.handling_status != 'pending':
         return
 
+    # ── F2-Stilllegung (PERSID Req 8) ───────────────────────────────────────────────
+    # Der per-Ereignis-Benoter schreibt keine Leerlauf-Noten mehr (100% abstained/NULL
+    # am Prod belegt F2 tot; der LLM-Gesamtbewerter deckt das Urteil ab via Judge).
+    # not_gradable = existierender Terminal-Status (:364) -> _pending_events zaehlt es
+    # NICHT (nur 'pending' wird gezaehlt) -> drainet auf 0 -> Call-Ende-Merge/rubric_score
+    # feuert normal (deadlock-frei). NULL Schema-Change; umgeht auch den RLS-fail-closed-
+    # Loop (:262-276); DB-Felder handling_score_numeric/handling_status/abstain_log bleiben.
+    ev.handling_status = _STATUS_NOT_GRADABLE
+    return
+
     # ── Tor-1-Konfidenz (D-03): garbage-in-Schutz, GETRENNT von Abstention ──────────
     # Niedrig-Konfidenz = Ereignis fragwuerdig -> 'failed' (NICHT 'abstained', KEIN abstain_log;
     # das ist Tor 1, nicht Tor 2). confidence None -> kein Signal -> NICHT failen (D-07
