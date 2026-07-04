@@ -725,6 +725,29 @@ def api_beenden():
         except Exception as _e_upd:
             print(f'[Phase08.23.2.D] calls-UPDATE Fehler: {_e_upd}')
             _db_calls.rollback()
+            # ── PERSID Req 11 Heiler (inline-terminal, Punkt 26 — KEIN periodischer Zeit-Sweep) ──
+            # Bei calls-UPDATE-Fehlschlag bleiben beide resolved-Flags in ihrem DB-Default
+            # (False) -> Call haengt dauerhaft "wird ausgewertet". Heiler rettet sie terminal
+            # via eigene Session (Muster: _audio_health_bg-finally, app_routes.py:~810).
+            # Idempotent: setzt auch dann True wenn eines der Flags bereits True ist.
+            # Non-fatal: ein Fehler hier bricht /api/beenden NICHT (Call-Record ist bereits
+            # committed, nur die resolved-Flags koennen haengen — Heiler-Log ist das Signal).
+            try:
+                _db_heal = get_session()
+                _row_heal = _db_heal.query(_CallModel).filter(
+                    _CallModel.id == _phase_d_call_id
+                ).first()
+                if _row_heal is not None:
+                    _row_heal.audio_health_resolved = True
+                    _row_heal.transcript_resolved = True
+                    _db_heal.commit()
+            except Exception as _e_heal:
+                print(f'[Heiler] resolved-Flag-Rettung fehlgeschlagen (non-fatal): {_e_heal}')
+            finally:
+                try:
+                    _db_heal.close()
+                except Exception:
+                    pass
         finally:
             _db_calls.close()
 

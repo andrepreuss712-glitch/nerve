@@ -787,11 +787,17 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
     # 06.1-r2 r6: Retry bei 529 overloaded_error — Anthropic hat stossweise Spitzen,
     # ein kurzer Backoff rettet i.d.R. den zweiten Versuch. Max 2 Retries, dann graceful fallback.
     import time as _time
+    from time import monotonic as _monotonic
     attempts = 0
     last_err = None
     stream_ctx = None
     while attempts < 3:
         attempts += 1
+        # Waechter (b) TTFT (PERSID Req 10): _t_stream_start unmittelbar vor dem
+        # Stream-Kontext-Manager — misst Zeit bis zum ersten Token des Knopf-Pfads.
+        # Latenz-neutral (Punkt 25): nur monotonic-Delta + print, keine Blockierung.
+        _first_token_manual = True
+        _t_stream_start = _monotonic()
         try:
             with claude_client.messages.stream(
                 model=config.MODEL_PIP_VARIANTE,
@@ -801,6 +807,11 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
             ) as stream:
                 stream_ctx = stream
                 for token in stream.text_stream:
+                    # TTFT-Messung beim ersten Token (Waechter b, PERSID Req 10)
+                    if _first_token_manual:
+                        _ttft_ms = (_monotonic() - _t_stream_start) * 1000
+                        _first_token_manual = False
+                        print(f"[EWB-TTFT] {_ttft_ms:.0f}ms model={config.MODEL_PIP_VARIANTE} sid={sid} path=manual")
                     full_text += token
                     sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True, 'source': 'manual_button'}, room=sid)
             break  # Erfolg — raus aus Retry-Loop

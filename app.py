@@ -2231,6 +2231,40 @@ if _os_guard.environ.get('NERVE_TESTING') != '1':
     # atexit: Sentinel stoppt den Consumer, dann finaler Drain offener Items (Bau-Regel 2).
     atexit.register(lambda: (request_shutdown(), flush_to_db()))
 
+    # ── PERSID Req 11 / S2 — EINMALIGER Boot-Sweep fuer bereits haengende Alt-Calls ──
+    # Der inline-Heiler (app_routes.py) repariert nur KUENFTIGE Fehlschlaege.
+    # Calls, die VOR diesem Deploy haengend waren (ended_at IS NOT NULL, Flags False),
+    # bleiben ohne diesen Sweep fuer immer in "wird ausgewertet".
+    # EINMAL pro Prozess-Start (KEIN periodischer Timer — Punkt 22/26):
+    #   WHERE ended_at IS NOT NULL AND (audio_health_resolved=False OR transcript_resolved=False)
+    #   -> beide Flags = True (terminal, idempotent).
+    # HART: NUR beendete Calls (ended_at IS NOT NULL) — ein laufender Call (ended_at NULL)
+    # darf NICHT angefasst werden (Punkt 26 — sonst zerreisst der Sweep die Bereitschafts-
+    # Naht eines aktiven Calls). Genau EINMAL pro Prozess-Start, KEIN wiederkehrender Timer.
+    try:
+        from database.db import get_session as _gs_boot
+        from database.models import Call as _CallBoot
+        from sqlalchemy import or_ as _or_boot
+        _db_boot = _gs_boot()
+        _db_boot.query(_CallBoot).filter(
+            _CallBoot.ended_at.isnot(None),
+            _or_boot(
+                _CallBoot.audio_health_resolved.is_(False),
+                _CallBoot.transcript_resolved.is_(False),
+            )
+        ).update(
+            {'audio_health_resolved': True, 'transcript_resolved': True},
+            synchronize_session=False,
+        )
+        _db_boot.commit()
+    except Exception as _e_bs:
+        print(f'[Heiler-BootSweep] non-fatal: {_e_bs}')
+    finally:
+        try:
+            _db_boot.close()
+        except Exception:
+            pass
+
 # SIGTERM-Handler (Finding #2): atexit feuert bei SIGTERM nicht zuverlaessig; SIGTERM ist
 # der HAEUFIGE Kill-Pfad (deploy.sh-Restart, systemd/gunicorn graceful stop).
 # N-1-GUARD: unter gunicorn gthread (1 Worker, --threads 4) laeuft der Bootstrap evtl. NICHT
