@@ -191,27 +191,35 @@ def _make_on_message(sid, mode='meeting'):
                     sp_name = 'Sprecher'
 
                 # WR-05 fix: use anonymized text in merge-queue; skip if Art-9/pipeline-error
+                # PERSID Plan 04 (S4): _merge_pending pro-SID unter _session_state_lock (EIN Lock).
+                # Ghost-SID-Guard: kein Write wenn SID nicht mehr in _session_state (Disconnect-Race).
                 if _text_for_analysis is not None:
                     key = str(speaker) if speaker is not None else 'unknown'
-                    with ls._merge_lock:
-                        if key in ls._merge_pending:
-                            ls._merge_pending[key]['timer'].cancel()
-                            ls._merge_pending[key]['texts'].append(_text_for_analysis)
-                            ls._merge_pending[key]['line_id'] = line_id
+                    with ls._session_state_lock:
+                        if sid not in ls._session_state:
+                            # Ghost-SID: Session bereits beendet, Segment verwerfen
+                            pass
                         else:
-                            ls._merge_pending[key] = {
-                                'texts':           [_text_for_analysis],
-                                'line_id':         line_id,
-                                'speaker':         speaker,
-                                'roles_confirmed': roles_confirmed,
-                                'sp_name':         sp_name,
-                                't_start':         time.monotonic(),
-                                'sid':             sid,   # Phase 08.19.4 D-02: route flush to per-SID buffer
-                            }
-                        t = threading.Timer(MERGE_WINDOW_S, ls._flush_segment, args=[key])
-                        t.daemon = True
-                        t.start()
-                        ls._merge_pending[key]['timer'] = t
+                            _bucket = ls._session_state[sid].setdefault('_merge_pending', {})
+                            if key in _bucket:
+                                _bucket[key]['timer'].cancel()
+                                _bucket[key]['texts'].append(_text_for_analysis)
+                                _bucket[key]['line_id'] = line_id
+                            else:
+                                _bucket[key] = {
+                                    'texts':           [_text_for_analysis],
+                                    'line_id':         line_id,
+                                    'speaker':         speaker,
+                                    'roles_confirmed': roles_confirmed,
+                                    'sp_name':         sp_name,
+                                    't_start':         time.monotonic(),
+                                    'sid':             sid,
+                                }
+                            # Timer-Args tragen jetzt sid + key (neue _flush_segment-Signatur)
+                            t = threading.Timer(MERGE_WINDOW_S, ls._flush_segment, args=[sid, key])
+                            t.daemon = True
+                            t.start()
+                            _bucket[key]['timer'] = t
             else:
                 sio.emit('transcript', {'type': 'interim', 'text': text},
                          room=sid)

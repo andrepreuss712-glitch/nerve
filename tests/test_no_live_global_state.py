@@ -46,6 +46,12 @@ _KILLED_MODULE_GLOBALS: frozenset = frozenset({
     'is_paused',
     '_line_id_counter',
     '_bof_count',
+    # Plan 04 Familie B: _merge_lock (S4: EIN Lock = _session_state_lock) + _merge_pending (per-SID)
+    '_merge_lock',
+    '_merge_pending',
+    # Plan 04: toter Post-Migration-Code (0 externe Reader nach per-SID-Migration)
+    'transcript_buffer',
+    'analysiert_bisher',
 })
 
 # ── _KILLED_STATE_KEYS: In Task 2 geloeschte state{}-Keys ────────────────────
@@ -89,7 +95,7 @@ _WHITELIST: frozenset = frozenset({
     'kb_lock',
     'phase_lock',
     'covered_phases_lock',
-    '_merge_lock',
+    # _merge_lock GELOESCHT (Plan 04, S4: EIN Lock = _session_state_lock)
     '_per_sid_lock',
     '_session_state_lock',
     '_per_sid_transcript_lock',
@@ -120,8 +126,8 @@ _WHITELIST: frozenset = frozenset({
     '_OUTCOME_MODIFIERS',
     'MERGE_WINDOW_S',
     # Modul-Globale Buffer/Listen (PENDING auf Welle A-E-Migration)
-    'transcript_buffer',
-    'analysiert_bisher',
+    # transcript_buffer/analysiert_bisher ENTFERNT (Plan 04 geloescht — in _KILLED_MODULE_GLOBALS)
+    # _merge_pending ENTFERNT (Plan 04 geloescht — in _KILLED_MODULE_GLOBALS)
     'coaching_buffer',
     'painpoints',
     'gegenargument_log',
@@ -130,7 +136,6 @@ _WHITELIST: frozenset = frozenset({
     'phasen_log',
     'conversation_log',
     'covered_phases',
-    '_merge_pending',
     # State-Dict (Modul-Global, PENDING-MIGRATION — Zustand wird schrittweise per-SID)
     'state',
     # Kaufbereitschaft (Modul-Global Mirror — separater Pfad app_routes:148, PENDING Welle C)
@@ -165,8 +170,7 @@ _PENDING_MIGRATION: frozenset = frozenset({
     # PERSID Plan 03: session_anrede, mic_muted, precall_briefing MIGRIERT (Welle A fertig).
     # Alle drei Eintraege entfernt — Liste schrumpft monoton (D-10).
     # ── Welle B / Plan 04 ─────────────────────────────────────────────────────
-    # _merge_pending: Zusammenfuehrungs-Dict — Welle B bringt per-SID-Migration
-    ('services/deepgram_service.py', '_merge_pending', 'B'),
+    # _merge_pending MIGRIERT (Plan 04, Familie B fertig — Liste schrumpft monoton).
     # ── Welle C / Plan 05 ─────────────────────────────────────────────────────
     # conversation_log: Modul-Globale Liste (claude_service + deepgram_service schreiben)
     ('services/claude_service.py', 'conversation_log', 'C'),

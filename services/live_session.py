@@ -43,9 +43,10 @@ os.makedirs(LOG_DIR, exist_ok=True)
 # pause_lock hatte 0 Leser ausserhalb live_session.py selbst → ebenfalls entfernt
 
 # ── Transkript-Buffer ─────────────────────────────────────────────────────────
+# transcript_buffer/analysiert_bisher Modul-Globale GELOESCHT (Plan 04, Familie B):
+# alle Schreiber sind per-SID (_per_sid_transcript / _session_state[sid]['analysiert_bisher']).
+# Fallback-Zweig in _flush_segment ebenfalls entfernt (toter Post-Migration-Zweig, Plan 04).
 buffer_lock       = threading.Lock()
-transcript_buffer = []
-analysiert_bisher = []
 analyse_trigger   = threading.Event()
 
 # ── Coaching-Buffer ───────────────────────────────────────────────────────────
@@ -83,8 +84,9 @@ session_meta_lock = threading.Lock()
 # session_meta GELOESCHT (D-09/RESEARCH §1) — reset_session-Block unten bleibt bis Plan 03 bereinigt
 
 # ── Satz-Zusammenführung ──────────────────────────────────────────────────────
-_merge_lock    = threading.Lock()
-_merge_pending = {}
+# _merge_lock GELOESCHT (S4: EIN Lock = _session_state_lock, Plan 04).
+# _merge_pending Modul-Global GELOESCHT (Plan 04, Familie B):
+# Puffer liegt jetzt unter _session_state[sid]['_merge_pending'] (seeded in init_session_state).
 
 # ── Zeilen-ID Counter (per-SID; Modul-Globale entfernt) ──────────────────────
 # DELETED: _line_id_counter (Modul-Global, schon per-SID :426 — S5, 2026-07-03 Phase PERSID)
@@ -436,6 +438,9 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             # PERSID Plan 03 W-1: mic_muted top-level (kanonische Ebene fuer Writer+Reader).
             # Vorher im 'state'-Subdict (:364, jetzt entfernt). Seed False (Default stumm=False).
             'mic_muted':             False,
+            # PERSID Plan 04 Familie B: _merge_pending pro-SID (S4: EIN Lock = _session_state_lock).
+            # Keyed nach Sprecher-String innerhalb des sid-Buckets (z.B. '0', '1', 'unknown').
+            '_merge_pending':        {},
         }
     # WR-03: init per-SID coaching buffer (separate lock — same lifecycle as transcript)
     with _per_sid_coaching_lock:
@@ -444,9 +449,28 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
 
 def pop_session_state(sid: str) -> None:
     """Remove all per-SID state on disconnect. Briefing is stored as _session_state[sid]['_briefing']
-    and is auto-cleaned when the dict entry is popped — no separate briefing cleanup needed (HIGH-2 fix)."""
+    and is auto-cleaned when the dict entry is popped — no separate briefing cleanup needed (HIGH-2 fix).
+
+    PERSID Plan 04 (Punkt 14 / S4): offene _merge_pending-Timer der sid werden VOR dem Pop
+    gecancelt (kein Feuern in weggeraeumte sid). Cancel AUSSERHALB des Locks (kein langer Op unter Lock):
+    Snapshot der Timer-Dicts unter Lock nehmen, Lock freigeben, dann .cancel() ausfuehren.
+    """
+    # Timer-Cancel: Snapshot unter Lock, cancel ausserhalb (D-03 Lock-Disziplin)
+    _timers_to_cancel = []
     with _session_state_lock:
-        _session_state.pop(sid, None)   # clears ['_briefing'] sub-key automatically
+        _mp = _session_state.get(sid, {}).get('_merge_pending', {})
+        for _entry in _mp.values():
+            _t = _entry.get('timer')
+            if _t is not None:
+                _timers_to_cancel.append(_t)
+    for _t in _timers_to_cancel:
+        try:
+            _t.cancel()
+        except Exception:
+            pass
+
+    with _session_state_lock:
+        _session_state.pop(sid, None)   # clears ['_briefing'] + ['_merge_pending'] sub-keys automatically
     with _per_sid_lock:
         _per_sid_profile.pop(sid, None)
     with _per_sid_transcript_lock:
@@ -873,10 +897,22 @@ def ist_painpoint_duplikat(neu: str, bestehende: list) -> bool:
     return False
 
 
-def _flush_segment(key: str):
-    """Timer-Callback: übergibt zusammengeführtes Segment an die Analyse-Queues."""
-    with _merge_lock:
-        pending = _merge_pending.pop(key, None)
+def _flush_segment(sid: str, key: str):
+    """Timer-Callback: popt Segment aus per-SID _merge_pending und uebergibt an Analyse-Queues.
+
+    PERSID Plan 04 Familie B (S4):
+    - Signatur nimmt sid + key (EIN Lock = _session_state_lock).
+    - Ghost-SID-Guard: sid nicht mehr in _session_state -> Timer-Leiche, return.
+    - Pop aus _session_state[sid]['_merge_pending'][key] unter _session_state_lock.
+    - Toter transcript_buffer-Fallback entfernt (pending['sid'] IMMER gesetzt nach Plan 04).
+    """
+    # Pop unter _session_state_lock (EIN Lock, S4 — kein langer Op unter Lock)
+    with _session_state_lock:
+        _ss = _session_state.get(sid)
+        if _ss is None:
+            # Ghost-SID-Guard: Timer feuerte nach pop_session_state -> verwerfen
+            return
+        pending = _ss.get('_merge_pending', {}).pop(key, None)
     if not pending:
         return
     merged_text     = " ".join(pending['texts'])
@@ -886,50 +922,35 @@ def _flush_segment(key: str):
     sp_name         = pending['sp_name']
     t_start         = pending.get('t_start', time.monotonic())
 
-    # Sprachstatistik aktualisieren
+    # Sprachstatistik aktualisieren (per-SID)
     word_count = len(merged_text.split())
     now_m = time.monotonic()
-    # NEW (per-SID):
-    _flush_sid = pending.get('sid')
-    if _flush_sid:
-        with _session_state_lock:
-            if _flush_sid in _session_state:
-                _ss = _session_state[_flush_sid]
-                if sp_name == 'Berater':
-                    _ss['berater_words'] = _ss.get('berater_words', 0) + word_count
-                    if _ss.get('_current_monolog_start') is None:
-                        _ss['_current_monolog_start'] = t_start
-                    dur = now_m - _ss['_current_monolog_start']
-                    if dur > _ss.get('laengster_monolog_sek', 0.0):
-                        _ss['laengster_monolog_sek'] = dur
-                elif sp_name == 'Kunde':
-                    _ss['kunde_words'] = _ss.get('kunde_words', 0) + word_count
-                    _ss['_current_monolog_start'] = None
+    with _session_state_lock:
+        if sid in _session_state:
+            _ss = _session_state[sid]
+            if sp_name == 'Berater':
+                _ss['berater_words'] = _ss.get('berater_words', 0) + word_count
+                if _ss.get('_current_monolog_start') is None:
+                    _ss['_current_monolog_start'] = t_start
+                dur = now_m - _ss['_current_monolog_start']
+                if dur > _ss.get('laengster_monolog_sek', 0.0):
+                    _ss['laengster_monolog_sek'] = dur
+            elif sp_name == 'Kunde':
+                _ss['kunde_words'] = _ss.get('kunde_words', 0) + word_count
+                _ss['_current_monolog_start'] = None
 
     if not roles_confirmed or speaker != 0:
-        _flush_sid = pending.get('sid')
-        if _flush_sid:
-            with _per_sid_transcript_lock:
-                _per_sid_transcript.setdefault(_flush_sid, []).append(
-                    {'text': merged_text, 'line_id': line_id, 't_start': t_start}
-                )
-        else:
-            # Fallback: pre-08.19.4 entry without SID (edge case — should not occur post-migration)
-            with buffer_lock:
-                transcript_buffer.append({'text': merged_text, 'line_id': line_id, 't_start': t_start})
+        with _per_sid_transcript_lock:
+            _per_sid_transcript.setdefault(sid, []).append(
+                {'text': merged_text, 'line_id': line_id, 't_start': t_start}
+            )
         analyse_trigger.set()
 
-    # WR-03: append to per-SID coaching buffer (not module-global) to prevent cross-user leak
-    _flush_sid = pending.get('sid')
-    if _flush_sid:
-        with _per_sid_coaching_lock:
-            _per_sid_coaching_buffer.setdefault(_flush_sid, []).append(
-                {'text': merged_text, 'speaker': sp_name, 't_start': t_start}
-            )
-    else:
-        # Fallback for pre-08.19.4 entries without SID (edge case — should not occur post-migration)
-        with coaching_lock:
-            coaching_buffer.append({'text': merged_text, 'speaker': sp_name, 't_start': t_start})
+    # WR-03: append to per-SID coaching buffer (not module-global)
+    with _per_sid_coaching_lock:
+        _per_sid_coaching_buffer.setdefault(sid, []).append(
+            {'text': merged_text, 'speaker': sp_name, 't_start': t_start}
+        )
     coaching_trigger.set()
 
 
@@ -952,15 +973,18 @@ def reset_session():
     Per-SID cleanup: iterates all active SIDs and calls pop+init as well as
     resetting module-level globals for backward compat with remaining callers."""
     # D-09 PERSID Plan 01: _line_id_counter/_bof_count Modul-Globale geloescht (S5/D-09).
+    # PERSID Plan 04: transcript_buffer/analysiert_bisher/coaching_buffer Modul-Globale entfernt
+    #   (toter Post-Migration-Code; per-SID-Puffer werden durch pop+init unten zurueckgesetzt).
     # roles_swapped bleibt vorerst als DEPRECATED-GLOBAL fuer Plan 03.
     # aktive_phase_idx bleibt als FIX-Verdikt B5 — Welle C/Plan 05.
-    global conversation_log, transcript_buffer, analysiert_bisher, painpoints
-    global coaching_buffer, _log_last_sp
+    global conversation_log, painpoints
+    global _log_last_sp
     global _confirmed_speaker, _pending_speaker, _pending_since, _second_sp_seen
     global roles_swapped
     global kaufbereitschaft, kaufbereitschaft_verlauf, aktive_phase_idx
     global gegenargument_log, hilfe_log, quick_action_log, phasen_log
     # Per-SID cleanup: reset all active SIDs via pop+init (Phase 08.19.5 migration)
+    # pop_session_state cancelt jetzt auch offene _merge_pending-Timer (Plan 04).
     with _session_state_lock:
         active = list(_session_state.keys())
     for _rsid in active:
@@ -973,11 +997,8 @@ def reset_session():
 
     with log_lock:
         conversation_log.clear()
-    with buffer_lock:
-        transcript_buffer.clear()
-        analysiert_bisher.clear()
-    with coaching_lock:
-        coaching_buffer.clear()
+    # buffer_lock + transcript_buffer/analysiert_bisher Modul-Globale entfernt (Plan 04, Familie B).
+    # coaching_buffer Modul-Global entfernt (Plan 04, 0 externe Reader).
     with painpoints_lock:
         painpoints.clear()
     with state_lock:
@@ -1000,13 +1021,8 @@ def reset_session():
         _pending_since     = None
     with _sp2_lock:
         _second_sp_seen = False
-    with _merge_lock:
-        for v in _merge_pending.values():
-            try:
-                v['timer'].cancel()
-            except Exception:
-                pass
-        _merge_pending.clear()
+    # _merge_lock/_merge_pending Modul-Global entfernt (Plan 04, S4).
+    # Per-SID-Timer-Cancel erfolgt durch pop_session_state (oben) — kein separater Block noetig.
     # D-09 PERSID Plan 01: _bof_count Modul-Global geloescht (per-SID bleibt).
     with roles_lock:
         roles_swapped = False
