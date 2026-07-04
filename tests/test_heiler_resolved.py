@@ -62,23 +62,24 @@ class TestTTFT:
         """Test 1: streame_manual_ewb_variante gibt [EWB-TTFT] path=manual aus.
 
         RED: ohne die TTFT-Messung im Stream-Loop fehlt der Print.
-        Wir mocken: claude_client.messages.stream, sio.emit, answer_system_content.
+        Wir mocken: extensions.socketio (lokal in Funktion importiert),
+        claude_client.messages.stream, services.prompt_pipeline.answer_system_content.
         """
         import services.claude_service as cs
+        import sys
 
-        # Mock: SocketIO-Emit (kein echter Socket)
-        monkeypatch.setattr('services.claude_service.sio', MagicMock())
+        # Mock: extensions.socketio (wird per 'from extensions import socketio as sio' lokal
+        # in streame_manual_ewb_variante importiert — extensions-Modul mocken).
+        mock_ext = MagicMock()
+        mock_ext.socketio = MagicMock()
+        monkeypatch.setitem(sys.modules, 'extensions', mock_ext)
 
-        # Mock: answer_system_content liefert einen fixen System-Prompt
-        mock_prompt_pipeline = MagicMock()
-        mock_prompt_pipeline.answer_system_content.return_value = [
+        # Mock: services.prompt_pipeline.answer_system_content
+        mock_pp = MagicMock()
+        mock_pp.answer_system_content.return_value = [
             {'type': 'text', 'text': 'System prompt'}
         ]
-        monkeypatch.setitem(
-            __import__('sys').modules,
-            'services.prompt_pipeline',
-            mock_prompt_pipeline,
-        )
+        monkeypatch.setitem(sys.modules, 'services.prompt_pipeline', mock_pp)
 
         # Mock: claude_client.messages.stream liefert genau 3 Token-Sequenz
         class _MockStream:
@@ -104,17 +105,13 @@ class TestTTFT:
             lambda **kw: _MockStream(['Hallo', ' Welt', '!'])
         )
 
-        # Mock: cost_tracker (kein Netz)
+        # Mock: services.cost_tracker (kein Netz)
         mock_cost = MagicMock()
         mock_cost.log_api_cost.return_value = None
-        monkeypatch.setitem(
-            __import__('sys').modules,
-            'services.cost_tracker',
-            mock_cost,
-        )
+        monkeypatch.setitem(sys.modules, 'services.cost_tracker', mock_cost)
 
         # Aufruf
-        result = cs.streame_manual_ewb_variante(
+        cs.streame_manual_ewb_variante(
             typ='preiseinwand',
             profile_einwand={'einwand': 'zu teuer'},
             kontext='Das ist zu teuer fuer uns.',
