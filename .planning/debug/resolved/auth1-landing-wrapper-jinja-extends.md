@@ -1,8 +1,9 @@
 ---
-status: fixing
+status: resolved
 trigger: "AUTH-1 Plan 01: window.fetch-Wrapper in templates/marketing/landing.html KAPUTT ausgeliefert (Prod-Regression, live via curl verifiziert) — <script> vor <html>, head verschluckt, nichts klickbar; nur landing.html betroffen, base.html-Seiten sauber."
 created: 2026-07-05
 updated: 2026-07-05
+resolved: 2026-07-05
 phase: 08.23.2.AUTH-1
 plan: "01"
 ---
@@ -27,10 +28,10 @@ plan: "01"
 1. `templates/marketing/landing.html` Zeile 12: `{% extends 'base.html' %}` aus dem Kommentar entfernt → „erbt NICHT von base.html"; Warn-Kommentar ergänzt (kein Jinja-Tag-Syntax in Kommentaren).
 2. Struktur-Wächter `tests/test_signup_journey.py::test_landing_renders_valid_structure` ergänzt — prüft die **ausgelieferte** Struktur (nicht String-Präsenz): (a) `<html>` steht VOR jedem `<script>`, (b) genau EIN `window.fetch =`-Wrapper ausgeliefert. Fängt genau diese Regressions-Klasse (Jinja-Tag im Quelltext → script-vor-html / Doppel-Wrapper).
 
-## Verifikation (Deploy-Gate B-fix, André)
-- `bash deploy.sh production`: `test_landing_renders_valid_structure` GRÜN + `test_register_flow_with_csrf` GRÜN.
-- Danach `curl https://getnerve.app/`: Ausgabe beginnt mit `<!DOCTYPE html>`/`<html>`, kein `<script>` davor, genau ein Wrapper.
-- Browser-Live-Test: Startseite klickbar, Register/Login/Warteliste funktionieren.
+## Verifikation (Deploy-Gate B-fix, André) — RESOLVED 2026-07-05
+- `bash deploy.sh production`: **886 passed** inkl. `test_landing_renders_valid_structure` + `test_register_flow_with_csrf`; Dienst neu gestartet, live deployed.
+- `curl https://getnerve.app/`: Ausgabe beginnt `<!DOCTYPE html>`/`<html>`/`<head>`, KEIN `<script>` davor, `window.fetch`-Wrapper genau 1× sauber im head geschlossen, `<meta name="csrf-token">` echtes DOM-Element. Startseite 200 / /login 302.
+- Browser (André, Inkognito): Startseite klickbar (nicht mehr tot), Login-Modal öffnet, Register-Wizard 1→2→3 → Absenden erreicht Server ("E-Mail bereits registriert" = Durchkommen, vor Fix war es 400). Wrapper hängt Token korrekt an.
 
 ## Files Changed
 - templates/marketing/landing.html
