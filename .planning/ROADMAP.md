@@ -2441,6 +2441,19 @@ Plans:
 **Komplexität:** 🟡 (Call-End-Flow-Integration + UX-Entscheidungen + confidence-Handling), finalisieren in Spec/Discuss.
 **Plans:** 0 plans
 
+### Phase 999.4: Flask-Admin-CSRF-Abdeckung — admin/master.html-Seiten außerhalb des base.html-Wrappers (BACKLOG, NEU 2026-07-05, aus AUTH-1 Plan-02 Fable-Recheck)
+
+**Goal:** Die drei Flask-Admin-Templates, die `admin/master.html` erben (NICHT unser `base.html`), bekommen den globalen `window.fetch`-CSRF-Wrapper aus AUTH-1 Plan 01 NICHT — sie liegen außerhalb seiner Abdeckung. `templates/admin/crm_overview.html:155` hat einen state-changing Schreib-Fetch (`fetch('/admin/crm/note', {method:'POST'})`, Endpunkt `admin_views.py:196`), der **vermutlich heute schon CSRF-kaputt ist** (Token fehlt → wahrscheinlich HTTP 400, analog der in AUTH-1 gemessenen keepalive/cancel/delete-400er). In AUTH-1 bewusst NICHT umgebaut (Punkt 17, kein Refactor huckepack) — stattdessen im CSRF-Wächter (`test_csrf_fetch_guard.py`, `_STANDALONE_WRAPPER_EXEMPT`) als dokumentierte Ausnahme geführt (crm_overview / kpi_dashboard / planning_list).
+
+**Tasks (Skizze, in Spec/Discuss schärfen):**
+1. **Verifizieren (Sicht statt Zusicherung):** `POST /admin/crm/note` token-los gegen Prod curl'en → ist es real 400? (wie AUTH-1-Beleg-Muster). Alle state-changing Fetches der 3 Seiten inventarisieren (heute nur crm_overview:155; kpi_dashboard/planning_list haben aktuell keine).
+2. **Fix-Weg wählen:** (a) den `window.fetch`-Wrapper zusätzlich in `admin/master.html` einbauen (deckt die ganze Flask-Admin-Familie an EINER Stelle — analog AUTH-1-A3-Linie) ODER (b) per-Call-`X-CSRFToken` an den einzelnen Admin-Fetches. (a) bevorzugt (fix-at-root, konsistent mit AUTH-1).
+3. **Wächter-Ausnahme abbauen:** nach dem Fix die 3 Einträge aus `_STANDALONE_WRAPPER_EXEMPT` (test_csrf_fetch_guard.py) entfernen → der Wächter deckt die Admin-Seiten dann regulär ab (Ausnahme war nur Übergangs-Marker).
+
+**Abhängigkeit:** Baut auf AUTH-1 (globaler Wrapper + CSRF-Wächter). Betrifft nur die Founder-/Support-Admin-Fläche (nicht Kunden-Pfad).
+**Komplexität:** 🟢/🟡 (kleiner, klar umrissener Root-Fix + Wächter-Ausnahme-Abbau).
+**Plans:** 0 plans
+
 ---
 
 ## 🧭 Strategische Themen-Pipeline (aus Strategie-Gespräch 2026-06-06 — Vault-Sync)
