@@ -59,6 +59,8 @@ if os.environ.get('WTF_CSRF_ENABLED', 'True').lower() == 'false':
     app.config['WTF_CSRF_ENABLED'] = False
     print('[CSRF] DISABLED — local dev mode (WTF_CSRF_ENABLED=False in .env)')
 
+app.config['WTF_CSRF_TIME_LIMIT'] = None   # D-04: kein Timeout — Anmelde-Seite darf >1h offen stehen ohne CSRF-400
+
 # ── Brute-Force-Schutz (H-20) ─────────────────────────────────────────────────
 # Reihenfolge KRITISCH: (1) ProxyFix(app.wsgi_app) [Wave 2] →
 #                       (2) CSRFProtect(app) [Wave 3] →
