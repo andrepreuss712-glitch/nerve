@@ -9,7 +9,9 @@
 (function () {
   // Globaler CSRF-fetch-Wrapper (Fable-SCOPE-OVERRIDE 2026-07-04, A3):
   // injiziert X-CSRFToken bei state-changing Methoden automatisch aus dem Meta-Tag.
-  // landing.html ist standalone (kein {% extends 'base.html' %}) -> traegt Meta-Tag + Wrapper SELBST.
+  // landing.html ist standalone (erbt NICHT von base.html) -> traegt Meta-Tag + Wrapper SELBST.
+  // WICHTIG: KEIN Jinja-Tag-Syntax in diesem Kommentar (Jinja verarbeitet Template-Tags auch
+  // in JS-/HTML-Kommentaren zur Render-Zeit -> zerschiesst die Standalone-Struktur, Prod-Regression 2026-07-05).
   // BEKANNTE, NICHT abgedeckte Umgehungen (bewusst dokumentiert):
   //  - fetch ueber eine aliasierte/Options-Variable, die der statische Guard-Scan nicht sieht
   //  - XMLHttpRequest und navigator.sendBeacon (der Wrapper patcht NUR window.fetch)

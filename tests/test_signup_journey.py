@@ -116,6 +116,38 @@ def test_register_flow_with_csrf(csrf_client, db_from_client, cleanup_tracker):
         cleanup_tracker['public.tenant_orgs'].append(to_row[0])
 
 
+def test_landing_renders_valid_structure(client):
+    """Struktur-Waechter (Prod-Regression 2026-07-05, /gsd-debug auth1-landing-wrapper-jinja-extends).
+
+    landing.html ist standalone. Ein Jinja-Tag ({% extends %}/{% block %}) IM QUELLTEXT — auch
+    versehentlich in einem JS-/HTML-Kommentar — wird von Jinja ZUR RENDER-ZEIT verarbeitet (Jinja
+    laeuft vor der HTML-Analyse, Kommentar-Kontext schuetzt NICHT). Ein verirrtes {% extends 'base.html' %}
+    liess Jinja landing.html faelschlich von base.html erben -> ausgelieferte Struktur zerschossen:
+    Wrapper-<script> landete VOR <html>, der <head> wurde als Script-Text verschluckt, ein ZWEITER
+    (base.html-)Wrapper kam dazu -> nichts klickbar. Der reine Server-E2E-Test faengt das NICHT
+    (das Meta-Tag erscheint via base.html-Vererbung trotzdem -> register 200 -> gruen).
+
+    Darum prueft dieser Test die AUSGELIEFERTE HTML-STRUKTUR (nicht nur String-Praesenz):
+      (a) <html> steht VOR jedem <script> (kein script-vor-Wurzel, der den head verschluckt),
+      (b) genau EIN window.fetch-Wrapper wird ausgeliefert (Doppel = faelschliche Vererbung).
+    """
+    r = client.get('/')
+    assert r.status_code == 200, f"Landing-GET erwartet 200, war {r.status_code}"
+    low = r.get_data(as_text=True).lower()
+    html_pos = low.find('<html')
+    script_pos = low.find('<script')
+    assert html_pos != -1, "landing.html: kein <html> in der ausgelieferten Seite"
+    assert script_pos == -1 or html_pos < script_pos, (
+        f"landing.html: <script> (Pos {script_pos}) steht VOR <html> (Pos {html_pos}) -> "
+        "Standalone-Struktur zerschossen (Jinja-Tag {% extends %}/{% block %} im Quelltext?)"
+    )
+    wrapper_count = low.count('window.fetch =')
+    assert wrapper_count == 1, (
+        f"landing.html: window.fetch-Wrapper {wrapper_count}x ausgeliefert (erwartet genau 1) -> "
+        "Doppel-Wrapper deutet auf faelschliche base.html-Vererbung"
+    )
+
+
 def test_register_without_token_is_400(csrf_client):
     # OHNE X-CSRFToken -> 400. Beweist, dass CSRF aktiv IST und der Waechter beisst
     # (kein Row-Leak: CSRF blockt VOR dem View, es wird nichts angelegt).
