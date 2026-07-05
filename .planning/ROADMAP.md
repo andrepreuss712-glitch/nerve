@@ -2456,6 +2456,21 @@ Plans:
 
 ---
 
+### Phase 999.5: Deploy-Hygiene — `deploy.sh` prunt gelöschte Dateien nicht (BACKLOG, NEU 2026-07-05, aus AUTH-1 Plan-02 ERST-ROT)
+
+**Goal:** Der Prod-Deploy (tar/copy) **entfernt keine im Repo gelöschten Dateien** vom Server — sie akkumulieren als toter Cruft in `/opt/nerve/app/`. Aufgedeckt in AUTH-1 Plan 02: der neue CSRF-Wächter flaggte auf dem Deploy-Gate drei längst gelöschte Ghost-Templates, die lokal/git nicht mehr existieren, aber server-seitig überlebt haben: `templates/app.html` (gelöscht Phase 08.11, e89e2bd), `templates/landing.html` (verschoben nach `marketing/` Phase 08.19.5.4, 668f1f8), `templates/onboarding.html` (gelöscht AUTH-1, cae84c4). Alle drei sind tot (0 render_template-Caller), aber ihre Präsenz macht statische Server-Tree-Wächter fragil (grün hängt an Server-Sauberkeit, nicht nur Repo-Sauberkeit).
+
+**Tasks (Skizze):**
+1. **Einmal-Cleanup (in AUTH-1 erledigt, manuell):** die 3 Ghost-Templates server-seitig entfernt, damit Gate D grün. Ggf. weiteren Cruft inventarisieren (`ssh ... 'ls /opt/nerve/app/templates/'` vs `git ls-files templates/`).
+2. **Deploy-Prune:** `deploy.sh` auf pruning umstellen — `rsync -a --delete` ODER Extraktion in ein frisches Verzeichnis + atomarer Symlink-Swap (statt Overlay über den Alt-Stand). Vorsicht: SCP-Hotfix-Fälle (Prod-Code nicht in origin/main) nicht wegbügeln — vorher der bestehende „echter-Code-auf-Prod?"-Check.
+3. **Optional Guard-Härtung:** erwägen, ob die statischen Datei-Wächter (CSRF/Template) nur erreichbare (render_template/include-referenzierte) Templates flaggen sollen — Trade-off: robuster gegen Cruft, aber schwächer gegen dynamische `render_template(variable)`-Calls. In Discuss abwägen.
+
+**Abhängigkeit:** keine harte; Hygiene-/Infra-Thema. Reaktivierungs-Nähe zu 08.23.2.STAGING (Promotion-Pipeline).
+**Komplexität:** 🟡 (Deploy-Skript-Änderung, Prod-Risiko → sorgfältig testen).
+**Plans:** 0 plans
+
+---
+
 ## 🧭 Strategische Themen-Pipeline (aus Strategie-Gespräch 2026-06-06 — Vault-Sync)
 
 > Überwiegend Post-Kernfeature / Phase 2-3. Volldetail + Einordnung im Vault: `Nerve-Vault/03 Planung/Strategie-Gespräch 2026-06-06.md` + `Nerve-Vault/01 Roadmap.md` (Sektion Strategische Themen-Pipeline). Bau-Reihenfolge wird mit Gemini abgestimmt (06.06.). **NICHT sofort** — erst Speech-Stats (Block J / Notizbuch B).
