@@ -3,6 +3,8 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session as flask_session, g
 from database.db import get_session
 from database.models import Waitlist, Organisation, Invitation
+from routes.auth import login_required
+from services.auth_decorators import superadmin_required
 
 waitlist_bp = Blueprint('waitlist', __name__, url_prefix='/waitlist')
 
@@ -94,9 +96,9 @@ def waitlist_stats():
 
 
 @waitlist_bp.route('/invite/<int:wid>', methods=['POST'])
+@login_required
+@superadmin_required
 def invite_from_waitlist(wid):
-    if flask_session.get('rolle') != 'owner':
-        return jsonify({'error': 'Keine Berechtigung'}), 403
     db = get_session()
     try:
         entry = db.query(Waitlist).get(wid)
@@ -136,9 +138,9 @@ def invite_from_waitlist(wid):
 
 
 @waitlist_bp.route('/admin')
+@login_required
+@superadmin_required
 def admin_waitlist():
-    if flask_session.get('rolle') != 'owner':
-        return redirect(url_for('dashboard.index'))
     db = get_session()
     try:
         entries = db.query(Waitlist).order_by(Waitlist.position).all()
