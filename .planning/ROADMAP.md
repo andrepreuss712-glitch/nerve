@@ -2471,6 +2471,21 @@ Plans:
 
 ---
 
+### Phase 999.6: Login-Cookie-Domain — Apex `getnerve.app` vs `app.getnerve.app` (BACKLOG, NEU 2026-07-06, aus AUTH-1 Plan-03 Live-Test)
+
+**Goal:** Der Session-Cookie ist subdomain-gebunden (`app.getnerve.app`). Wer die **Apex-Adresse** `getnerve.app` tippt, ist dort ausgeloggt → 302-Redirect zur Login-Seite (sah beim AUTH-1-Plan-03-Live-Test wie ein „Login-Loop" aus, war aber KEIN Bug — nur die falsche Host-Adresse). Für EA-User ist das eine echte UX-Stolperfalle (Apex ist die „natürliche" Eingabe).
+
+**Tasks (Skizze, in Spec/Discuss schärfen):**
+1. **Verifizieren:** `SESSION_COOKIE_DOMAIN` aktuell prüfen (gesetzt? auf `app.getnerve.app`?). Cookie-Scope live checken (DevTools/curl -I).
+2. **Entscheiden:** entweder (a) `SESSION_COOKIE_DOMAIN=.getnerve.app` setzen → Cookie gilt für Apex + alle Subdomains (dann ist Login auf `getnerve.app` UND `app.getnerve.app` gültig), ODER (b) Apex `getnerve.app` per Redirect dauerhaft auf `app.getnerve.app` umleiten (Marketing-Apex → App-Subdomain). Trade-offs abwägen (Cookie-Scope-Weite vs. sauberer Host-Split; CSRF/Security-Implikationen von breiterem Cookie-Scope bedenken).
+3. **Testen:** nach der Änderung Login auf beiden Hosts + Logout/Session-Fixation-Verhalten prüfen.
+
+**Abhängigkeit:** keine harte; Auth/UX-Politur vor EA-Launch. Berührt SESSION_COOKIE_*-Config.
+**Komplexität:** 🟢/🟡 (Config-Änderung + Security-Abwägung Cookie-Scope).
+**Plans:** 0 plans
+
+---
+
 ## 🧭 Strategische Themen-Pipeline (aus Strategie-Gespräch 2026-06-06 — Vault-Sync)
 
 > Überwiegend Post-Kernfeature / Phase 2-3. Volldetail + Einordnung im Vault: `Nerve-Vault/03 Planung/Strategie-Gespräch 2026-06-06.md` + `Nerve-Vault/01 Roadmap.md` (Sektion Strategische Themen-Pipeline). Bau-Reihenfolge wird mit Gemini abgestimmt (06.06.). **NICHT sofort** — erst Speech-Stats (Block J / Notizbuch B).
