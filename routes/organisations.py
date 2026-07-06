@@ -13,7 +13,7 @@ def _require_admin(f):
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
-        if session.get('rolle') not in ('owner', 'admin'):
+        if g.user.rolle not in ('owner', 'admin'):
             return jsonify({'error': 'Keine Berechtigung'}), 403
         return f(*args, **kwargs)
     return decorated

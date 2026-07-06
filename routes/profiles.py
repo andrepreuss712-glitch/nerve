@@ -33,7 +33,7 @@ def _normalize_branche(raw: str) -> str:
 
 
 def _rolle():
-    return flask_session.get('rolle', 'member')
+    return g.user.rolle
 
 
 def _active_profile_id():

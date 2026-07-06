@@ -60,7 +60,7 @@ def update_profile():
 @settings_bp.route('/billing', methods=['POST'])
 @login_required
 def update_billing():
-    if flask_session.get('rolle') not in ('owner', 'admin'):
+    if g.user.rolle not in ('owner', 'admin'):
         return jsonify({'error': 'Keine Berechtigung'}), 403
     data = request.get_json(force=True)
     db = get_session()
@@ -79,7 +79,7 @@ def update_billing():
 @settings_bp.route('/cancel', methods=['POST'])
 @login_required
 def cancel_subscription():
-    if flask_session.get('rolle') not in ('owner', 'admin'):
+    if g.user.rolle not in ('owner', 'admin'):
         return jsonify({'error': 'Nur Owner oder Admin können kündigen'}), 403
     data = request.get_json(force=True)
     db = get_session()
@@ -102,7 +102,7 @@ def cancel_subscription():
 @settings_bp.route('/reactivate', methods=['POST'])
 @login_required
 def reactivate_subscription():
-    if flask_session.get('rolle') not in ('owner', 'admin'):
+    if g.user.rolle not in ('owner', 'admin'):
         return jsonify({'error': 'Nur Owner oder Admin'}), 403
     db = get_session()
     try:
@@ -119,7 +119,7 @@ def reactivate_subscription():
 @settings_bp.route('/privacy', methods=['POST'])
 @login_required
 def update_privacy():
-    if flask_session.get('rolle') not in ('owner', 'admin'):
+    if g.user.rolle not in ('owner', 'admin'):
         return jsonify({'error': 'Keine Berechtigung'}), 403
     data = request.get_json(force=True)
     db = get_session()
@@ -188,7 +188,7 @@ def update_notifications():
 @settings_bp.route('/delete_account', methods=['POST'])
 @login_required
 def delete_account():
-    if flask_session.get('rolle') != 'owner':
+    if g.user.rolle != 'owner':
         return jsonify({'error': 'Nur der Owner kann den Account löschen'}), 403
     data = request.get_json(force=True)
     if data.get('confirmation', '') != 'LÖSCHEN':

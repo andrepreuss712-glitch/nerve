@@ -11,7 +11,7 @@ logs_bp = Blueprint('logs', __name__)
 @logs_bp.route('/logs')
 @login_required
 def liste():
-    rolle = flask_session.get('rolle', 'member')
+    rolle = g.user.rolle
     is_admin = rolle in ('owner', 'admin')
     result = []
     try:
@@ -33,7 +33,7 @@ def liste():
 @logs_bp.route('/logs/download/<path:filename>')
 @login_required
 def download(filename):
-    rolle = flask_session.get('rolle', 'member')
+    rolle = g.user.rolle
     is_admin = rolle in ('owner', 'admin')
     if not re.match(r'^nerve_log_[A-Za-z0-9_\-]+\.txt$', filename):
         abort(403)

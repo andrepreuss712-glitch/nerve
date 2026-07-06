@@ -523,7 +523,7 @@ def index():
                 flask_session['active_profile_id'] = apid
 
         profiles = db.query(Profile).filter_by(org_id=g.org.id).order_by(Profile.name).all()
-        recent_logs = get_recent_logs(g.user.id, g.org.id, flask_session.get('rolle', 'member'))
+        recent_logs = get_recent_logs(g.user.id, g.org.id, g.user.rolle)
         recent_calls = get_recent_calls_db(g.user.id, db, limit=5)
         welcome_trial = flask_session.pop('welcome_trial', False)
 
