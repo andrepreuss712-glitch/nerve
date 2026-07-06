@@ -22,7 +22,8 @@
   <div class="page-header">
     <div>
       <div class="page-title">Logs</div>
-      <div class="page-sub">Gespeicherte Gespräche{% if session.get('rolle') not in ('owner','admin') %} (nur deine){% endif %}</div>
+      {# g.user hier nie None — Route ist @login_required (CLAUDE.md Punkt 14 Schicht 4) #}
+      <div class="page-sub">Gespeicherte Gespräche{% if g.user.rolle not in ('owner','admin') %} (nur deine){% endif %}</div>
     </div>
   </div>
 

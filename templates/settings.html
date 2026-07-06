@@ -112,7 +112,8 @@
   <div class="tabs">
     <button class="tab-btn {% if active_tab == 'profile' or not active_tab %}active{% endif %}"
             onclick="showTab('profile')">Profil</button>
-    {% if session.get('rolle') in ('owner', 'admin') %}
+    {# g.user hier nie None — Route ist @login_required (CLAUDE.md Punkt 14 Schicht 4) #}
+    {% if g.user.rolle in ('owner', 'admin') %}
     <button class="tab-btn {% if active_tab == 'billing' %}active{% endif %}"
             onclick="showTab('billing')">Abrechnung</button>
     <button class="tab-btn {% if active_tab == 'privacy' %}active{% endif %}"
@@ -233,7 +234,7 @@
 
 
   <!-- TAB: ABRECHNUNG -->
-  {% if session.get('rolle') in ('owner', 'admin') %}
+  {% if g.user.rolle in ('owner', 'admin') %}
   <div class="tab-pane {% if active_tab == 'billing' %}active{% endif %}" id="tab-billing">
     <div class="settings-card">
       <div class="settings-card-title">Aktueller Plan</div>

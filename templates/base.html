@@ -102,7 +102,8 @@
   <div style="flex:1"></div>
   <!-- Hidden legacy nav items (D-31: kept in DOM, not deleted) -->
   <div style="display:none">
-    {% if session.get('rolle') in ('owner', 'admin') %}
+    {# g.user and — base.html rendert auf public Seiten (impressum/agb/datenschutz/changelog), g.user ist dort None (Fable BLOCKER 2, spiegelt bestehende g.user-Guards) #}
+    {% if g.user and g.user.rolle in ('owner', 'admin') %}
     <a class="n-nav-item" href="/org/team">Team</a>
     {% endif %}
     {% if session.get('is_coach') %}

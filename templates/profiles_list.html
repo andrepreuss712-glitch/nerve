@@ -27,7 +27,8 @@
       <div class="page-title">Profile</div>
       <div class="page-sub">Gesprächsprofile deiner Organisation</div>
     </div>
-    {% if session.get('rolle') in ('owner', 'admin') %}
+    {# g.user hier nie None — Route ist @login_required (CLAUDE.md Punkt 14 Schicht 4) #}
+    {% if g.user.rolle in ('owner', 'admin') %}
     <div class="page-actions">
       <a href="/profiles/new" class="n-btn n-btn-primary">+ Neues Profil</a>
     </div>
@@ -66,7 +67,7 @@
           <button class="n-btn n-btn-primary n-btn-sm" type="submit">Aktivieren</button>
         </form>
         {% endif %}
-        {% if session.get('rolle') in ('owner', 'admin') %}
+        {% if g.user.rolle in ('owner', 'admin') %}
         <a href="/profiles/{{ p.id }}/edit" class="n-btn n-btn-ghost n-btn-sm">Bearbeiten</a>
         <form method="post" action="/profiles/{{ p.id }}/delete" style="margin:0"
               onsubmit="return confirm('Profil löschen?')">
@@ -78,7 +79,7 @@
     </div>
     {% endfor %}
 
-    {% if session.get('rolle') in ('owner', 'admin') %}
+    {% if g.user.rolle in ('owner', 'admin') %}
     <a href="/profiles/new" class="profile-card n-glass" style="border:2px dashed #E2E8F0;align-items:center;justify-content:center;min-height:120px;text-decoration:none"
        onmouseover="this.style.borderColor='rgba(45,212,168,0.4)'" onmouseout="this.style.borderColor='#E2E8F0'">
       <div style="font-size:28px;color:var(--page-text-muted)">+</div>
