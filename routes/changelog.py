@@ -2,6 +2,8 @@ import json
 from flask import Blueprint, render_template, request, jsonify, session as flask_session, g
 from database.db import get_session
 from database.models import Changelog, User
+from routes.auth import login_required
+from services.auth_decorators import superadmin_required
 
 changelog_bp = Blueprint('changelog', __name__, url_prefix='/changelog')
 
@@ -80,9 +82,9 @@ def mark_seen():
 
 
 @changelog_bp.route('/admin', methods=['POST'])
+@login_required
+@superadmin_required
 def add_entry():
-    if flask_session.get('rolle') != 'owner':
-        return jsonify({'error': 'Keine Berechtigung'}), 403
     data = request.get_json(force=True)
     db = get_session()
     try:
