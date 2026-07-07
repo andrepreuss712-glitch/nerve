@@ -59,6 +59,7 @@ TAR_EXCLUDES=(
   --exclude='./deploy'
   --exclude='./deploy.sh'
   --exclude='./_design_export'
+  --exclude='./tests/tts_samples'
   --exclude='*.pyc'
   --exclude='__pycache__'
   --exclude='salesnerve_log_*.txt'
@@ -77,6 +78,15 @@ echo "[deploy] Uploading via tar-over-ssh (excludes: .git, .env, .planning, *.db
 # verhindert Permission-Konflikte (remote user ist root).
 tar "${TAR_EXCLUDES[@]}" -cf - ./ | \
   ssh -i "$SSH_KEY" "$VPS_HOST" "mkdir -p '$APP_DIR' && tar -xf - -C '$APP_DIR' --no-same-owner"
+
+# ── Phase 08.23.2.DEPLOY-PRUNE: Prune-Manifest (git-Index, NUL-delimitiert) ──
+# Erzeugt lokal (Server hat kein .git — tar-excluded) und per scp nach /root
+# (Symlink-Haertung, nicht /tmp). scripts/prune_orphans.sh liest es NACH dem Restart.
+echo "[deploy] Erzeuge Prune-Manifest (git ls-files -z Code-Whitelist)..."
+MANIFEST_LOCAL="$(mktemp)"
+git ls-files -z templates static routes services scripts tests alembic config tools nerve_rt docs app.py config.py extensions.py > "$MANIFEST_LOCAL"
+scp -i "$SSH_KEY" "$MANIFEST_LOCAL" "$VPS_HOST":/root/nerve_prune_manifest
+rm -f "$MANIFEST_LOCAL"
 
 # Finding 2: gthread verhindert OOM durch mehrfaches spaCy-Model-Load.
 # Deploy-Ordner ist vom tar ausgeschlossen — Service-Datei separat installieren.
@@ -238,5 +248,24 @@ ssh -i "$SSH_KEY" "$VPS_HOST" bash -s << ENDHEREDOC
   echo "[deploy] Service status:"
   sudo systemctl status $SERVICE_NAME --no-pager -l
 ENDHEREDOC
+
+# ── Phase 08.23.2.DEPLOY-PRUNE: Waisen-Prune NACH dem Restart ────────────────
+# ISOLIERT als SEPARATER ssh NACH dem Heredoc (Fable MUST-4): das Heredoc oben
+# laeuft mit `set -e` (Zeile 100) — ein Prune-exit!=0 dort wuerde den Deploy-Exit
+# NACH erfolgreichem Restart kippen. Hier ist der Deploy bereits live -> `|| WARN`
+# statt Abbruch. PRUNE_APPLY wird NUR bei woertlich "1" durchgereicht (Fable MUST-2 —
+# expliziter Gleichheits-Check, NICHT die alte plus-Substitution die bei jedem nicht-leeren
+# Wert triggern wuerde, z.B. auch bei "0"). Default = Dry-Run
+# (D-03): der Erst-Prod-Lauf listet nur; scharf erst nach Andre/Claudian-Verifikation.
+echo "[deploy] Waisen-Prune (scripts/prune_orphans.sh, NACH Restart, isoliert)..."
+PRUNE_ENV="MANIFEST=/root/nerve_prune_manifest APP_DIR='$APP_DIR'"
+if [ "${PRUNE_APPLY:-0}" = "1" ]; then
+  PRUNE_ENV="$PRUNE_ENV PRUNE_APPLY=1"
+  echo "[deploy] PRUNE_APPLY=1 — SCHARF (Kandidaten -> /opt/nerve/trash/<ts>/)"
+else
+  echo "[deploy] Dry-Run (Default) — Prune listet nur, bewegt NICHTS (PRUNE_APPLY=1 zum Scharfschalten)"
+fi
+ssh -i "$SSH_KEY" "$VPS_HOST" "$PRUNE_ENV bash '$APP_DIR/scripts/prune_orphans.sh'" \
+  || echo "[deploy][WARN] Prune-Schritt fehlgeschlagen — Deploy ist bereits live, Cruft manuell pruefen"
 
 echo "[deploy] Done."
