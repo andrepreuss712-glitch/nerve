@@ -392,8 +392,15 @@ def _snapshot_public_tables(read_engine, public_table_list=None):
                     text(f"SELECT {pk_col}, xmin::text FROM {qualified_tbl}")
                 ).fetchall()
             snap[qualified_tbl] = {r[0]: r[1] for r in rows}
-        except Exception:
-            # Tabelle existiert nicht / kein id-PK -> nicht Teil der Baseline-Pruefung.
+        except Exception as _snap_err:
+            # NEU (--reviews): NICHT mehr still. Eine Tabelle, deren SELECT scheitert, faellt sonst
+            # LAUTLOS aus der Baseline-Ueberwachung -> unsichtbarer Blocker (Leak wird nie erkannt).
+            # continue-Verhalten bleibt (best-effort Snapshot), aber laut + attribuierbar.
+            logging.getLogger(__name__).warning(
+                "[BASELINE-SNAPSHOT] Snapshot-SELECT fehlgeschlagen fuer %s: %r "
+                "-> Tabelle faellt aus der Baseline-Ueberwachung (nicht mehr still)",
+                qualified_tbl, _snap_err,
+            )
             continue
     return snap
 
