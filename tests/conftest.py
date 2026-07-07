@@ -623,7 +623,25 @@ def _baseline_cleanup_guard(request, _baseline_snapshot, _baseline_guard_engine)
         # Auto-Delete in engine.begin() (D-G05: TX-Hygiene, commit-on-exit), FK-violation-ROBUST gegen
         # Mutual-FK-Zyklen (Bug 3: _fk_safe_delete_rows = Savepoint-pro-Tabelle + Retry-Loop). PK-Spalte
         # aus Katalog-abgeleitetem Cache (Fund #2: kein hardcoded 'id'). public-only -> kein Tenant-GUC.
+        # CAUSE A (Phase TEST-AUFRAEUM, --reviews): audit_log traegt den append-only-Trigger
+        # trg_audit_log_immutable (Migration 0026, BEFORE DELETE -> RAISE EXCEPTION), der AUCH fuer
+        # den Owner feuert. Ein Raw-DELETE geleakter audit_log-Rows scheitert daher immer. WICHTIG
+        # (Kern-Korrektur der Diagnose): die undeletbaren audit_log-Rows halten per FK-Kaskade
+        # (audit_log.user_id/org_id -> users/organisations, NO ACTION) auch die users/orgs-Rows fest ->
+        # deren Delete stallt. Dieser Trigger-Bypass loest daher audit_log + users + organisations
+        # ZUSAMMEN (nicht die FK-Order — der Savepoint-Retry heilt azyklische Order selbst).
+        # nerve_app OWNT audit_log (Prod + nerve_test, live-belegt) -> wir deaktivieren den Trigger
+        # SCOPED nur um diesen Cleanup-Delete und aktivieren ihn im finally IMMER wieder. Drei getrennte
+        # committete TX (Pitfall 1): DISABLE / DELETE / ENABLE. Prod-nerve bleibt unberuehrt (nur nerve_test).
+        has_audit_log = 'public.audit_log' in leaked_by_tbl
         try:
+            # Schritt A: DISABLE (eigene committete TX) — nur wenn audit_log betroffen.
+            if has_audit_log:
+                with _baseline_guard_engine.begin() as conn_a:
+                    conn_a.execute(text(
+                        "ALTER TABLE public.audit_log DISABLE TRIGGER trg_audit_log_immutable"
+                    ))
+            # Schritt B: DELETE (eigene committete TX) — FK-robust via Savepoint-Retry.
             with _baseline_guard_engine.begin() as conn:
                 stalled = _fk_safe_delete_rows(
                     conn, delete_order, leaked_by_tbl,
@@ -641,6 +659,22 @@ def _baseline_cleanup_guard(request, _baseline_snapshot, _baseline_guard_engine)
                 "(Folge-Tests koennen beeintraechtigt sein)",
                 request.node.nodeid, e,
             )
+        finally:
+            # Schritt C: ENABLE (eigene committete TX) — IMMER, auch wenn DELETE crashte.
+            # Rest-Risiko (a, Gemini): Crash ZWISCHEN DISABLE und diesem ENABLE laesst den Trigger in
+            # nerve_test deaktiviert -> gemildert, weil deploy.sh nerve_test pro Lauf DROP+CREATE neu baut.
+            if has_audit_log:
+                try:
+                    with _baseline_guard_engine.begin() as conn_c:
+                        conn_c.execute(text(
+                            "ALTER TABLE public.audit_log ENABLE TRIGGER trg_audit_log_immutable"
+                        ))
+                except Exception as re_err:
+                    _log.warning(
+                        "[BASELINE-AUTO-FIX] ENABLE TRIGGER fehlgeschlagen fuer audit_log: %r "
+                        "(Trigger bleibt deaktiviert fuer diesen Test-Run — nerve_test wird neu gebaut)",
+                        re_err,
+                    )
 
 
 @pytest.fixture
