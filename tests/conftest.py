@@ -164,10 +164,12 @@ def _fk_safe_delete_rows(conn_or_session, ordered_tables, ids_by_table, pk_for, 
     bis eine Runde 0 Fortschritt macht. Loest Zyklen OHNE Superuser/session_replication_role/DEFERRABLE.
 
     Konvergenz: Test-Rows referenzieren fast nie EINANDER (meist Baseline id=1) -> der Retry-Loop raeumt
-    Kinder-vor-Eltern auf, auch wenn die Order innerhalb eines Zyklus imperfekt ist. Ein echter Hard-Stall
-    (Rows, die sich gegenseitig referenzieren) ist ohne DEFERRABLE-Constraint gar nicht einfuegbar; tritt
-    er dennoch auf, gibt die Funktion die nicht loeschbaren Tabellen zurueck -> der Caller loggt laut
-    (kein stiller Leak; der missing/mutated-Guard + POST-SUITE-Check bleiben fail-closed Backstop).
+    Kinder-vor-Eltern auf, auch wenn die Order innerhalb eines Zyklus imperfekt ist. ACHTUNG: ein ECHTER
+    wechselseitiger Zyklus (z.B. organisations.coach_id <-> users.org_id, beide nullable NO ACTION) IST
+    ohne DEFERRABLE einfuegbar und vom Retry-Loop NICHT aufloesbar -> die Zyklus-Kante muss VOR dem Delete
+    gekappt werden (der Baseline-Guard macht das gezielt via UPDATE organisations SET coach_id=NULL).
+    Tritt sonst ein Hard-Stall auf, gibt die Funktion die nicht loeschbaren Tabellen zurueck -> der Caller
+    loggt laut (kein stiller Leak; der missing/mutated-Guard + POST-SUITE-Check bleiben fail-closed Backstop).
 
     pk_for(tbl) -> PK-Spaltenname (katalog-abgeleitet, kein hardcoded 'id'). Der crm.*-Tenant-GUC wird
     hier EINMAL gesetzt. Der Caller committet selbst (diese Funktion committet NICHT). Akzeptiert eine
@@ -563,6 +565,18 @@ def _baseline_cleanup_guard(request, _baseline_snapshot, _baseline_guard_engine)
     crm.* UNVERAENDERT POST-SUITE-Check in deploy.sh (Plan 02). _DERIVED_FK_ORDER enthaelt zwar cross-schema
     Kanten (crm vor public), aber der Waechter-DELETE nutzt sie nur fuer public.*-Eintraege.
 
+    CRM-CROSS-SCHEMA-BLOCKER-KLASSE (D-G04, --reviews Runde 2 — DOKUMENTIERT, NICHT in-suite abgeraeumt):
+    crm.accounts/contacts/account_memory/meetings/user_preferences -> tenant_orgs (accounts_tenant_id_fkey
+    u.a., alle NO ACTION, live-verifiziert) WUERDEN einen tenant_orgs-Delete cross-schema blocken. Der
+    Guard raeumt sie BEWUSST NICHT in-suite ab: die Klasse ist heute doppelt-latent (braucht gleichzeitig
+    einen tenant_orgs-Leak UND ein crm-Kind darauf, heute nicht instanziiert) und bereits FAIL-CLOSED
+    abgesichert durch den deploy.sh-POST-SUITE-crm-leak-Check (scripts/_crm_leak_count.py, exit 1 bei != 0).
+    Ein in-suite-Clearing im Guard wuerde diesen Backstop zu WARN-ONLY degradieren (Guard raeumt crm ->
+    POST-SUITE zaehlt 0 -> Gate gruen statt rot) -> SCHAEDLICH. Wiedervorlage-Trigger: erster realer
+    tenant_orgs-[BASELINE-AUTO-FIX] ODER ein roter POST-SUITE-crm-Check. Falls dann noetig:
+    _fk_safe_delete_rows(conn, crm_order, tenant=<t>) wiederverwenden (setzt den crm-Tenant-GUC EINMAL) —
+    KEINE parallele Mechanik. training laeuft schon in derive_baseline_tables; analog per POST-SUITE gedeckt.
+
     COMPOSITE-PK-TABELLEN (Fund #6/#9): kommen hier NICHT vor — sie sind nicht in der baseline_table_list
     / nicht in _DERIVED_PK_COLS. Sie werden weder auto-geloescht noch snapshot-ueberwacht. Bekannte,
     offen dokumentierte Tor-Luecke, heute leer (0 composite-PK-Tabellen, Prod-Katalog 2026-06-16).
@@ -623,6 +637,30 @@ def _baseline_cleanup_guard(request, _baseline_snapshot, _baseline_guard_engine)
         # Auto-Delete in engine.begin() (D-G05: TX-Hygiene, commit-on-exit), FK-violation-ROBUST gegen
         # Mutual-FK-Zyklen (Bug 3: _fk_safe_delete_rows = Savepoint-pro-Tabelle + Retry-Loop). PK-Spalte
         # aus Katalog-abgeleitetem Cache (Fund #2: kein hardcoded 'id'). public-only -> kein Tenant-GUC.
+        # NEU (Phase TEST-AUFRAEUM, --reviews): echter Zyklus organisations.coach_id -> users.id
+        # (models.py:31, nullable, NO ACTION) <-> users.org_id -> organisations.id. Der Savepoint-Retry
+        # kann einen ECHTEN wechselseitigen Zyklus NICHT loesen. Wir kappen die Zyklus-Kante gezielt:
+        # setze coach_id NUR der geleakten organisations-Rows auf NULL, DANN loescht der Retry sauber.
+        # KEIN generisches "alle FKs auf NULL" (Gemini: Overkill + maskiert Architekturfehler) — NUR coach_id.
+        # Heute No-Op (register/login setzt kein coach_id); coach.py:105 setzt es -> kuenftig real.
+        if 'public.organisations' in leaked_by_tbl:
+            _org_ids = [str(x) for x in leaked_by_tbl['public.organisations']]
+            _org_pk = _DERIVED_PK_COLS.get('public.organisations', 'id')
+            try:
+                with _baseline_guard_engine.begin() as conn_cut:
+                    conn_cut.execute(
+                        text(
+                            f"UPDATE public.organisations SET coach_id = NULL "
+                            f"WHERE {_org_pk}::text = ANY(:ids)"
+                        ),
+                        {"ids": _org_ids},
+                    )
+            except Exception as _cut_err:
+                _log.warning(
+                    "[BASELINE-AUTO-FIX] coach_id-Zyklus-Kappung fehlgeschlagen fuer %s: %r",
+                    request.node.nodeid, _cut_err,
+                )
+
         # CAUSE A (Phase TEST-AUFRAEUM, --reviews): audit_log traegt den append-only-Trigger
         # trg_audit_log_immutable (Migration 0026, BEFORE DELETE -> RAISE EXCEPTION), der AUCH fuer
         # den Owner feuert. Ein Raw-DELETE geleakter audit_log-Rows scheitert daher immer. WICHTIG
