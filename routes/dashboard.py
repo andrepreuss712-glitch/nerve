@@ -446,12 +446,6 @@ def index():
     try:
         user = db.query(UserModel).get(g.user.id)
 
-        # Wizard redirect disabled — wird in einer späteren Phase neu gebaut
-        # if user and user.onboarding_done:
-        #     profile_count = db.query(Profile).filter_by(org_id=g.org.id).count()
-        #     if profile_count == 0:
-        #         return redirect(url_for('profiles.wizard_page'))
-
         # ── Streak aktualisieren ───────────────────────────────────────────
         today = date.today()
         if user.streak_last_date:

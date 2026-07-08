@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>NERVE — Erstprofil anlegen</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='nerve.css') }}">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--page-bg);color:var(--page-text-color);font-family:'Segoe UI',sans-serif;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+  .card{background:var(--glass-bg);border:1.5px solid var(--glass-border);
+    border-radius:var(--glass-radius);padding:36px 40px;width:100%;max-width:480px}
+  .logo{font-size:20px;font-weight:800;margin-bottom:4px;text-align:center}
+  .logo span{color:var(--btn-primary-bg-from)}
+  .subtitle{text-align:center;font-size:13px;color:var(--page-text-secondary);margin-bottom:28px}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;
+    color:var(--page-text-secondary);text-transform:uppercase;margin-bottom:6px;margin-top:20px}
+  select,textarea,input[type="text"]{
+    width:100%;background:var(--input-bg);border:1.5px solid var(--input-border);
+    border-radius:var(--input-radius);color:var(--input-text);font-size:14px;
+    padding:10px 12px;outline:none;font-family:inherit;transition:border-color .15s}
+  select:focus,textarea:focus,input[type="text"]:focus{border-color:var(--input-border-focus)}
+  textarea{resize:vertical;min-height:72px;line-height:1.5}
+  .hint{font-size:11px;color:var(--page-text-muted);margin-top:5px}
+  .btn-primary{width:100%;background:var(--btn-primary-bg-from);color:var(--btn-primary-text);
+    border:none;border-radius:var(--btn-primary-radius);padding:12px;font-size:14px;
+    font-weight:700;cursor:pointer;font-family:inherit;margin-top:24px;transition:opacity .15s}
+  .btn-primary:hover{opacity:.85}
+  .btn-skip{width:100%;background:transparent;color:var(--page-text-secondary);border:none;
+    padding:10px;font-size:13px;cursor:pointer;font-family:inherit;margin-top:8px;
+    text-decoration:underline;text-underline-offset:3px}
+  .btn-skip:hover{color:var(--page-text-color)}
+  .flash-warn{background:rgba(251,191,36,0.08);border:1.5px solid rgba(251,191,36,0.3);
+    color:#d97706;border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:16px}
+  .flash-err{background:rgba(248,113,113,0.08);border:1.5px solid rgba(248,113,113,0.3);
+    color:#e05c5c;border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:16px}
+  .divider{border:none;border-top:1px solid var(--glass-border);margin:20px 0}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Sales<span>Nerve</span></div>
+  <div class="subtitle">Richte dein erstes Verkaufsprofil ein — dauert 30 Sekunden.</div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="{{ 'flash-warn' if cat == 'warning' else 'flash-err' }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Submit-Formular (Profil anlegen) -->
+  <form method="post" action="{{ url_for('onboarding.wizard') }}" id="form-submit">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="branche_key">Deine Branche</label>
+    <select id="branche_key" name="branche_key" required>
+      {% for b in branchen %}
+        <option value="{{ b }}" {% if b == default_branche %}selected{% endif %}>
+          {{ b }}
+        </option>
+      {% endfor %}
+    </select>
+    <p class="hint">Wähle die Branche die am besten zu dir passt.</p>
+
+    <label for="produkt">Was verkaufst du?</label>
+    <textarea id="produkt" name="produkt" rows="3"
+              placeholder="z. B. CRM-Software für Vertriebsteams">{{ default_produkt }}</textarea>
+    <p class="hint">Du kannst das später jederzeit anpassen.</p>
+
+    <button type="submit" class="btn-primary">Profil anlegen und loslegen</button>
+  </form>
+
+  <hr class="divider">
+
+  <!-- Skip-Formular (eigene Route, CSRF erforderlich) -->
+  <form method="post" action="{{ url_for('onboarding.skip') }}" id="form-skip">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn-skip">Überspringen — ich richte das Profil später ein</button>
+  </form>
+</div>
+
+<script>
+// Vorbefüllung des Produktfelds bei Branchen-Wechsel (D-11)
+const branchen_produkte = {{ branchen_produkte | tojson }};
+const selectEl = document.getElementById('branche_key');
+const produktEl = document.getElementById('produkt');
+selectEl.addEventListener('change', function() {
+  const key = selectEl.value;
+  if (branchen_produkte[key]) {
+    produktEl.value = branchen_produkte[key];
+  }
+});
+</script>
+</body>
+</html>

@@ -1,4 +1,8 @@
-from flask import Blueprint, redirect, url_for
+import json
+from flask import (Blueprint, redirect, url_for, render_template,
+                   request, flash, g, session as flask_session)
+from database.db import get_session
+from database.models import Profile, User
 from routes.auth import login_required
 
 onboarding_bp = Blueprint('onboarding', __name__, url_prefix='/onboarding')
@@ -159,24 +163,115 @@ BRANCHE_TEMPLATES = {
 }
 
 
-@onboarding_bp.route('/')
+# ── D-13: EXPLIZITES Branche-Enum-Mapping (BRANCHE_TEMPLATES-Key → profiles.VALID_BRANCHE) ──
+# KEIN stiller _normalize_branche()-Fallback. Recruiting + Agentur haben KEINEN eigenen
+# Whitelist-Wert → bewusst dokumentiert auf 'sonstiges' (nicht still geschluckt).
+# VALID_BRANCHE aus routes/profiles.py: {'saas_b2b','maschinenbau','versicherung',
+# 'finanzprodukte','immobilien','coaching','beratung','sonstiges',''}
+BRANCHE_ENUM_MAP = {
+    'SaaS':         'saas_b2b',
+    'Versicherung': 'versicherung',
+    'Consulting':   'beratung',
+    'Immobilien':   'immobilien',
+    'Industrie':    'maschinenbau',
+    'Sonstiges':    'sonstiges',
+    'Recruiting':   'sonstiges',   # dokumentiert: kein eigener Whitelist-Wert
+    'Agentur':      'sonstiges',   # dokumentiert: kein eigener Whitelist-Wert
+}
+
+
+@onboarding_bp.route('/', methods=['GET', 'POST'])
 @login_required
 def wizard():
-    # Onboarding 2.0 Stub (08.19.5.2 Andre-Decision 2026-05-03).
-    # Neue User landen direkt im Dashboard. Onboarding 2.0 in kuenftiger Phase.
-    # Stub verhindert 404 bei alten Bookmarks oder Auth-Redirects.
-    return redirect(url_for('dashboard.index'))
+    """Erstprofil-Minimum-Seite (D-11/D-15).
+
+    GET: rendert Branchen-Wahl (1 von 8) + Produktfeld (vorbefüllt aus BRANCHE_TEMPLATES).
+    POST Submit: ★ Finding 3 — Rollen-Gate ZUERST (owner/admin only), dann Profil anlegen +
+                 aktiv setzen + onboarding_state='done' im SELBEN Commit (D-14).
+    POST Skip:   Eigene Route /onboarding/skip (offen für alle Rollen, D-12).
+    """
+    if request.method == 'POST':
+        # ── ★ Finding 3: Rollen-Gate (wie profiles.py:63) — ZUERST, vor jeder Profil-Anlage ──
+        if g.user.rolle not in ('owner', 'admin'):
+            flash('Keine Berechtigung.', 'error')
+            return redirect(url_for('dashboard.index'))
+
+        branche_key = request.form.get('branche_key', 'Sonstiges').strip()
+        # Validierung: nur bekannte Keys akzeptieren (T-AUTH2-05 Whitelist)
+        if branche_key not in BRANCHE_ENUM_MAP:
+            branche_key = 'Sonstiges'
+
+        produkt = request.form.get('produkt', '').strip()
+
+        # D-13: EXPLIZITES Mapping — kein _normalize_branche()-Fallback
+        branche_enum = BRANCHE_ENUM_MAP.get(branche_key, 'sonstiges')
+
+        # Profil-Daten aus Template seeden (D-11: Durchklicken ohne Ändern erlaubt)
+        template_basis = BRANCHE_TEMPLATES[branche_key]['basis']
+        daten = {'basis': dict(template_basis)}
+        daten['basis']['produktbeschreibung'] = (
+            produkt or template_basis['produktbeschreibung']
+        )
+
+        # D-11: Profilname automatisch
+        name = f"{branche_key} — Startprofil"
+
+        db = get_session()
+        try:
+            # Profil anlegen (Muster profiles.py:74-83)
+            p = Profile(
+                org_id=g.org.id,
+                name=name,
+                branche=branche_enum,
+                daten=json.dumps(daten, ensure_ascii=False),
+                erstellt_von=g.user.id,
+            )
+            db.add(p)
+            db.flush()  # p.id vergeben, noch kein Commit
+
+            # ── D-14: Aktiv-Setzen + State-Flip im SELBEN Commit (kein Training-404-Trap) ──
+            # (Muster profiles.py:194-198)
+            u = db.get(User, g.user.id)
+            if u is not None:
+                u.active_profile_id = p.id
+                u.onboarding_state = 'done'
+            db.commit()
+            flask_session['active_profile_id'] = p.id  # convenience only
+        finally:
+            db.close()
+
+        return redirect(url_for('dashboard.index'))
+
+    # GET: Branchen-Wahl + vorbefülltes Produktfeld anzeigen
+    default_branche = 'Sonstiges'
+    default_produkt = BRANCHE_TEMPLATES[default_branche]['basis']['produktbeschreibung']
+    # Vorbefüllung aller Branchen als JSON für client-seitigen Tausch (optional)
+    branchen_produkte = {
+        k: v['basis']['produktbeschreibung'] for k, v in BRANCHE_TEMPLATES.items()
+    }
+    return render_template(
+        'onboarding_erstprofil.html',
+        branchen=list(BRANCHE_TEMPLATES.keys()),
+        default_branche=default_branche,
+        default_produkt=default_produkt,
+        branchen_produkte=branchen_produkte,
+    )
 
 
-@onboarding_bp.route('/complete', methods=['POST'])
+@onboarding_bp.route('/skip', methods=['POST'])
 @login_required
-def complete():
-    # Onboarding 2.0 Stub — siehe wizard() oben.
-    return redirect(url_for('dashboard.index'))
-
-
-@onboarding_bp.route('/create_profile', methods=['POST'])
-@login_required
-def create_profile_from_template():
-    # Onboarding 2.0 Stub — siehe wizard() oben.
+def skip():
+    """Skip-Handler — KEIN Rollen-Gate (Finding 3: Skip offen für alle Rollen).
+    Setzt onboarding_state='skipped' + Flash-Banner (D-12).
+    Plan 05 stellt die Banner-Sichtbarkeit im Dashboard sicher.
+    """
+    db = get_session()
+    try:
+        u = db.get(User, g.user.id)
+        if u is not None:
+            u.onboarding_state = 'skipped'
+            db.commit()
+    finally:
+        db.close()
+    flash('Noch kein Profil — lege eins an, sonst ist Training nicht nutzbar.', 'warning')
     return redirect(url_for('dashboard.index'))
