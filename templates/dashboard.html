@@ -62,6 +62,13 @@
     <div class="n-outcome-reminder-sub">Letzte 7 Tage — klicke auf einen Anruf um den Outcome zu korrigieren.</div>
   </div>
 </div>
+<!-- D-12 (AUTH-2 Plan 05): Pflicht-Banner für Skip-User ohne aktives Profil. -->
+{% if show_no_profile_banner %}
+<div class="n-glass" style="border:1.5px solid rgba(248,113,113,0.4);padding:12px 16px;font-size:13px;color:var(--page-text-primary);margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(248,113,113,0.08)">
+  &#9888; <strong>Noch kein Profil</strong> &mdash; lege eins an, sonst ist Training nicht nutzbar.
+  <a href="{{ url_for('onboarding.wizard') }}" class="n-btn n-btn-primary" style="font-size:12px;padding:6px 14px;text-decoration:none;flex-shrink:0">Profil anlegen &rarr;</a>
+</div>
+{% endif %}
 <!-- Design-Tokens aus nerve.css, KEINE hardcoded Farben (CLAUDE.md Regel) -->
 <div class="db2-wrap page-wrap">
 

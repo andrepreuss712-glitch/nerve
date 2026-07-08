@@ -6,6 +6,7 @@ from database.db import get_session
 from database.models import User
 from routes.auth import _login_user, _create_org_and_user
 from services.audit import log_action
+from services.onboarding_routing import post_login_destination
 from config import (
     GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
     MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET,
@@ -106,10 +107,11 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
                        details={'method': provider}, request=request)
             db.commit()
             print(f'[OAuth] {provider} login: existing user id={user.id} onboarding_done={onboarding_done_flag}')
-            # D-05: diagnostic — log redirect target for existing-user path
-            # Onboarding redirect disabled — wird in einer späteren Phase neu gebaut
-            print(f'[OAuth] redirect target: dashboard.index (existing user id={user.id})')
-            return redirect(url_for('dashboard.index'))
+            # S4 Bestand-Pfad (AUTH-2 Plan 05, D-19): Weiche VOR dem finalen Redirect.
+            # Eigene get_session in post_login_destination stoert diese OAuth-TX nicht.
+            dest = post_login_destination(user)
+            print(f'[OAuth] redirect target: {dest or "dashboard.index"} (existing user id={user.id})')
+            return redirect(dest or url_for('dashboard.index'))
         # Neuanlage
         firmenname_platzhalter = (vorname + ' ' + nachname).strip() or email.split('@')[0]
         firmenname_platzhalter = firmenname_platzhalter + ' (Workspace)'
@@ -157,10 +159,13 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
             except Exception as _ce:
                 print(f'[OAUTH] Microsoft confirmation mail failed: {_ce}')
         print(f'[OAuth] {provider} register: new user id={new_user.id}')
-        # D-05: diagnostic — log redirect target for new-user path
-        # Onboarding redirect disabled — wird in einer späteren Phase neu gebaut
-        print(f'[OAuth] redirect target: dashboard.index (new user id={new_user.id})')
-        return redirect(url_for('dashboard.index'))
+        # S4 Neuanlage-Pfad (AUTH-2 Plan 05, D-19): Weiche VOR dem finalen Redirect.
+        # db.refresh: server_default 'pending' in ORM-Objekt sichern (T-AUTH2-13).
+        # Eigene get_session in post_login_destination stoert OAuth-TX nicht.
+        db.refresh(new_user)
+        dest = post_login_destination(new_user)
+        print(f'[OAuth] redirect target: {dest or "dashboard.index"} (new user id={new_user.id})')
+        return redirect(dest or url_for('dashboard.index'))
     finally:
         db.close()
 

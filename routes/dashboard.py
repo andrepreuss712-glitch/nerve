@@ -587,6 +587,12 @@ def index():
             weekly_report = None
             longterm_data = None
 
+        # D-12 (AUTH-2 Plan 05): persistentes Skip-Banner — sichtbar wenn onboarding_state='skipped'
+        # UND kein aktives Profil. Pflicht-Banner bis Profil existiert (Training ist sonst 404).
+        _user_state = getattr(user, 'onboarding_state', None)
+        _has_profile = bool(getattr(user, 'active_profile_id', None))
+        show_no_profile_banner = (_user_state == 'skipped' and not _has_profile)
+
         return render_template('dashboard.html',
                                stats=stats,
                                activity_map=json.dumps(activity_map),
@@ -608,7 +614,8 @@ def index():
                                learning_cards=learning_cards,
                                weekly_report=weekly_report,
                                longterm_data_json=_json.dumps(longterm_data, ensure_ascii=False) if longterm_data else 'null',
-                               training_recommendation=training_recommendation)
+                               training_recommendation=training_recommendation,
+                               show_no_profile_banner=show_no_profile_banner)
     finally:
         db.close()
 
