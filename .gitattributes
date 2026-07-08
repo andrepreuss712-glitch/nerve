@@ -1,0 +1,5 @@
+# Shell-Skripte IMMER mit LF auschecken — sonst bricht ein CRLF-`\r` das Skript auf
+# dem Linux-Server (deploy.sh + scripts/*.sh laufen dort via bash). Härtet gegen
+# core.autocrlf=true, das *.sh sonst bei einem künftigen checkout als CRLF re-materialisieren
+# würde. (Phase 08.23.2.DEPLOY-PRUNE — Deploy-Hygiene-Härtung.)
+*.sh text eol=lf
