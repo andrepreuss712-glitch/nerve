@@ -71,7 +71,7 @@
             {% endif %}
           </td>
           <td>
-            <a href="/logs/download/{{ log.filename }}" class="btn btn-secondary btn-xs">
+            <a href="{{ download_url|default('/logs/download/') }}{{ log.filename }}" class="btn btn-secondary btn-xs">
               ⬇ Download
             </a>
           </td>

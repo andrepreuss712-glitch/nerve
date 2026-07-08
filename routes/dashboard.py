@@ -155,7 +155,18 @@ def get_recent_calls_db(user_id, db, limit=5):
 
 
 def get_recent_logs(user_id, org_id, rolle, limit=5):
+    # Phase 08.23.2.AUTH-LOGS-TENANT: Widget respektiert jetzt die Firmen-Grenze — owner/admin sehen
+    # NUR Logs der eigenen Firma (org_id JETZT genutzt). Kein is_superadmin-Bypass. fail-closed.
     is_admin = rolle in ('owner', 'admin')
+    org_ids = None
+    if is_admin:
+        db = get_session()
+        try:
+            org_ids = {u.id for u in db.query(UserModel).filter_by(org_id=org_id).all()}
+        except Exception:
+            org_ids = set()  # fail-closed: nichts zeigen statt 'alle'
+        finally:
+            db.close()
     result = []
     try:
         files = sorted(
@@ -163,7 +174,12 @@ def get_recent_logs(user_id, org_id, rolle, limit=5):
             reverse=True
         )
         for fname in files:
-            if not is_admin:
+            if is_admin:
+                m = re.search(r'_U(\d+)_', fname)
+                uid = int(m.group(1)) if m else None
+                if uid is None or uid not in org_ids:
+                    continue
+            else:
                 if f'_U{user_id}_' not in fname:
                     continue
             fpath = os.path.join(LOG_DIR, fname)
