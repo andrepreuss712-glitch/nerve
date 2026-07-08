@@ -137,7 +137,7 @@ def founder_download(filename):
     try:
         log_action(
             db, g.user.id, g.org.id, 'founder_log_access',
-            target_type='call_log', target_id=filename,
+            target_type='call_log', target_id=None,  # target_id ist Integer (models.py:399) — Dateiname gehört in details (Textfeld), nicht hierher
             details={'datei': filename, 'grund': grund}, request=request, strict=True,
         )
     except Exception:
