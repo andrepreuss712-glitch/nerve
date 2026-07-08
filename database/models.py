@@ -82,7 +82,11 @@ class User(Base):
     # Block 1: Onboarding
     vorname             = Column(String(100), comment='Vorname des Users')
     nachname            = Column(String(100), comment='Nachname des Users')
-    onboarding_done     = Column(Boolean, default=False, comment='Flag: Onboarding abgeschlossen')
+    onboarding_done     = Column(Boolean, default=False, comment='[DEPRECATED ab AUTH-2 -- EINGEFROREN, nicht droppen] Abgeloest durch users.onboarding_state. Noch aktive LESER (kein neuer Schreiber): routes/auth.py (_login_user liest, _create_org_and_user setzt False), routes/oauth.py. Drop erst nach grep-Beleg 0 Leser (Zombie-Regel Punkt 23/29).')
+    onboarding_state    = Column(Text, nullable=False, server_default='pending',
+                                 comment='Onboarding-Fortschritt der Weiche post_login_destination (pending|done|skipped; CHECK ck_users_onboarding_state, erweiterbar um step_* ohne Weichen-Aenderung, D-09). Neue Wahrheitsquelle statt onboarding_done. Status: lebt (ab AUTH-2). Schreibt routes/onboarding.py (Erstprofil-Submit/Skip) + DB-Default pending bei Anlage; liest routes/auth.py + routes/oauth.py (post_login_destination).')
+    skip_onboarding     = Column(Boolean, nullable=False, server_default=text('false'), default=False,
+                                 comment='Founder/Support-Schalter: ueberspringt NUR das Onboarding (Stufe 1 der Weiche), NICHT das Billing (das laeuft ueber organisations.skip_billing, AUTH-3/4). Status: Foundation -- Setz-UI kommt AUTH-4, hier nur Spalte + Leser. Schreibt (spaeter) AUTH-4 Flask-Admin; liest routes/auth.py + routes/oauth.py (post_login_destination Stufe 1).')
     erfahrungslevel     = Column(String(50), comment='Erfahrungslevel: einsteiger/fortgeschritten/profi')   # einsteiger/fortgeschritten/profi
     schmerzpunkt        = Column(Text, comment='Onboarding: groesster Schmerzpunkt')
     persoenlich         = Column(Text, comment='Onboarding: persoenliche Angaben')
