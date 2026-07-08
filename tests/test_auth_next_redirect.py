@@ -176,12 +176,21 @@ def test_api_login_drops_open_redirect_next(client, cleanup_tracker):
     assert resp.status_code == 200
     data = resp.get_json()
     assert data['ok'] is True
-    assert 'next' not in data
+    # S2-Wiring (AUTH-2): safe_next verwirft den boesen next → nxt=None → die Weiche
+    # setzt ein sicheres INTERNES Ziel (pending Owner → '/onboarding/'). Der Angreifer-Wert
+    # darf NICHT reflektiert werden; ein internes Pfad-Ziel ist erlaubt (Open-Redirect-Schutz intakt, Punkt 18).
+    nxt = data.get('next', '')
+    assert 'evil.com' not in nxt
+    assert not nxt.startswith(('http://', 'https://', '//'))
 
 
 def test_api_login_without_next_preserves_legacy_shape(client, cleanup_tracker):
-    """POST /api/login without next → response has ok+coach, no next key."""
+    """POST /api/login without next, done-User → response has ok+coach, no next key."""
     u = _make_test_user(client, tracker=cleanup_tracker)
+    # done-User: die Weiche (S2) gibt None → kein next-Key → Legacy-Shape bleibt geprueft.
+    db = client._test_session
+    u.onboarding_state = 'done'
+    db.commit()
     resp = client.post(
         '/api/login',
         json={'email': u.email, 'passwort': 'secret12345'},
@@ -217,4 +226,9 @@ def test_api_login_rejects_crlf_in_next(client, cleanup_tracker):
     )
     assert resp.status_code == 200
     data = resp.get_json()
-    assert 'next' not in data
+    # S2-Wiring (AUTH-2): safe_next verwirft den CRLF-next → Weiche setzt sicheres internes Ziel.
+    # Der injizierte Wert darf NICHT in der Antwort landen (kein \r\n, kein X-Evil, kein externer Host).
+    nxt = data.get('next', '')
+    assert '\r' not in nxt and '\n' not in nxt
+    assert 'X-Evil' not in nxt
+    assert not nxt.startswith(('http://', 'https://', '//'))
