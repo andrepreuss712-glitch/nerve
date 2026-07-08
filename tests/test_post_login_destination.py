@@ -114,7 +114,7 @@ def _onboarding_state_of(session, user_id):
 
 # ── App-Kontext-Fixture (fuer url_for) ────────────────────────────────────────
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def app_ctx(client):
     """Stellt einen Flask-Test-Request-Context bereit, damit url_for() aufloesbar ist."""
     with client.application.test_request_context('/'):
