@@ -928,7 +928,7 @@ async function submitRegister(){
       body:JSON.stringify(rData)
     });
     const data=await res.json();
-    if(data.ok){window.location='/dashboard';}
+    if(data.ok){window.location=safeNextParam(data.next)||'/dashboard';}
     else{showErr('r-err3',data.error||'Fehler bei der Registrierung.');btn.disabled=false;btn.textContent='Jetzt kostenlos starten';}
   }catch(e){showErr('r-err3','Verbindungsfehler.');btn.disabled=false;btn.textContent='Jetzt kostenlos starten';}
 }

@@ -9,6 +9,7 @@ from database.models import User, Organisation, Session as DbSession, Invitation
 from config import MAX_SESSION_HOURS, PLANS
 from services.audit import log_action
 from services.rate_limiter import limiter
+from services.onboarding_routing import post_login_destination
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -88,7 +89,17 @@ def login():
     # Preserve next-param from query string so the landing modal can forward it.
     nxt = safe_next(request.args.get('next'))
     if 'user_id' in session:
-        return redirect(nxt) if nxt else redirect(url_for('dashboard.index'))
+        # S1 (AUTH-2 Plan 05): wenn kein explizites ?next=, Weiche fragen.
+        # g.user ist hier NICHT gesetzt (login() hat kein @login_required) -> frisch laden.
+        if nxt:
+            return redirect(nxt)
+        db = get_session()
+        try:
+            u = db.get(User, session['user_id'])
+        finally:
+            db.close()
+        dest = post_login_destination(u) if u else None
+        return redirect(dest or url_for('dashboard.index'))
     target = '/?modal=login'
     if nxt:
         from urllib.parse import quote
@@ -216,6 +227,17 @@ def api_login():
     resp = {'ok': True, 'coach': user_info['is_coach']}
     if nxt:
         resp['next'] = nxt
+    else:
+        # S2 (AUTH-2 Plan 05): kein explizites next -> Weiche fragen.
+        # user_info['id'] wurde von _login_user zurueckgegeben (auth.py:142).
+        db = get_session()
+        try:
+            u = db.get(User, user_info['id'])
+        finally:
+            db.close()
+        dest = post_login_destination(u) if u else None
+        if dest:
+            resp['next'] = dest
     return jsonify(resp)
 
 
@@ -255,7 +277,12 @@ def api_register():
             send_welcome(user.email, getattr(user, 'vorname', '') or '')
         except Exception as e:
             print(f'[AUTH] welcome mail failed: {e}')
-        return jsonify({'ok': True})
+        # S3 (AUTH-2 Plan 05): Weiche berechnen; db.refresh sichert server_default 'pending'
+        # (T-AUTH2-13: ORM-Objekt nach flush/commit traegt server_default evtl. nicht).
+        # D-17: KEIN expliziter onboarding_state-Setzer hier — DB-Default 'pending' genuegt.
+        db.refresh(user)
+        dest = post_login_destination(user)
+        return jsonify({'ok': True, 'next': dest})
     finally:
         db.close()
 
