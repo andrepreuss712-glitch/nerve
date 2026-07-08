@@ -152,7 +152,7 @@ def _migrate():
             # Block 1: Onboarding
             ('vorname', 'VARCHAR(100)'),
             ('nachname', 'VARCHAR(100)'),
-            ('onboarding_done', 'BOOLEAN DEFAULT 0'),
+            ('onboarding_done', 'BOOLEAN DEFAULT 0'),  # AUTH-2 D-10: SQLite-Legacy-ADD-COLUMN (Prod via Alembic). KEINE onboarding_state-Zeile hier ergaenzen -- die neue Spalte lebt ausschliesslich in Alembic 0032, kein _migrate()-Muster.
             ('erfahrungslevel', 'VARCHAR(50)'),
             ('schmerzpunkt', 'TEXT'),
             ('persoenlich', 'TEXT'),
@@ -833,6 +833,13 @@ def _migrate():
         # onboarding_done=NULL/False würden im Onboarding-Wizard hängen bleiben.
         # Idempotente Migration: setzt alle bestehenden User auf onboarding_done=1.
         # Safe bei mehrfachem Lauf (UPDATE ohne Effekt wenn schon 1).
+        # ★ AUTH-2 D-10 LANDMINE-MARKER: Dieser Startup-Flip ist SQLite-only (laeuft nie
+        # auf Prod -- _migrate() early-returns bei Postgres, app.py ~:140). Er darf NIEMALS
+        # auf users.onboarding_state portiert/kopiert werden -- ein Start-Flip auf
+        # onboarding_state wuerde jeden pending-Neuuser bei naechstem Start tot auf 'done'
+        # setzen und die Weiche (post_login_destination) aushebeln. onboarding_state ist
+        # ausschliesslich Migration 0032 (Anlage/Backfill) + Weichen-Uebergaenge
+        # (routes/onboarding.py). Kein Startup-Schreiber.
         try:
             from sqlalchemy import text as _text_um
             _result = conn.execute(_text_um(
@@ -1640,6 +1647,9 @@ def _seed():
                 rolle='owner',
                 vorname='André',
                 nachname='Preuß',
+                # AUTH-2 D-10: _seed laeuft nur bei User.count()==0 (nie auf Prod). onboarding_state
+                # NICHT hier setzen -- DB-Default 'pending' (Migration 0032) greift; ein Seed-Setzer
+                # auf 'done' wuerde die Weiche fuer den Seed-Owner umgehen.
                 onboarding_done=True,
             )
             db.add(owner)
