@@ -129,19 +129,27 @@ def _oauth_login_or_create(*, provider, oauth_id, email, vorname, nachname, avat
         )
         # H-18: email_confirmed=False atomar mit User-Anlage committen — kein TOCTOU-Fenster.
         # Muss VOR session.clear() + _login_user stehen damit der Commit email_confirmed=False enthält.
+        # D-03/D-07 (AUTH-EMAIL-VERIFY): JEDER OAuth-Pfad setzt email_confirmed EXPLIZIT — Google
+        # nicht auf den ORM-Default verlassen (Drift-Schutz, Punkt 29), damit der spaetere Default-Flip
+        # (Plan 02) ein No-Op wird.
         if provider == 'microsoft':
             new_user.email_confirmed = False
+        else:  # google (+ kuenftige verified-Provider): Mail vom Provider verifiziert (D-07)
+            new_user.email_confirmed = True
         session.clear()
         _login_user(db, new_user)
         log_action(db, new_user.id, getattr(new_user, 'org_id', None), 'login',
                    target_type='user', target_id=new_user.id,
                    details={'method': provider}, request=request)
         db.commit()
-        try:
-            from services.email_service import send_welcome
-            send_welcome(new_user.email, getattr(new_user, 'vorname', '') or '')
-        except Exception as e:
-            print(f'[OAUTH] welcome mail failed: {e}')
+        # Finding 3a: send_welcome NUR im Google/else-Zweig — MS bekommt Welcome erst via confirm_email
+        # (kein Doppel-Welcome). Google ist sofort bestaetigt (email_confirmed=True) → Welcome sofort.
+        if provider != 'microsoft':
+            try:
+                from services.email_service import send_welcome
+                send_welcome(new_user.email, getattr(new_user, 'vorname', '') or '')
+            except Exception as e:
+                print(f'[OAUTH] welcome mail failed: {e}')
         # H-18: Microsoft-OAuth Email-Hijacking-Mitigation
         # Nur für Microsoft: Email-Confirmation für neue User senden.
         # Google hat email_verified=True in JWT — kein Confirmation-Flow nötig.
