@@ -929,6 +929,9 @@ def _migrate():
             print(f"[DB] oauth_id UNIQUE-Index Migration-Fehler: {_e}")
 
         # ── Phase 08.10 H-18: email_confirmed Column für Microsoft-OAuth Email-Verification ──
+        # DEPRECATED/Legacy (Punkt 29): Diese SQLite-Inline-Migration DEFAULT 1 widerspricht dem
+        # False-DB-Default (Migration 0033, AUTH-EMAIL-VERIFY Plan 02). Nur der Alt-SQLite-Pfad;
+        # Prod-PG nutzt Alembic. Kein Verhaltens-Change hier — bei SQLite-Abbau entfernen.
         try:
             conn.execute(text("ALTER TABLE users ADD COLUMN email_confirmed BOOLEAN DEFAULT 1"))
             conn.commit()
@@ -1651,6 +1654,7 @@ def _seed():
                 # NICHT hier setzen -- DB-Default 'pending' (Migration 0032) greift; ein Seed-Setzer
                 # auf 'done' wuerde die Weiche fuer den Seed-Owner umgehen.
                 onboarding_done=True,
+                email_confirmed=True,  # D-03: Seed-Owner explizit bestaetigt (nur count==0, nie Prod)
             )
             db.add(owner)
             db.flush()

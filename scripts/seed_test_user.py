@@ -40,6 +40,7 @@ try:
         aktiv=True,
         market='dach',
         language='de',
+        email_confirmed=True,  # D-03: Test-User explizit bestaetigt (soll App nutzen koennen)
     )
     db.add(user)
     db.commit()

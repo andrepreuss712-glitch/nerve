@@ -272,19 +272,26 @@ def api_register():
             passwort_hash=generate_password_hash(passwort),
         )
         db.commit()
-        _login_user(db, user)
-        session['welcome_trial'] = True
+        # D-02 (AUTH-EMAIL-VERIFY): Form-Register beweist Mail-Besitz NICHT → email_confirmed
+        # EXPLIZIT False (nur hier, NICHT im geteilten _create_org_and_user — OAuth-Naht, Punkt 14).
+        # Explizit gesetzt → der spaetere Default-Flip (Plan 02) ist ein No-Op.
+        user.email_confirmed = False
+        db.commit()
+        _login_user(db, user)  # D-10: Auto-Login bleibt (Gate haelt bis Confirm)
+        # D-11/D-13: KEIN welcome_trial/send_welcome hier (wandern in confirm_email nach bewiesenem
+        # Mail-Besitz). Stattdessen die signierte Bestaetigungs-Mail versenden (Muster wie oauth.py).
         try:
-            from services.email_service import send_welcome
-            send_welcome(user.email, getattr(user, 'vorname', '') or '')
+            from services.email_service import send_confirmation_email
+            from itsdangerous import URLSafeTimedSerializer
+            from config import SECRET_KEY
+            confirm_token = URLSafeTimedSerializer(SECRET_KEY, salt='nerve-email-confirm').dumps(user.email)
+            confirm_url = url_for('auth.confirm_email', token=confirm_token, _external=True)
+            send_confirmation_email(user.email, confirm_url, getattr(user, 'vorname', '') or '')
         except Exception as e:
-            print(f'[AUTH] welcome mail failed: {e}')
-        # S3 (AUTH-2 Plan 05): Weiche berechnen; db.refresh sichert server_default 'pending'
-        # (T-AUTH2-13: ORM-Objekt nach flush/commit traegt server_default evtl. nicht).
-        # D-17: KEIN expliziter onboarding_state-Setzer hier — DB-Default 'pending' genuegt.
-        db.refresh(user)
-        dest = post_login_destination(user)
-        return jsonify({'ok': True, 'next': dest})
+            print(f'[AUTH] confirmation mail failed: {e}')
+        # D-09: Unbestaetigte landen auf der Warteseite (ueberschreibt die AUTH-2-Onboarding-Weiche);
+        # das fail-closed Gate (Plan 01) sperrt sie ohnehin bis email_confirmed=True.
+        return jsonify({'ok': True, 'next': url_for('auth.confirm_email_pending')})
     finally:
         db.close()
 
@@ -320,6 +327,7 @@ def register():
                 email=email,
                 passwort_hash=generate_password_hash(passwort),
                 rolle='member',
+                email_confirmed=True,  # D-03: Invite beweist Mail-Besitz → True (sonst nach Plan-02-Flip grundlos gegatet)
             )
             db.add(user)
             inv.verwendet = True
@@ -374,6 +382,16 @@ def confirm_email():
         email = URLSafeTimedSerializer(SECRET_KEY, salt='nerve-email-confirm').loads(token, max_age=86400)
         user = db.query(User).filter_by(email=email).first()
         if user:
+            # D-12/D-13 + Finding 3b (Idempotenz): Welcome + welcome_trial wandern hierher
+            # (nach bewiesenem Mail-Besitz). Der `if not user.email_confirmed`-Guard MUSS VOR dem
+            # `= True`-Setzen stehen — sonst feuert Mehrfach-Klick/Reload ein zweites Welcome.
+            if not user.email_confirmed:
+                try:
+                    from services.email_service import send_welcome
+                    send_welcome(user.email, getattr(user, 'vorname', '') or '')
+                except Exception as _we:
+                    print(f'[AUTH] welcome mail failed: {_we}')
+                session['welcome_trial'] = True   # best-effort same-browser (D-14)
             user.email_confirmed = True
             db.commit()
             flash('E-Mail erfolgreich bestätigt! Bitte einloggen.', 'success')
