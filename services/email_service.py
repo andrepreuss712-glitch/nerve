@@ -57,16 +57,16 @@ def send_confirmation_email(to_email, confirmation_url, vorname=''):
     Sendet Bestaetigungs-Email an neue Microsoft-OAuth-User.
     confirmation_url: signierter Link zum Bestaetigen der Email (itsdangerous).
     """
-    name = vorname or 'da'
+    name = vorname or 'there'
     html = (
-        f"<p>Hallo {name},</p>"
-        "<p>bitte bestätige deine E-Mail-Adresse für NERVE:</p>"
-        f"<p><a href='{confirmation_url}'>E-Mail bestätigen</a> (Link gültig 24 Stunden)</p>"
-        "<p>Wenn du dich nicht bei NERVE registriert hast, ignoriere diese E-Mail.</p>"
+        f"<p>Hi {name},</p>"
+        "<p>please confirm your email address for NERVE:</p>"
+        f"<p><a href='{confirmation_url}'>Confirm email</a> (link valid for 24 hours)</p>"
+        "<p>If you didn't sign up for NERVE, you can safely ignore this email.</p>"
         "<p>— André, Founder NERVE</p>"
     )
     return _send({'from': FROM_SYSTEM, 'to': [to_email],
-                  'subject': 'NERVE — Bitte E-Mail bestätigen', 'html': html})
+                  'subject': 'Confirm your email for NERVE', 'html': html})
 
 
 def send_feedback_in_planning(to_email, feedback_text, vorname=''):

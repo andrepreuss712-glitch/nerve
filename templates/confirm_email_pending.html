@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <div style="max-width:480px;margin:80px auto;text-align:center;">
-  <h2>E-Mail bestätigen</h2>
-  <p>Bitte bestätige deine E-Mail-Adresse. Wir haben dir einen Bestätigungslink geschickt.</p>
+  <h2>Confirm your email</h2>
+  <p>Please confirm your email address. We've sent you a confirmation link.</p>
   <p>
     <small>
-      Kein Link erhalten?
+      Didn't get the link?
       <button onclick="
         fetch('/auth/resend-confirm', {
           method: 'POST',
@@ -15,12 +15,12 @@
         })
         .then(function(r) { return r.json(); })
         .then(function(d) {
-          alert(d.ok ? 'E-Mail erneut gesendet!' : 'Fehler: ' + d.error);
+          alert(d.ok ? 'Email resent!' : 'Error: ' + d.error);
         })
-        .catch(function() { alert('Fehler beim Senden. Bitte erneut versuchen.'); });
-      ">Erneut senden</button>
+        .catch(function() { alert('Failed to send. Please try again.'); });
+      ">Resend</button>
     </small>
   </p>
-  <p><a href="/auth/logout">Abmelden</a></p>
+  <p><a href="/auth/logout">Log out</a></p>
 </div>
 {% endblock %}
