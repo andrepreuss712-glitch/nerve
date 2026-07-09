@@ -76,7 +76,9 @@ def login_required(f):
         # Ausnahmen: /auth/confirm_email (Token-Bestaetigung) und /auth/logout.
         # BEWUSST: confirm_email_pending + confirm_email + resend_confirm haben KEIN
         # @login_required — sonst Redirect-Loop.
-        if getattr(g.user, 'email_confirmed', True) is False:
+        # AUTH-EMAIL-VERIFY D-01b: fail-closed — NULL/unset/False gaten, nur True passiert
+        # (Form-Register-Leck-Fix, Fail-Open-Wurzel war `is False` das NULL durchliess).
+        if getattr(g.user, 'email_confirmed', True) is not True:
             if (not request.path.startswith('/auth/confirm_email') and
                     not request.path.startswith('/auth/logout')):
                 return redirect(url_for('auth.confirm_email_pending'))
