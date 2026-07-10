@@ -4,6 +4,7 @@ from flask import (Blueprint, redirect, url_for, render_template,
 from database.db import get_session
 from database.models import Profile, User
 from routes.auth import login_required
+from services.profile_schema import _migrate_profile_data
 
 onboarding_bp = Blueprint('onboarding', __name__, url_prefix='/onboarding')
 
@@ -215,6 +216,13 @@ def wizard():
 
         # D-11: Profilname automatisch
         name = f"{branche_key} — Startprofil"
+
+        # AUTH2-ERSTPROFIL-SCHEMA-FIX: Profil als AKTUELLE Schema-Version (v4, mit schema_version)
+        # anlegen — migrate-on-save wie routes/profiles.py:139. Ohne das fehlt schema_version, das
+        # Profil gilt als v1, und die Startup-Batch-Migration (app.py) versucht es bei JEDEM Neustart
+        # zu migrieren + vergiftet dabei ihre gemeinsame Transaktion ([Schema]/ProfileOpener sync,
+        # UPDATE InFailedSqlTransaction). Migrate hier normalisiert die Template-Daten auf v4.
+        daten = _migrate_profile_data(daten)
 
         db = get_session()
         try:
