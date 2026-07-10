@@ -8,6 +8,14 @@
 
 ## Open
 
+### AUTH2-ERSTPROFIL-SCHEMA-VERSION — Erstprofil-Seite legt Profile OHNE schema_version an → Start-Normalisierer stolpert (eigene AUTH-2-Folge-Phase)
+
+- **Severity:** medium (kein Datenverlust, aber jeder App-Neustart wirft Fehler solange ein versions-loses Profil existiert; echte Onboarding-Nutzer lösen es aus)
+- **Entdeckt:** Claudian 2026-07-10, beim Wave-3-Restart der Phase 08.23.2.AUTH-EMAIL-VERIFY. **NICHT dieser Phase zurechnen** — separater AUTH-2-Nebenfund (die Erstprofil-Seite stammt aus AUTH-2 Plan 04/05, nicht aus email-verify).
+- **Symptom:** die AUTH-2-Erstprofil-Seite legt Profile OHNE `schema_version` an → der Start-Profil-Normalisierer (`[Schema]`-Routine) stolpert bei jedem Neustart (`ProfileOpener`-sync + `UPDATE profiles` in `InFailedSqlTransaction`). Trat auf, als das UAT-Starterprofil beim Restart verarbeitet wurde. UAT-Konto gelöscht → Symptom weg (kein versions-loses Profil mehr), aber die Wurzel bleibt.
+- **Root-Fix (eine der beiden):** (a) Erstprofil-Anlage setzt `schema_version` explizit (auf `LATEST_SCHEMA_VERSION`, `services/profile_schema.py`), ODER (b) der Normalisierer toleriert versions-lose Profile (behandelt NULL als „ältestes Schema" statt zu crashen; + fängt die `InFailedSqlTransaction` mit rollback ab). Vermutlich (a) als Anlage-Fix + (b) als Robustheits-Netz.
+- **Routing:** eigene kleine AUTH-2-Folge-Phase (z.B. `08.23.2.AUTH-2.1`). Schema-Version-Bump-Regel (CLAUDE.md „🔴 Schema-Bump: LATEST_SCHEMA_VERSION-Konstante prüfen") beachten. Nicht launch-blockierend (Neu-Onboarding erst nach EA relevant), aber vor echten Onboarding-Nutzern fixen.
+
 ### EWB-DISPLAY-RACE — Live: NERVEs EWB-Vorschlag im PiP wird gelöscht/überschrieben WÄHREND der User ihn vorliest
 
 - **Severity:** high (Live-UX-Kernpfad; macht den Live-Assistenten im Cold-Call unbrauchbar + versaut jeden Post-Call-Bewerter-Test)
