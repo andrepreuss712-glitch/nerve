@@ -2,9 +2,10 @@
 
 Prueft, dass die 4 Login-Docks (S1-S4) korrekt an post_login_destination angedockt sind.
 
-ERST-ROT-Sequenz:
-  - test_register_owner_lands_on_erstprofil: ROT gegen HEAD (vor Plan-05 Task 2/3), weil
-    /api/register-Response kein 'next'=='/onboarding/' traegt (Dock S3 noch nicht verdrahtet).
+Sequenz:
+  - test_register_owner_lands_on_confirm_pending: Register-Response fuer Unbestaetigte traegt
+    'next'=='/auth/confirm-email-pending' (AUTH-EMAIL-VERIFY D-09, Confirm-First — ueberschreibt
+    die AUTH-2-Onboarding-Weiche; Onboarding erst NACH dem Bestaetigen).
   - test_login_done_user_no_onboarding_redirect: GRUEN auch gegen HEAD (kein falscher Redirect).
   - test_member_submit_rejected: setzt Plan-04-Submit-Handler voraus (Finding 3 gate) —
     gruen sobald Plan 04 executet ist (routes/onboarding.py Rollen-Gate live).
@@ -25,7 +26,8 @@ from database.models import User, Organisation, Session as DbSession, Profile
 
 
 # ── @nerve.local-Email-Convention (Fable BLOCKER 3b) ─────────────────────────
-# /api/register triggert send_welcome -> echte Resend-Mail AUSSER @nerve.local.
+# /api/register triggert send_confirmation_email (nach AUTH-EMAIL-VERIFY, statt send_welcome)
+# -> echte Resend-Mail AUSSER @nerve.local (im _send-Guard uebersprungen).
 _OWNER_EMAIL   = 'wiring_test_owner@nerve.local'
 _DONE_EMAIL    = 'wiring_test_done@nerve.local'
 _MEMBER_EMAIL  = 'wiring_test_member@nerve.local'
@@ -48,13 +50,18 @@ def _extract_csrf_token(resp):
     return m.group(1) if m else None
 
 
-# ── Test 1: S3 — Formular-Register → Erstprofil-Ziel im Response ─────────────
+# ── Test 1: D-09 — Formular-Register → Warteseite (Confirm-First) ────────────
 
-def test_register_owner_lands_on_erstprofil(csrf_client, db_from_client):
-    """ERST-ROT gegen HEAD: Register-Response hat KEIN 'next'=='/onboarding/' (Dock S3 offen).
-    GRUEN nach Task 2 (auth.py S3 mit post_login_destination verdrahtet).
+def test_register_owner_lands_on_confirm_pending(csrf_client, db_from_client):
+    """AUTH-EMAIL-VERIFY D-09: Register-Response fuer Unbestaetigte hat 'next'=='/auth/confirm-email-pending'.
 
-    API-Response-Assertion (nicht source-presence): prueft resp.get_json()['next'] == '/onboarding/'.
+    Vertrags-Update (Plan 03): api_register ueberschreibt die AUTH-2-Onboarding-Weiche fuer
+    unbestaetigte Neu-Registrierte — sie landen auf der Warteseite (email_confirmed=False, das
+    fail-closed Gate haelt bis Confirm). Das Onboarding-Routing (S3) greift erst NACH dem
+    Bestaetigen (via /login → Weiche → /onboarding/), belegt durch den Confirm-Flow-Guard
+    (tests/test_email_verify_creation_paths.py) + Live-UAT.
+
+    API-Response-Assertion (nicht source-presence): prueft resp.get_json()['next'] == '/auth/confirm-email-pending'.
     """
     ids = {DbSession: [], User: [], 'public.tenant_orgs': [], Organisation: []}
     try:
@@ -84,12 +91,12 @@ def test_register_owner_lands_on_erstprofil(csrf_client, db_from_client):
         data = resp.get_json()
         assert data.get('ok') is True, f"Register-Response nicht ok: {data}"
 
-        # ★ KERN-ASSERTION (ERST-ROT): Response muss 'next'=='/onboarding/' tragen.
-        # Gegen HEAD (S3 nicht verdrahtet): 'next' fehlt oder != '/onboarding/' -> ROT.
-        # Nach Task 2 (S3 verdrahtet): data['next'] == '/onboarding/' -> GRUEN.
-        assert data.get('next') == '/onboarding/', (
+        # ★ KERN-ASSERTION (D-09): Unbestaetigte Neu-Registrierte landen auf der Warteseite,
+        # NICHT auf /onboarding/ (das kommt erst nach dem Confirm). api_register ueberschreibt
+        # die AUTH-2-Weiche fuer email_confirmed=False (auth.py:294).
+        assert data.get('next') == '/auth/confirm-email-pending', (
             f"Register-Response traegt falsches Ziel: next={data.get('next')!r} "
-            f"(erwartet '/onboarding/' — Dock S3 noch nicht verdrahtet?)"
+            f"(erwartet '/auth/confirm-email-pending' — Confirm-First-Flow D-09)"
         )
 
         # Cleanup-Rows fuer Teardown registrieren
