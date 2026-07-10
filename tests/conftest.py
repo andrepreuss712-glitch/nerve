@@ -20,6 +20,27 @@ from database.db import Base
 import database.models  # noqa: F401
 
 
+# ── AUTH-EMAIL-VERIFY Finding 2: Test-gebaute User default email_confirmed=True ────────────
+# Nach dem Prod-ORM-Default-Flip (Plan 02: default=False) bekaemen test-gebaute User, die
+# email_confirmed NICHT explizit setzen, False → @login_required-Requests in ~8 Test-Dateien
+# liefen in 302/Warteseite (fail-closed Gate) und faerbten das Deploy-Gate rot. EINE zentrale
+# Stelle (Punkt 27, statt 8 Dateien): ein before_insert-Listener auf dem User-Mapper (NUR im
+# Test-Scope registriert, NICHT in database/models.py → Prod-Default False bleibt unberuehrt),
+# der email_confirmed=True defaultet WENN der Test nichts gesetzt hat.
+from sqlalchemy import event as _sa_event
+from database.models import User as _UserModel
+
+
+@_sa_event.listens_for(_UserModel, "before_insert")
+def _test_default_email_confirmed(mapper, connection, target):
+    # `is None`-Guard (Korrektheit): ueberschreibt NIE einen explizit gesetzten Wert. Die
+    # Fail-Closed-Guard-Tests (Plan 01: NULL via raw UPDATE / False / True) und die
+    # Creation-Path-Tests (Plan 03: api_register=False etc.) setzen email_confirmed EXPLIZIT
+    # → dieser Default greift dort NICHT, nur bei test-gebauten Usern, die gar nichts setzen.
+    if target.email_confirmed is None:
+        target.email_confirmed = True
+
+
 # ── Phase 08.23.2.PGTEST — generic fixtures bind to REAL Postgres nerve_test ──────────────
 # KONVENTION (Baseline-Sauberkeit, Phase 08.23.2.PGTEST Option-A): Jeder Test, der Daten in nerve_test
 # COMMITTET, registriert seine erzeugten Row-IDs und ruft cleanup_rows(...) in seiner POST-yield-Sektion,
@@ -92,8 +113,10 @@ def _pgtest_base_seed():
             org = Organisation(id=1, name="[PGTEST-BASE] org")
             session.add(org)
             session.flush()                 # feuert trg_mk_tenant_org -> tenant_orgs-Row auto
-            user = User(id=1, org_id=1, email="pgtest-base@nerve.local")
+            user = User(id=1, org_id=1, email="pgtest-base@nerve.local", email_confirmed=True)
             # is_superadmin/is_test_user/market/language kommen aus Python-default= (ORM-Pfad).
+            # email_confirmed=True explizit (Finding 2 belt-and-suspenders — der before_insert-Listener
+            # deckt es sowieso, aber die Base-Seed traegt es explizit, falls der Listener-Scope je enger wird).
             session.add(user)
             session.commit()
             # Sequenz-Advance (PG explicit-id-no-sequence-advance-Gotcha).
