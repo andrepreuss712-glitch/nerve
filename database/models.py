@@ -129,10 +129,18 @@ class User(Base):
     oauth_provider        = Column(String(50),  nullable=True, comment="OAuth-Provider: 'google' | 'microsoft' | None")  # 'google' | 'microsoft' | None
     oauth_id              = Column(String(200), nullable=True, comment='OAuth Provider-Sub-ID (eindeutig pro Provider)')  # Provider Sub-ID (eindeutig pro Provider)
     avatar_url            = Column(String(500), nullable=True, comment='Avatar-Bild-URL')
-    # H-18: Email-Confirmation-Flag (Microsoft-OAuth Email-Hijacking-Mitigation)
-    # True = bestaetigt oder Email/Google-User. False = Microsoft Neu-User pending.
-    # Default=True: bestehende User gelten automatisch als bestaetigt.
-    email_confirmed       = Column(Boolean, default=True, nullable=True, comment='Email bestaetigt (Microsoft-OAuth Hijacking-Mitigation, H-18)')
+    # H-18/AUTH-EMAIL-VERIFY: Email-Confirmation-Flag. True = bestaetigt (Email/Google-User oder
+    # nach Confirm-Klick). False = unbestaetigt (Form-Register, Microsoft-Neu-User) → fail-closed Gate.
+    # Default=False (D-03b): neue Inserts unbestaetigt bis Confirm. Bestand-Rows unveraendert (kein
+    # Backfill). Laeuft ZULETZT (Wave 3) — reiner No-Op, weil jeder Creator (Plan 03) schon explizit setzt.
+    # nullable=True bleibt (kein NOT-NULL — Bestand-Rows nicht angefasst).
+    email_confirmed       = Column(Boolean, default=False, nullable=True,
+        comment='Email bestaetigt — das fail-closed login_required-Gate laesst nur True passieren '
+                '(NULL/False gaten). Status: lebt. '
+                'Schreibt routes/oauth.py (Microsoft=False, Google=True), '
+                'routes/auth.py (api_register=False, confirm_email=True, invite=True), '
+                'app.py + scripts/seed_test_user.py (seed=True), DB-Default False (Migration 0033); '
+                'liest routes/auth.py login_required-Gate.')
     # Phase 04.7.1: Markt-Trennung (FT-Logging)
     market                = Column(String(10), nullable=False, default='dach', comment='Markt fuer FT-Logging-Trennung (z.B. dach)')
     language              = Column(String(10), nullable=False, default='de', comment='Sprache des Nutzers (z.B. de)')
