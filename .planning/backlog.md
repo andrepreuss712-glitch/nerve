@@ -15,6 +15,15 @@
 - **Symptom:** die AUTH-2-Erstprofil-Seite legt Profile OHNE `schema_version` an → der Start-Profil-Normalisierer (`[Schema]`-Routine) stolpert bei jedem Neustart (`ProfileOpener`-sync + `UPDATE profiles` in `InFailedSqlTransaction`). Trat auf, als das UAT-Starterprofil beim Restart verarbeitet wurde. UAT-Konto gelöscht → Symptom weg (kein versions-loses Profil mehr), aber die Wurzel bleibt.
 - **Root-Fix (eine der beiden):** (a) Erstprofil-Anlage setzt `schema_version` explizit (auf `LATEST_SCHEMA_VERSION`, `services/profile_schema.py`), ODER (b) der Normalisierer toleriert versions-lose Profile (behandelt NULL als „ältestes Schema" statt zu crashen; + fängt die `InFailedSqlTransaction` mit rollback ab). Vermutlich (a) als Anlage-Fix + (b) als Robustheits-Netz.
 - **Routing:** eigene kleine AUTH-2-Folge-Phase (z.B. `08.23.2.AUTH-2.1`). Schema-Version-Bump-Regel (CLAUDE.md „🔴 Schema-Bump: LATEST_SCHEMA_VERSION-Konstante prüfen") beachten. Nicht launch-blockierend (Neu-Onboarding erst nach EA relevant), aber vor echten Onboarding-Nutzern fixen.
+- **✅ Anlage-Fix (a) ERLEDIGT via /gsd-quick 2026-07-10 (Commit auf main, Deploy Claudian):** `routes/onboarding.py` Submit-Handler schickt die zusammengebauten `daten` durch `_migrate_profile_data(daten)` (migrate-on-save wie profiles.py:139) → Erstprofil wird als v4 mit `schema_version` angelegt, vom Startup-Normalisierer übersprungen. Root-Cause behoben. Robustheits-Netz (b) siehe separaten Eintrag `STARTUP-BATCH-MIGRATION-TXN` unten (offen).
+
+### STARTUP-BATCH-MIGRATION-TXN — Startup-Profil-Migration verarbeitet ALLE Profile in EINER Transaktion → ein vergiftendes Profil killt den Batch
+
+- **Severity:** low-medium (latenter Robustheits-Bug; moot solange KEIN versions-loses Profil existiert — der Anlage-Fix AUTH2-ERSTPROFIL-SCHEMA-VERSION verhindert neue; aber jedes künftige versions-lose/kaputte Profil reisst wieder den ganzen Batch mit)
+- **Entdeckt:** Claudian 2026-07-10, im Zuge des AUTH2-ERSTPROFIL-SCHEMA-FIX. **NICHT der Anlage-Fix** — das ist das Robustheits-Netz (b): der Anlage-Fix stopft die Quelle, dieser Eintrag härtet den Verarbeiter.
+- **Symptom/Wurzel:** die Startup-Batch-Migration (`app.py:990-1028`) migriert ALLE Profile in EINER gemeinsamen Transaktion (commit AUSSERHALB der Schleife) → ein einzelnes vergiftendes Profil (z.B. `InFailedSqlTransaction` beim ProfileOpener-sync/UPDATE) killt den ganzen Batch, nicht nur die eine Zeile.
+- **Root-Fix:** per-Profil-Savepoint (`db.begin_nested()`) ODER per-Profil-Transaktion in der Schleife → ein kaputtes Profil wird geloggt + übersprungen, die anderen migrieren sauber. Optional: der Normalisierer behandelt NULL-`schema_version` als „ältestes Schema" statt zu crashen (Toleranz-Hälfte von (b)).
+- **Routing:** eigene Mini-Härtung (Robustheits-Netz zu AUTH2-ERSTPROFIL-SCHEMA-VERSION). Nicht dringend solange 0 versions-lose Profile. Logging-First (Punkt 15), kein Blind-Refactor der Startup-Routine.
 
 ### EWB-DISPLAY-RACE — Live: NERVEs EWB-Vorschlag im PiP wird gelöscht/überschrieben WÄHREND der User ihn vorliest
 
