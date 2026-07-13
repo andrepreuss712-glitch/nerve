@@ -1418,21 +1418,17 @@ def _migrate_profile_json():
             print(f"[Schema] _migrate_profile_json: SELECT failed: {e}")
             return
 
-        # ── Step A: Add type column to profile_opener (idempotent) ───────────────
-        try:
-            conn.execute(_text3("ALTER TABLE profile_opener ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'opener'"))
-            conn.commit()
-            print("[DB] Migration: added profile_opener.type")
-        except Exception:
-            pass  # column already exists — idempotent
-
-        # ── Step B: Backfill pitch rows inserted without type (name='Pitch' → type='pitch') ──
-        try:
-            conn.execute(_text3("UPDATE profile_opener SET type='pitch' WHERE name='Pitch' AND type='opener'"))
-            conn.commit()
-            print("[DB] Migration: backfilled profile_opener type='pitch' for Pitch rows")
-        except Exception:
-            pass
+        # ── TXN-01: totes ALTER (Step A) + Backfill (Step B) ERSATZLOS entfernt ──────────
+        # Die Spalte profile_opener.type existiert in JEDER create_all-/Prod-DB (models.py
+        # ProfileOpener.type server_default='opener'). Das ALTER war der EINZIGE type-Nachruester
+        # fuer eine Alt-SQLite-DB VOR Einfuehrung der Spalte (Fable P5a) — per "Kein Local-Dev"
+        # (Prod = create_all/PG) traegt jede lebende DB die Spalte bereits, Loeschen also gefahrlos
+        # (Pre-Execute-Audit Claudian 2026-07-13: Step-B-Waisen=0, type-Verteilung sauber, alle
+        # Prod-Profile v4). NICHT als "IF NOT EXISTS" behalten: nerve_app hat auf Prod KEINE
+        # ALTER-Rechte (app.py:136) -> ein ALTER scheitert an Permissions = leisere Mine.
+        # DIES WAR die Transaktions-Mine: DuplicateColumn/Permission in except:pass OHNE rollback
+        # -> conn vergiftet -> Folge-Statements (Opener-Sync, UPDATE) sterben still als
+        # InFailedSqlTransaction. Ersatzlos raus = Mine entschaerft.
 
         for _row in _rows:
             _pid, _daten_str, _db_consent = _row[0], _row[1], _row[2]
@@ -1471,6 +1467,7 @@ def _migrate_profile_json():
                         conn.commit()
                         print(f"[Schema] Profil {_pid}: pitch -> ProfileOpener synced")
             except Exception as _e:
+                conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
                 print(f"[Schema] Profil {_pid}: ProfileOpener sync failed: {_e}")
 
             # ── Step C: Migrate erlaubnis JSON field → ProfileOpener type='erlaubnis' ──
@@ -1489,6 +1486,7 @@ def _migrate_profile_json():
                         conn.commit()
                         print(f"[Schema] Profil {_pid}: erlaubnis -> ProfileOpener synced")
                 except Exception as _e:
+                    conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
                     print(f"[Schema] Profil {_pid}: erlaubnis sync failed: {_e}")
 
             # consent_text dual-write (D-04): NULL explizit als leerer String (Finding 4)
@@ -1508,6 +1506,7 @@ def _migrate_profile_json():
                 conn.commit()
                 print(f"[Schema] Profil {_pid}: migriert auf schema_version=2")
             except Exception as _e:
+                conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
                 print(f"[Schema] Profil {_pid}: UPDATE failed: {_e}")
 
 # _migrate_profile_json() wird NACH _seed() und _seed_demo_profiles() aufgerufen
