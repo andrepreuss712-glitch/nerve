@@ -343,6 +343,21 @@ Test-Cleanup-Waechter `_baseline_cleanup_guard` erzwungen; ein Cleanup-Fehler wi
 erzwingt der POST-SUITE-Check in deploy.sh (jede crm.* Tabelle == 0 Rows, training.transcript_archive
 == 0). Code-Identifier (`cleanup_rows`/`_baseline_cleanup_guard`) bleiben ASCII.
 
+## DB-Regel: Nie stiller except auf einer PG-Connection/Session ohne rollback (Phase 08.23.2.PROFILE-MIGRATE-TXN-FIX)
+
+**Nie `except: pass`/stiller except auf einer Postgres-Connection/Session ohne `rollback`.**
+Ein verschluckter Fehler auf einer laufenden Transaktion vergiftet sie → alle Folge-Statements
+sterben still als `InFailedSqlTransaction` (Postgres-only, auf SQLite unsichtbar — daher fängt lokal/SQLite
+das Problem NICHT, nur real-PG). Jeder `except` auf einer `conn`/`session`, der den Fehler nicht
+re-raist, MUSS zuerst `conn.rollback()`/`session.rollback()` rufen (VOR dem print/pass/continue).
+
+Anlass: PROFILE-MIGRATE-TXN-FIX 2026-07-13 — ein totes `ALTER TABLE profile_opener ADD COLUMN type`
+in `except: pass` OHNE rollback (`DuplicateColumn`/Permission) hat bei jedem Start die Transaktion
+vergiftet → `InFailedSqlTransaction`-Kette → ein versions-loses Profil blieb unmigriert.
+
+Ein AST-basierter Wächter (grep reicht nicht — Kontroll-/Datenfluss-Analyse) ist bewusst nach Backlog
+`TXN-ROLLBACK-GUARD-AST` vertagt (Cross-AI Fable+Gemini: grep-Wächter over-engineered/unzuverlässig).
+
 ## Git-Regel: Immer pushen
 
 Nach jeder abgeschlossenen GSD-Phase und am Ende jeder Arbeitssession: `git push origin main` ausführen. GitHub muss immer den aktuellen Stand haben.

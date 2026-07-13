@@ -40,6 +40,9 @@
 
 ### TXN-ROLLBACK-GUARD-AST — statischer Wächter „except auf conn/session ohne rollback/raise" (AST, nicht grep)
 
+<!-- TXN-06 Task 5 (PROFILE-MIGRATE-TXN-FIX Execute 2026-07-13): Eintrag bereits beim Plan angelegt, hier belassen. In TXN-08 gefixte Bestands-Verletzer (Heiler-BootSweep + _seed_ewb_scenarios-Caveat) reduzieren den akuten Bedarf; die CLAUDE.md-Regel deckt die Verhaltensseite. -->
+
+
 - **Severity:** low (Härtungs-Wächter; die CLAUDE.md-Regel deckt es als Guideline bereits ab)
 - **Entdeckt/abgegrenzt:** Cross-AI (Fable + Gemini) 2026-07-13 im PROFILE-MIGRATE-TXN-FIX-Review — der ursprünglich geplante grep-Wächter wurde verworfen: „`except … : pass` auf einer conn/session ohne rollback" ist nur per **AST-Analyse** zuverlässig erkennbar (Kontext: ist das Objekt eine DB-conn? gibt es ein re-raise? ein rollback im Block?), ein grep-Sweep wäre false-positiv/false-negativ → over-engineered als grep.
 - **Root-Fix:** ein AST-basierter Test (wie `test_no_live_global_state.py`, aber `ast`-Modul statt Regex) der `services/`+`routes/`+`app.py` auf `Try`-Nodes mit einem conn/session-`execute`-Call und einem `ExceptHandler` OHNE `rollback()`/`raise` sweept. Deploy-Gate-Wächter.
