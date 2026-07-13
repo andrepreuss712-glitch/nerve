@@ -17,13 +17,24 @@
 - **Routing:** eigene kleine AUTH-2-Folge-Phase (z.B. `08.23.2.AUTH-2.1`). Schema-Version-Bump-Regel (CLAUDE.md „🔴 Schema-Bump: LATEST_SCHEMA_VERSION-Konstante prüfen") beachten. Nicht launch-blockierend (Neu-Onboarding erst nach EA relevant), aber vor echten Onboarding-Nutzern fixen.
 - **✅ Anlage-Fix (a) ERLEDIGT via /gsd-quick 2026-07-10 (Commit auf main, Deploy Claudian):** `routes/onboarding.py` Submit-Handler schickt die zusammengebauten `daten` durch `_migrate_profile_data(daten)` (migrate-on-save wie profiles.py:139) → Erstprofil wird als v4 mit `schema_version` angelegt, vom Startup-Normalisierer übersprungen. Root-Cause behoben. Robustheits-Netz (b) siehe separaten Eintrag `STARTUP-BATCH-MIGRATION-TXN` unten (offen).
 
-### STARTUP-BATCH-MIGRATION-TXN — Startup-Profil-Migration verarbeitet ALLE Profile in EINER Transaktion → ein vergiftendes Profil killt den Batch
+### STARTUP-BATCH-MIGRATION-TXN — ✅ PROMOTED → Phase 08.23.2.PROFILE-MIGRATE-TXN-FIX (2026-07-13)
+
+**Promoted 2026-07-13** in die Phase `08.23.2.PROFILE-MIGRATE-TXN-FIX` (Option A + Guards, PLAN.md geschrieben, Cross-AI Fable+Gemini PFLICHT vor Execute). Root-Cause verfeinert: NICHT nur „ein Commit für alle" — die echte Mine ist das tote `ALTER TABLE profile_opener ADD COLUMN type` in `_migrate_profile_json` (app.py:1423, `except:pass` ohne rollback → DuplicateColumn → InFailedSqlTransaction-Kette). Scope: Mine raus + rollback-Hygiene + Pro-Profil-Savepoint + Deferral-Guards (a)/(b)/(c). **Cross-Layer-Fund:** `profiles` hat KEINE `schema_version`-Spalte (lebt im daten-JSON) → Guards lesen JSON, kein Spalten-SELECT. Konsolidierung DEFERRED → siehe `PROFILE-MIGRATE-CONSOLIDATE`. Ursprungs-Notiz unten belassen:
 
 - **Severity:** low-medium (latenter Robustheits-Bug; moot solange KEIN versions-loses Profil existiert — der Anlage-Fix AUTH2-ERSTPROFIL-SCHEMA-VERSION verhindert neue; aber jedes künftige versions-lose/kaputte Profil reisst wieder den ganzen Batch mit)
 - **Entdeckt:** Claudian 2026-07-10, im Zuge des AUTH2-ERSTPROFIL-SCHEMA-FIX. **NICHT der Anlage-Fix** — das ist das Robustheits-Netz (b): der Anlage-Fix stopft die Quelle, dieser Eintrag härtet den Verarbeiter.
 - **Symptom/Wurzel:** die Startup-Batch-Migration (`app.py:990-1028`) migriert ALLE Profile in EINER gemeinsamen Transaktion (commit AUSSERHALB der Schleife) → ein einzelnes vergiftendes Profil (z.B. `InFailedSqlTransaction` beim ProfileOpener-sync/UPDATE) killt den ganzen Batch, nicht nur die eine Zeile.
 - **Root-Fix:** per-Profil-Savepoint (`db.begin_nested()`) ODER per-Profil-Transaktion in der Schleife → ein kaputtes Profil wird geloggt + übersprungen, die anderen migrieren sauber. Optional: der Normalisierer behandelt NULL-`schema_version` als „ältestes Schema" statt zu crashen (Toleranz-Hälfte von (b)).
 - **Routing:** eigene Mini-Härtung (Robustheits-Netz zu AUTH2-ERSTPROFIL-SCHEMA-VERSION). Nicht dringend solange 0 versions-lose Profile. Logging-First (Punkt 15), kein Blind-Refactor der Startup-Routine.
+
+### PROFILE-MIGRATE-CONSOLIDATE — die zwei Startup-Profil-Migrationspfade konsolidieren (DEFERRED aus PROFILE-MIGRATE-TXN-FIX Schritt 4)
+
+- **Severity:** medium (Doppel-Pfad + stiller Opener/Pitch-Datenverlust-Risiko; durch die Guards a/b aus PROFILE-MIGRATE-TXN-FIX sichtbar/kontrolliert, aber nicht behoben)
+- **Entdeckt/abgegrenzt:** Fable + Claudian 2026-07-13, bewusst DEFERRED aus der PROFILE-MIGRATE-TXN-FIX-Phase (die nur härtet, nicht konsolidiert).
+- **Symptom/Wurzel:** zwei Startup-Pfade migrieren Profile — der v4-Batch in `_migrate()` (app.py:~993) UND `_migrate_profile_json()` (app.py:1379). Überlappung → Doppel-Arbeit + Snapshot-Race (nur durch Guard b abgesichert) + `_migrate_profile_json` pop't `opener`/`pitch` aus dem daten-JSON und synct sie in `profile_opener` — läuft dieser Pop, bevor der Sync sicher persistiert ist, droht stiller Opener/Pitch-Verlust.
+- **Root-Fix (Konsolidierung):** den Opener/Pitch/Erlaubnis-Sync in den v4-Batch ziehen (VOR dem opener-Pop, transaktionssicher) und `_migrate_profile_json()` löschen — EIN Pfad, kein Race, kein Doppel-Ritual. Behebt auch den latenten Opener/Pitch-Datenverlust.
+- **Abhängigkeit:** NACH PROFILE-MIGRATE-TXN-FIX (die Guards a/b/c + der Erst-Rot-Wächter sind die Absicherung, auf der die Konsolidierung aufsetzt). Der Tech-Debt-Doc-Block (Guard c) in `_migrate_profile_json` verweist hierher.
+- **Routing:** eigene 🔴-Phase (Startup-Migration + Datenmigrations-Sicherheit → Cross-AI Pflicht, Real-Daten-Validation Punkt 13). Nicht launch-blockierend solange die Guards grün sind.
 
 ### EWB-DISPLAY-RACE — Live: NERVEs EWB-Vorschlag im PiP wird gelöscht/überschrieben WÄHREND der User ihn vorliest
 
