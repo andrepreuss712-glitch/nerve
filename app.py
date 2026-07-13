@@ -1332,6 +1332,16 @@ def _seed_ewb_scenarios(db=None):
             print(f"[DB] Phase 08 Seed: {inserted}/3 varianz-test scenarios (A/B/C) inserted")
         else:
             print("[DB] Phase 08 Seed: 3 varianz-test scenarios (A/B/C) already present")
+    except Exception:
+        # TXN-08: Session nach einem Fehler nicht vergiftet zurueckgeben (Regel-Konsistenz TXN-06).
+        # Wichtig fuer den injizierten-Session-Fall (owns=False, z.B. Tests) — das `finally` schliesst
+        # dort NICHT. re-raise bleibt: der Aufruf-Wrapper (app.py :1337-1340) logged non-fatal weiter.
+        # owns/close-Ownership-Mechanik UNVERAENDERT (Punkt 27, kein Refactor).
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        raise
     finally:
         if owns:
             db.close()
@@ -2303,6 +2313,10 @@ if _os_guard.environ.get('NERVE_TESTING') != '1':
         )
         _db_boot.commit()
     except Exception as _e_bs:
+        try:
+            _db_boot.rollback()   # TXN-08: Session nach verschlucktem Fehler nicht vergiftet lassen (Regel-Konsistenz TXN-06)
+        except Exception:
+            pass
         print(f'[Heiler-BootSweep] non-fatal: {_e_bs}')
     finally:
         try:
