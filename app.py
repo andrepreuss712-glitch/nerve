@@ -1365,13 +1365,13 @@ def _data_migrate():
             conn.execute(text("UPDATE organisations SET name='NERVE Alpha' WHERE name='SalesNerve Alpha'"))
             conn.commit()
         except Exception:
-            pass
+            conn.rollback()   # TXN-03: dieselbe Mine wie _migrate_profile_json (Fable P7) — conn nicht vergiftet lassen
         try:
             conn.execute(text("UPDATE organisations SET billing_email='admin@nerve.local' WHERE billing_email='andre@salesnerve.de'"))
             conn.commit()
             print('[DB] Migration: updated billing_email to admin@nerve.local')
         except Exception:
-            pass
+            conn.rollback()   # TXN-03: dieselbe Mine wie _migrate_profile_json (Fable P7) — conn nicht vergiftet lassen
 
 _data_migrate()
 
