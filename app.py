@@ -987,6 +987,9 @@ def _migrate():
         _migrate_fragen_to_faqs()
 
     # ── Phase 08.20: Batch-Migration alle Profile -> LATEST_SCHEMA_VERSION (v4) ──
+    # HINWEIS (TXN-05): laeuft auf Postgres NIE — _migrate() early-return :140 (PG). Nur SQLite/lokal.
+    # Migration auf Prod uebernimmt _migrate_profile_json (v1->v4); v2/v3->v4 auf Prod ungeloest ->
+    # Konsolidierung siehe Backlog PROFILE-MIGRATE-CONSOLIDATE. Dieser Batch bleibt UNVERAENDERT (PG-tot).
     # Idempotent: Profile mit schema_version >= LATEST_SCHEMA_VERSION werden uebersprungen.
     # Muss NACH den ALTER TABLE Blocks laufen (kein ALTER TABLE hier — nur daten-JSON).
     # Acceptable at startup for NERVE's current profile count (<=20); revisit if >1000 profiles
@@ -1375,9 +1378,14 @@ def _data_migrate():
 
 _data_migrate()
 
-# ── Phase 08.19: JSON-Daten-Migration aller Profile auf schema_version=2 ─────
+# ── Phase 08.19: JSON-Daten-Migration versions-loser/v1-Profile auf LATEST_SCHEMA_VERSION (v4) ─────
 def _migrate_profile_json():
-    """Idempotente Migration aller Profile auf Pydantic v2 ProfileSchema (schema_version=2).
+    """Idempotente Migration versions-loser/v1-Profile auf die aktuelle ProfileSchema (LATEST_SCHEMA_VERSION, v4).
+
+    TXN-05: frueher "schema_version=2" — das war stale. _mpd(_migrate_profile_data) hebt bis v4;
+    verarbeitet werden hier NUR versions-lose/v1-Profile (Idempotenz-Skip schema_version >= 2, s.u.).
+    v2/v3-Profile werden auf Prod NICHT gehoben (der v4-Batch in _migrate() ist auf PG tot,
+    early-return :140) -> Guard (a) am Ende macht das sichtbar (siehe Backlog PROFILE-MIGRATE-CONSOLIDATE).
 
     DB-Advisory-Lock verhindert Multi-Worker-Race-Condition beim Gunicorn-Multi-Worker-Start:
     - SQLite: isolation_level='EXCLUSIVE' (BEGIN EXCLUSIVE) — erste Worker haelt Exclusive-Lock
@@ -1388,6 +1396,7 @@ def _migrate_profile_json():
     from sqlalchemy import text as _text3
     try:
         from services.profile_schema import _migrate_profile_data as _mpd
+        from services.profile_schema import LATEST_SCHEMA_VERSION as _LATEST  # TXN-04/05: Guard a + Doku
     except ImportError as e:
         print(f"[Schema] _migrate_profile_json: import failed: {e}")
         return
@@ -1504,10 +1513,31 @@ def _migrate_profile_json():
                     {'d': _new_daten_str, 'id': _pid}
                 )
                 conn.commit()
-                print(f"[Schema] Profil {_pid}: migriert auf schema_version=2")
+                # TXN-05: frueher "schema_version=2" (stale) — _mpd hebt bis LATEST_SCHEMA_VERSION (v4).
+                print(f"[Schema] Profil {_pid}: migriert auf schema_version={_LATEST}")
             except Exception as _e:
                 conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
                 print(f"[Schema] Profil {_pid}: UPDATE failed: {_e}")
+
+        # ── TXN-04 Guard (a): Regressions-Sichtbarkeit am PG-laufenden Pfad ──────────────
+        # Re-Check aller Profile NACH dem Lauf. schema_version lebt AUSSCHLIESSLICH im daten-JSON
+        # (profiles hat KEINE schema_version-Spalte, Cross-Layer Punkt 21/22) -> JSON parsen, KEIN
+        # Spalten-SELECT. v1/versions-los nach dem Lauf = echter Migrations-Ausfall (CRITICAL, die
+        # Transaktions-Mine haette hier zugeschlagen). v2/v3 = bekannte Luecke des auf-PG-toten
+        # v4-Batches (WARN/stuck) -> PROFILE-MIGRATE-CONSOLIDATE, KEIN akuter Ausfall.
+        try:
+            for _cid, _cdaten in conn.execute(_text3("SELECT id, daten FROM profiles")).fetchall():
+                try:
+                    _cv = (_json3.loads(_cdaten) if _cdaten else {}).get('schema_version') or 1
+                except Exception:
+                    _cv = 1
+                if _cv <= 1:
+                    print(f"[Schema] CRITICAL MIGRATION FAILED Profil {_cid}: schema_version={_cv} nach _migrate_profile_json")
+                elif _cv < _LATEST:
+                    print(f"[Schema] WARN Profil {_cid}: schema_version={_cv} stuck (<{_LATEST}) — v4-Batch PG-tot, siehe PROFILE-MIGRATE-CONSOLIDATE")
+        except Exception as _e:
+            conn.rollback()   # TXN-02/04: Guard-a-Read soll die conn nicht vergiftet zuruecklassen
+            print(f"[Schema] Guard (a) re-check failed: {_e}")
 
 # _migrate_profile_json() wird NACH _seed() und _seed_demo_profiles() aufgerufen
 # (Zeile ~1877) — Profile muessen zuerst existieren bevor migriert werden kann.

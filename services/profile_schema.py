@@ -253,13 +253,16 @@ class ProfileReadSchema(BaseModel):
 # ── Idempotente Migration v1 → v2 ────────────────────────────────────────────
 
 def _migrate_profile_data(daten: dict) -> dict:
-    """Idempotente Migration: schema_version v1 -> v2 -> v3.
+    """Idempotente Migration: schema_version v1 -> v2 -> v3 -> v4 (LATEST_SCHEMA_VERSION).
 
-    Prueft schema_version. Wenn >= 3: unveraendert zurueck.
+    TXN-05 (Fable P5d): frueher "v1->v2->v3 … Wenn >= 3: unveraendert" — das war stale; das Verhalten
+    geht bis v4 (Guard `if version >= 4: return` unten + v3->v4-Block belegen es).
+    Prueft schema_version. Wenn >= 4 (LATEST_SCHEMA_VERSION): unveraendert zurueck.
     Andernfalls:
       v1->v2: Entfernt eliminierte Felder (D-06), setzt schema_version = 2
       v2->v3: einwaende/phasen upward-merge aus basis.*, fragen+branche entfernen,
               setzt schema_version = 3 (Phase 08.19.1)
+      v3->v4: setzt schema_version = 4 (Phase 08.20, siehe v3->v4-Block unten)
       - Kein DB-Zugriff (opener/pitch-Sync in app.py _migrate())
 
     Modifiziert daten in-place und gibt es zurueck (analog migrate_tabu_begriffe).
