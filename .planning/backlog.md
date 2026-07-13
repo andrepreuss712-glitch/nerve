@@ -36,6 +36,13 @@
 - **Abhängigkeit:** NACH PROFILE-MIGRATE-TXN-FIX (die Guards a/b/c + der Erst-Rot-Wächter sind die Absicherung, auf der die Konsolidierung aufsetzt). Der Tech-Debt-Doc-Block (Guard c) in `_migrate_profile_json` verweist hierher.
 - **Routing:** eigene 🔴-Phase (Startup-Migration + Datenmigrations-Sicherheit → Cross-AI Pflicht, Real-Daten-Validation Punkt 13). Nicht launch-blockierend solange die Guards grün sind.
 
+### TXN-ROLLBACK-GUARD-AST — statischer Wächter „except auf conn/session ohne rollback/raise" (AST, nicht grep)
+
+- **Severity:** low (Härtungs-Wächter; die CLAUDE.md-Regel deckt es als Guideline bereits ab)
+- **Entdeckt/abgegrenzt:** Cross-AI (Fable + Gemini) 2026-07-13 im PROFILE-MIGRATE-TXN-FIX-Review — der ursprünglich geplante grep-Wächter wurde verworfen: „`except … : pass` auf einer conn/session ohne rollback" ist nur per **AST-Analyse** zuverlässig erkennbar (Kontext: ist das Objekt eine DB-conn? gibt es ein re-raise? ein rollback im Block?), ein grep-Sweep wäre false-positiv/false-negativ → over-engineered als grep.
+- **Root-Fix:** ein AST-basierter Test (wie `test_no_live_global_state.py`, aber `ast`-Modul statt Regex) der `services/`+`routes/`+`app.py` auf `Try`-Nodes mit einem conn/session-`execute`-Call und einem `ExceptHandler` OHNE `rollback()`/`raise` sweept. Deploy-Gate-Wächter.
+- **Routing:** Härtung, keine Eile. Wird relevant wenn die except-ohne-rollback-Klasse erneut auftritt. Bis dahin: CLAUDE.md-Regel (PROFILE-MIGRATE-TXN-FIX TXN-06) als Guideline.
+
 ### EWB-DISPLAY-RACE — Live: NERVEs EWB-Vorschlag im PiP wird gelöscht/überschrieben WÄHREND der User ihn vorliest
 
 - **Severity:** high (Live-UX-Kernpfad; macht den Live-Assistenten im Cold-Call unbrauchbar + versaut jeden Post-Call-Bewerter-Test)
