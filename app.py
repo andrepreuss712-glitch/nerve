@@ -1473,14 +1473,14 @@ def _migrate_profile_json():
                 if _existing_opener == 0:
                     if _opener_text:
                         conn.execute(
-                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type) VALUES (:pid, :name, :inhalt, 0, 'opener')"),
+                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'opener', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default (models.py:203) -> roher INSERT muss ihn liefern (Guard-a-Wächter freigelegt, Poison-maskiert)
                             {'pid': _pid, 'name': 'Opener', 'inhalt': _opener_text}
                         )
                         conn.commit()
                         print(f"[Schema] Profil {_pid}: opener -> ProfileOpener synced")
                     if _pitch_text:
                         conn.execute(
-                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type) VALUES (:pid, :name, :inhalt, 1, 'pitch')"),
+                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 1, 'pitch', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
                             {'pid': _pid, 'name': 'Pitch', 'inhalt': _pitch_text}
                         )
                         conn.commit()
@@ -1499,7 +1499,7 @@ def _migrate_profile_json():
                     ).scalar()
                     if _existing_erlaubnis == 0:
                         conn.execute(
-                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type) VALUES (:pid, :name, :inhalt, 0, 'erlaubnis')"),
+                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'erlaubnis', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
                             {'pid': _pid, 'name': 'Erlaubnisfrage', 'inhalt': _erlaubnis_text}
                         )
                         conn.commit()
