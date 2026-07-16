@@ -27,6 +27,8 @@
 - **Root-Fix:** per-Profil-Savepoint (`db.begin_nested()`) ODER per-Profil-Transaktion in der Schleife → ein kaputtes Profil wird geloggt + übersprungen, die anderen migrieren sauber. Optional: der Normalisierer behandelt NULL-`schema_version` als „ältestes Schema" statt zu crashen (Toleranz-Hälfte von (b)).
 - **Routing:** eigene Mini-Härtung (Robustheits-Netz zu AUTH2-ERSTPROFIL-SCHEMA-VERSION). Nicht dringend solange 0 versions-lose Profile. Logging-First (Punkt 15), kein Blind-Refactor der Startup-Routine.
 
+### PROFILE-MIGRATE-CONSOLIDATE — ✅ PROMOTED → Phase 08.23.2.PROFILE-MIGRATE-CONSOLIDATE (2026-07-16, aufgesetzt; Scope = Konsolidierung A1-A3 + Hardening-Funde B1-B4 in ROADMAP.md festgehalten; Discuss als Nächstes)
+
 ### PROFILE-MIGRATE-CONSOLIDATE — die zwei Startup-Profil-Migrationspfade konsolidieren (DEFERRED aus PROFILE-MIGRATE-TXN-FIX Schritt 4)
 
 - **Severity:** medium (Doppel-Pfad + stiller Opener/Pitch-Datenverlust-Risiko; durch die Guards a/b aus PROFILE-MIGRATE-TXN-FIX sichtbar/kontrolliert, aber nicht behoben)
