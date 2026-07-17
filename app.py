@@ -1428,20 +1428,30 @@ def _migrate_profile_json():
             _pitch_text  = _daten.get('pitch', '')  if isinstance(_daten, dict) else ''
 
             # ProfileOpener-Sync: SELECT-vor-INSERT (idempotent)
+            # ── CONS-A2c: pro-Typ-COUNT statt type-losem Gate. Der frueher gemeinsame
+            #    "SELECT COUNT(*) ... WHERE profile_id=:pid" (OHNE type) liess bei COUNT>0 (irgendein
+            #    Bestands-Row) den opener-INSERT aus -> _mpd poppt danach den opener (profile_schema.py:304)
+            #    -> stiller Opener-Verlust. Jetzt pruefen opener und pitch je ihren eigenen Typ (Muster erlaubnis).
+            #    Die INSERT-Statements sind VERBATIM uebernommen (is_personalized TXN-09; created_at CONS-B2 unten).
             try:
-                _existing_opener = conn.execute(
-                    _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid"),
-                    {'pid': _pid}
-                ).scalar()
-                if _existing_opener == 0:
-                    if _opener_text:
+                if _opener_text:
+                    _has_opener = conn.execute(
+                        _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='opener'"),
+                        {'pid': _pid}
+                    ).scalar()
+                    if _has_opener == 0:
                         conn.execute(
                             _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'opener', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default (models.py:203) -> roher INSERT muss ihn liefern (Guard-a-Wächter freigelegt, Poison-maskiert)
                             {'pid': _pid, 'name': 'Opener', 'inhalt': _opener_text}
                         )
                         conn.commit()
                         print(f"[Schema] Profil {_pid}: opener -> ProfileOpener synced")
-                    if _pitch_text:
+                if _pitch_text:
+                    _has_pitch = conn.execute(
+                        _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='pitch'"),
+                        {'pid': _pid}
+                    ).scalar()
+                    if _has_pitch == 0:
                         conn.execute(
                             _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 1, 'pitch', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
                             {'pid': _pid, 'name': 'Pitch', 'inhalt': _pitch_text}
