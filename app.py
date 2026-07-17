@@ -1352,17 +1352,21 @@ _data_migrate()
 
 # ── Phase 08.19: JSON-Daten-Migration versions-loser/v1-Profile auf LATEST_SCHEMA_VERSION (v4) ─────
 def _migrate_profile_json():
-    """Idempotente Migration versions-loser/v1-Profile auf die aktuelle ProfileSchema (LATEST_SCHEMA_VERSION, v4).
+    """Idempotente Migration der Profile auf die aktuelle ProfileSchema (LATEST_SCHEMA_VERSION, v4).
 
-    TXN-05: frueher "schema_version=2" — das war stale. _mpd(_migrate_profile_data) hebt bis v4;
-    verarbeitet werden hier NUR versions-lose/v1-Profile (Idempotenz-Skip schema_version >= 2, s.u.).
-    v2/v3-Profile werden auf Prod NICHT gehoben (der v4-Batch in _migrate() ist auf PG tot,
-    early-return :140) -> Guard (a) am Ende macht das sichtbar (siehe Backlog PROFILE-MIGRATE-CONSOLIDATE).
+    CONS-A1/A2: EIN lebender Migrationspfad (der v4-Batch in _migrate() ist PG-tot + geloescht).
+    _mpd(_migrate_profile_data) hebt versions-lose/v1 UND v2/v3 auf v4 (rein JSON, kein Schema-Change).
+    Idempotenz-Skip: schema_version >= LATEST_SCHEMA_VERSION -> ueberspringen (s.u.). Guard (a) am Ende
+    meldet jeden Rest < LATEST als echten Migrations-Ausfall.
 
-    DB-Advisory-Lock verhindert Multi-Worker-Race-Condition beim Gunicorn-Multi-Worker-Start:
-    - SQLite: isolation_level='EXCLUSIVE' (BEGIN EXCLUSIVE) — erste Worker haelt Exclusive-Lock
-    - PostgreSQL: pg_advisory_xact_lock(819) — Lock bis Commit, dann idempotent skip
-    Weitere Worker warten, pruefen schema_version (>= 2) und ueberspringen (idempotent).
+    Multi-Worker-Safety (Gunicorn-Multi-Worker-Start):
+    - SQLite: BEGIN EXCLUSIVE — erster Worker haelt Exclusive-Lock (Local-Dev).
+    - PostgreSQL (CONS-A3, Session-Level): pg_try_advisory_lock(819) NICHT-blockierend — wer den Lock
+      kriegt, migriert; die anderen ueberspringen sofort (kein Boot-Hang) und der idempotente Skip
+      faengt den Rest. Der Lock haelt ueber die per-Profil-commits hinweg (Session- statt Xact-Lock,
+      sonst Doppel-Row-Race). Er wird im finally EXPLIZIT freigegeben (rollback DANN pg_advisory_unlock),
+      weil `with engine.connect()` die conn nicht schliesst und die Pool-Rueckgabe (rollback) session-level
+      Advisory-Locks NICHT freigibt — sonst geleakter Lock (H-1).
     """
     import json as _json3
     from sqlalchemy import text as _text3
@@ -1378,7 +1382,7 @@ def _migrate_profile_json():
 
     # DB-Advisory-Lock: Multi-Worker-Safety
     # SQLite: BEGIN EXCLUSIVE direkt als Statement (execution_options('EXCLUSIVE') nicht unterstuetzt)
-    # PostgreSQL: pg_advisory_xact_lock(819) als erstes Statement in Transaktion
+    # PostgreSQL (CONS-A3): Session-Level pg_try_advisory_lock(819), im finally freigegeben (Details unten)
     with engine.connect() as conn:
         if _is_sqlite:
             try:
@@ -1387,152 +1391,179 @@ def _migrate_profile_json():
                 print(f"[Schema] _migrate_profile_json: BEGIN EXCLUSIVE failed: {_e}")
                 return
         else:
+            # ── CONS-A3/H-1: Session-Level pg_try_advisory_lock(819) statt pg_advisory_xact_lock. ──
+            # Der xact-Lock fiel beim ERSTEN conn.commit() in der Schleife -> Doppel-Row-Race (Multi-Worker).
+            # Session-Lock haelt ueber commits hinweg. ABER: `with engine.connect()` (oben) SCHLIESST die conn
+            # NICHT -> Pool-Rueckgabe macht rollback, und rollback gibt session-level Advisory-Locks NICHT frei
+            # -> geleakter Lock -> Worker-Boot-Hang. Daher explizites pg_advisory_unlock im finally (H-1c/d).
+            # Nicht-blockierend (pg_try_...): wer den Lock nicht kriegt, ueberspringt (anderer Worker migriert)
+            # + idempotenter Skip (>= LATEST) faengt den Rest -> kein Boot-Hang.
             try:
-                conn.execute(_text3("SELECT pg_advisory_xact_lock(819)"))
+                _got_lock = conn.execute(_text3("SELECT pg_try_advisory_lock(819)")).scalar()
             except Exception as _e:
-                print(f"[Schema] _migrate_profile_json: pg_advisory_xact_lock failed: {_e}")
+                print(f"[Schema] _migrate_profile_json: pg_try_advisory_lock failed: {_e}")
+                return
+            if not _got_lock:
+                print("[Schema] _migrate_profile_json: advisory lock 819 busy — anderer Worker migriert, skip (idempotent)")
                 return
 
+        # ── CONS-A3/H-1b: ab hier (nach erfolgreichem Lock-Acquire) laeuft ALLES in try/finally —
+        #    inkl. des folgenden SELECT. Ein frueher return (SELECT-Fehler) wuerde sonst den Lock leaken;
+        #    das finally (H-1c/d) gibt den PG-Lock IMMER frei (rollback DANN unlock, PG-only, gleiche conn).
         try:
-            _rows = conn.execute(_text3("SELECT id, daten, consent_text FROM profiles")).fetchall()
-        except Exception as e:
-            print(f"[Schema] _migrate_profile_json: SELECT failed: {e}")
-            return
-
-        # ── TXN-01: totes ALTER (Step A) + Backfill (Step B) ERSATZLOS entfernt ──────────
-        # Die Spalte profile_opener.type existiert in JEDER create_all-/Prod-DB (models.py
-        # ProfileOpener.type server_default='opener'). Das ALTER war der EINZIGE type-Nachruester
-        # fuer eine Alt-SQLite-DB VOR Einfuehrung der Spalte (Fable P5a) — per "Kein Local-Dev"
-        # (Prod = create_all/PG) traegt jede lebende DB die Spalte bereits, Loeschen also gefahrlos
-        # (Pre-Execute-Audit Claudian 2026-07-13: Step-B-Waisen=0, type-Verteilung sauber, alle
-        # Prod-Profile v4). NICHT als "IF NOT EXISTS" behalten: nerve_app hat auf Prod KEINE
-        # ALTER-Rechte (app.py:136) -> ein ALTER scheitert an Permissions = leisere Mine.
-        # DIES WAR die Transaktions-Mine: DuplicateColumn/Permission in except:pass OHNE rollback
-        # -> conn vergiftet -> Folge-Statements (Opener-Sync, UPDATE) sterben still als
-        # InFailedSqlTransaction. Ersatzlos raus = Mine entschaerft.
-
-        for _row in _rows:
-            _pid, _daten_str, _db_consent = _row[0], _row[1], _row[2]
             try:
-                _daten = _json3.loads(_daten_str) if _daten_str else {}
-            except Exception:
-                _daten = {}
+                _rows = conn.execute(_text3("SELECT id, daten, consent_text FROM profiles")).fetchall()
+            except Exception as e:
+                print(f"[Schema] _migrate_profile_json: SELECT failed: {e}")
+                return
 
-            # CONS-A2: Idempotenz-Skip auf >= LATEST_SCHEMA_VERSION (nicht mehr >= 2) -> v2/v3 werden
-            # jetzt auf v4 gehoben (_mpd, rein JSON). isinstance-Praefix ERHALTEN (TXN/B1).
-            # None-safe: _daten.get() liefert None wenn Key=None — 'or 1' wandelt in 1 um
-            if isinstance(_daten, dict) and (_daten.get('schema_version') or 1) >= _LATEST:
-                continue
+            # ── TXN-01: totes ALTER (Step A) + Backfill (Step B) ERSATZLOS entfernt ──────────
+            # Die Spalte profile_opener.type existiert in JEDER create_all-/Prod-DB (models.py
+            # ProfileOpener.type server_default='opener'). Das ALTER war der EINZIGE type-Nachruester
+            # fuer eine Alt-SQLite-DB VOR Einfuehrung der Spalte (Fable P5a) — per "Kein Local-Dev"
+            # (Prod = create_all/PG) traegt jede lebende DB die Spalte bereits, Loeschen also gefahrlos
+            # (Pre-Execute-Audit Claudian 2026-07-13: Step-B-Waisen=0, type-Verteilung sauber, alle
+            # Prod-Profile v4). NICHT als "IF NOT EXISTS" behalten: nerve_app hat auf Prod KEINE
+            # ALTER-Rechte (app.py:136) -> ein ALTER scheitert an Permissions = leisere Mine.
+            # DIES WAR die Transaktions-Mine: DuplicateColumn/Permission in except:pass OHNE rollback
+            # -> conn vergiftet -> Folge-Statements (Opener-Sync, UPDATE) sterben still als
+            # InFailedSqlTransaction. Ersatzlos raus = Mine entschaerft.
 
-            _opener_text = _daten.get('opener', '') if isinstance(_daten, dict) else ''
-            _pitch_text  = _daten.get('pitch', '')  if isinstance(_daten, dict) else ''
-
-            # ProfileOpener-Sync: SELECT-vor-INSERT (idempotent)
-            # ── CONS-A2c: pro-Typ-COUNT statt type-losem Gate. Der frueher gemeinsame
-            #    "SELECT COUNT(*) ... WHERE profile_id=:pid" (OHNE type) liess bei COUNT>0 (irgendein
-            #    Bestands-Row) den opener-INSERT aus -> _mpd poppt danach den opener (profile_schema.py:304)
-            #    -> stiller Opener-Verlust. Jetzt pruefen opener und pitch je ihren eigenen Typ (Muster erlaubnis).
-            #    Die INSERT-Statements sind VERBATIM uebernommen (is_personalized TXN-09; created_at CONS-B2 unten).
-            try:
-                if _opener_text:
-                    _has_opener = conn.execute(
-                        _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='opener'"),
-                        {'pid': _pid}
-                    ).scalar()
-                    if _has_opener == 0:
-                        conn.execute(
-                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'opener', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default (models.py:203) -> roher INSERT muss ihn liefern (Guard-a-Wächter freigelegt, Poison-maskiert)
-                            {'pid': _pid, 'name': 'Opener', 'inhalt': _opener_text}
-                        )
-                        conn.commit()
-                        print(f"[Schema] Profil {_pid}: opener -> ProfileOpener synced")
-                if _pitch_text:
-                    _has_pitch = conn.execute(
-                        _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='pitch'"),
-                        {'pid': _pid}
-                    ).scalar()
-                    if _has_pitch == 0:
-                        conn.execute(
-                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 1, 'pitch', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
-                            {'pid': _pid, 'name': 'Pitch', 'inhalt': _pitch_text}
-                        )
-                        conn.commit()
-                        print(f"[Schema] Profil {_pid}: pitch -> ProfileOpener synced")
-            except Exception as _e:
-                conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
-                print(f"[Schema] Profil {_pid}: ProfileOpener sync failed: {_e}")
-
-            # ── Step C: Migrate erlaubnis JSON field → ProfileOpener type='erlaubnis' ──
-            _erlaubnis_text = _daten.get('erlaubnis', '') if isinstance(_daten, dict) else ''
-            if _erlaubnis_text:
+            for _row in _rows:
+                _pid, _daten_str, _db_consent = _row[0], _row[1], _row[2]
                 try:
-                    _existing_erlaubnis = conn.execute(
-                        _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='erlaubnis'"),
-                        {'pid': _pid}
-                    ).scalar()
-                    if _existing_erlaubnis == 0:
-                        conn.execute(
-                            _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'erlaubnis', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
-                            {'pid': _pid, 'name': 'Erlaubnisfrage', 'inhalt': _erlaubnis_text}
-                        )
-                        conn.commit()
-                        print(f"[Schema] Profil {_pid}: erlaubnis -> ProfileOpener synced")
+                    _daten = _json3.loads(_daten_str) if _daten_str else {}
+                except Exception:
+                    _daten = {}
+
+                # CONS-A2: Idempotenz-Skip auf >= LATEST_SCHEMA_VERSION (nicht mehr >= 2) -> v2/v3 werden
+                # jetzt auf v4 gehoben (_mpd, rein JSON). isinstance-Praefix ERHALTEN (TXN/B1).
+                # None-safe: _daten.get() liefert None wenn Key=None — 'or 1' wandelt in 1 um
+                if isinstance(_daten, dict) and (_daten.get('schema_version') or 1) >= _LATEST:
+                    continue
+
+                _opener_text = _daten.get('opener', '') if isinstance(_daten, dict) else ''
+                _pitch_text  = _daten.get('pitch', '')  if isinstance(_daten, dict) else ''
+
+                # ProfileOpener-Sync: SELECT-vor-INSERT (idempotent)
+                # ── CONS-A2c: pro-Typ-COUNT statt type-losem Gate. Der frueher gemeinsame
+                #    "SELECT COUNT(*) ... WHERE profile_id=:pid" (OHNE type) liess bei COUNT>0 (irgendein
+                #    Bestands-Row) den opener-INSERT aus -> _mpd poppt danach den opener (profile_schema.py:304)
+                #    -> stiller Opener-Verlust. Jetzt pruefen opener und pitch je ihren eigenen Typ (Muster erlaubnis).
+                #    Die INSERT-Statements sind VERBATIM uebernommen (is_personalized TXN-09; created_at CONS-B2 unten).
+                try:
+                    if _opener_text:
+                        _has_opener = conn.execute(
+                            _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='opener'"),
+                            {'pid': _pid}
+                        ).scalar()
+                        if _has_opener == 0:
+                            conn.execute(
+                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'opener', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default (models.py:203) -> roher INSERT muss ihn liefern (Guard-a-Wächter freigelegt, Poison-maskiert)
+                                {'pid': _pid, 'name': 'Opener', 'inhalt': _opener_text}
+                            )
+                            conn.commit()
+                            print(f"[Schema] Profil {_pid}: opener -> ProfileOpener synced")
+                    if _pitch_text:
+                        _has_pitch = conn.execute(
+                            _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='pitch'"),
+                            {'pid': _pid}
+                        ).scalar()
+                        if _has_pitch == 0:
+                            conn.execute(
+                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 1, 'pitch', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
+                                {'pid': _pid, 'name': 'Pitch', 'inhalt': _pitch_text}
+                            )
+                            conn.commit()
+                            print(f"[Schema] Profil {_pid}: pitch -> ProfileOpener synced")
                 except Exception as _e:
                     conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
-                    print(f"[Schema] Profil {_pid}: erlaubnis sync failed: {_e}")
+                    print(f"[Schema] Profil {_pid}: ProfileOpener sync failed: {_e}")
 
-            # consent_text dual-write (D-04): NULL explizit als leerer String (Finding 4)
-            if not isinstance(_daten.get('meta'), dict):
-                _daten['meta'] = {}
-            if not _daten['meta'].get('consent_text'):
-                _daten['meta']['consent_text'] = _db_consent or ''
+                # ── Step C: Migrate erlaubnis JSON field → ProfileOpener type='erlaubnis' ──
+                _erlaubnis_text = _daten.get('erlaubnis', '') if isinstance(_daten, dict) else ''
+                if _erlaubnis_text:
+                    try:
+                        _existing_erlaubnis = conn.execute(
+                            _text3("SELECT COUNT(*) FROM profile_opener WHERE profile_id=:pid AND type='erlaubnis'"),
+                            {'pid': _pid}
+                        ).scalar()
+                        if _existing_erlaubnis == 0:
+                            conn.execute(
+                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'erlaubnis', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
+                                {'pid': _pid, 'name': 'Erlaubnisfrage', 'inhalt': _erlaubnis_text}
+                            )
+                            conn.commit()
+                            print(f"[Schema] Profil {_pid}: erlaubnis -> ProfileOpener synced")
+                    except Exception as _e:
+                        conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
+                        print(f"[Schema] Profil {_pid}: erlaubnis sync failed: {_e}")
 
-            # ── CONS-A1-Invariante: der opener/pitch/erlaubnis-Sync oben (rohe INSERTs + commit) MUSS
-            #    VOR diesem _mpd-Aufruf laufen — _mpd poppt den opener-Key aus dem daten-JSON
-            #    (services/profile_schema.py:304). Reihenfolge NICHT umordnen (sonst stiller Opener-Verlust).
-            # ── CONS-A2b: _migration_profile_id VOR _mpd injizieren — sonst druckt _mpd '[Schema] Profile ?'
-            #    (profile_schema.py:321/:417) + schreibt AuditLog mit target_id=None (:399-403). NACH _mpd
-            #    wieder poppen (Hilfsfeld NICHT in profiles.daten persistieren; analog gel. v4-Batch).
-            if isinstance(_daten, dict):
-                _daten['_migration_profile_id'] = _pid
-            _daten = _mpd(_daten)
-            if isinstance(_daten, dict):
-                _daten.pop('_migration_profile_id', None)
+                # consent_text dual-write (D-04): NULL explizit als leerer String (Finding 4)
+                if not isinstance(_daten.get('meta'), dict):
+                    _daten['meta'] = {}
+                if not _daten['meta'].get('consent_text'):
+                    _daten['meta']['consent_text'] = _db_consent or ''
 
-            try:
-                _new_daten_str = _json3.dumps(_daten, ensure_ascii=False)
-                conn.execute(
-                    _text3("UPDATE profiles SET daten=:d WHERE id=:id"),
-                    {'d': _new_daten_str, 'id': _pid}
-                )
-                conn.commit()
-                # TXN-05: frueher "schema_version=2" (stale) — _mpd hebt bis LATEST_SCHEMA_VERSION (v4).
-                print(f"[Schema] Profil {_pid}: migriert auf schema_version={_LATEST}")
-            except Exception as _e:
-                conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
-                print(f"[Schema] Profil {_pid}: UPDATE failed: {_e}")
+                # ── CONS-A1-Invariante: der opener/pitch/erlaubnis-Sync oben (rohe INSERTs + commit) MUSS
+                #    VOR diesem _mpd-Aufruf laufen — _mpd poppt den opener-Key aus dem daten-JSON
+                #    (services/profile_schema.py:304). Reihenfolge NICHT umordnen (sonst stiller Opener-Verlust).
+                # ── CONS-A2b: _migration_profile_id VOR _mpd injizieren — sonst druckt _mpd '[Schema] Profile ?'
+                #    (profile_schema.py:321/:417) + schreibt AuditLog mit target_id=None (:399-403). NACH _mpd
+                #    wieder poppen (Hilfsfeld NICHT in profiles.daten persistieren; analog gel. v4-Batch).
+                if isinstance(_daten, dict):
+                    _daten['_migration_profile_id'] = _pid
+                _daten = _mpd(_daten)
+                if isinstance(_daten, dict):
+                    _daten.pop('_migration_profile_id', None)
 
-        # ── TXN-04 Guard (a): Regressions-Sichtbarkeit am PG-laufenden Pfad ──────────────
-        # Re-Check aller Profile NACH dem Lauf. schema_version lebt AUSSCHLIESSLICH im daten-JSON
-        # (profiles hat KEINE schema_version-Spalte, Cross-Layer Punkt 21/22) -> JSON parsen, KEIN
-        # Spalten-SELECT. v1/versions-los nach dem Lauf = echter Migrations-Ausfall (CRITICAL, die
-        # Transaktions-Mine haette hier zugeschlagen). v2/v3 = bekannte Luecke des auf-PG-toten
-        # v4-Batches (WARN/stuck) -> PROFILE-MIGRATE-CONSOLIDATE, KEIN akuter Ausfall.
-        try:
-            for _cid, _cdaten in conn.execute(_text3("SELECT id, daten FROM profiles")).fetchall():
                 try:
-                    _cv = (_json3.loads(_cdaten) if _cdaten else {}).get('schema_version') or 1
+                    _new_daten_str = _json3.dumps(_daten, ensure_ascii=False)
+                    conn.execute(
+                        _text3("UPDATE profiles SET daten=:d WHERE id=:id"),
+                        {'d': _new_daten_str, 'id': _pid}
+                    )
+                    conn.commit()
+                    # TXN-05: frueher "schema_version=2" (stale) — _mpd hebt bis LATEST_SCHEMA_VERSION (v4).
+                    print(f"[Schema] Profil {_pid}: migriert auf schema_version={_LATEST}")
+                except Exception as _e:
+                    conn.rollback()   # TXN-02: conn nach verschlucktem Fehler nicht vergiftet lassen (Isolation: Loop laeuft weiter)
+                    print(f"[Schema] Profil {_pid}: UPDATE failed: {_e}")
+
+            # ── TXN-04 Guard (a): Regressions-Sichtbarkeit am PG-laufenden Pfad ──────────────
+            # Re-Check aller Profile NACH dem Lauf. schema_version lebt AUSSCHLIESSLICH im daten-JSON
+            # (profiles hat KEINE schema_version-Spalte, Cross-Layer Punkt 21/22) -> JSON parsen, KEIN
+            # Spalten-SELECT. v1/versions-los nach dem Lauf = echter Migrations-Ausfall (CRITICAL). Nach
+            # CONS-A2 ist auch ein v2/v3-Rest ein echter Ausfall (die Hebung sollte ihn geloest haben).
+            try:
+                for _cid, _cdaten in conn.execute(_text3("SELECT id, daten FROM profiles")).fetchall():
+                    try:
+                        _cv = (_json3.loads(_cdaten) if _cdaten else {}).get('schema_version') or 1
+                    except Exception:
+                        _cv = 1
+                    if _cv <= 1:
+                        print(f"[Schema] CRITICAL MIGRATION FAILED Profil {_cid}: schema_version={_cv} nach _migrate_profile_json")
+                    elif _cv < _LATEST:
+                        # CONS-A2: v2/v3 werden jetzt gehoben -> ein <LATEST-Profil NACH dem Lauf ist ein
+                        # echter Migrations-Ausfall (nicht mehr "bekannt/stuck").
+                        print(f"[Schema] WARN Profil {_cid}: schema_version={_cv} nach Konsolidierung nicht auf {_LATEST} gehoben — Migrations-Ausfall pruefen")
+            except Exception as _e:
+                conn.rollback()   # TXN-02/04: Guard-a-Read soll die conn nicht vergiftet zuruecklassen
+                print(f"[Schema] Guard (a) re-check failed: {_e}")
+        finally:
+            # ── CONS-A3/H-1c/d: Lock IMMER freigeben. PG-only (SQLite hat keinen Advisory-Lock), gleiche
+            #    conn. ERST rollback (sonst scheitert pg_advisory_unlock selbst an InFailedSqlTransaction),
+            #    DANN unlock. Notwendig weil `with engine.connect()` die conn NICHT schliesst (Pool-Rueckgabe
+            #    = rollback gibt session-level Advisory-Locks NICHT frei).
+            if not _is_sqlite:
+                try:
+                    conn.rollback()
                 except Exception:
-                    _cv = 1
-                if _cv <= 1:
-                    print(f"[Schema] CRITICAL MIGRATION FAILED Profil {_cid}: schema_version={_cv} nach _migrate_profile_json")
-                elif _cv < _LATEST:
-                    # CONS-A2: v2/v3 werden jetzt gehoben -> ein <LATEST-Profil NACH dem Lauf ist ein
-                    # echter Migrations-Ausfall (nicht mehr "bekannt/stuck").
-                    print(f"[Schema] WARN Profil {_cid}: schema_version={_cv} nach Konsolidierung nicht auf {_LATEST} gehoben — Migrations-Ausfall pruefen")
-        except Exception as _e:
-            conn.rollback()   # TXN-02/04: Guard-a-Read soll die conn nicht vergiftet zuruecklassen
-            print(f"[Schema] Guard (a) re-check failed: {_e}")
+                    pass
+                try:
+                    conn.execute(_text3("SELECT pg_advisory_unlock(819)"))
+                except Exception as _e:
+                    print(f"[Schema] _migrate_profile_json: pg_advisory_unlock failed: {_e}")
 
 # _migrate_profile_json() wird NACH _seed() und _seed_demo_profiles() aufgerufen
 # (~:2078) — Profile muessen zuerst existieren bevor migriert werden kann.
