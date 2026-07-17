@@ -1418,9 +1418,10 @@ def _migrate_profile_json():
             except Exception:
                 _daten = {}
 
-            # Idempotenz: schema_version >= 2 -> ueberspringen
+            # CONS-A2: Idempotenz-Skip auf >= LATEST_SCHEMA_VERSION (nicht mehr >= 2) -> v2/v3 werden
+            # jetzt auf v4 gehoben (_mpd, rein JSON). isinstance-Praefix ERHALTEN (TXN/B1).
             # None-safe: _daten.get() liefert None wenn Key=None — 'or 1' wandelt in 1 um
-            if isinstance(_daten, dict) and (_daten.get('schema_version') or 1) >= 2:
+            if isinstance(_daten, dict) and (_daten.get('schema_version') or 1) >= _LATEST:
                 continue
 
             _opener_text = _daten.get('opener', '') if isinstance(_daten, dict) else ''
@@ -1509,7 +1510,9 @@ def _migrate_profile_json():
                 if _cv <= 1:
                     print(f"[Schema] CRITICAL MIGRATION FAILED Profil {_cid}: schema_version={_cv} nach _migrate_profile_json")
                 elif _cv < _LATEST:
-                    print(f"[Schema] WARN Profil {_cid}: schema_version={_cv} stuck (<{_LATEST}) — v4-Batch PG-tot, siehe PROFILE-MIGRATE-CONSOLIDATE")
+                    # CONS-A2: v2/v3 werden jetzt gehoben -> ein <LATEST-Profil NACH dem Lauf ist ein
+                    # echter Migrations-Ausfall (nicht mehr "bekannt/stuck").
+                    print(f"[Schema] WARN Profil {_cid}: schema_version={_cv} nach Konsolidierung nicht auf {_LATEST} gehoben — Migrations-Ausfall pruefen")
         except Exception as _e:
             conn.rollback()   # TXN-02/04: Guard-a-Read soll die conn nicht vergiftet zuruecklassen
             print(f"[Schema] Guard (a) re-check failed: {_e}")
