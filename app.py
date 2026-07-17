@@ -1480,7 +1480,14 @@ def _migrate_profile_json():
             # ── CONS-A1-Invariante: der opener/pitch/erlaubnis-Sync oben (rohe INSERTs + commit) MUSS
             #    VOR diesem _mpd-Aufruf laufen — _mpd poppt den opener-Key aus dem daten-JSON
             #    (services/profile_schema.py:304). Reihenfolge NICHT umordnen (sonst stiller Opener-Verlust).
+            # ── CONS-A2b: _migration_profile_id VOR _mpd injizieren — sonst druckt _mpd '[Schema] Profile ?'
+            #    (profile_schema.py:321/:417) + schreibt AuditLog mit target_id=None (:399-403). NACH _mpd
+            #    wieder poppen (Hilfsfeld NICHT in profiles.daten persistieren; analog gel. v4-Batch).
+            if isinstance(_daten, dict):
+                _daten['_migration_profile_id'] = _pid
             _daten = _mpd(_daten)
+            if isinstance(_daten, dict):
+                _daten.pop('_migration_profile_id', None)
 
             try:
                 _new_daten_str = _json3.dumps(_daten, ensure_ascii=False)
