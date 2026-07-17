@@ -263,7 +263,7 @@ def _migrate_profile_data(daten: dict) -> dict:
       v2->v3: einwaende/phasen upward-merge aus basis.*, fragen+branche entfernen,
               setzt schema_version = 3 (Phase 08.19.1)
       v3->v4: setzt schema_version = 4 (Phase 08.20, siehe v3->v4-Block unten)
-      - Kein DB-Zugriff (opener/pitch-Sync in app.py _migrate())
+      - Kein DB-Zugriff (opener/pitch-Sync in app.py _migrate_profile_json, VOR diesem Pop, CONS-A1)
 
     Modifiziert daten in-place und gibt es zurueck (analog migrate_tabu_begriffe).
     """
@@ -299,7 +299,7 @@ def _migrate_profile_data(daten: dict) -> dict:
             daten['ki'] = ki
 
         # ── opener aus daten-JSON entfernen (D-01) ───────────────────────────
-        # Sync in ProfileOpener-Tabelle erfolgt in app.py _migrate() (DB-Zugriff dort)
+        # Sync in ProfileOpener-Tabelle erfolgt in app.py _migrate_profile_json (VOR diesem Pop, CONS-A1)
         # erlaubnis und pitch werden dual-written zurueck in daten (transitional bis 08.20)
         daten.pop('opener', None)
 

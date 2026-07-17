@@ -986,49 +986,11 @@ def _migrate():
         # ── Phase 08.19.3 D-03/D-04/D-05: daten.fragen -> profile_faqs Migration ──
         _migrate_fragen_to_faqs()
 
-    # ── Phase 08.20: Batch-Migration alle Profile -> LATEST_SCHEMA_VERSION (v4) ──
-    # HINWEIS (TXN-05): laeuft auf Postgres NIE — _migrate() early-return :140 (PG). Nur SQLite/lokal.
-    # Migration auf Prod uebernimmt _migrate_profile_json (v1->v4); v2/v3->v4 auf Prod ungeloest ->
-    # Konsolidierung siehe Backlog PROFILE-MIGRATE-CONSOLIDATE. Dieser Batch bleibt UNVERAENDERT (PG-tot).
-    # Idempotent: Profile mit schema_version >= LATEST_SCHEMA_VERSION werden uebersprungen.
-    # Muss NACH den ALTER TABLE Blocks laufen (kein ALTER TABLE hier — nur daten-JSON).
-    # Acceptable at startup for NERVE's current profile count (<=20); revisit if >1000 profiles
-    try:
-        from database.db import get_session as _get_session
-        from database.models import Profile as _Profile
-        import json as _json
-        from services.profile_schema import _migrate_profile_data as _mpd, LATEST_SCHEMA_VERSION as _LATEST_VER
-
-        _db = _get_session()
-        try:
-            _profiles = _db.query(_Profile).all()
-            _migrated_count = 0
-            _skipped_count = 0
-            for _p in _profiles:
-                try:
-                    _daten = _json.loads(_p.daten) if _p.daten else {}
-                except Exception:
-                    _daten = {}
-                _version = _daten.get('schema_version') or 1
-                if _version >= _LATEST_VER:
-                    _skipped_count += 1
-                    continue
-                # Profil-ID fuer Audit-Log in _migrate_profile_data() injizieren
-                _daten['_migration_profile_id'] = _p.id
-                _daten_migrated = _mpd(_daten)
-                # _migration_profile_id nicht in DB speichern (Hilfsvariable)
-                _daten_migrated.pop('_migration_profile_id', None)
-                _p.daten = _json.dumps(_daten_migrated, ensure_ascii=False)
-                _migrated_count += 1
-            _db.commit()
-            if _migrated_count > 0:
-                print(f"[Schema] Batch-Migration v3->v4: {_migrated_count} Profile migriert, {_skipped_count} uebersprungen")
-            else:
-                print(f"[Schema] Batch-Migration v3->v4: alle {_skipped_count} Profile bereits auf v4")
-        finally:
-            _db.close()
-    except Exception as _e:
-        print(f"[Schema] Batch-Migration v3->v4 FEHLER (nicht kritisch): {_e}")
+    # ── CONS-A1: v4-Batch GELOESCHT (Phase PROFILE-MIGRATE-CONSOLIDATE) ──────────────────
+    # Der frueher hier stehende ORM-Profil-Schema-Batch (Phase 08.20) war auf Postgres TOT
+    # (_migrate() early-return :140) und nach CONS-A2 auch fuer SQLite redundant. EIN lebender
+    # Migrationspfad bleibt: _migrate_profile_json() (Aufruf ~:2078), der jetzt auch v2/v3->v4 hebt
+    # (CONS-A2, Skip >= LATEST_SCHEMA_VERSION) und opener/pitch/erlaubnis pro-Typ synct (CONS-A2c).
 
 
 def _migrate_fragen_to_faqs():
@@ -1514,6 +1476,9 @@ def _migrate_profile_json():
             if not _daten['meta'].get('consent_text'):
                 _daten['meta']['consent_text'] = _db_consent or ''
 
+            # ── CONS-A1-Invariante: der opener/pitch/erlaubnis-Sync oben (rohe INSERTs + commit) MUSS
+            #    VOR diesem _mpd-Aufruf laufen — _mpd poppt den opener-Key aus dem daten-JSON
+            #    (services/profile_schema.py:304). Reihenfolge NICHT umordnen (sonst stiller Opener-Verlust).
             _daten = _mpd(_daten)
 
             try:
@@ -1550,7 +1515,7 @@ def _migrate_profile_json():
             print(f"[Schema] Guard (a) re-check failed: {_e}")
 
 # _migrate_profile_json() wird NACH _seed() und _seed_demo_profiles() aufgerufen
-# (Zeile ~1877) — Profile muessen zuerst existieren bevor migriert werden kann.
+# (~:2078) — Profile muessen zuerst existieren bevor migriert werden kann.
 
 # ── NERVE Vertrieb Profile ───────────────────────────────────────────────
 NERVE_DEMO_PROFILE_JSON = json.dumps({
