@@ -1459,8 +1459,8 @@ def _migrate_profile_json():
                         ).scalar()
                         if _has_opener == 0:
                             conn.execute(
-                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'opener', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default (models.py:203) -> roher INSERT muss ihn liefern (Guard-a-Wächter freigelegt, Poison-maskiert)
-                                {'pid': _pid, 'name': 'Opener', 'inhalt': _opener_text}
+                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized, created_at) VALUES (:pid, :name, :inhalt, 0, 'opener', false, :created_at)"),  # TXN-09: is_personalized NOT NULL ohne server_default (models.py:203); CONS-B2: created_at (raw SQL umgeht Python-default utcnow)
+                                {'pid': _pid, 'name': 'Opener', 'inhalt': _opener_text, 'created_at': datetime.utcnow()}
                             )
                             conn.commit()
                             print(f"[Schema] Profil {_pid}: opener -> ProfileOpener synced")
@@ -1471,8 +1471,8 @@ def _migrate_profile_json():
                         ).scalar()
                         if _has_pitch == 0:
                             conn.execute(
-                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 1, 'pitch', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
-                                {'pid': _pid, 'name': 'Pitch', 'inhalt': _pitch_text}
+                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized, created_at) VALUES (:pid, :name, :inhalt, 1, 'pitch', false, :created_at)"),  # TXN-09: is_personalized NOT NULL ohne server_default; CONS-B2: created_at (raw SQL umgeht Python-default utcnow)
+                                {'pid': _pid, 'name': 'Pitch', 'inhalt': _pitch_text, 'created_at': datetime.utcnow()}
                             )
                             conn.commit()
                             print(f"[Schema] Profil {_pid}: pitch -> ProfileOpener synced")
@@ -1490,8 +1490,8 @@ def _migrate_profile_json():
                         ).scalar()
                         if _existing_erlaubnis == 0:
                             conn.execute(
-                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized) VALUES (:pid, :name, :inhalt, 0, 'erlaubnis', false)"),  # TXN-09: is_personalized NOT NULL ohne server_default -> im rohen INSERT liefern
-                                {'pid': _pid, 'name': 'Erlaubnisfrage', 'inhalt': _erlaubnis_text}
+                                _text3("INSERT INTO profile_opener (profile_id, name, inhalt, sortierung, type, is_personalized, created_at) VALUES (:pid, :name, :inhalt, 0, 'erlaubnis', false, :created_at)"),  # TXN-09: is_personalized NOT NULL ohne server_default; CONS-B2: created_at (raw SQL umgeht Python-default utcnow)
+                                {'pid': _pid, 'name': 'Erlaubnisfrage', 'inhalt': _erlaubnis_text, 'created_at': datetime.utcnow()}
                             )
                             conn.commit()
                             print(f"[Schema] Profil {_pid}: erlaubnis -> ProfileOpener synced")
@@ -1500,10 +1500,13 @@ def _migrate_profile_json():
                         print(f"[Schema] Profil {_pid}: erlaubnis sync failed: {_e}")
 
                 # consent_text dual-write (D-04): NULL explizit als leerer String (Finding 4)
-                if not isinstance(_daten.get('meta'), dict):
-                    _daten['meta'] = {}
-                if not _daten['meta'].get('consent_text'):
-                    _daten['meta']['consent_text'] = _db_consent or ''
+                # CONS-B1: nur wenn _daten ein dict ist — ein non-dict daten-JSON (z.B. Liste) hat kein
+                # .get('meta') und wuerde hier mit AttributeError den App-Start crashen.
+                if isinstance(_daten, dict):
+                    if not isinstance(_daten.get('meta'), dict):
+                        _daten['meta'] = {}
+                    if not _daten['meta'].get('consent_text'):
+                        _daten['meta']['consent_text'] = _db_consent or ''
 
                 # ── CONS-A1-Invariante: der opener/pitch/erlaubnis-Sync oben (rohe INSERTs + commit) MUSS
                 #    VOR diesem _mpd-Aufruf laufen — _mpd poppt den opener-Key aus dem daten-JSON
@@ -2091,7 +2094,12 @@ def _seed_changelog():
 
 _seed()
 # _seed_demo_profiles()  # 2026-04-28 deaktiviert (Andre): nutzlose System-Demos aus früher Phase, werden in Phase 08.22 durch echte Branchen-Templates mit Wisdom-Vorbefüllung ersetzt
-_migrate_profile_json()   # nach Seed: alle Profile existieren, jetzt migrieren
+try:
+    _migrate_profile_json()   # nach Seed: alle Profile existieren, jetzt migrieren
+except Exception as _e_mpj:
+    # CONS-B1: Boot-Crash-Netz — die Startup-Migration darf den App-Start NICHT umwerfen
+    # (wie die anderen Startup-Calls). Bei Fehler non-fatal loggen und weiterlaufen.
+    print(f"[Schema] _migrate_profile_json failed at startup (non-fatal): {_e_mpj}")
 _seed_training_scenarios()
 _seed_system_training_scenarios()
 # Phase 08.19.4 D-04: _load_initial_profile() geloescht — war DSGVO-Verstoss
