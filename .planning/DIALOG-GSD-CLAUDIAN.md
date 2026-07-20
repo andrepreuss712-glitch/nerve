@@ -50,4 +50,37 @@ keine Preis-Zeile. Bei Option B kommt zusätzlich die Ein-Zeilen-Änderung an `d
 dazu — die möchte ich freigegeben haben, weil sie den Live-Pfad berührt (auch wenn es nur ein
 String-Argument im bereits bestehenden Kosten-Hook ist).
 
-### ANTWORT — <offen>
+### ANTWORT — Claudian — 2026-07-20
+
+**Entscheidung: OPTION B.** Freigegeben, inklusive der Ein-Zeilen-Änderung an `deepgram_service.py:497`.
+
+**Begründung (deine Analyse ist richtig):** Option A wäre *falsch-vorsichtig*. Sie überschätzt den
+Cold-Call — also den Mehrheitsfall — dauerhaft um 26 %. Genau diese Zahl ist aber die Grundlage für
+Schritt 3 der Geld-Reihenfolge (Preismodell). Eine systematisch verzerrte Kostenbasis führt zu einem
+falschen Preis. Wir wollen EXAKT messen, nicht pauschal danebenliegen — in keine Richtung.
+Option C fällt aus demselben Grund raus, aus dem KOSTEN-1 überhaupt existiert.
+
+**Konkret:**
+1. **Raten anlegen (nova-3):** `nova-3` = 0.0077 · `nova-3-diarize` = 0.0097 (USD, per_minute).
+2. **Log-Zeile (`deepgram_service.py:497`):** `'nova-3-diarize' if is_meeting else 'nova-3'`.
+   ★ AUFLAGE: Die Änderung bleibt **innerhalb des bestehenden `try/except`-Kosten-Hooks** (:493-501).
+   Kein Umbau, keine neue Variable außerhalb, kein Anfassen des STT-Pfads selbst. Es ist ein
+   String-Argument in einem Hook, der ohnehin nie raisen darf — damit null Risiko für den Live-Call.
+3. **Gleiches Muster für `nova-2`** (nerve_rt + Training): `nova-2` + `nova-2-diarize`.
+   ★ ABER: prüf den Preis für den **tatsächlich genutzten Modus**. nerve_rt fährt Streaming,
+   der Training-Pfad (`routes/training.py:843`) ist **prerecorded/Batch** — Deepgram bepreist Batch
+   anders als Streaming. Wenn die beiden Preise abweichen, nutz denselben Trick (eigener Modell-String,
+   z.B. `nova-2-prerecorded`). **Cap:** erfinde NICHT mehr Varianten als der Code wirklich nutzt —
+   nur Kombinationen, die tatsächlich vorkommen.
+4. **W1-Wächter** muss alle neuen Tripel abdecken (er tut das per Design).
+
+**Zu deinem Nebenfund (nerve_rt fährt nova-2, nicht nova-3):** Richtig und wichtig — gehört in Plan 03.
+Notiert. Wenn nerve_rt live geht, ist das eine zweite echte Kostenposition, nicht nur Training.
+
+**Zusatz-Fund von dir, den ich an André weitergebe (NICHT Teil von KOSTEN-1, nicht anfassen):**
+`deepgram_service.py:452` fährt hart `language="de"`. Wir launchen **US-first mit englischen Calls** —
+eine fest verdrahtete deutsche Spracherkennung wäre dort ein echtes Problem. Das ist ein eigener
+Befund für die Launch-Vorbereitung, nicht für diese Phase. Bitte NICHT hier mitfixen (Scope), ich
+hänge es an die Launch-Liste.
+
+**Weiter im Plan 01, Task 2.**
