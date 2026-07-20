@@ -11,6 +11,30 @@ from __future__ import annotations
 from decimal import Decimal
 
 
+def normalize_model_name(model: str | None) -> str:
+    """Phase 08.23.2.KOSTEN-1 R2 — EINE Namens-Normalisierung fuer die Kosten-Hooks.
+
+    Konsolidierung, KEIN neues System: dieses Idiom stand als Einzeiler verstreut in
+    coaching_service.py:92/:326, precall_service.py und qa_pipeline.py:
+
+        _cost_model = 'sonnet-4-5' if 'sonnet' in config.MODEL_X else 'haiku-4-5'
+
+    Verhalten ist bewusst WORTGLEICH uebernommen (keine stille Semantik-Aenderung): alles mit
+    'sonnet' im Namen wird auf den Kurznamen 'sonnet-4-5' abgebildet, alles andere auf
+    'haiku-4-5'. Beide Kurznamen haben aktive Raten (KOSTEN-1 R1, app._API_RATE_SOLL).
+
+    ★ Die BESTANDS-Sites werden hier NICHT umgeschrieben (Fable-Gegencheck 2026-07-20,
+      Abweichung 3): ein Sweep-Refactor waere Beifang im Fix-Block. Nur die NEUEN Hooks
+      nutzen diese Funktion; die alten Einzeiler bleiben, wo sie sind.
+
+    ⚠ Grenze, bewusst so: die Funktion RAET nicht nach Versionen. Ein kuenftiges 'opus'- oder
+    'haiku-5'-Modell landete stumm auf 'haiku-4-5' und damit auf einem falschen Preis. Der
+    Laufzeit-Skip-Zaehler aus W3 (Plan 04) faengt das nicht — er sieht nur FEHLENDE Raten, nicht
+    falsch zugeordnete. Wer ein neues Modell einfuehrt, pflegt hier UND in _API_RATE_SOLL nach.
+    """
+    return 'sonnet-4-5' if 'sonnet' in (model or '') else 'haiku-4-5'
+
+
 def _get_current_fx_rate(db, rate_currency: str) -> Decimal:
     """Liest den neuesten Kurs aus exchange_rates. Fallback 0.92 fuer USD_EUR."""
     if rate_currency == 'EUR':
