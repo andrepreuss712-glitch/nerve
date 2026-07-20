@@ -847,6 +847,32 @@ def training_transcribe():
             smart_format=True, punctuate=True,
         )
         response   = client.listen.rest.v("1").transcribe_file(source, options)
+
+        # ── KOSTEN-1 R2.6 Cost-Hook (Deepgram prerecorded) ──────────────────────────
+        # POSITION: direkt nach dem Call, VOR dem Auspacken des Transkripts — die
+        # Kette response.results.channels[0]... kann werfen, bezahlt ist der Call trotzdem.
+        # DAUER: ausschliesslich aus response.metadata.duration. KEINE Schaetzung aus der
+        # Blob-Groesse (Fable ausdruecklich) — fehlt das Feld, wird NICHT geloggt und der
+        # Grund sichtbar gemacht. Lieber eine bekannte Luecke als eine erfundene Zahl.
+        # MODELL: 'nova-2-prerecorded' — Batch ist bei Deepgram billiger als Streaming,
+        # deshalb eigener Rate-Eintrag (app._API_RATE_SOLL). Diarization ist hier AUS
+        # (PrerecordedOptions oben ohne diarize), also die Basis-Variante.
+        try:
+            from services.cost_tracker import log_api_cost
+            _dauer_sek = getattr(getattr(response, 'metadata', None), 'duration', None)
+            if _dauer_sek:
+                log_api_cost('deepgram', 'nova-2-prerecorded',
+                             user_id=getattr(getattr(g, 'user', None), 'id', None),
+                             org_id=getattr(getattr(g, 'org', None), 'id', None),
+                             units=float(_dauer_sek) / 60.0, unit_type='per_minute',
+                             context_tag='training_stt', call_site='training_transcribe')
+            else:
+                print('[CostHook] training stt: response.metadata.duration fehlt — '
+                      'nicht geloggt (keine Schaetzung aus der Blob-Groesse)')
+        except Exception as _e:
+            print(f"[CostHook] training stt skipped: {_e}")
+        # ─────────────────────────────────────────────────────────────────────────────
+
         transcript = response.results.channels[0].alternatives[0].transcript
         return jsonify({'ok': True, 'text': transcript})
     except Exception as e:
@@ -963,6 +989,32 @@ Antworte NUR als valides JSON:
             max_tokens=1200,
             messages=[{"role": "user", "content": prompt}]
         )
+
+        # ── KOSTEN-1 R2.4 Cost-Hook (Muster: claude_service.py:542-568) ──────────────
+        # POSITION: direkt nach dem Call. Darunter liegt ein `return jsonify(...), 500`
+        # fuer den Fall "kein JSON in der Antwort" — der Call ist da laengst bezahlt.
+        # ATTRIBUTION: Request-Kontext mit @login_required -> g.user/g.org liegen an.
+        try:
+            from services.cost_tracker import log_api_cost, normalize_model_name
+            _u = getattr(response, 'usage', None)
+            if _u is not None:
+                _m = normalize_model_name(config.MODEL_TRAINING_PREVIEW)
+                _uid = getattr(getattr(g, 'user', None), 'id', None)
+                _oid = getattr(getattr(g, 'org', None), 'id', None)
+                for _units, _unit_type in (
+                    ((getattr(_u, 'input_tokens', 0) or 0) / 1000.0, 'per_1k_input_tokens'),
+                    ((getattr(_u, 'output_tokens', 0) or 0) / 1000.0, 'per_1k_output_tokens'),
+                    ((getattr(_u, 'cache_read_input_tokens', 0) or 0) / 1000.0, 'per_1k_cache_read_tokens'),
+                    ((getattr(_u, 'cache_creation_input_tokens', 0) or 0) / 1000.0, 'per_1k_cache_write_tokens'),
+                ):
+                    if _units > 0:
+                        log_api_cost('anthropic', _m, user_id=_uid, org_id=_oid,
+                                     units=_units, unit_type=_unit_type,
+                                     context_tag='training_preview', call_site='api_training_personality_generate')
+        except Exception as _e:
+            print(f"[CostHook] training preview skipped: {_e}")
+        # ─────────────────────────────────────────────────────────────────────────────
+
         text = response.content[0].text.strip()
         start = text.find('{')
         end   = text.rfind('}') + 1
