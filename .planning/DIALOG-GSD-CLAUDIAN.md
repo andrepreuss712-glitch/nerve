@@ -236,3 +236,20 @@ altem Code weiter und die ganze Plan-03-Arbeit ist unsichtbar.
 4. `inspect.sh logs-errors` → kein `[CostTracker] no active ApiRate`, kein Import-Fehler im
    nerve_rt-Log.
 
+
+---
+
+## ★ ANDRÉ-VORGABE — 2026-07-20 (für die Stripe-Arbeit in AUTH-3, NICHT jetzt)
+
+**„Die Stripe-Kosten sollten wir auch so genau wie möglich tracken."**
+
+Ist-Stand nach KOSTEN-1 R2.8: wir buchen das **Modell** (1,4 % + 0,25 €), nicht die real abgezogene
+Gebühr. Bei aktivem Radar/abweichenden Kartentypen liegt die echte Gebühr **höher** → wir unter-
+berichten dort leicht. Das ist dieselbe Klasse, die KOSTEN-1 gerade behoben hat, deshalb Vorgabe:
+
+**Wenn Stripe in AUTH-3 live geht, wird die ECHTE Gebühr geloggt, nicht das Modell.** Weg: pro Zahlung
+die `BalanceTransaction` des Charges holen (`fee`/`fee_details` = tatsächlich abgezogen, inkl. Radar
+und Payout-Anteilen) und diesen Betrag buchen statt der Formel. Kostet einen zusätzlichen API-Call je
+Zahlung — bei EA-Volumen vernachlässigbar, und es ist die einzige Zahl, die stimmt.
+
+Bis dahin bleibt die Modell-Rechnung als Näherung stehen (bewusst, dokumentiert, nicht still).
