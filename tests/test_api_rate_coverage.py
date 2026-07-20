@@ -96,6 +96,14 @@ def _known_non_literal_triples() -> set[tuple[str, str, str]]:
     _add_tokens('sonnet-4-5')
     _add_tokens('haiku-4-5')
 
+    # deepgram_service.py:497 (KOSTEN-1 R1) — der Modellname haengt am Modus, weil
+    # Deepgram-Diarization ein Add-on ist (+$0.0020/min) und wir sie nur im Meeting
+    # einschalten (`diarize=is_meeting`, :457). Der Literal-Sweep sieht den Ausdruck
+    # `'nova-3-diarize' if _mode == 'meeting' else 'nova-3'` NICHT — deshalb hier explizit.
+    # Faellt eine der beiden Raten weg, werden die STT-Minuten dieses Modus still verworfen.
+    triples.add(('deepgram', 'nova-3', 'per_minute'))
+    triples.add(('deepgram', 'nova-3-diarize', 'per_minute'))
+
     return triples
 
 

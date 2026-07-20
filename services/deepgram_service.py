@@ -494,7 +494,16 @@ def _close_deepgram_connection(sid):
         from services.cost_tracker import log_api_cost
         minutes = stt_sek / 60.0
         if minutes > 0.01:  # keine Artefakt-Rows fuer Sub-Sekunden
-            log_api_cost('deepgram', 'nova-3', user_id=None,
+            # KOSTEN-1 R1: Diarization ist bei Deepgram ein ADD-ON (+$0.0020/min), NICHT im
+            # Minutenpreis enthalten. Wir schalten sie konditional (`diarize=is_meeting`,
+            # :457) -> eigener Modell-String pro Modus, damit der Cold-Call (Mehrheitsfall)
+            # nicht pauschal 26% zu teuer gerechnet wird. mode-Quelle EINHEITLICH per-SID
+            # (_session_state[sid]['mode'], gesetzt :580); der Bucket lebt hier noch, weil
+            # beide Aufrufer erst _close_deepgram_connection und DANN stash_ended_session
+            # rufen (:803 / :842). Kein State -> 'cold_call' (dann sind auch keine Minuten da).
+            _mode = (ls._session_state.get(sid) or {}).get('mode', 'cold_call')
+            _dg_model = 'nova-3-diarize' if _mode == 'meeting' else 'nova-3'
+            log_api_cost('deepgram', _dg_model, user_id=None,
                          units=minutes, unit_type='per_minute',
                          session_id=str(sid), context_tag='stt')
     except Exception as _e:
