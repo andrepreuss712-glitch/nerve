@@ -17,9 +17,19 @@ BEWUSSTE GRENZEN (Fable/Gemini, verbindlich — NICHT "verbessern"):
 - **Jeder Allowlist-Eintrag braucht einen Grund im Kommentar.** Ein unkommentierter Eintrag ist
   selbst ein Fehler — sonst wird die Allowlist die Hintertuer, die den Waechter aushoehlt.
 
-Dieser Test ist ERST-ROT gebaut: gegen den Stand vor R2/R3 meldet er judge_runner, adoption_runner,
-outcome_service, routes/training.py, coaching_service, precall_service, routes/payments.py und die
-beiden nerve_rt-Adapter.
+★ KORREKTUR 2026-07-20 (beim Bau von Plan 02 aufgefallen): der urspruengliche Docstring behauptete,
+dieser Waechter melde AUCH coaching_service, precall_service und routes/payments.py. Nachgemessen
+tut er das NICHT und kann es strukturell nicht:
+  * `coaching_service.py` und `precall_service.py` enthalten bereits an ANDERER Stelle ein
+    `log_api_cost` -> Datei-Granularitaet sieht sie als versorgt, obwohl `validate_user_text` bzw.
+    `_brave_search` ungebucht sind.
+  * `routes/payments.py` ruft die Stripe-API und trifft damit KEINES der Anthropic/Deepgram-Muster.
+Nachgemessene ERST-ROT-Liste von Stufe 1: judge_runner, adoption_runner, outcome_service,
+routes/training.py + die beiden nerve_rt-Adapter (letztere gehoeren zu Plan 03).
+Damit die drei uebersehenen Sites nicht ungeschuetzt bleiben, gibt es Stufe 2 (`_PFLICHT_SITES`):
+eine explizite, kommentierte Liste (Datei, Funktion), deren Funktions-Textblock ein `log_api_cost`
+enthalten muss. Reine Text-Schnitte von `def` bis zum naechsten `def` gleicher Einrueckung —
+weiterhin KEIN AST.
 """
 from __future__ import annotations
 
@@ -91,6 +101,64 @@ def test_allowlist_entries_are_justified():
     unjustified = [f for f, reason in ALLOWLIST.items() if len((reason or '').strip()) < 20]
     assert not unjustified, (
         "Allowlist-Eintraege ohne belastbare Begruendung: " + ', '.join(unjustified)
+    )
+
+
+# ── Stufe 2: die Sites, an denen Datei-Granularitaet strukturell blind ist ──────────────────
+# Jede Zeile ist eine bewusste Pflege-Entscheidung: (Datei, Funktion, Grund).
+PFLICHT_SITES: tuple[tuple[str, str, str], ...] = (
+    ('services/coaching_service.py', 'validate_user_text',
+     'Eigener Anthropic-Call. Die Datei loggt nur im Postcall-Coach-Pfad -> Stufe 1 haelt sie '
+     'faelschlich fuer versorgt.'),
+    ('services/precall_service.py', '_brave_search',
+     'Brave kostet seit dem Wegfall des Free-Tiers (02/2026) Geld. Die Datei loggt sonst nur '
+     'ihre Anthropic-Calls -> Stufe 1 blind.'),
+    ('routes/payments.py', '_record_revenue',
+     'Stripe-Gebuehren (percent + fixed_per_tx) sind echte Kosten je Zahlung. Die Stripe-API '
+     'trifft KEIN Muster aus PAID_CALL_PATTERNS -> Stufe 1 sieht die Datei gar nicht erst an.'),
+    ('routes/training.py', 'training_transcribe',
+     'Deepgram-Prerecorded fuer die Trainings-Transkription — eigener Preis (Batch != Streaming).'),
+)
+
+
+def _function_block(src: str, funktion: str) -> str | None:
+    """Textblock einer Funktion: von ihrem `def` bis zum naechsten `def` gleicher Einrueckung.
+
+    Bewusst Text-Schnitte statt AST (Stolperdraht-Disziplin). Ungenau bei verschachtelten
+    Funktionen — reicht fuer die Frage "steht in dieser Funktion ueberhaupt ein Hook?".
+    """
+    treffer = re.search(rf"^([ \t]*)def\s+{re.escape(funktion)}\s*\(", src, re.MULTILINE)
+    if not treffer:
+        return None
+    einrueckung = treffer.group(1)
+    rest = src[treffer.end():]
+    naechste = re.search(rf"^{einrueckung}def\s+\w+\s*\(", rest, re.MULTILINE)
+    return rest[:naechste.start()] if naechste else rest
+
+
+def test_bekannte_pflicht_sites_buchen_ihre_kosten():
+    """Stufe 2 — die Faelle, die Datei-Granularitaet strukturell nicht sehen kann."""
+    fehlend, verschwunden = [], []
+    for datei, funktion, _grund in PFLICHT_SITES:
+        pfad = REPO_ROOT / datei
+        if not pfad.exists():
+            verschwunden.append(f"{datei} (Datei fehlt)")
+            continue
+        block = _function_block(pfad.read_text(encoding='utf-8'), funktion)
+        if block is None:
+            verschwunden.append(f"{datei}::{funktion}")
+        elif not _HOOK_RE.search(block):
+            fehlend.append(f"{datei}::{funktion}")
+
+    assert not verschwunden, (
+        "Diese Pflicht-Sites gibt es nicht mehr (umbenannt/geloescht). Das ist KEIN Erfolg — der "
+        "Eintrag zeigt ins Leere und prueft nichts mehr, sieht aber gruen aus. Nachziehen oder "
+        "streichen:\n  " + "\n  ".join(verschwunden)
+    )
+    assert not fehlend, (
+        "Bezahlte Call-Sites ohne Kosten-Hook (die Datei loggt anderswo, diese Funktion nicht):\n  "
+        + "\n  ".join(fehlend)
+        + "\n\nFix: Hook nach dem Muster claude_service.py:542-568 ergaenzen."
     )
 
 
