@@ -167,6 +167,40 @@ def classify(conv_data: dict) -> dict:
             system=SYSTEM_PROMPT,
             messages=[{'role': 'user', 'content': prompt}],
         )
+
+        # ── KOSTEN-1 R2.3 Cost-Hook (Muster: claude_service.py:542-568) ──────────────
+        # POSITION: direkt nach dem Call. Darunter folgen JSON-Parsing und mehrere
+        # Ausstiege (`return {'outcome': 'unknown'...}`) — der bezahlte Haiku-Call ist
+        # aber unabhaengig davon schon bezahlt.
+        # ATTRIBUTION: `conv_data` traegt weder user_id noch org_id (grep-belegt:
+        # routes/learning.py:71 + :240 bauen das Dict). Beide Aufrufer sind Request-Routen,
+        # also gibt es `g` — aber defensiv geprueft statt angenommen, damit ein kuenftiger
+        # Hintergrund-Aufrufer hier keinen RuntimeError kassiert (nur die Attribution
+        # faellt dann auf None zurueck).
+        try:
+            from flask import g, has_request_context
+            from services.cost_tracker import log_api_cost, normalize_model_name
+            _u = getattr(response, 'usage', None)
+            if _u is not None:
+                _uid = _oid = None
+                if has_request_context():
+                    _uid = getattr(getattr(g, 'user', None), 'id', None)
+                    _oid = getattr(getattr(g, 'org', None), 'id', None)
+                _m = normalize_model_name(_HAIKU_MODEL)
+                for _units, _unit_type in (
+                    ((getattr(_u, 'input_tokens', 0) or 0) / 1000.0, 'per_1k_input_tokens'),
+                    ((getattr(_u, 'output_tokens', 0) or 0) / 1000.0, 'per_1k_output_tokens'),
+                    ((getattr(_u, 'cache_read_input_tokens', 0) or 0) / 1000.0, 'per_1k_cache_read_tokens'),
+                    ((getattr(_u, 'cache_creation_input_tokens', 0) or 0) / 1000.0, 'per_1k_cache_write_tokens'),
+                ):
+                    if _units > 0:
+                        log_api_cost('anthropic', _m, user_id=_uid, org_id=_oid,
+                                     units=_units, unit_type=_unit_type,
+                                     context_tag='outcome', call_site='outcome_classify')
+        except Exception as _e:
+            print(f"[CostHook] outcome skipped: {_e}")
+        # ─────────────────────────────────────────────────────────────────────────────
+
         raw = response.content[0].text.strip()
         # Markdown-Code-Fence Defense
         if raw.startswith('```'):
