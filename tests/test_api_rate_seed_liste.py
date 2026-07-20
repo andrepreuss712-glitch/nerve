@@ -1,100 +1,94 @@
-"""Phase 08.14 — Regression: ApiRate-Seed auf fresh in-memory-SQLite.
+"""Phase 08.23.2.KOSTEN-1 R1b — Invarianten der EINEN Rate-Seed-Liste (`app._API_RATE_SOLL`).
 
-Bug: INSERT fehlte last_checked_at -> NOT NULL constraint failed auf jeder fresh DB.
-Fix: last_checked_at=datetime.utcnow() im INSERT ergaenzt.
+HERKUNFT (Stale-Test-Retarget, Punkt 18 / AUTH-2-Lehre):
+Diese Datei hiess `test_08_14_apirate_seed.py` und spiegelte den Phase-08.14-Seed als **Kopie**:
+sie baute eine eigene `SEED_ROWS`-Liste, schrieb sie mit eigenem Raw-SQL in eine in-memory-SQLite
+und pruefte danach ihre eigenen Zeilen. Damit haette sie auch dann gruen gemeldet, wenn der echte
+Seed geloescht wird — was in KOSTEN-1 R1b genau passiert ist (der 08.14-Block lag in `_migrate()`
+und war auf Postgres ohnehin tot, siehe app.py-Kommentar an der Fundstelle). Ein Test, der eine
+Vertrags-Aenderung nicht bemerkt, prueft nichts mehr; deshalb ist er hier auf den **neuen** Vertrag
+retargetet statt geloescht oder gruengemacht zu werden.
 
-Testet Runtime-Verhalten (echte SQLite-Writes), keine Source-Presence-Checks.
+WAS HIER GEPRUEFT WIRD: die Liste selbst, denn sie ist ab R1b die einzige Quelle der Preise.
+Ihre Struktur-Fehler sind genau die, die im Betrieb still weh tun:
+  * ein doppeltes Tripel -> `uix_api_rate_active` laesst nur eines aktiv werden, das zweite
+    kollidiert beim Seed und wird uebersprungen (Preis bleibt still der falsche).
+  * ein Preis <= 0 -> der Call wird zwar geloggt, aber mit 0 Kosten (unsichtbar wie ein Skip).
+  * Waehrungs-/Tippfehler -> `api_rates.currency` ist VARCHAR(3).
+Der Abgleich "wird jedes geloggte Tripel wirklich bepreist?" gehoert NICHT hierher — den macht
+`tests/test_api_rate_coverage.py` gegen die echte, geseedete Postgres-Tabelle (real-PG).
+
+Kein DB-Zugriff, keine Writes -> nichts aufzuraeumen (PGTEST-Cleanup-Regel n/a).
 """
-import pytest
-from datetime import datetime
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
+from __future__ import annotations
+
+from collections import Counter
+from decimal import Decimal
 
 
-@pytest.fixture(scope='module')
-def fresh_engine():
-    """In-memory SQLite mit NUR der public api_rates-Tabelle, frisch erstellt.
-
-    Phase 08.23.2.PGTEST Task 3 (Option B): frueher `Base.metadata.create_all(engine)` — das baute
-    ALLE Tabellen inkl. crm.*/training.* und funktionierte nur, weil der globale cf5de6d-ATTACH-
-    Listener crm/training auf jede SQLite-Verbindung ATTACHed. Dieser Listener ist in Plan 03 Task 1
-    entfernt -> `Base.metadata.create_all` wuerde jetzt "unknown database crm" werfen. ApiRate ist
-    eine PUBLIC-Tabelle (models.py: __tablename__='api_rates', KEIN {'schema':'crm'}), daher baut
-    `ApiRate.__table__.create(engine)` NUR die public api_rates-Tabelle -> kein crm/training, DSN-
-    unabhaengig (laeuft im Gate UND lokal, in-memory SQLite, nicht geskippt). Echte NOT-NULL-
-    last_checked_at-Runtime-Regression bleibt intakt."""
-    from database.models import ApiRate
-    engine = create_engine('sqlite:///:memory:')
-    ApiRate.__table__.create(engine)
-    return engine
+def _soll():
+    """Import erst im Test: `app` bootet beim Import die Flask-App (Seeder inklusive)."""
+    from app import _API_RATE_SOLL
+    return _API_RATE_SOLL
 
 
-SEED_ROWS = [
-    ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_input_tokens',       0.003,   'USD'),
-    ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_output_tokens',      0.015,   'USD'),
-    ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_cache_read_tokens',  0.0003,  'USD'),
-    ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_cache_write_tokens', 0.00375, 'USD'),
-    ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_input_tokens',       0.00025, 'USD'),
-    ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_output_tokens',      0.00125, 'USD'),
-    ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_cache_read_tokens',  0.000025,'USD'),
-    ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_cache_write_tokens', 0.0003,  'USD'),
-]
+def test_liste_ist_nicht_leer():
+    """Eine leere Liste wuerde jeden Coverage-Check trivial gruen machen."""
+    assert len(_soll()) >= 20, (
+        "Die Rate-Soll-Liste ist verdaechtig kurz — nach R1 stehen dort alle Anthropic-Token-"
+        "Einheiten, die Deepgram-Minuten-Varianten und die uebrigen Provider."
+    )
 
 
-class TestApiRateSeed:
-    def test_seed_inserts_8_rows(self, fresh_engine):
-        """Seed-Logik schreibt exakt 8 Rows in eine leere api_rates-Tabelle."""
-        now = datetime.utcnow()
-        with fresh_engine.connect() as conn:
-            for provider, model, unit, price, currency in SEED_ROWS:
-                conn.execute(
-                    text(
-                        "INSERT INTO api_rates "
-                        "(provider, model, unit_type, price_per_unit, currency, active, source_url, last_checked_at, created_at) "
-                        "VALUES (:p,:m,:u,:price,:cur,1,'seed:test',:now,:now)"
-                    ),
-                    {'p': provider, 'm': model, 'u': unit, 'price': price, 'cur': currency, 'now': now}
-                )
-            conn.commit()
-            count = conn.execute(text("SELECT COUNT(*) FROM api_rates")).scalar()
-        assert count == 8
+def test_keine_doppelten_tripel():
+    """(provider, model, unit_type) muss eindeutig sein — sonst kollidiert der Seed am UNIQUE.
 
-    def test_seed_rows_have_last_checked_at(self, fresh_engine):
-        """Alle Seed-Rows haben last_checked_at != NULL (war der Bug)."""
-        with fresh_engine.connect() as conn:
-            null_count = conn.execute(
-                text("SELECT COUNT(*) FROM api_rates WHERE last_checked_at IS NULL")
-            ).scalar()
-        assert null_count == 0, f"{null_count} Rows haben last_checked_at=NULL"
+    uix_api_rate_active = UNIQUE(provider, model, unit_type, active): ein zweites Vorkommen
+    desselben Tripels kann nicht zusaetzlich aktiv werden. Der Seed faengt den IntegrityError ab
+    und macht weiter — der Preis der zweiten Zeile landet also NIE in der DB, ohne dass etwas
+    rot wird. Genau diese Stille faengt dieser Test frueher ab.
+    """
+    tripel = [(p, m, u) for p, m, u, _price, _cur in _soll()]
+    doppelt = [t for t, n in Counter(tripel).items() if n > 1]
+    assert not doppelt, (
+        "Doppelte Tripel in _API_RATE_SOLL — nur das erste wird geseedet:\n  "
+        + "\n  ".join(f"{p}/{m}/{u}" for p, m, u in sorted(doppelt))
+    )
 
-    def test_seed_idempotent_no_duplicates(self, fresh_engine):
-        """Zweiter Seed-Lauf fuegt keine Duplikate ein (existing-Row-Check greift)."""
-        now = datetime.utcnow()
-        with fresh_engine.connect() as conn:
-            for provider, model, unit, price, currency in SEED_ROWS:
-                exists = conn.execute(
-                    text("SELECT 1 FROM api_rates WHERE provider=:p AND model=:m AND unit_type=:u AND active=1"),
-                    {'p': provider, 'm': model, 'u': unit}
-                ).fetchone()
-                if not exists:
-                    conn.execute(
-                        text(
-                            "INSERT INTO api_rates "
-                            "(provider, model, unit_type, price_per_unit, currency, active, source_url, last_checked_at) "
-                            "VALUES (:p,:m,:u,:price,:cur,1,'seed:test',:now)"
-                        ),
-                        {'p': provider, 'm': model, 'u': unit, 'price': price, 'cur': currency, 'now': now}
-                    )
-            conn.commit()
-            count = conn.execute(text("SELECT COUNT(*) FROM api_rates")).scalar()
-        assert count == 8, f"Nach zweitem Seed-Lauf: {count} Rows statt 8 (Duplikat-Bug)"
 
-    def test_seed_sonnet_and_haiku_models_present(self, fresh_engine):
-        """Beide Models (sonnet-4-5 + haiku-4-5) sind nach Seed vorhanden."""
-        with fresh_engine.connect() as conn:
-            models = {
-                row[0] for row in
-                conn.execute(text("SELECT DISTINCT model FROM api_rates")).fetchall()
-            }
-        assert 'claude-sonnet-4-5-20251022' in models
-        assert 'claude-haiku-4-5-20251001' in models
+def test_alle_preise_positiv():
+    """Ein 0-Preis loggt 0 Kosten — das ist so unsichtbar wie ein fehlender Eintrag.
+
+    Anlass: Brave stand zur Diskussion, mit 0.0 angelegt zu werden, weil es mal einen Free-Tier
+    gab. Der ist seit 02/2026 weg (Andre-Entscheid 2026-07-20) — ein 0-Preis waere ein zweites
+    stilles Loch gewesen, nur eines, das der Coverage-Waechter gruen meldet.
+    """
+    null_preise = [(p, m, u) for p, m, u, price, _cur in _soll() if Decimal(str(price)) <= 0]
+    assert not null_preise, (
+        "Preis <= 0 in _API_RATE_SOLL (loggt 0 Kosten statt echter):\n  "
+        + "\n  ".join(f"{p}/{m}/{u}" for p, m, u in null_preise)
+    )
+
+
+def test_waehrungen_sind_dreistellige_codes():
+    """`api_rates.currency` ist VARCHAR(3); alles andere wird beim Insert stumpf abgeschnitten."""
+    falsch = [(p, m, u, cur) for p, m, u, _price, cur in _soll()
+              if not (isinstance(cur, str) and len(cur) == 3 and cur.isupper())]
+    assert not falsch, f"Unzulaessige Waehrungs-Codes: {falsch}"
+
+
+def test_deepgram_diarize_variante_ist_teurer_als_basis():
+    """Diarization ist ein Add-on (+$0.0020/min), keine Alternative zum Basis-Preis.
+
+    Waere die `-diarize`-Zeile versehentlich gleich teuer oder billiger als die Basis-Zeile,
+    haette die Modus-Aufteilung aus `deepgram_service.py:497` keinen Zweck mehr — Meetings
+    wuerden wieder zu billig gerechnet, und zwar unauffaellig.
+    """
+    preise = {(p, m): Decimal(str(price)) for p, m, u, price, _cur in _soll() if u == 'per_minute'}
+    for basis in ('nova-3', 'nova-2'):
+        variante = f'{basis}-diarize'
+        assert ('deepgram', basis) in preise, f"deepgram/{basis}/per_minute fehlt in der Soll-Liste"
+        assert ('deepgram', variante) in preise, f"deepgram/{variante}/per_minute fehlt in der Soll-Liste"
+        assert preise[('deepgram', variante)] > preise[('deepgram', basis)], (
+            f"deepgram/{variante} ist nicht teurer als /{basis} — der Diarization-Aufpreis fehlt."
+        )
