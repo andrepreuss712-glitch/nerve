@@ -39,6 +39,36 @@ def _parse_period(period_str):
     return start, end
 
 
+# ── Phase 08.23.2.KOSTEN-1 ───────────────────────────────────────────────────────────
+# Ab diesem Tag ist die Kosten-Erfassung vollstaendig: Live-STT (nova-3) wird gebucht, die
+# Haiku-Preise stehen auf den echten 4.5-Werten, und die acht vorher ungehookten Call-Sites
+# loggen. ALLES DAVOR ist unvollstaendig — vor allem fehlt die minuten-getriebene
+# Hauptkostenposition, und Haiku war 4x zu niedrig bepreist. Die Marge aelterer Zeitraeume
+# sieht deshalb BESSER aus als sie war.
+# ★ D-02 (Finanzamt-Linie): alte api_cost_log-Zeilen werden NICHT rueckwirkend korrigiert.
+#   Die Vergangenheit wird MARKIERT, nicht umgeschrieben. Kein Backfill, keine Schaetzung.
+COST_DATA_COMPLETE_SINCE = date(2026, 7, 20)
+
+
+def _cost_skip_payload():
+    """KOSTEN-1 W3 — Skip-Zaehler fuers Founder-Dashboard aufbereiten.
+
+    Edge-Case 1 aus dem Plan: ein defekter Modellname in einer Schleife laesst die ANZAHL
+    schnell wachsen. Die Anzahl verschiedener TRIPEL bleibt klein — trotzdem wird die Anzeige
+    begrenzt, damit das Dashboard nie eine Endlosliste rendert.
+    """
+    try:
+        from services.cost_tracker import get_skip_counts
+        counts = get_skip_counts()
+    except Exception:
+        return {'total': 0, 'triples': []}
+    top = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:10]
+    return {
+        'total': sum(counts.values()),
+        'triples': [{'triple': k, 'count': v} for k, v in top],
+    }
+
+
 def _mrr_from_active_orgs(db):
     """MRR-Sum: Summe plan_preis aller active Organisationen.
     Fallback auf PLANS[plan]['preis'] wenn plan_preis nicht gesetzt."""
@@ -166,6 +196,12 @@ def api_overview():
                 'active_users': str(int(active_users)),
                 'gewinn_mo': f"{gewinn:,.2f} EUR".replace(',', '.'),
             },
+            # KOSTEN-1 W3: Laufzeit-Skip-Zaehler. Soll-Wert 0. Steht hier etwas anderes,
+            # verwirft cost_tracker gerade Kosten still — meist ein neuer Modell-String ohne
+            # Rate. Das ist der einzige Waechter, der ENV-/config-basierte Modellnamen faengt.
+            # Bewusste Grenze: der Zaehler lebt im RAM DIESES Prozesses (Gunicorn-Worker) —
+            # nerve-rt und weitere Worker zaehlen eigene Staende. Deshalb das Label "pro Prozess".
+            'cost_log_skips': _cost_skip_payload(),
             'mrr_costs_12m': {
                 'labels': labels_12m,
                 'mrr': mrr_12m,
@@ -586,7 +622,17 @@ def kunden_page():
             'warn':     sum(1 for r in out if r['status'] == 'warn'),
             'critical': sum(1 for r in out if r['status'] == 'critical'),
         }
-        return jsonify({'period': start.strftime('%Y-%m'), 'orgs': out, 'summary': summary})
+        return jsonify({
+            'period': start.strftime('%Y-%m'),
+            'orgs': out,
+            'summary': summary,
+            # KOSTEN-1 R5: Historie-Marker. Bedingung ist START < Stichtag, NICHT end — ein
+            # Zeitraum, der ueber den Stichtag HINWEG laeuft, ist teilweise unvollstaendig und
+            # muss den Hinweis genauso zeigen. Mit `end <` waere genau der Uebergangs-Monat
+            # stillschweigend als vollstaendig durchgegangen.
+            'cost_data_incomplete': start < COST_DATA_COMPLETE_SINCE,
+            'cost_data_complete_since': COST_DATA_COMPLETE_SINCE.strftime('%d.%m.%Y'),
+        })
     finally:
         db.close()
 

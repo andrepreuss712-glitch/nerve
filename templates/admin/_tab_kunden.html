@@ -1,5 +1,9 @@
 <div class="fcd-kunden">
   <h3>KUNDEN-PROFITABILITÄT — <span class="fcd-period-label"></span></h3>
+  {# KOSTEN-1 R5: Historie-Marker. Kosten vor dem Stichtag sind unvollstaendig erfasst —
+     die Marge aelterer Zeitraeume sieht besser aus als sie war. Wird MARKIERT, nicht
+     korrigiert (D-02, Finanzamt-Linie: alte Buchungen bleiben unangetastet). #}
+  <div id="fcd-kunden-historie" class="n-badge n-badge-warning" hidden></div>
   <div id="fcd-kunden-summary"></div>
   <table class="fcd-table">
     <thead><tr><th>Org</th><th>Plan</th><th>User</th><th>Umsatz</th><th>API-Kosten</th><th>Marge</th><th>Status</th><th></th></tr></thead>
@@ -18,6 +22,13 @@
     if (!r.ok) return;
     const d = await r.json();
     document.querySelectorAll('.fcd-period-label').forEach(e => e.textContent = d.period);
+    // KOSTEN-1 R5: Hinweis nur fuer Zeitraeume, die VOR dem Stichtag beginnen.
+    const hist = document.getElementById('fcd-kunden-historie');
+    if (hist) {
+      hist.hidden = !d.cost_data_incomplete;
+      hist.textContent = '⚠ Kosten vor ' + esc(d.cost_data_complete_since || '')
+        + ' unvollständig erfasst (Live-STT fehlte, Haiku 4× unterbewertet) — Marge zu optimistisch.';
+    }
     document.getElementById('fcd-kunden-summary').innerHTML =
       `<p>Gesund: <strong>${d.summary.healthy}</strong> | Warn: <strong>${d.summary.warn}</strong> | Kritisch: <strong>${d.summary.critical}</strong></p>`;
     document.getElementById('fcd-kunden-rows').innerHTML =

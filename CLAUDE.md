@@ -860,3 +860,25 @@ Quelle: `Nerve-Vault/CLAUDE.md` → „Fable-Audit-Lehren". Beleg-Fall: die per-
 **Regel:** Eine Migration/Refactor wird **fertig gemacht ODER der Rest wird im Foundation-Code-Register mit Aktivierungs-/Lösch-Trigger eingetragen** — kein halb-migrierter Zustand ohne Register. **Kern:** vor dem Kopieren eines bestehenden Musters/einer Funktion/einer Global prüfen, ob es das **ZIEL-Muster oder das ALT-Muster** ist — grep, ob die Vorlage einen Deprecated-Marker trägt. Nie ein deprecated Muster kopieren, weil es „noch da ist".
 
 **→ Wächter (Deploy-Gate, im selben Test wie Punkt 28 oder daneben):** jede als abgelöst markierte Global/Funktion bekommt einen `# DEPRECATED-GLOBAL`-Marker; der Test macht jeden NEUEN Schreib-Zugriff darauf rot (erzwingt „Migration fertig ODER registriert + geschrieben-verboten").
+
+## Punkt 30 — Neue bezahlte API / neues Modell = Kosten-Hook + ApiRate sind Pflicht (verankert 2026-07-20)
+
+Anlass: Phase 08.23.2.KOSTEN-1. Die Live-Spracherkennung loggte `nova-3`, die Preis-Tabelle kannte nur `nova-2` — `services/cost_tracker.py` verwirft in dem Fall **still** (`if not rate: print + return`). Ergebnis: die minuten-getriebene **Hauptkostenposition war monatelang unsichtbar**, dazu acht bezahlte Call-Sites ganz ohne Hook und Haiku-Preise 4× zu niedrig. Kein Fehler im Log, nur eine zu schöne Marge.
+
+**Die Regel:** Wer eine bezahlte API neu anbindet **oder einen Modell-String ändert**, liefert im selben Commit (a) den Kosten-Hook nach dem Muster `services/claude_service.py:542-568` (try/except, niemals raisen) und (b) den passenden Eintrag in der Rate-Soll-Liste `app._API_RATE_SOLL`. Ein Modellname ohne Rate ist kein „kleiner Rest" — er ist ein stilles Loch in der Marge.
+
+**Strukturell erzwungen durch drei Wächter — zwei zur Deploy-Zeit, einer zur Laufzeit:**
+
+| Wächter | Datei | fängt | Grenze |
+|---|---|---|---|
+| **W1** Raten-Abdeckung | `tests/test_api_rate_coverage.py` | geloggtes Tripel ohne aktive `ApiRate` (real-PG) | sieht nur String-Literale + die gepflegte Nicht-Literal-Liste |
+| **W2** Hook-Abdeckung | `tests/test_cost_hook_coverage.py` | bezahlter Call ohne `log_api_cost` (Stufe 1 Datei-, Stufe 2 Funktions-Granularität) | sieht keine Namens-Auflösung, sagt nichts über „feuert der Hook wirklich" |
+| **W3** Laufzeit-Skip-Zähler | `services/cost_tracker.py` + `tests/test_cost_skip_counter.py` | **jeden** Skip im Moment des Auftretens, egal woher der Modellname kam | RAM, pro Prozess, seit Deploy |
+
+W1/W2 sind statische Sweeps und können ENV-/config-basierte Modellnamen (`config.MODEL_*`, `MODEL_JUDGE`, `MODEL_ADOPTION`) grundsätzlich **nicht** sehen — genau dafür gibt es W3. Sein Zähler steht im Founder-Dashboard („Kosten-Log-Skips", Soll: **0**). Steht dort eine Zahl, ist das kein Schönheitsfehler, sondern der Hinweis auf das nächste unsichtbare Loch.
+
+**Bewusst NICHT gebaut:** keine Rate-Sync-Engine, die Preise von Anbieter-APIs zieht. Preispflege bleibt **manuell** (gepflegte Liste + Admin-UI `routes/admin_dashboard.py:393-442`). Und: alte `api_cost_log`-Zeilen werden **nie** rückwirkend korrigiert (D-02, Finanzamt-Linie) — unvollständige Zeiträume werden über `COST_DATA_COMPLETE_SINCE` **markiert**, nicht umgeschrieben.
+
+**Zwei Fallen, die diese Phase gekostet hat — beim nächsten Mal direkt mitprüfen:**
+- **Preis-Modell ≠ Preis-Liste:** Deepgram-Diarization ist ein Add-on (+$0.0020/min) und wird nur im Meeting-Modus geschaltet. Ein Preis pro `(provider, model, unit_type)` kann das nur abbilden, wenn der Modus **im Modell-String** steckt (`nova-3` vs. `nova-3-diarize`). Wo ein Anbieter Zusatzoptionen separat berechnet: eigener String statt Pauschale in die falsche Richtung.
+- **Zwei Pfade, ein Modell:** Haupt-App und `nerve_rt` fuhren unbemerkt verschiedene STT-Modelle. Dagegen wacht `tests/test_stt_model_parity.py`.

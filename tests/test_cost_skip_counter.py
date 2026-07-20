@@ -61,6 +61,9 @@ def test_successful_log_does_not_increment_counter(db_session):
     from database.models import ApiRate
     from services import cost_tracker
 
+    from database.models import ApiCostLog
+    from tests.conftest import cleanup_rows
+
     rate = (db_session.query(ApiRate)
             .filter_by(active=True)
             .first())
@@ -73,9 +76,19 @@ def test_successful_log_does_not_increment_counter(db_session):
         units=0.001, unit_type=rate.unit_type,
         context_tag='w3-selftest',
     )
-    assert cost_tracker.get_skip_counts() == {}, (
-        "Ein erfolgreicher Log hat den Skip-Zaehler erhoeht — der Alarm waere sofort unbrauchbar."
-    )
+    try:
+        assert cost_tracker.get_skip_counts() == {}, (
+            "Ein erfolgreicher Log hat den Skip-Zaehler erhoeht — der Alarm waere sofort unbrauchbar."
+        )
+    finally:
+        # PGTEST-Cleanup-Regel: dieser Test committet eine echte api_cost_log-Zeile
+        # (log_api_cost bringt seine EIGENE SessionLocal mit — der Rollback der Test-Session
+        # raeumt sie deshalb NICHT weg). Ohne dieses Teardown waechst die Baseline mit jedem
+        # Gate-Lauf und der Baseline-Waechter schlaegt zu Recht an.
+        ids = [r.id for r in db_session.query(ApiCostLog)
+               .filter(ApiCostLog.context_tag == 'w3-selftest').all()]
+        if ids:
+            cleanup_rows(db_session, {ApiCostLog: ids})
 
 
 def test_counter_holds_no_user_data(db_session):

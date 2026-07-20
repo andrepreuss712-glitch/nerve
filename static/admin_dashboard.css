@@ -96,7 +96,9 @@ html:has(.fcd-wrap) {
 /* ── KPI Cards ─────────────────────────────────────────────────────── */
 .fcd-kpi-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* KOSTEN-1 W3: 6 statt 5 Kacheln — die Skip-Kachel kam dazu. Ohne diese Zeile waere sie
+     als einzelne Kachel in eine zweite Zeile gerutscht. */
+  grid-template-columns: repeat(6, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -132,6 +134,16 @@ html:has(.fcd-wrap) {
 }
 .fcd-kpi .delta.up { color: #00D4AA; font-weight: 600; }
 .fcd-kpi .delta.down { color: #EF4444; font-weight: 600; }
+
+/* KOSTEN-1 W3 — Alarm-Zustand der Skip-Kachel (N > 0 heisst: es werden gerade still
+   Kosten verworfen). KEINE neue Farbe: #EF4444 ist die Warn-Farbe, die diese Datei
+   bereits fuer .delta.down nutzt. */
+.fcd-kpi.fcd-alarm {
+  border-color: #EF4444;
+  background: rgba(239, 68, 68, 0.04);
+}
+.fcd-kpi.fcd-alarm .value,
+.fcd-kpi.fcd-alarm .delta { color: #EF4444; font-weight: 600; }
 
 /* ── Chart Cards ───────────────────────────────────────────────────── */
 .fcd-chart-row {

@@ -9,6 +9,15 @@
     <div class="value" data-kpi="costs_mo">—</div>
     <div class="delta">API + Fixkosten</div>
   </div>
+  {# KOSTEN-1 W3: Laufzeit-Skip-Zaehler. Soll: 0. Steht hier eine Zahl, verwirft der
+     Kosten-Tracker gerade still Ausgaben (meist ein neuer Modell-String ohne ApiRate) —
+     der einzige Waechter, der ENV-/config-basierte Modellnamen faengt. Bewusst neben
+     "Kosten / Monat", weil er genau deren Vertrauenswuerdigkeit anzeigt. #}
+  <div class="fcd-kpi" id="fcd-kpi-skips">
+    <h3>Kosten-Log-Skips</h3>
+    <div class="value" data-kpi="cost_skips">—</div>
+    <div class="delta" id="fcd-skips-detail">seit Deploy, pro Prozess (Soll: 0)</div>
+  </div>
   <div class="fcd-kpi">
     <h3>Marge</h3>
     <div class="value" data-kpi="marge">—</div>

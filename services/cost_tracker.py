@@ -11,6 +11,53 @@ from __future__ import annotations
 from decimal import Decimal
 
 
+# ── Phase 08.23.2.KOSTEN-1 W3 — Laufzeit-Skip-Zaehler ────────────────────────────────────────
+# Der robusteste der drei Waechter: W1 (Raten-Abdeckung) und W2 (Hook-Abdeckung) sind statische
+# Sweeps und sehen nur String-Literale bzw. Aufruf-Muster. Unsere Modellnamen entstehen aber zur
+# Laufzeit aus ENV/config (config.MODEL_*, MODEL_JUDGE, MODEL_ADOPTION) — dieser Blindfleck ist
+# grep-technisch nicht schliessbar. Dieser Zaehler zaehlt JEDEN stillen Skip in dem Moment, in dem
+# er passiert, unabhaengig davon, woher der Name kam. Soll-Wert im Founder-Dashboard: 0.
+#
+# ★ Punkt 28 (kein globaler Live-Zustand) — BEWUSSTE, eng begruendete Ausnahme:
+#   Dieses Dict ist prozess-global, aber TENANT-NEUTRAL. Es haelt ausschliesslich
+#   Konfigurations-Defekte in der Form "provider/model/unit_type" -> Anzahl. Es nimmt NIEMALS
+#   user_id, org_id oder session_id auf (per Test festgenagelt:
+#   tests/test_cost_skip_counter.py::test_counter_holds_no_user_data). Damit faellt es unter die
+#   erlaubte Ausnahme "unveraenderliche Konstanten + tenant-neutrale Caches" — und steht deshalb
+#   mit Begruendung in der Whitelist des Global-Waechters, statt still durchzurutschen.
+#
+# GRENZEN, bewusst so:
+#   * RAM, keine DB-Spalte. Ein Neustart setzt ihn auf 0 zurueck — die Aussage ist "Skips seit
+#     Deploy". Wer Historie will, braucht eine eigene Tabelle: NICHT in dieser Phase.
+#   * Jeder Prozess (nerve, nerve-rt, Worker) zaehlt fuer sich. Deshalb traegt das Dashboard-Label
+#     "pro Prozess". Eine gemeinsame Zaehl-Infrastruktur waere genau das neue System, das der
+#     Bauplan verbietet.
+#   * Ein `dict[k] = dict.get(k,0)+1` aus mehreren Threads ist in CPython nicht atomar. Ein
+#     verlorenes Increment ist hier fachlich irrelevant — die Aussage ist "0 oder nicht 0", nicht
+#     die exakte Anzahl. Ein Lock waere Ueber-Engineering (Punkt 27).
+_skip_counts: dict[str, int] = {}
+_SKIP_KEYS_MAX = 200  # Deckel, falls ein Modellname je dynamisch entsteht (Speicher-Schutz)
+
+
+def get_skip_counts() -> dict[str, int]:
+    """Kopie des Skip-Zaehlers fuers Founder-Dashboard: {'provider/model/unit_type': anzahl}."""
+    return dict(_skip_counts)
+
+
+def reset_skip_counts() -> None:
+    """Zaehler leeren. Fuer Tests und einen bewussten Neu-Anfang nach einem Fix."""
+    _skip_counts.clear()
+
+
+def _count_skip(provider: str, model: str, unit_type: str) -> None:
+    key = f'{provider}/{model}/{unit_type}'
+    if key not in _skip_counts and len(_skip_counts) >= _SKIP_KEYS_MAX:
+        # Lieber die Anzahl bekannter Defekte deckeln als den Prozess-Speicher wachsen lassen.
+        # Dass ueberhaupt 200 verschiedene Tripel fehlschlagen, ist selbst schon der Alarm.
+        return
+    _skip_counts[key] = _skip_counts.get(key, 0) + 1
+
+
 def normalize_model_name(model: str | None) -> str:
     """Phase 08.23.2.KOSTEN-1 R2 — EINE Namens-Normalisierung fuer die Kosten-Hooks.
 
@@ -154,6 +201,9 @@ def log_api_cost(
                                  unit_type=unit_type, active=True)
                       .first())
             if not rate:
+                # W3: VOR dem return zaehlen — dahinter waere es toter Code (Interim-Position-
+                # Lehre 08.19.5.6.4.2). Das print bleibt fuers Log, der Zaehler macht es sichtbar.
+                _count_skip(provider, model, unit_type)
                 print(f"[CostTracker] no active ApiRate for "
                       f"{provider}/{model}/{unit_type} — skipping log")
                 return

@@ -40,6 +40,22 @@
       const key = el.dataset.kpi;
       if (data.kpis && data.kpis[key] !== undefined) el.textContent = data.kpis[key];
     });
+    // KOSTEN-1 W3: Skip-Zaehler. N > 0 ist ein ALARM-Zustand, keine Kennzahl — deshalb
+    // wechselt die Kachel sichtbar in den Warn-Zustand und nennt die verletzenden Tripel.
+    // Ohne das WAS (provider/model/unit_type) waere die Zahl nicht handlungsfaehig.
+    const skips = data.cost_log_skips;
+    if (skips) {
+      const kachel = document.getElementById('fcd-kpi-skips');
+      const wert   = document.querySelector('[data-kpi="cost_skips"]');
+      const detail = document.getElementById('fcd-skips-detail');
+      if (wert) wert.textContent = String(skips.total || 0);
+      if (kachel) kachel.classList.toggle('fcd-alarm', (skips.total || 0) > 0);
+      if (detail) {
+        detail.textContent = (skips.total || 0) > 0
+          ? (skips.triples || []).map(t => `${t.triple} (${t.count}x)`).join(' · ')
+          : 'seit Deploy, pro Prozess (Soll: 0)';
+      }
+    }
     if (data.mrr_costs_12m) FCD.renderMrrCosts(data.mrr_costs_12m);
     if (data.margin_12m) FCD.renderMarginChart(data.margin_12m);
   };
