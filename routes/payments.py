@@ -317,6 +317,48 @@ def _record_revenue(db, invoice_obj):
     db.commit()
     print(f"[Revenue] logged {invoice_id}: {netto_cents/100}EUR netto, {tax_treatment}, {country}")
 
+    # ── KOSTEN-1 R2.8 Stripe-Fee-Hook ───────────────────────────────────────────────
+    # POSITION: nach dem RevenueLog-Commit. Der Idempotenz-Riegel oben (UNIQUE
+    # stripe_invoice_id -> early return) schuetzt damit AUCH diesen Hook: ein wiederholt
+    # zugestelltes Webhook-Event bucht die Gebuehr nicht doppelt.
+    #
+    # ZWEI ZEILEN, weil Stripe zwei Komponenten berechnet und beide eigene Raten haben:
+    #   percent       (0.014)  -> units = Bruttobetrag in EUR
+    #   fixed_per_tx  (0.25)   -> units = 1 (eine Transaktion)
+    # Beide Raten sind in EUR hinterlegt; _get_current_fx_rate gibt fuer EUR 1.0 zurueck
+    # (cost_tracker.py:16-17 verifiziert) -> keine Kursumrechnung, kein FX-Rauschen.
+    #
+    # ⚠ DOKUMENTIERTE GRENZE (Gemini-Auflage "alle Fee-Typen"): das Invoice-Objekt traegt
+    # die tatsaechlich abgezogenen Gebuehren NICHT. Radar-, Payout- und
+    # Waehrungsumrechnungs-Gebuehren stehen erst auf der BalanceTransaction des Charges
+    # (charge -> balance_transaction.fee_details) und waeren nur ueber einen ZUSAETZLICHEN
+    # API-Call je Zahlung zu holen. Das ist hier bewusst NICHT gebaut (Fix-Block, kein
+    # neues System). Wir buchen also das MODELL (Prozent + Fixbetrag), nicht die
+    # Ist-Abrechnung — bei aktiviertem Radar liegt die reale Gebuehr hoeher.
+    # Genauer wuerde es nur mit dem BalanceTransaction-Abgleich; das ist ein eigener Brocken.
+    #
+    # ⚠ NAHT: AUTH-3 und METER fassen diese Datei ebenfalls an (_activate_subscription /
+    # _sync_subscription). Dieser Block beruehrt AUSSCHLIESSLICH _record_revenue.
+    try:
+        from services.cost_tracker import log_api_cost
+        if brutto_cents > 0 and currency == 'EUR':
+            log_api_cost('stripe', 'card', user_id=None, org_id=org_id,
+                         units=brutto_cents / 100.0, unit_type='percent',
+                         context_tag='stripe_fee', call_site='_record_revenue')
+            log_api_cost('stripe', 'card', user_id=None, org_id=org_id,
+                         units=1, unit_type='fixed_per_tx',
+                         context_tag='stripe_fee', call_site='_record_revenue')
+        elif brutto_cents <= 0:
+            print(f"[CostHook] stripe fee: Betrag 0 auf {invoice_id} — keine Gebuehren-Zeile")
+        else:
+            # Die hinterlegten Stripe-Raten sind EUR-basiert; bei fremder Waehrung waere
+            # die Prozent-Basis falsch. Lieber sichtbar nicht buchen als falsch buchen.
+            print(f"[CostHook] stripe fee: Waehrung {currency} != EUR auf {invoice_id} — "
+                  f"nicht geloggt (EUR-Raten passen nicht)")
+    except Exception as _e:
+        print(f"[CostHook] stripe fee skipped: {_e}")
+    # ─────────────────────────────────────────────────────────────────────────────────
+
 
 def _resolve_org_id(db, event):
     """Extract org_id from event metadata or customer lookup."""
