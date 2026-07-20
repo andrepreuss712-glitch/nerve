@@ -288,6 +288,32 @@ def run_adoption_judge(call, db) -> dict:
             tool_choice={'type': 'tool', 'name': 'record_adoption'},
         )
 
+        # ── KOSTEN-1 R2.2 Cost-Hook (Muster: claude_service.py:542-568) ──────────────
+        # POSITION wie im Judge-Runner: direkt nach dem Call, VOR dem Parsen — unten
+        # folgt ein `raise ValueError` (fehlender Tool-Use-Block) im except-Mantel.
+        # Der zweite Sonnet-Lauf pro Call; zusammen mit dem Judge die groesste bisher
+        # unsichtbare Position nach der Live-STT.
+        try:
+            from services.cost_tracker import log_api_cost, normalize_model_name, resolve_org_id_from_user
+            _u = getattr(response, 'usage', None)
+            if _u is not None:
+                _m = normalize_model_name(MODEL_ADOPTION)
+                _uid = getattr(call, 'user_id', None)
+                _oid = resolve_org_id_from_user(db, _uid)
+                for _units, _unit_type in (
+                    ((getattr(_u, 'input_tokens', 0) or 0) / 1000.0, 'per_1k_input_tokens'),
+                    ((getattr(_u, 'output_tokens', 0) or 0) / 1000.0, 'per_1k_output_tokens'),
+                    ((getattr(_u, 'cache_read_input_tokens', 0) or 0) / 1000.0, 'per_1k_cache_read_tokens'),
+                    ((getattr(_u, 'cache_creation_input_tokens', 0) or 0) / 1000.0, 'per_1k_cache_write_tokens'),
+                ):
+                    if _units > 0:
+                        log_api_cost('anthropic', _m, user_id=_uid, org_id=_oid,
+                                     units=_units, unit_type=_unit_type,
+                                     context_tag='adoption', call_site='run_adoption_judge')
+        except Exception as _e:
+            print(f"[CostHook] adoption skipped: {_e}")
+        # ─────────────────────────────────────────────────────────────────────────────
+
         # ── Parse: Tool-Use-Block extrahieren ─────────────────────────────────────────
         tool_input = None
         for block in response.content:
