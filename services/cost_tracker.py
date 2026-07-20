@@ -35,6 +35,29 @@ def normalize_model_name(model: str | None) -> str:
     return 'sonnet-4-5' if 'sonnet' in (model or '') else 'haiku-4-5'
 
 
+def resolve_org_id_from_user(db, user_id: int | None) -> int | None:
+    """Phase 08.23.2.KOSTEN-1 R2 — org_id ueber den User aufloesen (Nachlauf-Kontext).
+
+    Die Post-Call-Runner (Judge, Adoption) bekommen ein `call`-Objekt. `calls` traegt
+    `user_id` (Integer, NOT NULL) und `tenant_id` (UUID) — aber KEINE `org_id`, waehrend
+    `api_cost_log.org_id` ein Integer-FK auf `organisations.id` ist (Punkt 21: die Namen
+    sehen verwandt aus, die Schichten sind es nicht). Ohne diese Aufloesung blieben die
+    teuersten Zeilen (zwei Sonnet-Laeufe pro Call) org-los und faenden im
+    Kunden-Deckungsbeitrag (`compute_org_profitability`) nicht statt.
+
+    Laeuft auf der Session des Aufrufers (Nachlauf, kein Live-Pfad, Punkt 25 unkritisch).
+    Fehlschlag ist nie fatal: None -> die Zeile wird trotzdem geschrieben, nur ohne Org.
+    """
+    if not user_id:
+        return None
+    try:
+        from database.models import User
+        return db.query(User.org_id).filter(User.id == user_id).scalar()
+    except Exception as e:
+        print(f"[CostTracker] org_id-Aufloesung fuer user={user_id} fehlgeschlagen: {e}")
+        return None
+
+
 def _get_current_fx_rate(db, rate_currency: str) -> Decimal:
     """Liest den neuesten Kurs aus exchange_rates. Fallback 0.92 fuer USD_EUR."""
     if rate_currency == 'EUR':

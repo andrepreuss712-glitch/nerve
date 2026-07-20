@@ -389,6 +389,34 @@ def run_behavior_judge(call, events, db) -> dict:
             tool_choice={'type': 'tool', 'name': 'record_observations'},
         )
 
+        # ── KOSTEN-1 R2.1 Cost-Hook (Muster: claude_service.py:542-568) ─────────────────────
+        # POSITION: unmittelbar nach dem Call, VOR dem Parsen. Weiter unten steht ein
+        # `raise ValueError` (fehlender Tool-Use-Block) und darunter der except-Mantel — saesse
+        # der Hook dahinter, waere ein bezahlter Sonnet-Lauf bei jeder Parse-Panne unsichtbar.
+        # (Anker-Lehre: Interim-Position-Bug 08.19.5.6.4.2 — Code hinter zwei returns war tot.)
+        # ATTRIBUTION: Nachlauf-Kontext, kein Flask `g`. user_id kommt aus dem Call-Objekt
+        # (calls.user_id, NOT NULL); org_id hat der Call nicht -> ueber den User aufgeloest.
+        try:
+            from services.cost_tracker import log_api_cost, normalize_model_name, resolve_org_id_from_user
+            _u = getattr(response, 'usage', None)
+            if _u is not None:
+                _m = normalize_model_name(MODEL_JUDGE)
+                _uid = getattr(call, 'user_id', None)
+                _oid = resolve_org_id_from_user(db, _uid)
+                for _units, _unit_type in (
+                    ((getattr(_u, 'input_tokens', 0) or 0) / 1000.0, 'per_1k_input_tokens'),
+                    ((getattr(_u, 'output_tokens', 0) or 0) / 1000.0, 'per_1k_output_tokens'),
+                    ((getattr(_u, 'cache_read_input_tokens', 0) or 0) / 1000.0, 'per_1k_cache_read_tokens'),
+                    ((getattr(_u, 'cache_creation_input_tokens', 0) or 0) / 1000.0, 'per_1k_cache_write_tokens'),
+                ):
+                    if _units > 0:
+                        log_api_cost('anthropic', _m, user_id=_uid, org_id=_oid,
+                                     units=_units, unit_type=_unit_type,
+                                     context_tag='judge', call_site='run_behavior_judge')
+        except Exception as _e:
+            print(f"[CostHook] judge skipped: {_e}")
+        # ───────────────────────────────────────────────────────────────────────────────────
+
         # ── Parse: Tool-Use-Block extrahieren ───────────────────────────────────────────────
         tool_input = None
         for block in response.content:
