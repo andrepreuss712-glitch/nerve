@@ -22,10 +22,10 @@ logger = logging.getLogger("nerve_rt.stt.deepgram")
 
 
 class DeepgramAdapter(STTProvider):
-    """Deepgram Nova-2 adapter via asyncwebsocket.
+    """Deepgram Nova-3 adapter via asyncwebsocket.
 
     Adapter-internal config (NOT exposed to interface):
-    - model: nova-2
+    - model: nova-3 (KOSTEN-1 R3.1: war nova-2 -> Drift zur Haupt-App beseitigt)
     - smart_format: True for cold_call, False for meeting
     - utterance_end_ms: 1000 for meeting mode only
     - encoding: linear16, sample_rate: 16000
@@ -38,7 +38,7 @@ class DeepgramAdapter(STTProvider):
 
     @property
     def provider_name(self) -> str:
-        return "deepgram-nova-2"
+        return "deepgram-nova-3"
 
     async def connect(
         self,
@@ -52,8 +52,29 @@ class DeepgramAdapter(STTProvider):
         """
         conn = self._client.listen.asyncwebsocket.v("1")
 
+        # KOSTEN-1 R3.1: STT-Sekunden pro Session akkumulieren (Spiegel des Flask-Musters
+        # services/deepgram_service.py:158-160). Der Zaehler haengt an DIESER Verbindung —
+        # `connect()` laeuft einmal pro Session, also ist er per-Session gekeyt, ohne ein
+        # modul-globales Dict (Punkt 28: kein globaler Live-Zustand fuer pro-Nutzer-Daten;
+        # zwei parallele Calls duerfen ihre Minuten NIE vermischen).
+        # Gelesen wird er beim Session-Ende in session_manager.handle_session (finally-Zweig).
+        # ★ METER-NAHT: METER R6 speist `live_minutes_used` aus DENSELBEN Sekunden — die
+        #   Variable gehoert KOSTEN-1, der Zaehler-Sync gehoert METER. Wichtig fuer METER
+        #   (Punkt 26): der Wert ist erst bei SESSION-ENDE vollstaendig, nicht waehrenddessen.
+        conn._nerve_stt_seconds = 0.0
+
         # Register transcript callback — wraps Deepgram event into TranscriptResult
         async def _on_message(self_dg, result, **kwargs):
+            try:
+                # KOSTEN-1 R3.1: VOR dem Text-Filter — Deepgram berechnet auch Audio ohne
+                # erkannten Text. Ein `return` bei leerem Transkript (gleich darunter) wuerde
+                # sonst genau diese bezahlten Sekunden verschlucken.
+                _dur = getattr(getattr(result, "metadata", None), "duration", 0.0) or 0.0
+                if _dur > 0:
+                    conn._nerve_stt_seconds = getattr(conn, "_nerve_stt_seconds", 0.0) + _dur
+            except Exception as _e:  # pragma: no cover - defensiv, nie fatal
+                logger.warning("[DG] Sekunden-Akkumulation fehlgeschlagen: %s", _e)
+
             try:
                 alt = result.channel.alternatives[0]
                 text = alt.transcript
@@ -96,7 +117,13 @@ class DeepgramAdapter(STTProvider):
 
         # Build LiveOptions — adapter internals, not interface concerns
         options_dict = {
-            "model": "nova-2",
+            # KOSTEN-1 R3.1 (Andre-Freigabe 2026-07-20, Weg A): war "nova-2", waehrend die
+            # Haupt-App nova-3 faehrt (services/deepgram_service.py:451). Zwei Live-STT-Pfade
+            # mit verschiedenen Modellen heissen: verschiedene Preise, verschiedene Qualitaet —
+            # und der Kosten-Log haette ein Modell behauptet, das gar nicht lief. Der Pfad ist
+            # noch NICHT live, die Umstellung also risikofrei. Gegen Rueckfall wacht
+            # tests/test_stt_model_parity.py.
+            "model": "nova-3",
             "language": language,
             "smart_format": (mode != "meeting"),
             "interim_results": True,

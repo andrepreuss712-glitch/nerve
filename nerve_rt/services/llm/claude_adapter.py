@@ -32,6 +32,49 @@ class ClaudeAdapter(LLMProvider):
     def model_id(self) -> str:
         return self.MODEL
 
+    def _log_cost_async(self, input: AnalysisInput, posten, latency_ms: int) -> None:
+        """KOSTEN-1 R3.2 — Kosten-Zeilen schreiben, OHNE den Event-Loop zu blockieren.
+
+        Feuern und vergessen: der Aufrufer wartet nicht. Ein Kosten-Log darf eine
+        Live-Antwort niemals verzoegern (Punkt 25) und niemals brechen (`log_api_cost`
+        raist ohnehin nie, cost_tracker.py:91/142).
+
+        Modell-String ist `self.MODEL` = die Voll-ID; deren Raten hat Plan 01 auf die
+        echten 4.5-Preise korrigiert (sie standen 4x zu niedrig).
+        """
+        def _sync() -> None:
+            try:
+                from database.db import SessionLocal
+                from services.cost_tracker import log_api_cost, resolve_org_id_from_user
+
+                org_id = None
+                if input.user_id:
+                    db = SessionLocal()
+                    try:
+                        org_id = resolve_org_id_from_user(db, input.user_id)
+                    finally:
+                        try:
+                            db.close()
+                        except Exception:
+                            pass
+
+                for units, unit_type in posten:
+                    if units > 0:
+                        log_api_cost("anthropic", self.MODEL,
+                                     user_id=input.user_id, org_id=org_id,
+                                     units=units, unit_type=unit_type,
+                                     session_id=str(input.session_id or "") or None,
+                                     context_tag="live_rt", latency_ms=latency_ms,
+                                     call_site="nerve_rt.claude_adapter")
+            except Exception as e:
+                logger.error("[Cost] nerve_rt LLM-Log fehlgeschlagen: %s", e)
+
+        try:
+            import asyncio
+            asyncio.get_running_loop().run_in_executor(None, _sync)
+        except Exception as e:  # pragma: no cover - defensiv
+            logger.error("[Cost] nerve_rt LLM-Log nicht startbar: %s", e)
+
     async def analyse(self, input: AnalysisInput) -> AnalysisResult:
         """Call Claude Haiku for objection detection and coaching.
 
@@ -59,6 +102,33 @@ class ClaudeAdapter(LLMProvider):
             )
 
             latency_ms = (time.monotonic() - t0) * 1000
+
+            # ── KOSTEN-1 R3.2 Cost-Hook ──────────────────────────────────────────────
+            # `msg.usage` wurde hier bisher NIRGENDS gelesen — die Live-LLM-Kosten von
+            # nerve_rt existierten schlicht nicht.
+            #
+            # ★ LATENZ (Punkt 25, HART): `analyse()` ist die schnelle Live-Bahn. Der
+            #   Kosten-Log macht einen DB-Roundtrip und ist synchron — direkt aufgerufen
+            #   wuerde er den Event-Loop blockieren und damit ALLE parallelen Sessions
+            #   dieses Prozesses bremsen. Deshalb: Werte hier auslesen (Mikrosekunden,
+            #   reines Attribut-Lesen) und das Schreiben per `run_in_executor` in einen
+            #   Thread geben. Der Antwort-Pfad darunter wartet NICHT darauf.
+            # POSITION: nach der Latenz-Messung, VOR dem Parsen — `msg.content[0]` und
+            #   `_parse_json` koennen werfen; bezahlt ist der Call dann trotzdem.
+            try:
+                _u = getattr(msg, "usage", None)
+                if _u is not None:
+                    _posten = [
+                        ((getattr(_u, "input_tokens", 0) or 0) / 1000.0, "per_1k_input_tokens"),
+                        ((getattr(_u, "output_tokens", 0) or 0) / 1000.0, "per_1k_output_tokens"),
+                        ((getattr(_u, "cache_read_input_tokens", 0) or 0) / 1000.0, "per_1k_cache_read_tokens"),
+                        ((getattr(_u, "cache_creation_input_tokens", 0) or 0) / 1000.0, "per_1k_cache_write_tokens"),
+                    ]
+                    self._log_cost_async(input, _posten, int(latency_ms))
+            except Exception as _e:
+                logger.warning("[Cost] nerve_rt LLM-Hook uebersprungen: %s", _e)
+            # ─────────────────────────────────────────────────────────────────────────
+
             raw_text = msg.content[0].text.strip()
 
             # Parse JSON -- same logic as claude_service.py _parse_json()

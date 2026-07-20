@@ -104,6 +104,12 @@ def _known_non_literal_triples() -> set[tuple[str, str, str]]:
     triples.add(('deepgram', 'nova-3', 'per_minute'))
     triples.add(('deepgram', 'nova-3-diarize', 'per_minute'))
 
+    # nerve_rt (KOSTEN-1 R3) — der zweite Prozess loggt ebenfalls ueber Variablen:
+    # session_manager._log_stt_cost waehlt nova-3/nova-3-diarize nach Modus (oben schon
+    # abgedeckt), claude_adapter loggt `self.MODEL` = die Haiku-Voll-ID. Beide sind keine
+    # Literale am log_api_cost-Aufruf und deshalb hier explizit.
+    _add_tokens('claude-haiku-4-5-20251001')
+
     return triples
 
 

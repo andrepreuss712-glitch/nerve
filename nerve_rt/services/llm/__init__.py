@@ -19,6 +19,12 @@ class AnalysisInput:
     profile_data: dict           # Active profile (einwaende, phasen, gegenargumente, etc.)
     session_mode: str            # 'cold_call' | 'meeting'
     system_prompt: str = ""      # Full system prompt (built by caller)
+    # KOSTEN-1 R3.2 — Attribution fuer den Kosten-Hook im Adapter. Additiv mit Defaults,
+    # damit kein bestehender Aufrufer bricht. Ohne diese beiden Felder waeren die
+    # Live-LLM-Kosten von nerve_rt zwar erfasst, aber weder einem Nutzer noch einer Firma
+    # zuzuordnen — und damit im Kunden-Deckungsbeitrag wertlos.
+    user_id: Optional[int] = None
+    session_id: str = ""         # RAM-Kennung der Session, KEINE DB-Zeilen-ID
 
 
 @dataclass

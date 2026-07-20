@@ -1094,10 +1094,11 @@ _API_RATE_SOLL = [
     # Das war DAS Leck: geloggt wurde 'nova-3', die Tabelle kannte nur 'nova-2'.
     ('deepgram',   'nova-3',                      'per_minute',               0.0077,   'USD'),
     ('deepgram',   'nova-3-diarize',              'per_minute',               0.0097,   'USD'),
-    # nova-2 = nerve_rt-Streaming (nerve_rt/services/stt/deepgram_adapter.py:99) — der Hook
-    # dafuer kommt in Plan 03. Preis-Korrektur von 0.0036 (veralteter Briefing-Wert).
-    ('deepgram',   'nova-2',                      'per_minute',               0.0059,   'USD'),
-    ('deepgram',   'nova-2-diarize',              'per_minute',               0.0079,   'USD'),
+    # nova-2 STREAMING gibt es hier bewusst NICHT (mehr): nerve_rt fuhr nova-2, ist mit
+    # KOSTEN-1 R3.1 aber auf nova-3 gehoben (Drift zur Haupt-App beseitigt, Andre-Freigabe
+    # Weg A). Damit nutzt KEIN Pfad mehr nova-2-Streaming — eine Rate dafuer waere eine
+    # erfundene Variante (und der nova-2-Streaming-Preis ist oeffentlich gar nicht mehr
+    # gelistet). Die alte aktive nova-2-Zeile auf Prod bleibt unangetastet stehen.
     # Prerecorded/Batch ist bei Deepgram billiger als Streaming — Training-Transkription
     # (routes/training.py:846, PrerecordedOptions, OHNE diarize). Hook kommt in Plan 02.
     ('deepgram',   'nova-2-prerecorded',          'per_minute',               0.0043,   'USD'),

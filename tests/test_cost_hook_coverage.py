@@ -54,8 +54,13 @@ _HOOK_RE = re.compile(r'log_api_cost\s*\(')
 
 # ── Allowlist — Datei -> GRUND. Ohne Grund kein Eintrag (siehe Docstring). ──────────────────
 ALLOWLIST: dict[str, str] = {
-    # Beispiel-Form (aktuell leer): 'scripts/tts_comparison.py':
-    #     'Dev-Vergleichsskript, laeuft nie im Produktivbetrieb — keine Kundenkosten.'
+    'nerve_rt/services/stt/deepgram_adapter.py':
+        'KOSTEN-1 R3.1: der Adapter AKKUMULIERT die STT-Sekunden pro Verbindung '
+        '(conn._nerve_stt_seconds), gebucht wird bewusst eine Ebene hoeher in '
+        'nerve_rt/services/session_manager.py::_log_stt_cost — im finally-Zweig von '
+        'handle_session, damit auch abgebrochene Sessions ihre Minuten flushen. Der Adapter '
+        'bleibt dadurch zustandsarm und kennt die DB nicht. Die Buchung selbst ist also '
+        'vorhanden, nur nicht in DIESER Datei (Datei-Granularitaet kann das nicht sehen).',
 }
 
 

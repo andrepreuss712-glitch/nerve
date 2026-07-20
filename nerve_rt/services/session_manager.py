@@ -32,6 +32,72 @@ AUDIO_QUEUE_MAX = 100  # Drop oldest chunks when full (Pitfall 1: backpressure)
 ANALYSE_INTERVAL_S = 2  # Match Flask ANALYSE_INTERVALL
 
 
+async def _log_stt_cost(session, stt_conn) -> None:
+    """KOSTEN-1 R3.1 — die akkumulierten STT-Sekunden dieser Session als Kosten buchen.
+
+    Bis zu dieser Phase hat `nerve_rt` GAR NICHTS geloggt: weder STT noch LLM. Waere der
+    Pfad produktiv gegangen, waeren die Zahlen nicht nachholbar gewesen.
+
+    ★ ERSTE DB-Kopplung in nerve_rt (vorher 0 Treffer fuer cost_tracker/SessionLocal/psycopg).
+      Sie ist bewusst DIREKT und nicht ueber die Redis-Bruecke gebaut: `log_api_cost` bringt
+      seine eigene `SessionLocal` mit (services/cost_tracker.py:103), und der Dienst laeuft
+      laut deploy/nerve-rt.service mit `WorkingDirectory=/opt/nerve/app` und derselben
+      `EnvironmentFile=/etc/nerve/.env` wie Flask — also gleicher Import-Pfad, gleiche
+      DATABASE_URL. Kein Event-System, keine Bruecke (Fable-STOP-Signal).
+
+    ★ NICHT-BLOCKIEREND (Punkt 25): der Log-Aufruf ist synchron (DB-Roundtrip) und laeuft
+      deshalb ueber `run_in_executor` — ein blockierender Aufruf im Event-Loop wuerde alle
+      anderen laufenden Sessions dieses Prozesses mit anhalten. Das ist keine Optimierung,
+      sondern der Grund, warum der Hook ueberhaupt so aussieht.
+
+    Attribution: `session.user_id` liegt vor; `org_id` nicht — es wird ueber den User
+    aufgeloest, sonst faende diese Position im Kunden-Deckungsbeitrag nicht statt.
+    `session_id` ist eine RAM-Kennung (`f"{user_id}_{timestamp}"`), KEINE DB-Zeilen-ID —
+    sie geht als Text mit, damit die Zeile zuordenbar bleibt (Punkt R4 "Name != Sache").
+    """
+    try:
+        sekunden = float(getattr(stt_conn, "_nerve_stt_seconds", 0.0) or 0.0)
+    except Exception:
+        sekunden = 0.0
+    if sekunden <= 0.6:
+        # Keine Rausch-Zeilen fuer Sub-Sekunden (Spiegel deepgram_service.py:495).
+        return
+
+    # Diarization ist bei Deepgram ein Add-on (+$0.0020/min) und wird nur im Meeting-Modus
+    # eingeschaltet (deepgram_adapter LiveOptions `diarize`) -> eigener Modell-String, damit
+    # der Cold-Call nicht pauschal zu teuer gerechnet wird (KOSTEN-1 R1, Option B).
+    modell = "nova-3-diarize" if session.mode == "meeting" else "nova-3"
+
+    def _sync_log() -> None:
+        try:
+            from database.db import SessionLocal
+            from services.cost_tracker import log_api_cost, resolve_org_id_from_user
+
+            org_id = None
+            db = SessionLocal()
+            try:
+                org_id = resolve_org_id_from_user(db, session.user_id)
+            finally:
+                try:
+                    db.close()
+                except Exception:
+                    pass
+
+            log_api_cost("deepgram", modell, user_id=session.user_id, org_id=org_id,
+                         units=sekunden / 60.0, unit_type="per_minute",
+                         session_id=str(session.session_id), context_tag="stt_rt",
+                         call_site="nerve_rt.session_manager")
+        except Exception as e:
+            # log_api_cost raist nie — ein Fehler HIER waere also der Import oder die DB.
+            # Genau der Fall, der sonst spurlos bliebe: laut melden.
+            logger.error("[Cost] nerve_rt STT-Log fehlgeschlagen: %s", e)
+
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, _sync_log)
+    except Exception as e:  # pragma: no cover - defensiv
+        logger.error("[Cost] nerve_rt STT-Log konnte nicht ausgefuehrt werden: %s", e)
+
+
 class _Session:
     """Per-connection session state. Replaces live_session.py globals."""
 
@@ -166,6 +232,9 @@ class SessionManager:
             session._running = False
             session.aktiv = False
             if stt_conn:
+                # KOSTEN-1 R3.1: Kosten-Flush VOR dem Schliessen — die akkumulierten Sekunden
+                # haengen an der Verbindung, und close() darf sie danach mitnehmen.
+                await _log_stt_cost(session, stt_conn)
                 await self.stt.close(stt_conn)
             # Publish final state to Redis (Flask can read for dashboard)
             await redis_bridge.set_latest_result(
@@ -276,6 +345,9 @@ class SessionManager:
                 profile_data=session.profile_data,
                 session_mode=session.mode,
                 system_prompt=session.system_prompt,
+                # KOSTEN-1 R3.2: Attribution fuer den Kosten-Hook im ClaudeAdapter.
+                user_id=session.user_id,
+                session_id=session.session_id,
             )
 
             try:

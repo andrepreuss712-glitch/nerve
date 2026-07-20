@@ -85,7 +85,8 @@ def test_deepgram_diarize_variante_ist_teurer_als_basis():
     wuerden wieder zu billig gerechnet, und zwar unauffaellig.
     """
     preise = {(p, m): Decimal(str(price)) for p, m, u, price, _cur in _soll() if u == 'per_minute'}
-    for basis in ('nova-3', 'nova-2'):
+    # Nur nova-3: nova-2 laeuft seit R3.1 nur noch prerecorded (ohne Diarization).
+    for basis in ('nova-3',):
         variante = f'{basis}-diarize'
         assert ('deepgram', basis) in preise, f"deepgram/{basis}/per_minute fehlt in der Soll-Liste"
         assert ('deepgram', variante) in preise, f"deepgram/{variante}/per_minute fehlt in der Soll-Liste"
