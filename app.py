@@ -952,36 +952,13 @@ def _migrate():
         except Exception:
             pass
 
-        # ── Phase 08.14: ApiRate Seed fuer sonnet-4-5-20251022 + haiku-4-5-20251001 (cache_read/write) ────
-        try:
-            from database.models import ApiRate
-            _needed = [
-                ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_input_tokens',       0.003,   'USD'),
-                ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_output_tokens',      0.015,   'USD'),
-                ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_cache_read_tokens',  0.0003,  'USD'),
-                ('anthropic', 'claude-sonnet-4-5-20251022', 'per_1k_cache_write_tokens', 0.00375, 'USD'),
-                ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_input_tokens',       0.00025, 'USD'),
-                ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_output_tokens',      0.00125, 'USD'),
-                ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_cache_read_tokens',  0.000025,'USD'),
-                ('anthropic', 'claude-haiku-4-5-20251001',  'per_1k_cache_write_tokens', 0.0003,  'USD'),
-            ]
-            with engine.connect() as _conn:
-                for _provider, _model, _unit, _price, _currency in _needed:
-                    _exists = _conn.execute(
-                        text("SELECT 1 FROM api_rates WHERE provider=:p AND model=:m AND unit_type=:u AND active=1"),
-                        {'p': _provider, 'm': _model, 'u': _unit}
-                    ).fetchone()
-                    if not _exists:
-                        from datetime import datetime as _dt
-                        _now = _dt.utcnow()
-                        _conn.execute(
-                            text("INSERT INTO api_rates (provider, model, unit_type, price_per_unit, currency, active, source_url, last_checked_at, created_at) VALUES (:p,:m,:u,:price,:cur,1,'seed:2026-04-27',:now,:now)"),
-                            {'p': _provider, 'm': _model, 'u': _unit, 'price': _price, 'cur': _currency, 'now': _now}
-                        )
-                        print(f"[DB] ApiRate seeded: {_model} {_unit}")
-                _conn.commit()
-        except Exception as _e:
-            print(f"[DB] ApiRate seed (08.14) failed (non-fatal): {_e}")
+        # ── Phase 08.14 ApiRate-Seed: ENTFERNT (Phase 08.23.2.KOSTEN-1 R1b) ──────
+        # Er stand HIER, also innerhalb von _migrate() — und _migrate() early-returned auf
+        # Postgres (:140). Auf Prod war dieser Seed damit TOT: die Voll-ID-Raten kamen aus
+        # der SQLite-Zeit, neue wurden nie ergaenzt. Die Raten leben jetzt in _API_RATE_SOLL
+        # (~:1092) mit _seed_api_rates() — ausserhalb von _migrate(), laeuft auch auf Postgres.
+        # Zusaetzlicher Defekt des alten Blocks: Raw-SQL mit `active=1` (SQLite-Integer) statt
+        # PG-Boolean; die neue Fassung geht ueber das ORM.
 
         # ── Phase 08.19.3 D-03/D-04/D-05: daten.fragen -> profile_faqs Migration ──
         _migrate_fragen_to_faqs()
@@ -1089,12 +1066,157 @@ _migrate()
 # (_migrate() oben bleibt — das ist eine separate Spalten-Migration, NICHT der Alembic-Hook.)
 
 
+# ── Phase 08.23.2.KOSTEN-1 R1/R1b: EINE Rate-Liste, EIN Schreiber ─────────────
+# Vorher gab es ZWEI Seeds, die auf Prod BEIDE tot waren:
+#   1. Seed 08.14 (~:955) liegt in _migrate() — das early-returned auf Postgres (:140).
+#   2. Seed A (_seed_founder_dashboard_defaults) haengt an `if count() == 0` — feuert nie
+#      wieder, sobald irgendeine Rate existiert.
+# Folge: neue Modelle/Preise kamen nie nach -> cost_tracker.py:109-112 verwarf still.
+# Diese Liste ist die EINZIGE Quelle; sie wird per Tripel gepflegt (SELECT-dann-INSERT),
+# ist idempotent und laeuft bei JEDEM Start — auch auf Postgres.
+#
+# ★ Preispflege bleibt MANUELL (gepflegte Liste + Admin-UI routes/admin_dashboard.py:393-442).
+#   KEINE Rate-Sync-Engine, kein automatisches Ziehen von Anbieter-Preisen (Fable-STOP-Signal).
+#
+# Preis-Stand 2026-07-20 (Claudian/Andre-Entscheid, Dialog .planning/DIALOG-GSD-CLAUDIAN.md):
+#   - Deepgram Nova-3 Streaming PAYG monolingual $0.0077/min. Wir fahren monolingual
+#     (deepgram_service.py:452 hart `language="de"`), also NICHT die Multilingual-Rate.
+#   - Deepgram-Diarization ist ein ADD-ON von +$0.0020/min, NICHT im Minutenpreis enthalten.
+#     Unser Code schaltet sie konditional (`diarize=is_meeting`) -> eigener Modell-String
+#     pro Modus, damit Cold-Call und Meeting exakt statt pauschal bepreist werden (Option B).
+#   - Anthropic Haiku 4.5 = $1/$5 pro MTok -> die Bestandswerte standen 4x zu niedrig (3.5-Preise).
+#   - ElevenLabs API-Listenpreis $0.10/1k Zeichen (Bestand 0.30 = 3x zu HOCH).
+#   - Brave: Free-Tier seit 02/2026 abgeschafft -> echter Preis, KEIN 0-Preis.
+_API_RATE_SOLL = [
+    # provider,     model,                        unit_type,                  price,    currency
+    # ── Deepgram STT ──────────────────────────────────────────────────────────
+    # nova-3 = Live-Spracherkennung der Haupt-App (deepgram_service.py:497).
+    # Das war DAS Leck: geloggt wurde 'nova-3', die Tabelle kannte nur 'nova-2'.
+    ('deepgram',   'nova-3',                      'per_minute',               0.0077,   'USD'),
+    ('deepgram',   'nova-3-diarize',              'per_minute',               0.0097,   'USD'),
+    # nova-2 = nerve_rt-Streaming (nerve_rt/services/stt/deepgram_adapter.py:99) — der Hook
+    # dafuer kommt in Plan 03. Preis-Korrektur von 0.0036 (veralteter Briefing-Wert).
+    ('deepgram',   'nova-2',                      'per_minute',               0.0059,   'USD'),
+    ('deepgram',   'nova-2-diarize',              'per_minute',               0.0079,   'USD'),
+    # Prerecorded/Batch ist bei Deepgram billiger als Streaming — Training-Transkription
+    # (routes/training.py:846, PrerecordedOptions, OHNE diarize). Hook kommt in Plan 02.
+    ('deepgram',   'nova-2-prerecorded',          'per_minute',               0.0043,   'USD'),
+    # ── Anthropic ─────────────────────────────────────────────────────────────
+    # Haiku 4.5 ($1 in / $5 out pro MTok, Cache read 10% / write 125%) — Kurzname UND Voll-ID,
+    # weil beide Namensformen geloggt werden (_cost_model-Idiom vs. roher Config-Wert).
+    ('anthropic',  'haiku-4-5',                   'per_1k_input_tokens',       0.001,   'USD'),
+    ('anthropic',  'haiku-4-5',                   'per_1k_output_tokens',      0.005,   'USD'),
+    ('anthropic',  'haiku-4-5',                   'per_1k_cache_read_tokens',  0.0001,  'USD'),
+    ('anthropic',  'haiku-4-5',                   'per_1k_cache_write_tokens', 0.00125, 'USD'),
+    ('anthropic',  'claude-haiku-4-5-20251001',   'per_1k_input_tokens',       0.001,   'USD'),
+    ('anthropic',  'claude-haiku-4-5-20251001',   'per_1k_output_tokens',      0.005,   'USD'),
+    ('anthropic',  'claude-haiku-4-5-20251001',   'per_1k_cache_read_tokens',  0.0001,  'USD'),
+    ('anthropic',  'claude-haiku-4-5-20251001',   'per_1k_cache_write_tokens', 0.00125, 'USD'),
+    # Sonnet 4.5 ($3 in / $15 out pro MTok). 'claude-sonnet-4-5' (OHNE Datum) ist der Fund F-1:
+    # config.MODEL_PIP_AUTOVAR loggt genau diesen String (claude_service.py:693/696/703/707),
+    # eine Rate dafuer gab es NIE -> PiP-Autovarianten-Kosten wurden seit jeher verworfen.
+    ('anthropic',  'claude-sonnet-4-5',           'per_1k_input_tokens',       0.003,   'USD'),
+    ('anthropic',  'claude-sonnet-4-5',           'per_1k_output_tokens',      0.015,   'USD'),
+    ('anthropic',  'claude-sonnet-4-5',           'per_1k_cache_read_tokens',  0.0003,  'USD'),
+    ('anthropic',  'claude-sonnet-4-5',           'per_1k_cache_write_tokens', 0.00375, 'USD'),
+    ('anthropic',  'sonnet-4-5',                  'per_1k_input_tokens',       0.003,   'USD'),
+    ('anthropic',  'sonnet-4-5',                  'per_1k_output_tokens',      0.015,   'USD'),
+    ('anthropic',  'sonnet-4-5',                  'per_1k_cache_read_tokens',  0.0003,  'USD'),
+    ('anthropic',  'sonnet-4-5',                  'per_1k_cache_write_tokens', 0.00375, 'USD'),
+    ('anthropic',  'claude-sonnet-4-5-20251022',  'per_1k_input_tokens',       0.003,   'USD'),
+    ('anthropic',  'claude-sonnet-4-5-20251022',  'per_1k_output_tokens',      0.015,   'USD'),
+    ('anthropic',  'claude-sonnet-4-5-20251022',  'per_1k_cache_read_tokens',  0.0003,  'USD'),
+    ('anthropic',  'claude-sonnet-4-5-20251022',  'per_1k_cache_write_tokens', 0.00375, 'USD'),
+    # Legacy-Kurzname aus dem Ur-Seed (2026-04-09). Kein aktiver Logger mehr, Zeilen leben
+    # aber auf Prod -> in der Liste halten, damit der Seed sie nicht als "fehlend" behandelt.
+    ('anthropic',  'sonnet-4',                    'per_1k_input_tokens',       0.003,   'USD'),
+    ('anthropic',  'sonnet-4',                    'per_1k_output_tokens',      0.015,   'USD'),
+    # ── Uebrige Provider ──────────────────────────────────────────────────────
+    ('elevenlabs', 'multilingual-v2',             'per_1k_chars',              0.10,    'USD'),
+    # Brave: Free-Tier seit 02/2026 weg; $5/Mo Guthaben ~1000 Queries, danach metered,
+    # KEIN Spending-Cap. units=0.001 pro Query -> $0.005 je Abfrage. Hook kommt in Plan 02.
+    ('brave',      'web_search',                  'per_1k_queries',            5.00,    'USD'),
+    # Stripe: unveraendert; wird ab Plan 02 (R2.8 Fee-Hook) tatsaechlich genutzt.
+    ('stripe',     'card',                        'percent',                   0.014,   'EUR'),
+    ('stripe',     'card',                        'fixed_per_tx',              0.25,    'EUR'),
+]
+
+
+def _seed_api_rates():
+    """Phase 08.23.2.KOSTEN-1 R1/R1b — idempotenter Rate-Seed mit Preis-Korrektur-Pfad.
+
+    Pro Tripel (provider, model, unit_type):
+      * keine aktive Rate  -> INSERT
+      * Preis weicht ab    -> hauseigenes Preis-Wechsel-Muster (admin_dashboard.py:411-438):
+                              alte Zeile active=False, neue Zeile active=True, PriceChangeLog.
+      * Preis stimmt       -> nichts (das ist der Normalfall bei jedem Start).
+
+    D-02 (Finanzamt-Linie): bestehende api_cost_log-Zeilen werden NIE rueckwirkend korrigiert —
+    die Rate ist beim Schreiben eingefroren. Kein Backfill.
+
+    Commit pro Zeile: laufen zwei Prozesse gleichzeitig hoch, faengt der UNIQUE-Constraint
+    uix_api_rate_active den Doppel-Insert. Der wird per rollback abgefangen (CLAUDE.md DB-Regel:
+    nie stiller except auf einer PG-Session ohne rollback) — Endzustand bleibt korrekt.
+    """
+    from decimal import Decimal
+    from database.db import SessionLocal
+    from database.models import ApiRate, PriceChangeLog
+
+    db = SessionLocal()
+    inserted = corrected = 0
+    try:
+        for provider, model, unit_type, price, currency in _API_RATE_SOLL:
+            soll = Decimal(str(price))
+            try:
+                row = (db.query(ApiRate)
+                         .filter_by(provider=provider, model=model,
+                                    unit_type=unit_type, active=True)
+                         .first())
+                if row is None:
+                    db.add(ApiRate(provider=provider, model=model, unit_type=unit_type,
+                                   price_per_unit=soll, currency=currency, active=True,
+                                   source_url='seed:2026-07-20/KOSTEN-1'))
+                    db.commit()
+                    inserted += 1
+                    print(f"[DB] ApiRate seeded: {provider}/{model}/{unit_type} = {soll} {currency}")
+                elif Decimal(row.price_per_unit) != soll:
+                    ist = Decimal(row.price_per_unit)
+                    row.active = False
+                    db.flush()
+                    neu = ApiRate(provider=provider, model=model, unit_type=unit_type,
+                                  price_per_unit=soll, currency=currency, active=True,
+                                  source_url='seed:2026-07-20/KOSTEN-1')
+                    db.add(neu)
+                    db.flush()
+                    db.add(PriceChangeLog(
+                        api_rate_id=neu.id, old_rate=ist, new_rate=soll, currency=currency,
+                        impact_eur_per_month=None,
+                        note=f'KOSTEN-1 R1: {provider}/{model}/{unit_type} {ist} -> {soll} {currency}'))
+                    db.commit()
+                    corrected += 1
+                    print(f"[DB] ApiRate korrigiert: {provider}/{model}/{unit_type} {ist} -> {soll}")
+            except Exception as _e:
+                # F-3: uix_api_rate_active ist UNIQUE(provider, model, unit_type, active) ->
+                # pro Tripel ist genau EINE inaktive Zeile moeglich. Eine zweite Preis-Korrektur
+                # desselben Tripels kollidiert hier. Bewusst NICHT in dieser Phase geloest
+                # (Backlog APIRATE-HISTORY-UNIQUE) — aber laut, nicht still.
+                db.rollback()
+                print(f"[DB] ApiRate-Seed uebersprungen ({provider}/{model}/{unit_type}): {_e}")
+        if inserted or corrected:
+            print(f"[DB] ApiRate-Seed (KOSTEN-1): {inserted} neu, {corrected} preis-korrigiert")
+    except Exception as e:
+        print(f"[DB] _seed_api_rates failed: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def _seed_founder_dashboard_defaults():
     """Phase 04.7.2 — idempotenter Seed von FixedCost + ApiRate + ExchangeRate-Fallback.
     Re-run-safe: prueft COUNT pro Tabelle vor INSERT.
     """
     from database.db import SessionLocal
-    from database.models import FixedCost, ApiRate, ExchangeRate
+    from database.models import FixedCost, ExchangeRate  # ApiRate raus: R1b, Raten leben in _seed_api_rates
     from datetime import date
     db = SessionLocal()
     try:
@@ -1112,23 +1234,12 @@ def _seed_founder_dashboard_defaults():
                                  cycle=cycle, skr03=skr, eur_line=line, active=True))
             print(f"[DB] Seeded {len(defaults)} fixed_costs (Phase 04.7.2)")
 
-        # --- ApiRate Seed (Briefing Default-Preise) ---
-        if db.query(ApiRate).count() == 0:
-            rates = [
-                ('anthropic',  'haiku-4-5',       'per_1k_input_tokens',  0.00025, 'USD'),
-                ('anthropic',  'haiku-4-5',       'per_1k_output_tokens', 0.00125, 'USD'),
-                ('anthropic',  'sonnet-4',        'per_1k_input_tokens',  0.003,   'USD'),
-                ('anthropic',  'sonnet-4',        'per_1k_output_tokens', 0.015,   'USD'),
-                ('deepgram',   'nova-2',          'per_minute',           0.0036,  'USD'),
-                ('elevenlabs', 'multilingual-v2', 'per_1k_chars',         0.30,    'USD'),
-                ('stripe',     'card',            'percent',              0.014,   'EUR'),
-                ('stripe',     'card',            'fixed_per_tx',         0.25,    'EUR'),
-            ]
-            for provider, model, unit_type, price, currency in rates:
-                db.add(ApiRate(provider=provider, model=model, unit_type=unit_type,
-                               price_per_unit=price, currency=currency, active=True,
-                               source_url=f'briefing:2026-03-31/{provider}'))
-            print(f"[DB] Seeded {len(rates)} api_rates (Phase 04.7.2)")
+        # --- ApiRate Seed: ENTFERNT (Phase 08.23.2.KOSTEN-1 R1b) ---
+        # Hier stand ein `if db.query(ApiRate).count() == 0:`-Block mit einer zweiten
+        # Rate-Liste. Der Guard war die Wurzel des ganzen Kosten-Lecks: sobald IRGENDEINE
+        # Rate existierte, feuerte er nie wieder -> neue Modelle/Preise kamen nie nach.
+        # Die Raten leben jetzt in EINER Liste (_API_RATE_SOLL) mit EINEM Schreiber
+        # (_seed_api_rates), per Tripel idempotent statt per count().
 
         # --- ExchangeRate Fallback-Seed ---
         if db.query(ExchangeRate).count() == 0:
@@ -1145,6 +1256,9 @@ def _seed_founder_dashboard_defaults():
 
 
 _seed_founder_dashboard_defaults()
+# KOSTEN-1 R1b: EINE Rate-Seed-Stelle, laeuft bei JEDEM Start — auch auf Postgres
+# (der alte 08.14-Seed lag in _migrate() und war dort PG-tot).
+_seed_api_rates()
 
 
 # ── Phase 04.7.2 — Wechselkurs-Scheduler (Frankfurter daily 06:00 UTC) ────────
