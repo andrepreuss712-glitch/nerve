@@ -153,6 +153,36 @@ User-Satz: {user_text}
 Deckt der Satz das Lernziel ab? Antworte als JSON:
 {{"covers_goal": true/false, "feedback": "Kurzes Feedback auf Deutsch"}}"""}]
         )
+
+        # ── KOSTEN-1 R2.5 Cost-Hook (Muster: claude_service.py:542-568) ──────────────
+        # POSITION: direkt nach dem Call. Die Zeilen darunter (content[0], json.loads)
+        # koennen werfen und landen im except unten — der Call ist dann schon bezahlt.
+        # ATTRIBUTION: die Funktion bekommt weder user noch sid uebergeben und laeuft im
+        # Request-Kontext des Lernkarten-Dialogs -> g, defensiv geprueft. Ein eigener
+        # Parameter waere eine Signatur-Aenderung an fremdem Code (Beifang, Punkt 17).
+        try:
+            from flask import g, has_request_context
+            from services.cost_tracker import log_api_cost, normalize_model_name
+            _u = getattr(response, 'usage', None)
+            if _u is not None:
+                _uid = _oid = None
+                if has_request_context():
+                    _uid = getattr(getattr(g, 'user', None), 'id', None)
+                    _oid = getattr(getattr(g, 'org', None), 'id', None)
+                _m = normalize_model_name(config.MODEL_VALIDATE_USER_TEXT)
+                for _units, _unit_type in (
+                    ((getattr(_u, 'input_tokens', 0) or 0) / 1000.0, 'per_1k_input_tokens'),
+                    ((getattr(_u, 'output_tokens', 0) or 0) / 1000.0, 'per_1k_output_tokens'),
+                ):
+                    if _units > 0:
+                        log_api_cost('anthropic', _m, user_id=_uid, org_id=_oid,
+                                     units=_units, unit_type=_unit_type,
+                                     context_tag='validate_user_text',
+                                     call_site='validate_user_text')
+        except Exception as _e:
+            print(f"[CostHook] validate_user_text skipped: {_e}")
+        # ─────────────────────────────────────────────────────────────────────────────
+
         text = response.content[0].text.strip()
         start = text.find('{'); end = text.rfind('}') + 1
         return json.loads(text[start:end])
