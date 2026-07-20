@@ -2338,6 +2338,47 @@ Plans:
 - **08.23.2.TEST-AUFRAEUM „Test-Aufräum-Härtung" ✅ COMPLETE 2026-07-07 (🟡, nach AUTH-1):** LIVE+verifiziert — deploy.sh-Gate grün (897 passed, [BASELINE-AUTO-FIX]-Zähler=0, test_audit_log_immutable grün, Prod-tgenabled='O' byte-identisch, POST-SUITE crm-Check fail-closed grün). 1 Plan/4 Bau-Tasks nur in tests/conftest.py (Cause A Trigger-Bypass löst audit_log+users+orgs zusammen; Cause C coach_id-Zyklus gekappt; Cause D crm dokumentiert statt in-suite; Cause E Snapshot-WARN). Herkunft: audit_log-append-only-Leak (Migration 0026) — Test-Cleanup kann audit_log/organisations/users wegen Mutual-FK + append-only nicht abräumen → BASELINE-AUTO-FIX-Warnungen bei jedem Deploy (in AUTH-1 Gate E+G gesehen). Härten damit das Netz sauber grün ist statt „grün-mit-Warnung". Herkunft: AUTH-1-Live-Befund. (NEU — auch in Vault `01 Roadmap` nachziehen.)
 **Verhältnis:** Zulieferer fürs Betriebs-Gate (skip-Flags + trialing/active-Whitelist) + Nachbar zum DSGVO/Auth-Paket (AUTH-1 + Login-Härtung/Password-Reset zusammenlegbar). Pricing 08.15 = nur USD-Zahlen/EA-Rabatt.
 
+### Phase 08.23.2.KOSTEN-1: Kosten-Erfassung dichtmachen + Dashboard (NEU 2026-07-19) 🔴-nah — ★ AKTIV AUFGESETZT 2026-07-20
+
+**Herkunft / Design-Hoheit:** Der Bauplan ist FERTIG und kommt von **Fable** (2026-07-19), Gemini-cross-gecheckt + Claudian-auditiert. GSD setzt ihn UM, entwirft ihn NICHT neu.
+**Pflicht-Pre-Read (= die Spezifikation, verbindlich):** Vault `03 Planung/KOSTEN-1 Kosten-Erfassung dichtmachen + Dashboard — Bauplan (Fable 2026-07-19).md` (enthält R1-R5, drei Wächter, Wellen, Anker, STOP-Signale).
+
+**Goal / Kern-Merksatz:** Unsere Kosten-Erfassung hat Löcher. Die Live-Spracherkennung loggt `nova-3`, die Preis-Tabelle kennt nur `nova-2` → `cost_tracker.py` **skippt still** → die minuten-getriebene Hauptkostenposition ist seit Ende April unsichtbar. Zusätzlich: Haiku-Raten sind die alten 3.5-Preise (**4× zu niedrig**), 8 bezahlte Call-Sites ohne `log_api_cost`, `nerve_rt` loggt weder STT noch LLM. KOSTEN-1 stopft die Löcher, baut **drei Wächter** und zieht das Dashboard nach.
+
+**Ist-Anker (Prod-verifiziert, Fable + Claudian):** `deepgram_service.py` loggt `'nova-3'`, Prod hat nur `nova-2` → stiller Skip (größtes Loch, real ~35-40€/Mo pro Power-User). Sonnet/Haiku werden erfasst, **aber Haiku-Preis 4× zu niedrig** (5.721 Calls à 1,83€ verbucht = real ~7€). Wurzel: der Seed-A-Bug (Seed läuft nur bei LEERER Tabelle) → neue Modelle/Preise kommen nie nach.
+
+**★ GELOCKTE ENTSCHEIDUNGEN (André, nicht neu aufmachen):**
+1. **Stripe-Fees (R2.8): JETZT mit bauen**, nicht deferren.
+2. **Alte `api_cost_log`-Zeilen NICHT rückwirkend korrigieren** — nur Historie-Marker im Dashboard (D-02, Finanzamt-Linie: eingefrorene Raten sind Buchhaltungs-Wahrheit).
+3. **W3 (Laufzeit-Skip-Zähler + Founder-Alert) ist PFLICHT-Kernwächter**, nicht optional. Gemini-Fund: die grep-Wächter W1/W2 sehen ENV-basierte Modellnamen (`config.MODEL_*` = `os.getenv`) NICHT → nur der Laufzeit-Zähler fängt die.
+4. **Wellen-Reihenfolge aus dem Plan:** W1 zuerst (Wächter rot → Rates+Seed-Fix → grün) — reine Daten-Änderung ohne Code-Risiko, stoppt sofort das größte Leck.
+
+**★ DISZIPLIN (Gemini-Stolperdraht, verbindlich):** FIX-Block, **KEIN neues Kosten-System**. Kein Wrapper-/Decorator-Framework um den Anthropic-Client, kein AST-Parsing (Datei-Granularität reicht), kein Event-Bus für `nerve_rt`, keine Rate-Sync-Engine, kein Backfill-Job. Wenn ein Teil aufbläht → **STOP, melden, deferren.** Der Tracker (`services/cost_tracker.py`) bleibt architektonisch unangetastet.
+
+**★ ABGRENZUNG (damit nichts doppelt gebaut wird):** die `nerve_rt`-Verdrahtung (R3) wird **HIER EINMAL** gebaut — **METER R6** setzt später darauf auf (Zähler-Sync gehört METER, die Sekunden-Akkumulation gehört hierher). Der Stripe-Fee-Hook berührt `routes/payments.py` → **METER/AUTH-3 fassen dieselbe Datei später an** (Naht bekannt, hier nur `_record_revenue`).
+
+**★ WELLEN (Bauplan §Wellen):**
+- **W1** — W1-Wächter (Rate-Coverage) schreiben **ERST-ROT** → R1 (Raten vervollständigen + Preise aktualisieren + Seed-A-Bug auf per-Tripel-Muster) → Wächter grün.
+- **W2** — W2-Wächter (Hook-Coverage, grep) **ERST-ROT** → R2 (8 Hooks inkl. Stripe-Fees) + R3 (`nerve_rt` STT + LLM) → grün.
+- **W3** — R5 Dashboard (Historie-Marker `COST_DATA_COMPLETE_SINCE` + Skip-Kachel) + W3 Laufzeit-Skip-Zähler/Founder-Alert.
+
+**🟢 Offene André-Entscheidungen (blockieren W1 nicht komplett, aber die Rate-Werte):** (a) ElevenLabs Effektivpreis (API $0.10/1k vs. Abo-Plan-Preis), (b) Deepgram-Plan (PAYG $0.0077 vs. Growth $0.0065), (c) Brave (Rate jetzt anlegen vs. nur W2-Allowlist bis Paid-Plan). Plus Rest-Prüfpunkte aus dem Gemini-Cross-Check: Deepgram-Diarization im Minuten-Preis enthalten? Stripe-Fee-Typen vollständig (Transaktion + ggf. Radar/Payout)? Hosting = fixer Block, NICHT Teil dieses API-Trackings.
+
+**Prozess-Regel (P3, Gemini) → gehört nach `salesnerve/CLAUDE.md`:** neue bezahlte API / neues Modell = Kosten-Hook + Rate ist **Pflicht**; strukturell erzwungen durch W1 (Deploy-Zeit) + W3 (Laufzeit).
+
+**★ GEPLANT 2026-07-20 — 4 Plans / 3 Wellen, alle `autonomous:false`, NICHT execute-ready (Cross-AI + Pre-Execute-Audit stehen davor):**
+- [ ] 08.23.2.KOSTEN-1-01-PLAN.md — **W1** W1-Wächter `test_api_rate_coverage.py` ERST-ROT → R1 Raten (nova-3 NEU, `claude-sonnet-4-5` NEU [Fund F-1], Haiku 4× korrigiert, ElevenLabs 3× runter) via hauseigenem Muster `active=False`+neue Zeile+`PriceChangeLog` → Seed-A-`count()==0`-Guard raus, EINE idempotente Seed-Liste → grün. Enthält Entscheidungs-Checkpoint Task 0 (Preis-Fragen a-d). Wave 1.
+- [ ] 08.23.2.KOSTEN-1-02-PLAN.md — **W2a** W2-Wächter `test_cost_hook_coverage.py` ERST-ROT (grep, Datei-Granularität, kommentierte Allowlist) → `normalize_model_name()` in `cost_tracker.py` → 8 Hooks (judge/adoption/outcome/training-preview/validate_user_text/training-deepgram/brave/**Stripe-Fees**) nach Muster `claude_service.py:542-568` → grün. Wave 2.
+- [ ] 08.23.2.KOSTEN-1-03-PLAN.md — **W2b** `nerve_rt`-Verdrahtung (Task 0 = Import-/Prozess-Naht BEWEISEN vor Bau): STT-Sekunden per-Session + Flush bei Session-Ende, ClaudeAdapter-`usage`-Hook nicht-blockierend. 🔴 riskantester Teil (erste DB-Kopplung in `nerve_rt`, Punkt 25 Latenz + Punkt 28 kein Global). Wave 2, depends 02.
+- [ ] 08.23.2.KOSTEN-1-04-PLAN.md — **W3** Laufzeit-Skip-Zähler in `cost_tracker.py:109-112` ERST-ROT + Founder-Dashboard-Kachel/Alarm (Soll 0) + R5 Historie-Marker `COST_DATA_COMPLETE_SINCE` + P3-Regel in `salesnerve/CLAUDE.md`. Wave 3.
+
+**★ FÜNF NEUE FUNDE beim Anker-Nachprüfen (Details CONTEXT.md §3):** **F-1** `claude-sonnet-4-5` (Kurzname, `MODEL_PIP_AUTOVAR`) hat **gar keine Rate** → zweites stilles Loch, Prod-belegt. **F-2** Fables „Haiku-Cache-Rates für Kurzname fehlen ganz" ist an Prod **falsch** — sie existieren (id 13/14), sind nur zu niedrig → Korrektur-Pfad statt Anlage-Pfad. **F-3** `uix_api_rate_active` = UNIQUE(provider,model,unit_type,**active**) deckelt „deaktivieren+neu" auf **genau eine** Korrektur pro Tripel (heute 0 inaktive Zeilen → geht durch; Backlog `APIRATE-HISTORY-UNIQUE`). **F-4** das Preis-Wechsel-Muster inkl. `PriceChangeLog` **existiert bereits** (`admin_dashboard.py:393-442`) → R1 spiegelt es, erfindet nichts. **F-5** Seed A ist schon tot, seine 8 Zeilen leben aber auf Prod → die Konsolidierung hat **null Daten-Effekt**, sie schützt nur die Zukunft.
+**Anker-Korrekturen ggü. Fables Plan:** `deepgram_service.py:491` = Pop, Akkumulation ist **:160**; `diarize` ist konditional; Seed-A-Liste ist `app.py:1117-1126` (nicht :963-966); `nerve_rt` `MODEL` steht bei **:24** (nicht :49); `config.py`-MODEL-Block endet **:97**; `payments.py:248` ist die **Definition**, Aufrufer ist **:98**.
+
+**Komplexität:** 🔴-nah (Marge-kritisch + Geld-Pfad-Naht + `nerve_rt`-Prozessgrenze) → **Cross-AI PFLICHT vor Execute** (Claudian-Pre-Execute-Audit + Fable-Gegencheck), **kein Auto-Advance, `autonomous:false`**. Deploy fährt Claudian mit Zwei-Tore-Netz. Multi-Segment-Gotcha: Pfade hardcoden (`08.23.2.KOSTEN-1-kosten-erfassung-dichtmachen`), gsd-tools umgehen, STATE/ROADMAP hand-editieren.
+**Verzeichnis:** `.planning/phases/08.23.2.KOSTEN-1-kosten-erfassung-dichtmachen/`
+**Reihenfolge Geld-Thema:** KOSTEN-1 → Messung (1 sauberer Test-Anruf) → Preismodell (Grundgebühr+Nutzung) → **METER + AUTH-3 GEMEINSAM** (beide bauen `_activate_subscription`/`_sync_subscription` um → nicht nacheinander patchen).
+
 ### Phase 08.23.2.PROMPTGUARD: Prompt-Zusammenbau-Live-Naht-Wächter (NEU 2026-07-03) 🟡 — NACH PERSID
 
 **Herkunft:** Fable-Bewertung von Geminis Wächter-Ideen (Vault `05 Log` 2026-07-03). Von Geminis 3 Wächtern + 4 blinden Flecken die EINZIGE genuine Lücke — und zu ~70% schon getestet.
