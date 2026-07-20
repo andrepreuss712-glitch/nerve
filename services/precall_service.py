@@ -314,6 +314,28 @@ def _brave_search(firmenname, ansprechpartner=None, branche=None):
     try:
         resp = requests.get(BRAVE_SEARCH_URL, headers=headers, params=params, timeout=15)
         resp.raise_for_status()
+
+        # ── KOSTEN-1 R2.7 Cost-Hook (Brave Search) ──────────────────────────────────
+        # POSITION: nach raise_for_status(), also nur fuer Abfragen, die Brave auch
+        # beantwortet hat. Darunter folgen resp.json() und ein `return None`-Pfad, wenn
+        # keine Treffer kommen — eine Nulltreffer-Abfrage kostet trotzdem Geld.
+        # PREIS: Rate ist per_1k_queries (5.00 USD), eine Abfrage = 0.001 Einheiten.
+        # Der Free-Tier ist seit 02/2026 weg; 5$/Monat Guthaben, danach metered OHNE
+        # Spending-Cap -> genau deshalb darf diese Position nicht unsichtbar bleiben.
+        try:
+            from flask import g, has_request_context
+            from services.cost_tracker import log_api_cost
+            _uid = _oid = None
+            if has_request_context():
+                _uid = getattr(getattr(g, 'user', None), 'id', None)
+                _oid = getattr(getattr(g, 'org', None), 'id', None)
+            log_api_cost('brave', 'web_search', user_id=_uid, org_id=_oid,
+                         units=0.001, unit_type='per_1k_queries',
+                         context_tag='precall_search', call_site='_brave_search')
+        except Exception as _e:
+            print(f"[CostHook] brave search skipped: {_e}")
+        # ─────────────────────────────────────────────────────────────────────────────
+
         data = resp.json()
         results = []
         for r in (data.get("web", {}).get("results", []))[:10]:
