@@ -145,3 +145,94 @@ der Soll-Liste steht.
 **Offen aus Plan 01:** Task 4 Idempotenz-Beleg (zweiter Seed-Lauf = 0 neue Zeilen) — das ist erst
 am laufenden Prod-Prozess belegbar, also nach deinem Deploy. Zwei Neustarts, Row-Count vorher/nachher.
 
+---
+
+## STAND — 08.23.2.KOSTEN-1 Plan 02/03/04 — 2026-07-20 (code-complete, Deploy offen)
+
+**Keine Frage — Übergabe.** Plan 02, 03 und 04 sind gebaut. Deploy fährst du; ich habe `deploy.sh`
+nicht angefasst.
+
+### Plan 02 — die acht Hooks
+Alle acht sitzen **unmittelbar nach** dem bezahlten Call und **vor** dem Parsen. Das ist kein Stil,
+sondern der Punkt: bei Judge und Adoption steht direkt darunter ein `raise ValueError`, bei Training
+ein 500-`return` — ein Hook dahinter hätte den bezahlten Sonnet-Lauf bei jeder Parse-Panne unsichtbar
+gelassen (Interim-Position-Lehre).
+
+**Ein Befund am W2-Wächter selbst:** sein Docstring behauptete, er melde auch `coaching_service`,
+`precall_service` und `payments.py`. Nachgemessen tut er das **nicht** und kann es strukturell nicht —
+die ersten beiden loggen anderswo schon (Datei-Granularität hält sie für versorgt), und Stripe trifft
+keines der Call-Muster. **Drei der acht Sites waren also ungeschützt.** Ich habe eine Stufe 2
+nachgezogen: explizite (Datei, Funktion)-Liste, deren Funktions-Textblock ein `log_api_cost` enthalten
+muss. Beide Stufen sind ERST-ROT belegt, beide jetzt grün.
+
+**Attribution — zwei Wege, beide am Code belegt:** Post-Call-Runner (Judge/Adoption) haben kein Flask
+`g`; `user_id` kommt aus `calls.user_id`. `calls` hat **kein** `org_id` (nur `tenant_id` als UUID),
+`api_cost_log.org_id` ist aber ein Integer-FK — deshalb die neue Helferfunktion
+`resolve_org_id_from_user`. Ohne sie wären ausgerechnet die teuersten Zeilen org-los und fänden im
+Kunden-Deckungsbeitrag nicht statt. Die Request-Pfade (Outcome, Training, validate_user_text, Brave)
+lesen `g`, aber über `has_request_context()` abgesichert.
+
+**Stripe (R2.8) — eine dokumentierte Grenze, die du kennen solltest:** wir buchen das **Modell**
+(1,4 % + 0,25 €), nicht die Ist-Abrechnung. Das Invoice-Objekt trägt die real abgezogenen Gebühren
+nicht; Radar/Payout stehen erst auf der BalanceTransaction des Charges und bräuchten einen
+zusätzlichen API-Call je Zahlung. Bei aktiviertem Radar liegt die reale Gebühr also **höher** als
+das, was wir loggen. Bewusst nicht gebaut — wollte ich nicht stillschweigend weglassen.
+
+### Plan 03 — nerve_rt (die riskanteste Naht)
+**Task 0 belegt statt angenommen:** `deploy/nerve-rt.service` fährt `WorkingDirectory=/opt/nerve/app`
+und `EnvironmentFile=/etc/nerve/.env` — beides identisch zu `nerve.service`. Gleicher Import-Pfad,
+dieselbe `DATABASE_URL`. `cost_tracker` importiert `database.db`/`models` erst *innerhalb* der
+Funktion, und beide ziehen nur SQLAlchemy, kein Flask → kein App-Kontext, kein Ballast beim
+FastAPI-Start. Der direkte Weg trägt; **keine Brücke, keine Stufe 3 nötig.**
+
+Die STT-Sekunden hängen an der **Verbindung** (`conn._nerve_stt_seconds`) — per-Session by
+construction, kein Modul-Dict (Punkt 28). Sie zählen **vor** dem Leer-Text-`return`, sonst
+verschlucken sie bezahlte Stille. Gebucht wird im **`finally`** von `handle_session`, also auch bei
+Disconnect und Exception — sonst hätten ausgerechnet die abgebrochenen Calls ihre Minuten verloren.
+Beide Hooks (STT + LLM) laufen über `run_in_executor`: ein synchroner DB-Roundtrip im Event-Loop
+hätte **alle** parallelen Sessions dieses Prozesses mitgebremst.
+
+**Nova-Drift (Weg A, deine Freigabe):** nerve_rt steht jetzt auf nova-3.
+`tests/test_stt_model_parity.py` ist die Stolperstelle gegen Rückfall — weichen die beiden Live-STT-
+Pfade je wieder ab, ist der Deploy rot. **Folge, die du im Blick haben solltest:** nova-2-Streaming
+nutzt damit **kein** Pfad mehr, also habe ich `nova-2` + `nova-2-diarize` wieder aus der Soll-Liste
+genommen (dein Cap: keine erfundenen Varianten). `nova-2-prerecorded` für Training bleibt. Die alte
+aktive `nova-2`-Zeile auf Prod bleibt unangetastet stehen.
+
+### Plan 04 — sichtbar machen
+W3-Zähler sitzt **vor** dem `return` im stillen Skip und zählt **pro Tripel**, nicht als Summe — eine
+blanke Zahl zeigt *dass* etwas fällt, nicht *was*, und wäre im Alarm nicht handlungsfähig.
+Sechste KPI-Kachel im Founder-Dashboard, bei N > 0 sichtbarer Warn-Zustand (kein neuer Farbwert —
+`#EF4444` nutzt `admin_dashboard.css` schon für `.delta.down`).
+
+Zu Punkt 28: der Zähler ist prozess-global, aber tenant-neutral (nur `provider/model/unit_type`, per
+Test festgenagelt, dass keine user/org/session-Daten hineingeraten). Der Global-Wächter greift hier
+**gar nicht**, weil er nur `ls.<attr> =`-Muster scannt — ich habe deshalb **keinen** Whitelist-Eintrag
+gesetzt, statt einen Alibi-Eintrag zu produzieren, der die Regel aufweicht.
+
+`COST_DATA_COMPLETE_SINCE = 2026-07-20`. Die Bedingung ist **`start <` Stichtag, nicht `end <`** —
+sonst wäre ausgerechnet der Übergangs-Monat stillschweigend als vollständig durchgegangen.
+`compute_org_profitability` bleibt unangetastet.
+
+**Nebenbei gefixt:** `test_cost_skip_counter` räumte seine committete `api_cost_log`-Zeile nicht weg
+(`log_api_cost` bringt eine eigene `SessionLocal` mit, der Test-Rollback greift dort nicht) — ohne
+`cleanup_rows` wäre die Baseline mit **jedem** Gate-Lauf gewachsen.
+
+### Was ich verifiziert habe — und was nicht
+**Verifiziert:** alle statischen Wächter laufen lokal grün (W2 Stufe 1+2, Allowlist-Begründung,
+Allowlist-Totlinks, STT-Parity), Skip-Zähler-Logik smoke-getestet, alle geänderten Python-Dateien
+kompilieren. **Nicht verifiziert:** alles, was eine DB braucht — kein lokales Postgres, kein
+`TEST_DATABASE_URL`, und der Code liegt nicht auf dem Server. Das echte Gate ist dein Deploy.
+
+**Deploy-Hinweis:** `nerve` **und** `nerve-rt` neu starten — sonst läuft der FastAPI-Prozess mit
+altem Code weiter und die ganze Plan-03-Arbeit ist unsichtbar.
+
+### Abschluss-Beleg (Plan 04 Task 5) — vier Punkte, drei davon brauchen einen echten Anruf
+1. `inspect.sh sample api_cost_log 30` nach einem Test-Call → `deepgram/nova-3`-Zeile mit
+   `cost_eur > 0` (**das war das Loch**) + Judge/Adoption/Outcome-Zeilen.
+2. Founder-Dashboard „Kosten-Log-Skips" = **0**. Steht dort etwas anderes, ist die Phase **nicht**
+   fertig — dann zeigt der Wächter das nächste Loch, und das ist sein Erfolg, kein Grund zum Abhaken.
+3. Historie-Badge erscheint bei Zeiträumen vor dem 20.07. und **nicht** danach.
+4. `inspect.sh logs-errors` → kein `[CostTracker] no active ApiRate`, kein Import-Fehler im
+   nerve_rt-Log.
+
