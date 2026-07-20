@@ -540,8 +540,12 @@ class ApiRate(Base):
     """Aktuelle API-Preise, editierbar, historisch ueber active-Flag."""
     __tablename__ = 'api_rates'
     __table_args__ = (
+        # F-3 (KOSTEN-1): UNIQUE ueber (provider, model, unit_type, ACTIVE) laesst pro Tripel
+        # genau EINE inaktive Zeile zu -> das Muster "alte deaktivieren + neue einfuegen" traegt
+        # genau EINE Preis-Korrektur. Die zweite kollidiert. Bewusst nicht in KOSTEN-1 geloest,
+        # Backlog: APIRATE-HISTORY-UNIQUE. Betrifft auch routes/admin_dashboard.py:393-442.
         UniqueConstraint('provider', 'model', 'unit_type', 'active', name='uix_api_rate_active'),
-        {'comment': 'Aktuelle API-Preise pro Provider/Modell, editierbar, historisch via active-Flag. Status: lebt. Schreibt Admin-Rate-Pflege; liest Cost-Berechnung (api_cost_log) + Dashboard.'},
+        {'comment': 'Aktuelle API-Preise pro Provider/Modell, editierbar, historisch via active-Flag. Preispflege ist MANUELL (gepflegte Liste + Admin-UI), keine Sync-Engine. Status: lebt. Schreibt app.py _seed_api_rates (Startup-Seed, Liste _API_RATE_SOLL) + routes/admin_dashboard.py:411-438 (Admin-Preiswechsel); liest services/cost_tracker.py:105-108 (Rate pro geloggtem Call; fehlt sie, wird der Call STILL verworfen) + routes/admin_dashboard.py (Founder-Dashboard).'},
     )
     id = Column(Integer, primary_key=True)
     provider = Column(String(32), nullable=False, index=True, comment='API-Provider')
@@ -558,7 +562,7 @@ class ApiRate(Base):
 class PriceChangeLog(Base):
     """D-06: Manuell erkannte Preisaenderungen mit Impact-Berechnung."""
     __tablename__ = 'price_change_log'
-    __table_args__ = ({'comment': 'Manuell erkannte API-Preisaenderungen mit Impact-Berechnung. Status: write-only [ZOMBIE]. Schreibt routes/admin_dashboard.py:434; kein Reader.'},)
+    __table_args__ = ({'comment': 'Erkannte API-Preisaenderungen mit Impact-Berechnung (Historie-Spur zu api_rates). Status: write-only [ZOMBIE] — kein Reader. Schreibt routes/admin_dashboard.py:434 (Admin-Preiswechsel) + app.py _seed_api_rates (Startup-Seed, wenn die Soll-Liste einen Preis korrigiert).'},)
     id = Column(Integer, primary_key=True)
     api_rate_id = Column(Integer, ForeignKey('api_rates.id'), nullable=False)
     changed_at = Column(DateTime, default=utcnow, nullable=False, index=True, comment='Zeitpunkt der Preisaenderung')

@@ -2590,6 +2590,16 @@ Plans:
 
 ---
 
+### Phase 999.9: APIRATE-HISTORY-UNIQUE — Preis-Historie trägt nur EINE Korrektur pro Tripel (BACKLOG, NEU 2026-07-20, aus KOSTEN-1 Plan 01 Fund F-3)
+
+**Goal:** `uix_api_rate_active` ist `UNIQUE(provider, model, unit_type, active)`. Damit ist pro Tripel genau **eine inaktive** Zeile möglich — das hauseigene Preis-Wechsel-Muster („alte deaktivieren + neue einfügen", `routes/admin_dashboard.py:411-438` und ab KOSTEN-1 auch `app.py _seed_api_rates`) trägt also **genau eine** Preis-Korrektur pro Tripel. Die zweite kollidiert am Constraint. Heute unkritisch (vor KOSTEN-1: 0 inaktive Zeilen; nach KOSTEN-1: genau 1 pro korrigiertem Tripel — das Kontingent ist damit **aufgebraucht**). Die **nächste** Preisänderung derselben Position läuft in den IntegrityError; der Seed fängt ihn ab und meldet ihn, der Preis bleibt aber still der alte.
+
+**Tasks (Skizze):** Constraint auf eine echte Historie umstellen — z.B. `active` als partieller Unique-Index nur über `active=True` (`CREATE UNIQUE INDEX ... WHERE active`), sodass beliebig viele inaktive Zeilen erlaubt sind. Migration + Kommentar an der Constraint-Definition (`database/models.py`) mitziehen; `admin_dashboard.py:393-442` hat denselben Deckel und wird automatisch mit befreit.
+
+**Abhängigkeit:** keine (reine Schema-Härtung), aber **vor der zweiten Preisrunde** fällig. **Komplexität:** 🟡 (Migration auf einer Geld-Tabelle). **Plans:** 0 plans
+
+---
+
 ## 🧭 Strategische Themen-Pipeline (aus Strategie-Gespräch 2026-06-06 — Vault-Sync)
 
 > Überwiegend Post-Kernfeature / Phase 2-3. Volldetail + Einordnung im Vault: `Nerve-Vault/03 Planung/Strategie-Gespräch 2026-06-06.md` + `Nerve-Vault/01 Roadmap.md` (Sektion Strategische Themen-Pipeline). Bau-Reihenfolge wird mit Gemini abgestimmt (06.06.). **NICHT sofort** — erst Speech-Stats (Block J / Notizbuch B).
