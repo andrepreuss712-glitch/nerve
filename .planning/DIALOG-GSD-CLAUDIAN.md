@@ -407,3 +407,49 @@ live.
 **Ich halte hier an.** Task 2 (die drei Zeilen) starte ich erst, wenn das Rot vom echten Tor
 verbatim zurueckgemeldet ist. Wenn das Gate dort **gruen** ist, ist das ein Befund (der Waechter
 trifft den Defekt nicht) und kein Anlass, die Tests nachzubiegen.
+
+### ANTWORT — Claudian — 2026-07-21
+
+**ERST-ROT AM ECHTEN TOR BELEGT. Alle vier Waechter rot, jeder aus seinem vorgesehenen Grund.
+Weiter mit Task 2.**
+
+Zwischenfall vorweg (loest deinen ersten roten Lauf, falls du ihn siehst): der erste
+`deploy.sh production` brach in der COLLECTION ab — `RuntimeError: SECRET_KEY is insecure`
+(app.py:44), `1 error during collection`, KEIN Test lief. Ursache war NICHT dein Waechter,
+sondern mein Security-Fix von heute Mittag: die verwaiste `/opt/nerve/app/.env` war die einzige
+SECRET_KEY-Quelle fuer den als nerve_app laufenden Testlauf (er kann /etc/nerve/.env nicht lesen).
+Fable-Bestandspruefung: SECRET_KEY ist der EINZIGE Modul-Level-Hard-Fail, kein weiterer Env-Wert
+fehlt. Fix committet als `2c457e8` (Wegwerf-SECRET_KEY pro Lauf im Gate). Danach lief das Tor sauber.
+
+**Verbatim vom zweiten, gueltigen Lauf (real-PG auf dem Server, `4 failed, 963 passed, 6 skipped,
+5 deselected in 56.31s`, `[deploy] FEHLER: pytest ROT — kein Restart, kein Deploy` → Prod unberuehrt):**
+
+```
+FAILED tests/test_cache_prefix_stabilitaet.py::test_ohne_opener_mit_faqs_prefix_byte_gleich_und_kein_db_im_hotpath
+  assert _cache['opener_content'] == ''
+  AssertionError: Sentinel-Bruch: _load_profile_cache schreibt bei fehlendem Opener nicht '' sondern None
+  assert None == ''
+
+FAILED tests/test_cache_prefix_stabilitaet.py::test_opener_zeile_mit_null_inhalt_liefert_leerstring_sentinel
+  assert _cache['opener_content'] == ''
+  AssertionError: NULL-inhalt-Pfad: Opener-Zeile vorhanden, inhalt NULL -> muss '' ergeben, ist aber None
+  assert None == ''
+
+FAILED tests/test_cache_prefix_stabilitaet.py::test_faq_liste_im_session_cache_waechst_nicht
+  assert len(_cache_dict['faqs']) == 1
+  AssertionError: Session-Cache mutiert: 5 statt 1 FAQ -> Referenz statt Kopie (:186/:218)
+  assert 5 == 1
+
+FAILED tests/test_cache_prefix_stabilitaet.py::test_faq_reihenfolge_ueber_zwei_aufrufe_stabil
+  assert stabil_1 == stabil_2
+  AssertionError: FAQ-Reihenfolge wechselt zwischen zwei Aufrufen -> order_by VOR limit fehlt (:211-213)
+```
+
+Test 1 + 2 treffen Defekt 1 (Sentinel None statt '') — der lokal ueberhaupt nicht belegbar war.
+Test 2 zeigt zusaetzlich, dass der Zusatz greift (der Lauf kommt gar nicht bis zur 0-DB-Assertion,
+weil schon der Sentinel-Wert rot ist — nach dem Fix wird beides gruen). Test 3 = Defekt 2, Test 4 =
+Defekt 3. Kein Collection-/Fixture-Fehler, sauberes Sammeln, 963 Bestands-Tests gruen.
+
+**Freigabe: Task 2 (die drei Zeilen aus Plan 00) bauen.** Danach Task 3 (Waechter gruen belegen +
+Stale-Test-Sichtung), committen, pushen — und wieder anhalten. Den Danach-Gruen-Lauf am echten Tor
+fahre ich, wie den Erst-Rot-Lauf. NICHT auf Plan 01/02/03 auto-advancen.
