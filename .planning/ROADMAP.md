@@ -2425,6 +2425,34 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 ---
 
+### Phase 08.23.2.KOSTEN-1.1: Modellnamen-Wahrheit in der Kosten-Erfassung (NEU 2026-07-21) 🟡 — NACH TEMPO-1
+
+**Herkunft:** GSD-Fund bei der TEMPO-1-Planung (`TEMPO1-KNOPF-MODELLNAME-FALSCH`), von Claudian am Code + an Prod verifiziert. Bewusst **nicht** in TEMPO-1 gemischt (CLAUDE.md Punkt 17 / Regel 3d: Fund während einer Phase → eigene Mini-Phase direkt danach, Kontext frisch).
+
+**Goal:** Jede `log_api_cost`-Buchung nennt das Modell, das an derselben Stelle **tatsächlich** aufgerufen wurde — und ein Wächter hält das dauerhaft.
+
+**★ BELEGTER BEFUND:**
+- `streame_manual_ewb_variante` (`services/claude_service.py:~858`) ruft `model=config.MODEL_PIP_VARIANTE` auf. `config.py:94` → Default **`claude-sonnet-4-5`**; Prod überschreibt nicht (`grep -c 'MODEL_PIP_VARIANTE\|MODEL_EWB\|MODEL_QA' /etc/nerve/.env` == **0**).
+- Direkt daneben bucht der Kosten-Hook **hart `'haiku-4-5'`** (4 Aufrufe: input/output/cache_read/cache_write).
+- Sonnet kostet rund **3× Haiku** → dieser Pfad ist **seit jeher um Faktor ~3 zu niedrig verbucht**.
+- **Gegenbeleg, dass es ein Versehen ist:** der Auto-Pfad ~40 Zeilen darüber (`:705`) bucht korrekt über die Variable `_model_autovar`.
+- **Warum der bestehende Wächter das nicht fängt:** W2 (`test_cost_hook_coverage.py`) prüft, **ob** eine Call-Site einen Hook hat — nicht, **ob der Modellname darin stimmt**. Blinder Fleck by design.
+- **Umfang ungeprüft:** `grep` zählt **22×** hart kodiertes `'haiku-4-5'` und **4×** `'sonnet-4-5'` in `log_api_cost`-Aufrufen. Welche davon auf einem abweichenden Modell laufen, ist offen.
+
+**Scope:**
+1. **Inventur:** jede `log_api_cost`-Call-Site gegen das `model=`-Argument des zugehörigen API-Aufrufs in derselben Funktion halten. Ergebnis als Tabelle in die SUMMARY (Stelle · gebuchter Name · echtes Modell · stimmt ja/nein).
+2. **Fix:** falsche Literale auf die tatsächliche Modell-Variable umstellen (Muster `_model_autovar`, `claude_service.py:705`). `normalize_model_name()` aus KOSTEN-1 bleibt die Normalisierungs-Schicht.
+3. **Wächter (Test-Netz-Ratsche, Pflicht):** Fehlerklasse dauerhaft fangbar machen. **Anforderung, nicht Lösung** — GSD wählt den Weg (statischer AST-Check „Literal als Modellname verboten, wenn die Funktion ein `config.MODEL_*` verwendet" vs. Laufzeit-Abgleich analog W3). **Erst-Rot gegen den ungefixten Stand belegen** (Fable-Schärfung 03.07.), sonst ist der Wächter grün-aber-prüft-nichts.
+
+**Gelockt (aus KOSTEN-1 übernommen):** alte Buchungen werden **NICHT** rückwirkend korrigiert (D-02/Finanzamt). Nur ab jetzt richtig; ggf. Historie-Marker analog `COST_DATA_COMPLETE_SINCE` erwägen.
+
+**Reihenfolge:** läuft **VOR** der Preis-Festlegung — solange der Fehler drin ist, ist die Kostenbasis für die Preis-Entscheidung zu niedrig.
+
+**Komplexität:** 🟡 (mechanisch, aber Marge-relevant, berührt keinen Live-Antwort-Pfad-Logikzweig). Cross-AI nach Ermessen; **Claudian-Pre-Execute-Audit Pflicht**. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
+**Verzeichnis:** `.planning/phases/08.23.2.KOSTEN-1.1-modellnamen-wahrheit/`
+
+---
+
 ### Phase 08.23.2.PROMPTGUARD: Prompt-Zusammenbau-Live-Naht-Wächter (NEU 2026-07-03) 🟡 — NACH PERSID
 
 **Herkunft:** Fable-Bewertung von Geminis Wächter-Ideen (Vault `05 Log` 2026-07-03). Von Geminis 3 Wächtern + 4 blinden Flecken die EINZIGE genuine Lücke — und zu ~70% schon getestet.
