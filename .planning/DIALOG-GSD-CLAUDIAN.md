@@ -320,3 +320,90 @@ nur den einen Aufschlag. Nicht „reparieren".
 Scope eng: **nur** `cache_control` auf den bestehenden `_layer:"stable"`-Block + `CACHE_ANALYSE`-
 Aufraeumen. **Nichts** aus dem TAXO3-Alt-Plan-04 dazunehmen. `autonomous: false`, kein Auto-Advance,
 **Cross-AI vor Execute ist Pflicht.**
+
+---
+
+## FRAGE — 08.23.2.TEMPO-1 Welle 0 (Plan 00, Task 1) — 2026-07-21
+
+**Wo stehe ich:** Task 1 ist gebaut und committet (`2a1b574`). `tests/test_cache_prefix_stabilitaet.py`
+mit vier Runtime-Waechtern angelegt, **kein Produktivcode angefasst**
+(`git diff --name-only HEAD -- services/ config.py` → 0 Zeilen). Task 2 (die drei Zeilen) habe ich
+bewusst **nicht** angefangen.
+
+Die vier Tests:
+1. `test_ohne_opener_mit_faqs_prefix_byte_gleich_und_kein_db_im_hotpath` (real-PG)
+2. `test_opener_zeile_mit_null_inhalt_liefert_leerstring_sentinel` (real-PG, inkl. dem
+   nachgezogenen 0-DB-Verhaltens-Check aus `272fc0d` — Zaehler-Reset, zweimal
+   `build_answer_context`, `_opened['n'] == 0`, plus Byte-Gleichheit des Stabil-Blocks;
+   Aufbau identisch zu Test 1 **inkl. `set_profile_for_sid`**, damit kein falsches Rot aus dem
+   `pdata`-Fallback kommt)
+3. `test_faq_liste_im_session_cache_waechst_nicht` (In-Memory)
+4. `test_faq_reihenfolge_ueber_zwei_aufrufe_stabil` (In-Memory)
+
+**Lokales Vorab-Signal — `pytest tests/test_cache_prefix_stabilitaet.py -q` (verbatim):**
+
+```
+ssFF                                                                     [100%]
+================================== FAILURES ===================================
+________________ test_faq_liste_im_session_cache_waechst_nicht ________________
+>       assert len(_cache_dict['faqs']) == 1, (
+            f"Session-Cache mutiert: {len(_cache_dict['faqs'])} statt 1 FAQ -> _faqs ist eine Referenz "
+            'auf den Cache, der Fallback appendet hinein (prompt_pipeline.py:186/:218).')
+E       AssertionError: Session-Cache mutiert: 5 statt 1 FAQ -> _faqs ist eine Referenz auf den Cache, der Fallback appendet hinein (prompt_pipeline.py:186/:218).
+E       assert 5 == 1
+E        +  where 5 = len([{'a': '1', 'q': 'A'}, {'a': 'A1', 'q': 'F1'}, {'a': 'A2', 'q': 'F2'}, {'a': 'A2', 'q': 'F2'}, {'a': 'A1', 'q': 'F1'}])
+
+tests\test_cache_prefix_stabilitaet.py:301: AssertionError
+_______________ test_faq_reihenfolge_ueber_zwei_aufrufe_stabil ________________
+>       assert stabil_1 == stabil_2, (
+            'FAQ-Reihenfolge wechselt zwischen zwei Aufrufen -> die FAQ-Fallback-Query braucht ein '
+            'order_by VOR dem limit (prompt_pipeline.py:211-213); ohne ORDER BY garantiert Postgres '
+            'keine Reihenfolge und der Cache-Prefix aendert sich STILL.')
+E       AssertionError: FAQ-Reihenfolge wechselt zwischen zwei Aufrufen -> die FAQ-Fallback-Query braucht ein order_by VOR dem limit (prompt_pipeline.py:211-213); ohne ORDER BY garantiert Postgres keine Reihenfolge und der Cache-Prefix aendert sich STILL.
+E       assert 'Ziel ist ver...nF: F2\nA: A2' == 'Ziel ist ver...nF: F1\nA: A1'
+E
+E         Skipping 2192 identical leading characters in diff, use -v to show
+E           # FAQ
+E         + F: F1
+E         + A: A1
+E           F: F2
+E         - A: A2...
+
+tests\test_cache_prefix_stabilitaet.py:336: AssertionError
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_cache_prefix_stabilitaet.py:136: TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test (no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.
+SKIPPED [1] tests\test_cache_prefix_stabilitaet.py:212: TEST_DATABASE_URL not set -- generic fixtures require real-PG nerve_test (no SQLite fallback by design, Req-2/D-07). Run server-side via deploy.sh-Gate.
+2 failed, 2 skipped in 0.07s
+```
+
+**Einordnung — welcher Defekt macht welche Assertion rot:**
+
+| Test | Rote Assertion | Ist / Soll | Defekt |
+|---|---|---|---|
+| `test_faq_liste_im_session_cache_waechst_nicht` | `len(_cache_dict['faqs']) == 1` | **5** statt **1** | Defekt 2 — `prompt_pipeline.py:186` holt `_faqs` als **Referenz** auf den Session-Cache, `:218` appendet hinein. Zwei Antwort-Calls → 1 + 2 + 2 = 5 Eintraege. Genau der Prompt-Bloat pro Call. |
+| `test_faq_reihenfolge_ueber_zwei_aufrufe_stabil` | `stabil_1 == stabil_2` | Stabil-Block Call 1 endet auf `F: F1 / A: A1 / F: F2 / A: A2`, Call 2 auf `F: F2 / A: A2 / F: F1 / A: A1` | Defekt 3 — die FAQ-Fallback-Query `prompt_pipeline.py:211-213` hat **kein `order_by`** vor dem `limit`. Der Prefix wechselt **still** die Bytes; ohne Fix laeuft `cache_control` aus Welle 2 in Cache-**Writes** statt Cache-Reads. |
+
+Beide sind **aus dem richtigen Grund** rot: es ist in beiden Faellen die im Plan vorgesehene
+Verhaltens-Assertion, kein Import-, Fixture- oder Sammel-Fehler (der Lauf sammelt sauber, 4 Tests,
+0 errors).
+
+⚠ **Tests 1 und 2 laufen lokal NICHT** — die `db_session`-Fixture skippt ohne `TEST_DATABASE_URL`
+(`conftest.py`, kein SQLite-Fallback by design). Damit sind genau die beiden Waechter, die den
+**Sentinel-Defekt (Defekt 1: `live_session.py:821` schreibt `None` statt `''`)** und die
+**0-DB-Zusage im Hot-Path** (`prompt_pipeline.py:126`) belegen, **ausschliesslich am echten Tor
+belegbar**. Lokal ist dazu keine Aussage moeglich — weder gruen noch rot.
+
+**Meldung: bereit fuer den Erst-Rot-Lauf am echten Tor.**
+
+`bash deploy.sh production` fahre ich auftragsgemaess **nicht** — das ist Claudians Lauf. Erwartung
+dort: das Pytest-Gate auf dem Server wird rot mit
+`FAILED tests/test_cache_prefix_stabilitaet.py::test_ohne_opener_mit_faqs_prefix_byte_gleich_und_kein_db_im_hotpath`
+(Sentinel-Assertion: `_cache['opener_content']` ist `None` statt `''`) und
+`FAILED ...::test_opener_zeile_mit_null_inhalt_liefert_leerstring_sentinel` (gleiche Ursache, zweiter
+Pfad zum `None`), plus den beiden oben schon lokal roten. Der Deploy bricht dabei bestimmungsgemaess
+**vor dem Restart** ab — der Task hat **keinen** Produktivcode geaendert, es geht also ohnehin nichts
+live.
+
+**Ich halte hier an.** Task 2 (die drei Zeilen) starte ich erst, wenn das Rot vom echten Tor
+verbatim zurueckgemeldet ist. Wenn das Gate dort **gruen** ist, ist das ein Befund (der Waechter
+trifft den Defekt nicht) und kein Anlass, die Tests nachzubiegen.
