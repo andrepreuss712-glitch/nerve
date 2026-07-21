@@ -2148,7 +2148,7 @@ Geliefert + gepusht: der PG-Gate-Block in `deploy.sh` (provision→pg_dump-Resto
 
 **Depends on:** 08.23.2.TAXO1 (intent_event-Schema + Slow Lane, erfüllt). **Blocker für:** TAXO2-Plan-03-Deploy + TAXO2-Plan-04 (beide gated bis diese Phase live).
 **Komplexität:** 🔴 — DSGVO/RLS/Schema-Migration + Daemon-GUC-Mechanik. **Cross-AI Pflicht (Gemini-3-Sichten) + Real-Daten-Validation Pflicht.** create_all-Falle: Migration VOR Restart. KEIN Local-Dev.
-**Plans:** 3 Plans / 3 Wellen — **CODE-COMPLETE + gepusht 2026-06-25 (NICHT deployed, NICHT server-seitig verifiziert).** Cross-AI Gemini (3-Sichten) + Claudian-Pre-Execute-Audit GRÜN (head==0021 prod-verifiziert).
+**Plans:** 4 Plans / 4 Wellen (W0 nachgetragen 2026-07-21) — **CODE-COMPLETE + gepusht 2026-06-25 (NICHT deployed, NICHT server-seitig verifiziert).** Cross-AI Gemini (3-Sichten) + Claudian-Pre-Execute-Audit GRÜN (head==0021 prod-verifiziert).
 - [x] 08.23.2.TENANT-FOUND-01-anlage-tenant-backfill-PLAN.md — W1: resolve_tenant_uuid_for_user-Helper (db.py) + create_call_for_sid setzt tenant_id + idempotente Backfill-Migration 0023 + auth.py single-source Refactor (TF-1) — commits 4b603a6/609277a/4193ffa/7cf7551, SUMMARY 01
 - [x] 08.23.2.TENANT-FOUND-02-rls-schloss-kinder-PLAN.md — W2: abstain_log RLS+NOT NULL in 0022 gefaltet + rubric_score NOT NULL (0024) + suggestion_reactions NOT NULL + fail-closed-Flush-Skip + Schilder (TF-2) — commits 0e02e51/462bb59/32b3513, SUMMARY 02
 - [x] 08.23.2.TENANT-FOUND-03-daemon-guc-m4-PLAN.md — W3: Slow-Lane-Daemon A1-set_current_tenant-Klammer (M-4 Variante A1 GELOCKT) + M-4-Negativ/Positiv-Test (abstain_log) + Slow-Lane-Integration-Test (TF-3) — commits ee4eb0f/eba0810/9c70466, SUMMARY 03
@@ -2439,7 +2439,7 @@ bevor er Opener anlegt. **Heute real ist nur der Latenz-/DB-Anteil (Profil 7).**
 **Fix (3 Zeilen, eigener Plan + eigener Commit VOR dem Marker, einzeln zurueckrollbar):**
 (1) `live_session.py:821` `None` → `''` als „geladen, kein Opener"-Sentinel (`:193`/`:286` behandeln
 `''` bereits korrekt als falsy); (2) `_faqs = list(...)` als Kopie statt Referenz;
-(3) `.order_by(_FAQ_op.id)` an die FAQ-Query. **Begruendung fuer „in TEMPO-1 statt eigene Phase":**
+(3) `.order_by(_FAQ_op.id)` **vor** das `limit`; **(4) NACHGETRAGEN nach Claudian-Audit: `mode='literal'`-Filter im Fallback** — er filtert heute gar nicht und schleust damit **KI-generierte FAQs als hinterlegte Fakten** in den Antwort-Prompt (Prod-Beleg: Profil 6 = 7× ki_generated / 2× literal), was der Grounding-Regel des Paradigmas direkt zuwiderlaeuft. Fuenfter Waechter dazu. **Begruendung fuer „in TEMPO-1 statt eigene Phase":**
 kein Fremdthema, sondern die **Voraussetzung**, dass der Marker ueberhaupt wirkt — plus ein
 Latenz-Fix, der ohnehin faellig ist. **Regressions-Wachter Pflicht** (Erst-Rot gegen den ungefixten
 Stand): Profil ohne Opener + mit FAQs → zwei aufeinanderfolgende `build_answer_context`-Aufrufe
@@ -2448,8 +2448,9 @@ liefern **byte-gleiche** Stabil-Bloecke.
 **Komplexität:** 🟡 — berührt den Live-Antwort-Pfad → **Cross-AI PFLICHT vor Execute** + Claudian-Pre-Execute-Audit + Test-Anruf. `autonomous: false`, kein Auto-Advance. Deploy fährt Claudian (Zwei-Tore). Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
 **Verzeichnis:** `.planning/phases/08.23.2.TEMPO-1-antwort-zwischenspeicher/`
 
-**Plans:** 3 Plans / 3 Wellen (geplant 2026-07-21, alle `autonomous: false`) — Wellen sind sequenziell,
+**Plans:** 4 Plans / 4 Wellen (W0 nachgetragen 2026-07-21) (geplant 2026-07-21, alle `autonomous: false`) — Wellen sind sequenziell,
 weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt).
+- [ ] `08.23.2.TEMPO-1-00-PLAN.md` (W0) — **Prefix-Stabilitaet, Voraussetzung fuer den Marker**: Opener-Sentinel `''` statt `None` (`live_session.py:821`, trifft auch den NULL-`inhalt`-Pfad), FAQ-Liste als **Kopie** statt Referenz (`prompt_pipeline.py:186`), `order_by` **vor** `limit` (`:211-213`), **`mode='literal'`-Filter im Fallback** (Claudian-Audit: schleust sonst KI-generierte FAQs als Fakten in den Prompt) + **5 Regressions-Waechter mit Erst-Rot-Pflicht**
 - [ ] `08.23.2.TEMPO-1-01-PLAN.md` (W1) — toten Cache-Apparat entfernen (`CACHE_ANALYSE`-Zweig, `_CACHE_MIN_CHARS` an beiden Stellen, `CACHE_EWB`/`CACHE_QA`); `CACHE_ANTWORT` als EINZIGER Schalter (default true); Test-Contract nachgezogen
 - [ ] `08.23.2.TEMPO-1-02-PLAN.md` (W2) — `cache_control` auf den `_layer:"stable"`-Block in `answer_system_content()` (Zuordnung über den `_layer`-WERT, **nicht** über einen Listen-Index) + 5 Absicherungs-Tests inkl. Byte-Gleichheit des Cache-Prefix über zwei SIDs + Kommentar-Wahrheit
 - [ ] `08.23.2.TEMPO-1-03-PLAN.md` (W3) — Deploy (Zwei-Tore) + drei Live-Belege (TTFT vorher/nachher, `api_cost_log`-Cache-Read-Zeilen, `logs-errors`) + ROADMAP/STATE-Nachzug
