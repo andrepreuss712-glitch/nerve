@@ -2417,6 +2417,12 @@ Plans:
 **Komplexität:** 🟡 — berührt den Live-Antwort-Pfad → **Cross-AI PFLICHT vor Execute** + Claudian-Pre-Execute-Audit + Test-Anruf. `autonomous: false`, kein Auto-Advance. Deploy fährt Claudian (Zwei-Tore). Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
 **Verzeichnis:** `.planning/phases/08.23.2.TEMPO-1-antwort-zwischenspeicher/`
 
+**Plans:** 3 Plans / 3 Wellen (geplant 2026-07-21, alle `autonomous: false`) — Wellen sind sequenziell,
+weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt).
+- [ ] `08.23.2.TEMPO-1-01-PLAN.md` (W1) — toten Cache-Apparat entfernen (`CACHE_ANALYSE`-Zweig, `_CACHE_MIN_CHARS` an beiden Stellen, `CACHE_EWB`/`CACHE_QA`); `CACHE_ANTWORT` als EINZIGER Schalter (default true); Test-Contract nachgezogen
+- [ ] `08.23.2.TEMPO-1-02-PLAN.md` (W2) — `cache_control` auf den `_layer:"stable"`-Block in `answer_system_content()` (Zuordnung über den `_layer`-WERT, **nicht** über einen Listen-Index) + 5 Absicherungs-Tests inkl. Byte-Gleichheit des Cache-Prefix über zwei SIDs + Kommentar-Wahrheit
+- [ ] `08.23.2.TEMPO-1-03-PLAN.md` (W3) — Deploy (Zwei-Tore) + drei Live-Belege (TTFT vorher/nachher, `api_cost_log`-Cache-Read-Zeilen, `logs-errors`) + ROADMAP/STATE-Nachzug
+
 ---
 
 ### Phase 08.23.2.PROMPTGUARD: Prompt-Zusammenbau-Live-Naht-Wächter (NEU 2026-07-03) 🟡 — NACH PERSID
