@@ -2383,6 +2383,42 @@ Plans:
 **Verzeichnis:** `.planning/phases/08.23.2.KOSTEN-1-kosten-erfassung-dichtmachen/`
 **Reihenfolge Geld-Thema:** KOSTEN-1 → Messung (1 sauberer Test-Anruf) → Preismodell (Grundgebühr+Nutzung) → **METER + AUTH-3 GEMEINSAM** (beide bauen `_activate_subscription`/`_sync_subscription` um → nicht nacheinander patchen).
 
+### Phase 08.23.2.TEMPO-1: Antwort-Zwischenspeicher aktivieren + toten Cache-Schalter entfernen (NEU 2026-07-21) 🟡
+
+**Herkunft:** Claudian-Prod-Messung an `api_cost_log` (erste Auswertung NACH KOSTEN-1, 2026-07-21). Schritt 2 des Geld-Themas ("Kosten senken"), bewusst eng geschnitten.
+
+**Goal:** Den bereits cache-fähig angelegten STABIL-Block des Antwort-Prompts tatsächlich cachen, und den nachweislich wirkungslosen `CACHE_ANALYSE`-Schalter samt falscher Grenzwert-Logik entfernen.
+
+**★ ZWEI BELEGTE FUNDE (Messung, nicht Vermutung):**
+1. **`CACHE_ANALYSE` ist ein No-Op.** `SYSTEM_PROMPT_BASE` = **6.398 Zeichen**; Haiku 4.5 verlangt als cachebaren Prefix **4.096 Tokens ≈ 16.000 Zeichen** → würde nie greifen. Zusätzlich vergleicht `claude_service.py:528` **Zeichen gegen eine Token-Grenze** (`_CACHE_MIN_CHARS = 4096`), und der Kommentar `claude_service.py:10` ("Anthropic minimum: 1024 tokens") ist für Haiku 4.5 **veraltet**.
+2. **Antwort-Caching lohnt sich.** Prod-Messung: `pip_stream` avg **7.437 Input-Tokens** (Sonnet-4.5-Minimum 1.024 → 7× drüber). Aufrufe pro Session auf denselben stabilen Prefix: `pip_variante` 8,6 Zeilen/Session (≈4,3 Calls), `qa_response` 4,5 (≈2,3), `ewb` 3,8 (≈1,9) → **~8–9 Antwort-Calls pro Anruf**; Break-even bei 5-Min-TTL = 2 Calls. Klar drüber.
+
+**Scope (eng, Leitsatz 2 — NUR die Aktivierung):**
+- `cache_control: {"type": "ephemeral"}` auf den `_layer: "stable"`-Block in `answer_system_content()` (`services/prompt_pipeline.py:618-621` liefert die 2-Block-Liste; `:686` baut die Content-Blöcke). Die Struktur steht seit TAXO3-P1-01 — es fehlt ausschließlich der Marker.
+- `CACHE_ANALYSE` (`config.py:102-105`) + `_CACHE_MIN_CHARS` + der Cache-Zweig `claude_service.py:527-534` + stale Kommentar `:10` entfernen; `tests/test_08_13_01_config_constants.py:117/123` mitziehen.
+
+**AUSDRÜCKLICH NICHT DRIN:**
+- Circuit-Breaker-Umbau + Cache-Pre-Warming (TAXO3-Alt-Plan-04 `…TAXO3-04-caching-circuit-breaker-tempo-PLAN.md` bleibt Landkarte für später) — additiv, nicht nötig für den Nutzen.
+- **Judge-Transkript-Cap: bewusst zurückgestellt, weil KEIN Messwert existiert** — `context_tag='judge'` hat **0 Zeilen** in `api_cost_log` (Hook kam erst mit KOSTEN-1, seither kein Anruf). Erst messen, dann kappen. (Genau der Fehler, den Fund 1 illustriert.)
+- Modellwechsel (`MODEL_EWB`/`MODEL_QA`/`MODEL_PIP_AUTOVAR` = `claude-sonnet-4-5`) — eigener Kandidat, eigene Bewertung.
+
+**Fallen (Pflicht-Pre-Check, Punkte 14/19/20):**
+- **Cache-Poison-Risiko:** der STABIL-Block enthält den Profil-Stabilteil (Sek. 1–7) → Cache ist **pro User** korrekt gescoped. Die per-SID-Anrede wurde in TAXO3-P1-01 bereits bewusst aus dem Stabil-Block entfernt (Anti-Cache-Poison) — **verifizieren, dass das noch gilt**, sonst ist der Prefix pro Anruf verschieden und der Cache tot.
+- Max. 4 `cache_control`-Breakpoints pro Request — hier genau 1.
+- Der VOLATIL-Block darf **kein** `cache_control` bekommen (sonst Write pro Request statt Read).
+- Erster Call pro Cache-Fenster zahlt ~1,25× Aufschlag — deshalb ist die gemessene Call-Zahl pro Anruf (oben) der tragende Beleg.
+
+**Beleg-Pflicht nach Deploy (Test-Anruf, PFLICHT):** `api_cost_log` zeigt `unit_type='per_1k_cache_read_tokens'` mit `units > 0` für einen Antwort-Pfad. Der Logging-Hook existiert bereits (Muster `claude_service.py:556ff`) — **prüfen, ob er auch am EWB/QA-Pfad hängt**, sonst mit anlegen. Zusätzlich: TTFT nicht schlechter als vorher.
+
+**Nebenfund → Backlog:** `pip_stream` schreibt **keine `session_id`** in `api_cost_log` → Verbrauch dort nicht pro Anruf zuordenbar (KOSTEN-1-Restlücke).
+
+**Ehrliche Erwartung:** Geld-Effekt **klein** (dieser Pfad = 1,8 % der bisher erfassten Kosten); der eigentliche Gewinn ist **Antwort-Tempo** (CLAUDE.md Latenz-Regel). Der Geld-Hebel liegt in der Folge-Phase H1 (drei 4-Sekunden-Aufrufe zusammenlegen).
+
+**Komplexität:** 🟡 — berührt den Live-Antwort-Pfad → **Cross-AI PFLICHT vor Execute** + Claudian-Pre-Execute-Audit + Test-Anruf. `autonomous: false`, kein Auto-Advance. Deploy fährt Claudian (Zwei-Tore). Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
+**Verzeichnis:** `.planning/phases/08.23.2.TEMPO-1-antwort-zwischenspeicher/`
+
+---
+
 ### Phase 08.23.2.PROMPTGUARD: Prompt-Zusammenbau-Live-Naht-Wächter (NEU 2026-07-03) 🟡 — NACH PERSID
 
 **Herkunft:** Fable-Bewertung von Geminis Wächter-Ideen (Vault `05 Log` 2026-07-03). Von Geminis 3 Wächtern + 4 blinden Flecken die EINZIGE genuine Lücke — und zu ~70% schon getestet.
