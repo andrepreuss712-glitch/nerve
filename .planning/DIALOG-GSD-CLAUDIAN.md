@@ -253,3 +253,70 @@ und Payout-Anteilen) und diesen Betrag buchen statt der Formel. Kostet einen zus
 Zahlung — bei EA-Volumen vernachlässigbar, und es ist die einzige Zahl, die stimmt.
 
 Bis dahin bleibt die Modell-Rechnung als Näherung stehen (bewusst, dokumentiert, nicht still).
+
+---
+
+## ★ TEMPO-1 — Pflicht-Pre-Checks vor der Planung (Punkt 20), 2026-07-21
+
+Der ROADMAP-Eintrag TEMPO-1 verlangt zwei Verifikationen VOR der Planung. Beide sind gefahren,
+beide Ergebnisse hier belegt — damit später nachvollziehbar ist, worauf die Plaene aufsetzen.
+
+### 1. Haengt der cache_read-Logging-Hook auch am EWB/QA-Pfad? → JA, an allen dreien.
+
+Der Roadmap-Eintrag nennt `claude_service.py:556ff` als Muster und fragt, ob der Hook auch am
+Antwort-Pfad haengt. Er haengt — und zwar an jedem der drei Konsumenten von `answer_system_content()`:
+
+| Antwort-Pfad | Aufruf `answer_system_content` | Cache-Hook | `context_tag` / `call_site` |
+|---|---|---|---|
+| Auto/EWB (`streame_auto_variante`) | `claude_service.py:620` | `:700-709` | `ewb` / `ewb` |
+| Manuell (Knopf) | `claude_service.py:778` | `:853-862` | `ewb` / `ewb` |
+| QA | `qa_pipeline.py:418` | `qa_pipeline.py:488-497` | `qa` / `qa` |
+
+**Konsequenz: es ist NICHTS neu anzulegen.** Der Beleg nach dem Deploy ist fuehrbar, sobald der
+Marker sitzt. Die Hooks lesen `cache_read_input_tokens` / `cache_creation_input_tokens` und
+schreiben nur bei `> 0` — ein fehlender Marker sieht also aus wie „keine Zeile", nicht wie ein Fehler.
+
+**Korrektur am Beleg-Query im Roadmap-Text:** dort steht `pip_stream`. Ein `context_tag='pip_stream'`
+existiert im Code **nicht** — die Enumeration aller `context_tag=`/`call_site=`-Literale in
+`services/`, `routes/`, `nerve_rt/` kennt ihn nicht. `pip_stream` ist ein Mess-Label, kein DB-Wert.
+Der Beleg lautet daher:
+
+    unit_type='per_1k_cache_read_tokens' AND units > 0 AND context_tag IN ('ewb','qa')
+
+Wer nach `pip_stream` sucht, findet garantiert nichts und haelt eine funktionierende Aktivierung
+faelschlich fuer gescheitert.
+
+### 2. Ist die per-SID-Anrede weiterhin AUSSERHALB des STABIL-Blocks? → JA, Anti-Cache-Poison haelt.
+
+`prompt_pipeline.py:474-481` filtert im `return_blocks=True`-Pfad die Sek.-7-Zeile
+(`Anrede: … WICHTIG: Nutze konsequent …`) aktiv aus dem Stabil-Block heraus; die Anrede steht
+ausschliesslich volatil in Sektion 9 (`:452`, liest `session_anrede` per-SID). Der Alt-String-Pfad
+(`return_blocks=False`) behaelt sie — der ist fuer den Cache irrelevant.
+
+Zusatz-Scan der Sektionen 1–7 (`:145-433`) auf weitere per-Anruf-Inhalte: **ein** Zugriff auf
+`_session_state[sid]['_profile_cache']` — das ist der pro-User-Profil-Cache, ueber einen Anruf hinweg
+stabil. Kein Zeitstempel, kein Transkript, keine Session-ID im Stabil-Teil.
+
+**Der Prefix ist stabil → der Cache kann greifen.**
+
+### 3. Fund waehrend der Pre-Checks (geht in die Planung ein)
+
+`answer_system_content()` (`prompt_pipeline.py:686`) baut die Content-Bloecke so:
+
+    content = [{'type': 'text', 'text': b['text']} for b in blocks if b.get('text')]
+
+Dabei faellt der `_layer`-Marker (`'stable'` / `'volatile'`) weg, den `build_answer_context` (`:618-621`)
+gerade erst gesetzt hat. Der Marker muss **an dieser Stelle** ausgewertet werden, bevor er verloren
+geht — nicht weiter unten in `claude_service`/`qa_pipeline`, wo nur noch eine Liste ohne Layer-Info
+ankommt. Genau ein `cache_control` auf den `stable`-Block, keins auf `volatile`.
+
+**Bekannte, akzeptierte Cache-Segmentierung (kein Bug, aber zu wissen):** der Stabil-Block enthaelt
+`Rolle: {role_goal}` (`:596-598`). Kippt `contact_category` mitten im Anruf von `gatekeeper` auf
+`target`, aendert sich der Prefix → ein Cache-Miss und ein neuer Write. Inhaltlich korrekt, kostet
+nur den einen Aufschlag. Nicht „reparieren".
+
+### Randbedingungen fuer diese Phase (André, 2026-07-21)
+
+Scope eng: **nur** `cache_control` auf den bestehenden `_layer:"stable"`-Block + `CACHE_ANALYSE`-
+Aufraeumen. **Nichts** aus dem TAXO3-Alt-Plan-04 dazunehmen. `autonomous: false`, kein Auto-Advance,
+**Cross-AI vor Execute ist Pflicht.**
