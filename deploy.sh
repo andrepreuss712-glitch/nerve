@@ -193,7 +193,12 @@ ssh -i "$SSH_KEY" "$VPS_HOST" bash -s << ENDHEREDOC
   #     single-quoted inner bash -c (T-PGTEST-06: PW nie als String-Literal interpoliert), DATABASE_URL gesetzt (A-1, T-PGTEST-18).
   ANON_PW=\$(sudo grep ^NERVE_ANON_WORKER_DB_PASSWORD= /etc/nerve/ionos-s3.env | cut -d= -f2-)
   echo "[deploy] pytest gegen DATABASE_URL=postgresql://nerve_app@/\$TEST_DB (+ 4 Test-DSNs)"
-  sudo -u nerve_app env ANON_PW="\$ANON_PW" TEST_DB="\$TEST_DB" bash -c '
+  # SECRET_KEY: Wegwerf-Wert pro Lauf. nerve_app kann /etc/nerve/.env (600 root) nicht lesen,
+  # und die frueher danebenliegende /opt/nerve/app/.env ist entfernt (Security-Fix 2026-07-21).
+  # app.py:44 prueft NUR Gleichheit gegen den Default 'dev-secret-change-me' -> jeder andere String
+  # besteht (Fable-Bestandspruefung: einziger Modul-Level-Hard-Fail, kein weiterer Env-Wert noetig).
+  # Der ECHTE Schluessel bleibt bewusst draussen aus dem Testpfad.
+  sudo -u nerve_app env ANON_PW="\$ANON_PW" TEST_DB="\$TEST_DB" SECRET_KEY="gate-throwaway-\${RANDOM}\${RANDOM}\${RANDOM}" bash -c '
     cd /opt/nerve/app && \
     DATABASE_URL="postgresql://nerve_app@/\${TEST_DB}" \
     TEST_DATABASE_URL="postgresql://nerve_app@/\${TEST_DB}" \
