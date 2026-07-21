@@ -453,3 +453,39 @@ Defekt 3. Kein Collection-/Fixture-Fehler, sauberes Sammeln, 963 Bestands-Tests 
 **Freigabe: Task 2 (die drei Zeilen aus Plan 00) bauen.** Danach Task 3 (Waechter gruen belegen +
 Stale-Test-Sichtung), committen, pushen — und wieder anhalten. Den Danach-Gruen-Lauf am echten Tor
 fahre ich, wie den Erst-Rot-Lauf. NICHT auf Plan 01/02/03 auto-advancen.
+
+### FRAGE — 08.23.2.TEMPO-1 Welle 0 (Plan 00, Task 2+3) — 2026-07-21
+
+**Task 2 + Task 3 gebaut, committet, gepusht (`e1ed70f`, `5f63c58`). Bereit fuer den Gruen-Lauf am echten Tor.**
+
+Die drei Zeilen (Commit `e1ed70f`):
+- `live_session.py:825` Sentinel `''` statt `None` — **beide Pfade**:
+  `'opener_content': (getattr(_opener, 'inhalt', '') or '') if _opener else '',`
+- `prompt_pipeline.py:186` Kopie statt Referenz: `_faqs = list(_profile_cache.get('faqs', []))`
+- `prompt_pipeline.py:213` `.order_by(_FAQ_op.id).limit(20).all()` (order_by VOR limit)
+- Kommentar-Wahrheit `prompt_pipeline.py:185`: `# None = Cache nicht geladen; '' = geladen, kein Opener`
+
+Zeilen-Neutralitaet gehalten: `wc -l services/prompt_pipeline.py` == **686** (Plan-02-Anker bleiben gueltig).
+Randfunde NICHT angefasst (kein order_by in `live_session.py:795-802`, kein Profil-Stempel).
+
+**Lokales Vorab-Signal (KEINE Abnahme):**
+```
+test_faq_liste_im_session_cache_waechst_nicht PASSED
+test_faq_reihenfolge_ueber_zwei_aufrufe_stabil PASSED
+test_ohne_opener_mit_faqs_..._kein_db_im_hotpath SKIPPED (real-PG)
+test_opener_zeile_mit_null_inhalt_liefert_leerstring_sentinel SKIPPED (real-PG)
+2 passed, 2 skipped
+```
+Tests 3+4 rot→gruen ggue. Task-1-Erst-Rot. Tests 1+2 (Sentinel + 0-DB) skippen lokal → das
+rot→gruen-**Paar** fuer Defekt 1 ist nur am Tor belegbar.
+
+**Stale-Test-Sichtung (Punkt 18): kein Retarget noetig.**
+`test_per_sid_migration.py:82-88` (nur Key-Existenz), `test_prompt_pipeline.py:450` (eigene
+None-Fixture, legitim „nicht geladen"), `test_build_answer_context.py:138` (`opener_content=''`
+jetzt prod-treu) — alle gruen, keiner prueft den geaenderten Vertrag und bleibt faelschlich gruen.
+29 passed / 5 skipped / 0 failed.
+
+**Bitte den Gruen-Lauf am echten Tor fahren** (`bash deploy.sh production`): erwartet ist, dass die
+vier Waechter jetzt GRUEN sind (das rot→gruen-Paar ggue. dem Erst-Rot-Lauf `4 failed, 963 passed`).
+Sobald das Gate gruen ist und der Restart durchlaeuft, ist Welle 0 live. Danach entscheidet Andre
+ueber Welle 1 (Plan 01) — **kein Auto-Advance** von meiner Seite.
