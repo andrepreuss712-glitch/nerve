@@ -182,8 +182,8 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
         with ls._session_state_lock:
             _profile_cache = ls._session_state.get(sid, {}).get('_profile_cache', {})
 
-    _opener_content = _profile_cache.get('opener_content')   # None if not loaded
-    _faqs = _profile_cache.get('faqs', [])
+    _opener_content = _profile_cache.get('opener_content')   # None = Cache nicht geladen; '' = geladen, kein Opener
+    _faqs = list(_profile_cache.get('faqs', []))   # KOPIE: der Fallback unten appendet (:218)
     # Issue 1 fix: Profile.branche moved to DB column in Phase 08.19.1 — read from cache
     _profile_branche = _profile_cache.get('profile_branche') or ''
 
@@ -210,7 +210,7 @@ def build_profile_context(user_id: int, mode: str = 'cold_call', sid: str = None
                     try:
                         _faq_rows = _db_op.query(_FAQ_op).filter_by(
                             profile_id=_pid_op
-                        ).limit(20).all()
+                        ).order_by(_FAQ_op.id).limit(20).all()   # order_by VOR limit: sonst wirkungslos
                         for f in _faq_rows:
                             _q = getattr(f, 'frage_muster', '') or ''
                             _a = getattr(f, 'antwort', '') or ''

@@ -818,7 +818,11 @@ def _load_profile_cache(sid: str, user_id: int, profile_id: int) -> None:
                 print(f"[Cache] Profile.branche load failed (non-fatal): {_br_e}")
 
             _cache = {
-                'opener_content': getattr(_opener, 'inhalt', None) if _opener else None,
+                # TEMPO-1/W0: '' = "geladen, aber kein (nutzbarer) Opener" — NICHT None.
+                # None bleibt reserviert fuer "Cache noch nicht geladen" (prompt_pipeline.py:193
+                # faellt dann bewusst in den DB-Pfad, Punkt 26). BEIDE Wege muessen '' ergeben:
+                # auch _opener vorhanden mit inhalt NULL (Spalte ist nullable).
+                'opener_content': (getattr(_opener, 'inhalt', '') or '') if _opener else '',
                 'user_firstname': _firstname,
                 'faqs': _faqs,
                 'profile_branche': _profile_branche,
