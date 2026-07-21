@@ -2414,6 +2414,37 @@ Plans:
 
 **Ehrliche Erwartung:** Geld-Effekt **klein** (dieser Pfad = 1,8 % der bisher erfassten Kosten); der eigentliche Gewinn ist **Antwort-Tempo** (CLAUDE.md Latenz-Regel). Der Geld-Hebel liegt in der Folge-Phase H1 (drei 4-Sekunden-Aufrufe zusammenlegen).
 
+
+**★ WELLE 0 NACHGETRAGEN 2026-07-21 (Fable-Bestand-Audit, André-freigegeben — Scope-Erweiterung):**
+Der als „stabil" gecachte Prefix ist bei **Profilen ohne Opener** nachweislich **instabil** — das
+Feature waere dort wirkungslos, und ein Bestands-Bug kostet schon heute Latenz. **Belegt am Code:**
+- `services/live_session.py:821` schreibt `opener_content=None`, wenn das Profil **keinen** Opener hat.
+- `services/prompt_pipeline.py:185` kann `None` („nicht geladen") nicht von `None` („kein Opener")
+  unterscheiden — der Kommentar dort sagt selbst `# None if not loaded`. Folge: der DB-Fallback
+  (`:193`) laeuft bei **jedem** Antwort-Call → **2 DB-Queries im Live-Hot-Path**, obwohl `:126` eine
+  ausdrueckliche „0 DB / <5ms"-Zusage traegt (CLAUDE.md Punkt 25, Latenz = Dealbreaker).
+- `:186` holt `_faqs` als **Referenz** (keine Kopie) auf den Session-Cache; `:218` `append`t hinein →
+  bei Profilen **mit** FAQs waechst die Liste pro Antwort-Call um bis zu 20 Eintraege → Prefix aendert
+  sich jedes Mal → **nie ein Cache-Read, immer ein 1,25×-Write, Prompt-Bloat waehrend des Anrufs**
+  (langsamer UND teurer, je laenger telefoniert wird).
+- `:211-213` FAQ-Query **ohne `order_by`** → Reihenfolge in Postgres nicht garantiert → Prefix-Bytes
+  koennen zwischen zwei Calls wechseln, **still**.
+- **Verraeterisches Indiz:** der Bestands-Test `tests/test_build_answer_context.py:138` nutzt
+  `opener_content=''` und kommentiert „verhindert den DB-Fallback" — Prod schreibt aber `None`.
+**★ Ist-Lage Prod (Claudian gegengeprueft, praeziser als Fables Szenario):** Profil 6 = 13 Opener /
+9 FAQs (sauber) · **Profil 7 = 0 Opener / 0 FAQs → Fallback bei jedem Call, aber kein FAQ-Bloat** ·
+Profil 8 = 3 Opener / 0 FAQs (sauber). **Die schlimmste Kombination („FAQs gepflegt, Opener leer")
+existiert heute NICHT** — sie entsteht aber fast sicher beim EA-Launch, sobald jemand FAQs pflegt,
+bevor er Opener anlegt. **Heute real ist nur der Latenz-/DB-Anteil (Profil 7).**
+**Fix (3 Zeilen, eigener Plan + eigener Commit VOR dem Marker, einzeln zurueckrollbar):**
+(1) `live_session.py:821` `None` → `''` als „geladen, kein Opener"-Sentinel (`:193`/`:286` behandeln
+`''` bereits korrekt als falsy); (2) `_faqs = list(...)` als Kopie statt Referenz;
+(3) `.order_by(_FAQ_op.id)` an die FAQ-Query. **Begruendung fuer „in TEMPO-1 statt eigene Phase":**
+kein Fremdthema, sondern die **Voraussetzung**, dass der Marker ueberhaupt wirkt — plus ein
+Latenz-Fix, der ohnehin faellig ist. **Regressions-Wachter Pflicht** (Erst-Rot gegen den ungefixten
+Stand): Profil ohne Opener + mit FAQs → zwei aufeinanderfolgende `build_answer_context`-Aufrufe
+liefern **byte-gleiche** Stabil-Bloecke.
+
 **Komplexität:** 🟡 — berührt den Live-Antwort-Pfad → **Cross-AI PFLICHT vor Execute** + Claudian-Pre-Execute-Audit + Test-Anruf. `autonomous: false`, kein Auto-Advance. Deploy fährt Claudian (Zwei-Tore). Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
 **Verzeichnis:** `.planning/phases/08.23.2.TEMPO-1-antwort-zwischenspeicher/`
 
