@@ -2391,7 +2391,7 @@ Plans:
 
 **★ ZWEI BELEGTE FUNDE (Messung, nicht Vermutung):**
 1. **`CACHE_ANALYSE` ist ein No-Op.** `SYSTEM_PROMPT_BASE` = **6.398 Zeichen**; Haiku 4.5 verlangt als cachebaren Prefix **4.096 Tokens ≈ 16.000 Zeichen** → würde nie greifen. Zusätzlich vergleicht `claude_service.py:528` **Zeichen gegen eine Token-Grenze** (`_CACHE_MIN_CHARS = 4096`), und der Kommentar `claude_service.py:10` ("Anthropic minimum: 1024 tokens") ist für Haiku 4.5 **veraltet**.
-2. **Antwort-Caching lohnt sich.** Prod-Messung: `pip_stream` avg **7.437 Input-Tokens** (Sonnet-4.5-Minimum 1.024 → 7× drüber). Aufrufe pro Session auf denselben stabilen Prefix: `pip_variante` 8,6 Zeilen/Session (≈4,3 Calls), `qa_response` 4,5 (≈2,3), `ewb` 3,8 (≈1,9) → **~8–9 Antwort-Calls pro Anruf**; Break-even bei 5-Min-TTL = 2 Calls. Klar drüber.
+2. **Antwort-Caching lohnt sich.** Prod-Messung — **KORRIGIERT 2026-07-21 (Claudian-Fehler, von GSD gefangen):** die Erstmessung nutzte `context_tag='pip_stream'`, doch **dieser Tag ist tot** (letzter Schreiber 16. April; heutiger Code kennt ihn nicht). **Gültig sind `ewb` avg **3.190** Input-Tokens (109 Zeilen) + `qa` avg **3.570** (69 Zeilen)** — Sonnet-4.5-Minimum 1.024 → **3× drüber statt 7×**. Caching greift weiterhin sicher; die Zahl war falsch, die Entscheidung hält. Aufrufe pro Session auf denselben stabilen Prefix: `pip_variante` 8,6 Zeilen/Session (≈4,3 Calls), `qa_response` 4,5 (≈2,3), `ewb` 3,8 (≈1,9) → **~8–9 Antwort-Calls pro Anruf**; Break-even bei 5-Min-TTL = 2 Calls. Klar drüber.
 
 **Scope (eng, Leitsatz 2 — NUR die Aktivierung):**
 - `cache_control: {"type": "ephemeral"}` auf den `_layer: "stable"`-Block in `answer_system_content()` (`services/prompt_pipeline.py:618-621` liefert die 2-Block-Liste; `:686` baut die Content-Blöcke). Die Struktur steht seit TAXO3-P1-01 — es fehlt ausschließlich der Marker.
@@ -2410,7 +2410,7 @@ Plans:
 
 **Beleg-Pflicht nach Deploy (Test-Anruf, PFLICHT):** `api_cost_log` zeigt `unit_type='per_1k_cache_read_tokens'` mit `units > 0` für einen Antwort-Pfad. Der Logging-Hook existiert bereits (Muster `claude_service.py:556ff`) — **prüfen, ob er auch am EWB/QA-Pfad hängt**, sonst mit anlegen. Zusätzlich: TTFT nicht schlechter als vorher.
 
-**Nebenfund → Backlog:** `pip_stream` schreibt **keine `session_id`** in `api_cost_log` → Verbrauch dort nicht pro Anruf zuordenbar (KOSTEN-1-Restlücke).
+**Nebenfund ZURÜCKGEZOGEN 2026-07-21:** die ursprüngliche Notiz („`pip_stream` schreibt keine `session_id`") war **gegenstandslos** — der Tag ist tot, ein toter Schreiber kann nichts fehlen lassen. Die lebenden Antwort-Pfade `ewb` und `qa` schreiben `session_id=sid` korrekt (`claude_service.py:705/858`, `qa_pipeline.py:493`). Kein Backlog-Eintrag nötig.
 
 **Ehrliche Erwartung:** Geld-Effekt **klein** (dieser Pfad = 1,8 % der bisher erfassten Kosten); der eigentliche Gewinn ist **Antwort-Tempo** (CLAUDE.md Latenz-Regel). Der Geld-Hebel liegt in der Folge-Phase H1 (drei 4-Sekunden-Aufrufe zusammenlegen).
 
