@@ -835,26 +835,30 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
         # Cost-Hook
         try:
             from services.cost_tracker import log_api_cost
+            # KOSTEN-1.1: buche den ECHTEN Namen des aufgerufenen Modells (config.MODEL_PIP_VARIANTE,
+            # :803) statt des falschen Literals 'haiku-4-5'. Muster _model_autovar (:620). Der Knopf-
+            # Pfad laeuft auf Sonnet -> Kosten muessen als Sonnet gebucht werden (~3x Haiku), nicht schoen.
+            _model_variante = config.MODEL_PIP_VARIANTE
             final_msg = stream.get_final_message()
             u = getattr(final_msg, 'usage', None)
             if u is not None:
                 in_tok = getattr(u, 'input_tokens', 0) or 0
                 out_tok = getattr(u, 'output_tokens', 0) or 0
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _model_variante, user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
                              context_tag='pip_variante', session_id=sid)
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _model_variante, user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='pip_variante', session_id=sid)
             # Cache-Token-Logging (B1 Review-Finding)
             _cache_hits = getattr(getattr(final_msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
             _cache_writes = getattr(getattr(final_msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
             if _cache_hits > 0:
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _model_variante, user_id=None,
                              units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
                              context_tag='ewb', call_site='ewb', session_id=sid)
             if _cache_writes > 0:
-                log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                log_api_cost('anthropic', _model_variante, user_id=None,
                              units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
                              context_tag='ewb', call_site='ewb', session_id=sid)
         except Exception as _e:
