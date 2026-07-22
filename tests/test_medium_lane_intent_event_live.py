@@ -140,6 +140,12 @@ def test_medium_lane_live_dispatch_writes_intent_event(db_session, monkeypatch):
         }
 
     monkeypatch.setattr(cs, 'analysiere_mit_claude', _fake_analyse)
+    # H1 (2026-07-22): der Default-Merge-Pfad (MERGE_ANALYSE_QA='1') ruft
+    # analysiere_und_klassifiziere, NICHT mehr analysiere_mit_claude. Ohne diesen
+    # zweiten Mock liefe hier ein realer (leerer) Haiku-Call -> kein Einwand -> kein
+    # intent_event (0>=1). Stale-Contract-Retarget: beide Pfade auf dasselbe Fake
+    # (die Einwand-Sektion ist top-level identisch; der Merge nutzt zusaetzlich .get('qa')).
+    monkeypatch.setattr(cs, 'analysiere_und_klassifiziere', _fake_analyse)
     # Downstream-Helfer (NACH dem Emit) hermetisch stubben — kein Netz/QA-Pipeline.
     monkeypatch.setattr(cs, '_qa_pipeline_dispatch', lambda *a, **k: None)
 
