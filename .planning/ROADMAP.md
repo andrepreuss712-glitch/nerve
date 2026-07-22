@@ -2519,6 +2519,15 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 **Ehrliche Erwartung:** Spar-Effekt Weg 1 ≈ **20-30 %** der Tick-Kosten (nicht 35-45 %). Cache-Bonus UNSICHER (Haiku 4.096-Token-Prefix, evtl. drunter — messen).
 **WEG 3 (Coaching event-getriggert statt stur 4s) = SEPARATER Folge-Schritt danach** (eigene Phase). Fable-Befund: kein fertiges Trigger-Signal (Berater-only-Ticks erreichen Analyse nie; „Themenwechsel"/„kritische Phase" existieren nicht bzw. nur als tote Reader `:1319/:1335/:1305/:1323`) → braucht neuen kleinen Trigger-Layer (BOF-Zähler :1737 + Stats :1777-1790 + Analyse-Flags) + akzeptiert lückigere painpoint/kb_delta. NICHT jetzt bündeln (Risiko-Isolation, Gemini+Fable+Claudian einig).
 
+**Plans:** 3 plans / 3 Wellen (sequenziell — alle berühren claude_service.py, kein Parallel-Overlap). GEPLANT 2026-07-22. **Zusatzfund der Planung:** `generate_qa_response` läuft auf `config.MODEL_QA`=`claude-sonnet-4-5` (config.py:75) → der verworfene Aufruf ist ein **verworfener Sonnet-Call im Live-Loop** (verletzt zusätzlich „kein Sonnet live") — Kill spart mehr als ein Haiku-Tick.
+
+Plans:
+- [ ] 08.23.2.H1-01-PLAN.md — W1 H1-QAKILL: generate_qa_response streichen (Pflicht-Vorabcheck Punkt 20 → Konsumenten-frei belegen → kappen); classify_utterance + Abstain-intent_events + FAQ used_count bleiben. [autonom]
+- [ ] 08.23.2.H1-02-PLAN.md — W2 H1-MERGE + H1-TRUNC: analysiere_und_klassifiziere (EIN Haiku-Call, Einwand-Sektion top-level = Latte by construction, QA nested) + _parse_merged_sections (sektionsweise, truncation-fest, Einwand zuerst) + Env-Schalter MERGE_ANALYSE_QA (Rollback <30s auf Zwei-Call-Pfad) + analyse_loop verdrahtet (Guards gaten nur QA-Konsum, IL-2-Write vor Dispatch). [autonom]
+- [ ] 08.23.2.H1-03-PLAN.md — W3 H1-LATTE + H1-CAL: D2-Latte-Runtime-Wächter (8 Konsumenten) + Deploy/Kalibrierungs-Anruf-Checkpoint (Attention-Loss Merge-vs-2-Calls, TTFT + Time-to-Last-Token). [autonomous: false — Deploy+Anruf fahren André/Claudian]
+
+**🔴 → Cross-AI PFLICHT vor Execute** (Fable am Code + Gemini). KEIN Auto-Advance zu Execute. Requirements H1-MERGE/H1-TRUNC/H1-QAKILL/H1-LATTE/H1-CAL alle abgedeckt.
+
 **Komplexität:** 🔴. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren. **Sync:** Vault `01 Roadmap.md` parallel gepflegt.
 
 ---
