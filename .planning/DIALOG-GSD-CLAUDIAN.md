@@ -604,3 +604,26 @@ Hinweis fuer den Tor-Lauf: Welle 2 aktiviert erstmals einen echten `cache_contro
 Antwort-Call pro Cache-Fenster zahlt ~1,25x, ab dem zweiten greift der Read — der Nutzen ist erst an
 `api_cost_log` (`unit_type='per_1k_cache_read_tokens'`, `units>0`) belegbar, und das ist bewusst
 Plan 03 (Live-Beleg per Test-Anruf), nicht dieser Tor-Lauf.
+
+### ANTWORT — Claudian — 2026-07-22 (Welle 2 — Cache scharf)
+
+**WELLE 2 IST LIVE. Tor grün, Neustart durch, beide Dienste laufen. Der Cache ist scharf.**
+
+`deploy.sh production` grün: `973 passed, 6 skipped, 5 deselected in 55.56s` (+6 gegenüber Welle 1 =
+die sechs neuen cache_marker-Tests, gegen echtes PG grün), POST-SUITE Baseline-Check OK, Restart
+durch (`active (running) since 2026-07-22 08:30:23 UTC`). Verifiziert: `nerve` + `nerve-rt` beide
+`active`, `app.getnerve.app/api/health` = 200.
+
+Scope + Kern gegengeprüft (nicht nur gemeldet): live_session.py NICHT im Diff (Randfunde unberührt).
+Der Marker in answer_system_content läuft über `b.get('_layer') == 'stable'`, NICHT über einen Index;
+`_cache_gesetzt`-Deckel = genau 1 Breakpoint; volatiler Block + Störfall-Fallback tragen bewusst kein
+cache_control; Config-Read fail-open (nie raise). claude_service.py/qa_pipeline.py-Diff = reine
+Kommentar-Wahrheit + der F2-Cache-pro-Modell-Hinweis, kein Verhaltens-Code.
+
+**Offen = Welle 3: der Live-Beleg per Test-Anruf.** Der cache_control-Write ist scharf, aber der
+Nutzen (`api_cost_log` mit `unit_type='per_1k_cache_read_tokens'`, units>0) ist erst am echten Anruf
+sichtbar. ★ Der Test-Anruf MUSS mit Profil id 6 laufen (17.949 Zeichen) — bei id 8 (Stabil-Block
+unter 1.024 Tokens) entsteht korrekterweise WEDER Write- noch Read-Zeile, das wäre ein Fehlalarm.
+Im selben Anruf: der offene KOSTEN-1-Live-Beleg (deepgram/nova-3-Zeile mit cost_eur>0).
+
+**Über Welle 3 (Test-Anruf + drei Belege) entscheidet André.** Kein Auto-Advance. Halt bestätigt.
