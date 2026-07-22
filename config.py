@@ -96,13 +96,27 @@ MODEL_COACHING          = os.getenv("MODEL_COACHING",          "claude-haiku-4-5
 MODEL_VALIDATE_USER_TEXT= os.getenv("MODEL_VALIDATE_USER_TEXT","claude-haiku-4-5-20251001")
 MODEL_TRAINING_PREVIEW  = os.getenv("MODEL_TRAINING_PREVIEW",  "claude-haiku-4-5-20251001")
 
-# ── Phase 08.13: CACHE-Toggles (ENV-overridable, per Decision 3) ───────────────
-# CACHE_EWB: EWB-Generation cachen (System-Prompt gross genug — default an)
-# CACHE_QA: QA-Response cachen (System-Prompt gross genug — default an)
-# CACHE_ANALYSE: Analyse-Loop cachen (System-Prompt kuerzer — default AUS)
-CACHE_EWB     = os.getenv("CACHE_EWB",     "true").lower()  == "true"
-CACHE_QA      = os.getenv("CACHE_QA",      "true").lower()  == "true"
-CACHE_ANALYSE = os.getenv("CACHE_ANALYSE", "false").lower() == "true"
+# ── TEMPO-1: EIN Cache-Schalter fuer den gemeinsamen Antwort-System-Prompt ────
+# Abgeloest: CACHE_EWB / CACHE_QA (hatten null Konsumenten) und CACHE_ANALYSE
+# (steuerte einen Zweig, der nie greifen konnte — SYSTEM_PROMPT_BASE ~6.400 Zeichen
+# gegen 4.096 TOKENS Mindest-Prefix bei Haiku 4.5).
+#
+# Warum EIN Schalter und nicht drei: alle drei Antwort-Pfade (Auto/EWB, Knopf, QA)
+# ziehen seit TAXO3-P1-02 DENSELBEN Text aus prompt_pipeline.answer_system_content()
+# und laufen auf DEMSELBEN Modell (MODEL_EWB/MODEL_QA/MODEL_PIP_AUTOVAR/
+# MODEL_PIP_VARIANTE = claude-sonnet-4-5, siehe oben). Gleiches Modell + gleicher
+# Prefix = EIN Cache-Eintrag. Getrennte Schalter wuerden vorgaukeln, man koenne die
+# Pfade einzeln steuern — schaltet man einen aus, haelt der andere den Speicher
+# trotzdem warm.
+#
+# Wirkt an genau EINER Stelle: services/prompt_pipeline.py, answer_system_content()
+# (cache_control auf dem _layer='stable'-Block). Rollback ohne Deploy:
+# CACHE_ANTWORT=false in /etc/nerve/.env eintragen und den Dienst neu starten
+# (systemctl restart nerve). ACHTUNG: /opt/nerve/app/.env existiert auf Prod NICHT
+# (deploy.sh:54 schliesst ./.env vom tar-Deploy aus, :42-45 prueft /etc/nerve/.env).
+# Der ANALYSE-Pfad (claude_service.analysiere_mit_claude) ist bewusst uncached und
+# wird von diesem Schalter NICHT beruehrt.
+CACHE_ANTWORT = os.getenv("CACHE_ANTWORT", "true").lower() == "true"
 
 MERGE_WINDOW_S    = 0.3
 SPEAKER_DEBOUNCE_S = 3.0

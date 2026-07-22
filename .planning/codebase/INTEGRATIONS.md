@@ -37,10 +37,9 @@
 | `MODEL_TRAINING_SCORING` | Sonnet | Training session scoring |
 
 **Prompt caching (Anthropic cache_control):**
-- `CACHE_EWB = true` — EWB system prompt cached (large enough, >4096 chars)
-- `CACHE_QA = true` — QA system prompt cached
-- `CACHE_ANALYSE = false` — live analyse_loop not cached (prompt shorter)
-- Minimum cache threshold: 4096 chars (`_CACHE_MIN_CHARS` in `services/claude_service.py`)
+- `CACHE_ANTWORT = true` — the shared answer system prompt (Auto/EWB, button, QA) is cached on its stable block; ENV-overridable, rollback without deploy
+- Marker sits in `services/prompt_pipeline.py` (`answer_system_content`), on the `_layer='stable'` block only — never on the volatile block
+- Analyse loop deliberately uncached (prompt below the model's minimum cacheable prefix of 4.096 TOKENS)
 
 **EWB circuit-breaker (Phase 08.20, `services/claude_service.py`):**
 - Tracks TTFT for last 5 EWB streaming calls

@@ -204,8 +204,9 @@
 - Stripe webhook + OAuth callbacks explicitly exempted: `csrf.exempt(stripe_webhook)` etc.
 
 **Prompt Caching (Anthropic):**
-- EWB and QA system prompts use Anthropic prompt caching (`cache_control: {"type": "ephemeral"}`) when prompt length > 4096 chars (`_CACHE_MIN_CHARS`)
-- Toggled per module via `CACHE_EWB` / `CACHE_QA` env vars; `CACHE_ANALYSE=false` by default (analyse_loop prompt too short)
+- The shared answer system prompt (`prompt_pipeline.answer_system_content`) carries `cache_control: {"type": "ephemeral"}` on the `_layer='stable'` block only — one breakpoint per request (TEMPO-1)
+- Single ENV switch `CACHE_ANTWORT` (default `true`); rollback without deploy. The analyse loop (`claude_service.analysiere_mit_claude`) stays deliberately UNCACHED — `SYSTEM_PROMPT_BASE` is ~6.400 chars, far below the 4.096-TOKEN minimum prefix
+- The previous per-module cache toggles and the char-vs-token threshold constant were removed in TEMPO-1 (no consumers / the comparison could never fire)
 
 **DSGVO:**
 - Deepgram EU endpoint as default: `DEEPGRAM_HOST=api.eu.deepgram.com` in `config.py`

@@ -74,7 +74,7 @@
     - `MODEL_PRECALL`, `MODEL_CRM`, `MODEL_TRAINING_HELP`, `MODEL_TRAINING_SCORING`
   - All model constants are ENV-overridable (defined `config.py` lines 49–72)
   - Circuit-breaker for EWB TTFT: falls back Sonnet→Haiku if 3/5 calls exceed threshold (`services/claude_service.py`)
-  - Prompt caching: `CACHE_EWB=true`, `CACHE_QA=true`, `CACHE_ANALYSE=false`
+  - Prompt caching: `CACHE_ANTWORT=true` (single switch, stable answer prefix; analyse loop uncached)
 - `sentence-transformers` 2.7.0+ — semantic embedding for objection matching
 
 **Speech (STT):**
@@ -143,7 +143,7 @@
 | `CLASSIFIER_CONFIDENCE_THRESHOLD` | Objection classifier minimum confidence | `0.80` |
 | `PERSONALIZED_SCRIPTS_CAP` | Max personalized scripts per profile | `20` |
 | `MODEL_*` | All Claude model overrides | see `config.py` lines 49–72 |
-| `CACHE_EWB/QA/ANALYSE` | Prompt caching toggles | `true/true/false` |
+| `CACHE_ANTWORT` | Answer-prompt caching toggle (stable prefix) | `true` |
 
 **Audio constants (hardcoded in `config.py`):**
 - `SAMPLE_RATE = 16000` Hz
