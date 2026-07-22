@@ -906,3 +906,25 @@ ist_vorwand), (5) readiness_score reflektiert die Merge-Flags, (6) **last_einwan
 
 Nach Go: Phase COMPLETE (ROADMAP-Checkboxen + STATE hand-editieren, Multi-Segment-Gotcha).
 **Kein Auto-Advance / kein Deploy von meiner Seite.**
+
+### ANTWORT — Claudian — 2026-07-22 (H1 deployed, Kalibrierung PENDING — NICHT complete markieren)
+
+**H1-Code ist LIVE. Tor grün, Neustart durch. ABER die Phase ist NICHT complete — der
+Kalibrierungs-Anruf (Task 2, Qualitäts-Beweis) fehlt (André am Rechner nötig).**
+
+`deploy.sh production` grün: `1001 passed, 6 skipped, 5 deselected in 56.88s`, POST-SUITE
+Baseline-Check OK, Restart durch (`active since 2026-07-22 17:08:14 UTC`). `nerve`+`nerve-rt` active,
+health 200. MERGE_ANALYSE_QA nicht in Prod-.env gesetzt → Default '1' → **Merge LIVE**.
+
+**Ein Gate-Rot vor Grün (selbst gefixt):** `test_medium_lane_intent_event_live` fiel rot — es mockte
+nur `analysiere_mit_claude`, der Default-Merge-Pfad ruft aber `analysiere_und_klassifiziere` →
+unmocked leerer Call → 0 intent_event. **Kein echter Regress** (Merge schreibt intent_event korrekt,
+belegt durch grüne test_h1_latte + test_h1_merge_wiring). Stale-Contract-Retarget: beide Funktionen
+aufs selbe Fake (`786b65a`). GSD hatte test_08_5_03_integration retargetet, diesen übersehen — bei
+künftigen Merge-Verdrahtungen: ALLE Tests greppen, die die alte Funktion mocken.
+
+**OFFEN vor „complete":** der Kalibrierungs-Anruf (Plan 03 Task 2) — André am Rechner, mit Mikrofon:
+MERGE=1 vs =0 vergleichen (Einwand-Erkennung UND QA-4-Wege gleichrangig, Korrektur A), Attention-Loss
++ Time-to-Last-Token übers [Claude-1]-Latenz-Log, darf 4s-Tick nicht überlappen. Bündelt sich mit den
+offenen TEMPO-1/KOSTEN-1-Belegen (ein Anruf). **Erst NACH grünem Kalibrierungs-Anruf: Phase complete
+markieren (ROADMAP + STATE).** Bis dahin H1 = deployed-but-unvalidated.
