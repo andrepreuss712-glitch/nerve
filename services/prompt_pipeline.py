@@ -667,8 +667,10 @@ def answer_system_content(sid: str | None, *, is_auto_triggered: bool,
                           confidence: float | None = None) -> list[dict]:
     """System-Content-Liste (Anthropic-Format) aus build_answer_context fuer die Live-Pfade.
 
-    PHASE 1: PLAIN Content-Bloecke [{'type':'text','text':...}] OHNE cache_control —
-    Caching (cache_control-Layering auf dem stabilen Prefix) ist Phase 2 (Plan 04).
+    TEMPO-1: der STABILE Block (build_answer_context _layer='stable') traegt
+    cache_control {'type':'ephemeral'} — genau EIN Breakpoint pro Request. Der volatile
+    Block traegt bewusst KEINEN (sonst Cache-Write pro Request statt Read). Schalter:
+    config.CACHE_ANTWORT (default an, ENV-Rollback ohne Deploy).
     primary_intent/confidence: explizit uebergeben (z.B. geklickter typ, QA-confidence)
     ODER aus per-SID abgeleitet (None -> derive). Fail-open: nie leer, nie raise.
     """
@@ -680,7 +682,36 @@ def answer_system_content(sid: str | None, *, is_auto_triggered: bool,
         mode=p['mode'], confidence=_conf, role=p['role'],
         is_auto_triggered=is_auto_triggered,
     )
-    content = [{'type': 'text', 'text': b['text']} for b in blocks if b.get('text')]
+    # ── TEMPO-1: cache_control auf den STABILEN Prefix (A1-A6) ────────────────
+    # Hier — und nur hier — ist die Layer-Information noch da: die Zeile darunter
+    # verwirft den _layer-Marker, den build_answer_context (:618-621) gesetzt hat.
+    # ZUORDNUNG UEBER DEN _layer-WERT, NIE ueber einen Listen-Index (A5): der Filter
+    # 'if b.get("text")' kann den Stabil-Block entfernen — dann rutscht der VOLATILE
+    # Block auf Index 0 und ein index-basierter Marker wuerde den per-SID wechselnden
+    # Block cachen (Cache-Write pro Request statt Read, das teuerste Gegenteil).
+    # Genau 1 Breakpoint pro Request (A4; Anthropic-Maximum 4) — _cache_gesetzt sorgt
+    # dafuer, auch falls build_answer_context spaeter mehrere stabile Bloecke liefert.
+    # Rollback ohne Deploy: ENV CACHE_ANTWORT=false (config.py, CLAUDE.md Punkt 12).
+    try:
+        import config as _cfg
+        _cache_an = bool(getattr(_cfg, 'CACHE_ANTWORT', True))
+    except Exception as _cfg_e:
+        # Live-Loop-Garantie: nie raise. Ohne Config -> Standard-Verhalten (an).
+        print(f"[Pipeline] CACHE_ANTWORT nicht lesbar, Standard an: {type(_cfg_e).__name__}")
+        _cache_an = True
+
+    content = []
+    _cache_gesetzt = False
+    for b in blocks:
+        _text = b.get('text')
+        if not _text:
+            continue
+        _block = {'type': 'text', 'text': _text}
+        if _cache_an and not _cache_gesetzt and b.get('_layer') == 'stable':
+            _block['cache_control'] = {'type': 'ephemeral'}
+            _cache_gesetzt = True
+        content.append(_block)
     if not content:
+        # A6: der Stoerfall-Fallback ist weit unter jedem Cache-Minimum -> KEIN cache_control.
         content = [{'type': 'text', 'text': 'Verstehen und helfen, nie druecken.'}]
     return content
