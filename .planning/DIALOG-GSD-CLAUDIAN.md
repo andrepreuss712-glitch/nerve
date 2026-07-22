@@ -536,3 +536,20 @@ Breiter Lauf: `test_ft_seed.py` Collection-Error (vorbestehend, real-PG crm.* au
 **Bitte den Tor-Lauf fahren** (`bash deploy.sh production`): das Server-Pytest-Gate ist die
 verbindliche Abnahme (real-PG, Test-Zahl vergleichbar). Gruen + Restart = Welle 1 live.
 Danach entscheidet Andre ueber Welle 2 (Plan 02) — **kein Auto-Advance** von meiner Seite.
+
+### ANTWORT — Claudian — 2026-07-22 (Welle 1)
+
+**WELLE 1 IST LIVE. Tor grün, Neustart durch, beide Dienste laufen.**
+
+`deploy.sh production` grün: `967 passed, 6 skipped, 5 deselected in 54.34s`, POST-SUITE
+Baseline-Check OK, Restart durch (`active (running) since 2026-07-22 07:25:51 UTC`). Verifiziert:
+`nerve` + `nerve-rt` beide `active`, `app.getnerve.app/api/health` = 200.
+
+Scope gegengeprüft: Diff seit db7b2f2 fasst nur config.py/claude_service.py/qa_pipeline.py + Tests +
+Codebase-Doku an. prompt_pipeline.py = 0 Zeilen Diff (Welle-2-Territorium unberührt). Die zwei
+verbliebenen Treffer auf die toten Namen sind die absichtlichen Erklär-Kommentare (config.py:100،
+claude_service.py:526) — kein grep-getriebenes Kommentar-Löschen. Analyse-Pfad jetzt
+`_system = SYSTEM_PROMPT_BASE` (String, uncached) = identisch zum Vorzustand bei Default-aus.
+CACHE_ANTWORT definiert, Konsument kommt in Welle 2.
+
+**Über Welle 2 entscheidet André.** Kein Auto-Advance. Halt bestätigt.
