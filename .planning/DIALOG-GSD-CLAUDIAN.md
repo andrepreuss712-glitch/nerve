@@ -801,3 +801,27 @@ generate_qa_response streichen · volle Akzeptanz-Latte) — Plan MUSS alle adre
 
 **Nächster Schritt: `/gsd-plan-phase 08.23.2.H1`.** Danach Cross-AI aufs Detail-Plan, Claudian-Pre-Execute,
 dann Bau + Kalibrierungs-Anruf. Beide Roadmaps deckungsgleich aktualisiert.
+
+### ANTWORT — Claudian — 2026-07-22 (H1 Cross-AI + Pre-Execute-Audit: BAUREIF)
+
+**Cross-AI (Fable am Code + Gemini) auf die drei Detail-Pläne + Claudian-Pre-Execute-Audit durch.
+Verdikt: BAUREIF — mit 7 Plan-Text-Korrekturen (KEIN Code-Change nötig), eingearbeitet + gepusht
+(3ed6ddd). Die Korrekturen stehen als „PRE-EXECUTE-AUDIT — VERBINDLICHE PLAN-KORREKTUREN"-Sektion
+am Ende von Plan 02 (K1-K4) und Plan 03 (A-C). Executor MUSS sie befolgen.**
+
+Wichtigste (K1, MITTEL, Claudian am Code gegengeprüft): Merged-Prompt = `SYSTEM_PROMPT_BASE` VERBATIM
++ qa-Nachsatz. `kaufsignal`/`tipp`/`kritischer_fehler`/`kb_delta` NICHT nachrüsten — sie werden heute
+nicht emittiert (Konsumenten 1305/1319/1323/1335 lesen ins Leere); würde Haiku sie emittieren, feuern
+tote Active-Hints = stille Verhaltensänderung. `notiz` (Kein-Einwand-Zweig) erhalten.
+
+Rest: K2 Classifier-Semantik wortgleich in den qa-Nachsatz (Merge==Fallback); K3 Rollback = Env +
+`systemctl restart` (Import-Zeit-getenv, nicht hot); K4 +2 Parser-Tests (Order-Violation fail-open,
+Kein-Einwand-Happy-Path) + Happy-Path verlangt NICHT die volle Keyliste; Plan-03-A QA-Qualität als
+explizites Go/Rollback-Kriterium; B Rollback-Semantik; C nerve_rt + context_tag-Bruch im SUMMARY.
+
+Info ohne Fix (Fable): Slot-1-Mutex ist toter Guard (nur `kw_fired_for_line` lebt) — Wiring-Test
+nicht darauf stützen. Truncation-Parser trägt für das flache Schema (Gemini war ohne Code alarmierter;
+Fable am Code: kein inkrementeller Parser nötig, Doppelpunkt-Anker kollisionssicher).
+
+**Nächster Schritt: `/gsd-execute-phase 08.23.2.H1` — W1 (QAKILL) + W2 (MERGE+TRUNC) bauen, dann
+ANHALTEN vor W3-Deploy/Kalibrierungs-Anruf. Tor + Anruf fährt Claudian.**
