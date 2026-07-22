@@ -7,9 +7,6 @@ import anthropic
 import config
 from config import ANTHROPIC_API_KEY, ANALYSE_INTERVALL, KATEGORIE_LABEL
 
-# Anthropic minimum: 1024 tokens ≈ 4096 chars
-_CACHE_MIN_CHARS = 4096
-
 # ── Circuit-Breaker fuer EWB Sonnet TTFT (D-07 Phase 08.20) ──────────────────
 # Tracks TTFT for last 5 EWB auto-variant calls. If 3/5 exceed threshold:
 # fallback to Haiku for 30 seconds (DACH: Sonnet->Haiku, USA: Haiku->Haiku).
@@ -523,16 +520,13 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     # berechneten per-SID user_id/anrede-Reads sind entfernt (0 Reads nach MEDFIX, Punkt 14).
     # analysiere_mit_claude KLASSIFIZIERT nur; die Live-ANTWORT laeuft separat
     # (streame_auto_variante / Matcher), nicht hier (Phase-06.3-Invariante).
-    _system_prompt = SYSTEM_PROMPT_BASE
-    # ── Phase 08.13: Prompt-Caching Analyse-Loop (CACHE_ANALYSE=False default) ──
-    if config.CACHE_ANALYSE and len(_system_prompt) >= _CACHE_MIN_CHARS:
-        _system = [{"type": "text", "text": _system_prompt, "cache_control": {"type": "ephemeral"}}]
-    else:
-        _system = _system_prompt  # String, kein Cache
-    if config.CACHE_ANALYSE:
-        print(f"[Cache-Check] analyse system_prompt: {len(_system_prompt)} chars, "
-              f"threshold {_CACHE_MIN_CHARS}, cache={'on' if len(_system_prompt) >= _CACHE_MIN_CHARS else 'off'}")
-    # ──────────────────────────────────────────────────────────────────────────
+    # TEMPO-1 (C3): der Analyse-Pfad bleibt bewusst UNCACHED. SYSTEM_PROMPT_BASE ist
+    # ~6.400 Zeichen; Haiku 4.5 verlangt als cachebaren Prefix 4.096 TOKENS (~16.000
+    # Zeichen) — ein cache_control haette hier nie gegriffen. Der frueher hier stehende
+    # CACHE_ANALYSE-Zweig verglich zusaetzlich Zeichen gegen eine Token-Grenze.
+    # Gecacht wird ausschliesslich der ANTWORT-Prompt (services/prompt_pipeline.py,
+    # answer_system_content, Schalter config.CACHE_ANTWORT).
+    _system = SYSTEM_PROMPT_BASE
     msg = claude_client.messages.create(
         model=config.MODEL_ANALYSE,
         max_tokens=400,

@@ -45,9 +45,6 @@ from services.prompt_pipeline import (
 # ── Confidence threshold (Korrektur 3) ───────────────────────────────────────
 CONFIDENCE_THRESHOLD = 0.80
 
-# Anthropic minimum: 1024 tokens ≈ 4096 chars
-_CACHE_MIN_CHARS = 4096
-
 # ── Fallback prompts (used wenn prompt_versions lookup miss) ─────────────
 _FALLBACK_CLASSIFIER_PROMPT = (
     "Du bist ein Echtzeit-Klassifikator fuer Verkaufsgespraeche. "
