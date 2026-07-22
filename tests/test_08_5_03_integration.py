@@ -196,14 +196,14 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
             sio.emit.assert_not_called()
 
     def test_einwand_unknown_high_conf_no_readzone_emit(self):
-        """PIP-01 (Item a) — frueher test_einwand_unknown_high_conf_emits_slot1.
+        """PIP-01 (Item a) + H1-01 QAKILL — frueher test_einwand_unknown_high_conf_emits_slot1.
 
-        Neuer ewb_signal-Vertrag: einwand_unknown high-conf laeuft weiter durch die
-        Antwort-Generierung (generate_qa_response wird aufgerufen), aber der Auto-Pfad
-        schreibt NICHT mehr die Lese-Zone (slot 1) -> KEIN qa_slot1-Emit. Es entsteht
-        auch KEIN ewb_signal: der Roh-Enum 'einwand_unknown' ist ein Platzhalter, kein
-        anzeigbares Kurz-Label -> Blocklist -> kein (Geister-)Button (Cross-AI HIGH #1
-        + LOW). lieber kein Button als ein Geister-Button.
+        RETARGET H1-01 (stale-Contract, Code nicht zurueckgedreht): einwand_unknown
+        high-conf ruft generate_qa_response NICHT mehr auf (verworfener Sonnet-Call
+        entfernt). Wie zuvor: KEIN qa_slot1-Emit und KEIN ewb_signal (Roh-Enum
+        'einwand_unknown' ist kein anzeigbares Kurz-Label -> Blocklist, Cross-AI HIGH #1
+        + LOW). Netto-Effekt identisch zum PIP-01-Stand (Antwort wurde ohnehin verworfen),
+        nur ohne Bezahl-Call.
         """
         dispatch = self._get_dispatch_fn()
         ls, sio = _build_qa_dispatch_context(line_id='line-10', kw_fired_for_line=None)
@@ -215,8 +215,8 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
              patch('services.claude_service._qa_load_tabu', return_value=[]):
             dispatch('Das ist zu teuer ohne Keyword', 'line-10', '', ls, sio, sid='sid-test')
         emitted = _emitted_events(sio)
-        # Upstream-Logik bleibt erhalten (nur der Lese-Zonen-Schreib-Seiteneffekt entfaellt)
-        mock_gen.assert_called_once()
+        # H1-01 QAKILL: der verworfene generate_qa_response-Call ist entfernt.
+        mock_gen.assert_not_called()
         self.assertNotIn('qa_slot1', emitted,
                          f"qa_slot1 darf nach PIP-01 nicht mehr feuern (Lese-Zonen-Cut), got: {emitted}")
         self.assertNotIn('ewb_signal', emitted,
@@ -225,33 +225,24 @@ class TestAnalyseLoopDispatcher(unittest.TestCase):
         for payload in _ewb_signal_payloads(sio):
             self.assertNotIn(payload.get('typ'), _RAW_ENUM_TYPS)
 
-    def test_einwand_unknown_passes_profile_data_not_empty(self):
-        """WR-01 Regression: generate_qa_response muss _profile_daten erhalten, nicht {}.
-        Phase 08.19.4: migriert von get_active_profile() auf get_profile_for_sid(sid).
+    def test_einwand_unknown_high_conf_does_not_generate_response(self):
+        """RETARGET H1-01 QAKILL (frueher test_einwand_unknown_passes_profile_data_not_empty,
+        WR-01). Der WR-01-Regress (generate_qa_response bekommt echtes _profile_daten)
+        ist gegenstandslos: der Antwort-Call ist entfernt. Runtime-Waechter: high-conf
+        einwand_unknown ruft generate_qa_response NICHT mehr auf.
         """
         dispatch = self._get_dispatch_fn()
         ls, sio = _build_qa_dispatch_context(line_id='line-20', kw_fired_for_line=None)
-        captured_calls = []
-        def _capture_gen(*args, **kwargs):
-            captured_calls.append({'args': args, 'kwargs': kwargs})
-            return 'Testantwort'
-
         with patch('services.qa_pipeline.classify_utterance',
                    return_value={'kategorie': 'einwand_unknown', 'confidence': 0.95}), \
-             patch('services.qa_pipeline.generate_qa_response',
-                   side_effect=_capture_gen), \
+             patch('services.qa_pipeline.generate_qa_response') as mock_gen, \
              patch('services.qa_pipeline.apply_tabu_filter', return_value=False), \
              patch('services.claude_service._qa_load_tabu', return_value=[]), \
              patch('services.live_session.get_profile_for_sid',
                    return_value=('TestProfil', {'basis': {'produktbeschreibung': 'CRM'}})):
             dispatch('Das ist zu teuer', 'line-20', '', ls, sio, sid='sid-test')
 
-        self.assertTrue(len(captured_calls) > 0, "generate_qa_response wurde nicht aufgerufen")
-        call_args = captured_calls[0]['args']
-        # 3. Argument muss ein nicht-leeres Dict sein (nicht {})
-        profile_data_arg = call_args[2]
-        self.assertIsInstance(profile_data_arg, dict, "profile_data muss dict sein")
-        self.assertNotEqual(profile_data_arg, {}, "profile_data darf nicht leer sein (WR-01)")
+        mock_gen.assert_not_called()
 
     def test_low_confidence_no_readzone_emit(self):
         """PIP-01 (Item a + Cross-AI HIGH #2) — frueher test_low_confidence_emits_soft_hint.

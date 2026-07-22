@@ -1525,7 +1525,7 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
             return
 
         from services.qa_pipeline import (
-            classify_utterance, generate_qa_response,
+            classify_utterance,
             match_faq, apply_tabu_filter
         )
         from config import CLASSIFIER_CONFIDENCE_THRESHOLD
@@ -1637,18 +1637,11 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
                 # Soft-Hint (kein Dead-Code). _conf ist echt (aus classify_utterance).
                 _emit_abstain_event('echter_einwand')
                 _emit_soft_hint(reason='low_confidence')
-            else:
-                _antwort = generate_qa_response(
-                    neuer_text, 'einwand_unknown', _profile_daten, _anrede,
-                    confidence=float(_conf), user_id=_user_id, sid=_active_sid
-                )
-                if not _antwort:
-                    _emit_soft_hint(reason='empty_response')
-                elif apply_tabu_filter(_antwort, _tabu_begriffe):
-                    _emit_soft_hint(reason='tabu_filtered')
-                    print(f"[QA-INT] response tabu-filtered len={len(_antwort)}")
-                else:
-                    _emit_qa_slot1(_antwort)
+            # else (high-conf): H1-01 QAKILL — der verworfene generate_qa_response-
+            # Antwort-Call (Sonnet, config.MODEL_QA) ist entfernt. Sein Ergebnis war seit
+            # PIP-01 konsumenten-frei (floss nur in die No-Op-Emitter). High-conf
+            # einwand_unknown fuehrt daher zu KEINER Aktion — identisch zum bisherigen
+            # Netto-Effekt (die Antwort wurde ohnehin verworfen), nur ohne Bezahl-Call.
 
         elif _kat == 'frage':
             _faqs_all = _qa_load_faqs(_active_profile_id)
@@ -1676,23 +1669,15 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
                     except Exception as _uc_e:
                         print(f"[QA-INT] used_count inc skip: {_uc_e}")
             else:
-                # No FAQ match → fall back to generated response
+                # Kein FAQ-Match: nur der echte low-conf-Drop feuert das Abstain-Event.
                 if _conf < CLASSIFIER_CONFIDENCE_THRESHOLD:
                     # H-4 ECHTER LOW-CONF-DROP (frage, kein FAQ): abstain-Event VOR
                     # dem Soft-Hint (kein Dead-Code).
                     _emit_abstain_event('info_frage')
                     _emit_soft_hint(reason='no_faq_low_conf')
-                else:
-                    _antwort = generate_qa_response(
-                        neuer_text, 'frage', _profile_daten, _anrede,
-                        confidence=float(_conf), user_id=_user_id, sid=_active_sid
-                    )
-                    if not _antwort:
-                        _emit_soft_hint(reason='no_faq_empty')
-                    elif apply_tabu_filter(_antwort, _tabu_begriffe):
-                        _emit_soft_hint(reason='no_faq_tabu')
-                    else:
-                        _emit_qa_slot1(_antwort)
+                # else (high-conf, kein FAQ): H1-01 QAKILL — der verworfene
+                # generate_qa_response-Antwort-Call (Sonnet) ist entfernt (konsumenten-
+                # frei seit PIP-01). Kein Fallback-Generieren mehr -> keine Aktion.
         # smalltalk_none / einwand_known → no action (Slot bleibt wie es ist)
 
     except Exception as _qa_int_e:
