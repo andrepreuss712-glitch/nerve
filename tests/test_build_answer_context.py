@@ -185,3 +185,129 @@ def test_load_answer_config_fail_open(monkeypatch):
     monkeypatch.setattr(ap, 'get_answer_config', _boom, raising=False)
     cfg = pp.load_answer_config(user_id=1, sid='s')
     assert 'paradigm' in cfg and 'grounding' in cfg     # Minimal-Default, kein raise
+
+
+# ── TEMPO-1: cache_control-Marker auf dem stabilen Prefix ────────────────────
+
+def _blocks(stable_text='STABIL', volatile_text='VOLATIL'):
+    """Zwei-Block-Liste im Format von build_answer_context (:618-621)."""
+    return [
+        {'role': 'system', 'text': stable_text, '_layer': 'stable'},
+        {'role': 'system', 'text': volatile_text, '_layer': 'volatile'},
+    ]
+
+
+def test_cache_marker_auf_stabilem_block(monkeypatch):
+    """A1/A2: genau der stabile Block traegt cache_control, der volatile nicht."""
+    import services.prompt_pipeline as pp
+    monkeypatch.setattr(pp, 'build_answer_context', lambda **k: _blocks())
+    monkeypatch.setattr(pp, 'derive_answer_params', lambda sid: {
+        'user_id': 1, 'role': 'interessent', 'mode': 'cold_call',
+        'primary_intent': None, 'confidence': None})
+    content = pp.answer_system_content('sid-1', is_auto_triggered=True)
+    assert len(content) == 2
+    assert content[0]['text'] == 'STABIL'
+    assert content[0]['cache_control'] == {'type': 'ephemeral'}
+    assert 'cache_control' not in content[1]          # A2: Volatil NIE markiert
+
+
+def test_cache_marker_genau_ein_breakpoint(monkeypatch):
+    """A4: hoechstens EIN cache_control pro Request (Anthropic-Maximum 4)."""
+    import services.prompt_pipeline as pp
+    monkeypatch.setattr(pp, 'build_answer_context', lambda **k: [
+        {'text': 'S1', '_layer': 'stable'},
+        {'text': 'S2', '_layer': 'stable'},
+        {'text': 'V', '_layer': 'volatile'},
+    ])
+    monkeypatch.setattr(pp, 'derive_answer_params', lambda sid: {
+        'user_id': 1, 'role': 'interessent', 'mode': 'cold_call',
+        'primary_intent': None, 'confidence': None})
+    content = pp.answer_system_content('sid-1', is_auto_triggered=False)
+    assert sum(1 for c in content if 'cache_control' in c) == 1
+
+
+def test_cache_marker_folgt_layer_nicht_index(monkeypatch):
+    """A5 — die teuerste denkbare Fehlbedienung: faellt der leere Stabil-Block weg,
+    darf der VOLATILE Block (Index 0!) KEIN cache_control bekommen. Sonst schreibt
+    jeder Request einen neuen Cache-Eintrag statt einen zu lesen."""
+    import services.prompt_pipeline as pp
+    monkeypatch.setattr(pp, 'build_answer_context', lambda **k: [
+        {'text': '', '_layer': 'stable'},            # leer -> wird gefiltert
+        {'text': 'NUR_VOLATIL', '_layer': 'volatile'},
+    ])
+    monkeypatch.setattr(pp, 'derive_answer_params', lambda sid: {
+        'user_id': 1, 'role': 'interessent', 'mode': 'cold_call',
+        'primary_intent': None, 'confidence': None})
+    content = pp.answer_system_content('sid-1', is_auto_triggered=False)
+    assert len(content) == 1
+    assert content[0]['text'] == 'NUR_VOLATIL'
+    assert 'cache_control' not in content[0]
+
+
+def test_cache_marker_schalter_aus(monkeypatch):
+    """B1/B3: CACHE_ANTWORT=False -> kein einziger Block traegt cache_control
+    (Rollback-Pfad ohne Deploy, CLAUDE.md Punkt 12)."""
+    import config
+    import services.prompt_pipeline as pp
+    monkeypatch.setattr(config, 'CACHE_ANTWORT', False)
+    monkeypatch.setattr(pp, 'build_answer_context', lambda **k: _blocks())
+    monkeypatch.setattr(pp, 'derive_answer_params', lambda sid: {
+        'user_id': 1, 'role': 'interessent', 'mode': 'cold_call',
+        'primary_intent': None, 'confidence': None})
+    content = pp.answer_system_content('sid-1', is_auto_triggered=False)
+    assert all('cache_control' not in c for c in content)
+
+
+def test_cache_marker_fallback_ohne_marker(monkeypatch):
+    """A6: der Stoerfall-Fallback ist weit unter jedem Cache-Minimum -> kein Marker."""
+    import services.prompt_pipeline as pp
+    monkeypatch.setattr(pp, 'build_answer_context', lambda **k: [
+        {'text': '', '_layer': 'stable'}, {'text': '', '_layer': 'volatile'}])
+    monkeypatch.setattr(pp, 'derive_answer_params', lambda sid: {
+        'user_id': 1, 'role': 'interessent', 'mode': 'cold_call',
+        'primary_intent': None, 'confidence': None})
+    content = pp.answer_system_content(None, is_auto_triggered=False)
+    assert len(content) == 1
+    assert content[0]['text'] == 'Verstehen und helfen, nie druecken.'
+    assert 'cache_control' not in content[0]
+
+
+def test_stabil_block_byte_gleich_ueber_zwei_sids(monkeypatch):
+    """E3 (LOCKED): der Anti-Cache-Poison-Filter (prompt_pipeline.py:474-481) haelt den
+    Cache am Leben. Reisst eine spaetere Aenderung ihn heraus, stirbt der Cache LAUTLOS:
+    der Prefix waere pro Anruf verschieden -> Cache-Write statt Read, Kosten steigen,
+    KEINE Fehlermeldung. Deshalb: gleicher User, zwei SIDs mit VERSCHIEDENER
+    session_anrede -> der Stabil-Block muss BYTE-GLEICH sein."""
+    import threading
+    import services.live_session as ls
+    import services.prompt_pipeline as pp
+
+    pdata = {'ki': {'ansprache': 'Sie', 'ton': 'freundlich'}, 'basis': {'unternehmen': 'ACME'}}
+    _cache = {'opener_content': '', 'faqs': [], 'profile_branche': ''}
+    _state = {
+        'sid-A': {'_profile_cache': dict(_cache), 'session_anrede': 'Sie', 'vorwissen_level': 'hoch'},
+        'sid-B': {'_profile_cache': dict(_cache), 'session_anrede': 'Du',  'vorwissen_level': 'niedrig'},
+    }
+    monkeypatch.setattr(ls, 'get_profile_for_sid', lambda s: ('', pdata), raising=False)
+    monkeypatch.setattr(ls, 'get_briefing_for_sid',
+                        lambda s: f'Briefing fuer {s}', raising=False)   # volatil, pro SID verschieden
+    monkeypatch.setattr(ls, '_session_state', _state, raising=False)
+    monkeypatch.setattr(ls, '_session_state_lock', threading.Lock(), raising=False)
+
+    stable_a, volatile_a = pp._profile_blocks(user_id=1, mode='cold_call', sid='sid-A')
+    stable_b, volatile_b = pp._profile_blocks(user_id=1, mode='cold_call', sid='sid-B')
+
+    assert stable_a == stable_b, (
+        'Stabil-Block unterscheidet sich pro SID — der Cache-Prefix ist vergiftet, '
+        'der Cache stirbt lautlos. Anti-Cache-Poison-Filter (prompt_pipeline.py:474-481) pruefen.')
+    assert stable_a != ''                    # kein leerer False-Green (fail-open ('',''))
+    assert volatile_a != volatile_b          # die per-SID-Unterschiede sind wirklich VOLATIL gelandet
+    # Struktur-Beleg: echter Profil-Kontext, kein fail-open und kein DB-Zufallstreffer.
+    # Ohne diese Zeile waere der Test auch dann gruen, wenn er in den DB-Pfad rutscht —
+    # dann waeren beide Bloecke nicht-leer UND gleich, ohne dass der Filter geprueft wurde.
+    assert '## KI-Verhalten' in stable_a
+    # Der Anti-Cache-Poison-Filter haelt die Sektion-7-Anredezeile aus dem STABILEN Block raus:
+    assert 'WICHTIG: Nutze konsequent' not in stable_a
+    # Praezise statt Teilstring: 'Du' steckt im deutschen Profiltext auch in anderen Woertern
+    # ('Dunkel', 'Duo', 'Produkt') — geprueft wird die Anrede-ZEILE, nicht ein Vorkommen.
+    assert any(l.startswith('Anrede: Du') for l in volatile_b.split('\n'))
