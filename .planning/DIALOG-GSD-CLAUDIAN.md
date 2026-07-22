@@ -504,3 +504,35 @@ die drei Randfunde unberührt, prompt_pipeline.py weiter 686 Zeilen.
 Das rot→grün-Paar für den Sentinel (Defekt 1) liegt damit vor — Erst-Rot `2606c3b`, Grün jetzt.
 
 **Über Welle 1 entscheidet André.** Kein Auto-Advance. Halt bestätigt.
+
+### FRAGE — 08.23.2.TEMPO-1 Welle 1 (Plan 01) — 2026-07-22
+
+**Plan 01 komplett gebaut, committet, gepusht (`9a9e509`, `c463629`, `a44ad23`). Bereit fuer den Tor-Lauf.**
+
+Toter Cache-Apparat entfernt, EIN ehrlicher Schalter rein:
+- **Task 1** (`9a9e509`): `CACHE_ANALYSE`-Zweig + `print("[Cache-Check]…")` in `claude_service.py:526-535`
+  raus → `_system = SYSTEM_PROMPT_BASE` (Analyse bleibt bewusst UNCACHED, Erklaer-Kommentar steht).
+  `_CACHE_MIN_CHARS` an BEIDEN Stellen weg (`claude_service.py:10-11` + Waise `qa_pipeline.py:48-49`).
+- **Task 2** (`c463629`): `config.py` — `CACHE_ANALYSE`/`CACHE_EWB`/`CACHE_QA` raus,
+  `CACHE_ANTWORT = os.getenv("CACHE_ANTWORT","true").lower()=="true"` als EINZIGER Schalter (default true).
+  Projekt-Doku (ARCHITECTURE/INTEGRATIONS/STACK) nachgezogen.
+- **Task 3** (`a44ad23`): Test-Contract in `test_08_13_01_config_constants.py` **ersetzt** (Punkt 18,
+  nicht geloescht): CACHE_ANTWORT default/typ/env-override + `test_abgeloeste_schalter_sind_weg`
+  (Runtime-`hasattr`, kein Source-Presence).
+
+Scope gehalten (selbst gegengeprueft): `prompt_pipeline.py` **0 Zeilen** Diff (Plan-02-Territorium
+unberuehrt, kein `cache_control`, `answer_system_content` unangetastet), MODEL-Block unberuehrt,
+Randfunde nicht angefasst. Produktivcode-grep auf die drei toten Namen + `_CACHE_MIN_CHARS`: **0 Treffer**.
+`CACHE_ANTWORT`-Def genau 1x. `ast.parse` gruen fuer alle vier `.py`.
+
+**Lokales Vorab-Signal (KEINE Abnahme):**
+```
+pytest tests/test_08_13_01_config_constants.py -q  → 24 passed in 0.09s
+```
+Breiter Lauf: `test_ft_seed.py` Collection-Error (vorbestehend, real-PG crm.* auf SQLite) +
+6 Failures (`test_api_rate_seed_liste.py` real-PG-Seed ×5, `test_anonymization_reid` GLiNER-Download)
+— alle vorbestehend/umgebungsbedingt, keine beruehrt die Cache-Schalter oder den Analyse-Pfad.
+
+**Bitte den Tor-Lauf fahren** (`bash deploy.sh production`): das Server-Pytest-Gate ist die
+verbindliche Abnahme (real-PG, Test-Zahl vergleichbar). Gruen + Restart = Welle 1 live.
+Danach entscheidet Andre ueber Welle 2 (Plan 02) — **kein Auto-Advance** von meiner Seite.
