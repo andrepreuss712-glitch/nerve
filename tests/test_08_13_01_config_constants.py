@@ -102,25 +102,35 @@ class TestHaikuConstants:
 
 
 class TestCacheBooleans:
-    """CACHE_*-Booleans haben die korrekten Defaults."""
+    """TEMPO-1: EIN Cache-Schalter (CACHE_ANTWORT) statt der drei abgeloesten
+    CACHE_EWB/CACHE_QA/CACHE_ANALYSE. Der Vertrag hat sich geaendert, der Test wird
+    nachgezogen (CLAUDE.md Punkt 18) — nicht ersatzlos entfernt."""
 
-    def test_cache_ewb_default_true(self):
+    def test_cache_antwort_default_true(self):
         cfg = fresh_config()
-        assert cfg.CACHE_EWB is True
+        assert cfg.CACHE_ANTWORT is True
 
-    def test_cache_qa_default_true(self):
+    def test_cache_antwort_is_bool_type(self):
         cfg = fresh_config()
-        assert cfg.CACHE_QA is True
+        assert isinstance(cfg.CACHE_ANTWORT, bool)
 
-    def test_cache_analyse_default_false(self):
-        cfg = fresh_config()
-        assert cfg.CACHE_ANALYSE is False
+    def test_cache_antwort_env_override_false(self, monkeypatch):
+        """Rollback-Pfad ohne Deploy (CLAUDE.md Punkt 12): ENV CACHE_ANTWORT=false."""
+        monkeypatch.setenv('CACHE_ANTWORT', 'false')
+        import importlib
+        import config
+        importlib.reload(config)
+        assert config.CACHE_ANTWORT is False
+        monkeypatch.delenv('CACHE_ANTWORT', raising=False)
+        importlib.reload(config)
+        assert config.CACHE_ANTWORT is True
 
-    def test_cache_booleans_are_bool_type(self):
+    def test_abgeloeste_schalter_sind_weg(self):
+        """Die drei alten Schalter duerfen NICHT wieder auftauchen — sonst kehrt die
+        'zwei Schalter fuer einen Cache-Eintrag'-Luege zurueck (B2)."""
         cfg = fresh_config()
-        assert isinstance(cfg.CACHE_EWB, bool)
-        assert isinstance(cfg.CACHE_QA, bool)
-        assert isinstance(cfg.CACHE_ANALYSE, bool)
+        for _tot in ('CACHE_EWB', 'CACHE_QA', 'CACHE_ANALYSE'):
+            assert not hasattr(cfg, _tot), f'{_tot} lebt wieder — TEMPO-1 rueckgaengig gemacht?'
 
 
 class TestEnvOverride:
