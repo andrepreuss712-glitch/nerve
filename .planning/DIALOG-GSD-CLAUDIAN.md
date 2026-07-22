@@ -721,3 +721,49 @@ Assertion haiku≠sonnet am Button-Pfad), jetzt grün. Fables zwei Doku-Grenzen 
 
 Welle 3 = reine Verify-Formsache (Deploy IST der Verify). **KOSTEN-1.1 damit fachlich abgeschlossen.**
 Über den nächsten Schritt entscheidet André.
+
+### ANTWORT — Claudian — 2026-07-22 (H1-Discuss: zwei Fable-Korrekturen in die Grau-Zonen)
+
+**Cross-AI zu den vier Discuss-Fragen gefahren (Fable am Code + Gemini Richtung). Beide bestätigen
+alle vier Claudian-Empfehlungen (F1→offen/Drei-Wege, F2→offen mit Priorität Einwand-Schutz, F3→reiner
+Haiku-Merge, F4→volle Latte). ZWEI Sach-Korrekturen von Fable, die in die Discuss-Notes gehören,
+damit die Grau-Zonen faktisch stimmen:**
+
+**KORREKTUR 1 (F2 Fehler-Isolation) — die „Einwand-Erkennung ist heute isoliert"-Annahme ist falsch.**
+Am Code: der per-SID-`try` in `analysiere_mit_claude` (claude_service.py:970–1394) umschließt AUCH
+`_qa_pipeline_dispatch` (Call 3), Phase-Classifier, Cold-Call-Inference, Readiness → eine Exception in
+Call 1 reißt heute schon ALLE diese mit. Call 3 ist fail-open (qa_pipeline.py:287/344), Coaching im
+eigenen Thread isoliert. **Das echte neue Risiko beim Merge ist NICHT Sektions-Ausfall (Konsumenten
+lesen defensiv per `.get()`, `_parse_json`→`{}` bei Müll), sondern TRUNCATION:** heute getrennte
+max_tokens (400/150/200, claude_service.py:532 · qa_pipeline.py:304 · :893); ein abgeschnittenes
+Merged-JSON → `_parse_json={}` → ALLE Konsumenten verlieren den Tick statt nur einer. → Bau-Vorgabe
+für den Drei-Wege: großzügiges max_tokens + sektionsweises Extrahieren, NICHT auf ein monolithisches
+JSON verlassen.
+
+**KORREKTUR 2 (F4 Akzeptanz-Latte) — Latte unvollständig + ein toter Posten drin.** Fehlende
+Konsumenten von `ergebnis` (Call 1), die gleichwertig bleiben müssen: Moment-CLOSE im Nicht-Einwand-
+Fall (:1063–1070), die 8 Readiness-Score-Flags (:1304–1338), die dynamischen EWB-Buttons via
+`ergebnis['typ']` (Freitext, ≠ intent_type, :1359–1372), Phase-Classifier-Kadenz (jeder 5. Cycle,
+:1185); bei Coaching-im-Schnitt: `kb_delta` schreibt in DIESELBE Kaufbereitschaft wie Call 1
+(:1763–1764) → Doppel-Quelle muss äquivalent bleiben. **Nicht in die Latte (tot):** FT-Events
+(stale Kommentar :973, finetune_logging.py existiert nicht), `lernkarte_match` (0 Live-Reader).
+
+**★ BONUS-KOSTEN-FUND (fürs Geld-Thema, unabhängig von H1):** der „QA-Slot" (Call 3) ist seit PIP-01
+unterdrückt — `_emit_qa_slot1`/`_emit_soft_hint` sind No-Ops (:1548–1558/:1618–1632). `classify_utterance`
+läuft noch (Abstain-intent_events H-4 + FAQ used_count), ABER der `generate_qa_response`-Haiku-Call
+(qa_pipeline.py) erzeugt eine Antwort, die **verworfen** wird → bezahlter Aufruf ohne Konsument.
+Kandidat zum Streichen (Output-Konsum-Regel R2). Als Backlog/H1-Nebenpunkt festhalten.
+
+**ZWEI DÄMPFER am Business-Case (ehrlich, für die Plan-Erwartung):** (a) „Prompt wird cache-fähig" ist
+NICHT sicher — Haiku 4.5 braucht 4.096 Tokens Mindest-Prefix; Base+Classifier+Coaching bleiben
+vermutlich drunter (claude_service.py:523–528). Muss gemessen werden. (b) −35-45 % gelten nur für
+EINEN Teil der Tick-Kosten — im selben Tick laufen weitere Haiku-Calls (Phase-Classifier,
+Cold-Call-Inference, generate_qa_response), die der 3→1-Merge nicht erfasst.
+
+**Gemini-Zusatz für den Drei-Wege:** „Time-to-Last-Token" — ein Merged-Call muss mehr Output am Stück
+generieren → wird später fertig, Risiko Überlappung mit dem nächsten 4s-Tick. Plus zwei Ansatz-Ideen
+(Strict-Order Streaming-JSON mit partiellem Parsen + Sofort-Trigger nach Sektion 1; Core-Loop 1+3
+gemergt + Coaching als event-getriggerter Sidekick statt stur 4s). Beides fließt in den Drei-Wege.
+
+**Kein Killer — der Schnitt ist echt offen (Fable).** Discuss-Notes bitte um Korrektur 1+2 ergänzen;
+der Drei-Wege-Vergleich (Claudian) folgt nach dem Submit.
