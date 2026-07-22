@@ -873,3 +873,36 @@ Datei unberuehrt — out-of-scope; test_ft_seed.py pre-existing PG-only).
 - **Ehrliche Erwartung:** ≈20-30 % Tick-Kosten (nicht 35-45 %); Cache-Bonus unsicher (Haiku 4.096-Token-Prefix, messen).
 
 **Kein Auto-Advance von meiner Seite.** Welle 3 (Deploy + Anruf) liegt bei dir/André.
+
+### FRAGE — 08.23.2.H1 Welle 3 Task 1 (Latte-Waechter) — 2026-07-22
+
+**Latte-Waechter gebaut, committet, gepusht (`a839bc9`). Damit ist der GESAMTE autonome H1-Code fertig
+(Welle 1 QAKILL + Welle 2 Merge + Welle 3 Task 1). Nur noch Task 2 (Deploy + Kalibrierungs-Anruf) offen — der faehrst DU/André.**
+
+`tests/test_h1_latte.py` — 8 Runtime-Assertions (Ratsche), je eine pro lebendem D2-Konsument, alle
+Function-Call-/State-Mutation-Asserts (kein Source-Presence, selbst gegengeprueft: der einzige
+grep-Treffer ist die Docstring-Zeile die sagt was NICHT getan wird). `pytest tests/test_h1_latte.py -q`
+→ **8 passed**. Nur die neue Datei, kein Produktivcode angefasst.
+
+Die 8: (1) emit_intent_event mit Merge-Werten, (2) Moment-Open/Close(advisor_answered),
+(3) update_kaufbereitschaft(-5) bei intensitaet=hoch, (4) gegenargument_log-Eintrag (einwand_typ,
+ist_vorwand), (5) readiness_score reflektiert die Merge-Flags, (6) **last_einwand_typ == ergebnis['typ']
+(Freitext) UND != intent_type** — der subtile EWB-Button-Bug, (7) Phase-Kadenz jeder 5. Tick,
+(8) guard-frei (lebender D-02-Guard, NICHT slot1-Mutex) → abstain-intent_event + FAQ used_count++.
+
+**Bitte Task 2 fahren (Deploy + Kalibrierungs-Anruf) — alle Vorgaben stehen im vorigen Handoff:**
+- **Prod-Gate:** `bash deploy.sh production` — test_h1_qakill / test_h1_merge_parse / test_h1_merge_wiring
+  / test_h1_latte + bestehende QA-Tests muessen im Server-Gate GRUEN sein (real-PG). Rot → kein Restart.
+- **Kalibrierungs-Anruf** mit `MERGE_ANALYSE_QA=1` vs `=0` am selben/aequivalenten Transkript:
+  - Korrektur A: Einwand-Erkennung UND QA-4-Wege-Trefferquote (Abstain + FAQ used_count) gleichrangig —
+    bricht eine ein → Rollback.
+  - Attention-Loss (Merge vs 2-Call) + Time-to-Last-Token via `[Claude-1] … Latenz`-Log (kein TTFT am
+    blockierenden Call); darf den 4s-Tick nicht ueberlappen.
+  - Ehrliche Erwartung ~20-30 % Tick-Kosten; Cache-Bonus unsicher (Haiku 4.096-Token-Prefix).
+- **Rollback (Korrektur B):** `MERGE_ANALYSE_QA=0` in `/etc/nerve/.env` + `systemctl restart nerve`.
+- **Ins SUMMARY (Korrektur C):** (1) nerve_rt eigener ungemergter Loop — live Sessions? (2) context_tag-Bruch:
+  neu `live_haiku_merged` → erste Kosten-Auswertung zeigt scheinbaren Absturz auf alt live_haiku+qa_classifier
+  (Kosten wandern nur), nicht fehldeuten.
+
+Nach Go: Phase COMPLETE (ROADMAP-Checkboxen + STATE hand-editieren, Multi-Segment-Gotcha).
+**Kein Auto-Advance / kein Deploy von meiner Seite.**
