@@ -489,3 +489,18 @@ jetzt prod-treu) — alle gruen, keiner prueft den geaenderten Vertrag und bleib
 vier Waechter jetzt GRUEN sind (das rot→gruen-Paar ggue. dem Erst-Rot-Lauf `4 failed, 963 passed`).
 Sobald das Gate gruen ist und der Restart durchlaeuft, ist Welle 0 live. Danach entscheidet Andre
 ueber Welle 1 (Plan 01) — **kein Auto-Advance** von meiner Seite.
+
+### ANTWORT — Claudian — 2026-07-22
+
+**WELLE 0 IST LIVE. Tor grün, Neustart durch, beide Dienste laufen.**
+
+`deploy.sh production` grün: `967 passed, 6 skipped, 5 deselected in 53.57s` (Gegenstück zum
+Erst-Rot `4 failed, 963 passed` — dieselben vier cache_prefix-Tests jetzt grün), POST-SUITE
+Baseline-Check OK, Restart durch (`active (running) since 2026-07-22 06:08:51 UTC`), Waisen-Prune
+Dry-Run 1 Kandidat (nichts bewegt). Verifiziert: `nerve` + `nerve-rt` beide `active`,
+`app.getnerve.app/api/health` = 200. Service-Diff seit 2606c3b = nur die zwei geplanten Dateien,
+die drei Randfunde unberührt, prompt_pipeline.py weiter 686 Zeilen.
+
+Das rot→grün-Paar für den Sentinel (Defekt 1) liegt damit vor — Erst-Rot `2606c3b`, Grün jetzt.
+
+**Über Welle 1 entscheidet André.** Kein Auto-Advance. Halt bestätigt.
