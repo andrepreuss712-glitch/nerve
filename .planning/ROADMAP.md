@@ -2508,7 +2508,18 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 **Kern-Risiko / Akzeptanz:** Erkennungs-Qualität sinkt NICHT + Latenz steigt NICHT (Balance Qualität↔Tempo, CLAUDE.md Latenz-Regel). Nebeneffekt erwünscht: Prompt wird zwischenspeicher-fähig.
 
-**Komplexität:** 🔴. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren. **Genauer Schnitt (rein/raus) in Discuss/Plan.** **Sync:** Vault `01 Roadmap.md` parallel gepflegt.
+**★ SCHNITT ENTSCHIEDEN 2026-07-22 (André, nach Drei-Wege + Cross-AI Fable+Gemini deckungsgleich) — WEG 1:** nur das natürliche Paar mergen — `analysiere_mit_claude` (Call 1, Einwand) + `classify_utterance` (Call 3, QA-Klassifikation) → EIN Haiku-Call. Coaching (`analysiere_coaching`) bleibt UNVERÄNDERT im eigenen Thread (gratis fault-isoliert). Begründung am Code: 1+3 laufen schon heute im selben Thread/Tick über dieselben Daten (claude_service.py:975→:1075→:1543); Coaching nutzt andere Daten (Sprecher-Labels, Berater inkl.) → gehört nicht ins selbe Prompt.
+**Bau-Vorgaben (Plan MUSS adressieren):**
+1. **IL-2-Vertrag erhalten:** merged `primary_intent`+`confidence` per-SID in State schreiben (:1003-1005/:1022-1023) VOR `generate_qa_response`-Prompt-Bau (qa_pipeline.py:415 → prompt_pipeline.py:648-667).
+2. **Guards vorziehen:** SID-Check (:1499), `kw_fired_for_line==line_id` (:1514), Slot-1-Mutex (:1519) VOR den gemergten Call; QA-Sektion tolerant ignorieren wenn Guard greift (die Slot-Emitter sind ohnehin No-Ops seit PIP-01, :1548-1558/:1618-1632).
+3. **Truncation-Schutz (Kern-Risiko):** getrennte max_tokens (400 + 150) in EIN großzügiges Budget + **sektionsweises Extrahieren**, NICHT auf all-or-nothing `_parse_json` (:217-227) verlassen — ein abgeschnittenes Merged-JSON darf nicht ALLE Konsumenten killen.
+4. **★ `generate_qa_response` streichen** (Fable-Fund + R2): Output seit PIP-01 verworfen (No-Op-Emitter) = bezahlter Geldverbrenner. Erst Konsumenten-frei verifizieren (Punkt 20 grep), dann kappen. Gilt unabhängig vom Merge, gehört in H1.
+5. **Volle Akzeptanz-Latte** (D2, alle lebenden Konsumenten): intent_event + Moment-Open/CLOSE (:996-1070), Kaufbereitschaft/`intensitaet` (:1090), gegenargument_log (:1141-1147), 8 Readiness-Flags (:1304-1338), dynamische EWB-Buttons via `ergebnis['typ']` (≠intent_type, :1359-1372), Phase-Classifier-Kadenz (:1185), Abstain-intent_events (:1638/:1683), FAQ used_count (:1670). NICHT: FT-Events (tot) + lernkarte_match (0 Reader).
+**Kalibrierungs-Anruf zusätzlich:** Attention-Loss prüfen — sinkt die Einwand-Erkennungs-Qualität, weil Haiku jetzt zwei Aufgaben in einem Call macht (Gemini-Warnung)? Latenz: Time-to-Last-Token, nicht nur TTFT (Überlappungs-Risiko nächster Tick).
+**Ehrliche Erwartung:** Spar-Effekt Weg 1 ≈ **20-30 %** der Tick-Kosten (nicht 35-45 %). Cache-Bonus UNSICHER (Haiku 4.096-Token-Prefix, evtl. drunter — messen).
+**WEG 3 (Coaching event-getriggert statt stur 4s) = SEPARATER Folge-Schritt danach** (eigene Phase). Fable-Befund: kein fertiges Trigger-Signal (Berater-only-Ticks erreichen Analyse nie; „Themenwechsel"/„kritische Phase" existieren nicht bzw. nur als tote Reader `:1319/:1335/:1305/:1323`) → braucht neuen kleinen Trigger-Layer (BOF-Zähler :1737 + Stats :1777-1790 + Analyse-Flags) + akzeptiert lückigere painpoint/kb_delta. NICHT jetzt bündeln (Risiko-Isolation, Gemini+Fable+Claudian einig).
+
+**Komplexität:** 🔴. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren. **Sync:** Vault `01 Roadmap.md` parallel gepflegt.
 
 ---
 

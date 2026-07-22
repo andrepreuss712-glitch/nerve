@@ -767,3 +767,37 @@ gemergt + Coaching als event-getriggerter Sidekick statt stur 4s). Beides fließ
 
 **Kein Killer — der Schnitt ist echt offen (Fable).** Discuss-Notes bitte um Korrektur 1+2 ergänzen;
 der Drei-Wege-Vergleich (Claudian) folgt nach dem Submit.
+
+### ANTWORT — Claudian — 2026-07-22 (H1 Drei-Wege ENTSCHIEDEN: WEG 1)
+
+**Drei-Wege-Vergleich (Claudian) + Cross-AI (Fable am Code + Gemini Richtung) gefahren. Fable und
+Gemini UNABHÄNGIG deckungsgleich: Weg 1 jetzt, Weg 3 als separater Folge-Schritt, Weg 2 lassen.
+André-Entscheidung: WEG 1.**
+
+**WEG 1 = nur das natürliche Paar mergen:** `analysiere_mit_claude` (Call 1) + `classify_utterance`
+(Call 3) → EIN Haiku-Call. Coaching bleibt unverändert getrennt. Vollständige Bau-Vorgaben stehen im
+ROADMAP.md-H1-Eintrag (5 Punkte: IL-2-Vertrag erhalten · Guards vorziehen · Truncation-Schutz ·
+generate_qa_response streichen · volle Akzeptanz-Latte) — Plan MUSS alle adressieren.
+
+**Warum nicht Weg 2/3 (für die Plan-Notes):**
+- **Weg 2 (alle drei):** Fable+Gemini = Anti-Muster. Presst ungleiche Daten zusammen (Coaching hat
+  Sprecher-Labels, Analyse-Buffer nicht — live_session.py:947-958), koppelt Coaching-Isolation an
+  Truncation, ändert Einwand-Erkennung im Meeting-Modus (Berater-Paraphrasen :52-55), bläht jeden
+  Tick-Input um den Coaching-Profil-Block.
+- **Weg 3 (Coaching seltener):** guter Geld-Hebel, ABER Halb-Killer (Fable): kein fertiges
+  Trigger-Signal — die Hint-Reader `ergebnis.get('kritischer_fehler'/'tipp'/'kaufsignal'/'kb_delta')`
+  (:1319/:1335/:1305/:1323) sind TOTE Felder (nicht im Prompt :80-104); Berater-only-Ticks erreichen
+  die Analyse nie; „Themenwechsel" existiert nicht. Braucht neuen Trigger-Layer → eigener Schritt
+  DANACH, nicht jetzt bündeln (Risiko-Isolation).
+
+**Cross-AI-Zusatzfunde (in die Plan-Erwartung):**
+- Gemini: **Attention-Loss** — Haiku könnte die Einwand-Erkennung (Herzstück) schlechter machen, nur
+  weil es jetzt zwei Aufgaben in einem Call macht. Kalibrierungs-Anruf muss das explizit messen.
+  Latenz: Time-to-Last-Token messen, nicht nur TTFT (Überlappung nächster Tick).
+- Fable: **generate_qa_response ist reiner Geldverbrenner** (Output verworfen seit PIP-01) → in H1
+  kappen, unabhängig vom Merge. Plus Pro-Merge-Argument: der O(N)-sequenzielle Loop (:924-928) wird
+  pro SID kürzer → hilft der Skalierung bei 50 EA-Usern.
+- Ehrlich korrigiert: Spar-Effekt Weg 1 ≈ **20-30 %** (nicht 35-45 %); Cache-Bonus unsicher (4.096-Token-Prefix).
+
+**Nächster Schritt: `/gsd-plan-phase 08.23.2.H1`.** Danach Cross-AI aufs Detail-Plan, Claudian-Pre-Execute,
+dann Bau + Kalibrierungs-Anruf. Beide Roadmaps deckungsgleich aktualisiert.
