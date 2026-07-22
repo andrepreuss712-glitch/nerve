@@ -1150,7 +1150,20 @@ def analyse_loop():
                 # Keyword-Matcher (06.2) is sole primary for Slot 0 + Slot 1.
                 # Non-streaming call preserves ergebnis for FT-events, Kaufbereitschaft,
                 # Phase-Classifier, Cold-Call-Inference, Active-Hint-Orchestration.
-                ergebnis = analysiere_mit_claude(neuer_text, kontext, sid=sid)
+                # ── Phase 08.23.2.H1 (WEG 1): EIN Merged-Call statt Call 1 + Call 3 ──
+                # Bei MERGE_ANALYSE_QA=='1' (Default): ergebnis IST weiterhin die Einwand-
+                # Sektion (top-level) -> alle Call-1-Konsumenten UNVERAENDERT (Latte). Die
+                # QA-Klassifikation kommt aus merged['qa'] und wird dem Dispatch mitgegeben
+                # (kein zweiter Haiku-Call). Bei '0': ALTER Zwei-Call-Pfad (Rollback-Ventil).
+                # Der Merged-Call laeuft JEDEN Tick fuer die Einwand-Analyse (Invariante),
+                # auch wenn ein QA-Guard im Dispatch spaeter greift.
+                if config.MERGE_ANALYSE_QA == '1':
+                    merged = analysiere_und_klassifiziere(neuer_text, kontext, sid=sid)
+                    ergebnis = merged
+                    _qa_section = merged.get('qa', {})   # QA-Sektion (fail-open {} bei Truncation)
+                else:
+                    ergebnis = analysiere_mit_claude(neuer_text, kontext, sid=sid)
+                    _qa_section = None                   # Signal: Dispatch macht den eigenen classify_utterance-Call
                 # SID liveness check after Claude API call
                 with ls._session_state_lock:
                     if sid not in ls._session_state:
@@ -1250,7 +1263,10 @@ def analyse_loop():
                 # ── Phase 08.5: Universal Response Loop ──────────────────────────
                 # Classifies utterance via qa_pipeline when kw_fired_for_line != line_id
                 # (D-02 guard). Emits qa_slot1 or qa_soft_hint to active session.
-                _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid=sid)
+                # H1 (WEG 1): qa_section aus dem Merged-Call durchreichen (None = Fallback-
+                # Pfad -> Dispatch macht seinen eigenen classify_utterance-Call).
+                _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid=sid,
+                                      qa_section=_qa_section)
                 # SID liveness check after _qa_pipeline_dispatch
                 with ls._session_state_lock:
                     if sid not in ls._session_state:
@@ -1650,7 +1666,8 @@ def _qa_load_faqs(active_profile_id):
     return []
 
 
-def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None):
+def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None,
+                          qa_section=None):
     """Phase 08.5: Classify utterance and dispatch to qa_pipeline.
 
     Called from analyse_loop after the Phase 06.3 comment block.
@@ -1718,10 +1735,29 @@ def _qa_pipeline_dispatch(neuer_text, line_id, kontext, ls, sio, sid: str = None
 
         _tabu_begriffe = _qa_load_tabu(_active_profile_id, _profile_daten)
 
-        _qa_result = classify_utterance(neuer_text, kontext, _user_id, sid=sid)
-        _kat = _qa_result.get('kategorie', 'smalltalk_none')
-        _conf = _qa_result.get('confidence', 0.0)
-        print(f"[QA-INT] classify kategorie={_kat} conf={_conf:.2f} line={line_id}")
+        # ── Phase 08.23.2.H1 (WEG 1): QA-Klassifikation aus dem Merged-Call ──────
+        # Merge-Pfad (qa_section is not None): die Klassifikation kam bereits aus
+        # analysiere_und_klassifiziere -> KEIN zweiter Haiku-Call (classify_utterance).
+        # Die Guards oben (not sid / kw_fired_for == line_id / slot1_busy) haben schon
+        # gegatet: greift ein Guard -> early return -> diese Zeile wird NICHT erreicht ->
+        # die QA-Sektion wird NICHT konsumiert (identisch zum Ist: bei Guard-Treffer
+        # wurde classify_utterance frueher gar nicht erst gerufen). fail-open exakt wie
+        # der classify_utterance-Fallback, wenn qa_section == {} durch Truncation.
+        if qa_section is not None:
+            _kat = qa_section.get('kategorie', 'smalltalk_none')
+            # Validierung/Coercion analog classify_utterance (Enum-Whitelist + conf-Clamp)
+            if _kat not in ('einwand_unknown', 'frage', 'smalltalk_none', 'einwand_known'):
+                _kat = 'smalltalk_none'
+            try:
+                _conf = max(0.0, min(1.0, float(qa_section.get('confidence', 0.0))))
+            except (TypeError, ValueError):
+                _conf = 0.0
+            print(f"[QA-INT] classify (merged) kategorie={_kat} conf={_conf:.2f} line={line_id}")
+        else:
+            _qa_result = classify_utterance(neuer_text, kontext, _user_id, sid=sid)
+            _kat = _qa_result.get('kategorie', 'smalltalk_none')
+            _conf = _qa_result.get('confidence', 0.0)
+            print(f"[QA-INT] classify kategorie={_kat} conf={_conf:.2f} line={line_id}")
 
         def _emit_soft_hint(reason=''):
             """Phase 08.23.2.PIP-01 (Item a, Anzeige-Trennung): Der Auto-Erkenner darf
