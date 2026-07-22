@@ -553,3 +553,54 @@ claude_service.py:526) — kein grep-getriebenes Kommentar-Löschen. Analyse-Pfa
 CACHE_ANTWORT definiert, Konsument kommt in Welle 2.
 
 **Über Welle 2 entscheidet André.** Kein Auto-Advance. Halt bestätigt.
+
+### FRAGE — 08.23.2.TEMPO-1 Welle 2 (Plan 02, der KERN) — 2026-07-22
+
+**Plan 02 komplett gebaut, committet, gepusht (`2437fd3`, `219b1e2`, `9277d19`, SUMMARY `9c61e1e`). Bereit fuer den Tor-Lauf.**
+
+**Task 1 — der Marker (`2437fd3`):** `cache_control: ephemeral` auf den `_layer=='stable'`-Block in
+`answer_system_content`. Wertbasiert, KEIN Index — die List-Comprehension wurde durch eine `for`-Schleife
+ersetzt, die `b.get('_layer') == 'stable'` am Quell-Block prueft, bevor der marker-freie Content-Dict
+gebaut wird. `_cache_gesetzt`-Deckel = genau 1 Breakpoint. Volatil bekommt nie den Marker; leerer
+Stabil-Block → Volatil auf Index 0, matcht aber nie 'stable'.
+Belege (selbst gegengeprueft): `content[0]`=**0**, `_layer') == 'stable'`=**1**,
+`cache_control.*ephemeral`=**2**. `wc -l prompt_pipeline.py` 686→717 (Plan 02 ist der letzte
+Anker-Konsument, Wachstum hier ok — Plan 03 hat keinen Code).
+
+**Task 2 — 5 Tests + E3 (`219b1e2`):** `test_cache_marker_auf_stabilem_block`, `_genau_ein_breakpoint`,
+`_folgt_layer_nicht_index`, `_schalter_aus`, `_fallback_ohne_marker` + E3
+`test_stabil_block_byte_gleich_ueber_zwei_sids`. **Pflicht-Wirksamkeitsbeleg** erbracht: der
+Index-Fallen-Test zeigt gegen eine temporaere `content[0]['cache_control']`-Variante verbatim ROT
+(`assert 'cache_control' not in content[0]` → FAILED), danach zurueckgebaut, Ruckbau gruen.
+**E3 gruen:** Stabil-Block byte-gleich ueber sid-A/sid-B, Volatil traegt distinkt `Anrede: Du`/`Anrede: Sie`
+(Anti-Cache-Poison haelt).
+
+**Task 3 — Kommentar-Wahrheit + Stale-Sichtung (`9277d19`):** 6 luegende „PLAIN/Phase 2/NICHT
+aktiviert"-Kommentare ersetzt (claude_service, qa_pipeline, prompt_pipeline), F1/F2-Kommentare
+ergaenzt (nur Kommentar). Belege: alle Luegen-greps=0, `CACHE_ANTWORT` in claude_service=**3**
+(CODE-Anker-Schalter=0, die eigentliche Abnahme), `TEMPO-1/F1`=1, `TEMPO-1/F2`=1.
+**Stale-Sichtung (Punkt 18):** `test_heiler_resolved`/`test_per_sid_migration`/`test_qa_pipeline`
+gruen ohne Retarget — Rueckgabe-Vertrag `list[dict]` unveraendert, nur optionaler Key dazu.
+
+Scope selbst gegengeprueft: Diff seit b60bdc9 fasst nur prompt_pipeline/claude_service/qa_pipeline +
+Test + SUMMARY an. `live_session.py` NICHT im Diff (Randfunde unberuehrt), kein Plan-03-Code,
+keine STATE/ROADMAP-Nachzuege. `ast.parse` gruen fuer alle drei `.py`.
+
+**Lokales Vorab-Signal (KEINE Abnahme):**
+```
+pytest test_build_answer_context.py -k "cache_marker or byte_gleich" → 6 passed, 11 deselected
+test_build_answer_context.py gesamt → 17 passed (11 alt + 6 neu)
+Stale-Kandidaten → 27 passed, 4 skipped
+```
+Volles Gate `--ignore=test_ft_seed.py` → 6 failed / 725 passed: die 6 sind pre-existing/out-of-scope
+(per git-stash belegt: identischer Fehler ohne meine Aenderungen — real-PG-Seed ×5 + GLiNER).
+
+**Bitte den Tor-Lauf fahren** (`bash deploy.sh production`): das Server-Pytest-Gate (real-PG) ist die
+verbindliche Abnahme — die 6 neuen cache_marker-Tests laufen dort gegen echtes PG. Gruen + Restart =
+Welle 2 live, **der Cache ist damit scharf**. Danach entscheidet Andre ueber Welle 3 (Plan 03: Deploy-
+Zwei-Tore + Live-Belege TTFT/api_cost_log/logs-errors) — **kein Auto-Advance** von meiner Seite.
+
+Hinweis fuer den Tor-Lauf: Welle 2 aktiviert erstmals einen echten `cache_control`-Write. Der erste
+Antwort-Call pro Cache-Fenster zahlt ~1,25x, ab dem zweiten greift der Read — der Nutzen ist erst an
+`api_cost_log` (`unit_type='per_1k_cache_read_tokens'`, `units>0`) belegbar, und das ist bewusst
+Plan 03 (Live-Beleg per Test-Anruf), nicht dieser Tor-Lauf.
