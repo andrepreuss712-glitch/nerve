@@ -2457,7 +2457,7 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 ---
 
-### Phase 08.23.2.KOSTEN-1.1: Modellnamen-Wahrheit in der Kosten-Erfassung (NEU 2026-07-21) 🟡 — NACH TEMPO-1
+### Phase 08.23.2.KOSTEN-1.1: Modellnamen-Wahrheit in der Kosten-Erfassung (NEU 2026-07-21) 🟡 — ✅ COMPLETE + LIVE 2026-07-22 (head 3ad470b; genau EIN Fehlpfad bestätigt via Claudian-Audit + Fable-Gegencheck: streame_manual_ewb_variante buchte 'haiku-4-5', läuft auf MODEL_PIP_VARIANTE=sonnet → Fix bucht `_model_variante = config.MODEL_PIP_VARIANTE` an allen 4 Stellen; Wächter W4 `test_cost_model_truth.py` mit Erst-Rot verbatim belegt; Deploy-Gate grün 975 passed; alte Buchungen NICHT rückwirkend korrigiert — D-02)
 
 **Herkunft:** GSD-Fund bei der TEMPO-1-Planung (`TEMPO1-KNOPF-MODELLNAME-FALSCH`), von Claudian am Code + an Prod verifiziert. Bewusst **nicht** in TEMPO-1 gemischt (CLAUDE.md Punkt 17 / Regel 3d: Fund während einer Phase → eigene Mini-Phase direkt danach, Kontext frisch).
 
@@ -2483,9 +2483,32 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 **Komplexität:** 🟡 (mechanisch, aber Marge-relevant, berührt keinen Live-Antwort-Pfad-Logikzweig). Cross-AI nach Ermessen; **Claudian-Pre-Execute-Audit Pflicht**. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
 **Verzeichnis:** `.planning/phases/08.23.2.KOSTEN-1.1-modellnamen-wahrheit/`
 **Plans:** 3 plans in 3 waves
-- [ ] 08.23.2.KOSTEN-1.1-01-PLAN.md — Inventur: jede log_api_cost-Stelle gegen ihr echtes model= (Verbindungs-Karte)
-- [ ] 08.23.2.KOSTEN-1.1-02-PLAN.md — W4-Waechter (AST, ERST-ROT) + Fix streame_manual_ewb_variante
-- [ ] 08.23.2.KOSTEN-1.1-03-PLAN.md — Verify=Production: deploy.sh-Pytest-Gate (bindende Abnahme, W4 inkl.)
+- [x] 08.23.2.KOSTEN-1.1-01-PLAN.md — Inventur: jede log_api_cost-Stelle gegen ihr echtes model= (Verbindungs-Karte)
+- [x] 08.23.2.KOSTEN-1.1-02-PLAN.md — W4-Waechter (AST, ERST-ROT) + Fix streame_manual_ewb_variante
+- [x] 08.23.2.KOSTEN-1.1-03-PLAN.md — Verify=Production: deploy.sh-Pytest-Gate (bindende Abnahme, W4 inkl.) — Gate grün 975 passed, live 3ad470b
+
+---
+
+### Phase 08.23.2.H1: Live-Schleifen zusammenlegen — 3 Haiku-Aufrufe → 1 (NEU 2026-07-22) 🔴 — der große Kosten-Hebel
+
+**Herkunft:** André-Direktive 2026-07-20 (*„nicht mehr alle 4 Sekunden ein Aufruf über dieselben Daten"*). Größter Spar-Hebel im Geld-Thema „Kosten senken". NACH TEMPO-1 + KOSTEN-1.1 (beide live).
+
+**Goal:** Die drei ~4s-Haiku-Aufrufe über weitgehend dieselben Transkript-Daten auf EINEN Aufruf zusammenlegen — ohne Erkennungs-Qualität zu verlieren und ohne Latenz-Verschlechterung.
+
+**Belegt am Code:** `ANALYSE_INTERVALL=4` (`config.py:37`). Drei überlappende Haiku-Aufrufe:
+- Einwand-/Struktur-Erkennung: `analysiere_mit_claude` (analyse_loop, `claude_service.py:916` → `:975`), `MODEL_ANALYSE`=haiku.
+- Coaching: `analysiere_coaching` (coaching_loop, `:1707`), `MODEL_COACHING`=haiku.
+- Frage-Einstufer: `classify_utterance` (QA, `qa_pipeline.py`), `MODEL_ANALYSE`=haiku.
+
+**Pflicht-Prozess (🔴, verändert wie NERVE live mitdenkt):**
+1. **Drei-Wege-Vergleich VOR Architektur-Festlegung** (Claudian, Leitsatz 3) — mind. 3 Ansätze (z.B. ein großer Kombi-Prompt / ein Aufruf mit mehrteiliger strukturierter Antwort / geteilter gecachter Prefix bei getrennten Aufrufen), Vergleichstabelle Komplexität/Fehleranfälligkeit/**Latenz**, KEIN Code bis André wählt.
+2. **Cross-AI Pflicht** (Fable am echten Code + Gemini).
+3. **Claudian-Pre-Execute-Audit.**
+4. **Kalibrierungs-/Test-Anruf Pflicht** — der EINE zusammengelegte Aufruf muss Einwände erkennen + Fragen einstufen + coachen mindestens so gut wie drei getrennte, am echten Anruf gegen den Ist-Stand belegt.
+
+**Kern-Risiko / Akzeptanz:** Erkennungs-Qualität sinkt NICHT + Latenz steigt NICHT (Balance Qualität↔Tempo, CLAUDE.md Latenz-Regel). Nebeneffekt erwünscht: Prompt wird zwischenspeicher-fähig.
+
+**Komplexität:** 🔴. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren. **Genauer Schnitt (rein/raus) in Discuss/Plan.** **Sync:** Vault `01 Roadmap.md` parallel gepflegt.
 
 ---
 
