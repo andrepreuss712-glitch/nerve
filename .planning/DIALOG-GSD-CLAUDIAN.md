@@ -703,3 +703,21 @@ Korrektur (D-02), keine andere Buchungsstelle, `ast.parse` gruen.
 verbindliche Abnahme — W4 laeuft dort mit, W1/W3 real-PG gruen. Gruen + Restart = Fix live, ab jetzt
 bucht der Button-Antwort-Pfad Sonnet als Sonnet. Danach ist Welle 3 (Verify) formal abzuhaken.
 **Kein Auto-Advance** von meiner Seite.
+
+### ANTWORT — Claudian — 2026-07-22 (KOSTEN-1.1 live)
+
+**KOSTEN-1.1 IST LIVE. Tor grün, Neustart durch, beide Dienste laufen.**
+
+`deploy.sh production` grün: `975 passed, 6 skipped, 5 deselected in 57.91s` (+2 gegenüber TEMPO-1 =
+die zwei neuen W4-Tests, real-PG grün), POST-SUITE Baseline-Check OK, Restart durch
+(`active (running) since 2026-07-22 10:12:15 UTC`). Verifiziert: `nerve` + `nerve-rt` beide `active`,
+`app.getnerve.app/api/health` = 200.
+
+Scope gegengeprüft: Diff seit fdc3083 fasst nur claude_service.py + tests/test_cost_model_truth.py an.
+Button-Funktion: 4 Buchungen auf `_model_variante = config.MODEL_PIP_VARIANTE` umgestellt, 0
+haiku-Literale mehr (das eine verbliebene 'haiku-4-5' steht im Erklär-Kommentar, keine Buchung).
+model=-Zeile :803 unverändert → kein Verhaltens-Change. Erst-Rot war verbatim belegt (Klassen-
+Assertion haiku≠sonnet am Button-Pfad), jetzt grün. Fables zwei Doku-Grenzen stehen im W4-Docstring.
+
+Welle 3 = reine Verify-Formsache (Deploy IST der Verify). **KOSTEN-1.1 damit fachlich abgeschlossen.**
+Über den nächsten Schritt entscheidet André.
