@@ -581,7 +581,8 @@ def build_answer_context(*, user_id: int, sid: str | None, primary_intent: str |
     Rueckgabe: LISTE von System-Bloecken — STABIL vorne (Paradigma + Rollen-Ziel +
     Grounding + Profil-Stabilteil), VOLATIL hinten (EIN Intent-Hinweis +
     Modus/Konfidenz-Register + volatiler Profilteil). Strukturell cache-faehig
-    getrennt (_layer-Marker), Caching NICHT aktiviert (Phase 2).
+    getrennt (_layer-Marker). TEMPO-1: answer_system_content setzt cache_control auf den stabilen
+    Block (Schalter config.CACHE_ANTWORT); build_answer_context selbst bleibt marker-frei.
 
     Rolle/Modus/Konfidenz/EIN-Intent sind PARAMETER (kein if-Prompt-Zweig, Req 3/5/6).
     MUST NOT raise: jeder Teil fail-open (.get-Defaults, _profile_blocks -> ('','')).
@@ -595,6 +596,10 @@ def build_answer_context(*, user_id: int, sid: str | None, primary_intent: str |
     # ── STABIL-Block: Paradigma + Rollen-Ziel + Grounding + Profil-Stabilteil ──
     role_goal = (cfg.get('roles') or {}).get(role) or (cfg.get('roles') or {}).get('interessent', '')
     _stabil_parts = list(cfg.get('paradigm') or [])
+    # TEMPO-1/F1: `Rolle` steht bewusst im STABILEN Block. Kippt contact_category mitten im
+    # Anruf (gatekeeper -> target), aendert sich der Cache-Prefix -> EIN Miss + EIN Write.
+    # Inhaltlich korrekt und akzeptiert — nicht als Cache-Defekt diagnostizieren, nicht
+    # "reparieren" (der Rollen-Wechsel MUSS die Antwort aendern).
     if role_goal:
         _stabil_parts.append(f'Rolle: {role_goal}')
     if cfg.get('grounding'):
@@ -616,7 +621,7 @@ def build_answer_context(*, user_id: int, sid: str | None, primary_intent: str |
     volatil_block = '\n'.join(_volatil_parts)
 
     return [
-        {'role': 'system', 'text': stabil_block, '_layer': 'stable'},    # _layer -> Phase-2-Caching-Marker
+        {'role': 'system', 'text': stabil_block, '_layer': 'stable'},    # _layer -> von answer_system_content zu cache_control ausgewertet (TEMPO-1)
         {'role': 'system', 'text': volatil_block, '_layer': 'volatile'},
     ]
 

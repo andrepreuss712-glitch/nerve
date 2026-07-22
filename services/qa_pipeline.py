@@ -410,7 +410,7 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
         # ── System-Prompt aus der EINEN Quelle (TAXO3 P1-02, Req 1/2/3/6/7) ────
         # build_answer_context: Paradigma + Rollen-Ziel + Grounding + Profil-Kontext,
         # Rolle/Modus/EIN-Intent/Konfidenz als Parameter (kein Selbstbau, kein "zwingt").
-        # Phase 1: PLAIN Content-Bloecke ohne cache_control (Caching = Phase 2/Plan 04).
+        # TEMPO-1: der stabile Prefix traegt cache_control (Schalter config.CACHE_ANTWORT).
         # primary_intent = per-SID (Punkt 26 fail-open); confidence durchgereicht.
         _system = answer_system_content(sid, is_auto_triggered=False, confidence=float(confidence))
         # Tabu-Instruktion (Produkt-Verbote) bleibt als eigener System-Block erhalten.
@@ -433,10 +433,10 @@ def generate_qa_response(utterance: str, category: str, profile_data: dict,
             f"Formuliere eine kurze, konkrete Antwort (max. 45 Wörter)."
         )
 
-        # TAXO3 P1-02: cache_control-Layering ENTFERNT (Phase 2/Plan 04 baut es korrekt
-        # auf dem stabilen Prefix wieder auf). _system ist die PLAIN Block-Liste aus
-        # answer_system_content (+ Tabu-Block). anrede kommt jetzt aus dem Profil-Kontext
-        # (build_answer_context Volatil-Block), nicht mehr aus einer eigenen Prompt-Zeile.
+        # TEMPO-1: das cache_control-Layering sitzt jetzt in answer_system_content auf dem
+        # stabilen Prefix — NICHT hier. Der Tabu-Block wird bewusst OHNE cache_control
+        # HINTEN angehaengt: er ist produkt-/profilabhaengig und darf den Cache-Prefix
+        # nicht mitbestimmen. anrede kommt aus dem Profil-Kontext (Volatil-Block).
 
         from services.claude_service import claude_client
 

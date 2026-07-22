@@ -608,7 +608,7 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
     # _ewb_autovar_system (kontext-armer 14-Token-Prompt) GELOESCHT. Auto zieht jetzt
     # aus build_answer_context (Paradigma + Rollen-Ziel + Grounding + Profil-Kontext).
     # is_auto_triggered=True KONSTANT; primary_intent durchgereicht (keyword: matched_label;
-    # analyse_loop: per-SID). Phase 1: PLAIN Bloecke ohne cache_control (Caching = Phase 2).
+    # analyse_loop: per-SID). TEMPO-1: der stabile Prefix traegt cache_control (Schalter config.CACHE_ANTWORT).
     # HINWEIS (P1-02-Deviation): dieser Pfad ist seit PIP-01 DORMANT (0 Produktiv-Caller,
     # nur Tests) — die Umlenkung haelt ihn paradigma-korrekt fuer eine spaetere Reaktivierung.
     from services.prompt_pipeline import answer_system_content as _asc_auto
@@ -620,6 +620,9 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
     _model_autovar = config.MODEL_PIP_AUTOVAR
     if _cb_in_fallback:
         _model_autovar = 'claude-haiku-4-5-20251001'  # DACH fallback (CLAUDE.md: Haiku only in fallback)
+        # TEMPO-1/F2: Anthropic-Caches sind PRO MODELL gekeyt. Nach diesem Fallback laeuft
+        # der Antwort-Prompt auf einem EIGENEN Cache-Eintrag (erster Call zahlt Aufschlag).
+        # Das ist erwartet, kein Defekt — nicht als Cache-Fehler diagnostizieren.
         print(f"[CircuitBreaker-EWB] Haiku fallback active sid={sid}")
 
     print(f"[PiP-AutoVar] ENTRY trigger={trigger} sid={sid} slot={slot} text={neuer_text[:60]!r}")
@@ -767,7 +770,7 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
     # build_answer_context: Paradigma + Rollen-Ziel + Grounding + Profil-Kontext.
     # Knopf = bewusster Klick -> is_auto_triggered=False, confidence hoch (1.0);
     # primary_intent = der geklickte typ als Label. Rolle/Modus aus per-SID abgeleitet.
-    # Phase 1: PLAIN Content-Bloecke ohne cache_control (Caching = Phase 2/Plan 04).
+    # TEMPO-1: der stabile Prefix traegt cache_control (Schalter config.CACHE_ANTWORT).
     try:
         from services.prompt_pipeline import answer_system_content as _asc_manual
         _system_manual = _asc_manual(sid, is_auto_triggered=False,
