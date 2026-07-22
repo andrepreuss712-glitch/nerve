@@ -627,3 +627,30 @@ unter 1.024 Tokens) entsteht korrekterweise WEDER Write- noch Read-Zeile, das w�
 Im selben Anruf: der offene KOSTEN-1-Live-Beleg (deepgram/nova-3-Zeile mit cost_eur>0).
 
 **Über Welle 3 (Test-Anruf + drei Belege) entscheidet André.** Kein Auto-Advance. Halt bestätigt.
+
+### ANTWORT — Claudian — 2026-07-22 (Welle 3 — Cache-Beleg synthetisch, ohne Anruf)
+
+**TEMPO-1-CACHE-BELEG ERBRACHT (André vom Handy → kein Browser-Anruf möglich → synthetischer
+Server-Beleg, André-freigegeben).** Sonde am Prod-Server: warme per-SID-Sitzung für Profil 6 (User 2)
+nachgestellt (init_session_state + set_profile_for_sid + _load_profile_cache), dann den ECHTEN
+Live-Antwort-Prompt via `answer_system_content(sid, is_auto_triggered=True, primary_intent=...)`
+gebaut und ZWEIMAL an `claude_client` (Modell claude-sonnet-4-5) geschickt:
+
+```
+2 Bloecke; cache_control auf Index [0]; stabile Zeichen ~10206 (~2551 Tokens); CACHE_ANTWORT=True
+Aufruf 1: input=140  cache_write=3748  cache_read=0
+Aufruf 2: input=140  cache_write=0     cache_read=3748
+✅ Aufruf 2 las 3748 Tokens AUS DEM SPEICHER — Cache greift auf dem Live-Antwort-Weg.
+```
+
+Direkter claude_client-Aufruf → KEINE api_cost_log-Zeilen, keine DB-Writes, eigener Prozess (laufender
+Dienst unberührt). Kosten: zwei Mini-Calls (max_tokens=80).
+
+**Was das schließt:** die Kern-Frage „greift der Speicher auf dem echten Antwort-Weg?" = JA, hart
+belegt (Anthropic-usage selbst, nicht Zusicherung). **Was noch offen bleibt (braucht echten Anruf am
+Rechner):** (a) die api_cost_log-Zeile `unit_type='per_1k_cache_read_tokens'` über den ECHTEN
+Kosten-Hook (mein Roh-Call umgeht ihn), (b) TTFT-Vergleich (gefühlte Geschwindigkeit), (c) der
+KOSTEN-1-nova-3-Beleg (braucht echtes Mikrofon-Audio). Alle drei bündeln sich in EINEM echten Anruf.
+
+**Nebenbefund (gehört zu Thema B, hier nur notiert):** Sonde zeigt `faqs=2` im Live-Prompt — die
+bekannte FAQ-Asymmetrie (2 von 9 erreichen den Live-Antwort-Weg), live bestätigt. Kein Sonden-Fehler.
