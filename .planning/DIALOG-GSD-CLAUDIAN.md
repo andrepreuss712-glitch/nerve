@@ -825,3 +825,51 @@ Fable am Code: kein inkrementeller Parser nötig, Doppelpunkt-Anker kollisionssi
 
 **Nächster Schritt: `/gsd-execute-phase 08.23.2.H1` — W1 (QAKILL) + W2 (MERGE+TRUNC) bauen, dann
 ANHALTEN vor W3-Deploy/Kalibrierungs-Anruf. Tor + Anruf fährt Claudian.**
+
+### FRAGE — 08.23.2.H1 Welle 1+2 (QAKILL + MERGE/TRUNC) — 2026-07-22
+
+**Welle 1 + Welle 2 gebaut, committet, gepusht. Bereit fuer Welle 3 (Tor-Lauf + Kalibrierungs-Anruf — faehrst DU/André).**
+Commits: QAKILL `d5a7f15`/`94be9e2`/`94fc2d8`, MERGE/TRUNC `fd9d909`/`b10ddda`/`a785f9b`/`4934ae1`.
+
+**Welle 1 — generate_qa_response gekappt.** Vorabcheck (Punkt 20) belegt konsumenten-frei: `_antwort`
+floss nur in No-Op-Emitter (`_emit_soft_hint`/`_emit_qa_slot1`, seit PIP-01 nur `print`) + reine
+`apply_tabu_filter` — kein Emit/State/DB/Return. `MODEL_QA=claude-sonnet-4-5` bestaetigt → verworfener
+Sonnet-Call live weg. `classify_utterance` + Abstain-intent_events + FAQ-used_count intakt. −15 Zeilen,
+nur claude_service.py.
+
+**Welle 2 — Merge (Call 1+3 → EIN Haiku-Call), alle 4 Audit-Korrekturen umgesetzt (selbst gegengeprueft):**
+- **K1 (kein nachgeruestetes Feld):** `_MERGED_SYSTEM = SYSTEM_PROMPT_BASE + _MERGED_QA_NACHSATZ` — reine
+  Konkatenation, BASE verbatim. Der qa-Nachsatz enthaelt **0** tote Felder (kaufsignal/kritischer_fehler/
+  kb_delta/tipp) → tote Active-Hints bleiben stumm, keine stille Verhaltensaenderung. `notiz`-Zweig erhalten.
+- **K2:** Classifier-Semantik verbatim aus `_FALLBACK_CLASSIFIER_PROMPT` im qa-Nachsatz (Merge==Fallback-Semantik).
+- **K3:** `MERGE_ANALYSE_QA` Import-Zeit-getenv → Rollback = `.env` + `systemctl restart nerve` (kein hot-reload),
+  so im config-Kommentar.
+- **K4:** Test 7 (Order-Violation → fail-open Dict, kein Crash) + Test 8 (Kein-Einwand-Happy-Path, nicht
+  in Rescue) ergaenzt; Happy-Path-Check verlangt NICHT die volle Einwand-Keyliste.
+- **B-1:** Truncation-Anker `rfind('"qa":')` MIT Doppelpunkt (kollisionssicher); naiver Anker = 0 im Code.
+  Test 6 (Adversarial) belegt: naiv verliert `[gegenargument_1/2, typ, detailfrage, monosyllabisch]` (ROT),
+  Doppelpunkt behaelt sie (GRUEN). 8 Parser-Tests, Erst-Rot verbatim (ImportError → 8 grccün).
+- **IL-2:** Laufzeit-side_effect liest primary_intent IM MOMENT des Dispatch-Aufrufs (captured=='echter_einwand');
+  Guard-Test nutzt den lebenden D-02-Guard `kw_fired_for==line_id`, NICHT den toten slot1-Mutex.
+- Weiche: `MERGE_ANALYSE_QA=='1'` → 1 Call; else = alter Zwei-Call-Fallback (sauberer A/B-Vergleich).
+- Coaching unberuehrt, `MODEL_ANALYSE` bleibt Haiku (D1), Scope nur config.py + claude_service.py.
+
+**Lokales Vorab-Signal (KEINE Abnahme):** Trio 18 passed (parse 8 / wiring 5 / qakill 5); breit 73 passed /
+4 skipped / 1 failed (`test_phase_classifier_integration_real_haiku` @integration braucht echten Haiku-Call,
+Datei unberuehrt — out-of-scope; test_ft_seed.py pre-existing PG-only).
+
+**Bitte Welle 3 fahren — Tor + Kalibrierungs-Anruf. Audit-Korrekturen A-C fuer den Anruf gelten:**
+- **A (Go/Rollback):** QA-Klassifikations-Qualitaet ist AUSDRUECKLICHES Kriterium, gleichrangig zur
+  Einwand-Erkennung — Merge (=1) vs Zwei-Call (=0) am selben Transkript; bricht die 4-Wege-Trefferquote
+  (Abstain-intent_events + FAQ-used_count) ein → Rollback.
+- **B:** Rollback = `MERGE_ANALYSE_QA=0` in `/etc/nerve/.env` + `systemctl restart nerve`.
+- **C (ins SUMMARY):** (1) `nerve_rt` faehrt einen eigenen ungemergten Haiku-Loop — klaeren ob live Sessions
+  laufen (bewusst ausserhalb H1-Scope). (2) **context_tag-Bruch:** der Merge bucht neu
+  `context_tag='live_haiku_merged'` → jede Auswertung auf alt `live_haiku`+`qa_classifier` zeigt einen
+  SCHEINBAREN Kosten-Absturz (Kosten wandern nur auf den neuen Tag). Erste Kosten-Auswertung nach H1 nicht
+  fehlinterpretieren.
+- **Messen (Gemini):** Attention-Loss (Einwand-Erkennung Merge vs 2-Call) + Time-to-Last-Token via
+  `[Claude-1] … Latenz`-Log (kein TTFT am blockierenden Merged-Call); darf den 4s-Tick nicht ueberlappen.
+- **Ehrliche Erwartung:** ≈20-30 % Tick-Kosten (nicht 35-45 %); Cache-Bonus unsicher (Haiku 4.096-Token-Prefix, messen).
+
+**Kein Auto-Advance von meiner Seite.** Welle 3 (Deploy + Anruf) liegt bei dir/André.
