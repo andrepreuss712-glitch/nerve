@@ -566,6 +566,184 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     return _parse_json(msg.content[0].text.strip())
 
 
+# ── Phase 08.23.2.H1 (WEG 1, Welle 2): MERGE Call 1 + Call 3 ─────────────────
+# EIN Haiku-Call liefert BEIDE Sektionen. Der Merged-Prompt ist SYSTEM_PROMPT_BASE
+# VERBATIM (Einwand-Schema, PRIMAER — K1: KEINE Felder nachgeruestet, die BASE heute
+# nicht emittiert) + ein kompakter qa-Nachsatz, der die Classifier-Semantik WORTGLEICH
+# aus _FALLBACK_CLASSIFIER_PROMPT (qa_pipeline.py) traegt (K2: Merge- und Fallback-Pfad
+# klassifizieren identisch). STRICT ORDER: alle Einwand-Felder zuerst, "qa" als LETZTES.
+#
+# HINWEIS (K2): PROMPT_CLASSIFIER_VERSION_OVERRIDE (prompt_pipeline) ist fuer diesen
+# Merge-Pfad WIRKUNGSLOS — der qa-Nachsatz ist im Prompt hart verdrahtet (kein
+# prompt_versions-Lookup). Accept: es gibt nur EINEN Seed classifier/v1, kein aktives A/B.
+_MERGED_QA_NACHSATZ = """
+
+── Zusaetzliche Aufgabe (SEKUNDAER — die Einwand-Analyse oben ist und bleibt die PRIMAERE Aufgabe): ──
+Klassifiziere die letzte Kunden-Aeusserung ZUSAETZLICH in EINE dieser vier Kategorien:
+- einwand_unknown: Kunde bringt einen Einwand (nicht bereits durch Keyword erfasst)
+- frage: Kunde stellt eine direkte Frage
+- smalltalk_none: Zustimmung, Smalltalk, oder Berater liest einen fertigen Vertriebs-Satz vor
+- einwand_known: Einwand bereits durch Keyword-Matcher erkannt
+Regeln:
+- Bei Unsicherheit zwischen einwand_unknown und frage: frage hat Vorrang
+- Wenn der Sprecher einen fertigen Vertriebs-Satz vorliest: smalltalk_none
+
+STRIKTE FELD-REIHENFOLGE (Pflicht): Gib ZUERST ALLE Einwand-Felder aus (genau wie oben
+beschrieben), und als ALLERLETZTES Feld ein Objekt "qa" mit dieser Struktur:
+"qa": {"kategorie": "<eine der vier Kategorien>", "confidence": 0.00, "einwand_zitat": "<konkreter Kundensatz oder null>"}
+- qa.confidence: 0.0-1.0
+- qa.einwand_zitat: konkreter Satz des Kunden (nur bei einwand_unknown/frage), sonst null
+Das "qa"-Objekt kommt IMMER ganz zuletzt, NACH allen Einwand-Feldern."""
+
+_MERGED_SYSTEM = SYSTEM_PROMPT_BASE + _MERGED_QA_NACHSATZ
+
+
+def _parse_merged_sections(raw: str) -> dict:
+    """Truncation-fester, sektionsweiser Parser fuer das Merged-JSON.
+
+    Vertrag:
+      - IMMER ein Dict (nie Exception) — fail-open {}.
+      - Happy-Path: was `_parse_json` sauber als Dict parst -> zurueckgeben (K4/Test 8:
+        der HAEUFIGSTE Fall {"einwand": false, ...} darf NICHT in den Rescue fallen;
+        KEINE volle Einwand-Keyliste als Bedingung).
+      - Rescue (nur bei echtem Parse-Fehler / Truncation): die Einwand-Sektion (top-level,
+        per STRICT ORDER zuerst emittiert) wird gerettet, die abgeschnittene qa-Sektion
+        faellt fail-open zu qa == {}.
+      - `result.setdefault('qa', {})`: qa ist IMMER vorhanden (mind. {}).
+
+    B-1 (kollisionssicherer Anker): der Schnitt sucht `rfind('"qa":')` MIT Doppelpunkt —
+    trifft NUR den echten Schluessel. Ein Einwand-Feld mit dem WERT "qa" (z.B.
+    einwand_zitat=="qa", typ=="qa-Thema") hat keinen Doppelpunkt dahinter und wird NIE
+    getroffen -> kein stiller Schnitt mitten in die Einwand-Sektion.
+    """
+    if not raw or not isinstance(raw, str):
+        return {}
+
+    # ── Happy-Path: sauberer Voll-Parse (Test 1/5/8) ─────────────────────────
+    full = _parse_json(raw)
+    if full:
+        full.setdefault('qa', {})
+        return full
+
+    # ── Rescue: Voll-Parse gescheitert (Truncation oder Muell) ───────────────
+    start = raw.find('{')
+    if start == -1:
+        return {}
+    body = raw[start:]
+
+    # qa-Sektion abschneiden, falls ihr Schluessel emittiert wurde (B-1: Doppelpunkt-Anker).
+    # Bei Truncation exakt vor dem Doppelpunkt liefert rfind -1 -> body bleibt ganz ->
+    # progressives Trimmen -> qa == {} (gewollt).
+    qa_idx = body.rfind('"qa":')
+    if qa_idx != -1:
+        body = body[:qa_idx]
+
+    # Kandidaten-Schnittpunkte: Ende des body, dann jede Top-Level-Feld-Grenze (Komma
+    # auf depth==1), absteigend. Die Grenzen-Suche respektiert Strings (Kommas IN Werten
+    # zaehlen nicht) -> ein gegenargument-Text mit Komma verwirrt das Trimmen nicht.
+    commas = _top_level_commas(body)
+    cut_points = [len(body)] + list(reversed(commas))
+    for cp in cut_points:
+        frag = body[:cp].rstrip().rstrip(',').rstrip()
+        if not frag or frag == '{':
+            continue
+        try:
+            d = json.loads(frag + '}')
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(d, dict):
+            d.setdefault('qa', {})
+            return d
+    return {}
+
+
+def _top_level_commas(s: str) -> list:
+    """Indizes der Kommas auf Objekt-depth==1 in `s` (beginnt mit '{'). String-sicher:
+    Kommas innerhalb von String-Werten (inkl. escaped quotes) werden ignoriert. Bei einem
+    unterminierten String am Ende (mid-string-Truncation) bleiben die frueheren Grenzen
+    erhalten -> Rescue schliesst VOR dem kaputten String (Test 3)."""
+    ends = []
+    depth = 0
+    in_str = False
+    esc = False
+    for i, ch in enumerate(s):
+        if esc:
+            esc = False
+            continue
+        if ch == '\\':
+            if in_str:
+                esc = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch in '{[':
+            depth += 1
+        elif ch in '}]':
+            depth -= 1
+        elif ch == ',' and depth == 1:
+            ends.append(i)
+    return ends
+
+
+def analysiere_und_klassifiziere(neuer_text: str, kontext: str, sid: str = None) -> dict:
+    """H1-MERGE (WEG 1): EIN Haiku-Call (MODEL_ANALYSE, D1 — KEIN Modellwechsel) liefert
+    pro Tick BEIDE Sektionen:
+      - Einwand-Sektion FLACH top-level = exakt das analysiere_mit_claude-Schema
+        (SYSTEM_PROMPT_BASE) -> alle Call-1-Konsumenten lesen weiter ergebnis.get(...)
+        UNVERAENDERT (Latte by construction).
+      - QA-Klassifikation NESTED unter "qa" (Nesting Pflicht — sonst kollidieren
+        confidence + einwand_zitat zwischen den Sektionen).
+
+    Truncation-Schutz: grosszuegiges max_tokens=600 (400+150+Headroom) + sektionsweiser
+    _parse_merged_sections statt des monolithischen _parse_json. analysiere_mit_claude +
+    classify_utterance bleiben als Fallback-Pfad intakt (Env MERGE_ANALYSE_QA=0)."""
+    user_msg = f"""Bisheriger Gesprächskontext (zur Orientierung, letzte Aussagen):
+{kontext if kontext else "(Kein vorheriger Kontext)"}
+
+Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
+{neuer_text}"""
+    msg = claude_client.messages.create(
+        model=config.MODEL_ANALYSE,
+        max_tokens=600,
+        system=_MERGED_SYSTEM,
+        messages=[{"role": "user", "content": user_msg}]
+    )
+    # ── Cost-Hook (Punkt 30 — Pflicht, nie raisen) ──────────────────────────
+    # Identisch zum Muster in analysiere_mit_claude, neuer context_tag='live_haiku_merged'.
+    try:
+        from services.cost_tracker import log_api_cost
+        u = getattr(msg, 'usage', None)
+        if u is not None:
+            in_tok = getattr(u, 'input_tokens', 0) or 0
+            out_tok = getattr(u, 'output_tokens', 0) or 0
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=in_tok/1000.0, unit_type='per_1k_input_tokens',
+                         context_tag='live_haiku_merged', session_id=sid)
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=out_tok/1000.0, unit_type='per_1k_output_tokens',
+                         context_tag='live_haiku_merged', session_id=sid)
+        _cache_hits = getattr(getattr(msg, 'usage', None), 'cache_read_input_tokens', 0) or 0
+        _cache_writes = getattr(getattr(msg, 'usage', None), 'cache_creation_input_tokens', 0) or 0
+        if _cache_hits > 0:
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=_cache_hits/1000.0, unit_type='per_1k_cache_read_tokens',
+                         context_tag='analyse', call_site='analyse_merged', session_id=sid)
+        if _cache_writes > 0:
+            log_api_cost('anthropic', 'haiku-4-5', user_id=None,
+                         units=_cache_writes/1000.0, unit_type='per_1k_cache_write_tokens',
+                         context_tag='analyse', call_site='analyse_merged', session_id=sid)
+    except Exception as _e:
+        print(f"[CostHook] claude live_haiku_merged skipped: {_e}")
+    # ────────────────────────────────────────────────────────────────────────
+    if not msg.content:
+        print(f"[claude] empty content from API (module=analyse_merged)")
+        return {}
+    return _parse_merged_sections(msg.content[0].text.strip())
+
+
 def streame_auto_variante(neuer_text: str, einwaende: list, kontext: str, sid: str, slot: int = 1, trigger: str = "analyse_loop", primary_intent: str | None = None) -> dict:
     # ── Shared-Lock Design ────────────────────────────────────────────────────
     # Der Anti-Overlap-Guard fuer Slot 1 laeuft ueber ls.state['slot1_variant_busy_until']

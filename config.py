@@ -48,6 +48,21 @@ CLASSIFIER_CONFIDENCE_THRESHOLD = float(
 )
 
 
+# ── Phase 08.23.2.H1 (WEG 1): Merge-Schalter analyse_loop Call 1 + Call 3 ─────
+# '1' (Default): analyse_loop fasst Einwand-Analyse (Call 1, analysiere_mit_claude)
+# und QA-Klassifikation (Call 3, classify_utterance) zu EINEM Haiku-Call zusammen
+# (analysiere_und_klassifiziere). '0': Rollback auf den ALTEN Zwei-Call-Pfad —
+# analysiere_mit_claude + classify_utterance bleiben dafuer als lebender Fallback intakt.
+#
+# ROLLBACK-SEMANTIK (K3, ehrlich): os.getenv wird zur IMPORT-Zeit gelesen (Muster wie
+# CACHE_ANTWORT oben). Ein Rollback wirkt NICHT hot/sofort-ohne-Restart. Korrekt ist:
+# MERGE_ANALYSE_QA=0 in /etc/nerve/.env eintragen UND den Dienst neu starten
+# (systemctl restart nerve). KEIN Deploy noetig — aber ein Restart ist Pflicht.
+# (ACHTUNG wie bei CACHE_ANTWORT: /opt/nerve/app/.env existiert auf Prod NICHT —
+# deploy.sh schliesst ./.env vom tar-Deploy aus und prueft /etc/nerve/.env.)
+MERGE_ANALYSE_QA = os.getenv("MERGE_ANALYSE_QA", "1")
+
+
 def should_abstain(confidence, threshold=None) -> bool:
     """TAXO1-Welle 4 (K4, Cross-AI Finding #4): reine Funnel-Entscheidung — KEIN
     I/O, KEIN LLM, KEINE DB. low-conf (oder fehlende confidence) -> abstain
