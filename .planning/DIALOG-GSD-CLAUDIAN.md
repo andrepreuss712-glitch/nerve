@@ -654,3 +654,52 @@ KOSTEN-1-nova-3-Beleg (braucht echtes Mikrofon-Audio). Alle drei bündeln sich i
 
 **Nebenbefund (gehört zu Thema B, hier nur notiert):** Sonde zeigt `faqs=2` im Live-Prompt — die
 bekannte FAQ-Asymmetrie (2 von 9 erreichen den Live-Antwort-Weg), live bestätigt. Kein Sonden-Fehler.
+
+### FRAGE — 08.23.2.KOSTEN-1.1 Welle 1+2 (Inventur + Waechter+Fix) — 2026-07-22
+
+**Welle 1 + Welle 2 gebaut, committet, gepusht. Bereit fuer den Tor-Lauf.**
+Commits: Inventur `5099e03`/`d943226`, Waechter+Fix `b76a907`/`6c91198`/`2efbe29`.
+
+**Welle 1 — Inventur (Beweis-Artefakt, Punkt 22):** 61 log_api_cost-Buchungsstellen (54 Anthropic +
+7 n/a), jede gegen ihr echtes `model=` gehalten. **stimmt=nein: genau 4**, alle in
+`streame_manual_ewb_variante` (`claude_service.py:843/846/853/857`) — bucht `'haiku-4-5'`, ruft
+`MODEL_PIP_VARIANTE=claude-sonnet-4-5`. Einziger Defekt (am Code + Prod-ENV belegt, kein Override).
+Roadmap „22+4" war die reine Literal-Zaehlung, zu eng.
+
+**Welle 2 — Waechter W4 (AST) + Fix, ERST-ROT erzwungen.**
+
+★ **Verbatim ERST-ROT gegen den ungefixten Stand (HEAD `d943226`):**
+```
+.F                                                                       [100%]
+E   AssertionError: Gebuchter Modellname widerspricht dem aufgerufenen Modell (Kosten-Klasse) -
+    Sonnet-Kosten werden als Haiku verbucht (o. umgekehrt), die Marge ist still falsch:
+E     claude_service.py::streame_manual_ewb_variante:843: bucht 'haiku-4-5' (Klasse haiku-4-5),
+        ruft aber config.MODEL_PIP_VARIANTE (Klasse sonnet-4-5) auf
+E     ...:846 / :853 / :857 identisch
+FAILED tests/test_cost_model_truth.py::test_no_booked_literal_contradicts_called_model
+1 failed, 1 passed in 0.49s
+```
+Rot aus dem richtigen Grund (Klassen-Assertion, nicht Import/Collection); `test_scanner_finds_something`
+gruen (fuehrender `.`).
+
+**Fix (4 Zeilen):** `:841` neu `_model_variante = config.MODEL_PIP_VARIANTE`; `:843/846/853/857`
+`'haiku-4-5'` → `_model_variante`. **`model=`-Zeile `:803` unveraendert** (`config.MODEL_PIP_VARIANTE`)
+— kein Verhaltens-Change, nur der gebuchte Name. Selbst gegengeprueft: 4× `_model_variante` gebucht,
+0 Haiku-Literale mehr in der Funktion.
+
+**Gruen nach Fix (Vorab-Signal, KEINE Abnahme):** `test_cost_model_truth.py` 2 passed, W2
+`test_cost_hook_coverage.py` 4 passed. W1/W3 skippen lokal (real-PG). W1-Gegenrechnung:
+`claude-sonnet-4-5` hat alle 4 unit_types in `_API_RATE_SOLL` (app.py:1120-1123, identisch zum schon
+gebuchten AUTOVAR-String) → W1 kann nicht neu rot werden.
+
+**Fable-Grenzen im Waechter-Docstring** (nur Doku): (1) W3/Skip-Zaehler faengt nur FEHLENDE Raten,
+nicht falsche Namen mit gueltiger Rate — die Luecke, die W4 schliesst; (2) W4 haengt an der
+config-Modell-Einstellung der Testumgebung (Aufloesung zur Analysezeit).
+
+Scope/Locks gehalten: nur die 4 Zeilen + Waechter-Datei geaendert, keine rueckwirkende api_cost_log-
+Korrektur (D-02), keine andere Buchungsstelle, `ast.parse` gruen.
+
+**Bitte den Tor-Lauf fahren** (`bash deploy.sh production`): das real-PG-Pytest-Gate ist die
+verbindliche Abnahme — W4 laeuft dort mit, W1/W3 real-PG gruen. Gruen + Restart = Fix live, ab jetzt
+bucht der Button-Antwort-Pfad Sonnet als Sonnet. Danach ist Welle 3 (Verify) formal abzuhaken.
+**Kein Auto-Advance** von meiner Seite.
