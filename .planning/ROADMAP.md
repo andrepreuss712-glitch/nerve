@@ -2482,6 +2482,10 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 **Komplexität:** 🟡 (mechanisch, aber Marge-relevant, berührt keinen Live-Antwort-Pfad-Logikzweig). Cross-AI nach Ermessen; **Claudian-Pre-Execute-Audit Pflicht**. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren.
 **Verzeichnis:** `.planning/phases/08.23.2.KOSTEN-1.1-modellnamen-wahrheit/`
+**Plans:** 3 plans in 3 waves
+- [ ] 08.23.2.KOSTEN-1.1-01-PLAN.md — Inventur: jede log_api_cost-Stelle gegen ihr echtes model= (Verbindungs-Karte)
+- [ ] 08.23.2.KOSTEN-1.1-02-PLAN.md — W4-Waechter (AST, ERST-ROT) + Fix streame_manual_ewb_variante
+- [ ] 08.23.2.KOSTEN-1.1-03-PLAN.md — Verify=Production: deploy.sh-Pytest-Gate (bindende Abnahme, W4 inkl.)
 
 ---
 
