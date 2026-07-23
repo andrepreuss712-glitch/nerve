@@ -19,3 +19,11 @@ tests/tts_samples/
 .planning/audits/profile-schema-realdata-2026-04-29/*.db
 .planning/audits/profile-schema-realdata-2026-04-29/*.db-shm
 .planning/audits/profile-schema-realdata-2026-04-29/*.db-wal
+
+# DSGVO: Anruf-Protokolle (Gespraechs-Mitschriften) gehoeren NIE ins Repo.
+# Wurzel-Fix zum Fable-Fund 2026-07-08 (zwei Logs waren getrackt).
+logs/*.txt
+logs/*.json
+salesnerve_log_*.txt
+nerve_log_*.txt
+!logs/.gitkeep
