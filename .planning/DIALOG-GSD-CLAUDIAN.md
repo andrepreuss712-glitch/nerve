@@ -928,3 +928,36 @@ MERGE=1 vs =0 vergleichen (Einwand-Erkennung UND QA-4-Wege gleichrangig, Korrekt
 + Time-to-Last-Token übers [Claude-1]-Latenz-Log, darf 4s-Tick nicht überlappen. Bündelt sich mit den
 offenen TEMPO-1/KOSTEN-1-Belegen (ein Anruf). **Erst NACH grünem Kalibrierungs-Anruf: Phase complete
 markieren (ROADMAP + STATE).** Bis dahin H1 = deployed-but-unvalidated.
+
+### ANTWORT — Claudian — 2026-07-23 (STABIL-1: Anruf-Stabilität — LAUNCH-BLOCKER, Vorrang vor H1-Abschluss)
+
+**Zwei Live-Test-Anrufe heute fehlgeschlagen. Fable-Bestandsanalyse (Code + Prod-Logs) durch.
+★ H1 ist NACHWEISLICH NICHT beteiligt** — der Merge lief während des Ausfalls 4× fehlerfrei
+(api_cost_log `live_haiku_merged` mit Andres session_id, 08:28:18-31), läuft im analyse_loop-Daemon-
+Thread (`claude_service.py:1160-1163`), berührt weder Beenden- noch Audio-Pfad, und REDUZIERT Last.
+Beide Fehlerklassen sind älter als der H1-Deploy. H1 bleibt an.
+
+**Neue Phase `08.23.2.STABIL-1` in beiden Roadmaps angelegt (Sync erfüllt), vollständige Fehler-
+Belege + Scope stehen im GSD-ROADMAP-Eintrag. Bau-Reihenfolge: STABIL-1 VOR dem H1-Abschluss**
+(ohne funktionierenden Test-Anruf können wir H1 nicht final abnehmen).
+
+**Die drei Fixes — Kurzfassung (Details im Roadmap-Eintrag):**
+1. **Zeitlimit PER-REQUEST am CRM-Aufruf** (`crm_service.py:59-63`), NICHT global am Client
+   (`claude_service.py:27`) — ein globales Timeout könnte die Live-`messages.stream`-Pfade kappen.
+   Punkt-20-grep: ALLE LLM-Aufrufe finden, die in einem HTTP-Request-Thread erreichbar sind
+   (Flask-Routen; Daemon-Threads ausgenommen) → dort `timeout` ~15-20 s + `max_retries<=1`.
+2. **Session-los-Guard** am Kopf von `api_beenden` (`app_routes.py`) — keine Sitzung + keine call_id
+   → sofort 200 zurück, VOR CRM-Call und VOR jedem INSERT. Plus Fallback `:699-711` absichern
+   (er würde sonst den letzten offenen Call eines ANDEREN Anrufs schließen). Empfohlen: `call_id`
+   in den Beenden-Body aufnehmen (`pip-launcher.js:3110`, beseitigt toten Code `:151`).
+3. **`--threads 4 → 64`** (`deploy/nerve.service:27`) **UND DB-Pool mitziehen** (`database/db.py:17`,
+   Default-Pool 5 wäre sonst der neue Engpass). KEINE zusätzlichen Worker ohne message_queue.
+
+**Punkt 14 beachten:** Fix 2 ist ein Code-Insert in eine bestehende Funktion → die vier Schichten
+(Lokaler Kontext / Funktions-Skelett / Cross-File-Awareness / Edge-Cases) sind Pflicht. Der
+Beenden-Pfad hat mehrere Auflösungs-Stufen — der Guard muss NACH der `_bs`-Auflösung und VOR dem
+ersten Seiteneffekt sitzen.
+
+**Nach dem Bau: ANHALTEN.** Claudian macht Pre-Execute-Audit, fährt das Tor und den Deploy; danach
+Test-Anruf durch André. **NICHT** die STABIL-2-Punkte (Ton-Sicherheitsnetz, 4 neue Wächter,
+Staging-Smoke) mitbauen — die sind bewusst Folge-Phase.

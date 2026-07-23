@@ -2489,6 +2489,30 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 ---
 
+### Phase 08.23.2.STABIL-1: Anruf-Stabilität — Zeitlimit, Not-Ausgang, Kapazität (NEU 2026-07-23) 🔴 ★★ LAUNCH-BLOCKER, VORRANG
+
+**Herkunft:** Zwei fehlgeschlagene Live-Test-Anrufe auf Prod (23.07. 08:27 + 14:27). Fable-Bestandsanalyse am Code + Prod-Logs. **H1 nachweislich NICHT beteiligt** (Merge lief live 4× fehlerfrei im analyse_loop-Daemon-Thread `claude_service.py:1160-1163`, reduziert Last; beide Fehlerklassen älter als der H1-Deploy).
+
+**Goal:** Ein Test-Anruf muss wieder durchlaufen können: Beenden darf nicht minutenlang blockieren, ein leerer Anruf darf keine Pipeline (und keinen fremden Datensatz) anfassen, und der Thread-Pool darf nicht bei 3 gleichzeitigen Anrufen kippen.
+
+**★ BELEGTE FEHLER:**
+1. **`/api/beenden` hängt >60 s.** `generate_crm_export` (`services/crm_service.py:59-63`) ruft `claude_client.messages.create(model=MODEL_CRM=sonnet, max_tokens=1200)` **synchron im Request-Thread**; der Client (`services/claude_service.py:27`) hat **weder `timeout` noch `max_retries`** → SDK-Defaults 600 s + 2 Retries = bis **30 Min** Thread-Blockade. nginx `location /` ohne `proxy_read_timeout` (`deploy/nginx-production.conf:62-67`) → 60 s Default → beobachtete 504er 08:30:46 / 14:30:02. Erster print im Happy-Path ist `:341` — in beiden Anrufen fehlt JEDE Beenden-Log-Zeile → Hang liegt davor, und CRM ist dort der einzige Netz-Call.
+2. **Kein Session-los-Guard in `api_beenden`.** Anruf 2 hatte keine Sitzung; Frontend sendet gar keine `call_id` (`static/pip-launcher.js:3106-3114` → Stufe-1-Auflösung `app_routes.py:151` ist toter Code) → `_bs=None`, trotzdem läuft `generate_crm_export([], [], [], 30, '')` mit `"(kein Transkript)"`, danach Müll-`ConversationLog`-INSERT (`:373-412`) + Punkte (`:614-647`) + Fallback `:699-711` greift **den letzten offenen Call des Users** → hätte Anruf 1 überschrieben.
+3. **Kapazität `--workers 1 --threads 4`** (`deploy/nerve.service:26-27`) bei `async_mode='threading'` (`app.py:47`): jede WS-Verbindung belegt einen Thread für die gesamte Anruf-Dauer; gunicorn `--timeout 120` killt gthread **nicht** pro Request (Worker-Uptime 21 h belegt das). Max ~3 parallele Calls. Für 50 EA-Nutzer nicht tragfähig.
+
+**Scope (klein halten, Leitsatz 2):**
+- **(a) Zeitlimit PER-REQUEST am CRM-Aufruf** — NICHT global am Client. Begründung: ein Client-weites `timeout` könnte die Live-Antwort-**Streams** (`messages.stream`) kappen. GSD greppt **alle** LLM-Aufrufe, die in einem **HTTP-Request-Thread** erreichbar sind (Flask-Routen; Daemon-Threads analyse_loop/coaching_loop/slow_lane ausgenommen) und setzt dort explizit `timeout` (~15-20 s) + `max_retries<=1`. Punkt-20-grep als Beleg in die SUMMARY.
+- **(b) Session-los-Guard** am Kopf von `api_beenden` nach der `_bs`-Auflösung: keine Sitzung UND keine geposteten `call_id` → sofort `200 {ok:false, reason:'no_session'}`, **VOR** dem CRM-Call und **VOR** jedem INSERT/Punkte-Vergabe. Zusätzlich den Fallback `:699-711` absichern, damit er keinen fremden/älteren Call schließt. **Empfohlen mit drin:** `call_id` in den Beenden-Body aufnehmen (`pip-launcher.js:3110`) — macht die Auflösung robust und beseitigt toten Code.
+- **(c) `--threads 4 → 64`** in `deploy/nerve.service:27` **UND DB-Pool mitziehen** (`database/db.py:17` `create_engine` — Default-Pool 5 würde sonst der neue Engpass; `pool_size` ~20 + `max_overflow` prüfen). **KEINE** zusätzlichen Worker (>1) ohne Socket.IO-`message_queue` + Sticky-Sessions — zerreißt sonst die Rooms.
+
+**NICHT drin (Folge-Phase STABIL-2):** Ton-Sicherheitsnetz im Client (`socket.connected`-Gate + `volatile.emit` `pip-launcher.js:1577`, unbegrenzte Reconnects statt 3 `:1523-1527`, sichtbare Verbindungs-Warnung statt lügendem AnalyserNode-Pegel, Session-Resume nach Reconnect da `deepgram_service.py:833-839` stumm verwirft) + Server-seitiger Chunk-Gap-Alarm + die vier neuen Wächter + Staging-Smoke im Deploy-Gate.
+
+**Komplexität:** 🔴 (Live-Pfad + Betriebs-Konfiguration). Cross-AI bereits erfolgt (Fable-Analyse). **Claudian-Pre-Execute Pflicht**, Deploy + Test-Anruf fährt Claudian/André. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden. **Sync:** Vault `01 Roadmap.md` parallel.
+
+**Diagnose-Merker für den nächsten Vorfall:** `py-spy dump --pid <gunicorn>` **VOR** dem Neustart — entscheidet Lock-Wedge vs. Pool-Erschöpfung in 10 Sekunden.
+
+---
+
 ### Phase 08.23.2.H1: Live-Schleifen zusammenlegen — 3 Haiku-Aufrufe → 1 (NEU 2026-07-22) 🔴 — der große Kosten-Hebel
 
 **Herkunft:** André-Direktive 2026-07-20 (*„nicht mehr alle 4 Sekunden ein Aufruf über dieselben Daten"*). Größter Spar-Hebel im Geld-Thema „Kosten senken". NACH TEMPO-1 + KOSTEN-1.1 (beide live).
