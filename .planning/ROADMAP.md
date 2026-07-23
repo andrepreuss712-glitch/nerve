@@ -2513,7 +2513,19 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 **Verzeichnis (hardcoded, Multi-Segment-Gotcha):** `.planning/phases/08.23.2.STABIL-1-anruf-stabilitaet-zeitlimit-notausgang-kapazitaet/`
 **Eingefügt:** 2026-07-23 via `/gsd-insert-phase` — **nach** 08.23.2.KOSTEN-1.1 (live), **VOR** 08.23.2.H1. H1 bleibt aktiv/an (nachweislich unschuldig), wird nur zeitlich hinter STABIL-1 gestellt.
-**Status:** noch nicht geplant → `/gsd-plan-phase 08.23.2.STABIL-1`
+
+**★ GEPLANT 2026-07-23 — 4 Plans / 3 Wellen (W1: 01+02 parallel · W2: 03 · W3: 04), hand-authored (Multi-Segment-Gotcha: gsd-sdk/gsd-tools umgangen, Pfade hardcodiert).** Belegt am Code + Prod (SSH read-only): RESEARCH.md enthält den vollständigen **Punkt-20-grep** (26 LLM-Call-Sites klassifiziert: **15 aus HTTP-Request-Threads erreichbar** → Zeitlimit; 7 Daemon-Threads + 1 SocketIO-Background-Stream + 3 ohne Aufrufer → ausgenommen) und die Prod-Fakten (4 vCPU / 7,7 GB, PG `max_connections=100` − 3 reserviert = 97 nutzbar, geteilt mit `nerve-rt.service`).
+**Zwei Funde der Planung:** (1) beide `messages.stream`-Call-Sites liegen **außerhalb** des Request-Threads → das Per-Request-Zeitlimit kann die Live-Streams gar nicht treffen (bestätigt das ROADMAP-Verbot „nicht global"). (2) Das Frontend **kennt** die laufende `call_id` nicht — es gibt keinen Server→Client-Emit dafür; Plan 04 muss ihn erst anlegen und ist damit größer als der „empfohlen mit drin"-Satz vermuten ließ → als **separierbar** geschnitten (`autonomous: false`, streichbar ohne 01–03 zu berühren).
+**Zeitlimit-Arithmetik (Akzeptanzkriterium):** STANDARD 20 s × max 2 Versuche ≈ 41 s, LANG 45 s **ohne** Retry — beide unter dem nginx-60-s-Default (`location /` ohne `proxy_read_timeout` bleibt bewusst unverändert).
+**Nicht gebaut (STABIL-2, bestätigt):** keine der vier neuen Wächter, kein Ton-Sicherheitsnetz, kein Staging-Smoke. Zusätzlich als STABIL-2-Kandidaten notiert: `pool_pre_ping`, LLM-Call-Sites ohne umgebenden `except`.
+
+**Plans:**
+- [ ] 08.23.2.STABIL-1-01-PLAN.md — W1 Zeitlimit PER-REQUEST: `http_llm_client()`-Helfer (`with_options`, Modul-Client Z.27 unverändert) an 15 HTTP-erreichbaren Call-Sites; Punkt-20-grep-Beleg in die SUMMARY [autonom]
+- [ ] 08.23.2.STABIL-1-02-PLAN.md — W1 Session-los-Guard nach der `_bs`-Auflösung (`app_routes.py:192`) → `200 {ok:false, reason:'no_session'}` VOR CRM (`:305`) und VOR jedem INSERT; Fallback `:699-717` gehärtet (Alters- + Eindeutigkeits-Schranke, kein Raten). **Punkt 14 in allen vier Schichten dokumentiert** [autonom]
+- [ ] 08.23.2.STABIL-1-03-PLAN.md — W2 Kapazität (nach 01, beide fassen config.py an): `nerve.service` `--threads 4→64` (Worker bleibt 1) **UND** DB-Pool explizit 20+15 / `pool_timeout` 10 s, nur Postgres; Budget gegen `max_connections` belegt [autonom]
+- [ ] 08.23.2.STABIL-1-04-PLAN.md — W3 `call_started`-Emit + `state.currentCallId` + `call_id` im Beenden-Body (belebt die tote Stufe-1-Auflösung). **Separierbar, `autonomous: false` — André entscheidet** [supervised]
+
+**Status:** geplant, **NICHT execute-ready**. Nächster Schritt = **Claudian-Pre-Execute-Audit**, danach Tor + Deploy + Test-Anruf. Kein Auto-Advance. Cross-AI entfällt (Fable-Analyse ist die Cross-AI-Sicht dieser Phase).
 
 **Diagnose-Merker für den nächsten Vorfall:** `py-spy dump --pid <gunicorn>` **VOR** dem Neustart — entscheidet Lock-Wedge vs. Pool-Erschöpfung in 10 Sekunden.
 
