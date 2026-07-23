@@ -2489,7 +2489,7 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 ---
 
-### Phase 08.23.2.STABIL-1: Anruf-Stabilität — Zeitlimit, Not-Ausgang, Kapazität (NEU 2026-07-23) 🔴 ★★ LAUNCH-BLOCKER, VORRANG
+### Phase 08.23.2.STABIL-1: Anruf-Stabilität — Zeitlimit, Not-Ausgang, Kapazität (NEU 2026-07-23) 🔴 ★★ LAUNCH-BLOCKER, VORRANG (INSERTED)
 
 **Herkunft:** Zwei fehlgeschlagene Live-Test-Anrufe auf Prod (23.07. 08:27 + 14:27). Fable-Bestandsanalyse am Code + Prod-Logs. **H1 nachweislich NICHT beteiligt** (Merge lief live 4× fehlerfrei im analyse_loop-Daemon-Thread `claude_service.py:1160-1163`, reduziert Last; beide Fehlerklassen älter als der H1-Deploy).
 
@@ -2508,6 +2508,12 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 **NICHT drin (Folge-Phase STABIL-2):** Ton-Sicherheitsnetz im Client (`socket.connected`-Gate + `volatile.emit` `pip-launcher.js:1577`, unbegrenzte Reconnects statt 3 `:1523-1527`, sichtbare Verbindungs-Warnung statt lügendem AnalyserNode-Pegel, Session-Resume nach Reconnect da `deepgram_service.py:833-839` stumm verwirft) + Server-seitiger Chunk-Gap-Alarm + die vier neuen Wächter + Staging-Smoke im Deploy-Gate.
 
 **Komplexität:** 🔴 (Live-Pfad + Betriebs-Konfiguration). Cross-AI bereits erfolgt (Fable-Analyse). **Claudian-Pre-Execute Pflicht**, Deploy + Test-Anruf fährt Claudian/André. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden. **Sync:** Vault `01 Roadmap.md` parallel.
+
+**Bau-Stopp (André-Direktive 2026-07-23):** Nach dem Bau **ANHALTEN** — kein Auto-Deploy, kein Auto-Advance. Claudian macht Pre-Execute, fährt Deploy-Gate + Deploy, danach Test-Anruf. Punkt 14 (4 Schichten Control-Flow) ist beim Session-los-Guard **Pflicht**; Punkt-20-grep beim Zeitlimit **Pflicht** (Beleg in die SUMMARY).
+
+**Verzeichnis (hardcoded, Multi-Segment-Gotcha):** `.planning/phases/08.23.2.STABIL-1-anruf-stabilitaet-zeitlimit-notausgang-kapazitaet/`
+**Eingefügt:** 2026-07-23 via `/gsd-insert-phase` — **nach** 08.23.2.KOSTEN-1.1 (live), **VOR** 08.23.2.H1. H1 bleibt aktiv/an (nachweislich unschuldig), wird nur zeitlich hinter STABIL-1 gestellt.
+**Status:** noch nicht geplant → `/gsd-plan-phase 08.23.2.STABIL-1`
 
 **Diagnose-Merker für den nächsten Vorfall:** `py-spy dump --pid <gunicorn>` **VOR** dem Neustart — entscheidet Lock-Wedge vs. Pool-Erschöpfung in 10 Sekunden.
 
