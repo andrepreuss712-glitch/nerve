@@ -53,6 +53,9 @@ def test_generate_response_mocked_call(monkeypatch):
     class _FakeClient:
         messages = _FakeMessages()
 
+        def with_options(self, *args, **kwargs):
+            return self
+
     monkeypatch.setattr(ts, 'claude_client', _FakeClient())
 
     monkeypatch.setattr(ts, 'resolve_prompt_version', lambda module, uid: 'v1')
@@ -84,6 +87,9 @@ def test_generate_response_with_mood_mocked_call(monkeypatch):
 
     class _FakeClient:
         messages = _FakeMessages()
+
+        def with_options(self, *args, **kwargs):
+            return self
 
     monkeypatch.setattr(ts, 'claude_client', _FakeClient())
     monkeypatch.setattr(ts, 'resolve_prompt_version', lambda module, uid: 'v1')

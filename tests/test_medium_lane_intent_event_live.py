@@ -96,6 +96,9 @@ def test_analysiere_uses_classification_schema_returns_structured_dict(monkeypat
     class _FakeClient:
         messages = _FakeMessages()
 
+        def with_options(self, *args, **kwargs):
+            return self
+
     # Den ganzen Client ersetzen -> robust, egal ob der echte Client (API-Key) init ist.
     monkeypatch.setattr(cs, 'claude_client', _FakeClient())
 

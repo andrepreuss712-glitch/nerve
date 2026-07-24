@@ -80,6 +80,9 @@ class _FakeClient:
     def __init__(self, text):
         self.messages = _FakeMessages(text)
 
+    def with_options(self, *args, **kwargs):
+        return self
+
 
 class _SioRecorder:
     def __init__(self):

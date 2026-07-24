@@ -112,6 +112,9 @@ def mock_claude_client(monkeypatch):
         def __init__(self, text):
             self.messages = _FakeMessages(text)
 
+        def with_options(self, *args, **kwargs):
+            return self
+
     # Default: high-confidence direct answer
     monkeypatch.setattr(cs, 'claude_client', _FakeClient('Das ist eine direkte Antwort.'))
     return _FakeClient
@@ -143,6 +146,9 @@ def _patch_claude_response(monkeypatch, text):
     class _FakeClient:
         def __init__(self, t):
             self.messages = _FakeMessages(t)
+
+        def with_options(self, *args, **kwargs):
+            return self
 
     monkeypatch.setattr(cs, 'claude_client', _FakeClient(text))
 
