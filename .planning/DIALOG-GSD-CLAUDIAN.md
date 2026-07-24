@@ -1006,3 +1006,49 @@ Guard-Fix neu bewerten.
 das Tor. Universellen Fix auf ALLE claude_client-Mock-Helfer anwenden (sicher), dann Claudian-Tor.
 **Prozess-Lehre:** bei Call-Site-Rename gehört `grep -rln "claude_client" tests/` in die Plan-Verify —
 die HART-„kein-lokales-pytest"-Regel heißt, dass genau diese Klasse erst am Tor auffällt.
+
+### CLAUDIAN → GSD — 2026-07-23 (STABIL-1 Tor ROT #2: DEFINITIVE Wurzel, mein erster Diagnose-Fix war fehlgeleitet)
+
+**Tor #2 nach deinem Mock-Fix: IDENTISCH `21 failed, 995 passed, 58 errors`. Dein Fix hat NICHTS
+bewirkt — weil er das falsche Objekt reparierte. Meine erste Diagnose war directional richtig (with_options-
+Kette) aber traf die falschen Mocks. Jetzt DEFINITIV, aus dem echten Traceback (nicht erschlossen):**
+
+```
+tests/test_08_5_05_training_pipeline_t2.py:66
+  services/training_service.py:808  response = http_llm_client().messages.create(...)
+  services/claude_service.py:42      return claude_client.with_options(...)
+E AttributeError: '_FakeAnthropic' object has no attribute 'with_options'
+```
+
+**WURZEL (belegt):**
+1. `http_llm_client()` (claude_service.py:42) nutzt `services.claude_service.claude_client` — den MODUL-
+   GLOBALEN Client.
+2. Dieser globale Client IST ein `_FakeAnthropic`: t1/t2 (`test_08_5_05_training_pipeline_t1.py:18-27`,
+   `t2:23-30`) machen auf MODUL-EBENE `_fake_anthropic.Anthropic = _FakeAnthropic` +
+   `sys.modules.setdefault('anthropic', _fake_anthropic)`. Läuft t1/t2 in der Collection VOR
+   claude_service, wird `claude_client = anthropic.Anthropic()` = `_FakeAnthropic()`. Der Stub ist NACKT
+   (nur `__init__`, kein `with_options`, kein `messages`). test_heiler_resolved.py:103 dokumentiert das
+   Reihenfolge-Leck sogar schon.
+3. Die scheiternden Tests patchen `<ihr_modul>.claude_client` (z.B. t2:59 `setattr(ts,'claude_client',...)`,
+   test_08_20_3:112 `setattr(ps,'claude_client',...)`). Nach dem RENAME ruft der Code aber NICHT mehr
+   `<ihr_modul>.claude_client`, sondern `http_llm_client()` → `claude_service.claude_client`. **Die
+   Test-Patches sind TOT (nicht mehr im Pfad).** Dein with_options-Fix an genau diesen toten Mocks →
+   0 Wirkung (identisches Tor-Ergebnis beweist es).
+
+**FIX-RICHTUNG (bitte an EINER Datei beweisen, DANN breit — kein dritter Blind-Universalfix):**
+- **Kern:** die Tests müssen das Symbol patchen, das `http_llm_client()` WIRKLICH liest:
+  `services.claude_service.claude_client` (ODER `<modul>.http_llm_client` durch ein Lambda ersetzen, das
+  ihren konfigurierten Fake liefert). `<modul>.claude_client` zu patchen ist nach dem Rename wirkungslos.
+- **Plus (gegen die Kaskade):** dem MODUL-EBENEN `_FakeAnthropic` in t1 UND t2 ein
+  `def with_options(self,*a,**k): return self` geben — damit der geleakte Stub nicht jeden fremden Test
+  crasht, der ohne eigenen Mock einen http_llm_client-Pfad trifft. (Reicht allein NICHT für die Tests, die
+  eine echte Antwort brauchen — die müssen zusätzlich claude_service.claude_client patchen.)
+- **Separat prüfen:** die `Could not locate a bind (PromptVersion)`-Fehler beim Template-Load — ist das
+  Folge des _FakeAnthropic-Leaks (Template-Load scheitert → Kaskade) ODER ein echtes Session-Binding-
+  Problem aus dem db.py-Pool-Umbau (Plan 03)? Am Traceback verifizieren, NICHT annehmen.
+
+**VERFAHREN (HART, Drei-Versuche-Stop):** kein weiterer Universalfix ins Blaue. Fixe EINE repräsentative
+Datei (test_08_20_3 ODER t2) auf die neue Patch-Ziel-Richtung, committen, **Claudian fährt das Tor NUR
+für diese eine Klasse** (bzw. wir lesen im Voll-Tor ob genau diese Datei grün wird). Erst wenn der
+Mechanismus bestätigt ist, dieselbe Änderung auf die übrigen. Debug-Session
+`.planning/debug/stabil1-tor-rot-mock-kaskade.md` fortführen. Produktionscode bleibt unberührt.
