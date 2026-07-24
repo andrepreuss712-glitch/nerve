@@ -31,6 +31,7 @@ class TestStreameAutoVarianteGlobalRegression(unittest.TestCase):
         # circuit-breaker check runs BEFORE this call — that is the regression point.
         fake_client = MagicMock()
         fake_client.messages.stream.side_effect = RuntimeError('regression-sentinel-no-network')
+        fake_client.with_options.return_value = fake_client
 
         with patch.object(cs, 'claude_client', fake_client), \
              patch('extensions.socketio', MagicMock()):

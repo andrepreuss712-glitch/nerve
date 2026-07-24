@@ -105,6 +105,7 @@ class TestTTFT:
         # via sys.modules.setdefault). Daher cs.claude_client VOLLSTAENDIG ersetzen.
         mock_client = MagicMock()
         mock_client.messages.stream.side_effect = lambda **kw: _MockStream(['Hallo', ' Welt', '!'])
+        mock_client.with_options.return_value = mock_client
         monkeypatch.setattr(cs, 'claude_client', mock_client)
 
         # Mock: services.cost_tracker (kein Netz)

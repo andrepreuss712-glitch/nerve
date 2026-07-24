@@ -17,6 +17,7 @@ def _make_claude_mock(response_text):
     mock_msg.usage = None  # no cost tracking in tests
     mock_client = MagicMock()
     mock_client.messages.create.return_value = mock_msg
+    mock_client.with_options.return_value = mock_client
     return mock_client
 
 

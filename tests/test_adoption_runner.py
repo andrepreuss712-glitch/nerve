@@ -168,6 +168,7 @@ def test_whole_transcript_and_suggestion_list(monkeypatch):
     fake_client.messages.create.return_value = _make_adoption_tool_response([
         {'interaction_id': iid1, 'beleg': 'Unsere Erfolgsrate ist 85 Prozent.', 'urteil': 'voll', 'adoption_value': 1.0}
     ])
+    fake_client.with_options.return_value = fake_client
     monkeypatch.setattr(ar, 'claude_client', fake_client)
 
     # Mock DB: SuggestionReaction -> [sug1], TranscriptSegment -> all_segments
@@ -242,6 +243,7 @@ def test_bundled_single_call(monkeypatch):
         {'interaction_id': iid2, 'beleg': 'Antwort 2', 'urteil': 'teilweise', 'adoption_value': 0.5},
     ]
     fake_client.messages.create.return_value = _make_adoption_tool_response(pair_results)
+    fake_client.with_options.return_value = fake_client
     monkeypatch.setattr(ar, 'claude_client', fake_client)
 
     # Mock DB direkt fuer SuggestionReaction-Query und TranscriptSegment-Query
@@ -299,6 +301,7 @@ def test_prompt_has_no_outcome(monkeypatch):
     fake_client.messages.create.return_value = _make_adoption_tool_response([
         {'interaction_id': iid, 'beleg': 'Test', 'urteil': 'ignoriert', 'adoption_value': 0.0}
     ])
+    fake_client.with_options.return_value = fake_client
     monkeypatch.setattr(ar, 'claude_client', fake_client)
 
     sug = _make_suggestion(iid=iid, text='Test-Vorschlag')
@@ -354,6 +357,7 @@ def test_write_adoption(monkeypatch):
     ]
     fake_client = MagicMock()
     fake_client.messages.create.return_value = _make_adoption_tool_response(pair_results)
+    fake_client.with_options.return_value = fake_client
     monkeypatch.setattr(ar, 'claude_client', fake_client)
 
     # Echte Suggestion-Row-Attrappe (mutierbares SimpleNamespace)

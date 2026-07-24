@@ -142,6 +142,7 @@ class TestClassifyUtterance(unittest.TestCase):
              patch('services.qa_pipeline._load_qa_template', return_value='prompt'):
             mock_client = MagicMock()
             mock_client.messages.create.side_effect = RuntimeError("API down")
+            mock_client.with_options.return_value = mock_client
             import services.claude_service as cs
             with patch.object(cs, 'claude_client', mock_client):
                 result = classify_utterance('echt interessant', '', 0)
@@ -156,6 +157,7 @@ class TestClassifyUtterance(unittest.TestCase):
             mock_msg.content = [MagicMock(text='NOT JSON AT ALL')]
             mock_client = MagicMock()
             mock_client.messages.create.return_value = mock_msg
+            mock_client.with_options.return_value = mock_client
             import services.claude_service as cs
             with patch.object(cs, 'claude_client', mock_client):
                 result = classify_utterance('test text', '', 0)
@@ -172,6 +174,7 @@ class TestClassifyUtterance(unittest.TestCase):
             mock_msg.content = [MagicMock(text=valid_json)]
             mock_client = MagicMock()
             mock_client.messages.create.return_value = mock_msg
+            mock_client.with_options.return_value = mock_client
             import services.claude_service as cs
             with patch.object(cs, 'claude_client', mock_client):
                 result = classify_utterance('test', '', 0)
@@ -211,6 +214,7 @@ class TestGenerateQaResponse(unittest.TestCase):
             mock_msg.content = [MagicMock(text='Das ist kein Problem fuer unsere Kunden.')]
             mock_client = MagicMock()
             mock_client.messages.create.return_value = mock_msg
+            mock_client.with_options.return_value = mock_client
             import services.claude_service as cs
             with patch.object(cs, 'claude_client', mock_client):
                 result = generate_qa_response(

@@ -27,6 +27,7 @@ def _make_claude_mock(response_text):
     mock_msg.usage = None
     mock_client = MagicMock()
     mock_client.messages.create.return_value = mock_msg
+    mock_client.with_options.return_value = mock_client
     return mock_client
 
 
@@ -127,6 +128,7 @@ class TestKIPersonalize:
             pytest.skip("generate_personalized_skript not yet implemented (Plan 02)")
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = Exception("API Error")
+        mock_client.with_options.return_value = mock_client
         monkeypatch.setattr(ps, 'claude_client', mock_client)
         result, error = ps.generate_personalized_skript(
             briefing_dict={'firmenname': 'ACME GmbH', 'text': 'x', 'empfehlungen': []},
@@ -172,6 +174,7 @@ class TestKIPersonalize:
         mock_msg.usage.output_tokens = 50
         mock_client = MagicMock()
         mock_client.messages.create.return_value = mock_msg
+        mock_client.with_options.return_value = mock_client
         monkeypatch.setattr(ps, 'claude_client', mock_client)
 
         cost_calls = []

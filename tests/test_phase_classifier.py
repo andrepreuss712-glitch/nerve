@@ -41,6 +41,7 @@ def corpus():
 
 def test_phase_range_cold_call_within_1_to_6():
     with patch('services.claude_service.claude_client') as mock_client:
+        mock_client.with_options.return_value = mock_client
         mock_client.messages.create.return_value = _make_mock_response(3)
         result = classify_phase(['Hallo'], 1, 10, 'cold_call')
         assert result is not None
@@ -50,6 +51,7 @@ def test_phase_range_cold_call_within_1_to_6():
 def test_phase_range_gatekeeper_max_4():
     # Mock returnt phase=5 (out-of-range fuer gatekeeper) -> classify_phase muss None retournieren
     with patch('services.claude_service.claude_client') as mock_client:
+        mock_client.with_options.return_value = mock_client
         mock_client.messages.create.return_value = _make_mock_response(5)
         result = classify_phase(['Hallo'], 1, 5, 'gatekeeper')
         assert result is None
@@ -57,6 +59,7 @@ def test_phase_range_gatekeeper_max_4():
 
 def test_phase_range_gatekeeper_valid():
     with patch('services.claude_service.claude_client') as mock_client:
+        mock_client.with_options.return_value = mock_client
         mock_client.messages.create.return_value = _make_mock_response(2, confidence=0.8)
         result = classify_phase(['Mit wem spreche ich?'], 1, 5, 'gatekeeper')
         assert result is not None
@@ -99,6 +102,7 @@ def test_phase_classifier_f1_mocked_with_noise(corpus):
             mock_phase = expected
         mock_resp = _make_mock_response(mock_phase)
         with patch('services.claude_service.claude_client') as mock_client:
+            mock_client.with_options.return_value = mock_client
             mock_client.messages.create.return_value = mock_resp
             result = classify_phase(entry['transcript_window'], 1, 30, mode)
         # Korrektheit: nur wenn classify_phase die mock-Antwort sauber durchreicht

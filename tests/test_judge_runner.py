@@ -205,6 +205,7 @@ def test_forced_tool_use(monkeypatch):
 
     fake_client = MagicMock()
     fake_client.messages.create.return_value = _make_tool_response()
+    fake_client.with_options.return_value = fake_client
     monkeypatch.setattr(jr, 'claude_client', fake_client)
     monkeypatch.setattr(jr, 'build_profile_context', lambda *a, **k: _fake_profile_briefing())
 
@@ -256,6 +257,7 @@ def test_compliance_is_separate_field(monkeypatch):
 
     fake_client = MagicMock()
     fake_client.messages.create.return_value = _make_tool_response()
+    fake_client.with_options.return_value = fake_client
     monkeypatch.setattr(jr, 'claude_client', fake_client)
     monkeypatch.setattr(jr, 'build_profile_context', lambda *a, **k: _fake_profile_briefing())
 
@@ -391,6 +393,7 @@ def test_judge_gated_on_transcript_resolved(monkeypatch):
     fake_db = MagicMock()
 
     fake_client = MagicMock()
+    fake_client.with_options.return_value = fake_client
     monkeypatch.setattr(jr, 'claude_client', fake_client)
 
     result = jr.run_behavior_judge(call, events, fake_db)
