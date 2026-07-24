@@ -915,6 +915,7 @@ def api_training_personalities():
 def api_training_personality_generate():
     """Generate a random personality via Claude Haiku (not saved until user confirms)."""
     from services.training_service import claude_client
+    from services.claude_service import http_llm_client
 
     # Load profile context for industry-relevant personality
     branche_ctx = ""
@@ -984,7 +985,7 @@ Antworte NUR als valides JSON:
 }}"""
 
     try:
-        response = claude_client.messages.create(
+        response = http_llm_client().messages.create(
             model=config.MODEL_TRAINING_PREVIEW,
             max_tokens=1200,
             messages=[{"role": "user", "content": prompt}]

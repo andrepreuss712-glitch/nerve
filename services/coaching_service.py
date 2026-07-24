@@ -3,7 +3,7 @@ import json
 import threading
 from datetime import datetime, timezone
 import config
-from services.claude_service import claude_client
+from services.claude_service import claude_client, http_llm_client
 
 _analysis_lock = threading.Lock()
 
@@ -81,7 +81,7 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
             ga_details=json.dumps(ga_details, ensure_ascii=False)[:2000],
         )
         try:
-            response = claude_client.messages.create(
+            response = http_llm_client(long_running=True).messages.create(
                 model=config.MODEL_POSTCALL_ANALYSIS,
                 max_tokens=1500,
                 messages=[{"role": "user", "content": prompt_text}]
@@ -144,7 +144,7 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
 def validate_user_text(user_text, lernziel):
     """D-06: KI prueft ob user-eingegebener Satz das Lernziel abdeckt (Haiku)."""
     try:
-        response = claude_client.messages.create(
+        response = http_llm_client().messages.create(
             model=config.MODEL_VALIDATE_USER_TEXT,
             max_tokens=200,
             messages=[{"role": "user", "content": f"""Lernziel: {lernziel}
@@ -345,7 +345,7 @@ Antworte als JSON:
 {{"report_text": "...", "muster": "...", "suggested_card": {{"category": "...", "text": "...", "lernziel": "..."}}}}"""
 
         try:
-            response = claude_client.messages.create(
+            response = http_llm_client(long_running=True).messages.create(
                 model=config.MODEL_WEEKLY_SUMMARY,
                 max_tokens=800,
                 messages=[{"role": "user", "content": report_prompt}]

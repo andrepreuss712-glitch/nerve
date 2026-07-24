@@ -12,7 +12,7 @@ import threading
 import requests
 import config
 from config import BRAVE_SEARCH_API_KEY
-from services.claude_service import claude_client
+from services.claude_service import claude_client, http_llm_client
 from database.db import get_session
 from database.models import ProfileOpener, AccountMemory
 
@@ -414,7 +414,7 @@ def _generiere_briefing(firmenname, ansprechpartner, branche, suchergebnisse, pr
 
     try:
         _t0 = time.time()
-        msg = claude_client.messages.create(
+        msg = http_llm_client().messages.create(
             model=config.MODEL_PRECALL,
             max_tokens=1200,
             system=_system,
@@ -551,7 +551,7 @@ def _generiere_empfehlungen(sid, firmenname, fields, user_id=None):
 
     try:
         _t0 = time.time()
-        msg = claude_client.messages.create(
+        msg = http_llm_client().messages.create(
             model=config.MODEL_PRECALL,
             max_tokens=1500,
             system=empf_system,
@@ -639,7 +639,7 @@ Briefing:
         user_msg += f"\nOriginal-Opener/Skript:\n{opener_inhalt}\n\nBitte passe diesen Text an den Lead an:"
 
         _t0 = time.time()
-        msg = claude_client.messages.create(
+        msg = http_llm_client().messages.create(
             model=config.MODEL_PRECALL,
             max_tokens=8000,
             system=_system,

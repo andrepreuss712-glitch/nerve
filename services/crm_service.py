@@ -1,7 +1,7 @@
 import json
 import time
 import config
-from services.claude_service import claude_client
+from services.claude_service import claude_client, http_llm_client
 
 
 def generate_crm_export(log_entries, painpoints, einwaende,
@@ -56,7 +56,7 @@ Erstelle als valides JSON:
 Nutze Stichpunkte mit "- " Prefix. Antworte NUR mit dem JSON."""
 
     _t0 = time.time()
-    msg = claude_client.messages.create(
+    msg = http_llm_client().messages.create(
         model=config.MODEL_CRM,
         max_tokens=1200,
         messages=[{"role": "user", "content": prompt}]

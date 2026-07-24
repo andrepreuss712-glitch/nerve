@@ -10,7 +10,7 @@ from database.db import get_session
 from database.models import Profile, User as UserModel, ConversationLog, Organisation
 from services.live_session import LOG_DIR
 import config
-from services.claude_service import claude_client
+from services.claude_service import claude_client, http_llm_client
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -352,7 +352,7 @@ REGELN:
 - Kein Markdown, keine Sternchen — reiner Text
 - Sprich den User mit seinem Vornamen an
 """
-        msg = claude_client.messages.create(
+        msg = http_llm_client(long_running=True).messages.create(
             model=config.MODEL_WEEKLY_SUMMARY,
             max_tokens=200,
             messages=[{'role': 'user', 'content': prompt}]

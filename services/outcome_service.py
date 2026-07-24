@@ -12,7 +12,7 @@ import statistics
 from typing import List, Tuple, Optional
 
 import config
-from services.claude_service import claude_client
+from services.claude_service import claude_client, http_llm_client
 
 
 # Outcome-Enum aus models.py ck_calls_outcome (D-W2-01: send_info + gatekeeper_blocked hinzugefuegt)
@@ -161,7 +161,7 @@ def classify(conv_data: dict) -> dict:
     prompt = _build_prompt(conv_data, snippets)
 
     try:
-        response = claude_client.messages.create(
+        response = http_llm_client().messages.create(
             model=_HAIKU_MODEL,
             max_tokens=80,
             system=SYSTEM_PROMPT,
