@@ -203,7 +203,9 @@ def test_beenden_ohne_session_ist_noop(client, throwaway):
     with patch('services.crm_service.generate_crm_export') as m_crm:
         resp = client.post('/api/beenden', json={'session_mode': 'cold_call'})
         if resp.status_code in (302, 401):
-            pytest.skip('Login-Fixture greift nicht — Endpoint braucht authentifizierte Session')
+            pytest.fail('Login-Fixture greift nicht (302/401) — Auth-Bruch MUSS ROT sein, nicht '
+                        'still uebersprungen: sonst verschwindet die gesamte Guard-Abdeckung lautlos '
+                        'in Gelb (Hollow-Green-Haertung, Fable-Ehrlichkeitspruefung 2026-07-24)')
         assert resp.status_code == 200, f'Erwartet 200, bekam {resp.status_code}'
         data = resp.get_json()
         assert data is not None
@@ -231,7 +233,9 @@ def test_guard_schreibt_nichts(client, throwaway):
     with patch('services.crm_service.generate_crm_export') as m_crm:
         resp = client.post('/api/beenden', json={'session_mode': 'cold_call'})
         if resp.status_code in (302, 401):
-            pytest.skip('Login-Fixture greift nicht — Endpoint braucht authentifizierte Session')
+            pytest.fail('Login-Fixture greift nicht (302/401) — Auth-Bruch MUSS ROT sein, nicht '
+                        'still uebersprungen: sonst verschwindet die gesamte Guard-Abdeckung lautlos '
+                        'in Gelb (Hollow-Green-Haertung, Fable-Ehrlichkeitspruefung 2026-07-24)')
         assert resp.status_code == 200
         data = resp.get_json()
         assert data['ok'] is False and data['reason'] == 'no_session'
@@ -260,7 +264,9 @@ def test_guard_schliesst_keinen_offenen_call(client, throwaway):
     with patch('services.crm_service.generate_crm_export') as m_crm:
         resp = client.post('/api/beenden', json={'session_mode': 'cold_call'})
         if resp.status_code in (302, 401):
-            pytest.skip('Login-Fixture greift nicht — Endpoint braucht authentifizierte Session')
+            pytest.fail('Login-Fixture greift nicht (302/401) — Auth-Bruch MUSS ROT sein, nicht '
+                        'still uebersprungen: sonst verschwindet die gesamte Guard-Abdeckung lautlos '
+                        'in Gelb (Hollow-Green-Haertung, Fable-Ehrlichkeitspruefung 2026-07-24)')
         assert resp.status_code == 200
         data = resp.get_json()
         assert data['reason'] == 'no_session'
@@ -286,7 +292,9 @@ def test_geposteter_call_id_umgeht_den_guard(client, throwaway):
     with patch('services.crm_service.generate_crm_export', return_value=dict(_CRM_MOCK_RETURN)):
         resp = client.post('/api/beenden', json={'session_mode': 'cold_call', 'call_id': call_id})
         if resp.status_code in (302, 401):
-            pytest.skip('Login-Fixture greift nicht — Endpoint braucht authentifizierte Session')
+            pytest.fail('Login-Fixture greift nicht (302/401) — Auth-Bruch MUSS ROT sein, nicht '
+                        'still uebersprungen: sonst verschwindet die gesamte Guard-Abdeckung lautlos '
+                        'in Gelb (Hollow-Green-Haertung, Fable-Ehrlichkeitspruefung 2026-07-24)')
         assert resp.status_code == 200
         data = resp.get_json()
         assert data.get('reason') != 'no_session', \
@@ -310,7 +318,9 @@ def test_fallback_nimmt_eindeutigen_frischen_call(client, throwaway):
         with patch('services.crm_service.generate_crm_export', return_value=dict(_CRM_MOCK_RETURN)):
             resp = client.post('/api/beenden', json={'session_mode': 'cold_call'})
             if resp.status_code in (302, 401):
-                pytest.skip('Login-Fixture greift nicht — Endpoint braucht authentifizierte Session')
+                pytest.fail('Login-Fixture greift nicht (302/401) — Auth-Bruch MUSS ROT sein, nicht '
+                        'still uebersprungen: sonst verschwindet die gesamte Guard-Abdeckung lautlos '
+                        'in Gelb (Hollow-Green-Haertung, Fable-Ehrlichkeitspruefung 2026-07-24)')
             assert resp.status_code == 200
             data = resp.get_json()
             assert data.get('ok') is True
@@ -339,7 +349,9 @@ def test_fallback_raet_nicht_bei_zwei_offenen_calls(client, throwaway):
         with patch('services.crm_service.generate_crm_export', return_value=dict(_CRM_MOCK_RETURN)):
             resp = client.post('/api/beenden', json={'session_mode': 'cold_call'})
             if resp.status_code in (302, 401):
-                pytest.skip('Login-Fixture greift nicht — Endpoint braucht authentifizierte Session')
+                pytest.fail('Login-Fixture greift nicht (302/401) — Auth-Bruch MUSS ROT sein, nicht '
+                        'still uebersprungen: sonst verschwindet die gesamte Guard-Abdeckung lautlos '
+                        'in Gelb (Hollow-Green-Haertung, Fable-Ehrlichkeitspruefung 2026-07-24)')
             assert resp.status_code == 200
             data = resp.get_json()
             if data.get('conv_id'):
@@ -370,7 +382,9 @@ def test_fallback_ignoriert_veralteten_call(client, throwaway):
         with patch('services.crm_service.generate_crm_export', return_value=dict(_CRM_MOCK_RETURN)):
             resp = client.post('/api/beenden', json={'session_mode': 'cold_call'})
             if resp.status_code in (302, 401):
-                pytest.skip('Login-Fixture greift nicht — Endpoint braucht authentifizierte Session')
+                pytest.fail('Login-Fixture greift nicht (302/401) — Auth-Bruch MUSS ROT sein, nicht '
+                        'still uebersprungen: sonst verschwindet die gesamte Guard-Abdeckung lautlos '
+                        'in Gelb (Hollow-Green-Haertung, Fable-Ehrlichkeitspruefung 2026-07-24)')
             assert resp.status_code == 200
             data = resp.get_json()
             if data.get('conv_id'):
