@@ -24,7 +24,12 @@ def _make_claude_mock(response_text):
 def _call_briefing(monkeypatch, response_text, firmenname='TestFirma GmbH', branche='IT'):
     """Call _generiere_briefing() with monkeypatched claude_client."""
     import services.precall_service as ps
-    monkeypatch.setattr(ps, 'claude_client', _make_claude_mock(response_text))
+    _mock = _make_claude_mock(response_text)
+    monkeypatch.setattr(ps, 'claude_client', _mock)
+    # STABIL-1 (2026-07-23): der Code ruft http_llm_client() -> liest
+    # claude_service.claude_client, NICHT ps.claude_client. Den by-name-Import
+    # ps.http_llm_client (precall_service.py:15) direkt auf den Mock umleiten.
+    monkeypatch.setattr(ps, 'http_llm_client', lambda *a, **k: _mock)
     return ps._generiere_briefing(
         firmenname=firmenname,
         ansprechpartner='Max Mustermann',

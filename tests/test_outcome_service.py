@@ -32,7 +32,7 @@ def mock_haiku_response_meeting():
 
 def test_classify_returns_valid_outcome(valid_conv_data, mock_haiku_response_meeting):
     from services import outcome_service
-    with patch.object(outcome_service, 'claude_client') as mock_client:
+    with patch('services.claude_service.claude_client') as mock_client:  # STABIL-1: http_llm_client() liest claude_service.claude_client
         mock_client.with_options.return_value = mock_client
         mock_client.messages.create.return_value = mock_haiku_response_meeting
         result = outcome_service.classify(valid_conv_data)
@@ -52,7 +52,7 @@ def test_classify_short_call_returns_unknown():
 def test_classify_empty_conv_data_no_http():
     """Empty conv_data returns unknown/0.0 without HTTP call."""
     from services import outcome_service
-    with patch.object(outcome_service, 'claude_client') as mock_client:
+    with patch('services.claude_service.claude_client') as mock_client:  # STABIL-1: http_llm_client() liest claude_service.claude_client
         mock_client.with_options.return_value = mock_client
         result = outcome_service.classify({})
         mock_client.messages.create.assert_not_called()
@@ -62,7 +62,7 @@ def test_classify_empty_conv_data_no_http():
 def test_classify_dauer_zero_no_http():
     """Call with dauer_sekunden=0 returns unknown/0.0 without HTTP call."""
     from services import outcome_service
-    with patch.object(outcome_service, 'claude_client') as mock_client:
+    with patch('services.claude_service.claude_client') as mock_client:  # STABIL-1: http_llm_client() liest claude_service.claude_client
         mock_client.with_options.return_value = mock_client
         result = outcome_service.classify({'dauer_sekunden': 0})
         mock_client.messages.create.assert_not_called()
@@ -72,7 +72,7 @@ def test_classify_dauer_zero_no_http():
 def test_classify_handles_claude_exception(valid_conv_data):
     """Bei Claude-Fehler: outcome='unknown', kein Crash."""
     from services import outcome_service
-    with patch.object(outcome_service, 'claude_client') as mock_client:
+    with patch('services.claude_service.claude_client') as mock_client:  # STABIL-1: http_llm_client() liest claude_service.claude_client
         mock_client.with_options.return_value = mock_client
         mock_client.messages.create.side_effect = RuntimeError('Claude API down')
         result = outcome_service.classify(valid_conv_data)
@@ -85,7 +85,7 @@ def test_classify_handles_malformed_json(valid_conv_data):
     from services import outcome_service
     bad_msg = MagicMock()
     bad_msg.content = [MagicMock(text='nicht-json-text {{{')]
-    with patch.object(outcome_service, 'claude_client') as mock_client:
+    with patch('services.claude_service.claude_client') as mock_client:  # STABIL-1: http_llm_client() liest claude_service.claude_client
         mock_client.with_options.return_value = mock_client
         mock_client.messages.create.return_value = bad_msg
         result = outcome_service.classify(valid_conv_data)
@@ -98,7 +98,7 @@ def test_classify_invalid_outcome_value_rejected(valid_conv_data):
     from services import outcome_service
     bad_msg = MagicMock()
     bad_msg.content = [MagicMock(text=json.dumps({'outcome': 'random_value', 'confidence': 0.9}))]
-    with patch.object(outcome_service, 'claude_client') as mock_client:
+    with patch('services.claude_service.claude_client') as mock_client:  # STABIL-1: http_llm_client() liest claude_service.claude_client
         mock_client.with_options.return_value = mock_client
         mock_client.messages.create.return_value = bad_msg
         result = outcome_service.classify(valid_conv_data)
@@ -110,7 +110,7 @@ def test_confidence_ceiling_short_text():
     from services import outcome_service
     mock_response = MagicMock()
     mock_response.content = [MagicMock(text='{"outcome": "meeting_booked", "confidence": 0.92}')]
-    with patch.object(outcome_service, 'claude_client') as mock_client:
+    with patch('services.claude_service.claude_client') as mock_client:  # STABIL-1: http_llm_client() liest claude_service.claude_client
         mock_client.with_options.return_value = mock_client
         mock_client.messages.create.return_value = mock_response
         result = outcome_service.classify({

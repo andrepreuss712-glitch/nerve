@@ -110,7 +110,11 @@ class TestKIPersonalize:
         import services.precall_service as ps
         if not hasattr(ps, 'generate_personalized_skript'):
             pytest.skip("generate_personalized_skript not yet implemented (Plan 02)")
-        monkeypatch.setattr(ps, 'claude_client', _make_claude_mock('Personalisierter Text'))
+        _mock = _make_claude_mock('Personalisierter Text')
+        monkeypatch.setattr(ps, 'claude_client', _mock)
+        # STABIL-1 (2026-07-23): der Code ruft http_llm_client() -> liest
+        # claude_service.claude_client, NICHT ps.claude_client. Umleiten auf den Mock.
+        monkeypatch.setattr(ps, 'http_llm_client', lambda *a, **k: _mock)
         result, error = ps.generate_personalized_skript(
             briefing_dict={'firmenname': 'ACME GmbH', 'text': 'Briefing Text', 'empfehlungen': []},
             opener_inhalt='Original Opener Text',
@@ -130,6 +134,7 @@ class TestKIPersonalize:
         mock_client.messages.create.side_effect = Exception("API Error")
         mock_client.with_options.return_value = mock_client
         monkeypatch.setattr(ps, 'claude_client', mock_client)
+        monkeypatch.setattr(ps, 'http_llm_client', lambda *a, **k: mock_client)  # STABIL-1: Code liest http_llm_client()
         result, error = ps.generate_personalized_skript(
             briefing_dict={'firmenname': 'ACME GmbH', 'text': 'x', 'empfehlungen': []},
             opener_inhalt='x',
@@ -147,6 +152,7 @@ class TestKIPersonalize:
         import config
         mock_client = _make_claude_mock('result')
         monkeypatch.setattr(ps, 'claude_client', mock_client)
+        monkeypatch.setattr(ps, 'http_llm_client', lambda *a, **k: mock_client)  # STABIL-1: Code liest http_llm_client()
         ps.generate_personalized_skript(
             briefing_dict={'firmenname': 'X', 'text': 'y', 'empfehlungen': []},
             opener_inhalt='z',
@@ -176,6 +182,7 @@ class TestKIPersonalize:
         mock_client.messages.create.return_value = mock_msg
         mock_client.with_options.return_value = mock_client
         monkeypatch.setattr(ps, 'claude_client', mock_client)
+        monkeypatch.setattr(ps, 'http_llm_client', lambda *a, **k: mock_client)  # STABIL-1: Code liest http_llm_client()
 
         cost_calls = []
         def mock_log_api_cost(*args, **kwargs):

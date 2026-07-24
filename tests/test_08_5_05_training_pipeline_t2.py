@@ -24,6 +24,20 @@ class _FakeAnthropic:
     def __init__(self, **kwargs):
         pass
 
+    # STABIL-1 (2026-07-23): siehe _t1.py — with_options()->self + messages.create
+    # wirft, damit der geleakte Stub http_llm_client() ueberlebt statt fremde Tests
+    # mitzureissen. Tests mit echter Antwort patchen claude_service.claude_client selbst.
+    def with_options(self, *a, **k):
+        return self
+
+    class _Messages:
+        def create(self, *a, **k):
+            raise RuntimeError(
+                'fake anthropic client (test stub) — patch '
+                'services.claude_service.claude_client oder <modul>.http_llm_client')
+
+    messages = _Messages()
+
 
 _fake_anthropic.Anthropic = _FakeAnthropic
 sys.modules.setdefault('anthropic', _fake_anthropic)
@@ -56,7 +70,11 @@ def test_generate_response_mocked_call(monkeypatch):
         def with_options(self, *args, **kwargs):
             return self
 
-    monkeypatch.setattr(ts, 'claude_client', _FakeClient())
+    _fake = _FakeClient()
+    monkeypatch.setattr(ts, 'claude_client', _fake)
+    # STABIL-1 (2026-07-23): generate_response ruft http_llm_client() -> liest
+    # claude_service.claude_client, NICHT ts.claude_client. Umleiten auf den Fake.
+    monkeypatch.setattr(ts, 'http_llm_client', lambda *a, **k: _fake)
 
     monkeypatch.setattr(ts, 'resolve_prompt_version', lambda module, uid: 'v1')
 
@@ -91,7 +109,11 @@ def test_generate_response_with_mood_mocked_call(monkeypatch):
         def with_options(self, *args, **kwargs):
             return self
 
-    monkeypatch.setattr(ts, 'claude_client', _FakeClient())
+    _fake = _FakeClient()
+    monkeypatch.setattr(ts, 'claude_client', _fake)
+    # STABIL-1 (2026-07-23): generate_response ruft http_llm_client() -> liest
+    # claude_service.claude_client, NICHT ts.claude_client. Umleiten auf den Fake.
+    monkeypatch.setattr(ts, 'http_llm_client', lambda *a, **k: _fake)
     monkeypatch.setattr(ts, 'resolve_prompt_version', lambda module, uid: 'v1')
 
     conversation = [{'speaker': 'berater', 'text': 'Hallo'}]

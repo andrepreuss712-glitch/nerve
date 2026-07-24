@@ -22,6 +22,26 @@ class _FakeAnthropic:
     def __init__(self, **kwargs):
         pass
 
+    # STABIL-1 (2026-07-23): der Modul-Global claude_service.claude_client wird
+    # (reihenfolge-abhaengig) diese _FakeAnthropic-Instanz, weil der sys.modules-
+    # Stub unten den echten anthropic-Import abklemmt. Nach dem Call-Site-Rename
+    # ruft der Code http_llm_client() -> claude_client.with_options(...); der nackte
+    # Stub crashte daran ('has no attribute with_options') und riss fremde Tests mit.
+    # with_options gibt sich selbst zurueck (Kopie-Semantik); messages.create wirft
+    # bewusst (Vor-Rename-Aequivalent: ungemockte Kollateralpfade landeten am echten
+    # API-Call in ihren except-Bloecken). Tests, die eine ANTWORT brauchen, patchen
+    # claude_service.claude_client bzw. <modul>.http_llm_client selbst.
+    def with_options(self, *a, **k):
+        return self
+
+    class _Messages:
+        def create(self, *a, **k):
+            raise RuntimeError(
+                'fake anthropic client (test stub) — patch '
+                'services.claude_service.claude_client oder <modul>.http_llm_client')
+
+    messages = _Messages()
+
 
 _fake_anthropic.Anthropic = _FakeAnthropic
 sys.modules.setdefault('anthropic', _fake_anthropic)
