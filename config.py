@@ -102,6 +102,20 @@ MODEL_PERSONALITY_GEN   = os.getenv("MODEL_PERSONALITY_GEN",   "claude-haiku-4-5
 # Weitere Haiku-Stellen aus RESEARCH.md (grep-verifiziert)
 MODEL_PHASE_CLASSIFY    = os.getenv("MODEL_PHASE_CLASSIFY",    "claude-haiku-4-5-20251001")
 MODEL_COLDCALL_INFER    = os.getenv("MODEL_COLDCALL_INFER",    "claude-haiku-4-5-20251001")
+
+# ── Phase 08.23.2.STABIL-1: Zeitlimit fuer LLM-Aufrufe im HTTP-Request-Thread ──
+# NUR fuer Aufrufe, die aus einer Flask-Route erreichbar sind. Daemon-Threads
+# (analyse_loop/coaching_loop/slow_lane) und messages.stream bleiben ohne Limit —
+# ein client-weites timeout wuerde die Live-Streams kappen.
+# Arithmetik: timeout x (1+retries) muss unter dem nginx-60s-Default bleiben.
+# max_retries-Default ist 0 (nicht 1): der SDK-Retry-Mechanismus ehrt einen
+# Retry-After-Header bis 60s — mit max_retries=1 koennte ein schnelles 429/529
+# mit Retry-After:60 die STANDARD-Stufe auf ~1+60+20 ~= 81s ziehen (> nginx-60s),
+# trotz 20s-Timeout. Mit 0 ist STANDARD hart 20s, immun gegen Retry-After.
+# ENV-Override bleibt, um ohne Deploy auf 1 zu stellen (Robustheit ist STABIL-2-Kandidat).
+HTTP_LLM_TIMEOUT_S      = float(os.getenv("HTTP_LLM_TIMEOUT_S", "20"))
+HTTP_LLM_TIMEOUT_LONG_S = float(os.getenv("HTTP_LLM_TIMEOUT_LONG_S", "45"))
+HTTP_LLM_MAX_RETRIES    = int(os.getenv("HTTP_LLM_MAX_RETRIES", "0"))
 # D-07 (LOCKED 2026-04-29): DACH default = Sonnet for EWB streaming (grammar quality).
 # Rollback path (no deploy needed): set ENV MODEL_PIP_AUTOVAR=claude-haiku-4-5-20251001
 # MODEL_ANALYSE stays Haiku — CLAUDE.md absolute constraint: never Sonnet in live analyse_loop.

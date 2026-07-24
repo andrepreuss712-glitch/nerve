@@ -26,6 +26,22 @@ _ewb_circuit_lock = threading.Lock()
 
 claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
+
+def http_llm_client(long_running: bool = False):
+    """Client-KOPIE mit Zeitlimit fuer Aufrufe aus einem HTTP-Request-Thread.
+
+    Phase 08.23.2.STABIL-1: der Modul-Client (:27) bleibt bewusst ohne timeout —
+    ein globales Limit wuerde die messages.stream-Aufrufe (:812/:980) kappen.
+    with_options() liefert eine Kopie, der Modul-Client wird NICHT mutiert.
+    long_running=True: grosse Post-Call-Generierung, 45s OHNE Retry
+    (mit Retry waeren es 90s > nginx-60s-Default).
+    """
+    if long_running:
+        return claude_client.with_options(
+            timeout=config.HTTP_LLM_TIMEOUT_LONG_S, max_retries=0)
+    return claude_client.with_options(
+        timeout=config.HTTP_LLM_TIMEOUT_S, max_retries=config.HTTP_LLM_MAX_RETRIES)
+
 SYSTEM_PROMPT_BASE = """Du bist ein Echtzeit-Vertriebsassistent der während eines Gesprächs mitläuft und Einwände erkennt.
 
 Einwand-Typen:
