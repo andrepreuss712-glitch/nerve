@@ -191,6 +191,20 @@ def api_beenden():
 
     _bs = _load_beenden_state(_beenden_sid)
 
+    # ── Phase 08.23.2.STABIL-1 (b): Session-los-Guard ─────────────────────────
+    # Belegt aus Live-Anruf 2 (23.07. 14:27): ohne Sitzung UND ohne geposteten
+    # call_id lief der komplette Beenden-Pfad auf leeren Daten weiter — Sonnet-
+    # CRM-Call ueber "(kein Transkript)" (:305), Muell-ConversationLog (:374),
+    # audit_log (:601), Punkte + Fair-Use (:614) — und der DB-Fallback (:699)
+    # schloss den letzten offenen Call des Users, also potenziell einen FREMDEN.
+    # Nichts davon ist ohne Sitzung sinnvoll -> hier raus, VOR jedem Konsumenten.
+    # reset_session wird bewusst NICHT gerufen: _beenden_sid ist None, es gibt
+    # nichts zurueckzusetzen (ein Aufruf mit None traefe eine fremde/keine sid).
+    if _bs is None and not _posted_call_id:
+        print(f"[Beenden] Kein Session-State und keine call_id "
+              f"(user_id={g.user.id}) — no-op: kein CRM-Call, kein INSERT.")
+        return jsonify({'ok': False, 'reason': 'no_session'}), 200
+
     # ── precall_briefing per-SID aus _bs (PERSID Plan 03 §6.9) ────────────────
     # Vorher: ls.state.get('precall_briefing') — DEPRECATED-GLOBAL.
     # Jetzt: per-SID via _bs.get('_briefing') (Snapshot-faehig).
