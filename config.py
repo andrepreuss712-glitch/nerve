@@ -39,6 +39,16 @@ MAX_SESSION_HOURS = int(os.environ.get('MAX_SESSION_HOURS', 8))
 # NICHT MAX_SESSION_HOURS wiederverwenden (die ist fuer Session-Timeout, nicht Fallback-Frische).
 STABIL1_FALLBACK_FRESH_HOURS = int(os.environ.get('STABIL1_FALLBACK_FRESH_HOURS', 2))
 
+# ── Phase 08.23.2.STABIL-1: DB-Pool (zieht mit gunicorn --threads 64 mit) ──
+# Budget-Beleg 2026-07-23: PG max_connections=100, 3 reserviert => 97 nutzbar.
+# nerve-rt importiert DIESELBE database/db.py (nerve_rt/services/session_manager.py:73-77,
+# `from database.db import SessionLocal`, gleiche DATABASE_URL) -> KEIN eigener Pool.
+# 20+15 = max 35 aus der Haupt-App; worst case gesamt 35 (App) + 35 (nerve-rt) = 70 von 97
+# nutzbaren Verbindungen (Pool fuellt lazy, nerve-rt zieht real wenig) -> weiterhin sicher.
+DB_POOL_SIZE     = int(os.environ.get('DB_POOL_SIZE', 20))
+DB_MAX_OVERFLOW  = int(os.environ.get('DB_MAX_OVERFLOW', 15))
+DB_POOL_TIMEOUT  = int(os.environ.get('DB_POOL_TIMEOUT', 10))
+
 SAMPLE_RATE       = 16000
 CHUNK_SIZE        = 1024
 ANALYSE_INTERVALL = 4  # Phase 06.3: raised from 2s — analyse_loop is intelligence-only now, fewer calls = less 529 risk + lower cost

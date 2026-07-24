@@ -14,7 +14,23 @@ if _DATABASE_URL.startswith('sqlite:///') and not _DATABASE_URL.startswith('sqli
     _DATABASE_URL = f'sqlite:///{_abs}'
 
 _connect_args = {'check_same_thread': False} if 'sqlite' in _DATABASE_URL else {}
-engine = create_engine(_DATABASE_URL, connect_args=_connect_args)
+
+# Phase 08.23.2.STABIL-1: Pool explizit dimensioniert. Vorher lief create_engine
+# ohne Pool-Parameter -> SQLAlchemy-Default pool_size=5 / max_overflow=10 /
+# pool_timeout=30. Mit gunicorn --threads 64 (deploy/nerve.service) waere der
+# 16. gleichzeitige DB-Zugriff 30s blockiert und danach TimeoutError gewesen —
+# der Engpass waere nur von gunicorn hierher gewandert.
+# pool_timeout bewusst 10s statt 30s: lieber ein schneller, sichtbarer Fehler
+# als ein halbminuetig haengender Request (dieselbe Logik wie das LLM-Zeitlimit).
+# PRE-EXECUTE-AUDIT K1: nerve-rt importiert DIESELBE Engine (kein eigener Pool) ->
+# worst case 35 (Haupt-App) + 35 (nerve-rt, gleicher Cap) = 70 von 97 nutzbaren
+# PG-Verbindungen; weiterhin sicher (Pool fuellt lazy, siehe config.py-Kommentar).
+_pool_kwargs = {} if 'sqlite' in _DATABASE_URL else {
+    'pool_size':    int(os.environ.get('DB_POOL_SIZE', 20)),
+    'max_overflow': int(os.environ.get('DB_MAX_OVERFLOW', 15)),
+    'pool_timeout': int(os.environ.get('DB_POOL_TIMEOUT', 10)),
+}
+engine = create_engine(_DATABASE_URL, connect_args=_connect_args, **_pool_kwargs)
 
 # ── Enable WAL mode for SQLite (concurrent reads + writes under threading) ─────
 if 'sqlite' in _DATABASE_URL:
