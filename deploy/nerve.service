@@ -20,11 +20,17 @@ WorkingDirectory=/opt/nerve/app
 EnvironmentFile=/etc/nerve/.env
 
 # gunicorn with gthread worker class (required for Flask-SocketIO threading mode)
-# 1 worker + 4 threads: optimal for CX22 (2 vCPU, 4 GB RAM) with Socket.IO
+# 1 worker + 64 threads (Phase 08.23.2.STABIL-1). Host gemessen 2026-07-23:
+# 4 vCPU / 7.7 GB (der frühere "CX22, 2 vCPU, 4 GB"-Kommentar war stale).
+# Bei async_mode='threading' belegt JEDE WS-Verbindung einen Thread fuer die
+# gesamte Anruf-Dauer -> 4 Threads = max ~3 parallele Anrufe.
+# KEINE zusaetzlichen Worker (>1) ohne Socket.IO-message_queue + Sticky-Sessions:
+# jeder Worker haette eigene In-Memory-Rooms -> die Rooms zerreissen.
+# Der DB-Pool ist in database/db.py mitgezogen (sonst wandert der Engpass nur dorthin).
 ExecStart=/opt/nerve/venv/bin/gunicorn \
     --worker-class gthread \
     --workers 1 \
-    --threads 4 \
+    --threads 64 \
     --bind 127.0.0.1:8000 \
     --timeout 120 \
     --access-logfile - \
