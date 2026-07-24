@@ -961,3 +961,48 @@ ersten Seiteneffekt sitzen.
 **Nach dem Bau: ANHALTEN.** Claudian macht Pre-Execute-Audit, fährt das Tor und den Deploy; danach
 Test-Anruf durch André. **NICHT** die STABIL-2-Punkte (Ton-Sicherheitsnetz, 4 neue Wächter,
 Staging-Smoke) mitbauen — die sind bewusst Folge-Phase.
+
+### CLAUDIAN → GSD — 2026-07-23 (STABIL-1 Tor ROT: Test-Kaskade nach Call-Site-Rename)
+
+**Tor-Ergebnis:** `21 failed, 995 passed, 7 skipped, 58 errors` — kein Restart, Prod unberührt.
+**Produktionscode ist GESUND** (Claudian am Code verifiziert: http_llm_client=echte Kopie, beide
+messages.stream unberührt, Guard :206 vor CRM :319, Pool 20+15/10s korrekt). Rot ist reine Test-Contract-
+Breakage + eine Kaskade. **Kein Code-Rückbau — Tests retargeten.**
+
+**WURZEL (eine):** Plan 01 hat 15 HTTP-Call-Sites von `claude_client.messages.create(...)` auf
+`http_llm_client().messages.create(...)` umbenannt. `http_llm_client()` gibt `claude_client.with_options(
+timeout,max_retries)` zurück. Jeder Test, der `claude_client` durch ein MagicMock ersetzt
+(`monkeypatch.setattr(<modul>,'claude_client',mock)` oder `patch(...claude_client)`), bekommt aus
+`mock.with_options(...)` ein **frisches, unkonfiguriertes** MagicMock → `.messages.create()` liefert ein
+nacktes MagicMock statt der konfigurierten Antwort.
+→ (a) Assertions scheitern (21 FAILED); (b) das nackte MagicMock fließt in einen DB-/Cost-Log-Write →
+ein MagicMock landet in einer geschützten Tabelle → der autouse `_baseline_cleanup_guard`
+(conftest.py:642, `json.dumps`) verschluckt sich → **Wächter vergiftet → 58 ERRORs + 500er kaskadieren**
+über fremde Tests (tenant_orgs, waitlist, tabu_migration, word_confidence, suggestion_reactions,
+transcript_segments) UND unsere eigenen (test_stabil1_beenden_guard 500, audit_log-immutable) = alle
+Kaskaden-Opfer, kein Eigen-Defekt.
+
+**UNIVERSELLER FIX (mechanisch, pro betroffenem Mock-Helfer EINE Zeile):**
+```python
+mock_client.with_options.return_value = mock_client   # with_options()-Kette gibt das konfigurierte Mock zurueck
+```
+Damit liefert `http_llm_client()` wieder das konfigurierte Mock. Sicher + idempotent — schadet auch
+dort nicht, wo die Site nicht umbenannt wurde.
+
+**Betroffen (mocken `claude_client`):** test_08_20_3, test_08_5_05_training_pipeline_t2,
+test_precall_schema — sicher; PLUS aus dem grep prüfen, welche an einer RENAMED Site hängen:
+test_adoption_runner, test_anon_live_vs_stored, test_ewb_autovar_global_regression, test_heiler_resolved,
+test_judge_runner, test_outcome_service, test_phase_classifier, test_qa_pipeline,
+test_qa_pipeline_rueckfrage. **Daemon-Site-Tests (qa/judge/adoption/outcome/phase/ewb/medium_lane)
+wurden NICHT umbenannt → sollten grün bleiben; falls sie failen, sind sie Kaskaden-Opfer → nach dem Fix
+neu prüfen.** (test_medium_lane wurde in H1 schon retargetet.)
+
+**Unsere STABIL-1-Tests:** test_stabil1_http_llm_timeout setzt `with_options.return_value=fake_client`
+bereits KORREKT (Vorbild). ABER prüfen, ob SEIN fake_client der Poisoner ist: leckt ein MagicMock aus
+`get_session`-Mock in einen echten Write? test_stabil1_beenden_guard 500 = vermutlich Kaskade → nach
+Guard-Fix neu bewerten.
+
+**Vorgehen:** `/gsd-debug` oder execute-fix. HART: kein lokales pytest → GSD editiert, Claudian fährt
+das Tor. Universellen Fix auf ALLE claude_client-Mock-Helfer anwenden (sicher), dann Claudian-Tor.
+**Prozess-Lehre:** bei Call-Site-Rename gehört `grep -rln "claude_client" tests/` in die Plan-Verify —
+die HART-„kein-lokales-pytest"-Regel heißt, dass genau diese Klasse erst am Tor auffällt.
