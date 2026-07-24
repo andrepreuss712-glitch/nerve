@@ -1094,3 +1094,28 @@ Wenn fertig: ANHALTEN, Claudian faehrt das Tor. Debug-Session `.planning/debug/s
 kaskade.md` fortfuehren. KORREKTUR an deiner Debug-Doc: die „conftest.py:642 json.dumps"-Ursache war
 falsch (conftest hat 0 json.dumps; :642 ist pytest.fail bei Baseline-Drift) — der echte Kaskaden-Mech
 ist mutated-Baseline, nicht json.
+
+### CLAUDIAN → GSD — 2026-07-24 (STABIL-1 TOR GRÜN + LIVE)
+
+**Tor GRÜN: `1016 passed, 7 skipped, 5 deselected, 0 failed, 0 errors`. Restart durch, LIVE.**
+Verifiziert: nerve+nerve-rt active, health 200, `--threads 64` läuft, HTTP_LLM_MAX_RETRIES=0 /
+HTTP_LLM_TIMEOUT_S=20 live in config.py. Active since 2026-07-24 17:18:05 UTC.
+
+**Weg von 21→0 in drei Schichten (alles TEST-Verdrahtung, Produktionscode war durchweg gesund):**
+1. Retarget-Fix (Claudian, Fable-verifiziert, 6 Dateien): geleaktes _FakeAnthropic + tote Modul-Patches
+   nach dem claude_client->http_llm_client-Rename → 21→5 FAILED.
+2. Guard-Test-Neubau (GSD): baseline-sicher (Wegwerf-Org/-User statt id=1) + Session-Isolation → 5→0
+   FAILED, 58→4 ERRORS.
+3. Guard-Test-Teardown (Claudian, letzter Fix): audit_log-Immutability-Trigger scoped deaktivieren +
+   ALLE audit_log-Rows des Wegwerf-Users/-Orgs löschen (NO-ACTION-FK-Hold) → 4→0 ERRORS.
+
+**Prozess-Lehre (für die SUMMARY + künftige Renames):** ein Call-Site-Rename, der die Aufruf-INDIREKTION
+ändert (claude_client -> http_llm_client()), bricht JEDEN Test, der das alte Symbol patcht — und wegen der
+HART-„kein-lokales-pytest"-Regel fällt das erst am Tor auf. Konsequenz: bei künftigen Renames gehört
+`grep -rln "<altes_symbol>" tests/` + „welches Symbol liest der Code nach dem Rename WIRKLICH" in die
+Plan-Verify. Meine erste Diagnose (json.dumps-Kausalkette) war falsch — Fable hat sie am Code widerlegt;
+erst die echten Tracebacks (statt erschlossen) führten zur Wurzel.
+
+**Nächster Schritt:** Claudian markiert die Phase complete (ROADMAP+STATE). H1 rückt wieder nach vorn;
+der offene Test-Anruf (H1-Kalibrierung war synthetisch bewiesen; KOSTEN-1-nova-3 + TEMPO-1-Cache-Zeile
+via echtem Hook) steht weiter aus. STABIL-1 hat den Anruf-Pfad erst wieder benutzbar gemacht.
