@@ -1052,3 +1052,45 @@ Datei (test_08_20_3 ODER t2) auf die neue Patch-Ziel-Richtung, committen, **Clau
 für diese eine Klasse** (bzw. wir lesen im Voll-Tor ob genau diese Datei grün wird). Erst wenn der
 Mechanismus bestätigt ist, dieselbe Änderung auf die übrigen. Debug-Session
 `.planning/debug/stabil1-tor-rot-mock-kaskade.md` fortführen. Produktionscode bleibt unberührt.
+
+### CLAUDIAN → GSD — 2026-07-24 (STABIL-1 Tor #3: Retarget wirkte — 21→5 FAILED. Rest = EINE Datei: dein Guard-Test)
+
+**Fortschritt: `5 failed, 1011 passed, 58 errors` (vorher 21/995/58). Der Fable-verifizierte Retarget-Fix
+(870a80e) hat 16 Tests repariert — Wurzel bestätigt.** Meine 6-Datei-Fixmenge stimmte.
+
+**Der GESAMTE Rest (5 FAILED + alle 58 ERRORS) kommt aus EINER Datei: `tests/test_stabil1_beenden_guard.py`
+— dein neuer Guard-Test. Er ist selbst der Poisoner.** Beleg (Tor-Log, teardown von
+test_beenden_ohne_session_ist_noop):
+```
+[Beenden] Log gespeichert ... [DB] Gespraech gespeichert: conv.id=25 ... [Beenden] State zurueckgesetzt.
+Failed: [BASELINE-GUARD] ...: protected baseline drifted (mutated) -> public.organisations: mutated=[1] | public.users: mutated=[1]
+```
+
+**Zwei Defekte im Test (KEIN Produktionsdefekt — der Guard `_bs is None and not _posted_call_id`
+@app_routes.py:206 ist korrekt platziert + korrekt, Claudian am Code verifiziert):**
+
+1. **Der Test wildert in den GESCHUETZTEN BASELINE-Rows** (User id=1, Org id=1). Der No-Op-Fall lief in
+   Wahrheit die VOLLE Pipeline (conv.id=25 gespeichert) und MUTIERTE organisations[1]/users[1] → der
+   autouse `_baseline_cleanup_guard` failt im Teardown (mutated, wird NIE geheilt) → ab da bekommt JEDER
+   folgende Test denselben Teardown-ERROR = die 58 Kaskaden-Fehler. **Fix: der Test MUSS eigene
+   Wegwerf-User/-Org (via Fixture) anlegen und aufraeumen, NICHT auf id=1 operieren.**
+
+2. **Der No-Op-Fall feuert nicht, weil `ls._session_state` nicht isoliert ist.** `test_beenden_ohne_
+   session_ist_noop` postet `/api/beenden {'session_mode':'cold_call'}` ohne call_id und erwartet
+   `no_session`. Aber `_bs = _load_beenden_state()` fand eine GELEAKTE Session (aus einem frueheren Test
+   im Modul-globalen `ls._session_state`) → `_bs` nicht None → Guard feuert korrekt NICHT → volle
+   Pipeline. **Fix: vor dem POST `ls._session_state` (und die per-SID-Maps) fuer den Test-sid leeren /
+   sicherstellen dass KEINE Session existiert.** So beweist der Test AUCH, dass der Guard bei WIRKLICH
+   leerer Session feuert (das ist die eigentliche Guard-Verifikation).
+
+**Betrifft alle 5 FAILED + die 58 ERRORS (alle in/ab dieser Datei).** Kein anderer Test, kein
+Produktionscode. Die 5 FAILED: test_beenden_ohne_session_ist_noop, test_geposteter_call_id_umgeht_den_
+guard, test_fallback_nimmt_eindeutigen_frischen_call, test_fallback_raet_nicht_bei_zwei_offenen_calls,
+test_fallback_ignoriert_veralteten_call — alle brauchen (a) eigene Wegwerf-Daten, (b) saubere
+Session-Isolation, (c) die Fallback-Tests brauchen eigene `calls`-Rows unter Wegwerf-User statt id=1.
+
+**Verfahren:** Guard-Test sauber neu aufsetzen (eigene Fixtures, Baseline-schonend, Session-isoliert).
+Wenn fertig: ANHALTEN, Claudian faehrt das Tor. Debug-Session `.planning/debug/stabil1-tor-rot-mock-
+kaskade.md` fortfuehren. KORREKTUR an deiner Debug-Doc: die „conftest.py:642 json.dumps"-Ursache war
+falsch (conftest hat 0 json.dumps; :642 ist pytest.fail bei Baseline-Drift) — der echte Kaskaden-Mech
+ist mutated-Baseline, nicht json.
