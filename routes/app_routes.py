@@ -709,20 +709,34 @@ def api_beenden():
 
     # Phase 08.23.2.D Fallback 2026-05-27 — wenn _session_state schon leer:
     # Latest Call des Users mit ended_at=NULL als Update-Target nehmen.
-    # Pragmatisch: User hat genau einen aktiven Call gleichzeitig (kein Multi-Tab-Live).
+    # STABIL-1 (b) HAERTUNG: frueher "nimm den neuesten offenen Call des
+    # Users" — das schloss bei einem sitzungslosen /api/beenden einen FREMDEN
+    # Anruf (Live-Anruf 2, 23.07.). Jetzt zwei Schranken: nur innerhalb eines
+    # engen Frische-Fensters (STABIL1_FALLBACK_FRESH_HOURS, PRE-EXECUTE-AUDIT
+    # K1 — bewusst enger als MAX_SESSION_HOURS, um das Fenster zu schliessen in
+    # dem ein aelterer einzelner offener Call faelschlich fuer den aktuellen
+    # gehalten wuerde falls create_call_for_sid fehlschlug), und nur wenn der
+    # Kandidat EINDEUTIG ist (D-02: bei Mehrdeutigkeit wird nicht geraten).
     if not _phase_d_call_id:
-        from datetime import datetime as _dt_fb, timezone as _tz_fb
+        from datetime import datetime as _dt_fb, timezone as _tz_fb, timedelta as _td_fb
         from database.models import Call as _CallModel_fb
+        import config as _cfg_fb
+        _cutoff_fb = _dt_fb.now(_tz_fb.utc) - _td_fb(hours=_cfg_fb.STABIL1_FALLBACK_FRESH_HOURS)
         _db_fb = get_session()
         try:
-            _latest = (_db_fb.query(_CallModel_fb)
-                       .filter(_CallModel_fb.user_id == g.user.id,
-                               _CallModel_fb.ended_at.is_(None))
-                       .order_by(_CallModel_fb.started_at.desc())
-                       .first())
-            if _latest is not None:
-                _phase_d_call_id = _latest.id
-                print(f'[Phase08.23.2.D] Fallback-Lookup via DB: call_id={_phase_d_call_id} (ended_at=NULL, user_id={g.user.id})')
+            _open_fb = (_db_fb.query(_CallModel_fb)
+                        .filter(_CallModel_fb.user_id == g.user.id,
+                                _CallModel_fb.ended_at.is_(None),
+                                _CallModel_fb.started_at >= _cutoff_fb)
+                        .order_by(_CallModel_fb.started_at.desc())
+                        .limit(2).all())
+            if len(_open_fb) == 1:
+                _phase_d_call_id = _open_fb[0].id
+                print(f'[Phase08.23.2.D] Fallback-Lookup via DB: call_id={_phase_d_call_id} '
+                      f'(eindeutig, user_id={g.user.id})')
+            elif len(_open_fb) > 1:
+                print(f'[Beenden] WARN: {len(_open_fb)}+ offene Calls fuer user_id={g.user.id} '
+                      f'— Fallback raet NICHT, calls-UPDATE wird uebersprungen.')
         except Exception as _e_fb:
             print(f'[Phase08.23.2.D] Fallback-Lookup Fehler: {_e_fb}')
         finally:

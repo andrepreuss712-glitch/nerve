@@ -32,6 +32,13 @@ BRAVE_SEARCH_API_KEY = os.environ.get('BRAVE_SEARCH_API_KEY', '')
 DATABASE_URL      = os.environ.get('DATABASE_URL', 'sqlite:///database/nerve.db')
 MAX_SESSION_HOURS = int(os.environ.get('MAX_SESSION_HOURS', 8))
 
+# Phase 08.23.2.STABIL-1 (b), PRE-EXECUTE-AUDIT K1: enger als MAX_SESSION_HOURS.
+# Schliesst das Fenster, in dem der DB-Fallback in api_beenden (routes/app_routes.py)
+# einen aelteren, aber noch "offenen" Call faelschlich statt des aktuellen schliesst,
+# wenn create_call_for_sid fuer den aktuellen Call fehlschlug. Eigene Konstante,
+# NICHT MAX_SESSION_HOURS wiederverwenden (die ist fuer Session-Timeout, nicht Fallback-Frische).
+STABIL1_FALLBACK_FRESH_HOURS = int(os.environ.get('STABIL1_FALLBACK_FRESH_HOURS', 2))
+
 SAMPLE_RATE       = 16000
 CHUNK_SIZE        = 1024
 ANALYSE_INTERVALL = 4  # Phase 06.3: raised from 2s — analyse_loop is intelligence-only now, fewer calls = less 529 risk + lower cost
