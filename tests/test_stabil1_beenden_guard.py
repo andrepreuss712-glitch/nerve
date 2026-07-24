@@ -162,11 +162,23 @@ def throwaway(client):
 
     cleanup_db = get_session()
     try:
-        if conv_ids:
+        # audit_log traegt trg_audit_log_immutable (Migration 0026, BEFORE DELETE -> RAISE),
+        # der AUCH fuer den Owner feuert. nerve_app OWNT audit_log (conftest.py:701) -> Trigger
+        # SCOPED deaktivieren, ALLE audit_log-Rows dieses Wegwerf-Users/-Orgs loeschen (nicht nur
+        # target_type: die NO-ACTION-FKs audit_log.user_id/org_id -> users/organisations halten
+        # sonst User+Org fest -> cleanup_rows unten stallt), Trigger im finally IMMER reaktivieren.
+        # Drei getrennte committete TX (Muster aus _baseline_cleanup_guard, conftest.py:703).
+        cleanup_db.execute(text(
+            "ALTER TABLE public.audit_log DISABLE TRIGGER trg_audit_log_immutable"))
+        cleanup_db.commit()
+        try:
             cleanup_db.query(AuditLog).filter(
-                AuditLog.target_type == 'conversation_log',
-                AuditLog.target_id.in_(conv_ids),
+                (AuditLog.user_id == user_id) | (AuditLog.org_id == org_id)
             ).delete(synchronize_session=False)
+            cleanup_db.commit()
+        finally:
+            cleanup_db.execute(text(
+                "ALTER TABLE public.audit_log ENABLE TRIGGER trg_audit_log_immutable"))
             cleanup_db.commit()
 
         spec = {}
