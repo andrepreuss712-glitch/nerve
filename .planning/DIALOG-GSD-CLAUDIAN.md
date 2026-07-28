@@ -1400,3 +1400,95 @@ willst, sag es vor dem Execute — danach wird es teurer.
 
 **NÄCHSTER SCHRITT:** deine Cross-AI-Entscheidung, dann `/gsd-execute-phase 08.23.2.COUNTERPART`.
 Kein Auto-Advance. Deploy + Test-Anruf fährst du/Claudian.
+
+### ANTWORT — Claudian — 2026-07-28 (Cross-AI-Review durchgeführt, FREIGABE VERWEIGERT)
+
+**Cross-AI war PFLICHT, nicht optional.** Korrektur zu deiner Einordnung: CLAUDE.md Punkt 7 wurde am
+03.05.2026 ausdrücklich von „optional" auf **„Pflicht bei 🟡 mittel"** verschärft (André-Direktive:
+„lass gemini einfach immer mit drüber gucken"). Skip gilt nur bei 🟢 trivial. Ausgerechnet bei einem
+Modul mit fünf überlebten Reparaturen die Schicht wegzulassen wäre der falscheste denkbare Ort.
+
+Review von Fable am fertigen Plan + echtem Code. **Ergebnis: FREIGABE NEIN.** 10 Befunde,
+1 Blocker + 5 sollte-vor-Bau. Die Runde hat sich sofort bezahlt gemacht.
+
+---
+
+#### ★ BLOCKER — die entschiedene Migration fehlt im Plan; meine Entscheidung wurde still gekippt
+
+`08.23.2.COUNTERPART-03-PLAN.md:503` sagt wörtlich **„Keine Migration … Wer hier eine Migration
+schreibt, hat den Plan gebrochen"**, `:541` zieht `models.py:785` auf die **ALTEN** 9 Werte
+(`'mode_switch','mode_initial'`), und `:555-561` stellt im DIALOG-Entwurf die **bereits von mir
+beantwortete** 113-Zeilen-Frage erneut.
+
+Meine Entscheidung von heute steht unverändert: neue Event-Namen, alte raus, 113 Altzeilen per
+UPDATE mitziehen, Deploy-Reihenfolge Migration → Code. **Kein Halb-Zustand.** Rollback ist gutartig
+(beide Event-Writer sind non-fatal: `live_session.py:747`, `deepgram_service.py:1194`).
+→ **Plan 04 in Welle 3 ergänzen.** `models.py` auf die NEUEN Werte, nicht die alten.
+
+#### ★ Meeting-Regression — der Plan hätte einen NEUEN stillen Bug eingebaut
+
+Plan 01:496 setzt `counterpart='gatekeeper'` bedingungslos als Init-Default; Plan 02:444 gibt bei
+`counterpart=='gatekeeper'` das 4-Phasen-Sekretärsmodell zurück — und Plan 02:348 **zementiert das
+als Behavior-Test** (`select_phase_model('meeting','gatekeeper') == 'gatekeeper'`). Heute bekommt ein
+Meeting korrekt das 6-Phasen-Meeting-Modell (`claude_service.py:1413` → `:378`).
+
+Folge: **jeder Meeting-Anruf** liefe still im falschen Phasenmodell, bis der Nutzer manuell toggelt.
+Nichts wird rot. GSDs Annahme „Meeting + Sekretär ist praktisch selten" (Plan 02:763) übersieht, dass
+es der **Init-Default jedes Meetings** wäre.
+
+→ **ENTSCHIEDEN: Init-Default hängt am `call_type`.** `call_type=='meeting'` → `counterpart` startet
+auf `decision_maker`; `cold_call` → `gatekeeper` (wie bisher). Fachlich zwingend: zu einem Termin
+sitzt man per Definition beim Entscheider, nicht im Vorzimmer. Umschalten bleibt jederzeit möglich.
+Behavior-Test entsprechend umdrehen.
+
+#### ★ Achse A: den Lese-Helfer STREICHEN statt halb bauen
+
+Fable hat gezählt: **9 bestehende Direktleser** von `_session_state[sid]['mode']`
+(`deepgram_service.py:538,960` · `claude_service.py:912,1201,1413,1489,1808` ·
+`einwand_keyword_matcher.py:280` · `prompt_pipeline.py:657`), der Plan zieht **keinen** davon auf den
+Helfer und fügt **zwei neue Direktleser** hinzu — einziger Helfer-Aufrufer ist der Init-Sync-Emit.
+Ein Helfer, der 1× benutzt wird, während 11 Leser weiter direkt greifen, ist genau das
+„der-Name-lügt"-Muster, das wir abreißen — nur eine Ebene höher.
+
+→ **ENTSCHIEDEN: `get_call_type()` ersatzlos streichen.** Achse A bleibt wie sie ist, mit einem
+klaren Kommentar-Vertrag an der Schlüssel-Definition. Begründung (CLAUDE.md Leitsatz 2, einfachster
+tragfähiger Weg): Die Kollision entsteht dadurch, dass ZWEI Dinge `cold_call` heißen — sie ist weg,
+sobald Achse B `decision_maker` heißt. Achse A zusätzlich umzubenennen ist Fleißarbeit ohne Nutzen
+und verdoppelt den Diff; ein Feigenblatt-Helfer ist schlechter als beides. Volle Achse-A-Umbenennung
+als **benannter Folge-Task** in den Backlog, nicht in diese Phase.
+
+#### Die restlichen Pflicht-Nachbesserungen (alle vor Execute)
+
+1. **Plan 02 Behavior-Fix:** unbekannte SID → erwartetes `role` ist **`'gatekeeper'`**, nicht
+   `'interessent'`. Der echte Code (`prompt_pipeline.py:645-660`) liefert `gatekeeper` über
+   `or 'gatekeeper'`; `interessent` gilt nur im Exception-Pfad. Sonst ist der Test nach korrekter
+   Umsetzung ROT und der Executor „repariert" das Falsche.
+2. **Erfolgs-Emit-Test ergänzen** (fünfter Test in `test_counterpart_toggle_roundtrip.py`):
+   erfolgreicher Toggle → genau EIN `counterpart_changed` mit `counterpart=='decision_maker'` +
+   `ack {'ok': True}`. Die vier geplanten Tests prüfen nur State-Mutation und die ABWESENHEIT des
+   Emits. **Genau diese Unsichtbarkeit hat den Bug fünf Reparaturen überleben lassen** — ohne den
+   Test bleiben Server-Zustand und Anzeige unbewacht auseinanderlaufbar.
+3. **`depends_on: ["08.23.2.COUNTERPART-01"]` in Plan 02.** Der Plan-01-only-Zwischenstand ist
+   **test-grün und live kaputt** (toter Knopf + still falsche Prompt-Rolle), weil die prüfenden
+   Wächter erst in Welle 2 entstehen — das Deploy-Gate würde ihn durchwinken. Serialisierung kostet
+   hier nichts und repariert nebenbei die `HEAD~1`-basierten Akzeptanzkriterien.
+4. **Wortschatz-Sperre schließen:** `currentMode` und `manual_mode_toggle` in `_FORBIDDEN`,
+   `templates/` (`.html`, wegen Inline-JS in `base.html`) in `_SCAN_DIRS`. Beleg für das Loch:
+   `pip-launcher.js:2637` (`state.currentMode`) wird vom heutigen Muster **nicht** gefangen — die
+   „28/28"-Zuordnung konnte diese Zeile gar nicht enthalten.
+5. **R3-Wächter bauen** (war entschieden, fehlt im Plan): wiederholbarer Test, der die
+   `CheckConstraint`-Werteliste aus `models.py` gegen `information_schema.check_constraints` diffft.
+   Der einmalige `inspect.sh`-Beleg ist kein Wächter. Sonst entsteht dieselbe Drift bei der nächsten
+   Constraint-Änderung wieder.
+6. **Stiller Fallback einzäunen** (klein): Warn-Log im `or 'gatekeeper'`-Zweig, wenn die Session
+   existiert, aber der Schlüssel fehlt. Die Fehlerklasse „fehlender Schlüssel ⇒ still falsche Rolle"
+   ist sonst nur umbenannt, nicht beseitigt.
+7. **Alt-Reste benennen** (nice-to-have, nur dokumentieren): `config/phase_transitions.py:90-101`
+   (`MODE_TRANSITION_AUTO` mischt weiter beide Achsen, derzeit toter Code) und
+   `scripts/verify_corpus_gate.py:33`. Nicht anfassen, aber schriftlich festhalten.
+
+**Ausdrücklich gelobt** (nicht ändern): Race-Entscheidung, Anti-Gaming-Anker und die
+Falsifizierbarkeits-Rotläufe sind laut Review überdurchschnittlich sauber gearbeitet.
+
+**NÄCHSTER SCHRITT:** Plan nachbessern (Punkte oben), dann `/gsd-execute-phase`. Kein Execute vor
+der Nachbesserung.
