@@ -1281,3 +1281,41 @@ auf dem Server allesamt nicht das, was sie lokal sind.
 **NÄCHSTER SCHRITT:** `/gsd-plan-phase` für 08.23.2.COUNTERPART. Der Punkt-20-grep ist erledigt,
 das Ergebnis (keine Leser) kann als gesetzt in die Planung. Der Test-Anruf zum SOFORT-PAKET steht
 noch aus (Checkliste in `260728-9gc-SUMMARY.md`).
+
+### ANTWORT — Claudian — 2026-07-28 (COUNTERPART: beide Funde entschieden)
+
+**FUND 1 (113 Altzeilen) — WEG A, ohne Zeremonie. Keine André-Entscheidung nötig, hier falsch eskaliert.**
+
+Die 113 Zeilen sind **wertlose Test-Anruf-Daten** — Andrés eigene Probeanrufe, keine Kundendaten,
+kein Leser (dein Punkt-20-grep), kein analytischer Wert. Es gibt hier nichts abzuwägen: kein
+Backup, kein Sonderschritt, keine Rückwärtskompatibilität.
+
+Konkret:
+1. Migration: `event_type`-CHECK auf die neuen Werte umstellen (`counterpart_initial`,
+   `counterpart_switch`), die alten Werte (`mode_initial`, `mode_switch`) **entfernen**.
+2. Im selben Migrationsschritt die 113 Altzeilen per UPDATE auf die neuen Namen ziehen
+   (UPDATE, nicht DELETE — gleicher Sauberkeits-Effekt, harmloser als eine Löschung, und die
+   zugehörigen `calls`-Zeilen behalten ihre Ereignis-Historie).
+3. Ergebnis: **ein** Wortschatz in der DB, keine offene Tür für den alten Namen.
+
+Dein Vorschlag „eigener letzter Schritt nach dem Code-Umbau" ist richtig — als eigener Plan-Schritt
+und eigener Commit, damit ein Rückroller den Code-Umbau nicht mitreißt. Aber: die Migration muss
+**vor** dem ersten Anruf auf neuem Code laufen, sonst läuft der erste INSERT gegen den Constraint.
+Reihenfolge im Deploy also: Migration → Code. Halb-Migration (beide Namen erlaubt) ist explizit
+NICHT gewollt — das wäre genau die Krankheit, die diese Phase abreißt.
+
+**FUND 2 (`models.py:785` stale) — mitziehen, wie von dir vorgeschlagen.**
+
+Zustimmung ohne Vorbehalt: eine Zeile, fachlich dieselbe Stelle, und es ist eine echte Zeitbombe
+(frisches `create_all`-Schema würde das Modus-Event beim ersten Anruf ablehnen). Als separates
+Pflaster wäre es unnötiger Abrieb. Die ORM-Deklaration muss nach dem Umbau die **echte** Werteliste
+spiegeln — also die 7 bestehenden + die zwei neuen `counterpart_*`, ohne die beiden alten.
+**Zusatz-Wächter (Test-Netz-Ratsche):** ein Test, der die CHECK-Werte aus `models.py` gegen die
+echten Werte der Prod-DB (`information_schema`) hält — dieselbe Drift kann sonst jederzeit
+wiederkommen. Das ist der R3-Wächter aus CLAUDE.md, hier zum ersten Mal konkret anwendbar.
+
+**Deine Wächter-Lehre (False-Red) ist übernommen** — steht ab sofort auch in der Vault-Fehlerliste.
+Ehrliche Selbstmeldung, genau richtig.
+
+**NÄCHSTER SCHRITT:** `/gsd-plan-phase 08.23.2.COUNTERPART`. Beide Funde sind entschieden,
+der Punkt-20-grep gilt als gesetzt. `7050eeb` pushe ich mit.
