@@ -2533,6 +2533,44 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 ---
 
+### Phase 08.23.2.COUNTERPART: Gespraechspartner-Umbau — Abriss + Neubau des Sekretaer/Entscheider-Umschalters (NEU 2026-07-28) 🟡 ★★ LAUNCH-BLOCKER, VORRANG (INSERTED)
+
+**Herkunft:** André-Entscheidung 2026-07-28 nach dem Test-Anruf 27./28.07.: **ABREISSEN statt sechstes Pflaster.** Wurzelanalyse FERTIG (Fable, am echten Code + Prod-Logs) — **nicht neu diagnostizieren, planen + bauen nach dem Entwurf.**
+
+**Warum VOR H1:** Der Umschalter blockiert **jeden Test-Anruf**. H1s Deliverable (Kalibrierungs-Anruf: Attention-Loss Merge-vs-2-Call, Time-to-Last-Token) ist ohne funktionierenden Test-Anruf nicht abnehmbar. Diese Phase ist damit Vorbedingung für H1, nicht Konkurrenz dazu.
+
+**Goal:** Zwei getrennte Begriffe, je EIN Ort, keine Wort-Überlappung — und ein Knopf, der sich selbst heilt statt sich zu verklemmen.
+
+**★ DREI BELEGTE WURZELN:**
+1. **Der Knopf rechnet auf der falschen Seite (Einbahnstrasse).** `static/pip-launcher.js:3883-3897`: `var newCategory = (state.contactCategory === 'gatekeeper') ? 'target' : 'gatekeeper'` → der Browser hält eine EIGENE Kopie und berechnet daraus den Zielwert. Die Kopie wird NUR durch das Server-Echo `contact_category_update` aktualisiert (`_updateContactCategory`, `:2635-2637`), Startwert fest `'gatekeeper'` (`:74`). **Geht das Echo EINMAL verloren, sendet der Knopf ab da bei jedem Druck `'target'`.** Prod-Log 27.07.: 4 Klicks, 4× `category=target`, ab Klick 2 `'cold_call'` → `'cold_call'`.
+2. **Bedeutungs-Kollision.** `'cold_call'` bezeichnet ZWEI orthogonale Achsen: (A) Anruf-Art `cold_call|meeting` → `_session_state[sid]['mode']` (`live_session.py:330`); (B) Gesprächspartner `gatekeeper|cold_call(!)` → `state['current_mode']` (`live_session.py:377`). Kollision in EINER Zeile: `deepgram_service.py:1134` `new_mode = 'gatekeeper' if category == 'gatekeeper' else 'cold_call'`. Der Code **warnt an 3 Stellen vor sich selbst** (`mode_strategy.py:28-33`, `deepgram_service.py:955-958`) — erkannt, dokumentiert, NICHT beseitigt. Prod-Log 28.07., 1 Sekunde auseinander: `17:12:04 start_live_session (mode=cold_call)` [Achse A] vs `17:12:05 mode_initial written: mode='gatekeeper'` [Achse B]. **Beisst LIVE:** `_PHASE_NAMES_BY_MODE` (`claude_service.py:276-280`) mischt Schlüssel BEIDER Achsen, wird aber mit Achse A aufgerufen (`:1413`) → Gatekeeper-Phasenmodell unerreichbar, während der Toggle `current_phase` auf Gatekeeper-Logik zurücksetzt (`:1146-1155`).
+3. **Zustand an 7 Stellen.** `state.mode` / `state.contactCategory` / `state.currentMode` (**TOT**, kein Leser) / `_session_state[sid]['mode']` / `state['current_mode']` / `state['contact_category']` / `calls.call_mode` — plus `call_events`-Payloads, die BEIDE Achsen unter dem Schlüssel `'mode'` ablegen.
+
+**NICHT die Ursache (geprüft — nicht erneut untersuchen):** Automatische Erkennung ist unschuldig. `services/gatekeeper.py` ist seit C.R ein 17-Zeilen-Stub. Einzige Schreiber = Init-Default + manueller Toggle (grep-verifiziert). `/api/gatekeeper/phrases` ist ein reiner Lese-Endpoint für Button-Texte.
+
+**DER NEUBAU:**
+- `call_type` ∈ `{cold_call, meeting}` — Server-Session-State, ändert sich nie.
+- `counterpart` ∈ `{gatekeeper, decision_maker}` — Server-Session-State, per Toggle.
+- **`'cold_call'` darf beim Gesprächspartner NIE wieder vorkommen.**
+- **Toggle kehrt sich um:** Browser sendet `toggle_counterpart` **ohne Wert** (reiner Befehl) → **SERVER** berechnet das Gegenteil aus SEINEM Zustand → sendet `counterpart_changed {counterpart}` → Browser = reine Anzeige, hält keinen entscheidungsrelevanten Zustand mehr. **Selbstheilend:** verlorenes Echo = 1 Sekunde falsche Anzeige, nie ein toter Knopf.
+- **Ersetzt:** `current_mode`, `contact_category`, `state.contactCategory`, `state.currentMode` (tot, ersatzlos löschen), gemischtes `_PHASE_NAMES_BY_MODE`. **Bleibt:** `calls.call_mode` (DB, Achse A). Phasenmodell explizit nach `(call_type, counterpart)` wählen.
+
+**★ PFLICHT-KLÄRUNG VOR DEM BAU (nicht raten — CLAUDE.md Punkt 20):** Die DB-Events heissen heute `mode_initial`/`mode_switch` und legen beide Achsen unter dem Schlüssel `'mode'` ab. VOR jeder Umbenennung greppen, **WER diese Events liest** (Auswertung, Dashboard, Coaching, Lernkarten, Slow-Lane).
+- Leser vorhanden → Event-**NAMEN erstmal lassen**, nur die PAYLOAD sauber trennen (`call_type` + `counterpart` als getrennte Felder). Umbenennung = eigener Schritt.
+- Keine Leser → Umbenennung auf `counterpart_initial`/`counterpart_switch` OK.
+- **Ergebnis des greps in `.planning/DIALOG-GSD-CLAUDIAN.md` dokumentieren.**
+
+**★ WÄCHTER (Pflicht, Test-Netz-Ratsche):**
+1. **HIN-UND-ZURÜCK-TEST** — der Test, der diesen Bug gefangen hätte und heute **NIRGENDS existiert**: Toggle-Handler 2× aufrufen, Assertion: Server-Zustand ist wieder `'gatekeeper'`. **ERST ROT gegen den ALTEN Stand laufen lassen, Beleg verbatim in den Commit** — dann bauen. Ein Test, der von Anfang an grün ist, beweist nichts.
+2. **WORTSCHATZ-SPERRE:** `grep -rn "current_mode\|contact_category\|contactCategory" services/ static/ routes/` muss **0 Treffer** liefern.
+3. **EIN-SCHREIBER-SPERRE:** `counterpart` wird nur von Init + Toggle-Handler geschrieben.
+
+**Komplexität:** 🟡 mittel (~200-300 Zeilen, 4 Dateien). **Regeln:** CLAUDE.md Punkt 14 (vor jedem Insert 30 Zeilen davor/danach, Control-Flow, Cross-File-grep, Edge-Cases + Race-Fragen) · Punkt 17 (kein Refactor nebenbei) · UI-Teil KEINE hardcoded Farben / KEINE Inline-Styles, CSS-Variablen aus `static/nerve.css` (vorher scannen) · atomare Commits · Fragen/Entscheidungen ans Ende von `.planning/DIALOG-GSD-CLAUDIAN.md` (NICHT als interaktives Menü — André am Handy) · Deploy-Gate präsentieren, **Claudian pusht + deployt**. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren. **Sync:** Vault `01 Roadmap.md` macht Claudian.
+
+**Status:** Eingefügt 2026-07-28, **noch NICHT geplant** → nächster Schritt `/gsd-plan-phase`.
+
+---
+
 ### Phase 08.23.2.H1: Live-Schleifen zusammenlegen — 3 Haiku-Aufrufe → 1 (NEU 2026-07-22) 🔴 — der große Kosten-Hebel
 
 **Herkunft:** André-Direktive 2026-07-20 (*„nicht mehr alle 4 Sekunden ein Aufruf über dieselben Daten"*). Größter Spar-Hebel im Geld-Thema „Kosten senken". NACH TEMPO-1 + KOSTEN-1.1 (beide live).

@@ -1181,3 +1181,103 @@ von diesem Paket verursacht.
 `.service`-Dateien + `daemon-reload`, FIX 1 greift dadurch automatisch — aber **erst nach dem
 Service-Restart** sind die Zeitstempel geradegezogen). Danach Test-Anruf, Checkliste steht in
 `260728-9gc-SUMMARY.md`.
+
+### GSD → CLAUDIAN/ANDRÉ — 2026-07-28 (Phase 08.23.2.COUNTERPART eingefügt + PFLICHT-GREP erledigt)
+
+**Phase `08.23.2.COUNTERPART` (Gesprächspartner-Umbau) in `.planning/ROADMAP.md` eingetragen —
+nach STABIL-1, VOR H1, Marker `(INSERTED)`, 🟡 mittel, ★★ LAUNCH-BLOCKER, VORRANG.
+Noch NICHT geplant, nichts gebaut.** Vault `01 Roadmap.md` macht Claudian.
+
+**Warum vor H1 (die Einordnung war im Auftrag nicht vorgegeben, ich habe sie gesetzt):**
+Der Umschalter blockiert jeden Test-Anruf. H1s Deliverable ist ein **Kalibrierungs-Anruf**
+(Attention-Loss Merge-vs-2-Call, Time-to-Last-Token) — der ist ohne funktionierenden Test-Anruf
+nicht abnehmbar. COUNTERPART ist damit H1s **Vorbedingung**, keine Konkurrenz. Wenn du es anders
+willst, ist es eine Zeile im ROADMAP.
+
+---
+
+#### ✅ PFLICHT-KLÄRUNG (Punkt 20) IST ERLEDIGT — Antwort: KEINE LESER
+
+Der Auftrag sagte „VOR jeder Umbenennung greppen, WER `mode_initial`/`mode_switch` liest".
+Gemacht, das Ergebnis ist eindeutig:
+
+```
+grep -rn "mode_initial\|mode_switch" --include=*.py --include=*.js --include=*.html
+```
+Treffer ausschliesslich in: **Schreibern** (`live_session.py:719-747`, `deepgram_service.py:1166-1194`),
+der **Migration 0004**, und **Tests** (`test_mode_initial_db.py`, `test_mode_switch_event.py`).
+Gegenprobe auf generische `CallEvent`/`call_events`-Konsumenten: **kein Auswertungs-, Dashboard-,
+Coaching-, Lernkarten- oder Slow-Lane-Leser.** Der einzige Nicht-Test-Bezug auf `call_events` in
+einer Auswertung ist ein **Kommentar** (`config/phase_transitions.py:5`, spricht über
+`event_type='phase_change'`, nicht über die Modus-Events).
+
+→ **Nach deiner eigenen Regel ist die Umbenennung auf `counterpart_initial`/`counterpart_switch`
+damit ERLAUBT.** ABER sie ist nicht gratis — siehe die zwei Funde unten.
+
+---
+
+#### 🔴 FUND 1: Die Umbenennung braucht eine Migration + eine Entscheidung über 113 Prod-Zeilen
+
+Auf Prod verifiziert (`sudo -u postgres psql -d nerve`):
+```
+ck_call_events_event_type CHECK (event_type = ANY (ARRAY[
+  'transcript_chunk','suggestion_shown','reaction','phase_change',
+  'audio_health','objection_detected','consent_optin','mode_switch','mode_initial']))
+
+event_type   | count
+mode_initial |    72
+mode_switch  |    41
+audio_health |    27
+```
+Es liegen also **113 echte Zeilen** mit den alten Namen in der Prod-DB, und der CHECK-Constraint
+lässt neue Namen **nicht** zu. Eine Umbenennung im Code allein würde beim ersten INSERT hart
+gegen den Constraint laufen.
+
+→ **Zu entscheiden (gehört in die Planung, nicht in den Bau):** Migration, die die neuen Werte
+zulässt — und dann entweder (a) die 113 Altzeilen mit-umschreiben und die alten Werte aus dem
+Constraint entfernen (sauber, aber nicht rückwärts-kompatibel), oder (b) alte Werte im Constraint
+belassen und die Altdaten stehen lassen (billiger, aber der Wortschatz bleibt in der DB gemischt —
+genau die Sorte Halb-Migration, vor der CLAUDE.md warnt).
+**Mein Vorschlag: (a), aber als EIGENER letzter Schritt** nach dem Code-Umbau — nicht im selben
+Commit. Deine Entscheidung.
+
+#### 🔴 FUND 2: `models.py` ist beim CHECK-Constraint bereits JETZT falsch (Cross-Layer-Drift, Punkt 21)
+
+`database/models.py:785` deklariert nur **7** Werte:
+```
+CheckConstraint("event_type IN ('transcript_chunk','suggestion_shown','reaction',
+  'phase_change','audio_health','objection_detected','consent_optin')", ...)
+```
+Die echte Prod-DB hat **9** (inkl. `mode_switch`/`mode_initial`, via Migration 0004 nachgezogen).
+**Die ORM-Deklaration ist seit 0004 stale.** Live tut das heute nichts, weil Postgres den echten
+Constraint fährt — aber auf einem **frisch per `create_all` angelegten Schema** entstünde ein
+Constraint, der `mode_initial` **ablehnt**, und das Modus-Event würde beim ersten Anruf hart
+scheitern. Das ist dieselbe Familie wie die `DEPLOY-CREATE-ALL-CRASH`-Lehre.
+
+→ Das ist **nicht** von dieser Phase verursacht, aber diese Phase fasst genau diese Zeile an.
+Vorschlag: in COUNTERPART mitziehen (eine Zeile, gehört fachlich dazu), NICHT als separates
+Pflaster. Falls du es getrennt willst: sag Bescheid, dann geht es als Mini-Phase raus.
+
+---
+
+**KORREKTUR (nachgetragen, gleicher Tag):** Als ich diesen Eintrag schrieb, war das SOFORT-PAKET
+noch ungepusht. Beim Commit war es das nicht mehr — Claudian hat gepusht und deployt.
+**Prod läuft auf `19da9f2`** (`/api/health`, `deployed_at 17:02:36Z`, Service aktiv,
+`PYTHONUNBUFFERED` in der installierten Unit, SDK weiter 3.10.0). Zwei Folge-Commits von Claudian:
+`36fc47b` (deepgram-sdk auf `<5` gedeckelt — mein DIALOG-Fund 1 von heute Mittag) und `19da9f2`.
+
+**★ `19da9f2` ist ein Fehler von mir, den Claudian gefangen hat — festhalten, damit er nicht wiederkommt:**
+Mein Wächter aus FIX 1 (`test_service_unit_unbuffered.py`) löst die Unit-Pfade **relativ zum Repo-Root**
+auf. Auf dem Server ist das `$APP_DIR/deploy/` — ein Ordner, den `deploy.sh` per
+`TAR_EXCLUDES --exclude='./deploy'` (`deploy.sh:59`) **bewusst nie überträgt** und der deshalb noch auf
+dem Stand vom 09.04. lag. Ergebnis: **Tor ROT, obwohl die installierte `/etc/systemd/system/nerve.service`
+die Zeile längst hatte** — ein False-Red, das ab da JEDEN Deploy blockiert hätte.
+Ich hatte den Wächter lokal rot/grün gegengeprobt und das als Beweis genommen; die Umgebung, in der er
+tatsächlich läuft, hatte ich nicht geprüft. Genau wofür die HART-Regel „kein lokales pytest als Abnahme"
+da ist. **Lehre für künftige Wächter, die Dateien statt Code lesen: erst fragen, ob die Datei am
+Ausführungsort überhaupt existiert und aktuell ist** — `deploy/`, `.env`, `logs/`, `.planning/` sind
+auf dem Server allesamt nicht das, was sie lokal sind.
+
+**NÄCHSTER SCHRITT:** `/gsd-plan-phase` für 08.23.2.COUNTERPART. Der Punkt-20-grep ist erledigt,
+das Ergebnis (keine Leser) kann als gesetzt in die Planung. Der Test-Anruf zum SOFORT-PAKET steht
+noch aus (Checkliste in `260728-9gc-SUMMARY.md`).
