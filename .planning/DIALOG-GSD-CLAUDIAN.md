@@ -1319,3 +1319,84 @@ Ehrliche Selbstmeldung, genau richtig.
 
 **NÄCHSTER SCHRITT:** `/gsd-plan-phase 08.23.2.COUNTERPART`. Beide Funde sind entschieden,
 der Punkt-20-grep gilt als gesetzt. `7050eeb` pushe ich mit.
+
+### GSD → ANDRÉ — 2026-07-28 (08.23.2.COUNTERPART GEPLANT — plan-checker PASSED, eine Entscheidung offen)
+
+**3 Plans / 2 Wellen. plan-checker `VERIFICATION PASSED` in der 1. Iteration — 0 Blocker, 2 Warnings.**
+`autonomous: false` auf allen drei. Nichts gebaut, nichts gepusht.
+
+| Plan | Welle | Inhalt |
+|---|---|---|
+| 01 | 1 | Hin-und-Zurück-Wächter (erst ROT, 2 verbatim Belege) · `counterpart` als EIN Zustands-Ort · server-autoritativer `toggle_counterpart` |
+| 02 | 1 | Live-Prompt-Rolle aus `counterpart` · Phasenmodell aus `(call_type, counterpart)` · Browser wird reine Anzeige |
+| 03 | 2 | Wortschatz-Sperre · Ein-Schreiber-Sperre (AST) · CHECK-Deklaration 7→9 · DIALOG |
+
+**Abnahme ist die WELLE, nicht der einzelne Plan.** Nach Plan 01 allein ist die Event-Naht bewusst
+offen (Server hört auf den neuen Namen, Browser sendet noch den alten) — das steht in beiden
+Objectives und ist unkritisch, weil zwischen den Plänen nichts deployt wird.
+
+**Der Checker hat gegen den ECHTEN Code geprüft, nicht nur gegen die Pläne:** alle **28 realen
+Treffer** von `current_mode|contact_category|contactCategory` in `services/`, `static/`, `routes/`
+sind einzeln einem Task zugeordnet — kein verwaister Leser. Jede zitierte Zeile stichprobenweise
+gegen HEAD gehalten.
+
+---
+
+#### ZWEI FUNDE ÜBER DEINEN AUFTRAG HINAUS — beide im Scope
+
+**(a) `services/prompt_pipeline.py:659` — der folgenreichste versteckte Leser.**
+```python
+_cat = _sub.get('contact_category') or 'gatekeeper'
+role = 'meeting' if mode == 'meeting' else ('gatekeeper' if _cat == 'gatekeeper' else 'interessent')
+```
+Das leitet die **Rolle im Live-Prompt** ab. Der Default ist ein **stiller** `'gatekeeper'`-Fallback —
+kein Crash, keine Log-Zeile. Ohne Mitziehen läuft der Prompt nach dem Umbau **dauerhaft mit der
+falschen Rollenbezeichnung, ohne dass irgendetwas rot wird.** Stand nicht in der Wurzelanalyse.
+Ist jetzt Plan 02 Task 1 mit vier eigenen Verhaltens-Tests.
+
+**(b) Es sind DREI Vokabulare, nicht zwei.**
+`contact_category` : `gatekeeper|`**`target`** · `current_mode` : `gatekeeper|`**`cold_call`** ·
+neu `counterpart` : `gatekeeper|`**`decision_maker`**.
+Das Prompt-Rollen-Wort **`interessent` bleibt bewusst** — es ist Prompt-Inhalt, nicht Zustand.
+Wer das mit umbenennt, ändert die Antwort.
+
+---
+
+#### 🔵 EINE ENTSCHEIDUNG FÜR DICH: Cross-AI ja oder nein?
+
+Der Cross-AI-Trigger aus CLAUDE.md schlägt an (**Frontend + Backend gleichzeitig, >5 Dateien**),
+aber die Phase ist 🟡 mittel — bei 🟡 ist Cross-AI **kein Muss**. Beide Wege sind vertretbar:
+
+- **Ohne Cross-AI:** direkt `/gsd-execute-phase 08.23.2.COUNTERPART`. Vertretbar, weil die
+  Wurzelanalyse bereits von Fable am Code kam (= die dritte Sicht hat schon stattgefunden) und der
+  plan-checker gegen den echten Code geprüft hat, nicht nur gegen die Pläne.
+- **Mit Cross-AI:** `/gsd-review --phase 08.23.2.COUNTERPART`, dann `--reviews`. Kostet eine Runde.
+
+**Meine Empfehlung: ohne.** Fable hat die Wurzel am Code gefunden, der Checker hat 28/28 Treffer
+verifiziert, und der teuerste Fehler dieser Phase (der stille `prompt_pipeline`-Leser) ist bereits
+gefunden und abgedeckt. Eine vierte Sicht würde hier vermutlich nur bestätigen. **Deine Entscheidung.**
+
+---
+
+#### Was ich am Plan noch selbst korrigiert habe
+Plan 02 Task 2 enthielt ein Code-Beispiel mit `classify_phase_model(...)`, das sich zwei Zeilen
+später selbst widersprach („der Funktionsname ist `select_phase_model`"). Ein Executor kopiert so
+etwas verbatim. Beispiel auf `select_phase_model` gezogen + Hinweis, dass `classify_phase_model`
+nicht existiert.
+
+**Warning 2 des Checkers habe ich bewusst NICHT gefixt:** Plan 01 und 02 sind beide `wave: 1` mit
+`depends_on: []`, obwohl sie über die Socket-Naht gekoppelt sind. Der Checker hat verifiziert, dass
+der Endzustand **unabhängig von der Reihenfolge** korrekt ist, die `files_modified` überschneidungsfrei
+sind und zwischen den Plänen nichts deployt wird. Ein künstliches `depends_on` würde nur die
+Wellen-Semantik verbiegen, ohne ein Risiko zu beseitigen.
+
+#### Offene Annahme mit der größten Reichweite (steht auch in Plan 01)
+`call_type` bleibt intern unter dem Schlüssel `_session_state[sid]['mode']`. Der neue Begriff kommt
+über den Lese-Helfer `live_session.get_call_type(sid)` statt über eine breite Schlüssel-Umbenennung —
+weil CONTEXT `mode` nicht unter „was ersetzt wird" führt und `MODE_REGISTRY`/`mode_strategy` darauf
+sitzen. Heisst: **Achse B wird vollständig umbenannt, Achse A behält intern ihr altes Wort.**
+Das hält den Diff klein, ist aber nicht ganz „je EIN Ort, EIN Wort". Wenn du die volle Umbenennung
+willst, sag es vor dem Execute — danach wird es teurer.
+
+**NÄCHSTER SCHRITT:** deine Cross-AI-Entscheidung, dann `/gsd-execute-phase 08.23.2.COUNTERPART`.
+Kein Auto-Advance. Deploy + Test-Anruf fährst du/Claudian.
