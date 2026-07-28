@@ -2244,6 +2244,13 @@
     // Klicks werden über Event-Delegation im pip-Document gefangen (_wirePipButtons).
   }
 
+  function _clearSlot1Fallback() {
+    if (state.slot1FallbackTimer) {
+      clearTimeout(state.slot1FallbackTimer);
+      state.slot1FallbackTimer = null;
+    }
+  }
+
   function _triggerEwb(typ, btn) {
     // 06.1-r2 r3: Manual-EWB = deterministisch aus profile.einwaende rendern.
     // Keine Claude-Call-Latenz, keine leeren Slots wenn Claude einwand=False meldet.
@@ -2272,8 +2279,21 @@
     // 06.1-r2 r4: Slot 1 bekommt gleich Placeholder bis Haiku-Variante streamt.
     var slot1Body = pipEl('pip-slot-body-1');
     if (slot1Body) {
+      slot1Body.classList.remove('pip-hinweis');
       slot1Body.textContent = 'Variante wird gebaut\u2026';
       slot1Body.classList.add('pip-streaming');
+      // Sicherungs-Timer: ohne Server-Ereignis bliebe der Platzhalter ewig stehen
+      // (Test-Anruf 27.07.). Nach 10s ruhiger Hinweis statt Dauer-Haenger.
+      _clearSlot1Fallback();
+      state.slot1FallbackTimer = setTimeout(function () {
+        state.slot1FallbackTimer = null;
+        var b = pipEl('pip-slot-body-1');
+        if (!b) return;
+        if (state.pipSlots[1] && state.pipSlots[1].streaming) return; // Stream laeuft doch
+        b.classList.remove('pip-streaming');
+        b.classList.add('pip-hinweis');
+        b.textContent = 'Keine KI-Variante erhalten \u2014 es gilt die Antwort oben.';
+      }, 10000);
     }
     // Klick + Variante-Request ans Backend. Backend loggt Klick (ewb_clicks für
     // postcall-Analytics) UND streamt kontextbezogene Haiku-Variante in Slot 1.
@@ -2312,6 +2332,7 @@
       // ein evtl. durchgerutschter/Reconnect-Replay-Emit den Pin nie ueberschreibt. slot 0
       // (Profil-Antwort A) bleibt unveraendert.
       if (slot === 1 && (!d.source || d.source !== 'manual_button')) return;
+      if (slot === 1) _clearSlot1Fallback();
       // 06.2: Latenz-Log für Slot 1 (erstes Token nach keyword_einwand_match)
       if (slot === 1 && state.slot0LastKeywordAt) {
         var slot1Delta = Date.now() - state.slot0LastKeywordAt;
@@ -2321,6 +2342,7 @@
       var container = pipEl('pip-slot-' + slot);
       if (body) {
         body.textContent = '';
+        body.classList.remove('pip-hinweis');
         body.classList.add('pip-streaming');
       }
       if (container) container.classList.add('pip-slot-streaming');
@@ -2376,6 +2398,7 @@
       // Betrifft NUR slot-1-done-Events; der slot-0-Analyse-done (mit result.phase/result.kb,
       // der unten _showProactiveContent fuettert) hat slot===0 und passiert dieses Gate.
       if (slot === 1 && (!d.source || d.source !== 'manual_button')) return;
+      if (slot === 1) _clearSlot1Fallback();
       state.pipSlots[slot].streaming = false;
       state.pipSlots[slot].result = d.result || {};
       var body = pipEl('pip-slot-body-' + slot);
@@ -2426,6 +2449,7 @@
     state.socket.on('pip_stream_error', function (d) {
       if (!d) return;
       var slot = d.slot || 0;
+      if (slot === 1) _clearSlot1Fallback();
       state.pipSlots[slot].streaming = false;
       var body = pipEl('pip-slot-body-' + slot);
       var container = pipEl('pip-slot-' + slot);

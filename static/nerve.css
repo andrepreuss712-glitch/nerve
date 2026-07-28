@@ -3696,3 +3696,8 @@ input[type="range"].perf-slider::-moz-range-thumb {
 }
 #transcript-search-input:focus { border-color: var(--input-border-focus); box-shadow: var(--input-focus-glow); }
 .transcript-search-counter { font-size: 12px; color: var(--page-text-muted); min-width: 56px; text-align: center; }
+
+/* Slot-1-Sicherungs-Hinweis (SOFORT-PAKET 27.07.): ruhiger, zurueckgenommener Ton.
+   Doppel-Klasse, damit sie die base.html-Regel `.pip-slot-body{color:#1a1a1a}`
+   bei gleicher Reihenfolge sicher schlaegt (Spezifitaet 0,2,0 > 0,1,0). */
+.pip-slot-body.pip-hinweis { color: var(--page-text-muted); font-style: italic; }

@@ -1065,6 +1065,8 @@ def register_audio_handlers(sio):
         def _run():
             try:
                 result = streame_manual_ewb_variante(typ, profile_einwand or {}, kontext, _sid, slot=1)
+                if isinstance(result, dict) and result.get('error'):
+                    print(f"[PiP] Variante-Fehler (sid={_sid}, typ={typ!r}): {result['error']}")
                 _antwort = (result.get('gegenargument_1') or '').strip() or None
                 # Phase 08.23.2.B: OUTPUT-PFAD Anonymisierung (D-01, Req-9)
                 # anonymize_output() nutzt Cache-Reverse-Lookup (bekannte Namen aus Briefing echoen)

@@ -971,6 +971,15 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                                      primary_intent=typ, confidence=1.0)
     except Exception as _bpc_e:
         print(f"[EWB] answer_context error: {_bpc_e}")
+        # Ohne diesen Emit bleibt der Slot-1-Platzhalter im PiP ewig stehen: es gibt weder
+        # pip_stream_start noch pip_token_done noch pip_stream_error (Test-Anruf 27.07.).
+        try:
+            sio.emit('pip_stream_error',
+                     {'slot': slot,
+                      'error': 'KI-Variante konnte nicht gestartet werden — nimm die Antwort oben.'},
+                     room=sid)
+        except Exception:
+            pass
         return {'error': f'answer_context failed: {_bpc_e}', 'gegenargument_1': None}
     print(f"[PiP-Variante] ENTRY sid={sid} slot={slot} typ={typ!r}")
     # Phase 08.23.2.PIP-01 (Item a): source=manual_button kennzeichnet den EINZIGEN
