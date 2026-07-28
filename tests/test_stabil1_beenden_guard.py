@@ -303,6 +303,45 @@ def test_geposteter_call_id_umgeht_den_guard(client, throwaway):
             throwaway['conv_ids'].append(data['conv_id'])
 
 
+def test_beenden_loggt_entry_als_erste_zeile(client, throwaway, capsys):
+    """SOFORT-PAKET 27.07. FIX 2: /api/beenden gibt als ALLERERSTE Aktion eine
+    [Beenden] ENTRY-Zeile aus (user_id + Wanduhr-Zeit + remote).
+
+    Ohne sie ist "keine Log-Zeile" nicht von "Anfrage kam nie an" unterscheidbar —
+    genau das blockierte die 504-Diagnose des Test-Anrufs. Geprueft wird nicht nur
+    das Vorhandensein, sondern die ORDNUNG: die ENTRY-Zeile steht VOR der bisher
+    fruehesten Log-Zeile des Endpoints (Session-los-Guard).
+
+    Runtime-Verhaltens-Test (echter HTTP-Request -> echte Ausgabe), kein Source-Presence-Test.
+    """
+    uid = throwaway['user_id']
+    _clear_leaked_sessions_for_user(uid)
+
+    with patch('services.crm_service.generate_crm_export') as m_crm:
+        resp = client.post('/api/beenden', json={'session_mode': 'cold_call'})
+        if resp.status_code in (302, 401):
+            pytest.fail('Login-Fixture greift nicht (302/401) — Auth-Bruch MUSS ROT sein, nicht '
+                        'still uebersprungen: sonst verschwindet die gesamte Guard-Abdeckung lautlos '
+                        'in Gelb (Hollow-Green-Haertung, Fable-Ehrlichkeitspruefung 2026-07-24)')
+        assert resp.status_code == 200
+        m_crm.assert_not_called()
+
+    out = capsys.readouterr().out
+    beenden_zeilen = [z for z in out.splitlines() if '[Beenden]' in z]
+    assert beenden_zeilen, '[Beenden]-Zeilen fehlen komplett in der Ausgabe'
+
+    entry_idx = next((i for i, z in enumerate(beenden_zeilen) if '[Beenden] ENTRY' in z), None)
+    assert entry_idx is not None, f'Keine [Beenden] ENTRY-Zeile gefunden. Zeilen: {beenden_zeilen}'
+    assert f'user_id={uid}' in beenden_zeilen[entry_idx], \
+        f'ENTRY-Zeile ohne user_id={uid}: {beenden_zeilen[entry_idx]}'
+
+    guard_idx = next((i for i, z in enumerate(beenden_zeilen) if 'Kein Session-State' in z), None)
+    assert guard_idx is not None, \
+        f'Guard-Zeile fehlt — Test prueft den falschen Pfad. Zeilen: {beenden_zeilen}'
+    assert entry_idx < guard_idx, \
+        'ENTRY-Zeile muss VOR der Guard-Zeile stehen (sie ist die erste Aktion der Route)'
+
+
 # ── Fallback-Halbseite ─────────────────────────────────────────────────────────
 
 def test_fallback_nimmt_eindeutigen_frischen_call(client, throwaway):

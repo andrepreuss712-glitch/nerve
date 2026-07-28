@@ -97,6 +97,11 @@ def live():
 @app_routes_bp.route('/api/beenden', methods=['POST'])
 @login_required
 def api_beenden():
+    # Eingangs-Marker (Test-Anruf 27.07.): ohne ihn ist "keine Log-Zeile" nicht von
+    # "Anfrage kam nie an" unterscheidbar. sid ist hier bewusst NOCH nicht bekannt —
+    # sie wird erst unten dreistufig aufgeloest; darauf zu warten wuerde den Marker entwerten.
+    print(f"[Beenden] ENTRY user_id={getattr(getattr(g, 'user', None), 'id', None)} "
+          f"t={datetime.now().strftime('%H:%M:%S.%f')[:-3]} remote={request.remote_addr}")
     req_data = request.get_json(silent=True) or {}
     session_mode = req_data.get('session_mode', 'meeting')
     # POLISH-40: Accept string, dict-with-.text (Frontend sends whole briefing
