@@ -2567,7 +2567,24 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 **Komplexität:** 🟡 mittel (~200-300 Zeilen, 4 Dateien). **Regeln:** CLAUDE.md Punkt 14 (vor jedem Insert 30 Zeilen davor/danach, Control-Flow, Cross-File-grep, Edge-Cases + Race-Fragen) · Punkt 17 (kein Refactor nebenbei) · UI-Teil KEINE hardcoded Farben / KEINE Inline-Styles, CSS-Variablen aus `static/nerve.css` (vorher scannen) · atomare Commits · Fragen/Entscheidungen ans Ende von `.planning/DIALOG-GSD-CLAUDIAN.md` (NICHT als interaktives Menü — André am Handy) · Deploy-Gate präsentieren, **Claudian pusht + deployt**. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren. **Sync:** Vault `01 Roadmap.md` macht Claudian.
 
-**Status:** Eingefügt 2026-07-28, **noch NICHT geplant** → nächster Schritt `/gsd-plan-phase`.
+**Plans:** 3 plans / 2 Wellen. GEPLANT 2026-07-28.
+
+Plans:
+- [ ] 08.23.2.COUNTERPART-01-PLAN.md — Welle 1: Hin-und-Zurück-Wächter (erst ROT) + `counterpart` als EIN Zustands-Ort + server-autoritativer `toggle_counterpart` (ersetzt `manual_mode_toggle`)
+- [ ] 08.23.2.COUNTERPART-02-PLAN.md — Welle 1: Konsumenten nachziehen (Live-Prompt-Rolle, Phasenmodell aus `(call_type, counterpart)`) + Browser wird reine Anzeige (JS/CSS/Markup)
+- [ ] 08.23.2.COUNTERPART-03-PLAN.md — Welle 2: Wächter 2 (Wortschatz-Sperre) + Wächter 3 (Ein-Schreiber-Sperre, AST) + CHECK-Deklaration nachgezogen + DIALOG-Eintrag
+
+**Planungs-Zusatzfund (im Auftrag nicht genannt, jetzt im Scope):** `services/prompt_pipeline.py:659`
+leitet die **Rollen-Bezeichnung im Live-Prompt** aus `contact_category` ab — mit stillem
+`or 'gatekeeper'`-Fallback. Ohne Mitziehen hätte der Umbau dauerhaft die falsche Rolle in den
+Prompt geschrieben, ohne eine einzige Fehlermeldung (Plan 02 Task 1).
+
+**Zurückgestellt (bewusst, siehe DIALOG):** Event-Umbenennung `mode_initial`/`mode_switch`
+(nur Payload getrennt — Migration + 113 Prod-Altzeilen), Ausblenden des Knopfs im Meeting-Modus,
+modus-blindes `current_phase_name`.
+
+**Status:** GEPLANT 2026-07-28 → nächster Schritt `/gsd-execute-phase 08.23.2.COUNTERPART`
+(🟡 mittel; Cross-AI optional — Trigger-Check: 4 Files Backend + FE+BE gleichzeitig → André entscheidet).
 
 ---
 
