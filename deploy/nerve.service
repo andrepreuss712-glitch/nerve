@@ -17,6 +17,9 @@ WorkingDirectory=/opt/nerve/app
 # Environment — secrets live in /etc/nerve/.env (not in repo)
 # Phase 08: Optional PROMPT_EWB_VERSION_OVERRIDE fuer A/B-Override (siehe .env.example)
 # Leer = A/B-Routing aktiv; gesetzt = forciert alle User auf angegebene Variante.
+# Zeilenweises Log-Flushing: ohne das puffert Python unter systemd blockweise (~8KB) und die
+# journal-Zeitstempel eines ganzen Anrufs klumpen Minuten spaeter zusammen (Test-Anruf 27.07.).
+Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=/etc/nerve/.env
 
 # gunicorn with gthread worker class (required for Flask-SocketIO threading mode)
