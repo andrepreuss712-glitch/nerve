@@ -99,6 +99,19 @@ elif [[ "$TARGET" == "production" ]]; then
   ssh -i "$SSH_KEY" "$VPS_HOST" "sudo cp /tmp/nerve.service /etc/systemd/system/nerve.service && sudo systemctl daemon-reload"
 fi
 
+# WAECHTER-SPIEGEL (2026-07-28): tests/test_service_unit_unbuffered.py loest die
+# Unit-Pfade relativ zum Repo-Root auf -- auf dem Server also $APP_DIR/deploy/.
+# Dieser Ordner ist vom tar ausgeschlossen (TAR_EXCLUDES: './deploy'), stand deshalb
+# noch auf dem Stand vom April und liess den Waechter ROT laufen, obwohl die oben
+# INSTALLIERTE Unit die Zeile bereits hatte -- ein False-Red, das jeden Deploy
+# blockiert haette. Beide Units werden hier gespiegelt, damit der Waechter genau die
+# Fassung prueft, die gerade installiert wurde. Nur die .service-Dateien; deploy.sh
+# selbst bleibt bewusst ausgeschlossen (der Server soll sein Deploy-Skript nicht
+# waehrend eines Deploys unter sich austauschen).
+echo "[deploy] Spiegele Unit-Dateien nach $APP_DIR/deploy/ (fuer Unit-Waechter)..."
+ssh -i "$SSH_KEY" "$VPS_HOST" "mkdir -p '$APP_DIR/deploy'"
+scp -i "$SSH_KEY" deploy/nerve.service deploy/nerve-staging.service "$VPS_HOST":"$APP_DIR/deploy/"
+
 echo "[deploy] Uploading nginx config for $TARGET..."
 if [[ "$TARGET" == "staging" ]]; then
   scp -i "$SSH_KEY" deploy/nginx-staging.conf "$VPS_HOST":/tmp/nginx-staging.conf
