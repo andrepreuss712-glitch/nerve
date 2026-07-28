@@ -1119,3 +1119,65 @@ erst die echten Tracebacks (statt erschlossen) führten zur Wurzel.
 **Nächster Schritt:** Claudian markiert die Phase complete (ROADMAP+STATE). H1 rückt wieder nach vorn;
 der offene Test-Anruf (H1-Kalibrierung war synthetisch bewiesen; KOSTEN-1-nova-3 + TEMPO-1-Cache-Zeile
 via echtem Hook) steht weiter aus. STABIL-1 hat den Anruf-Pfad erst wieder benutzbar gemacht.
+
+### GSD → CLAUDIAN/ANDRÉ — 2026-07-28 (SOFORT-PAKET nach Test-Anruf 27.07. — 5 Fixes gebaut, NICHT gepusht)
+
+**Quick-Task `260728-9gc`. Fünf atomare Commits auf `main`, lokal. Kein Push, kein Deploy — Claudian fährt das Tor.**
+
+| # | Commit | Fix |
+|---|---|---|
+| 1 | `185f576` | `PYTHONUNBUFFERED=1` in beiden systemd-Units — Log-Zeitstempel |
+| 2 | `56aba39` | `[Beenden] ENTRY`-Zeile als allererste Aktion in `api_beenden` |
+| 3 | `f2830d1` | Deepgram-Keepalive (Client-Option) — **die Hauptursache des 1011** |
+| 4 | `3b1001c` | Stille Fehl-Sendung sichtbar (`send`-Rückgabewert auswerten) |
+| 5 | `6742030` | Slot-1-Dauerhänger: 10s-Rückfall im Browser + `pip_stream_error` im Server-Fehlerpfad |
+
+**Test-Stand:** `pytest -m "not live and not perf"` → 6 failed / 772 passed / 240 skipped.
+Gegenprobe am Basis-Commit `f71e63f` im Scratch-Checkout: **dieselben 6 failed** (lokale SQLite-/GLiNER-
+Umgebungssachen, vorbestehend) → **keine Regression**, +11 neue grüne Wächter.
+Rot-Gegenprobe gemacht für FIX 1, 3 und 5: Fix rausgenommen → Wächter FAILED → wieder rein → passed.
+Kein Schein-Grün.
+
+---
+
+#### DREI ENTSCHEIDUNGEN / FUNDE, DIE ANDRÉ SEHEN MUSS
+
+**1. `requirements.txt` pinnt `deepgram-sdk>=3.7.0` — nach oben offen. Das ist eine Zeitbombe für FIX 3.**
+Prod läuft auf 3.10.0. Die Keepalive-**Client-Option** gibt es nur in 3.x/4.x. In **v5.0.0 wurde sie
+ersatzlos entfernt** und durch manuelle Control-Messages ersetzt (`connection.send_control(...)`).
+Heisst: ein `pip install -U` auf Prod zieht irgendwann v5, die Option wird still ignoriert, und
+**FIX 3 ist wieder weg — ohne Fehler, ohne Log-Zeile.** Genau die Sorte stiller Rückfall, die dieses
+Paket eigentlich abstellen soll.
+→ *Vorschlag (NICHT gebaut, weil Punkt 17 — kein Refactor nebenbei):* Pin auf `deepgram-sdk>=3.7.0,<5`
+ziehen. Ein Einzeiler, eigener Commit, eigene Entscheidung. **André entscheidet, ich habe es gelassen.**
+
+**2. Die Browser-Hälfte von FIX 5 hat KEINEN automatischen Wächter — bewusst.**
+Im Repo gibt es keine JS-Test-Infrastruktur (kein package.json/jest/vitest). Der einzige „Test", der
+ohne sie möglich wäre, ist `assert 'setTimeout' in open('pip-launcher.js').read()` — ein
+**Source-Presence-False-Green**, den CLAUDE.md ausdrücklich als zu löschen einstuft (dieselbe Lehre wie
+bei den per-SID-TAXO-Tests). Ein Test, der grün ist, egal ob der Timer wirklich feuert, ist schlechter
+als kein Test, weil er Sicherheit vortäuscht.
+→ Der Wächter sitzt deshalb auf der **Server-Hälfte** (echter Emit-Test, rot-gegengeprobt).
+→ **Konsequenz: der 10s-Rückfall im Browser ist nur im Live-Anruf beweisbar.** Er gehört auf die
+Post-Deploy-Checkliste, er ist NICHT durch das Tor abgedeckt. Nicht vergessen.
+
+**3. FIX 2 loggt `user_id` + Zeit + Remote — NICHT die `sid`. Abweichung vom Auftrag, mit Absicht.**
+Der Auftrag sagte „Log-Zeile mit sid/user_id/Zeitpunkt". Die `sid` ist an der Eingangsstelle noch nicht
+bekannt: sie wird erst ab `app_routes.py:146-172` dreistufig aufgelöst — und diese Auflösung **nimmt
+`ls._session_state_lock`**. Eine Eingangs-Zeile, die auf die sid wartet, hätte also eine Lock-Übernahme
+in genau die Zeile gebaut, die beweisen soll, dass die Anfrage überhaupt angekommen ist — sie hätte am
+504 mit-hängen können. Die sid-Zuordnung liefert die nächste bereits bestehende Log-Zeile.
+→ Falls du die sid trotzdem in der ERSTEN Zeile willst: ginge über die geposteten `call_id` aus dem
+Request-Body, kostet aber den `get_json()`-Parse davor. Sag Bescheid, dann ziehe ich nach.
+
+---
+
+**Nebenfund (nur zur Kenntnis, nichts gebaut):** `tests/test_ft_seed.py` bricht schon beim Einsammeln
+mit `sqlite3.OperationalError: unknown database crm` ab und verhindert lokal den Suite-Start komplett
+(deshalb lief die Gegenprobe mit `--ignore`). Auf dem PG-Tor ist das kein Thema. Vorbestehend, nicht
+von diesem Paket verursacht.
+
+**NÄCHSTER SCHRITT:** Claudian pusht + fährt `deploy.sh production` (Punkt: deploy.sh kopiert beide
+`.service`-Dateien + `daemon-reload`, FIX 1 greift dadurch automatisch — aber **erst nach dem
+Service-Restart** sind die Zeitstempel geradegezogen). Danach Test-Anruf, Checkliste steht in
+`260728-9gc-SUMMARY.md`.
