@@ -3,7 +3,14 @@ flask-socketio>=5.3.6
 flask-wtf>=1.2.0
 flask-limiter>=3.5.0
 anthropic>=0.40.0
-deepgram-sdk>=3.7.0
+# Obergrenze <5 (2026-07-28): die Keepalive-CLIENT-OPTION (FIX 3, verhindert den
+# 1011-Abbruch bei kurzem Ton-Stau) existiert nur in 3.x/4.x. In v5.0.0 wurde sie
+# ersatzlos entfernt und durch manuelle Control-Messages ersetzt -> ein pip-Upgrade
+# auf v5+ wuerde den Fix STILL abschalten (kein Fehler, keine Log-Zeile).
+# Prod laeuft 3.10.0. Neueste veroeffentlichte Version ist 7.6.0 -> ein bewusster
+# Sprung 3.x -> 7.x ist eine eigene Phase (Keepalive muss dabei auf send_control
+# umgebaut werden); diese Grenze dann mit anheben, nicht einfach loeschen.
+deepgram-sdk>=3.7.0,<5
 python-dotenv>=1.0.0
 sqlalchemy>=2.0.0
 alembic>=1.13.0
