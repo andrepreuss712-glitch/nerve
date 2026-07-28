@@ -20,6 +20,31 @@ _deepgram_sessions = {}        # {sid: connection}
 _cost_opened_at = {}           # {sid: float} — Phase 04.7.2 STT-minute tracking (kept for clean dict)
 _stt_seconds_accumulated = {}  # {sid: float} — H-9: echte STT-Sekunden, nicht Socket-Lifetime
 _sessions_lock = threading.Lock()
+_send_fail_counts = {}         # {sid: int} — Fehl-Sendungen pro Session (per-sid gekeyt, Punkt 28)
+
+
+def _send_audio_chunk(sid, connection, data, chunk_no=None):
+    """Sendet einen Ton-Brocken und macht ein STILLES Scheitern sichtbar.
+
+    Das SDK wirft bei toter Verbindung nicht, es gibt False zurueck
+    (abstract_sync_websocket.py:387-447) — ohne Auswertung verschwinden Brocken lautlos.
+    NUR Logging, KEIN Wiederaufbau (bewusst spaetere Phase).
+    Rueckgabe: True wenn gesendet, sonst False.
+    """
+    try:
+        ok = connection.send(data)
+    except Exception as e:
+        print(f"[DG] Send error (sid={sid}): {e}")
+        return False
+    if ok is False:
+        n = _send_fail_counts.get(sid, 0) + 1
+        _send_fail_counts[sid] = n
+        # Log-Flut vermeiden: erste Fehl-Sendung pro sid, danach jede 100.
+        if n == 1 or n % 100 == 0:
+            print(f"[DG] Send fehlgeschlagen — Verbindung tot? "
+                  f"(sid={sid}, chunk=#{chunk_no}, fehl_sendungen={n})")
+        return False
+    return True
 
 
 def _rolling_10s_score(buffer, now_ms):
@@ -496,6 +521,7 @@ def _close_deepgram_connection(sid):
         connection = _deepgram_sessions.pop(sid, None)
         # _session_modes.pop(sid, None)  ENTFERNT (TAXO1-07): per-SID mode raeumt pop_session_state.
         _cost_opened_at.pop(sid, None)           # Dict sauber halten (H-9: nicht mehr als Basis)
+        _send_fail_counts.pop(sid, None)
         stt_sek = _stt_seconds_accumulated.pop(sid, 0.0)  # H-9: echte STT-Sekunden
     # ── H-9 Cost-Hook: echte STT-Sekunden statt Socket-Lifetime ────────
     try:
@@ -841,10 +867,7 @@ def register_audio_handlers(sio):
         with _sessions_lock:
             connection = _deepgram_sessions.get(_sid)
         if connection:
-            try:
-                connection.send(data)
-            except Exception as e:
-                print(f"[DG] Send error (sid={_sid}): {e}")
+            _send_audio_chunk(_sid, connection, data, chunk_no=cnt)
 
     @sio.on('disconnect')
     def handle_disconnect(sid=None):
