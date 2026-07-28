@@ -430,7 +430,15 @@ def _open_deepgram_connection(sid, mode='cold_call', keyterms=None):
     # Standardmäßig `api.eu.deepgram.com` (siehe config.py Default).
     client = DeepgramClient(
         DEEPGRAM_API_KEY,
-        config=DeepgramClientOptions(url=f"https://{DEEPGRAM_HOST}"),
+        config=DeepgramClientOptions(
+            url=f"https://{DEEPGRAM_HOST}",
+            # Keepalive (SDK 3.10.0 = Prod-Stand): das SDK startet daraufhin in
+            # connection.start() selbst einen Hintergrund-Thread, der periodisch KeepAlive
+            # schickt. Ohne das schliesst Deepgram nach ~10s ohne eintreffende Audio-Daten
+            # mit 1011 "did not receive audio data" — ein kurzer Ton-Stau genuegt
+            # (Test-Anruf 27.07., 17:03:42).
+            options={"keepalive": "true"},
+        ),
     )
     connection = client.listen.websocket.v("1")
     connection.on(LiveTranscriptionEvents.Transcript, _make_on_message(sid, mode))
