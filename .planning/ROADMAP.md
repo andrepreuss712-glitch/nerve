@@ -2842,6 +2842,35 @@ Plans:
 
 ---
 
+### Phase 999.10: ACHSE-A-UMBENENNUNG — `_session_state[sid]['mode']` → `call_type` durchziehen (BACKLOG, NEU 2026-07-28, aus COUNTERPART Cross-AI-Review)
+
+**Herkunft:** Cross-AI-Review (Fable) zu Phase 08.23.2.COUNTERPART, André-Entscheidung 2026-07-28.
+Der ursprüngliche COUNTERPART-Plan wollte einen Lese-Helfer `get_call_type(sid)` einführen. Fable hat
+gezählt: **9 bestehende Direktleser** von `_session_state[sid]['mode']` (`deepgram_service.py:538,960` ·
+`claude_service.py:912,1201,1413,1489,1808` · `einwand_keyword_matcher.py:280` · `prompt_pipeline.py:657`),
+der Plan zog **keinen** davon auf den Helfer und fügte **zwei neue Direktleser** hinzu. Ein Helfer mit
+1 Aufrufer neben 11 Direktlesern ist genau das „der-Name-lügt"-Muster, das COUNTERPART abreisst — nur
+eine Ebene höher. → **Helfer in COUNTERPART ersatzlos gestrichen**, Achse A bleibt dort unangetastet
+(nur Kommentar-Vertrag am Schlüssel).
+
+**Goal:** Achse A (Anruf-Art) heisst überall `call_type` statt `mode` — ein Wort, ein Ort, keine
+Rest-Zweideutigkeit.
+
+**Warum BACKLOG und nicht sofort (CLAUDE.md Leitsatz 2, einfachster tragfähiger Weg):** Die
+Bedeutungs-Kollision entsteht dadurch, dass ZWEI Dinge `cold_call` heissen. Sie ist **weg, sobald
+Achse B `decision_maker` heisst** — das erledigt COUNTERPART. Achse A zusätzlich umzubenennen ist
+Fleissarbeit ohne funktionalen Nutzen und würde den COUNTERPART-Diff verdoppeln. Sauber, aber später.
+
+**Scope, wenn es drankommt:** die 11 Direktleser + `MODE_REGISTRY`/`services/mode_strategy.py`
+(sitzen auf dem Schlüssel) + `call_events`-Payload-Feld + Tests. Reines Umbenennen, kein
+Verhaltenswechsel — Wächter: `grep -rn "\['mode'\]" services/ routes/` == 0.
+
+**Voraussetzung:** 08.23.2.COUNTERPART muss live und stabil sein. Vorher nicht anfassen.
+
+**Komplexität:** 🟡 mittel (breit, aber mechanisch). Kein Launch-Blocker.
+
+---
+
 ### Phase 999.9: APIRATE-HISTORY-UNIQUE — Preis-Historie trägt nur EINE Korrektur pro Tripel (BACKLOG, NEU 2026-07-20, aus KOSTEN-1 Plan 01 Fund F-3)
 
 **Goal:** `uix_api_rate_active` ist `UNIQUE(provider, model, unit_type, active)`. Damit ist pro Tripel genau **eine inaktive** Zeile möglich — das hauseigene Preis-Wechsel-Muster („alte deaktivieren + neue einfügen", `routes/admin_dashboard.py:411-438` und ab KOSTEN-1 auch `app.py _seed_api_rates`) trägt also **genau eine** Preis-Korrektur pro Tripel. Die zweite kollidiert am Constraint. Heute unkritisch (vor KOSTEN-1: 0 inaktive Zeilen; nach KOSTEN-1: genau 1 pro korrigiertem Tripel — das Kontingent ist damit **aufgebraucht**). Die **nächste** Preisänderung derselben Position läuft in den IntegrityError; der Seed fängt ihn ab und meldet ihn, der Preis bleibt aber still der alte.
