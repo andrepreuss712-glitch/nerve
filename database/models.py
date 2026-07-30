@@ -782,7 +782,18 @@ class CallEvent(Base):
     payload = Column(JSON_TYPE, nullable=False, comment='JSON: event-spezifische Nutzdaten (GIN-indiziert)')
     created_at = Column(DateTime, default=utcnow)
     __table_args__ = (
-        CheckConstraint("event_type IN ('transcript_chunk', 'suggestion_shown', 'reaction', 'phase_change', 'audio_health', 'objection_detected', 'consent_optin')", name='ck_call_events_event_type'),
+        # Phase 08.23.2.COUNTERPART: Werte-Liste gleichgezogen mit Migration 0035
+        # (counterpart_initial/counterpart_switch; die alten mode_*-Namen sind raus,
+        # inkl. der 113 Bestandszeilen). Nebenbei repariert: die Deklaration hinkte
+        # seit Migration 0004 hinterher (7 statt 9 Werte) — der R3-Waechter
+        # tests/test_call_events_check_constraint_parity.py faengt so eine Drift ab jetzt.
+        # Reine Deklaration: wirkt auf create_all (SQLite-Testpfade) + die Metadata,
+        # NICHT auf Postgres — dort regiert die Migration.
+        CheckConstraint(
+            "event_type IN ('transcript_chunk', 'suggestion_shown', 'reaction', "
+            "'phase_change', 'audio_health', 'objection_detected', 'consent_optin', "
+            "'counterpart_switch', 'counterpart_initial')",
+            name='ck_call_events_event_type'),
         Index('idx_call_events_call_time', 'call_id', 'event_ts_ms'),
         Index('idx_call_events_type', 'call_id', 'event_type'),
         Index('idx_call_events_payload_gin', 'payload', postgresql_using='gin'),

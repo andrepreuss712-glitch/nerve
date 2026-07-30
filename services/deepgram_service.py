@@ -789,7 +789,7 @@ def register_audio_handlers(sio):
                     ls._load_profile_cache(sid=_sid, user_id=user_id, profile_id=_profile_id2)
                 except Exception as _cache_e:
                     print(f"[DG] _load_profile_cache failed (non-fatal): {_cache_e}")
-            # Phase 08.23.2.C.R.F: Call-Record anlegen fuer mode_switch/mode_initial Events (REQ-6)
+            # Phase 08.23.2.C.R.F: Call-Record anlegen fuer counterpart_switch/counterpart_initial Events (REQ-6)
             # Punkt 14 Control-Flow-Audit: user_id ist gesetzt (handle_connect() rejectet unauthenticated)
             # sio ist per Closure aus register_audio_handlers(sio) verfuegbar
             # call_mode mapping: 'meeting' -> 'meeting_consented', else 'cold_call'
@@ -809,7 +809,7 @@ def register_audio_handlers(sio):
                 _cid_f = ls.create_call_for_sid(_sid, user_id=user_id, call_mode=_call_mode_f)
                 if _cid_f is None:
                     print(f'[DG] create_call_for_sid returned None for sid={_sid!r} — '
-                          f'mode_switch/mode_initial events will be skipped on this session')
+                          f'counterpart_switch/counterpart_initial events will be skipped on this session')
             else:
                 print(f'[DG] Reconnect detected for sid={_sid!r}, existing call_id={_existing_cid_f!r} '
                       f'— skipping create_call_for_sid (fast-path idempotency)')
@@ -1172,7 +1172,7 @@ def register_audio_handlers(sio):
         print(f'[COUNTERPART] toggle sid={sid} {_old_cp!r} -> {_new_cp!r} call_type={_call_type!r}')
         # D-04a: Skip-Guard — kein INSERT wenn call_id nicht gesetzt (kein aktiver Anruf)
         if _call_id is None:
-            print('[COUNTERPART] mode_switch: call_id not set, skip event')
+            print('[COUNTERPART] counterpart_switch: call_id not set, skip event')
         else:
             _db_ms = None
             try:
@@ -1183,12 +1183,12 @@ def register_audio_handlers(sio):
                 try:
                     _db_ms.add(_CE_ms(
                         call_id=_call_id,
-                        event_type='mode_switch',
+                        event_type='counterpart_switch',
                         event_ts_ms=int(_t_ms.time() * 1000),
                         payload={
-                            # Zwei getrennte Achsen, getrennte Felder. Der Event-NAME bleibt
-                            # 'mode_switch' (CHECK-Constraint + Prod-Altzeilen) — die
-                            # Umbenennung ist bewusst ein eigener, spaeterer Schritt.
+                            # Phase 08.23.2.COUNTERPART: Event-Name UND Payload tragen jetzt
+                            # dieselben zwei Achsen-Woerter. 'counterpart_switch' ersetzt
+                            # 'mode_switch' (Migration 0035, inkl. der Bestandszeilen).
                             'call_type': _call_type,
                             'old_counterpart': _old_cp,
                             'new_counterpart': _new_cp,
@@ -1196,13 +1196,13 @@ def register_audio_handlers(sio):
                         },
                     ))
                     _db_ms.commit()
-                    print(f'[COUNTERPART] mode_switch event written: {_old_cp!r} → {_new_cp!r}')
+                    print(f'[COUNTERPART] counterpart_switch event written: {_old_cp!r} → {_new_cp!r}')
                 finally:
                     _db_ms.close()
             except Exception as _ms_err:
                 if _db_ms is not None:
                     _db_ms.rollback()
-                print(f'[COUNTERPART] mode_switch persist Fehler (non-fatal): '
+                print(f'[COUNTERPART] counterpart_switch persist Fehler (non-fatal): '
                       f'{type(_ms_err).__name__}: {_ms_err}')
         sio.emit('counterpart_changed',
                  {'counterpart': _new_cp, 'call_type': _call_type, 'source': 'manual'}, room=sid)

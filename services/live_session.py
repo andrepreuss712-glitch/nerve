@@ -701,7 +701,7 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
     # Phase 08.23.2.C.R.F Fix — Atomare Idempotenz (Cross-AI Review: TOCTOU bei Reconnect).
     # Check + Sentinel-Write muessen unter DEMSELBEN Lock-Eintritt passieren.
     # Zwei parallele handle_start_live_session-Aufrufe koennen sonst beide None lesen
-    # und beide einen Call-Record in DB schreiben (Doppel-Records + Doppel-mode_initial).
+    # und beide einen Call-Record in DB schreiben (Doppel-Records + Doppel-counterpart_initial).
     with _session_state_lock:
         _existing_cid_atomic = _session_state.get(sid, {}).get('state', {}).get('call_id')
         if _existing_cid_atomic is not None and _existing_cid_atomic != '__call_pending__':
@@ -745,7 +745,7 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
             if sid in _session_state:
                 _session_state[sid].setdefault('state', {})['call_id'] = cid
         print(f'[live_session] create_call_for_sid: call_id={cid!r} sid={sid!r}')
-        # D-04b: mode_initial-Event — liest call_type + counterpart aus State (nach call_id-Write)
+        # D-04b: counterpart_initial-Event — liest call_type + counterpart aus State (nach call_id-Write)
         with _session_state_lock:
             _mi_sd = _session_state.get(sid) or {}
             _mode_init_state = _mi_sd.get('state') or {}
@@ -760,12 +760,12 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
             try:
                 _db_mi.add(_CE_mi(
                     call_id=cid,
-                    event_type='mode_initial',
+                    event_type='counterpart_initial',
                     event_ts_ms=int(_t_mi.time() * 1000),
                     payload={
-                        # Phase 08.23.2.COUNTERPART: zwei getrennte Achsen, getrennte Felder.
-                        # Der Event-NAME bleibt 'mode_initial' (CHECK-Constraint + Prod-Altzeilen);
-                        # die Umbenennung ist bewusst ein eigener, spaeterer Schritt.
+                        # Phase 08.23.2.COUNTERPART: Event-Name UND Payload tragen jetzt
+                        # dieselben zwei Achsen-Woerter. 'counterpart_initial' ersetzt
+                        # 'mode_initial' (Migration 0035, inkl. der Bestandszeilen).
                         'call_type': _call_type_init,
                         'counterpart': _counterpart_init,
                         'sid': sid,
@@ -773,12 +773,12 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
                     },
                 ))
                 _db_mi.commit()
-                print(f'[live_session] mode_initial event written: call_id={cid!r} '
+                print(f'[live_session] counterpart_initial event written: call_id={cid!r} '
                       f'call_type={_call_type_init!r} counterpart={_counterpart_init!r}')
             finally:
                 _db_mi.close()
         except Exception as _mi_err:
-            print(f'[live_session] mode_initial persist Fehler (non-fatal): {type(_mi_err).__name__}: {_mi_err}')
+            print(f'[live_session] counterpart_initial persist Fehler (non-fatal): {type(_mi_err).__name__}: {_mi_err}')
         return cid
     except Exception as e:
         print(f'[live_session] create_call_for_sid Fehler: {type(e).__name__}: {e}')
