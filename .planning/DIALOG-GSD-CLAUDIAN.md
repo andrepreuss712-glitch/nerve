@@ -1492,3 +1492,43 @@ Falsifizierbarkeits-Rotläufe sind laut Review überdurchschnittlich sauber gear
 
 **NÄCHSTER SCHRITT:** Plan nachbessern (Punkte oben), dann `/gsd-execute-phase`. Kein Execute vor
 der Nachbesserung.
+
+## 08.23.2.COUNTERPART — was gebaut wurde und was bewusst liegen bleibt (2026-07-28, Planung nach Cross-AI)
+
+**GEBAUT (Plan 04, Welle 3): die Event-Umbenennung.** `mode_initial`/`mode_switch` heissen ab
+dieser Phase `counterpart_initial`/`counterpart_switch`. Alte Namen raus, die **113 Prod-Altzeilen**
+(72 + 41) werden per UPDATE mitgezogen, `models.py` steht auf den NEUEN Werten, Deploy-Reihenfolge
+Migration → Code. Ein Rollback ist gutartig, weil beide Event-Writer non-fatal sind
+(`live_session.py:747`, `deepgram_service.py:1194`): alter Code + neuer Constraint → der Event
+wird verworfen, der Anruf laeuft weiter. Kein Halb-Zustand, keine „alten Werte im Constraint
+belassen"-Variante.
+
+**LIEGT BEWUSST LIEGEN — 1: Der Toggle-Knopf wird bei `call_type == 'meeting'` weiterhin NICHT
+ausgeblendet.** Der CSS-Selektor `[data-mode="meeting"]`, der das tun sollte, war seit seiner
+Entstehung tot (kein Schreiber setzte je den Wert `meeting`). Er wurde beim Attribut-Umbau entfernt,
+statt einen neuen Signalweg zu bauen — dafuer gibt es keine Entscheidung und es waere Refactor
+nebenbei. **Frage an André: soll der Gespraechspartner-Knopf im Meeting verschwinden?** Wenn ja:
+kleiner eigener Schritt (der Server schickt `call_type` bereits im `counterpart_changed`-Echo mit,
+der Browser muesste ihn nur auswerten).
+
+**LIEGT BEWUSST LIEGEN — 2: `current_phase_name` bleibt modus-blind.** `claude_service.py` schreibt
+den Phasen-Namen immer aus der Cold-Call-Labelliste (`_PHASE_NAMES`), unabhaengig vom gewaehlten
+Phasenmodell. Das Phasenmodell selbst waehlt jetzt korrekt nach `(call_type, counterpart)` — nur
+dieses eine Anzeige-Label hinkt nach. Eigener Befund aus der Kartierung.
+
+**LIEGT BEWUSST LIEGEN — 3: zwei Alt-Reste, nur dokumentiert, nicht angefasst** (Punkt 17):
+- `config/phase_transitions.py:90-101` — `MODE_TRANSITION_AUTO` mischt weiter beide Achsen
+  (`gatekeeper`/`cold_call`/`meeting` in denselben Tupeln). Derzeit **toter Code**; er wird von
+  keinem Live-Pfad gelesen. Wer ihn reaktiviert, muss ihn vorher auf die zwei getrennten Achsen
+  umbauen.
+- `scripts/verify_corpus_gate.py:33` — dieselbe Achsen-Vermischung in einer Pruef-Konstante
+  (`VALID_MODES = {'cold_call', 'meeting', 'gatekeeper'}`).
+Beide liegen ausserhalb des Wortschatz-Sperre-Scopes (`services/`, `routes/`, `static/`,
+`templates/`) und bleiben in dieser Phase unberuehrt.
+
+**LIEGT BEWUSST LIEGEN — 4: die vollstaendige Umbenennung von Achse A.** Der Speicher-Schluessel
+`_session_state[sid]['mode']` behaelt seinen Namen (9 Direktleser, MODE_REGISTRY/mode_strategy
+sitzen darauf). Er hat jetzt einen Kommentar-Vertrag an der Definition. Ein Lese-Helfer
+`get_call_type()` wurde bewusst **nicht** gebaut — ein Helfer mit einem Aufrufer neben neun
+Direktlesern waere dasselbe „der-Name-luegt"-Muster eine Ebene hoeher. Die volle Umbenennung
+fuehrt André als Backlog-Eintrag.
