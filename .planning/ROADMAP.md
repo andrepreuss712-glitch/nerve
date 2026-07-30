@@ -2584,12 +2584,54 @@ Prompt geschrieben, ohne eine einzige Fehlermeldung (Plan 02 Task 1).
 (nur Payload getrennt — Migration + 113 Prod-Altzeilen), Ausblenden des Knopfs im Meeting-Modus,
 modus-blindes `current_phase_name`.
 
-**Status:** IN ARBEIT — Plan 01 ✅ 2026-07-30 (1/3 Plans). Welle 1 läuft SERIELL, nächster Schritt ist
-**Plan 02**. ⚠ Der Zwischenstand nach Plan 01 ist test-grün und live kaputt (Knopf tot, Prompt-Rolle
-still falsch) — **kein Deploy vor Abschluss von Plan 02**. Nicht gepusht, nicht deployt.
-**Offene Auflage vor Deploy:** `inspect.sh schema/constraints call_events` einmal gegen Production
-laufen lassen (im Plan-01-Lauf per Executor-Mandat nicht ausgeführt, code-seitiger Ersatzbeleg aus
-Migration 0004 im SUMMARY).
+**Status:** ✅ **LIVE** (André-Bestätigung 2026-07-30) — alle 4 Plans gebaut, Migration 0035 gefahren, deployt.
+Die zuvor hier notierte „IN ARBEIT / 1 von 3 Plans"-Zeile war ein stehengebliebener Zwischenstand aus dem
+Plan-01-Lauf und ist damit überholt.
+
+---
+
+### Phase 08.23.2.LOCK-1: Sitzungs-Riegel entklemmen (NEU 2026-07-30) 🟡 ★★ LAUNCH-BLOCKER, VORRANG (INSERTED)
+
+**Herkunft:** André-Entscheidung 2026-07-30 nach dem Test-Anruf vom 30.07. Die Wurzel ist **AM LAUFENDEN PROZESS bewiesen** (`py-spy dump`, PID 2335884), nicht erschlossen — **nicht neu diagnostizieren, planen + bauen.** Abzug liegt auf dem Server: `root@178.104.82.166:/root/dump_2026-07-30_lock-deadlock.txt`.
+
+**Warum VOR H1:** Solange das offen ist, ist **jeder Test-Anruf ein Glücksspiel** — der Fehler kann jederzeit zuschlagen, und dann sind Auswertung, Transkript und Kosten-Erfassung des Anrufs verloren, **stumm, ohne Fehlermeldung**. H1s Deliverable ist ein Kalibrierungs-Anruf; der ist damit nicht verlässlich abnehmbar. Vorbedingung, keine Konkurrenz.
+
+**Goal:** Der Ton-Weg nimmt den globalen Sitzungs-Riegel nicht mehr, das Auflegen kann nicht mehr unbegrenzt warten, und wenn der Riegel doch klemmt, **sagt es jemand** statt dass die Sitzung still stirbt.
+
+**★ BELEG — Anruf 30.07., sid `5Y-0MFlm_ITb1cupAAAB`:**
+```
+09:27:56  letzte Coaching-Zeile
+--- ab hier absolute Stille ---
+09:28:07  manual_ewb "Hat Partner"  -> kein Start, keine Fehlermeldung
+09:29:11 / 09:29:55 / 09:30:07     -> dito (3 weitere Klicks)
+09:30:18  [Beenden] ENTRY          -> und dann nichts mehr
+```
+Falsifikation bestanden: ab 09:28:07 **NULL** Treffer für `[Claude-1]`, `[Claude-2]`, `[KW]`, `[MOMENT]`, `[COUNTERPART]` — die gesamte Sitzungs-Verarbeitung war tot.
+
+**py-spy-Frame-Häufigkeit:** 1415× `get_sid_paused` → `live_session.py:107` = `with _session_state_lock:`. Davon 1414× aus `handle_audio_chunk` (`deepgram_service.py:864`), 4× `handle_manual_ewb` (`:966`, die vier toten Klicks), 1× `api_beenden` (`app_routes.py:171`, das Auflegen), 1× `handle_stop_live_session` (`:845`), 1× `coaching_loop`→`get_anonymisierer` (`live_session.py:313`), 1× `analyse_loop` (`claude_service.py:1322`). **NIEMAND hält den Riegel mit sichtbarem Python-Frame — alle 1416 warten.** Keine anonymization/gliner/torch-Frames im Abzug.
+
+**★ WURZEL 1 — globaler Riegel im 10-Hz-Takt (das Nadelöhr):** `live_session.py:105-108` nimmt in `get_sid_paused` denselben globalen `_session_state_lock` wie Analyse, Coaching, Umschalter, Knopfdruck und Auflegen — **bei jedem Ton-Brocken**, also 10×/Sekunde (`deepgram_service.py:864`, 100ms-Frames). Klemmt er einmal, stirbt die ganze Sitzung; und weil kein Wächter existiert: stumm. **Der Zugriff braucht den Riegel nicht** — die Funktion ist durchgängig mit `.get()`-Defaults geschrieben; riegel-freies Lesen kann höchstens einen um Millisekunden veralteten Ja/Nein-Wert liefern (harmlos, nächster Brocken in 100ms), niemals einen Fehler oder kaputte Daten.
+
+**★ WURZEL 2 — echte Umklammerung beim Auflegen:** Thread-2284 `_wait_for_tstate_lock` → `join` → `finish` (`deepgram/clients/common/v1/abstract_sync_websocket.py:468`) → `_close_deepgram_connection` (`deepgram_service.py:548`) → `handle_stop_live_session` (`:845`). `finish()` wartet per `join()` **unbegrenzt** auf den Lausch-Faden — und genau der steht in `on_message` → `get_sid_paused` am klemmenden Riegel. Zwei warten aufeinander. Folge: kein `conversation_logs`-Eintrag, kein Transkript, keine `nova-3`-Kostenzeile — und **kein 504 im App-Log** (die Anfrage endet nicht, sie bricht nur beim Browser ab; `gunicorn --timeout 120` greift bei blockierten Arbeits-Fäden nicht, weil der Herzschlag vom Haupt-Faden kommt).
+
+**★ EHRLICH OFFEN:** **WER den Riegel ursprünglich nahm, ist UNBEKANNT.** Fable hat alle ~60 `with _session_state_lock:`-Stellen auditiert (deepgram_service, claude_service, live_session, app_routes, learning, cost_tracker, prompt_pipeline, einwand_keyword_matcher): jede ist ein kurzer RAM-Block, kein DB/Netz/LLM/emit unter dem Riegel, kein rohes `.acquire()`. **Statisch nicht auffindbar.** Das ändert den Fix nicht — Wurzel 1+2 sind unabhängig davon falsch gebaut. **Teil 3 (Wachhund) benennt den Halter beim nächsten Auftreten.**
+
+**DER FIX, drei Teile:**
+- **TEIL 1 🟢 `get_sid_paused` riegel-frei machen.** Docstring auf „bewusst riegel-frei" mit Begründung. **PFLICHT-PRÜFUNG vorher:** greppen, ob es WEITERE Riegel-Nahmen im Ton-Weg gibt (`handle_audio_chunk` nimmt zusätzlich `_sessions_lock` — anderer Riegel, ok; `_chunk_counts` ist riegel-frei).
+- **TEIL 2 🟡 Auflegen mit Zeitlimit.** **DREI WEGE gegeneinander abwägen:** (a) `finish()` in eigenem Faden mit Zeitlimit ~5s, danach ohne ihn weiter + tote Verbindung aus dem Verzeichnis nehmen; (b) prüfen ob **TEIL 1 das Problem schon auflöst** (der Lausch-Faden hängt dann nicht mehr am Sitzungs-Riegel) → dann ist (a) evtl. unnötig; (c) beides. **ERST MESSEN, DANN BAUEN. Nicht doppelt absichern wo einer reicht** (CLAUDE.md Punkt 27 / Leitsatz 2). Ergebnis der Abwägung in DIALOG dokumentieren.
+- **TEIL 3 🟡 Wachhund.** Periodischer Tick (analog `[SLOW] requeue_pending`, alle 30s) probiert `lock.acquire(timeout=2)`. Bei Fehlschlag Log-Zeile `[LOCKWATCH] _session_state_lock >2s belegt` + Faden-Name + Übernahme-Zeit. Ergänzend `faulthandler` mit Signal-Auslöser, damit ein Stapel-Abzug **ohne Zusatz-Werkzeug** möglich ist (py-spy musste heute erst installiert werden — liegt jetzt im venv, **nicht** in `requirements.txt`).
+
+**★ WÄCHTER (Pflicht, Test-Netz-Ratsche):**
+1. **VERKLEMMUNGS-TEST, ERST ROT:** Test-Faden hält `_session_state_lock`; danach müssen `handle_manual_ewb` **UND** `api_beenden` innerhalb N Sekunden **MIT FEHLER** zurückkehren. Heute hängen sie ewig → **der Test MUSS am alten Stand rot sein, Rot-Beleg verbatim in den Commit.**
+2. **STATISCHE SPERRE:** Test, der in jedem `with _session_state_lock:`-Block blockierende Aufrufe verbietet (`get_session`, `SessionLocal`, `messages.create/stream`, `sio.emit`, `requests.`, `sleep`, `join`).
+3. **TON-WEG RIEGEL-FREI:** Regressions-Test, dass `get_sid_paused` den Sitzungs-Riegel nicht nimmt.
+
+**Komplexität:** 🟡 mittel (Live-Pfad, drei kleine Teile). **Regeln:** CLAUDE.md **Punkt 14** (30 Zeilen davor/danach, Control-Flow, Cross-File-grep, Edge-Cases + die vier Race-Fragen — hier besonders relevant) · **Punkt 28** (Live-Pfad, pro-sid) · **Punkt 17** (kein Refactor nebenbei) · atomare Commits · Fragen ans **Ende** von `.planning/DIALOG-GSD-CLAUDIAN.md`, **nicht als Menü** (André am Handy) · **Cross-AI PFLICHT** (🟡 + Live-Pfad) · nach dem Bau **NICHT deployen** — Gate melden, Claudian fährt Deploy + Test-Anruf. `autonomous: false`. Multi-Segment-Gotcha: Pfade hardcoden, gsd-tools umgehen, STATE/ROADMAP hand-editieren. **Sync:** Vault `01 Roadmap.md` macht Claudian.
+
+**Status:** NOCH NICHT GEPLANT → nächster Schritt `/gsd-plan-phase 08.23.2.LOCK-1`, danach Cross-AI vor Execute.
+
+Plans:
+- [ ] tbd via `/gsd-plan-phase 08.23.2.LOCK-1`
 
 ---
 

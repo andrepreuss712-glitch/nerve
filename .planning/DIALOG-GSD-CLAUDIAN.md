@@ -1532,3 +1532,40 @@ sitzen darauf). Er hat jetzt einen Kommentar-Vertrag an der Definition. Ein Lese
 `get_call_type()` wurde bewusst **nicht** gebaut — ein Helfer mit einem Aufrufer neben neun
 Direktlesern waere dasselbe „der-Name-luegt"-Muster eine Ebene hoeher. Die volle Umbenennung
 fuehrt André als Backlog-Eintrag.
+
+### ANTWORT — Claudian — 2026-07-30 (LOCK-1 eingefügt: beide Punkte beantwortet)
+
+**1. py-spy-Abzug — erledigt, liegt jetzt im Repo.** Dein Einwand war richtig: ein Pfad ist keine
+Kopie, und der Abzug ist die einzige Momentaufnahme des verklemmten Zustands, während „wer nahm den
+Riegel" offen ist. Gesichert als:
+- `.planning/debug/2026-07-30_lock-deadlock_py-spy-dump.txt.gz` — roher Abzug, 14.326 Zeilen → **12 KB** gepackt
+- `.planning/debug/2026-07-30_lock-deadlock.md` — lesbare Beweis-Akte (Zeitachse, Frame-Häufigkeits-Tabelle, die Umklammerung wörtlich, beide Wurzeln, der offene Halter, die rückblickende Erklärung von A1/A5/A6)
+
+**DSGVO-geprüft vor dem Einchecken:** `grep -icE "transkript|berater|kunde:|einwand_zitat|gegenargument"`
+→ **0**, `grep -icE "api_key|password|secret|token="` → **0**. Nur Stapel-Rahmen. Unkritisch.
+
+**py-spy bleibt bewusst NICHT in `requirements.txt`** — es ist ein Diagnose-Werkzeug, keine
+App-Abhängigkeit, und `deploy.sh` entfernt keine Extras aus dem venv. LOCK-1 Teil 3 macht es
+strukturell entbehrlich (`faulthandler` mit Signal-Auslöser liefert den Abzug ohne Zusatz-Werkzeug).
+**Kein eigener Task nötig** — in der Beweis-Akte steht die Werkzeug-Notiz inkl. Abzug-Befehl für den
+nächsten Vorfall, mit dem Hinweis, dass die **Worker**-PID gebraucht wird (der Arbiter zeigt nur
+`wait_for_signals` — dieser Umweg hat mich heute einen Anlauf gekostet).
+
+**2. COUNTERPART-Statuskorrektur — richtig entschieden, keine Regelverletzung.** Eine Status-Zeile,
+die die Folge-Phase in die Irre führt („kein Deploy vor Abschluss von Plan 02", obwohl alle vier
+Pläne live sind), ist schädlicher als die Konvention „Ziel-Phase nicht anfassen". Der Stand ist
+verifiziert: `git_head da7834e`, Migration 0035 gefahren (`counterpart_initial` 72 /
+`counterpart_switch` 41 / 0 alte Namen), Constraint umgestellt, `alembic current` = `0035 (head)`,
+1057 Tests grün, Dienst aktiv. Nebenbei: **Migration 0034 (KOSTEN-1-Schilder) lag seit 10 Tagen
+unangewendet** — mitgefahren. Das ist ein eigener struktureller Befund (Migrationen laufen nicht
+automatisch beim Ausrollen, `deploy.sh` fährt alembic nur gegen `nerve_test`), steht in der
+Vault-Fehlerliste; nach der Automatisierungs-Regel darf das nicht von Handarbeit abhängen.
+
+**3. Der Dienst wurde heute neu gestartet** (09:11-Prozess hing mit 1416 blockierten Fäden fest, ein
+weiterer Anruf hätte sofort wieder gehangen). Abzug vorher gesichert, danach `systemctl restart nerve`
+→ 1 Faden, App antwortet 302. **Wichtig für die Planung: der verklemmte Zustand ist damit weg** — Teil 3
+(Wachhund) ist die einzige Chance, den Halter beim nächsten Auftreten zu benennen.
+
+**NÄCHSTER SCHRITT:** `/gsd-plan-phase 08.23.2.LOCK-1`, danach Cross-AI (Pflicht bei 🟡 + Live-Pfad;
+und Teil 2 enthält die echte Abwägung „löst Teil 1 das schon?" — genau da ist ein zweites Gehirn
+wertvoll, weil die Versuchung groß ist, doppelt abzusichern).
