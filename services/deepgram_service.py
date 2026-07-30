@@ -813,16 +813,15 @@ def register_audio_handlers(sio):
             else:
                 print(f'[DG] Reconnect detected for sid={_sid!r}, existing call_id={_existing_cid_f!r} '
                       f'— skipping create_call_for_sid (fast-path idempotency)')
-            # Initial-Sync: Frontend state.contactCategory setzen (verhindert "erster Klick wirkt nicht")
-            # Ohne dieses Emit ist state.contactCategory undefined nach PiP-Open.
-            # Finding 1.1 (Claudian Pre-Execute): category+mode aus Session-State lesen,
-            # NICHT hardcoden — Meeting-Sessions wuerden sonst faelschlich Sekretaer-Toggle anzeigen.
-            with ls._session_state_lock:
-                _init_st_f = ls._session_state.get(_sid, {}).get('state', {})
-                _init_cat_f = _init_st_f.get('contact_category', 'gatekeeper')
-                _init_mode_f = _init_st_f.get('current_mode', 'gatekeeper')
-            sio.emit('contact_category_update',
-                     {'category': _init_cat_f, 'mode': _init_mode_f, 'source': 'session_init'},
+            # Initial-Sync: die Anzeige im Browser auf die Server-Wahrheit setzen
+            # (verhindert "erster Klick wirkt nicht"). Der Browser haelt selbst KEINEN
+            # entscheidungsrelevanten Zustand mehr — er zeigt nur, was hier steht.
+            # Reiner LESE-Zugriff: der Init-Default kommt aus init_session_state
+            # (Ein-Schreiber-Sperre, Waechter 3).
+            _init_cp_f = ls.get_counterpart(_sid)
+            sio.emit('counterpart_changed',
+                     {'counterpart': _init_cp_f, 'call_type': mode,
+                      'source': 'session_init'},
                      room=_sid)
         except Exception as _pe:
             print(f"[08.19.4] per-SID init failed for {_sid}: {_pe}")
@@ -952,10 +951,11 @@ def register_audio_handlers(sio):
         # eigener _session_state_lock-Block, NICHT mit state_lock genested.
         # mode-Quelle EINHEITLICH mit Medium/Fast: per-SID _session_state[sid]['mode']
         # (TAXO1-07: globales _session_modes geloescht).
-        # CAVEAT (TAXO1-07): 'cold_call' existiert in ZWEI orthogonalen Achsen —
-        # state['current_mode'] (Kontakt: cold_call vs gatekeeper, handle_manual_mode_toggle)
-        # und _session_state[sid]['mode'] (Hoerbarkeit: cold_call vs meeting, Registry, HIER).
-        # NICHT vermischen: die Kontakt-Achse wird NICHT ins Register migriert.
+        # HINWEIS (COUNTERPART): es gibt ZWEI orthogonale Achsen —
+        # _session_state[sid]['mode'] (Anruf-Art/Hoerbarkeit: cold_call vs meeting, Registry,
+        # HIER) und state['counterpart'] (Gespraechspartner: gatekeeper vs decision_maker).
+        # Seit Phase 08.23.2.COUNTERPART teilen sie KEIN Wort mehr. Nicht vermischen:
+        # die Gespraechspartner-Achse wird NICHT ins Register migriert.
         try:
             _btn_mode = (ls._session_state.get(_sid) or {}).get('mode', 'cold_call')
             _btn_iid = None
@@ -1118,52 +1118,61 @@ def register_audio_handlers(sio):
             except Exception as e:
                 print(f"[PiP] record_ewb_click error (sid={_sid}): {e}")
 
-    @sio.on('manual_mode_toggle')
-    def handle_manual_mode_toggle(data=None):
-        """Phase 08.23.2.C Req-6 — Berater toggled manuell zwischen target/gatekeeper.
+    @sio.on('toggle_counterpart')
+    def handle_toggle_counterpart(data=None):
+        """Phase 08.23.2.COUNTERPART — Gespraechspartner umschalten, SERVER-autoritativ.
 
-        Setzt contact_category + current_mode im per-SID-State. Schickt Bestaetigung zurueck.
-        T-08.23.2.C-24: category wird gegen Whitelist validiert — invalid emits werden mit ok:False quittiert.
+        Der Browser sendet einen reinen BEFEHL ohne Wert; der Server berechnet das
+        Gegenteil aus SEINEM Zustand und schickt das Ergebnis zurueck. Damit kann der
+        Knopf nicht mehr verklemmen: ein verlorenes Echo kostet eine Sekunde falsche
+        Anzeige, nie einen toten Knopf. `data` wird bewusst ignoriert.
+
+        Race (RESEARCH F): zwischen 'connect' und 'start_live_session' existiert
+        _session_state[sid] OHNE 'state'-Sub-Dict. Ein Write dorthin wuerde von der
+        init_session_state-Wholesale-Replace kommentarlos verworfen -> wir lehnen ab
+        (ok:False) statt zu schreiben. KEIN setdefault('state', {}) — das war der Bug.
         """
         from flask import request
         sid = request.sid
-        category = (data.get('category') if isinstance(data, dict) else None)
-        if category not in ('target', 'gatekeeper'):
-            sio.emit('manual_mode_toggle_ack', {'ok': False, 'error': 'invalid category'}, room=sid)
-            return
-        new_mode = 'gatekeeper' if category == 'gatekeeper' else 'cold_call'
-        _old_cat = None
-        _old_mode = None
+        _ok = False
+        _old_cp = None
+        _new_cp = None
         _call_id = None
+        _call_type = 'cold_call'
         with ls._session_state_lock:
-            if sid in ls._session_state:
-                st = ls._session_state[sid].setdefault('state', {})
-                _old_cat = st.get('contact_category')
-                _old_mode = st.get('current_mode')
+            _sd = ls._session_state.get(sid)
+            st = _sd.get('state') if isinstance(_sd, dict) else None
+            if isinstance(st, dict) and 'counterpart' in st:
+                _ok = True
+                _old_cp = st['counterpart']
+                _new_cp = 'decision_maker' if _old_cp == 'gatekeeper' else 'gatekeeper'
+                st['counterpart'] = _new_cp
                 _call_id = st.get('call_id')
-                st['contact_category'] = category
-                st['current_mode'] = new_mode
-                # Reset Hysterese auf neuer Modus → Phase 1 (cold_call='opener',
-                # gatekeeper='greeting'). current_phase ist kanonisch INT 1-6
-                # (detect_phase/classify_phase/PHASE_BUTTONS); der Label kommt aus
-                # _PHASE_NAMES_BY_MODE. Vorher stand hier ein String-Label →
+                _call_type = _sd.get('mode', 'cold_call')
+                # Reset Hysterese auf neuen Gespraechspartner → Phase 1. current_phase ist
+                # kanonisch INT 1-6 (detect_phase/classify_phase/PHASE_BUTTONS); der Label
+                # kommt aus dem Phasenmodell. Frueher stand hier ein String-Label →
                 # '>' int vs str-Crash in detect_phase (live_bug phase_classify).
                 st['current_phase'] = 1
                 st['phase_hint_count'] = 0
                 st['pending_phase'] = None
                 import time as _t
                 st['phase_entered_at'] = _t.monotonic()
-                # ── TAXO1-Welle 4 (Task 3c b): Modus-Downgrade-Schliesser (Gemini-Punkt d) ──
-                # Modus aendert sich live (z.B. cold_call<->gatekeeper) -> offenen Moment
-                # des alten Modus SOFORT verwerfen (Belt-and-suspenders zum Helper-internen
-                # moment_opened_mode-Mismatch in get_or_open_moment). close_moment lock-frei,
-                # der bestehende _session_state_lock-Block (oben) haelt den Lock.
-                if new_mode != _old_mode:
+                # ── TAXO1-Welle 4 (Task 3c b): Downgrade-Schliesser (Gemini-Punkt d) ──
+                # Gespraechspartner aendert sich live -> offenen Moment des alten
+                # Zustands SOFORT verwerfen. close_moment ist lock-frei, der umgebende
+                # _session_state_lock wird gehalten.
+                if _new_cp != _old_cp:
                     ls.close_moment(sid, reason='mode_downgrade')
-        print(f"[Phase-C] manual_mode_toggle sid={sid} category={category} new_mode={new_mode}")
+        if not _ok:
+            print(f'[COUNTERPART] toggle abgelehnt (kein aktiver Session-State) sid={sid}')
+            sio.emit('counterpart_toggle_ack',
+                     {'ok': False, 'error': 'no_active_session'}, room=sid)
+            return
+        print(f'[COUNTERPART] toggle sid={sid} {_old_cp!r} -> {_new_cp!r} call_type={_call_type!r}')
         # D-04a: Skip-Guard — kein INSERT wenn call_id nicht gesetzt (kein aktiver Anruf)
         if _call_id is None:
-            print(f'[pip] mode_switch: call_id not set, skip event')
+            print('[COUNTERPART] mode_switch: call_id not set, skip event')
         else:
             _db_ms = None
             try:
@@ -1177,20 +1186,24 @@ def register_audio_handlers(sio):
                         event_type='mode_switch',
                         event_ts_ms=int(_t_ms.time() * 1000),
                         payload={
-                            'old_mode': _old_mode,
-                            'new_mode': new_mode,
-                            'old_category': _old_cat,
-                            'new_category': category,
+                            # Zwei getrennte Achsen, getrennte Felder. Der Event-NAME bleibt
+                            # 'mode_switch' (CHECK-Constraint + Prod-Altzeilen) — die
+                            # Umbenennung ist bewusst ein eigener, spaeterer Schritt.
+                            'call_type': _call_type,
+                            'old_counterpart': _old_cp,
+                            'new_counterpart': _new_cp,
                             'timestamp': _t_ms.monotonic(),
                         },
                     ))
                     _db_ms.commit()
-                    print(f'[pip] mode_switch event written: {_old_mode!r} → {new_mode!r}')
+                    print(f'[COUNTERPART] mode_switch event written: {_old_cp!r} → {_new_cp!r}')
                 finally:
                     _db_ms.close()
             except Exception as _ms_err:
                 if _db_ms is not None:
                     _db_ms.rollback()
-                print(f'[pip] mode_switch persist Fehler (non-fatal): {type(_ms_err).__name__}: {_ms_err}')
-        sio.emit('contact_category_update', {'category': category, 'mode': new_mode, 'source': 'manual'}, room=sid)
-        sio.emit('manual_mode_toggle_ack', {'ok': True, 'category': category, 'mode': new_mode}, room=sid)
+                print(f'[COUNTERPART] mode_switch persist Fehler (non-fatal): '
+                      f'{type(_ms_err).__name__}: {_ms_err}')
+        sio.emit('counterpart_changed',
+                 {'counterpart': _new_cp, 'call_type': _call_type, 'source': 'manual'}, room=sid)
+        sio.emit('counterpart_toggle_ack', {'ok': True}, room=sid)

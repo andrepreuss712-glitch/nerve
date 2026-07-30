@@ -1,8 +1,13 @@
-"""Behavioral Tests fuer mode_switch Skip-Guard via handle_manual_mode_toggle.
+"""Behavioral Tests fuer den mode_switch-DB-Write + Skip-Guard via handle_toggle_counterpart.
 
-Phase 08.23.2.C.R.F: Tests muessen den echten Handler aufrufen — nicht manuell
-CallEvent-Objekte bauen und in Mock-DB schieben (das war der False-Green-Klassen-Fehler
-aus Phase C.R der zu C.R.F gefuehrt hat).
+Phase 08.23.2.COUNTERPART: der Toggle ist server-autoritativ. Der Browser sendet
+'toggle_counterpart' OHNE Wert, der Server rechnet das Gegenteil aus SEINEM Zustand.
+Der DB-Event-NAME bleibt 'mode_switch' (CHECK-Constraint + Prod-Altzeilen); nur die
+Payload traegt jetzt getrennte Achsen (call_type + old_counterpart/new_counterpart).
+
+Phase 08.23.2.C.R.F (bleibt gueltig): Tests muessen den echten Handler aufrufen — nicht
+manuell CallEvent-Objekte bauen und in Mock-DB schieben (das war der False-Green-Klassen-
+Fehler aus Phase C.R der zu C.R.F gefuehrt hat).
 
 Technik: register_audio_handlers(mock_sio) mit mock_sio.on-Capture, dann handler() direkt aufrufen.
 flask.request und database.db.SessionLocal werden gepacht damit der Handler isoliert laeuft.
@@ -34,26 +39,26 @@ def _extract_handler(event_name):
 
 
 def test_mode_switch_payload_persisted_to_db():
-    """handle_manual_mode_toggle schreibt CallEvent mit korrekten Feldern in DB.
+    """handle_toggle_counterpart schreibt CallEvent mit korrekten Feldern in DB.
 
     Szenario: call_id ist im State gesetzt (create_call_for_sid() wurde aufgerufen,
-    wie nach Plan 01 auf jedem Produktions-Pfad). Toggle von gatekeeper zu target.
+    wie nach Plan 01 auf jedem Produktions-Pfad). Toggle von gatekeeper zu decision_maker.
     Erwartet: handler ruft db_session.add() mit CallEvent(event_type='mode_switch')
-    auf, Payload enthaelt old_mode, new_mode, old_category, new_category.
+    auf, Payload enthaelt call_type, old_counterpart, new_counterpart.
     """
     test_sid = 'test-mode-switch-rf-001'
     test_call_id = 'test-uuid-rf-switch-001'
 
-    handler, mock_sio = _extract_handler('manual_mode_toggle')
+    handler, mock_sio = _extract_handler('toggle_counterpart')
 
     # State wie nach create_call_for_sid() (Plan 01): call_id ist gesetzt
     with ls._session_state_lock:
         ls._session_state[test_sid] = {
+            'mode': 'cold_call',            # ACHSE A (call_type), top-level
             'state': {
-                'current_mode': 'gatekeeper',
-                'contact_category': 'gatekeeper',
+                'counterpart': 'gatekeeper',   # ACHSE B (Gespraechspartner)
                 'call_id': test_call_id,
-                'current_phase': 'greeting',
+                'current_phase': 1,
                 'phase_hint_count': 0,
                 'pending_phase': None,
                 'phase_entered_at': 0.0,
@@ -69,7 +74,7 @@ def test_mode_switch_payload_persisted_to_db():
     try:
         with patch('flask.request', new=MagicMock(sid=test_sid)), \
              patch('database.db.SessionLocal', return_value=mock_db):
-            handler({'category': 'target'})
+            handler(None)
 
         # Handler muss genau 1 Objekt in DB geschrieben haben
         assert len(added_objects) == 1, (
@@ -78,19 +83,19 @@ def test_mode_switch_payload_persisted_to_db():
         )
         evt = added_objects[0]
 
-        # event_type und call_id korrekt
+        # event_type und call_id korrekt — der Event-NAME bleibt 'mode_switch'
         assert evt.event_type == 'mode_switch', f'event_type falsch: {evt.event_type!r}'
         assert evt.call_id == test_call_id, f'call_id falsch: {evt.call_id!r}'
 
-        # 4 Pflicht-Payload-Keys
-        assert 'old_mode' in evt.payload, 'old_mode fehlt im Payload'
-        assert 'new_mode' in evt.payload, 'new_mode fehlt im Payload'
-        assert 'old_category' in evt.payload, 'old_category fehlt im Payload'
-        assert 'new_category' in evt.payload, 'new_category fehlt im Payload'
+        # 3 Pflicht-Payload-Keys (getrennte Achsen)
+        assert 'call_type' in evt.payload, 'call_type fehlt im Payload'
+        assert 'old_counterpart' in evt.payload, 'old_counterpart fehlt im Payload'
+        assert 'new_counterpart' in evt.payload, 'new_counterpart fehlt im Payload'
 
-        # Werte korrekt: vorher gatekeeper, nachher target/cold_call
-        assert evt.payload['old_category'] == 'gatekeeper'
-        assert evt.payload['new_category'] == 'target'
+        # Werte korrekt: vorher gatekeeper, nachher decision_maker; Anruf-Art unveraendert
+        assert evt.payload['old_counterpart'] == 'gatekeeper'
+        assert evt.payload['new_counterpart'] == 'decision_maker'
+        assert evt.payload['call_type'] == 'cold_call'
 
     finally:
         with ls._session_state_lock:
@@ -98,25 +103,25 @@ def test_mode_switch_payload_persisted_to_db():
 
 
 def test_call_id_none_means_skip_guard_fires():
-    """handle_manual_mode_toggle schreibt KEIN CallEvent wenn call_id=None im State.
+    """handle_toggle_counterpart schreibt KEIN CallEvent wenn call_id=None im State.
 
     Szenario: call_id ist None (wie VOR Plan 01 auf Produktions-Pfad, oder nach
     einem DB-Fehler in create_call_for_sid). Skip-Guard in handler: if _call_id is None
-    → return ohne DB-Write.
+    → kein DB-Write.
     Erwartet: db_session.add() wird nie aufgerufen.
     """
     test_sid = 'test-skip-guard-rf-001'
 
-    handler, mock_sio = _extract_handler('manual_mode_toggle')
+    handler, mock_sio = _extract_handler('toggle_counterpart')
 
     # State mit call_id=None — Skip-Guard-Bedingung
     with ls._session_state_lock:
         ls._session_state[test_sid] = {
+            'mode': 'cold_call',
             'state': {
-                'current_mode': 'gatekeeper',
-                'contact_category': 'gatekeeper',
+                'counterpart': 'gatekeeper',
                 'call_id': None,
-                'current_phase': 'greeting',
+                'current_phase': 1,
                 'phase_hint_count': 0,
                 'pending_phase': None,
                 'phase_entered_at': 0.0,
@@ -129,7 +134,7 @@ def test_call_id_none_means_skip_guard_fires():
     try:
         with patch('flask.request', new=MagicMock(sid=test_sid)), \
              patch('database.db.SessionLocal', return_value=mock_db):
-            handler({'category': 'target'})
+            handler(None)
 
         # Skip-Guard muss gefeuert haben — kein DB-Write erwartet
         mock_db.add.assert_not_called()
