@@ -224,7 +224,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 
 **Velocity:**
 
-- Total plans completed: 29
+- Total plans completed: 30
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -368,6 +368,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.19.3 P04 | 5min | 2 tasks | 2 files |
 | Phase 08.20.2 P01 | 3min | 2 tasks | 1 files |
 | Phase 08.23.2.COUNTERPART P03 | 40min | 3 tasks | 4 files |
+| Phase 08.23.2.COUNTERPART P04 | 35min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -820,8 +821,42 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-07-30
-Stopped at: Phase 08.23.2.COUNTERPART Plan 03 abgeschlossen (Welle 2 KOMPLETT, 3/3 der urspruenglichen Planung) — ANHALTEN (`autonomous: false`). **KEIN DEPLOY vor Plan 04**: der neue R3-Waechter ist bewusst ROT (models.py deklariert 7 event_type-Werte, die echte DB kennt 9 seit Migration 0004) und wuerde das Deploy-Gate zu Recht blockieren. Naechster Schritt: **Plan 04 (Welle 3)** — Event-Umbenennung `mode_initial`/`mode_switch` → `counterpart_initial`/`counterpart_switch` inkl. Alembic-Migration, UPDATE der 113 Prod-Altzeilen und `models.py` auf die neuen Werte.
-Resume file: .planning/phases/08.23.2.COUNTERPART-gespraechspartner-umbau/08.23.2.COUNTERPART-04-PLAN.md
+Stopped at: Phase 08.23.2.COUNTERPART Plan 04 abgeschlossen — **PHASE CODE-VOLLSTAENDIG (4/4 Plans)**, ANHALTEN (`autonomous: false`). Der R3-Waechter ist jetzt **GRUEN** (`2 passed, 1 skipped`; models.py deklariert 9 event_type-Werte mit den NEUEN Namen). **Migration 0035 ist GESCHRIEBEN, NICHT AUSGEFUEHRT.** Uebergabe an Claudian, Reihenfolge zwingend: (1) `alembic upgrade head` auf Prod (beaufsichtigt, als postgres) → (2) Gegenprobe `SELECT event_type, count(*) FROM call_events GROUP BY 1` (Soll: counterpart_initial ~72, counterpart_switch ~41, 0 alte Namen) → (3) `bash deploy.sh production` → (4) Test-Anruf (Toggle 4x + Meeting-Init-Default). models.py ist ORM-LESER: Migration MUSS vor dem Code-Deploy laufen (AUTH-2-Expand/Contract).
+Resume file: .planning/phases/08.23.2.COUNTERPART-gespraechspartner-umbau/08.23.2.COUNTERPART-04-SUMMARY.md
+
+**Phase 08.23.2.COUNTERPART Plan 04 abgeschlossen (2026-07-30) — Welle 3, Phase code-vollstaendig:**
+Die zwei letzten „mode"-Namen sind weg. (1) **Migration 0035**
+(`alembic/versions/0035_counterpart_event_rename.py`, commit `dab5f10`): `down_revision='0034'` am echten
+Datei-Kopf verifiziert (`0034_kosten1_apirate_schilder.py:26`); Reihenfolge **DROP Constraint → UPDATE
+Zeilen → CREATE Constraint** (andersherum scheitert das UPDATE am jeweils geltenden CHECK), reversibel,
+`batch_alter_table`-Muster aus 0004, **kein `except`** in der Migration, idempotente UPDATEs via
+`WHERE event_type = '<alt>'`. **GESCHRIEBEN, NICHT AUSGEFUEHRT.** (2) **ORM + beide Schreiber** (commit
+`1439f89`): `models.py`-Aenderung war **KEIN Rename** — dort standen exakt 7 Werte, die alten Namen
+**nie** (Drift seit Migration 0004); die volle 9er-Liste mit den neuen Namen wurde neu deklariert, die
+sieben unbeteiligten Werte zeichengleich. `live_session.create_call_for_sid` schreibt
+`counterpart_initial`, `deepgram_service.handle_toggle_counterpart` schreibt `counterpart_switch`; die
+non-fatalen `try/except` beider Writer sind **unveraendert** (Grundlage der Rollback-Betrachtung: im
+Fenster Migration→Code verliert alter Code hoechstens einen Protokoll-Eintrag, kein Anruf bricht ab →
+**kein Expand/Contract-Zweischritt noetig**). Vier Alt-Namens-Fundstellen mehr als der Plan auflistete
+(`live_session.py:704/748`, `deepgram_service.py:792/812`) mitgezogen. (3) **Bestands-Tests** (commit
+`74dac3f`): `event_type`-Erwartungen + Docstrings nachgezogen, **Dateinamen bewusst unveraendert**
+(Punkt 17). Ergebnis: `14 passed, 1 skipped` bei den vier Waechtern (Plan 03 endete bei `1 failed`),
+`55 passed` bei den Bestands-Tests.
+**Offene Auflagen:** (a) 0035 war laut `0034_kosten1_apirate_schilder.py:24-25` fuer AUTH-3s
+`skip_billing` reserviert — **AUTH-3 muss auf 0036**. (b) Die SSH-Pflicht-Belege des Plans
+(`inspect.sh constraints call_events` + Event-Typ-Verteilung) wurden **nicht** gezogen (Executor-Mandat:
+kein SSH); die Zahl **113 = 72+41 bleibt eine Planungs-Behauptung**, fuer die Korrektheit aber
+irrelevant (die UPDATEs greifen alle Zeilen per WHERE). Die zwei STOP-Bedingungen des Plans wandern in
+Schritt 2 des Deploy-Gates: zeigt die Gegenprobe **vor** dem Lauf schon `counterpart_*`-Zeilen oder
+einen Constraint ohne die alten Werte → **nicht migrieren**, zurueck an GSD. (c) Kein Schild-Nachzug
+noetig (Punkt 23) — geprueft, nicht angenommen: keine neue Tabelle/Spalte, kein neuer/entfallender
+Leser-/Schreiber-Pfad, und die zwei Beispielwerte im `event_type`-Spalten-Schild
+(`transcript_chunk`/`objection_detected`) sind von der Umbenennung nicht betroffen. (d) Fuenf verbliebene
+`mode_*`-Textstellen sind dokumentiert und bewusst nicht angefasst: zwei plan-vorgeschriebene
+Erklaer-Kommentare (`live_session.py:768`, `deepgram_service.py:1191`), die historische
+Migration-0004-Notiz im R3-Waechter (darf nicht editiert werden) und zwei Dateinamens-Verweise
+(`test_callid_race_close.py:8`, `test_counterpart_toggle_roundtrip.py:4`).
+Kein Deploy, kein `git push`, kein SSH, kein `alembic upgrade`.
 
 **Phase 08.23.2.COUNTERPART Plan 03 abgeschlossen (2026-07-30):** Die Ratsche eingerastet — drei
 laufende Waechter statt drei einmaliger greps. (1) **Wortschatz-Sperre**
