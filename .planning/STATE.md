@@ -224,7 +224,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 
 **Velocity:**
 
-- Total plans completed: 28
+- Total plans completed: 29
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -367,6 +367,7 @@ Progress: [█████████░] ~94% (Phase 2 ✓, Phase 3 ✓, Phase
 | Phase 08.19.3 P03 | 5min | 1 tasks | 1 files |
 | Phase 08.19.3 P04 | 5min | 2 tasks | 2 files |
 | Phase 08.20.2 P01 | 3min | 2 tasks | 1 files |
+| Phase 08.23.2.COUNTERPART P03 | 40min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -819,8 +820,39 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-07-30
-Stopped at: Phase 08.23.2.COUNTERPART Plan 02 abgeschlossen (Welle 1 KOMPLETT, 2/3) — ANHALTEN (`autonomous: false`), Deploy-Gate + Push gehoeren Claudian; danach Welle 2 = Plan 03
-Resume file: .planning/phases/08.23.2.COUNTERPART-gespraechspartner-umbau/08.23.2.COUNTERPART-03-PLAN.md
+Stopped at: Phase 08.23.2.COUNTERPART Plan 03 abgeschlossen (Welle 2 KOMPLETT, 3/3 der urspruenglichen Planung) — ANHALTEN (`autonomous: false`). **KEIN DEPLOY vor Plan 04**: der neue R3-Waechter ist bewusst ROT (models.py deklariert 7 event_type-Werte, die echte DB kennt 9 seit Migration 0004) und wuerde das Deploy-Gate zu Recht blockieren. Naechster Schritt: **Plan 04 (Welle 3)** — Event-Umbenennung `mode_initial`/`mode_switch` → `counterpart_initial`/`counterpart_switch` inkl. Alembic-Migration, UPDATE der 113 Prod-Altzeilen und `models.py` auf die neuen Werte.
+Resume file: .planning/phases/08.23.2.COUNTERPART-gespraechspartner-umbau/08.23.2.COUNTERPART-04-PLAN.md
+
+**Phase 08.23.2.COUNTERPART Plan 03 abgeschlossen (2026-07-30):** Die Ratsche eingerastet — drei
+laufende Waechter statt drei einmaliger greps. (1) **Wortschatz-Sperre**
+(`tests/test_counterpart_vocabulary_guard.py`, 3 Tests, commit `2bd8a0d`): Sweep ueber
+`services/ routes/ static/ templates/` auf fuenf fragmentiert zusammengesetzte Bezeichner
+(`current_mode`, `contact_category`, `contactCategory`, `currentMode`, `manual_mode_toggle`).
+`__pycache__`/`.pyc` **doppelt und explizit** ausgeschlossen (Verzeichnisname + Endungs-Whitelist)
+mit eigenem Test — stale Bytecode (`routes/__pycache__/app_routes.cpython-311.pyc`) trug die alten
+Bezeichner noch und haette den Waechter auf Vergangenheit statt auf Quelltext rot gemacht. Das
+blosse Wort `gatekeeper` steht bewusst NICHT im Muster (gueltiger counterpart-Wert +
+`gatekeeper_blocked`-Outcome in `dashboard.html`, 5 Treffer, bleiben gruen). (2)
+**Ein-Schreiber-Sperre** (`tests/test_counterpart_single_writer.py`, 4 Tests, commit `d8fa30c`):
+AST-Sweep, `Assign` + `AugAssign`, innerste umschliessende Funktion, Whitelist
+`(services/deepgram_service.py, handle_toggle_counterpart)`; der AST-unsichtbare Dict-Literal-Seed
+wird durch zwei **Laufzeit**-Tests belegt (cold_call → `gatekeeper`, meeting → `decision_maker`).
+(3) **CHECK-Paritaets-Sperre** (`tests/test_call_events_check_constraint_parity.py`, commit
+`cd06ca7`): diffft die ORM-Werteliste gegen `pg_get_constraintdef` aus `pg_catalog` (NICHT
+`information_schema` — privilegien-maskiert, waere ein False-Negative fuer `nerve_app`);
+„Constraint nicht gefunden" ist ein Fehler, kein Skip; bestehende Fixture `schild_guard_pg_conn`
+wiederverwendet, **keine `deploy.sh`-Aenderung**. Beide statischen Waechter sind als
+falsifizierbar **nachgewiesen** (je ein dokumentierter Rot-Lauf verbatim im SUMMARY, danach
+`git status --porcelain` leer); R3 belegt seine Falsifizierbarkeit DB-frei ueber
+`test_parser_detects_drift`. **Kein Schutz-Kommentar wurde geopfert**, um einen grep gruen zu
+bekommen — 6 Kriterien sind wegen plan-eigener Kommentare zahlen-abweichend, alle mit exakter
+`file:line` im SUMMARY dokumentiert; die 12-Zeilen-Anker-Tabelle traf vollstaendig zu.
+`database/models.py`, `deploy.sh`, `alembic/versions/`, `config/phase_transitions.py` und
+`scripts/verify_corpus_gate.py` **nicht angefasst** (0 Diff-Treffer bzw. leeres porcelain).
+Die vier zurueckgestellten Entscheidungen stehen jetzt schriftlich in
+`.planning/DIALOG-GSD-CLAUDIAN.md` statt in einem Kopf. Kein Schild-Nachzug noetig (Punkt 23):
+nur lesender Katalog-Zugriff im Test. Nicht gepusht, nicht deployt, keine Migration ausgefuehrt,
+kein SSH.
 
 **Phase 08.23.2.COUNTERPART Plan 01 abgeschlossen (2026-07-30):** Server-autoritativer
 Gespraechspartner. `state['counterpart']` ('gatekeeper'|'decision_maker') ersetzt
