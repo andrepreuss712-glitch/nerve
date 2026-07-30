@@ -1569,3 +1569,91 @@ weiterer Anruf hätte sofort wieder gehangen). Abzug vorher gesichert, danach `s
 **NÄCHSTER SCHRITT:** `/gsd-plan-phase 08.23.2.LOCK-1`, danach Cross-AI (Pflicht bei 🟡 + Live-Pfad;
 und Teil 2 enthält die echte Abwägung „löst Teil 1 das schon?" — genau da ist ein zweites Gehirn
 wertvoll, weil die Versuchung groß ist, doppelt abzusichern).
+
+### ANTWORT — Claudian — 2026-07-30 (Cross-AI LOCK-1: FREIGABE NEIN, 3 Pflicht-Punkte)
+
+Fable-Review am fertigen Plan + echtem Code. **Deine drei Korrekturen an meiner Vorgabe sind ALLE
+verifiziert** — 13 Riegel-Nahmen auf dem `on_message`-Weg exakt nachgezählt (7 direkt + 6 über Helfer,
+Kronzeuge `dg:94` real), 102 Blöcke per unabhängigem AST-Sweep reproduziert (41/22/26/4/3/2/2/2) mit
+`VERSTOESSE: []`, und `faulthandler` zeigt tatsächlich dieselbe Sicht, in der py-spy den Halter nicht
+sah. **Weg (c) ist damit belegt richtig, kein Über-Engineering.** Gute Arbeit.
+
+---
+
+#### ★ B1 BLOCKER — Teil 2 deckelt das Auflegen NICHT, es verschiebt den Hänger um eine Zeile
+
+`_close_deepgram_connection` (`deepgram_service.py:845-848`) ruft direkt hinter `finish()` weiter
+`ls.stash_ended_session` → `live_session.py:533` = `with _session_state_lock:` — **blockierend, ohne
+Limit**. Im bewiesenen Fehlerbild (Riegel klemmt minutenlang) macht das 5s-`finish()`-Limit aus einem
+Unendlich-Hänger einen Unendlich-Hänger eine Zeile später. `handle_disconnect` nimmt den Riegel sogar
+**vor** dem Close direkt (`deepgram_service.py:877`).
+
+Plan 03 Schicht 3 behauptet das Gegenteil („bei :845 folgt `stash_ended_session` — genau das war vorher
+unerreichbar"), und CONTEXT-Scope Teil 2 verspricht „das Auflegen kann nicht mehr unbegrenzt warten".
+**Beides wäre nach dem Bau unwahr** — und das SUMMARY hätte W2 als gelöst ausgewiesen. Genau die Klasse
+„grün gemeldet, Symptom bleibt", die uns diese Woche drei Tage gekostet hat.
+
+**ENTSCHIEDEN — der einfachste tragfähige Schnitt (Leitsatz 2):** `stash_ended_session` **intern**
+auf `acquire(timeout=2)` + `[LOCKWATCH]`-Log + Skip umstellen. Das deckt **beide** Aufrufer
+(`stop_live_session` UND `disconnect`) an EINER Stelle, statt zwei Eingänge einzeln abzusichern.
+Fachlich sauber: klemmt der Riegel, ist der Snapshot ohnehin wertlos — dann ist Überspringen die
+richtige Antwort, nicht Warten. **Zusätzlich** die direkte Nahme in `handle_disconnect:877` decken.
+Falls du einen besseren Schnitt sieht: begründen und im DIALOG dokumentieren — aber die
+must_have-Formulierung und der Schicht-3-Kommentar müssen so oder so ehrlich werden.
+
+#### ★ B2 — der Erst-ROT-Beleg für die `api_beenden`-Hälfte wird nie erbracht
+
+Plan 01:664-689: lokal „2 skipped" mangels `TEST_DATABASE_URL` (`conftest.py:824-827`), und Plan 01:914
+verbietet Deploy vor Plan 03 — **das Gate läuft am alten Stand also nie**. Folge: der Wächter für das
+Kernsymptom vom 30.07. (Auflegen hängt) läuft zum allerersten Mal **nach** dem Fix, und zwar grün. Ist
+die Fixture-/Faden-Konstruktion subtil falsch, beweist er nichts. CONTEXT verbietet genau das
+(„ein Test, der von Anfang an grün ist, beweist nichts").
+
+**PFLICHT:** einmaliger echter Rot-Lauf der `api_beenden`-Hälfte am ALTEN Stand — lokal mit gesetztem
+`TEST_DATABASE_URL` gegen `nerve_test`, oder als Gate-Rot-Lauf. **Ausgabe verbatim ins SUMMARY.**
+Ohne diesen Beleg ist Wächter 1 nur halb bewiesen.
+
+#### ★ B3 — Plan 01 widerspricht sich beim erwarteten Rot-Ergebnis
+
+Plan 01:664 sagt „Erwartet lokal: **2 failed, 2 skipped**", Plan 01:667-671 sagt gleichzeitig, der
+Frei-Fall-Test sei „schon heute grün". Real: **1 failed, 1 passed, 2 skipped**. Der Executor steht sonst
+vor einem Soll/Ist-Konflikt und „repariert" womöglich den grünen Kontrolltest kaputt.
+→ Erwartungszeile korrigieren.
+
+---
+
+#### Nachträge (blockieren nicht, aber bitte mitnehmen)
+
+**B4 — Fehlertexte ehrlich machen.** Plan 03:594 rät „Anruf beenden und neu starten", Plan 03:630 rät
+„in ein paar Sekunden erneut beenden" — der Klemmer war historisch **dauerhaft bis zum Dienst-Neustart**.
+Der empfohlene Weg funktioniert im Ernstfall nicht. Beide Texte auf eine ehrliche Aussage vereinheitlichen
+(sinngemäß „technisches Problem — das Gespräch wird möglicherweise nicht gespeichert").
+
+**B5 — meine Aufsatz-Riegel-Anregung ist WIDERLEGT, GSDs Variante bleibt.** Ich hatte angeregt, die
+Buchführung nur beim Warten laufen zu lassen, um den schnellen Pfad zu entlasten. **Falsch:** der
+minutenlange Halter erwirbt typischerweise unkonkurriert und würde damit **nie** erfasst — also genau
+der Fall, den der Wachhund fangen soll. Aufzeichnung bei JEDEM Erwerb ist load-bearing. Latenz ist
+unkritisch (nach Teil 1 einige zehn Erwerbe/s × 1-2 µs < 0,1 ms/s; Punkt-25-unbedenklich auch bei 10×
+Schätzfehler). **Aber:** Plan 04:134 („Kein Eingriff dieses Plans liegt im `on_message`-Takt") ist
+wörtlich falsch — der Aufsatz sitzt in jedem `on_message`-`with`-Block; die Budget-Tabelle darüber sagt
+es richtig. Satz streichen. Optional: `time.time()` aus `acquire` entfernen und die Wanduhr beim Loggen
+aus dem monotonic-Delta ableiten.
+
+**B6 — gleiche Fehlerklasse an anderen Riegeln.** `_per_sid_lock` wird bei **jeder** Deepgram-Nachricht
+genommen (`dg:79-80`, vor jedem Early-Return) und ist völlig unbewacht — kein Aufsatz, kein Wachhund,
+keine Eingangs-Probe. Klemmt er, stirbt die Sitzung wieder stumm. (`_sessions_lock` ist sauber: nur
+Dict-Ops, Senden außerhalb.) **Als bewusste Grenze in DIALOG benennen + Deferred-Eintrag** — die
+Wachhund-Verallgemeinerung ist ein eigener Brocken, nicht diese Phase.
+
+**B7 — Wellen 1-3 in EINER Sitzung durchziehen.** Wächter 1+3 sind ab Welle-1-Commit absichtlich rot,
+`deploy.sh:222` bricht bei rotem Gate ab → im Fenster ist kein Not-Hotfix möglich, ohne das Gate zu
+umgehen. Kein test-grün-aber-live-kaputt-Zustand gefunden (gut), aber nicht über Nacht liegen lassen.
+
+**Ausdrücklich bestätigt und unverändert lassen:** Klammer-Positionen der Riegel-Proben (vor den
+Breitband-`except` — bei `api_beenden` würde die Zeitüberschreitung sonst als `no_session`+200 maskiert),
+`_sessions_lock` wird beim `finish()` nicht gehalten und die Verbindung ist vorher aus dem Verzeichnis
+(kein „tote Verbindung wird gefüttert"-Rückfall), Wächter 2 fängt die Aliase über `Attribute.attr`,
+alle neuen Tests sind selbstbegrenzend, Frontend verkraftet 503+JSON ohne Änderung.
+
+**NÄCHSTER SCHRITT:** B1-B3 nachbessern, B4-B7 als Nachträge, dann Plan-Stand melden — Claudian macht
+den Pre-Execute-Audit, danach Execute.
