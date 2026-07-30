@@ -25,12 +25,11 @@ WAS DIESE STRATEGY REGIERT — UND WAS NICHT
     Ein per-Modus-Prompt wuerde den MEDFIX re-brechen (intent_event wieder leer).
     Die Strategy regiert NUR Sprecher-Zuordnung + Audibility, NICHT den Prompt.
 
-CAVEAT — NAMENS-UEBERLAPPUNG (Refinement 2)
-  'cold_call' existiert in ZWEI orthogonalen Achsen:
-    - _session_state[sid]['mode']  (Hoerbarkeit: cold_call vs meeting)  <- DIESE Registry
-    - state['current_mode']        (Kontakt: cold_call vs gatekeeper)   <- handle_manual_mode_toggle
-  Diese Registry regiert NUR die Hoerbarkeits-Achse. NICHT mit der Kontakt-Achse
-  vermischen.
+CAVEAT — ZWEI ACHSEN (seit Phase 08.23.2.COUNTERPART wortgetrennt)
+  - _session_state[sid]['mode']    (Anruf-Art/Hoerbarkeit: cold_call vs meeting)  <- DIESE Registry
+  - state['counterpart']           (Gespraechspartner: gatekeeper vs decision_maker) <- toggle_counterpart
+  Die beiden Achsen teilen KEIN Wort mehr. Diese Registry regiert NUR die
+  Hoerbarkeits-Achse. NICHT mit der Gespraechspartner-Achse vermischen.
 
 KEIN AIR-GAP-BUS: kein In-Prozess-Nachrichten-Geruest, keine Sim-internen
 Namespaces, keine Audio-Routing-Kanaele in TAXO1.
@@ -86,9 +85,9 @@ class ColdCallStrategy(ModeStrategy):
     Aeusserung ist der Berater -> advisor-abgeleitete Erkennung wird als BERATER
     attribuiert, NIE als Kunde (Decision 2 — Sprecher-Bug-Fix).
 
-    ACHTUNG Namens-Ueberlappung: 'cold_call' hier = Hoerbarkeits-Achse (vs meeting).
-    NICHT verwechseln mit state['current_mode']=='cold_call' (Kontakt-Achse vs
-    gatekeeper, handle_manual_mode_toggle). Diese Strategy regiert die
+    ACHTUNG: 'cold_call' hier = Anruf-Art/Hoerbarkeit (vs meeting). Der
+    Gespraechspartner liegt getrennt in state['counterpart'] (gatekeeper vs
+    decision_maker, toggle_counterpart). Diese Strategy regiert die
     Hoerbarkeits-Achse."""
 
     def setup_audio_routes(self) -> dict:

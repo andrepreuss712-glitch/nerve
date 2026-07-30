@@ -596,10 +596,10 @@ def build_answer_context(*, user_id: int, sid: str | None, primary_intent: str |
     # ── STABIL-Block: Paradigma + Rollen-Ziel + Grounding + Profil-Stabilteil ──
     role_goal = (cfg.get('roles') or {}).get(role) or (cfg.get('roles') or {}).get('interessent', '')
     _stabil_parts = list(cfg.get('paradigm') or [])
-    # TEMPO-1/F1: `Rolle` steht bewusst im STABILEN Block. Kippt contact_category mitten im
-    # Anruf (gatekeeper -> target), aendert sich der Cache-Prefix -> EIN Miss + EIN Write.
-    # Inhaltlich korrekt und akzeptiert — nicht als Cache-Defekt diagnostizieren, nicht
-    # "reparieren" (der Rollen-Wechsel MUSS die Antwort aendern).
+    # TEMPO-1/F1: `Rolle` steht bewusst im STABILEN Block. Kippt der Gespraechspartner
+    # mitten im Anruf (gatekeeper -> decision_maker), aendert sich der Cache-Prefix ->
+    # EIN Miss + EIN Write. Inhaltlich korrekt und akzeptiert — nicht als Cache-Defekt
+    # diagnostizieren, nicht "reparieren" (der Rollen-Wechsel MUSS die Antwort aendern).
     if role_goal:
         _stabil_parts.append(f'Rolle: {role_goal}')
     if cfg.get('grounding'):
@@ -637,7 +637,7 @@ def derive_answer_params(sid: str | None) -> dict:
     """Leitet user_id/Rolle/Modus/EIN-Intent/Konfidenz aus dem per-SID-State ab (Req 3/5/6).
 
     Rolle (Parameter, kein Code-Zweig): mode=='meeting' -> 'meeting'; sonst
-    contact_category 'gatekeeper' -> 'gatekeeper', 'target' -> 'interessent'.
+    counterpart 'gatekeeper' -> 'gatekeeper', 'decision_maker' -> 'interessent'.
     primary_intent + confidence: per-SID (TAXO1-Live). Punkt 26: der Wert wird zum
     Aufruf-Zeitpunkt gelesen; laeuft der Leser dem Schreiber voraus -> None ->
     fail-open Default-Intent (NIE falscher Intent). Reiner Lese-Zugriff, nie raise.
@@ -656,8 +656,23 @@ def derive_answer_params(sid: str | None) -> dict:
         user_id = _st.get('user_id') or 0
         mode = _st.get('mode') or 'cold_call'
         _sub = _st.get('state') or {}
-        _cat = _sub.get('contact_category') or 'gatekeeper'
-        role = 'meeting' if mode == 'meeting' else ('gatekeeper' if _cat == 'gatekeeper' else 'interessent')
+        _cp_raw = _sub.get('counterpart')
+        if _cp_raw is None and _st:
+            # Zaun um den stillen Fallback (COUNTERPART): die Session EXISTIERT, aber
+            # der Gespraechspartner-Schluessel fehlt — das kann nur ein Alt-Pfad oder
+            # ein Fremd-Schreiber sein. Fail-open bleibt (Live-Pfad, nie raise), aber
+            # es wird nicht mehr stumm die falsche Rolle zementiert.
+            # KEIN Log bei komplett unbekannter SID (_st leer) — das ist der legitime
+            # Normalfall (Ghost-SID / Aufruf vor Anruf-Start).
+            print(f"[AnswerParams] WARN: Session vorhanden, aber 'counterpart' fehlt "
+                  f"(sid={sid!r}) — Rolle faellt auf 'gatekeeper' zurueck.")
+        _cp = _cp_raw or 'gatekeeper'
+        # Vorrangordnung wie bisher: die Anruf-Art 'meeting' gewinnt gegen den
+        # Gespraechspartner. Bewusst UNVERAENDERT (eine Aenderung waere eine
+        # Prompt-Inhalts-Aenderung, nicht Teil des COUNTERPART-Umbaus).
+        # 'interessent' ist eine PROMPT-ROLLEN-Bezeichnung (cfg['roles']), kein
+        # Zustands-Wort — sie wird NICHT umbenannt.
+        role = 'meeting' if mode == 'meeting' else ('gatekeeper' if _cp == 'gatekeeper' else 'interessent')
         primary_intent = _sub.get('primary_intent')
         _conf = _sub.get('confidence')
         confidence = float(_conf) if _conf is not None else None

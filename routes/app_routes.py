@@ -2027,7 +2027,7 @@ def api_gatekeeper_phrases():
     """Gibt die 4 Mr.-Miyagi-Phrases (mode='gatekeeper') mit Template-Variablen-Ersetzung.
 
     Phase 08.23.2.C Req-9. Variablen kommen aus dem aktuellen Session-Briefing +
-    contact_category-Detected-Names (falls vorhanden).
+    counterpart-Detected-Names (falls vorhanden).
     """
     from database.models import Phrase
     db = get_session()
