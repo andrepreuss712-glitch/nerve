@@ -2570,7 +2570,7 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 **Plans:** 3 plans / 2 Wellen. GEPLANT 2026-07-28.
 
 Plans:
-- [ ] 08.23.2.COUNTERPART-01-PLAN.md — Welle 1: Hin-und-Zurück-Wächter (erst ROT) + `counterpart` als EIN Zustands-Ort + server-autoritativer `toggle_counterpart` (ersetzt `manual_mode_toggle`)
+- [x] 08.23.2.COUNTERPART-01-PLAN.md — Welle 1: Hin-und-Zurück-Wächter (erst ROT) + `counterpart` als EIN Zustands-Ort + server-autoritativer `toggle_counterpart` (ersetzt `manual_mode_toggle`) ✅ 2026-07-30 (3 Commits: 8bedfb5, 2037c8d, de49c10)
 - [ ] 08.23.2.COUNTERPART-02-PLAN.md — Welle 1: Konsumenten nachziehen (Live-Prompt-Rolle, Phasenmodell aus `(call_type, counterpart)`) + Browser wird reine Anzeige (JS/CSS/Markup)
 - [ ] 08.23.2.COUNTERPART-03-PLAN.md — Welle 2: Wächter 2 (Wortschatz-Sperre) + Wächter 3 (Ein-Schreiber-Sperre, AST) + CHECK-Deklaration nachgezogen + DIALOG-Eintrag
 
@@ -2583,8 +2583,12 @@ Prompt geschrieben, ohne eine einzige Fehlermeldung (Plan 02 Task 1).
 (nur Payload getrennt — Migration + 113 Prod-Altzeilen), Ausblenden des Knopfs im Meeting-Modus,
 modus-blindes `current_phase_name`.
 
-**Status:** GEPLANT 2026-07-28 → nächster Schritt `/gsd-execute-phase 08.23.2.COUNTERPART`
-(🟡 mittel; Cross-AI optional — Trigger-Check: 4 Files Backend + FE+BE gleichzeitig → André entscheidet).
+**Status:** IN ARBEIT — Plan 01 ✅ 2026-07-30 (1/3 Plans). Welle 1 läuft SERIELL, nächster Schritt ist
+**Plan 02**. ⚠ Der Zwischenstand nach Plan 01 ist test-grün und live kaputt (Knopf tot, Prompt-Rolle
+still falsch) — **kein Deploy vor Abschluss von Plan 02**. Nicht gepusht, nicht deployt.
+**Offene Auflage vor Deploy:** `inspect.sh schema/constraints call_events` einmal gegen Production
+laufen lassen (im Plan-01-Lauf per Executor-Mandat nicht ausgeführt, code-seitiger Ersatzbeleg aus
+Migration 0004 im SUMMARY).
 
 ---
 

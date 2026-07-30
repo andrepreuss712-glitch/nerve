@@ -818,6 +818,27 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-04T20:56:33.265Z
-Stopped at: Phase 08.23.2.AUTH-1 context gathered
-Resume file: .planning/phases/08.23.2.AUTH-1-eingangstuer-netz/08.23.2.AUTH-1-CONTEXT.md
+Last session: 2026-07-30
+Stopped at: Phase 08.23.2.COUNTERPART Plan 01 abgeschlossen (Welle 1, 1/3) — weiter mit Plan 02
+Resume file: .planning/phases/08.23.2.COUNTERPART-gespraechspartner-umbau/08.23.2.COUNTERPART-02-PLAN.md
+
+**Phase 08.23.2.COUNTERPART Plan 01 abgeschlossen (2026-07-30):** Server-autoritativer
+Gespraechspartner. `state['counterpart']` ('gatekeeper'|'decision_maker') ersetzt
+`contact_category` + `current_mode`; `toggle_counterpart` (Befehl ohne Wert) ersetzt
+`manual_mode_toggle`; `counterpart_changed` + `counterpart_toggle_ack` ersetzen
+`contact_category_update` + `manual_mode_toggle_ack`. Neuer Lese-Helfer `ls.get_counterpart(sid)`;
+**kein** `get_call_type()` (Cross-AI-Entscheidung — Achse A behaelt 9 Direktleser + Kommentar-Vertrag).
+Init-Default an die Anruf-Art gekoppelt (`meeting` → `decision_maker`) — schliesst die
+Meeting-Regression, die ein bedingungsloses `gatekeeper` still eingebaut haette.
+Race beantwortet: kein `setdefault` mehr, fehlender State wird ABGELEHNT (`ok:false`), kein
+Geister-State, kein Erfolgs-Emit fuer nichts. Hin-und-Zurueck-Waechter
+(`tests/test_counterpart_toggle_roundtrip.py`, 5 Tests) zweifach ROT belegt (fehlender Handler +
+Reproduktion des Verklemm-Bugs am Alt-Handler), beide Ausgaben verbatim in Commit `8bedfb5`.
+DB-Event-Namen `mode_initial`/`mode_switch` bewusst unveraendert (Umbenennung = Plan 04);
+nur die Payloads getrennt (`call_type` + `counterpart` bzw. `old_/new_counterpart`).
+3 Commits: 8bedfb5, 2037c8d, de49c10. 21 lokale Tests gruen (Vorabsignal, keine Abnahme).
+⚠ **Zwischenstand test-gruen und live kaputt** — `static/pip-launcher.js` hoert noch auf die
+geloeschten Events (Knopf tot) und `prompt_pipeline.py:659` liest noch `contact_category`
+(still immer Sekretaer-Rolle). **Kein Deploy vor Plan 02.** Nicht gepusht.
+**Offen:** `inspect.sh schema/constraints call_events` gegen Production (Executor-Mandat verbot
+SSH; Ersatzbeleg aus Migration 0004 im SUMMARY, 9 Werte inkl. mode_switch/mode_initial).
