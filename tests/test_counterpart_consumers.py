@@ -7,8 +7,16 @@ im LIVE-Prompt und faellt bei fehlendem Schluessel STILL auf 'gatekeeper' zuruec
 Kein Source-Presence-False-Green: jeder Test ruft die echte Funktion auf und
 assertiert den Rueckgabewert.
 """
+import json
+from unittest.mock import patch, MagicMock
+
 import services.live_session as ls
 from services.prompt_pipeline import derive_answer_params
+from services.claude_service import (
+    classify_phase,
+    select_phase_model,
+    _PHASE_NAMES_BY_PHASE_MODEL,
+)
 
 
 def _seed(sid, *, mode='cold_call', state=None):
@@ -95,3 +103,65 @@ def test_warns_when_session_exists_but_counterpart_key_missing(capsys):
     derive_answer_params('gibt-es-nicht')
     out2 = capsys.readouterr().out
     assert 'WARN' not in out2, out2
+
+
+# ── Teil 2: die Phasenmodell-Wahl (Task 2) ───────────────────────────────────
+
+def test_select_phase_model_cold_call_gatekeeper():
+    """Das 4-Phasen-Vorzimmer-Modell — vor dieser Phase strukturell unerreichbar."""
+    assert select_phase_model('cold_call', 'gatekeeper') == 'gatekeeper'
+
+
+def test_select_phase_model_meeting_gatekeeper_call_type_wins():
+    """Die ANRUF-ART hat Vorrang: ein Termin laeuft immer im 6-Phasen-Meeting-Modell,
+    auch wenn zwischendurch auf Sekretaer geschaltet wird."""
+    assert select_phase_model('meeting', 'gatekeeper') == 'meeting'
+
+
+def test_select_phase_model_cold_call_decision_maker():
+    assert select_phase_model('cold_call', 'decision_maker') == 'cold_call'
+
+
+def test_select_phase_model_meeting_decision_maker():
+    assert select_phase_model('meeting', 'decision_maker') == 'meeting'
+
+
+def test_select_phase_model_fail_open_on_none():
+    assert select_phase_model(None, None) == 'cold_call'
+
+
+def test_phase_model_gatekeeper_has_four_phases():
+    assert _PHASE_NAMES_BY_PHASE_MODEL['gatekeeper'][1] == 4
+    assert _PHASE_NAMES_BY_PHASE_MODEL['cold_call'][1] == 6
+    assert _PHASE_NAMES_BY_PHASE_MODEL['meeting'][1] == 6
+
+
+def test_no_axis_value_collision_in_phase_model_keys():
+    """Die Tabelle ist nach PHASENMODELL gekeyt, nicht nach Achsen-Werten.
+    'decision_maker' ist ein Gespraechspartner-Wert und hat hier nichts verloren."""
+    assert 'decision_maker' not in _PHASE_NAMES_BY_PHASE_MODEL
+
+
+def test_classify_phase_uses_selected_gatekeeper_model():
+    """Laufzeit-Naht: das von select_phase_model gewaehlte Modell steuert wirklich
+    die Phasen-Liste (Gatekeeper -> max_phase 4, out-of-range wird verworfen)."""
+    phase_model = select_phase_model('cold_call', 'gatekeeper')
+
+    def _resp(phase):
+        item = MagicMock()
+        item.text = json.dumps({'phase': phase, 'confidence': 0.9, 'grund': 'mock'})
+        r = MagicMock()
+        r.content = [item]
+        r.usage = None
+        return r
+
+    with patch('services.claude_service.claude_client') as mock_client:
+        mock_client.with_options.return_value = mock_client
+        mock_client.messages.create.return_value = _resp(5)
+        assert classify_phase(['Mit wem spreche ich?'], 1, 5, phase_model) is None
+
+        mock_client.messages.create.return_value = _resp(3)
+        ok = classify_phase(['Mit wem spreche ich?'], 1, 5, phase_model)
+        assert ok is not None and 1 <= ok['phase'] <= 4, ok
+        _prompt = mock_client.messages.create.call_args.kwargs['messages'][0]['content']
+        assert 'bypass' in _prompt, "Gatekeeper-Phasenlabels muessen im Prompt stehen"

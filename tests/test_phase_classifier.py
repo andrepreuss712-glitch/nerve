@@ -13,7 +13,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from services.claude_service import classify_phase, _PHASE_NAMES_BY_MODE
+from services.claude_service import classify_phase, _PHASE_NAMES_BY_PHASE_MODEL
 
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 CORPUS_PATH = Path('tests/fixtures/phase_classifier_corpus.json')

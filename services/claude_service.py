@@ -272,12 +272,38 @@ _PHASE_NAMES_GATEKEEPER = {
     4: 'handoff',
 }
 
-# Hilfs-Mapping fuer Modus -> (phasen_dict, max_phase).
-_PHASE_NAMES_BY_MODE = {
+# Phasenmodell-Tabelle. Der Schluessel ist ein PHASENMODELL-Name, KEIN Achsen-Wert:
+# er wird von select_phase_model(call_type, counterpart) explizit gewaehlt.
+# Frueher wurden hier Werte BEIDER Achsen gemischt — das machte das Gatekeeper-Set
+# strukturell unerreichbar (Phase 08.23.2.COUNTERPART).
+_PHASE_NAMES_BY_PHASE_MODEL = {
     'cold_call':   (_PHASE_NAMES_COLD_CALL, 6),
     'meeting':     (_PHASE_NAMES_MEETING, 6),
     'gatekeeper':  (_PHASE_NAMES_GATEKEEPER, 4),
 }
+
+
+def select_phase_model(call_type: str | None, counterpart: str | None) -> str:
+    """Waehlt das Phasenmodell explizit aus den ZWEI Achsen.
+
+    call_type:   'cold_call' | 'meeting'          (Anruf-Art, aendert sich nie im Anruf)
+    counterpart: 'gatekeeper' | 'decision_maker'  (Gespraechspartner, per Toggle)
+
+    Regel: die ANRUF-ART hat Vorrang. Ein Termin laeuft im 6-Phasen-Meeting-Modell —
+    auch wenn zwischendurch auf 'gatekeeper' umgeschaltet wird. Nur bei Kaltakquise
+    entscheidet der Gespraechspartner: Sekretaer -> 4-Phasen-Gatekeeper-Modell,
+    Entscheider -> Cold-Call-Modell.
+
+    Damit gilt hier DIESELBE Vorrangordnung wie bei der Prompt-Rolle in
+    prompt_pipeline.derive_answer_params ('meeting' schlaegt den Gespraechspartner) —
+    die beiden Konsumenten koennen sich nicht mehr widersprechen.
+    Rein, ohne Seiteneffekt, fail-open auf 'cold_call'.
+    """
+    if call_type == 'meeting':
+        return 'meeting'
+    if counterpart == 'gatekeeper':
+        return 'gatekeeper'
+    return 'cold_call'
 
 # Backward-Compat-Alias fuer bestehende Callers (Z.970/974/983/984 im Analyse-Loop).
 # Callers haben keinen Modus-Kontext — Alias bleibt erhalten.
@@ -351,21 +377,21 @@ _PHASE_CUES_GATEKEEPER = {
     3: 'Bypass-Versuch, Durchstellen erbitten',
     4: 'Uebergabe an Zielperson / Termin fuer Rueckruf',
 }
-_PHASE_CUES_BY_MODE = {
+_PHASE_CUES_BY_PHASE_MODEL = {
     'cold_call':  _PHASE_CUES_COLD_CALL,
     'meeting':    _PHASE_CUES_MEETING,
     'gatekeeper': _PHASE_CUES_GATEKEEPER,
 }
 
 
-def classify_phase(transcript_window, current_phase, elapsed_s, mode, sid: str = None):
-    """Modus-bewusster Phasen-Klassifikator (Phase 08.23.2.C Req-2).
+def classify_phase(transcript_window, current_phase, elapsed_s, phase_model, sid: str = None):
+    """Phasenmodell-bewusster Phasen-Klassifikator (Phase 08.23.2.C Req-2).
 
     Args:
         transcript_window: List[str] der letzten Berater-Saetze.
         current_phase: int — aktuell aktive Phasen-Nummer.
         elapsed_s: float — Sekunden seit Gespraechs-Start.
-        mode: 'cold_call' | 'meeting' | 'gatekeeper'.
+        phase_model: 'cold_call' | 'meeting' | 'gatekeeper' — von select_phase_model gewaehlt.
 
     Returns:
         dict {'phase': int (1..max_phase), 'confidence': float (0..1), 'grund': str}
@@ -374,15 +400,15 @@ def classify_phase(transcript_window, current_phase, elapsed_s, mode, sid: str =
     if not transcript_window:
         return None
 
-    # Modus-Dispatch: waehle Phasen-Liste + max_phase basierend auf mode.
-    phase_names, max_phase = _PHASE_NAMES_BY_MODE.get(
-        mode, (_PHASE_NAMES_COLD_CALL, 6)  # Fallback: cold_call
+    # Phasenmodell-Dispatch: waehle Phasen-Liste + max_phase.
+    phase_names, max_phase = _PHASE_NAMES_BY_PHASE_MODEL.get(
+        phase_model, (_PHASE_NAMES_COLD_CALL, 6)  # Fallback: cold_call
     )
 
     labels_str = ', '.join(f'{i}={name}' for i, name in phase_names.items())
     formatted = "\n".join(f"- {t}" for t in transcript_window[-10:])
     # Addition B: Phasen-Cues je Modus (Phase 5/6 explizit, Termin -> Phase 6).
-    _cue_map = _PHASE_CUES_BY_MODE.get(mode, _PHASE_CUES_COLD_CALL)
+    _cue_map = _PHASE_CUES_BY_PHASE_MODEL.get(phase_model, _PHASE_CUES_COLD_CALL)
     cues_str = "\n".join(f"- {i}={name}: {_cue_map.get(i, '')}"
                          for i, name in phase_names.items())
     prompt = PHASE_CLASSIFIER_PROMPT.format(
@@ -390,7 +416,7 @@ def classify_phase(transcript_window, current_phase, elapsed_s, mode, sid: str =
         cues=cues_str,
         current_phase=current_phase,
         elapsed_s=int(elapsed_s or 0),
-        mode=mode or 'meeting',
+        mode=phase_model or 'meeting',
         transcript_window=formatted,
     )
     try:
@@ -1411,8 +1437,13 @@ def analyse_loop():
                             phase_change_count = _sid_phase_st.get('phase_change_count', 0) or 0
                             last_change_cycle = _sid_phase_st.get('_phase_cycle_at_last_change', 0) or 0
                             mode = (ls._session_state.get(sid) or {}).get('mode', 'meeting')
+                            # Gespraechspartner aus dem BEREITS gehaltenen Lock lesen —
+                            # NICHT ls.get_counterpart() (nimmt den Lock selbst, nicht reentrant).
+                            _counterpart = (_sid_phase_st or {}).get('counterpart')
                         elapsed_s = (time.time() - ls.session_start_ts) if hasattr(ls, 'session_start_ts') else 0
-                        raw = classify_phase(transcript_window, cur_phase, elapsed_s, mode, sid=sid)
+                        _phase_model = select_phase_model(mode, _counterpart)
+                        raw = classify_phase(transcript_window, cur_phase, elapsed_s,
+                                             _phase_model, sid=sid)
                         if raw:
                             cycles_since_change = _phase_cycle_counter - last_change_cycle
                             new_phase, new_conf = detect_phase(
