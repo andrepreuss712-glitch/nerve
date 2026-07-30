@@ -69,9 +69,9 @@
     // Phase 08.20.3: Modus-B Briefing Tab state
     briefingTabExpandedAtStreamStart: false, // guard for PiP tab auto-collapse (D-05)
     _personalizedSkriptText: null,           // KI result buffer for renderStep4c
-    _personalizeAbortController: null,       // AbortController for renderStep4b cancel
-    // Phase 08.23.2.C: gatekeeper toggle — mirrors server default (init_session_state)
-    contactCategory: 'gatekeeper'
+    _personalizeAbortController: null        // AbortController for renderStep4b cancel
+    // Phase 08.23.2.COUNTERPART: KEIN Gespraechspartner-Zustand mehr im Browser —
+    // der Server ist die Wahrheit, die Anzeige folgt counterpart_changed.
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -2559,9 +2559,11 @@
     state.socket.on('qa_slot1', function () { /* PIP-01: no-op — slot 1 nur via source=manual_button */ });
     state.socket.on('qa_soft_hint', function () { /* PIP-01: no-op — slot 1 nur via source=manual_button */ });
 
-    // ── Phase 08.23.2.C.R — Gatekeeper Socket-Subscriptions ─────────────────
-    state.socket.on('contact_category_update', function (data) {
-      _updateContactCategory(data.category, data.mode);
+    // ── Phase 08.23.2.COUNTERPART: Server-autoritativer Gespraechspartner ────
+    // Der Browser haelt KEINEN entscheidungsrelevanten Zustand. Dies ist die
+    // einzige Stelle, an der die Anzeige des Gespraechspartners gesetzt wird.
+    state.socket.on('counterpart_changed', function (data) {
+      _updateCounterpart(data && data.counterpart);
     });
 
     state.socket.on('phase_change', function (data) {
@@ -2573,9 +2575,11 @@
       console.log('[pip] trigger_phrase_hint', data);
     });
 
-    state.socket.on('manual_mode_toggle_ack', function (data) {
+    state.socket.on('counterpart_toggle_ack', function (data) {
       if (data && !data.ok) {
-        console.warn('[pip] manual_mode_toggle_ack error:', data.error);
+        // Kein aktiver Session-State (z.B. Klick vor Anruf-Start) — der Knopf
+        // kippt bewusst NICHT. Server-Wahrheit gewinnt.
+        console.warn('[pip] toggle_counterpart abgelehnt:', data.error);
       }
     });
 
@@ -2630,22 +2634,22 @@
     });
   }
 
-  // ── Phase 08.23.2.C — Gatekeeper-Modus-Funktionen ────────────────────────
+  // ── Phase 08.23.2.COUNTERPART — Gespraechspartner-Anzeige ────────────────
 
-  function _updateContactCategory(category, mode) {
-    state.contactCategory = category;
-    state.currentMode = mode;
+  function _updateCounterpart(counterpart) {
+    // Reine Anzeige-Ableitung. Kein state-Write — der Server ist die Wahrheit.
+    var cp = (counterpart === 'decision_maker') ? 'decision_maker' : 'gatekeeper';
     var indicator = pipEl('pip-mode-indicator');
     if (indicator) {
-      indicator.dataset.mode = mode;
-      var label = (mode === 'gatekeeper') ? 'Sekretär' : (mode === 'meeting') ? 'Meeting' : 'Entscheider';
+      indicator.dataset.counterpart = cp;
+      var label = (cp === 'gatekeeper') ? 'Sekretär' : 'Entscheider';
       var _lbl = indicator.querySelector('.pip-toggle-label');
       if (_lbl) { _lbl.textContent = label; } else { indicator.textContent = label; }
-      // Dynamisches aria-label zeigt Ziel-Modus (D-03b): "Modus wechseln zu X"
+      // Dynamisches aria-label zeigt den ZIEL-Zustand
       indicator.setAttribute('aria-label',
-        'Modus wechseln zu ' + ((mode === 'gatekeeper') ? 'Entscheider' : 'Sekretär'));
+        'Modus wechseln zu ' + ((cp === 'gatekeeper') ? 'Entscheider' : 'Sekretär'));
     }
-    if (category === 'gatekeeper') {
+    if (cp === 'gatekeeper') {
       _renderGatekeeperButtons();
     } else {
       _renderStandardEwbButtons();
@@ -3880,7 +3884,7 @@
     }
   });
 
-  // ── Phase 08.23.2.C.R: Klick-Handler fuer pip-mode-indicator Toggle-Button (300ms Throttle) ──
+  // ── Phase 08.23.2.COUNTERPART: Klick-Handler fuer pip-mode-indicator Toggle-Button (300ms Throttle) ──
   var _modeBtnThrottle = 0;
   var _modeBtn = document.getElementById('pip-mode-indicator');
   if (_modeBtn) {
@@ -3889,9 +3893,11 @@
       var _now = Date.now();
       if (_now - _modeBtnThrottle < 300) { return; }
       _modeBtnThrottle = _now;
-      var newCategory = (state.contactCategory === 'gatekeeper') ? 'target' : 'gatekeeper';
+      // Phase 08.23.2.COUNTERPART: reiner BEFEHL ohne Wert. Der Server berechnet
+      // das Gegenteil aus SEINEM Zustand und schickt counterpart_changed zurueck.
+      // Hier NICHTS rechnen und NICHTS speichern — genau das war der Verklemm-Bug.
       if (state.socket && state.socket.emit) {
-        state.socket.emit('manual_mode_toggle', { category: newCategory });
+        state.socket.emit('toggle_counterpart');
       }
     });
   }

@@ -3175,25 +3175,20 @@ input[type="range"].perf-slider::-moz-range-thumb {
     color: var(--page-text-secondary);
 }
 /* Gatekeeper (Sekretar) = toggle ON: Knob rechts, blaue Farben */
-.pip-mode-indicator[data-mode="gatekeeper"] .pip-toggle-track {
+.pip-mode-indicator[data-counterpart="gatekeeper"] .pip-toggle-track {
     background: var(--pip-gatekeeper-bg);
     border-color: var(--pip-gatekeeper-text);
 }
-.pip-mode-indicator[data-mode="gatekeeper"] .pip-toggle-knob {
+.pip-mode-indicator[data-counterpart="gatekeeper"] .pip-toggle-knob {
     transform: translateX(12px);
     background: var(--pip-gatekeeper-text);
 }
-.pip-mode-indicator[data-mode="gatekeeper"] .pip-toggle-label {
+.pip-mode-indicator[data-counterpart="gatekeeper"] .pip-toggle-label {
     color: var(--pip-gatekeeper-text);
 }
-/* Meeting: Toggle-Track ausgeblendet — kein binaerer Toggle fuer diesen Modus */
-/* Label in Brand-Teal signalisiert "gesperrter Zustand / andere Kategorie" */
-.pip-mode-indicator[data-mode="meeting"] .pip-toggle-track {
-    display: none;
-}
-.pip-mode-indicator[data-mode="meeting"] .pip-toggle-label {
-    color: var(--btn-primary-bg-from);
-}
+/* Kein [data-counterpart="meeting"]: 'meeting' ist eine Anruf-Art, kein Gespraechspartner.
+   Der alte [data-mode="meeting"]-Block war seit seiner Entstehung tot (kein Schreiber) —
+   Phase 08.23.2.COUNTERPART. Ein Ausblenden des Knopfs im Meeting ist bewusst NICHT gebaut. */
 /* Button-Reset */
 #pip-mode-indicator {
     border: none;
