@@ -819,8 +819,8 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-07-30
-Stopped at: Phase 08.23.2.COUNTERPART Plan 01 abgeschlossen (Welle 1, 1/3) — weiter mit Plan 02
-Resume file: .planning/phases/08.23.2.COUNTERPART-gespraechspartner-umbau/08.23.2.COUNTERPART-02-PLAN.md
+Stopped at: Phase 08.23.2.COUNTERPART Plan 02 abgeschlossen (Welle 1 KOMPLETT, 2/3) — ANHALTEN (`autonomous: false`), Deploy-Gate + Push gehoeren Claudian; danach Welle 2 = Plan 03
+Resume file: .planning/phases/08.23.2.COUNTERPART-gespraechspartner-umbau/08.23.2.COUNTERPART-03-PLAN.md
 
 **Phase 08.23.2.COUNTERPART Plan 01 abgeschlossen (2026-07-30):** Server-autoritativer
 Gespraechspartner. `state['counterpart']` ('gatekeeper'|'decision_maker') ersetzt
@@ -842,3 +842,34 @@ geloeschten Events (Knopf tot) und `prompt_pipeline.py:659` liest noch `contact_
 (still immer Sekretaer-Rolle). **Kein Deploy vor Plan 02.** Nicht gepusht.
 **Offen:** `inspect.sh schema/constraints call_events` gegen Production (Executor-Mandat verbot
 SSH; Ersatzbeleg aus Migration 0004 im SUMMARY, 9 Werte inkl. mode_switch/mode_initial).
+
+**Phase 08.23.2.COUNTERPART Plan 02 abgeschlossen (2026-07-30) — WELLE 1 KOMPLETT:** Die drei
+Konsumenten sind nachgezogen und der Browser ist zur reinen Anzeige degradiert. (1) Die
+**Live-Prompt-Rolle** kommt aus `counterpart` statt aus dem stillen `or 'gatekeeper'`-Fallback —
+plus ein **Zaun**: existiert die Session, fehlt aber der Schluessel, gibt es eine WARN-Zeile;
+bei unbekannter SID bewusst NICHT (legitimer Ghost-SID-Normalfall). (2) Neue reine Funktion
+`select_phase_model(call_type, counterpart)` waehlt das Phasenmodell explizit; `_PHASE_NAMES_BY_MODE`
+→ `_PHASE_NAMES_BY_PHASE_MODEL` (Schluessel = Phasenmodell, kein Achsen-Wert) — das
+**4-Phasen-Gatekeeper-Set ist erstmals erreichbar**. Vorrangordnung in BEIDEN Konsumenten gleich:
+die Anruf-Art gewinnt (`meeting` schlaegt den Gespraechspartner), belegt durch Zeilen-Reihenfolge
+302 < 304. `counterpart` wird im BEREITS gehaltenen `_session_state_lock` gelesen, NICHT via
+`ls.get_counterpart()` (nicht reentrant → Deadlock im Analyse-Loop). (3) `state.contactCategory` +
+`state.currentMode` ersatzlos geloescht; der Klick emittiert `toggle_counterpart` **ohne Payload**;
+CSS-Attribut `data-mode` → `data-counterpart`, die zwei toten `[data-mode="meeting"]`-Regeln
+ersatzlos entfernt (Begruendungs-Kommentar bleibt). `data-mode-button` (EWB-Phrasenbuttons) bewusst
+NICHT mit umbenannt. **UI-HART-Regel explizit belegt:** 0 neue Hex/rgba, 0 neue Inline-Styles,
+**kein neuer Design-Token** (damit kein Brand-Konsistenz-Risiko) — nur Bestands-Variablen
+`--pip-gatekeeper-*` / `--page-text-secondary`.
+**Waechter 2 (Wortschatz-Sperre) ist damit erfuellt:**
+`grep -rn "current_mode|contact_category|contactCategory" services/ static/ routes/` → **0 Treffer**,
+ohne dass dafuer ein Schutz-Kommentar geloescht wurde.
+3 Commits: d4f10fe, c39edae, c20b8cc. 31 lokale Tests gruen + `node --check` exit 0 (Vorabsignal,
+KEINE Abnahme). Nicht gepusht, nicht deployt, keine Migration, kein SSH.
+⚠ **Drei grep-Akzeptanzkriterien sind nur wegen Schutz-Kommentaren rot** (`ls.get_counterpart(`,
+`data-mode=`, `data-counterpart="meeting"` — je 1 Treffer, alle in Kommentaren, im ausgefuehrten
+Code 0). Kommentare bewusst stehengelassen; Details + Anker-Empfehlung fuer Plan 03 im SUMMARY.
+**Folgefunde (nicht gefixt, Punkt 17):** (a) `_PHASE_NAMES`-Alias (`claude_service.py:1431`) ist
+modus-blind — durch das jetzt erreichbare Gatekeeper-Modell **sichtbarer** (Phase `bypass` wird als
+`Bedarfsanalyse` beschriftet), Empfehlung eigener Mini-Plan; (b) `mode`-Default-Inkonsistenz
+(`:1413` `'meeting'` vs. `'cold_call'` im Fallback); (c) Toggle bei `call_type=='meeting'`
+ausblenden → Folgefrage fuer DIALOG (Plan 03 Task 3).

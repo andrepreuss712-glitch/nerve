@@ -2571,7 +2571,7 @@ weil dieselben Dateien mehrfach angefasst werden (kein paralleler Merge-Konflikt
 
 Plans:
 - [x] 08.23.2.COUNTERPART-01-PLAN.md — Welle 1: Hin-und-Zurück-Wächter (erst ROT) + `counterpart` als EIN Zustands-Ort + server-autoritativer `toggle_counterpart` (ersetzt `manual_mode_toggle`) ✅ 2026-07-30 (3 Commits: 8bedfb5, 2037c8d, de49c10)
-- [ ] 08.23.2.COUNTERPART-02-PLAN.md — Welle 1: Konsumenten nachziehen (Live-Prompt-Rolle, Phasenmodell aus `(call_type, counterpart)`) + Browser wird reine Anzeige (JS/CSS/Markup)
+- [x] 08.23.2.COUNTERPART-02-PLAN.md — Welle 1: Konsumenten nachziehen (Live-Prompt-Rolle, Phasenmodell aus `(call_type, counterpart)`) + Browser wird reine Anzeige (JS/CSS/Markup) ✅ 2026-07-30 (3 Commits: d4f10fe, c39edae, c20b8cc) — **Welle 1 code-vollständig**, Wortschatz-Sperre `current_mode|contact_category|contactCategory` in services/static/routes = **0 Treffer**; NICHT deployt/gepusht (`autonomous: false`, Abnahme = `deploy.sh production` durch Claudian)
 - [ ] 08.23.2.COUNTERPART-03-PLAN.md — Welle 2: Wächter 2 (Wortschatz-Sperre) + Wächter 3 (Ein-Schreiber-Sperre, AST) + CHECK-Deklaration nachgezogen + DIALOG-Eintrag
 
 **Planungs-Zusatzfund (im Auftrag nicht genannt, jetzt im Scope):** `services/prompt_pipeline.py:659`
