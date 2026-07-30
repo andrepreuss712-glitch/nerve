@@ -1,7 +1,12 @@
-"""Behavioral-Test fuer mode_initial DB-INSERT in create_call_for_sid().
+"""Behavioral-Test fuer counterpart_initial DB-INSERT in create_call_for_sid().
+
+Phase 08.23.2.COUNTERPART / Migration 0035: der Event heisst nicht mehr nach der
+Anruf-Art. 'counterpart_initial' ersetzt den alten Namen — im Code, im
+CHECK-Constraint und in den Bestandszeilen. Der DATEINAME bleibt bewusst wie er
+ist (Datei-Umbenennung = Diff-Rauschen ohne Nutzen, CLAUDE.md Punkt 17).
 
 Phase 08.23.2.C.R: Verifiziert dass create_call_for_sid() tatsaechlich
-einen mode_initial-Eintrag in call_events schreibt (REQ-6 DB-INSERT-Nachweis).
+einen counterpart_initial-Eintrag in call_events schreibt (REQ-6 DB-INSERT-Nachweis).
 Nutzt Mock-SessionLocal (via database.db.SessionLocal) damit kein produktives
 Schema benoetigt wird.
 
@@ -27,8 +32,8 @@ def _make_mock_session():
     return session
 
 
-def test_create_call_for_sid_writes_mode_initial():
-    """create_call_for_sid() muss mode_initial-Event in call_events schreiben."""
+def test_create_call_for_sid_writes_counterpart_initial():
+    """create_call_for_sid() muss counterpart_initial-Event in call_events schreiben."""
     import services.live_session as ls
 
     test_sid = 'test-behavioral-sid-001'
@@ -44,7 +49,7 @@ def test_create_call_for_sid_writes_mode_initial():
         }
 
     try:
-        # Beide DB-Sitzungen (Call-Insert + mode_initial-Insert) tracken
+        # Beide DB-Sitzungen (Call-Insert + counterpart_initial-Insert) tracken
         main_session = _make_mock_session()
         mi_session = _make_mock_session()
 
@@ -74,17 +79,17 @@ def test_create_call_for_sid_writes_mode_initial():
         # Rueckgabe muss eine call_id (string) sein
         assert result is not None, 'create_call_for_sid() hat None zurueckgegeben'
 
-        # mode_initial-CallEvent muss via mi_session.add() geschrieben worden sein
+        # counterpart_initial-CallEvent muss via mi_session.add() geschrieben worden sein
         mi_added = mi_session.added_objects
         assert len(mi_added) >= 1, (
-            'create_call_for_sid() hat keinen mode_initial-Event in call_events geschrieben. '
+            'create_call_for_sid() hat keinen counterpart_initial-Event in call_events geschrieben. '
             'Plan 04 Task 2 (Wave 2) muss den INSERT implementiert haben.'
         )
 
-        # Hinzugefuegtes Objekt muss mode_initial-Payload haben
+        # Hinzugefuegtes Objekt muss counterpart_initial-Payload haben
         evt = mi_added[-1]
-        assert evt.event_type == 'mode_initial', (
-            f'Erwartetes event_type="mode_initial", aber got {evt.event_type!r}'
+        assert evt.event_type == 'counterpart_initial', (
+            f'Erwartetes event_type="counterpart_initial", aber got {evt.event_type!r}'
         )
         # Phase 08.23.2.COUNTERPART: getrennte Achsen, getrennte Felder
         assert evt.payload['counterpart'] == 'gatekeeper'

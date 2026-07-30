@@ -1,9 +1,10 @@
-"""Behavioral Tests fuer den mode_switch-DB-Write + Skip-Guard via handle_toggle_counterpart.
+"""Behavioral Tests fuer den counterpart_switch-DB-Write + Skip-Guard via handle_toggle_counterpart.
 
 Phase 08.23.2.COUNTERPART: der Toggle ist server-autoritativ. Der Browser sendet
 'toggle_counterpart' OHNE Wert, der Server rechnet das Gegenteil aus SEINEM Zustand.
-Der DB-Event-NAME bleibt 'mode_switch' (CHECK-Constraint + Prod-Altzeilen); nur die
-Payload traegt jetzt getrennte Achsen (call_type + old_counterpart/new_counterpart).
+Migration 0035: der DB-Event heisst 'counterpart_switch' — nicht mehr nach der Anruf-Art.
+Die Payload traegt getrennte Achsen (call_type + old_counterpart/new_counterpart). Der
+DATEINAME bleibt bewusst wie er ist (Diff-Rauschen ohne Nutzen, CLAUDE.md Punkt 17).
 
 Phase 08.23.2.C.R.F (bleibt gueltig): Tests muessen den echten Handler aufrufen — nicht
 manuell CallEvent-Objekte bauen und in Mock-DB schieben (das war der False-Green-Klassen-
@@ -12,7 +13,7 @@ Fehler aus Phase C.R der zu C.R.F gefuehrt hat).
 Technik: register_audio_handlers(mock_sio) mit mock_sio.on-Capture, dann handler() direkt aufrufen.
 flask.request und database.db.SessionLocal werden gepacht damit der Handler isoliert laeuft.
 
-REQ-6: mode_switch CallEvents muessen in DB geschrieben werden wenn call_id gesetzt.
+REQ-6: counterpart_switch CallEvents muessen in DB geschrieben werden wenn call_id gesetzt.
 Skip-Guard: wenn call_id=None → kein INSERT (kein aktiver Anruf).
 """
 from unittest.mock import patch, MagicMock
@@ -38,12 +39,12 @@ def _extract_handler(event_name):
     return registered[event_name], mock_sio
 
 
-def test_mode_switch_payload_persisted_to_db():
+def test_counterpart_switch_payload_persisted_to_db():
     """handle_toggle_counterpart schreibt CallEvent mit korrekten Feldern in DB.
 
     Szenario: call_id ist im State gesetzt (create_call_for_sid() wurde aufgerufen,
     wie nach Plan 01 auf jedem Produktions-Pfad). Toggle von gatekeeper zu decision_maker.
-    Erwartet: handler ruft db_session.add() mit CallEvent(event_type='mode_switch')
+    Erwartet: handler ruft db_session.add() mit CallEvent(event_type='counterpart_switch')
     auf, Payload enthaelt call_type, old_counterpart, new_counterpart.
     """
     test_sid = 'test-mode-switch-rf-001'
@@ -83,8 +84,8 @@ def test_mode_switch_payload_persisted_to_db():
         )
         evt = added_objects[0]
 
-        # event_type und call_id korrekt — der Event-NAME bleibt 'mode_switch'
-        assert evt.event_type == 'mode_switch', f'event_type falsch: {evt.event_type!r}'
+        # event_type und call_id korrekt — der Event heisst 'counterpart_switch'
+        assert evt.event_type == 'counterpart_switch', f'event_type falsch: {evt.event_type!r}'
         assert evt.call_id == test_call_id, f'call_id falsch: {evt.call_id!r}'
 
         # 3 Pflicht-Payload-Keys (getrennte Achsen)
