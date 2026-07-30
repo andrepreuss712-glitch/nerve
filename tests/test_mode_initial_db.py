@@ -36,9 +36,9 @@ def test_create_call_for_sid_writes_mode_initial():
     # Session-State mit gatekeeper-Default vorbereiten
     with ls._session_state_lock:
         ls._session_state[test_sid] = {
+            'mode': 'cold_call',          # ACHSE A (call_type), top-level
             'state': {
-                'current_mode': 'gatekeeper',
-                'contact_category': 'gatekeeper',
+                'counterpart': 'gatekeeper',   # ACHSE B (Gespraechspartner)
                 'call_id': None,
             }
         }
@@ -86,8 +86,9 @@ def test_create_call_for_sid_writes_mode_initial():
         assert evt.event_type == 'mode_initial', (
             f'Erwartetes event_type="mode_initial", aber got {evt.event_type!r}'
         )
-        assert evt.payload['mode'] == 'gatekeeper'
-        assert evt.payload['category'] == 'gatekeeper'
+        # Phase 08.23.2.COUNTERPART: getrennte Achsen, getrennte Felder
+        assert evt.payload['counterpart'] == 'gatekeeper'
+        assert evt.payload['call_type'] == 'cold_call'
         assert evt.payload['sid'] == test_sid
         assert 'timestamp' in evt.payload
 

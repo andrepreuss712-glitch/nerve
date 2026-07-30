@@ -314,10 +314,28 @@ def get_anonymisierer(sid: str):
         return _session_state.get(sid, {}).get('anonymisierer')
 
 
+def get_counterpart(sid: str) -> str:
+    """Gespraechspartner (Achse B) fuer sid: 'gatekeeper' | 'decision_maker'.
+
+    Reiner Lese-Zugriff, nimmt _session_state_lock selbst — NICHT aus einem bereits
+    gehaltenen Lock heraus aufrufen (threading.Lock ist nicht reentrant).
+    Fail-open Default 'gatekeeper' bei Ghost-SID (nie raise, Live-Pfad).
+    """
+    with _session_state_lock:
+        return ((_session_state.get(sid) or {}).get('state') or {}).get('counterpart') or 'gatekeeper'
+
+
 def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                        market: str = 'dach', language: str = 'de',
                        mode: str = 'cold_call') -> None:
     """Initialize _session_state[sid] for a new WebSocket connection (D-02)."""
+    # Phase 08.23.2.COUNTERPART — der Init-Default haengt an der ANRUF-ART:
+    # zu einem Termin sitzt man per Definition beim Entscheider, bei Kaltakquise
+    # zuerst im Vorzimmer. Ohne diese Kopplung liefe JEDER Meeting-Anruf bis zum
+    # ersten manuellen Toggle still im 4-Phasen-Sekretaersmodell statt im
+    # 6-Phasen-Meeting-Modell (Cross-AI-Fund 2026-07-28, Meeting-Regression).
+    # Umschalten bleibt jederzeit moeglich — das hier ist nur der Startwert.
+    _counterpart_default = 'decision_maker' if mode == 'meeting' else 'gatekeeper'
     with _session_state_lock:
         _session_state[sid] = {
             'user_id': user_id,
@@ -327,6 +345,14 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
             'active_sid': sid,
             'market': market,
             'language': language,
+            # ── ACHSE A (call_type) ────────────────────────────────────────────
+            # 'cold_call' | 'meeting' = die ANRUF-ART. Aendert sich waehrend eines
+            # Anrufs NIE. Der Speicher-Schluessel heisst historisch 'mode', weil
+            # MODE_REGISTRY/mode_strategy darauf sitzen — das ist Absicht, kein
+            # Restposten. Es gibt bewusst KEINEN Lese-Helfer dafuer (9 Direktleser
+            # im Bestand; ein Helfer mit 1 Aufrufer wuerde nur den Namen luegen).
+            # NIE mit dem Gespraechspartner verwechseln: der liegt getrennt in
+            # state['counterpart'] ('gatekeeper' | 'decision_maker').
             'mode': mode,
             'conversation_log': [],
             'berater_words': 0,
@@ -372,9 +398,12 @@ def init_session_state(sid: str, user_id: int, org_id: int, profile_id=None,
                 # W-1 PERSID Plan 03: 'session_anrede' aus 'state'-Subdict ENTFERNT.
                 # Liegt top-level lazy: _session_state[sid]['session_anrede'] (kein Seed,
                 # LAZY erzeugt durch per-SID Start-Write NACH init N-4 oder Toggle :827).
-                # Phase 08.23.2.C.R — Gatekeeper-State (Default: Sekretaer-Modus, DSGVO Single-Speaker)
-                'contact_category':      'gatekeeper', # 'target' | 'gatekeeper' — Default gatekeeper (REQ-5)
-                'current_mode':          'gatekeeper',  # Default gatekeeper; manuell via pip-mode-indicator aenderbar
+                # Phase 08.23.2.COUNTERPART — Gespraechspartner (Achse B), EIN Ort.
+                # Werte: 'gatekeeper' | 'decision_maker'. NIE 'cold_call'/'meeting' —
+                # das ist die Anruf-Art (call_type, top-level _session_state[sid]['mode']).
+                # Geschrieben NUR hier (Init) und in handle_toggle_counterpart
+                # (deepgram_service.py) — Ein-Schreiber-Sperre, Waechter 3.
+                'counterpart':           _counterpart_default,
                 'context_notes':         [],            # Phase 08.23.2.I aktiviert Befuellung
                 # Hysterese-interne Keys (Req-3) — Token-basiert (z.B. 'opener', 'pitch')
                 # HINWEIS: 'current_phase' (Integer) oben ist das alte Phase-04.8-System.
@@ -716,11 +745,12 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
             if sid in _session_state:
                 _session_state[sid].setdefault('state', {})['call_id'] = cid
         print(f'[live_session] create_call_for_sid: call_id={cid!r} sid={sid!r}')
-        # D-04b: mode_initial-Event — liest aktuellen Modus aus State (nach call_id-Write)
+        # D-04b: mode_initial-Event — liest call_type + counterpart aus State (nach call_id-Write)
         with _session_state_lock:
-            _mode_init_state = _session_state.get(sid, {}).get('state', {})
-            _current_mode = _mode_init_state.get('current_mode', 'gatekeeper')
-            _current_cat = _mode_init_state.get('contact_category', 'gatekeeper')
+            _mi_sd = _session_state.get(sid) or {}
+            _mode_init_state = _mi_sd.get('state') or {}
+            _counterpart_init = _mode_init_state.get('counterpart', 'gatekeeper')
+            _call_type_init = _mi_sd.get('mode', 'cold_call')
         _db_mi = None
         try:
             from database.db import SessionLocal as _SL_mi
@@ -733,14 +763,18 @@ def create_call_for_sid(sid: str, user_id: int, call_mode: str = 'cold_call') ->
                     event_type='mode_initial',
                     event_ts_ms=int(_t_mi.time() * 1000),
                     payload={
-                        'mode': _current_mode,
-                        'category': _current_cat,
+                        # Phase 08.23.2.COUNTERPART: zwei getrennte Achsen, getrennte Felder.
+                        # Der Event-NAME bleibt 'mode_initial' (CHECK-Constraint + Prod-Altzeilen);
+                        # die Umbenennung ist bewusst ein eigener, spaeterer Schritt.
+                        'call_type': _call_type_init,
+                        'counterpart': _counterpart_init,
                         'sid': sid,
                         'timestamp': _t_mi.monotonic(),
                     },
                 ))
                 _db_mi.commit()
-                print(f'[live_session] mode_initial event written: call_id={cid!r} mode={_current_mode!r}')
+                print(f'[live_session] mode_initial event written: call_id={cid!r} '
+                      f'call_type={_call_type_init!r} counterpart={_counterpart_init!r}')
             finally:
                 _db_mi.close()
         except Exception as _mi_err:

@@ -25,16 +25,10 @@ def test_init_session_state_has_context_notes(fresh_sid):
     assert st.get('context_notes') == []
 
 
-def test_init_session_state_has_contact_category(fresh_sid):
-    # Phase 08.23.2.C.R REQ-5: Default ist 'gatekeeper' (DSGVO Single-Speaker-Constraint)
+def test_init_session_state_has_counterpart(fresh_sid):
+    # Phase 08.23.2.COUNTERPART: EIN Gespraechspartner-Schluessel, Default 'gatekeeper'
     init_session_state(fresh_sid, user_id=1, org_id=1)
-    assert _session_state[fresh_sid]['state']['contact_category'] == 'gatekeeper'
-
-
-def test_init_session_state_has_current_mode(fresh_sid):
-    # Phase 08.23.2.C.R REQ-5: Default ist 'gatekeeper'
-    init_session_state(fresh_sid, user_id=1, org_id=1)
-    assert _session_state[fresh_sid]['state']['current_mode'] == 'gatekeeper'
+    assert _session_state[fresh_sid]['state']['counterpart'] == 'gatekeeper'
 
 
 def test_init_session_state_has_hysteresis_keys(fresh_sid):
@@ -64,6 +58,6 @@ def test_no_global_ls_state_writes_for_phase_c_keys(fresh_sid):
     before_keys = set(getattr(ls, 'state', {}).keys())
     init_session_state(fresh_sid, user_id=1, org_id=1)
     after_keys = set(getattr(ls, 'state', {}).keys())
-    forbidden = {'contact_category', 'current_mode', 'context_notes', 'phase_hint_count', 'pending_phase'}
+    forbidden = {'counterpart', 'context_notes', 'phase_hint_count', 'pending_phase'}
     new_keys = after_keys - before_keys
     assert not (new_keys & forbidden), f'Phase-C-Keys in ls.state geschrieben: {new_keys & forbidden}'
