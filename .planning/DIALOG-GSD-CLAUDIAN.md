@@ -1974,3 +1974,103 @@ Kriterium, das ohne jede Änderung erfüllt ist, ist kein Kriterium.
    `test_api_beenden_kehrt_mit_fehler_zurueck` zählt.
 3. **Kein Deploy, kein Push von Code** — Gate melden, Claudian fährt Migration-freien Deploy + Test-Anruf.
 4. **Kein Auto-Advance.**
+
+---
+
+### LOCK-1 — GSD — 2026-07-30: Teil-2-Abwägung + fünf weitere Punkte zur Kenntnis
+
+**1. Teil 2: Weg (c), aber als ZWEI DISJUNKTE DEFEKTE — nicht als doppelte Absicherung.**
+Weg (b) („Teil 1 reicht schon") ist **statisch widerlegt**, nicht vermutet. Der
+Deepgram-Lausch-Faden nimmt den `_session_state_lock` auf dem `on_message`-Weg **13-mal
+weiter**, nachdem `get_sid_paused` riegel-frei ist. Kronzeuge: `services/deepgram_service.py:94`
+im `result.is_final`-Zweig — das läuft bei **jeder** finalisierten Transkript-Zeile, also etwa
+jede Sekunde Sprache. Weitere: `:89` (`stabilize_speaker`), `:90` (`next_line_id`), `:104`,
+`:138`, `:141`, `:151` (`get_anonymisierer`), `:165`, `:197`, `:233`, `:276`, `:285`. Der einzige
+riegel-freie Ausgang ist leerer Text (`:83-84`) oder cold_call+interim (`:273-274`). `finish()`s
+`join()` wartet also weiter — Teil 1 alleine hätte den Bug **nicht** behoben.
+
+Damit ist Weg (c) **keine** doppelte Absicherung: Teil 1 nimmt dem 10-Hz-Ton-Weg den globalen
+Riegel (Punkt 25, echte Latenz-Verbesserung — 1414 von 1416 wartenden Rahmen im Abzug), Teil 2
+nimmt dem Auflegen die Unendlichkeit. Es gibt **keinen** einzelnen Weg, der beides löst.
+**Punkt 27 ist gewahrt.**
+
+*Nachtrag aus dem Cross-AI (B1):* Weg (c) deckelt das Auflegen **nur zusammen mit Teil 2c**.
+`finish()` allein zu begrenzen verschiebt den Hänger um eine Zeile — direkt dahinter steht
+`ls.stash_ended_session(_sid)` (`deepgram_service.py:848` bzw. `:884`), das den Riegel
+**unbegrenzt** nimmt (`live_session.py:533`), gefolgt von `pop_session_state` (`:490`, `:502`).
+Deshalb hat Plan 03 einen **vierten** Eingriff: begrenzter Erwerb in `stash_ended_session`,
+`pop_session_state` und der `setdefault`-Rennsperre in `handle_disconnect` (`:877`).
+
+*Nebenbefund für Teil 2a:* die CONTEXT-Forderung „tote Verbindung aus dem Verzeichnis nehmen"
+ist **bereits erfüllt** — `_deepgram_sessions.pop(sid)` passiert bei
+`services/deepgram_service.py:521`, also **vor** `finish()` (`:548`). Wird **nicht** erneut gebaut.
+
+**2. Scope der begrenzten Erwerbe — Entscheidung: EINE Probe pro Eingang, nicht acht begrenzte
+Erwerbe.** Wächter 1 verlangt, dass `handle_manual_ewb` **und** `api_beenden` MIT FEHLER
+zurückkehren. Der naheliegende Weg wäre, alle Riegel-Nahmen in beiden Eingängen auf
+`acquire(timeout=…)` umzustellen (4 in `handle_manual_ewb`: `dg:966/:982/:1011/:1027`; 3 in
+`api_beenden`: `app_routes.py:157/:171/:188`). Gebaut wird stattdessen **eine** Probe am Eingang
+jeder der zwei Funktionen (`ls.wait_session_state_lock_free()`), die den Riegel kurz nimmt und
+sofort freigibt. Begründung: der Fehlerfall ist ein **minutenlang** klemmender Riegel, keine
+Mikrosekunden-Konkurrenz — dafür genügt eine Probe. Und: **keine der sieben Riegel-Nahmen in den
+zwei Eingängen** wird angefasst (`dg:966/:982/:1011/:1027`, `app_routes.py:157/:171/:188`) — es
+sind **zwei** neue Stellen statt sieben. Angefasst werden ausschließlich die fünf Blöcke aus
+Teil 1 und Teil 2c (Punkt 1 oben); **97 der 102 bleiben unberührt**. Die theoretische Lücke
+(Riegel wird zwischen Probe und Nutzung genommen) bleibt bewusst offen; sie ist durch den
+Wachhund (Teil 3, sagt es) und das `finish()`-Zeitlimit (Teil 2, deckelt das Auflegen)
+abgefedert. **Punkt 27.**
+
+**3. HTTP-Status des `api_beenden`-Fehlerpfads — Entscheidung: 503 + `reason='state_locked'`,
+plus ein `error`-Feld.** Am Frontend geprüft, nicht angenommen: `static/pip-launcher.js:3144`
+macht `.then(function (r) { return r.json(); })` **ohne** Status-Prüfung und geht dann — nach
+einem Stale-Guard bei `:3146-3149`, der nur bei bereits laufender Neu-Sitzung greift — in
+`if (!data.ok) { console.error(..., data.error); _hideLadebalken1(); _showPostcallEmpty(); }`
+(`:3150`). Ein 503 mit JSON-Body funktioniert damit **ohne jede JS-Änderung** und beendet den
+ewigen Ladebalken. Der globale `fetch`-Wrapper (`templates/base.html:20-29`) setzt nur den
+CSRF-Header und behandelt Status nicht. Das Hausmuster wäre `200 + ok:false`
+(`app_routes.py:211`), aber hier ist es ein echter, transienter **Server**-Zustand — 503 ist
+korrekt und für Monitoring unterscheidbar. Das zusätzliche `error`-Feld gibt es, weil die
+Bestands-Konsole `data.error` loggt (sonst stünde dort `undefined`).
+
+**4. Rot-Beleg — nach Cross-AI B2 geändert und am 30.07. nachgeschärft: lokal für die
+`manual_ewb`-Hälfte, PFLICHT-Server-Rot-Lauf (durch Claudian) für die `api_beenden`-Hälfte —
+ohne `deploy.sh`.** Der lokale Rot-Lauf ist ein **Ermittlungs**-Lauf, nicht eine Abnahme — die
+von der HART-Regel erlaubte Kategorie; Präzedenz `08.23.2.COUNTERPART-01-SUMMARY.md`
+Zeilen 86-131. Er deckt aber **nur** die `manual_ewb`-Hälfte: die zwei `api_beenden`-Tests
+brauchen `TEST_DATABASE_URL` und werden lokal **übersprungen** (`tests/conftest.py:824-827`).
+Die ursprüngliche Planung hätte damit den Wächter für das **Kernsymptom** vom 30.07. zum
+allerersten Mal **nach** dem Fix laufen lassen — und zwar grün. Das beweist nichts.
+**Deshalb neu und verbindlich:** ein direkter pytest-Lauf **auf dem Prod-Server** am alten Stand
+(Welle 1 fertig, Plan 03 noch nicht gebaut), gegen eine frisch provisionierte Wegwerf-`nerve_test`,
+mit einem Arbeits-Abzug des App-Baums in `/tmp` — `/opt/nerve/app` wird dabei nur **gelesen**.
+**Kein `deploy.sh`:** dessen tar-Upload (`deploy.sh:79-80`) läuft **vor** dem Gate, Produktion
+bekäme also Dateien auf die Platte, die wir für den Beweis nicht brauchen. Damit gibt es in
+dieser Phase **keine** Ausnahme von der Kein-Deploy-Regel. **Claudian fährt den Lauf**
+(SSH-Mandat), nicht der Executor; der fertige Befehlsblock steht in Plan 01
+`<erst_rot_pflicht>`. Entscheidend sind zwei Testnamen aus
+`tests/test_session_lock_deadlock_guard.py`: `test_api_beenden_kehrt_mit_fehler_zurueck`
+(muss FAILED sein) und `test_api_beenden_mit_freiem_riegel_ist_kein_state_locked` (muss PASSED
+sein). Ausgabe verbatim ins SUMMARY („Rot-Beleg II"). PASSED oder SKIPPED statt FAILED: STOP.
+
+**5. `faulthandler` zusätzlich in eine Datei — Entscheidung: NEIN, nicht in dieser Phase.**
+`deploy/nerve.service` setzt kein `LogRateLimitIntervalSec`/`LogRateLimitBurst`; systemd-Default
+(10000 Nachrichten / 30s pro Dienst) reicht für einen einzelnen Abzug von realistisch mehreren
+hundert Zeilen. Kosten der Datei-Variante wären ein **dauerhaft offener Datei-Handle** in
+`logs/`, der nie geschlossen und nie rotiert werden darf (sonst schreibt der Abzug ins Leere) —
+Punkt 27: nicht bauen, bevor es weh tut. Nachzuziehen, falls im Journal nach einem echten Abzug
+„Suppressed N messages" auftaucht.
+
+**6. Zahlen-Korrektur, die Planung und Wächter 2 betrifft.** CONTEXT sagt „~60"
+`with _session_state_lock:`-Stellen, RESEARCH sagt 98 (grep-basiert). Der AST-Sweep über
+`services/` + `routes/` (Planungs-Lauf, reines Parsen ohne App-Import) findet **102** Blöcke in
+**8** Dateien: `claude_service.py` 41, `deepgram_service.py` 22, `live_session.py` 26,
+`app_routes.py` 4, `prompt_pipeline.py` 3, `cost_tracker.py` 2, `routes/learning.py` 2,
+`einwand_keyword_matcher.py` 2. Der grep war **doppelt** falsch: er übersieht die fünf
+Alias-Schreibweisen (`_ls_av._session_state_lock` in `claude_service.py:940`, `ls_module.` in
+`deepgram_service.py:572`, `_ls.` in `prompt_pipeline.py:654` und
+`einwand_keyword_matcher.py:259/:286`) und zählt mindestens einen **Kommentar** mit
+(`einwand_keyword_matcher.py:273`). Ein grep-basierter Wächter 2 hätte fünf echte Blöcke
+verpasst — deshalb ist er AST-basiert (Plan 02). **Und die gute Nachricht:** derselbe Sweep
+findet in allen 102 Blöcken **null** blockierende Aufrufe (`get_session`, `SessionLocal`,
+`messages.create/stream`, `sio.emit`, `requests.`, `sleep`, `join`). Fables Audit-Aussage
+„alle kurze RAM-Blöcke" ist damit maschinell bestätigt — Wächter 2 startet **grün**.
