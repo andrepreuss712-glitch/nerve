@@ -544,10 +544,42 @@ def _close_deepgram_connection(sid):
         print(f"[CostHook] deepgram stt skipped: {_e}")
     # ────────────────────────────────────────────────────────────────────
     if connection:
-        try:
-            connection.finish()
-        except Exception as e:
-            print(f"[DG] Fehler beim Schliessen (sid={sid}): {e}")
+        # ── Phase 08.23.2.LOCK-1 Teil 2: finish() mit Zeitlimit (Wurzel 2) ──────────────
+        # connection.finish() joint UNBEGRENZT auf den SDK-Lausch-Faden:
+        # deepgram/clients/common/v1/abstract_sync_websocket.py:468 -> self._listen_thread.join()
+        # OHNE timeout-Argument. Identisch in 3.10.0 / 3.11.0 / 4.8.1, und requirements.txt:13
+        # pinnt <5 — ein SDK-Upgrade loest das NICHT.
+        # Steht der Lausch-Faden in on_message am _session_state_lock (er nimmt ihn dort
+        # 13-mal, Kronzeuge ist der is_final-Zweig weiter oben in dieser Datei), warten zwei
+        # aufeinander: py-spy-Abzug 30.07., Thread-2284. Folge: das Auflegen kehrt NIE
+        # zurueck — kein conversation_logs-Eintrag, kein Transkript, kein 504 (die Anfrage
+        # endet nicht, sie bricht nur im Browser ab).
+        # ALLES FACHLICHE IST VOR DEM JOIN ERLEDIGT (_signal_exit, abstract:485-527):
+        # CloseStream gesendet (:492), Close-Handler gefeuert (:504), _exit_event gesetzt
+        # (:516), Socket geschlossen (:523). Und die Verbindung ist oben schon aus
+        # _deepgram_sessions raus. Der Join ist reine Hygiene — ihn aufzugeben verliert
+        # nichts Fachliches.
+        # 5.0s und KEIN kleinerer Wert: _signal_exit schlaeft fix 0.5s (abstract:513),
+        # im gesunden Fall braucht der Join danach <50ms. Unter 1.0s wuerde der GESUNDE
+        # Pfad abgeschnitten.
+        # Bei Zeitueberschreitung wird NICHT aufgeraeumt und NICHT erneut finish() gerufen.
+        # Der Faden heilt sich selbst: sobald der Riegel frei wird, laeuft on_message einmal
+        # fertig und die SDK-Schleife sieht _exit_event gesetzt und kehrt zurueck.
+        def _finish_bounded():
+            try:
+                connection.finish()
+            except Exception as e:
+                print(f"[DG] Fehler beim Schliessen (sid={sid}): {e}")
+
+        _fin_t = threading.Thread(target=_finish_bounded, daemon=True,
+                                  name=f'dg-finish-{sid}')
+        _fin_t.start()
+        _fin_t.join(timeout=5.0)
+        if _fin_t.is_alive():
+            print(f"[LOCKWATCH] finish() nach 5.0s nicht zurueck (sid={sid}) — der "
+                  f"Deepgram-Lausch-Faden haengt vermutlich am _session_state_lock. Wir "
+                  f"laufen ohne ihn weiter; er beendet sich selbst, sobald der Riegel frei "
+                  f"wird. Stapel-Abzug: sudo systemctl kill -s SIGUSR1 nerve")
         print(f"[DG] Session beendet (sid={sid})")
 
 
