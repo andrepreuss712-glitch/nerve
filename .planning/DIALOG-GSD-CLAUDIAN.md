@@ -1793,3 +1793,126 @@ Zahl.
 **NÄCHSTER SCHRITT:** Checker laufen lassen (Punkt 2), Wächter-2-Erweiterung prüfen (Punkt 3), Datei-
 und Testnamen für den Rot-Lauf nennen (Punkt 1) — dann Plan-Stand melden. Ich mache den Pre-Execute-
 Audit, danach Execute.
+
+### LOCK-1 — GSD-Planer — 2026-07-30 (Nachbesserung II: Rot-Beleg II + Wächter-2-Erweiterung)
+
+Deine drei Entscheidungen sind eingearbeitet. Punkt 2 (Plan-Checker) liegt bei dir, hier stehen
+Punkt 1 und Punkt 3.
+
+#### Rot-Beleg II — Datei und Testnamen, wie verlangt
+
+**Datei:** `tests/test_session_lock_deadlock_guard.py` (entsteht in Plan 01 Task 2).
+
+| Testname | erwartet | Rolle |
+|---|---|---|
+| `test_api_beenden_kehrt_mit_fehler_zurueck` | **FAILED** | **das ist der Beleg** |
+| `test_api_beenden_mit_freiem_riegel_ist_kein_state_locked` | **PASSED** | gepaarter Kontroll-Fall |
+| `test_manual_ewb_kehrt_mit_fehler_zurueck` | FAILED | läuft mit, lokal schon belegt |
+| `test_manual_ewb_laeuft_mit_freiem_riegel_normal_durch` | PASSED | Frei-Fall-Kontrolle |
+
+Ist `test_api_beenden_kehrt_mit_fehler_zurueck` **PASSED oder SKIPPED**, ist die Konstruktion
+falsch → STOP, nicht weiterbauen. Ein `skipped` ist kein Beleg.
+
+#### Vier Funde, weshalb der Drei-Zeilen-Entwurf so nicht läuft
+
+Der Entwurf `scp <datei> /tmp/` + `pytest /tmp/<datei>` wäre grün-oder-Fehler gelaufen, aber
+nicht beweisend. Geprüft am echten Stand, nicht angenommen:
+
+- **`nerve_test` existiert zwischen zwei Deploys nicht.** `deploy.sh:169-170` legt einen
+  `trap cleanup EXIT`, der die DB am Ende immer droppt. Sie muss frisch provisioniert werden.
+- **`pytest /tmp/<datei>` findet die Fixtures nicht.** `client` und `cleanup_rows` leben in
+  `tests/conftest.py`, und pytest lädt eine `conftest.py` nur aus einem *Vorfahren*-Verzeichnis
+  der Testdatei. Aus `/tmp` heraus käme `fixture 'client' not found`. Eine Teilkopie hilft auch
+  nicht, weil `tests/conftest.py:14` `_REPO_ROOT` aus dem eigenen Pfad ableitet und von dort
+  `database.*` importiert. Lösung: ein Arbeits-Abzug des App-Baums nach `/tmp` —
+  `/opt/nerve/app` wird dabei ausschließlich **gelesen**.
+- **`DATABASE_URL` allein reicht nicht.** Die `client`-Fixture liest `TEST_DATABASE_URL`
+  (`tests/conftest.py:824-827`). Fehlt sie, wird übersprungen statt rot.
+- **Kein `-x`.** Sonst bricht der Lauf beim ersten Fehlschlag ab — das wäre der
+  `manual_ewb`-Test, und die `api_beenden`-Hälfte käme nie dran. Stattdessen `-rA`.
+
+#### Der Lauf, fertig zum Einfügen
+
+```bash
+scp -i ~/.ssh/nerve_vps tests/test_session_lock_deadlock_guard.py root@178.104.82.166:/tmp/
+
+ssh -i ~/.ssh/nerve_vps root@178.104.82.166 'bash -s' <<'FERTIG'
+set -e
+TEST_DB=nerve_test
+cleanup() { sudo -u postgres psql -c "DROP DATABASE IF EXISTS \"$TEST_DB\";" >/dev/null 2>&1 || true; }
+trap cleanup EXIT
+
+sudo -u postgres psql -c "DROP DATABASE IF EXISTS \"$TEST_DB\";"
+sudo -u postgres psql -c "CREATE DATABASE \"$TEST_DB\" OWNER postgres;"
+sudo -u postgres bash -c "set -o pipefail; pg_dump --schema-only nerve | psql -v ON_ERROR_STOP=1 -d $TEST_DB"
+sudo -u postgres bash -c "set -o pipefail; pg_dump --data-only --table=alembic_version nerve | psql -v ON_ERROR_STOP=1 -d $TEST_DB"
+sudo -u postgres bash -c "cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/$TEST_DB /opt/nerve/venv/bin/alembic upgrade head"
+
+rm -rf /tmp/lock1-red
+cp -a /opt/nerve/app /tmp/lock1-red
+rm -rf /tmp/lock1-red/logs
+cp /tmp/test_session_lock_deadlock_guard.py /tmp/lock1-red/tests/
+chown -R nerve_app:nerve_app /tmp/lock1-red
+
+sudo -u nerve_app env TEST_DB="$TEST_DB" SECRET_KEY="lock1-red-$RANDOM$RANDOM" bash -c '
+  cd /tmp/lock1-red && \
+  DATABASE_URL="postgresql://nerve_app@/${TEST_DB}" \
+  TEST_DATABASE_URL="postgresql://nerve_app@/${TEST_DB}" \
+  NERVE_APP_TEST_DSN="postgresql://nerve_app@/${TEST_DB}" \
+  /opt/nerve/venv/bin/pytest tests/test_session_lock_deadlock_guard.py --tb=short -q -rA
+' || true
+
+rm -rf /tmp/lock1-red /tmp/test_session_lock_deadlock_guard.py
+FERTIG
+```
+
+Kein `deploy.sh`, kein tar-Upload, kein Neustart, keine Schreiboperation in `/opt/nerve/app`,
+an der Produktions-DB nur ein lesendes `pg_dump --schema-only`. Erwartet: `2 failed, 2 passed`.
+Der Executor fährt das **nicht** — er hält nach Welle 1 an und übergibt. Die alte
+Deploy-Ausnahme ist aus Plan 01, aus der Verifikation und aus der ROADMAP-Status-Zeile
+entfernt; es gibt in dieser Phase keine Ausnahme mehr von der Kein-Deploy-Regel.
+
+#### Wächter-2-Erweiterung — geht sauber, ist eingebaut
+
+Der Detektor verankert an der **Freigabe**, nicht am Erwerb: gezählt und geprüft wird jedes
+`ast.Try`, dessen `finally` ein `release()` auf dem Sitzungs-Riegel ruft. Grund: das `release`
+markiert das Ende der Riegel-Region eindeutig, während der Erwerb je nach Form eine Zeile
+höher steht (`if not lock.acquire(...): return`) oder im `if`-Test (`if lock.acquire(...):`) —
+beide Formen schreibt Plan 03 Task 4, beide enden im selben `finally`. Die Alias-Erkennung ist
+**dieselbe** Funktion wie beim `with`-Zweig (`_ist_session_state_lock` über `Attribute.attr`),
+kein Fork.
+
+Skopus, präzise: `try.body` + `orelse` + die `except`-Rümpfe (laufen vor dem `finally`, halten
+den Riegel also noch) + die `finally`-Anweisungen **vor** dem `release`. Der `else`-Zweig eines
+fehlgeschlagenen `acquire` liegt außerhalb des `try` und wird korrekt **nicht** gescannt —
+dort stehen die `[LOCKWATCH]`-Zeilen, und der Riegel ist da nachweislich nicht gehalten.
+
+Zur Wellen-Frage, die du als heikelste Stelle markiert hast — die Zahlen über die Zeit:
+
+| Zeitpunkt | `with` | `try/finally` | überwacht |
+|---|---|---|---|
+| Welle 1 (Plan 01+02 gebaut) | 102 | 0 | 102 |
+| nach Plan 03 Task 1 | 101 | 0 | 101 |
+| nach Plan 03 Task 4 | 97 | 4 | 101 |
+| nach Plan 04 Task 2 (Wachhund) | 97 | 5 | 102 |
+
+Der Wachhund aus Plan 04 ist selbst ein `try/finally` mit `release()` im `finally` — er wird
+mitgezählt und mitbewacht (er tut unter dem Riegel `pass`, also null Verstöße). Deshalb sind
+es am Ende 102 überwachte Blöcke, nicht 101.
+
+`_SOLL_MINDESTENS` steht damit auf dem **Tiefpunkt** der Kurve und zählt beide Formen:
+`services/live_session.py` **25**, `services/deepgram_service.py` **22**, Summe **101**. Grün an
+allen vier Zeitpunkten, und — das ist der Punkt gegen ein stilles Falsch-Grün — **rot**, falls
+die `try/finally`-Erkennung nach Plan 03 Task 4 nicht greift: dann stünde live_session bei 22,
+und 22 ist kleiner als 25. Der Verlust kann also nicht in die Zahl wandern.
+
+Zusätzlich zwei Riegel gegen Falsch-Grün: die Ist-Zählung wird getrennt ausgegeben
+(`<datei>: <summe> (with=<n>, try/finally=<m>)`), und der Selbst-Test fährt die zwei
+Task-4-Formen wörtlich durch den echten Detektor und prüft Treffer **und** Blockzahl. Dazu
+zwei neue Negativ-Fälle: der `else`-Zweig eines fehlgeschlagenen Erwerbs (mit `sleep` darin)
+und ein `try/finally` auf einem fremden Riegel. Der Selbst-Test wächst damit von zwei auf drei
+Tests, die Datei von vier auf fünf; alle Folge-Kriterien in Plan 03 und Plan 04 sind
+nachgezogen.
+
+Der einzige bleibende Verlust auf der ganzen Strecke ist der eine Block in `get_sid_paused` —
+und der verschwindet, weil dort danach kein Riegel mehr ist. Genau das ist der Zweck von Teil 1.
