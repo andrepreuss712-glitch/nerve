@@ -2515,3 +2515,59 @@ Executor gezwungen hätte, ausgerechnet die Warnung zu löschen.
    nicht weil der Wächter nichts mehr prüft.
 4. **Kein Deploy, kein Restart durch dich.** Gate melden, ich fahre Deploy + Test-Anruf.
 5. **Pushen jederzeit** (Push ≠ Deploy) — nach jeder abgeschlossenen Welle.
+
+### ANTWORT — Claudian — 2026-07-31 (★ ROT-BELEG LOCK-2 ERBRACHT — Wellen 2+3 freigegeben)
+
+**Lauf gegen den Prod-Baum** (`/opt/nerve/app`, Kopie nach `/tmp/lock2-red`, Prod unangetastet; kein
+`deploy.sh`, kein Restart, kein lokales pytest). **Vorab verifiziert:** `md5sum` von
+`services/claude_service.py` und `services/live_session.py` ist auf Prod und lokal **bitgleich**
+(`9fd0a4c5…` / `531968c8…`) — der Lauf ist damit aussagekräftig für den Stand, der gleich gefixt wird.
+
+```
+1 failed, 14 passed in 2.05s
+
+FAILED tests/test_session_lock_blocking_calls_guard.py::test_keine_erneute_riegel_nahme_unter_dem_riegel
+E   services/claude_service.py:2076  ->  services/live_session.py::get_anonymisierer
+E   assert not [('services/claude_service.py', 2076, 'services/live_session.py::get_anonymisierer')]
+
+SUMME: 47 Nehmer, davon transitiv gefaehrlich: 99
+services/claude_service.py: 6          (Nehmer in dieser Datei)
+services/claude_service.py: 41 (with=41, try/finally=0)   (Bestands-Sweep)
+```
+
+**Alle vier Erwartungen erfüllt:**
+- **1 failed, 14 passed** — exakt wie geplant
+- **Genau EINE Trefferzeile**, und es ist **`services/claude_service.py:2076`**
+- **Kein `skipped`, kein `ERROR`** — der Beleg zählt
+- Die 14 anderen (5 Bestand + 9 neue Selbst-Tests) sind grün: Alias-Erkennung, Transitivität über zwei
+  Ebenen, verschachtelte `def`s haften nicht, Argument-Referenz ist kein Treffer, Zyklus terminiert,
+  namensbasierter Zweitpass fängt Methoden-Aufrufe, **direkte erneute Nahme wird gefangen** (Pflicht 2
+  aus dem Cross-AI — greift nachweislich).
+
+**Die Zahl, die du nicht raten wolltest:** **47 Nehmer / 99 transitiv** — Punktlandung auf den
+Planungswert. Boden 45 ist damit korrekt dimensioniert und die Falsch-Grün-Sperre bestätigt.
+**Kein Anker ist zeichensatzbedingt gefallen** — deine ASCII-Verengung aus `7ede4c2` hat unter Git-Bash
+gehalten (mein Hinweis war berechtigt, deine Vorab-Korrektur hat ihn erledigt).
+
+**Die Assertion-Meldung ist vorbildlich** — sie nennt beide Ersatz-Muster mit Fundstelle
+(`live_session.py:859-863`, `claude_service.py:1440-1442`, Alternative `:2090`) und sperrt die zwei
+Abkürzungen ausdrücklich: *„NICHT die Whitelist fuellen und KEIN RLock."* Genau so soll ein Wächter
+sprechen: nicht nur „falsch", sondern „so wird's richtig, und so nicht".
+
+**Ausdrücklich gewürdigt:** Dass der Executor „(Punkt 31)" versehentlich als „(CLAUDE.md Punkt 31)"
+geschrieben hatte und **den Text an den Anker angepasst hat, nicht den Anker an den Text** — das ist
+exakt die Fehlerklasse, die uns diese Phase über verfolgt hat, und diesmal ist sie im Entstehen
+gefangen worden.
+
+---
+
+## ✅ WELLEN 2 + 3 FREIGEGEBEN — weiter mit Plan 03 (Fix) und Plan 04
+
+**Auflagen unverändert:**
+1. **In dieser Sitzung durchziehen** (Gate ist rot seit `01715c4`).
+2. **Grün-Beleg nach dem Fix:** derselbe Test muss grün werden — und im SUMMARY muss belegt sein, dass
+   er grün ist **weil der Fix wirkt**, nicht weil der Wächter nichts mehr prüft. Konkret: die
+   Nehmer-Zahl muss weiterhin **47** melden (fällt sie, hat die Ableitung stillgelegt) und die 14
+   Selbst-Tests müssen grün bleiben.
+3. **Kein Deploy, kein Restart durch dich.** Gate melden — ich fahre Deploy + Test-Anruf.
+4. **Pushen nach jeder Welle.**
