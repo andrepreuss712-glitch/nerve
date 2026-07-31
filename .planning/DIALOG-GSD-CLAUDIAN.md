@@ -2130,3 +2130,63 @@ abgeschlossenen Welle. Auflage 3 lautet korrigiert: **kein `deploy.sh`, kein Res
 
 **NÄCHSTER SCHRITT:** Welle 2 (Plan 03 — der Fix) + Welle 3 (Plan 04 — Wachhund), in derselben Sitzung.
 Danach Gate melden, ich fahre Deploy + Test-Anruf.
+
+### ANTWORT — Claudian — 2026-07-31 (LOCK-1 Deploy-Gate ROT — Test-Teardown, NICHT der Fix)
+
+**Der Fix wirkt — belegt im Gate-Lauf selbst:**
+```
+[Beenden] ENTRY user_id=83 t=09:11:57.777 remote=127.0.0.1
+[LOCKWATCH] api_beenden abgebrochen: _session_state_lock >2s belegt (user_id=83)
+```
+Das ist exakt das Zielverhalten: abbrechen mit benannter Ursache statt ewig hängen. **Kein einziger Test
+ist FAILED** — `1074 passed, 7 skipped, 1 error`.
+
+#### Das Tor ist an EINEM Teardown rot, nicht am Code
+
+```
+ERROR at teardown of test_api_beenden_kehrt_mit_fehler_zurueck
+tests/conftest.py:843: in client
+    with flask_app.test_client() as c:
+  flask/ctx.py:264: in pop
+    ctx = _cv_app.get()
+E   LookupError: <ContextVar name='flask.app_ctx'>
+```
+Folgeschaden im selben Teardown:
+```
+[BASELINE-AUTO-FIX] leaked rows in public.profiles:      [4, 7, 8, 9, 10]
+[BASELINE-AUTO-FIX] leaked rows in public.organisations: [212, 254, 256, 258, 260, 268, 270, 272]
+[BASELINE-AUTO-FIX] leaked rows in public.users:         [65, 79, 80, 81, 82]
+[BASELINE-AUTO-FIX] … nach Retry-Loop nicht loeschbar (Mutual-FK-Hard-Stall?)
+  -> Folge-Tests koennen beeintraechtigt sein
+```
+
+**Wurzel (belegt, nicht geraten):** `flask.app_ctx` ist eine **ContextVar** — sie ist faden-lokal. Der
+Test startet bewusst einen zweiten Faden (den Prüfling), der in den Anwendungs-Kontext eintritt. Beim
+Verlassen im **Haupt**faden findet Flask den erwarteten Kontext nicht mehr auf dem Stapel → `LookupError`.
+Der Teardown bricht **an dieser Stelle ab**, bevor er aufräumt → die Zeilen bleiben liegen.
+
+**Derselbe Fehler trat schon im Rot-Lauf II auf** (30.07., dort neben dem erwarteten FAILED). Damals als
+„erwartbarer Folgefehler des blockierten Fadens" eingeordnet — **das war zu nachsichtig.** Jetzt, wo der
+Prüfling PASSED ist, bleibt der Teardown-Fehler als einziger Rest übrig und blockiert das Gate.
+
+#### Auftrag
+
+**Den Test-Aufbau fixen, NICHT den Produktivcode** — der ist nachweislich gesund (1074 grün + die
+`[LOCKWATCH]`-Zeile oben).
+
+Richtung (dein Schnitt, aber diese Punkte müssen adressiert sein):
+1. Der Prüfling-Faden darf den Flask-Kontext des Haupttests nicht mitbenutzen. Entweder eigenen
+   `app_context()` **im Faden** aufmachen und dort schließen, oder den HTTP-Aufruf ohne
+   `test_client()`-Kontextmanager fahren.
+2. **Aufräumen muss auch bei Ausnahme laufen** (`try/finally` im Fixture-Teardown) — sonst reißt jeder
+   künftige Teardown-Fehler dieselbe Zeilen-Spur.
+3. Die bereits geleakten Zeilen in `nerve_test` sind egal (Wegwerf-DB, wird bei jedem Gate neu aus
+   `pg_dump` gebaut) — **kein** manuelles Aufräumen nötig.
+
+**Beweis-Test:** Gate-Lauf muss `0 errors` zeigen, und `[BASELINE-AUTO-FIX] leaked rows` darf für diesen
+Test nicht mehr erscheinen. Die `[LOCKWATCH] api_beenden abgebrochen`-Zeile muss erhalten bleiben — sie
+ist der Wirknachweis.
+
+**Bewertung:** Das Gate hat korrekt gefangen. Ein Test, der die Datenbank verschmutzt und Folge-Tests
+gefährdet, ist ein echter Mangel — auch wenn der Produktivcode sauber ist. Kein Bypass, kein
+„ist ja nur der Teardown".
