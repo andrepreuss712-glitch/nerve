@@ -288,9 +288,90 @@ _ended_snapshots_lock = threading.Lock()
 _SNAPSHOT_TTL_S: float = 300.0       # 5 Minuten TTL
 _per_sid_lock = threading.Lock()
 
+# ── Phase 08.23.2.LOCK-1 Teil 3: Aufsatz-Riegel mit Halter-Aufzeichnung ──────────────
+class _TracedLock:
+    """Duenner Aufsatz auf threading.Lock, der den HALTER aufzeichnet.
+
+    WARUM: CPython gibt aus einem threading.Lock KEINE Halter-Information heraus. Der
+    py-spy-Abzug vom 30.07. (PID 2335884) zeigte 1416 wartende Faeden und KEINEN Halter mit
+    sichtbarem Python-Rahmen — 'wer haelt den Riegel' ist ohne Aufzeichnung BEIM ERWERB
+    schlicht nicht beantwortbar. faulthandler zeigt exakt dieselbe Sicht und kann es
+    deshalb AUCH NICHT; er ersetzt nur das Werkzeug py-spy, nicht die Antwort.
+
+    PUNKT 17 (kein Refactor nebenbei): diese Klasse ersetzt GENAU EINE Zeile — die
+    Erzeugung von _session_state_lock. Keine der 97 'with ... _session_state_lock:'-
+    Stellen in acht Dateien wird angefasst; sie brauchen nur das Kontext-Manager-Protokoll.
+    Alle ANDEREN Riegel des Moduls (_per_sid_lock, _ended_snapshots_lock,
+    _per_sid_transcript_lock, _per_sid_coaching_lock, state_lock) bleiben bewusst
+    gewoehnliche threading.Lock — nur der eine, der am 30.07. geklemmt hat, bekommt den Aufsatz.
+
+    KEIN RLock. Wieder-Eintritt desselben Fadens muss weiterhin verklemmen: close_moment /
+    get_or_open_moment sind ausdruecklich darauf gebaut ('LOCK-FREE, der AUFRUFER haelt',
+    weiter unten in dieser Datei). Ein RLock wuerde diesen Design-Zwang lautlos aufloesen.
+
+    PUNKT 28 (kein modul-globaler veraenderlicher Zustand fuer pro-Nutzer-Daten): die
+    Halter-Felder sind veraenderlich und prozessweit — aber sie beschreiben DEN RIEGEL,
+    nicht einen Nutzer, eine Sitzung oder einen Anruf. Sie enthalten KEINE sid, KEINE
+    user_id, KEINE org_id; ein Cross-Tenant-Vermischungs-Risiko existiert nicht. Sie liegen
+    ausserdem INNERHALB dieses Moduls, waehrend der Global-Waechter
+    (tests/test_no_live_global_state.py) Zuweisungen der Form `ls.<attr> = ...` aus
+    FREMDmodulen prueft. Kein Whitelist-Eintrag noetig — diese Begruendung IST der Eintrag.
+
+    LATENZ (Punkt 25): ein Python-__enter__/__exit__-Paar kostet grob 1-2 us pro Erwerb
+    statt ~0.1 us beim C-Riegel. Nach Teil 1 nimmt der 10-Hz-Ton-Weg diesen Riegel GAR
+    NICHT mehr; die verbleibenden Erwerbe (mehrere pro finalisierter Zeile, ~1/s pro Anruf,
+    plus Analyse-/Coaching-Schleife alle 2-4s) liegen bei grob 1.8 ms PRO MINUTE und Anruf.
+    Budget: < 5 ms/min/Anruf.
+    """
+
+    __slots__ = ('_lock', '_name', 'holder_thread', 'holder_ident',
+                 'holder_since')
+
+    def __init__(self, name: str):
+        self._lock = threading.Lock()
+        self._name = name
+        self.holder_thread = None        # str  — Faden-Name des aktuellen Halters
+        self.holder_ident = None         # int  — Faden-Kennung (fuer den faulthandler-Abzug)
+        self.holder_since = None         # float monotonic — Halte-DAUER; die Uebernahme-
+                                         # UHRZEIT wird daraus erst beim Loggen abgeleitet
+
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        got = self._lock.acquire(blocking, timeout)
+        if got:
+            _t = threading.current_thread()
+            self.holder_thread = _t.name
+            self.holder_ident = _t.ident
+            self.holder_since = time.monotonic()   # EIN C-Aufruf, kein zweiter fuer die Uhrzeit
+        return got
+
+    def release(self) -> None:
+        # REIHENFOLGE IST LOAD-BEARING: erst die Felder loeschen, DANN freigeben.
+        # Umgekehrt koennte ein wartender Faden den Riegel sofort uebernehmen und seine
+        # Felder setzen — und unser nachgelagertes Loeschen wuerde den NEUEN Halter
+        # wegwischen. Der Wachhund meldete dann 'Halter unbekannt', obwohl er bekannt ist.
+        self.holder_thread = None
+        self.holder_ident = None
+        self.holder_since = None
+        self._lock.release()
+
+    def locked(self) -> bool:
+        return self._lock.locked()
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.release()
+        return False
+
+    def __repr__(self):
+        return f"<_TracedLock {self._name} holder={self.holder_thread!r}>"
+
+
 # ── Per-SID Session-State (D-02) ─────────────────────────────────────────────
 _session_state: dict = {}       # {sid: {key: value, ...}}
-_session_state_lock = threading.Lock()
+_session_state_lock = _TracedLock('_session_state_lock')
 
 # ── Per-SID Transcript Buffer (D-02 Tier 2 PFLICHT) ──────────────────────────
 # Replaces module-global transcript_buffer. SID written by _flush_segment.
