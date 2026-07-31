@@ -335,3 +335,165 @@ def test_sweep_erreicht_alle_bekannten_bloecke():
         f"erwartet mindestens {_SOLL_SUMME_MINDESTENS}. Gezaehlt werden BEIDE Formen "
         f"(with + try/finally) — faellt die Summe darunter, deckt der Waechter weniger "
         f"ab als die Phase versprochen hat.")
+
+
+# ══ Selbst-Test: der Sweep beweist, dass er beisst ═════════════════════════════
+# Synthetischer Quelltext statt temporaer verunreinigter Produktiv-Datei — Begruendung
+# im Modul-Docstring. Die Schnipsel stehen in tests/, das NICHT im Sweep-Scope liegt
+# (_SCAN_DIRS = services/routes) -> kein Selbst-Treffer. Der Alias ist bewusst eine
+# nackte Variable ohne import-Zeile: ein dedenteter Import auf Spalte 0 wuerde das
+# Modul-Ebenen-Kriterium „der Waechter laedt die App nicht" treffen.
+
+def _analysiere_quelle(quelltext):
+    """Faehrt DENSELBEN Sweep gegen einen synthetischen Quelltext. Bewusst dieselben
+    Helfer wie der Datei-Sweep — ein nachgebauter Mini-Detektor wuerde nur sich selbst
+    beweisen. Deckt BEIDE Formen ab: with-Bloecke und try/finally mit begrenztem Erwerb."""
+    baum = ast.parse(textwrap.dedent(quelltext))
+    treffer = []
+    for block in _sammle_bloecke(baum):
+        treffer.extend(_verbotene_aufrufe_in(block))
+    for tblock in _sammle_try_bloecke(baum):
+        treffer.extend(_verbotene_aufrufe_in(_riegel_region(tblock)))
+    return treffer
+
+
+def _zaehle_bloecke(quelltext):
+    """Wie viele UEBERWACHTE Bloecke sieht der Sweep in diesem Quelltext? Beide Formen."""
+    baum = ast.parse(textwrap.dedent(quelltext))
+    return len(_sammle_bloecke(baum)) + len(_sammle_try_bloecke(baum))
+
+
+def test_sweep_erkennt_verbotene_aufrufe_in_allen_alias_schreibweisen():
+    faelle = [
+        ('nackt (live_session.py-Stil)', """
+            with _session_state_lock:
+                db = get_session()
+        """, 'get_session'),
+        ('Alias ls.', """
+            with ls._session_state_lock:
+                sio.emit('x')
+        """, 'emit'),
+        ('Alias _ls. (prompt_pipeline, einwand_keyword_matcher)', """
+            with _ls._session_state_lock:
+                time.sleep(1)
+        """, 'sleep'),
+        ('Alias _ls_av. (claude_service:940)', """
+            with _ls_av._session_state_lock:
+                db = SessionLocal()
+        """, 'SessionLocal'),
+        ('Alias ls_module. (deepgram_service:572)', """
+            with ls_module._session_state_lock:
+                t.join()
+        """, 'join'),
+        ('Mehr-Item-with', """
+            with anderer_lock, ls._session_state_lock:
+                requests.post('u')
+        """, 'requests.post'),
+        ('zwei Ebenen tief im selben Block', """
+            with ls._session_state_lock:
+                if x:
+                    try:
+                        client.messages.create()
+                    except Exception:
+                        pass
+        """, 'messages.create'),
+    ]
+    for beschreibung, quelltext, erwartet in faelle:
+        treffer = _analysiere_quelle(quelltext)
+        assert len(treffer) == 1, f"{beschreibung}: erwartet 1 Treffer, war {treffer!r}"
+        assert treffer[0][1] == erwartet, f"{beschreibung}: {treffer!r}"
+
+
+def test_sweep_meldet_harmlose_aufrufe_nicht():
+    faelle = [
+        ('String-Join ist kein Faden-Join', """
+            with ls._session_state_lock:
+                x = ', '.join(teile)
+        """),
+        ('dict.get ist kein requests.get', """
+            with ls._session_state_lock:
+                v = d.get('k', 0)
+        """),
+        ('get_session AUSSERHALB jedes Riegel-Blocks', """
+            def helfer():
+                with anderer_lock:
+                    pass
+                db = get_session()
+        """),
+        ('anderer Riegel (with)', """
+            with anderer_lock:
+                sio.emit('x')
+        """),
+        ('try/finally-Negativfall 1: der Fehl-Zweig eines begrenzten Erwerbs', """
+            if ls._session_state_lock.acquire(timeout=2.0):
+                try:
+                    d.pop('k', None)
+                finally:
+                    ls._session_state_lock.release()
+            else:
+                time.sleep(1)
+        """),
+        ('try/finally-Negativfall 2: fremder Riegel', """
+            if _sessions_lock.acquire(timeout=2.0):
+                try:
+                    db = get_session()
+                finally:
+                    _sessions_lock.release()
+        """),
+    ]
+    for beschreibung, quelltext in faelle:
+        treffer = _analysiere_quelle(quelltext)
+        assert treffer == [], f"{beschreibung}: Falsch-Treffer {treffer!r}"
+
+
+def test_sweep_erkennt_die_begrenzten_erwerbe_aus_plan_03():
+    """Die Falsch-Gruen-Sperre. Die try/finally-Form entsteht erst in Welle 2 — ohne
+    diesen Selbst-Test waere in Welle 1 ununterscheidbar, ob der Detektor sie erkennt
+    oder sie nur noch nicht existiert. Erkennt er sie nicht, deckt er still nichts ab.
+    Geprueft wird deshalb BEIDES: der Verbots-Treffer UND die Blockzahl."""
+    faelle = [
+        ('Form A wie Eingriff C1 (stash_ended_session)', """
+            def stash_ended_session(sid):
+                if not _session_state_lock.acquire(timeout=2.0):
+                    print('[LOCKWATCH] stash_ended_session: Riegel besetzt')
+                    return
+                try:
+                    db = get_session()
+                finally:
+                    _session_state_lock.release()
+        """, 'get_session', 1),
+        ('Form B wie Eingriff C4 (handle_disconnect, cross-modul)', """
+            def handle_disconnect(sid):
+                if ls._session_state_lock.acquire(timeout=2.0):
+                    try:
+                        sio.emit('x')
+                    finally:
+                        ls._session_state_lock.release()
+                else:
+                    print('[LOCKWATCH] handle_disconnect: Riegel besetzt')
+        """, 'emit', 1),
+        ('Wachhund _lockwatch_tick (Plan 04 Task 2): 0 Treffer, aber 1 gezaehlter Block', """
+            def _lockwatch_tick():
+                if not _session_state_lock.acquire(timeout=0.05):
+                    print('[LOCKWATCH] Riegel besetzt')
+                    return
+                try:
+                    pass
+                finally:
+                    _session_state_lock.release()
+        """, None, 1),
+    ]
+    for beschreibung, quelltext, erwartet, soll_bloecke in faelle:
+        treffer = _analysiere_quelle(quelltext)
+        if erwartet is None:
+            assert treffer == [], (
+                f"{beschreibung}: der Wachhund haelt den Riegel fuer 'pass' — er darf den "
+                f"Waechter NICHT rot faerben ({treffer!r}).")
+        else:
+            assert len(treffer) == 1 and treffer[0][1] == erwartet, (
+                f"{beschreibung}: der begrenzte Erwerb aus Plan 03 Task 4 wird NICHT bewacht "
+                f"({treffer!r}). Genau die vier Stellen, die wir wegen einer Verklemmung "
+                f"anfassen, fielen damit aus dem Waechter.")
+        assert _zaehle_bloecke(quelltext) == soll_bloecke, (
+            f"{beschreibung}: der Block wird nicht als ueberwachter Block GEZAEHLT — dann ist "
+            f"_SOLL_MINDESTENS still falsch und der Verlust wandert in die Zahl.")
