@@ -2903,6 +2903,18 @@ Plans:
 
 ---
 
+### Phase 999.11: `inspect.sh git-stand` lügt — uraltes `.git` in `/opt/nerve/app` (BACKLOG, NEU 2026-07-31, aus LOCK-1 Rot-Beleg II)
+
+**Goal:** `inspect.sh git-stand` liefert auf Production eine **irreführende** Ausgabe: `/opt/nerve/app` trägt ein eigenes, uraltes `.git` mit HEAD `014fcef` („remove debug logging from EWB buttons") und meldet Hunderte Dateien als `M`, weil `deploy.sh` per tar darüberschreibt statt zu mergen. Wer das liest, glaubt an einen deployten Stand, den es nicht gibt — der echte Stand stand zeitgleich in `.deploy_meta` (`GIT_HEAD=da7834e`).
+
+**Warum das gefährlich ist:** dieselbe Klasse wie der `inspect.sh`-RLS-False-Negative — ein Werkzeug, dem wir bei Beweis-Fragen vertrauen, gibt eine plausible falsche Antwort statt eines Fehlers. Ein Prüfschritt, der auf `git-stand` ankert, ist damit wertlos, ohne dass es jemand merkt.
+
+**Tasks (Skizze):** entweder (a) `git-stand` auf `.deploy_meta` umstellen (bzw. zusätzlich ausgeben und den git-Teil als „nicht maßgeblich" kennzeichnen), oder (b) das Server-`.git` in `/opt/nerve/app` entfernen und `deploy.sh` es entfernt halten lassen. (b) ist ehrlicher — kein Repo vortäuschen, wo keins ist.
+
+**Gefunden:** beim Rot-Beleg-II-Lauf der Phase 08.23.2.LOCK-1; der Leseschritt (2a') hat genau seinen Zweck erfüllt und die Täuschung sichtbar gemacht. **Abhängigkeit:** keine. **Komplexität:** 🟢. **Plans:** 0 plans
+
+---
+
 ### Phase 999.10: ACHSE-A-UMBENENNUNG — `_session_state[sid]['mode']` → `call_type` durchziehen (BACKLOG, NEU 2026-07-28, aus COUNTERPART Cross-AI-Review)
 
 **Herkunft:** Cross-AI-Review (Fable) zu Phase 08.23.2.COUNTERPART, André-Entscheidung 2026-07-28.
