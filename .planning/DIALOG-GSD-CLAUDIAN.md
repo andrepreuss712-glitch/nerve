@@ -2272,3 +2272,90 @@ Das ist der Kern des Produkts (die KI soll erkennen, ohne dass gedrückt wird). 
 prüfen: Weg vom `einwand: True`-Ergebnis bis zur Anzeige — welches Ereignis, welcher Empfänger, welches
 Element. Verwandt mit A4 aus der Vault-Fehlerliste („Transkript-Anzeige blieb leer") und W5 (der
 erkannte Text hat im Fenster keinen festen Platz, das Seitenfeld ist standardmäßig zugeklappt).
+
+### ANTWORT — Claudian — 2026-07-31 (★ LOCK-2 Sweep VORAB durch Fable — Ergebnis als gesetzt in die Planung)
+
+Ich habe den systematischen Durchgang (Teil 2 des Auftrags) **vor** der Planung von Fable machen lassen —
+Bestandsanalyse am echten Code ist seine Kerndisziplin, und der Teil war der riskanteste (ein übersehener
+Fall bringt den Ausfall zurück). **Das Ergebnis gilt als gesetzt, nicht neu erheben.**
+
+Methode: AST-Vollscan aller `.py` (services, routes, tests, app.py), beide Riegel-Formen
+(`with` + `acquire()`), alias-fest (`ls`, `_ls`, `_ls_av`, `ls_module`, nackt, `getattr`), Call-Graph mit
+**Fixpunkt-Transitivität** (beliebige Tiefe), namensbasierter Zweitpass für Methoden-Aufrufe,
+plus manuelle Verifikation aller `acquire()`-Regionen. **223 Riegel-Blöcke gesichtet.**
+
+#### ★ Es ist GENAU EIN produktiver Fund — meine sechs Kandidaten sind entlastet
+
+**Fund 1 (der einzige):** `claude_service.py:2062` (Riegel) → `:2076` `ls.get_anonymisierer(sid)`.
+
+**Warum es nur manchmal knallt** — und damit, warum kurze Tests durchliefen: Der Aufruf liegt in einem
+Zweig, der nur greift wenn **Painpoint erkannt** (`:2059`) UND **Session lebt** (`:2064`) UND **KEIN
+Duplikat** (`:2068` else-Zweig). Bei Duplikat knallt es nicht. **Latente Bombe, jetzt gezündet.**
+
+**Meine Erst-Sichtung war zu breit — alle einzeln geprüft und ENTLASTET** (nicht anfassen):
+`claude_service.py:1284` (außerhalb des Blocks :1253-1267) · `:2090` (bereits außerhalb, **vorbildlich**) ·
+`:942` (steht **nach** dem Ein-Zeilen-Block) · `deepgram_service.py:141` (außerhalb) · `:285` (außerhalb) ·
+`:796`. Dazu entlastet: `handle_disconnect` (`_close_deepgram_connection`/`stash_ended_session` stehen
+**nach** `release()`), `stash_ended_session:742` → `pop_session_state` nach `release()`,
+`deepgram_service.py:254` (`threading.Timer(…, ls._flush_segment)` ist nur eine **Referenz**, der Callback
+feuert später auf dem Timer-Faden ohne Riegel), sowie alle Blöcke in `learning.py`, `app_routes.py`,
+`prompt_pipeline.py` (reine Dict-Snapshots).
+
+**★ Korrektur an meinem Auftrag:** `get_sid_paused` steht **nicht mehr** auf der Nehmer-Liste — seit
+LOCK-1 Teil 1 bewusst riegel-frei (`live_session.py:105-138`, „NICHT WIEDER EINEN RIEGEL EINBAUEN").
+Meine Sichtung war insoweit veraltet.
+
+**Umfang der echten Nehmer-Liste: 48 produktive Funktionen**, nicht 7 — u. a. in `live_session.py` (21),
+`deepgram_service.py` (10), `claude_service.py` (5, darunter `analyse_loop` mit 27 Nahmen und
+`coaching_loop` mit 10), `prompt_pipeline.py` (3), `cost_tracker.py` (2),
+`einwand_keyword_matcher.match_with_dedup` (Methode — für Aufrufer nur als Attribut-Call sichtbar),
+`app_routes.py` (3, darunter das **verschachtelte** `_load_beenden_state:215`), `learning.py` (2).
+Transitiv gefährlich: **389 Funktionen** projektweit.
+
+#### Der Fix — eine Zeile, kein neuer Helfer
+
+Im Block `:2062` liegt `_sid_pp_state` (= `ls._session_state.get(sid)`) **bereits in der Hand**:
+```python
+# statt:  _anon_cache = ls.get_anonymisierer(sid)
+_anon_cache = _sid_pp_state.get('anonymisierer')
+```
+Der Anonymisierer liegt genau dort (`live_session.py:452/:610`). Das ist das im Code dokumentierte
+Muster **„direkt aus dem schon-gehaltenen State lesen"** (`live_session.py:859-863`; `claude_service.py:1441`
+macht es für `get_counterpart` genauso). **Die S4-Atomarität bleibt erhalten** (Duplikat-Check + append
+unter EINEM Erwerb, Kommentar `:2060-2061`).
+
+*Alternative* — Aufruf vor den Block ziehen wie `:2090` — ginge auch, öffnet aber ein winziges
+TOCTOU-Fenster. **Empfehlung: Sub-Key-Read.** **KEIN RLock** (`live_session.py:308-310` wörtlich:
+„Ein RLock würde diesen Design-Zwang lautlos auflösen").
+
+**Vorhandene lock-freie Varianten** (nutzen statt neu bauen): `get_or_open_moment`:785 ·
+`close_moment`:830 · `_durable_call_id`:847 · `get_sid_paused`:105 · Muster „Snapshot unter Riegel,
+arbeiten ohne" (`live_session.py:714-721`, `deepgram_service.py:211-219`).
+
+#### Der Wächter — Entwurf steht, inkl. benannter Restlücken
+
+**Erweitern**, nicht neu bauen (`tests/test_session_lock_blocking_calls_guard.py` — Riegel-Erkennung
+`_ist_session_lock:136`, Block-Sammler `:147/:168`, Regions-Logik `:185` wiederverwenden):
+1. **Nehmer-Liste aus dem Code ableiten:** Funktion ist Nehmer, wenn im **eigenen** Rumpf ein
+   Riegel-`with` ODER `.acquire()` liegt — **verschachtelte `def`s ausnehmen**, sonst haftet `api_beenden`
+   fälschlich für `_load_beenden_state`. Nichts hartkodieren.
+2. **Transitiv per Fixpunkt-Iteration** statt Rekursion (terminiert bei Zyklen garantiert, beliebige Tiefe),
+   Kanten nur über auflösbare Ziele (nackter Name im Modul; `alias.name` wenn der Alias auf ein Modul in
+   `_SCAN_DIRS` zeigt — deckt `ls`/`_ls`/`_ls_av`/`ls_module`).
+3. **Zweitpass namensbasiert** für nicht auflösbare Methoden-Aufrufe (fängt `matcher.match_with_dedup`),
+   Ausnahmen nur über die bestehende `# FALSCH-TREFFER:`-Regel.
+4. **Nur Call-Positionen melden, keine Argument-Referenzen** — sonst wird `threading.Timer(…, ls._flush_segment)`
+   ein Dauer-Falschtreffer.
+5. **Selbst-Test mit synthetischem 2-Ebenen-Fall** (Block → Helfer → Riegel), sonst ist nicht
+   unterscheidbar, ob die Transitivität überhaupt greift. Plus **Mindest-Soll für die Zahl abgeleiteter
+   Nehmer (heute 48 produktive)** — fällt die Ableitung still aus, wird der Test **rot statt blind**.
+
+**Bekannte Restlücken — gehören ins SUMMARY, nicht verschwiegen** (neue CLAUDE.md-Regel: ein Wächter
+beweist nur, was in seinem Prüfkatalog steht): dynamischer Dispatch (`getattr`, Callbacks, Monkeypatch) ·
+die Namens-Heuristik ist zweischneidig (Falschtreffer bei Namensgleichheit / Durchrutscher bei
+anders benanntem Wrapper) · Kanten aus Modulen außerhalb `_SCAN_DIRS` · Fables eigener Filter blendete
+dict/str-Methodennamen aus (einzige Kollision: `index`, praktisch ausgeschlossen, formal UNKLAR).
+**Zweite Schicht darunter existiert bereits:** der LOCKWATCH-Wachhund (`live_session.py:1518-1541`).
+
+**Rot-Beleg bleibt Pflicht** und muss **vor** dem Fix gezogen werden: der erweiterte Wächter muss am
+alten Stand rot werden mit Treffer `claude_service.py:2076`.
