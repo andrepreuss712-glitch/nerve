@@ -497,3 +497,361 @@ def test_sweep_erkennt_die_begrenzten_erwerbe_aus_plan_03():
         assert _zaehle_bloecke(quelltext) == soll_bloecke, (
             f"{beschreibung}: der Block wird nicht als ueberwachter Block GEZAEHLT — dann ist "
             f"_SOLL_MINDESTENS still falsch und der Verlust wandert in die Zahl.")
+
+
+# ══ LOCK-2: erneute Riegel-Nahme unter gehaltenem Riegel ══════════════════════
+# Mindest-Soll fuer die ABGELEITETE Nehmer-Menge. Faellt die Ableitung still aus (falsches
+# AST-Muster, leerer Alias-Satz), findet der Sweep 0 Verstoesse und SIEHT GRUEN AUS. Diese
+# Zahl macht ihn dann rot statt blind.
+#
+# IST-STAND 2026-07-31 (nachgemessen ueber services/ + routes/): 47 abgeleitete Nehmer —
+# live_session 21, deepgram_service 10, claude_service 6, app_routes 3, cost_tracker 2,
+# learning 2, prompt_pipeline 2, einwand_keyword_matcher 1.
+# Fables urspruenglich genannte "48" war eine GERUNDETE Angabe, keine Messung: ihre eigene
+# Aufschluesselung ergibt ebenfalls 47.
+#
+# WARUM 45 UND NICHT 47: der Zweck ist "rot statt blind", nicht exakte Buchfuehrung. Ein
+# stiller Total-Ausfall der Ableitung liefert 0 bis eine Handvoll Nehmer — den faengt 45
+# genauso zuverlaessig wie 47. Ein Boden von 47 waere dagegen bei JEDER legitimen Entfernung
+# eines Nehmers rot; genau das ist real passiert (LOCK-1 hat get_sid_paused bewusst
+# riegel-frei gemacht). Der Waechter waere dann ein Blockierer statt ein Netz. Der Puffer
+# folgt derselben Logik wie _SOLL_MINDESTENS weiter oben ("Tiefpunkt der Kurve, nicht
+# heutiger Ist-Stand").
+# Die EXAKTE Ist-Zahl druckt jeder Lauf selbst ([LOCK-2]-Ausgabe unter -s) und sie gehoert
+# ins SUMMARY. Sinkt sie: Ursache klaeren und MIT BEGRUENDUNG nachziehen — nie stillschweigend
+# senken, nie den Test entfernen.
+_SOLL_NEHMER_MINDESTENS = 45
+
+# Falsch-Treffer-Ausnahmen NUR fuer die LOCK-2-Erweiterung. HEUTE LEER — jeder Eintrag
+# braucht einen '# FALSCH-TREFFER:'-Kommentar mit Datei:Zeile und Begruendung.
+# Ein ECHTER Fund gehoert NICHT hierher, sondern gemeldet (STOP-Regel im Docstring).
+_ERNEUTE_NAHME_FALSCH_TREFFER = frozenset()   # {(datei, zeile, name), ...}
+
+# Meldenamen der DIREKTEN Wieder-Nahme. Bewusst von den Call-Treffern
+# ('<zieldatei>::<funktion>') unterscheidbar: Plan 02 wertet die Trefferzeilen aus, und ein
+# direkter Treffer darf dort nicht als Call-Treffer gelesen werden. Als Konstanten, damit die
+# Zeichenkette GENAU EINMAL im Code steht und die Selbst-Tests sie nicht zweitschreiben.
+_MELDE_WITH = '<direkte erneute Nahme (with)>'
+_MELDE_ACQUIRE = '<direkte erneute Nahme (.acquire)>'
+
+
+# ── Nehmer-Erkennung (D-3 Punkt 1) ────────────────────────────────────────────
+def _ist_riegel_acquire(call):
+    """True fuer <riegel>.acquire(...) — Alias-fest ueber DIESELBE Riegel-Erkennung wie der
+    with-Zweig (_ist_session_state_lock). Zweite Form der Riegel-Nahme seit LOCK-1 Plan 03."""
+    f = call.func
+    return (isinstance(f, ast.Attribute) and f.attr == 'acquire'
+            and _ist_session_state_lock(f.value))
+
+
+def _eigene_knoten(fn_knoten):
+    """Alle Knoten im Rumpf von fn_knoten OHNE die Ruempfe verschachtelter def/class.
+
+    WARUM (D-3 Punkt 1): ast.walk wuerde in verschachtelte Funktionen absteigen und
+    routes/app_routes.py:api_beenden faelschlich zum Riegel-Nehmer machen, weil das darin
+    definierte _load_beenden_state:215 einen Riegel haelt. Die verschachtelte Funktion wird
+    separat als EIGENE Funktion erfasst und ist dort zu Recht Nehmer.
+    """
+    ergebnis = []
+
+    def _lauf(knoten):
+        for kind in ast.iter_child_nodes(knoten):
+            if isinstance(kind, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            ergebnis.append(kind)
+            _lauf(kind)
+
+    _lauf(fn_knoten)
+    return ergebnis
+
+
+def _nimmt_riegel_selbst(fn_knoten):
+    """Nehmer = im EIGENEN Rumpf liegt ein Riegel-`with` ODER ein <riegel>.acquire().
+    Nichts hartkodiert: eine neue riegel-nehmende Funktion ist damit automatisch geschuetzt.
+    Eine gepflegte Liste wuerde veralten und dieselbe Luecke neu erzeugen."""
+    for k in _eigene_knoten(fn_knoten):
+        if isinstance(k, ast.With) and any(
+                _ist_session_state_lock(i.context_expr) for i in k.items):
+            return True
+        if isinstance(k, ast.Call) and _ist_riegel_acquire(k):
+            return True
+    return False
+
+
+# ── Modul-/Alias-Aufloesung (D-3 Punkt 2) ─────────────────────────────────────
+def _punkt_name(datei):
+    """'services/live_session.py' -> 'services.live_session'"""
+    return datei[:-3].replace('/', '.')
+
+
+def _aliase_und_importe(baum, bekannte_module):
+    """(modul_aliase, funktions_importe) fuer EINE Datei.
+
+    modul_aliase:    alias-Name        -> ziel-DATEI   (deckt ls / _ls / _ls_av / ls_module)
+    funktions_importe: lokaler Name    -> (ziel-DATEI, funktions-Name)
+
+    ast.walk statt baum.body: die riskantesten Aliase sind FUNKTIONSLOKALE lazy-Importe gegen
+    Modul-Zyklen (services/claude_service.py:936 `import services.live_session as _ls_av`).
+    Ein Sammler nur auf Modul-Ebene faende genau die fuenf Faelle nicht, die schon LOCK-1 zum
+    AST gezwungen haben.
+    """
+    aliase, importe = {}, {}
+    for knoten in ast.walk(baum):
+        if isinstance(knoten, ast.Import):
+            for a in knoten.names:
+                if a.name in bekannte_module:
+                    aliase[a.asname or a.name.split('.')[-1]] = bekannte_module[a.name]
+        elif isinstance(knoten, ast.ImportFrom):
+            if not knoten.module:
+                continue
+            for a in knoten.names:
+                voll = f'{knoten.module}.{a.name}'
+                if voll in bekannte_module:
+                    # `from services import live_session as ls` -> Modul, kein Symbol
+                    aliase[a.asname or a.name] = bekannte_module[voll]
+                elif knoten.module in bekannte_module:
+                    importe[a.asname or a.name] = (bekannte_module[knoten.module], a.name)
+    return aliase, importe
+
+
+# ── Funktionen + Kanten einer Datei ───────────────────────────────────────────
+def _funktionen_der_datei(baum):
+    """[(name, knoten)] fuer JEDE def/async def im Baum — inkl. Methoden und verschachtelter
+    defs. Der Name ist der BLOSSE Funktionsname (ohne Klasse): fuer Aufrufer ist eine Methode
+    ohnehin nur als `obj.name(...)` sichtbar, und genau darauf setzt der Zweitpass auf."""
+    return [(k.name, k) for k in ast.walk(baum)
+            if isinstance(k, (ast.FunctionDef, ast.AsyncFunctionDef))]
+
+
+def _aufloesen(func, datei, aliase, importe, lokale_namen):
+    """(ziel_datei|None, name|None) fuer den AUFGERUFENEN Ausdruck eines ast.Call.
+
+    ziel_datei is None + name gesetzt  ->  nicht aufloesbar, geht in den namensbasierten
+                                           Zweitpass (D-3 Punkt 3).
+    """
+    if isinstance(func, ast.Name):
+        if func.id in lokale_namen:
+            return datei, func.id
+        if func.id in importe:
+            return importe[func.id]
+        return None, func.id
+    if isinstance(func, ast.Attribute):
+        v = func.value
+        if isinstance(v, ast.Name) and v.id in aliase:
+            return aliase[v.id], func.attr
+        return None, func.attr
+    return None, None
+
+
+def _kanten_der_funktion(fn_knoten, datei, aliase, importe, lokale_namen):
+    """(aufgeloeste_ziele, namens_ziele) aus dem EIGENEN Rumpf.
+
+    NUR Aufruf-Positionen (knoten.func) — KEINE Argument-Referenzen (D-3 Punkt 4). Sonst
+    wuerde threading.Timer(..., ls._flush_segment) (services/deepgram_service.py:254) ein
+    Dauer-Falschtreffer: dort wird die Funktion nur als WERT weitergereicht, der Callback
+    feuert spaeter auf dem Timer-Faden OHNE Riegel.
+    """
+    ziele, namen = set(), set()
+    for k in _eigene_knoten(fn_knoten):
+        if not isinstance(k, ast.Call):
+            continue
+        zdatei, zname = _aufloesen(k.func, datei, aliase, importe, lokale_namen)
+        if zname is None:
+            continue
+        if zdatei is None:
+            namen.add(zname)
+        else:
+            ziele.add((zdatei, zname))
+    return ziele, namen
+
+
+# ── Fixpunkt (D-3 Punkt 2) ────────────────────────────────────────────────────
+def _graph_bauen(baeume):
+    """(gefaehrlich, gefaehrliche_namen, nehmer, nehmer_pro_datei) fuer {datei: baum}.
+
+    FIXPUNKT-ITERATION, KEINE REKURSION: die Menge waechst monoton ueber eine endliche
+    Grundmenge, terminiert also garantiert — auch bei Zyklen (A ruft B, B ruft A). Eine
+    Rekursion ueber den Call-Graph liefe dort ohne Besuchs-Markierung endlos.
+    Beliebige Tiefe ist damit gratis: der Kegel aus 99 transitiv gefaehrlichen Funktionen
+    (Ist-Stand 2026-07-31 ueber _SCAN_DIRS) entsteht von selbst.
+    """
+    bekannte_module = {_punkt_name(d): d for d in baeume}
+    alle = {}          # (datei, name) -> (ziele, namens_ziele)
+    nehmer = set()
+    nehmer_pro_datei = {}
+    for datei, baum in baeume.items():
+        aliase, importe = _aliase_und_importe(baum, bekannte_module)
+        funktionen = _funktionen_der_datei(baum)
+        lokale_namen = {n for n, _ in funktionen}
+        for name, knoten in funktionen:
+            schluessel = (datei, name)
+            alle[schluessel] = _kanten_der_funktion(
+                knoten, datei, aliase, importe, lokale_namen)
+            if _nimmt_riegel_selbst(knoten):
+                nehmer.add(schluessel)
+                nehmer_pro_datei[datei] = nehmer_pro_datei.get(datei, 0) + 1
+
+    gefaehrlich = set(nehmer)
+    gefaehrliche_namen = {name for _d, name in gefaehrlich}
+    geaendert = True
+    while geaendert:
+        geaendert = False
+        for schluessel, (ziele, namens_ziele) in alle.items():
+            if schluessel in gefaehrlich:
+                continue
+            if (ziele & gefaehrlich) or (namens_ziele & gefaehrliche_namen):
+                gefaehrlich.add(schluessel)
+                gefaehrliche_namen.add(schluessel[1])
+                geaendert = True
+    return gefaehrlich, gefaehrliche_namen, nehmer, nehmer_pro_datei
+
+
+# ── Verstoss-Sweep — ZWEI Pfade ───────────────────────────────────────────────
+def _direkte_erneute_nahmen(baum):
+    """[(zeile, meldename)] — die DIREKTESTE Form der Fehlerklasse in EINER Datei:
+    ein Riegel-`with` ODER ein <riegel>.acquire() INNERHALB einer bereits gehaltenen Region.
+
+    WARUM EIN EIGENER PFAD: _erneute_nahmen_finden wertet nur ast.Call ueber die Nehmer-Menge
+    aus. (a) Ein verschachteltes `with ls._session_state_lock:` ist gar kein Call. (b) Ein
+    direktes ls._session_state_lock.acquire() loest auf den Namen 'acquire' auf, und der ist
+    als _TracedLock-Methode bewusst KEIN Nehmer (der Ausschluss ist fuer die Nehmer-Ableitung
+    richtig). Beides ist exakt der Selbstverklemmer vom 31.07., nur ohne Zwischenfunktion —
+    und beides waere ueber den Call-Pfad unsichtbar.
+
+    KEIN SELBST-TREFFER DER REGIONS-WURZEL: _sammle_bloecke liefert die Riegel-`with`-Bloecke,
+    und genau diese Knoten SIND die Wurzeln. Ein naives ast.walk(wurzel) faende die Wurzel
+    wieder und meldete jeden Riegel-Block als Verstoss gegen sich selbst. Gemeldet wird nur,
+    was ECHT INNERHALB liegt:
+      * with-Regionen: Identitaets-Vergleich `k is wurzel` (die Wurzel selbst faellt raus,
+        ein verschachtelter Riegel-`with` nicht).
+      * try-Regionen: die Region ist eine ANWEISUNGS-Liste, und _riegel_region liefert
+        `body + orelse + except-Ruempfe + finally-VOR-release`. Bei BEIDEN Hausformen des
+        begrenzten Erwerbs steht das eroeffnende acquire im `if`-Test bzw. eine Zeile hoeher,
+        also AUSSERHALB des `try` — es liegt damit gar nicht erst in der Region und kann sich
+        nicht selbst melden. Es braucht deshalb KEINE Positions-Ausnahme.
+
+    WARUM KEINE AUSNAHME DER ERSTEN ANWEISUNG (empirisch entschieden, 2026-07-31):
+    Ein frueherer Entwurf schloss die erste Anweisung aus, um zusaetzlich die dritte Form
+    (`try: lock.acquire() ... finally: lock.release()`) vor einem Selbst-Treffer zu schuetzen.
+    Das riss ein Loch derselben Klasse, die dieser Waechter schliesst: eine ECHTE Wieder-Nahme
+    als ERSTE Anweisung einer Form-1/2-Region waere still durchgerutscht. Nachgemessen: die
+    dritte Form kommt im Produktiv-Code NICHT vor (0 von 5 try-Riegel-Regionen in
+    services/ + routes/ haben ein acquire als erste try-Anweisung), und die beiden echten
+    Hausformen brauchen die Ausnahme nicht. Sie faellt deshalb weg.
+    Taucht die dritte Form kuenftig auf, meldet der Waechter sie LAUT (ein
+    `# FALSCH-TREFFER:`-Eintrag mit Begruendung raeumt sie aus) statt eine echte Wieder-Nahme
+    STILL zu verschlucken. Falsch-Treffer-Richtung ist bei einem Waechter die sichere
+    Richtung — "rot statt blind" (CLAUDE.md Punkt 31).
+    """
+    treffer = []
+
+    def _ist_riegel_with(k):
+        return isinstance(k, ast.With) and any(
+            _ist_session_state_lock(i.context_expr) for i in k.items)
+
+    for wurzel in _sammle_bloecke(baum):
+        for k in ast.walk(wurzel):
+            if k is wurzel:
+                continue          # die Wurzel ist die gehaltene Region, kein Verstoss
+            if _ist_riegel_with(k):
+                treffer.append((getattr(k, 'lineno', 0), _MELDE_WITH))
+            elif isinstance(k, ast.Call) and _ist_riegel_acquire(k):
+                treffer.append((getattr(k, 'lineno', 0), _MELDE_ACQUIRE))
+
+    for tknoten in _sammle_try_bloecke(baum):
+        # Keine Positions-Ausnahme: der eroeffnende Erwerb liegt bei beiden Hausformen
+        # ausserhalb des try und damit nicht in dieser Region (siehe Docstring).
+        for anweisung in _riegel_region(tknoten):
+            for k in ast.walk(anweisung):
+                if _ist_riegel_with(k):
+                    treffer.append((getattr(k, 'lineno', 0), _MELDE_WITH))
+                elif isinstance(k, ast.Call) and _ist_riegel_acquire(k):
+                    treffer.append((getattr(k, 'lineno', 0), _MELDE_ACQUIRE))
+    return treffer
+
+
+def _erneute_nahmen_finden(baeume):
+    """[(datei, zeile, meldename)] — ZWEI Pfade.
+
+    Pfad A (Call-Pfad): Aufrufe unter dem Riegel, die den Riegel selbst ueber eine
+    Zwischenfunktion (direkt oder transitiv) wieder nehmen.
+    Pfad B (_direkte_erneute_nahmen): die DIREKTE Wieder-Nahme ohne Zwischenfunktion —
+    verschachteltes Riegel-`with` (kein ast.Call) und <riegel>.acquire() (bewusst kein
+    Nehmer-Name). Ohne Pfad B bliebe die DIREKTESTE Form der Fehlerklasse unsichtbar.
+
+    Beide Pfade nutzen DIESELBEN Regions-Helfer wie LOCK-1
+    (_sammle_bloecke / _sammle_try_bloecke / _riegel_region) — eine zweite Regions-Logik
+    waere der Anfang der Divergenz.
+
+    Dass die Regionslogik trennt, ist am Produktiv-Code belegt: services/claude_service.py:2076
+    liegt IM Block :2062 (Treffer), :2090 und :1355 liegen DAHINTER (kein Treffer) — derselbe
+    Quelltext, andere Position.
+    """
+    gefaehrlich, gefaehrliche_namen, _n, _p = _graph_bauen(baeume)
+    bekannte_module = {_punkt_name(d): d for d in baeume}
+    treffer = []
+    for datei, baum in baeume.items():
+        aliase, importe = _aliase_und_importe(baum, bekannte_module)
+        lokale_namen = {n for n, _ in _funktionen_der_datei(baum)}
+        regionen = [[b] for b in _sammle_bloecke(baum)]
+        regionen += [_riegel_region(t) for t in _sammle_try_bloecke(baum)]
+        for region in regionen:
+            for wurzel in region:
+                for k in ast.walk(wurzel):
+                    if not isinstance(k, ast.Call):
+                        continue
+                    zdatei, zname = _aufloesen(
+                        k.func, datei, aliase, importe, lokale_namen)
+                    if zname is None:
+                        continue
+                    ist_treffer = ((zdatei, zname) in gefaehrlich if zdatei
+                                   else zname in gefaehrliche_namen)
+                    if ist_treffer:
+                        melde = (f'{zdatei or "?"}::{zname}')
+                        treffer.append((datei, getattr(k, 'lineno', 0), melde))
+        # Pfad B: direkte Wieder-Nahme in derselben Datei (eigene Regions-Durchlaeufe, weil
+        # hier KNOTEN geprueft werden statt Call-Kanten — Schicht 4 Punkt 6).
+        for zeile, melde in _direkte_erneute_nahmen(baum):
+            treffer.append((datei, zeile, melde))
+    return sorted(set(treffer))
+
+
+def test_keine_erneute_riegel_nahme_unter_dem_riegel():
+    baeume = {}
+    fehler = []
+    for datei, pfad in _python_dateien():
+        baum, f = _baum_oder_fehler(pfad)
+        if baum is None:
+            fehler.append((datei, 0, f'SYNTAX ({f})'))
+            continue
+        baeume[datei] = baum
+    verstoesse = [t for t in _erneute_nahmen_finden(baeume)
+                  if t not in _ERNEUTE_NAHME_FALSCH_TREFFER] + fehler
+    assert not verstoesse, (
+        "Erneute Riegel-Nahme unter gehaltenem _session_state_lock — der Faden blockiert "
+        "SICH SELBST (threading.Lock ist NICHT reentrant, und das ist Absicht: "
+        "services/live_session.py:308-310):\n" +
+        "\n".join(f"  {d}:{z}  ->  {n}" for d, z, n in verstoesse) +
+        "\n\nNICHT die Whitelist fuellen und KEIN RLock. Den Wert direkt aus dem SCHON "
+        "GEHALTENEN State lesen (Muster: services/live_session.py:859-863 und "
+        "services/claude_service.py:1440-1442) oder den Aufruf VOR den Block ziehen "
+        "(Muster: services/claude_service.py:2090).")
+
+
+def test_nehmer_ableitung_faellt_nicht_still_aus():
+    baeume = {}
+    for datei, pfad in _python_dateien():
+        baum, _f = _baum_oder_fehler(pfad)
+        if baum is not None:
+            baeume[datei] = baum
+    _g, _gn, nehmer, pro_datei = _graph_bauen(baeume)
+    print('\n[LOCK-2] Abgeleitete Riegel-NEHMER (nichts hartkodiert):')
+    for datei in sorted(pro_datei):
+        print(f'  {datei}: {pro_datei[datei]}')
+    print(f'  SUMME: {len(nehmer)} Nehmer, davon transitiv gefaehrlich: {len(_g)}')
+    assert len(nehmer) >= _SOLL_NEHMER_MINDESTENS, (
+        f"Die Nehmer-Ableitung liefert nur {len(nehmer)} Funktionen, erwartet mindestens "
+        f"{_SOLL_NEHMER_MINDESTENS} (gemessener Ist-Stand 2026-07-31: 47). Entweder greift das "
+        f"AST-Muster nicht mehr (dann ist der Waechter BLIND, nicht gruen), oder Nehmer "
+        f"wurden legitim zurueckgebaut (dann die Zahl MIT BEGRUENDUNG nachziehen, den Test "
+        f"NICHT entfernen).")
