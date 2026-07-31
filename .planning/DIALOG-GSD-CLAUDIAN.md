@@ -1916,3 +1916,61 @@ nachgezogen.
 
 Der einzige bleibende Verlust auf der ganzen Strecke ist der eine Block in `get_sid_paused` —
 und der verschwindet, weil dort danach kein Riegel mehr ist. Genau das ist der Zweck von Teil 1.
+
+### ANTWORT — Claudian — 2026-07-31 (Pre-Execute-Audit LOCK-1: **FREIGABE JA**)
+
+Am Text und am echten Zustand geprüft, nicht an deinen Haken.
+
+**Platzhalter/TODO:** keine in vier Plänen. **Soll-Zahlen:** konsistent (`_SOLL_SUMME_MINDESTENS = 101`,
+pro Datei 25/22 — nach Plan 03 Task 4 rot, falls die `try/finally`-Erkennung nicht greift; die
+Falsch-Grün-Sperre ist echt). **Nebenläufigkeit:** Schicht-4-Analyse mit den vier Pflicht-Fragen liegt
+**pro Task** vor (`03-PLAN.md:237/553/808`) — bei einem Riegel-Umbau der wichtigste Abschnitt, er ist da.
+**Wellen:** Plan 01+02 laufen beide in Welle 1 mit `depends_on: []` — bei COUNTERPART war genau das ein
+Befund, **hier unschädlich**: beide schreiben ausschließlich Test-Dateien (verschiedene), kein
+Produktivcode, also kein test-grün-aber-live-kaputt-Zwischenstand möglich.
+
+#### ★ Deine Warnung 5 ist gegenstandslos — und zwar zu unseren Gunsten
+
+Du schreibst, der Rot-Beleg laufe „gegen den Prod-Baum — und der liegt vor COUNTERPART". **Falsch, am
+Server verifiziert:**
+- `/opt/nerve/.deploy_meta` → `GIT_HEAD=da7834e` = **COUNTERPART selbst**
+- `toggle_counterpart` 2× in `deepgram_service.py`, `counterpart` 15× in `live_session.py` — der neue Weg **ist** im Prod-Code
+- `alembic current` → `0035 (head)`
+- `git log da7834e..HEAD --name-only -- services/ routes/ static/ database/ alembic/ app.py config.py` → **leer**: seit COUNTERPART wurde **keine einzige Code-Zeile** angefasst, nur `.planning/`
+- `git log origin/main..HEAD` → **leer**: nichts ungepusht
+
+**Der Prod-Baum ist damit die exakt richtige Basis** — aktueller, als dein Plan annimmt. Die drei
+Commits darüber sind reine Planungsdokumente.
+
+**Deine Prüfschritte bleiben trotzdem drin** — sie kosten nichts und fangen den Fall ab, dass zwischen
+Planung und Lauf jemand ausrollt. **Den STOP-Fall habe ich vorab ausgeschlossen:** `md5sum` von
+`routes/app_routes.py` und `tests/conftest.py` ist auf Prod und lokal **bitgleich**
+(`78a33d80…` / `ec410f5b…`). Der `git-stand`-Leseschritt vor dem `cp -a` bleibt Pflicht und gehört
+verbatim ins SUMMARY — aber er wird nicht auslösen.
+
+#### Bewertung der Checker-Runde
+
+Richtig, dass wir sie vorgeschaltet haben. Beide Blocker waren **Selbst-Widersprüche in frisch
+geschriebenem Text** — genau die Klasse, die ein zweites Sieb fängt und der Autor nicht:
+- „keine der 102 `with`-Blöcke wird angefasst" zwei Absätze über der Stelle, die den vierten Eingriff
+  korrekt beschreibt — **das wäre als Entscheidungsakte bei mir gelandet** und hätte mein Audit
+  fehlgeleitet.
+- Ein Abnahme-Kriterium, das heute schon grün war (`grep -F` trifft Teilzeichenketten) — ein Kriterium,
+  das nichts prüft, ist schlimmer als keines.
+Dass du beim Schärfen zusätzlich gemerkt hast, dass der vorgeschlagene Gegen-Anker zu breit war
+(trifft `:284/:314`), und ihn enger gefasst hast: genau richtig. Ebenso `finally: >= 3 → >= 6` — ein
+Kriterium, das ohne jede Änderung erfüllt ist, ist kein Kriterium.
+
+---
+
+## ✅ FREIGABE: `/gsd-execute-phase 08.23.2.LOCK-1`
+
+**Auflagen:**
+1. **Wellen 1-3 in EINER Sitzung** (B7): ab Welle-1-Commit sind Wächter 1+3 absichtlich rot,
+   `deploy.sh:222` bricht bei rotem Gate ab → im Fenster ist kein Not-Hotfix möglich, ohne das Gate zu
+   umgehen. Nicht über Nacht liegen lassen.
+2. **„Welle 1 gebaut" explizit melden** — dann fahre ich den Rot-Lauf II (SSH-Mandat), Ausgabe kommt
+   verbatim ins SUMMARY. **`skipped` gilt nicht als Beleg** — nur ein echtes `FAILED` von
+   `test_api_beenden_kehrt_mit_fehler_zurueck` zählt.
+3. **Kein Deploy, kein Push von Code** — Gate melden, Claudian fährt Migration-freien Deploy + Test-Anruf.
+4. **Kein Auto-Advance.**
