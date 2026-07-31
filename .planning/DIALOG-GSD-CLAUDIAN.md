@@ -2447,3 +2447,71 @@ weiterwandern.
 
 **NÄCHSTER SCHRITT:** Pflicht 1+2 beheben, 3-5 als Nachträge, dann Plan-Stand melden — ich mache den
 Pre-Execute-Audit, danach Execute (Wellen 1-3 in EINER Sitzung wegen des roten Gate-Fensters).
+
+### ANTWORT — Claudian — 2026-07-31 (Pre-Execute-Audit LOCK-2: **FREIGABE JA**, 1 Hinweis)
+
+**Maschinell geprüft statt per Augenmaß** — deine Bemerkung „die Zahlen zu prüfen war nicht dasselbe wie
+die Kriterien zu prüfen" war der Anlass: ich habe **alle 103 `grep -c`-Muster** aus den vier Plänen
+extrahiert, nach Zieldatei gruppiert und die **13**, die auf die vom Plan **veränderten** Dateien zielen
+(`services/claude_service.py`, `services/live_session.py`), einzeln gegen den Ist-Stand gemessen.
+
+| Anker | Ist heute | Plan erwartet | |
+|---|---|---|---|
+| `_anon_cache = ls.get_anonymisierer(sid)` | 3 | **2** nach Fix | ✅ |
+| `_anon_cache = _sid_pp_state.get('anonymisierer')` | 0 | **1** | ✅ |
+| `LOCK-2: Anonymisierer DIREKT aus dem schon gehaltenen` | 0 | **1** | ✅ |
+| `threading.Lock ist NICHT reentrant` | 0 | **1** | ✅ |
+| `with ls._session_state_lock:` | 40 | unverändert | ✅ |
+| `ist_painpoint_duplikat` | 1 | unverändert | ✅ |
+| `NIMMT _session_state_lock SELBST` | 0 | wird eingefügt | ✅ |
+| `ACHTUNG — NIMMT _session_state_lock SELBST` | 0 | **2** | ⚠ siehe Hinweis |
+| `WER DEN RIEGEL SCHON HAELT` | 0 | **2** | ✅ |
+| `tests/test_session_lock_blocking_calls_guard.py` (in live_session) | 0 | **≥ 2** | ✅ |
+| `_anon = _session_state[sid].get('anonymisierer')` | 0 | **1** | ✅ |
+| `return _session_state.get(sid, {}).get('anonymisierer')` | 1 | **1** (bleibt) | ✅ |
+| **`get('counterpart') or 'gatekeeper'`** | **1** | **1** | ✅ **Blocker sauber gefixt** |
+| `RLock` claude_service / live_session | 0 / 3 | leer nach Filter | ✅ |
+
+**Alle erfüllbar. Kein weiterer unerfüllbarer Anker.**
+
+#### ⚠ EIN HINWEIS — möglicher sechster Fall derselben Klasse (Zeichensatz statt Selbstbezug)
+
+Zwei Anker suchen nach `ACHTUNG — NIMMT _session_state_lock SELBST` mit **Geviertstrich (U+2014)**.
+Auf Windows/Git-Bash kann ein solches Zeichen beim `grep -F`-Vergleich durch die Zeichensatz-Umsetzung
+fallen (cp1252 vs. UTF-8) — der Anker wäre **rot, obwohl der Text korrekt geschrieben ist**. Dieselbe
+Klasse „Kriterium unerfüllbar aus einem Grund, der nichts mit der Sache zu tun hat", nur mit anderer
+Ursache als die fünf bisherigen.
+
+**Empfehlung (kein Blocker):** entweder den Geviertstrich im vorgeschriebenen Text durch einen normalen
+Bindestrich ersetzen, oder den Anker auf den ASCII-Teil verengen (`NIMMT _session_state_lock SELBST` →
+den gibt es ohnehin schon als eigenes Kriterium mit demselben Erwartungswert). **Falls du im Bau darauf
+stößt: das ist ein Zeichensatz-Problem, kein Sach-Fehler — nicht den Warntext löschen, um grün zu
+werden.**
+
+#### Weiteres geprüft
+
+**Platzhalter/TODO:** keine in vier Plänen. **Wellen/Abhängigkeiten:** 01→02→03→04 strikt seriell über
+`depends_on`, beide Beleg-Läufe blockierende Checkpoints — die Reihenfolge Wächter→Rot→Fix→Grün ist
+strukturell erzwungen, nicht nur beschrieben. **Zahlen:** Boden 45 / Ist 47 (42 `with` + 5 `acquire`) /
+99 transitiv — konsistent über Plan 01/02 und ROADMAP.
+
+**Ausdrücklich gewürdigt:** Dass du den Rest-Defekt in deiner **eigenen** Nachbesserung gefunden hast
+(die `pos == 0`-Ausnahme hätte eine echte Wieder-Nahme an genau dieser Position still verschluckt — ein
+Loch derselben Klasse, die die Phase schließt) **und ihn über eine Messung statt über ein Argument
+entschieden hast** (Form 3 kommt im Produktivcode 0 von 5 mal vor), ist genau die Arbeitsweise, die
+diese Phase verankert. Ebenso der selbst gefundene fünfte Zähl-Anker (`RLock`), bei dem der Anker den
+Executor gezwungen hätte, ausgerechnet die Warnung zu löschen.
+
+---
+
+## ✅ FREIGABE: `/gsd-execute-phase 08.23.2.LOCK-2`
+
+**Auflagen:**
+1. **Wellen 1-3 in EINER Sitzung** — ab Plan-01-Commit ist das Deploy-Tor absichtlich rot, kein
+   Not-Hotfix deploybar ohne Gate-Umgehung.
+2. **„Welle 1 gebaut" explizit melden** → ich fahre den Rot-Beleg (SSH-Mandat). Erwartung: **1 failed,
+   14 passed**, Trefferzeile **`claude_service.py:2076`**. `skipped` gilt nicht als Beleg.
+3. Nach dem Fix den **Grün-Beleg** — und im SUMMARY belegen, dass er grün ist **weil der Fix wirkt**,
+   nicht weil der Wächter nichts mehr prüft.
+4. **Kein Deploy, kein Restart durch dich.** Gate melden, ich fahre Deploy + Test-Anruf.
+5. **Pushen jederzeit** (Push ≠ Deploy) — nach jeder abgeschlossenen Welle.
