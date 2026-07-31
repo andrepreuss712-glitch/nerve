@@ -2500,6 +2500,48 @@ if _os_guard.environ.get('NERVE_TESTING') != '1':
         # kann der Bootstrap in einem Nicht-Main-Thread laufen -> KEIN Crash, atexit deckt
         # den sauberen Restart als Fallback (Flush ist Optimierung, keine Daten-Garantie, §0).
         print(f"[SLOW] SIGTERM-Handler nicht registriert (kein Main-Thread): {_sig_e}; atexit-Fallback aktiv")
+
+# ── Phase 08.23.2.LOCK-1 Teil 3: faulthandler auf SIGUSR1 (Stapel-Abzug ohne py-spy) ──
+# Am 30.07. musste py-spy erst auf dem Prod-Server installiert werden, um den verklemmten
+# Zustand ueberhaupt zu sehen. Es liegt jetzt im venv, aber NICHT in requirements.txt —
+# ein Neuaufsetzen verliert es. faulthandler ist stdlib und braucht keine Abhaengigkeit.
+#
+# ERWARTUNGS-DAEMPFER: faulthandler zeigt EXAKT dieselbe Sicht wie py-spy (Python-Stapel
+# aller Faeden). Genau dort war der Halter am 30.07. UNSICHTBAR. faulthandler ersetzt das
+# WERKZEUG, nicht die Antwort auf 'wer haelt den Riegel' — die liefert der Aufsatz-Riegel
+# _TracedLock in services/live_session.py.
+#
+# SIGUSR1, und NIEMALS SIGUSR2. gunicorns Arbiter erzeugt bei USR2 einen NEUEN Arbiter
+# (Live-Deployment-Re-Exec, arbiter.py:294-300), und der Worker setzt USR2 auf SIG_DFL
+# (base.py:170-171) = Prozess-Tod. Bei systemd-Default KillMode=control-group traefe
+# `systemctl kill -s SIGUSR2 nerve` BEIDE. USR1 dagegen leitet der Arbiter sauber an die
+# Worker weiter (arbiter.py:286-292) und belegt es dort nur mit log.reopen_files()
+# (base.py:188-189) — idempotent und harmlos.
+#
+# chain=True ist PFLICHT — der Default ist False! Ohne Chain kapern wir gunicorns
+# handle_usr1. Heute folgenlos (--access-logfile -/--error-logfile - schreiben nach
+# stderr), morgen ein stiller Log-Rotations-Defekt.
+#
+# Registrierungs-Zeitpunkt: gunicorn ruft init_signals() VOR load_wsgi() (base.py:135),
+# und deploy/nerve.service setzt kein preload_app -> app.py wird im WORKER importiert,
+# nach gunicorns Signal-Setup. Unsere Registrierung gewinnt, und init_process laeuft im
+# Haupt-Faden, also ist signal.signal erlaubt.
+#
+# ABZUG: sudo systemctl kill -s SIGUSR1 nerve   (trifft den Arbiter, der leitet weiter)
+#        oder gezielt: sudo kill -USR1 <worker-pid>
+# LESEN: bash scripts/inspect.sh logs 3000   (der Default von 200 Zeilen schneidet einen
+#        Abzug ab — 64 gthread-Faeden plus Daemons plus SDK-Faeden sind mehrere hundert Zeilen)
+if _os_guard.environ.get('NERVE_TESTING') != '1':
+    try:
+        import faulthandler as _fh
+        _fh.register(signal.SIGUSR1, all_threads=True, chain=True)
+        print("[LOCKWATCH] faulthandler auf SIGUSR1 registriert (all_threads=True, "
+              "chain=True) — Abzug: sudo systemctl kill -s SIGUSR1 nerve, "
+              "lesen: bash scripts/inspect.sh logs 3000")
+    except (ValueError, RuntimeError, OSError, AttributeError) as _fh_e:
+        # Ein stiller Handler ist so gut wie keiner: beim naechsten Vorfall muss im Journal
+        # stehen, ob der Abzug scharf ist.
+        print(f"[LOCKWATCH] faulthandler NICHT registriert: {type(_fh_e).__name__}: {_fh_e}")
 # ────────────────────────────────────────────────────────────────────────────────
 
 # ── Phase 08.23.2.B+C: Anonymisierungs-Pipeline Pre-Warm ─────────────────────
