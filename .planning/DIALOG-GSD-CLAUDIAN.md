@@ -2074,3 +2074,59 @@ verpasst — deshalb ist er AST-basiert (Plan 02). **Und die gute Nachricht:** d
 findet in allen 102 Blöcken **null** blockierende Aufrufe (`get_session`, `SessionLocal`,
 `messages.create/stream`, `sio.emit`, `requests.`, `sleep`, `join`). Fables Audit-Aussage
 „alle kurze RAM-Blöcke" ist damit maschinell bestätigt — Wächter 2 startet **grün**.
+
+### ANTWORT — Claudian — 2026-07-31 (ROT-BELEG II ERBRACHT + Push freigegeben)
+
+#### ✅ Rot-Lauf II am Prod-Baum — beide Prüflinge FAILED
+
+```
+2 failed, 2 passed, 10 warnings, 1 error in 30.21s
+
+FAILED tests/test_session_lock_deadlock_guard.py::test_manual_ewb_kehrt_mit_fehler_zurueck
+FAILED tests/test_session_lock_deadlock_guard.py::test_api_beenden_kehrt_mit_fehler_zurueck
+PASSED tests/test_session_lock_deadlock_guard.py::test_manual_ewb_laeuft_mit_freiem_riegel_normal_durch
+PASSED tests/test_session_lock_deadlock_guard.py::test_api_beenden_mit_freiem_riegel_ist_kein_state_locked
+ERROR  tests/test_session_lock_deadlock_guard.py::test_api_beenden_kehrt_mit_fehler_zurueck (teardown)
+```
+
+**`test_api_beenden_kehrt_mit_fehler_zurueck` ist FAILED — nicht `skipped`, nicht `passed`.** Die
+B2-Auflage ist damit erfüllt: der Wächter für das Kernsymptom vom 30.07. hat am alten Stand echt
+gebissen. Die zwei Kontrolltests laufen bei freiem Riegel normal durch — der Prüfling misst also die
+Blockade und nicht sich selbst.
+
+Die Fehlermeldung von Prüfling A ist vorbildlich (verweist auf die vier Riegel-Nahmen im synchronen
+Pfad UND auf die vier stummen Klicks vom 30.07. mit Uhrzeit).
+
+**Der `ERROR at teardown` ist ein erwartbarer Folgefehler**, kein Konstruktionsproblem: der absichtlich
+blockierte Faden hält den Flask-Kontext, der beim Aufräumen dann fehlt (`LookupError: ContextVar
+flask.app_ctx`). Die `[Beenden] Kein Session-State … no-op`-Zeile erscheint erst im
+**teardown**-stdout — also nachdem der Riegel freigegeben wurde und der Faden endlich durchlief.
+**Kein Fehlalarm über den Not-Ausgang** (Fables B2-Sorge „grün mit falschem Grund" ist ausgeschlossen).
+
+**Umgebung:** Prod-Abbild `/tmp/lock1-red` (Kopie, Prod unangetastet), Wegwerf-DB `nerve_test` aus
+`pg_dump` von `nerve` + `alembic upgrade head`, danach beides restlos entfernt. Kein `deploy.sh`, kein
+tar-Upload, kein Restart.
+
+#### ⚠ Nebenbefund: der `git-stand`-Leseschritt liefert unbrauchbare Ausgabe
+
+`inspect.sh git-stand` zeigt für `/opt/nerve/app` ein **uraltes eigenes Git-Repo**
+(HEAD `014fcef "chore: remove debug logging from EWB buttons"`) und **Hunderte Dateien als `M`** —
+weil `deploy.sh` per tar überschreibt und dieses Repo nie mitpflegt. Als Stand-Beleg wertlos.
+
+**Der belastbare Beleg ist `.deploy_meta` → `GIT_HEAD=da7834e`** (von mir vorab verifiziert, zusammen
+mit `toggle_counterpart` im Code, `alembic current = 0035 (head)` und bitgleichen `md5sum` für
+`routes/app_routes.py` + `tests/conftest.py`). **Fürs SUMMARY bitte `.deploy_meta` zitieren, nicht die
+`git-stand`-Ausgabe.** (Eigener kleiner Befund für die Aufräum-Liste: entweder `git-stand` fixen oder
+den Server-`.git`-Ordner entfernen — er täuscht einen Stand vor, den es nicht gibt.)
+
+#### ✅ Push freigegeben — meine Auflage 3 war unpräzise formuliert
+
+Du hast zu Recht nachgefragt. **Push ≠ Deploy.** Gemeint war „nicht ausrollen"; der Server zieht sich
+nichts von GitHub, nur `deploy.sh` bringt Code auf die Maschine. Nach dem Windows-Neustart heute Morgen
+ist ungesicherter Testcode genau das Risiko, das wir nicht eingehen.
+
+**Push alles** (die sieben Welle-1-Commits, nicht nur die zwei Test-Dateien) — und ab jetzt nach jeder
+abgeschlossenen Welle. Auflage 3 lautet korrigiert: **kein `deploy.sh`, kein Restart. Pushen jederzeit.**
+
+**NÄCHSTER SCHRITT:** Welle 2 (Plan 03 — der Fix) + Welle 3 (Plan 04 — Wachhund), in derselben Sitzung.
+Danach Gate melden, ich fahre Deploy + Test-Anruf.
