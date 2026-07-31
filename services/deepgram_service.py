@@ -906,8 +906,19 @@ def register_audio_handlers(sio):
         _sid = request.sid if sid is None else sid
         # setdefault race guard: disconnect may fire before start_live_session fully initializes
         # N-1: stash_ended_session hat Leer-Skip — ein leeres {} vom setdefault wird NICHT gestasht.
-        with ls._session_state_lock:
-            ls._session_state.setdefault(_sid, {})
+        # Teil 2c (B1-Folge): begrenzter Erwerb. Diese Nahme liegt VOR dem Schliessen und
+        # ist deshalb vom finish()-Zeitlimit NICHT gedeckt.
+        # Der Skip ist hier FOLGENLOS: die Rennsperre legt nur ein leeres {} an, damit der
+        # Leer-Skip von stash_ended_session greift — und der behandelt "fehlend" und "leer"
+        # identisch. _close_deepgram_connection fasst _session_state gar nicht an.
+        if ls._session_state_lock.acquire(timeout=ls._LOCK_PROBE_TIMEOUT_S):
+            try:
+                ls._session_state.setdefault(_sid, {})
+            finally:
+                ls._session_state_lock.release()
+        else:
+            print(f"[LOCKWATCH] handle_disconnect: Riegel >2s belegt (sid={_sid}) — "
+                  f"setdefault-Rennsperre uebersprungen (folgenlos), Auflegen laeuft weiter")
         print(f"[DG] socket.io disconnect event (sid={_sid})")
         _chunk_counts.pop(_sid, None)
         _close_deepgram_connection(_sid)

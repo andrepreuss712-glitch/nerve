@@ -553,20 +553,37 @@ def pop_session_state(sid: str) -> None:
     """
     # Timer-Cancel: Snapshot unter Lock, cancel ausserhalb (D-03 Lock-Disziplin)
     _timers_to_cancel = []
-    with _session_state_lock:
-        _mp = _session_state.get(sid, {}).get('_merge_pending', {})
-        for _entry in _mp.values():
-            _t = _entry.get('timer')
-            if _t is not None:
-                _timers_to_cancel.append(_t)
+    # Teil 2c (B1-Folge): begrenzter Erwerb — pop_session_state ist der direkte Schwanz von
+    # stash_ended_session (Aufruf am Ende dort). Bliebe es hier unbegrenzt, waere der
+    # Haenger nur eine Zeile weiter gewandert.
+    if _session_state_lock.acquire(timeout=_LOCK_PROBE_TIMEOUT_S):
+        try:
+            _mp = _session_state.get(sid, {}).get('_merge_pending', {})
+            for _entry in _mp.values():
+                _t = _entry.get('timer')
+                if _t is not None:
+                    _timers_to_cancel.append(_t)
+        finally:
+            _session_state_lock.release()
+    else:
+        print(f"[LOCKWATCH] pop_session_state: Riegel >2s belegt (sid={sid}) — offene "
+              f"_merge_pending-Timer bleiben ungecancelt. Der Ghost-SID-Guard verwirft "
+              f"sie beim Feuern; wir laufen weiter, statt zu warten.")
     for _t in _timers_to_cancel:
         try:
             _t.cancel()
         except Exception:
             pass
 
-    with _session_state_lock:
-        _session_state.pop(sid, None)   # clears ['_briefing'] + ['_merge_pending'] sub-keys automatically
+    if _session_state_lock.acquire(timeout=_LOCK_PROBE_TIMEOUT_S):
+        try:
+            _session_state.pop(sid, None)   # clears ['_briefing'] + ['_merge_pending'] sub-keys automatically
+        finally:
+            _session_state_lock.release()
+    else:
+        print(f"[LOCKWATCH] pop_session_state: Riegel >2s belegt (sid={sid}) — der "
+              f"per-sid-Zustand bleibt im Speicher liegen und wird beim naechsten "
+              f"Aufraeumen mitgenommen. Wir laufen weiter, statt zu warten.")
     with _per_sid_lock:
         _per_sid_profile.pop(sid, None)
     with _per_sid_transcript_lock:
@@ -595,14 +612,32 @@ def stash_ended_session(sid: str) -> None:
          ueberschreiben. Der volle :779-Snapshot gewinnt gegen einen spaeteren leeren
          :815-Stash-Versuch.
     """
-    # N-1 Pruefung 1: leeres oder fehlendes Dict NICHT stashen
-    with _session_state_lock:
+    # ── Phase 08.23.2.LOCK-1 Teil 2c: begrenzter Erwerb statt unbegrenztem Warten ──────
+    # Cross-AI-Fund B1: das finish()-Zeitlimit (Teil 2) deckelt NUR das Schliessen der
+    # Deepgram-Verbindung. Direkt danach ruft BEIDE Auflege-Naehte diese Funktion
+    # (handle_stop_live_session und handle_disconnect) — ein unbegrenztes Warten hier
+    # haette den Haenger nur um eine Zeile verschoben.
+    # Klemmt der Riegel, ist der Schnappschuss ohnehin nicht zu bekommen. Dann ist
+    # Ueberspringen die richtige Antwort, nicht Warten. NICHT still: die Log-Zeile sagt
+    # ausdruecklich, dass der Schnappschuss VERWORFEN wurde — ein stummer Skip waere
+    # genau das stumme Sterben, gegen das diese Phase gebaut ist.
+    # Die drei Zusagen bleiben unveraendert: Leer-/Fehlend-Skip, first-stash-wins, und
+    # die Kopie wird weiterhin UNTER dem Riegel genommen (D-03).
+    if not _session_state_lock.acquire(timeout=_LOCK_PROBE_TIMEOUT_S):
+        print(f"[LOCKWATCH] stash_ended_session: Riegel >2s belegt (sid={sid}) — der "
+              f"Schnappschuss dieses Anrufs wird VERWORFEN, damit das Auflegen "
+              f"zurueckkehrt. Stapel-Abzug: sudo systemctl kill -s SIGUSR1 nerve")
+        return
+    try:
+        # N-1 Pruefung 1: leeres oder fehlendes Dict NICHT stashen
         state_copy = _session_state.get(sid)
         if not state_copy:
             # Leer-/Fehlend-Skip — kein Stash (verhindert Ueberschreiben mit leerem Dict)
             return
-        # Flache Kopie unter Lock nehmen (D-03: Snapshot unter Lock, dann Lock freigeben)
+        # Flache Kopie unter Riegel nehmen (D-03: Snapshot unter Lock, dann Lock freigeben)
         state_copy = dict(state_copy)
+    finally:
+        _session_state_lock.release()
 
     # Lazy TTL-Sweep: alte Snapshots entfernen
     _now = time.monotonic()
