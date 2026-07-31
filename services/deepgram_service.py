@@ -943,6 +943,31 @@ def register_audio_handlers(sio):
         print(f"[PiP] manual_ewb (sid={_sid}): {typ[:80]}")
         import services.live_session as ls
 
+        # ── Phase 08.23.2.LOCK-1 Teil 2b: Riegel-Probe VOR den Breitband-except-Klammern ──
+        # Diese Probe MUSS hier stehen und nicht tiefer. Ab Zeile 959 (nach diesem Insert
+        # verschoben) beginnt ein `try:` mit `except Exception as _btn_emit_e:` am Ende, und
+        # danach ein zweites mit `except Exception as _btn_log_e:`. Beide verschlucken JEDE
+        # Exception aus ihrem Block. Eine tiefer geworfene Zeitueberschreitung wuerde dort
+        # geschluckt, der Handler liefe weiter und kehrte OHNE Fehler zurueck — der Waechter
+        # waere gruen und der Nutzer saehe wieder nichts. Genau das war das Symptom vom
+        # 30.07.: vier Klicks (09:28:07 / 09:29:11 / 09:29:55 / 09:30:07), null Reaktion.
+        # VIER Riegel-Nahmen liegen hinter diesem Punkt: der direkte Block kurz darunter,
+        # zweimal ls.get_anonymisierer(_sid) (live_session.py:313) und ein zweiter direkter
+        # Block im EWB-Transcript-Teil.
+        # Der Fehler-Kanal 'pip_stream_error' existiert bereits (weiter unten im _run-Pfad)
+        # und hat GENAU EINEN Zuhoerer: static/pip-launcher.js:2449. Der zeigt d.error
+        # woertlich an, solange es ein String < 200 Zeichen ist -> KEINE JS-Aenderung noetig.
+        if not ls.wait_session_state_lock_free():
+            print(f"[LOCKWATCH] manual_ewb abgebrochen: _session_state_lock >2s belegt (sid={_sid})")
+            try:
+                sio.emit('pip_stream_error',
+                         {'slot': 1,
+                          'error': 'Technisches Problem: die Sitzung ist blockiert. Das Gespräch wird möglicherweise nicht gespeichert.'},
+                         room=_sid)
+            except Exception:
+                pass
+            return
+
         # ── TAXO1-Welle 4 (Task 3b): EWB-Button -> intent_event (ui_asserted) ───
         # SOFORT beim Klick (nicht erst bei Call-Ende). Der Button haengt am AKTUELL
         # OFFENEN Moment (Punkt c: kein line_id-Race) — ist kein Fenster offen, oeffnet

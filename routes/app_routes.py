@@ -102,6 +102,33 @@ def api_beenden():
     # sie wird erst unten dreistufig aufgeloest; darauf zu warten wuerde den Marker entwerten.
     print(f"[Beenden] ENTRY user_id={getattr(getattr(g, 'user', None), 'id', None)} "
           f"t={datetime.now().strftime('%H:%M:%S.%f')[:-3]} remote={request.remote_addr}")
+    # ── Phase 08.23.2.LOCK-1 Teil 2b: Riegel-Probe VOR jedem Schreibvorgang ──────────
+    # Hier und nicht tiefer, aus zwei Gruenden:
+    # (1) Der `try:` weiter unten (Dreistufen-sid-Aufloesung) hat ein nacktes
+    #     `except Exception:`, das _beenden_sid=None setzt. Ohne geposteten call_id endet
+    #     die Anfrage dann als reason='no_session' mit Status 200 — eine tiefer geworfene
+    #     Zeitueberschreitung waere also als FALSCHER Grund maskiert.
+    # (2) An diesem Punkt ist NICHTS geschrieben und NICHTS gelesen: kein DB-Zugriff, kein
+    #     Sonnet-CRM-Call, kein ConversationLog-INSERT, kein audit_log, keine Punkte,
+    #     keine Fair-Use-Buchung. Ein Abbruch hinterlaesst KEINEN halben Datensatz.
+    # DREI Riegel-Nahmen liegen hinter diesem Punkt: die Stufe-1-Aufloesung ueber die
+    # gepostete call_id, der Stufe-2-user_id-Scan (das war der Rahmen im py-spy-Abzug vom
+    # 30.07.) und _load_beenden_state.
+    # reset_session am Funktionsende wird BEWUSST NICHT begrenzt: dort ist der Antwort-Weg
+    # schon fertig; ein Abbruch wuerde eine erfolgreiche Beendigung als Fehler melden.
+    # 503 statt des Hausmusters 200+ok:false, weil dies ein echter, transienter SERVER-
+    # Zustand ist. Am Frontend geprueft: static/pip-launcher.js macht .then(r => r.json())
+    # OHNE Status-Pruefung und geht dann in `if (!data.ok)` -> Ladebalken weg, leerer
+    # Postcall-Zustand. Das 'error'-Feld gibt es, weil dort console.error(..., data.error)
+    # steht. KEINE JS-Aenderung noetig.
+    if not ls.wait_session_state_lock_free():
+        print(f"[LOCKWATCH] api_beenden abgebrochen: _session_state_lock >2s belegt "
+              f"(user_id={getattr(getattr(g, 'user', None), 'id', None)})")
+        return jsonify({
+            'ok': False,
+            'reason': 'state_locked',
+            'error': 'Technisches Problem: die Sitzung ist blockiert. Das Gespräch wird möglicherweise nicht gespeichert.',
+        }), 503
     req_data = request.get_json(silent=True) or {}
     session_mode = req_data.get('session_mode', 'meeting')
     # POLISH-40: Accept string, dict-with-.text (Frontend sends whole briefing
