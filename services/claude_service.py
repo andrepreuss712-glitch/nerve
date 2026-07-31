@@ -2073,7 +2073,14 @@ def coaching_loop():
                                 # Finding 4: anonymize_output() gibt keine Sentinel-Werte zurueck
                                 try:
                                     from services.anonymization import anonymize_output
-                                    _anon_cache = ls.get_anonymisierer(sid)
+                                    # LOCK-2: Anonymisierer DIREKT aus dem schon gehaltenen
+                                    # State lesen. NICHT ls.get_anonymisierer() — die nimmt
+                                    # _session_state_lock SELBST, und der Riegel oben ist
+                                    # gehalten. threading.Lock ist NICHT reentrant (Absicht:
+                                    # services/live_session.py:308-310) -> der Faden verklemmt
+                                    # SICH SELBST. Anruf 31.07., Thread-3 (coaching_loop),
+                                    # gehalten=133.2s. Muster: services/live_session.py:859-863.
+                                    _anon_cache = _sid_pp_state.get('anonymisierer')
                                     _painpoint_anon = anonymize_output(painpoint, _anon_cache)
                                 except Exception as _anon_err:
                                     print(f'[ANON] anonymize_output Fehler (painpoint, sid={sid!r}): {type(_anon_err).__name__}')
