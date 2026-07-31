@@ -103,9 +103,75 @@ def next_line_id(sid: str) -> str:
 
 
 def get_sid_paused(sid: str) -> bool:
-    """Thread-safe read of is_paused for a single SID. Returns False for unknown SIDs."""
-    with _session_state_lock:
-        return _session_state.get(sid, {}).get('state', {}).get('is_paused', False)
+    """Liest is_paused fuer EINE sid. BEWUSST RIEGEL-FREI. False fuer unbekannte sids.
+
+    WARUM OHNE DEN GLOBALEN SITZUNGS-RIEGEL (Phase 08.23.2.LOCK-1 Teil 1, Wurzel 1):
+    Diese Funktion lief bei JEDEM Ton-Brocken, also 10x/Sekunde pro Anruf
+    (services/deepgram_service.py:864, 100ms-Frames) — und nahm dabei denselben GLOBALEN
+    `_session_state_lock` wie Analyse, Coaching, Umschalter, Knopfdruck und Auflegen.
+    Beleg am laufenden Prozess, nicht erschlossen: py-spy-Abzug 30.07. (PID 2335884,
+    sid 5Y-0MFlm_ITb1cupAAAB) — 1415 von 1416 blockierten Rahmen standen genau hier,
+    davon 1414 aus handle_audio_chunk. Klemmte der Riegel einmal, starb die ganze
+    Sitzung: keine Coaching-Zeile, kein Transkript, keine Kostenzeile — und stumm.
+
+    WARUM DAS SICHER IST: der Zugriff ist durchgaengig mit .get()-Defaults geschrieben und
+    liefert EINEN bool. Die drei nebenlaeufigen Schreiber (init_session_state setzt
+    _session_state[sid] als Ganzes, pop_session_state entfernt es als Ganzes, der
+    Pause-Pfad setzt einen bool) sind einzelne dict-Operationen und unter dem GIL atomar —
+    ein halb geschriebenes dict ist in CPython nicht sichtbar. Jede Zwischenstufe faellt
+    auf einen Default zurueck: sid weg -> {} -> {} -> False. Riegel-freies Lesen kann
+    also hoechstens einen um Millisekunden veralteten Ja/Nein-Wert liefern (harmlos — der
+    naechste Ton-Brocken kommt in 100ms), NIEMALS einen Fehler und NIEMALS kaputte Daten.
+
+    Das ist kein Praezedenzbruch: riegel-freie _session_state-Reads sind Bestand, z.B.
+    services/deepgram_service.py:961 (mode) und :1061 (analysiert_bisher).
+
+    ABGRENZUNG: das macht den on_message-Weg NICHT riegel-frei. Dort liegen 13 weitere
+    Riegel-Nahmen, u.a. services/deepgram_service.py:94 bei JEDER finalisierten Zeile —
+    deshalb gibt es zusaetzlich das finish()-Zeitlimit (Teil 2). Zwei getrennte Defekte.
+
+    NICHT WIEDER EINEN RIEGEL EINBAUEN. Wer hier einen braucht, hat die Funktion
+    erweitert — dann gehoert die Erweiterung woanders hin, nicht der Riegel hierher.
+    Bewacht von tests/test_audio_path_lock_free_guard.py (Verhaltens-Test: der haelt den
+    Riegel und diese Funktion muss trotzdem den KORREKTEN Wert liefern).
+    """
+    return _session_state.get(sid, {}).get('state', {}).get('is_paused', False)
+
+
+# ── Phase 08.23.2.LOCK-1 Teil 2b: begrenzte Riegel-Probe fuer genau zwei Eingaenge ──────
+# Unveraenderliche Konstante (Punkt 28: kein veraenderlicher Modul-Zustand).
+# Der Text der LOCKWATCH-Log-Zeilen ist auf ">2s" festgelegt (CONTEXT) — wer diesen Wert
+# aendert, aendert auch die zwei Log-Zeilen in deepgram_service.py und app_routes.py.
+_LOCK_PROBE_TIMEOUT_S = 2.0
+
+
+def wait_session_state_lock_free(timeout: float = _LOCK_PROBE_TIMEOUT_S) -> bool:
+    """Probiert, den Sitzungs-Riegel innerhalb `timeout` Sekunden zu bekommen, und gibt ihn
+    SOFORT wieder frei. True = der Riegel war (oder wurde) frei. False = er klemmt.
+
+    ZWECK: der Knopfdruck (handle_manual_ewb) und das Auflegen (api_beenden) duerfen NICHT
+    ewig warten, sondern muessen MIT FEHLER zurueckkehren. Am 30.07. hingen vier Klicks
+    (09:28:07 / 09:29:11 / 09:29:55 / 09:30:07) und ein [Beenden] (09:30:18) stumm — kein
+    Fehler, keine Anzeige, kein 504 (die Anfrage endete nicht, sie brach nur im Browser ab;
+    gunicorn --timeout 120 greift bei blockierten Arbeits-Faeden nicht, weil der Herzschlag
+    vom Haupt-Faden kommt).
+
+    BEWUSST EINE PROBE AM EINGANG, KEIN begrenzter Erwerb an sieben Stellen (Punkt 27 +
+    Punkt 17): der Fehlerfall ist ein MINUTENLANG klemmender Riegel, keine Mikrosekunden-
+    Konkurrenz. Dafuer genuegt eine Probe — und KEINER der bestehenden Riegel-Bloecke muss
+    dafuer angefasst werden. Die theoretische Luecke (der Riegel wird ZWISCHEN Probe und Nutzung
+    genommen) ist bewusst offen: dann wartet der Aufrufer wie bisher, aber der Wachhund
+    (Teil 3) sagt es, und das Auflegen ist durch das finish()-Zeitlimit (Teil 2)
+    unabhaengig gedeckelt. Die Abwaegung steht in .planning/DIALOG-GSD-CLAUDIAN.md.
+
+    KEIN Zustand, KEIN Log hier — der Aufrufer loggt mit seinem eigenen Kontext (sid bzw.
+    user_id). LATENZ (Punkt 25): ein unkonkurriertes acquire+release kostet ~0.1 us und
+    laeuft pro Knopfdruck bzw. pro Anruf-Ende, nicht im 10-Hz-Takt.
+    """
+    got = _session_state_lock.acquire(timeout=timeout)
+    if got:
+        _session_state_lock.release()
+    return got
 
 
 # ── Analyse-State ─────────────────────────────────────────────────────────────
