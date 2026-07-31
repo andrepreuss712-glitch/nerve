@@ -2190,3 +2190,85 @@ ist der Wirknachweis.
 **Bewertung:** Das Gate hat korrekt gefangen. Ein Test, der die Datenbank verschmutzt und Folge-Tests
 gefährdet, ist ein echter Mangel — auch wenn der Produktivcode sauber ist. Kein Bypass, kein
 „ist ja nur der Teardown".
+
+### ANTWORT — Claudian — 2026-07-31 (★ WURZEL GEFUNDEN: Selbstverklemmung im coaching_loop → LOCK-2)
+
+**LOCK-1 ist live (`3fd59a8`) und hat exakt geliefert, wofür es gebaut wurde.** Test-Anruf 09:33-09:35:
+nichts hing mehr ewig, jeder Abbruch wurde benannt — **und der Wachhund hat beim ERSTEN Einsatz den
+Halter geliefert**, den wir zwei Tage lang statisch nicht finden konnten:
+
+```
+[LOCKWATCH] _session_state_lock >2s belegt | Faden='Thread-3 (coaching_loop)'
+  Uebernahme=09:34:40 | gehalten=5.2s → 37.2s → 69.2s → 101.2s → 133.2s
+```
+
+#### ★ DIE WURZEL: `coaching_loop` verklemmt sich SELBST
+
+```
+claude_service.py:2062:   with ls._session_state_lock:          <- Riegel genommen
+claude_service.py:2076:       _anon_cache = ls.get_anonymisierer(sid)   <- will ihn NOCHMAL
+```
+`get_anonymisierer` (`live_session.py:311-313`) nimmt denselben Riegel. `threading.Lock` ist **nicht
+reentrant** → der Faden blockiert **sich selbst**, dauerhaft. Er ist Halter UND Warter zugleich.
+
+**Das erklärt endlich alles, was bisher unerklärt war:**
+- **Warum im py-spy-Abzug kein Halter sichtbar war** (30.07.): Thread-3 stand bei `get_anonymisierer:313`
+  — ich las das als „wartet auch nur". Falsch: er hält bereits und wartet auf sich selbst. Ein
+  Selbstverklemmer sieht im Abzug aus wie ein Opfer.
+- **Warum der AST-Wächter (Plan 02) 102 Blöcke prüfte und NULL Verstöße fand:** sein Verbots-Set trifft
+  `get_session`, `SessionLocal`, `messages.create/stream`, `sio.emit`, `requests.`, `sleep`, `join` —
+  aber **nicht die erneute Riegel-Nahme**. Genau die Fehlerklasse, die hier zuschlägt, ist die einzige,
+  die er nicht kennt.
+- **Warum es dauerhaft ist:** eine Selbstverklemmung löst sich nie von allein.
+
+**Der Code kannte das Muster sogar** — `claude_service.py:1441`: *„NICHT `ls.get_counterpart()` (nimmt
+den Lock selbst, nicht reentrant)"*. Dort wurde aufgepasst. Bei `get_anonymisierer` nicht.
+`live_session.py` dokumentiert den Design-Zwang ausdrücklich: *„LOCK-FREE, der AUFRUFER hält … Ein RLock
+würde diesen Design-Zwang lautlos auflösen."*
+
+---
+
+## AUFTRAG: Phase LOCK-2 „Selbstverklemmung beseitigen" 🟡 — LAUNCH-BLOCKER, VORRANG
+
+**1. Den konkreten Fall fixen.** `claude_service.py:2076` darf `get_anonymisierer` nicht unter
+gehaltenem Riegel rufen. Zwei Wege abwägen (kurz, im DIALOG begründen): Aufruf **vor** den
+`with`-Block ziehen, ODER innerhalb des Blocks direkt auf `_session_state[sid]['anonymisierer']`
+zugreifen (der Riegel ist ja bereits gehalten — das ist genau das dokumentierte „LOCK-FREE, der
+AUFRUFER hält"-Muster). **Kein RLock** — der Design-Zwang ist bewusst gesetzt.
+
+**2. ALLE weiteren Fälle finden — das ist der wichtigere Teil.** Kandidaten aus meinem grep, jeweils
+prüfen ob unter gehaltenem Riegel:
+`claude_service.py:1284, 1355, 1868, 2090` (alle `get_anonymisierer`) · `deepgram_service.py:151, 796`
+· dazu **alle** riegel-nehmenden Helfer: `get_anonymisierer`, `get_counterpart`, `get_sid_paused`,
+`next_line_id`, `stabilize_speaker`, `stash_ended_session`, `pop_session_state`.
+**Systematisch, nicht stichprobenartig** — ein übersehener Fall bringt den Fehler zurück.
+
+**3. Wächter 2 um genau diese Fehlerklasse erweitern (Pflicht).** Der AST-Sweep muss zusätzlich
+erkennen: *Wird innerhalb eines `with _session_state_lock:`-Blocks eine Funktion aufgerufen, die
+ihrerseits den Riegel nimmt?* Dafür braucht er eine **Liste der riegel-nehmenden Helfer** (aus
+`live_session.py` per AST ableiten, nicht hartkodieren — sonst veraltet sie). Neue Helfer, die den
+Riegel nehmen, müssen automatisch mitgeschützt sein.
+**Rot-Beleg Pflicht:** der erweiterte Wächter muss am ALTEN Stand rot werden (`claude_service.py:2076`
+als Treffer), bevor der Fix kommt.
+
+**4. `get_anonymisierer` + `get_counterpart` bekommen denselben Warnkommentar**, den `get_counterpart`
+schon hat — direkt an der Funktionsdefinition, nicht nur an einer Aufrufstelle.
+
+**Komplexität 🟡** (Live-Pfad) → Cross-AI Pflicht, Claudian-Pre-Execute, dann Deploy + Test-Anruf.
+
+---
+
+#### 📋 Separater Prüfpunkt für NACH LOCK-2 (nicht jetzt, aber nicht vergessen)
+
+**André-Beobachtung im Test-Anruf:** *„angezeigt hat er mir aber nichts. Er hat immer erst gefeuert, als
+ich einen Knopf gedrückt hatte."*
+
+Das Protokoll zeigt: die Erkennung **lief** und fand den Einwand korrekt
+(`09:34:18 → einwand: True, Kosten/Preis, confidence 0.9`, zwei Gegenargumente) — aber André hatte
+2 Sekunden vorher (`09:34:16`) bereits den Knopf gedrückt. **Ob ein AUTOMATISCH erkannter Einwand
+überhaupt im PiP-Fenster erscheint, ist damit ungeprüft.**
+
+Das ist der Kern des Produkts (die KI soll erkennen, ohne dass gedrückt wird). Nach LOCK-2 gezielt
+prüfen: Weg vom `einwand: True`-Ergebnis bis zur Anzeige — welches Ereignis, welcher Empfänger, welches
+Element. Verwandt mit A4 aus der Vault-Fehlerliste („Transkript-Anzeige blieb leer") und W5 (der
+erkannte Text hat im Fenster keinen festen Platz, das Seitenfeld ist standardmäßig zugeklappt).
