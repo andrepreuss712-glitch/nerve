@@ -995,7 +995,7 @@ def register_audio_handlers(sio):
         # waere gruen und der Nutzer saehe wieder nichts. Genau das war das Symptom vom
         # 30.07.: vier Klicks (09:28:07 / 09:29:11 / 09:29:55 / 09:30:07), null Reaktion.
         # VIER Riegel-Nahmen liegen hinter diesem Punkt: der direkte Block kurz darunter,
-        # zweimal ls.get_anonymisierer(_sid) (live_session.py:313) und ein zweiter direkter
+        # zweimal ls.get_anonymisierer(_sid) (live_session.py:456-461) und ein zweiter direkter
         # Block im EWB-Transcript-Teil.
         # Der Fehler-Kanal 'pip_stream_error' existiert bereits (weiter unten im _run-Pfad)
         # und hat GENAU EINEN Zuhoerer: static/pip-launcher.js:2449. Der zeigt d.error

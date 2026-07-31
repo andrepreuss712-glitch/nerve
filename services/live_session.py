@@ -456,6 +456,22 @@ def init_anonymisierer(sid: str) -> None:
 def get_anonymisierer(sid: str):
     """Gibt AnrufAnonymisierer fuer SID zurueck, oder None wenn nicht initialisiert/SID unbekannt.
     Thread-safe. Gibt None bei Ghost-SID (Race-Condition Pitfall 3 — Caller handelt None defensiv).
+
+    ACHTUNG — NIMMT _session_state_lock SELBST. NIEMALS aus einem bereits gehaltenen
+    _session_state_lock heraus aufrufen: threading.Lock ist NICHT reentrant, und das ist
+    ABSICHT (siehe _TracedLock weiter oben, "Ein RLock wuerde diesen Design-Zwang lautlos
+    aufloesen"). Der Faden waere Halter UND Wartender zugleich und blockiert sich selbst
+    dauerhaft — im py-spy-Abzug sieht er dabei aus wie ein Opfer.
+
+    WER DEN RIEGEL SCHON HAELT, liest den Wert DIREKT aus dem gehaltenen State:
+        _anon = _session_state[sid].get('anonymisierer')
+    (dokumentiertes Muster "LOCK-FREE, der AUFRUFER haelt", weiter unten in dieser Datei;
+    services/claude_service.py:1440-1442 macht es fuer get_counterpart genauso).
+
+    ANLASS: services/claude_service.py tat unter dem Riegel genau das nicht und hat am
+    31.07. eine Produktions-Sitzung selbst verklemmt (Thread-3 (coaching_loop),
+    gehalten=133.2s). Bewacht von tests/test_session_lock_blocking_calls_guard.py
+    (LOCK-2-Erweiterung) — wer den Hinweis ignoriert, faerbt das Deploy-Gate rot.
     """
     with _session_state_lock:
         return _session_state.get(sid, {}).get('anonymisierer')
@@ -463,10 +479,22 @@ def get_anonymisierer(sid: str):
 
 def get_counterpart(sid: str) -> str:
     """Gespraechspartner (Achse B) fuer sid: 'gatekeeper' | 'decision_maker'.
+    Reiner Lese-Zugriff. Fail-open Default 'gatekeeper' bei Ghost-SID (nie raise, Live-Pfad).
 
-    Reiner Lese-Zugriff, nimmt _session_state_lock selbst — NICHT aus einem bereits
-    gehaltenen Lock heraus aufrufen (threading.Lock ist nicht reentrant).
-    Fail-open Default 'gatekeeper' bei Ghost-SID (nie raise, Live-Pfad).
+    ACHTUNG — NIMMT _session_state_lock SELBST. NIEMALS aus einem bereits gehaltenen
+    _session_state_lock heraus aufrufen: threading.Lock ist NICHT reentrant, und das ist
+    ABSICHT (siehe _TracedLock weiter oben, "Ein RLock wuerde diesen Design-Zwang lautlos
+    aufloesen"). Der Faden waere Halter UND Wartender zugleich und blockiert sich selbst
+    dauerhaft.
+
+    WER DEN RIEGEL SCHON HAELT, liest den Wert DIREKT aus dem gehaltenen State:
+        _cp = (_session_state[sid].get('state') or {}).get('counterpart')
+    und behandelt leer/None mit demselben Vorgabewert 'gatekeeper' wie der Rumpf unten.
+    (services/claude_service.py:1440-1442 macht genau das — der Kommentar dort stand an der
+    richtigen Stelle fuer den, der ihn schrieb, und an der falschen fuer den naechsten;
+    deshalb steht die Warnung jetzt HIER, an der Definition).
+
+    Bewacht von tests/test_session_lock_blocking_calls_guard.py (LOCK-2-Erweiterung).
     """
     with _session_state_lock:
         return ((_session_state.get(sid) or {}).get('state') or {}).get('counterpart') or 'gatekeeper'
