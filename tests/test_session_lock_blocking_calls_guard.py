@@ -83,6 +83,72 @@ dem Riegel, ist das ein **Fund** und kein Konfigurations-Problem: anhalten, mit
 `Datei:Zeile` melden, **nicht** die Whitelist fuellen und **nicht** das Muster aufweichen.
 Einzige erlaubte Whitelist-Kategorie ist ein nachweislicher **Falsch**-Treffer (Aufruf, der
 nur zufaellig so heisst), mit `# FALSCH-TREFFER:`-Kommentar, `Datei:Zeile` und Begruendung.
+
+LOCK-2: ERNEUTE RIEGEL-NAHME UNTER GEHALTENEM RIEGEL
+----------------------------------------------------
+ANLASS: Anruf vom 31.07. Der LOCKWATCH-Wachhund aus LOCK-1 Teil 3 meldete beim ERSTEN
+Einsatz auf Produktion `_session_state_lock >2s belegt | Faden='Thread-3 (coaching_loop)'
+… gehalten=133.2s` — und zum ersten Mal stand der HALTER namentlich im Log statt nur seine
+Opfer. Wurzel: services/claude_service.py:2062 nimmt den Riegel, :2076 ruft
+ls.get_anonymisierer(sid), das denselben Riegel NOCHMAL nimmt. threading.Lock ist NICHT
+reentrant (und das ist Absicht, services/live_session.py:308-310: „Ein RLock wuerde diesen
+Design-Zwang lautlos aufloesen") -> der Faden blockiert SICH SELBST, dauerhaft. Im py-spy-
+Abzug sieht ein Selbstverklemmer aus wie ein Opfer: er steht wartend in acquire(), wie alle
+anderen auch.
+
+WARUM DIE LOCK-1-HAELFTE DAS NICHT FAND: ihr Verbots-Set kennt get_session, SessionLocal,
+messages.create/stream, sio.emit, requests.*, sleep, join — aber nicht die erneute
+Riegel-Nahme. Genau die eine Klasse fehlte. Der Waechter war nicht falsch, er war
+unvollstaendig; sein gruenes Ergebnis war wahr und wertlos zugleich.
+
+WARUM DIE NEHMER-LISTE ABGELEITET UND NICHT GEPFLEGT WIRD: eine gepflegte Liste veraltet und
+erzeugt genau dieselbe Luecke noch einmal. Der Kommentar bei services/claude_service.py:1441
+ist der Beleg — dort stand das Wissen als Kommentar statt als Waechter, und bei
+get_anonymisierer hat es niemand gelesen.
+
+RESTLUECKEN — ein Waechter beweist nur, was in seinem Pruefkatalog steht (CLAUDE.md Punkt 31):
+1. Dynamischer Dispatch: getattr(...)(...), Callbacks, Monkeypatch, Registry-Hooks sind fuer
+   einen statischen Sweep unsichtbar.
+2. Die Namens-Heuristik ist zweischneidig: sie faengt matcher.match_with_dedup, kann aber bei
+   Namensgleichheit falsch anschlagen — und ein anders benannter Wrapper rutscht durch.
+3. Kanten aus Modulen ausserhalb _SCAN_DIRS (app.py, database/, alembic/) werden nicht verfolgt.
+4. dict-/str-Methodennamen sind NICHT ausgefiltert. Eine Kollision entstuende nur, wenn eine
+   gefaehrliche Funktion wie eine dict-/str-Methode hiesse; unter den 47 abgeleiteten Nehmern
+   ist das heute nicht der Fall. Die einzige theoretisch moegliche Kollision ist `index` —
+   praktisch ausgeschlossen, formal UNKLAR.
+5. Konstruktor-/Property-Durchrutscher: `Klasse()` loest auf den KLASSEN-Namen auf, ein
+   riegel-nehmender `__init__` stuende als '__init__' in der Nehmer-Menge -> keine Kante.
+   Properties/Deskriptoren erzeugen gar keinen ast.Call, sondern einen Attribut-Zugriff ->
+   ebenfalls unsichtbar. Heute unkritisch (einzige riegel-nehmende Methode ist
+   match_with_dedup), aber strukturell offen.
+6. Lambda/def IN der Region: ast.walk steigt in Lambda-Ruempfe und in der Region definierte
+   defs ab. `threading.Timer(2.0, lambda: ls.get_anonymisierer(sid))` unter dem Riegel wird
+   deshalb GEMELDET, obwohl der Rumpf erst spaeter OHNE Riegel feuert. Die Richtung ist
+   FALSCH-TREFFER (konservativ), nicht Durchrutscher — wer hier je einen Treffer sieht, ordnet
+   ihn als Falsch-Treffer ein und nimmt ihn ueber die '# FALSCH-TREFFER:'-Regel heraus, statt
+   das Muster aufzuweichen. Heute 0 Vorkommen.
+7. Dritte Erwerbsform `try: <riegel>.acquire() ... finally: <riegel>.release()`: der
+   eroeffnende Erwerb liegt hier IM try und wuerde als erneute Nahme GEMELDET. Die Richtung
+   ist FALSCH-TREFFER (laut), nicht Durchrutscher — bewusst so gewaehlt: eine Ausnahme fuer
+   die erste Anweisung haette eine ECHTE Wieder-Nahme an derselben Position STILL verschluckt
+   (nachgemessen 2026-07-31). Heute 0 Vorkommen dieser Form (0 von 5 try-Riegel-Regionen in
+   services/ + routes/); taucht sie auf, raeumt ein '# FALSCH-TREFFER:'-Eintrag MIT
+   Begruendung sie aus — niemals durch Aufweichen des Musters.
+
+GEPRUEFT UND GESCHLOSSEN (Cross-AI Fable 2026-07-31, Punkt 31 verlangt auch diese Aussage):
+die DIREKTESTE Form der Fehlerklasse — ein verschachteltes `with <riegel>:` bzw. ein direktes
+<riegel>.acquire() INNERHALB einer gehaltenen Region — waere ueber den Call-Pfad unsichtbar
+(kein ast.Call bzw. bewusst kein Nehmer-Name). Sie ist NICHT offen gelassen, sondern durch
+_direkte_erneute_nahmen gefangen (Meldenamen _MELDE_WITH / _MELDE_ACQUIRE) und durch
+test_direkte_erneute_nahme_wird_gefangen paarweise belegt. Heute 0 Vorkommen im Code.
+Rest-Kante: in der Doppelform "Erwerb im if-Test UND Erwerb als ERSTE Anweisung im try" bliebe
+der zweite Erwerb ungemeldet (die erste Anweisung gilt als der regions-eroeffnende Erwerb) —
+heute 0 Vorkommen, und die Alternative waere ein Selbst-Treffer auf jeder try/finally-Form.
+ZWEITE SCHICHT DARUNTER: der LOCKWATCH-Wachhund (services/live_session.py:1518-1541) meldet
+zur LAUFZEIT, was der statische Sweep nicht sieht. Er hat diesen Fund geliefert.
+
+STOP-REGEL: erwartet sind 0 Verstoesse. Ein echter Fund wird mit Datei:Zeile gemeldet — NICHT
+whitelistet, NICHT durch ein RLock aufgeloest, NICHT durch Aufweichen des Musters.
 """
 
 import ast
@@ -741,7 +807,7 @@ def _direkte_erneute_nahmen(baum):
     Taucht die dritte Form kuenftig auf, meldet der Waechter sie LAUT (ein
     `# FALSCH-TREFFER:`-Eintrag mit Begruendung raeumt sie aus) statt eine echte Wieder-Nahme
     STILL zu verschlucken. Falsch-Treffer-Richtung ist bei einem Waechter die sichere
-    Richtung — "rot statt blind" (CLAUDE.md Punkt 31).
+    Richtung — "rot statt blind" (Punkt 31).
     """
     treffer = []
 
@@ -855,3 +921,381 @@ def test_nehmer_ableitung_faellt_nicht_still_aus():
         f"AST-Muster nicht mehr (dann ist der Waechter BLIND, nicht gruen), oder Nehmer "
         f"wurden legitim zurueckgebaut (dann die Zahl MIT BEGRUENDUNG nachziehen, den Test "
         f"NICHT entfernen).")
+
+
+# ══ LOCK-2 Selbst-Tests: die Erweiterung beweist, dass sie beisst ══════════════
+# Wieder synthetischer Quelltext statt verunreinigter Produktiv-Datei (Begruendung im
+# Modul-Docstring). Die Schnipsel liegen in tests/, das NICHT in _SCAN_DIRS steht ->
+# kein Selbst-Treffer im Datei-Sweep. Die Datei-Namen sind reine SCHLUESSEL; sie muessen
+# auf der Platte nicht existieren, _python_dateien() wird dabei nicht befragt.
+
+def _erneute_nahme_in_quelle(quelltext, datei='services/synthetisch.py'):
+    """Faehrt die LOCK-2-Erweiterung gegen einen synthetischen Quelltext — bewusst ueber
+    DIESELBE Funktion wie der Datei-Sweep (_erneute_nahmen_finden). Ein nachgebauter
+    Mini-Detektor wuerde nur sich selbst beweisen (LOCK-1-Lehre)."""
+    return _erneute_nahme_in_quellen({datei: quelltext})
+
+
+def _erneute_nahme_in_quellen(quellen):
+    """Mehr-Datei-Variante. Die Alias-Aufloesung laeuft per Definition ueber Modul-Grenzen
+    (ein funktionslokales `import services.live_session as _ls_av` in Datei A zeigt auf Datei
+    B) — mit nur EINER synthetischen Datei ist sie gar nicht pruefbar, weil `bekannte_module`
+    dann nur diese eine Datei kennt."""
+    return _erneute_nahmen_finden(
+        {d: ast.parse(textwrap.dedent(q)) for d, q in quellen.items()})
+
+
+def test_transitivitaet_greift_ueber_zwei_ebenen():
+    """Die eigentliche Falsch-Gruen-Sperre: ohne einen synthetischen 2-Ebenen-Fall ist nicht
+    unterscheidbar, ob die Fixpunkt-Transitivitaet greift oder ob es zufaellig keinen
+    2-Ebenen-Fall im Repo gibt."""
+    quelle = """
+        def _tief():
+            with ls._session_state_lock:
+                pass
+
+        def _mittel(sid):
+            return _tief()
+
+        def oben(sid):
+            with ls._session_state_lock:
+                x = _mittel(sid)
+    """
+    treffer = _erneute_nahme_in_quelle(quelle)
+    assert len(treffer) == 1, f"Transitivitaet greift NICHT: {treffer!r}"
+    assert treffer[0][2].endswith('::_mittel'), treffer
+
+    # Gegenprobe: ohne den Riegel in `oben` steht der Aufruf unter KEINEM Riegel.
+    ohne_riegel = """
+        def _tief():
+            with ls._session_state_lock:
+                pass
+
+        def _mittel(sid):
+            return _tief()
+
+        def oben(sid):
+            x = _mittel(sid)
+    """
+    assert _erneute_nahme_in_quelle(ohne_riegel) == [], (
+        "Ohne gehaltenen Riegel ist derselbe Aufruf harmlos — meldet der Sweep ihn "
+        "trotzdem, kommt der Treffer nicht aus der Region.")
+
+
+def test_verschachtelte_defs_haften_nicht_fuer_den_aeusseren():
+    """Nachbau von routes/app_routes.py:api_beenden mit dem verschachtelten
+    _load_beenden_state:215. Der aeussere Rahmen haftet NICHT fuer den Riegel im
+    verschachtelten Rumpf — er haftet nur fuer das, was er selbst ruft."""
+    quelle = """
+        def api_beenden():
+            def _load_beenden_state(sid):
+                with ls._session_state_lock:
+                    return 1
+            return _load_beenden_state('x')
+
+        def ruft_nur_den_aeusseren():
+            with ls._session_state_lock:
+                api_beenden()
+    """
+    treffer = _erneute_nahme_in_quelle(quelle)
+    assert len(treffer) == 1, (
+        f"api_beenden ist TRANSITIV gefaehrlich (es RUFT _load_beenden_state) — der Aufruf "
+        f"unter dem Riegel muss gemeldet werden: {treffer!r}")
+    assert treffer[0][2].endswith('::api_beenden'), treffer
+
+    # Der NEHMER-Status haengt am EIGENEN Rumpf: ohne den Aufruf ist api_beenden weder
+    # Nehmer noch gefaehrlich, obwohl der Riegel im verschachtelten def steht.
+    quelle_ohne_aufruf = """
+        def api_beenden():
+            def _load_beenden_state(sid):
+                with ls._session_state_lock:
+                    return 1
+            return 0
+    """
+    baeume = {'services/synthetisch.py': ast.parse(textwrap.dedent(quelle_ohne_aufruf))}
+    gefaehrlich, _gn, nehmer, _p = _graph_bauen(baeume)
+    assert ('services/synthetisch.py', 'api_beenden') not in nehmer, (
+        "api_beenden gilt faelschlich als Riegel-NEHMER, nur weil _load_beenden_state in "
+        "ihm definiert ist — _eigene_knoten steigt nicht in verschachtelte defs ab.")
+    assert ('services/synthetisch.py', 'api_beenden') not in gefaehrlich
+    assert ('services/synthetisch.py', '_load_beenden_state') in nehmer
+
+
+def test_argument_referenz_ist_kein_treffer():
+    """Nachbau von services/deepgram_service.py:254 — threading.Timer(..., ls._flush_segment)
+    reicht die Funktion nur als WERT weiter; der Callback feuert spaeter auf dem Timer-Faden
+    OHNE Riegel. Waere das ein Treffer, waere es ein Dauer-Falschtreffer."""
+    quelle = """
+        def _flush_segment(sid):
+            with ls._session_state_lock:
+                pass
+
+        def plant_timer(sid):
+            with ls._session_state_lock:
+                threading.Timer(2.0, _flush_segment).start()
+    """
+    assert _erneute_nahme_in_quelle(quelle) == [], (
+        "Eine reine Argument-Referenz wurde als Aufruf gemeldet — "
+        "services/deepgram_service.py:254 waere ein Dauer-Falschtreffer.")
+
+    # Gepaart: derselbe Name als AUFRUF ist sehr wohl ein Treffer. Ohne diese Paarung
+    # waere nicht unterscheidbar, ob der Detektor korrekt trennt oder nur nichts findet.
+    als_aufruf = """
+        def _flush_segment(sid):
+            with ls._session_state_lock:
+                pass
+
+        def plant_timer(sid):
+            with ls._session_state_lock:
+                _flush_segment(sid)
+    """
+    treffer = _erneute_nahme_in_quelle(als_aufruf)
+    assert len(treffer) == 1 and treffer[0][2].endswith('::_flush_segment'), (
+        f"Der echte Aufruf desselben Nehmers wird NICHT gemeldet: {treffer!r}")
+
+
+def test_zyklus_im_aufrufgraph_terminiert():
+    """Terminierungs-Beweis. Eine Rekursion ueber den Call-Graph liefe hier ohne
+    Besuchs-Markierung endlos (bzw. RecursionError); die Fixpunkt-Iteration terminiert
+    garantiert. Der Test ist gruen, wenn er ueberhaupt zurueckkehrt."""
+    quelle = """
+        def a():
+            return b()
+
+        def b():
+            return a()
+
+        def nimmt():
+            with ls._session_state_lock:
+                return a()
+    """
+    assert _erneute_nahme_in_quelle(quelle) == [], (
+        "Weder a noch b nimmt je einen Riegel — kein Treffer erwartet.")
+
+    # Derselbe Zyklus, aber b nimmt den Riegel: die Gefahr muss ueber den Zyklus zu a
+    # weiterwandern, und der Sweep muss trotzdem terminieren.
+    mit_riegel_im_zyklus = """
+        def a():
+            return b()
+
+        def b():
+            with ls._session_state_lock:
+                pass
+            return a()
+
+        def nimmt():
+            with ls._session_state_lock:
+                return a()
+    """
+    treffer = _erneute_nahme_in_quelle(mit_riegel_im_zyklus)
+    assert len(treffer) == 1 and treffer[0][2].endswith('::a'), (
+        f"Der Zyklus traegt die Gefahr nicht weiter: {treffer!r}")
+
+
+def test_erneute_nahme_meldet_harmlose_aufrufe_nicht():
+    faelle = [
+        ('dict-/list-Methoden unter dem Riegel', """
+            def oben(sid):
+                with ls._session_state_lock:
+                    v = d.get('k', 0)
+                    liste.append(v)
+        """),
+        ('riegel-freie Funktion unter dem Riegel (live_session.py:1106)', """
+            def ist_painpoint_duplikat(text, liste):
+                return text in liste
+
+            def oben(sid):
+                with ls._session_state_lock:
+                    ist_painpoint_duplikat('x', [])
+        """),
+        ('Nehmer-Aufruf AUSSERHALB jedes Riegel-Blocks (claude_service.py:2090)', """
+            def get_anonymisierer(sid):
+                with ls._session_state_lock:
+                    return 1
+
+            def oben(sid):
+                a = get_anonymisierer(sid)
+        """),
+        ('Nehmer-Aufruf NACH dem release im finally (stash_ended_session:742)', """
+            def get_anonymisierer(sid):
+                with ls._session_state_lock:
+                    return 1
+
+            def stash_ended_session(sid):
+                if not ls._session_state_lock.acquire(timeout=2.0):
+                    return
+                try:
+                    d.pop('k', None)
+                finally:
+                    ls._session_state_lock.release()
+                    get_anonymisierer(sid)
+        """),
+    ]
+    for beschreibung, quelltext in faelle:
+        treffer = _erneute_nahme_in_quelle(quelltext)
+        assert treffer == [], f"{beschreibung}: Falsch-Treffer {treffer!r}"
+
+
+def test_namensbasierter_zweitpass_faengt_methoden_aufrufe():
+    """Der Anker fuer D-3 Punkt 3. services/einwand_keyword_matcher.py:match_with_dedup ist
+    fuer jeden Aufrufer nur als `matcher.match_with_dedup(...)` sichtbar — der Empfaenger ist
+    NICHT aufloesbar. Ohne den namensbasierten Zweitpass bliebe die Klasse unsichtbar, und
+    NICHTS wuerde rot: der eine reale Treffer laeuft ueber die Alias-Aufloesung."""
+    quelle = """
+        class EinwandMatcher:
+            def match_with_dedup(self, text):
+                with _ls._session_state_lock:
+                    return 1
+
+        def oben(matcher, text):
+            with ls._session_state_lock:
+                return matcher.match_with_dedup(text)
+    """
+    treffer = _erneute_nahme_in_quelle(quelle)
+    assert len(treffer) == 1, f"Der namensbasierte Zweitpass greift NICHT: {treffer!r}"
+    assert treffer[0][2] == '?::match_with_dedup', (
+        f"Erwartet ein Treffer OHNE aufgeloeste Datei ('?') — genau das belegt, dass der "
+        f"NAMENS-pass gefeuert hat und nicht die Alias-Aufloesung: {treffer!r}")
+
+    # Gepaarte Gegenprobe: unbekannter Methodenname -> 0 Treffer. Ohne sie waere nicht
+    # unterscheidbar, ob der Zweitpass gezielt trifft oder pauschal jeden Attribut-Aufruf.
+    unbekannt = """
+        class EinwandMatcher:
+            def match_with_dedup(self, text):
+                with _ls._session_state_lock:
+                    return 1
+
+        def oben(matcher, text):
+            with ls._session_state_lock:
+                return matcher.unbekannte_methode(text)
+    """
+    assert _erneute_nahme_in_quelle(unbekannt) == [], (
+        "Der Zweitpass meldet pauschal jeden Attribut-Aufruf statt nur die gefaehrlichen "
+        "Namen — das waere ein Dauer-Falschtreffer.")
+
+
+def test_alias_aufloesung_zielt_auf_die_datei_nicht_nur_den_namen():
+    """Die Alias-Aufloesung ist heute NUR durch den einen realen Treffer belegt — und der
+    verschwindet mit Plan 03. Danach bewacht nichts mehr, ob _ls_av.get_anonymisierer()
+    unter einem Riegel ueberhaupt noch erkannt wird. Nachbau des funktionslokalen
+    Lazy-Imports aus services/claude_service.py:936."""
+    ziel = """
+        def get_anonymisierer(sid):
+            with _session_state_lock:
+                return 1
+    """
+    rufer = """
+        def coaching_loop(sid):
+            import services.live_session as _ls_av
+            with _ls_av._session_state_lock:
+                return _ls_av.get_anonymisierer(sid)
+    """
+    treffer = _erneute_nahme_in_quellen({
+        'services/live_session.py': ziel,
+        'services/claude_service.py': rufer,
+    })
+    assert len(treffer) == 1, f"Die Alias-Aufloesung greift NICHT: {treffer!r}"
+    assert treffer[0][2] == 'services/live_session.py::get_anonymisierer', treffer
+
+    # Gepaarte Gegenprobe: derselbe Alias zeigt auf eine RIEGEL-FREIE Funktion GLEICHEN
+    # Namens — waehrend der gefaehrliche Namensvetter weiterhin im Baum-Satz liegt.
+    # 0 Treffer beweist: die Aufloesung zielt auf die DATEI, nicht bloss auf den Namen.
+    harmlos = """
+        def get_anonymisierer(sid):
+            return 1
+    """
+    rufer_harmlos = """
+        def coaching_loop(sid):
+            import services.harmlos as _ls_av
+            with _ls_av._session_state_lock:
+                return _ls_av.get_anonymisierer(sid)
+    """
+    assert _erneute_nahme_in_quellen({
+        'services/live_session.py': ziel,
+        'services/harmlos.py': harmlos,
+        'services/claude_service.py': rufer_harmlos,
+    }) == [], (
+        "Die Aufloesung zielt nur auf den NAMEN statt auf die Datei, auf die der Alias "
+        "zeigt — ein gleichnamiger riegel-freier Helfer waere ein Dauer-Falschtreffer.")
+
+
+def test_direkte_erneute_nahme_wird_gefangen():
+    """Pfad B: verschachteltes Riegel-`with` und direktes <riegel>.acquire() unter dem Riegel.
+    Beides ist der Selbstverklemmer vom 31.07. OHNE Zwischenfunktion — und beides ist ueber den
+    Call-Pfad unsichtbar (kein ast.Call bzw. bewusst kein Nehmer-Name). Die beiden
+    Gegenproben beweisen, dass die Regions-WURZEL sich nicht selbst meldet."""
+    verschachtelt = """
+        def oben(sid):
+            with ls._session_state_lock:
+                with ls._session_state_lock:
+                    pass
+    """
+    treffer = _erneute_nahme_in_quelle(verschachtelt)
+    assert len(treffer) == 1 and treffer[0][2] == _MELDE_WITH, (
+        f"Verschachtelter Riegel-with unter gehaltenem Riegel NICHT gefangen: {treffer!r}")
+
+    nebeneinander = """
+        def a(sid):
+            with ls._session_state_lock:
+                pass
+
+        def b(sid):
+            with ls._session_state_lock:
+                pass
+    """
+    assert _erneute_nahme_in_quelle(nebeneinander) == [], (
+        "Die Regions-WURZEL meldet sich selbst — dann waere JEDER Riegel-Block ein "
+        "'Verstoss' (heute 42 with-Bloecke), der Waechter unbrauchbar, und der bequeme "
+        "Ausweg waere ein Aufweichen des Musters.")
+
+    direkter_erwerb = """
+        def oben(sid):
+            with ls._session_state_lock:
+                ls._session_state_lock.acquire(timeout=2.0)
+    """
+    treffer = _erneute_nahme_in_quelle(direkter_erwerb)
+    assert len(treffer) == 1 and treffer[0][2] == _MELDE_ACQUIRE, (
+        f"Direkter <riegel>.acquire() unter gehaltenem Riegel NICHT gefangen: {treffer!r}")
+
+    eroeffnender_erwerb = """
+        def stash_ended_session(sid):
+            if not ls._session_state_lock.acquire(timeout=2.0):
+                return
+            try:
+                d.pop('k', None)
+            finally:
+                ls._session_state_lock.release()
+    """
+    assert _erneute_nahme_in_quelle(eroeffnender_erwerb) == [], (
+        "Der regions-EROEFFNENDE Erwerb meldet sich selbst — dann waere jede begrenzte "
+        "Erwerbsform aus LOCK-1 Plan 03 Task 4 ein 'Verstoss'.")
+
+    # Die beiden Faelle, die eine Positions-Ausnahme (`pos == 0`) still verschluckt haette.
+    # Ohne sie waere der Waechter an genau der Stelle blind, die er bewachen soll.
+    wieder_nahme_als_erste_anweisung = """
+        def oben(sid):
+            if not ls._session_state_lock.acquire(timeout=2.0):
+                return
+            try:
+                ls._session_state_lock.acquire()
+            finally:
+                ls._session_state_lock.release()
+    """
+    treffer = _erneute_nahme_in_quelle(wieder_nahme_als_erste_anweisung)
+    assert len(treffer) == 1 and treffer[0][2] == _MELDE_ACQUIRE, (
+        f"Echte Wieder-Nahme als ERSTE Anweisung einer try-Region NICHT gefangen: "
+        f"{treffer!r} — eine Positions-Ausnahme fuer pos==0 waere genau hier blind.")
+
+    verschachtelt_in_try_region = """
+        def oben(sid):
+            if not ls._session_state_lock.acquire(timeout=2.0):
+                return
+            try:
+                with ls._session_state_lock:
+                    pass
+            finally:
+                ls._session_state_lock.release()
+    """
+    treffer = _erneute_nahme_in_quelle(verschachtelt_in_try_region)
+    assert len(treffer) == 1 and treffer[0][2] == _MELDE_WITH, (
+        f"Riegel-`with` innerhalb einer begrenzt erworbenen Region NICHT gefangen: {treffer!r}")
