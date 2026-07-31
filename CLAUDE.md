@@ -882,3 +882,70 @@ W1/W2 sind statische Sweeps und können ENV-/config-basierte Modellnamen (`confi
 **Zwei Fallen, die diese Phase gekostet hat — beim nächsten Mal direkt mitprüfen:**
 - **Preis-Modell ≠ Preis-Liste:** Deepgram-Diarization ist ein Add-on (+$0.0020/min) und wird nur im Meeting-Modus geschaltet. Ein Preis pro `(provider, model, unit_type)` kann das nur abbilden, wenn der Modus **im Modell-String** steckt (`nova-3` vs. `nova-3-diarize`). Wo ein Anbieter Zusatzoptionen separat berechnet: eigener String statt Pauschale in die falsche Richtung.
 - **Zwei Pfade, ein Modell:** Haupt-App und `nerve_rt` fuhren unbemerkt verschiedene STT-Modelle. Dagegen wacht `tests/test_stt_model_parity.py`.
+
+## Punkt 31 — Ein Waechter beweist nur, was in seinem Pruefkatalog steht (verankert 2026-07-31)
+
+Anlass: Phase 08.23.2.LOCK-2. Waechter 2 aus LOCK-1 lief ueber **102 Riegel-Bloecke** und fand
+**NULL** Verstoesse — waehrend eine Selbstverklemmung die ganze Zeit im Code stand
+(`services/claude_service.py:2062` nahm den Riegel, `:2076` rief `ls.get_anonymisierer(sid)`,
+das denselben Riegel nochmal nimmt). Sein Verbots-Set kannte `get_session`, `SessionLocal`,
+`messages.create/stream`, `sio.emit`, `requests.*`, `sleep`, `join` — **aber nicht die erneute
+Riegel-Nahme**. Der Waechter war nicht falsch, er war **unvollstaendig**. Sein gruenes Ergebnis
+war **wahr und wertlos zugleich**, und es hat die Suche nach dem Halter zwei Tage in die
+falsche Richtung gelenkt.
+
+**Die Regel:** Wer einen Waechter baut oder erweitert, schreibt in **denselben** Commit, was
+der Waechter **NICHT** prueft. Die Restluecken gehoeren
+(a) in den **Modul-Docstring** des Waechters, unter einer Ueberschrift `RESTLUECKEN`, und
+(b) ins **SUMMARY** der Phase, die ihn gebaut hat.
+Ein Waechter ohne benannte Grenzen erzeugt falsche Sicherheit — er ist dann schlimmer als kein
+Waechter, weil sein Gruen als Beweis gelesen wird.
+
+**Pflicht-Bestandteile des Restluecken-Absatzes:**
+1. **Was der Pruefkatalog abdeckt** — in einem Satz, positiv formuliert.
+2. **Was er strukturell nicht sehen kann** (bei statischen Sweeps typisch: dynamischer Dispatch
+   via `getattr`, Callbacks, Monkeypatch, Registry-Hooks; Kanten aus Modulen ausserhalb des
+   Sweep-Bereichs; alles, was erst zur Laufzeit entsteht).
+3. **Wo Heuristiken zweischneidig sind** — jede namens-/muster-basierte Abkuerzung mit beiden
+   Richtungen: Falschtreffer **und** Durchrutscher.
+4. **Was formal UNKLAR bleibt** — ehrlich als unklar markieren, nicht als „praktisch
+   ausgeschlossen" wegschreiben.
+5. **Welche zweite Schicht darunter liegt** — Laufzeit-Wachhund, Gate-Check, UAT. Ein
+   statischer Waechter ist nie die einzige Schicht; wenn es keine zweite gibt, gehoert **das**
+   in den Absatz.
+6. **Was geprueft und GESCHLOSSEN wurde** — der Katalog ist keine reine Mangelliste. Klassen,
+   die geprueft und **abgedeckt** sind, gehoeren mit dem Vermerk `GEPRUEFT UND GESCHLOSSEN`
+   hinein, samt Rest-Kante, falls eine bleibt. Sonst weiss der naechste Leser nicht, ob eine
+   nicht genannte Klasse **abgedeckt** oder bloss **nicht bedacht** war — und genau diese
+   Unterscheidung ist der ganze Zweck des Katalogs. **Besonders fuer die direkteste Form der
+   Fehlerklasse, gegen die der Waechter gebaut wurde:** sie darf nie unbenannt bleiben, weder
+   als Luecke noch als geschlossen.
+
+**Zwei Zusatz-Pflichten, ohne die ein Waechter nichts beweist:**
+- **ROT-Beleg vor GRUEN.** Ein Waechter, der nie rot war, beweist nichts. Der Rot-Lauf ist ein
+  **Acceptance-Artefakt** (Ausgabe verbatim ins SUMMARY), keine Nebenbemerkung — und er wird
+  **vor** dem Fix gezogen, nicht danach.
+- **Sperre gegen den stillen Ausfall.** Jeder Waechter, der eine Menge ableitet (Bloecke,
+  Nehmer, Dateien, Call-Sites), braucht ein **Mindest-Soll** auf dieser Zahl. Faellt die
+  Ableitung aus, wird er sonst **blind statt rot** und sieht dabei gruen aus. Sinkt die Zahl:
+  Ursache klaeren und die Zahl **mit Begruendung** nachziehen — den Test **nie** entfernen und
+  die Zahl **nie** stillschweigend senken.
+
+**Was NICHT erlaubt ist, wenn ein Waechter anschlaegt:** die Whitelist fuellen, das Muster
+aufweichen, oder den Design-Zwang aufloesen, den er schuetzt (im Anlass-Fall waere das ein
+`RLock` gewesen — er haette die Fehlerklasse **unsichtbar** gemacht statt sie zu beseitigen).
+Einzige zulaessige Whitelist-Kategorie bleibt der nachweisliche **Falsch**-Treffer, mit
+`# FALSCH-TREFFER:`-Kommentar, `Datei:Zeile` und Begruendung.
+
+**Muster-Umsetzung:** `tests/test_session_lock_blocking_calls_guard.py` (Abschnitte
+`RESTLUECKEN` und `ZWEITE SCHICHT DARUNTER` im Modul-Docstring). Die zweite Schicht dort ist
+der LOCKWATCH-Wachhund (`services/live_session.py:1518-1541`) — **er** hat den Fund geliefert,
+den der statische Waechter nicht sehen konnte.
+
+**Verhaeltnis zu anderen Punkten:** ergaenzt die Test-Qualitaets-Regel (dort: „dokumentiere den
+Grund mit Kommentar im Test") um die **Grenzen**-Haelfte. Punkt 30 macht es in seiner
+Waechter-Tabelle bereits vor (Spalte „Grenze") — Punkt 31 macht daraus die Pflicht fuer jeden
+neuen Waechter.
+
+**Geltungsbereich:** jeder neue oder erweiterte Waechter/Guard/statische Sweep. Skip-OK:
+gewoehnliche Verhaltens-Tests (die behaupten nichts ueber eine Fehler**klasse**).
