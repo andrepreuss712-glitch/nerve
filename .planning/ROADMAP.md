@@ -2688,7 +2688,15 @@ claude_service.py:2076:       _anon_cache = ls.get_anonymisierer(sid)
 
 **Abhängigkeit:** direkt nach 08.23.2.LOCK-1 (live), **vor H1**. **Komplexität:** 🟡 (Live-Pfad, aber klar begrenzte Änderung). **Cross-AI:** PFLICHT (🟡 mit Live-Pfad + Wächter-Erweiterung), danach Claudian-Pre-Execute-Audit, dann Deploy + Test-Anruf durch Claudian. **Kein Deploy durch GSD.**
 
-**Status:** 📋 **EINGEFÜGT 2026-07-31, noch nicht geplant** → nächster Schritt `/gsd-plan-phase 08.23.2.LOCK-2`, danach `/gsd-review` (Cross-AI Pflicht). **Vollständiger Auftrag:** Ende von `.planning/DIALOG-GSD-CLAUDIAN.md` (Claudian, 2026-07-31, „WURZEL GEFUNDEN"). **Sync:** `Nerve-Vault/01 Roadmap.md` parallel gepflegt.
+**Plans:** 4 Pläne in 4 Wellen — die Reihenfolge **Wächter → ROT-Beleg → Fix → GRÜN** ist über `depends_on` strukturell erzwungen, nicht nur im Text erwähnt.
+
+Plans:
+- [ ] 08.23.2.LOCK-2-01-PLAN.md — Wächter 2 erweitern: erneute Riegel-Nahme unter gehaltenem Riegel (AST-Nehmer-Ableitung statt gepflegter Liste, Fixpunkt-Transitivität, namensbasierter Zweitpass, nur Call-Positionen, Mindest-Soll 48 Nehmer gegen den stillen Ausfall) + Selbst-Tests (2-Ebenen, Verschachtelung, Argument-Referenz, Zyklus) + Restlücken im Docstring. **Kein Produktiv-Code, kein pytest** (Kein-Local-Dev). ⚠ Ab diesem Commit ist das Deploy-Tor rot, bis Plan 03 gebaut ist.
+- [ ] 08.23.2.LOCK-2-02-PLAN.md — **ROT-Beleg am ALTEN Stand** (`autonomous: false`, **Claudian** fährt den Lauf via SSH gegen `git archive HEAD` in `/tmp` + Wegwerf-`nerve_test`; `/opt/nerve/app` wird nur gelesen, **kein `deploy.sh`**). Erwartet `1 failed, 10 passed` mit **genau einer** Trefferzeile `services/claude_service.py:2076`. Abweichungs-Regel: **mehr** → STOP + DIALOG (Widerspruch zum gesetzten Fable-Ergebnis, nicht stillschweigend mitfixen); **weniger** → Wächter reparieren, Fix **nicht** vorziehen.
+- [ ] 08.23.2.LOCK-2-03-PLAN.md — **Der Fix** (eine Zeile: `_anon_cache = _sid_pp_state.get('anonymisierer')`, Sub-Key-Read aus dem schon gehaltenen State; S4-Atomarität bleibt, **kein RLock**, kein neuer Helfer) + Warnhinweis an den **Definitionen** von `get_anonymisierer` und `get_counterpart` + **GRÜN-Beleg** (Claudian, alle vier LOCK-1-Wächter mit). Enthält die Korrektur eines CONTEXT-Ankers: `_anon_cache = ls.get_anonymisierer(sid)` steht **3×** in der Datei (`:1355`, `:2076`, `:2090`), nach dem Fix also **2**, nicht 1.
+- [ ] 08.23.2.LOCK-2-04-PLAN.md — **CLAUDE.md Punkt 31** („ein Wächter beweist nur, was in seinem Prüfkatalog steht": Restlücken-Pflicht, ROT-vor-GRÜN, Mindest-Soll gegen blind-statt-rot) + Restlücken-Katalog im Phasen-SUMMARY (dynamischer Dispatch · Namens-Heuristik zweischneidig · Kanten außerhalb `_SCAN_DIRS` · dict/str-Kollision `index` formal UNKLAR) + zweite Schicht LOCKWATCH.
+
+**Status:** 📋 **GEPLANT 2026-07-31** (4 Pläne, 4 Wellen) → nächster Schritt **`/gsd-review --phase 08.23.2.LOCK-2 --all`** (Cross-AI **PFLICHT**, 🟡 + Live-Pfad + Wächter-Erweiterung), **nicht** direkt Execute. Der systematische Sweep (Teil 2 des Auftrags) wurde **vorab von Fable** erledigt und liegt als gesetztes Vorwissen in CONTEXT.md — kein Plan-Task erhebt ihn neu. **Vollständiger Auftrag:** Ende von `.planning/DIALOG-GSD-CLAUDIAN.md` (Claudian, 2026-07-31, „WURZEL GEFUNDEN"). **Sync:** `Nerve-Vault/01 Roadmap.md` parallel gepflegt.
 
 ---
 
