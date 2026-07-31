@@ -2420,6 +2420,17 @@ if _os_guard.environ.get('NERVE_TESTING') != '1':
     # Laeuft in TAXO1 LEER (kein Producer angebunden) und benotet NICHTS (Scoring = TAXO2).
     from services.slow_lane import slow_lane_consumer, flush_to_db, request_shutdown
 
+    # ── Phase 08.23.2.LOCK-1 Teil 3: Wachhund auf dem Sitzungs-Riegel ──────────────
+    # VOR dem Faden-Start, damit das Start-Beleg-Log des Consumers ihn mitzaehlt
+    # ("periodic-hooks: 2" statt 1 — der einzige Beweis im Journal, dass er scharf ist).
+    # Bewusst EXPLIZIT hier statt implizit beim Modul-Import: der Hook-Import-Block in
+    # slow_lane.py warnt ausdruecklich vor der Import-Falle (eine lautlos leere Registry).
+    try:
+        from services.live_session import register_lockwatch_hook as _reg_lockwatch
+        _reg_lockwatch()
+    except Exception as _lw_e:
+        print(f"[LOCKWATCH] Wachhund NICHT registriert: {type(_lw_e).__name__}: {_lw_e}")
+
     threading.Thread(target=slow_lane_consumer, daemon=True).start()
 
     # atexit: Sentinel stoppt den Consumer, dann finaler Drain offener Items (Bau-Regel 2).

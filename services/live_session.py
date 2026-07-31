@@ -1467,3 +1467,97 @@ def _build_log_content(bs, user_email='', profile_name='') -> str:
 
     lines.append("=" * 65)
     return "\n".join(lines) + "\n"
+
+
+# ── Phase 08.23.2.LOCK-1 Teil 3: Wachhund auf dem Sitzungs-Riegel ────────────────────
+# Am 30.07. starb eine Sitzung um 09:27:56 und NIEMAND hat es gemerkt: kein Fehler, kein
+# 504, keine Log-Zeile. Vier Klicks und ein [Beenden] liefen ins Leere. Dieser Tick ist
+# die Antwort auf 'und wenn er doch klemmt?'.
+#
+# MUSTER: exakt wie [SLOW] requeue_pending (services/slow_lane.py:326-341) — Registrierung
+# ueber register_periodic_tick_hook, Drosselung ueber einen Zaehler modulo N, KEIN zweiter
+# Timer. Der Consumer taktet mit SLOW_LANE_TICK = 5.0s, also 6 Ticks = ~30s.
+#
+# FEHLERBEHANDLUNG: keine eigene noetig — _periodic_tick (slow_lane.py:349-353) klammert
+# jeden Hook einzeln. ABER der Wachhund darf niemals werfen, WAEHREND er den Riegel haelt,
+# sonst wird der Waechter zur Ursache. Deshalb: im Erfolgsfall NICHTS unter dem Riegel tun
+# und im finally freigeben; die Log-Zeile steht im FEHL-Zweig, also OHNE Riegel.
+#
+# NEBENLAEUFIGKEIT: _lockwatch_tick laeuft ausschliesslich im EINEN Slow-Lane-Consumer-
+# Faden (app.py). Die drei Zaehler unten haben genau einen Schreiber — kein Riegel noetig.
+#
+# PUNKT 28: die drei Zaehler sind veraenderlicher Modul-Zustand, beschreiben aber den
+# RIEGEL/den PROZESS, nicht einen Nutzer oder Anruf (keine sid, keine user_id, keine
+# org_id). Sie leben innerhalb dieses Moduls; der Global-Waechter prueft `ls.<attr> = ...`
+# aus Fremdmodulen. Diese Begruendung IST der Whitelist-Eintrag.
+#
+# BEKANNTE GRENZE (P-6): _periodic_tick feuert NUR bei leerer Slow-Lane-Queue
+# (slow_lane.py:792-793). Ist der Consumer beschaeftigt, gibt es keinen Tick. Im
+# Verklemmungsfall ist das gutartig (bei geklemmtem Riegel produziert niemand neue Items,
+# die Queue laeuft leer) — trotzdem gibt es die Herzschlag-Zeile, damit ein STUMMER
+# Wachhund von einem ZUFRIEDENEN unterscheidbar ist.
+
+# Der Log-Text ist auf ">2s" FESTGELEGT (CONTEXT). Wer diesen Wert aendert, aendert auch
+# den Text — und die zwei Zeilen in deepgram_service.py / app_routes.py aus Teil 2b.
+_LOCKWATCH_ACQUIRE_TIMEOUT_S = 2.0
+_LOCKWATCH_EVERY_N_TICKS = 6        # 6 x SLOW_LANE_TICK(5.0s) = ~30s
+_LOCKWATCH_HEARTBEAT_EVERY = 20     # jede 20. Pruefung = ~10 Minuten
+_lockwatch_tick_count = 0
+_lockwatch_runs = 0
+_lockwatch_fails = 0
+
+
+def _lockwatch_tick() -> None:
+    """Periodische Riegel-Pruefung. Registriert via register_lockwatch_hook()."""
+    global _lockwatch_tick_count, _lockwatch_runs, _lockwatch_fails
+    _lockwatch_tick_count += 1
+    if _lockwatch_tick_count % _LOCKWATCH_EVERY_N_TICKS != 0:
+        return
+    _lockwatch_runs += 1
+
+    if _session_state_lock.acquire(timeout=_LOCKWATCH_ACQUIRE_TIMEOUT_S):
+        try:
+            pass    # P-3: im Erfolgsfall unter dem Riegel NICHTS tun
+        finally:
+            _session_state_lock.release()
+        if _lockwatch_runs % _LOCKWATCH_HEARTBEAT_EVERY == 0:
+            print(f"[LOCKWATCH] Herzschlag: {_lockwatch_runs} Pruefungen, "
+                  f"{_lockwatch_fails} davon fehlgeschlagen")
+        return
+
+    # ── Fehl-Fall: OHNE gehaltenen Riegel loggen ──────────────────────────────────
+    _lockwatch_fails += 1
+    # Halter-Felder EINMAL in lokale Variablen lesen (sie koennen sich waehrend der
+    # Formatierung aendern, wenn der Halter freigibt) und ALLE defensiv behandeln.
+    _h_name = _session_state_lock.holder_thread
+    _h_ident = _session_state_lock.holder_ident
+    _h_mono = _session_state_lock.holder_since
+    # Wanduhr wird NICHT beim Erwerb erfasst (B5), sondern hier aus dem monotonic-Abstand
+    # abgeleitet — gleiche Aussage, ein C-Aufruf weniger im heissen Pfad.
+    _jetzt_mono = time.monotonic()
+    _dauer = (f"{_jetzt_mono - _h_mono:.1f}s" if _h_mono else 'unbekannt')
+    _seit = (time.strftime('%H:%M:%S', time.localtime(time.time() - (_jetzt_mono - _h_mono)))
+             if _h_mono else 'unbekannt')
+    print(f"[LOCKWATCH] _session_state_lock >2s belegt | Faden={_h_name or 'unbekannt'!r} "
+          f"ident={_h_ident} | Uebernahme={_seit} | gehalten={_dauer} | "
+          f"Stapel-Abzug: sudo systemctl kill -s SIGUSR1 nerve")
+
+
+def register_lockwatch_hook() -> None:
+    """Haengt den Wachhund in die Slow-Lane-Tick-Registry. Wird EINMAL aus app.py gerufen,
+    VOR dem Start des slow_lane_consumer-Fadens — damit das Start-Beleg-Log
+    (slow_lane.py:781) ihn mitzaehlt und man in `inspect.sh logs` sieht, dass er scharf ist.
+
+    Der Import ist LAZY: slow_lane zieht database.db nach, und live_session wird sehr frueh
+    und sehr breit importiert. Heute gibt es keinen Zyklus (slow_lane importiert
+    live_session nicht) — das lazy Import haelt es dabei.
+
+    Idempotent: ein zweiter Aufruf registriert NICHT erneut (sonst doppelte Log-Zeilen).
+    """
+    from services.slow_lane import register_periodic_tick_hook, _PERIODIC_TICK_HOOKS
+    if _lockwatch_tick in _PERIODIC_TICK_HOOKS:
+        print("[LOCKWATCH] Wachhund war bereits registriert — kein zweiter Eintrag")
+        return
+    register_periodic_tick_hook(_lockwatch_tick)
+    print(f"[LOCKWATCH] Wachhund registriert: alle ~{_LOCKWATCH_EVERY_N_TICKS * 5}s eine "
+          f"Probe mit {_LOCKWATCH_ACQUIRE_TIMEOUT_S}s Zeitlimit")
