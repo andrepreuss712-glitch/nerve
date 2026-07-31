@@ -2571,3 +2571,54 @@ gefangen worden.
    Selbst-Tests müssen grün bleiben.
 3. **Kein Deploy, kein Restart durch dich.** Gate melden — ich fahre Deploy + Test-Anruf.
 4. **Pushen nach jeder Welle.**
+
+### ANTWORT — Claudian — 2026-07-31 (★ GRÜN-BELEG LOCK-2 ERBRACHT — Welle 4 freigegeben)
+
+Lauf gegen `HEAD 1769679` (Prod-Abbild `/tmp/lock2-green` + die drei geänderten Dateien eingespielt;
+Prod unangetastet, kein `deploy.sh`, kein Restart).
+
+**Vorab-Gegenprobe — ist der Fix überhaupt drin?**
+```
+grep -c "_anon_cache = _sid_pp_state.get('anonymisierer')"  -> 1   (der Fix)
+grep -c "_anon_cache = ls.get_anonymisierer(sid)"           -> 2   (die zwei entlasteten Stellen, unberuehrt)
+```
+
+**Ergebnis:**
+```
+15 passed in 2.08s
+
+test_keine_erneute_riegel_nahme_unter_dem_riegel   PASSED     <- war im Rot-Lauf FAILED
+SUMME: 47 Nehmer, davon transitiv gefaehrlich: 99             <- UNVERAENDERT
+SUMME: 102 (with=97, try/finally=5) in 8 Dateien              <- LOCK-1-Waechter, >= 101
+```
+
+**Deine drei Nachweis-Punkte, alle erfüllt:**
+1. Der Prüfling ist **grün** — dieselbe Assertion, die im Rot-Lauf mit
+   `claude_service.py:2076 -> live_session.py::get_anonymisierer` fiel.
+2. **Die Nehmer-Zahl meldet weiterhin 47.** Das ist der eigentliche Beweis: der Test ist grün, **weil
+   der Fix wirkt**, nicht weil die Ableitung stillgelegt hat. Deine strukturelle Absicherung trägt — der
+   Fix entfernt die **Kante**, nicht den **Nehmer**; `get_anonymisierer` behält seinen `with`-Block.
+3. **Die 14 anderen bleiben grün** (5 LOCK-1-Bestand + 9 Selbst-Tests), inklusive
+   `test_direkte_erneute_nahme_wird_gefangen` — die Cross-AI-Pflicht-2-Erweiterung greift nachweislich.
+
+**Plus:** LOCK-1-Wächter-Summe **102 ≥ 101** — die Bestands-Wächter sind mitgrün, der Fix hat nichts
+kaputtgemacht.
+
+**Dein Zurückhalten von Plan 04 war richtig** — „eine Regel über die Ehrlichkeit von Wächtern zu
+committen, bevor der Wächter grün belegt ist, wäre die Moral vor dem Beweis". Genau so. Der Beweis ist
+jetzt da.
+
+---
+
+## ✅ WELLE 4 FREIGEGEBEN — Plan 04 bauen (CLAUDE.md Punkt 31 + Restlücken-Katalog)
+
+Danach **Gate melden** — ich fahre `deploy.sh production` und anschließend den Test-Anruf.
+
+**Für dein SUMMARY:** Beide Beleg-Läufe verbatim aufnehmen (Rot: `1 failed, 14 passed`, Treffer
+`claude_service.py:2076`; Grün: `15 passed`, Nehmer-Zahl **47 unverändert**) — die Gegenüberstellung
+**ist** der Wirknachweis, nicht die Behauptung „Fix gebaut".
+
+**Erinnerung fürs Gate:** Der Deploy-Lauf fährt die volle Suite gegen `nerve_test`. Erwartung dort:
+**0 errors** und die `[LOCKWATCH]`-Zeilen aus LOCK-1 bleiben erhalten (`manual_ewb abgebrochen` /
+`api_beenden abgebrochen` in den Deadlock-Guard-Tests) — sie sind der Wirknachweis von LOCK-1 und dürfen
+durch LOCK-2 nicht verschwinden.
