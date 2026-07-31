@@ -822,8 +822,40 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-07-31
-Stopped at: Phase 08.23.2.LOCK-1 Plan 03 abgeschlossen (Welle 2 — **der Fix**). Vier atomare Commits: `c32d649` (Teil 1 — `get_sid_paused` riegel-frei + `wait_session_state_lock_free`), `289a2f8` (Teil 2b — die zwei Riegel-Proben: `pip_stream_error` bzw. 503/`state_locked`), `694c278` (Teil 2 — `finish()` im Daemon-Faden mit `join(timeout=5.0)`), `9d5619a` (Teil 2c — Auflege-Schwanz begrenzt: `stash_ended_session`, `pop_session_state` 2×, `setdefault`-Rennsperre in `handle_disconnect`). **Wächter 1 und 3 aus Welle 1 sind GRÜN** — durch den Fix, nicht durch abgeschwächte Assertionen; Wächter 2 bleibt grün mit `live_session.py: 25 (with=22, try/finally=3)` / `deepgram_service.py: 22 (with=21, try/finally=1)`, die vier umgestellten Bereiche sind also **weiterhin bewacht**. Gepusht. **Kein Deploy, kein SSH, keine Migration** (Punkt 23 nicht anwendbar — kein DB-Pfad angefasst). **Nächster Schritt: Plan 04 (Welle 3) — der Wachhund** (`_TracedLock` mit Halter-Aufzeichnung, `[LOCKWATCH]`-Tick, `faulthandler` auf SIGUSR1). Erst danach Übergabe an André für Deploy-Gate + Test-Anruf. ⚠ `gsd-tools` misresolved die Phasen-ID `08.23.2.LOCK-1` → Pfade hartkodieren.
-Resume file: .planning/phases/08.23.2.LOCK-1-sitzungs-riegel-entklemmen/08.23.2.LOCK-1-03-SUMMARY.md
+Stopped at: Phase 08.23.2.LOCK-1 **Plan 04 abgeschlossen (Welle 3 — der Wachhund); Phase code-vollstaendig 4/4, ANHALTEN (`autonomous: false`) — naechster Schritt Cross-AI-Review, danach Deploy-Gate durch André.** Details siehe Block direkt unter „Resume file". Vorheriger Stand: Plan 03 abgeschlossen (Welle 2 — **der Fix**). Vier atomare Commits: `c32d649` (Teil 1 — `get_sid_paused` riegel-frei + `wait_session_state_lock_free`), `289a2f8` (Teil 2b — die zwei Riegel-Proben: `pip_stream_error` bzw. 503/`state_locked`), `694c278` (Teil 2 — `finish()` im Daemon-Faden mit `join(timeout=5.0)`), `9d5619a` (Teil 2c — Auflege-Schwanz begrenzt: `stash_ended_session`, `pop_session_state` 2×, `setdefault`-Rennsperre in `handle_disconnect`). **Wächter 1 und 3 aus Welle 1 sind GRÜN** — durch den Fix, nicht durch abgeschwächte Assertionen; Wächter 2 bleibt grün mit `live_session.py: 25 (with=22, try/finally=3)` / `deepgram_service.py: 22 (with=21, try/finally=1)`, die vier umgestellten Bereiche sind also **weiterhin bewacht**. Gepusht. **Kein Deploy, kein SSH, keine Migration** (Punkt 23 nicht anwendbar — kein DB-Pfad angefasst). **Nächster Schritt: Plan 04 (Welle 3) — der Wachhund** (`_TracedLock` mit Halter-Aufzeichnung, `[LOCKWATCH]`-Tick, `faulthandler` auf SIGUSR1). Erst danach Übergabe an André für Deploy-Gate + Test-Anruf. ⚠ `gsd-tools` misresolved die Phasen-ID `08.23.2.LOCK-1` → Pfade hartkodieren.
+Resume file: .planning/phases/08.23.2.LOCK-1-sitzungs-riegel-entklemmen/08.23.2.LOCK-1-04-SUMMARY.md
+
+**Phase 08.23.2.LOCK-1 Plan 04 abgeschlossen (2026-07-31) — Welle 3, PHASE CODE-VOLLSTAENDIG (4/4 Plans):**
+Der Wachhund steht. Vier atomare Commits: `818804e` (Teil 3 — Aufsatz-Riegel `_TracedLock` mit
+Halter-Aufzeichnung: **eine** geaenderte Bestands-Zeile, 97 `with`-Stellen unberuehrt, KEIN RLock,
+Halter-Felder werden VOR `self._lock.release()` geloescht), `cee1fe1` (Teil 3 — `[LOCKWATCH]`-Tick
+alle ~30s via `register_periodic_tick_hook`, Drosselung modulo 6, im Erfolgsfall `try: pass /
+finally: release()` = **nichts** unter dem Riegel, Log-Zeile im Fehl-Zweig **ohne** Riegel, Herzschlag
+alle ~10 min gegen P-6, `register_lockwatch_hook` lazy+idempotent, Aufruf in `app.py:2430` VOR dem
+Consumer-Start `:2434` und innerhalb des `NERVE_TESTING`-Guards `:2410`), `65acdb5` (Teil 3 —
+`faulthandler.register(SIGUSR1, all_threads=True, chain=True)` bei `app.py:2537`, nach dem
+SIGTERM-Block `:2497`; **NIEMALS SIGUSR2** als Code-Kommentar, `signal.SIGUSR2` → 0 Treffer),
+`f8e1d96` (6 Verhaltens-Tests, `tests/test_lockwatch_watchdog.py` → **6 passed**).
+**Alle vier Waechter gruen: `15 passed, 2 skipped`** (die 2 Skips sind die bekannten
+`api_beenden`-Haelften, die im `deploy.sh`-Gate auf Prod laufen). Waechter 2 steigt planmaessig um
+**genau einen** Block: `services/live_session.py: 26 (with=22, try/finally=4)`,
+`services/deepgram_service.py: 22 (with=21, try/finally=1)`, SUMME **102** — der Wachhund wird also
+mitgezaehlt und **mitbewacht**; `_SOLL_MINDESTENS` wurde nicht angefasst. Bestand: `34 passed,
+9 skipped`. Gepusht. **Kein Deploy, kein SSH, keine Migration** (Punkt 23 nicht anwendbar — kein
+DB-Pfad angefasst, `models.py` unveraendert). **Drei Abweichungen, keine davon durch Aufweichen eines
+Kriteriums geloest:** (1) `sudo systemctl kill -s SIGUSR1 nerve` steht **2×** in `live_session.py`
+statt der geforderten 1 — die zweite Fundstelle ist **Bestand aus Welle 2** (`stash_ended_session`,
+`9d5619a`); das Kriterium war gegen den Stand VOR Plan 03 formuliert, beide Zeilen sind korrekt, kein
+Code geaendert. (2) `LOCKWATCH-testhalter` stand zunaechst nur 1× in der Test-Datei (Soll ≥2) — Fix im
+**Code**: die Assertion prueft jetzt das Literal statt der Konstante (eine Konstante auf beiden Seiten
+waere gegen sich selbst gruen gewesen). (3) Alle Plan-Zeilennummern verschoben (Riegel bei 293 statt
+227; SIGTERM-`print` bei 2508 statt 2491) → per **Text-Anker** eingefuegt, Struktur vorher verifiziert.
+**Naechster Schritt: Cross-AI-Review (PFLICHT, 🟡 + Live-Pfad)** — Schwerpunkt Latenz-Abschaetzung des
+Aufsatz-Riegels (`[ASSUMED]` A6: 1-2 µs/Erwerb ≈ 1,8 ms/min/Anruf ist geschaetzt, nicht gemessen) und
+Punkt-27-Begruendung der Riegel-Probe. Danach Uebergabe an Andre: `deploy.sh production` →
+**drei Journal-Beleg-Zeilen** (`periodic-hooks: 2`, `[LOCKWATCH] Wachhund registriert`,
+`[LOCKWATCH] faulthandler auf SIGUSR1 registriert`) → Test-Anruf. Fehlt eine der drei Zeilen, ist der
+entsprechende Teil stumm. ⚠ `gsd-tools` misresolved die Phasen-ID `08.23.2.LOCK-1` → Pfade hartkodieren.
 
 **Vorherige Session (2026-07-30):** Phase 08.23.2.COUNTERPART Plan 04 abgeschlossen — **PHASE CODE-VOLLSTAENDIG (4/4 Plans)**, ANHALTEN (`autonomous: false`). Der R3-Waechter ist jetzt **GRUEN** (`2 passed, 1 skipped`; models.py deklariert 9 event_type-Werte mit den NEUEN Namen). **Migration 0035 ist GESCHRIEBEN, NICHT AUSGEFUEHRT.** Uebergabe an Claudian, Reihenfolge zwingend: (1) `alembic upgrade head` auf Prod (beaufsichtigt, als postgres) → (2) Gegenprobe `SELECT event_type, count(*) FROM call_events GROUP BY 1` (Soll: counterpart_initial ~72, counterpart_switch ~41, 0 alte Namen) → (3) `bash deploy.sh production` → (4) Test-Anruf (Toggle 4x + Meeting-Init-Default). models.py ist ORM-LESER: Migration MUSS vor dem Code-Deploy laufen (AUTH-2-Expand/Contract).
 
