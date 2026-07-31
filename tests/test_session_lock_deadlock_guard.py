@@ -215,6 +215,30 @@ def test_manual_ewb_laeuft_mit_freiem_riegel_normal_durch(ewb_sid_aufraeumen):
 
 # ── Prueflung B: POST /api/beenden ────────────────────────────────────────────
 
+def _post_beenden_in_eigenem_kontext(user_id, ergebnis):
+    """POST /api/beenden mit einem EIGENEN Test-Client, vollstaendig in DIESEM Faden.
+
+    WARUM NICHT DER `client` DER FIXTURE (Gate-Befund 2026-07-31):
+    `flask.app_ctx` ist eine ContextVar und damit faden-lokal. Der Kontextmanager-Client
+    (`with flask_app.test_client() as c`, tests/conftest.py:843) haelt den Request-Kontext
+    nach dem Aufruf fest und raeumt ihn beim Verlassen des `with` ab — im HAUPT-Faden.
+    Laeuft der Aufruf in einem ZWEITEN Faden, ist die ContextVar dort gesetzt und im
+    Haupt-Faden leer: `LookupError: ContextVar 'flask.app_ctx'` (flask/ctx.py:264), der
+    Teardown bricht ab BEVOR er aufraeumt, und es leaken Zeilen in users/organisations/
+    profiles. Das war KEIN Produktiv-Fehler — der Riegel-Fix wirkte im selben Lauf
+    nachweislich (`[LOCKWATCH] api_beenden abgebrochen`) — sondern ein Mangel im Testaufbau.
+
+    Deshalb: eigener Client OHNE Kontextmanager (`preserve_context` bleibt False, es wird
+    also gar nichts ueber den Aufruf hinaus festgehalten), Sitzungs-Cookie in diesem Faden
+    gesetzt. Push UND Pop passieren damit beide hier. Der Client der Fixture wird von
+    diesem Faden nicht angefasst.
+    """
+    from app import app as flask_app   # erst NACH der conftest-Umbindung importieren
+    tc = flask_app.test_client()
+    with tc.session_transaction() as sess:
+        sess['user_id'] = user_id
+    ergebnis.append(tc.post('/api/beenden', json={'session_mode': 'cold_call'}))
+
 @pytest.fixture
 def throwaway(client):
     """Throwaway Organisation + User (ORM) — NIE die geschuetzte Baseline id=1 anfassen.
@@ -247,7 +271,16 @@ def throwaway(client):
     tracker = {'user_id': user_id, 'org_id': org_id, 'call_ids': [], 'conv_ids': []}
     yield tracker
 
-    _clear_leaked_sessions_for_user(user_id)
+    # Das Zeilen-Aufraeumen MUSS auch dann laufen, wenn ein Schritt davor wirft
+    # (Gate-Befund 2026-07-31): sonst reisst JEDER kuenftige Teardown-Fehler dieselbe
+    # Zeilen-Spur in users/organisations/profiles auf, der BASELINE-AUTO-FIX muss
+    # hinterherraeumen und Folge-Tests laufen auf verschmutzter DB. Ein Wegwerf-Test,
+    # der die Baseline verdreckt, ist ein echter Mangel — kein "ist ja nur der Teardown".
+    try:
+        _clear_leaked_sessions_for_user(user_id)
+    except Exception as _sess_e:   # noqa: BLE001 - Diagnose-Pfad, darf nie das Aufraeumen kosten
+        print(f"[LOCK1-TEST] _clear_leaked_sessions_for_user fehlgeschlagen: {_sess_e!r}; "
+              f"Zeilen-Aufraeumen laeuft trotzdem weiter")
 
     call_ids = [c for c in tracker['call_ids'] if c]
     conv_ids = [c for c in tracker['conv_ids'] if c]
@@ -258,18 +291,26 @@ def throwaway(client):
         # der AUCH fuer den Owner feuert. nerve_app OWNT audit_log -> Trigger SCOPED
         # deaktivieren, ALLE audit_log-Rows dieses Wegwerf-Users/-Orgs loeschen, Trigger im
         # finally IMMER reaktivieren. Drei getrennte committete TX.
-        cleanup_db.execute(text(
-            "ALTER TABLE public.audit_log DISABLE TRIGGER trg_audit_log_immutable"))
-        cleanup_db.commit()
+        # Auch dieser Block darf das Zeilen-Aufraeumen nicht kosten (Gate-Befund 2026-07-31):
+        # scheitert er, bleiben audit_log-Zeilen liegen und cleanup_rows stallt an den
+        # NO-ACTION-FKs — aber der VERSUCH ist allemal besser als ein uebersprungenes Delete.
         try:
-            cleanup_db.query(AuditLog).filter(
-                (AuditLog.user_id == user_id) | (AuditLog.org_id == org_id)
-            ).delete(synchronize_session=False)
-            cleanup_db.commit()
-        finally:
             cleanup_db.execute(text(
-                "ALTER TABLE public.audit_log ENABLE TRIGGER trg_audit_log_immutable"))
+                "ALTER TABLE public.audit_log DISABLE TRIGGER trg_audit_log_immutable"))
             cleanup_db.commit()
+            try:
+                cleanup_db.query(AuditLog).filter(
+                    (AuditLog.user_id == user_id) | (AuditLog.org_id == org_id)
+                ).delete(synchronize_session=False)
+                cleanup_db.commit()
+            finally:
+                cleanup_db.execute(text(
+                    "ALTER TABLE public.audit_log ENABLE TRIGGER trg_audit_log_immutable"))
+                cleanup_db.commit()
+        except Exception as _audit_e:   # noqa: BLE001 - Diagnose-Pfad
+            cleanup_db.rollback()       # CLAUDE.md DB-Regel: nie stiller except ohne rollback
+            print(f"[LOCK1-TEST] audit_log-Aufraeumen fehlgeschlagen: {_audit_e!r}; "
+                  f"cleanup_rows laeuft trotzdem")
 
         spec = {}
         if call_ids:
@@ -298,13 +339,21 @@ def test_api_beenden_kehrt_mit_fehler_zurueck(client, throwaway, held_session_st
     gebraucht — der Wegwerf-User hat keine Session, und der Stufe-2-Scan kommt ohnehin
     nicht bis zum Ergebnis, weil er am Riegel abbricht.
 
-    Der Flask-Test-Client ist nicht faden-sicher: session_transaction() lief im Haupt-Faden
-    (throwaway-Fixture), nur client.post() laeuft in Faden C.
+    Der Flask-Test-Client ist nicht faden-sicher. Faden C benutzt deshalb NICHT den `client`
+    der Fixture, sondern einen eigenen (siehe _post_beenden_in_eigenem_kontext) — sonst
+    reisst die faden-lokale ContextVar `flask.app_ctx` den Teardown des Haupt-Fadens ab und
+    die Wegwerf-Zeilen leaken.
     """
     antwort = []
-    c = threading.Thread(target=lambda: antwort.append(
-            client.post('/api/beenden', json={'session_mode': 'cold_call'})),
-        daemon=True, name='LOCK1-pruefling-B')
+    faden_fehler = []
+
+    def _lauf():
+        try:
+            _post_beenden_in_eigenem_kontext(throwaway['user_id'], antwort)
+        except BaseException as _e:       # noqa: BLE001 - Diagnose, sonst stiller Leer-Fall
+            faden_fehler.append(_e)
+
+    c = threading.Thread(target=_lauf, daemon=True, name='LOCK1-pruefling-B')
     c.start()
     held_session_state_lock(c)   # Nachzuegler-Anmeldung, Schicht 4 Punkt 3b
     c.join(timeout=_PRUEFLING_TIMEOUT_S)
@@ -313,6 +362,10 @@ def test_api_beenden_kehrt_mit_fehler_zurueck(client, throwaway, held_session_st
         f"{_PRUEFLING_TIMEOUT_S}s zurueck. Drei Riegel-Nahmen liegen davor: "
         f"app_routes.py:157, :171 (der Rahmen aus dem py-spy-Abzug), :188. "
         f"Am 30.07. um 09:30:18 stand [Beenden] ENTRY im Log — und danach nichts mehr.")
+    assert not faden_fehler, (
+        f"Faden C ist an einer Ausnahme gestorben statt zu antworten: {faden_fehler[0]!r}. "
+        f"Das ist KEIN Riegel-Befund — der Testaufbau ist kaputt.")
+    assert antwort, "Faden C kam zurueck, hat aber keine Antwort abgelegt."
     r = antwort[0]
     assert r.status_code == 503, f"Erwartet 503, war {r.status_code}"
     assert (r.get_json() or {}).get('reason') == 'state_locked', (
