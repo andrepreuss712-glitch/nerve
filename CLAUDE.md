@@ -949,3 +949,37 @@ neuen Waechter.
 
 **Geltungsbereich:** jeder neue oder erweiterte Waechter/Guard/statische Sweep. Skip-OK:
 gewoehnliche Verhaltens-Tests (die behaupten nichts ueber eine Fehler**klasse**).
+
+---
+
+## ⛔ HART: Keine hardcoded Farben, keine Inline-Styles in UI-Komponenten
+
+> **Gespiegelt 2026-08-01 aus dem Vault-Regelwerk.** Grund für die Spiegelung: Die Regel richtet sich WÖRTLICH an den Plan- und Execute-Agent — stand aber bis heute **nur** in `Nerve-Vault/CLAUDE.md`, die GSD nie lädt. Der Verstoß ist dadurch **fünfmal** passiert (08.20.2 Pflichtfeld-Karte, 08.20.3 Filter-Toggle, 08.19.5.2 nerve-nav-guard Modal, C.R, C.R.F). Jedes Mal wurde die Regel verschärft — an einer Stelle, wo der Adressat sie nicht sehen konnte. Gefunden beim Vault-Audit 01.08.
+>
+> André-Zitat, das die Verankerung ausgelöst hat: *„WO LIEGT DIESE VERFICKTE DESIGN DATEI VON DER DU MIR JETZT SCHON ZIG MAL GESAGT HAST DAS SIE GELÖSCHT IST?!?!?!"*
+
+**Das aktuelle NERVE-Design ist LIGHT-MODE.** Alte Dark-Mode-Farben gehören zu einem Design-Stand, den es nicht mehr gibt.
+
+### Schicht 1 — Keine hardcoded Farben
+
+1. **VERBOTEN:** `style="..."`-Attribute mit hardcoded Farben. Enthält ein `style`-Attribut ein `#xxxxxx` → **SOFORT-FAIL** im Code-Review. Plan-Agent darf es nicht vorschlagen, Execute-Agent nicht bauen.
+2. **VERBOTEN als Hex-Literal:** `#1a1a2e`, `#2a2a4e`, `#f0c040`, `#9a9ab0`, `#00D4AA` — alte Dark-Mode-Palette.
+3. **PFLICHT:** CSS-Variablen aus `static/nerve.css` nutzen (`var(--page-bg)`, `var(--accent)`, `var(--page-text)`, `var(--page-text-muted)`, `var(--border-color)` …). Fehlt ein Token → **erst** Token in `static/nerve.css` ergänzen, dann nutzen.
+4. **PFLICHT:** UI-Komponenten als CSS-Klassen (`.n-*`) in `static/nerve.css`, nicht inline. Inline-Styles NUR für dynamische Werte (`style="width:${score}%"`).
+5. **PFLICHT-Vorabrecherche bei jeder UI-Phase:** VOR der ersten UI-Codezeile `static/nerve.css` scannen — welche Variablen und Klassen existieren? Welche Modals/Cards/Pills nutzt die App schon? **Pattern aus bestehenden Komponenten kopieren, nicht neu erfinden.**
+
+### Schicht 2 — Brand-Konsistenz (ein sauberer Token kann trotzdem falsch sein)
+
+Verankert nach C.R.F: Ein Schieber war blau (`#3b82f6`) statt teal — formal sauber als CSS-Variable definiert, trotzdem ein Fremdkörper. André: *„warum ist der blau? wo kommt diese farbe schon wieder her? warum nicht einfach in teal…"* Weder Pre-Execute-Audit noch Cross-AI hatten es gefangen — beide prüften nur „ist es ein Token", nicht „passt der Wert zur Marke".
+
+**Bei JEDER neuen Token-Definition:**
+1. `grep` gegen die Brand-Tokens in `static/nerve.css` — `--btn-primary-bg-from` (#00D4AA), `--accent`, `--brand-*`
+2. Farb-Familie prüfen: **Teal ist die Marke.** Blau = Fremdkörper. Lila = Fremdkörper. „Neutral-professionelles Blau" ist KEINE gültige Begründung.
+3. Neue Funktion braucht neue Farbe? → **André fragen**, nicht eigenständig festlegen.
+4. In der UI-SPEC-Phase: Token-Werte gegen die Brand-Liste kreuzprüfen VOR der Freigabe.
+
+### Durchsetzung
+
+- **Code-Review-Pflicht:** Jede UI-Datei (`templates/*.html`, `static/*.css`, `static/*.js`) explizit auf Inline-Styles + hardcoded Farben prüfen. Findings sind **CRITICAL**, nicht INFO — vor Phasen-Freigabe zu fixen.
+- **Cross-AI-Briefing bei UI-Komponenten** muss explizit enthalten: „prüfe auf hardcoded Farben, Inline-Styles und Design-Token-Konsistenz" — nicht nur Logik-Review.
+- **Bei Verstoß:** Phase nicht freigeben. André wird gefragt, ob neu gebaut wird. **Anti-Abrieb schlägt Termindruck.**
