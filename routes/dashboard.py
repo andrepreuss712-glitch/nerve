@@ -2,6 +2,7 @@ import os
 import re
 import json
 import hashlib
+import traceback
 from datetime import datetime, timedelta, date
 from difflib import SequenceMatcher
 from flask import Blueprint, render_template, redirect, url_for, g, session as flask_session, jsonify, request, abort
@@ -958,15 +959,27 @@ def session_detail(sid):
                                             _RubricScore.origin == 'live')
                                     .first())
             if rubric_preview is not None:
-                _obs = rubric_preview.observations_jsonb or {}
+                # FORM-GARANTIE (Fehler-500, 2026-08-01): observations_jsonb ist JSONB — die Form
+                # ist in der DB NIRGENDS erzwungen. Steht dort etwas anderes als erwartet (String,
+                # Zahl, dict statt Liste), bricht sonst erst das Template, also NACH dem try/except
+                # unten — dort, wo kein Netz mehr haengt. Deshalb die Form HIER erzwingen, wo sie
+                # entsteht: der Anzeige-Pfad bekommt garantiert [{name, eintraege: list[dict]}].
+                _obs = rubric_preview.observations_jsonb
+                if not isinstance(_obs, dict):
+                    _obs = {}
                 # _compliance separat extrahieren — NICHT in die Dimensions-Schleife mischen
-                _compliance = _obs.get('_compliance') or {}
+                _compliance = _obs.get('_compliance')
+                if not isinstance(_compliance, dict):
+                    _compliance = {}
                 compliance_verletzt = bool(_compliance.get('verletzt'))
                 compliance_beleg = _compliance.get('beleg_zitat') or ''
                 # observations_display: geordnet nach fester DIMENSIONS-Reihenfolge
                 for _dim in _DIMENSIONS:
                     _key = _dim['key']
-                    _items = _obs.get(_key) or []
+                    _roh = _obs.get(_key)
+                    # Nur echte Listen; Nicht-dict-Eintraege darin verwerfen (das Template ruft
+                    # obs.get(...) — ein String an dieser Stelle waere der naechste 500).
+                    _items = [_e for _e in _roh if isinstance(_e, dict)] if isinstance(_roh, list) else []
                     observations_display.append({
                         'name': _dim['name'],
                         # Schluessel heisst 'eintraege', NICHT 'items': in Jinja2 loest der
@@ -985,33 +998,65 @@ def session_detail(sid):
             compliance_verletzt = False
             compliance_beleg = ''
 
-        return render_template(
-            'session_detail.html',
-            conv=conv,
-            events=events,
-            rubric_preview=rubric_preview,        # TAXO2-05: live-rubric_score-Zeile (status + guard)
-            outcome_confirmed=outcome_confirmed,  # TAXO2-05: ANZEIGE-Sperre (calls.outcome IS NOT NULL)
-            observations_display=observations_display,   # TAXO2-05: [{name, eintraege}] je Dimension
-            compliance_verletzt=compliance_verletzt,     # TAXO2-05: _compliance.verletzt bool
-            compliance_beleg=compliance_beleg,           # TAXO2-05: _compliance.beleg_zitat str
-            pt=pt,
-            trend_avg=trend_avg,
-            chart_data_json=chart_data_json,
-            schwierigkeit_label=schwierigkeit_label,
-            recommendations=recommendations,
-            score_total=score_total,            # W-06: Gesamt-Score fuer Score-Hero
-            kb_end_effective=kb_end_effective,  # Fix B (UAT-R1): = letzter kb_verlauf-Punkt falls vorhanden
-            painpoints=painpoints,              # UAT-R2 I / UAT-R3 I-bis: dedupliziert (SequenceMatcher > 0.60)
-            # Phase 07.2 Wave 1: Scoring-Konsolidierung Context-Keys
-            scoring_kategorien=scoring_kategorien,                  # Sektion 13: 6 Einzel-Scores (Training only)
-            scoring_wendepunkte_detail=scoring_wendepunkte_detail,  # Sektion 12: Wendepunkt-Analyse (Training only)
-            scoring_verbesserungen=scoring_verbesserungen,          # Sektion 14: Verbesserungspotenzial (Training only)
-            kunden_name=kunden_name,                                # Header-Subtext: "Vorname Nachname"
-            kunden_alter=kunden_alter,                              # Header-Subtext: Alter-String
-            kunden_display_name=kunden_display_name,                # UAT-R1 Fix 1: Custom-Kunden-Badge-Text (pt.name ODER custom_persona_name)
-            kunden_display_icon=kunden_display_icon,                # UAT-R1 Fix 1: Custom-Kunden-Badge-Icon
-            schwierigkeit_raw=schwierigkeit_raw,                    # Plan 03 "Nochmal trainieren"-URL raw-Key
-        )
+        # ── SICHERHEITSNETZ um das Rendern (Fehler-500, 2026-08-01) ──────────────────────────
+        # Der except oben endet VOR dieser Zeile. Ein Fehler im Vorschau-Panel entsteht aber erst
+        # BEIM Rendern (Jinja) — das Netz hing also nie dort, wo gerissen wird, und die Zusage im
+        # Kommentar oben ("darf session_detail NIE brechen") war faktisch falsch. Sie wird hier
+        # wahr gemacht: bricht der Render, wird EINMAL ohne Vorschau-Daten neu gerendert.
+        # Der Fehler wird NICHT stumm geschluckt — Typ, Meldung und voller Traceback gehen ins Log.
+        def _render(_preview_on=True):
+            return render_template(
+                'session_detail.html',
+                conv=conv,
+                events=events,
+                # Bei _preview_on=False faellt NUR das Vorschau-Panel weg; der Rest der Seite
+                # (Transkript, Chart, Empfehlungen) bleibt vollstaendig.
+                rubric_preview=(rubric_preview if _preview_on else None),        # TAXO2-05: live-rubric_score-Zeile (status + guard)
+                outcome_confirmed=(outcome_confirmed if _preview_on else False),  # TAXO2-05: ANZEIGE-Sperre (calls.outcome IS NOT NULL)
+                observations_display=(observations_display if _preview_on else []),   # TAXO2-05: [{name, eintraege}] je Dimension
+                compliance_verletzt=(compliance_verletzt if _preview_on else False),  # TAXO2-05: _compliance.verletzt bool
+                compliance_beleg=(compliance_beleg if _preview_on else ''),           # TAXO2-05: _compliance.beleg_zitat str
+                pt=pt,
+                trend_avg=trend_avg,
+                chart_data_json=chart_data_json,
+                schwierigkeit_label=schwierigkeit_label,
+                recommendations=recommendations,
+                score_total=score_total,            # W-06: Gesamt-Score fuer Score-Hero
+                kb_end_effective=kb_end_effective,  # Fix B (UAT-R1): = letzter kb_verlauf-Punkt falls vorhanden
+                painpoints=painpoints,              # UAT-R2 I / UAT-R3 I-bis: dedupliziert (SequenceMatcher > 0.60)
+                # Phase 07.2 Wave 1: Scoring-Konsolidierung Context-Keys
+                scoring_kategorien=scoring_kategorien,                  # Sektion 13: 6 Einzel-Scores (Training only)
+                scoring_wendepunkte_detail=scoring_wendepunkte_detail,  # Sektion 12: Wendepunkt-Analyse (Training only)
+                scoring_verbesserungen=scoring_verbesserungen,          # Sektion 14: Verbesserungspotenzial (Training only)
+                kunden_name=kunden_name,                                # Header-Subtext: "Vorname Nachname"
+                kunden_alter=kunden_alter,                              # Header-Subtext: Alter-String
+                kunden_display_name=kunden_display_name,                # UAT-R1 Fix 1: Custom-Kunden-Badge-Text (pt.name ODER custom_persona_name)
+                kunden_display_icon=kunden_display_icon,                # UAT-R1 Fix 1: Custom-Kunden-Badge-Icon
+                schwierigkeit_raw=schwierigkeit_raw,                    # Plan 03 "Nochmal trainieren"-URL raw-Key
+            )
+
+        try:
+            return _render()
+        except Exception as _e_render:
+            # KEIN stilles Schlucken: Typ, Meldung und VOLLER Traceback ins Log
+            # (auffindbar via `inspect.sh logs-errors`, Praefix [TAXO2-05] + sid).
+            _tb_erst = traceback.format_exc()
+            print(f'[TAXO2-05] session_detail Render-Fehler sid={sid}: '
+                  f'{type(_e_render).__name__}: {_e_render}')
+            print(f'[TAXO2-05] Traceback (Erst-Render) sid={sid}:\n{_tb_erst}')
+            try:
+                # Zweiter Versuch OHNE Vorschau-Daten — die Seite kommt degradiert statt als 500.
+                return _render(_preview_on=False)
+            except Exception as _e_fallback:
+                # Der Fallback ist selbst gerissen -> der Fehler lag NICHT am Vorschau-Panel.
+                # Der ERSTE Traceback wird hier noch einmal mitgegeben, damit ihn der zweite
+                # nicht verdeckt (Vorgabe: nicht ueberschreiben), dann sauber weiterreichen:
+                # ein 500 mit Log ist ehrlicher als eine stumme Falsch-Seite.
+                print(f'[TAXO2-05] session_detail Fallback-Render ebenfalls gescheitert sid={sid}: '
+                      f'{type(_e_fallback).__name__}: {_e_fallback}')
+                print(f'[TAXO2-05] Traceback (Fallback) sid={sid}:\n{traceback.format_exc()}')
+                print(f'[TAXO2-05] Traceback (Erst-Render, erneut) sid={sid}:\n{_tb_erst}')
+                raise
     finally:
         db.close()
 

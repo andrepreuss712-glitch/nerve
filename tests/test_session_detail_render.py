@@ -176,3 +176,70 @@ def test_session_detail_leere_beobachtungen_zeigt_hinweis(client, db_from_client
         f'Der Hinweis {LEER_SATZ!r} fehlt — der Leer-Zweig ist tot, solange selectattr auf die '
         f'immer-truthy Dict-Methode trifft.'
     )
+
+
+# ── Option 3, Haelfte 1: Form-Garantie an der Quelle ──────────────────────────────────────
+def test_session_detail_haelt_kaputte_jsonb_form_aus(client, db_from_client, tracker):
+    """`observations_jsonb` ist JSONB — die Form ist in der DB NIRGENDS erzwungen.
+
+    Steht unter einem Dimensions-Schluessel etwas anderes als eine Liste von Dicts (hier: ein
+    String, eine Zahl, ein dict, ein None-Eintrag), darf die Seite nicht brechen. Ohne die
+    Form-Garantie in routes/dashboard.py liefe `{% for obs in dim.eintraege %}` ueber die
+    Zeichen eines Strings und `obs.get(...)` waere der naechste 500."""
+    keys = [d['key'] for d in DIMENSIONS]
+    kaputt = {
+        keys[0]: 'kein-list-sondern-string',
+        keys[1]: 42,
+        keys[2]: {'kein': 'list'},
+        keys[3]: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}, None, 'muell'],
+    }
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, kaputt)
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, (
+        f'Kaputte JSONB-Form bricht die Seite ({r.status_code}) — die Form-Garantie greift nicht.'
+    )
+    html = r.get_data(as_text=True)
+    # Der EINE gueltige Eintrag ueberlebt, der Muell drumherum wird verworfen.
+    assert BEOBACHTUNG in html, 'Der gueltige Eintrag wurde mit dem Muell zusammen verworfen.'
+    assert 'kein-list-sondern-string' not in html, 'Ein String wurde als Eintragsliste durchgereicht.'
+
+
+# ── Option 3, Haelfte 2: das Netz um den Render ───────────────────────────────────────────
+def test_session_detail_netz_faengt_render_fehler(client, db_from_client, tracker, monkeypatch):
+    """Bricht das Rendern WEGEN der Vorschau-Daten, kommt die Seite degradiert statt als 500.
+
+    Beweist das Netz selbst, nicht nur seine Existenz: `render_template` wird so ersetzt, dass
+    es beim ERSTEN Aufruf (mit Vorschau-Daten) wirft und beim zweiten (ohne) durchlaeuft — genau
+    der Fall, fuer den das Netz gebaut ist. Ohne Netz waere das ein HTTP 500."""
+    import routes.dashboard as _dash
+
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+    })
+    _login(client, u, tenant_id)
+
+    _echt = _dash.render_template
+    aufrufe = {'n': 0}
+
+    def _wackelig(template_name, **kw):
+        # Nur der Render MIT Vorschau-Daten faellt — der Fallback (leere Liste) laeuft durch.
+        if template_name == 'session_detail.html' and kw.get('observations_display'):
+            aufrufe['n'] += 1
+            raise RuntimeError('simulierter Render-Fehler im Vorschau-Panel')
+        return _echt(template_name, **kw)
+
+    monkeypatch.setattr(_dash, 'render_template', _wackelig)
+
+    r = client.get(f'/session/{sid}')
+    assert aufrufe['n'] == 1, 'Der Erst-Render wurde nicht wie erwartet zum Scheitern gebracht.'
+    assert r.status_code == 200, (
+        f'Das Netz faengt den Render-Fehler nicht ({r.status_code}) — die Zusage '
+        f'"darf session_detail NIE brechen" waere weiter unwahr.'
+    )
+    html = r.get_data(as_text=True)
+    # Die Seite kommt — ohne das Vorschau-Panel, aber vollstaendig im Rest.
+    assert BEOBACHTUNG not in html, 'Der Fallback zeigt die Vorschau-Daten, die gerade gerissen sind.'
+    assert 'session-detail' in html or '</html>' in html, 'Der Fallback lieferte keine vollstaendige Seite.'
