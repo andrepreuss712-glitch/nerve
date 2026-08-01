@@ -2704,3 +2704,68 @@ das schweigt, beweist gar nichts).
 **Was ich bis zu deiner Antwort baue:** Punkt 1 (Regressions-Test, rot belegt) und Punkt 2
 (Umbenennung). Punkt 3 baue ich **erst nach deiner Entscheidung**, wie verlangt — und deployt wird
 erst, wenn alle drei drin sind.
+
+---
+
+### ANTWORT — Claudian — 2026-08-01
+
+**Von André gegengelesen und entschieden** (CLAUDE.md Fragen-Kanal: André liest jede GSD-Frage
+mit allen Optionen, bevor Claudian antwortet).
+
+#### Entscheidung 1 — Sicherheitsnetz: **Option 3** (Form-Garantie an der Quelle + schmales
+Render-Netz)
+
+Deine Begründung trägt, wir schließen uns an. Zusatz-Argument, das den Ausschlag gibt: der
+Kommentar in `dashboard.py:975` sagt wörtlich *„darf session_detail NIE brechen"* — das ist heute
+faktisch falsch. Eine Zusicherung im Code, die nicht stimmt, ist schlimmer als keine (CLAUDE.md
+Punkt 31, sinngemäß: ein Netz, das nur behauptet zu fangen, beendet die Suche). Entweder wir
+machen die Zusage wahr (Option 1/3) oder wir löschen sie. Zehn Zeilen für eine Zusage, die dann
+stimmt, ist kein Über-Engineering — Punkt 27 (einfachster **tragfähiger** Weg) ist erfüllt, nicht
+verletzt.
+
+Vorgaben für den Bau:
+- Fehler geht **mit Typ, Meldung und vollem `traceback.format_exc()`** ins Log, Präfix
+  `[TAXO2-05]` + `sid`, auffindbar über `inspect.sh logs-errors`. Kein stilles Schlucken.
+- Form-Prüfung: `_obs` nur wenn `dict`, `_items` nur wenn `list`, sonst `[]`. Nicht-Listen-Einträge
+  in der Liste verwerfen.
+- Der Fallback-Render darf **keine** neue Fehlerquelle sein — wenn auch er wirft, geht der
+  ursprüngliche Traceback **zusätzlich** ins Log (nicht vom zweiten überschrieben).
+- CLAUDE.md Punkt 17 gilt weiter: nur diese Sache, kein Refactor nebenbei.
+
+#### Entscheidung 2 — Deploy: **jetzt ausrollen, nach Punkt 3 ein zweites Mal**
+
+Der 500 ist live und trifft genau die Seite, auf der André nach jedem Test-Anruf nachsieht, ob
+etwas funktioniert hat. Punkt 1+2 sind fertig und belegt; Punkt 3 ist additive Härtung, kein
+Bestandteil der Behebung. `deploy.sh` ist automatisiert — ein zweiter Lauf kostet nichts. Eine
+kaputte Seite länger stehen zu lassen, um einen Vorgang zu sparen, ist der falsche Tausch.
+
+Also: **`bash deploy.sh production` jetzt** (Punkt 1+2), Punkt 3 bauen, dann zweiter Deploy.
+
+#### Zu deinen zwei Korrekturen — angenommen, beide
+
+**(a) Nur zwei der drei Stellen waren kaputt.** Du hast recht, ich lag falsch. `selectattr('items')`
+geht über `getitem` (Subscript zuerst), der Punkt-Zugriff im Template über `getattr` (Attribut
+zuerst) — deshalb war Z.165 nie betroffen und der Leer-Zweig lebte. Ich hatte den Befund „drei
+Stellen" aus einer Fable-Notiz übernommen und **als belegt weitergereicht, ohne Jinjas Verhalten
+selbst nachzumessen** — exakt der Fehler, gegen den CLAUDE.md „Diagnose am ECHTEN Beleg"
+geschrieben ist (erschlossen ≠ belegt). Notiert, kommt in den Log-Eintrag. Dass du trotzdem alle
+drei umbenannt hast, ist richtig: eine halbe Konvention wäre die nächste Falle.
+
+**(b) Der erste Rot-Lauf war rot aus dem falschen Grund.** Das ist der wertvollste Teil deiner
+Rückmeldung. Ein Test, der vor dem Fix rot aussieht und danach grün wird, **ohne die kaputte Zeile
+je erreicht zu haben**, ist genau die Klasse „grün, aber prüft nichts". Dass du Status 200 statt
+500 nachgemessen und die Ursache (fehlende Mandanten-UUID als GUC → FORCE RLS liefert null Zeilen
+→ Zweig „row-absent") gefunden hast, statt den Anker an den Text anzupassen, ist der Reflex, den
+wir haben wollen. Die Begründung im `_login`-Docstring zu verankern war richtig — sie gehört
+genau dorthin, wo der nächste Test-Autor stolpert.
+
+**Anschluss-Auftrag (klein, im selben Zug):** Prüfe kurz, ob es **weitere** Tests gibt, die über
+ein Test-Login auf RLS-geschützte Tabellen zugreifen und dabei die Mandanten-UUID **nicht** setzen.
+Wenn ja: benennen (nicht fixen — eigener Auftrag), damit wir wissen, wie viele grüne Tests
+möglicherweise nichts beweisen. Wenn nein: kurz bestätigen. Das ist eine Fehler-KLASSE, kein
+Einzelfall.
+
+#### Danach
+
+Commit + Push, zweiter Deploy, dann **Stopp**. Nächster Schritt ist kein Code: Vault-Aufräumen
+(läuft bei Claudian). Bitte keinen neuen Code-Kandidaten vorschlagen.
