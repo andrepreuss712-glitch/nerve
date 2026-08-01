@@ -940,7 +940,7 @@ def session_detail(sid):
         # rubric_score hat FORCE RLS; Request-Pfad-GUC (g.tenant_id) erlaubt das Lesen der Zeile.
         rubric_preview = None
         outcome_confirmed = False
-        observations_display = []   # [{name, items:[{beobachtung, beleg_zitat}]}] je Dimension
+        observations_display = []   # [{name, eintraege:[{beobachtung, beleg_zitat}]}] je Dimension
         compliance_verletzt = False
         compliance_beleg = ''
         try:
@@ -969,7 +969,13 @@ def session_detail(sid):
                     _items = _obs.get(_key) or []
                     observations_display.append({
                         'name': _dim['name'],
-                        'items': _items,
+                        # Schluessel heisst 'eintraege', NICHT 'items': in Jinja2 loest der
+                        # Punkt-Zugriff `dim.items` ueber getattr auf und trifft die Dict-METHODE
+                        # dict.items statt den Schluessel -> `{% for obs in dim.items %}` warf
+                        # "TypeError: 'builtin_function_or_method' object is not iterable" (HTTP 500
+                        # auf der Auswertungs-Seite, 2026-08-01). Der Name war die Falle, nicht der
+                        # Zugriff — deshalb umbenannt statt am Template geflickt.
+                        'eintraege': _items,
                     })
         except Exception as _e_preview:
             # Vorschau-Panel ist nice-to-have — ein Fehler darf session_detail NIE brechen.
@@ -985,7 +991,7 @@ def session_detail(sid):
             events=events,
             rubric_preview=rubric_preview,        # TAXO2-05: live-rubric_score-Zeile (status + guard)
             outcome_confirmed=outcome_confirmed,  # TAXO2-05: ANZEIGE-Sperre (calls.outcome IS NOT NULL)
-            observations_display=observations_display,   # TAXO2-05: [{name, items}] je Dimension
+            observations_display=observations_display,   # TAXO2-05: [{name, eintraege}] je Dimension
             compliance_verletzt=compliance_verletzt,     # TAXO2-05: _compliance.verletzt bool
             compliance_beleg=compliance_beleg,           # TAXO2-05: _compliance.beleg_zitat str
             pt=pt,

@@ -162,7 +162,7 @@
       {% endif %}
 
       {# Dimensionen (feste Reihenfolge aus DIMENSIONS — '_compliance' wird nicht mitgegeben). #}
-      {% set _has_any_obs = observations_display | selectattr('items') | list | length > 0 %}
+      {% set _has_any_obs = observations_display | selectattr('eintraege') | list | length > 0 %}
       {% if not _has_any_obs and not compliance_verletzt %}
         {# (c) Kein Material — Daten-Substanz-Schutz (NICHT "wegen des Neins"). #}
         <p class="n-observation-empty">Nicht genug zum Bewerten.</p>
@@ -170,8 +170,8 @@
         {% for dim in observations_display %}
           <div class="n-observation-dim">
             <div class="n-observation-dim-title">{{ dim.name }}</div>
-            {% if dim.items %}
-              {% for obs in dim.items %}
+            {% if dim.eintraege %}
+              {% for obs in dim.eintraege %}
                 <p class="n-observation-text">{{ obs.get('beobachtung') or '' }}</p>
                 {% if obs.get('beleg_zitat') %}
                   <blockquote class="n-observation-quote">{{ obs.beleg_zitat }}</blockquote>
