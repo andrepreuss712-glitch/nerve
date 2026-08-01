@@ -2622,3 +2622,85 @@ Danach **Gate melden** — ich fahre `deploy.sh production` und anschließend de
 **0 errors** und die `[LOCKWATCH]`-Zeilen aus LOCK-1 bleiben erhalten (`manual_ewb abgebrochen` /
 `api_beenden abgebrochen` in den Deadlock-Guard-Tests) — sie sind der Wirknachweis von LOCK-1 und dürfen
 durch LOCK-2 nicht verschwinden.
+
+
+---
+
+## FRAGE — Fehler-500 — 2026-08-01
+
+**Kontext:** Auswertungs-Seite `session_detail`. Punkte 1 (Regressions-Test rot zuerst) und 2
+(Key `items` → `eintraege`) sind eindeutig und werden gebaut. Offen ist **Punkt 3: wohin das
+Sicherheitsnetz gehört.**
+
+**Der Befund, am Code bestätigt:** `routes/dashboard.py:946-980` fängt Lesefehler des
+Vorschau-Panels ab (`except Exception → print + leere Defaults`, Kommentar: *„ein Fehler darf
+session_detail NIE brechen"*). Der `return render_template(...)` steht ab **:982 außerhalb** dieses
+`try`. Der TypeError entsteht aber erst **beim Rendern** in Jinja — also genau dort, wo das Netz
+nicht mehr hängt. Das Netz konnte den Fehler, für den es gebaut wurde, **nie** fangen.
+
+**Wichtig für die Abwägung:** `observations_jsonb` ist JSONB — die **Form ist nirgends erzwungen**.
+Nach der Umbenennung löst `dim.eintraege` zwar keine Methode mehr auf, aber wenn unter einem
+Dimensions-Schlüssel etwas anderes als eine Liste steht (String, dict, `null` in einer Liste),
+läuft `{% for obs in dim.eintraege %}` erneut in einen 500. Die Umbenennung schließt **den
+konkreten Fall**, nicht die **Klasse**.
+
+---
+
+### Option 1 — Render in einen eigenen `try`, Fallback-Render ohne Vorschau-Daten
+
+Die `render_template`-Argumente einmal in eine lokale Funktion `_render(preview_on=True)` ziehen
+(dieselbe Argumentliste, nur einmal geschrieben — kein zweiter 30-Zeilen-Block). Dann
+`try: return _render()` und im `except`: Fehler **mit Typ, Text und `traceback.format_exc()`
+ins Log** (`[TAXO2-05] session_detail Render-Fehler`), danach `return _render(preview_on=False)`
+— die Seite kommt ohne Vorschau-Panel, statt mit 500.
+
+*Dafür:* Das Netz hängt endlich dort, wo gerissen wird, und deckt **jede** Ursache im
+Vorschau-Panel ab — auch künftige. *Dagegen:* Liegt der Render-Fehler **nicht** am Vorschau-Panel,
+wirft der Fallback-Render genauso — dann kommt trotzdem ein 500, jetzt mit doppeltem Log-Eintrag.
+Und der `return`-Block wird angefasst (kein Refactor, aber eine Strukturänderung im Sinne von
+Punkt 17 — hält sich in Grenzen, weil die Argumentliste wörtlich übernommen wird).
+
+### Option 2 — Form-Garantie an der Quelle statt Netz am Render
+
+Im bestehenden `try` (also **vor** dem Rendern) die Form erzwingen: `_obs` nur übernehmen, wenn es
+ein `dict` ist; `_items` nur, wenn es eine `list` ist — sonst `[]`; optional die Nicht-dict-Einträge
+in der Liste verwerfen. Drei bis fünf Zeilen, keine Strukturänderung.
+
+*Dafür:* Behebt die **Klasse** („JSONB liefert eine unerwartete Form") **dort, wo sie entsteht**,
+und macht den bestehenden `except` zum ersten Mal wirksam — er fängt dann echte Lesefehler und
+die Form-Prüfung fängt den Rest. Punkt 27: der einfachste tragfähige Weg. *Dagegen:* Fängt
+ausschließlich Form-Probleme der Vorschau-Daten. Ein Render-Fehler **anderer** Ursache im
+Vorschau-Block (z.B. ein künftiger Template-Ausdruck) wäre weiterhin ein 500.
+
+### Option 3 — beides: Form-Garantie an der Quelle **und** schmales Netz am Render
+
+Option 2 als strukturelle Sperre plus Option 1 als Auffangnetz für alles, was die Form-Prüfung
+nicht kennt.
+
+*Dafür:* Die Form-Prüfung verhindert den Regelfall bereits vor dem Rendern, sodass das
+Render-Netz nur noch echte Überraschungen fängt — damit ist auch der Nachteil von Option 1
+entschärft (der Fallback-Render wird zum seltenen Ausnahmefall statt zum wahrscheinlichen
+Zweitversuch). *Dagegen:* Zwei Maßnahmen statt einer für einen Fehler, der nach Punkt 2 bereits
+behoben ist — etwas mehr, als die Sache streng genommen verlangt.
+
+---
+
+### Meine Empfehlung: **Option 3**
+
+Begründung in zwei Sätzen: Der 500 von heute ist nach der Umbenennung weg, aber die **Ursache
+zweiter Ordnung** — unerzwungene JSONB-Form in einem Anzeige-Pfad — bleibt bestehen, und genau
+die fängt Option 2 dort, wo sie entsteht, zum Preis von fünf Zeilen. Option 1 allein wäre ein
+Netz, das im Regelfall **zweimal** durch denselben kaputten Datensatz läuft, bevor es greift;
+zusammen mit der Form-Garantie wird es zu dem, was ein Netz sein soll — die letzte Schicht, nicht
+die erste.
+
+**In beiden Fällen gilt (deine Vorgabe):** Der Fehler wird **nicht stumm verschluckt.** Er geht mit
+Typ, Meldung und vollem `traceback.format_exc()` ins Log, mit Präfix `[TAXO2-05]` und der `sid`,
+damit er in `inspect.sh logs-errors` auffindbar ist. Ein Netz, das nichts meldet, verwandelt einen
+lauten 500 in eine leise falsche Seite — das wäre der schlechtere Tausch (CLAUDE.md Punkt 31:
+„ein Wächter beweist nur, was in seinem Prüfkatalog steht" — sinngemäß gilt für Netze: eines,
+das schweigt, beweist gar nichts).
+
+**Was ich bis zu deiner Antwort baue:** Punkt 1 (Regressions-Test, rot belegt) und Punkt 2
+(Umbenennung). Punkt 3 baue ich **erst nach deiner Entscheidung**, wie verlangt — und deployt wird
+erst, wenn alle drei drin sind.
