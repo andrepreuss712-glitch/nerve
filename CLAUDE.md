@@ -883,6 +883,18 @@ W1/W2 sind statische Sweeps und können ENV-/config-basierte Modellnamen (`confi
 - **Preis-Modell ≠ Preis-Liste:** Deepgram-Diarization ist ein Add-on (+$0.0020/min) und wird nur im Meeting-Modus geschaltet. Ein Preis pro `(provider, model, unit_type)` kann das nur abbilden, wenn der Modus **im Modell-String** steckt (`nova-3` vs. `nova-3-diarize`). Wo ein Anbieter Zusatzoptionen separat berechnet: eigener String statt Pauschale in die falsche Richtung.
 - **Zwei Pfade, ein Modell:** Haupt-App und `nerve_rt` fuhren unbemerkt verschiedene STT-Modelle. Dagegen wacht `tests/test_stt_model_parity.py`.
 
+## ⛔ HART: `nerve_rt` hat KEINE Anonymisierung — nicht scharf schalten, bevor sie drin ist (verankert 2026-08-02)
+
+**Befund (Cross-AI-Audit am echten Code):** Im gesamten `nerve_rt/` gibt es **0 Treffer** fuer `anonym`. Roher Deepgram-Text wird gepuffert (`nerve_rt/services/session_manager.py:298`) und ungefiltert an die Anthropic-API geschickt (`:337-351` → `nerve_rt/services/llm/claude_adapter.py:92`). Der Dienst laeuft seit 28.07. auf Prod, hatte aber **0 Verbindungen** — bislang ist also nichts passiert. **Das bleibt nur so, solange niemand die Engine anschliesst.**
+
+**Pflicht vor dem Scharfschalten** (Vollfassung + Vorbild-Zeilen: `nerve_rt/README.md`):
+1. `anonymize()` vor **jedem** LLM-Aufruf und **jedem** DB-Insert. Vorbild: `services/deepgram_service.py:148-179`.
+2. **Fail-closed:** Faellt die Anonymisierung aus, wird das Segment **verworfen**, nicht roh weitergereicht (`deepgram_service.py:154-179` + `:231`).
+3. **Kein Abschalt-Schalter** — die Haupt-App hat bewusst keinen.
+4. **Ein Waechter statt eines Kommentars** (Fable: *„Eine Prosa-Regel ohne Waechter kommt wieder"*). Muster existiert: `tests/test_stt_model_parity.py` faengt genau diese Zwei-Pfade-Divergenz. Analog: rot, wenn in `nerve_rt/` ein LLM-Adapter Text bekommt, der nicht durch `anonymize()` lief. **Pruefkatalog + bekannte Luecke dokumentieren** (Punkt 31).
+
+**Warum hart:** DSGVO gilt weiter (deutscher Einzelunternehmer, auch bei US-first) · die US-Klagewelle gegen Otter.ai/Invoca stuetzt sich genau auf „Anbieter nutzt Daten fuer eigene Zwecke" · und das Produktversprechen lautet „NERVE zeichnet nichts auf".
+
 ## Punkt 31 — Ein Waechter beweist nur, was in seinem Pruefkatalog steht (verankert 2026-07-31)
 
 Anlass: Phase 08.23.2.LOCK-2. Waechter 2 aus LOCK-1 lief ueber **102 Riegel-Bloecke** und fand
