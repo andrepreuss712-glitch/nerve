@@ -95,7 +95,28 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 > - **⛔ `nerve_rt` NICHT scharf schalten ohne Anonymisierung** — eigener HART-Block in `CLAUDE.md` + `nerve_rt/README.md`. Dienst laeuft seit 28.07. mit **0 Verbindungen**, bisher ist nichts passiert.
 > - **Akzeptiert als kein Risiko (Andre):** Trainings-Simulator (KI-simulierte Umgebung, kein echter Kunde) · PreCall-Recherche an Brave/Anthropic (frei zugaengliche Firmendaten; gehoert nur in die Datenschutzerklaerung).
 >
-> **Reihenfolge ab hier (Vault-Roadmap "WO STEHEN WIR" ist fuehrend):** SCHWAERZ-1 → "Verstehe"-Fix → METRIK-1 (Abloese, Form 2 → Form 3/4) → Schwaerzung-Mittelweg (Beschluss D) → Schott-Restpaket → Stresstest.
+> ### ★★ NEU VORGEZOGEN: LIVE-CALL-AUFRAEUMEN (Phase-Vorschlag, Andre-Freigabe 2026-08-02)
+>
+> **Anlass:** Andre fiel auf, dass das Geld-/Tempo-Thema (KOSTEN-1 / TEMPO-1 / H1) beim Start der Bug-Woche **abgebrochen und nie beendet** wurde. Am echten Prod-Datensatz belegt (`api_cost_log`, 2026-08-02 13:50-14:10, drei Testcalls, ~3,8 min Gespraechszeit): **100 LLM-Aufrufe, 0,168 EUR.**
+>
+> | context_tag | model | Aufrufe | EUR |
+> |---|---|---|---|
+> | `live_haiku_merged` | haiku-4-5 | **38** | 0,057 |
+> | `coaching_haiku` | haiku-4-5 | **38** | 0,055 |
+> | `phase_classify` | haiku-4-5 | 6 | 0,003 |
+> | `coldcall_infer` | haiku-4-5 | 6 | 0,002 |
+> | `crm` / `postcall_coach` / `outcome` | sonnet-4-5 / haiku | 12 | 0,051 |
+>
+> **Drei Befunde, alle am Datensatz belegt:**
+> 1. **`coaching_haiku` feuert 1:1 so oft wie der Live-Call (38:38).** Bestehende Notiz: die Live-Anzeige dafuer wurde in Phase 06.6 entfernt. Falls bestaetigt = **33 % der Kosten + ein Aufruf pro Runde im Live-Pfad fuer nichts**, und die H1-Ersparnis (3→1) ist damit wieder aufgefressen. ⚠ **NICHT verifiziert — erst greppen (Bau-Regel 20), dann abschalten.**
+> 2. **`latency_ms` ist bei 98 von 100 Zeilen NULL.** Die Live-Latenz wird **nicht gemessen**. Deshalb ist der TEMPO-1-Beleg nicht „offen", sondern **nicht fuehrbar**. Bei einem Produkt mit Latenz als Dealbreaker ist das die Luecke, die jede spaetere Tempo-Aussage (Sonnet 5, Caching, Stresstest, US-Umzug) zur Behauptung macht.
+> 3. **`call_site` ist bei 92 von 100 Zeilen NULL** → KOSTEN-1 ist **unfertig**, nicht fertig.
+>
+> **Scope:** (a) `coaching_haiku` verifizieren + abschalten, (b) `latency_ms` an allen Live-LLM-Aufrufen mitschreiben, (c) `call_site` durchgaengig setzen. **Vor SCHWAERZ-1** — erst das Messgeraet, dann die Reparatur.
+>
+> ⚠ **Prozess-Lehre (Andre-Direktive, jetzt in `Nerve-Vault/CLAUDE.md` verankert):** „Fertig" ohne Beleg ist verboten. TEMPO-1 und H1 standen **zwei Wochen** als „live" in der Roadmap, ohne je an echten Daten geprueft worden zu sein. Ab sofort gilt in beiden Roadmaps: ✅ nur mit Beleg, sonst ⚠️ NICHT BELEGT.
+>
+> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend):** **LIVE-CALL-AUFRAEUMEN** → SCHWAERZ-1 → "Verstehe"-Fix → METRIK-1 (Abloese, Form 2 → Form 3/4) → Schwaerzung-Mittelweg (Beschluss D) → Schott-Restpaket → Stresstest.
 
 **Aktuelle Richtungs-Entscheidungen (Stand 2026-06-01, Sync von Vault-Roadmap):**
 - **Staging komplett aus dem Workflow** bis zur letzten Phase vor Launch → Production ist einziger Deploy-/Test-Pfad (Details: `CLAUDE.md` → "ÜBERSCHREIBUNG 2026-06-01"). `deploy.sh`-Staging-Gate entfernt. Reaktivierung = Phase **08.23.2.STAGING** (ganz am Ende, letzte Phase vor Launch).
