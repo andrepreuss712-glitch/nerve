@@ -983,3 +983,15 @@ Verankert nach C.R.F: Ein Schieber war blau (`#3b82f6`) statt teal — formal sa
 - **Code-Review-Pflicht:** Jede UI-Datei (`templates/*.html`, `static/*.css`, `static/*.js`) explizit auf Inline-Styles + hardcoded Farben prüfen. Findings sind **CRITICAL**, nicht INFO — vor Phasen-Freigabe zu fixen.
 - **Cross-AI-Briefing bei UI-Komponenten** muss explizit enthalten: „prüfe auf hardcoded Farben, Inline-Styles und Design-Token-Konsistenz" — nicht nur Logik-Review.
 - **Bei Verstoß:** Phase nicht freigeben. André wird gefragt, ob neu gebaut wird. **Anti-Abrieb schlägt Termindruck.**
+
+---
+
+## ⚠ Bau-Regeln 13, 14, 20 — Vollfassungen in eigener Datei
+
+Beim Vault-Aufräumen am 02.08. wurden drei Regeln aus `Nerve-Vault/CLAUDE.md` auf Anker-Saetze gekuerzt, mit der Begruendung "Vollfassung steht im Code-Repo". **Fable-Gegenpruefung: fuer diese drei stimmte das NICHT** — Punkt 13 war sogar ein Zirkelverweis zurueck ins Vault. Nachgetragen in **`CLAUDE-BAUREGELN-13-14-20.md`**:
+
+- **13 — Real-Daten-Validation bei Schema-Phasen.** 5 Pflicht-Schritte vor Plan-Approval. Plan-Checker BLOCKt bei Fehlen. *Strict-Mode schuetzt nur, wenn das Schema die Realitaet abbildet — sonst ist es ein Selbstschuss.*
+- **14 — Pre-Insert-Control-Flow-Audit.** 5 Pflicht-Sektionen im Plan (Lokaler Kontext / Funktions-Skelett / Cross-File-grep / Edge-Cases inkl. 4 Race-Fragen / Persistenz-Schicht). Anlass: neuer Code hinter zwei `return`-Statements = Dead Code.
+- **20 — Pflicht-grep vor Migration/Insert:** Wird die Tabelle/Funktion im Production-Pfad ueberhaupt gelesen? 0 Treffer = STOPP. Zwei belegte Faelle, zusammen ~4 h Verlust.
+
+**⚠ Nummerierungs-Falle:** Vault-Punkt 22 heisst hier Punkt 26; der hiesige Punkt 22 ist etwas anderes. Verweisen "siehe Punkt N" nie blind folgen — ueber den Regel-NAMEN suchen.
