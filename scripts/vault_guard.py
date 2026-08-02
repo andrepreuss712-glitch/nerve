@@ -116,8 +116,21 @@ def commit_tage(n=21):
 
 
 def log_tage(text):
-    """Datumsangaben der Eintraege in 05 Log.md."""
-    return set(re.findall(r"^##\s+(\d{4}-\d{2}-\d{2})", text, re.M))
+    """Datumsangaben der Eintraege in 05 Log.md.
+
+    Erkennt AUCH Bereichs-Ueberschriften wie '## 2026-07-23/24 — ...'.
+    Ohne das meldete der Waechter am 02.08. einen Eintrag als fehlend, der
+    sehr wohl existierte -- ein Fehlalarm im eigenen Pruefkatalog. Genau die
+    Sorte Fund, die die Regel 'ein gruener Waechter beweist nur, was in
+    seinem Katalog steht' auch in die andere Richtung belegt: ein ROTER
+    Waechter kann ebenso luegen, wenn sein Muster zu eng ist.
+    """
+    tage = set(re.findall(r"^##\s+(\d{4}-\d{2}-\d{2})", text, re.M))
+    # Bereiche: '2026-07-23/24' -> zusaetzlich 2026-07-24 eintragen
+    for jahr, monat, _tag1, tag2 in re.findall(
+            r"^##\s+(\d{4})-(\d{2})-(\d{2})/(\d{1,2})", text, re.M):
+        tage.add(f"{jahr}-{monat}-{int(tag2):02d}")
+    return tage
 
 
 def main():
