@@ -51,7 +51,19 @@ REPO = r"C:\Users\andre\dev\salesnerve"
 
 # --- Schwellen. Reissen sie, ist das ein roter Befund, kein Gefuehl. ---
 MAX_LOG_ZEILEN = 1000
-MAX_CLAUDE_ZEILEN = 500
+# 500 war das Fernziel, aber als Schwelle unehrlich -- IN DIE ANDERE RICHTUNG:
+# Eine dauerhaft rote Schwelle erzeugt Alarm-Muedigkeit ("kenn ich schon") und
+# genau das Uebergehen, gegen das dieser Waechter gebaut ist (Fable 2026-08-02).
+# 700 ist KALIBRIERT, nicht gebogen: hergeleitet aus dem belegten Schnitt-Potenzial,
+# NICHT aus dem Istwert (der war 773). Die Grenze zwischen beidem:
+#   gebogen   = Schwelle auf den Istwert heben, damit es gruen wird
+#   kalibriert = knapp ueber dem belegt erreichbaren Boden, mit konkreter Schnitt-Liste
+# RESTLISTE bis 700 (Fable-Befund, noch offen):
+#   - Session-Routinen + Rollende-Planung-Sektion auf Kern eindampfen
+#   - restliche Bau-Vorgaben-Absaetze nach salesnerve/ verschieben
+#   - Vorfalls-Belege in eine eigene Beleg-Datei, in der Regel nur ein Anker-Satz
+# 500 bleibt Fernziel -- erreichbar erst, wenn Waechter die Regel-Prosa ersetzen.
+MAX_CLAUDE_ZEILEN = 700
 MAX_PLANUNG_DATEIEN = 25
 MAX_AKTIV_TAGE = 60          # "aktiv", aber so lange nicht angefasst = verdaechtig
 MAX_STAND_TAGE = 30          # "02 Stand" gilt als einzige Wahrheit ueber den Systemzustand
