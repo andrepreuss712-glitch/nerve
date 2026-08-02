@@ -209,11 +209,21 @@ def main():
     # ---------- 6: Kaputte Wikilinks ----------
     namen = {os.path.splitext(os.path.basename(p))[0] for p in dateien}
     pfade = {os.path.relpath(p, VAULT).replace("\\", "/")[:-3] for p in dateien}
+    # Ordner sind gueltige Verweis-Ziele (Obsidian oeffnet sie)
+    ordner = set()
+    for p in dateien:
+        rel = os.path.relpath(p, VAULT).replace("\\", "/")
+        teile = rel.split("/")[:-1]
+        for i in range(len(teile)):
+            ordner.add("/".join(teile[:i + 1]))
     kaputt = {}
     for p in dateien:
         for ziel in re.findall(r"\[\[([^\]|#]+)", lies(p)):
             z = ziel.strip().rstrip("/")
-            if not z or z in namen or z in pfade or z.split("/")[-1] in namen:
+            # Obsidian erlaubt die .md-Endung im Verweis -- unser Muster muss das auch
+            if z.endswith(".md"):
+                z = z[:-3]
+            if not z or z in namen or z in pfade or z in ordner or z.split("/")[-1] in namen:
                 continue
             kaputt.setdefault(z, []).append(os.path.relpath(p, VAULT).replace("\\", "/"))
     if kaputt:
