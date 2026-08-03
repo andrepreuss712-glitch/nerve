@@ -51,19 +51,40 @@ REPO = r"C:\Users\andre\dev\salesnerve"
 
 # --- Schwellen. Reissen sie, ist das ein roter Befund, kein Gefuehl. ---
 MAX_LOG_ZEILEN = 1000
-# 500 war das Fernziel, aber als Schwelle unehrlich -- IN DIE ANDERE RICHTUNG:
-# Eine dauerhaft rote Schwelle erzeugt Alarm-Muedigkeit ("kenn ich schon") und
-# genau das Uebergehen, gegen das dieser Waechter gebaut ist (Fable 2026-08-02).
-# 700 ist KALIBRIERT, nicht gebogen: hergeleitet aus dem belegten Schnitt-Potenzial,
-# NICHT aus dem Istwert (der war 773). Die Grenze zwischen beidem:
-#   gebogen   = Schwelle auf den Istwert heben, damit es gruen wird
-#   kalibriert = knapp ueber dem belegt erreichbaren Boden, mit konkreter Schnitt-Liste
-# RESTLISTE bis 700 (Fable-Befund, noch offen):
-#   - Session-Routinen + Rollende-Planung-Sektion auf Kern eindampfen
-#   - restliche Bau-Vorgaben-Absaetze nach salesnerve/ verschieben
-#   - Vorfalls-Belege in eine eigene Beleg-Datei, in der Regel nur ein Anker-Satz
-# 500 bleibt Fernziel -- erreichbar erst, wenn Waechter die Regel-Prosa ersetzen.
-MAX_CLAUDE_ZEILEN = 700
+# --- CLAUDE.md: Schwelle am 2026-08-03 UMGEWIDMET, nicht gebogen. ---
+# Vorgeschichte: 700 war aus dem belegten Schnitt-Potenzial hergeleitet, nicht aus
+# einer Wirkungs-Messung. Am 03.08. wurde recherchiert, was belegt ist:
+#   * Anthropic empfiehlt <200 Zeilen -- Herstellerangabe OHNE veroeffentlichte Messung.
+#   * Die einzige direkte Studie zu CLAUDE.md-Dateien (McMillan, arXiv 2605.10039,
+#     1650 Sitzungen / 16050 Beobachtungen) findet zwischen 25 und 500 Zeilen
+#     KEINEN Effekt auf Regel-Befolgung -- mit bestaetigendem Null-Beleg (BF10 0,05-0,10).
+#     Auch die Position einer Regel in der Datei: kein Effekt.
+#   * Belegt schaedlich ist etwas anderes: die ANZAHL gleichzeitig geltender Regeln.
+#     "Prompt Design at Scale" (arXiv 2607.19257, getestet an Sonnet 5):
+#     10 Regeln -> 59-94 % aller Regeln eingehalten, 40 Regeln -> 9-31 %, 80 -> ~0 %.
+#   * Zweitgroesster belegter Faktor: aehnlich klingende, sich ueberlappende Regeln
+#     (Chroma "Context Rot") und Widersprueche -- Anthropic: "Claude may pick one
+#     arbitrarily". Das ist der Grund, warum Entdopplung mehr bringt als Kuerzen.
+#   * Staerkster gemessener Effekt ueberhaupt: die SITZUNGSlaenge (-5,6 % Befolgungs-
+#     Chance je gebauter Funktion), nicht die Dateilaenge.
+# FOLGE: Die Zeilen-Schwelle ist KEIN Qualitaetsmass mehr, sondern ein reiner
+# WACHSTUMS-ALARM ("hier wurde ergaenzt, ohne gegenzubuchen") -- deshalb 900 statt 700.
+# Zeilen sind bei uns ohnehin ein Zerrspiegel: 697 Zeilen = 98.634 Zeichen (~30k Token),
+# davon 107 Zeilen ueber 300 Zeichen. Unsere Zeilen sind 3-5x laenger als normale.
+# Das ehrliche Mass steht darunter: MAX_DAUER_REGELN.
+MAX_CLAUDE_ZEILEN = 900
+
+# --- Das BELEGTE Mass: Anzahl der IMMER geltenden harten Regeln. ---
+# Hergeleitet aus der Sonnet-5-Messkurve oben: ab ~40 gleichzeitig geltenden Regeln
+# faellt der Anteil der Antworten, die ALLE einhalten, auf 9-31 %.
+# Gezaehlt werden Ueberschriften mit HART / Verbots-Zeichen / PFLICHT -- also die
+# Dauer-Pflichten, nicht die bedingten Bauregeln ("bei Schema-Phasen...", die sind
+# pro Zug nur zu wenigen aktiv). Bewusst konservativ: lieber zu frueh warnen.
+# BEKANNTE LUECKE: Der Zaehler sieht Ueberschriften, nicht Wirkung. Zwei Regeln, die
+# dasselbe sagen, zaehlen als zwei -- das ist ABSICHT (Dopplung ist der belegte Schaden).
+# Beiss-Test 03.08.: mit Grenze 10 meldete der Zaehler korrekt "14 harte Regeln" rot.
+# Der Waechter ist also nicht blind-gruen. Istwert 14 -- gesunder Abstand.
+MAX_DAUER_REGELN = 40
 MAX_PLANUNG_DATEIEN = 25
 MAX_AKTIV_TAGE = 60          # "aktiv", aber so lange nicht angefasst = verdaechtig
 MAX_STAND_TAGE = 30          # "02 Stand" gilt als einzige Wahrheit ueber den Systemzustand
@@ -184,7 +205,27 @@ def main():
         if os.path.exists(p):
             z = zeilen(p)
             if z > grenze:
-                schwellen.append(f"{datei}: {z} Zeilen (Grenze {grenze}) — komprimieren, NICHT splitten")
+                if datei == "CLAUDE.md":
+                    schwellen.append(
+                        f"{datei}: {z} Zeilen (Wachstums-Alarm ab {grenze}) — hier wurde "
+                        f"ergaenzt, ohne gegenzubuchen. Regel: ein Rein, eins Raus.")
+                else:
+                    schwellen.append(
+                        f"{datei}: {z} Zeilen (Grenze {grenze}) — komprimieren, NICHT splitten")
+
+    # Das belegte Mass: Anzahl der IMMER geltenden harten Regeln (siehe Herleitung oben).
+    p_cl = os.path.join(VAULT, "CLAUDE.md")
+    if os.path.exists(p_cl):
+        with io.open(p_cl, encoding="utf-8") as f:
+            kopfzeilen = [z for z in f if z.startswith("#")]
+        dauer = [z.strip() for z in kopfzeilen
+                 if ("HART" in z or "⛔" in z or "PFLICHT" in z)]
+        if len(dauer) > MAX_DAUER_REGELN:
+            schwellen.append(
+                f"CLAUDE.md: {len(dauer)} immer geltende harte Regeln (Grenze "
+                f"{MAX_DAUER_REGELN}) — ab ~40 haelt Sonnet 5 belegt nur noch 9-31 % "
+                f"aller Regeln gleichzeitig ein. Zusammenfuehren oder in einen "
+                f"Waechter ueberfuehren, NICHT nur kuerzen.")
 
     pl = os.path.join(VAULT, "03 Planung")
     if os.path.isdir(pl):
