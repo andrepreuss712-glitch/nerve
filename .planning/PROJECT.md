@@ -2,7 +2,7 @@
 
 ## What This Is
 
-NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertriebler im DACH-Markt. Er hört Verkaufsgesprächen live zu, erkennt Einwände in Echtzeit und liefert Gegenargumente sowie Coaching-Tipps direkt auf den Bildschirm — unsichtbar für den Kunden. Ergänzend bietet NERVE einen KI-Trainingsmodus, eine Coach-Plattform für Teams und automatisierte Post-Call-Analysen.
+NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertriebler — **Markt: US-FIRST** (beschlossen 2026-07-04, siehe `Nerve-Vault/00 Vision.md`). Er hört Verkaufsgesprächen live zu, erkennt Einwände in Echtzeit und liefert Gegenargumente sowie Coaching-Tipps direkt auf den Bildschirm — unsichtbar für den Kunden. Ergänzend bietet NERVE einen KI-Trainingsmodus, eine Coach-Plattform für Teams und automatisierte Post-Call-Analysen.
 
 **Status:** v0.9.5, Pre-Launch — Phase 04.3 complete (Design Unification, dark-only theme)
 **Founder:** André Preuß, Iserlohn (Solo-Founder, Einzelunternehmer)
@@ -75,7 +75,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 
 ### Out of Scope
 
-- Englische UI / US-Markt — erst Milestone 2, nach DACH-Validierung
+- ⚠ **UEBERHOLT (korrigiert 2026-08-03):** Hier stand "Englische UI / US-Markt — erst Milestone 2, nach DACH-Validierung". **Das Gegenteil gilt seit 2026-07-04: US-FIRST.** Englische Oberflaeche + US-Recht + US-Coaching-Inhalte sind **Launch-Blocker**, nicht Milestone 2. DACH ist offen und faellt nach dem US-Start.
 - Eigenes TTS (Piper/Coqui) — erst Milestone 3 ab ~500 Kunden (größter Margenhebel)
 - Eigene Sales-KI (fine-tuned Llama/Mistral) — erst Milestone 4
 - Enterprise-Features (SSO, erweiterte Admin-Rechte) — zu früh
@@ -89,7 +89,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 
 **APIs:** Deepgram Nova-2 (Live-STT), Anthropic Claude (Haiku für Live, Sonnet für Post-Call), ElevenLabs Multilingual v2 (TTS Training).
 
-**Markt:** CloseAI (~380 User, DACH, schlechte Bewertungen), SalesEcho (US, DSGVO-Problem), Gong (Enterprise, Post-Call). Differenzierung: Live + DSGVO + Training + Coach-Plattform + transparente Preise.
+**Markt (Wettbewerbs-Analyse Stand April 2026, aus der DACH-Zeit — ⚠ fuer US-first nicht neu erhoben):** CloseAI (~380 User, DACH), SalesEcho (US), Gong (Enterprise, Post-Call). Differenzierung: Live + Training + Coach-Plattform + transparente Preise + **"zeichnet nichts auf"** — Letzteres ist im US-Markt das staerkste Argument, weil aufzeichnende Werkzeuge in den Staaten mit Zustimmungspflicht aller Beteiligten den Kunden fragen muessen; NERVE im Kaltakquise-Modus nicht.
 
 **Finanzierung:** Bootstrap. Vestas-Gehalt (~65k/Jahr) finanziert Lebenshaltung. 14 Tage/Monat Offshore (Vestas), 14 Tage/Monat für NERVE.
 
@@ -98,8 +98,8 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 ## Constraints
 
 - **Stack:** Kein Framework-Wechsel — Flask + Vanilla JS bleibt. Keine React-Migration.
-- **Kosten Live:** Sonnet MUSS raus aus dem Live-Loop — nur Haiku für alles Live. Sonnet nur Post-Call.
-- **DSGVO:** Pflicht von Tag 1 — Server in Deutschland (Hetzner), kein wörtliches Mitschneiden default.
+- **Kosten/Tempo Live:** ⚠ **KORRIGIERT 2026-08-03 — hier stand "Sonnet MUSS raus, nur Haiku fuer alles Live". UEBERHOLT und das Gegenteil der geltenden Vorgabe.** Es gilt: **Gleichgewicht aus Qualitaet UND Tempo** — schnell-aber-Muell ist genauso ein Dealbreaker wie gut-aber-langsam. Ambition: **das STARKE Modell schnell genug machen** (Zwischenspeicher, kleinere Prompts, Vorladen, lokales Sofortnetz), NICHT aufs schwache ausweichen. Sonnet 4.5 laeuft seit 22.07. live.
+- **DSGVO:** Pflicht von Tag 1 — kein woertliches Mitschneiden default, **NIE Audio persistieren**, Call-Logs nie loeschen. ⚠ **KORRIGIERT 2026-08-03 — hier stand "Server in Deutschland (Hetzner)". Das war nie eine DSGVO-Anforderung** und steuerte nach dem US-first-Beschluss falsch: Server-Region folgt dem Markt (beim US-Umzug US-Region). DSGVO-Pflichten bleiben unabhaengig davon, weil Andre deutscher Einzelunternehmer ist.
 - **Pricing:** Flat-Rate (nicht Credits) — Kunden wollen Planbarkeit. Kein harter Stopp bei Fair-Use.
 - **Budget:** Bootstrap — kein externes Kapital. Reinvestition aller NERVE-Einnahmen.
 - **Zeit:** Solo-Founder, ~14 Tage/Monat verfügbar.
@@ -113,8 +113,8 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 | Fair-Use statt hartem Block | Kein User soll im Arbeitstag gesperrt werden | — Pending |
 | DSGVO-Modus default AN | Vertrauen als Differenzierungsmerkmal | — Pending |
 | ElevenLabs bis 500 Kunden | Dann eigenes TTS als größter Margenhebel | — Pending |
-| Deployment Hetzner CX22 (~4€/Monat) | Bootstrap-Budget, Server in DE für DSGVO | — Pending |
-| US-Markt von Anfang an mitdenken | 16x größerer Markt, höhere Preise ($99 statt 69€) | — Pending |
+| Deployment Hetzner CX22 (~4€/Monat) | Bootstrap-Budget. ⚠ Begruendung "Server in DE fuer DSGVO" ist ueberholt (2026-08-03) — Region folgt dem Markt, Hetzner hat US-Standorte, kein Anbieterwechsel noetig | — Live |
+| **US-FIRST statt "mitdenken"** | Beschlossen 2026-07-04: 16x groesserer Markt, hoehere Preise ($99 statt 69€), und "NERVE zeichnet nichts auf" ist in den US-Staaten mit Zustimmungspflicht aller Beteiligten ein SCHAERFERES Argument als in DACH | — Entschieden |
 | Alles reinvestieren, kein Gründergehalt | Bootstrap-Weg, Vestas deckt Lebenshaltung | — Pending |
 
 ## Evolution
@@ -135,7 +135,9 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-27 after Phase 08.18 (Block N Phase B — Sales-Literatur-Research + Branchen-Spezifika) completion — 2 Research-Dokumente verfasst: sales-coaching-literatur-synthese.md (13 Autoren, 6 Sektionen, 20 Schema-Bullets für 08.19) + branchen-precall-spezifika.md (Top-10 DACH+USA, 3 Premium-Cluster Tiefe, 4 Mittel-Tiefen, Schema-Empfehlungen für precall_service.py in 08.20). Bereit für 08.19 Pydantic-Schema-Redesign.*
+*Zuletzt inhaltlich korrigiert: 2026-08-03 — Markt (DACH → US-FIRST), Server-Region, Live-Modell-Vorgabe und Out-of-Scope-Eintrag berichtigt. Diese Datei stand drei Monate auf einem ueberholten Stand und speist den Projekt-Kopfblock in `CLAUDE.md`, der in JEDER Session geladen wird. ⚠ Bei Aenderungen an Markt, Region, Modell-Strategie oder Scope: **hier UND in `CLAUDE.md` nachziehen** — sonst ueberschreibt die naechste Generierung die Korrektur.*
+
+*Vorheriger Stand — Last updated: 2026-04-27 after Phase 08.18 (Block N Phase B — Sales-Literatur-Research + Branchen-Spezifika) completion — 2 Research-Dokumente verfasst: sales-coaching-literatur-synthese.md (13 Autoren, 6 Sektionen, 20 Schema-Bullets für 08.19) + branchen-precall-spezifika.md (Top-10 DACH+USA, 3 Premium-Cluster Tiefe, 4 Mittel-Tiefen, Schema-Empfehlungen für precall_service.py in 08.20). Bereit für 08.19 Pydantic-Schema-Redesign.*
 
 ## Phase Completion Notes
 
