@@ -77,13 +77,25 @@ MAX_CLAUDE_ZEILEN = 900
 # --- Das BELEGTE Mass: Anzahl der IMMER geltenden harten Regeln. ---
 # Hergeleitet aus der Sonnet-5-Messkurve oben: ab ~40 gleichzeitig geltenden Regeln
 # faellt der Anteil der Antworten, die ALLE einhalten, auf 9-31 %.
-# Gezaehlt werden Ueberschriften mit HART / Verbots-Zeichen / PFLICHT -- also die
-# Dauer-Pflichten, nicht die bedingten Bauregeln ("bei Schema-Phasen...", die sind
-# pro Zug nur zu wenigen aktiv). Bewusst konservativ: lieber zu frueh warnen.
-# BEKANNTE LUECKE: Der Zaehler sieht Ueberschriften, nicht Wirkung. Zwei Regeln, die
-# dasselbe sagen, zaehlen als zwei -- das ist ABSICHT (Dopplung ist der belegte Schaden).
-# Beiss-Test 03.08.: mit Grenze 10 meldete der Zaehler korrekt "14 harte Regeln" rot.
-# Der Waechter ist also nicht blind-gruen. Istwert 14 -- gesunder Abstand.
+# Gezaehlt werden Ueberschriften mit HART / Verbots-Zeichen / PFLICHT / Blitz / Stern.
+# Beiss-Test 03.08.: mit Grenze 10 meldete der Zaehler korrekt rot -- nicht blind-gruen.
+#
+# ⚠ KORRIGIERT 2026-08-03 nach Fable-Gegenpruefung. Der Zaehler hatte einen
+# gefaehrlichen blinden Fleck: Er matchte nur GROSS geschriebenes "PFLICHT" und sah
+# damit ausgerechnet die RANGHOECHSTE Regel der Datei nicht ("Klartext-Pflicht",
+# klein geschrieben, gleich zweimal). Ein Zaehler, der die wichtigste Regel uebersieht,
+# meldet beruhigende Zahlen -- exakt der Fehler, gegen den die Regel "ein gruener
+# Waechter beweist nur, was in seinem Pruefkatalog steht" ueberhaupt existiert.
+# Jetzt case-insensitiv plus ⚡/★ als Marker.
+#
+# BEKANNTE LUECKEN -- ehrlich benannt, bewusst NICHT behoben:
+#  1. Der Zaehler sieht nur UEBERSCHRIFTEN. Dauer-Pflichten als Aufzaehlungspunkt oder
+#     im Fliesstext (Roadmap-Sync, "Ein Rein eins Raus" in Ablage-Regel 2, die 22
+#     Nudelcode-Punkte) zaehlen NICHT mit. Der reale Bestand liegt UEBER dem Wert,
+#     den dieser Waechter meldet. Wer die Zahl liest, muss das wissen.
+#  2. Er sieht Form, nicht Wirkung. Zwei Regeln, die dasselbe sagen, zaehlen als zwei
+#     -- das ist ABSICHT (Dopplung ist der belegte Schaden).
+#  3. Er erkennt nicht, ob eine Regel inhaltlich noch stimmt.
 MAX_DAUER_REGELN = 40
 MAX_PLANUNG_DATEIEN = 25
 MAX_AKTIV_TAGE = 60          # "aktiv", aber so lange nicht angefasst = verdaechtig
@@ -219,7 +231,8 @@ def main():
         with io.open(p_cl, encoding="utf-8") as f:
             kopfzeilen = [z for z in f if z.startswith("#")]
         dauer = [z.strip() for z in kopfzeilen
-                 if ("HART" in z or "⛔" in z or "PFLICHT" in z)]
+                 if ("hart" in z.lower() or "pflicht" in z.lower()
+                     or "⛔" in z or "⚡" in z or "★" in z)]
         if len(dauer) > MAX_DAUER_REGELN:
             schwellen.append(
                 f"CLAUDE.md: {len(dauer)} immer geltende harte Regeln (Grenze "

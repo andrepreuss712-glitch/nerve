@@ -410,7 +410,7 @@ Jede Phase ist mit einem Marker klassifiziert (in PLAN.md / SPEC.md sichtbar):
 
 | Trigger | Pflicht-Schritt | Kommando | Wann |
 |---|---|---|---|
-| 🔴 Plan fertig | Cross-AI-Plan-Review **vor** Execute | `/gsd-review --phase X --all` | IMMER bei 🔴, Default-ON bei 🟡 mit substantiellem Code-Removal (>500 Zeilen) ODER >5 Files ODER FE+BE gleichzeitig ODER Migrations-Logik |
+| 🔴 Plan fertig | Cross-AI-Plan-Review **vor** Execute | `/gsd-review --phase X --all` | **IMMER bei 🔴 UND bei 🟡** (Trigger egal — korrigiert 2026-08-03, hier stand faelschlich "Default-ON bei 🟡 nur mit Trigger"). Skip nur bei 🟢. |
 | Cross-AI-Findings da | Replan mit Findings | `/gsd-plan-phase X --reviews` | Wenn Cross-AI ≥1 substantielles Finding (HIGH actionable) liefert |
 | Schema-Phase Plan | Real-Daten-Validation Pflicht | Plan muss Real-Daten-Sample gegen neues Schema testen | Bei Phasen die ein Pydantic/SQLAlchemy/etc.-Schema ändern (Vault-CLAUDE.md Punkt 13) |
 | `url_for(...)`-Strings | Endpoint-Verifikation | `grep "def " routes/X.py` + Live-Test-Request-Context | Bei jedem Plan/Edit mit `url_for('blueprint.function')` (Vault-CLAUDE.md Punkt 9) |
@@ -448,7 +448,7 @@ Erst NACH Review-Findings + Replan kommt Execute als Next Up.
 
 Pro Phase wird in `Nerve-Vault/05 Log.md` festgehalten:
 - Cross-AI gemacht: warum (🔴 / 🟡-Trigger) + Hit-Rate (Anzahl actionable Findings)
-- Cross-AI geskippt: warum (🟢 / 🟡 ohne Trigger) — kurze Begründung
+- Cross-AI geskippt: warum (**nur 🟢 ist ein gueltiger Grund**) — kurze Begründung
 
 Begründung: Lerneffekt aus Block-N-Phasen — Hit-Rate steigt bei klarem Briefing + Pro-Modell, Skip-Entscheidungen müssen genauso bewusst sein wie Run-Entscheidungen.
 - "Immer git push nach Phase" → CLAUDE.md (Ausnahmen: lokale Branches, WIP)
@@ -977,7 +977,9 @@ gewoehnliche Verhaltens-Tests (die behaupten nichts ueber eine Fehler**klasse**)
 ### Schicht 1 — Keine hardcoded Farben
 
 1. **VERBOTEN:** `style="..."`-Attribute mit hardcoded Farben. Enthält ein `style`-Attribut ein `#xxxxxx` → **SOFORT-FAIL** im Code-Review. Plan-Agent darf es nicht vorschlagen, Execute-Agent nicht bauen.
-2. **VERBOTEN als Hex-Literal:** `#1a1a2e`, `#2a2a4e`, `#f0c040`, `#9a9ab0`, `#00D4AA` — alte Dark-Mode-Palette.
+2. **VERBOTEN als Hex-Literal — tote Dark-Mode-Farben, ganz raus:** `#1a1a2e`, `#2a2a4e`, `#f0c040`, `#9a9ab0`.
+   **Sonderfall `#00D4AA`:** Das ist die **Markenfarbe Teal** und bleibt gueltig — aber **nie als Hex-Literal schreiben**, immer `var(--accent)` bzw. das passende Brand-Token nutzen.
+   ⚠ Bis 2026-08-03 stand `#00D4AA` faelschlich in derselben Liste wie die toten Farben. Ein Plan-Agent konnte daraus schliessen, Teal sei abgeschafft — der C.R.F-Blau-Fehler in Gegenrichtung.
 3. **PFLICHT:** CSS-Variablen aus `static/nerve.css` nutzen (`var(--page-bg)`, `var(--accent)`, `var(--page-text)`, `var(--page-text-muted)`, `var(--border-color)` …). Fehlt ein Token → **erst** Token in `static/nerve.css` ergänzen, dann nutzen.
 4. **PFLICHT:** UI-Komponenten als CSS-Klassen (`.n-*`) in `static/nerve.css`, nicht inline. Inline-Styles NUR für dynamische Werte (`style="width:${score}%"`).
 5. **PFLICHT-Vorabrecherche bei jeder UI-Phase:** VOR der ersten UI-Codezeile `static/nerve.css` scannen — welche Variablen und Klassen existieren? Welche Modals/Cards/Pills nutzt die App schon? **Pattern aus bestehenden Komponenten kopieren, nicht neu erfinden.**
@@ -1009,3 +1011,52 @@ Beim Vault-Aufräumen am 02.08. wurden drei Regeln aus `Nerve-Vault/CLAUDE.md` a
 - **20 — Pflicht-grep vor Migration/Insert:** Wird die Tabelle/Funktion im Production-Pfad ueberhaupt gelesen? 0 Treffer = STOPP. Zwei belegte Faelle, zusammen ~4 h Verlust.
 
 **⚠ Nummerierungs-Falle:** Vault-Punkt 22 heisst hier Punkt 26; der hiesige Punkt 22 ist etwas anderes. Verweisen "siehe Punkt N" nie blind folgen — ueber den Regel-NAMEN suchen.
+
+---
+
+## ⛔ HART: Vier Vault-Regeln, die sich an DICH richten (gespiegelt 2026-08-03)
+
+> **Warum das hier steht:** Diese vier Regeln adressieren woertlich den Plan- und Execute-Agenten,
+> standen aber nur in `Nerve-Vault/CLAUDE.md` — einer Datei, die GSD nie laedt. Gefunden bei einer
+> Fable-Gegenpruefung am 03.08. **Exakt dasselbe Muster wie bei der Farb-Regel, die fuenf Verstoesse
+> lang am falschen Ort stand.** Vollfassungen bleiben im Vault; hier steht, was beim Bauen zaehlt.
+
+### A) Context7 ist Pflicht bei fremden Bibliotheken
+Vor Plan-/Code-Arbeit an einer dieser Abhaengigkeiten die aktuelle Doku ueber Context7 ziehen
+(`use context7` + konkrete Frage), statt aus dem Modellwissen zu schreiben:
+**Anthropic-SDK · Stripe · Pydantic · Deepgram · ElevenLabs · Flask-Erweiterungen · SQLAlchemy.**
+**Skip bei:** Python-Bordmitteln, HTML/CSS/JS, Geschaeftslogik ohne fremde Bibliothek, Fehlern mit
+klarer Ursache, rein mechanischen Aufgaben.
+**Zweck:** verhindert Plan-Fehler durch veraltete Schnittstellen-Annahmen. Trainingsstand != Ist-Stand.
+
+### B) Roadmap-Sync ist HART — beide Roadmaps in EINER Sequenz
+Es gibt zwei Roadmaps: `.planning/ROADMAP.md` (hier) und `Nerve-Vault/01 Roadmap.md` (strategisch).
+**Jede** Aenderung (neue Phase, Scope-Update, Komplexitaets-Hochstufung, Abschluss-Markierung) muss in
+**beiden** stehen — nicht "erst hier, Vault spaeter".
+**Was du konkret tust:** Nach einer ROADMAP.md-Aenderung einen Hinweis in
+`.planning/DIALOG-GSD-CLAUDIAN.md` schreiben (`## ROADMAP-SYNC — <Phase> — <Datum>`, was geaendert
+wurde und warum), damit Claudian die Vault-Roadmap im selben Zug nachzieht.
+**Beleg:** 4 Drift-Vorfaelle. Wenn nur eine Seite gepflegt wird, laeuft der naechste
+`/gsd-spec-phase`-Aufruf in den falschen Scope und produziert eine ge-driftete SPEC.md.
+
+### C) Fix oder Neubau — pro angefasstem Modul bewusst entscheiden
+**Neubau-Signale:** drei oder mehr Pflaster schon drin · gemischte Konventionen in einer Datei ·
+ueber 500 Zeilen mit vermischten Zustaendigkeiten · unklarer Datenfluss · "der Fix waere das
+naechste Pflaster".
+**Der Plan MUSS dann eine Tabelle enthalten:** pro Datei *reparierbar* oder *zu verworren*, mit
+Begruendung. Bei Neubau den alten Code als **Funktions-Referenz** lesen (welche Randfaelle loest
+er?), aber **nicht als Vorlage** — sonst erbt man den Wildwuchs.
+**Grenze:** gilt fuer **einzelne Module**, nie fuer die ganze App. Vor dem Start und ohne echte
+Nutzer ist Modul-Neubau billig; spaeter nicht.
+
+### D) Vier Saeulen — Pflicht-Check in JEDEM Feature-Plan
+1. **Automatisieren:** Routine-Entscheidungen macht der Code, nicht Andre.
+2. **Nachvollziehen:** Jede wichtige Aktion landet in einer Tabelle, nicht nur auf dem Bildschirm.
+3. **Eingreifen koennen:** Fuer jede automatische Entscheidung ein Schalter — von "Andre entscheidet
+   anders" bis "Code verhaelt sich anders" duerfen **30 Sekunden** vergehen.
+4. **Marge:** Der Code loest ein Problem, fuer das man sonst jemanden einstellen muesste.
+
+**Vier Fragen, die im Plan beantwortet sein muessen:** Was wird automatisiert? Wo wird es
+gespeichert? Welcher Schalter erlaubt Eingriff? Welche Handarbeit spart es dauerhaft?
+**Ist eine dieser Antworten "bauen wir spaeter", ist das genau das Fuenfmal-Anfassen, das wir
+vermeiden wollen.**
