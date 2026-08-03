@@ -2983,8 +2983,19 @@ Plans:
 
 **Ausdruecklich NICHT in dieser Phase:** `coaching_haiku` abschalten oder mit `live_haiku_merged` verschmelzen. Das ist eine eigene Phase **nach METRIK-1** — METRIK-1 schafft die Kaufbereitschaft (`kb_delta`) ab, die der Hauptertrag dieses Aufrufs ist. Jetzt anfassen = Wegwerf-Arbeit.
 
-**Komplexitaet:** 🟡 (5 Aufrufstellen + 1 Migration + Dashboard-Ansicht + Waechter; keine Architektur-Weiche) → **Cross-AI-Review ist Pflicht** (`/gsd-review --gemini --claude`).
-**Plans:** 0 plans
+**Komplexitaet:** 🟡 (SIEBEN Aufrufstellen + 1 Alembic-Migration + Dashboard-Ansicht + Waechter; keine Architektur-Weiche) → **Cross-AI-Review ist Pflicht** (`/gsd-review --gemini --claude`).
+
+**⚠ Zwei Korrekturen aus der Planung (2026-08-03, am Code + an Prod belegt — haben Vorrang vor dem Text oben):**
+- **Es sind SIEBEN Live-Pfade, nicht fuenf.** Die Liste unter Task 1 laesst `live_haiku` (`:585`/`:588`) und `pip_autovar` (`:910`/`:913`) aus. `pip_autovar` ist ein **zweiter Streaming-Pfad** — `ttft_ms` betrifft damit ZWEI Pfade, nicht einen.
+- **`_migrate()` ist der falsche Weg** (Task 2 oben sagt das Gegenteil): es early-returned auf Postgres (`app.py:140`). Es gibt eine **Alembic-Migration 0036**. Prod stand bei der Planung bereits auf **0035** (`inspect.sh migrations`) — auch das korrigiert eine Annahme aus dem CONTEXT.
+
+**Plans:** 4 plans in 3 Wellen (geplant 2026-08-03). Cross-AI Pflicht VOR Execute (🟡).
+
+Plans:
+- [ ] 08.23.2.MESSGERAETE-1-01-PLAN.md — Fundament: Spalte `ttft_ms` (Alembic 0036) + Punkt-23-Schild + Waechter bauen und **ERST ROT** fahren (Welle 1)
+- [ ] 08.23.2.MESSGERAETE-1-02-PLAN.md — Die Messung an allen SIEBEN Live-Pfaden (reine API-Dauer; 2x zusaetzlich TTFT) + Pruning-Entscheidung D-09 (Welle 2)
+- [ ] 08.23.2.MESSGERAETE-1-03-PLAN.md — Der Leser: Auswertung nach `context_tag` im Founder-Dashboard (Buchungen/Kosten/Antworten/Ø/p50/p95/TTFT) (Welle 2)
+- [ ] 08.23.2.MESSGERAETE-1-04-PLAN.md — Migration + Deploy + **echter Test-Anruf** + D-06-SELECT als Abnahme (Welle 3)
 
 ---
 

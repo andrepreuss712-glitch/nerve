@@ -2769,3 +2769,23 @@ Einzelfall.
 
 Commit + Push, zweiter Deploy, dann **Stopp**. Nächster Schritt ist kein Code: Vault-Aufräumen
 (läuft bei Claudian). Bitte keinen neuen Code-Kandidaten vorschlagen.
+
+
+## ROADMAP-SYNC — 08.23.2.MESSGERAETE-1 — 2026-08-03
+
+**Was geaendert wurde in `.planning/ROADMAP.md`:**
+- Phaseneintrag MESSGERAETE-1 von „Plans: 0 plans" auf **4 Plans in 3 Wellen** gesetzt (Planung fertig).
+- Zwei **Korrekturen** in den Phaseneintrag geschrieben, weil der bestehende Text zwei belegbar falsche Annahmen enthielt:
+  1. **SIEBEN Live-Pfade statt fuenf.** Die ROADMAP-Liste liess `live_haiku` und `pip_autovar` aus. `pip_autovar` ist ein **zweiter Streaming-Pfad** → `ttft_ms` betrifft zwei Pfade.
+  2. **Alembic 0036 statt `_migrate()`.** `_migrate()` early-returned auf Postgres (`app.py:140`) und ist dort tot.
+- Zusaetzlicher Fund: **Prod stand bereits auf Alembic `0035`** (`inspect.sh migrations`, gemessen 2026-08-03). Der CONTEXT (Punkt 9) behauptete, 0035 sei noch nicht ausgefuehrt. Der Deploy-Plan (Plan 04) misst den Stand trotzdem vor dem Upgrade, statt ihn anzunehmen.
+
+**Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen:** Phase MESSGERAETE-1 = geplant (4 Plans, 3 Wellen), Cross-AI-Review steht als Pflicht-Schritt VOR Execute an (🟡).
+
+**Offene Frage an Andre (kein Blocker fuer den Plan, aber eine bewusste Entscheidung):**
+Der Abnahme-SELECT aus D-06 verlangt `COUNT(latency_ms) = COUNT(*)` je Live-Sorte. Weil `log_api_cost`
+pro API-Antwort 2-4x laeuft (Ein-/Ausgabe-Token, Zwischenspeicher) und die Dauer nach D-07 bewusst
+**nur** an der Eingabe-Buchung haengt, kann diese Gleichung ueber ALLE Buchungsarten nie aufgehen.
+Plan 04 wertet sie deshalb **auf Ebene der Eingabe-Buchungen** aus und prueft zusaetzlich, dass die
+anderen Buchungsarten `COUNT(latency_ms) = 0` haben — das ist strenger als das urspruengliche
+Kriterium, nicht lascher. Falls das anders gemeint war: bitte kurz melden.
