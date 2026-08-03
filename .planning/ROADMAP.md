@@ -2957,6 +2957,37 @@ Plans:
 
 ---
 
+### Phase 08.23.2.MESSGERAETE-1: Antwort-Dauer je Live-KI-Aufruf in die DB + Leser fuer die vorhandene Herkunft (NEU 2026-08-03) 🟡
+
+**Herkunft:** Andre-Entscheidung 03.08. („Weg B"). Ersetzt den alten Scope von „LIVE-CALL-AUFRAEUMEN". **Zwei der drei damaligen Befunde waren erschlossen, nicht belegt** — Gegenpruefung 03.08. (Fable am echten Code + SELECTs gegen Prod-`api_cost_log`, 21 Tage). Details im Block oben.
+
+**Goal:** Bevor irgendetwas am Live-Pfad optimiert wird, existiert ein **auswertbares Messgeraet**: pro KI-Frage im Anruf steht die **reine API-Dauer** in der Datenbank, und es gibt eine **Ansicht**, die Kosten + Dauer + Anzahl nach Frage-Sorte gruppiert. Ohne das ist jede Tempo-Aussage (TEMPO-1, Sonnet 5, Stresstest, US-Umzug) eine Behauptung.
+
+**★ BELEGTE AUSGANGSLAGE (03.08., alles am Code + Prod verifiziert — nicht neu diagnostizieren):**
+1. **Die Dauer WIRD gemessen, landet aber in einer `.txt`.** Analyse: `claude_service.py:1181` (`t_start`) → `:1326` (`latency_e`) → `conversation_log` `:1346`. Coaching: `:1985` → `:2010` → `:2052-2057`. Aggregation `live_session.py:1386-1397` + `:1433-1445`, Ausgabe in `logs/`-Textdatei via `app_routes.py:379-386`. **Nicht in der DB, keine Spalte in `ConversationLog`, maschinell nicht auswertbar.**
+2. **⚠ Diese vorhandenen Werte sind NICHT wiederverwendbar.** `latency_e`/`latency_c` messen ab dem **ersten Puffer-Eintrag** und schliessen QA-Dispatch ein — das ist „wie lange lag der Satz herum + KI + Nachverarbeitung", nicht die API-Dauer. Wer sie in `latency_ms` schreibt, erzeugt ein Feld, dessen Name luegt (Vault-Regel R4).
+3. **`api_cost_log.latency_ms` existiert** (`database/models.py:535`, Parameter `cost_tracker.py:172`, Schreibstelle `:230`, Migration `app.py:943-945`) — **wird von KEINEM Live-Call gesetzt** und hat **keinen Leser**. Prod-Beleg: `COUNT(latency_ms) = 0` bei allen fuenf Live-`context_tag`s ueber 21 Tage.
+4. **Die Herkunft ist bereits lueckenlos da** — als `context_tag` (`String(32)`, `models.py:534`): `live_haiku_merged`, `coaching_haiku`, `phase_classify`, `coldcall_infer`, `pip_variante`. **`call_site` ist ein zweites Feld**, das in `claude_service.py`/`qa_pipeline.py` nur die Cache-Token-Buchungen setzen — und das **nirgends gelesen wird** (grep ueber `routes/`, `app.py`, `tools/`, `scripts/`, `database/`: nur Schreibstellen + Migration). **Kein Nachtrags-Backfill noetig, keine Umbenennung** — es fehlt eine Anzeige.
+5. **Das Admin-Dashboard aggregiert heute nur** `cost_eur`, `units`, `provider`, `model`, `user_id`, `org_id`, `created_at` (`routes/admin_dashboard.py:133`, `:333-337`, `:377-379`, `:458-462`, `:584-586`, `:654-657`) — **`context_tag` taucht in keiner Gruppierung auf.**
+
+**Tasks (Scope, in Plan schaerfen):**
+1. **Reine API-Dauer messen** — Zeitstempel unmittelbar **um** den `messages.create`- bzw. `messages.stream`-Aufruf, nichts dazwischen. Betroffene `log_api_cost`-Aufrufpaare in `services/claude_service.py`: `:435/:438` (phase_classify) · `:512/:515` (coldcall_infer) · `:764/:767` (live_haiku_merged) · `:1076/:1079` (pip_variante) · `:1133/:1136` (coaching_haiku). Wert an `log_api_cost(latency_ms=...)` durchreichen.
+2. **⚠ Streaming braucht ZWEI Zahlen, nicht eine** (`streame_manual_ewb_variante`): `latency_ms` = Dauer bis zum **letzten** Token; **neue Spalte `ttft_ms`** = Zeit bis zum ersten Token. Der Wert wird bereits berechnet (`claude_service.py:1029`/`:1041`), aber nur geprintet. **Beide Bedeutungen in EINE Spalte zu kippen ist verboten** — das ist genau der „Name luegt"-Fehler. Migration nach dem vorhandenen `_migrate()`-Muster (wiederholbar).
+3. **Leser bauen** — Ansicht im Admin-Dashboard, gruppiert nach `context_tag`: Anzahl Buchungen · Summe `cost_eur` · Ø/p50/p95 `latency_ms` · Ø `ttft_ms` wo vorhanden. Zeitraum waehlbar. **Ohne diesen Task ist die Phase wertlos** — genau das war der Fehler bei `latency_ms` und `call_site`.
+4. **Waechter (Test-Netz-Ratsche), ERST ROT laufen lassen:** ein Test, der fuer jeden produktiven Live-LLM-Pfad prueft, dass `log_api_cost` mit gesetztem `latency_ms` aufgerufen wird. **Die Liste der Pfade aus dem Code ableiten (AST/grep), nicht von Hand pflegen** — sonst reisst dieselbe Luecke spaeter leiser wieder auf (Vault-Regel „gruener Waechter beweist nur seinen Pruefkatalog"). **Bekannte Luecke im Kommentar benennen:** der Waechter prueft, DASS gemessen wird, nicht, dass die Zahl stimmt.
+5. **Abnahme an echten Daten, nicht am gruenen Test:** nach dem Ausrollen ein echter Test-Anruf, dann `SELECT context_tag, COUNT(*), COUNT(latency_ms), ROUND(AVG(latency_ms)) FROM api_cost_log WHERE created_at > now() - interval '1 hour' GROUP BY context_tag;` — **jede Live-Sorte muss `COUNT(latency_ms) = COUNT(*)` haben.** Ergebnis in die SUMMARY.
+
+**Vier Saeulen (Bau-Regel 12):** *Automatisieren* — Messung laeuft ohne Zutun bei jedem Aufruf mit. *Nachvollziehen* — Tabelle `api_cost_log`, nicht Bildschirm/Textdatei. *Eingreifen* — die Ansicht macht sichtbar, welche Frage-Sorte teuer oder langsam ist; Abschalten/Umbauen einzelner Sorten ist die Folgephase. *Marge* — ohne diese Zahlen ist die Preis-Untergrenze (Punkt 12 der Vault-Roadmap) nicht berechenbar.
+
+**Pruning-Notiz (Bau-Regel 3a) im Plan beantworten:** Wird die `logs/`-Textdatei-Aggregation (`live_session.py:1386-1397`, `:1433-1445`, `app_routes.py:379-386`) durch die DB-Messung obsolet — entfernen oder mit Begruendung stehen lassen? **Nicht stillschweigend doppelt fuehren.**
+
+**Ausdruecklich NICHT in dieser Phase:** `coaching_haiku` abschalten oder mit `live_haiku_merged` verschmelzen. Das ist eine eigene Phase **nach METRIK-1** — METRIK-1 schafft die Kaufbereitschaft (`kb_delta`) ab, die der Hauptertrag dieses Aufrufs ist. Jetzt anfassen = Wegwerf-Arbeit.
+
+**Komplexitaet:** 🟡 (5 Aufrufstellen + 1 Migration + Dashboard-Ansicht + Waechter; keine Architektur-Weiche) → **Cross-AI-Review ist Pflicht** (`/gsd-review --gemini --claude`).
+**Plans:** 0 plans
+
+---
+
 ## Backlog
 
 > Unsequenzierte Ideen (999.x), noch nicht in der aktiven Phasen-Reihenfolge. Promoten via `/gsd-review-backlog`.
