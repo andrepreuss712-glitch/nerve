@@ -105,7 +105,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 > - **⛔ `nerve_rt` NICHT scharf schalten ohne Anonymisierung** — eigener HART-Block in `CLAUDE.md` + `nerve_rt/README.md`. Dienst laeuft seit 28.07. mit **0 Verbindungen**, bisher ist nichts passiert.
 > - **Akzeptiert als kein Risiko (Andre):** Trainings-Simulator (KI-simulierte Umgebung, kein echter Kunde) · PreCall-Recherche an Brave/Anthropic (frei zugaengliche Firmendaten; gehoert nur in die Datenschutzerklaerung).
 >
-> ### ★★ NEU VORGEZOGEN: LIVE-CALL-AUFRAEUMEN (Phase-Vorschlag, Andre-Freigabe 2026-08-02)
+> ### ★★ MESSGERAETE-1 — vormals „LIVE-CALL-AUFRAEUMEN" (Andre-Freigabe 02.08., **Scope verkleinert 03.08.**)
 >
 > **Anlass:** Andre fiel auf, dass das Geld-/Tempo-Thema (KOSTEN-1 / TEMPO-1 / H1) beim Start der Bug-Woche **abgebrochen und nie beendet** wurde. Am echten Prod-Datensatz belegt (`api_cost_log`, 2026-08-02 13:50-14:10, drei Testcalls, ~3,8 min Gespraechszeit): **100 LLM-Aufrufe, 0,168 EUR.**
 >
@@ -117,16 +117,28 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 > | `coldcall_infer` | haiku-4-5 | 6 | 0,002 |
 > | `crm` / `postcall_coach` / `outcome` | sonnet-4-5 / haiku | 12 | 0,051 |
 >
-> **Drei Befunde, alle am Datensatz belegt:**
-> 1. **`coaching_haiku` feuert 1:1 so oft wie der Live-Call (38:38).** Bestehende Notiz: die Live-Anzeige dafuer wurde in Phase 06.6 entfernt. Falls bestaetigt = **33 % der Kosten + ein Aufruf pro Runde im Live-Pfad fuer nichts**, und die H1-Ersparnis (3→1) ist damit wieder aufgefressen. ⚠ **NICHT verifiziert — erst greppen (Bau-Regel 20), dann abschalten.**
-> 2. **`latency_ms` ist bei 98 von 100 Zeilen NULL.** Die Live-Latenz wird **nicht gemessen**. Deshalb ist der TEMPO-1-Beleg nicht „offen", sondern **nicht fuehrbar**. Bei einem Produkt mit Latenz als Dealbreaker ist das die Luecke, die jede spaetere Tempo-Aussage (Sonnet 5, Caching, Stresstest, US-Umzug) zur Behauptung macht.
-> 3. **`call_site` ist bei 92 von 100 Zeilen NULL** → KOSTEN-1 ist **unfertig**, nicht fertig.
+> **⚠⚠ SCOPE AM 2026-08-03 VERKLEINERT + UMBENANNT — die drei Befunde unten waren zu zwei Dritteln FALSCH.**
+> Was hier stand, war aus Notizen erschlossen, nicht am Code belegt. Gegenpruefung 03.08. (Fable am echten Code + eigene SELECTs gegen `api_cost_log`, 21 Tage, `2026-07-23`–`2026-08-02`):
 >
-> **Scope:** (a) `coaching_haiku` verifizieren + abschalten, (b) `latency_ms` an allen Live-LLM-Aufrufen mitschreiben, (c) `call_site` durchgaengig setzen. **Vor SCHWAERZ-1** — erst das Messgeraet, dann die Reparatur.
+> | Alte Behauptung | Befund 03.08. | Beleg |
+> |---|---|---|
+> | (a) `coaching_haiku` laeuft ins Leere → abschalten | **FALSCH.** Entfernt wurde in 06.6 **nur der WebSocket-Emit des Tipps** (`claude_service.py:2117-2123`). Der Call liefert weiter `kb_delta` (Live-Anzeige + 40 % der Note), `painpoint` und die Kaufsignal-Tipps (`app_routes.py:297-298`). **Abschalten haette die Kaufbereitschaft gekillt.** | `claude_service.py:1112-1136`, `:2004`, `live_session.py:1203` |
+> | (b) Live-Latenz wird nicht gemessen | **HALB FALSCH.** Sie **wird** gemessen (`claude_service.py:1181`/`:1326` Analyse, `:1985`/`:2010` Coaching) — landet aber in einer **.txt unter `logs/`** (`app_routes.py:379-386`), nicht in der DB. `api_cost_log.latency_ms` existiert, wird von **keinem** Live-Call gesetzt und hat **keinen Leser** (grep ueber `routes/`, `app.py`, `tools/`, `scripts/`, `templates/`). | `COUNT(latency_ms)=0` bei allen 5 Live-`context_tag`s |
+> | (c) `call_site` bei 92 % NULL → KOSTEN-1 unfertig | **IRREFUEHREND.** Die Herkunft **ist** lueckenlos erfasst — als **`context_tag`** (`live_haiku_merged`, `coaching_haiku`, `phase_classify`, `coldcall_infer`, `pip_variante`). `call_site` ist ein **zweites** Feld, das in `claude_service.py`/`qa_pipeline.py` nur die Cache-Token-Buchungen setzen — und das **niemand liest**. Es fehlt kein Schreiber, sondern ein **Leser**. | Prod-SELECT: jede Live-Zeile hat `context_tag`, keine hat `call_site` |
 >
-> ⚠ **Prozess-Lehre (Andre-Direktive, jetzt in `Nerve-Vault/CLAUDE.md` verankert):** „Fertig" ohne Beleg ist verboten. TEMPO-1 und H1 standen **zwei Wochen** als „live" in der Roadmap, ohne je an echten Daten geprueft worden zu sein. Ab sofort gilt in beiden Roadmaps: ✅ nur mit Beleg, sonst ⚠️ NICHT BELEGT.
+> **Echte Prod-Zahlen 21 Tage (ersetzen die 3,8-min-Stichprobe oben):** `live_haiku_merged` 152 Buchungen / 0,2466 EUR · `coaching_haiku` 132 / 0,1920 EUR · `phase_classify` 16 / 0,0083 · `coldcall_infer` 16 / 0,0061 · `pip_variante` 14 / 0,0155. **Die Coaching-Frage kostet 78 % der Analyse-Frage.** (`live_haiku` + `qa_classifier` je 24 Zeilen: nur am 23.07., Rollback-Schalter-Test, kein laufendes Problem.)
 >
-> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend):** **LIVE-CALL-AUFRAEUMEN** → SCHWAERZ-1 → "Verstehe"-Fix → METRIK-1 (Abloese, Form 2 → Form 3/4) → Schwaerzung-Mittelweg (Beschluss D) → Schott-Restpaket → Stresstest.
+> **⚠ Und TEMPO-1 heisst falsch:** Einen Cache der LLM-**Antworten** gibt es nirgends. Es existiert Anthropic-Prompt-Caching, **nur auf dem EWB-Pfad** (`prompt_pipeline.py:730-732`). Der Analyse-Pfad ist bewusst uncached — Haiku 4.5 verlangt 4096 Token Mindest-Prefix, `SYSTEM_PROMPT_BASE` ist kuerzer (`claude_service.py:565-571`). **Die beiden Dauerfragen mit ~90 % der Live-Kosten profitieren von TEMPO-1 gar nicht.**
+>
+> **NEUER SCOPE (Andre-Entscheidung 03.08., „Weg B") — Phase heisst jetzt MESSGERAETE-1:**
+> 1. **`latency_ms` an allen Live-LLM-Calls mitschreiben** — **reine API-Dauer**, direkt um den `messages.create`/`messages.stream`-Aufruf gemessen. ⚠ **NICHT** die vorhandenen `latency_e`/`latency_c` wiederverwenden: die enthalten Puffer-Wartezeit + QA-Dispatch, das waere ein anderes Mass. Betrifft `claude_service.py` `:435/:438`, `:512/:515`, `:764/:767`, `:1076/:1079`, `:1133/:1136`.
+> 2. **Leser bauen** — Auswertung nach `context_tag` (Kosten + Ø-Dauer + Anzahl je Frage-Sorte) im Admin-Dashboard (`routes/admin_dashboard.py`).
+> 3. **(a) ist RAUS** → eigene Phase **nach METRIK-1** (siehe Reihenfolge). Begruendung: `coaching_haiku` liefert vor allem `kb_delta` = Kaufbereitschaft, und METRIK-1 **schafft die Kaufbereitschaft komplett ab**. Jetzt zusammenlegen = Wegwerf-Arbeit; danach ist die Entscheidung womoeglich „ganz weg" statt „verschmelzen".
+>
+> ⚠ **Prozess-Lehre (Andre-Direktive, in `Nerve-Vault/CLAUDE.md` verankert):** „Fertig" ohne Beleg ist verboten. TEMPO-1 und H1 standen **zwei Wochen** als „live" in der Roadmap, ohne je an echten Daten geprueft worden zu sein. Ab sofort gilt in beiden Roadmaps: ✅ nur mit Beleg, sonst ⚠️ NICHT BELEGT.
+> ⚠ **Zweite Lehre aus genau diesem Eintrag (03.08.):** Der Block oben war selbst ein Verstoss — drei „am Datensatz belegte" Befunde, von denen zwei erschlossen waren. **Diagnose am echten Fehler-Beleg, nicht aus der Struktur** (Vault-Regel, verankert 24.07.).
+>
+> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.):** **MESSGERAETE-1** → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → Schwaerzung-Mittelweg (Beschluss D) → Schott-Restpaket → Stresstest.
 
 **Aktuelle Richtungs-Entscheidungen (Stand 2026-06-01, Sync von Vault-Roadmap):**
 - **Staging komplett aus dem Workflow** bis zur letzten Phase vor Launch → Production ist einziger Deploy-/Test-Pfad (Details: `CLAUDE.md` → "ÜBERSCHREIBUNG 2026-06-01"). `deploy.sh`-Staging-Gate entfernt. Reaktivierung = Phase **08.23.2.STAGING** (ganz am Ende, letzte Phase vor Launch).
