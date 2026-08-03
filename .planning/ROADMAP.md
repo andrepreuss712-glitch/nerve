@@ -2986,10 +2986,14 @@ Plans:
 **Komplexitaet:** 🟡 (SIEBEN Aufrufstellen + 1 Alembic-Migration + Dashboard-Ansicht + Waechter; keine Architektur-Weiche) → **Cross-AI-Review ist Pflicht** (`/gsd-review --gemini --claude`).
 
 **⚠ Zwei Korrekturen aus der Planung (2026-08-03, am Code + an Prod belegt — haben Vorrang vor dem Text oben):**
-- **Es sind SIEBEN Live-Pfade, nicht fuenf.** Die Liste unter Task 1 laesst `live_haiku` (`:585`/`:588`) und `pip_autovar` (`:910`/`:913`) aus. `pip_autovar` ist ein **zweiter Streaming-Pfad** — `ttft_ms` betrifft damit ZWEI Pfade, nicht einen.
+- **Es sind ACHT Live-Pfade, nicht fuenf** (Stand nach Cross-AI 2026-08-03; die Planung fand zunaechst sieben, das Review den achten).
+  Sieben in `claude_service.py`, dazu `classify_utterance` in `services/qa_pipeline.py` (`qa_classifier`, Rollback-Zwilling von `live_haiku` — CONTEXT D-10).
+- **Drei davon sind dormant** (`live_haiku`, `pip_autovar`, `qa_classifier`): Messung wird eingebaut und statisch bewacht, kann an echten Daten aber nicht belegt werden (CONTEXT Punkt 13). Der Leser bekommt deshalb **zwei** Tabellen (CONTEXT Punkt 12) aus **einer** Liste (D-11).
+- **Der Mess-Anker darf kein Argument mitmessen** — bei `analysiere_coaching` wird `_build_coaching_prompt` vor den Anker gezogen (CONTEXT Punkt 14, Cross-AI-Blocker).
+- **(alt) Es sind SIEBEN Live-Pfade, nicht fuenf.** Die Liste unter Task 1 laesst `live_haiku` (`:585`/`:588`) und `pip_autovar` (`:910`/`:913`) aus. `pip_autovar` ist ein **zweiter Streaming-Pfad** — `ttft_ms` betrifft damit ZWEI Pfade, nicht einen.
 - **`_migrate()` ist der falsche Weg** (Task 2 oben sagt das Gegenteil): es early-returned auf Postgres (`app.py:140`). Es gibt eine **Alembic-Migration 0036**. Prod stand bei der Planung bereits auf **0035** (`inspect.sh migrations`) — auch das korrigiert eine Annahme aus dem CONTEXT.
 
-**Plans:** 4 plans in 3 Wellen (geplant 2026-08-03). Cross-AI Pflicht VOR Execute (🟡).
+**Plans:** 4 plans in 3 Wellen (geplant 2026-08-03, **Cross-AI durch** — Gemini + Fable, 2 Blocker + 7 Nachzuege eingearbeitet 2026-08-03).
 
 Plans:
 - [ ] 08.23.2.MESSGERAETE-1-01-PLAN.md — Fundament: Spalte `ttft_ms` (Alembic 0036) + Punkt-23-Schild + Waechter bauen und **ERST ROT** fahren (Welle 1)

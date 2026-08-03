@@ -2789,3 +2789,22 @@ pro API-Antwort 2-4x laeuft (Ein-/Ausgabe-Token, Zwischenspeicher) und die Dauer
 Plan 04 wertet sie deshalb **auf Ebene der Eingabe-Buchungen** aus und prueft zusaetzlich, dass die
 anderen Buchungsarten `COUNT(latency_ms) = 0` haben — das ist strenger als das urspruengliche
 Kriterium, nicht lascher. Falls das anders gemeint war: bitte kurz melden.
+
+
+## ROADMAP-SYNC — 08.23.2.MESSGERAETE-1 — 2026-08-03 (nach Cross-AI)
+
+Cross-AI (Gemini + Fable, beide mit Repo-Zugriff) ist durch, der Replan eingearbeitet. Aenderungen
+in `.planning/ROADMAP.md`:
+- **ACHT Live-Pfade statt sieben** — `services/qa_pipeline.py::classify_utterance` (`qa_classifier`)
+  ist der Rollback-Zwilling von `live_haiku` und wird mitgemessen (Andre-Entscheidung, CONTEXT D-10).
+- **Drei Pfade sind dormant** (`live_haiku`, `pip_autovar`, `qa_classifier`) — Messung eingebaut und
+  statisch bewacht, an echten Daten NICHT belegbar. Steht als Pflichtsatz in der Abnahme-SUMMARY.
+- **Leser bekommt zwei Tabellen** (Live-KI je Frage-Sorte / Uebrige Kosten) aus EINER Liste in
+  `services/cost_tracker.py` — in Prod existieren 33 context_tag-Werte, nicht 5.
+- **Blocker aus dem Review:** der Mess-Anker haette bei `analysiere_coaching` den Prompt-Bau
+  mitgemessen (Funktionsaufruf im Argument, nimmt `_session_state_lock`). Hoist ist jetzt ein
+  eigener Plan-Schritt.
+- Status: Cross-AI **durch**, Phase ist damit execute-reif (vorbehaltlich Pre-Execute-Audit).
+
+**Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen:** MESSGERAETE-1 = geplant + Cross-AI durch
+(Hit-Rate: 2 Blocker + 7 actionable Nachzuege, davon 1 divergente Sicht am Code entschieden).
