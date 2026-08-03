@@ -397,7 +397,7 @@ Beispiele:
 ## GSD-Workflow-Pflichten — Plan/Execute/Review
 
 > **Pflicht-Sequenz für jeden Plan-/Execute-/Review-Agent.** Diese Regeln sind verbindlich und gelten ZUSÄTZLICH zur "Next Up"-Empfehlung des Plan-Agents. Wenn der Plan-Agent direkt zu Execute springt bei einer 🔴-Phase, ist das ein Bug — Cross-AI-Review kommt dazwischen.
-> **Source-of-Truth für Mechanik (Trigger-Logik, Hit-Rate-Pattern, Fairness-Regel):** `Nerve-Vault/CLAUDE.md` Punkt 7+8.
+> **Source-of-Truth für Mechanik (Trigger-Logik, Hit-Rate-Pattern, Fairness-Regel):** `Nerve-Vault/CLAUDE.md` Punkt 7. (Punkt 8 wurde am 02.08. gestrichen — er ist in "Vorgehens-Prinzip Teil B" derselben Datei aufgegangen.)
 
 ### Komplexitäts-Marker
 
@@ -421,8 +421,10 @@ Jede Phase ist mit einem Marker klassifiziert (in PLAN.md / SPEC.md sichtbar):
 ### Skip-Regel (für Plan-Agent)
 
 - 🟢 trivial: Cross-AI-Review SKIP (Overkill, frisst Momentum)
-- 🟡 mittel ohne Trigger oben: Cross-AI-Review optional (Andre entscheidet pro Phase)
-- 🟡 mittel mit Trigger ODER 🔴 komplex: Cross-AI-Review **PFLICHT vor Execute**
+- 🟡 mittel (mit oder ohne Trigger) ODER 🔴 komplex: Cross-AI-Review **PFLICHT vor Execute**
+  (korrigiert 2026-08-03: hier stand "🟡 ohne Trigger = optional" — das war ein Widerspruch
+   zum Vault, wo Cross-AI bei 🟡 seit dem 03.05.2026 Pflicht ist. Belegter Anlass damals:
+   Phase 08.19.5.1, wo der uebersprungene Check drei Migrations-Stellen kostete.)
 
 ### Was Plan-Agent NICHT tun soll
 
