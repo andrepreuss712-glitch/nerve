@@ -3,7 +3,7 @@
 
 **NERVE**
 
-NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertriebler im DACH-Markt. Er hört Verkaufsgesprächen live zu, erkennt Einwände in Echtzeit und liefert Gegenargumente sowie Coaching-Tipps direkt auf den Bildschirm — unsichtbar für den Kunden. Ergänzend bietet NERVE einen KI-Trainingsmodus, eine Coach-Plattform für Teams und automatisierte Post-Call-Analysen.
+NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertriebler — **Markt: US-FIRST** (beschlossen 2026-07-04). Er hört Verkaufsgesprächen live zu, erkennt Einwände in Echtzeit und liefert Gegenargumente sowie Coaching-Tipps direkt auf den Bildschirm — unsichtbar für den Kunden. Ergänzend bietet NERVE einen KI-Trainingsmodus, eine Coach-Plattform für Teams und automatisierte Post-Call-Analysen.
 
 **Status:** v0.9.4, Pre-Launch — Early Access vorbereitet
 **Founder:** Solo-Founder (Einzelunternehmer)
@@ -17,8 +17,8 @@ NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertrie
 ### Constraints
 
 - **Stack:** Kein Framework-Wechsel — Flask + Vanilla JS bleibt. Keine React-Migration.
-- **Kosten Live:** Sonnet MUSS raus aus dem Live-Loop — nur Haiku für alles Live. Sonnet nur Post-Call.
-- **DSGVO:** Pflicht von Tag 1 — Server in Deutschland (Hetzner), kein wörtliches Mitschneiden default.
+- **Kosten/Tempo Live:** ⚠ **KORRIGIERT 2026-08-03 — hier stand "Sonnet MUSS raus, nur Haiku fuer alles Live". Das ist UEBERHOLT und war das Gegenteil der geltenden Vorgabe.** Es gilt Punkt 25 (Latenz): **Gleichgewicht aus Qualitaet UND Tempo.** Schnell-aber-Muell ist genauso ein Dealbreaker wie gut-aber-langsam. Die Ambition ist **"das STARKE Modell schnell genug machen"** (Zwischenspeicher, kleinere Prompts, Vorladen, lokales Sofortnetz) — NICHT aufs schwache Modell ausweichen. Sonnet 4.5 laeuft seit 22.07. live mit scharfem Zwischenspeicher.
+- **DSGVO:** Pflicht von Tag 1 — kein woertliches Mitschneiden default, **NIE Audio persistieren**, Call-Logs nie loeschen. ⚠ **KORRIGIERT 2026-08-03 — hier stand "Server in Deutschland (Hetzner)". Das war nie eine DSGVO-Anforderung** und steuerte nach dem US-first-Beschluss in die falsche Richtung: Server-Region folgt dem Markt, beim US-Umzug also **US-Region**. DSGVO-Pflichten (Loeschpflicht, Auskunft, Datenschutzerklaerung) bleiben unabhaengig davon bestehen, weil Andre deutscher Einzelunternehmer ist.
 - **Pricing:** Flat-Rate (nicht Credits) — Kunden wollen Planbarkeit. Kein harter Stopp bei Fair-Use.
 - **Budget:** Bootstrap — kein externes Kapital. Reinvestition aller NERVE-Einnahmen.
 - **Zeit:** Solo-Founder, ~14 Tage/Monat verfügbar.
@@ -1060,3 +1060,81 @@ Nutzer ist Modul-Neubau billig; spaeter nicht.
 gespeichert? Welcher Schalter erlaubt Eingriff? Welche Handarbeit spart es dauerhaft?
 **Ist eine dieser Antworten "bauen wir spaeter", ist das genau das Fuenfmal-Anfassen, das wir
 vermeiden wollen.**
+
+---
+
+## ⛔ HART: Acht weitere Vault-Regeln, die sich an DICH richten (gespiegelt 2026-08-03, zweite Runde)
+
+> **Wie sie gefunden wurden:** Eine systematische Durchsicht der Vault-Regeldatei Regel fuer Regel
+> mit der Frage "wer muss danach handeln — und steht sie dort, wo er sie liest?". Diese Richtung
+> war nie geprueft worden. Ergebnis: acht Regeln verlangten eine Handlung von GSD, standen aber
+> nur im Vault, den GSD nie laedt. Vollfassungen bleiben im Vault.
+
+### 1. Regressions-Test bei JEDEM Bugfix — erst rot, dann fixen
+Zu jedem Fix gehoert ein Test, der genau diesen Fehler festnagelt. **Den Test ERST gegen den
+ungefixten Stand rot laufen lassen, DANN fixen** — der Rot-Lauf gehoert in Commit/SUMMARY.
+Sonst entsteht ein Test, der gruen ist, aber nichts prueft.
+Bei sicherheits-, datentrennungs- oder kernpfad-kritischem Verhalten: Deploy-Tor-Test statt
+Einmal-Check. **Das Test-Netz ist eine Ratsche — was einmal drin ist, bleibt drin.**
+*(Punkt 31 verlangt den Rot-Beleg bisher nur fuer Waechter. Diese Regel ist allgemeiner.)*
+
+### 2. Tueroeffner gegen das spaetere Feature validieren — BEVOR er gegossen wird
+Ergaenzt Punkt 24 Teil A als **Leitplanke 4** (am 22.06. beschlossen, hier nie nachgezogen).
+Bei jedem Haken/Foundation-Bau — neue Erfassungs-Tabelle, durchgereichte ID, Vertrag mit einer
+spaeteren Phase — **das Ziel-Feature grob skizzieren** (welche Felder, welche Verknuepfungen
+braucht es?) und im Plan belegen, dass der Haken sie traegt.
+**Besonders kritisch bei nur-einfuegenden Erfassungs-Haken: verpasste Felder sind fuer immer weg,
+es gibt kein Nachtragen.** Pflicht-Frage im Plan: *"Habe ich das Feature, das hier dranhaengt,
+weit genug skizziert, um sicher zu sein, dass dieser Haken passt?"*
+
+### 3. Zwei unverhandelbare Daten-Schranken
+1. **NERVE persistiert NIE Audio.** Audio rein, Analyse, sofort weg — auch nicht "kurz zum
+   Debuggen". Das ist Produktversprechen ("NERVE zeichnet NICHTS auf") und Rechtsgrundlage der
+   Single-Speaker-Architektur, kein Detail.
+2. **Call-Logs sind heilig.** Transkripte, Ereignisse, Metadaten werden NIE geloescht.
+   Zuruecksetzen im Browser darf **ausschliesslich** Anzeige-Zustand toeten, **niemals**
+   server-seitige Anruf-Daten. Sie sind Grundlage der Nachbereitung UND Trainingsmaterial.
+
+**Jeder Plan, der Audio-Pfade, Zuruecksetzen oder Loesch-Logik anfasst, prueft beide Punkte
+ausdruecklich.** Vollbegruendung: Vault + DSGVO-Analyse.
+
+### 4. Fragen-Kanal — Pflicht in allen Phasen, unabhaengig vom Session-Start-Block
+Jede Frage, Entscheidung und jeden Checkpoint ans **Ende** von
+`.planning/DIALOG-GSD-CLAUDIAN.md` schreiben und **sofort committen**:
+`## FRAGE — <Phase> — <Datum>` mit: *wo stehe ich* (Datei:Zeile/Task) · *Frage + alle Optionen +
+deine Empfehlung* · *was ist blockiert*.
+Dieselbe Frage **zusaetzlich als normalen Fliesstext im Terminal** — **NIE als interaktives Menue.**
+**Warum:** Andre arbeitet zeitweise vom Handy und kann Terminal-Ausgabe nicht kopieren; Claudian
+sieht das Terminal ueberhaupt nicht. Ohne diesen Kanal **raet** Claudian deine Fragen — belegter
+Schadensfall Juli 2026. Die Antwort kommt als `### ANTWORT — Claudian` in dieselbe Datei.
+
+### 5. Reparatur-Modus: NUR der Fehler wird angefasst
+Keine Umbenennungen ausserhalb des Fehler-Pfads, kein Sortieren von Importen, kein Auslagern,
+keine "wenn ich schon dabei bin"-Verbesserungen — die werden als Todo notiert, nicht committet.
+**Pruefung vor dem Commit:** Aendert der Diff mehr Zeilen, als der Fehler mechanisch braucht?
+Dann begruenden. **Erlaubt:** die Fehlerstelle, direkt abhaengige Stellen (mit Begruendung),
+ergaenzende Tests.
+**Grund:** In etwa vier von fuenf Faellen ist eine der nebenbei geaenderten Stellen subtil kaputt.
+**Ebenso:** Faellt waehrend einer Phase toter oder kaputter Code auf — **nicht in die laufende
+Phase mischen**, sondern direkt danach als eigene Mini-Phase.
+
+### 6. Nach drei Fehlversuchen am selben Fehler: harter Stopp
+Derselbe Fehler = gleicher Code-Pfad, gleiches Symptom. (Ein durch den vorigen Fix NEU erzeugter
+Fehler zaehlt nicht mit.) Dann drei Fragen: *"Verstehe ich das Problem ueberhaupt, oder repariere
+ich ein Symptom?"* · *"Welche Annahme habe ich nie geprueft?"* · *"Was wuerde ein Frischer fragen?"*
+**Zweitmeinung ist PFLICHT vor Versuch vier** (Cross-AI oder Claudian ueber die DIALOG-Datei).
+**Drei Fehlversuche sind ein starkes Signal, dass die ARCHITEKTUR das Problem erzeugt**, nicht
+eine Code-Stelle → Fix-oder-Neubau-Pruefung (Abschnitt "Vier Vault-Regeln", C).
+
+### 7. Pruning-Notiz — Pflichtteil JEDER Phasen-SUMMARY
+Am Phasen-Ende auflisten, welche Code-Stellen durch diese Phase obsolet geworden sind. Pro Stelle
+genau eine der beiden Angaben: **geloescht** ODER **bleibt als Foundation fuer Phase Y, weil ...**
+(dann zusaetzlich Eintrag in `Nerve-Vault/04 Entscheidungen/Foundation-Code-Register.md`).
+**Kein stehengelassenes Legacy ohne Begruendung** — das ist die Nudelcode-Wurzel.
+
+### 8. Werkzeug-Falle: `grep -ciF` nie als Abnahme-Anker
+`grep -ciF` stuerzt auf Andres Git-Bash ab und liefert **gar nichts statt einer `0`**. Ein Plan mit
+diesem Muster im `<verify>`-Block schlaegt falsch-rot fehl — und erzeugt den Reflex, den Text an
+den Anker anzupassen statt umgekehrt. Stattdessen `grep -c` ohne diese Flag-Kombination, oder
+Treffer ueber `grep ... | wc -l` zaehlen. *(Gilt auch fuer die Pattern in
+`CLAUDE-BAUREGELN-13-14-20.md`, Punkt 20.)*

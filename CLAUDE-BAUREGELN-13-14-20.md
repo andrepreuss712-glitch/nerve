@@ -101,3 +101,14 @@ grep -rn "<func_name>(" services/ routes/ static/ --include="*.py" --include="*.
 ## ⚠ Nummerierungs-Falle zwischen den Dateien
 
 Die Punkt-Nummern in `Nerve-Vault/CLAUDE.md` und `salesnerve/CLAUDE.md` sind **NICHT identisch**. Beispiel: Vault-Punkt 22 (Async-Bereitschafts-Naht) heißt im Code-Repo **Punkt 26**; der dortige Punkt 22 ist etwas völlig anderes (Verbindungs-Karten-Pflicht). **Wer einem Verweis „siehe Punkt N" folgt, prüft zuerst, in WELCHER Datei gezählt wird.** Sicherer: über den Regel-NAMEN suchen, nicht über die Nummer.
+
+---
+
+## ⚠ Werkzeug-Falle bei Punkt 20 (ergaenzt 2026-08-03)
+
+`grep -ciF` **stuerzt auf Andres Git-Bash ab und liefert gar nichts statt einer `0`.**
+Nie als Abnahme-Anker in einem `<verify>`-Block verwenden — der Plan schlaegt dann falsch-rot
+fehl, und der naechste Reflex ist, den Text an den Anker anzupassen statt den Anker zu reparieren.
+**Stattdessen:** `grep -c` ohne diese Flag-Kombination, oder Treffer ueber `grep ... | wc -l`.
+Zwei weitere belegte Ursachen falsch-roter Anker: Selbstbezug (das Suchmuster steht im geprueften
+Text selbst) und Zeichensatz-Probleme bei Umlauten/Sonderzeichen.
