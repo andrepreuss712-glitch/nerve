@@ -428,15 +428,19 @@ Jede Phase ist mit einem Marker klassifiziert (in PLAN.md / SPEC.md sichtbar):
 
 ### Was Plan-Agent NICHT tun soll
 
-- Direkt zu `/gsd-execute-phase` springen wenn Phase 🔴 ist
-- Cross-AI-Pflicht als optional darstellen wenn 🔴
-- "Next Up — Execute" empfehlen ohne vorherigen Review-Schritt bei 🔴
+- Direkt zu `/gsd-execute-phase` springen wenn Phase 🔴 **ODER 🟡** ist
+- Cross-AI-Pflicht als optional darstellen bei 🔴 **ODER 🟡**
+- "Next Up — Execute" empfehlen ohne vorherigen Review-Schritt bei 🔴 **ODER 🟡**
+
+⚠ **KORRIGIERT 2026-08-03 (Gemini-Fund):** Hier stand ueberall nur 🔴. Weil ein Modell sich
+stark an ausdruecklichen Verboten orientiert, war der 🟡-Review damit faktisch wegrationalisierbar
+— obwohl er seit 2026-05-03 Pflicht ist. **Skip gilt nur bei 🟢.**
 
 ### Was Plan-Agent statt dessen empfehlen soll
 
-Bei 🔴-Phase als "Next Up":
+Bei 🔴- **und 🟡**-Phase als "Next Up":
 ```
-▶ Next Up — Cross-AI Peer Review (PFLICHT bei 🔴)
+▶ Next Up — Cross-AI Peer Review (PFLICHT bei 🔴 und 🟡)
 
 /clear
 /gsd-review --phase X --all
@@ -521,27 +525,34 @@ Damit Live-Tests keinen Daten-Schaden anrichten:
 
 ### Folge für GSD-Workflow
 
-Plan-Author + Executor müssen Pytest-Acceptance-Checks auf Staging laufen lassen, nicht lokal. Macht jede Plan-Acceptance 30-60s langsamer (SSH-Roundtrip), aber stellt sicher dass Tests-Grün auf Staging tatsächlich Aussagekraft hat.
+Plan-Author + Executor müssen Test-Abnahmen **auf dem Server** laufen lassen, nicht lokal. Kostet pro Abnahme 30-60s (SSH), stellt aber sicher, dass „Tests gruen" ueberhaupt Aussagekraft hat.
+
+⚠ **KORRIGIERT 2026-08-03 (Gemini-Fund): In diesem Abschnitt standen bis heute woertliche
+Beispiele mit `deploy.sh staging` und `ssh deploy@staging.getnerve.app` — obwohl 60 Zeilen
+darueber steht, dass Staging KOMPLETT raus ist. Ein Agent kopiert Code-Beispiele woertlich,
+statt sie im Kopf gemaess Prosa-Regel umzuschreiben. Die Beispiele sind jetzt auf Production
+umgestellt.**
 
 **Workflow pro Plan-Task:**
 
-1. Code-Edit (lokal in IDE — nur Editieren, kein Ausführen)
+1. Code-Edit (lokal in der IDE — nur Editieren, kein Ausfuehren)
 2. `git commit`
 3. `git push`
-4. `bash deploy.sh staging` (oder GSD-Executor-Wrapper)
-5. Pytest auf Staging via SSH: `ssh deploy@<staging-ip> 'cd /opt/nerve && source venv/bin/activate && pytest tests/test_X.py -x -v'`
-6. Live-Test im Browser via `https://staging.getnerve.app`
-7. Wenn grün: `bash deploy.sh production`
+4. `bash deploy.sh production` — das Test-Tor laeuft dabei **auf dem Server** vor dem Neustart
+5. Bei rotem Tor: **kein Neustart, der alte Stand bleibt live.** Das ist kein Fehlschlag, sondern der Zweck des Tors.
+6. Bei gruenem Tor: Neustart = live → Live-Test im Browser auf `https://app.getnerve.app` mit dem Test-Konto
 
 ### Konsequenz für Plan-Author
 
-Plan-Files müssen `<verify>`-Sektionen so formulieren dass Pytest **auf Staging-Server** läuft, nicht in lokalem Working-Directory. Plan-Acceptance-Criteria müssen Staging-Befehle enthalten (SSH-basiert).
+`<verify>`-Sektionen so formulieren, dass die Pruefung **auf dem Production-Server** laeuft, nicht im lokalen Arbeitsverzeichnis.
 
 Pattern für Plan-Author:
 
 ```xml
 <verify>
-  <automated>bash deploy.sh staging && ssh deploy@staging.getnerve.app 'cd /opt/nerve && source venv/bin/activate && pytest tests/test_X.py -x'</automated>
+  <automated>bash deploy.sh production</automated>
+  <!-- Das Test-Tor laeuft serverseitig im Deploy. Fuer gezielte Einzelpruefungen read-only: -->
+  <!-- ssh -i ~/.ssh/nerve_vps root@178.104.82.166 'cd /opt/nerve/app && bash scripts/inspect.sh <cmd>' -->
 </verify>
 ```
 
@@ -581,7 +592,7 @@ Read-only Wrapper auf Staging-Server `/opt/nerve/app/scripts/inspect.sh`. SQL-In
 **SSH-Pattern für GSD-Plan-Author + Research-Phase + Pre-Execute-Audit:**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519_nerve root@staging.getnerve.app \
+ssh -i ~/.ssh/nerve_vps root@178.104.82.166 \
     'cd /opt/nerve/app && bash scripts/inspect.sh <command> [args]'
 ```
 
@@ -600,9 +611,9 @@ ssh -i ~/.ssh/id_ed25519_nerve root@staging.getnerve.app \
 
 ```xml
 <read_first>
-  - ssh deploy@staging 'cd /opt/nerve/app && bash scripts/inspect.sh schema calls' (Live-Schema-Stand)
-  - ssh deploy@staging 'cd /opt/nerve/app && bash scripts/inspect.sh constraints calls' (CHECK-Constraints)
-  - ssh deploy@staging 'cd /opt/nerve/app && bash scripts/inspect.sh sample calls 100' (Real-Daten-Sample)
+  - ssh -i ~/.ssh/nerve_vps root@178.104.82.166 'cd /opt/nerve/app && bash scripts/inspect.sh schema calls' (Live-Schema-Stand)
+  - ssh -i ~/.ssh/nerve_vps root@178.104.82.166 'cd /opt/nerve/app && bash scripts/inspect.sh constraints calls' (CHECK-Constraints)
+  - ssh -i ~/.ssh/nerve_vps root@178.104.82.166 'cd /opt/nerve/app && bash scripts/inspect.sh sample calls 100' (Real-Daten-Sample)
   - database/models.py Z.644-693 (ORM-Definition — Code-Lesen lokal OK via git-Sync)
 </read_first>
 ```
@@ -630,7 +641,7 @@ ssh -i ~/.ssh/id_ed25519_nerve root@staging.getnerve.app \
 ### Folgen für andere CLAUDE.md-Punkte
 
 - **Punkt 13 (Real-Daten-Validation):** der Pflicht-Schritt "Real-Daten-Sample ziehen" läuft ab sofort über `inspect.sh sample`-SSH. Sonst ist Validation wertlos.
-- **Punkt 15 (Logging-First-Debugging):** Logs via `inspect.sh logs` / `logs-errors`, nicht lokal. Neue Diagnose-Prints werden committed → `deploy.sh staging` → dann via `inspect.sh logs` gelesen.
+- **Punkt 15 (Logging-First-Debugging):** Logs via `inspect.sh logs` / `logs-errors`, nicht lokal. Neue Diagnose-Ausgaben werden committet → `deploy.sh production` → dann via `inspect.sh logs` gelesen.
 - **Punkt 19 (Pre-Execute-Audit):** neuer Pflicht-Check — "Greifen alle Daten/Schema/Routes-Pulls in den Plan-Files auf Staging zu, nicht lokal?" Wenn lokal → BLOCK + Replan.
 - **Punkt 20 (Pflicht-grep):** der Pflicht-grep läuft ab sofort entweder lokal auf git-pulled Code ODER via `inspect.sh grep` auf Staging — beide äquivalent solange Code synchron ist. Pflicht: vor dem Grep `git pull origin/main` damit lokaler Stand = Staging-Stand.
 
@@ -867,7 +878,7 @@ Quelle: `Nerve-Vault/CLAUDE.md` → „Fable-Audit-Lehren". Beleg-Fall: die per-
 
 Anlass: Phase 08.23.2.KOSTEN-1. Die Live-Spracherkennung loggte `nova-3`, die Preis-Tabelle kannte nur `nova-2` — `services/cost_tracker.py` verwirft in dem Fall **still** (`if not rate: print + return`). Ergebnis: die minuten-getriebene **Hauptkostenposition war monatelang unsichtbar**, dazu acht bezahlte Call-Sites ganz ohne Hook und Haiku-Preise 4× zu niedrig. Kein Fehler im Log, nur eine zu schöne Marge.
 
-**Die Regel:** Wer eine bezahlte API neu anbindet **oder einen Modell-String ändert**, liefert im selben Commit (a) den Kosten-Hook nach dem Muster `services/claude_service.py:542-568` (try/except, niemals raisen) und (b) den passenden Eintrag in der Rate-Soll-Liste `app._API_RATE_SOLL`. Ein Modellname ohne Rate ist kein „kleiner Rest" — er ist ein stilles Loch in der Marge.
+**Die Regel:** Wer eine bezahlte API neu anbindet **oder einen Modell-String ändert**, liefert im selben Commit (a) den Kosten-Hook nach dem Muster im Block `Phase 04.7.2 Cost-Hook` in `services/claude_service.py` (try/except, niemals raisen — **ueber den Kommentar-Marker suchen, nicht ueber Zeilennummern**: der frühere Anker "542-568" war am 03.08. bereits um ~40 Zeilen verrutscht) und (b) den passenden Eintrag in der Rate-Soll-Liste `app._API_RATE_SOLL`. Ein Modellname ohne Rate ist kein „kleiner Rest" — er ist ein stilles Loch in der Marge.
 
 **Strukturell erzwungen durch drei Wächter — zwei zur Deploy-Zeit, einer zur Laufzeit:**
 
@@ -978,9 +989,9 @@ gewoehnliche Verhaltens-Tests (die behaupten nichts ueber eine Fehler**klasse**)
 
 1. **VERBOTEN:** `style="..."`-Attribute mit hardcoded Farben. Enthält ein `style`-Attribut ein `#xxxxxx` → **SOFORT-FAIL** im Code-Review. Plan-Agent darf es nicht vorschlagen, Execute-Agent nicht bauen.
 2. **VERBOTEN als Hex-Literal — tote Dark-Mode-Farben, ganz raus:** `#1a1a2e`, `#2a2a4e`, `#f0c040`, `#9a9ab0`.
-   **Sonderfall `#00D4AA`:** Das ist die **Markenfarbe Teal** und bleibt gueltig — aber **nie als Hex-Literal schreiben**, immer `var(--accent)` bzw. das passende Brand-Token nutzen.
+   **Sonderfall `#00D4AA`:** Das ist die **Markenfarbe Teal** und bleibt gueltig — aber **nie als Hex-Literal schreiben**, immer ueber das passende Token (`var(--btn-primary-bg-from)`).
    ⚠ Bis 2026-08-03 stand `#00D4AA` faelschlich in derselben Liste wie die toten Farben. Ein Plan-Agent konnte daraus schliessen, Teal sei abgeschafft — der C.R.F-Blau-Fehler in Gegenrichtung.
-3. **PFLICHT:** CSS-Variablen aus `static/nerve.css` nutzen (`var(--page-bg)`, `var(--accent)`, `var(--page-text)`, `var(--page-text-muted)`, `var(--border-color)` …). Fehlt ein Token → **erst** Token in `static/nerve.css` ergänzen, dann nutzen.
+3. **PFLICHT:** CSS-Variablen aus `static/nerve.css` nutzen. ⚠ **KORRIGIERT 2026-08-03 — hier stand `var(--accent)` als Beispiel. DIESES TOKEN EXISTIERT NICHT** (grep ueber `static/*.css`: 0 Treffer). Die Regel schickte Plan-Agenten auf ein Phantom-Token; in `templates/profile_editor.html:1411` wird es bereits benutzt und loest nicht auf. **Real existierende Tokens:** `var(--page-bg)`, `var(--page-text-color)`, `var(--border-color)`, `var(--btn-primary-bg-from)` (= Teal `#00D4AA`), Fallback-Muster `var(--n-accent, #00D4AA)`. **Vor der Verwendung eines Tokens: einmal in `static/nerve.css` greppen, ob es dort definiert ist.** Fehlt eines → erst dort ergaenzen, dann nutzen.
 4. **PFLICHT:** UI-Komponenten als CSS-Klassen (`.n-*`) in `static/nerve.css`, nicht inline. Inline-Styles NUR für dynamische Werte (`style="width:${score}%"`).
 5. **PFLICHT-Vorabrecherche bei jeder UI-Phase:** VOR der ersten UI-Codezeile `static/nerve.css` scannen — welche Variablen und Klassen existieren? Welche Modals/Cards/Pills nutzt die App schon? **Pattern aus bestehenden Komponenten kopieren, nicht neu erfinden.**
 
@@ -989,7 +1000,7 @@ gewoehnliche Verhaltens-Tests (die behaupten nichts ueber eine Fehler**klasse**)
 Verankert nach C.R.F: Ein Schieber war blau (`#3b82f6`) statt teal — formal sauber als CSS-Variable definiert, trotzdem ein Fremdkörper. André: *„warum ist der blau? wo kommt diese farbe schon wieder her? warum nicht einfach in teal…"* Weder Pre-Execute-Audit noch Cross-AI hatten es gefangen — beide prüften nur „ist es ein Token", nicht „passt der Wert zur Marke".
 
 **Bei JEDER neuen Token-Definition:**
-1. `grep` gegen die Brand-Tokens in `static/nerve.css` — `--btn-primary-bg-from` (#00D4AA), `--accent`, `--brand-*`
+1. `grep` gegen die real existierenden Brand-Tokens in `static/nerve.css` — `--btn-primary-bg-from` (#00D4AA), `--btn-primary-bg-to`, Fallback-Muster `--n-accent`. *(`--accent` und `--brand-*` standen hier bis 03.08. — beide existieren nicht.)*
 2. Farb-Familie prüfen: **Teal ist die Marke.** Blau = Fremdkörper. Lila = Fremdkörper. „Neutral-professionelles Blau" ist KEINE gültige Begründung.
 3. Neue Funktion braucht neue Farbe? → **André fragen**, nicht eigenständig festlegen.
 4. In der UI-SPEC-Phase: Token-Werte gegen die Brand-Liste kreuzprüfen VOR der Freigabe.
@@ -1095,8 +1106,10 @@ weit genug skizziert, um sicher zu sein, dass dieser Haken passt?"*
    Zuruecksetzen im Browser darf **ausschliesslich** Anzeige-Zustand toeten, **niemals**
    server-seitige Anruf-Daten. Sie sind Grundlage der Nachbereitung UND Trainingsmaterial.
 
-**Jeder Plan, der Audio-Pfade, Zuruecksetzen oder Loesch-Logik anfasst, prueft beide Punkte
-ausdruecklich.** Vollbegruendung: Vault + DSGVO-Analyse.
+**Jeder Plan, der Audio-Pfade, Zuruecksetzen oder Loesch-Logik anfasst, schreibt einen
+Bestaetigungs-Satz in den Plan** — woertlich: *"Geprueft: Diese Phase persistiert kein Audio und
+loescht keine Call-Logs."* Fehlt der Satz bei einer solchen Phase, ist der Plan unvollstaendig.
+Vollbegruendung: Vault + DSGVO-Analyse.
 
 ### 4. Fragen-Kanal — Pflicht in allen Phasen, unabhaengig vom Session-Start-Block
 Jede Frage, Entscheidung und jeden Checkpoint ans **Ende** von

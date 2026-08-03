@@ -4,7 +4,7 @@
 
 NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertriebler — **Markt: US-FIRST** (beschlossen 2026-07-04, siehe `Nerve-Vault/00 Vision.md`). Er hört Verkaufsgesprächen live zu, erkennt Einwände in Echtzeit und liefert Gegenargumente sowie Coaching-Tipps direkt auf den Bildschirm — unsichtbar für den Kunden. Ergänzend bietet NERVE einen KI-Trainingsmodus, eine Coach-Plattform für Teams und automatisierte Post-Call-Analysen.
 
-**Status:** v0.9.5, Pre-Launch — Phase 04.3 complete (Design Unification, dark-only theme)
+**Status:** Pre-Launch, Early Access vorbereitet. ⚠ **KORRIGIERT 2026-08-03 — hier stand "Phase 04.3 complete (Design Unification, dark-only theme)". UEBERHOLT:** Das aktuelle Design ist **LIGHT-MODE** (siehe HART-Regel in `CLAUDE.md`). Diese Zeile haette bei der naechsten Generierung "dark-only" in eine Datei injiziert, deren eigene Regel Light-Mode vorschreibt.
 **Founder:** André Preuß, Iserlohn (Solo-Founder, Einzelunternehmer)
 
 ## Core Value
@@ -29,7 +29,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - ✓ Skript-Teleprompter mit Abdeckungs-Tracking — existing
 - ✓ Kompakt-Modus (320px floating overlay, bottom-right) — validated Phase 03.2
 - ✓ Light/Dark Mode Toggle mit System-Detection und DB-Persistenz — validated Phase 03.2 (removed in Phase 04.3: dark-only)
-- ✓ Einheitliches dunkles Theme (#0D1117/#1C2333/#00D4AA) auf allen Seiten — validated Phase 04.3
+- ⚠ **UEBERHOLT (2026-08-03):** "Einheitliches dunkles Theme validated Phase 04.3" gilt NICHT mehr — das Design ist seither auf **LIGHT-MODE** umgestellt. Markenfarbe Teal `#00D4AA` bleibt, aber nie als Hex-Literal, immer ueber ein Token.
 - ✓ Dashboard back-link im Live-Assistent Header — validated Phase 04.3
 - ✓ Rechtliches Tab in Einstellungen — validated Phase 04.3
 - ✓ Footer und Header-Email/Logout entfernt — validated Phase 04.3
@@ -85,9 +85,9 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 
 ## Context
 
-**Codebase:** Python Flask + Flask-SocketIO, Jinja2 + Vanilla JS, SQLite (PostgreSQL-kompatibel). Drei parallele Background-Threads für Audio-Transkription, KI-Analyse und Coaching-Delivery in Echtzeit. 12 Blueprints, 12 DB-Tabellen, 19 HTML-Templates. ~22k Zeilen app.py.
+**Codebase:** Python Flask + Flask-SocketIO, Jinja2 + Vanilla JS, **PostgreSQL** (Umstellung von SQLite seit 12.05. durch, inkl. RLS). Parallele Hintergrund-Faeden fuer Transkription, KI-Analyse und Coaching. ⚠ **Zahlen 2026-08-03 am Code korrigiert:** 23 Blueprints (nicht 12), `app.py` ~2.571 Zeilen (nicht 22k — der alte Wert stammt aus der Zeit vor der Aufteilung in `routes/`). Eine `static/app.js` existiert NICHT (real: `admin_dashboard.js`, `audio-processor.js` u. a.).
 
-**APIs:** Deepgram Nova-2 (Live-STT), Anthropic Claude (Haiku für Live, Sonnet für Post-Call), ElevenLabs Multilingual v2 (TTS Training).
+**APIs:** Deepgram **nova-3** (Live-Spracherkennung; `nova-3-diarize` im Meeting-Modus — nicht mehr Nova-2), Anthropic Claude (**Sonnet 4.5 live seit 22.07.**, Haiku 4.5 fuer die schnelle Analyse), ElevenLabs (Sprachausgabe im Training).
 
 **Markt (Wettbewerbs-Analyse Stand April 2026, aus der DACH-Zeit — ⚠ fuer US-first nicht neu erhoben):** CloseAI (~380 User, DACH), SalesEcho (US), Gong (Enterprise, Post-Call). Differenzierung: Live + Training + Coach-Plattform + transparente Preise + **"zeichnet nichts auf"** — Letzteres ist im US-Markt das staerkste Argument, weil aufzeichnende Werkzeuge in den Staaten mit Zustimmungspflicht aller Beteiligten den Kunden fragen muessen; NERVE im Kaltakquise-Modus nicht.
 
@@ -108,7 +108,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 
 | Entscheidung | Begründung | Outcome |
 |---|---|---|
-| Haiku für Live, Sonnet nur Post-Call | Halbiert Kosten, ausreichend für Echtzeit | — Pending |
+| ⚠ **UEBERHOLT:** "Haiku fuer Live, Sonnet nur Post-Call" | Galt bis Mitte 2026. **Seit 22.07. laeuft Sonnet 4.5 live** mit scharfem Zwischenspeicher. Es gilt das Gleichgewicht Qualitaet+Tempo: das STARKE Modell schnell genug machen, nicht aufs schwache ausweichen | — Ersetzt 2026-08-03 |
 | Flat-Rate 69/59/49€ statt Credits | Kunden wollen Planbarkeit, Produkt ist Premium | — Pending |
 | Fair-Use statt hartem Block | Kein User soll im Arbeitstag gesperrt werden | — Pending |
 | DSGVO-Modus default AN | Vertrauen als Differenzierungsmerkmal | — Pending |

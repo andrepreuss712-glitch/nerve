@@ -32,7 +32,12 @@ Wenn kein BuildError: Route ist aufloesbar.
 `url_for('auth.login')` schlaegt fehl wenn Blueprint-Name nicht 'auth' ist.
 Immer Schritt 2 vor dem Schreiben ausfuehren.
 
-## Blueprint-Uebersicht (verifiziert 2026-04-27)
+## Blueprint-Uebersicht (Stand 2026-08-03)
+
+> ⚠ **Diese Tabelle ist eine Kopie und veraltet still.** Sie stand von 2026-04-27 bis 2026-08-03
+> unveraendert da und hatte `crm_export.py` (seit 01.06. im Repo) nie enthalten.
+> **Im Zweifel gilt der grep-Dreischritt darueber, nicht diese Tabelle.**
+
 | Datei              | Blueprint-Instanz    | Blueprint-Name   |
 |--------------------|----------------------|------------------|
 | auth.py            | auth_bp              | 'auth'           |
@@ -55,6 +60,7 @@ Immer Schritt 2 vor dem Schreiben ausfuehren.
 | waitlist.py        | waitlist_bp          | 'waitlist'       |
 | admin_dashboard.py | admin_dashboard_bp   | 'admin_dashboard' |
 | admin_ewb.py       | admin_ewb_bp         | 'admin_ewb'      |
+| crm_export.py      | crm_export_bp        | 'crm_export'     |
 
 Hinweis: organisations.py nutzt `orgs_bp` mit Blueprint-Name `'orgs'` (nicht 'organisations').
 Fehler-Quelle: url_for('organisations.foo') schlaegt fehl — korrekt ist url_for('orgs.foo').

@@ -88,14 +88,27 @@ MAX_CLAUDE_ZEILEN = 900
 # Waechter beweist nur, was in seinem Pruefkatalog steht" ueberhaupt existiert.
 # Jetzt case-insensitiv plus ⚡/★ als Marker.
 #
-# BEKANNTE LUECKEN -- ehrlich benannt, bewusst NICHT behoben:
+# BEKANNTE LUECKEN -- ehrlich benannt, bewusst NICHT behoben.
+# (4 und 5 am 03.08. nach Fable-Gegenpruefung ergaenzt -- sie fehlten, obwohl sie die
+#  direkteste Form der Fehlerklasse sind. Genau das verbietet Punkt 31.)
 #  1. Der Zaehler sieht nur UEBERSCHRIFTEN. Dauer-Pflichten als Aufzaehlungspunkt oder
 #     im Fliesstext (Roadmap-Sync, "Ein Rein eins Raus" in Ablage-Regel 2, die 22
-#     Nudelcode-Punkte) zaehlen NICHT mit. Der reale Bestand liegt UEBER dem Wert,
-#     den dieser Waechter meldet. Wer die Zahl liest, muss das wissen.
+#     Bau-Regeln) zaehlen NICHT mit. Der reale Bestand liegt UEBER dem gemeldeten Wert.
 #  2. Er sieht Form, nicht Wirkung. Zwei Regeln, die dasselbe sagen, zaehlen als zwei
 #     -- das ist ABSICHT (Dopplung ist der belegte Schaden).
 #  3. Er erkennt nicht, ob eine Regel inhaltlich noch stimmt.
+#  4. UEBERSCHRIFTEN OHNE MARKERWORT zaehlen nicht mit, auch wenn sie Dauer-Pflichten
+#     sind: "Git-Regel: Immer pushen", "Kommunikationsregel: Kein Gefaelligkeits-Ja",
+#     "Entscheidungs-Kennzeichnung", "Aufwandsschaetzungen", "Test-Netz proaktiv
+#     erweitern", "NERVE Architektur-Entscheidungen". Die Zahl ist eine Untergrenze.
+#  5. UNTER-Ueberschriften EINER Regel zaehlen MEHRFACH: die Klartext-Pflicht liefert 4
+#     Treffer, die Ablage-Regel ebenfalls 4. Es ist also eine Ueberschriften-Zaehlung,
+#     KEINE Regel-Zaehlung -- die beiden Fehler (4 zaehlt zu wenig, 5 zu viel) heben
+#     sich zufaellig teilweise auf. Wer die 40er-Schwelle interpretiert, muss das wissen.
+#  6. Der Zaehler laeuft NUR gegen das Vault. Die GSD-Regeldatei (salesnerve/CLAUDE.md,
+#     ~1140 Zeilen, >27 markierte Ueberschriften + Punkte 13-31 + 12 gespiegelte Regeln)
+#     wird NICHT gezaehlt -- obwohl die Sonnet-Messkurve, die die Schwelle begruendet,
+#     dort haerter zutrifft. Offener Punkt, in der Roadmap vermerkt.
 MAX_DAUER_REGELN = 40
 MAX_PLANUNG_DATEIEN = 25
 MAX_AKTIV_TAGE = 60          # "aktiv", aber so lange nicht angefasst = verdaechtig
@@ -275,6 +288,20 @@ def main():
     # ---------- 6: Kaputte Wikilinks ----------
     namen = {os.path.splitext(os.path.basename(p))[0] for p in dateien}
     pfade = {os.path.relpath(p, VAULT).replace("\\", "/")[:-3] for p in dateien}
+    # ⚠ KORRIGIERT 2026-08-03 (Fable-Fund): Bis hierher kannte der Check NUR .md-Dateien als
+    # gueltige Ziele -- ein Verweis auf ein Bild (`[[...png]]`) galt als kaputt, OBWOHL die Datei
+    # existierte. Das meldete den Stromlaufplan einen ganzen Tag lang falsch-rot, und der Befund
+    # wurde als "Bild fehlt" weitergereicht. Genau die Falsch-Rot-Klasse, vor der die eigene
+    # Regel warnt ("ein roter Waechter kann ebenso luegen").
+    for _wurzel, _uv, _fs in os.walk(VAULT):
+        _uv[:] = [d for d in _uv if d not in SKIP_ORDNER and not d.startswith(".")]
+        for _f in _fs:
+            if _f.lower().endswith(".md"):
+                continue                      # .md steckt schon in namen/pfade
+            namen.add(_f)                     # Anhaenge: mit Endung verlinkt (Bild.png)
+            namen.add(os.path.splitext(_f)[0])  # und ohne
+            _rel = os.path.relpath(os.path.join(_wurzel, _f), VAULT).replace("\\", "/")
+            pfade.add(_rel)
     # Ordner sind gueltige Verweis-Ziele (Obsidian oeffnet sie)
     ordner = set()
     for p in dateien:
