@@ -2957,7 +2957,7 @@ Plans:
 
 ---
 
-### Phase 08.23.2.MESSGERAETE-1: Antwort-Dauer je Live-KI-Aufruf in die DB + Leser fuer die vorhandene Herkunft (NEU 2026-08-03) 🟡
+### Phase 08.23.2.MESSGERAETE-1: Antwort-Dauer je Live-KI-Aufruf in die DB + Leser fuer die vorhandene Herkunft ✅ COMPLETE 2026-08-04 🟡
 
 **Herkunft:** Andre-Entscheidung 03.08. („Weg B"). Ersetzt den alten Scope von „LIVE-CALL-AUFRAEUMEN". **Zwei der drei damaligen Befunde waren erschlossen, nicht belegt** — Gegenpruefung 03.08. (Fable am echten Code + SELECTs gegen Prod-`api_cost_log`, 21 Tage). Details im Block oben.
 
@@ -2995,11 +2995,24 @@ Plans:
 
 **Plans:** 4 plans in 3 Wellen (geplant 2026-08-03, **Cross-AI durch** — Gemini + Fable, 2 Blocker + 7 Nachzuege eingearbeitet 2026-08-03).
 
+**✅ ABGESCHLOSSEN 2026-08-04** — live auf Production (`git_head 3474a4b`, `alembic_version 0037`).
+Deploy-Tor gruen (**1103 passed**). D-06 an echten Prod-Daten nach einem Test-Anruf bestanden:
+jede im Anruf vorgekommene Live-Sorte hat `COUNT(latency_ms) = COUNT(*)` an den
+Eingabe-Buchungen, alle anderen Buchungsarten `= 0` (D-07 haelt). TTFT belegt ueber
+`pip_variante` (1035 ms bis zum ersten, 3250 ms bis zum letzten Token).
+Code-Review nach dem Deploy: **0 CRITICAL, 1 WARNING, 5 INFO**.
+⚠ **`latency_ms` traegt ZWEI Bedeutungen** — bei den zwei Stream-Pfaden inklusive Auslieferung
+an den Browser (`sio.emit` im Messfenster, `async_mode=threading`), bei den sechs blockierenden
+Pfaden reine API-Dauer. **Bewusst nicht im Live-Pfad repariert (Punkt 25), sondern in DB-Schild
+(Migration 0037) UND Anzeige (◆-Markierung + Fussnote) benannt.** Details: Plan-04-SUMMARY.
+Drei Sorten (`live_haiku`, `pip_autovar`, `qa_classifier`) sind dormant/rollback-only und an
+echten Daten NICHT belegt — statisch bewacht via `MINDEST_LIVE_PFADE = 8`.
+
 Plans:
-- [ ] 08.23.2.MESSGERAETE-1-01-PLAN.md — Fundament: Spalte `ttft_ms` (Alembic 0036) + Punkt-23-Schild + Waechter bauen und **ERST ROT** fahren (Welle 1)
-- [ ] 08.23.2.MESSGERAETE-1-02-PLAN.md — Die Messung an allen SIEBEN Live-Pfaden (reine API-Dauer; 2x zusaetzlich TTFT) + Pruning-Entscheidung D-09 (Welle 2)
-- [ ] 08.23.2.MESSGERAETE-1-03-PLAN.md — Der Leser: Auswertung nach `context_tag` im Founder-Dashboard (Buchungen/Kosten/Antworten/Ø/p50/p95/TTFT) (Welle 2)
-- [ ] 08.23.2.MESSGERAETE-1-04-PLAN.md — Migration + Deploy + **echter Test-Anruf** + D-06-SELECT als Abnahme (Welle 3)
+- [x] 08.23.2.MESSGERAETE-1-01-PLAN.md — Fundament: Spalte `ttft_ms` (Alembic 0036) + Punkt-23-Schild + Waechter bauen und **ERST ROT** fahren (Welle 1) ✅ 2026-08-04
+- [x] 08.23.2.MESSGERAETE-1-02-PLAN.md — Die Messung an allen **ACHT** Live-Pfaden (reine API-Dauer; 2x zusaetzlich TTFT) + Pruning-Entscheidung D-09 (Welle 2) ✅ 2026-08-04
+- [x] 08.23.2.MESSGERAETE-1-03-PLAN.md — Der Leser: Auswertung nach `context_tag` im Founder-Dashboard (Buchungen/Kosten/Antworten/Ø/p50/p95/TTFT) (Welle 2) ✅ 2026-08-04
+- [x] 08.23.2.MESSGERAETE-1-04-PLAN.md — Migration + Deploy + **echter Test-Anruf** + D-06-SELECT als Abnahme (Welle 3) ✅ 2026-08-04
 
 ---
 

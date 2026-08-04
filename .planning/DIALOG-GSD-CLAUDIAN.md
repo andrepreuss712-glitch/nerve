@@ -2808,3 +2808,44 @@ in `.planning/ROADMAP.md`:
 
 **Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen:** MESSGERAETE-1 = geplant + Cross-AI durch
 (Hit-Rate: 2 Blocker + 7 actionable Nachzuege, davon 1 divergente Sicht am Code entschieden).
+
+## ROADMAP-SYNC — 08.23.2.MESSGERAETE-1 — 2026-08-04
+
+**Was geaendert wurde in `.planning/ROADMAP.md`:** Phase 08.23.2.MESSGERAETE-1 auf
+**✅ COMPLETE 2026-08-04** gesetzt, alle 4 Plan-Zeilen abgehakt, Abschluss-Block ergaenzt.
+Bitte in `Nerve-Vault/01 Roadmap.md` im selben Zug nachziehen.
+
+**Warum:** Phase ist gebaut, ausgerollt und an echten Prod-Daten abgenommen.
+Live auf Production: `git_head 3474a4b`, `alembic_version 0037`, Deploy-Tor gruen (1103 passed).
+
+**Drei Punkte, die in die Vault-Roadmap gehoeren, weil sie den naechsten Brocken betreffen:**
+
+1. **Die Zahl fuer METRIK-1 ist jetzt da.** Erste echte Messwerte aus einem Test-Anruf:
+   Analyse+QA 1988 ms · Coaching-Frage 2714 ms · Phasen-Erkennung 1742 ms ·
+   Cold-Call-Ableitung 1642 ms · PiP-Antwort 3250 ms (davon 1035 ms bis zum ersten Wort).
+   Damit laesst sich die Tempo-Frage aus Punkt 25 erstmals belegen statt behaupten.
+   ⚠ Messumstand: dieser Anruf lief MIT Headset, frueheres Material teils ohne —
+   bei Vergleichen beruecksichtigen.
+
+2. **`latency_ms` traegt ZWEI Bedeutungen** (bei den zwei Stream-Pfaden inklusive Auslieferung
+   an den Browser, bei den sechs blockierenden reine API-Dauer). Bewusst so gelassen
+   (Punkt 25: kein Umbau eines funktionierenden Live-Pfads), aber in DB-Schild UND Anzeige
+   benannt. **Wer spaeter Tempo-Zahlen vergleicht, muss das wissen** — sonst wird die
+   PiP-Antwort faelschlich als langsamster Pfad gelesen.
+
+3. **Drei der acht gemessenen Sorten sind dormant** (`live_haiku`, `pip_autovar`,
+   `qa_classifier` — null bzw. rollback-only Aufrufer). Die Messung ist eingebaut und statisch
+   bewacht, aber an echten Daten NICHT belegt. Fuer METRIK-1 heisst das: diese drei liefern
+   keine Vergleichszahlen, solange sie nicht reaktiviert werden.
+
+**Regel-Kandidaten fuer `Nerve-Vault/CLAUDE.md`** (aus dieser Phase, Details im Plan-04-SUMMARY):
+
+- **Existenz-Anker neben jede Abwesenheits-Pruefung.** Ein `grep -c ... == 0` ueber einen
+  extrahierten Ausschnitt kann „sauber" ODER „nichts gelesen" bedeuten; erst ein zusaetzliches
+  `grep -c <bekanntes Muster> == 1` unterscheidet das. Fuenf Selbsttreffer in EINER Phase,
+  einer davon ein Blocker (das awk-Fenster brach am eigenen Kommentartext ab und lief
+  leerlaufend gruen). Das ist Punkt 31 („Sperre gegen den stillen Ausfall") auf grep-Ebene.
+- **`sudo -u postgres` + Alembic braucht `DATABASE_URL` explizit** — sonst SQLite statt Prod,
+  ohne Fehlermeldung, wenn die Datei beschreibbar ist. Betrifft jede kuenftige Migrations-Anleitung.
+- **Prods `.git` ist kein Hotfix-Detektor** (Stand `014fcef`, tar-Deploy zieht es nicht nach) —
+  belastbar ist nur der md5sum-Vergleich Server-gegen-lokal fuer die Dateien der Phase.
