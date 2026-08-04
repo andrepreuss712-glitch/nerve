@@ -203,6 +203,7 @@ def log_api_cost(
     session_id: str | None = None,
     context_tag: str | None = None,
     latency_ms: int | None = None,    # NEU: Phase 08.13
+    ttft_ms: int | None = None,       # NEU: Phase 08.23.2.MESSGERAETE-1 (D-03, nur Streaming)
     call_site: str | None = None,     # NEU: Phase 08.13
 ) -> None:
     """Schreibt api_cost_log Eintrag. Darf NIEMALS raisen.
@@ -214,6 +215,7 @@ def log_api_cost(
         units: Anzahl Einheiten (tokens/1000, Minuten, chars/1000)
         unit_type: muss zu ApiRate.unit_type matchen
         org_id, session_id, context_tag: optional
+        ttft_ms: Zeit bis zum ersten Token (nur Streaming-Pfade, nur an der input-Token-Buchung)
     """
     try:
         import database.db as _db_mod
@@ -261,6 +263,7 @@ def log_api_cost(
                 session_id=session_id,
                 context_tag=context_tag,
                 latency_ms=latency_ms,    # NEU: Phase 08.13
+                ttft_ms=ttft_ms,          # NEU: Phase 08.23.2.MESSGERAETE-1
                 call_site=call_site,      # NEU: Phase 08.13
             ))
             db.commit()

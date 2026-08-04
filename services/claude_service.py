@@ -420,11 +420,16 @@ def classify_phase(transcript_window, current_phase, elapsed_s, phase_model, sid
         transcript_window=formatted,
     )
     try:
+        # ── MESSGERAETE-1 (D-01): reine API-Dauer. Zwischen _t_api_start und _latency_ms
+        # steht NUR der API-Aufruf — kein Prompt-Bau, kein Parsing, kein Emit, kein Cost-Hook.
+        # Punkt 25 (Latenz-Neutralitaet): das sind zwei monotonic()-Lesungen, kein Netz, keine DB.
+        _t_api_start = time.monotonic()
         resp = claude_client.messages.create(
             model=config.MODEL_PHASE_CLASSIFY,
             max_tokens=60,
             messages=[{'role': 'user', 'content': prompt}],
         )
+        _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
         # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
         try:
             from services.cost_tracker import log_api_cost
@@ -434,7 +439,8 @@ def classify_phase(transcript_window, current_phase, elapsed_s, phase_model, sid
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='phase_classify', session_id=sid)
+                             context_tag='phase_classify', session_id=sid,
+                             latency_ms=_latency_ms)
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='phase_classify', session_id=sid)
@@ -497,11 +503,16 @@ def infer_customer_state(seller_transcript, phase, sid: str = None):
     formatted = "\n".join(f"- {t}" for t in seller_transcript[-6:])
     prompt = COLDCALL_INFER_PROMPT.format(phase=phase, seller_transcript=formatted)
     try:
+        # ── MESSGERAETE-1 (D-01): reine API-Dauer. Zwischen _t_api_start und _latency_ms
+        # steht NUR der API-Aufruf — kein Prompt-Bau, kein Parsing, kein Emit, kein Cost-Hook.
+        # Punkt 25 (Latenz-Neutralitaet): das sind zwei monotonic()-Lesungen, kein Netz, keine DB.
+        _t_api_start = time.monotonic()
         resp = claude_client.messages.create(
             model=config.MODEL_COLDCALL_INFER,
             max_tokens=120,
             messages=[{'role': 'user', 'content': prompt}],
         )
+        _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
         # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
         try:
             from services.cost_tracker import log_api_cost
@@ -511,7 +522,8 @@ def infer_customer_state(seller_transcript, phase, sid: str = None):
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='coldcall_infer', session_id=sid)
+                             context_tag='coldcall_infer', session_id=sid,
+                             latency_ms=_latency_ms)
                 log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='coldcall_infer', session_id=sid)
@@ -569,12 +581,17 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
     # Gecacht wird ausschliesslich der ANTWORT-Prompt (services/prompt_pipeline.py,
     # answer_system_content, Schalter config.CACHE_ANTWORT).
     _system = SYSTEM_PROMPT_BASE
+    # ── MESSGERAETE-1 (D-01): reine API-Dauer. Zwischen _t_api_start und _latency_ms
+    # steht NUR der API-Aufruf — kein Prompt-Bau, kein Parsing, kein Emit, kein Cost-Hook.
+    # Punkt 25 (Latenz-Neutralitaet): das sind zwei monotonic()-Lesungen, kein Netz, keine DB.
+    _t_api_start = time.monotonic()
     msg = claude_client.messages.create(
         model=config.MODEL_ANALYSE,
         max_tokens=400,
         system=_system,
         messages=[{"role": "user", "content": user_msg}]
     )
+    _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
     # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
     try:
         from services.cost_tracker import log_api_cost
@@ -582,9 +599,19 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         if u is not None:
             in_tok = getattr(u, 'input_tokens', 0) or 0
             out_tok = getattr(u, 'output_tokens', 0) or 0
+            # ── MESSGERAETE-1 / D-07: die Dauer haengt NUR an der input-Token-Buchung ──────────
+            # log_api_cost laeuft pro API-ANTWORT 2-4x (input, output, ggf. cache-read, cache-write).
+            # Traegt jede dieser Zeilen dieselbe latency_ms, zaehlt EINE Antwort 2-4x in Ø/p50/p95 —
+            # und der Mittelwert kippt in Richtung der Antworten, die zufaellig Cache-Zeilen erzeugt
+            # haben. Die input-Buchung ist die einzige, die bei JEDER Antwort GENAU EINMAL existiert;
+            # deshalb traegt sie die Dauer, und der Leser (routes/admin_dashboard.py) filtert auf
+            # latency_ms IS NOT NULL. Cache-/Output-Zeilen bleiben bewusst NULL — das ist keine
+            # Luecke, das IST die Entzerrung. tests/test_live_latency_coverage.py haelt beide
+            # Richtungen fest (input MUSS, alle anderen DUERFEN NICHT).
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                         context_tag='live_haiku', session_id=sid)
+                         context_tag='live_haiku', session_id=sid,
+                         latency_ms=_latency_ms)
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                          context_tag='live_haiku', session_id=sid)
@@ -747,12 +774,18 @@ def analysiere_und_klassifiziere(neuer_text: str, kontext: str, sid: str = None)
 
 Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
 {neuer_text}"""
+    # ── MESSGERAETE-1 (D-01): reine API-Dauer. Zwischen _t_api_start und _latency_ms
+    # steht NUR der API-Aufruf — kein Prompt-Bau, kein Parsing, kein Emit, kein Cost-Hook.
+    # Punkt 25 (Latenz-Neutralitaet): das sind zwei monotonic()-Lesungen, kein Netz, keine DB.
+    # _MERGED_SYSTEM ist eine Modul-Konstante — kein Funktionsaufruf im Argument (Punkt 14).
+    _t_api_start = time.monotonic()
     msg = claude_client.messages.create(
         model=config.MODEL_ANALYSE,
         max_tokens=600,
         system=_MERGED_SYSTEM,
         messages=[{"role": "user", "content": user_msg}]
     )
+    _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
     # ── Cost-Hook (Punkt 30 — Pflicht, nie raisen) ──────────────────────────
     # Identisch zum Muster in analysiere_mit_claude, neuer context_tag='live_haiku_merged'.
     try:
@@ -763,7 +796,8 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
             out_tok = getattr(u, 'output_tokens', 0) or 0
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                         context_tag='live_haiku_merged', session_id=sid)
+                         context_tag='live_haiku_merged', session_id=sid,
+                         latency_ms=_latency_ms)
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                          context_tag='live_haiku_merged', session_id=sid)
@@ -1117,12 +1151,20 @@ def analysiere_coaching(segmente: list, kontext: str, sid: str = None) -> dict:
 Aktuelles Gesprächssegment:
 {gespraech}"""
     # Phase 04.8 P07: migrated Sonnet→Haiku per Haiku-only-live constraint
+    # ── MESSGERAETE-1 (Punkt 14, Cross-AI-BLOCKER 2026-08-03): Prompt-Bau VOR den Anker.
+    # _build_coaching_prompt laedt das Profil und nimmt ls._session_state_lock. Bliebe der
+    # Aufruf im Argument, wuerde Python ihn NACH _t_api_start auswerten und die Lock-Wartezeit
+    # landete in latency_ms — die Zahl haette dann den falschen Namen (D-02-Fehlerklasse).
+    # KEIN Waechter dieser Phase kann das sehen; dieser Hoist ist die einzige Verteidigung.
+    _system_coaching = _build_coaching_prompt(sid=sid)
+    _t_api_start = time.monotonic()
     msg = claude_client.messages.create(
         model=config.MODEL_COACHING,
         max_tokens=200,
-        system=_build_coaching_prompt(sid=sid),
+        system=_system_coaching,
         messages=[{"role": "user", "content": user_msg}]
     )
+    _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
     # ── Phase 04.7.2 Cost-Hook (04.8 P07: Haiku) ────────────────────────
     try:
         from services.cost_tracker import log_api_cost
@@ -1132,7 +1174,8 @@ Aktuelles Gesprächssegment:
             out_tok = getattr(u, 'output_tokens', 0) or 0
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                         context_tag='coaching_haiku', session_id=sid)
+                         context_tag='coaching_haiku', session_id=sid,
+                         latency_ms=_latency_ms)
             log_api_cost('anthropic', 'haiku-4-5', user_id=None,
                          units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                          context_tag='coaching_haiku', session_id=sid)

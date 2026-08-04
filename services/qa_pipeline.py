@@ -34,6 +34,7 @@ embedding model lazy-init with threading.Lock.
 """
 from __future__ import annotations
 import re
+import time  # MESSGERAETE-1: Mess-Anker der reinen API-Dauer (Modul-Import, kein Import im heissen Pfad)
 from typing import Optional
 import threading as _threading
 import config
@@ -299,12 +300,18 @@ def classify_utterance(text: str, kontext: str, user_id: int, sid: str = None) -
             f"Letzte Kunden-Aeusserung:\n\"{text}\"\n\nKlassifiziere als JSON."
         )
 
+        # ── MESSGERAETE-1 (D-01/D-10): reine API-Dauer. Zwischen _t_api_start und _latency_ms
+        # steht NUR der API-Aufruf — kein Prompt-Bau, kein Parsing, kein Emit, kein Cost-Hook.
+        # system_prompt und user_msg sind oben vorab gebaut — kein Funktionsaufruf im Argument
+        # (Punkt 14). Punkt 25: zwei monotonic()-Lesungen, kein Netz, keine DB.
+        _t_api_start = time.monotonic()
         msg = claude_client.messages.create(
             model=config.MODEL_ANALYSE,
             max_tokens=150,
             system=system_prompt,
             messages=[{"role": "user", "content": user_msg}]
         )
+        _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
         raw = msg.content[0].text.strip()
         parsed = _parse_json(raw) or {}
 
@@ -332,7 +339,8 @@ def classify_utterance(text: str, kontext: str, user_id: int, sid: str = None) -
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', 'haiku-4-5', user_id=user_id or None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='qa_classifier', session_id=sid)
+                             context_tag='qa_classifier', session_id=sid,
+                             latency_ms=_latency_ms)
                 log_api_cost('anthropic', 'haiku-4-5', user_id=user_id or None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='qa_classifier', session_id=sid)
