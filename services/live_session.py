@@ -1432,6 +1432,13 @@ def _build_log_content(bs, user_email='', profile_name='') -> str:
             lines.append(f"    · [{pp['ts']}] {pp['text']}")
     if latenzen_einwand or latenzen_coaching:
         lines.append("")
+        # ── MESSGERAETE-1 (D-09, Pruning-Entscheidung 2026-08-03): BLEIBT BEWUSST STEHEN ────────
+        # Diese Statistik aggregiert latency_e/latency_c — das Mass "erster Puffer-Eintrag bis
+        # nach der Nachverarbeitung", inklusive Wartezeit und QA-Dispatch. Seit MESSGERAETE-1
+        # steht in api_cost_log.latency_ms die REINE API-Dauer. Das sind ZWEI VERSCHIEDENE ZAHLEN,
+        # keine Doppelfuehrung: ihre Differenz ist genau die Wartezeit, die NICHT an der API liegt.
+        # ⚠ Wer diese Werte je in api_cost_log.latency_ms schreibt, erzeugt ein Feld, dessen Name
+        #   luegt (D-02). Diese Statistik bleibt in der logs/-Textdatei und NUR dort.
         lines.append("  LATENZ-STATISTIKEN")
         lines.append("  " + "-" * 40)
         if latenzen_einwand:
