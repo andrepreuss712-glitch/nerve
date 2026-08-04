@@ -224,6 +224,23 @@ html:has(.fcd-wrap) {
   font-weight: 800;
 }
 
+/* ── MESSGERAETE-1: Live-KI je Frage-Sorte ──────────────────────────── */
+/* Bewusst NUR Ausrichtung und Ziffern-Laufweite. KEINE Farbe, KEIN neues Token:
+   die Tabellen erben Rahmen, Hintergrund und Schriftfarbe komplett von .fcd-table.
+   Der Block-Ende-Marker unten begrenzt die Farb-Pruefregel dieses Plans. */
+.fcd-ktag-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.fcd-ktag-head {
+  margin-top: 24px;
+}
+.fcd-ktag-hint {
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+/* ── ENDE MESSGERAETE-1-BLOCK ────────────────────────────────────────── */
+
 /* ── Section Headers (h3, h4 in tabs) ──────────────────────────────── */
 .fcd-einnahmen h3,
 .fcd-ausgaben h3,

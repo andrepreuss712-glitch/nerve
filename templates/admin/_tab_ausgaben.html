@@ -8,6 +8,34 @@
     <tfoot><tr><th colspan="2">Gesamt</th><th id="fcd-ausg-total">—</th><th colspan="2"></th></tr></tfoot>
   </table>
 
+  <h4 class="fcd-ktag-head">Live-KI je Frage-Sorte</h4>
+  <p class="fcd-ktag-hint">
+    Dauer = reine API-Zeit. „Antworten" zählt jede KI-Antwort genau einmal;
+    „Buchungen" zählt alle Kostenzeilen (Ein-/Ausgabe-Token, Zwischenspeicher).
+    „bis 1. Wort" gibt es nur bei den beiden Stream-Pfaden.
+    Die Zeilen „Zwischenspeicher …" sind reine Cache-Token-Buchungen ohne eigene
+    KI-Antwort — dort stehen bei den Dauer-Spalten absichtlich Striche.
+  </p>
+  <table class="fcd-table">
+    <thead>
+      <tr>
+        <th>Frage-Sorte</th><th>Buchungen</th><th>Kosten</th><th>Antworten</th>
+        <th>Ø Dauer</th><th>p50</th><th>p95</th><th>Ø bis 1. Wort</th>
+      </tr>
+    </thead>
+    <tbody id="fcd-ktag-body"></tbody>
+  </table>
+
+  <h4 class="fcd-ktag-head">Übrige Kosten</h4>
+  <p class="fcd-ktag-hint">
+    Alles, was keine Live-KI-Frage ist: Spracherkennung, Zahlungsgebühren, Training,
+    Vorbereitung, Nachbereitung. Hier gibt es bewusst keine Dauer-Spalten.
+  </p>
+  <table class="fcd-table">
+    <thead><tr><th>Herkunft</th><th>Buchungen</th><th>Kosten</th></tr></thead>
+    <tbody id="fcd-uebrige-body"></tbody>
+  </table>
+
   <h4 style="margin-top:24px;">Anbieter-Verteilung</h4>
   <div id="fcd-ausg-providers"></div>
 
@@ -90,6 +118,29 @@
              + `<span style="display:inline-block;background:#00D4AA;height:14px;width:${pct}%;"></span>`
              + `<span style="margin-left:8px;">${fmt(p.netto)}</span></div>`;
       }).join('');
+
+    // MESSGERAETE-1: zwei Tabellen. ms-Formatierung deutsch, "—" wo nichts gemessen wurde.
+    const ms = v => (v === null || v === undefined) ? '—'
+                    : Number(v).toLocaleString('de-DE') + ' ms';
+    document.getElementById('fcd-ktag-body').innerHTML =
+      (d.live_ki||[]).map(k => `
+        <tr>
+          <td>${esc(k.label)}</td>
+          <td class="fcd-ktag-num">${esc(k.buchungen)}</td>
+          <td class="fcd-ktag-num">${fmt(k.kosten_eur)}</td>
+          <td class="fcd-ktag-num">${esc(k.antworten)}</td>
+          <td class="fcd-ktag-num">${ms(k.latenz_avg_ms)}</td>
+          <td class="fcd-ktag-num">${ms(k.latenz_p50_ms)}</td>
+          <td class="fcd-ktag-num">${ms(k.latenz_p95_ms)}</td>
+          <td class="fcd-ktag-num">${ms(k.ttft_avg_ms)}</td>
+        </tr>`).join('');
+    document.getElementById('fcd-uebrige-body').innerHTML =
+      (d.uebrige_kosten||[]).map(k => `
+        <tr>
+          <td>${esc(k.label)}</td>
+          <td class="fcd-ktag-num">${esc(k.buchungen)}</td>
+          <td class="fcd-ktag-num">${fmt(k.kosten_eur)}</td>
+        </tr>`).join('');
 
     // 30-Tage-Chart
     const el = document.getElementById('fcd-ausg-daily');
