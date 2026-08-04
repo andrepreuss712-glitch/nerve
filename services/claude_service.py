@@ -883,8 +883,18 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
     sio.emit('pip_stream_start', {'slot': slot, 'raw_text': True}, room=sid)
     full_text = ''
     _first_token_autovar = True
+    # MESSGERAETE-1: VOR dem try initialisiert, damit der Cost-Hook die Namen auf JEDEM Pfad
+    # kennt (Punkt 30 — der Hook darf nie an einem NameError sterben).
+    _ttft_ms = None
+    _latency_ms = None
     try:
-        _t_stream_start = _time_autovar.monotonic()
+        # ── MESSGERAETE-1 (D-01/D-03): EIN Nullpunkt fuer beide Zahlen.
+        # ttft_ms = bis zum ERSTEN Token, latency_ms = bis zum LETZTEN (Stream-Ende).
+        # Bewusste Abweichung von "nichts dazwischen": im Stream liegen die per-Token-
+        # sio.emit-Aufrufe zwangslaeufig INNERHALB des Messfensters — das ist der Stream,
+        # nicht Nachverarbeitung. Ein Emit ist ein RAM-Append im SocketIO-Puffer (µs),
+        # kein Netz-Roundtrip; die Zahl bleibt aussagekraeftig.
+        _t_api_start = time.monotonic()
         with claude_client.messages.stream(
             model=_model_autovar,
             max_tokens=500,  # TAXO3: Headroom gegen mid-Satz-Clipping (Laenge steuert die 2-3-Saetze-Paradigma-Regel, nicht die Kappe)
@@ -893,7 +903,7 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
         ) as stream:
             for token in stream.text_stream:
                 if _first_token_autovar:
-                    _ttft_ms = (_time_autovar.monotonic() - _t_stream_start) * 1000
+                    _ttft_ms = (time.monotonic() - _t_api_start) * 1000
                     _first_token_autovar = False
                     with _ewb_circuit_lock:
                         _ewb_ttft_history.append(_ttft_ms)
@@ -908,6 +918,8 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                     print(f"[EWB-TTFT] {_ttft_ms:.0f}ms model={_model_autovar} sid={sid}")
                 full_text += token
                 sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True}, room=sid)
+        # ← hier endet der with-Block (Stream geschlossen = letztes Token durch)
+        _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
         # ── FOLD A-2 / Req 11: Anzeige roh (echte Namen, Live-Nutzen), Storage anonymisiert (DSGVO) ──
         # Analog Knopf-Pfad (streame_manual_ewb_variante:823 + deepgram_service.py Knopf-Storage).
         # Die dem Berater LIVE gezeigte Antwort behaelt die ECHTEN Namen — [PERSON_A] waere unbrauchbar.
@@ -943,7 +955,9 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='pip_autovar', session_id=sid)
+                             context_tag='pip_autovar', session_id=sid,
+                             latency_ms=_latency_ms,
+                             ttft_ms=int(_ttft_ms) if _ttft_ms is not None else None)
                 log_api_cost('anthropic', _model_autovar, user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='pip_autovar', session_id=sid)
@@ -1054,13 +1068,24 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
     attempts = 0
     last_err = None
     stream_ctx = None
+    # ── MESSGERAETE-1 (Punkt 11): bei Retries zaehlt die Dauer des ERFOLGREICHEN Versuchs.
+    # Beide Variablen werden PRO VERSUCH neu gesetzt; ein Fehlversuch samt Backoff faellt
+    # damit aus der Zahl heraus. Begruendung: latency_ms soll die API-Dauer messen, nicht
+    # Anthropics Ueberlast. Wer die Ueberlast messen will, zaehlt 529er — das ist eine
+    # andere Frage und gehoert nicht in ein Feld namens "latency".
+    _ttft_ms = None
+    _latency_ms = None
     while attempts < 3:
         attempts += 1
-        # Waechter (b) TTFT (PERSID Req 10): _t_stream_start unmittelbar vor dem
+        # Waechter (b) TTFT (PERSID Req 10): _t_api_start unmittelbar vor dem
         # Stream-Kontext-Manager — misst Zeit bis zum ersten Token des Knopf-Pfads.
         # Latenz-neutral (Punkt 25): nur monotonic-Delta + print, keine Blockierung.
+        # MESSGERAETE-1 (D-01/D-03): derselbe Anker traegt jetzt BEIDE Zahlen — die Zeit
+        # bis zum ersten Token und die bis zum Stream-Ende (Semantik siehe
+        # streame_auto_variante, dort einmal ausgeschrieben).
         _first_token_manual = True
-        _t_stream_start = _monotonic()
+        _ttft_ms = None
+        _t_api_start = time.monotonic()
         try:
             with claude_client.messages.stream(
                 model=config.MODEL_PIP_VARIANTE,
@@ -1072,11 +1097,13 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                 for token in stream.text_stream:
                     # TTFT-Messung beim ersten Token (Waechter b, PERSID Req 10)
                     if _first_token_manual:
-                        _ttft_ms = (_monotonic() - _t_stream_start) * 1000
+                        _ttft_ms = (time.monotonic() - _t_api_start) * 1000
                         _first_token_manual = False
                         print(f"[EWB-TTFT] {_ttft_ms:.0f}ms model={config.MODEL_PIP_VARIANTE} sid={sid} path=manual")
                     full_text += token
                     sio.emit('pip_token', {'slot': slot, 'token': token, 'raw_text': True, 'source': 'manual_button'}, room=sid)
+            # ← hier endet der with-Block (Stream geschlossen = letztes Token durch)
+            _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
             break  # Erfolg — raus aus Retry-Loop
         except Exception as e:
             last_err = e
@@ -1109,7 +1136,9 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                 out_tok = getattr(u, 'output_tokens', 0) or 0
                 log_api_cost('anthropic', _model_variante, user_id=None,
                              units=in_tok/1000.0, unit_type='per_1k_input_tokens',
-                             context_tag='pip_variante', session_id=sid)
+                             context_tag='pip_variante', session_id=sid,
+                             latency_ms=_latency_ms,
+                             ttft_ms=int(_ttft_ms) if _ttft_ms is not None else None)
                 log_api_cost('anthropic', _model_variante, user_id=None,
                              units=out_tok/1000.0, unit_type='per_1k_output_tokens',
                              context_tag='pip_variante', session_id=sid)
