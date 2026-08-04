@@ -49,6 +49,104 @@ def _parse_period(period_str):
 #   Die Vergangenheit wird MARKIERT, nicht umgeschrieben. Kein Backfill, keine Schaetzung.
 COST_DATA_COMPLETE_SINCE = date(2026, 7, 20)
 
+from services.cost_tracker import LIVE_LLM_CONTEXT_TAGS, CACHE_CONTEXT_TAGS
+
+# ── Phase 08.23.2.MESSGERAETE-1 — Leser fuer die Live-KI-Messung ──────────────────────────
+# ★ D-11: die Zuordnung "welcher context_tag ist Live-KI" kommt aus GENAU EINER Liste in
+# services/cost_tracker.py. Hier wird sie NUR gelesen — keine zweite Liste, kein Duplikat.
+# tests/test_live_latency_coverage.py::test_live_tag_liste_ist_synchron faellt rot, wenn die
+# Liste von den Code-Funden abweicht.
+#
+# Perzentile werden in PYTHON gerechnet, nicht per percentile_cont in SQL. Grund (Punkt 27,
+# einfachster tragfaehiger Weg): percentile_cont ist Postgres-Dialekt; die Tests laufen teils
+# ohne Postgres, und eine Dialekt-Weiche im Leser waere mehr Mechanik als das Problem gross
+# ist. Es werden nur ZWEI Integer-Spalten des gewaehlten Monats geladen (bei den heutigen
+# Groessenordnungen — 152 Buchungen der teuersten Sorte in 21 Tagen — sind das dreistellige
+# bis niedrig vierstellige Zahlen pro Monat).
+_OHNE_HERKUNFT = '(ohne Herkunft)'
+
+
+def _perzentil(werte_sortiert, q):
+    """Nearest-Rank-Perzentil auf einer AUFSTEIGEND sortierten Liste. None bei leerer Liste.
+
+    Bewusst Nearest-Rank (kein Interpolieren): das Ergebnis ist immer ein tatsaechlich
+    gemessener Wert, keine Rechengroesse zwischen zwei Messungen. Bei zwei Dutzend Werten
+    pro Sorte ist Interpolation ohnehin Scheingenauigkeit.
+    """
+    if not werte_sortiert:
+        return None
+    import math
+    rang = max(1, math.ceil(q * len(werte_sortiert)))
+    return int(werte_sortiert[rang - 1])
+
+
+def _aggregiere_kosten_nach_tag(summen_rows, latenz_rows):
+    """Teilt die Kosten in ZWEI Listen: (live_ki, uebrige_kosten).
+
+    summen_rows: Iterable von (context_tag, anzahl_buchungen, summe_cost_eur) — ALLE Tags
+    latenz_rows: Iterable von (context_tag, latency_ms, ttft_ms) — NUR Zeilen mit
+                 latency_ms IS NOT NULL
+
+    ★ D-07 (Doppelzaehlung): log_api_cost laeuft pro API-ANTWORT 2-4x (input, output, ggf.
+    cache-read, cache-write). Die Dauer haengt deshalb NUR an der input-Token-Buchung
+    (services/claude_service.py + services/qa_pipeline.py, MESSGERAETE-1 Plan 02). Dieser Leser
+    filtert auf latency_ms IS NOT NULL und zaehlt damit jede API-Antwort GENAU EINMAL in
+    Ø/p50/p95 — waehrend 'buchungen' bewusst weiterhin ALLE Zeilen zaehlt (das ist die
+    Kosten-Sicht). Deshalb stehen 'buchungen' und 'antworten' als ZWEI Spalten nebeneinander;
+    sie sind nicht dasselbe und duerfen nie zusammengefasst werden.
+
+    ★ Punkt 12: Tabelle 2 bekommt bewusst KEINE Dauer-Felder. Ein neuer, unbekannter Tag faellt
+    still dorthin — fuer Nicht-LLM-Kosten (stt, stripe_fee, training_*) ist das gewuenscht.
+    Fuer einen neuen LIVE-Pfad waere es eine Luecke; die faengt der Waechter (Sync-Test), solange
+    der Pfad in claude_service.py oder qa_pipeline.py steht. Steht er woanders: RESTLUECKE 3.
+
+    ★ DSGVO/Mandanten: die Rueckgabe enthaelt ausschliesslich context_tag, Anzahlen, Kosten und
+    Millisekunden. Kein user_id, kein org_id, kein session_id, kein Transkript. Eine nach
+    context_tag gruppierte Aggregation ueber alle Mandanten ist damit personenbezugsfrei; eine
+    Zeilen-Ansicht waere es nicht und wird deshalb NICHT gebaut.
+    """
+    roh = {}
+    for tag, anzahl, summe in summen_rows:
+        schluessel = tag or _OHNE_HERKUNFT
+        e = roh.setdefault(schluessel, {'buchungen': 0, 'kosten_eur': 0.0, '_lat': [], '_ttft': []})
+        e['buchungen'] += int(anzahl or 0)
+        e['kosten_eur'] += float(summe or 0)
+    for tag, lat, ttft in latenz_rows:
+        schluessel = tag or _OHNE_HERKUNFT
+        e = roh.setdefault(schluessel, {'buchungen': 0, 'kosten_eur': 0.0, '_lat': [], '_ttft': []})
+        e['_lat'].append(int(lat))
+        if ttft is not None:
+            e['_ttft'].append(int(ttft))
+
+    live_ki, uebrige_kosten = [], []
+    for schluessel, e in roh.items():
+        kosten = round(e['kosten_eur'], 4)
+        if schluessel in LIVE_LLM_CONTEXT_TAGS:
+            lat = sorted(e['_lat'])
+            ttft = e['_ttft']
+            live_ki.append({
+                'context_tag': schluessel,
+                'label': LIVE_LLM_CONTEXT_TAGS[schluessel],
+                'nur_cache': schluessel in CACHE_CONTEXT_TAGS,
+                'buchungen': e['buchungen'],
+                'kosten_eur': kosten,
+                'antworten': len(lat),
+                'latenz_avg_ms': int(sum(lat) / len(lat)) if lat else None,
+                'latenz_p50_ms': _perzentil(lat, 0.5),
+                'latenz_p95_ms': _perzentil(lat, 0.95),
+                'ttft_avg_ms': int(sum(ttft) / len(ttft)) if ttft else None,
+            })
+        else:
+            uebrige_kosten.append({
+                'context_tag': schluessel,
+                'label': schluessel,
+                'buchungen': e['buchungen'],
+                'kosten_eur': kosten,
+            })
+    live_ki.sort(key=lambda r: r['kosten_eur'], reverse=True)
+    uebrige_kosten.sort(key=lambda r: r['kosten_eur'], reverse=True)
+    return live_ki, uebrige_kosten
+
 
 def _cost_skip_payload():
     """KOSTEN-1 W3 — Skip-Zaehler fuers Founder-Dashboard aufbereiten.
@@ -395,6 +493,26 @@ def ausgaben_page():
                 'stale': stale_days > 30,
             })
 
+        # ── MESSGERAETE-1 (D-04 + Punkt 12): zwei Tabellen aus EINER Abfrage-Paarung ──────
+        # Zwei Abfragen statt einer: die Kosten-Summe braucht ALLE Zeilen, die Dauer-Statistik
+        # nur die mit gesetztem latency_ms (D-07). Eine gemeinsame Abfrage wuerde entweder
+        # Kosten unterschlagen oder Dauern doppelt zaehlen. Der Split Live-KI/Uebrige passiert
+        # in Python gegen LIVE_LLM_CONTEXT_TAGS — kein context_tag-Filter im SQL, damit ein
+        # unbekannter Tag sichtbar bleibt statt lautlos zu verschwinden.
+        ktag_summen = (db.query(ApiCostLog.context_tag,
+                                func.count(ApiCostLog.id),
+                                func.sum(ApiCostLog.cost_eur))
+                         .filter(ApiCostLog.created_at >= start,
+                                 ApiCostLog.created_at < end)
+                         .group_by(ApiCostLog.context_tag).all())
+        ktag_latenzen = (db.query(ApiCostLog.context_tag,
+                                  ApiCostLog.latency_ms,
+                                  ApiCostLog.ttft_ms)
+                           .filter(ApiCostLog.created_at >= start,
+                                   ApiCostLog.created_at < end,
+                                   ApiCostLog.latency_ms.isnot(None)).all())
+        live_ki, uebrige_kosten = _aggregiere_kosten_nach_tag(ktag_summen, ktag_latenzen)
+
         return jsonify({
             'period': start.strftime('%Y-%m'),
             'by_provider': by_provider,
@@ -404,6 +522,8 @@ def ausgaben_page():
             'grand_total': round(api_total + fc_total, 2),
             'daily_30': daily,
             'api_rates': rates_out,
+            'live_ki': live_ki,
+            'uebrige_kosten': uebrige_kosten,
         })
     finally:
         db.close()
