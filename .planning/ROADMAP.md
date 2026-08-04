@@ -138,7 +138,39 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 > ⚠ **Prozess-Lehre (Andre-Direktive, in `Nerve-Vault/CLAUDE.md` verankert):** „Fertig" ohne Beleg ist verboten. TEMPO-1 und H1 standen **zwei Wochen** als „live" in der Roadmap, ohne je an echten Daten geprueft worden zu sein. Ab sofort gilt in beiden Roadmaps: ✅ nur mit Beleg, sonst ⚠️ NICHT BELEGT.
 > ⚠ **Zweite Lehre aus genau diesem Eintrag (03.08.):** Der Block oben war selbst ein Verstoss — drei „am Datensatz belegte" Befunde, von denen zwei erschlossen waren. **Diagnose am echten Fehler-Beleg, nicht aus der Struktur** (Vault-Regel, verankert 24.07.).
 >
-> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.):** **MESSGERAETE-1** → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → Schwaerzung-Mittelweg (Beschluss D) → Schott-Restpaket → Stresstest.
+> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.):** **MESSGERAETE-1** ✅ → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → ~~Schwaerzung-Mittelweg~~ **(aufgegangen in den Engine-Neubau, s.u.)** → Schott-Restpaket → Stresstest.
+>
+> ### ⛔ SCHWAERZUNG — BESCHLUSSLAGE 2026-08-04 (ersetzt "Beschluss D" als eigenen Punkt)
+>
+> Belegt durch Rechts-Recherche mit Quellen + Gemini-Brainstorming + Fable-Pruefung am echten Code. **Volltext: Vault, `03 Planung/Mehrnutzer-Faehigkeit — Bestandsaufnahme + Konzept 2026-08-04.md` §7d/§7e.**
+>
+> **Befund, der eine seit 16.04. ungepruefte Annahme kippt:** US-Recht verlangt die Schwaerzung **nirgends** (Kalifornien verlangt einen **Vertrag**; bei Abhoer-Gesetzen zaehlt der **Zugriff**, nicht was danach passiert). Einziger harter Grund ist die DSGVO — **und nur fuer das, was in die DB geht**, nicht fuer den Weg zur KI (Anthropic = Auftragsverarbeiter, Art. 28). ⚠ **Deepgram sieht die Klartext-Namen ohnehin** (Schwaerzung sitzt an zweiter Stelle der Kette) → Zusatzschutz gegenueber Anthropic ist klein. **Kein Wettbewerber schwaerzt aus Abhoer-Gruenden** (Gong/Chorus/Otter/Fireflies: keiner; Balto nur wegen PCI/HIPAA).
+>
+> **BESCHLUSS 1 — AUFTEILEN, nicht verschieben.** Drei Schritte in `services/anonymization.py:539`:
+> - **Schritt 0 (Art-9-Wortliste)** und **Schritt 1 (Regex: IBAN/Tel/E-Mail/USt-ID/Steuernr/Kreditkarte)** **BLEIBEN IM LIVE-PFAD.** Sie kosten fast nichts und decken die zwei Loecher, die ein AVV **nicht** schliesst: Art-9-Daten brauchen eine ausdrueckliche Einwilligung (die wir nicht haben), Kartendaten haben eigene Vorschriften. Der Art-9-Filter verwirft heute den **ganzen Satz** — laeuft er erst am Ende, lag der Satz 10 min im Speicher und war einmal bei Claude.
+> - **Schritt 2 (spaCy + GLiNER)** **WANDERT AUS DEM LIVE-PFAD.** Das ist der ganze Engpass.
+>
+> **BESCHLUSS 2 — waehrend des Anrufs geht KEIN Gespraechstext in die DB, nur in den Arbeitsspeicher.** Ohne diese Regel traegt Beschluss 1 nicht: `services/intent_event_writer.py:123-137` schreibt **mitten im Anruf** `triggering_text` mit — heute vorher ueber den Merkzettel geschwaerzt. Faellt Schritt 2 aus dem Live-Pfad, stuende dort **sofort Klartext in der DB**. ⚠ Zwei weitere Senken mitdenken: TXT-Log auf der Platte (`routes/app_routes.py:380-386`) und **roher Text im journalctl** (`deepgram_service.py:126` — unabhaengiger Befund, gehoert ohnehin behoben).
+>
+> **BESCHLUSS 3 — Verbindungsabbruch: 90-Sekunden-Zaehler, dann Anruf als beendet werten. NICHTS wegwerfen.** (Andre 04.08.; Claudians erster Vorschlag "in die Tonne" wurde zurueckgewiesen — ein abgebrochener Anruf ist ein echter Anruf, und Wegwerfen traefe vor allem den haeufigsten Fall: WLAN wackelt 3 s, Verkaeufer telefoniert weiter.) Der Server kann "Laptop zu" und "WLAN weg" nicht zuverlaessig unterscheiden — **der Zaehler braucht die Ursache nicht.**
+>
+> **🎁 Der Hintergrund-Schwaerzer EXISTIERT BEREITS:** `scripts/anonymizer_worker.py` (01.06., Phase 08.23.2.G-MEET Wave 3) — standalone, out-of-process, eigener DB-Role `nerve_anon_worker`. **Muss nur nach vorn gezogen werden**, sodass er die Anruf-Mitschrift uebernimmt statt erst `crm.account_memory`. Umbau kleiner als gedacht.
+>
+> **🎁 `_apply_ner_parallel` (`anonymization.py:431`) wird von `anonymize()` NICHT aufgerufen** — gebaute, brachliegende Parallelisierung beider NER-Modelle.
+>
+> ⚠ **Tempo-Erwartung korrigiert (Claudian gegen Andres Annahme "wesentlich schneller"):** Bei EINEM Nutzer real 10-30 ms von 1000 ms (Testschranke <200 ms/1000 Zeichen, ein Segment hat 50-150 Zeichen). **Der Gewinn liegt vollstaendig bei Parallelbetrieb** — der Server hat **zwei vCPU**, und die zwei Modelle belegen geschaetzt 1-1,5 GB von 4 GB RAM. **Vor dem Bau messen** (MESSGERAETE-1 steht).
+>
+> **VERWORFEN (am Code geprueft, damit sie nicht wiederkommen):** Claude schwaerzt im selben Call mit ❌ (9 Live-Calls verarbeiten Transkript-Text; der `pip_token`-Stream wuerde die Schwaerzung **mit anzeigen** oder die 1-s-Marke reissen; stabile Tokens ueber getrennte Calls nicht garantierbar; die 0-%-Garantie des Art-9-Filters kann ein LLM prinzipiell nicht geben) · Schwaerzen im Browser ❌ (Browser sendet **Audio**, nicht Text — `deepgram_service.py:888-901`) · Transkripte gar nicht speichern ❌ (toetet 6 Consumer + widerspricht "Call-Logs sind heilig").
+>
+> ### 🔴 NEU 2026-08-04 — US-RECHT: das groessere Risiko ist die DIARISIERUNG, nicht die Schwaerzung
+>
+> Illinois BIPA. **Zwei laufende Klagen gegen exakt diese Funktion:** *Basich u.a. ./. Microsoft* (Nr. 2:26-cv-00422, W.D. Wash., eingereicht 05.02.2026, Teams-Live-Transkription) und *Cruz ./. Fireflies.AI* (C.D. Ill., 18.12.2025). **Der Vorwurf ist das ERZEUGEN des Voiceprints, nicht das Speichern** → "wir speichern kein Audio" hilft **nicht**, die Schwaerzung hilft **nicht**. Cold-Call-Modus: niedriges Risiko (eine Stimme, keine Diarisierung noetig, Verkaeufer ist eigener Vertragspartner mit schriftlicher Einwilligung im Onboarding). **Meeting-Modus: erhoehtes Risiko** — und die muendlich vorgelesene Zustimmung genuegt der BIPA-Schriftform formal nicht. 1.000-5.000 $ pro Verstoss, private right of action, ohne Schadensnachweis.
+>
+> **BESCHLUSS 4 (Andre 04.08.):** Meeting-Modus wird **trotzdem gebaut**, so rechtssicher wie moeglich — **mit Sichtbarkeits-Schalter** (zum Launch ggf. nur Superuser). **Der Schalter gehoert in die Anforderungsliste des Engine-Neubaus** — spaeter nicht mehr sauber nachruestbar.
+>
+> **BESCHLUSS 5:** Mail an `security@deepgram.com` (laut Deepgrams Privacy Policy zustaendig), CC `support@`: Werden bei Diarisierung intern Voice-Embeddings berechnet? Bleiben sie nach der Session erhalten / sind sie session-uebergreifend wiederverwendbar? Gibt es eine belastbare schriftliche BIPA-Position? ⚠ Erwartungs-Daempfer: Gerade **weil** Deepgrams Kernprodukt daran haengt, geben sie es womoeglich nicht schriftlich. Die Anwaltsstunde bleibt auf der Liste.
+>
+> **Werbeaussagen:** "NERVE zeichnet NICHTS auf" ist als **ueberpruefbare Tatsachenbehauptung** angreifbar, solange Text gespeichert wird; "bei uns landen keine Kundendaten" ist gegenueber **Deepgram** nicht haltbar. Vier Slogan-Vorschlaege von Andre verworfen (*"da muessen wir nochmal ans reissbrett"*). Anforderungen an die Neufassung im Vault §7f — **Pflicht: muss in BEIDEN Modi wahr sein** (der erste Anlauf hatte den Meeting-Modus vergessen).
 
 ---
 
