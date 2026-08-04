@@ -3040,6 +3040,37 @@ Plans:
 
 ---
 
+### Phase 08.23.2.SOFORT-2: Besitzpruefung an drei offenen Eingaengen + Zeitlimit auf Live-LLM-Aufrufen (NEU 2026-08-04) 🔴
+
+**Herkunft:** Mehrnutzer-Bestandsaufnahme 04.08. (vier parallele Code-Untersuchungen + Gemini). Andre-Entscheidung: *„ja sollten wir beide angehen"* — **unabhaengig vom Engine-Neubau (Weg C), gilt fuer jeden Weg.** Volltext + Anforderungsliste: `Nerve-Vault/03 Planung/Mehrnutzer-Fähigkeit — Bestandsaufnahme + Konzept 2026-08-04.md`.
+
+**Goal:** Zwei Risiken schliessen, die **heute** bestehen und keinen Architektur-Umbau brauchen: (1) fremde Anrufe sind ueber geratene/erlangte Kennungen les- und schreibbar, (2) ein haengender LLM-Aufruf legt alle gleichzeitigen Gespraeche still.
+
+**⚠ WICHTIG VORAB — Zeilennummern neu ermitteln.** Alle unten genannten Zeilen stammen von **vor** dem MESSGERAETE-1-Bau (`4dadc8b`). In `claude_service.py` haben sich die Nummern durch die eingebauten Messanker verschoben. **Jede Stelle vor dem Anfassen per grep neu lokalisieren, nicht der Zeilennummer vertrauen.**
+
+**★ WELLE 1 — Besitzpruefung (Sicherheit, hat Vorrang):**
+1. **`routes/app_routes.py:184-189`** — die Stufe-1-SID-Aufloesung in `/api/beenden` scannt `_session_state` nach der **geposteten** `call_id` und vergleicht **nicht** `_sd['user_id']` mit `_my_uid`. Die Stufe darunter (`:201`) filtert korrekt — dort ist das Muster ablesbar. Folge heute: fremdes Transkript (`:283`), fremdes Briefing (`:245`), fremde Sprachstatistik (`:257-261`).
+2. **`routes/app_routes.py:782` und `:828`** — `calls`-UPDATE gefiltert nur auf `_CallModel.id`, kein `user_id`. **Schreibend** (`ended_at`, `conversation_log_id`, `call_mode`, `score_breakdown`, `transcript_resolved`). Zum Vergleich: der DB-Fallback `:760` und `_audio_health_bg` `:877-878` filtern beide korrekt auf `user_id`.
+3. **`routes/app_routes.py:2076-2085`** — `sid` aus dem Query-String (`request.args.get('sid')`), keine Eigentuemer-Pruefung; liefert `active_profile_data`/`_briefing` des fremden Zustands.
+4. **⛔ NICHT NUR DIESE DREI.** Die Ghost-SID-Guards im Repo pruefen **Lebendigkeit** (`if sid not in _session_state: return`), **nicht Eigentuemerschaft** — das ist eine ganze Fehlerklasse. **Pflicht: systematischer Sweep** ueber `routes/` nach Endpunkten, die eine `sid`/`call_id`/`profile_id` aus Request-Body, Query-String oder URL nehmen und damit Zustand oder DB-Zeilen aufloesen, ohne gegen `g.user.id`/`g.org.id` zu pruefen. **Jeden Fund melden, auch wenn er nicht gefixt wird.**
+5. **Waechter, ERST ROT:** ein Test, der mit Konto A eine Ressource von Konto B anfragt und **403/404 erwartet** — pro gefundenem Eingang einer. Die Pfadliste **aus dem Code ableiten**, nicht handpflegen (Vault-Regel: ein gruener Waechter beweist nur seinen Pruefkatalog).
+
+**★ WELLE 2 — Zeitlimit:**
+6. **`services/claude_service.py:27`** — der Modul-Client wird **bewusst ohne `timeout`** erzeugt (Begruendung `:33-34`: `messages.stream` soll nicht gekappt werden). Ein Client **mit** Limit existiert bereits: `http_llm_client` (`:30-43`, 20 s / 45 s, `HTTP_LLM_MAX_RETRIES=0`, `config.py:133-135`) — er wird von **keinem** Live-Aufruf benutzt.
+7. **Ohne Limit greifen die SDK-Vorgaben** (`anthropic 0.86.0`: `connect=5.0`, `read=600`, `max_retries=2`) → Worst Case ~30 min fuer EINEN Aufruf. Weil `analyse_loop`/`coaching_loop` sequentiell ueber alle SIDs iterieren, stehen in dieser Zeit **alle** Gespraeche still. Der `try/except` faengt Ausnahmen, **nicht Haenger**. Der Lock-Wachhund (`live_session.py:1537-1542`) ueberwacht den **Riegel**, nicht die Schleife — ein haengender Loop ohne gehaltenen Riegel ist fuer ihn unsichtbar.
+8. **Zwei Groessen getrennt entscheiden, nicht ein Wert fuer alles:** blockierende Aufrufe (Analyse, Coaching, Phase, Coldcall-Infer) brauchen ein Gesamt-Limit; die Stream-Pfade duerfen **nicht** an der Gesamtdauer gekappt werden (lange Antworten sind legitim) — dort gehoert das Limit auf **Verbindungsaufbau + Zeit bis zum ersten Token**. Die heutigen Messwerte als Grundlage: Analyse Ø 1988 ms, Coaching Ø 2714 ms, Phase 1742 ms, Coldcall 1642 ms, TTFT Stream 1035 ms.
+9. **Verhalten bei Zeitueberschreitung explizit festlegen:** Was sieht der Berater? Was wird gebucht (`log_api_cost` mit welcher Dauer)? Wird erneut versucht? **Ein stiller Ausfall ist die schlechteste Variante** — die Runde soll uebersprungen und der Vorfall sichtbar protokolliert werden.
+10. **Waechter, ERST ROT:** ein Test, der beweist, dass **kein** Live-LLM-Aufruf den Client ohne Zeitlimit benutzt. Liste aus dem Code ableiten (AST), nicht handpflegen — dieselbe Mechanik wie der MESSGERAETE-1-Waechter, dort abkupfern.
+
+**Abnahme an echten Daten (nicht am gruenen Test):** Welle 1 — mit zwei Konten im Browser gegenpruefen, dass der Fremdzugriff 403/404 liefert. Welle 2 — nach dem Ausrollen ein echter Test-Anruf; die Messwerte in `api_cost_log` muessen unveraendert im bisherigen Bereich liegen (kein neues Kappen legitimer Aufrufe).
+
+**⛔ AUSDRUECKLICH NICHT in dieser Phase:** Nebenlaeufigkeit, ThreadPool, Redis, Engine. Das ist der Neubau (Weg C). **Reparatur-Modus: nur diese beiden Themen, keine Nebenverbesserungen.**
+
+**Komplexitaet:** 🔴 (Sicherheit + Live-Pfad). Der Fix selbst ist klein — der Aufwand liegt in der **Vollstaendigkeit** von Punkt 4 und der Verhaltens-Entscheidung in Punkt 9. → **Cross-AI-Review ist Pflicht.**
+**Plans:** 0 plans
+
+---
+
 ## Backlog
 
 > Unsequenzierte Ideen (999.x), noch nicht in der aktiven Phasen-Reihenfolge. Promoten via `/gsd-review-backlog`.
