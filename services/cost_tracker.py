@@ -114,6 +114,21 @@ LIVE_LLM_CONTEXT_TAGS: dict[str, str] = {
 # (D-11s eigenes Ziel), und ast.literal_eval kann es lesen.
 CACHE_CONTEXT_TAGS: tuple[str, ...] = ('analyse', 'ewb')
 
+# Die Stream-Pfade. Ihre latency_ms/ttft_ms tragen eine ANDERE Bedeutung als die der sechs
+# blockierenden Pfade: der per-Token-Versand (sio.emit) liegt im Messfenster, und weil die App
+# mit async_mode=threading laeuft (app.py:47), ist jedes emit ein echter send-Syscall — keine
+# RAM-Anhaengung. Bei Gegendruck vom Browser (schwaches Mobilnetz) steigt die Zahl also, obwohl
+# das Modell gleich schnell war.
+#
+# Bewusst NICHT repariert, sondern beschriftet: das emit aus dem Messfenster zu ziehen hiesse,
+# einen funktionierenden Live-Pfad umzubauen (Punkt 25) — und fuer die Frage, die dieses
+# Dashboard beantworten soll ("ist das starke Modell schnell genug?"), ist die Zahl INKLUSIVE
+# Auslieferung sogar die ehrlichere, weil sie naeher an dem liegt, was der Berater spuert.
+# Falsch war nur die Behauptung "reine API-Dauer". Deshalb hier eine explizite Menge statt
+# einer Suche nach "Stream" im Label-Text: die Anzeige markiert diese Zeilen sichtbar, damit
+# niemand zwei verschiedene Groessen untereinander vergleicht, ohne es zu merken.
+STREAM_CONTEXT_TAGS: tuple[str, ...] = ('pip_autovar', 'pip_variante')
+
 
 def resolve_org_id_from_user(db, user_id: int | None) -> int | None:
     """Phase 08.23.2.KOSTEN-1 R2 — org_id ueber den User aufloesen (Nachlauf-Kontext).

@@ -49,7 +49,7 @@ def _parse_period(period_str):
 #   Die Vergangenheit wird MARKIERT, nicht umgeschrieben. Kein Backfill, keine Schaetzung.
 COST_DATA_COMPLETE_SINCE = date(2026, 7, 20)
 
-from services.cost_tracker import LIVE_LLM_CONTEXT_TAGS, CACHE_CONTEXT_TAGS
+from services.cost_tracker import LIVE_LLM_CONTEXT_TAGS, CACHE_CONTEXT_TAGS, STREAM_CONTEXT_TAGS
 
 # ── Phase 08.23.2.MESSGERAETE-1 — Leser fuer die Live-KI-Messung ──────────────────────────
 # ★ D-11: die Zuordnung "welcher context_tag ist Live-KI" kommt aus GENAU EINER Liste in
@@ -128,6 +128,11 @@ def _aggregiere_kosten_nach_tag(summen_rows, latenz_rows):
                 'context_tag': schluessel,
                 'label': LIVE_LLM_CONTEXT_TAGS[schluessel],
                 'nur_cache': schluessel in CACHE_CONTEXT_TAGS,
+                # Die Dauer dieser Zeilen enthaelt zusaetzlich die Auslieferung an den Browser
+                # (Begruendung an STREAM_CONTEXT_TAGS in services/cost_tracker.py). Die Anzeige
+                # markiert sie sichtbar — ohne Markierung staenden hier zwei verschiedene
+                # Groessen in derselben Spalte untereinander.
+                'inkl_auslieferung': schluessel in STREAM_CONTEXT_TAGS,
                 'buchungen': e['buchungen'],
                 'kosten_eur': kosten,
                 'antworten': len(lat),

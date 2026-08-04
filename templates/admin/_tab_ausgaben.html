@@ -10,7 +10,9 @@
 
   <h4 class="fcd-ktag-head">Live-KI je Frage-Sorte</h4>
   <p class="fcd-ktag-hint">
-    Dauer = reine API-Zeit. „Antworten" zählt jede KI-Antwort genau einmal;
+    Dauer = Antwortzeit der KI (bei den mit ◆ markierten Zeilen zusätzlich inklusive
+    Auslieferung an den Browser — siehe Fußnote unter der Tabelle).
+    „Antworten" zählt jede KI-Antwort genau einmal;
     „Buchungen" zählt alle Kostenzeilen (Ein-/Ausgabe-Token, Zwischenspeicher).
     „bis 1. Wort" gibt es nur bei den beiden Stream-Pfaden.
     Die Zeilen „Zwischenspeicher …" sind reine Cache-Token-Buchungen ohne eigene
@@ -25,6 +27,14 @@
     </thead>
     <tbody id="fcd-ktag-body"></tbody>
   </table>
+  <p class="fcd-ktag-hint">
+    ◆ Bei diesen Zeilen misst die Dauer nicht nur die Antwortzeit der KI, sondern zusätzlich
+    die Auslieferung der Antwort an den Browser — bei diesen beiden Pfaden wird Wort für Wort
+    gesendet, und dieses Senden fällt mit in die Messung. Sitzt der Berater in einem schwachen
+    Mobilnetz, steigt die Zahl, obwohl die KI genauso schnell war. Die Zeilen ohne dieses
+    Zeichen zeigen die reine Antwortzeit der KI. Beide Arten stehen hier bewusst untereinander,
+    sind aber nicht eins zu eins vergleichbar.
+  </p>
 
   <h4 class="fcd-ktag-head">Übrige Kosten</h4>
   <p class="fcd-ktag-hint">
@@ -125,7 +135,7 @@
     document.getElementById('fcd-ktag-body').innerHTML =
       (d.live_ki||[]).map(k => `
         <tr>
-          <td>${esc(k.label)}</td>
+          <td>${esc(k.label)}${k.inkl_auslieferung ? ' ◆' : ''}</td>
           <td class="fcd-ktag-num">${esc(k.buchungen)}</td>
           <td class="fcd-ktag-num">${fmt(k.kosten_eur)}</td>
           <td class="fcd-ktag-num">${esc(k.antworten)}</td>
