@@ -140,6 +140,30 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 >
 > **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.):** **MESSGERAETE-1** → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → Schwaerzung-Mittelweg (Beschluss D) → Schott-Restpaket → Stresstest.
 
+---
+
+> ### 🔴🔴 EINSCHUB 2026-08-04 — MEHRNUTZER-FAEHIGKEIT: die Reihenfolge oben steht unter Vorbehalt
+>
+> **Anlass:** MESSGERAETE-1 lieferte die ersten echten Tempo-Zahlen (Analyse Ø 1988 ms, Coaching Ø 2714 ms, Post-Call-CRM 15194 ms). Andre daraus: *„Das System, das wir gebaut haben, ist nicht auf mehrere Nutzer ausgelegt. Punkt."*
+> **Vier parallele Code-Untersuchungen + Gemini als dritte Sicht.** Vollstaendige Bestandsaufnahme, Anforderungsliste und Abnahme-Grundlage: `Nerve-Vault/03 Planung/Mehrnutzer-Fähigkeit — Bestandsaufnahme + Konzept 2026-08-04.md`.
+>
+> **⚠ DIE ENTSCHEIDUNG VOM 01.08. IST WIDERLEGT.** Sie lautete: *„Der grosse Umbau kommt NICHT vor dem Start — er waere Wegwerf-Arbeit, weil die NERVE-Engine ihn ohnehin ersetzt."* **Beide Haelften halten nicht:** der Umbau ist nicht aufschiebbar, und die Engine ersetzt ihn nicht (sie deckt den Post-Call-Pfad gar nicht ab).
+>
+> **Kernbefunde, alle am Code belegt:**
+> - **Datentrennung IST gebaut** (Phase PERSID, Waechter-Tests) — **aber NIE an zwei echten gleichzeitigen Anrufen belegt.** Es gab nie zwei parallele Anrufe; `test_persid_concurrency.py` umgeht `/api/beenden` ausdruecklich, die Zwei-Firmen-Browserpruefung steht als DEFERRED. **Nach der Regel „Fertig ohne Beleg ist verboten": ⚠️ NICHT BELEGT, nicht ✅.**
+> - **Drei HTTP-Eingaenge ohne Besitzpruefung** (`routes/app_routes.py:184-189` lesend, `:782`/`:828` **schreibend**, `:2076-2085` lesend) — nur `@login_required`, kein `user_id`-Vergleich. **Verkaufs-Blocker.**
+> - **Kein Zeitlimit auf Live-LLM-Aufrufen** (`claude_service.py:27` bewusst ohne `timeout`; der Client MIT Limit wird von keinem Live-Pfad benutzt). SDK-Default 600 s x 3 → **ein Haenger legt alle Sessions bis ~30 min still. Risiko besteht HEUTE bei einem Nutzer.**
+> - **Drei Ein-Bearbeiter-Schleifen:** `analyse_loop:1237`, `coaching_loop:2042`, `slow_lane_consumer:790`.
+> - **`anonymization.py:19-24`:** 5 Fehler in 10 min — von IRGENDEINEM Anruf — schalten die Schwaerzung **prozessweit** ab.
+> - **★ G1 (Gemini):** 2–4 eigene DB-Sessions pro Analyse-Tick **pro SID**. Bei 20 parallelen Anrufen 40–80 Verbindungen gegen `DB_POOL_SIZE=20 + MAX_OVERFLOW=15`. **Parallelisieren ohne Buendelung friert den Server ein, statt ihn zu verlangsamen.**
+> - **★★ G2 (Gemini):** Der gesamte Live-Zustand liegt im RAM **eines** Prozesses; Socket.IO ohne `message_queue`; `redis` fehlt in `requirements.txt` (nur in `requirements-rt.txt`). **Ein zweiter Gunicorn-Worker ist heute unmoeglich. Harte Decke: ein Rechner, ein Prozess.**
+>
+> **★ ANDRE-ENTSCHEIDUNG 04.08. — WEG C:** Die Engine wird **NEU geschrieben**, nicht weitergebaut — **und auf die Auswertung nach dem Anruf erweitert**, die im heutigen Entwurf fehlt. Begruendung: 4 von ~20 Bausteinen vorhanden, 0 Zeilen Schwaerzung, kein Flask-seitiger Redis-Schreiber, Typ-Bruch an der Redis-Naht (flache Strings vs. erwartetes dict).
+>
+> **Sofort und unabhaengig vom Neubau:** (1) die drei Tueren schliessen, (2) Zeitlimit einbauen.
+>
+> ⛔ **Vor dem ersten Bau-Auftrag zum Neubau: die Anforderungsliste in §7 des Vault-Dokuments lesen.** Sie ist die Abnahme-Grundlage — A1–A9 (Nebenlaeufigkeit), B1–B2 (die zwei Gemini-Funde), C1–C5 (Datenschutz), D (Zutatenliste + drei Konstruktions-Entscheidungen), E1–E4 (Fallen aus dem Bestand), F1–F4 (Abnahme). **F1 ist der Beleg, den wir bis heute nie erbracht haben: zwei echte gleichzeitige Anrufe, zwei Konten, zwei Firmen.**
+
 **Aktuelle Richtungs-Entscheidungen (Stand 2026-06-01, Sync von Vault-Roadmap):**
 - **Staging komplett aus dem Workflow** bis zur letzten Phase vor Launch → Production ist einziger Deploy-/Test-Pfad (Details: `CLAUDE.md` → "ÜBERSCHREIBUNG 2026-06-01"). `deploy.sh`-Staging-Gate entfernt. Reaktivierung = Phase **08.23.2.STAGING** (ganz am Ende, letzte Phase vor Launch).
 - **Block O = kompletter Design-Wechsel auf neues Dark-Design** (kein Polish mehr). Das alte Light-Design fliegt komplett raus (nerve.css-Tokens/Klassen/Inline-Styles) → nur das neue bleibt als single source of truth, damit GSD künftig nicht mehr im alten Design bauen kann. Mockups + Export in `_design_export/`. Usability-Bar: ein Anfänger ohne Sales/IT muss das Dashboard in ~10 Sek verstehen (Klartext-Labels statt Metapher-Jargon).
