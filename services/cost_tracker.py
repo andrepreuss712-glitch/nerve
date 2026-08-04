@@ -82,6 +82,39 @@ def normalize_model_name(model: str | None) -> str:
     return 'sonnet-4-5' if 'sonnet' in (model or '') else 'haiku-4-5'
 
 
+# ── Phase 08.23.2.MESSGERAETE-1 (D-11) — die EINE Liste der Live-KI-Herkunfts-Tags ──────────
+# Sie beantwortet zwei Fragen an einer Stelle: (1) welche context_tag-Werte gehoeren in die
+# Ansicht "Live-KI je Frage-Sorte" (Tabelle 1 des Lesers), (2) wie heissen sie auf Deutsch.
+# Alles, was hier NICHT steht, faellt im Founder-Dashboard in Tabelle 2 "Uebrige Kosten" —
+# in Prod existieren 33 verschiedene context_tag-Werte (stt, stripe_fee, training_*, precall,
+# judge, crm, postcall_coach ...), die unter einer Live-KI-Ueberschrift nichts verloren haben.
+#
+# ★ Diese Liste wird NICHT vom Waechter importiert. tests/test_live_latency_coverage.py liest
+#   sie per ast.literal_eval aus DIESER Datei und faellt rot, wenn sie von den aus dem Code
+#   abgeleiteten context_tag-Literalen abweicht. Deshalb muessen beide Konstanten reine
+#   Literale bleiben — keine Funktionsaufrufe, keine Referenzen, keine f-Strings.
+LIVE_LLM_CONTEXT_TAGS: dict[str, str] = {
+    'live_haiku_merged': 'Analyse + QA (zusammengelegt)',
+    'live_haiku':        'Analyse (Rollback-Pfad)',
+    'qa_classifier':     'QA-Klassifikation (Rollback-Pfad)',
+    'coaching_haiku':    'Coaching-Frage',
+    'phase_classify':    'Phasen-Erkennung',
+    'coldcall_infer':    'Cold-Call-Ableitung',
+    'pip_autovar':       'PiP-Antwort (automatisch, Stream)',
+    'pip_variante':      'PiP-Antwort (Knopf, Stream)',
+    # Die zwei Cache-Tags gehoeren in dieselbe Tabelle (sie sind Kosten derselben Frage-Sorten),
+    # haben aber nie eine eigene API-Antwort und deshalb nie eine Dauer. Beschriftung so, dass
+    # das nicht als Defekt gelesen wird.
+    'analyse':           'Zwischenspeicher Analyse (nur Cache-Token)',
+    'ewb':               'Zwischenspeicher Antwort (nur Cache-Token)',
+}
+
+# Teilmenge von LIVE_LLM_CONTEXT_TAGS: die Tags, die NUR Cache-Token-Buchungen tragen.
+# Bewusst ein Tupel statt eines zweiten Dicts: die Labels stehen damit an GENAU EINER Stelle
+# (D-11s eigenes Ziel), und ast.literal_eval kann es lesen.
+CACHE_CONTEXT_TAGS: tuple[str, ...] = ('analyse', 'ewb')
+
+
 def resolve_org_id_from_user(db, user_id: int | None) -> int | None:
     """Phase 08.23.2.KOSTEN-1 R2 — org_id ueber den User aufloesen (Nachlauf-Kontext).
 

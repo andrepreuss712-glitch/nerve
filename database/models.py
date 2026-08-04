@@ -517,7 +517,7 @@ class ApiCostLog(Base):
     D-02: Wechselkurs wird beim Schreiben eingefroren (steuerlich korrekt).
     """
     __tablename__ = 'api_cost_log'
-    __table_args__ = ({'comment': 'Jeder API-Call mit eingefrorenem Wechselkurs und Rate (Founder Cost Dashboard, steuerlich korrekt). Status: lebt. Schreibt API-Call-Wrapper in services/; liest Founder-Cost-Dashboard.'},)
+    __table_args__ = ({'comment': 'Jeder API-Call mit eingefrorenem Wechselkurs und Rate (Founder Cost Dashboard, steuerlich korrekt). Status: lebt. Schreibt ausschliesslich services/cost_tracker.py log_api_cost (gerufen aus services/claude_service.py sieben Live-Pfaden, coaching_service.py, precall_service.py, qa_pipeline.py, deepgram_service.py, training_service.py, crm_service.py, judge_runner.py, adoption_runner.py, outcome_service.py, routes/dashboard.py, routes/payments.py, routes/training.py, nerve_rt/services/session_manager.py, nerve_rt/services/llm/claude_adapter.py); liest routes/admin_dashboard.py (Founder-Dashboard: Tab Ausgaben inkl. Live-KI-Auswertung je context_tag, CSV-Export) + services/eur_calculator.py (EUER). latency_ms/ttft_ms tragen die Dauer NUR an der input-Token-Buchung (D-07).'},)
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=utcnow, nullable=False, index=True)
     provider = Column(String(32), nullable=False, index=True, comment='API-Provider (z.B. anthropic/deepgram)')
@@ -532,7 +532,8 @@ class ApiCostLog(Base):
     cost_eur = Column(Numeric(12, 6), nullable=False, comment='Berechnete Kosten in Euro')
     session_id = Column(String(64), nullable=True, index=True, comment='Zugehoerige Session-ID')
     context_tag = Column(String(32), nullable=True, comment='Kontext-Tag des Calls')
-    latency_ms  = Column(Integer, nullable=True, comment='API-Latenz in ms')
+    latency_ms  = Column(Integer, nullable=True, comment='Reine API-Dauer in ms bis zum LETZTEN Token. Nur an der input-Token-Buchung gesetzt (D-07: eine API-Antwort zaehlt genau einmal), Cache-/Output-Buchungen bleiben NULL. NICHT identisch mit latency_e/latency_c aus live_session (die enthalten Puffer-Wartezeit + QA-Dispatch).')
+    ttft_ms     = Column(Integer, nullable=True, comment='Zeit bis zum ERSTEN Token in ms. Nur Streaming-Pfade (pip_autovar, pip_variante), nur an der input-Token-Buchung; bei blockierenden Aufrufen immer NULL. Getrennte Spalte, weil latency_ms bis zum letzten Token misst — beide Bedeutungen in EINE Spalte zu kippen waere der Name-luegt-Fehler (D-03).')
     call_site   = Column(String(50), nullable=True, comment='Code-Aufrufstelle')
 
 
