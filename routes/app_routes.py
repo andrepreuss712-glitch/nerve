@@ -181,12 +181,11 @@ def api_beenden():
         _my_uid = g.user.id
         # Stufe 1: exakte Aufloesung via posted call_id (S3)
         if _posted_call_id:
-            with ls._session_state_lock:
-                for _s, _sd in ls._session_state.items():
-                    if _sd.get('state', {}).get('call_id') and \
-                       str(_sd['state']['call_id']) == str(_posted_call_id):
-                        _beenden_sid = _s
-                        break
+            # SOFORT-2 B-02: Der frueher hier stehende Scan verglich NUR die call_id und
+            # traf damit auch fremde Sitzungen (Lebendigkeit statt Eigentuemerschaft).
+            # Der Helfer vergleicht zusaetzlich user_id; ein fremder Treffer zaehlt wie
+            # kein Treffer, und Stufe 2 (eigener user_id-Scan, unveraendert darunter) greift.
+            _beenden_sid = ls.resolve_own_sid_by_call_id(_posted_call_id, _my_uid)
             # Auch im Snapshot suchen (B1 — fuer den Fall dass :779 schon gestasht hat)
             if _beenden_sid is None:
                 _snap_s3 = ls.consume_ended_session_by_call_id(_posted_call_id) \
@@ -1561,6 +1560,15 @@ def api_precall_research():
 
     sid = (data.get('sid') or '').strip() or None
     user_id = g.user.id if g.user else None
+    # SOFORT-2 N-01: die sid aus dem Anfrage-Koerper wandert ueber recherche_firma in
+    # set_briefing_for_sid — dessen Guard prueft nur, ob die Sitzung LEBT. Ohne diese
+    # Bedingung schreibt ein fremdes Konto beliebigen Text in den _briefing-Schluessel einer
+    # laufenden Sitzung; der Text landet in Abschnitt 8 des System-Prompts JEDES Live-Aufrufs
+    # dieser Sitzung. Im selben Aufruf laese build_profile_context das fremde Profil aus und
+    # gaebe es dem Anfragenden zurueck.
+    # 404 (nicht 403): ein 403 wuerde bestaetigen, dass die Kennung existiert.
+    if sid and not ls.sid_belongs_to(sid, user_id):
+        return jsonify({'error': 'Unbekannte Sitzung'}), 404
     profile_id = flask_session.get('active_profile_id')
 
     briefing, error = recherche_firma(
@@ -2075,10 +2083,16 @@ def api_gatekeeper_phrases():
         # Template-Variablen aus Session-State (best effort — fehlende Werte bleiben als Platzhalter)
         sid = request.args.get('sid') or flask_session.get('sid')
         variables = {'branche': '', 'detail': '', 'vorname': '', 'nachname': ''}
-        if sid:
-            from services.live_session import _session_state, _session_state_lock
-            with _session_state_lock:
-                st = _session_state.get(sid, {}).get('state', {})
+        # SOFORT-2 B-03: Die DB-Abfrage darueber filtert korrekt auf Phrase.user_id — die
+        # Zustands-Aufloesung darunter tat es nicht. Zwei Vertrauensniveaus in einer Funktion.
+        # Antwortform (benannte Festlegung, Plan 03): KEIN Statuswechsel. Die sid ist hier
+        # optional (Rueckfall auf flask_session), und die Funktion hat bereits einen sauberen
+        # Leerpfad — die Platzhalter bleiben stehen. Ein 404 wuerde legitime Aufrufe ohne
+        # aktive Sitzung brechen.
+        import services.live_session as _ls_gk
+        if sid and _ls_gk.sid_belongs_to(sid, g.user.id):
+            with _ls_gk._session_state_lock:
+                st = _ls_gk._session_state.get(sid, {}).get('state', {})
                 briefing = st.get('active_profile_data') or st.get('_briefing') or {}
             if isinstance(briefing, dict):
                 variables['branche'] = briefing.get('branche', '') or ''
