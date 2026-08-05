@@ -2849,3 +2849,54 @@ Live auf Production: `git_head 3474a4b`, `alembic_version 0037`, Deploy-Tor grue
   ohne Fehlermeldung, wenn die Datei beschreibbar ist. Betrifft jede kuenftige Migrations-Anleitung.
 - **Prods `.git` ist kein Hotfix-Detektor** (Stand `014fcef`, tar-Deploy zieht es nicht nach) —
   belastbar ist nur der md5sum-Vergleich Server-gegen-lokal fuer die Dateien der Phase.
+
+## ROADMAP-SYNC — 08.23.2.SOFORT-2 — 2026-08-05
+
+Phase 08.23.2.SOFORT-2 fixt **ACHT** Eingaenge statt der drei aus dem Roadmap-Eintrag
+(B-01/B-02/B-03 + N-01 `/api/precall/research` + N-02/N-03 `outcome_ready`-Emit in
+`routes/learning.py` + **R-7** `routes/crm_export.py::save_meeting` + **R-8**
+`routes/coach.py::methodik_uebertragen`). Begruendung: Plan 03 „Scope-Begruendung" und Plan 09.
+
+**R-7 war zuerst vertagt — Andre hat das am 2026-08-05 aufgehoben.** Grund: die Spalte
+`crm.meetings.call_id` hat heute keinen Leser, also heute kein Leck; genau deshalb ist Vertagen
+teuer — ein nur-einfuegender Haken ohne Pruefung produziert stillen Muell, der spaeter nicht
+mehr von echten Daten unterscheidbar ist (Vault-Leitplanke 4, „verpasste Felder sind fuer immer
+weg"). **R-8 ist neu** und beim Nachziehen des Waechters aufgefallen (Menge
+`PROFILEID_AUS_ANFRAGE`): `methodik_uebertragen` prueft die Ziel-Org, nicht die Quell-Org — ein
+Coach koennte ein fremdes Profil kopieren. Heute unerreichbar (0 Coaches / 0 Zuweisungen auf
+Production, gemessen), Fix = eine Bedingung.
+
+**Bitte als Backlog-Eintrag promoten (D-02: gemeldet, nicht gefixt):** R-1 bis R-6 **sowie R-9** aus
+`.planning/phases/08.23.2.SOFORT-2-besitzpruefung-eingaenge-zeitlimit-live-llm/08.23.2.SOFORT-2-FUNDE.md`,
+Abschnitt 2. Kurz:
+- R-1 toter `consume_ended_session_by_call_id`-Zweig (wer ihn nachruestet, baut B-02 nach)
+- R-2 `sid` im Query-String → nginx-Zugriffsprotokoll (ASVS V3)
+- R-3 Hex-Literal `#f59e0b` in `_showAudioWarning` (Farb-Regel-Bestandsverstoss)
+- R-4 vier veraltete Selbstverweise in `routes/app_routes.py`
+- R-5 Pfad-Traversal-Kante `routes/admin_views.py` (Guard vorhanden, andere Fehlerklasse)
+- R-6 `judge_runner`/`adoption_runner` verlieren ihre SDK-Retries durch `max_retries=0`
+- **R-9 (NEU, Cross-AI-Fund C-2, eigene Mini-Phase):** `services/deepgram_service.py:963`
+  `handle_mute_mic` und `:978` `handle_manual_ewb` akzeptieren eine **fremd-setzbare SID** als
+  zweites Positions-Argument — fremdes Mikrofon stummschalten bzw. Einwand-Vorschlag in einen
+  fremden PiP schieben. Kein Produktiv-Aufrufer des `sid=`-Parameters (er existiert nur fuer
+  zwei Tests). Fix waere je eine Zeile, liegt aber ausserhalb des Reparatur-Modus dieser Phase.
+  **Kein Waechter dieser Phase sieht ihn** (nicht in `routes/`, kein `.get()`, kein
+  URL-Parameter)
+- ★ **R-10 ist NICHT mehr hier** — er wird in Welle 2 gefixt (Andre-Entscheidung 2026-08-05), nicht gemeldet. Historisch: `services/adoption_runner.py:281` und
+  `services/judge_runner.py:382` rufen `claude_client.messages.create(...)` **ohne
+  `timeout=`** — im **einzigen** Slow-Lane-Consumer-Faden (`services/slow_lane.py:30`).
+  Wirkung bei Eintritt: bis zu **10 Minuten** keine Nachbearbeitung fuer **alle** Mandanten;
+  **keine** Datenpreisgabe, **kein** Live-Ausfall, **kein** Datenverlust. Nicht gefixt, weil
+  Welle 2 die **Live-Bahn** anfasst, nicht die Post-Call-Batch-Strecke — der Fix waere zwei
+  Zeilen mit derselben Konstante, die Scope-Entscheidung liegt bei Andre.
+  **Der Zeitlimit-Waechter bleibt dabei gruen** — deshalb stehen beide Zeilen namentlich in
+  seinem `RESTLUECKEN`-Absatz
+
+**Zusaetzlich zu melden (kein Fix in dieser Phase, kein Backlog-Eintrag noetig):** der
+Einladungsweg `routes/organisations.py` setzt **kein** `is_test_user` auf neu eingeladenen
+Konten (`grep is_test_user routes/organisations.py` → 0 Treffer). Ein per Einladung erzeugtes
+Testkonto zaehlt damit als **echter** Nutzer in Kennzahlen, DPO-Korpus-Filter und spaeterer
+Abrechnung. Diese Phase setzt das Flag fuer ihre Gegenprobe **von Hand** (Plan 04 Task 1);
+den Einladungsweg dauerhaft zu reparieren gehoert in eine eigene Mini-Phase.
+
+**Ich aendere `.planning/ROADMAP.md` in dieser Phase NICHT** (Auftrags-Vorgabe).
