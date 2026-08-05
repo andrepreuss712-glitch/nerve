@@ -431,6 +431,135 @@ def get_briefing_for_sid(sid: str) -> str | None:
         return _session_state.get(sid, {}).get('_briefing')
 
 
+# ── Phase 08.23.2.SOFORT-2 — Besitzpruefung (D-02: Lebendigkeit ist NICHT Eigentuemerschaft) ──
+# Die Ghost-SID-Guards ueber diesem Block (set_profile_for_sid, set_briefing_for_sid) pruefen
+# `if sid not in _session_state` — also ob die Sitzung LEBT. Sie beantworten NICHT die Frage
+# "gehoert sie dem Anfragenden?". Das ist eine ganze Fehlerklasse, kein Einzelfall: sechs
+# Endpunkte in routes/ nahmen eine sid/call_id aus der Anfrage und loesten damit fremden Zustand
+# oder fremde DB-Zeilen auf.
+#
+# Diese zwei Funktionen sind der EINE Ort, an dem die Frage beantwortet wird. Der AST-Waechter
+# tests/test_ownership_state_guard.py fordert, dass jede Zustands-Aufloesung in routes/ durch
+# eine von ihnen laeuft — deshalb duerfen ihre Namen nicht ohne Nachzug im Waechter wandern.
+#
+# ⚠ RIEGEL (Punkt 31 / LOCK-2): _session_state_lock ist KEIN RLock. Im Rumpf dieser beiden
+# Funktionen wird deshalb KEINE andere live_session-Funktion gerufen, die den Riegel nimmt
+# (get_briefing_for_sid, set_briefing_for_sid, get_or_open_moment, record_suggestion_offer
+# nehmen ihn alle) — nur direkter Dict-Zugriff. Wer das aendert, verklemmt den Live-Pfad.
+#
+# ⚠ ANTWORTFORM: beide geben bei FREMDBESITZ exakt dasselbe zurueck wie bei einer UNBEKANNTEN
+# Kennung (False bzw. None). Das ist Absicht — eine Unterscheidung waere ein Existenz-Leck
+# (ASVS V7). Die Endpunkte leiten daraus 404 ab, nie 403.
+
+def sid_belongs_to(sid, user_id) -> bool:
+    """True, wenn die Sitzung `sid` dem Nutzer `user_id` gehoert.
+
+    False bei: unbekannter sid, fehlendem user_id im Zustand, fremdem Besitzer, sid/user_id None.
+    Kein Unterschied zwischen "gibt es nicht" und "gehoert dir nicht" (Existenz-Leck).
+    """
+    if not sid or user_id is None:
+        return False
+    with _session_state_lock:
+        eintrag = _session_state.get(sid)
+        besitzer = eintrag.get('user_id') if isinstance(eintrag, dict) else None
+    if besitzer is None:
+        return False
+    if besitzer != user_id:
+        # Bewusst NUR der abgelehnte Fall wird protokolliert. Jeden Aufruf zu loggen waere im
+        # Live-Betrieb Rauschen; ein abgelehnter Fremdzugriff ist ein Ereignis.
+        _logger.warning(
+            f"[SOFORT-2] Fremdzugriff abgelehnt: sid={sid!r} gehoert user_id={besitzer}, "
+            f"angefragt von user_id={user_id}"
+        )
+        return False
+    return True
+
+
+def resolve_own_sid_by_call_id(call_id, user_id):
+    """Die sid der EIGENEN lebenden Sitzung zu dieser `call_id` — oder None.
+
+    Loest den Muster-Fehler aus B-02/N-02/N-03 an einer Stelle: der Scan ueber _session_state
+    vergleicht die call_id UND den Besitzer. Ein Treffer, der jemand anderem gehoert, zaehlt
+    wie kein Treffer.
+    """
+    if call_id is None or user_id is None:
+        return None
+    gesucht = str(call_id)
+    treffer_fremd = False
+    with _session_state_lock:
+        for _s, _sd in _session_state.items():
+            if not isinstance(_sd, dict):
+                continue
+            _cid = (_sd.get('state') or {}).get('call_id')
+            if _cid is None or str(_cid) != gesucht:
+                continue
+            if _sd.get('user_id') == user_id:
+                return _s
+            treffer_fremd = True
+    if treffer_fremd:
+        _logger.warning(
+            f"[SOFORT-2] Fremdzugriff abgelehnt: call_id={gesucht} gehoert einer fremden Sitzung, "
+            f"angefragt von user_id={user_id}"
+        )
+    return None
+
+
+def call_belongs_to(call_id, user_id, tenant_id=None) -> bool:
+    """True, wenn die Anruf-ZEILE in public.calls dem Anfragenden gehoert (R-7, Plan 09).
+
+    Die zwei Funktionen darueber fragen den RAM-Zustand einer LEBENDEN Sitzung. Diese hier
+    fragt die DB-Zeile — noetig, weil eine call_id auch dann verknuepft werden kann, wenn die
+    Sitzung laengst beendet ist (crm.meetings.call_id, routes/crm_export.py::save_meeting).
+
+    BESITZ-KRITERIUM (benannte Festlegung, Begruendung in Plan 09): user_id ODER tenant_id.
+      - calls.user_id ist NOT NULL (database/models.py:709) -> der eigene Anruf trifft IMMER,
+        auch bei Altzeilen. Ein Filter allein auf tenant_id koennte dort falsch ablehnen.
+      - calls.tenant_id ist NULLABLE (models.py:703), auf Production aber bei 0 von 79 Zeilen
+        NULL (gemessen 2026-08-05). Der Mandanten-Zweig deckt den Kollegen derselben
+        Organisation ab — crm.meetings ist mandanten-granular, nicht nutzer-granular.
+      - Ist tenant_id des Aufrufers None ODER die der Zeile None, zaehlt NUR der user_id-Zweig.
+        Fail-closed: im Zweifel gehoert die Zeile nicht.
+
+    False bei: unbekannter/ungueltiger call_id, fehlendem user_id, fremdem Besitzer, DB-Fehler.
+    Kein Unterschied zwischen "gibt es nicht" und "gehoert dir nicht" (Existenz-Leck).
+    """
+    if call_id is None or user_id is None:
+        return False
+    import uuid as _uuid_cb
+    try:
+        _cid = _uuid_cb.UUID(str(call_id))
+    except (ValueError, TypeError, AttributeError):
+        # Nicht-UUID kommt aus der Anfrage — kein 500, sondern fail-closed.
+        return False
+    from database.db import SessionLocal as _SL_cb
+    from database.models import Call as _Call_cb
+    _db_cb = _SL_cb()
+    try:
+        _row = (_db_cb.query(_Call_cb.user_id, _Call_cb.tenant_id)
+                .filter(_Call_cb.id == _cid).first())
+    except Exception as _e_cb:
+        # CLAUDE.md DB-Regel: NIE ein stiller except auf einer PG-Session ohne rollback —
+        # ein verschluckter Fehler vergiftet sonst die Transaktion (InFailedSqlTransaction).
+        _db_cb.rollback()
+        _logger.warning(f"[SOFORT-2] call_belongs_to: Abfrage fehlgeschlagen "
+                        f"call_id={_cid} ({_e_cb}) -> fail-closed False")
+        return False
+    finally:
+        _db_cb.close()
+    if _row is None:
+        return False
+    if _row.user_id == user_id:
+        return True
+    if tenant_id is not None and _row.tenant_id is not None \
+            and str(_row.tenant_id) == str(tenant_id):
+        return True
+    _logger.warning(
+        f"[SOFORT-2] Fremdzugriff abgelehnt: call_id={_cid} gehoert user_id={_row.user_id}, "
+        f"angefragt von user_id={user_id}"
+    )
+    return False
+
+
 # ── Per-SID AnrufAnonymisierer Cache (D-06 Phase 08.23.2.B) ──────────────────
 # AnrufAnonymisierer stored as sub-key of _session_state[sid]['anonymisierer'].
 # Uses _session_state_lock (no extra lock needed — eliminates deadlock risk).
