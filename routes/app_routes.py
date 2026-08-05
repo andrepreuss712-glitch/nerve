@@ -271,7 +271,19 @@ def api_beenden():
             _phase_d_call_id = _bs.get('state', {}).get('call_id')
             _phase_d_word_confidences = list(_bs.get('word_confidences', []))
         # Fallback fuer word_confidences falls _bs keinen Eintrag hat (defensiv)
-        if not _phase_d_call_id and _posted_call_id:
+        # SOFORT-2 B-01 (P-4): Dieser Rueckfall traegt den legitimen Reconnect-Fall
+        # (_bs leer, der Client kennt seine call_id noch). Er uebernahm die GEPOSTETE call_id
+        # frueher UNGEPRUEFT - und _phase_d_call_id hat DREI Verbraucher, von denen nur der
+        # calls-UPDATE (:782/:828) einen eigenen user_id-Filter bekommt:
+        #   :509  suggestion_reactions-Flush  -> schreibt eine FREMDREFERENZ in eine eigene Zeile
+        #   :853  _slow_lane.put(...)         -> stoesst die Merge-/Scoring-Strecke auf einem
+        #                                        FREMDEN Anruf an; ihr Schreiber sitzt in
+        #                                        services/slow_lane.py und ist hier nicht
+        #                                        erreichbar
+        # Deshalb sitzt die Pruefung JETZT AN DER QUELLE. call_belongs_to gibt fuer den eigenen
+        # Anruf True zurueck - der Reconnect-Fall bleibt also unberuehrt.
+        if not _phase_d_call_id and _posted_call_id and \
+                ls.call_belongs_to(_posted_call_id, g.user.id, getattr(g, 'tenant_id', None)):
             _phase_d_call_id = _posted_call_id
     except Exception as _e_lookup:
         print(f'[Phase08.23.2.D] call_id/word_confidences-Lookup Fehler (non-fatal): {_e_lookup}')
@@ -778,7 +790,24 @@ def api_beenden():
         from database.models import Call as _CallModel
         _db_calls = get_session()
         try:
-            _call_row = _db_calls.query(_CallModel).filter(_CallModel.id == _phase_d_call_id).first()
+            # SOFORT-2 B-01: Besitzpruefung. Vorher filterte dieser UPDATE NUR auf die id —
+            # eine geposteter fremde call_id (zweiter Weg: der Rueckfall weiter oben, der
+            # _posted_call_id direkt uebernimmt) setzte damit ended_at, conversation_log_id
+            # (fremder Anruf zeigte mein Transkript), call_mode, score_breakdown und
+            # transcript_resolved auf einem fremden Anruf — und stiess die Bewertungs-Strecke
+            # darauf an. Vorbild: der DB-Fallback ~20 Zeilen darueber und _audio_health_bg
+            # filtern beide korrekt.
+            # ⚠ public.calls hat auf Production KEINE RLS (psql als postgres, 2026-08-04) —
+            # dieser WHERE-Filter ist die EINZIGE Kontrolle. Faellt er raus, faengt nichts.
+            _call_row = (_db_calls.query(_CallModel)
+                         .filter(_CallModel.id == _phase_d_call_id,
+                                 _CallModel.user_id == g.user.id)
+                         .first())
+            if _call_row is None:
+                # Vorher lief dieser Fall STILL durch. Ein abgelehnter Fremdzugriff ist ein
+                # Ereignis, kein Nichts.
+                print(f'[SOFORT-2] calls-UPDATE uebersprungen: call_id={_phase_d_call_id} '
+                      f'gehoert nicht user_id={g.user.id} (oder existiert nicht)')
             if _call_row is not None:
                 _call_row.ended_at = _dt.now(_tz.utc)
                 _call_row.conversation_log_id = saved_conv_id
@@ -824,7 +853,8 @@ def api_beenden():
             try:
                 _db_heal = get_session()
                 _row_heal = _db_heal.query(_CallModel).filter(
-                    _CallModel.id == _phase_d_call_id
+                    _CallModel.id == _phase_d_call_id,
+                    _CallModel.user_id == g.user.id,   # SOFORT-2 B-01: zweite Stelle
                 ).first()
                 if _row_heal is not None:
                     _row_heal.audio_health_resolved = True
