@@ -170,7 +170,14 @@ def methodik_uebertragen():
     try:
         # Coach must own source profile's org
         src = db.get(Profile, profile_id)
-        if not src:
+        # SOFORT-2 R-8: Der Kommentar darueber stand hier seit jeher — die Pruefung nicht.
+        # Geprueft wurde nur die ZIEL-Organisation (CoachAssignment, unten). Ohne diese
+        # Bedingung konnte ein Coach ein FREMDES Profil (Methodik, Einwaende, Gegenargumente,
+        # Skripte) in eine ihm zugewiesene Organisation kopieren und dort lesen — allein durch
+        # Raten einer profile_id.
+        # Gleiche Antwort wie "gibt es nicht" (404), damit die Existenz fremder Profil-Ids
+        # nicht bestaetigt wird.
+        if not src or src.org_id != g.org.id:
             return jsonify({'error': 'Profil nicht gefunden'}), 404
 
         # Coach must be assigned to target org
