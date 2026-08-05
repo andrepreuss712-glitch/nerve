@@ -3099,7 +3099,21 @@ Plans:
 **⛔ AUSDRUECKLICH NICHT in dieser Phase:** Nebenlaeufigkeit, ThreadPool, Redis, Engine. Das ist der Neubau (Weg C). **Reparatur-Modus: nur diese beiden Themen, keine Nebenverbesserungen.**
 
 **Komplexitaet:** 🔴 (Sicherheit + Live-Pfad). Der Fix selbst ist klein — der Aufwand liegt in der **Vollstaendigkeit** von Punkt 4 und der Verhaltens-Entscheidung in Punkt 9. → **Cross-AI-Review ist Pflicht.**
-**Plans:** 0 plans
+
+**Scope-Nachtrag 2026-08-05 (Cross-AI-Replan):** Der Sweep aus Punkt 4 fand **acht** Eingaenge statt der drei oben. Zusaetzlich gefixt werden R-7 (`routes/crm_export.py::save_meeting` haengt eine fremde `call_id` an einen eigenen Termin — Vertagung von Andre aufgehoben) und R-8 (`routes/coach.py::methodik_uebertragen` akzeptiert ein fremdes Quell-Profil). Der Waechter deckt jetzt **fuenf** abgeleitete Mengen ab, inkl. `profile_id` und **URL-Routen-Parameter** (Punkt 4 verlangt sie woertlich, die erste Fassung sah sie nicht). Alle Zahlen dieser Phase stehen an EINEM Ort: der **Zahlen-Tafel** in `08.23.2.SOFORT-2-01-PLAN.md`.
+
+**Plans:** 9 plans (4 Wellen — Welle 1 Sicherheit: Plaene 01-04 + 09, Welle 2 Zeitlimit: Plaene 05-08)
+
+Plans:
+- [ ] 08.23.2.SOFORT-2-01-PLAN.md — Funde melden (D-02) + zwei Waechter bauen (AST-Sweep mit fuenf Mengen, Verhaltenstest mit acht Eingaengen)
+- [ ] 08.23.2.SOFORT-2-02-PLAN.md — ROT-Lauf verbatim sichern + die drei Besitz-Helfer in `services/live_session.py`
+- [ ] 08.23.2.SOFORT-2-03-PLAN.md — Fix B-01/B-02/B-03/N-01/N-02/N-03 in `routes/app_routes.py` + `routes/learning.py`
+- [ ] 08.23.2.SOFORT-2-09-PLAN.md — Fix R-7 (`crm_export.py`) + R-8 (`coach.py`) + Schild-Nachzug `crm.meetings` (Migration 0038)
+- [ ] 08.23.2.SOFORT-2-04-PLAN.md — Welle 1 ausrollen, GRUEN-Beleg, Zwei-Konten-Gegenprobe **Org gegen Org**
+- [ ] 08.23.2.SOFORT-2-05-PLAN.md — Zeitlimit-Konstanten in `config.py` + ROT-Lauf Welle 2
+- [ ] 08.23.2.SOFORT-2-06-PLAN.md — Zeitlimit einbauen (blockierend 12 s / Stream-TTFT 8 s, `max_retries=0`)
+- [ ] 08.23.2.SOFORT-2-07-PLAN.md — gestaffeltes Verhalten (Stufe 1 still, Stufe 2 PiP-Hinweis ab 3) + Founder-Zaehler
+- [ ] 08.23.2.SOFORT-2-08-PLAN.md — Welle 2 ausrollen, echter Test-Anruf, D-06-Messung (Grenzwert aus `config` abgeleitet)
 
 ---
 
