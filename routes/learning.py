@@ -145,12 +145,15 @@ def api_postcall_analysis():
             # SocketIO emit 'outcome_ready' - NUR room-targeted, KEIN broadcast (Multi-User-Privacy)
             if _sio_phase_d is not None:
                 try:
-                    _sid_for_emit = None
-                    with ls._session_state_lock:
-                        for _sid, _sd in ls._session_state.items():
-                            if str(_sd.get('state', {}).get('call_id')) == str(_posted_call_id):
-                                _sid_for_emit = _sid
-                                break
+                    # SOFORT-2 N-02/N-03: Raum-Auswahl ueber den Besitz-Helfer, nicht ueber
+                    # einen besitzlosen Zustands-Scan. Der calls-UPDATE oben filtert bereits
+                    # korrekt auf Call.user_id — nur die Raum-Auswahl hier tat es nicht
+                    # (derselbe Zwei-Niveau-Fehler wie in B-03). Folge vorher: ein fremdes
+                    # Konto konnte dem PiP eines anderen Beraters mitten im Gespraech eine
+                    # Abschluss-Maske mit selbst gewaehltem Ergebnis einblenden.
+                    # Der bestehende else-Zweig darunter ("KEINE aktive SID - SKIP emit") ist
+                    # bereits der richtige Leerpfad — deshalb KEIN Statuswechsel.
+                    _sid_for_emit = ls.resolve_own_sid_by_call_id(_posted_call_id, g.user.id)
                     if _sid_for_emit:
                         # BLOCKER-1: emit fires even for confidence=0 (outcome/source null) so FE _decideModalState
                         # can render Zustand 1 ('Automatische Erkennung nicht verfügbar'). Dieser Emit ist ein
@@ -312,12 +315,15 @@ def api_postcall_outcome():
             # -- Block C: SocketIO emit 'outcome_ready' — NUR room-targeted, KEIN broadcast --
             if _sio_phase_d is not None:
                 try:
-                    _sid_for_emit = None
-                    with ls._session_state_lock:
-                        for _sid, _sd in ls._session_state.items():
-                            if str(_sd.get('state', {}).get('call_id')) == str(_posted_call_id):
-                                _sid_for_emit = _sid
-                                break
+                    # SOFORT-2 N-02/N-03: Raum-Auswahl ueber den Besitz-Helfer, nicht ueber
+                    # einen besitzlosen Zustands-Scan. Der calls-UPDATE oben filtert bereits
+                    # korrekt auf Call.user_id — nur die Raum-Auswahl hier tat es nicht
+                    # (derselbe Zwei-Niveau-Fehler wie in B-03). Folge vorher: ein fremdes
+                    # Konto konnte dem PiP eines anderen Beraters mitten im Gespraech eine
+                    # Abschluss-Maske mit selbst gewaehltem Ergebnis einblenden.
+                    # Der bestehende else-Zweig darunter ("KEINE aktive SID - SKIP emit") ist
+                    # bereits der richtige Leerpfad — deshalb KEIN Statuswechsel.
+                    _sid_for_emit = ls.resolve_own_sid_by_call_id(_posted_call_id, g.user.id)
                     if _sid_for_emit:
                         # BLOCKER-1: emit fires even for confidence=0 (outcome/source null) so FE
                         # _decideModalState Zustand 1 rendern kann. SIBLING des calls-UPDATE-Write-
