@@ -143,6 +143,22 @@ def save_meeting():
     person  = (data.get('ansprechpartner') or '').strip()
     notes   = (data.get('notes') or '').strip() or None
     call_id = data.get('call_id') or None
+    # SOFORT-2 R-7: Besitzpruefung der geposteten call_id — fail-closed VOR jedem DB-Write,
+    # genau wie die Firma-Pflicht drei Zeilen darueber.
+    # Vorher wurde die call_id ungeprueft als Meeting.call_id gespeichert: Konto A konnte einen
+    # FREMDEN Anruf an seinen EIGENEN Termin haengen. Die RLS auf crm.* schuetzt die ZEILE
+    # mandantenweise — NICHT die Fremdreferenz darin. Heute liest niemand die Spalte; genau
+    # deshalb wird hier geprueft statt vertagt: ein nur-einfuegender Haken ohne Pruefung
+    # sammelt stillen Muell, der spaeter nicht mehr von echten Daten unterscheidbar ist.
+    # BESITZ-KRITERIUM (benannte Festlegung, Plan 09): eigener Anruf ODER gleicher Mandant.
+    # Beide Vergleichswerte sind serverseitig (g.user.id / g.tenant_id) — der Client setzt keinen.
+    # ⚠ public.calls traegt KEINE RLS (relrowsecurity = f, Production 2026-08-05) — nur deshalb
+    # darf ein leeres Ergebnis hier als "gehoert dir nicht" gelesen werden. Auf einer
+    # FORCE-RLS-Tabelle waere derselbe Rueckschluss ein Falsch-403.
+    if call_id:
+        import services.live_session as ls
+        if not ls.call_belongs_to(call_id, g.user.id, tenant_id):
+            return jsonify(ok=False, error='Unbekannter Anruf'), 403
     sched_raw = data.get('scheduled_at')
     scheduled_at = None
     if sched_raw:
