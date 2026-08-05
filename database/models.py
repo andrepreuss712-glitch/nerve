@@ -1064,7 +1064,7 @@ class Meeting(Base):
     tenant_id      = Column(UUID_TYPE, nullable=False)
     account_id     = Column(UUID_TYPE, nullable=True)
     contact_id     = Column(UUID_TYPE, nullable=True)
-    call_id        = Column(UUID_TYPE, nullable=True, comment='Soft-Link zu public.calls.id, KEIN FK (D-08)')   # soft link zu public.calls.id, KEIN FK (D-08)
+    call_id        = Column(UUID_TYPE, nullable=True, comment='Soft-Link zu public.calls.id, KEIN FK (D-08). Wird beim Speichern gegen den Besitzer geprueft (services/live_session.py::call_belongs_to, eigener Anruf ODER gleicher Mandant) — vorher wurde der geposteten Wert ungeprueft uebernommen. Status: wird befuellt, hat KEINEN Leser.')   # soft link zu public.calls.id, KEIN FK (D-08)
     scheduled_at   = Column(DateTime(timezone=True), nullable=True, comment='Geplanter Meeting-Zeitpunkt')
     notes          = Column(Text, nullable=True, comment='Meeting-Notizen')
     schema_version = Column(SmallInteger, nullable=False, server_default='1', comment='Schema-Version des Meeting-Datensatzes')
@@ -1073,7 +1073,7 @@ class Meeting(Base):
         Index('idx_meetings_tenant', 'tenant_id'),
         Index('idx_meetings_account_id', 'account_id'),
         Index('idx_meetings_contact_id', 'contact_id'),
-        {'schema': 'crm', 'comment': 'Termin-/Meeting-Datensaetze je Tenant (PiP-Termin-Form, G-MEET). Status: lebt (crm, RLS-isoliert). Schreibt/liest services/crm_service.py + routes/app_routes.py.'},
+        {'schema': 'crm', 'comment': 'Termin-/Meeting-Datensaetze je Tenant (PiP-Termin-Form, G-MEET). Status: lebt (crm, RLS-isoliert, tenant_isolation FORCE). Schreibt routes/crm_export.py::save_meeting (POST /crm/meetings, seit 08.23.2.SOFORT-2 mit Besitzpruefung der call_id) + services/crm_service.py + routes/app_routes.py; liest bislang KEIN Produktionspfad.'},
     )
 
 
