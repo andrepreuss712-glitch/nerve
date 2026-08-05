@@ -168,7 +168,32 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 >
 > **BESCHLUSS 4 (Andre 04.08.):** Meeting-Modus wird **trotzdem gebaut**, so rechtssicher wie moeglich — **mit Sichtbarkeits-Schalter** (zum Launch ggf. nur Superuser). **Der Schalter gehoert in die Anforderungsliste des Engine-Neubaus** — spaeter nicht mehr sauber nachruestbar.
 >
-> **BESCHLUSS 5:** Mail an `security@deepgram.com` (laut Deepgrams Privacy Policy zustaendig), CC `support@`: Werden bei Diarisierung intern Voice-Embeddings berechnet? Bleiben sie nach der Session erhalten / sind sie session-uebergreifend wiederverwendbar? Gibt es eine belastbare schriftliche BIPA-Position? ⚠ Erwartungs-Daempfer: Gerade **weil** Deepgrams Kernprodukt daran haengt, geben sie es womoeglich nicht schriftlich. Die Anwaltsstunde bleibt auf der Liste.
+> **BESCHLUSS 5 — ✅ ERLEDIGT UND BEANTWORTET (05.08.).** Deepgram hat binnen 24 h geantwortet, schriftlich, vom **Director of Information Security** (Ehab El-Ali). Volltext als Beweisstueck im Vault: `04 Entscheidungen/NERVE US-Rechtslage Analyse.md` §3.2b — **nicht loeschen, das ist im Streitfall ein Dokument.**
+> - **Werden Embeddings berechnet?** *"We extract embeddings, but only to separate speakers based on vocal characteristics."* → **JA.**
+> - **Bleiben sie erhalten / sind sie uebergreifend nutzbar?** *"They are ephemeral. We do not use embeddings to create any form of speaker identification across sessions or customers."* → **Das ist die Entlastung.**
+> - **Formale Position:** Diarisierung sei keine biometrische Datenverarbeitung, solange sie Sprecher nur unterscheidet, **ohne eine Vorlage zur Wiedererkennung ueber mehrere Gespraeche hinweg** zu erzeugen.
+>
+> **★ Der starke Teil:** Diese Position deckt sich **woertlich** mit dem einzigen belegten Urteil dazu (Covington/X: ein biometrisches Merkmal muss die Person *identifizieren koennen*). Es ist keine Werbeaussage, sondern eine vor Gericht bereits einmal tragende Verteidigungslinie.
+> **⚠ Die drei Haken:** (1) Embeddings **entstehen** — entlastend ist nur *fluechtig*. (2) *"typically not considered"* ist eine Einschaetzung, keine Zusicherung. (3) *"We abide by all privacy laws"* ist Standardtext, **keine BIPA-Freistellung** → entscheidet ein Gericht anders, haftet **NERVE**, nicht Deepgram.
+> **Claudians Erwartungs-Daempfer war in der Sache falsch** — sie haben es schriftlich gegeben. Richtig blieb nur: Position ≠ Garantie.
+>
+> **Die Anwaltsfrage ist dadurch nicht weg, sondern SCHAERFER:** nicht mehr *"erzeugt Deepgram Voiceprints?"* (beantwortet), sondern *"reicht **fluechtig + nicht wiederverwendbar** als BIPA-Verteidigung — und wer haftet, wenn nicht?"* Eine Beratungsstunde, kein Gutachten.
+>
+> **⬜ BEOBACHTEN, nicht abhaken:** Otter haengt seit Mai 2026, Microsoft seit Februar. **Diese Entscheidungen werden Praezedenzfaelle fuer die ganze Branche.** Andre 05.08.: *"das werden erst die verfahren in illinois zeigen."* Alle ~6 Wochen kurz pruefen.
+>
+> ### 🔴 NEU 2026-08-05 — SCHIEDS-KLAUSEL + ZUSTIMMUNGS-NACHWEIS (START-BLOCKER, Bau-Teil bei UNS)
+>
+> **Wirkt unabhaengig davon, wie die Verfahren ausgehen** — deshalb der eine Punkt, an dem ein Anwalt wirklich etwas kauft, das wir uns nicht selbst bauen koennen. Andre 05.08.: *"dann bleibt uns an der stelle keine wahl als einen anwalt drueber schauen zu lassen."*
+>
+> **(a) Anwalts-Teil:** Schieds-Klausel mit Sammelklagen-Verzicht, **individuell** aufgesetzt. Keine Netz-Vorlage: moderne Klauseln muessen **Massen-Schiedsverfahren** abfangen (tausend Einzelverfahren gleichzeitig, Gebuehr zahlt der Anbieter — kann teurer werden als die vermiedene Sammelklage). Alles Uebrige (ToS, Privacy Policy, DPA) geht mit Vorlagen + Pruefung ~720 $.
+>
+> **(b) 🔴 BAU-TEIL — das ist UNSERE Arbeit und ein TUEROEFFNER (nicht nachruestbar):**
+> Die Klausel ist **wertlos ohne Nachweis der Zustimmung.**
+> - **Aktiv zu setzendes Haekchen** bei Registrierung (ein blosser Fussleisten-Link — "mit der Nutzung stimmen Sie zu" — wird vor US-Gerichten regelmaessig kassiert).
+> - **Gespeichert werden muss: WER · WANN (Zeitstempel) · WELCHE FASSUNG (Versionsnummer der Bedingungen).**
+> - ⚠ **Nicht nachruestbar:** Wer sich vor Einfuehrung registriert hat, hat nie zugestimmt — fuer den gilt die Klausel nie. Vor dem Start kostet das nichts; nach hundert Kunden ist es unreparierbar.
+> - **Muss vor dem ersten echten Kunden stehen.** Beruehrt `routes/auth.py` (register), das User-Modell und die Onboarding-Maske.
+> - **Zusammen bauen mit** der schriftlichen BIPA-Einwilligung des Verkaeufers (Cold-Call-Modus, Illinois-Schriftform) — dieselbe Stelle, dieselbe Mechanik, ein Bau-Schritt statt zwei.
 >
 > **Werbeaussagen:** "NERVE zeichnet NICHTS auf" ist als **ueberpruefbare Tatsachenbehauptung** angreifbar, solange Text gespeichert wird; "bei uns landen keine Kundendaten" ist gegenueber **Deepgram** nicht haltbar. Vier Slogan-Vorschlaege von Andre verworfen (*"da muessen wir nochmal ans reissbrett"*). Anforderungen an die Neufassung im Vault §7f — **Pflicht: muss in BEIDEN Modi wahr sein** (der erste Anlauf hatte den Meeting-Modus vergessen).
 
