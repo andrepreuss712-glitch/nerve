@@ -403,6 +403,129 @@ def test_pending_migration_is_empty():
 # schaltete diesen Pruefpunkt fuer die halbe Riegel-Menge still ab.
 # ══════════════════════════════════════════════════════════════════════════════
 
+_RIEGEL_PRUEFKATALOG = """PRUEFPUNKT 6 — modul-globaler Riegel um einen Netz-/LLM-Aufruf.
+(Phase 08.23.2.MEHRNUTZER-REST-1, CLAUDE.md Punkt 31)
+
+WAS DER KATALOG ABDECKT (positiv, in einem Satz):
+Ein auf MODUL-EBENE definierter, FUER ALLE NUTZER GEMEINSAMER Riegel, dessen
+`with`-Block — oder dessen `acquire`/`try`/`finally`-Region — einen im Block SICHTBAR
+aufgerufenen LLM- oder HTTP-Aufruf enthaelt: <x>.messages.create/stream, requests.*,
+httpx.*, http_llm_client(...) — ueber alle .py-Dateien in services/ und routes/.
+ABGRENZUNG: ein PER-SCHLUESSEL-Riegel (Fabrik-Aufruf mit Argument, `_lock_for(key)`)
+ist definitionsgemaess KEIN Verstoss — er ist die Loesung der Fehlerklasse. Er zaehlt
+voll fuer die Soll-Tabelle mit (sonst waere der Waechter nach dem Fix blind), wird
+aber nicht gemeldet.
+
+WAS ER STRUKTURELL NICHT SEHEN KANN:
+1. EIN HELFER EINE EBENE TIEFER. Steht unter dem Riegel `self._frag_das_modell()` und
+   der Netzaufruf liegt IN dieser Funktion, sieht der Sweep nichts. Das ist dieselbe
+   Restluecke wie bei tests/test_session_lock_blocking_calls_guard.py:114 und die
+   WAHRSCHEINLICHSTE kuenftige Rueckkehr der Fehlerklasse.
+2. Dynamischer Dispatch (getattr(...)()), Callbacks, Monkeypatch, Registry-Hooks.
+3. ⚠ NUR MODUL-EBENE — DIE ZWEI WICHTIGSTEN NICHT ERFASSTEN DEFINITIONS-ORTE.
+   Die Riegel-Ableitung liest ausschliesslich `baum.body`, also die echte Modul-Ebene.
+   Damit erfasst dieser Sweep NICHT:
+   (a) RIEGEL, DIE INNERHALB VON FUNKTIONEN DEFINIERT WERDEN — jedes
+       `def f(): ... _x_lock = threading.Lock()` (auch in Fabriken, Closures,
+       Dekoratoren, Klassen-Methoden und `__init__`). Ein solcher Riegel steht in
+       KEINER abgeleiteten Namensmenge; ein `with` darauf ist fuer diesen Pruefpunkt
+       schlicht unsichtbar — auch dann, wenn die Funktion nur EINMAL laeuft und der
+       Riegel faktisch prozessweit gemeinsam ist (z.B. ein Riegel in einer
+       Modul-Init-Funktion oder in einem `__init__` eines Singletons).
+       ⚠ Das ist ein DURCHRUTSCHER, kein Falsch-Treffer: die Fehlerklasse kann in
+       dieser Form ZURUECKKEHREN, ohne dass dieser Waechter rot wird.
+   (b) RIEGEL, DIE ALS KLASSENATTRIBUT DEFINIERT WERDEN — `class X: _lock =
+       threading.Lock()`, heute z.B. services/anonymization.py:197,
+       services/einwand_keyword_matcher.py:219, services/live_session.py:331. Sie
+       sind bewusst ausserhalb, weil sie in der Regel pro-Instanz gedacht sind — aber
+       ein Klassenattribut ist in Python faktisch von ALLEN Instanzen GETEILT. Ein
+       geteilter Klassenattribut-Riegel um einen Netz-Aufruf waere die Fehlerklasse
+       in voller Schaerfe und wuerde von diesem Sweep NICHT gemeldet.
+   Beide Luecken sind BENANNT, nicht geschlossen. Ein gruenes Ergebnis dieses
+   Pruefpunkts ist deshalb KEINE Aussage ueber funktions-lokale oder
+   klassenattribut-basierte Riegel. Wer diese Formen mit abdecken will, braucht eine
+   ERWEITERUNG der Ableitung (ast.walk statt baum.body plus eine Aussage darueber,
+   wie oft der definierende Rumpf laeuft) — nicht ein Weiterlesen dieses Gruens.
+4. Alles ausserhalb von services/ + routes/: app.py, database/, nerve_rt/, scripts/.
+   ⚠ nerve_rt/ ist damit UNBEWACHT und hat bereits eine eigene HART-Regel (CLAUDE.md,
+   fehlende Anonymisierung) — dieser Waechter deckt sie NICHT mit ab.
+
+WO DIE HEURISTIKEN ZWEISCHNEIDIG SIND (beide Richtungen):
+5. Riegel-Erkennung ueber den NAMEN: `_sessions_lock` existiert in zwei Dateien
+   (services/deepgram_service.py:22, routes/training.py:42). Eine gleichnamige LOKALE
+   Variable in einer dritten Datei gaelte als Riegel -> Richtung FALSCH-TREFFER (laut,
+   harmlos). Umgekehrt rutscht ein Riegel durch, der ueber eine FUNKTION statt einer
+   Zuweisung entsteht.
+6. Konstruktor-Kriterium endswith('Lock') faengt threading.Lock/RLock und _TracedLock,
+   aber NICHT eine Huelle namens z.B. `Mutex` oder `make_lock()`.
+7. VARIANTE A (endswith('_lock','_lock_for') auf AUFRUFE) haelt den conv_id-Riegel in
+   der Bewachung, macht aber jeden gleich benannten Aufruf zu einem Riegel-Ausdruck.
+   Beleg fuer die Richtung: services/exchange_rates.py:100 `_acquire_worker_lock()`
+   liefert ein bool, keinen Riegel — wird heute in keinem `with` benutzt (gemessen
+   2026-08-06: 0 Treffer), gaelte dort aber als Riegel-Block. Richtung FALSCH-TREFFER
+   (laut), nicht Durchrutscher.
+8. NEUE RESTLUECKE DURCH DIE TRENNUNG ZAEHL-/MELDE-SEITE: Ein Fabrik-Aufruf MIT
+   Argument (`_lock_for(key)`) gilt als per-Schluessel-Riegel und wird deshalb
+   GEZAEHLT, aber NICHT gemeldet. Der Sweep sieht nur die AUFRUFFORM, nie den Rumpf
+   der Fabrik. Eine Fabrik, die ihr Argument IGNORIERT und trotzdem einen gemeinsamen
+   Riegel zurueckgibt — `def _x_lock_for(_egal): return _EIN_GLOBALER` — rutscht
+   damit DURCH. Richtung: DURCHRUTSCHER, nicht Falsch-Treffer, und damit die
+   gefaehrlichere der beiden. Gegengewicht: die Fabrik OHNE Argument
+   (`_hole_lock()`) wird sehr wohl gemeldet, weil sie gar nicht nach Schluessel
+   trennen KANN. Ein Laufzeit-Nachweis "verschiedene Schluessel bekommen wirklich
+   verschiedene Riegel" leistet nur der Verhaltens-Test
+   tests/test_lernkarten_lock_pro_conv.py (Plan 01), nicht dieser Sweep.
+9. messages.create/stream sind an den Empfaenger `messages` gebunden; ein LLM-SDK mit
+   anderer Aufrufform (z.B. client.complete(...)) rutscht durch.
+
+WAS FORMAL UNKLAR BLEIBT:
+10. Ob ein Lazy-Model-Load unter Riegel als "Netzaufruf" zu werten ist:
+   services/anonymization.py:62 (_gliner_lock -> GLiNER.from_pretrained, :67),
+   services/qa_pipeline.py:97 (_MODEL_LOCK -> SentenceTransformer, :101),
+   services/anonymization.py:36 (_nlp_lock -> spacy.load, :38). Alle drei sind
+   Double-Checked-Locking, EINMAL pro Prozess beim Kaltstart, kein pro-Nutzer-Aufruf —
+   deshalb BEWUSST NICHT im Katalog. from_pretrained KANN beim allerersten Mal einen
+   Download ausloesen; die Klasse ist damit OFFEN, nicht geschlossen. Sie stehen
+   ABSICHTLICH NICHT in _FALSCH_TREFFER_RIEGEL: es sind keine Falsch-Treffer, der
+   Katalog erfasst sie schlicht nicht.
+
+WELCHE ZWEITE SCHICHT DARUNTER LIEGT:
+11. Fuer _session_state_lock: der LOCKWATCH-Wachhund (services/live_session.py:1518-1541,
+    Laufzeit) plus tests/test_session_lock_blocking_calls_guard.py (breiteres Verbots-Set).
+    Fuer ALLE UEBRIGEN modul-globalen Riegel — darunter der neue conv_id-Riegel in
+    services/coaching_service.py — gibt es KEINE Laufzeit-Schicht. Dieser statische
+    Sweep ist dort die einzige Schicht.
+
+GEPRUEFT UND GESCHLOSSEN:
+12. Die DIREKTESTE Form der Fehlerklasse — ein GEMEINSAMER modul-globaler Riegel, der
+    im selben Block sichtbar messages.create/stream oder requests.*/httpx.* umschliesst
+    — ist GEFANGEN. Belegt dreifach: durch
+    test_riegel_sweep_beisst_gegen_synthetischen_quelltext (fuenf Formen, inkl.
+    try/finally und _TracedLock-Huelle), durch die Gegenprobe (III) in
+    test_riegel_erkennung_erfasst_context_manager_aufruf, UND durch den ROT-Lauf
+    dieser Phase gegen services/coaching_service.py:84.
+13. Die Form NACH dem Fix — `with _analysis_lock_for(conv_id):` — bleibt in der
+    ZAEHLUNG (Variante A) und ist bewusst NICHT verstoss-faehig: ein
+    per-Schluessel-Riegel ist die LOESUNG, kein Verstoss. Beide Richtungen belegt durch
+    test_riegel_erkennung_erfasst_context_manager_aufruf ((I) gezaehlt == 1,
+    (II) nicht gemeldet). Ohne (I) waere der Waechter nach dem Fix gruen ABER BLIND;
+    ohne (II) bliebe er dauerhaft ROT und das gruene Tor unerreichbar. Die Restluecke,
+    die diese Trennung oeffnet, steht als Punkt 8 — sie ist benannt, nicht verschwiegen.
+14. _session_state_lock ist von diesem Pruefpunkt erfasst (weite Ableitung ueber
+    _TracedLock), war aber schon vorher durch
+    tests/test_session_lock_blocking_calls_guard.py mit breiterem Verbots-Set gedeckt.
+    Doppel-Deckung, keine Luecke.
+15. Unterordner von services//routes/ sind ueber rglob mit abgedeckt (heute existieren
+    keine) — anders als bei den sechs aelteren Sweeps dieser Datei, die glob('*.py')
+    benutzen.
+
+STOP-REGEL: erwartet sind 0 Verstoesse. Ein echter Fund wird mit Datei:Zeile gemeldet —
+NICHT in _FALSCH_TREFFER_RIEGEL geschoben, NICHT durch Aufweichen des Netz-Katalogs
+aufgeloest, und NICHT durch ersatzloses Entfernen des Riegels (daran haengt der
+Duplikatschutz: learning_cards hat keinen Unique-Constraint auf call_id,
+database/models.py:629-631).
+"""
+
 _RIEGEL_SCAN_DIRS = ('services', 'routes')
 
 # WEITE Riegel-Ableitung: jede Modul-Ebenen-Zuweisung, deren rechte Seite ein Aufruf
@@ -960,3 +1083,31 @@ def test_riegel_erkennung_erfasst_context_manager_aufruf():
     assert _riegel_zaehle_bloecke_in_quelle(kein_riegel) == 0, (
         "`with open(...)` wird faelschlich als Riegel-Block gezaehlt — die "
         "Endungs-Heuristik ist zu weit.")
+
+
+def test_riegel_pruefkatalog_ist_vollstaendig():
+    """Ein Waechter ohne benannte Grenzen erzeugt falsche Sicherheit (Punkt 31).
+    Diese Pruefung haelt die sechs Punkt-31-Pflicht-Bestandteile PLUS die hauseigene
+    STOP-REGEL fest — zusammen die sieben Ueberschriften unten."""
+    for ueberschrift in ('WAS DER KATALOG ABDECKT',
+                         'WAS ER STRUKTURELL NICHT SEHEN KANN',
+                         'WO DIE HEURISTIKEN ZWEISCHNEIDIG SIND',
+                         'WAS FORMAL UNKLAR BLEIBT',
+                         'WELCHE ZWEITE SCHICHT DARUNTER LIEGT',
+                         'GEPRUEFT UND GESCHLOSSEN',
+                         'STOP-REGEL'):
+        assert ueberschrift in _RIEGEL_PRUEFKATALOG, (
+            f"Pflicht-Abschnitt '{ueberschrift}' fehlt im Pruefkatalog "
+            f"(CLAUDE.md Punkt 31).")
+
+    # Auflage aus dem Pre-Execute-Audit (Claudian) + Cross-AI (Gemini, LOW-Befund):
+    # Die zwei nicht erfassten Definitions-Orte sind die naheliegendste Fehl-Lesung
+    # eines gruenen Ergebnisses. Sie standen bisher nur in RESEARCH.md §4.7.2 — dort
+    # liest sie niemand, der diesen Test gruen sieht. Diese Schleife haelt sie IM
+    # Docstring fest, damit sie nicht still herausgekuerzt werden koennen.
+    for luecke in ('RIEGEL, DIE INNERHALB VON FUNKTIONEN DEFINIERT WERDEN',
+                   'RIEGEL, DIE ALS KLASSENATTRIBUT DEFINIERT WERDEN'):
+        assert luecke in _RIEGEL_PRUEFKATALOG, (
+            f"Die benannte Restluecke '{luecke}' fehlt im Pruefkatalog. Ohne sie "
+            f"wird ein gruenes Ergebnis dieses Pruefpunkts als weitergehender Beweis "
+            f"gelesen, als er ist (CLAUDE.md Punkt 31, Pflicht-Bestandteil 2 und 3).")
