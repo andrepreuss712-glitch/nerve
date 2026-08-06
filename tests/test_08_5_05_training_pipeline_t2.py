@@ -22,7 +22,10 @@ _fake_anthropic = types.ModuleType('anthropic')
 
 class _FakeAnthropic:
     def __init__(self, **kwargs):
-        pass
+        # SOFORT-2 (2026-08-06): Konstruktor-Argumente merken statt wegwerfen — siehe _t1.py.
+        self.max_retries = kwargs.get('max_retries')
+        self.api_key = kwargs.get('api_key')
+        self._kwargs = kwargs
 
     # STABIL-1 (2026-07-23): siehe _t1.py — with_options()->self + messages.create
     # wirft, damit der geleakte Stub http_llm_client() ueberlebt statt fremde Tests
@@ -40,6 +43,39 @@ class _FakeAnthropic:
 
 
 _fake_anthropic.Anthropic = _FakeAnthropic
+
+
+# SOFORT-2 (2026-08-06): Ausnahme-Klassen mit echter Vererbung + echtes SDK gewinnt,
+# wenn installiert. Vollstaendige Begruendung in _t1.py — hier bewusst identisch, weil
+# BEIDE Dateien die Attrappe unterschieben und wer nur eine repariert, verschiebt den
+# Fehler auf die Test-Reihenfolge (dann haengt das Deploy-Tor mal und mal nicht).
+class _FakeAnthropicError(Exception):
+    pass
+
+
+class _FakeAPIError(_FakeAnthropicError):
+    def __init__(self, message='fake anthropic error', *, request=None, **kw):
+        self.request = request
+        super().__init__(message)
+
+
+class _FakeAPIConnectionError(_FakeAPIError):
+    pass
+
+
+class _FakeAPITimeoutError(_FakeAPIConnectionError):
+    pass
+
+
+_fake_anthropic.AnthropicError = _FakeAnthropicError
+_fake_anthropic.APIError = _FakeAPIError
+_fake_anthropic.APIConnectionError = _FakeAPIConnectionError
+_fake_anthropic.APITimeoutError = _FakeAPITimeoutError
+
+try:  # pragma: no cover - haengt an der Umgebung, nicht am Testpfad
+    import anthropic as _real_anthropic  # noqa: F401
+except ImportError:
+    pass
 sys.modules.setdefault('anthropic', _fake_anthropic)
 # Stub requests ONLY if not already loaded — see _t1.py for full reasoning.
 import requests as _real_requests  # noqa: F401

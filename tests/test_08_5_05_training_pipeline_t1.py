@@ -20,7 +20,14 @@ _fake_client = object()
 
 class _FakeAnthropic:
     def __init__(self, **kwargs):
-        pass
+        # SOFORT-2 (2026-08-06): die Konstruktor-Argumente MERKEN statt wegwerfen.
+        # Vorher warf __init__ sie weg; test_modul_client_hat_keinen_retry sah dann
+        # "'_FakeAnthropic' object has no attribute 'max_retries'" und konnte NICHT
+        # pruefen, ob max_retries=0 wirklich am Aufruf steht. Der echte
+        # anthropic.Anthropic legt beide als Attribut ab — die Attrappe jetzt auch.
+        self.max_retries = kwargs.get('max_retries')
+        self.api_key = kwargs.get('api_key')
+        self._kwargs = kwargs
 
     # STABIL-1 (2026-07-23): der Modul-Global claude_service.claude_client wird
     # (reihenfolge-abhaengig) diese _FakeAnthropic-Instanz, weil der sys.modules-
@@ -44,6 +51,55 @@ class _FakeAnthropic:
 
 
 _fake_anthropic.Anthropic = _FakeAnthropic
+
+
+# SOFORT-2 (2026-08-06): Die Attrappe muss die Ausnahme-KLASSEN mittragen, die der
+# Produktivcode faengt (anthropic.APITimeoutError 7x, anthropic.APIConnectionError 1x).
+# Ohne sie wirft `except anthropic.APITimeoutError:` beim AUSWERTEN einen AttributeError,
+# der breitere Handler schluckt ihn — und der Timeout-Zweig ist in JEDEM Test, in dem
+# diese Attrappe gewinnt, unerreichbar. Genau daran ist das Deploy-Tor am 2026-08-06
+# haengengeblieben ("module 'anthropic' has no attribute 'APITimeoutError'", 2 failed).
+# ⚠ Die VERERBUNG ist Teil des Vertrags, nicht Zierde. Echte SDK 0.86.0:
+#   APITimeoutError -> APIConnectionError -> APIError -> AnthropicError -> Exception.
+#   Wer sie flach nachbaut, macht test_timeout_zweig_ist_erreichbar aussagelos: der Test
+#   prueft die Vererbungs-Falle ("steht ein breiterer Handler zuerst?") und wuerde dann
+#   eine Reihenfolge pruefen, die es in Produktion so nicht gibt.
+# ⚠ `request=` ist Pflicht-Schluesselwort im echten Konstruktor — die Attrappe nimmt es
+#   entgegen, sonst scheitert schon das Erzeugen der Ausnahme im Test.
+class _FakeAnthropicError(Exception):
+    pass
+
+
+class _FakeAPIError(_FakeAnthropicError):
+    def __init__(self, message='fake anthropic error', *, request=None, **kw):
+        self.request = request
+        super().__init__(message)
+
+
+class _FakeAPIConnectionError(_FakeAPIError):
+    pass
+
+
+class _FakeAPITimeoutError(_FakeAPIConnectionError):
+    pass
+
+
+_fake_anthropic.AnthropicError = _FakeAnthropicError
+_fake_anthropic.APIError = _FakeAPIError
+_fake_anthropic.APIConnectionError = _FakeAPIConnectionError
+_fake_anthropic.APITimeoutError = _FakeAPITimeoutError
+
+# ⛔ Das ECHTE SDK muss gewinnen, wenn es installiert ist — sonst prueft
+# test_live_timeout_stufen.py seine eigene Attrappe statt der Wirklichkeit (sein
+# Docstring sagt ausdruecklich "Eine echte SDK-Ausnahme, keine Attrappe").
+# Dasselbe Muster wie beim `requests`-Stub drei Zeilen tiefer, aus demselben Grund:
+# `setdefault` greift nur, wenn das Modul noch NICHT geladen ist — also laden wir das
+# echte zuerst. Die Attrappe bleibt der Rueckfall fuer Umgebungen OHNE SDK (ihr Zweck:
+# training_service.py importierbar halten).
+try:  # pragma: no cover - haengt an der Umgebung, nicht am Testpfad
+    import anthropic as _real_anthropic  # noqa: F401
+except ImportError:
+    pass
 sys.modules.setdefault('anthropic', _fake_anthropic)
 
 # Stub requests ONLY if not already loaded. import first to ensure the real
