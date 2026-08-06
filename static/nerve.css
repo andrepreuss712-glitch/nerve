@@ -3472,6 +3472,22 @@ input[type="range"].perf-slider::-moz-range-thumb {
     50% { opacity: 0.5; }
 }
 
+/* Phase 08.23.2.SOFORT-2 (D-04 Stufe 2) - Live-KI antwortet nicht.
+   Ruhig, kein Alarm: KEIN Puls, KEIN Gelb/Rot. Marken-Teal, gedaempft.
+   Farbe ausschliesslich ueber Tokens - kein Hex-Literal (Farb-Regel Schicht 1),
+   und Teal statt Blau/Gelb (Farb-Regel Schicht 2: Teal ist die Marke). */
+.pip-llm-timeout-warn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--btn-primary-bg-from, #00D4AA);
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+}
+
 /* ===========================================================================
    Phase 08.23.2.D - Dashboard Outcome-Reminder + Inline-Korrektur (REQ-D-8/9)
    Brand-Lock: ausschliesslich Teal-Familie (#00D4AA), KEIN Gelb (#f59e0b/#fbbf24)

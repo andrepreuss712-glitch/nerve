@@ -2605,6 +2605,15 @@
       }
     });
 
+    // -- Phase 08.23.2.SOFORT-2 (D-04 Stufe 2) - live_llm_timeout_warning ---
+    state.socket.on('live_llm_timeout_warning', function (d) {
+      try {
+        _showLlmTimeoutWarning(d && d.text, d && d.tip);
+      } catch (e) {
+        console.error('[SOFORT-2] live_llm_timeout_warning Handler Fehler:', e);
+      }
+    });
+
     // -- Phase 08.23.2.D D-04e - Reconnect-Fallback-Pull -----------------
     state.socket.on('connect', function () {
       if (state.lastCallId) {
@@ -3915,6 +3924,28 @@
     el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/></svg>';
     host.appendChild(el);
     setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 5000);
+  }
+
+  // Phase 08.23.2.SOFORT-2 (D-04 Stufe 2): ruhig und knapp, kein Alarm.
+  // Der Wortlaut kommt VOM SERVER (config.LIVE_LLM_TIMEOUT_HINWEIS_TEXT) — EIN Pflegeort,
+  // nachpruefbar und aenderbar (D-04 Andre-Pflicht). Die Fallbacks hier sind nur ein Notnetz.
+  // Farbe: KEIN Hex-Literal. Das SVG erbt die Farbe ueber stroke="currentColor" aus der
+  // CSS-Klasse .pip-llm-timeout-warn, die ein Token aus static/nerve.css setzt.
+  function _showLlmTimeoutWarning(text, tip) {
+    var host = document.querySelector('.pip-header-mic-area') || document.querySelector('.pip-header') || document.body;
+    var existing = document.getElementById('pip-llm-timeout-warn');
+    if (existing) existing.remove();   // Hysterese: nie zwei gleichzeitig
+    var el = document.createElement('div');
+    el.id = 'pip-llm-timeout-warn';
+    el.className = 'pip-llm-timeout-warn';
+    el.setAttribute('data-tip', tip || 'Mehrere Anfragen ohne Antwort — die Analyse pausiert, das Gespräch läuft weiter.');
+    var _svg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+    el.innerHTML = _svg + '<span></span>';
+    el.querySelector('span').textContent = text || 'Die Live-Erkennung antwortet gerade nicht.';
+    host.appendChild(el);
+    // Selbstentfernend: ein Hinweis, der bleibt, ist ein Alarm (Vorbild _showAudioWarning, 5 s).
+    // Hier 8 s, weil die Meldung gelesen werden soll, nicht nur bemerkt.
+    setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 8000);
   }
 
   // ── Outcome-Flow Helpers (Phase 08.23.2.D.UX-05 — D-W3-01/02/06) ──────────
