@@ -199,6 +199,41 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 
 ---
 
+> ### ✅ NEU 2026-08-06 — BESTANDS-PRUEFUNG: was AUSSERHALB der Live-Engine mehrnutzer-tauglich ist
+>
+> **Andre-Frage 06.08.:** *„Jetzt wo wir festgestellt haben, dass wir das ganze Kassensystem neu aufsetzen muessen — wie sieht es mit unseren restlichen Systemen aus? Also z.B. unser Profilsystem und ggf. andere Systeme?"*
+>
+> **Am Code geprueft (Fable, vier Fehlerklassen ueber `services/` + `routes/`). Antwort: KEIN zweiter Neubau.**
+>
+> **SAUBER — nichts zu tun:** Profilsystem (`routes/profiles.py`, `profile_schema.py`, `profile_migration.py` — null modul-globale Ablagen) · Training (`routes/training.py:41` haelt Sessions im RAM, aber **pro Nutzer gekeyt**, `_sessions[g.user.id]` Z.320, mit Lock) · CRM (`crm_service.py`, `crm_export.py`) · Precall (`precall_service.py:22` — gemeinsamer Cache, aber Key enthaelt die systemweit eindeutige Profil-ID, Z.218, plus Lock + 5-min-TTL) · Kosten (`cost_tracker.py:38` — prozessweiter Zaehler als **bewusst dokumentierte Ausnahme**, zaehlt nur Konfig-Defekte, nie Nutzerdaten, eigener Test nagelt es fest) · Settings/Auth/Orgs/Coach.
+>
+> **BETROFFEN — genau EIN Bereich: die Post-Call-Auswertung. Drei Stellen:**
+>
+> **(1) 🔴 START-BLOCKER, Fix billig — `services/coaching_service.py:8 + :59` (Klasse: globaler Riegel).**
+> Die Lernkarten-Erzeugung haelt einen **fuer ALLE Nutzer gemeinsamen Lock waehrend des LLM-Calls** (bis 45 s), aufgerufen direkt aus der Browser-Request (`routes/learning.py:42` und `:403`).
+> Wirkung: zweiter Nutzer haengt bis 45 s; **ab ~3 gleichzeitigen Nutzern reisst die 60-s-Grenze des Webservers → echter Fehler im Browser**, nicht nur „langsam".
+> Fix: **Der Lock ist ueberfluessig.** Er schuetzt gegen Doppel-Erzeugung — dafuer existiert direkt dahinter bereits eine DB-Pruefung. Lock auf die kurze Pruefung verengen, LLM-Call ausserhalb.
+>
+> **(2) `services/slow_lane.py:145` + `app.py:2434` (Klasse: ein Worker fuer alle).**
+> Die gesamte Post-Call-Bewertung (judge_runner, adoption_runner — beides LLM-Calls) laeuft durch **eine Queue mit EINEM Consumer** fuer alle Mandanten. Fuenf gleichzeitige Anruf-Enden → der Fuenfte wartet auf vier fremde LLM-Calls.
+> **halbteuer, aber im Code bereits vorgedacht:** `slow_lane.py:28-31` beschreibt woertlich die Multi-Worker-Aktivierung fuer „Block M", die DB-Seite ist vorbereitet. **Einloesen eines geplanten Ausbaus, kein Neubau.**
+> `judge_runner.py` / `adoption_runner.py` / `outcome_service.py` selbst sind sauber — sie erben nur diese Engstelle.
+>
+> **(3) `services/anonymization.py:19 + :524-534` (Klasse: ein Fehler trifft alle).**
+> Ueberschreiten die Fehler IRGENDEINES Anrufs die Schwelle, setzt `is_pipeline_healthy = False` die Schwaerzung **prozessweit fuer alle** ausser Betrieb (ab da wirft Z.562 fuer jeden). Betrifft auch den Post-Call-Pfad (Transkript-Speicherung), gehoert also in den Bestand.
+> Fix billig–mittel: Der Fehler-Zaehler braucht eine **Mandanten-Ebene statt Prozess-Ebene**.
+>
+> **⚠ TEST-NETZ-RATSCHE — PFLICHT im selben Zug:**
+> `tests/test_no_live_global_state.py` existiert bereits gegen genau diese Fehlerklasse — **prueft aber NUR die eine Live-Engine-Datei.** Alle drei Funde oben liegen ausserhalb und wurden deshalb nie gemeldet. **Waechter auf die Post-Call-Module ausweiten**, sonst kommt der Fehler zurueck und niemand merkt es. Und: **Pruefkatalog + bekannte Luecke im Waechter dokumentieren** (was faengt er NICHT?).
+>
+> **Bekannte Luecke dieser Untersuchung, ehrlich benannt:** Gesucht wurde nach vier Mustern (modul-globale Ablagen · Locks · Hintergrund-Worker · prozessweite Schalter) plus Einzel-Lektuere aller Treffer. **NICHT gefangen:** Logik-Fehler INNERHALB sauber getrennter Ablagen, und Stau an der Datenbank selbst.
+>
+> **Merkposten (kein Handlungsbedarf heute):** `services/claude_service.py:15-17` traegt denselben „ein Fehler trifft alle"-Bauplan (prozessweiter Not-Umschalter aufs schnelle Modell) — laut Waechter-Whitelist derzeit **schlafender Code ohne lebenden Aufrufer**. Bei Wiederbelebung wuerde ein langsamer Nutzer alle umschalten.
+>
+> **Einordnung in die Reihenfolge:** direkt hinter SOFORT-2, VOR dem Engine-Neubau. Fund 1 ist billig und start-blockierend; 2 und 3 passen thematisch dazu und waeren als eigene Phase Verschnitt.
+>
+> ---
+>
 > ### 🔴🔴 EINSCHUB 2026-08-04 — MEHRNUTZER-FAEHIGKEIT: die Reihenfolge oben steht unter Vorbehalt
 >
 > **Anlass:** MESSGERAETE-1 lieferte die ersten echten Tempo-Zahlen (Analyse Ø 1988 ms, Coaching Ø 2714 ms, Post-Call-CRM 15194 ms). Andre daraus: *„Das System, das wir gebaut haben, ist nicht auf mehrere Nutzer ausgelegt. Punkt."*
