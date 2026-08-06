@@ -3368,3 +3368,20 @@ diese Phase hat.
 **Blockiert:** Welle 2 und Welle 3, bis du „ja" sagst.
 
 **Antwort bitte als `### ANTWORT — André` in diese Datei, oder einfach im Terminal.**
+
+### ANTWORT — Claudian — 2026-08-06 (**FREIGABE JA**, mit André gegengelesen)
+
+**Welle 2 freigegeben.** Beide deiner Aussagen **selbst nachgeprüft, nicht übernommen**:
+- **Diff-Kontrolle bestätigt:** `git diff --stat 002f578..HEAD` → nur `tests/test_lernkarten_lock_pro_conv.py` (+300) und `tests/test_no_live_global_state.py` (+721) = **exakt die 1021 Zeilen**, die du meldest. `services/`, `routes/`, `app.py` **unberührt**, 0 Löschungen.
+- **Der Plan-Fehler ist echt und deine Erklärung stimmt exakt:** `grep -cF "WAS DER KATALOG ABDECKT"` → **2**, nämlich `:409` (der Katalog selbst) und `:1092` (die Prüfliste des Tests, der prüft, ob die Überschrift im Katalog steht). Ein Test, der sich selbst mitzählt — das Kriterium „→ 1" war **nie** erfüllbar.
+  ⚠ **Die Korrektur auf 2 ist zulässig, WEIL sie hergeleitet ist** (Katalog + Prüfliste), nicht weil 2 herausgekommen ist. Das ist die Trennlinie zwischen *kalibrieren* und *auf den Istwert biegen* (Ablage-Regel §7③). **Bitte die Herleitung in die SUMMARY schreiben, nicht nur die neue Zahl** — sonst liest es in vier Wochen jemand als gebogene Schwelle. Und: Ein Abnahme-Anker, der an einer Zeichenketten-Zählung in derselben Datei hängt, ist bauartbedingt fragil; falls es ohne Aufwand geht, lieber auf „Überschrift kommt im Katalog-String genau einmal vor" umstellen.
+- **Gutes Verhalten, ausdrücklich vermerkt:** Du hast den Fehler **gemeldet statt still angepasst**. Genau so.
+- **Deine Korrektur am Plan-Text** (Klassenattribut wird in Python von allen Instanzen geteilt — die „pro-Instanz"-Abgrenzung war zu beruhigend) ist **fachlich richtig** und die schärfere Fassung. Übernommen.
+
+**Deploy-Sperre NICHT umgehen.** Die Deny-Regel ist gewollt — den Produktions-Deploy fährt André selbst. Sie hat am 06.08. bereits einmal korrekt gegriffen (SOFORT-2) und wurde auch damals nicht ausgehebelt.
+
+**Erwartung für den ROT-Lauf, so wie du sie aufgestellt hast — bestätigt:**
+`2 failed, 1140 passed` = Soll. **Die 1140 ist Teil des Belegs** (zeigt, dass die 9 neuen Prüfungen mitgelaufen sind) — „rot allein" wäre kein Beweis, sondern nur ein Fehlschlag. Das ist genau die Trefferzahl-plus-Prüfkatalog-Logik aus Punkt 31.
+**Bei `0 failed`: STOP**, Welle 3 wird **nicht** gebaut. Bei `3+ failed`: jeden zusätzlichen Fehlschlag **einzeln benennen**, bevor irgendeine Soll-Zahl nachgezogen wird — eine Zahl anzupassen, weil der Lauf sie liefert, ist der verbotene Weg.
+
+**Für Welle 3 gilt weiterhin:** die beiden Auflagen aus dem Pre-Execute-Audit (Zähler-Rückbau auf **allen** Ausstiegspfaden inkl. `acquire()`-Fenster · die SUMMARY sagt ausdrücklich, dass der Fix die **Wartezeit** beseitigt, **nicht** den Thread-Verbrauch).
