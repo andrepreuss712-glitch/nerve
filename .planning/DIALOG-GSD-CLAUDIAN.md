@@ -3175,3 +3175,42 @@ Groessen-Annahme abhaengt — er bleibt beweisbar exakt so stark wie heute, was 
 Kern-Anspruch der Phase ist. Ohne Widerspruch von dir plane ich (a).
 
 *(Antwort einfach im Terminal sagen — ich trage sie hier nach.)*
+
+**NACHTRAG nach der Forschung (Claudian, gleicher Tag).** Die Forschung hat vier weitere
+Entscheidungen aufgeworfen. Ich plane unter den folgenden Annahmen weiter — vor `/gsd-execute-phase`
+steht ohnehin die Pflicht-Runde Cross-AI, du kannst also jederzeit umsteuern.
+
+**FRAGE 3 — der wichtigste Punkt der ganzen Phase: der Waechter wird nach dem Fix BLIND statt gruen.**
+Der neue Pruefpunkt zaehlt Bloecke der Form `with <riegel-name>:`. Nach dem Fix heisst es aber
+`with _analysis_lock_for(conv_id):` — das ist ein **Aufruf**, kein Riegel-Name. Der frisch gebaute
+Riegel faellt damit aus der eigenen Bewachung, und das Datei-Soll `coaching_service.py: 1` muesste
+auf 0. Genau das verbietet LOCK-1 (`test_session_lock_blocking_calls_guard.py:200-203`:
+*"Ein Eintrag mit Soll 0 kann nie fehlschlagen"*) — und es ist Punkt 31 in Reinform: gruen ohne
+Aussage. Ich plane **Variante A**: die Riegel-Erkennung zusaetzlich auf Aufrufe ausdehnen, deren
+Funktionsname auf `_lock` / `_lock_for` endet, plus einen Selbst-Test, der genau das beweist.
+Das ist eine **Erweiterung** der Bewachung, kein Aufweichen — die Menge der bewachten Bloecke
+wird groesser, nicht kleiner.
+
+**FRAGE 4 — Schild `learning_cards` ist stale** (`database/models.py:628` zitiert Zeilennummern,
+`:170` stimmt schon heute nicht mehr). Ich fasse es **nicht** an: nachziehen hiesse Alembic-Revision,
+und die Roadmap sagt fuer diese Phase ausdruecklich "keine Migration erwartet". Wird als Folgefund
+notiert. (Konfidenz MEDIUM — das ist Regel-Auslegung, keine Messung. Sag Bescheid, wenn du es
+lieber sofort willst.)
+
+**FRAGE 5 — weite Riegel-Ableitung.** `_session_state_lock` entsteht aus `_TracedLock(...)`, nicht
+aus `threading.Lock()`. Ein enges Kriterium wuerde ausgerechnet den wichtigsten Riegel des Projekts
+**still** uebersehen (40 statt 143 bewachte Bloecke). Ich plane **weit** (`endswith('Lock')`).
+Doppel-Deckung mit LOCK-1 ist kein Schaden, Blindheit waere einer.
+
+**FRAGE 6 — Rendezvous-Timeout 5,0 s** im Regressionstest, damit "keine Serialisierung" ueber ein
+`threading.Event` statt ueber eine Wanduhr-Messung bewiesen wird (flatterfrei). Kostet den ROT-Lauf
+einmalig ~5 s Tor-Zeit. Ich plane damit.
+
+**Ausserdem aus der Messung, ohne Frage:** der neue Pruefpunkt meldet heute ueber `services/` +
+`routes/` **genau eine** Stelle — `coaching_service.py:84`, also die richtige. 23 modul-globale
+Riegel, 143 ueberwachte Bloecke, 1 Verstoss. Der ROT-Lauf faellt aus dem richtigen Grund, und nach
+dem Fix gibt es keinen Kollateralschaden. Und: Teil (b) des Regressionstests ("gleiche conv_id
+erzeugt nur EINEN Satz Karten") ist **kein** ROT-Beleg — der heutige globale Riegel schuetzt
+genauso. Er ist der Gegenpol gegen den falschen Fix; damit er trotzdem beweisbar beisst, kommt ein
+dritter Test gegen eine riegellose Mini-Funktion im Testmodul dazu (Muster "synthetischer
+Quelltext"), ohne Produktiv-Code anzufassen.
