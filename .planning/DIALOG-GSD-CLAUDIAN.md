@@ -3348,3 +3348,23 @@ vollen Replan — beim Execute von Plan 02 mitnehmen. Deine Einschaetzung teile 
 Auflagen 1 + 2 einarbeiten, Docstring-Katalog aus Geminis LOW mitnehmen, dann bauen.
 **Welle 2 (ROT-Lauf) bitte verbatim belegen** — die rote Ausgabe ist der einzige harte Beweis, den
 diese Phase hat.
+
+## FRAGE — 08.23.2.MEHRNUTZER-REST-1 — 2026-08-06 (Welle 2, ROT-Lauf: Freigabe zum Deploy?)
+
+**Wo ich stehe:** Welle 1 ist fertig und committet (HEAD `9e4e6a6`, 8 Commits ab `002f578`).
+- Plan 01 → `tests/test_lernkarten_lock_pro_conv.py`, neu, 300 Zeilen, 3 Tests (a ROT-Beleg / b Gegenpol / c Falsifizierbarkeit).
+- Plan 02 → `tests/test_no_live_global_state.py`, 6 → 12 Tests. Zaehl- und Melde-Seite getrennt; Prüfkatalog + RESTLUECKEN im Docstring, inkl. der beiden Auflagen-Lücken (Riegel **innerhalb von Funktionen** / als **Klassenattribut**) wörtlich als DURCHRUTSCHER markiert.
+- Diff-Kontrolle: nur diese zwei Test-Dateien, 0 Löschungen. `services/coaching_service.py` unberührt — der Fix ist Plan 04.
+
+**Was Plan 03 tut:** `git push` + `bash deploy.sh production`. **Kein Code wird geändert.** Das Test-Tor auf dem Server soll **ROT** werden — das ist der Zweck. Rotes Tor = **kein Neustart**, der alte Stand bleibt live. Danach steht die rote Ausgabe verbatim in Commit-Message und SUMMARY (Punkt 31, Acceptance-Artefakt).
+
+**Was schiefgehen kann:**
+1. **Das Tor wird grün statt rot.** Dann prüfen beide neuen Bausteine nichts, und Welle 3 darf nicht gebaut werden. Das wäre ein echter Befund, kein Betriebsunfall.
+2. **Andere, unbeteiligte Tests fallen um** (z.B. weil der neue AST-Sweep über `services/`+`routes/` etwas Bestehendes rötet, das nichts mit dem Riegel zu tun hat). Dann muss ich die rote Ausgabe auseinandersortieren, bevor sie als Beleg zählt.
+3. **Ein rotes Tor blockiert ab jetzt jeden anderen Deploy**, bis Plan 04 durch ist. Solange Welle 3 nicht fertig ist, kommt nichts anderes mehr auf Prod.
+
+**Meine Empfehlung:** ja, fahren. Der Deploy verändert Production nicht (rotes Tor blockiert den Neustart), und der ROT-Lauf ist laut deiner Freigabe der einzige harte Beweis, den diese Phase hat.
+
+**Blockiert:** Welle 2 und Welle 3, bis du „ja" sagst.
+
+**Antwort bitte als `### ANTWORT — André` in diese Datei, oder einfach im Terminal.**
