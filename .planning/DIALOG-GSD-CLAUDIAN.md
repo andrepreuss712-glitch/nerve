@@ -2900,3 +2900,43 @@ Abrechnung. Diese Phase setzt das Flag fuer ihre Gegenprobe **von Hand** (Plan 0
 den Einladungsweg dauerhaft zu reparieren gehoert in eine eigene Mini-Phase.
 
 **Ich aendere `.planning/ROADMAP.md` in dieser Phase NICHT** (Auftrags-Vorgabe).
+
+## FRAGE — 08.23.2.SOFORT-2 — 2026-08-06
+
+> ⚠ **Nachgetragen.** Diese Frage wurde am 2026-08-06 direkt im Gespraech gestellt und
+> beantwortet, bevor der Eintrag hier stand. Sie wird samt Antwort nachgetragen, damit der
+> Fragen-Kanal die Zugangs-Entscheidung belegt und nicht nur ein Terminal-Verlauf.
+
+**Wo ich stehe:** Plan 04 Task 1, vor dem Deploy von Welle 1.
+
+**Frage:** D-06 verlangt die Gegenprobe mit zwei Konten im Browser. Gemessen auf Production
+(als `postgres`, Spaltennamen aus `inspect.sh schema users`, nicht geraten):
+
+```
+ id |          email           | org_id | is_test_user | hat_pw | email_confirmed | aktiv | oauth_provider | is_superadmin
+----+--------------------------+--------+--------------+--------+-----------------+-------+----------------+---------------
+  1 | admin@nerve.local        |      1 | f            | t      | t               | t     |                | f
+  2 | andrepreuss712@gmail.com |      2 | t            | t      | t               | t     | google         | t
+  3 | andre-test@nerve.local   |      1 | t            | t      | t               | t     |                | f
+```
+
+Die zwei Konten sitzen in VERSCHIEDENEN Organisationen (org 1 / org 2) — die Gegenprobe deckt
+damit Org gegen Org ab, nicht nur User gegen User. Beide tragen is_test_user = true.
+
+**Offen war nur:** kennst du das Passwort von andre-test@nerve.local (id 3, org 1)?
+
+**Antwort (Andre, 2026-08-06): Lage B.** Das Passwort war nicht mehr bekannt. Andre hat das
+Neusetzen ausdruecklich freigegeben. Ausgefuehrt wurde
+`UPDATE users SET passwort_hash=<neu> WHERE email='andre-test@nerve.local' AND is_test_user IS TRUE;`
+-> `UPDATE 1`. Verfahren und Laenge identisch zum Bestand (`scrypt:32768:8:1`, 162 Zeichen),
+verifiziert am echten Pruefpfad (`check_password_hash`: richtiges Passwort True, falsches False).
+id 1 und id 2 nachweislich unveraendert. Andre hat den Login im Browser bestaetigt.
+Das Passwort selbst steht bewusst in KEINEM Artefakt.
+
+**Nachtrag zur Planannahme:** id 2 hat `oauth_provider = google` und einen **leeren**
+`passwort_hash` (Laenge 0, nicht NULL — deshalb sah `hat_pw` nach `t` aus). Das Konto kann sich
+gar nicht per Passwort anmelden, nur ueber Google. Fuer die Gegenprobe folgenlos (Andre nutzt
+dort sein Google-Login), aber der Plan ging von zwei Passwort-Logins aus.
+
+**Was blockiert war:** Task 3 (Zwei-Konten-Gegenprobe) — jetzt frei. Task 2 (Deploy) lief
+unabhaengig davon.
