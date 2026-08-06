@@ -155,3 +155,52 @@ def _rufe_analyse(conv_id):
         kb_start=0, kb_end=30, redeanteil_berater=50, redeanteil_kunde=50,
         dauer_sek=60, skript_abdeckung=0, ga_details=[],
     )
+
+
+# ══ (a) ROT-BELEG ═════════════════════════════════════════════════════════════
+
+@pytest.mark.rot_vor_fix
+def test_verschiedene_conv_ids_blockieren_sich_nicht():
+    """Zwei VERSCHIEDENE conv_id muessen GLEICHZEITIG im kritischen Abschnitt sein koennen.
+
+    Gegen den ungefixten Stand (services/coaching_service.py:59 "with _analysis_lock:")
+    ist das unmoeglich: Faden A haelt den prozessweiten Riegel und steht im gefaelschten
+    LLM-Aufruf, Faden B kommt nie ueber :59 hinaus. A's wait() laeuft in den Timeout,
+    erfolg['A'] ist False -> ROT. Das ist eine BLOCKADE, kein Rennen; der Test flattert
+    also nicht.
+
+    Nach dem Fix nehmen beide ihren eigenen conv_id-Riegel, beide Events sind gesetzt,
+    beide wait() kehren mit True zurueck — typischerweise in Millisekunden.
+
+    Bewusst KEINE Zeitmessung: "parallel < 2x seriell" wuerde auf dem geteilten VPS die
+    Maschine messen statt den Code (RESEARCH §3.4 / Falle 4).
+    """
+    drin = {'A': threading.Event(), 'B': threading.Event()}
+    erfolg = {}
+
+    def _fake_create(**_kwargs):
+        wer = _zweig()
+        anderer = 'B' if wer == 'A' else 'A'
+        drin[wer].set()
+        erfolg[wer] = drin[anderer].wait(timeout=_RENDEZVOUS_S)
+        return _fake_response()
+
+    fake_client = MagicMock()
+    fake_client.messages.create.side_effect = _fake_create
+
+    fake_db = MagicMock()
+    fake_db.query.return_value.filter_by.return_value.count.return_value = 0
+
+    with patch.object(claude_service_module.claude_client, 'with_options',
+                      return_value=fake_client), \
+         patch('database.db.get_session', return_value=fake_db):
+        faeden = _starte_paar(_rufe_analyse, (4711, 4712))
+        _sammle_ein(faeden)
+
+    assert erfolg.get('A') is True and erfolg.get('B') is True, (
+        f"Zwei verschiedene conv_id (4711/4712) waren NICHT gleichzeitig im kritischen "
+        f"Abschnitt: {erfolg!r}. Der Riegel in services/coaching_service.py:59 ist "
+        f"prozessweit — ein zweiter Nutzer wartet im Worst Case "
+        f"config.HTTP_LLM_TIMEOUT_LONG_S = 45 s (config.py:134) und belegt dabei einen "
+        f"der 64 gthread-Threads (deploy/nerve.service:35-36). Der Fix ist ein Riegel "
+        f"PRO conv_id, NICHT das ersatzlose Entfernen des Riegels.")
