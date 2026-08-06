@@ -52,6 +52,7 @@ RESTLUECKEN
    ⚠ Eine DRITTE Schicht gibt es NICHT: public.calls hat auf Production KEINE RLS. Fuer crm.*
    gibt es sie (force=true) — sie schuetzt aber die ZEILE, nicht die FREMDREFERENZ darin (R-7).
 """
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -289,6 +290,13 @@ def zwei_konten(client, db_from_client, monkeypatch):
 
     # crm.* NUR unter gesetzter Tenant-GUC lesen (FORCE-RLS: ohne GUC sind 0 Zeilen KEIN
     # Abwesenheitsbeweis). deploy.sh verlangt danach 0 Zeilen je crm.*-Tabelle.
+    # ⚠ CAST(:t AS uuid), NICHT :t::uuid — SQLAlchemy ersetzt einen Platzhalter NICHT, wenn
+    #   direkt ein `::`-Cast folgt (das Doppel-Kolon ist dort die Cast-Schreibweise, nicht der
+    #   Beginn eines zweiten Platzhalters). `:t::uuid` ging deshalb WOERTLICH an Postgres und
+    #   starb mit `syntax error at or near ":"`. Der `except` darunter verschluckte den Fehler,
+    #   crm_ids blieb leer — und weil damit die crm-Kinder nie geloescht wurden, stallte
+    #   anschliessend auch public.tenant_orgs/organisations am FK. Sichtbar wurde es erst am
+    #   POST-SUITE-Check in deploy.sh ("crm.* nicht leer, 2 Leak-Rows"), nicht am gruenen Test.
     crm_ids = {'crm.meetings': [], 'crm.contacts': [], 'crm.accounts': []}
     for tenant in [t for t in (tenant_a, tenant_b) if t]:
         try:
@@ -297,11 +305,19 @@ def zwei_konten(client, db_from_client, monkeypatch):
             for tabelle in crm_ids:
                 crm_ids[tabelle] += [
                     str(r[0]) for r in db.execute(
-                        text(f'SELECT id FROM {tabelle} WHERE tenant_id = :t::uuid'),
+                        text(f'SELECT id FROM {tabelle} WHERE tenant_id = CAST(:t AS uuid)'),
                         {'t': str(tenant)}).fetchall()
                 ]
-        except Exception:
+        except Exception as fehler:
+            # LAUT, nicht still: ein verschluckter Fehler hier sieht aus wie "keine crm-Zeilen
+            # da" und ist von einem echten Abwesenheitsbeweis nicht zu unterscheiden. Der
+            # rollback bleibt Pflicht (CLAUDE.md: nie stiller except auf einer PG-Session).
             db.rollback()
+            logging.getLogger(__name__).warning(
+                '[SOFORT-2-TEARDOWN] crm-Einsammeln fuer tenant=%s fehlgeschlagen: %r — '
+                'die crm-Zeilen dieses Tests bleiben liegen und der POST-SUITE-Check in '
+                'deploy.sh wird sie melden.', tenant, fehler,
+            )
 
     spec = {
         'crm.meetings': crm_ids['crm.meetings'],
