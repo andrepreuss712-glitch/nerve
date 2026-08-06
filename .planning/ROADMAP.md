@@ -3275,7 +3275,13 @@ Plans:
 
 **Fragen-Kanal:** Jede Frage/Entscheidung ans Ende von `.planning/DIALOG-GSD-CLAUDIAN.md`, sofort committen und **zusaetzlich als normaler Fliesstext im Terminal** zeigen — kein interaktives Menue (Andre liest vom Handy und kann dort nicht kopieren).
 
-**Plans:** noch nicht geplant
+**Plans:** 4 plans in 3 Wellen (ROT-vor-GRUEN-Reihenfolge, nicht nach Dateien geteilt)
+
+Plans:
+- [ ] 08.23.2.MEHRNUTZER-REST-1-01-PLAN.md — Welle 1: Regressionsnetz `tests/test_lernkarten_lock_pro_conv.py` (a ROT-Beleg / b Gegenpol / c Falsifizierbarkeit)
+- [ ] 08.23.2.MEHRNUTZER-REST-1-02-PLAN.md — Welle 1: neuer Pruefpunkt in `tests/test_no_live_global_state.py` (weite Riegel-Ableitung + Variante A + Mindest-Soll + Pruefkatalog)
+- [ ] 08.23.2.MEHRNUTZER-REST-1-03-PLAN.md — Welle 2: ROT-Lauf ausrollen, rote Tor-Ausgabe verbatim belegen
+- [ ] 08.23.2.MEHRNUTZER-REST-1-04-PLAN.md — Welle 3: der Fix (`coaching_service.py:8/:59`) + GRUEN-Beleg + Pruning-Notiz/Folgefunde
 
 
 ---
