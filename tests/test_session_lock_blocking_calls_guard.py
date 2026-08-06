@@ -179,17 +179,43 @@ _VERBOTENE_MESSAGES_METHODEN = frozenset({'create', 'stream'})
 # weniger, zu Recht) und vier weitere Bloecke von `with` auf `try/finally` umstellt —
 # die bleiben ueberwacht, weil dieser Sweep beide Formen zaehlt. Stuende hier 22/21,
 # waere der Waechter nach Plan 03 Task 4 still blind statt rot.
+#
+# ── NACHGEZOGEN 2026-08-06, Phase 08.23.2.SOFORT-2 Welle 1 (Besitzpruefung) ──
+# Die Besitz-Fix-Welle hat drei Riegel-Bloecke aus routes/ ENTFERNT und zwei in
+# services/live_session.py NEU angelegt. Der Schutz ist NICHT verschwunden, er ist
+# GEWANDERT — genau das war der Zweck ("EIN Besitz-Pruefpunkt statt fuenf Bedingungen"):
+#   routes/learning.py        2 -> 0   api_postcall_analysis/-outcome loesen _session_state
+#                                      nicht mehr selbst auf; sie rufen
+#                                      live_session.resolve_own_sid_by_call_id — und DIE
+#                                      nimmt den Riegel (services/live_session.py:489).
+#   routes/app_routes.py      4 -> 3   api_gatekeeper_phrases scannt _session_state nicht
+#                                      mehr selbst; api_beenden/-precall gehen ueber die
+#                                      Helfer. Ein Block bleibt.
+#   services/live_session.py 26 -> 28  die zwei neuen Helfer sid_belongs_to (:462) und
+#                                      resolve_own_sid_by_call_id (:489) nehmen den Riegel
+#                                      jeweils in einem eigenen `with`-Block.
+# Rechnung, gemessen im Deploy-Gate: 102 - 3 + 2 = 101 = die gemessene SUMME. Die
+# Verschiebung geht also restlos auf; es ist kein Block unbewacht verloren gegangen.
+#
+# ⚠ live_session.py steigt 25 -> 27 (NICHT stehen bleiben): die zwei gewanderten Riegel
+#   sind jetzt der EINZIGE Ort, an dem diese Scans synchronisiert sind. Bliebe das Soll
+#   bei 25, koennte jemand den Riegel aus einem Helfer nehmen, ohne dass es hier rot wird —
+#   der Waechter waere genau fuer die neue Fehlerklasse blind. Das Soll folgt der Wanderung.
+# ⚠ routes/learning.py ist ENTFERNT statt auf 0 gesetzt: ein Eintrag mit Soll 0 kann nie
+#   fehlschlagen. Eine Nicht-Pruefung in einer Liste von Pruefungen schwaecht die Anker
+#   daneben (dieselbe Werkzeug-Falle wie ein `>= 0`-Anker). Die Datei hat heute belegbar
+#   NULL Bloecke; kommt dort je wieder einer hinzu, gehoert die Zeile zurueck.
 _SOLL_MINDESTENS = {
     'services/claude_service.py': 41,
     'services/deepgram_service.py': 22,
-    'services/live_session.py': 25,
-    'routes/app_routes.py': 4,
+    'services/live_session.py': 27,   # 25 + 2 gewanderte (SOFORT-2)
+    'routes/app_routes.py': 3,        # 4 - 1 gewandert (SOFORT-2)
     'services/prompt_pipeline.py': 3,
     'services/cost_tracker.py': 2,
-    'routes/learning.py': 2,
     'services/einwand_keyword_matcher.py': 2,
+    # 'routes/learning.py': 2,  -> ENTFERNT (SOFORT-2): heute 0 Bloecke, Begruendung oben
 }
-# 102 heute, 101 nach Plan 03, 102 nach Plan 04 -> das Minimum ueber alle drei Wellen:
+# 102 vor SOFORT-2, 101 nach der Wanderung (-3 in routes/, +2 in live_session.py):
 _SOLL_SUMME_MINDESTENS = 101
 
 # Falsch-Treffer-Ausnahmen. HEUTE LEER — jeder Eintrag braucht einen
