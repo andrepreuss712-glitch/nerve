@@ -3232,6 +3232,54 @@ Plans:
 
 ---
 
+### Phase 08.23.2.MEHRNUTZER-REST-1: Lernkarten-Erzeugung — globaler Riegel um den LLM-Aufruf raus, Riegel pro conv_id rein (INSERTED 2026-08-06) 🔴 START-BLOCKER
+
+**Herkunft:** Bestands-Pruefung 06.08. (Fable, vier Fehlerklassen ueber `services/` + `routes/`), Fund **(1)** aus dem Roadmap-Abschnitt *„NEU 2026-08-06 — BESTANDS-PRUEFUNG: was AUSSERHALB der Live-Engine mehrnutzer-tauglich ist"*. Der Abschnitt wurde am 06.08. in Commit `1e09d96` an **zwei** Stellen korrigiert (geratene 60-s-Zahl + falscher Fix-Vorschlag). **Es gilt ausschliesslich die korrigierte Fassung** — die alte Empfehlung *„Lock entfernen, die DB-Pruefung dahinter schuetzt schon"* ist am Code widerlegt und darf nicht gebaut werden.
+
+**Einordnung:** direkt hinter **08.23.2.SOFORT-2** (abgeschlossen 06.08.), **vor** dem Engine-Neubau (Weg C). Fund 1 ist billig und start-blockierend; Fund 2 und 3 bleiben offen und sind **nicht** Teil dieser Phase.
+
+**Goal:** `services/coaching_service.py` haelt waehrend eines bis zu 45 s langen LLM-Aufrufs einen **fuer alle Nutzer gemeinsamen** Riegel. Nach dieser Phase blockieren sich verschiedene Anrufe nicht mehr gegenseitig, **waehrend der Duplikatschutz exakt gleich stark bleibt** — und ein Waechter meldet es, wenn diese Fehlerklasse in den Post-Call-Modulen zurueckkommt.
+
+**Der Befund, am Code belegt:**
+- `services/coaching_service.py:8` — `_analysis_lock = threading.Lock()` als Modul-Global.
+- `services/coaching_service.py:59` — `with _analysis_lock:` umschliesst **den ganzen** `generate_postcall_analysis`-Rumpf, inklusive des Sonnet-Aufrufs.
+- Aufgerufen aus der Browser-Request: `routes/learning.py:42` (`/api/postcall_analysis`) und `routes/learning.py:403` (`/api/postcall_cards`).
+- Schaden ist **Serialisierung**, nicht Browser-Fehler: nginx `proxy_read_timeout 3600s`, gunicorn `--timeout 120 --workers 1 --threads 64`, kein Frontend-Timeout; der einzige lebende Aufruf laeuft fire-and-forget (`static/pip-launcher.js:3174`, Response wird verworfen). N gleichzeitige Anruf-Enden = N × bis 45 s hintereinander, jeder Wartende belegt einen der 64 gthread-Threads.
+- **Bleibt 🔴 START-BLOCKER** (Andre-Entscheidung 06.08., Herabstufung auf 🟡 ausdruecklich zurueckgewiesen): beim 50-Nutzer-Stresstest und bei Multi-Worker wird aus „langsam" ein harter Ausfall.
+
+**⛔ Der Riegel darf NICHT ersatzlos entfallen — nachgeprueft:**
+- Die Duplikat-Pruefung (`coaching_service.py:65`) liegt **INNERHALB** des Riegels und ist eine reine `count()`-Abfrage.
+- Es gibt **keinen** Unique-Constraint auf `learning_cards.call_id`: `database/models.py:629-631` — `__table_args__` enthaelt nur den Schild-Kommentar, keinen `UniqueConstraint`; kein unique index in `alembic/versions/*`.
+- Ohne Riegel lesen zwei parallele Requests derselben `conv_id` **beide** die 0 und schreiben **beide** → doppelte Lernkarten.
+- `call_id` kann auch **nicht** unique werden: bis zu 3 Karten pro Call by design.
+
+**★ DER FIX: Riegel PRO `conv_id` statt EIN globaler Riegel.** Duplikatschutz bleibt identisch stark, verschiedene Nutzer blockieren sich nicht mehr.
+- ⚠ **Unbegrenztes Wachstum der Riegel-Ablage ist ein Memory-Leak** — eine Ablage `conv_id -> Lock`, aus der nie etwas verschwindet, waechst mit jedem Anruf. **Die gewaehlte Loesung dafuer ist im Plan zu begruenden**, nicht stillschweigend zu waehlen.
+- ⛔ **Kein DB-seitiger Riegel in dieser Phase.** Bei Multi-Worker traegt ein Prozess-Riegel ohnehin nicht mehr — das gehoert zu Fund (2) / Anforderung 4c und wird **dort** geloest, nicht hier vorweggenommen.
+
+**★ TEST-NETZ-RATSCHE — PFLICHT, nicht optional:**
+1. **Regressions-Test ZUERST gegen den UNGEFIXTEN Stand rot laufen lassen, roten Lauf verbatim im Commit belegen.** Ein Test, der nie rot war, beweist nichts. Er muss **beides** zeigen: (a) zwei parallele **verschiedene** `conv_id` blockieren sich **nicht** mehr, (b) zwei parallele Requests **derselben** `conv_id` erzeugen weiterhin nur **EINEN** Satz Karten.
+2. **Waechter `tests/test_no_live_global_state.py` auf die Post-Call-Module ausweiten.** Zielklasse: **modul-globaler Lock, der einen Netzwerk-/LLM-Aufruf umschliesst.** Auch dieser Waechter muss gegen den ungefixten Stand **ROT** sein — sonst prueft er nichts.
+   ⚠ **Praezisierung zur Roadmap-Formulierung** (Claudian 06.08., am Test nachgeprueft): Der Satz *„prueft aber NUR die eine Live-Engine-Datei"* ist ungenau. Der AST-Sweep laeuft bereits ueber **`services/*.py` + `routes/*.py`** (`tests/test_no_live_global_state.py:290/343`) — er sucht dort aber ausschliesslich nach Schreib-Zugriffen auf Globale von `services.live_session` (`ls.<attr> = …` / `ls.state[…] = …`). **Locks sind gar keine gepruefte Musterklasse.** Die Ausweitung ist also ein **neuer Pruefpunkt**, keine Verzeichnis-Erweiterung.
+3. **Pruefkatalog UND bekannte Luecke dokumentieren:** wogegen prueft der Waechter, welche Fehlerklasse faengt er **NICHT**? Ein Gruen ohne Katalog ist keine Aussage (Vault-Regel, CLAUDE.md Punkt 31).
+
+**⛔ AUSDRUECKLICH NICHT in dieser Phase (Reparatur-Modus, Bau-Regel 17 — nur der Fehler):**
+- **Fund (2)** `services/slow_lane.py:145` + `app.py:2434` (ein Consumer fuer alle Mandanten) — **bleibt offen.**
+- **Fund (3)** `services/anonymization.py:19 + :524-534` (prozessweiter Fehler-Zaehler schaltet die Schwaerzung fuer alle ab) — **bleibt offen.**
+- Der **tote HTTP-Eingang** `/api/postcall_analysis` (`routes/learning.py:18`; im Frontend nur noch als Kommentar, `static/pip-launcher.js:3213`) wird **nicht** hier entfernt — notiert fuer die naechste Tote-Code-Inventur (Bau-Regel 3c/3d).
+- Keine Nebenverbesserungen an `coaching_service.py`, keine Prompt-Aenderung, kein Schema-Umbau.
+
+**Abnahme (nicht am gruenen Test):** Kein Local-Dev — nicht lokal starten, lokales `pytest` ist **kein** Abnahme-Signal. Commit → push → `bash deploy.sh production`; **das Tor auf dem Server entscheidet.** Schema-Aenderungen ausschliesslich als Alembic-Revision auf dem aktuellen Kopf (`_migrate()` ist auf Postgres wirkungslos) — in dieser Phase ist **keine** erwartet.
+
+**Komplexitaet:** mittel. Der Code-Eingriff ist klein; der Aufwand liegt im ROT-Beleg beider Tests und in der Waechter-Ausweitung. → **Cross-AI-Review ist PFLICHT:** `/gsd-plan-phase` → `/gsd-review --gemini` → `/gsd-plan-phase --reviews` → `/gsd-execute-phase`.
+
+**Fragen-Kanal:** Jede Frage/Entscheidung ans Ende von `.planning/DIALOG-GSD-CLAUDIAN.md`, sofort committen und **zusaetzlich als normaler Fliesstext im Terminal** zeigen — kein interaktives Menue (Andre liest vom Handy und kann dort nicht kopieren).
+
+**Plans:** noch nicht geplant
+
+
+---
+
 ## Backlog
 
 > Unsequenzierte Ideen (999.x), noch nicht in der aktiven Phasen-Reihenfolge. Promoten via `/gsd-review-backlog`.

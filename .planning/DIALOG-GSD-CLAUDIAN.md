@@ -3105,3 +3105,35 @@ GESAMTDAUER umstellt statt auf den Chunk-Abstand, kappt einen legitimen Aufruf m
 Einwand-Antwort — der Fall ist gemessen (TTFT 8851 ms bei 8000 ms Grenze), nicht ausgedacht.
 
 **Restfund-Liste dieser Phase damit final:** F-1…F-5, E-3…E-12, R-11…R-15.
+
+---
+
+## 2026-08-06 — Phase eingeschoben: 08.23.2.MEHRNUTZER-REST-1 (Fund 1, Lernkarten-Riegel)
+
+Die Phase ist angelegt und in ROADMAP.md direkt hinter 08.23.2.SOFORT-2 einsortiert (Marker
+INSERTED, 🔴 START-BLOCKER). Verzeichnis:
+`.planning/phases/08.23.2.MEHRNUTZER-REST-1-lernkarten-lock-pro-conv-id/`.
+Geplant ist noch nichts — als naechstes `/gsd-plan-phase`, dann Pflicht-Gemini-Review.
+
+**ENTSCHEIDUNG 1 (von mir getroffen, bitte widersprechen falls unerwuenscht) — Phasen-Name.**
+Ich habe `08.23.2.MEHRNUTZER-REST-1` gewaehlt statt eines Dezimal-Einschubs wie
+`08.23.2.SOFORT-2.1`. Grund: die Bestands-Pruefung hat drei Funde, Fund 2 und 3 bleiben offen und
+bekommen spaeter voraussichtlich eigene Phasen — mit `-2` und `-3` am selben Stamm bleibt die
+Herkunft im Namen sichtbar. Ausserdem vermeidet der Bindestrich statt eines weiteren Punktes die
+bekannte gsd-tools-Falle mit mehrsegmentigen IDs (Pfade sind wie immer hart verdrahtet).
+
+**ENTSCHEIDUNG 2 — eine Praezisierung an deiner Roadmap-Formulierung, kein Widerspruch in der Sache.**
+Im Abschnitt Test-Netz-Ratsche steht ueber `tests/test_no_live_global_state.py`:
+*"prueft aber NUR die eine Live-Engine-Datei"*. Am Test nachgeprueft stimmt das so nicht ganz: der
+AST-Sweep laeuft bereits ueber **alle** Dateien in `services/` und `routes/`
+(`tests/test_no_live_global_state.py:290` und `:343`). Er sucht dort aber ausschliesslich nach
+Schreib-Zugriffen auf Globale von `services.live_session` (`ls.<attr> = ...` bzw.
+`ls.state[...] = ...`). **Locks sind ueberhaupt keine gepruefte Musterklasse.**
+Fuer den Auftrag aendert das nichts — nur die Begruendung: die Ausweitung ist ein **neuer
+Pruefpunkt** im bestehenden Waechter, keine Erweiterung des durchsuchten Verzeichnisses. Genau so
+steht es jetzt im Phasen-Eintrag, damit der Planer nicht das Falsche baut.
+
+**KEINE offene Frage an dich.** Alles Uebrige aus deinem Auftrag (Riegel pro conv_id, Memory-Leak
+begruenden, kein DB-Riegel, ERST-ROT fuer beide Tests, Pruefkatalog + bekannte Luecke, Fund 2/3 und
+der tote Eingang `/api/postcall_analysis` ausdruecklich RAUS, Cross-AI Pflicht, kein Local-Dev) ist
+woertlich in den Phasen-Eintrag uebernommen.
