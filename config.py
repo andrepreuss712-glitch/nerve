@@ -159,6 +159,28 @@ LIVE_LLM_TIMEOUT_S = float(os.getenv("LIVE_LLM_TIMEOUT_S", "12"))
 # nur bis zum ersten Token. Eine Messung der Token-Abstaende gibt es nicht — nur ttft_ms und
 # latency_ms. 8 s ist so gewaehlt, dass eine legitime Pause sie praktisch nie erreicht; wer sie
 # erreicht, haengt. Die GESAMTDAUER wird dadurch NICHT begrenzt (lange Antworten sind legitim).
+#
+# ⛔⛔ WARNUNG AN DEN NAECHSTEN BAUER — DIESE ZAHL BEGRENZT NICHT DIE GESAMTDAUER (Fund R-14)
+#
+# `httpx` wendet `read` auf den ABSTAND ZWISCHEN ZWEI CHUNKS an, nicht auf die Zeit bis zum
+# ersten Token und nicht auf die Antwort insgesamt. Die `ping`-Ereignisse des Anthropic-SDK
+# setzen die Uhr dabei zurueck.
+#
+# AM ECHTEN ANRUF GEMESSEN (2026-08-06, erster Test-Anruf nach dem Welle-2-Deploy):
+#   pip_variante  TTFT = 8851 ms  bei einer Grenze von 8000 ms  ->  NICHT gekappt.
+#   Die Antwort lief vollstaendig durch (Andre, Beobachtung 3 der D-06-Abnahme).
+#
+# ⛔ WER DIESE GRENZE JE AUF DIE GESAMTDAUER UMSTELLT (z.B. `timeout=8` statt `httpx.Timeout`,
+#    oder ein eigener Gesamt-Wachhund um den Stream), KAPPT GENAU DIESEN LEGITIMEN AUFRUF —
+#    mitten in einer Einwand-Antwort im laufenden Verkaufsgespraech. Das ist kein theoretisches
+#    Risiko: der Fall ist oben gemessen, nicht ausgedacht.
+#    Wer die Semantik trotzdem aendern will, misst VORHER die TTFT-Verteilung
+#    (`api_cost_log.ttft_ms`, context_tag `pip_variante`) und waehlt die neue Zahl danach.
+#
+# ⚠ Damit ist auch die urspruengliche Freigabe-Erzaehlung „Faktor 7,7" (8 s gegen den
+#   Durchschnitt von 1035 ms) fuer den WORST CASE hinfaellig — der Durchschnitt traegt hier
+#   nicht. Der Schutz haengt an der Chunk-Abstand-Semantik, nicht an der Marge.
+#
 LIVE_LLM_STREAM_TIMEOUT_S = float(os.getenv("LIVE_LLM_STREAM_TIMEOUT_S", "8"))
 
 # F-3 — ab wie vielen Zeitueberschreitungen IN FOLGE der Berater es sieht (D-04 Stufe 2).

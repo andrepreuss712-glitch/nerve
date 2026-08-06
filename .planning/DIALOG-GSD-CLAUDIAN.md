@@ -3073,3 +3073,35 @@ Test-Anruf. Bitte mit in die Vault-Roadmap uebernehmen.
 
 **Damit ist die Restfund-Liste dieser Phase vollstaendig:** F-1…F-5 (Cross-AI Fable),
 E-3…E-12 (waehrend der Ausfuehrung), R-11…R-14 (in FUNDE.md Abschnitt 2).
+
+## NACHTRAG 2 — 08.23.2.SOFORT-2 — 2026-08-06 (nach der Phasen-Abnahme)
+
+**R-15 — `scripts/inspect.sh` kann `crm.*` und `training.*` nicht adressieren.**
+Gefunden von Andre, als er die Aufraeum-Gegenprobe selbst nachpruefen wollte.
+Zwei unabhaengige Ursachen: (1) die Whitelist `^[a-z_][a-z0-9_]*$` (`inspect.sh:46`) laesst
+keinen Punkt zu → `crm.meetings` wird abgewiesen; (2) ohne Praefix loest `meetings` gegen
+`search_path` = `public` auf → „relation does not exist".
+**Reichweite genau:** `schilder <name>` geht schema-uebergreifend (ueber `pg_description`),
+`count`/`sample`/`schema`/`constraints` **nicht**.
+⚠ **Gefaehrlich ist die Fehlermeldung:** „relation does not exist" liest sich wie ein
+Abwesenheits-Beweis. **Dritte Schicht derselben Familie** neben dem FORCE-RLS-Falsch-Negativ.
+⚠ **CLAUDE.md Punkt 23 ist an dieser Stelle irrefuehrend** — dort steht, `inspect.sh schilder`
+decke „public UND crm/training" ab. Das stimmt nur fuer `schilder`, liest sich aber wie eine
+Aussage ueber das ganze Werkzeug.
+**Fix waere klein** (Whitelist um einen optionalen Schema-Teil erweitern), beruehrt aber die
+Read-only-Sicherheitszusage des Skripts → bewusst entscheiden, nicht nebenbei.
+**Ablageort:** `08.23.2.SOFORT-2-FUNDE.md` Abschnitt 2, Zeile R-15.
+
+**Aufraeumen Probe 9 — bestaetigt (Andre hatte es zu Recht eingefordert):**
+```
+Suche SOFORT2/GEGENPROBE/AUFRAEUM in crm.accounts + crm.meetings  ->  0 rows
+Existenz-Anker im selben Schema:  accounts=15  meetings=14  calls=85
+```
+Kette: vorher 1 account + 1 meeting -> DELETE 1 + DELETE 1 (eine Transaktion) -> 0|0.
+
+**R-14 ist jetzt an der Konstante selbst dokumentiert**, nicht nur in der Fund-Liste:
+`config.py`, direkt ueber `LIVE_LLM_STREAM_TIMEOUT_S`. Kernsatz dort: wer die Grenze je auf die
+GESAMTDAUER umstellt statt auf den Chunk-Abstand, kappt einen legitimen Aufruf mitten in einer
+Einwand-Antwort — der Fall ist gemessen (TTFT 8851 ms bei 8000 ms Grenze), nicht ausgedacht.
+
+**Restfund-Liste dieser Phase damit final:** F-1…F-5, E-3…E-12, R-11…R-15.
