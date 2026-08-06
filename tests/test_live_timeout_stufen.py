@@ -36,7 +36,7 @@ RESTLUECKEN
    (a) Die Stream-Pfade. Sie zaehlen bewusst NICHT in Stufe 2 (sie liegen nicht in den Loops
        und haben mit pip_stream_error einen eigenen Kanal); ihre Timeouts zahlen nur in den
        Founder-Zaehler ein. Ob DIESE Buchung passiert, prueft hier nichts.
-       ⚠ Nachtrag des Executors (D-02, gemeldet als R-11): sie passiert heute GAR NICHT —
+       ⚠ Nachtrag des Executors (D-02, gemeldet als R-12): sie passiert heute GAR NICHT —
        Plan 07 baut in den Stream-Pfaden keinen Timeout-Zweig, und die Abnahme-Zahl 6 laesst
        auch keinen zu. Die Aussage in (a) beschreibt die Absicht, nicht den Ist-Stand.
    (b) services/qa_pipeline.py::classify_utterance hat seinen try VOR messages.create mit
