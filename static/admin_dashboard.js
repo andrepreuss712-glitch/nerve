@@ -56,6 +56,23 @@
           : 'seit Deploy, pro Prozess (Soll: 0)';
       }
     }
+    // SOFORT-2 (D-04): Zeitueberschreitungen der Live-KI-Aufrufe. Soll 0 — dieselbe
+    // Alarm-Logik wie bei den Kosten-Log-Skips, weil beide keine Kennzahl sind, sondern
+    // ein Zustand, der 0 sein muss. Ohne das WAS (Funktionsname) waere die Zahl nicht
+    // handlungsfaehig. Farbe kommt aus .fcd-alarm (admin_dashboard.css) — kein Hex hier.
+    const llmTo = data.live_llm_timeouts;
+    if (llmTo) {
+      const kachelT = document.getElementById('fcd-kpi-llm-timeouts');
+      const wertT   = document.querySelector('[data-kpi="live_llm_timeouts"]');
+      const detailT = document.getElementById('fcd-llm-timeouts-detail');
+      if (wertT) wertT.textContent = String(llmTo.total || 0);
+      if (kachelT) kachelT.classList.toggle('fcd-alarm', (llmTo.total || 0) > 0);
+      if (detailT) {
+        detailT.textContent = (llmTo.total || 0) > 0
+          ? (llmTo.funktionen || []).map(f => `${f.funktion} (${f.count}x)`).join(' · ')
+          : 'pro Prozess, Soll: 0';
+      }
+    }
     if (data.mrr_costs_12m) FCD.renderMrrCosts(data.mrr_costs_12m);
     if (data.margin_12m) FCD.renderMarginChart(data.margin_12m);
   };

@@ -18,6 +18,16 @@
     <div class="value" data-kpi="cost_skips">—</div>
     <div class="delta" id="fcd-skips-detail">seit Deploy, pro Prozess (Soll: 0)</div>
   </div>
+  {# SOFORT-2 (D-04): Zeitueberschreitungen der Live-KI-Aufrufe. Soll: 0. Steht hier eine
+     Zahl, hat ein Live-Aufruf sein Zeitlimit gerissen — Stufe 1 hat die Runde still
+     uebersprungen, ab drei in Folge hat der Berater es im PiP gesehen. Bewusst neben den
+     Kosten-Log-Skips: beide sind Soll-0-Alarme, keine Kennzahlen. Kein neues CSS —
+     dieselben .fcd-kpi/.fcd-alarm-Klassen wie die Nachbar-Kachel (Punkt 27). #}
+  <div class="fcd-kpi" id="fcd-kpi-llm-timeouts">
+    <h3>Live-KI Zeitüberschreitungen</h3>
+    <div class="value" data-kpi="live_llm_timeouts">—</div>
+    <div class="delta" id="fcd-llm-timeouts-detail">pro Prozess, Soll: 0</div>
+  </div>
   <div class="fcd-kpi">
     <h3>Marge</h3>
     <div class="value" data-kpi="marge">—</div>

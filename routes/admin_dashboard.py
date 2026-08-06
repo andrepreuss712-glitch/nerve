@@ -172,6 +172,26 @@ def _cost_skip_payload():
     }
 
 
+def _live_timeout_payload():
+    """SOFORT-2 (D-04) — Zeitueberschreitungen der Live-LLM-Aufrufe. Soll-Wert: 0.
+
+    Aufbau wortgleich zu _cost_skip_payload. Schluessel ist die aufrufende Funktion
+    (analyse_loop / coaching_loop / classify_phase / infer_customer_state) — tenant-neutral,
+    ohne Nutzerbezug (Punkt 28). Der Drei-in-Folge-Zaehler, der die PiP-Anzeige ausloest, liegt
+    dagegen PER SID in _session_state und taucht hier bewusst NICHT auf.
+    """
+    try:
+        from services.claude_service import get_live_timeout_counts
+        counts = get_live_timeout_counts()
+    except Exception:
+        return {'total': 0, 'funktionen': []}
+    top = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:10]
+    return {
+        'total': sum(counts.values()),
+        'funktionen': [{'funktion': k, 'count': v} for k, v in top],
+    }
+
+
 def _mrr_from_active_orgs(db):
     """MRR-Sum: Summe plan_preis aller active Organisationen.
     Fallback auf PLANS[plan]['preis'] wenn plan_preis nicht gesetzt."""
@@ -305,6 +325,13 @@ def api_overview():
             # Bewusste Grenze: der Zaehler lebt im RAM DIESES Prozesses (Gunicorn-Worker) —
             # nerve-rt und weitere Worker zaehlen eigene Staende. Deshalb das Label "pro Prozess".
             'cost_log_skips': _cost_skip_payload(),
+            # SOFORT-2 (D-04): Zeitueberschreitungen der Live-LLM-Aufrufe. Soll-Wert 0.
+            # Steht hier etwas anderes, hat ein Aufruf sein Limit gerissen — Stufe 1 hat die
+            # Runde still uebersprungen, und ab drei in Folge hat der Berater es gesehen.
+            # Bewusste Grenze (wie bei cost_log_skips): der Zaehler lebt im RAM DIESES
+            # Prozesses (Gunicorn-Worker) — weitere Worker zaehlen eigene Staende. Deshalb das
+            # Label "pro Prozess". Ein Neustart setzt ihn auf 0.
+            'live_llm_timeouts': _live_timeout_payload(),
             'mrr_costs_12m': {
                 'labels': labels_12m,
                 'mrr': mrr_12m,
