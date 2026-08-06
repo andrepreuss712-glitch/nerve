@@ -3163,7 +3163,11 @@ Plans:
 
 ---
 
-### Phase 08.23.2.SOFORT-2: Besitzpruefung an drei offenen Eingaengen + Zeitlimit auf Live-LLM-Aufrufen (NEU 2026-08-04) 🔴
+### Phase 08.23.2.SOFORT-2: Besitzpruefung an drei offenen Eingaengen + Zeitlimit auf Live-LLM-Aufrufen (NEU 2026-08-04) 🔴 ✅ ABGESCHLOSSEN 2026-08-06
+
+**✅ LIVE auf Production** — Welle 1 ausgerollt 06:19:27 UTC, Welle 2 ausgerollt 12:00:55 UTC (`git_head 3e7f3bc`, `alembic_version 0038`). Beide Wellen mit ROT-vor-GRUEN-Beleg und menschlicher Abnahme: Welle 1 per Zwei-Konten-Gegenprobe **Org gegen Org** (Proben 2-9 bestanden; ⚠ **Probe 1 ausdruecklich NICHT bestanden** — ihr fehlt der Existenz-Anker, Ursache ist Fund R-11), Welle 2 per echtem Test-Anruf (EWB-Stream lief vollstaendig durch, keine Timeout-Meldung, `ab_grenze = 0` auf allen angefassten Live-Pfaden).
+⚠ **Was die Abnahme NICHT abdeckt** (nicht als gruenes Schweigen): der **langsamste** Live-Pfad (Coaching-Frage) wurde nie ausgeloest — Fund **R-13**, siehe Absatz bei „Coaching-Frage: zusammenlegen oder streichen". Der Founder-Zaehler `0` belegt wegen **R-12** nur die blockierenden Pfade, nicht die Stream-Pfade.
+**Vier Restfund-Gruppen** (F-1…F-5, E-3…E-12, R-11…R-14) liegen in `08.23.2.SOFORT-2-FUNDE.md` und im DIALOG-Kanal fuer die Vault-Roadmap.
 
 **Herkunft:** Mehrnutzer-Bestandsaufnahme 04.08. (vier parallele Code-Untersuchungen + Gemini). Andre-Entscheidung: *„ja sollten wir beide angehen"* — **unabhaengig vom Engine-Neubau (Weg C), gilt fuer jeden Weg.** Volltext + Anforderungsliste: `Nerve-Vault/03 Planung/Mehrnutzer-Fähigkeit — Bestandsaufnahme + Konzept 2026-08-04.md`.
 
@@ -3196,15 +3200,15 @@ Plans:
 **Plans:** 9 plans (4 Wellen — Welle 1 Sicherheit: Plaene 01-04 + 09, Welle 2 Zeitlimit: Plaene 05-08)
 
 Plans:
-- [ ] 08.23.2.SOFORT-2-01-PLAN.md — Funde melden (D-02) + zwei Waechter bauen (AST-Sweep mit fuenf Mengen, Verhaltenstest mit acht Eingaengen)
-- [ ] 08.23.2.SOFORT-2-02-PLAN.md — ROT-Lauf verbatim sichern + die drei Besitz-Helfer in `services/live_session.py`
-- [ ] 08.23.2.SOFORT-2-03-PLAN.md — Fix B-01/B-02/B-03/N-01/N-02/N-03 in `routes/app_routes.py` + `routes/learning.py`
-- [ ] 08.23.2.SOFORT-2-09-PLAN.md — Fix R-7 (`crm_export.py`) + R-8 (`coach.py`) + Schild-Nachzug `crm.meetings` (Migration 0038)
-- [ ] 08.23.2.SOFORT-2-04-PLAN.md — Welle 1 ausrollen, GRUEN-Beleg, Zwei-Konten-Gegenprobe **Org gegen Org**
-- [ ] 08.23.2.SOFORT-2-05-PLAN.md — Zeitlimit-Konstanten in `config.py` + ROT-Lauf Welle 2
-- [ ] 08.23.2.SOFORT-2-06-PLAN.md — Zeitlimit einbauen (blockierend 12 s / Stream-TTFT 8 s, `max_retries=0`)
-- [ ] 08.23.2.SOFORT-2-07-PLAN.md — gestaffeltes Verhalten (Stufe 1 still, Stufe 2 PiP-Hinweis ab 3) + Founder-Zaehler
-- [ ] 08.23.2.SOFORT-2-08-PLAN.md — Welle 2 ausrollen, echter Test-Anruf, D-06-Messung (Grenzwert aus `config` abgeleitet)
+- [x] 08.23.2.SOFORT-2-01-PLAN.md — Funde melden (D-02) + zwei Waechter bauen (AST-Sweep mit fuenf Mengen, Verhaltenstest mit acht Eingaengen)
+- [x] 08.23.2.SOFORT-2-02-PLAN.md — ROT-Lauf verbatim sichern + die drei Besitz-Helfer in `services/live_session.py`
+- [x] 08.23.2.SOFORT-2-03-PLAN.md — Fix B-01/B-02/B-03/N-01/N-02/N-03 in `routes/app_routes.py` + `routes/learning.py`
+- [x] 08.23.2.SOFORT-2-09-PLAN.md — Fix R-7 (`crm_export.py`) + R-8 (`coach.py`) + Schild-Nachzug `crm.meetings` (Migration 0038)
+- [x] 08.23.2.SOFORT-2-04-PLAN.md — Welle 1 ausrollen, GRUEN-Beleg, Zwei-Konten-Gegenprobe **Org gegen Org**
+- [x] 08.23.2.SOFORT-2-05-PLAN.md — Zeitlimit-Konstanten in `config.py` + ROT-Lauf Welle 2
+- [x] 08.23.2.SOFORT-2-06-PLAN.md — Zeitlimit einbauen (blockierend 12 s / Stream-TTFT 8 s, `max_retries=0`)
+- [x] 08.23.2.SOFORT-2-07-PLAN.md — gestaffeltes Verhalten (Stufe 1 still, Stufe 2 PiP-Hinweis ab 3) + Founder-Zaehler
+- [x] 08.23.2.SOFORT-2-08-PLAN.md — Welle 2 ausrollen, echter Test-Anruf, D-06-Messung (Grenzwert aus `config` abgeleitet)
 
 ---
 
