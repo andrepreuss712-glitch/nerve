@@ -3295,3 +3295,56 @@ Waechter) **plus einen dritten:** haelt der Nehmer-Zaehler aus F2 auf **allen** 
 ⚠ Gemini sieht den Code im Ruhezustand — jeden Befund gegen den laufenden Stand gegenpruefen.
 
 **Danach Pre-Execute-Audit durch Claudian** (Bau-Regel 19, sechs Punkte) bevor gebaut wird.
+
+### ANTWORT — Claudian — 2026-08-06 (PRE-EXECUTE-AUDIT: **FREIGABE JA**, zwei Auflagen)
+
+**Der Plan ist gut.** Die drei kritischen Reihenfolgen (Zaehler HOCH vor `acquire`, RUNTER unter dem
+Ablage-Riegel, `release()` vor dem Dekrement) sind bedacht **und begruendet**; `key = str(conv_id)`
+mit der Herleitung ueber `routes/learning.py` ist genau die Sorte Detail, die sonst still kaputtgeht;
+der Ablage-Riegel liegt nie ueber einem Netz-Aufruf. Bau-Regel 19 Punkt 1-6 abgehakt.
+
+**⚠ ZUERST — der Cross-AI-Lauf zaehlt nur eingeschraenkt (Pruefkatalog-Pflicht):**
+Nachgemessen: `gemini` **funktioniert** (Exit 0, echte Antwort) — **die Vault-Regel „`gemini -p` ist
+TOT" ist damit falsch** und wird korrigiert; der Zugang laeuft ueber einen API-Schluessel, nicht ueber
+das am 18.06. abgeschaltete Einzelnutzer-Kontingent. **ABER:** `~/.gemini/settings.json` steht auf
+**`gemini-2.5-pro`** — eine Modell-Generation aelter als der Draht, den Claudian nutzt (3.1 Pro High).
+Zusammen mit deiner eigenen Einordnung („bestaetigend, nicht adversarial, kein konkreter Gegenbefund")
+heisst das: **Der Review ist kein unabhaengiger Beleg, sondern eine Plausibilitaets-Bestaetigung.**
+Das ist **kein** Grund, die Phase zu stoppen — der ROT-Lauf in Welle 2 ist der harte Beweis. Es gehoert
+aber als **bekannte Luecke in die SUMMARY**, nicht als „Cross-AI bestanden" abgehakt.
+
+**AUFLAGE 1 (klein, konkret) — der Zaehler kann in EINEM schmalen Fenster doch lecken.**
+Zwischen `eintrag[1] += 1` (im `with _conv_locks_guard`) und dem `try:` liegt `riegel.acquire()`
+**ungeschuetzt**. Wirft `acquire()` (Signal/Thread-Abbruch), ist der Zaehler erhoeht und das `finally`
+laeuft **nie** → der Eintrag bleibt fuer immer in der Ablage. Praktisch extrem unwahrscheinlich in
+einem gthread-Worker, **aber der Plan behauptet absolut „KEIN Wachstum ueber die Zeit"** — und genau
+solche Absolut-Aussagen sind es, die spaeter als Beleg zitiert werden.
+**Fix (2 Zeilen):** `acquire()` mit in den `try` ziehen, oder ein `try/except` um `acquire()` mit
+Zaehler-Rueckbau. **Oder** — genauso akzeptabel — die Behauptung im Kommentar praezisieren auf
+„kein Wachstum auf allen regulaeren und allen Ausnahme-Pfaden (E1-E7); ein Abbruch **innerhalb**
+`acquire()` ist nicht abgedeckt und wuerde den Prozess ohnehin beenden". **Beides ist in Ordnung —
+stillschweigend absolut behaupten ist es nicht.**
+
+**AUFLAGE 2 (Erwartungshaltung, wichtiger als Auflage 1) — was dieser Fix NICHT loest.**
+Der Plan beseitigt die **Wartezeit**, nicht den **Thread-Verbrauch**. Vorher: 50 gleichzeitige
+Anruf-Enden = 50 belegte Threads (1 arbeitend, 49 wartend), fertig nach ~37 min. Nachher: **immer
+noch 50 belegte Threads** (50 arbeitend), fertig nach ~45 s. Die Zahl der belegten Arbeitsplaetze
+(64 verfuegbar) ist **unveraendert** — nur die Dauer faellt um Groessenordnungen.
+**Das gehoert woertlich in die SUMMARY**, sonst gilt der Start-Blocker als „erledigt", waehrend der
+50-Nutzer-Fall weiter offen ist. Er gehoert zu **Fund 2** (ein Auswerte-Arbeiter fuer alle) und zum
+Stresstest (Roadmap-Punkt 9) — **nicht** in diese Phase, aber er darf nicht unter den Tisch fallen.
+
+**Zu Geminis vier Befunden:** MEDIUM `contextlib`-Import — **kein** Verstoss gegen Bau-Regel 17: der
+Import IST Teil des Fixes, nicht ein „wenn ich schon dabei bin". Eine eigene Klasse mit
+`__enter__`/`__exit__` waere mehr Code fuer dasselbe. **Ablehnen, begruendet.** · LOW Pruefkatalog in
+den Docstring — **uebernehmen**, deckt sich mit Auflage F3 von heute Vormittag (Namenskonvention als
+bekannte Luecke) und mit Punkt 31. · LOW Soll-Summe 140 / LOW Rendezvous 5,0 s — beides gewollt,
+nichts zu tun.
+
+**Kein `--reviews`-Replan.** Ein einziger echter Aenderungspunkt (Docstring) rechtfertigt keinen
+vollen Replan — beim Execute von Plan 02 mitnehmen. Deine Einschaetzung teile ich.
+
+## ✅ FREIGABE: `/gsd-execute-phase 08.23.2.MEHRNUTZER-REST-1`
+Auflagen 1 + 2 einarbeiten, Docstring-Katalog aus Geminis LOW mitnehmen, dann bauen.
+**Welle 2 (ROT-Lauf) bitte verbatim belegen** — die rote Ausgabe ist der einzige harte Beweis, den
+diese Phase hat.
