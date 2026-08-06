@@ -55,9 +55,20 @@ RESTLUECKEN
    Deshalb wurden die zwei Dateien in SWEEP_DATEIEN aufgenommen und beide Aufrufe in Plan 06
    Task 2 mit timeout= versehen - GEFIXT, nicht gemeldet. R-10 ist damit erledigt und steht
    NICHT mehr in FUNDE.md Abschnitt 2.
+   ⚠ KORREKTUR 2026-08-06 (Andre-Entscheidung, Fund E-10): diese ZWEI Aufrufe tragen
+   BATCH_LLM_TIMEOUT_S (45 s), NICHT LIVE_LLM_TIMEOUT_S (12 s). Hier stand vorher
+   "derselbe Mechanismus wie live" - das war falsch. Sie laufen NICHT im Live-Gespraech;
+   die Post-Call-Auswertung dauert insgesamt 15,2 s (MESSGERAETE-1), 12 s haetten sie
+   gekappt und dem Berater die Coaching-Note genommen. Begruendung: config.py, F-7.
+   ⚠ DIESER WAECHTER MERKT DEN UNTERSCHIED NICHT: test_jeder_live_aufruf_traegt_ein_zeitlimit
+   prueft nur die ANWESENHEIT eines timeout-Schluesselworts (`hat_timeout = 'timeout' in kw`),
+   nicht WELCHE Konstante. Nur der Stream-Test bindet an einen Namen. Wer eine dritte Klasse
+   von Pfaden anlegt, bekommt von hier KEINE Warnung, wenn er die falsche Zahl nimmt -
+   das ist eine bewusste Restluecke, keine Nachlaessigkeit (Punkt 31).
    WAS HIER NICHT STEHEN DARF: eine generische Luecken-Formulierung, unter der konkrete,
    heute existierende Faelle verschwinden. Wer den Sweep je erweitert, haengt an jeden neuen
-   Aufruf timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S).
+   LIVE-Aufruf timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S)
+   - an einen BATCH-Aufruf dagegen config.BATCH_LLM_TIMEOUT_S.
 
 5. HEURISTIK, zweischneidig: der Stream-Test vergleicht den QUELLTEXT des timeout-Arguments
    gegen den Konstantennamen. Ein Alias (`from config import LIVE_LLM_STREAM_TIMEOUT_S as T`)

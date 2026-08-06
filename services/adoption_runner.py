@@ -289,8 +289,12 @@ def run_adoption_judge(call, db) -> dict:
             tool_choice={'type': 'tool', 'name': 'record_adoption'},
             # SOFORT-2 (D-03/R-10): blockierender Aufruf im EINZIGEN slow_lane-Consumer-Faden.
             # Ohne Zeitlimit blockiert ein Haenger hier die Nachbearbeitung ALLER Mandanten
-            # (SDK-Vorgabe read=600 s). => LIVE_LLM_TIMEOUT_S, derselbe Mechanismus wie live.
-            timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
+            # (SDK-Vorgabe read=600 s).
+            # ⚠ BATCH_LLM_TIMEOUT_S, NICHT LIVE_LLM_TIMEOUT_S (Andre-Entscheidung 2026-08-06,
+            # Fund E-10): dieser Pfad laeuft NICHT im Live-Gespraech. Die Post-Call-Auswertung
+            # dauert insgesamt 15,2 s — 12 s haetten sie gekappt und dem Berater die
+            # Coaching-Note genommen. Begruendung der 45 s: config.py, Abschnitt F-7.
+            timeout=httpx.Timeout(config.BATCH_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
         )
 
         # ── KOSTEN-1 R2.2 Cost-Hook (Muster: claude_service.py:542-568) ──────────────

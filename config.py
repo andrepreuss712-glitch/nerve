@@ -179,6 +179,31 @@ LIVE_LLM_TIMEOUT_HINWEIS_TIP = (
     "Mehrere Anfragen ohne Antwort — die Analyse pausiert, das Gespräch läuft weiter."
 )
 
+# F-7 — das Zeitlimit fuer die BATCH-Pfade (Post-Call, NICHT live). NEU 2026-08-06.
+# Betrifft services/adoption_runner.py und services/judge_runner.py (das ist R-10).
+#
+# ⚠ ANDRE-ENTSCHEIDUNG 2026-08-06, hebt die erste Fassung auf. Bis eben trugen diese zwei
+#   Aufrufe LIVE_LLM_TIMEOUT_S (12 s) — "derselbe Mechanismus wie live". Das war ein Fehler,
+#   und zwar derselbe Fehler wie ein fehlendes Limit, nur in die andere Richtung:
+#
+#   Diese Pfade laufen NICHT im Live-Gespraech. Ein Haenger kostet hier keine Antwort mitten
+#   im Verkaufsgespraech, sondern die Nachbearbeitung — und ein zu KNAPPES Limit toetet ein
+#   funktionierendes Feature: die Post-Call-Auswertung dauert insgesamt 15,2 s
+#   (MESSGERAETE-1). Geht ein EINZELNER Aufruf darin ueber 12 s, kappt das Limit die
+#   Auswertung und der Berater bekommt keine Coaching-Note.
+#
+# ⚠ WARUM UEBERHAUPT EIN LIMIT (die Begruendung von R-10 bleibt gueltig): beide Aufrufe
+#   laufen im EINZIGEN Slow-Lane-Consumer-Faden (services/slow_lane.py:30). Ohne Limit greift
+#   die SDK-Vorgabe read=600 s — ein Haenger blockiert dann bis zu ZEHN MINUTEN die
+#   Nachbearbeitung ALLER Mandanten. 45 s begrenzt denselben Schaden auf ~1/13 davon und
+#   laesst der Auswertung trotzdem das Dreifache ihrer gemessenen Gesamtdauer.
+#
+# ⛔ DIESE ZAHL IST UNVALIDIERT (Fund E-10): fuer adoption/judge steht in api_cost_log KEINE
+#   einzige gemessene Dauer (mit_dauer = 0) — es sind Batch-Aufrufe mit groesseren Prompts als
+#   die Live-Pfade, auf denen die 12-s-Rechnung fusst. 45 s ist deshalb bewusst grosszuegig
+#   gewaehlt, nicht knapp. Wer sie senken will, misst vorher.
+BATCH_LLM_TIMEOUT_S = float(os.getenv("BATCH_LLM_TIMEOUT_S", "45"))
+
 # F-6 — das VERBINDUNGS-Zeitlimit. NEU 2026-08-05 (Cross-AI-Fund F-N7.1).
 # ⚠ Heisst F-6, NICHT F-5: F-5 ist oben schon vergeben (die zwei Buchungs-/Retry-
 #   Entscheidungen, dort als F-5a/F-5b referenziert). Zwei Dinge unter einer Nummer waere
