@@ -500,6 +500,12 @@ def classify_phase(transcript_window, current_phase, elapsed_s, phase_model, sid
                 'confidence': conf,
                 'grund': data.get('grund', ''),
             }
+    except anthropic.APITimeoutError:
+        # SOFORT-2 (D-04, Entscheidung c): die Zeitueberschreitung wird hier NICHT verschluckt.
+        # Sie blockiert den analyse_loop genauso lange wie die Haupt-Analyse und gehoert
+        # deshalb in denselben per-sid-Zaehler. Der breite except darunter faengt weiterhin
+        # alles andere (Parse-Fehler, API-Fehler) unveraendert ab.
+        raise
     except Exception as e:
         print(f"[phase_classify] parse error: {e}")
     return None
@@ -585,6 +591,12 @@ def infer_customer_state(seller_transcript, phase, sid: str = None):
             'recommended_next': str(data.get('recommended_next', ''))[:200],
             'ts': datetime.utcnow().isoformat(),
         }
+    except anthropic.APITimeoutError:
+        # SOFORT-2 (D-04, Entscheidung c): die Zeitueberschreitung wird hier NICHT verschluckt.
+        # Sie blockiert den analyse_loop genauso lange wie die Haupt-Analyse und gehoert
+        # deshalb in denselben per-sid-Zaehler. Der breite except darunter faengt weiterhin
+        # alles andere (Parse-Fehler, API-Fehler) unveraendert ab.
+        raise
     except Exception as e:
         print(f"[coldcall_infer] error: {e}")
         return None
@@ -1263,6 +1275,93 @@ Aktuelles Gesprächssegment:
     return _parse_json(msg.content[0].text.strip())
 
 
+# ── Phase 08.23.2.SOFORT-2 (D-04) — gestaffeltes Verhalten bei Zeitueberschreitung ──────────
+# Stufe 1: still ueberspringen, protokollieren, KEIN Retry. Der Berater soll mitten im Satz
+#          nicht abgelenkt werden, und die naechste Runde kommt in Sekunden. Kein Retry, weil
+#          ein zweiter Versuch die Blockade genau dann verdoppelt, wenn es ohnehin klemmt.
+# Stufe 2: ab config.LIVE_LLM_TIMEOUT_HINWEIS_AB Ueberschreitungen IN FOLGE wird es im PiP
+#          sichtbar — ruhig und knapp, kein Alarm.
+#
+# ⚠ "IN FOLGE" zaehlt LLM-VERSUCHE, nicht Schleifentakte. Beide Loops steigen vor dem Aufruf
+# aus, wenn nichts zu tun ist — ein Takt-Zaehler wuerde Stufe 2 in einer Gespraechspause
+# ausloesen, also genau den Alarm, den D-04 vermeiden will.
+#
+# ⚠ Der Drei-in-Folge-Zaehler liegt PER SID in _session_state (Punkt 28) und NICHT modul-global.
+# tests/test_no_live_global_state.py wuerde einen Modul-Global HIER nicht fangen (sein Regex
+# zielt nur auf `ls.<attr> =`). Der Zaehler liegt per-sid, WEIL ES RICHTIG IST — nicht weil ein
+# Test es erzwingt.
+
+_SID_TIMEOUT_KEY = '_llm_timeout_streak'
+
+# Founder-Zaehler: modul-global ist hier ERLAUBT, weil der Schluessel die aufrufende FUNKTION
+# ist — tenant-neutral, kein Nutzerbezug (dieselbe Ausnahme wie cost_tracker._skip_counts).
+# Grenzen bewusst wie dort: RAM, pro Prozess, Neustart setzt auf 0, kein Lock (die Aussage ist
+# "0 oder nicht 0", nicht die exakte Zahl — ein Lock waere Ueber-Engineering, Punkt 27).
+_live_timeout_counts: dict[str, int] = {}
+_LIVE_TIMEOUT_KEYS_MAX = 50
+
+
+def get_live_timeout_counts() -> dict:
+    """Kopie des Timeout-Zaehlers fuers Founder-Dashboard: {'funktionsname': anzahl}."""
+    return dict(_live_timeout_counts)
+
+
+def reset_live_timeout_counts() -> None:
+    """Zaehler leeren. Fuer Tests und einen bewussten Neu-Anfang nach einem Fix."""
+    _live_timeout_counts.clear()
+
+
+def _zaehle_live_timeout(funktion: str) -> None:
+    if funktion not in _live_timeout_counts and len(_live_timeout_counts) >= _LIVE_TIMEOUT_KEYS_MAX:
+        return
+    _live_timeout_counts[funktion] = _live_timeout_counts.get(funktion, 0) + 1
+
+
+def _timeout_stufen(sid, funktion: str) -> None:
+    """Stufe 1 immer, Stufe 2 ab der N-ten Ueberschreitung IN FOLGE fuer diese sid.
+
+    Wird AUSSCHLIESSLICH aus einem Timeout-Ausnahmezweig gerufen — also nur, wenn ein
+    LLM-Versuch stattgefunden hat und an der Zeit gescheitert ist.
+    """
+    # Hausmuster (analyse_loop, die zwei ersten Zeilen seines Rumpfes): BEIDE sind in diesem
+    # Modul funktionslokal, NICHT modul-weit. Ohne diese zwei Zeilen stirbt der Helfer mit
+    # NameError im except-Zweig — und der Ausfall waere unsichtbar, weil der aeussere except
+    # ihn schluckt.
+    import services.live_session as ls
+    from extensions import socketio as sio
+    _zaehle_live_timeout(funktion)                      # Founder-Zaehler, Soll 0
+    print(f"[SOFORT-2] Zeitueberschreitung in {funktion} (sid={sid}) — Runde uebersprungen, kein Retry")
+    if not sid:
+        return
+    with ls._session_state_lock:
+        _st = ls._session_state.get(sid)
+        if not isinstance(_st, dict):
+            return
+        _streak = _st.get(_SID_TIMEOUT_KEY, 0) + 1
+        _st[_SID_TIMEOUT_KEY] = _streak
+    # Emit AUSSERHALB des Riegels (Muster audio_health_warning: SocketIO kann blockieren).
+    # Genau BEIM Erreichen der Schwelle, nicht bei jeder weiteren — sonst blinkt es.
+    if _streak == config.LIVE_LLM_TIMEOUT_HINWEIS_AB:
+        try:
+            sio.emit('live_llm_timeout_warning', {
+                'text': config.LIVE_LLM_TIMEOUT_HINWEIS_TEXT,
+                'tip': config.LIVE_LLM_TIMEOUT_HINWEIS_TIP,
+            }, room=sid)
+        except Exception as _e_emit:
+            print(f"[SOFORT-2] Hinweis-Emit fehlgeschlagen (non-fatal): {_e_emit}")
+
+
+def _timeout_streak_zuruecksetzen(sid) -> None:
+    """Ein Erfolg setzt auf 0 — anders traegt "in Folge" nicht. Vorbild: _bof_count."""
+    import services.live_session as ls                  # dito — kein Modul-Global
+    if not sid:
+        return
+    with ls._session_state_lock:
+        _st = ls._session_state.get(sid)
+        if isinstance(_st, dict) and _st.get(_SID_TIMEOUT_KEY):
+            _st[_SID_TIMEOUT_KEY] = 0
+
+
 def analyse_loop():
     """Call 1 — Einwand-Analyse (Haiku, schnell)."""
     import services.live_session as ls
@@ -1329,13 +1428,28 @@ def analyse_loop():
                 # (kein zweiter Haiku-Call). Bei '0': ALTER Zwei-Call-Pfad (Rollback-Ventil).
                 # Der Merged-Call laeuft JEDEN Tick fuer die Einwand-Analyse (Invariante),
                 # auch wenn ein QA-Guard im Dispatch spaeter greift.
-                if config.MERGE_ANALYSE_QA == '1':
-                    merged = analysiere_und_klassifiziere(neuer_text, kontext, sid=sid)
-                    ergebnis = merged
-                    _qa_section = merged.get('qa', {})   # QA-Sektion (fail-open {} bei Truncation)
-                else:
-                    ergebnis = analysiere_mit_claude(neuer_text, kontext, sid=sid)
-                    _qa_section = None                   # Signal: Dispatch macht den eigenen classify_utterance-Call
+                # SOFORT-2 (D-04): ENGER try NUR um den LLM-Aufruf. Der aeussere per-sid-try
+                # faengt heute schon alles mit `except Exception` — ein Timeout-Zweig dort waere
+                # von einem JSON-Parse-Fehler nicht unterscheidbar, Stufe 2 feuerte nie, und es
+                # saehe funktionierend aus.
+                # ⚠ REIHENFOLGE: anthropic.APITimeoutError ist eine UNTERKLASSE von
+                # anthropic.APIConnectionError. Steht das Breitere zuerst, ist dieser Zweig
+                # unerreichbar. Hier steht ausschliesslich der enge Typ — alles andere faellt
+                # unveraendert nach aussen durch.
+                try:
+                    if config.MERGE_ANALYSE_QA == '1':
+                        merged = analysiere_und_klassifiziere(neuer_text, kontext, sid=sid)
+                        ergebnis = merged
+                        _qa_section = merged.get('qa', {})   # QA-Sektion (fail-open {} bei Truncation)
+                    else:
+                        ergebnis = analysiere_mit_claude(neuer_text, kontext, sid=sid)
+                        _qa_section = None                   # Signal: Dispatch macht den eigenen classify_utterance-Call
+                except anthropic.APITimeoutError:
+                    _timeout_stufen(sid, 'analyse_loop')
+                    continue
+                # Erfolg: Streak zuruecksetzen — VOR der SID-Lebendigkeitspruefung, sonst
+                # bleibt die Ruecksetzung bei einem Abbruch aus (Vorbild: _bof_count).
+                _timeout_streak_zuruecksetzen(sid)
                 # SID liveness check after Claude API call
                 with ls._session_state_lock:
                     if sid not in ls._session_state:
@@ -1563,8 +1677,14 @@ def analyse_loop():
                             _counterpart = (_sid_phase_st or {}).get('counterpart')
                         elapsed_s = (time.time() - ls.session_start_ts) if hasattr(ls, 'session_start_ts') else 0
                         _phase_model = select_phase_model(mode, _counterpart)
-                        raw = classify_phase(transcript_window, cur_phase, elapsed_s,
-                                             _phase_model, sid=sid)
+                        try:
+                            raw = classify_phase(transcript_window, cur_phase, elapsed_s,
+                                                 _phase_model, sid=sid)
+                        except anthropic.APITimeoutError:
+                            # Zahlt in denselben per-sid-Zaehler ein: fuer den Berater ist "die
+                            # Erkennung setzt aus" EINE Aussage, nicht drei (Entscheidung c).
+                            _timeout_stufen(sid, 'classify_phase')
+                            raw = None
                         if raw:
                             cycles_since_change = _phase_cycle_counter - last_change_cycle
                             new_phase, new_conf = detect_phase(
@@ -1642,11 +1762,15 @@ def analyse_loop():
                                 cc_phase = (_sid_cc_st.get('state') or {}).get('current_phase', 1) or 1
                             if cc_mode == 'cold_call':
                                 seller_window = list(sid_state.get('analysiert_bisher', []))[-6:]
-                                inference = infer_cold_call_context(
-                                    seller_window, cc_phase, cc_mode,
-                                    haiku_caller=infer_customer_state,
-                                    sid=sid,  # TAXO1-03 B-B: per-SID Kosten-Attribution
-                                )
+                                try:
+                                    inference = infer_cold_call_context(
+                                        seller_window, cc_phase, cc_mode,
+                                        haiku_caller=infer_customer_state,
+                                        sid=sid,  # TAXO1-03 B-B: per-SID Kosten-Attribution
+                                    )
+                                except anthropic.APITimeoutError:
+                                    _timeout_stufen(sid, 'infer_customer_state')
+                                    inference = None
                                 with ls._session_state_lock:
                                     _sid_cc_target = (ls._session_state.get(sid) or {}).get('state')
                                     if _sid_cc_target is not None:
@@ -2122,7 +2246,13 @@ def coaching_loop():
 
             kontext = " ".join(sid_state.get('analysiert_bisher', [])[-10:])
             try:
-                result    = analysiere_coaching(segmente, kontext, sid=sid)
+                # SOFORT-2 (D-04): enger try NUR um den LLM-Aufruf — siehe analyse_loop.
+                try:
+                    result    = analysiere_coaching(segmente, kontext, sid=sid)
+                except anthropic.APITimeoutError:
+                    _timeout_stufen(sid, 'coaching_loop')
+                    continue
+                _timeout_streak_zuruecksetzen(sid)
                 # SID liveness check after Claude API call
                 with ls._session_state_lock:
                     if sid not in ls._session_state:
