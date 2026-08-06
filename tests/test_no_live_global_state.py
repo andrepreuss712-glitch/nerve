@@ -661,3 +661,302 @@ def _riegel_baum_oder_fehler(pfad):
 def _riegel_zaehlung(baum, namen):
     """(anzahl_with, anzahl_try) fuer eine Datei."""
     return len(_riegel_with_bloecke(baum, namen)), len(_riegel_try_bloecke(baum, namen))
+
+
+def _riegel_analysiere_quelle(quelltext, namen=None):
+    """Faehrt DENSELBEN Sweep gegen synthetischen Quelltext (Muster
+    tests/test_session_lock_blocking_calls_guard.py:439-449). Die Schnipsel stehen in
+    tests/, das NICHT im Sweep-Bereich liegt -> kein Selbst-Treffer.
+    namen=None: Riegel-Namen aus dem Schnipsel selbst ableiten.
+
+    MELDE-Seite: prueft ausschliesslich GEMEINSAME Riegel. Ein per-Schluessel-Riegel
+    ist kein Verstoss."""
+    baum = ast.parse(textwrap.dedent(quelltext))
+    if namen is None:
+        namen = _riegel_namen_einer_datei(baum)
+    p = _ist_gemeinsamer_riegel_ausdruck
+    treffer = []
+    for block in _riegel_with_bloecke(baum, namen, p):
+        treffer.extend(_netz_aufrufe_in(block))
+    for tblock in _riegel_try_bloecke(baum, namen, p):
+        treffer.extend(_netz_aufrufe_in(_riegel_region(tblock, namen, p)))
+    return treffer
+
+
+def _riegel_zaehle_bloecke_in_quelle(quelltext, namen=None):
+    """ZAEHL-Seite: alle Riegel-Bloecke, auch die per-Schluessel gefuehrten."""
+    baum = ast.parse(textwrap.dedent(quelltext))
+    if namen is None:
+        namen = _riegel_namen_einer_datei(baum)
+    return (len(_riegel_with_bloecke(baum, namen))
+            + len(_riegel_try_bloecke(baum, namen)))
+
+
+@pytest.mark.rot_vor_fix
+def test_kein_modul_globaler_riegel_um_netz_aufruf():
+    """Kein modul-globaler Riegel darf einen Netz-/LLM-Aufruf umschliessen.
+
+    Die Fehlerklasse: ein prozessweiter Riegel um einen Aufruf mit
+    config.HTTP_LLM_TIMEOUT_LONG_S = 45 s Zeitlimit serialisiert ALLE Nutzer. Solo
+    getestet unsichtbar; zwei gleichzeitige Anruf-Enden warten hintereinander und
+    belegen dabei je einen der 64 gthread-Threads (deploy/nerve.service:35-36).
+
+    ROT-Beleg (Marker rot_vor_fix, CLAUDE.md Punkt 31): gegen den ungefixten Stand
+    MUSS diese Pruefung failen — mit services/coaching_service.py:84.
+
+    KEIN Source-Presence-False-Green (CLAUDE.md Test-Qualitaets-Regel): geprueft wird
+    ein VERBOTENES Muster, nicht die Existenz erwuenschten Codes. Verschwindet der
+    Aufruf aus dem Riegel, wird der Test gruener; kommt einer hinzu, roetet er.
+
+    MELDE-Seite (_ist_gemeinsamer_riegel_ausdruck): nur GEMEINSAME Riegel sind
+    verstoss-faehig. Ein per-Schluessel-Riegel (`_lock_for(key)`) ist die LOESUNG der
+    Fehlerklasse und wird bewusst NICHT gemeldet — er bleibt aber voll GEZAEHLT
+    (test_riegel_sweep_erreicht_alle_bekannten_bloecke).
+    """
+    namen = _riegel_namen_gesamt()
+    p = _ist_gemeinsamer_riegel_ausdruck
+    gefunden = {}
+    for datei, pfad in _riegel_python_dateien():
+        baum, fehler = _riegel_baum_oder_fehler(pfad)
+        if baum is None:
+            # Nicht verschlucken: sichtbar rot statt still uebersprungen.
+            gefunden[(datei, 0)] = {f'SYNTAX ({fehler})'}
+            continue
+        treffer = []
+        for block in _riegel_with_bloecke(baum, namen, p):
+            treffer.extend(_netz_aufrufe_in(block))
+        for tblock in _riegel_try_bloecke(baum, namen, p):
+            treffer.extend(_netz_aufrufe_in(_riegel_region(tblock, namen, p)))
+        for zeile, muster in treffer:
+            if (datei, zeile) in _FALSCH_TREFFER_RIEGEL:
+                continue
+            # Dedup je (datei, zeile): messages.create UND http_llm_client() stehen im
+            # selben Ausdruck; zwei Melde-Zeilen behaupteten zwei Verstoesse statt einem.
+            gefunden.setdefault((datei, zeile), set()).add(muster)
+
+    verstoesse = [f"{d}:{z}  [{', '.join(sorted(m))}]"
+                  for (d, z), m in sorted(gefunden.items())]
+    assert not verstoesse, (
+        f"{len(verstoesse)} modul-globale(r) Riegel um einen Netz-/LLM-Aufruf:\n  "
+        + "\n  ".join(verstoesse)
+        + "\n\nPunkt 28 (Mehr-Nutzer): ein prozessweiter Riegel um einen Netz-Aufruf "
+          "serialisiert ALLE Nutzer ueber die volle Zeitlimit-Dauer.\n"
+          "NICHT den Riegel ersatzlos entfernen (der Duplikatschutz haengt daran) und "
+          "NICHT die Falsch-Treffer-Liste fuellen. Den Riegel pro Schluessel fuehren "
+          "(Muster: services/coaching_service.py _analysis_lock_for) ODER den "
+          "Netz-Aufruf AUS dem Riegel-Block herausziehen.")
+
+
+def test_riegel_sweep_erreicht_alle_bekannten_bloecke():
+    """Sperre gegen den stillen Ausfall (CLAUDE.md Punkt 31).
+
+    Faellt die Riegel-Ableitung aus, ist die Namensmenge leer, der Sweep faende 0
+    Verstoesse und SAEHE GRUEN AUS. Diese Pruefung macht daraus ROT.
+    """
+    namen = _riegel_namen_gesamt()
+    ist, aufteilung = {}, {}
+    for datei, pfad in _riegel_python_dateien():
+        baum, _f = _riegel_baum_oder_fehler(pfad)
+        if baum is None:
+            continue
+        n_with, n_try = _riegel_zaehlung(baum, namen)
+        if n_with or n_try:
+            ist[datei] = n_with + n_try
+            aufteilung[datei] = (n_with, n_try)
+
+    print('\n[MEHRNUTZER-REST-1 Riegel-Waechter] Ist-Zaehlung:')
+    print(f'  abgeleitete Riegel-Namen: {len(namen)} -> {sorted(namen)}')
+    for datei in sorted(ist):
+        n_with, n_try = aufteilung[datei]
+        print(f'  {datei}: {ist[datei]} (with={n_with}, try/finally={n_try})')
+    print(f'  SUMME: {sum(ist.values())} in {len(ist)} Dateien')
+
+    assert len(namen) >= _RIEGEL_SOLL_NAMEN_MINDESTENS, (
+        f"Unter-Ableitung: nur {len(namen)} modul-globale Riegel-Namen gefunden, "
+        f"erwartet mindestens {_RIEGEL_SOLL_NAMEN_MINDESTENS}. Entweder ist die "
+        f"Ableitung kaputt (dann ist der Waechter BLIND, nicht gruen) oder Riegel "
+        f"wurden legitim entfernt (dann die Zahl MIT BEGRUENDUNG nachziehen, den Test "
+        f"NICHT entfernen). Gefunden: {sorted(namen)}")
+
+    zu_wenig = {d: (ist.get(d, 0), soll) for d, soll in _RIEGEL_SOLL_JE_DATEI.items()
+                if ist.get(d, 0) < soll}
+    assert not zu_wenig, (
+        f"Unter-Sweep je Datei: {zu_wenig}. services/coaching_service.py ist der "
+        f"wichtigste Eintrag — faellt er auf 0, ist der conv_id-Riegel dieser Phase "
+        f"aus der eigenen Bewachung gefallen (Variante A / _RIEGEL_FABRIK_ENDUNGEN "
+        f"greift nicht mehr).")
+
+    assert sum(ist.values()) >= _RIEGEL_SOLL_SUMME_MINDESTENS, (
+        f"Unter-Sweep ueber die Summe: {sum(ist.values())} ueberwachte Bloecke, "
+        f"erwartet mindestens {_RIEGEL_SOLL_SUMME_MINDESTENS}. Gezaehlt werden BEIDE "
+        f"Formen (with + try/finally).")
+
+
+# ── Selbst-Tests gegen synthetischen Quelltext ───────────────────────────────
+
+def test_riegel_sweep_beisst_gegen_synthetischen_quelltext():
+    """Positiv-Beleg: der Sweep meldet die Fehlerklasse tatsaechlich — in beiden
+    Erwerbsformen und ueber Alias-Schreibweisen."""
+    with_form = """
+        import threading
+        _x_lock = threading.Lock()
+
+        def f(c):
+            with _x_lock:
+                r = c.messages.create(model='m')
+                return r
+    """
+    try_form = """
+        import threading
+        _y_lock = threading.Lock()
+
+        def g(c):
+            _y_lock.acquire()
+            try:
+                return c.messages.stream(model='m')
+            finally:
+                _y_lock.release()
+    """
+    requests_form = """
+        import threading
+        _z_lock = threading.Lock()
+
+        def h():
+            with _z_lock:
+                return requests.post('https://x')
+    """
+    nackter_aufruf = """
+        import threading
+        _w_lock = threading.Lock()
+
+        def i():
+            with _w_lock:
+                return http_llm_client(long_running=True)
+    """
+    traced_huelle = """
+        _session_state_lock = _TracedLock('_session_state_lock')
+
+        def j(c):
+            with _session_state_lock:
+                return c.messages.create(model='m')
+    """
+    for name, quelle in (('with', with_form), ('try/finally', try_form),
+                         ('requests', requests_form), ('nackt', nackter_aufruf),
+                         ('_TracedLock', traced_huelle)):
+        assert _riegel_analysiere_quelle(quelle), (
+            f"Der Sweep sieht die Fehlerklasse in der Form '{name}' NICHT — "
+            f"solange das so ist, beweist sein Gruen nichts.")
+
+
+def test_riegel_sweep_meldet_harmloses_nicht():
+    """Negativ-Beleg: der enge, empfaenger-gebundene Katalog produziert keine
+    Falsch-Treffer. Ein Katalog ueber Methodennamen ('get', 'join') haette allein
+    durch dict.get(...) unter Riegeln neun Falsch-Treffer im Bestand."""
+    harmlos = """
+        import threading
+        _a_lock = threading.Lock()
+
+        def f(d, xs, c):
+            with _a_lock:
+                v = d.get('k')
+                s = ', '.join(xs)
+                n = create(model='m')          # nacktes create, KEIN messages.create
+                return v, s, n
+    """
+    assert _riegel_analysiere_quelle(harmlos) == [], (
+        f"Falsch-Treffer im harmlosen Quelltext: "
+        f"{_riegel_analysiere_quelle(harmlos)!r}. Der Katalog MUSS "
+        f"empfaenger-gebunden bleiben.")
+
+    ausserhalb = """
+        import threading
+        _b_lock = threading.Lock()
+
+        def f(c):
+            with _b_lock:
+                daten = {'k': 1}
+            return c.messages.create(model='m')   # AUSSERHALB des Riegels
+    """
+    assert _riegel_analysiere_quelle(ausserhalb) == [], (
+        "Ein Netz-Aufruf AUSSERHALB des Riegel-Blocks darf nicht gemeldet werden — "
+        "sonst waere der Waechter unbrauchbar laut.")
+
+
+def test_riegel_erkennung_erfasst_context_manager_aufruf():
+    """DER WICHTIGSTE SELBST-TEST DIESER PHASE (Variante A / _RIEGEL_FABRIK_ENDUNGEN).
+
+    Nach dem Fix heisst es in services/coaching_service.py nicht mehr
+    `with _analysis_lock:` sondern `with _analysis_lock_for(conv_id):` — ein ast.Call,
+    kein Riegel-Name. Dieser Test nagelt BEIDE Richtungen fest; nur eine zu pruefen
+    beweist die Haelfte:
+
+    (I)  ZAEHL-Seite: der Fabrik-Block wird GEZAEHLT. Ohne das faellt der neue Riegel
+         aus der eigenen Bewachung, das Datei-Soll muesste auf 0, und der Waechter
+         waere GRUEN ABER BLIND — verboten laut
+         tests/test_session_lock_blocking_calls_guard.py:200-207 ("ein Eintrag mit
+         Soll 0 kann nie fehlschlagen").
+    (II) MELDE-Seite: derselbe Block wird NICHT als Verstoss gemeldet. Ein
+         per-Schluessel-Riegel ist definitionsgemaess kein gemeinsamer Riegel — er
+         IST die Loesung der Fehlerklasse. Wuerde er gemeldet, bliebe der Waechter
+         nach dem Fix ROT und das gruene Tor waere unerreichbar.
+    (III) Gegenprobe gemeinsamer Riegel: `with _globaler_lock:` um denselben Aufruf
+         MUSS weiterhin gemeldet werden. Ohne diese Haelfte koennte (II) auch von
+         einem kaputten Netz-Katalog erfuellt werden.
+    (IV) Gegenprobe Fabrik OHNE Argument: `with _hole_lock():` kann nicht nach
+         Schluessel trennen und MUSS gemeldet werden.
+    """
+    nach_dem_fix = """
+        import threading
+        _conv_locks = {}
+        _conv_locks_guard = threading.Lock()
+
+        def f(conv_id, c):
+            with _analysis_lock_for(conv_id):
+                return c.messages.create(model='m')
+    """
+    assert _riegel_zaehle_bloecke_in_quelle(nach_dem_fix) == 1, (
+        "(I) `with _analysis_lock_for(conv_id):` wird NICHT als bewachter Block "
+        "gezaehlt. Damit faellt der in dieser Phase gebaute Riegel aus der eigenen "
+        "Bewachung und das Datei-Soll services/coaching_service.py muesste auf 0 — "
+        "der Waechter waere gruen ABER BLIND (RESEARCH §4.6). "
+        "_RIEGEL_FABRIK_ENDUNGEN pruefen.")
+    assert _riegel_analysiere_quelle(nach_dem_fix) == [], (
+        f"(II) Ein per-Schluessel-Riegel wird als Verstoss GEMELDET: "
+        f"{_riegel_analysiere_quelle(nach_dem_fix)!r}. Damit bliebe der Waechter auch "
+        f"NACH dem Fix rot und das gruene Tor waere unerreichbar. "
+        f"_ist_per_schluessel_riegel_ausdruck pruefen.")
+
+    weiterhin_verstoss = """
+        import threading
+        _globaler_lock = threading.Lock()
+
+        def f(c):
+            with _globaler_lock:
+                return c.messages.create(model='m')
+    """
+    assert _riegel_analysiere_quelle(weiterhin_verstoss), (
+        "(III) Ein GEMEINSAMER Riegel um messages.create wird nicht mehr gemeldet — "
+        "die Trennung Zaehl-/Melde-Seite hat den Waechter abgeschaltet statt "
+        "praezisiert. Das ist die Fehlerklasse selbst.")
+
+    fabrik_ohne_argument = """
+        import threading
+        _platzhalter_lock = threading.Lock()
+
+        def f(c):
+            with _hole_lock():
+                return c.messages.create(model='m')
+    """
+    assert _riegel_analysiere_quelle(fabrik_ohne_argument), (
+        "(IV) Eine Riegel-Fabrik OHNE Argument kann gar nicht nach Schluessel "
+        "trennen und ist damit faktisch gemeinsam — sie MUSS gemeldet werden.")
+
+    # Gegenprobe: ein gewoehnlicher Aufruf ist KEIN Riegel-Ausdruck.
+    kein_riegel = """
+        def f(c):
+            with open('x') as fh:
+                return c.messages.create(model='m')
+    """
+    assert _riegel_zaehle_bloecke_in_quelle(kein_riegel) == 0, (
+        "`with open(...)` wird faelschlich als Riegel-Block gezaehlt — die "
+        "Endungs-Heuristik ist zu weit.")
