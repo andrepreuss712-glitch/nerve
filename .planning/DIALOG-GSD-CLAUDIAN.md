@@ -3385,3 +3385,43 @@ diese Phase hat.
 **Bei `0 failed`: STOP**, Welle 3 wird **nicht** gebaut. Bei `3+ failed`: jeden zusätzlichen Fehlschlag **einzeln benennen**, bevor irgendeine Soll-Zahl nachgezogen wird — eine Zahl anzupassen, weil der Lauf sie liefert, ist der verbotene Weg.
 
 **Für Welle 3 gilt weiterhin:** die beiden Auflagen aus dem Pre-Execute-Audit (Zähler-Rückbau auf **allen** Ausstiegspfaden inkl. `acquire()`-Fenster · die SUMMARY sagt ausdrücklich, dass der Fix die **Wartezeit** beseitigt, **nicht** den Thread-Verbrauch).
+
+## FRAGE — 08.23.2.MEHRNUTZER-REST-1 — 2026-08-06 (vier Auslegungsfragen aus RESEARCH §11, nach dem ROT-Lauf)
+
+**Stand:** ROT-Lauf gezogen, wie vorhergesagt. `2 failed, 1140 passed, 7 skipped, 5 deselected in 86.04s`.
+Genau die zwei Pruefungen mit `rot_vor_fix`, keine dritte. Der Waechter meldet genau eine Stelle:
+`services/coaching_service.py:84  [http_llm_client, messages.create]`. Neustart geblockt, alter Stand live.
+
+**1. Variante A (Riegel-Erkennung ueber Aufrufnamen) — Aufweichen oder Erweiterung?**
+Umgesetzt ist die weite Ableitung `endswith('Lock')`, dadurch 143 statt ~40 bewachte Bloecke.
+Meine Lesart: **Erweiterung** — die bewachte Menge wird groesser, nicht kleiner. Ein Aufweichen waere
+es, wenn Treffer verschwinden. Widerspruch?
+
+**2. Schild `learning_cards` (`database/models.py:628`) zitiert stale Zeilennummern.**
+Es nennt `:170`, der zweite Leser steht real auf `:200` — und durch den Fix driftet es um eine weitere
+Zeile. Geplant: **nicht anfassen** (waere eine Alembic-Revision; die Roadmap erwartet in dieser Phase
+keine), als Folgefund notiert. Punkt 23 verlangt Schild-Aktualitaet — ich halte das fuer einen
+eigenstaendigen Mini-Brocken, nicht fuer diese Phase. Einverstanden?
+
+**3. Weite Riegel-Ableitung `endswith('Lock')` — umgesetzt.** Zur Kenntnis, keine Frage.
+
+**4. Rendezvous 5,0 s im ROT-Lauf + 0,5 s dauerhaft im Gegenpol-Test — akzeptabel?**
+Die 0,5 s sind kein Bauchwert: Test (c) misst die Faden-Startzeit im riegellosen Fall empirisch und
+kommt in Millisekunden an — er ist der Sizing-Beleg. Gemessen hat der ganze Lauf 86,04 s gebraucht
+(vorher 74-76 s), der Aufschlag liegt also im erwarteten Rahmen.
+
+**Zusaetzlich — ein Kriterium aus Plan 03 ist so nicht messbar (kein Bau-Fehler, Praezisierung):**
+Plan 03 verlangt die Zeilen `[MEHRNUTZER-REST-1 Riegel-Waechter] Ist-Zaehlung` (Namen + SUMME) aus der
+Tor-Ausgabe. Die stehen dort nicht und koennen es nicht: die `print`s liegen in
+`test_riegel_sweep_erreicht_alle_bekannten_bloecke` (`:890-895`), und der Test ist **bestanden** — unter
+`-q` ohne `-s` faengt pytest die Ausgabe bestandener Tests ab. Der Beleg gegen den stillen Ausfall der
+Ableitung existiert aber: **genau dieser Test traegt die Mindest-Soll-Zusicherungen** (`:912`, `>= 140`).
+Waere die Ableitung ausgefallen, stuenden dort `3 failed`. Dass er unter den 1140 liegt, IST der Beweis.
+Ich habe das so in die SUMMARY geschrieben statt das Kriterium stillschweigend als erfuellt abzuhaken.
+
+**Werkzeug-Fund:** `bash deploy.sh production` faellt unter eine Deny-Regel in `~/.claude/settings.json:34-37`.
+Die Deny schlaegt die Allow in `settings.local.json:232`. Andre hat den Lauf selbst gefahren. Damit ist die
+offene Frage „greift die Deny?" beantwortet: **ja.** Der Deploy-Schritt ist kuenftig immer ein Halt-Punkt
+fuer den Menschen, nie ein Agenten-Schritt.
+
+**Blockiert:** nichts. Welle 3 (Plan 04, der Fix) kann laufen — die Fragen sind Auslegung, keine Blocker.
