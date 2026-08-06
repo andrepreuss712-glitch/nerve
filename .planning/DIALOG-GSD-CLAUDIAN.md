@@ -3009,3 +3009,36 @@ Welle 2 am Deploy-Tor"* fuehren, Scope-Notiz "acht statt drei Eingaenge (R-7/R-8
 **Ablageort-Wurzel fuer alles oben:**
 `.planning/phases/08.23.2.SOFORT-2-besitzpruefung-eingaenge-zeitlimit-live-llm/`
 (FUNDE.md fuer R-*, die jeweilige SUMMARY fuer E-*, die REVIEWS-Datei fuer F-*).
+
+## ROADMAP-SYNC — 08.23.2.SOFORT-2 — 2026-08-06
+
+**Geaendert in `.planning/ROADMAP.md`:** ein Absatz unter der Reihenfolge-Zeile, direkt beim
+Punkt „Coaching-Frage: zusammenlegen oder streichen".
+
+**Was und warum:** Bei der D-06-Abnahme der Phase 08.23.2.SOFORT-2 ist ein Befund aufgetaucht,
+der die dortige Entscheidung vorpraegt — Andre hat ausdruecklich um den Vermerk gebeten
+(sonst haette diese Phase die ROADMAP.md nicht angefasst).
+
+**Der Befund (E-13 / R-13):** Der **sichtbare** Teil der Coaching-Frage erreicht den Nutzer
+faktisch nie. `services/claude_service.py:2278` sperrt sie:
+`if kategorie == 'frage' and bof_snapshot < 2: tipp = None`. Der Zaehler `_bof_count`
+(`:2238-2242`) zaehlt Berater-Beitraege **ohne** Fragezeichen und springt bei **jedem**
+Fragezeichen zurueck auf 0. Ein Cold-Caller fragt staendig → die Schwelle 2 wird praktisch nie
+erreicht. **Andre bestaetigt: in der gesamten Projektlaufzeit noch NIE einen Coaching-Hinweis
+im PiP gesehen.**
+
+**Warum es die Entscheidung verschiebt:** `coaching_haiku` ist mit Ø 2714-2922 ms der
+**langsamste** Live-Pfad und kostet laut der Kosten-Zeile in der ROADMAP **78 % der
+Analyse-Frage** — fuer eine Anzeige, die nicht ankommt. Das spricht fuer **STREICHEN** oder
+**SCHWELLE KORRIGIEREN**, nicht fuer „zusammenlegen".
+
+**Fuer SOFORT-2 war das kein Blocker** (die Sperre ist alt und unabhaengig von den Zeitlimits),
+**aber die dortige Abnahme deckt den langsamsten Live-Pfad deshalb NICHT ab** — so ausdruecklich
+in `08.23.2.SOFORT-2-08-SUMMARY.md` vermerkt, nicht als gruenes Schweigen.
+
+**Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen.**
+
+**Ablageorte:** Fund-Details in
+`.planning/phases/08.23.2.SOFORT-2-besitzpruefung-eingaenge-zeitlimit-live-llm/08.23.2.SOFORT-2-FUNDE.md`
+(Abschnitt 2, Zeile **R-13**); Abnahme-Kontext in `…-08-SUMMARY.md`, Abschnitt
+„WAS DIESE ABNAHME NICHT ABDECKT".

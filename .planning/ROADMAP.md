@@ -140,6 +140,11 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 >
 > **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.):** **MESSGERAETE-1** ✅ → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → ~~Schwaerzung-Mittelweg~~ **(aufgegangen in den Engine-Neubau, s.u.)** → Schott-Restpaket → Stresstest.
 >
+> 🔴 **NEUER BEFUND zur "Coaching-Frage: zusammenlegen oder streichen" — er verschiebt die Entscheidung Richtung STREICHEN oder SCHWELLE KORRIGIEREN** (gefunden 2026-08-06 bei der D-06-Abnahme von Phase 08.23.2.SOFORT-2, Fund **E-13**):
+> **Der sichtbare Teil der Coaching-Frage erreicht den Nutzer faktisch nie.** `services/claude_service.py:2278` sperrt sie: `if kategorie == 'frage' and bof_snapshot < 2: tipp = None`. Der Zaehler `_bof_count` (`:2238-2242`) zaehlt Berater-Beitraege **ohne** Fragezeichen und springt bei **jedem** Fragezeichen zurueck auf 0. Ein Cold-Caller fragt staendig → die Schwelle 2 wird praktisch nie erreicht. **Andre bestaetigt: in der gesamten Projektlaufzeit noch NIE einen Coaching-Hinweis im PiP gesehen.**
+> Wirtschaftlich ist das der teuerste Posten dieser Klasse: `coaching_haiku` ist mit Ø 2714-2922 ms der **langsamste** Live-Pfad und kostet laut der Zeile oben **78 % der Analyse-Frage** — fuer eine Anzeige, die nicht ankommt.
+> ⚠ Fuer SOFORT-2 war das **kein** Blocker (die Sperre ist alt und unabhaengig von den Zeitlimits), **aber die dortige Abnahme deckt den langsamsten Live-Pfad deshalb NICHT ab** — so ausdruecklich in `08.23.2.SOFORT-2-08-SUMMARY.md` vermerkt, nicht als gruenes Schweigen. Claudian zieht die Vault-Roadmap parallel nach.
+>
 > ### ⛔ SCHWAERZUNG — BESCHLUSSLAGE 2026-08-04 (ersetzt "Beschluss D" als eigenen Punkt)
 >
 > Belegt durch Rechts-Recherche mit Quellen + Gemini-Brainstorming + Fable-Pruefung am echten Code. **Volltext: Vault, `03 Planung/Mehrnutzer-Faehigkeit — Bestandsaufnahme + Konzept 2026-08-04.md` §7d/§7e.**
