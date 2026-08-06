@@ -199,6 +199,32 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 
 ---
 
+> ### ⬜ NEU 2026-08-06 — PROFIL-KONTEXT: die Analyse-KI ist blind (NICHT anfassen bis SOFORT-2 durch ist)
+>
+> **Andre-Direktive 06.08.:** *"Damit die KI moeglichst gute Vorschlaege machen kann, braucht sie den ganzen Kontext aus dem Profil — nicht nur die hinterlegten EWBs. Ohne Kontext wird die KI gerade in laengeren Gespraechen niemals richtig gut sein koennen."* Kanonisch verankert: `Nerve-Vault/04 Entscheidungen/NERVE Konstrukt - Soll-Verhalten.md` §1.
+>
+> **BEFUND (am Code belegt):** Von sechs lebenden Live-LLM-Aufrufen bekommen **zwei** das volle Profil — die Knopf-Antwort (`claude_service.py:1044`) und die automatische QA-Antwort (`qa_pipeline.py:423`). **Die Dauer-Analyse (`claude_service.py:782-787`, feuert alle ~4 s laut `config.py:54` und entscheidet, OB ueberhaupt etwas passiert) nutzt die feste Konstante `_MERGED_SYSTEM` — NULL Profilwissen.** Ebenso Phasen-Erkennung (`:427`) und Cold-Call-Ableitung (`:510`): nur Transkript. Coaching (`:1190`) nur schmal (Produkt+Firma, **kein** Preis/USP/Tabu) und **nie** das Briefing. **Folge: Die Vorab-Recherche wirkt live nur im Moment des Knopfdrucks.**
+>
+> **TOTE PROFILFELDER (Nutzer pflegt, nichts wirkt):** `basis.zielkunden` (`profile_wizard.html:340`), `value.roi_argumente`, `nogos` (`profile_editor.html:612-620`), `techniken` (`:554-567`), `ki.antwortlaenge` (`:682`), `meta.firma`/`meta.rolle`, je Einwand `varianten`/`technik`/`intensitaet`/`kurzlabel` (`:1016`). Null Treffer in Live-Auftraegen. Nebenbefund: `techniken.verboten` dubliziert die **lebenden** Tabu-Begriffe (`prompt_pipeline.py:426`); die eigene Recherche haelt `nogos` fuer kritisch wichtig (`.planning/research/sales-coaching-literatur-synthese.md:244`).
+>
+> **★ ENTSCHEIDUNGS-REIHENFOLGE — Gemini und Fable beide befragt.** Sie widersprachen sich im ZEITPUNKT (Gemini: jetzt / Fable: spaeter), waren sich in der SACHE einig: **nicht das Vollprofil.** Claudians erste Empfehlung ("ganzes Profil, jetzt") wurde von beiden als zu grob zurueckgewiesen.
+> 1. **ERST MESSEN — kostet nichts, entscheidet alles.** Wie viele Token ergeben `_MERGED_SYSTEM` + stabiler Profil-Block an einem echten Profil? Haiku-4.5-Cache-Schwelle: **4096 Token (~16.000 Zeichen)**; der heutige Analyse-Auftrag hat ~6.400 Zeichen (`claude_service.py:577-582`). **Darueber → cachebar, nahezu kostenneutral. Darunter → dauerhafter Aufschlag im 4-Sekunden-Takt, und NICHTS wird rot.**
+> 2. **Coaching-Erweiterung sofort** — Preis (`basis.preismodell`), USP (`basis.usps`), Tabu (`build_tabu_instruction`), Briefing (`ls.get_briefing_for_sid`) in `_build_coaching_prompt` (`claude_service.py:170-230`). Wenige Zeilen, kein Takt- und kein Cache-Thema. Unstrittig.
+> 3. **Dauer-Analyse erst danach — und NICHT mit dem Vollprofil**, sondern mit einem schlanken Einordnungs-Auszug (Einwand-Liste + Wettbewerber + ein Produkt-Satz).
+>
+> **⚠ ZWEI HARTE WARNUNGEN:**
+> **(a) Fehler auf diesem Pfad sind LAUTLOS.** Belegter Vorfall (MEDFIX 18.06., Kommentar `claude_service.py:570-576`): falscher Auftragstext → Modell lieferte Prosa statt Struktur → `_parse_merged_sections` (`:670`) gab leer zurueck (fail-open zu `{}`) → **ein ganzes Feature feuerte still nie.** Kein Alarm, nur weniger erkannte Einwaende.
+> **(b) Mehr Kontext kann SCHADEN** (Gemini): Aufmerksamkeits-Verduennung bei einer reinen Ja/Nein-Einordnung · "lost in the middle" verdraengt die eigentliche Anweisung · das Modell wendet krampfhaft gelesene Techniken an, wo ein simples "nein danke" reicht.
+> **⚠ Und:** `tests/test_medium_lane_intent_event_live.py:115` nagelt den Fallback-Auftrag woertlich auf `SYSTEM_PROMPT_BASE` fest — bricht bei Aenderung.
+> **ABER — kein "absichtlich schlank":** Fable hat gezielt gesucht: **es gibt nirgends einen Kommentar "Profil gehoert hier bewusst NICHT rein".** Die Kuerze ist aus Kosten- und Format-Vorfaellen gewachsen (MEDFIX `:573-574`, H1 `:639-643`, Cache `:577-582`), nicht als Design-Entscheidung gegen Profilwissen.
+>
+> **✅ ENTWARNUNG ZUM ABRIEB:** `nerve_rt/` baut **keine** eigenen Prompts — der Adapter reicht durch, was er bekommt (`nerve_rt/services/llm/claude_adapter.py:97`; Interface woertlich: *"Full system prompt (built by caller)"*, `nerve_rt/services/llm/__init__.py:21`). Der Flask-seitige Schreiber existiert noch gar nicht (`.planning/audits/08.20.99-SP9-nerve-rt.md:97/107` — "nur dokumentiert, nie implementiert", 0 Treffer fuer den Redis-Key ausserhalb `nerve_rt/`). **Was hier angeschlossen wird, ueberlebt den Neubau unveraendert.**
+> **⚠ Praezisierung fuer den Neubau:** Er nimmt **einen festen Text pro Session** (`session_manager.py:197`, danach unveraendert `:347`). Nur der **stabile** Profil-Teil ueberlebt 1:1 — Veraenderliches (Phase, Anrede-Wechsel) braucht dort eine eigene Loesung. **→ Als Anforderung in den Engine-Neubau aufnehmen: EINE Prompt-Quelle fuer alle Aufrufe.**
+>
+> **🟢 OFFEN FUER ANDRE (nicht technisch):** Die toten Felder — anschliessen oder aus dem Editor entfernen? Fables Aufteilung: Dubletten (`techniken.verboten` → in Tabu ueberfuehren) und Karteileichen (`meta.firma`/`rolle`, `kurzlabel`) **raus**; `nogos` **behalten und im Neubau anschliessen** (laut eigener Recherche kritisch wichtig).
+>
+> ---
+>
 > ### ✅ NEU 2026-08-06 — BESTANDS-PRUEFUNG: was AUSSERHALB der Live-Engine mehrnutzer-tauglich ist
 >
 > **Andre-Frage 06.08.:** *„Jetzt wo wir festgestellt haben, dass wir das ganze Kassensystem neu aufsetzen muessen — wie sieht es mit unseren restlichen Systemen aus? Also z.B. unser Profilsystem und ggf. andere Systeme?"*
