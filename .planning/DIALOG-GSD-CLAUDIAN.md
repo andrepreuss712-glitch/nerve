@@ -2940,3 +2940,72 @@ dort sein Google-Login), aber der Plan ging von zwei Passwort-Logins aus.
 
 **Was blockiert war:** Task 3 (Zwei-Konten-Gegenprobe) — jetzt frei. Task 2 (Deploy) lief
 unabhaengig davon.
+
+---
+
+## FUND-SYNC — 08.23.2.SOFORT-2 — 2026-08-06 — WELLE 2 GEBAUT, NICHT AUSGEROLLT
+
+⛔ **Dies ist ausdruecklich KEIN Abschluss-Eintrag.** Der Eintrag
+`ROADMAP-SYNC — 08.23.2.SOFORT-2 — <Datum> — ABGESCHLOSSEN` kommt erst, wenn Welle 2 live ist,
+der Waechter GRUEN gelaufen ist und der Test-Anruf stattgefunden hat. Nichts davon ist passiert.
+
+**Stand:**
+- **Welle 1** (Besitzpruefung, **ACHT** Eingaenge statt der drei aus dem Roadmap-Eintrag) ist
+  **live und abgenommen** (Deploy 2026-08-06, `alembic_version = 0038`, HEAD `ab74661`,
+  19 passed, Zwei-Konten-Gegenprobe **Org gegen Org** — Proben 2-9 bestanden, Probe 1
+  ausdruecklich NICHT durchfuehrbar, siehe R-11).
+- **Welle 2** (Zeitlimit: 12 s blockierend / 8 s Stream, `max_retries=0`, gestaffeltes Verhalten
+  mit Schwelle 3) ist gebaut, committet und **gepusht** (`8ccc541` auf `origin/main`), aber
+  **NICHT ausgerollt**. `bash deploy.sh production` ist durch eine `deny`-Regel in
+  `.claude/settings.local.json` gesperrt; die Regel wurde **nicht umgangen**. Production laeuft
+  unveraendert auf dem Welle-1-Stand.
+
+**Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen:** Phase 08.23.2.SOFORT-2 als *"Welle 1 live,
+Welle 2 am Deploy-Tor"* fuehren, Scope-Notiz "acht statt drei Eingaenge (R-7/R-8 mitgefixt)".
+`.planning/ROADMAP.md` habe ich auftragsgemaess **nicht** angefasst.
+
+---
+
+### Alle Restfunde dieser Phase — mit Ablageort. Bitte als Backlog-Kandidaten fuer die Vault-Roadmap promoten.
+
+#### A) Aus der Cross-AI-Freigabe (Fable, 2026-08-05) — bewusst NICHT behoben, nur notiert
+
+*Ablageort fuer alle F-*: die REVIEWS-Datei der Phase im Phasen-Verzeichnis.*
+
+| ID | Fund |
+|---|---|
+| **F-1** | Plan 02 Z.725 ("elf der neunzehn Tests") und Plan 04 Z.554 ("dieselben neunzehn") sind heute rechnerisch richtig, aber es ist die **Vorhersage-Form**, die der Umbau abgeschafft hat — sie veraltet **still** beim naechsten Test. |
+| **F-2** | Plan 01 Z.690 (W-1-Korrektur) behauptet fuer `training_start` "es gibt dort kein `ast.Compare`" — **falsch**: `routes/training.py:208` enthaelt `TrainingScenario.org_id == g.org.id` im Rumpf (Z.87-401). Das **Urteil** (gruen) stimmt, nur der **Belegtext** ist verkehrt herum. |
+| **F-3** | Plan 02 Schritt 1 nutzt `inspect.sh git-stand` als "Bestaetigung" des Prod-Stands — laut Regelwerk ist der Git-Stand dort Altbestand ohne Aussage. Tragend ist ohnehin Schritt 2. (Bestaetigt durch **E-5**.) |
+| **F-4** | Das Ergebnis-Raster kennt nur PASSED/FAILED/SKIPPED/ERROR — ein **xfail/xpass** haette keine Zeile. Praktisch verschlossen durch die Schmuck-Zeilen-Pruefung in Plan 01, aber die **Klasse fehlt im Katalog**. |
+| **F-5** | Definitionsluecke "anerkannter Helfer": Teil (b) verlangt eine `g.*`-Identitaet im Helfer-Rumpf, die drei `live_session`-Helfer tragen aber `user_id`. Heute folgenlos (eigener Regel-Zweig), aber ein kuenftiger Regel-Bauer stolpert darueber. |
+
+#### B) Waehrend der Ausfuehrung gefunden
+
+| ID | Fund | Ablageort |
+|---|---|---|
+| **R-11** | `routes/app_routes.py:2126-2138` ist **dreifach** kaputt → die Gatekeeper-Platzhalter (`{branche}`/`{detail}`/Vorname/Nachname) werden **nie** gefuellt. Totes Feature, **kein** Sicherheitsproblem. Folge fuer die Abnahme: genau deshalb war Probe 1 der Browser-Gegenprobe nicht durchfuehrbar — ohne Daten, die durchsickern koennten, beweist ein leeres Ergebnis nichts (fehlender Existenz-Anker). | **FUNDE.md Abschnitt 2** |
+| **R-12** | Die **Stream-Pfade zahlen in gar keinen Founder-Zaehler ein** — Entscheidung (d) aus Plan 07 ist nicht eingeloest. ⛔ **Folge:** der Abnahme-Satz "Founder-Zaehler 0" belegt **NUR die acht blockierenden Pfade**. Eine gekappte gestreamte EWB-Antwort laesst den Zaehler bei 0. **Bewusst gemeldet-nicht-gefixt** (der Zweig gehoert in den aeusseren `except` — andere Stelle, eigene Entscheidung), aber die Abnahme ist in Plan 08 umformuliert und um zwei unabhaengige Belege ergaenzt worden. | **FUNDE.md Abschnitt 2** |
+| **E-3** | SQLAlchemy ersetzt **keinen** Platzhalter vor einem `::`-Cast: `text('… tenant_id = :t::uuid')` geht woertlich an Postgres. Ein stiller `except` verschluckte den Syntaxfehler, der Teardown raeumte nichts weg. In der neuen Testdatei gefixt (`CAST(:t AS uuid)` + lautes `except`); ⛔ **`tests/_schema_introspect.py:206` traegt dieselbe Falle und ist NICHT gefixt.** | **04-SUMMARY** |
+| **E-4** | `routes/coach.py`: `src.org_id != g.org.id` hat **keinen** `hasattr(g, 'org')`-Schutz, anders als die drei Bestands-Vorbilder `routes/profiles.py:614/694/734`. Fail-closed (500 vor dem Insert, kein Leck), aber ein Robustheits-Unterschied (500 statt 404). | **04-SUMMARY** |
+| **E-5** | `inspect.sh git-stand` taugt auf Prod **nicht** als Hotfix-Detektor — das dortige `.git` steht auf dem **10.04.** (tar-Deploy schliesst `.git` aus). Ersatz: Inhalts-Hash-Vergleich **mit Zeilenenden-Normalisierung**. In Plan 08 erneut angewandt: 88 Dateien, 82 identisch (Existenz-Anker), 6 Abweichungen = exakt die Welle-2-Dateien, alle sechs blob-identisch zum deployten HEAD. Bestaetigt F-3. | **04-SUMMARY, 08-SUMMARY** |
+| **E-6** | `nerve_test` ist eine **Wegwerf-DB**: `deploy.sh` baut sie pro Lauf aus `pg_dump --schema-only` und droppt sie per `trap cleanup EXIT`. Zwischen Deploys existiert sie **nicht**. Die Plan-Texte kannten nur Schritt 9. | **04-SUMMARY** |
+| **E-7** | Plan 05 `must_haves`-Frontmatter sagt "**8** Live-Pfade", die Zahlen-Tafel ZT-15 sagt **10** (seit `4656f48`). Dieselbe Klasse wie die zwei stale "ACHT", die vor dem Bau korrigiert wurden. Gebaut wurden **zehn**. | **05-/06-SUMMARY** |
+| **E-8** | `templates/admin_dashboard.html` (Plan 07 `files_modified`) **existiert nicht** — das Founder-Dashboard rendert aus `templates/admin/_tab_uebersicht.html` + `static/admin_dashboard.js`. Ein `grep` gegen eine nicht existierende Datei ist nicht von "ist nicht gebaut" unterscheidbar. | **07-SUMMARY** |
+| **E-9** | Plan 07 Abnahme-Regex `[a-z\[\], ]` ist auf Git-Bash strukturell kaputt: in ERE beendet das `]` die Zeichenklasse vorzeitig (Backslashes sind in Bracket-Expressions literal). Mit `[]a-z\[, ]` (`]` zuerst) liefert derselbe Diff das erwartete Ergebnis. | **07-SUMMARY** |
+| **E-10** ★ NEU | `services/adoption_runner.py::run_adoption_judge` und `services/judge_runner.py::run_behavior_judge` haben in Plan 06 (R-10) ein **12-s-Limit** bekommen — aber `api_cost_log` fuehrt fuer die Tags `adoption`/`judge` **`mit_dauer = 0`**: es existiert **keine einzige gemessene Dauer**. Die 12 s sind dort **unvalidiert**; die Freigabe-Rechnung stuetzt sich ausschliesslich auf Live-Pfad-Werte. Es sind Batch-Aufrufe mit **groesseren** Prompts als die Live-Bahn. Backlog: `latency_ms` an den zwei Runner-Buchungen nachziehen (Klasse MESSGERAETE-1), **dann** die 12 s dort abnehmen. | **08-SUMMARY** |
+| **E-11** ★ NEU | Die Freigabe-Rechnung nennt "groesster gemessener Ausreisser **5300 ms** → Faktor 2,3". Im 14-Tage-Fenster stimmt das fuer `live_haiku_merged` (max **5333 ms**) — aber `coaching_haiku` hatte einen Aufruf mit **9047 ms** (1 von 32, `p95 = 3481`). Gegen 12 s ist das Faktor **1,33**, nicht 2,3. ⛔ **Keine Zahl geaendert** — das ist Andres Entscheidung. Aber: ein Aufruf ueber 12 s ist **selten, nicht ausgeschlossen**; die Founder-Kachel wird womoeglich nicht dauerhaft 0 zeigen, und ein gelegentlicher Einzeltreffer ist **kein** Beleg fuer eine falsch gewaehlte Grenze. | **08-SUMMARY** |
+
+#### Bereits vorher gemeldet, weiterhin offen
+
+- **R-1 bis R-6** (Zahlen-Tafel ZT-11 = 7 bei Planung) — **FUNDE.md Abschnitt 2**
+- **R-9** (Socket.IO, fremd-setzbare SID, `services/deepgram_service.py:963/:978`) —
+  **FUNDE.md Abschnitt 2**, **eigene Mini-Phase**
+- Der Einladungsweg (`routes/organisations.py`) setzt **kein** `is_test_user` — gehoert in
+  **FUNDE.md Abschnitt 5** (noch zu schreiben), eigene Mini-Phase
+- ★ **R-10 ist erledigt** — in Welle 2 gefixt (Plan 05 Sweep-Dateien + Plan 06 Stellen 10/11),
+  nicht vertagt.
+
+**Ablageort-Wurzel fuer alles oben:**
+`.planning/phases/08.23.2.SOFORT-2-besitzpruefung-eingaenge-zeitlimit-live-llm/`
+(FUNDE.md fuer R-*, die jeweilige SUMMARY fuer E-*, die REVIEWS-Datei fuer F-*).
