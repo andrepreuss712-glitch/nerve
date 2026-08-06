@@ -143,7 +143,20 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 > 🔴 **NEUER BEFUND zur "Coaching-Frage: zusammenlegen oder streichen" — er verschiebt die Entscheidung Richtung STREICHEN oder SCHWELLE KORRIGIEREN** (gefunden 2026-08-06 bei der D-06-Abnahme von Phase 08.23.2.SOFORT-2, Fund **E-13**):
 > **Der sichtbare Teil der Coaching-Frage erreicht den Nutzer faktisch nie.** `services/claude_service.py:2278` sperrt sie: `if kategorie == 'frage' and bof_snapshot < 2: tipp = None`. Der Zaehler `_bof_count` (`:2238-2242`) zaehlt Berater-Beitraege **ohne** Fragezeichen und springt bei **jedem** Fragezeichen zurueck auf 0. Ein Cold-Caller fragt staendig → die Schwelle 2 wird praktisch nie erreicht. **Andre bestaetigt: in der gesamten Projektlaufzeit noch NIE einen Coaching-Hinweis im PiP gesehen.**
 > Wirtschaftlich ist das der teuerste Posten dieser Klasse: `coaching_haiku` ist mit Ø 2714-2922 ms der **langsamste** Live-Pfad und kostet laut der Zeile oben **78 % der Analyse-Frage** — fuer eine Anzeige, die nicht ankommt.
-> ⚠ Fuer SOFORT-2 war das **kein** Blocker (die Sperre ist alt und unabhaengig von den Zeitlimits), **aber die dortige Abnahme deckt den langsamsten Live-Pfad deshalb NICHT ab** — so ausdruecklich in `08.23.2.SOFORT-2-08-SUMMARY.md` vermerkt, nicht als gruenes Schweigen. Claudian zieht die Vault-Roadmap parallel nach.
+> ⚠ Fuer SOFORT-2 war das **kein** Blocker (die Sperre ist alt und unabhaengig von den Zeitlimits), **aber die dortige Abnahme deckt den langsamsten Live-Pfad deshalb NICHT ab** — so ausdruecklich in `08.23.2.SOFORT-2-08-SUMMARY.md` vermerkt, nicht als gruenes Schweigen.
+>
+> **★ NACHTRAG 06.08. (Andre-Erinnerung + im Vault verifiziert) — E-13 ist NUR DIE HALBE URSACHE, und die Richtung ist damit entschieden:**
+> Die `bof_snapshot`-Sperre ist ein Detail **obendrauf**. Die eigentliche Ursache: **Die Live-Anzeige des Coaching-Tipps wurde in Phase 06.6 BEWUSST entfernt** — `services/claude_service.py:2070-2076` woertlich: *"Live-Anzeige waehrend des Calls war kontraproduktiv"*. **Anlass laut Andre:** Mitten im Vorlesen einer EWB-Antwort funkte ein Coaching-Text dazwischen und stoerte.
+> **Damit ist E-13 kein Konstruktionsfehler, sondern eine bewusste Entscheidung** — Claudian hatte es zunaechst falsch als "Denkfehler" gemeldet und korrigiert das hiermit.
+> **Und der Befund ist nicht neu:** Er steht seit **27.07.** als **W3** in `Nerve-Vault/03 Planung/Fehlerliste Test-Anruf 2026-07-27 + offene Punkte.md`: *"Der Anzeige-Weg wurde in Phase 06.6 bewusst entfernt — der KI-Aufruf feuert aber weiter nach jedem Satz. 14 von 26 Aufrufen. Das ist echter Leerlauf, kein Qualitaetsthema."*
+>
+> **★ DER ZIELZUSTAND STEHT SEIT 08.06. KANONISCH FEST** (`Nerve-Vault/04 Entscheidungen/NERVE Konstrukt - Soll-Verhalten.md` §2 und `NERVE TAXO-Geruest (verriegelt).md` §213):
+> *"Coaching-Hinweise = ambienter Visual-Kanal (**aufleuchtende Symbole** + Sprechgeschwindigkeits-Regler), **NICHT** Text in den Antwort-Fenstern."* Beispiele im TAXO-Geruest: "Frage stellen", "Pause lassen".
+> **Andres Begruendung (06.08. wiederholt):** *"Warum Symbole und kein Text? Um den mental load zu reduzieren. Wenn der User dem Kunden zuhoeren und gleichzeitig Coaching-Tipps lesen soll, wird das viele ueberfordern."*
+> **★ Entscheidend fuer die Bau-Richtung: Die Symbole speisen sich aus BERECHNETEN Werten (Sprechtempo, Redeanteil aus `get_speech_stats`) — dafuer braucht es KEINEN LLM-Aufruf.**
+>
+> **➡️ ENTSCHEIDUNG (Andre 06.08.): Der `coaching_haiku`-Aufruf wird GESTRICHEN, nicht verschmolzen** — sobald METRIK-1 die Kaufbereitschaft (`kb_delta`) abgeloest hat. Das ist 100 % Ersparnis des teuersten und langsamsten Live-Pfads, nicht 50 %.
+> ⚠ **AUFLAGE vor dem Streichen:** vollstaendig greppen, ob wirklich **nichts anderes** an dem Aufruf haengt (`kb_delta`, `painpoint`, `kategorie`, die verhaltensbasierten Tipps ab `:2282`). "Feuert ins Leere" hiess in diesem Projekt schon zweimal "feuert an eine Stelle, die keiner auf dem Schirm hatte".
 >
 > ### ⛔ SCHWAERZUNG — BESCHLUSSLAGE 2026-08-04 (ersetzt "Beschluss D" als eigenen Punkt)
 >
