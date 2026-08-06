@@ -89,7 +89,10 @@ def test_analysiere_uses_classification_schema_returns_structured_dict(monkeypat
         usage = None
 
     class _FakeMessages:
-        def create(self, *, model, max_tokens, system, messages):
+        def create(self, *, model, max_tokens, system, messages, **kwargs):
+            # SOFORT-2: **kwargs, weil die Live-Aufrufe seit D-03 zusaetzlich ein
+            # timeout=httpx.Timeout(...) uebergeben. Ohne diese Ergaenzung stirbt der Fake an
+            # TypeError: create() got an unexpected keyword argument 'timeout'.
             captured['system'] = system
             return _FakeMsg()
 

@@ -3,7 +3,9 @@
 Prueft Laufzeit-Verhalten (welche Optionen der Anthropic-SDK-Client zur Laufzeit
 bekommt), KEIN Source-Presence (CLAUDE.md Test-Qualitaets-Regel):
 - HTTP-erreichbare Call-Sites setzen timeout+max_retries via with_options()
-- Daemon-Pfad (analysiere_mit_claude) bekommt KEIN Zeitlimit
+- Daemon-Pfad (analysiere_mit_claude) setzt sein Zeitlimit AM AUFRUF
+  (config.LIVE_LLM_TIMEOUT_S, Phase 08.23.2.SOFORT-2 D-03 — bis dahin bewusst OHNE Limit)
+- Der Modul-Client wird mit max_retries=0 erzeugt (SOFORT-2 D-04)
 - Der Modul-Client (services.claude_service.claude_client) bleibt unveraendert
   (with_options() liefert eine Kopie, keine Mutation) — sichert die Live-Streams ab
 - Worst-Case-Arithmetik bleibt unter dem nginx-60s-Default
@@ -77,18 +79,50 @@ def test_lang_stufe_ohne_retry():
     assert kwargs['max_retries'] == 0
 
 
-def test_daemon_pfad_ohne_zeitlimit():
-    """analysiere_mit_claude (Daemon-Pfad analyse_loop) bekommt KEIN Zeitlimit —
-    with_options() wird NICHT aufgerufen, der Live-Analyse-Pfad bleibt unangetastet."""
-    fake_msg = _fake_response('{}')
+def test_daemon_pfad_mit_zeitlimit():
+    """analysiere_mit_claude (Daemon-Pfad analyse_loop) setzt sein Zeitlimit AM AUFRUF.
 
-    with patch.object(claude_service_module.claude_client, 'with_options') as mock_with_options, \
-         patch.object(claude_service_module.claude_client.messages, 'create',
-                      return_value=fake_msg):
+    Phase 08.23.2.SOFORT-2 (D-03) hat die STABIL-1-Aussage umgedreht: der Daemon-Pfad bekam
+    frueher bewusst KEIN Zeitlimit (die Vorgaengerfassung dieses Tests nagelte genau das fest).
+    Ohne Limit greifen die SDK-Vorgaben (read=600 s, max_retries=2) — und weil analyse_loop
+    sequentiell ueber alle SIDs iteriert, stehen in dieser Zeit ALLE Gespraeche still.
+
+    Der Weg ist ein anderer als bei den HTTP-Pfaden: kein with_options()-Client, sondern das
+    timeout-Schluesselwort am messages.create-Aufruf selbst (RESEARCH §3.7). Dieser Test ist
+    die RUNTIME-Ergaenzung zum statischen tests/test_live_timeout_coverage.py — der sieht ein
+    Schluesselwort im Syntaxbaum, dieser hier sieht den WERT, der wirklich ankommt.
+    """
+    fake_msg = _fake_response('{}')
+    aufgefangen = {}
+
+    class _FakeMessages:
+        def create(self, **kwargs):
+            aufgefangen.update(kwargs)
+            return fake_msg
+
+    class _FakeClient:
+        messages = _FakeMessages()
+
+    with patch.object(claude_service_module, 'claude_client', _FakeClient()):
         analysiere_mit_claude(neuer_text="Testsatz", kontext="", sid=None)
 
-    assert mock_with_options.called is False, \
-        "Daemon-Pfad darf with_options() (Zeitlimit) NICHT aufrufen"
+    assert 'timeout' in aufgefangen, \
+        "Daemon-Pfad ruft messages.create OHNE timeout — ohne Limit greift read=600 s"
+    _t = aufgefangen['timeout']
+    # httpx.Timeout traegt die Lese-Grenze in .read und den Verbindungsaufbau in .connect
+    assert _t.read == config.LIVE_LLM_TIMEOUT_S, \
+        f"Daemon-Pfad benutzt {_t.read}s statt config.LIVE_LLM_TIMEOUT_S ({config.LIVE_LLM_TIMEOUT_S}s)"
+    assert _t.connect == 5.0, "connect soll der scharfe SDK-Wert 5.0 bleiben"
+
+
+def test_modul_client_hat_keinen_retry():
+    """Der Modul-Client wird mit max_retries=0 erzeugt — der Worst Case ist 1 x Limit.
+
+    Ohne diese Zeile gilt das Limit PRO VERSUCH: mit der SDK-Vorgabe 2 haelt ein 12-s-Limit
+    im Worst Case 3 x 12 s + Backoff. Der statische Waechter prueft das ebenfalls; hier steht
+    die Runtime-Gegenprobe am wirklich erzeugten Objekt.
+    """
+    assert claude_service_module.claude_client.max_retries == 0
 
 
 def test_modul_client_bleibt_unveraendert():
