@@ -3301,7 +3301,7 @@ Plans:
 
 Plans:
 - [x] 08.23.2.MEHRNUTZER-REST-1-01-PLAN.md — Welle 1: Regressionsnetz `tests/test_lernkarten_lock_pro_conv.py` (a ROT-Beleg / b Gegenpol / c Falsifizierbarkeit) ✅ 2026-08-06 (3 Tests, 300 Z., commits 49b6b2f/353b246/36ef630; **nicht ausgefuehrt** — der ROT-Lauf gehoert zu Plan 03)
-- [ ] 08.23.2.MEHRNUTZER-REST-1-02-PLAN.md — Welle 1: neuer Pruefpunkt in `tests/test_no_live_global_state.py` (weite Riegel-Ableitung + Variante A + Mindest-Soll + Pruefkatalog)
+- [x] 08.23.2.MEHRNUTZER-REST-1-02-PLAN.md — Welle 1: neuer Pruefpunkt in `tests/test_no_live_global_state.py` (weite Riegel-Ableitung + Variante A + Mindest-Soll + Pruefkatalog) ✅ 2026-08-06 (6 -> 12 Tests, commits 1f21416/7c5f7f1/38ac516; Zaehl-/Melde-Trennung, `_FALSCH_TREFFER_RIEGEL` leer, `_WHITELIST` unberuehrt; **nicht ausgefuehrt** — der ROT-Lauf gehoert zu Plan 03. Auflage erfuellt: RESTLUECKEN benennt funktions-lokale UND klassenattribut-basierte Riegel ausdruecklich als DURCHRUTSCHER)
 - [ ] 08.23.2.MEHRNUTZER-REST-1-03-PLAN.md — Welle 2: ROT-Lauf ausrollen, rote Tor-Ausgabe verbatim belegen
 - [ ] 08.23.2.MEHRNUTZER-REST-1-04-PLAN.md — Welle 3: der Fix (`coaching_service.py:8/:59`) + GRUEN-Beleg + Pruning-Notiz/Folgefunde
 
