@@ -3214,3 +3214,34 @@ erzeugt nur EINEN Satz Karten") ist **kein** ROT-Beleg — der heutige globale R
 genauso. Er ist der Gegenpol gegen den falschen Fix; damit er trotzdem beweisbar beisst, kommt ein
 dritter Test gegen eine riegellose Mini-Funktion im Testmodul dazu (Muster "synthetischer
 Quelltext"), ohne Produktiv-Code anzufassen.
+
+## ROADMAP-SYNC — 08.23.2.MEHRNUTZER-REST-1 — 2026-08-06
+
+**Was sich in `.planning/ROADMAP.md` geaendert hat:** Der Phasen-Eintrag hatte
+`**Plans:** noch nicht geplant`. Steht jetzt auf `4 plans in 3 Wellen (ROT-vor-GRUEN-Reihenfolge,
+nicht nach Dateien geteilt)` plus die Plan-Liste. Sonst nichts — Goal, Befund, Nicht-Ziele und
+Abnahme sind unveraendert.
+
+**Warum:** `/gsd-plan-phase` ist durch, plan-checker in Durchlauf 2 bestanden.
+
+**Was Claudian in `Nerve-Vault/01 Roadmap.md` nachziehen soll:** dieselbe Statuszeile
+(geplant / 4 Plans / 3 Wellen), **und** dass die Phase am **Cross-AI-Tor** steht, nicht am
+Execute-Tor. Die Roadmap schreibt fuer diese Phase `/gsd-review --gemini` als Pflicht vor
+(Komplexitaet mittel), und `auto_advance` in `.planning/config.json` steht auf `true` — der
+Auto-Sprung nach Execute wurde deshalb bewusst **unterdrueckt**.
+
+**Ein Punkt, der die Vault-Seite inhaltlich betrifft:** der gefaehrlichste Fund der Planung war,
+dass der neue Waechter nach dem Fix **gruen aber blind** geworden waere (Punkt 31 in Reinform).
+Geloest durch Trennung von Zaehl- und Melde-Seite: ein Riegel **pro Schluessel** ist kein Verstoss,
+ein **gemeinsamer** roetet weiter. Am echten und am gepatchten Baum simuliert (23 Riegel-Namen,
+143 Bloecke, genau 1 Verstoss vorher / 0 nachher). Das ist ein wiederverwendbares Muster fuer
+kuenftige Waechter, keine Einzelfall-Loesung.
+
+**Folgefunde, die NICHT in dieser Phase gebaut werden** (fuer die Vault-Backlog-Seite):
+- Das `learning_cards`-Schild in `database/models.py` zitiert stale Zeilennummern (Punkt 23
+  Aktualitaets-Pflicht). Nicht angefasst, weil Nachziehen eine Alembic-Revision hiesse und die
+  Roadmap fuer diese Phase ausdruecklich keine Migration erwartet.
+- Der tote HTTP-Eingang `/api/postcall_analysis` (`routes/learning.py:18`) bleibt stehen — gehoert
+  in die naechste Tote-Code-Inventur.
+- Fund (2) `services/slow_lane.py` und Fund (3) `services/anonymization.py` bleiben offen wie im
+  Roadmap-Eintrag festgehalten.
