@@ -204,3 +204,97 @@ def test_verschiedene_conv_ids_blockieren_sich_nicht():
         f"config.HTTP_LLM_TIMEOUT_LONG_S = 45 s (config.py:134) und belegt dabei einen "
         f"der 64 gthread-Threads (deploy/nerve.service:35-36). Der Fix ist ein Riegel "
         f"PRO conv_id, NICHT das ersatzlose Entfernen des Riegels.")
+
+
+# ══ (b) GEGENPOL — KEIN ROT-BELEG ═════════════════════════════════════════════
+
+def test_gleiche_conv_id_erzeugt_nur_einen_satz_karten():
+    """Zwei parallele Requests DERSELBEN conv_id erzeugen weiterhin EINEN Satz Karten.
+
+    ⚠ EHRLICHKEIT (RESEARCH §3.5 / Falle 6): Dieser Test ist gegen den HEUTIGEN Stand
+    GRUEN. Er ist KEIN ROT-Beleg und darf im SUMMARY nicht als solcher gefuehrt werden —
+    der globale Riegel schuetzt exakt genauso. Er ist der GEGENPOL gegen den FALSCHEN
+    Fix ("Riegel ersatzlos raus"): learning_cards hat KEINEN Unique-Constraint auf
+    call_id (database/models.py:629-631) und kann auch keinen bekommen (bis zu 3 Karten
+    pro Call by design, coaching_service.py:113). Ohne Riegel lesen beide Faden die 0
+    und schreiben beide.
+
+    Warum das deterministisch beisst: das Rendezvous sitzt IM gefaelschten LLM-Aufruf —
+    also NACH der count-Abfrage (:65) und VOR dem Schreiben (:129-130). Faden A schreibt
+    erst, nachdem B sich gemeldet hat; B meldet sich erst, nachdem B gezaehlt hat. Im
+    riegellosen Fall zaehlen also beide zwingend 0 (-> Test (c) belegt genau das).
+    Im korrekten Fall steht B am conv_id-Riegel, A laeuft nach _GEGENPOL_S weiter,
+    schreibt 3, gibt frei; B zaehlt dann 3 und ueberspringt den Sonnet-Aufruf.
+    Die _GEGENPOL_S sind die dauerhaften Tor-Kosten dieses Gegenpols.
+    """
+    fake_db = _FakeDB()
+    drin = {'A': threading.Event(), 'B': threading.Event()}
+    aufrufe = []
+    aufrufe_sperre = threading.Lock()
+
+    def _fake_create(**_kwargs):
+        with aufrufe_sperre:
+            aufrufe.append(_zweig())
+        wer = _zweig()
+        anderer = 'B' if wer == 'A' else 'A'
+        drin[wer].set()
+        drin[anderer].wait(timeout=_GEGENPOL_S)
+        return _fake_response(_DREI_VORSCHLAEGE)
+
+    fake_client = MagicMock()
+    fake_client.messages.create.side_effect = _fake_create
+
+    with patch.object(claude_service_module.claude_client, 'with_options',
+                      return_value=fake_client), \
+         patch('database.db.get_session', return_value=fake_db):
+        faeden = _starte_paar(_rufe_analyse, (4711, 4711))
+        _sammle_ein(faeden)
+
+    assert len(fake_db.karten) == 3, (
+        f"Duplikatschutz gebrochen: {len(fake_db.karten)} Karten fuer conv_id=4711 statt 3. "
+        f"Der Riegel darf NICHT ersatzlos entfallen — die count()-Pruefung in "
+        f"services/coaching_service.py:65 ist die EINZIGE Duplikat-Sperre im Prozess.")
+    assert len(aufrufe) == 1, (
+        f"Der Sonnet-Aufruf lief {len(aufrufe)}x statt 1x ({aufrufe!r}). Das ist die "
+        f"schaerfere der beiden Aussagen: sie faellt auch dann, wenn die Karten zufaellig "
+        f"ueberschrieben statt verdoppelt wuerden.")
+
+
+# ══ (c) FALSIFIZIERBARKEIT ════════════════════════════════════════════════════
+
+def _riegellos_erzeuge_karten(conv_id, db, drin):
+    """Absichtlich RIEGELLOSE Mini-Fassung derselben count-dann-schreib-Logik.
+
+    Steht bewusst IM TESTMODUL (Muster "synthetischer Quelltext",
+    tests/test_session_lock_blocking_calls_guard.py:432-441): so laesst sich beweisen,
+    dass die Apparatur Duplikate ueberhaupt SEHEN kann, OHNE Produktiv-Code anzufassen
+    und ohne Rueckbau-Risiko. Sie bildet coaching_service.py:65 / :129-130 nach.
+    """
+    class _Karte:
+        def __init__(self, call_id):
+            self.call_id = call_id
+
+    if db.query(None).filter_by(call_id=conv_id).count() > 0:
+        return
+    wer = _zweig()
+    anderer = 'B' if wer == 'A' else 'A'
+    drin[wer].set()
+    drin[anderer].wait(timeout=_GEGENPOL_S)
+    for _ in range(3):
+        db.add(_Karte(conv_id))
+    db.commit()
+
+
+def test_riegellose_variante_erzeugt_doppelte_karten():
+    """Anti-Stub: OHNE Riegel entstehen 6 Karten. Damit ist bewiesen, dass Test (b)
+    Duplikate sehen KANN und nicht bloss immer gruen ist."""
+    fake_db = _FakeDB()
+    drin = {'A': threading.Event(), 'B': threading.Event()}
+
+    faeden = _starte_paar(lambda cid: _riegellos_erzeuge_karten(cid, fake_db, drin),
+                          (4711, 4711))
+    _sammle_ein(faeden)
+
+    assert len(fake_db.karten) == 6, (
+        f"Die Apparatur sieht Duplikate NICHT: riegellos entstanden {len(fake_db.karten)} "
+        f"statt 6 Karten. Solange das so ist, beweist Test (b) nichts.")
