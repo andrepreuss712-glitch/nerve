@@ -94,7 +94,8 @@ def test_daemon_pfad_ohne_zeitlimit():
 def test_modul_client_bleibt_unveraendert():
     """Nach einem HTTP-Aufruf ist services.claude_service.claude_client dasselbe
     Objekt wie vorher (is-Vergleich) — beweist dass with_options() eine Kopie
-    liefert und der Modul-Client (Stream-Pfade :812/:980) nicht mutiert wird."""
+    liefert und der Modul-Client (Stream-Pfade streame_auto_variante /
+    streame_manual_ewb_variante) nicht mutiert wird."""
     client_before = claude_service_module.claude_client
 
     fake_msg = _fake_response(

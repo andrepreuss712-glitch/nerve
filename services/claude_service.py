@@ -24,14 +24,36 @@ _ewb_circuit_lock = threading.Lock()
 # keinen lebenden Aufrufer mehr (grep-belegt). resolve_prompt_version lebt weiter in
 # services/prompt_pipeline.py (classifier/qa_pipeline + training_* nutzen es aktiv).
 
-claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, max_retries=0)
+# ↑ SOFORT-2 (D-03/D-04): max_retries=0. Das SDK wiederholt bei Zeitueberschreitung, 408, 409,
+# 429 und >=500 — und ehrt dabei einen Retry-After-Header. Das Limit gilt PRO VERSUCH, nicht
+# kumulativ: mit der SDK-Vorgabe 2 haelt ein 12-s-Limit im Worst Case 3 x 12 s + Backoff ~= 38 s.
+# Ein Waechter, der nur `timeout=` prueft, bleibt dabei GRUEN — deshalb steht max_retries
+# ausdruecklich im Pruefkatalog von tests/test_live_timeout_coverage.py.
+# HIER am Modul-Client und nicht als zweiter Client: (1) es deckt auch kuenftige Live-Pfade,
+# (2) http_llm_client() setzt max_retries in BEIDEN Zweigen selbst und bleibt unberuehrt,
+# (3) ein Modul-Level with_options(...) waere beim IMPORT ausgewertet — die 91 vorhandenen
+# monkeypatch.setattr(cs, 'claude_client', ...) in 16 Testdateien wuerden ihn nicht mehr
+# erreichen und still am Fake vorbeilaufen (falsche Greens, genau die Fehlerklasse dieser Phase).
+# BEWUSSTE NEBENWIRKUNG, gemeldet als R-6: services/judge_runner.py und
+# services/adoption_runner.py benutzen claude_client direkt und verlieren ihre SDK-Retries.
+# Beide sind Post-Call-Batch hinter slow_lane mit eigener Fehlerbehandlung.
+# Dieselbe Entscheidung wie config.HTTP_LLM_MAX_RETRIES = 0 (STABIL-1), an einem zweiten Ort.
+# Der Block steht BEWUSST unter der Zeile, damit der Konstruktor die erste Zeile des Blocks
+# bleibt und nicht unter vierzehn Kommentarzeilen verschwindet.
 
 
 def http_llm_client(long_running: bool = False):
     """Client-KOPIE mit Zeitlimit fuer Aufrufe aus einem HTTP-Request-Thread.
 
-    Phase 08.23.2.STABIL-1: der Modul-Client (:27) bleibt bewusst ohne timeout —
-    ein globales Limit wuerde die messages.stream-Aufrufe (:812/:980) kappen.
+    Phase 08.23.2.STABIL-1: der Modul-Client (claude_client, das Modul-Global direkt ueber
+    dieser Funktion) bleibt bewusst ohne timeout — ein globales Limit wuerde die
+    messages.stream-Aufrufe (streame_auto_variante / streame_manual_ewb_variante) kappen.
+    Zeilen wandern — deshalb hier durchgehend Namen statt Zeilennummern. Der Modul-Client
+    steht als einzige claude_client-Zuweisung direkt ueber dieser Funktion; die
+    Stream-Aufrufe lagen am 2026-08-04 auf :898 und :1090.
+    ⚠ SOFORT-2: der Modul-Client hat inzwischen max_retries=0 (aber weiterhin KEIN globales
+    timeout) — die Live-Aufrufe setzen ihr Zeitlimit je Aufruf, mit zwei Zahlen.
     with_options() liefert eine Kopie, der Modul-Client wird NICHT mutiert.
     long_running=True: grosse Post-Call-Generierung, 45s OHNE Retry
     (mit Retry waeren es 90s > nginx-60s-Default).
