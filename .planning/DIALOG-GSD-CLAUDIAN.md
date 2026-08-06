@@ -3137,3 +3137,41 @@ steht es jetzt im Phasen-Eintrag, damit der Planer nicht das Falsche baut.
 begruenden, kein DB-Riegel, ERST-ROT fuer beide Tests, Pruefkatalog + bekannte Luecke, Fund 2/3 und
 der tote Eingang `/api/postcall_analysis` ausdruecklich RAUS, Cross-AI Pflicht, kein Local-Dev) ist
 woertlich in den Phasen-Eintrag uebernommen.
+
+---
+
+## 2026-08-06 — /gsd-plan-phase 08.23.2.MEHRNUTZER-REST-1 (Claudian, vor dem Planen)
+
+**Stand:** Phasen-Verzeichnis ist leer, es gibt **keine** CONTEXT.md. Der Roadmap-Eintrag ist aber
+so vollstaendig (Befund am Code belegt, Fix festgelegt, Nicht-Ziele explizit, Abnahme definiert),
+dass er faktisch schon das PRD ist. Ich habe den Befund am Code gegengeprueft und bestaetige ihn:
+`services/coaching_service.py:8` Modul-Global `_analysis_lock`, `:59` `with _analysis_lock:` um den
+ganzen Rumpf, Duplikat-`count()` auf `LearningCard.call_id` liegt bei `:65` INNERHALB des Riegels.
+
+**FRAGE 1 — Discuss ueberspringen?**
+Empfehlung: **ja, ueberspringen.** Der Roadmap-Eintrag deckt alles ab, was `/gsd-discuss-phase`
+sonst erfragen wuerde. Ich plane direkt aus dem Roadmap-Abschnitt.
+Gegenteil sagen, falls du doch eine Discuss-Runde willst.
+
+**FRAGE 2 — die einzige wirklich offene Entscheidung: Lebensdauer der Riegel-Ablage.**
+Die Roadmap verlangt ausdruecklich, dass die Loesung gegen das Memory-Leak **begruendet** wird.
+Drei Kandidaten:
+
+  (a) **Aufraeumen im finally mit Nehmer-Zaehler** — Ablage `conv_id -> (Lock, Zaehler)`, geschuetzt
+      von einem kleinen Register-Riegel. Wer eintritt zaehlt hoch, wer geht zaehlt runter; faellt
+      der Zaehler auf 0, fliegt der Eintrag raus. Ablage bleibt exakt so gross wie die Zahl der
+      gerade laufenden Analysen. Kein Zeit-Rateschritt, kein Leak. Preis: ~15 Zeilen und der
+      Zaehler muss im `finally` runter, sonst leakt es doch.
+
+  (b) **Deckel-Ablage (LRU/OrderedDict, z.B. max 512 Eintraege)** — aeltester Eintrag fliegt raus.
+      Kuerzer zu schreiben, aber: wird der Riegel einer *noch laufenden* `conv_id` verdraengt,
+      faellt genau der Duplikatschutz aus, den die Phase erhalten soll. Bei 512 unwahrscheinlich,
+      aber es ist eine stille Bedingung statt einer Garantie.
+
+  (c) **Nie aufraeumen** — ausgeschlossen, das ist genau das Leak, das die Roadmap verbietet.
+
+Meine Empfehlung: **(a)**. Sie ist die einzige der drei, bei der der Duplikatschutz nicht von einer
+Groessen-Annahme abhaengt — er bleibt beweisbar exakt so stark wie heute, was der erklaerte
+Kern-Anspruch der Phase ist. Ohne Widerspruch von dir plane ich (a).
+
+*(Antwort einfach im Terminal sagen — ich trage sie hier nach.)*
