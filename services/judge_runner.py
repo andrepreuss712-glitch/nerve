@@ -27,6 +27,7 @@ Phase: 08.23.2.TAXO2.HANDLING-TIMING Plan 03
 
 import os
 
+import httpx  # SOFORT-2 (D-03): httpx.Timeout je Aufruf — Abhaengigkeit von anthropic, kein neues Paket
 import config
 from database.models import TranscriptSegment
 from services.claude_service import claude_client
@@ -387,6 +388,10 @@ def run_behavior_judge(call, events, db) -> dict:
             messages=[{'role': 'user', 'content': user_str}],
             tools=[JUDGE_TOOL],
             tool_choice={'type': 'tool', 'name': 'record_observations'},
+            # SOFORT-2 (D-03/R-10): blockierender Aufruf im EINZIGEN slow_lane-Consumer-Faden.
+            # Ohne Zeitlimit blockiert ein Haenger hier die Nachbearbeitung ALLER Mandanten
+            # (SDK-Vorgabe read=600 s). => LIVE_LLM_TIMEOUT_S, derselbe Mechanismus wie live.
+            timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
         )
 
         # ── KOSTEN-1 R2.1 Cost-Hook (Muster: claude_service.py:542-568) ─────────────────────

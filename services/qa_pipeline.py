@@ -37,6 +37,7 @@ import re
 import time  # MESSGERAETE-1: Mess-Anker der reinen API-Dauer (Modul-Import, kein Import im heissen Pfad)
 from typing import Optional
 import threading as _threading
+import httpx  # SOFORT-2 (D-03): httpx.Timeout je Aufruf — Abhaengigkeit von anthropic, kein neues Paket
 import config
 
 from services.prompt_pipeline import (
@@ -309,7 +310,11 @@ def classify_utterance(text: str, kontext: str, user_id: int, sid: str = None) -
             model=config.MODEL_ANALYSE,
             max_tokens=150,
             system=system_prompt,
-            messages=[{"role": "user", "content": user_msg}]
+            messages=[{"role": "user", "content": user_msg}],
+            # SOFORT-2 (D-03): blockierender Live-Aufruf => LIVE_LLM_TIMEOUT_S. `timeout=` geht
+            # 1:1 an httpx; `read` gilt pro Datenblock, eine blockierende Antwort kommt als EIN
+            # Koerper — der Wert wirkt hier faktisch als Gesamt-Limit (Worst Case 5 + 12 = 17 s).
+            timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
         )
         _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
         raw = msg.content[0].text.strip()

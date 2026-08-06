@@ -4,6 +4,7 @@ import time
 import threading
 from datetime import datetime
 import anthropic
+import httpx  # SOFORT-2 (D-03): httpx.Timeout je Aufruf — Abhaengigkeit von anthropic, kein neues Paket
 import config
 from config import ANTHROPIC_API_KEY, ANALYSE_INTERVALL, KATEGORIE_LABEL
 
@@ -450,6 +451,11 @@ def classify_phase(transcript_window, current_phase, elapsed_s, phase_model, sid
             model=config.MODEL_PHASE_CLASSIFY,
             max_tokens=60,
             messages=[{'role': 'user', 'content': prompt}],
+            # SOFORT-2 (D-03): EIN Mechanismus, ZWEI Zahlen. `timeout=` geht 1:1 an httpx,
+            # wo `read` PRO DATENBLOCK gilt. Eine blockierende Antwort kommt als EIN Koerper —
+            # damit wirkt der Wert hier faktisch wie ein Gesamt-Limit. connect=config.LLM_CONNECT_TIMEOUT_S ist der
+            # bewaehrte SDK-Wert und bleibt scharf. Worst Case blockierend = 5 + 12 = 17 s.
+            timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
         )
         _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
         # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
@@ -533,6 +539,8 @@ def infer_customer_state(seller_transcript, phase, sid: str = None):
             model=config.MODEL_COLDCALL_INFER,
             max_tokens=120,
             messages=[{'role': 'user', 'content': prompt}],
+            # SOFORT-2 (D-03): blockierender Aufruf => die erste Zahl (Begruendung bei classify_phase).
+            timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
         )
         _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
         # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
@@ -611,7 +619,10 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         model=config.MODEL_ANALYSE,
         max_tokens=400,
         system=_system,
-        messages=[{"role": "user", "content": user_msg}]
+        messages=[{"role": "user", "content": user_msg}],
+        # SOFORT-2 (D-03): blockierender Aufruf => die erste Zahl (Begruendung bei classify_phase).
+        # Genau dieser Pfad ist der Anlass: analyse_loop iteriert sequentiell ueber alle SIDs.
+        timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
     )
     _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
     # ── Phase 04.7.2 Cost-Hook ─────────────────────────────────────────
@@ -805,7 +816,9 @@ Neues Gesprächssegment (analysiere NUR dieses auf Einwände):
         model=config.MODEL_ANALYSE,
         max_tokens=600,
         system=_MERGED_SYSTEM,
-        messages=[{"role": "user", "content": user_msg}]
+        messages=[{"role": "user", "content": user_msg}],
+        # SOFORT-2 (D-03): blockierender Aufruf => die erste Zahl (Begruendung bei classify_phase).
+        timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
     )
     _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
     # ── Cost-Hook (Punkt 30 — Pflicht, nie raisen) ──────────────────────────
@@ -921,7 +934,15 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
             model=_model_autovar,
             max_tokens=500,  # TAXO3: Headroom gegen mid-Satz-Clipping (Laenge steuert die 2-3-Saetze-Paradigma-Regel, nicht die Kappe)
             system=_system_autovar,
-            messages=[{'role': 'user', 'content': user_msg}]
+            messages=[{'role': 'user', 'content': user_msg}],
+            # SOFORT-2 (D-03): derselbe Parameter, die ZWEITE Zahl. Beim Stream ist jedes Token
+            # ein eigener Datenblock — `read` heisst hier "nie laenger als X Sekunden Stille".
+            # Der ERSTE Block muss innerhalb von X kommen => X ist automatisch die TTFT-Grenze.
+            # Die GESAMTDAUER wird dadurch NICHT gekappt: eine lange, aber fliessende Antwort
+            # laeuft unbegrenzt weiter. Genau das verlangt D-03.
+            # ⚠ Rest-Kante: X kappt auch eine Pause MITTEN in der Antwort. Deshalb ist
+            # LIVE_LLM_STREAM_TIMEOUT_S (8 s) bewusst weit ueber dem gemessenen TTFT-Ø (1035 ms).
+            timeout=httpx.Timeout(config.LIVE_LLM_STREAM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
         ) as stream:
             for token in stream.text_stream:
                 if _first_token_autovar:
@@ -1113,7 +1134,10 @@ Antworte NUR mit dem Text. Kein JSON, keine Labels, keine Meta-Kommentare.
                 model=config.MODEL_PIP_VARIANTE,
                 max_tokens=500,  # TAXO3: Headroom gegen mid-Satz-Clipping (Laenge steuert die 2-3-Saetze-Paradigma-Regel, nicht die Kappe)
                 system=_system_manual,
-                messages=[{'role': 'user', 'content': user_msg}]
+                messages=[{'role': 'user', 'content': user_msg}],
+                # SOFORT-2 (D-03): Stream => die ZWEITE Zahl (Begruendung bei streame_auto_variante).
+                # TTFT- plus Stillstands-Grenze; die Gesamtdauer bleibt bewusst frei.
+                timeout=httpx.Timeout(config.LIVE_LLM_STREAM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
             ) as stream:
                 stream_ctx = stream
                 for token in stream.text_stream:
@@ -1213,7 +1237,10 @@ Aktuelles Gesprächssegment:
         model=config.MODEL_COACHING,
         max_tokens=200,
         system=_system_coaching,
-        messages=[{"role": "user", "content": user_msg}]
+        messages=[{"role": "user", "content": user_msg}],
+        # SOFORT-2 (D-03): blockierender Aufruf => die erste Zahl (Begruendung bei classify_phase).
+        # coaching_loop iteriert ebenfalls sequentiell ueber alle SIDs.
+        timeout=httpx.Timeout(config.LIVE_LLM_TIMEOUT_S, connect=config.LLM_CONNECT_TIMEOUT_S),
     )
     _latency_ms = int((time.monotonic() - _t_api_start) * 1000)
     # ── Phase 04.7.2 Cost-Hook (04.8 P07: Haiku) ────────────────────────
