@@ -27,6 +27,7 @@ Gruen-Bedingung in Welle 0:
 import ast
 import os
 import re
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -390,3 +391,273 @@ def test_pending_migration_is_empty():
         + "\n\nB3: Plan 06 Task 3 verlangt _PENDING_MIGRATION == frozenset()."
         " Alle Wellen A-E muessen vollstaendig migriert sein."
     )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Pruefpunkt 6 (Phase 08.23.2.MEHRNUTZER-REST-1): modul-globaler Riegel, der einen
+# Netz-/LLM-Aufruf umschliesst.
+#
+# Eigene Konstanten mit eigenem Praefix — _WHITELIST oben wird BEWUSST NICHT
+# mitbenutzt: sie listet erlaubte ZUWEISUNGSZIELE fuer `ls.<attr> =` und enthaelt
+# dabei Riegel-Namen (state_lock, _per_sid_lock, ...). Wer sie hier mitbenutzte,
+# schaltete diesen Pruefpunkt fuer die halbe Riegel-Menge still ab.
+# ══════════════════════════════════════════════════════════════════════════════
+
+_RIEGEL_SCAN_DIRS = ('services', 'routes')
+
+# WEITE Riegel-Ableitung: jede Modul-Ebenen-Zuweisung, deren rechte Seite ein Aufruf
+# ist, dessen Name auf 'Lock' endet. Faengt threading.Lock(), threading.RLock(),
+# _threading.Lock() UND _TracedLock('_session_state_lock')
+# (services/live_session.py:374). Ein enges Kriterium "threading.Lock()" wuerde
+# ausgerechnet den wichtigsten Riegel des Projekts STILL uebersehen und die
+# ueberwachte Blockmenge von 143 auf 40 senken — genau die Punkt-31-Fehlerklasse.
+_RIEGEL_KONSTRUKTOR_ENDUNG = 'Lock'
+
+# VARIANTE A (Phase MEHRNUTZER-REST-1, der wichtigste Einzelpunkt): ein Aufruf,
+# dessen Funktionsname auf '_lock' oder '_lock_for' endet, gilt ebenfalls als
+# Riegel-Ausdruck. OHNE das faellt der in dieser Phase gebaute
+# `with _analysis_lock_for(conv_id):` aus der eigenen Bewachung — er ist ein
+# ast.Call, kein Riegel-Name -> das Datei-Soll coaching_service.py muesste auf 0,
+# und "ein Eintrag mit Soll 0 kann nie fehlschlagen"
+# (tests/test_session_lock_blocking_calls_guard.py:200-207). Der Waechter waere
+# gruen ABER BLIND. Das ist eine ERWEITERUNG der Bewachung, kein Aufweichen:
+# die Menge der bewachten Bloecke wird groesser, nie kleiner.
+# Gemessen 2026-08-06: kollidiert mit 0 bestehenden Bloecken.
+_RIEGEL_FABRIK_ENDUNGEN = ('_lock', '_lock_for')
+
+# ZAEHL-SEITE != MELDE-SEITE (Praezisierung nach plan-checker, RESEARCH §4.6-Nachtrag).
+# Die bewachte FEHLERKLASSE ist ein FUER ALLE NUTZER GEMEINSAMER Riegel um einen
+# Netz-Aufruf. Ein PER-SCHLUESSEL-Riegel ist definitionsgemaess KEIN Verstoss — er
+# ist die LOESUNG. Wuerde Variante A auch die Melde-Seite erfassen, bliebe der
+# Waechter nach dem Fix ROT (der Sonnet-Aufruf steht ja weiterhin im Block) und das
+# gruene Tor waere unerreichbar. Deshalb:
+#   Fabrik-Aufruf MIT Argument  (`_lock_for(conv_id)`) -> ZAEHLT, meldet NICHT
+#   Fabrik-Aufruf OHNE Argument (`_hole_lock()`)       -> ZAEHLT, MELDET (kann gar
+#                                                          nicht nach Schluessel trennen)
+#   Riegel-NAME (`with _analysis_lock:`)               -> ZAEHLT, MELDET
+# Das ist eine PRAEZISIERUNG, keine Aufweichung: die gemeinsame Form roetet
+# unveraendert weiter, der ROT-Lauf dieser Phase bleibt Zeile fuer Zeile derselbe.
+
+# Netz-/LLM-Katalog. BEWUSST ENG und EMPFAENGER-GEBUNDEN: ein Katalog ueber
+# Methodennamen (z.B. 'get') produzierte allein durch dict.get(...) unter Riegeln
+# neun Falsch-Treffer (precall_service.py:219/:285, deepgram_service.py:184/:898,
+# routes/training.py:420/:482/:582/:609).
+_NETZ_EMPFAENGER_MODULE = frozenset({'requests', 'httpx'})
+_NETZ_MESSAGES_METHODEN = frozenset({'create', 'stream'})
+_NETZ_NACKTE_NAMEN = frozenset({'http_llm_client'})
+
+# ── Mindest-Soll (CLAUDE.md Punkt 31: Sperre gegen den stillen Ausfall) ───────
+# Faellt eine abgeleitete Menge aus, faende der Sweep 0 Verstoesse und SAEHE GRUEN AUS.
+# Sinkt eine Zahl: Ursache klaeren und MIT BEGRUENDUNG nachziehen — den Test NIE
+# entfernen, die Zahl NIE stillschweigend senken.
+_RIEGEL_SOLL_NAMEN_MINDESTENS = 23      # heute exakt 23 distinkte Namen
+_RIEGEL_SOLL_SUMME_MINDESTENS = 140     # heute 143 (138 with + 5 try/finally), Puffer 3
+
+# Stand 2026-08-06 (AST-gemessen). services/coaching_service.py ist der WICHTIGSTE
+# Eintrag: er sichert, dass der in dieser Phase gebaute conv_id-Riegel auch NACH dem
+# Fix noch bewacht ist.
+# ⚠ HEUTE 1 (`with _analysis_lock:`). Der Fix in Plan 04 macht daraus DREI Bloecke
+#   (1x `with _analysis_lock_for(conv_id):` + 2x `with _conv_locks_guard:`); Plan 04
+#   Task 1 zieht den Eintrag deshalb im selben Commit auf 3 HOCH. Das ist Pflicht,
+#   nicht Kosmetik: bliebe er bei 1, wuerde ihn schon die Ablage-Riegel-Haelfte allein
+#   erfuellen — der Eintrag koennte den Ausfall von Variante A nicht mehr melden.
+#   Hier auf 3 vorzugreifen ist NICHT moeglich: dann waere der ROT-Lauf (Plan 03) mit
+#   3 statt 2 Fehlschlaegen rot und der Beleg unbrauchbar.
+_RIEGEL_SOLL_JE_DATEI = {
+    'routes/app_routes.py': 3,
+    'routes/training.py': 9,
+    'services/anonymization.py': 5,
+    'services/claude_service.py': 47,
+    'services/coaching_service.py': 1,
+    'services/cost_tracker.py': 2,
+    'services/deepgram_service.py': 27,
+    'services/einwand_keyword_matcher.py': 2,
+    'services/live_session.py': 41,
+    'services/precall_service.py': 2,
+    'services/prompt_pipeline.py': 3,
+    'services/qa_pipeline.py': 1,
+}
+
+# Falsch-Treffer-Ausnahmen. HEUTE LEER. Jeder Eintrag braucht einen
+# '# FALSCH-TREFFER:'-Kommentar mit Datei:Zeile und Begruendung. Ein ECHTER Fund
+# gehoert NICHT hierher, sondern gemeldet und behoben.
+_FALSCH_TREFFER_RIEGEL = frozenset()    # {(datei, zeile), ...}
+
+
+# ── Riegel-Ableitung ─────────────────────────────────────────────────────────
+def _riegel_namen_einer_datei(baum):
+    """Modul-globale Riegel-Namen EINER Datei.
+
+    Nur baum.body (echte Modul-Ebene), nicht ast.walk: ein Riegel in einer Funktion
+    oder als Klassen-Attribut ist pro-Instanz und bewusst ausserhalb.
+    """
+    namen = set()
+    for knoten in baum.body:
+        if not isinstance(knoten, ast.Assign) or not isinstance(knoten.value, ast.Call):
+            continue
+        f = knoten.value.func
+        aufruf = f.attr if isinstance(f, ast.Attribute) else getattr(f, 'id', '')
+        if not aufruf.endswith(_RIEGEL_KONSTRUKTOR_ENDUNG):
+            continue
+        for ziel in knoten.targets:
+            if isinstance(ziel, ast.Name):
+                namen.add(ziel.id)
+    return namen
+
+
+def _riegel_namen_gesamt():
+    """Vereinigung ueber alle Dateien im Sweep-Bereich. Ueber den NAMEN, nicht ueber
+    den Empfaenger — so muss keine Alias-Liste gepflegt werden (Begruendung:
+    tests/test_session_lock_blocking_calls_guard.py:229-231)."""
+    namen = set()
+    for _datei, pfad in _riegel_python_dateien():
+        baum, _f = _riegel_baum_oder_fehler(pfad)
+        if baum is not None:
+            namen |= _riegel_namen_einer_datei(baum)
+    return namen
+
+
+def _ist_gemeinsamer_riegel_ausdruck(expr, namen):
+    """VERSTOSS-FAEHIGER Riegel: einer, den ALLE Nutzer teilen.
+
+    - Name/Attribut aus der abgeleiteten Menge (faengt `x`, `ls.x`, `_ls.x`,
+      `modul.x` — ueber den ATTRIBUT-Namen).
+    - Eine Riegel-Fabrik OHNE Argument (`_hole_lock()`): sie kann gar nicht nach
+      Schluessel trennen und ist damit faktisch ein gemeinsamer Riegel.
+    """
+    if isinstance(expr, ast.Attribute) and expr.attr in namen:
+        return True
+    if isinstance(expr, ast.Name) and expr.id in namen:
+        return True
+    if isinstance(expr, ast.Call) and not _ist_per_schluessel_riegel_ausdruck(expr):
+        f = expr.func
+        aufruf = f.attr if isinstance(f, ast.Attribute) else getattr(f, 'id', '')
+        if aufruf.endswith(_RIEGEL_FABRIK_ENDUNGEN):
+            return True
+    return False
+
+
+def _ist_per_schluessel_riegel_ausdruck(expr):
+    """Fabrik-Muster `_lock_for(key)`: ein Aufruf auf _lock/_lock_for MIT mindestens
+    einem Argument. Das ist die LOESUNG der Fehlerklasse, kein Verstoss — er zaehlt
+    fuer die Soll-Tabelle, wird aber NICHT gemeldet."""
+    if not isinstance(expr, ast.Call):
+        return False
+    f = expr.func
+    aufruf = f.attr if isinstance(f, ast.Attribute) else getattr(f, 'id', '')
+    return bool(aufruf.endswith(_RIEGEL_FABRIK_ENDUNGEN)
+                and (expr.args or expr.keywords))
+
+
+def _ist_riegel_ausdruck(expr, namen):
+    """ZAEHL-Seite: alles, was ein bewachter Riegel-Block ist — gemeinsam ODER
+    per Schluessel. Diese Menge darf nur wachsen, nie schrumpfen."""
+    return (_ist_gemeinsamer_riegel_ausdruck(expr, namen)
+            or _ist_per_schluessel_riegel_ausdruck(expr))
+
+
+def _riegel_with_bloecke(baum, namen, praedikat=None):
+    """Jedes ast.With, bei dem IRGENDEIN Kontext-Ausdruck ein Riegel ist —
+    auch `with anderer, _session_state_lock:`.
+
+    praedikat=None -> ZAEHL-Seite (alle Riegel-Bloecke).
+    praedikat=_ist_gemeinsamer_riegel_ausdruck -> MELDE-Seite (nur gemeinsame)."""
+    praedikat = praedikat or _ist_riegel_ausdruck
+    return [k for k in ast.walk(baum)
+            if isinstance(k, ast.With)
+            and any(praedikat(i.context_expr, namen) for i in k.items)]
+
+
+def _ist_riegel_freigabe(call, namen, praedikat=None):
+    praedikat = praedikat or _ist_riegel_ausdruck
+    f = call.func
+    return (isinstance(f, ast.Attribute) and f.attr == 'release'
+            and praedikat(f.value, namen))
+
+
+def _riegel_try_bloecke(baum, namen, praedikat=None):
+    """Jedes ast.Try, dessen finally-Zweig einen Riegel FREIGIBT. Verankert an der
+    FREIGABE, nicht am Erwerb: das release() markiert das Ende der Region eindeutig,
+    waehrend der Erwerb je nach Form eine Zeile hoeher oder im if-Test steht.
+    Heute 5 solche Regionen (deepgram_service.py 1, live_session.py 4). Der Sammler
+    kommt trotzdem mit: sonst fiele ein kuenftiger Umbau von `with` auf
+    `acquire`/`try` STILL aus der Bewachung."""
+    return [k for k in ast.walk(baum)
+            if isinstance(k, ast.Try)
+            and any(isinstance(n, ast.Call)
+                    and _ist_riegel_freigabe(n, namen, praedikat)
+                    for anw in k.finalbody for n in ast.walk(anw))]
+
+
+def _riegel_region(try_knoten, namen, praedikat=None):
+    """Die Anweisungen, die WIRKLICH unter dem Riegel laufen: body + orelse +
+    except-Ruempfe + finally-Anweisungen VOR dem release. Ab dem release ist frei."""
+    region = list(try_knoten.body) + list(try_knoten.orelse)
+    for behandler in try_knoten.handlers:
+        region.extend(behandler.body)
+    for anw in try_knoten.finalbody:
+        if any(isinstance(n, ast.Call)
+               and _ist_riegel_freigabe(n, namen, praedikat)
+               for n in ast.walk(anw)):
+            break
+        region.append(anw)
+    return region
+
+
+# ── Netz-/LLM-Pruefung (genau EINE, fuer beide Formen) ───────────────────────
+def _ist_netz_aufruf(call):
+    """Melde-Name des Netz-/LLM-Aufrufs, sonst None. EMPFAENGER-gebunden."""
+    f = call.func
+    if isinstance(f, ast.Name):
+        return f.id if f.id in _NETZ_NACKTE_NAMEN else None
+    if isinstance(f, ast.Attribute):
+        if (f.attr in _NETZ_MESSAGES_METHODEN
+                and isinstance(f.value, ast.Attribute) and f.value.attr == 'messages'):
+            return 'messages.' + f.attr
+        if (isinstance(f.value, ast.Name)
+                and f.value.id in _NETZ_EMPFAENGER_MODULE):
+            return f'{f.value.id}.{f.attr}'
+    return None
+
+
+def _netz_aufrufe_in(knoten_oder_liste):
+    """ast.walk geht auch in verschachtelte with/try/if-Bloecke: ein messages.create
+    zwei Ebenen tief im selben Riegel-Block ist genauso schaedlich."""
+    knoten = (knoten_oder_liste if isinstance(knoten_oder_liste, list)
+              else [knoten_oder_liste])
+    treffer = []
+    for wurzel in knoten:
+        for n in ast.walk(wurzel):
+            if isinstance(n, ast.Call):
+                name = _ist_netz_aufruf(n)
+                if name:
+                    treffer.append((getattr(n, 'lineno', 0), name))
+    return treffer
+
+
+# ── Datei-Sweep (uebernommen aus test_session_lock_blocking_calls_guard.py) ──
+def _riegel_python_dateien():
+    """__pycache__ wird uebersprungen — .pyc ist kein Quelltext, und stale Bytecode war
+    in Phase COUNTERPART-03 der einzige verbliebene Falsch-Treffer. rglob statt glob:
+    Unterordner von services//routes/ sind damit mit abgedeckt (heute existieren keine)."""
+    ergebnis = []
+    for d in _RIEGEL_SCAN_DIRS:
+        for p in (_ROOT / d).rglob('*.py'):
+            if '__pycache__' in p.parts:
+                continue
+            ergebnis.append((p.relative_to(_ROOT).as_posix(), p))
+    return sorted(ergebnis)
+
+
+def _riegel_baum_oder_fehler(pfad):
+    """Kein errors='ignore': ein Dekodier-Fehler soll auffallen, nicht still einen
+    Block verschlucken."""
+    try:
+        return ast.parse(pfad.read_text(encoding='utf-8')), None
+    except (SyntaxError, UnicodeDecodeError) as e:
+        return None, f'{type(e).__name__}: {e}'
+
+
+def _riegel_zaehlung(baum, namen):
+    """(anzahl_with, anzahl_try) fuer eine Datei."""
+    return len(_riegel_with_bloecke(baum, namen)), len(_riegel_try_bloecke(baum, namen))
