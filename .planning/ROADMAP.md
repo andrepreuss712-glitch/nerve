@@ -285,6 +285,28 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 >
 > ---
 >
+> ### 🔴 NEU 2026-08-06 — POST-CALL-AUSWERTUNG: `coaching_score` geht STILL verloren + Lernkarten haben keinen Konsumenten
+>
+> **Ausgeloest durch Andre:** *„wenn die user solange warten muessen auf die auswertung, ist die gefahr gross, dass sie den PiP einfach ueber das X schliessen — jemand der den ganzen tag anrufe macht hat schlicht keine zeit."* Am Code aufgenommen, jede Aussage mit Datei:Zeile belegt.
+>
+> **TEIL 1 — 🔴 Kernfeature-Defekt: ohne Outcome-Confirm gibt es NIE einen `coaching_score`.**
+> `pip-launcher.js:1765-1780` (`pagehide` am PiP) setzt `#pip-live-window` auf `display:none` und haengt es zurueck in den `body`. Die Outcome-Maske (`_renderOutcomeUx`, `:4337-4551`) wird danach **gerendert, aber unsichtbar** — `pipEl()` faellt auf `document` zurueck (`:99-104`) und findet die Knoten im versteckten Container. **Der Nutzer kann nicht mehr bestaetigen.** `calls.coaching_score` wird ausschliesslich in `routes/app_routes.py:2273` gesetzt (Confirm-Pfad), vorher NULL (`:821`) ⇒ **bleibt fuer immer NULL.**
+> ⚠ **Unsichtbar fuer den Nutzer:** Bei `outcome_source='ai_auto'` mit Confidence ≥ 0.90 zaehlt `routes/performance.py:450-459` den Call **nicht** in „warten auf Bestaetigung", und `templates/dashboard.html:832` zeigt keinen Unsicher-Punkt. **Der Call sieht erledigt aus.**
+> ⚠ **Keine Unload-Warnung:** `pip-launcher.js:3889-3894` haengt an `state.micStarted`; `_stopMic()` setzt es beim Beenden auf `false` (`:3070`) ⇒ **ab Anrufende ist die Warnung aus.** Kein `AbortController`, kein `keepalive`, kein `visibilitychange`-Handler auf dem Postcall-Pfad.
+> **Tab-Schliessen (statt nur PiP):** `/api/beenden` laeuft serverseitig komplett durch (kein Disconnect-Check), aber der `.then()`-Block feuert nie ⇒ **0 LearningCards + `calls.outcome` NULL**, ohne serverseitigen Ersatzpfad.
+> ✅ **Nicht betroffen (laeuft browser-unabhaengig):** ConversationLog, transcript_segments, ObjectionEvents, `suggestion_reactions`, Punkte/Fair-Use, calls-UPDATE, `_audio_health_bg`, slow_lane-Judge + Adoption.
+>
+> **TEIL 2 — Lernkarten haben KEINEN Konsumenten (R2-Klasse).**
+> `services/coaching_service.py:127` persistiert mit `status='vorschlag'`. `coaching_service.py:200-201` liest **ausschliesslich** `status='aktiv'`. `GET /api/learning_cards` (`routes/learning.py:435`) hat im Frontend **null** Aufrufer (grep ueber `templates/*.html` + `static/*.js`: nur `/api/learning_cards/<id>/status` fuer bereits sichtbare Karten, `dashboard.html:1138`). ⇒ **Der teuerste Post-Call-Aufruf (Sonnet, Timeout 45 s) erzeugt Daten, die keine UI je zeigt.** Gleiche Klasse wie der Coaching-Hinweis in E-13.
+>
+> **➡️ ENTSCHEIDUNG 06.08. (Andre): WEG A — 08.23.2.MEHRNUTZER-REST-1 wird wie geplant gebaut, der Aufruf wird NICHT stillgelegt.**
+> Begruendung **Unumkehrbarkeit**: Karten, die heute nicht erzeugt werden, sind spaeter nicht nachholbar (Gespraeche sind dann alt). Der laufende Aufruf sammelt Rohmaterial fuer die spaetere Ansicht. *„dann bauen wir in einer spaeteren phase alles fuer die lernkarten."*
+> **Verworfen: Weg B** (Aufruf anhalten bis eine Ansicht existiert) — waere billiger gewesen und haette MEHRNUTZER-REST-1 ueberfluessig gemacht, kostet aber unwiederbringlich Daten.
+>
+> ⚠ **Verzahnung — NICHT uebersehen:** Teil 1 gehoert fachlich zu **METRIK-1**. Wer die Bewertung neu baut, muss den Confirm-Zwang mitentscheiden, sonst wird derselbe Defekt neu gebaut.
+>
+> ---
+>
 > ### 🔴🔴 EINSCHUB 2026-08-04 — MEHRNUTZER-FAEHIGKEIT: die Reihenfolge oben steht unter Vorbehalt
 >
 > **Anlass:** MESSGERAETE-1 lieferte die ersten echten Tempo-Zahlen (Analyse Ø 1988 ms, Coaching Ø 2714 ms, Post-Call-CRM 15194 ms). Andre daraus: *„Das System, das wir gebaut haben, ist nicht auf mehrere Nutzer ausgelegt. Punkt."*
