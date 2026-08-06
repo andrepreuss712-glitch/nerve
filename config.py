@@ -133,6 +133,68 @@ MODEL_COLDCALL_INFER    = os.getenv("MODEL_COLDCALL_INFER",    "claude-haiku-4-5
 HTTP_LLM_TIMEOUT_S      = float(os.getenv("HTTP_LLM_TIMEOUT_S", "20"))
 HTTP_LLM_TIMEOUT_LONG_S = float(os.getenv("HTTP_LLM_TIMEOUT_LONG_S", "45"))
 HTTP_LLM_MAX_RETRIES    = int(os.getenv("HTTP_LLM_MAX_RETRIES", "0"))
+
+# ── Phase 08.23.2.SOFORT-2 (D-03/D-04) — Zeitlimit auf den LIVE-LLM-Aufrufen ────────────────
+# FUENF benannte Festlegungen. Sie stehen HIER und nicht in einer Bedingung, damit sie
+# nachpruefbar und aenderbar bleiben (D-04, Andre-Pflicht). Vier sind per ENV ueberschreibbar.
+# ⛔ KORRIGIERT 2026-08-05 (F-N7.3): hier stand "ein Wechsel braucht keinen Deploy". FALSCH -
+#    config.py liest die Werte beim PROZESS-START. Ohne Neustart des Dienstes aendert sich
+#    nichts. Wer die Variable setzt und dann misst, misst den ALTEN Wert.
+#
+# EIN Mechanismus, ZWEI Zahlen (Punkt 27 — der einfachste tragfaehige Weg):
+# `timeout=` wird vom Anthropic-SDK EINS ZU EINS an httpx durchgereicht, und `read` gilt dort
+# PRO DATENBLOCK. Fuer eine blockierende Antwort (ein Koerper) wirkt das faktisch wie ein
+# Gesamt-Limit; fuer einen Stream (ein Datenblock je Token) wirkt derselbe Parameter als
+# TTFT- plus Stillstands-Limit und kappt die Gesamtdauer NICHT. Genau das will D-03.
+# ⛔ Deshalb wird KEINE Uhr im Token-Loop gebaut. Es braucht sie nicht.
+
+# F-1 — blockierende Aufrufe (Analyse, Coaching, Phasen-Erkennung, Cold-Call-Ableitung, QA).
+# Langsamster gemessener Ø: coaching_haiku 2714 ms (MESSGERAETE-1, 2026-08-04, Headset).
+# 12 s = mehr als das Vierfache Luft — es gibt KEINE p95-Messung, also grosszuegig statt knapp.
+# Zum Vergleich: die SDK-Vorgabe waere 600 s.
+LIVE_LLM_TIMEOUT_S = float(os.getenv("LIVE_LLM_TIMEOUT_S", "12"))
+
+# F-2 — Stream-Pfade (pip_autovar, pip_variante). Gemessener Ø TTFT: 1035 ms.
+# ⚠ Bewusst NICHT dicht an 1035 ms: `read` kappt auch eine Pause MITTEN in der Antwort, nicht
+# nur bis zum ersten Token. Eine Messung der Token-Abstaende gibt es nicht — nur ttft_ms und
+# latency_ms. 8 s ist so gewaehlt, dass eine legitime Pause sie praktisch nie erreicht; wer sie
+# erreicht, haengt. Die GESAMTDAUER wird dadurch NICHT begrenzt (lange Antworten sind legitim).
+LIVE_LLM_STREAM_TIMEOUT_S = float(os.getenv("LIVE_LLM_STREAM_TIMEOUT_S", "8"))
+
+# F-3 — ab wie vielen Zeitueberschreitungen IN FOLGE der Berater es sieht (D-04 Stufe 2).
+# ⚠ "Runde" ist NICHT "Schleifentakt": beide Loops steigen VOR dem LLM-Aufruf aus, wenn nichts
+# zu tun ist. Ein Zaehler auf Takte wuerde in einer Gespraechspause ausloesen — genau der
+# Alarm, den D-04 vermeiden will. Gezaehlt werden nur LLM-Versuche, die stattfanden UND mit
+# einer Zeitueberschreitung endeten. Ein Erfolg setzt auf 0 zurueck ("in Folge").
+LIVE_LLM_TIMEOUT_HINWEIS_AB = int(os.getenv("LIVE_LLM_TIMEOUT_HINWEIS_AB", "3"))
+
+# F-4 — der Wortlaut, den der Berater sieht. Ruhig und knapp, kein Alarm (D-04 woertlich).
+# User-facing => ECHTE Umlaute. Alle Bezeichner drumherum bleiben ASCII.
+# Er beschreibt einen ZUSTAND, keinen Fehler, und sagt ausdruecklich, dass das Gespraech
+# weiterlaeuft — denn Stille sieht im Live-Gespraech aus wie "alles in Ordnung, keine
+# Einwaende", und das ist die gefaehrlichste Rueckmeldung, die wir geben koennen.
+# KEIN ENV-Override: ein Anzeigetext gehoert versioniert, nicht in eine Umgebungsvariable.
+LIVE_LLM_TIMEOUT_HINWEIS_TEXT = "Die Live-Erkennung antwortet gerade nicht."
+LIVE_LLM_TIMEOUT_HINWEIS_TIP = (
+    "Mehrere Anfragen ohne Antwort — die Analyse pausiert, das Gespräch läuft weiter."
+)
+
+# F-6 — das VERBINDUNGS-Zeitlimit. NEU 2026-08-05 (Cross-AI-Fund F-N7.1).
+# ⚠ Heisst F-6, NICHT F-5: F-5 ist oben schon vergeben (die zwei Buchungs-/Retry-
+#   Entscheidungen, dort als F-5a/F-5b referenziert). Zwei Dinge unter einer Nummer waere
+#   dieselbe Mehrdeutigkeit, gegen die diese Phase antritt.
+# ⚠ Es stand vorher als Literal `connect=5.0` an NEUN Aufruf-Stellen ohne Zentrale - genau die
+#   "eine Zahl an N Orten"-Falle, gegen die die Zahlen-Tafel gebaut wurde, nur in Welle 2.
+#   Der Wert selbst bleibt 5.0 (unveraendert, Reparatur-Modus) - er bekommt nur EINEN Ort.
+#
+# ⚠ WORST CASE BLOCKIEREND = LLM_CONNECT_TIMEOUT_S + LIVE_LLM_TIMEOUT_S = 5 + 12 = 17 SEKUNDEN.
+#   Diese Zahl stand bis zum Replan NIRGENDS im Plan-Satz - obwohl D-06 gegen sie misst.
+#   httpx zaehlt `connect` und `read` NACHEINANDER, nicht als Gesamtbudget: erst bis zu 5 s
+#   Verbindungsaufbau, DANN bis zu 12 s auf den Antwort-Koerper.
+#   Fuer die Stream-Pfade entsprechend: 5 + 8 = 13 s bis zum ersten Token.
+#   Wer das Gesamt-Budget senken will, senkt BEIDE Zahlen - nicht nur die auffaellige.
+LLM_CONNECT_TIMEOUT_S = float(os.getenv("LLM_CONNECT_TIMEOUT_S", "5"))
+
 # D-07 (LOCKED 2026-04-29): DACH default = Sonnet for EWB streaming (grammar quality).
 # Rollback path (no deploy needed): set ENV MODEL_PIP_AUTOVAR=claude-haiku-4-5-20251001
 # MODEL_ANALYSE stays Haiku — CLAUDE.md absolute constraint: never Sonnet in live analyse_loop.
