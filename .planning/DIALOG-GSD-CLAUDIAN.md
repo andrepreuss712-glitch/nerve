@@ -3042,3 +3042,34 @@ in `08.23.2.SOFORT-2-08-SUMMARY.md` vermerkt, nicht als gruenes Schweigen.
 `.planning/phases/08.23.2.SOFORT-2-besitzpruefung-eingaenge-zeitlimit-live-llm/08.23.2.SOFORT-2-FUNDE.md`
 (Abschnitt 2, Zeile **R-13**); Abnahme-Kontext in `…-08-SUMMARY.md`, Abschnitt
 „WAS DIESE ABNAHME NICHT ABDECKT".
+
+## NACHTRAG FUND-SYNC — 08.23.2.SOFORT-2 — 2026-08-06 (nach dem Deploy)
+
+Zwei Funde kamen NACH dem Fund-Sync-Eintrag oben dazu — beide erst beim Ausrollen bzw. beim
+Test-Anruf. Bitte mit in die Vault-Roadmap uebernehmen.
+
+- **E-12 — Die `anthropic`-Attrappe machte den Timeout-Zweig unerreichbar.**
+  `tests/test_08_5_05_training_pipeline_t1.py` (+ `_t2.py`) schieben per
+  `sys.modules.setdefault('anthropic', …)` ein Attrappen-Modul unter, das nur `.Anthropic` trug.
+  Der Produktivcode faengt aber `anthropic.APITimeoutError` (7x) und `APIConnectionError` (1x).
+  Gewinnt die Attrappe das Rennen um `sys.modules`, wirft `except anthropic.APITimeoutError:`
+  beim AUSWERTEN einen `AttributeError`, den der breitere Handler schluckt.
+  ⚠ **Produktion war nie betroffen** (echte SDK 0.86.0 hat die Klasse). Betroffen war der
+  **Beweis** der Erreichbarkeit. **Ein statischer Waechter waere gruen geblieben** — gefangen hat
+  es der Runtime-Waechter `test_timeout_zweig_ist_erreichbar` aus Plan 07 (Punkt 31 zu unseren
+  Gunsten). Gefixt in `3e7f3bc`, beide Dateien.
+  **Lehre fuer die Vault:** ein modulweiter `sys.modules`-Stub ist reihenfolgeabhaengig und
+  trifft Tests, die ihn nie erwaehnen. **Ablageort:** `…-08-SUMMARY.md`, Abschnitt „Der erste
+  Deploy-Versuch fiel ROT".
+
+- **R-14 — Die Stream-Grenze begrenzt NICHT die Zeit bis zum ersten Token.**
+  Im ersten echten Test-Anruf gemessen: `pip_variante` TTFT **8851 ms** bei einer Grenze von
+  **8000 ms** — **ohne** Kappung. Kein Defekt: `read` in httpx begrenzt den **Chunk-Abstand**,
+  nicht die Gesamtzeit; die `ping`-Ereignisse setzen die Uhr zurueck.
+  ⛔ **Aber die Freigabe-Erzaehlung „Faktor 7,7" (8 s gegen Ø-TTFT 1035 ms) haelt beim ersten
+  echten Anruf nicht.** Warnung fuer den naechsten Bauer: wer das Stream-Limit je auf die
+  **Gesamtdauer** umstellt, haette genau diesen legitimen Aufruf gekappt — mitten in einer
+  Einwand-Antwort im Verkaufsgespraech. **Ablageort:** `…-FUNDE.md` Abschnitt 2, Zeile R-14.
+
+**Damit ist die Restfund-Liste dieser Phase vollstaendig:** F-1…F-5 (Cross-AI Fable),
+E-3…E-12 (waehrend der Ausfuehrung), R-11…R-14 (in FUNDE.md Abschnitt 2).
