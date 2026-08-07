@@ -3466,3 +3466,66 @@ behaupten nicht.**
 50 Anruf-Enden belegen weiterhin 50 von 64 Threads, nur 45 s statt 37 min. **Sonst gilt der
 Start-Blocker faelschlich als vollstaendig erledigt.**
 Plus: Geminis LOW-Befund (Pruefkatalog in den Docstring) mitnehmen.
+
+---
+
+## ROADMAP-SYNC — 08.23.2.MEHRNUTZER-REST-1 — 2026-08-07
+
+**⚠ Stand: NICHT abgeschlossen. Bitte den Vault erst NACH dem gruenen Tor nachziehen.**
+
+Welle 3 (Plan 04, der Fix) ist **gebaut und gepusht** — Commit `e213a2a` auf `origin/main`:
+
+- `_analysis_lock` (prozessweit) **geloescht**; `generate_postcall_analysis` nimmt
+  `_analysis_lock_for(conv_id)` — Riegel pro `conv_id`, Ablage mit Nehmer-Zaehler,
+  Aufraeumen im `finally`, `key = str(conv_id)`.
+- Die `count()`-Duplikatpruefung liegt unveraendert **innerhalb** des Riegels.
+- Waechter-Soll `services/coaching_service.py` **1 → 3** im selben Commit **hoch**gezogen,
+  mit Begruendung (Punkt 31: stilles Senken ist verboten, ein begruendeter Hochzug ist der Weg).
+- Diff: `services/coaching_service.py` +55/−2, `tests/test_no_live_global_state.py` +5/−1.
+  Keine Migration, kein Schema, kein Prompt, kein anderer Produktiv-Code.
+
+**Was noch fehlt — der GRUEN-Beleg.** `bash deploy.sh production` faellt unter die Deny-Regel
+(`~/.claude/settings.json:34-37`) und ist ein Halt-Punkt fuer den Menschen. Erwartet:
+`1142 passed, 7 skipped, 5 deselected`, Ist-Zaehlung `services/coaching_service.py: 3
+(with=3, try/finally=0)`, `abgeleitete Riegel-Namen: 23` inkl. `_conv_locks_guard`,
+`SUMME: 145`, keine `[BASELINE-AUTO-FIX]`-Warnung. **Bis dahin blockiert der rote Lauf aus
+Plan 03 jeden Deploy und der 🔴 START-BLOCKER ist offen.**
+
+**Auflage A1 — erledigt, Richtung (a).** `acquire()` liegt jetzt **im** `try`, ein Flag
+`erworben` verhindert ein `release()` ohne Erwerb. Zusaetzlich ist die Absolut-Behauptung im
+Kommentar praezisiert („auf allen regulaeren und allen Ausnahme-Pfaden (E1-E7) sowie bei einem
+Fehlschlag des `acquire()` selbst"). **Restfenster benannt, nicht geschlossen:** ein Signal
+zwischen der Rueckkehr von `acquire()` und `erworben = True` (eine Bytecode-Grenze). Die einzige
+Form ohne dieses Fenster (`with riegel:`) haette den `riegel.release()`-Anker entfernt, an dem
+drei Abnahme-Kriterien die Freigabe-Reihenfolge belegen — bewusster Tausch, im SUMMARY notiert.
+
+**Auflage A2 — woertlich in der SUMMARY.** Der Fix nimmt die **Wartezeit**, nicht den
+**Thread-Verbrauch**: 50 gleichzeitige Anruf-Enden belegen weiterhin 50 von 64 Threads, nur
+~45 s statt ~37 min. Gehoert zu **Fund (2)** + Lasttest (Roadmap-Punkt 9), **nicht** zu dieser
+Phase — darf aber nicht unter den Tisch fallen.
+
+**Cross-AI dieser Phase zaehlt NICHT als bestanden.** Der Review lief auf `gemini-2.5-pro`
+(aeltere Modell-Generation als vorgeschrieben) und war **bestaetigend statt gegnerisch** — kein
+Gegen-Befund auf eine der harten Fragen. Als Plausibilitaets-Pruefung verbuchen, nicht als
+unabhaengigen Beleg. Bitte im `05 Log.md` so eintragen.
+
+**Geminis MEDIUM (der `contextlib`-Import verstosse gegen Bau-Regel 17): begruendet abgelehnt.**
+Der Import **ist** Teil des Fixes, kein Beifang; eine eigene Klasse mit `__enter__`/`__exit__`
+waere mehr Code fuer dasselbe Ergebnis. Nicht umgesetzt.
+
+### FRAGE (Konfidenz MEDIUM, Auslegung) — `learning_cards`-Schild `database/models.py:628`
+
+Das Schild zitiert Zeilennummern aus `coaching_service.py`. Zwei Dinge stimmen nicht:
+`:170` war **schon vor** dieser Phase falsch (der zweite Leser steht auf `:200`), und `:65` ist
+durch die **+2-Zeilendrift** dieser Phase zu `:67` geworden.
+
+**Ich habe es bewusst NICHT nachgezogen.** Begruendung: das waere eine
+`COMMENT ON TABLE`-Alembic-Revision, und die Roadmap erwartet fuer diese Phase ausdruecklich
+**keine** Migration. Punkt 23 loest bei *„neuer Schreiber, geaenderter Mechanismus, neue
+Konsum-Stelle"* aus — nichts davon trifft zu (derselbe Schreiber, derselbe Mechanismus, keine
+neue Konsum-Stelle; nur der Riegel darum herum ist ein anderer).
+
+**Frage an dich:** teilst du die Auslegung? Und stimmst du der allgemeinen Beobachtung aus dem
+Vormittag zu, dass der richtige Fix **„keine Zeilennummern in Schilder"** ist statt „diese
+Nummern nachziehen"? Falls ja, gehoert das als eigener kleiner Roadmap-Eintrag angelegt, nicht
+als Beifang hier.
