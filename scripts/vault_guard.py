@@ -17,29 +17,123 @@ einmal drin, prueft es jede Sitzung.
 ENTWURFS-ENTSCHEIDUNG: Die Uebersicht wird bei JEDEM Lauf LIVE aus dem
 echten Datei-Bestand erzeugt. Es gibt bewusst KEINE gespeicherte
 Index-Datei — die koennte veralten, und genau das ist die Krankheit,
-die hier kuriert wird.
+die hier kuriert wird. (Einzige Ausnahme seit 07.08.: eine winzige
+Zustands-Datei, die NUR Erst-Melde-DATEN von Gelb-Befunden haelt, keinen
+Bestand — Herleitung unten bei GELB_ESKALATION_TAGE.)
+
+================================================================================
+UMBAU 2026-08-07 — WARUM DIESER WAECHTER FRUEHER DAUERROT WAR
+================================================================================
+Andrés Befund: "das scheint fuer uns so nicht zu funktionieren."
+Gegengelesen von Gemini (Konzept) und Fable (am echten Code + Bestand).
+Beide fanden unabhaengig dieselben drei Konstruktionsfehler:
+
+FEHLER 1 — EIN-STUFEN-MODELL. Alles landete in derselben rot-Liste und
+demselben Exit 1: "ein Arbeitstag fehlt im Changelog" (echtes Wahrheits-
+Risiko, die Gruendungs-Krankheit) stand gleichrangig neben "Log hat 1029
+statt 1000 Zeilen" (Hausarbeit ohne Risiko). Weil die Hausarbeits-Checks
+strukturell dauernd rissen (Fehler 2), war fast immer rot — und die
+Alarm-Muedigkeit, vor der die eigene Ablage-Regel §7③ warnt, frisst dann
+auch die ECHTEN Befunde daneben.
+  -> BEHOBEN: zwei Stufen. ROT nur fuer Wahrheits-Risiko. GELB fuer
+     Hausarbeit — mit Verfallsdatum, sonst wird Gelb ein Friedhof.
+
+FEHLER 2 — ZWEI SCHWELLEN FORDERTEN, WAS ANDERE REGELN VERBIETEN.
+  (a) MAX_LOG_ZEILEN = 1000 war mit der eigenen Komprimier-Regel
+      MATHEMATISCH UNVEREINBAR. Rechnung (Fable, an echten Daten):
+      32 Volltext-Eintraege ueber 22 Tage = ~26 Zeilen/Eintrag,
+      ~1,45 Eintraege/Tag = ~270 Zeilen/Woche. Die Regel "4 Wochen
+      Volltext behalten" ergibt 4 x 270 = ~1080 Zeilen, plus
+      Archiv-Register (166 Z., waechst) = ~1260 Zeilen DAUERZUSTAND.
+      Die Grenze 1000 lag UNTER dem regelkonformen Minimum. Gruen war
+      nur erreichbar, indem man Eintraege komprimierte, die die Regel
+      noch im Volltext haben will — genau das passierte am 03.08., und
+      dabei riss ein Datums-Anker (der dokumentierte Fehlalarm).
+      Gegenprobe am realen Verlauf: nach der Komprimierung ~815 Zeilen,
+      Rest-Luft 185, bei ~50 Zeilen/Tag -> rot nach ~3,7 Tagen.
+      Beobachtet: gruen 03.08., rot 07.08. Die Rechnung trifft.
+      -> ERSETZT durch KOMPRIMIER_TAGE: gemessen wird jetzt die
+         Komprimier-Regel SELBST ("steht Volltext aelter als 4 Wochen
+         drin?"). Das hat gar keine Schwelle mehr, die man biegen kann.
+  (b) MAX_PLANUNG_DATEIEN = 25 forderte "Erledigtes ins Archiv" fuer
+      einen Bestand, in dem es nach eigener Definition NICHTS Erledigtes
+      gibt: 26 Dateien, alle inhaltlich zu Recht aktiv, 7 tragen "NICHT
+      gebaut", 3 ausdruecklich "NICHT archivieren". Der Archiv-Ausloeser
+      aus Ablage-Regel §3 ("Phase ist live") ist fuer sie nie gefeuert.
+      Der Waechter mass Anzahl; die Krankheit waere FALSCH-aktiv, und
+      falsch-aktiv war 0.
+      -> ERSETZT durch den Anker-Check (siehe ANKER_PFLICHT_ORDNER).
+
+FEHLER 3 — DIE MESSGROESSE WAR BLIND. Der 60-Tage-"aktiv"-Check hing am
+Datei-Aenderungsdatum (mtime). Beim Aufraeumen am 02.08. wurden ALLE 26
+Planungs-Dateien angefasst -> alle Uhren auf null, der Check konnte bis
+Anfang Oktober nichts mehr finden. Jede Massen-Operation und sogar ein
+OneDrive-Sync blendet ihn erneut. Ausgerechnet der Check, der der echten
+Krankheit am naechsten kommt, war der am leichtesten zu taeuschende.
+  -> BEHOBEN: gemessen wird das Kopfzeilen-Feld `letzte_aktualisierung`
+     (ohnehin Pflicht). Gilt auch fuer "02 Stand".
+
+IST DAS "DIE SCHWELLE BIEGEN, DAMIT ES GRUEN WIRD"? Nein — Lackmustest
+aus Ablage-Regel §7③, hier bestanden: "Kaeme dieselbe neue Zahl heraus,
+wenn der heutige Istwert ein anderer waere?" Die 1260-Zeilen-Rechnung
+kommt aus zwei ANDEREN Regeln plus einer Messung; sie waere identisch
+ausgefallen, wenn das Log heute bei 900 stuende. Gebogen waere: "steht
+bei 1029, also Grenze 1100." Die sauberste Form ist ohnehin gar keine
+Zahl mehr, sondern der Messgroessen-Tausch.
+
+EIN REIN, EINS RAUS (Ablage-Regel §2) — die Gegenbuchungen dieses Umbaus:
+  RAUS MAX_LOG_ZEILEN        -> REIN Volltext-aelter-als-4-Wochen (gelb)
+  RAUS MAX_PLANUNG_DATEIEN   -> REIN Anker-Check (gelb)
+  ERSETZT mtime              -> durch `letzte_aktualisierung` (kein neuer Check)
+  NEU ohne Gegenbuchung: die Gelb-Eskalation. Bewusst als offene
+  Gegenbuchung vermerkt (Ablage-Regel §2 erlaubt das ausdruecklich,
+  verboten ist nur das stille Anhaengen). Eintrag im Log 07.08.
+
+WAS AUSDRUECKLICH BLEIBT, WEIL ES FUNKTIONIERT HAT:
+  - Log-Luecken gegen die Code-Historie (Check 5). Die einzige Pruefung
+    gegen eine FREMDE Wahrheit statt gegen Selbst-Deklaration, und die
+    einzige, die den Gruendungs-Vorfall (fehlender 31.07.) gefangen
+    haette. Gemini wollte sie streichen — abgelehnt: die Fehlalarme kamen
+    vom Komprimieren, nicht von der Pruefung. Faellt das Hand-Komprimieren
+    weg, faellt die Fehlalarm-Quelle mit.
+  - Live-Erzeugung ohne Index-Datei.
+  - Die Selbst-Deklaration von Pruefkatalog und bekannten Luecken.
+  - Die Korrektur-Historie als Kommentar (nicht wegputzen).
+  - Der Exit-Code als Tor.
+================================================================================
 
 PRUEFKATALOG (CLAUDE.md: "Ein gruener Waechter beweist nur, was in seinem
 Pruefkatalog steht"). Dieser Waechter prueft:
-  1. Fehlende Kopfzeilen (status / beschreibung)
-  2. Dateien auf "aktiv", die seit >60 Tagen niemand angefasst hat
-  3. Groessen-Schwellen (Log, CLAUDE.md, Datei-Anzahl in 03 Planung)
-  4. Alter von "02 Stand" (die Datei, die als einzige Wahrheit gilt)
-  5. Log-Luecken: Tage mit Code-Commits ohne Log-Eintrag
-  6. Kaputte Wikilinks (Ziel existiert nicht)
+
+  ROT — Wahrheits-Risiko, VOR der Arbeit ansehen:
+  R1. Fehlende Kopfzeilen (status / beschreibung)
+  R2. "02 Stand" veraltet (die Datei, die als einzige Wahrheit gilt)
+  R3. Log-Luecken: Tage mit Code-Commits ohne Log-Eintrag
+  R4. Jeder Gelb-Befund, der laenger als GELB_ESKALATION_TAGE offen ist
+
+  GELB — Hausarbeit, blockiert nicht, verfaellt aber:
+  G1. Volltext-Log-Eintraege aelter als 4 Wochen (= die Komprimier-Regel)
+  G2. Planungs-Dateien ohne gueltigen Geltungs-Anker
+  G3. "aktiv", aber seit >60 Tagen nicht aktualisiert
+  G4. CLAUDE.md-Wachstums-Alarm (Zeilen) + das belegte Mass (Regel-Anzahl)
+  G5. Kaputte Wikilinks
 
 BEKANNTE LUECKE — was er NICHT faengt:
   - ob der INHALT einer Datei stimmt (nur ob sie gepflegt aussieht)
   - ob ein Log-Eintrag vollstaendig ist (nur ob es ihn gibt)
   - Drift zwischen Vault-Roadmap und GSD-Roadmap
   - ob eine Entscheidung noch zur Marktrichtung passt (US-first)
+  - der Anker-Check prueft, ob ein Anker EXISTIERT und in der Roadmap
+    vorkommt — nicht, ob er der RICHTIGE ist. Ein falsch gesetzter Anker
+    ist gruen. Bewusste Restluecke.
 Wer diesen Katalog erweitert: Luecken-Liste hier mitpflegen.
 
 AUFRUF:  python scripts/vault_guard.py [--kurz]
-EXIT:    0 = sauber, 1 = rote Befunde
+EXIT:    0 = sauber (oder nur Gelb), 1 = rote Befunde
 """
 
 import io
+import json
 import os
 import re
 import subprocess
@@ -49,8 +143,25 @@ from datetime import datetime, timedelta
 VAULT = r"C:\Users\andre\OneDrive\Desktop\Nerve-Vault"
 REPO = r"C:\Users\andre\dev\salesnerve"
 
-# --- Schwellen. Reissen sie, ist das ein roter Befund, kein Gefuehl. ---
-MAX_LOG_ZEILEN = 1000
+# --- Die Komprimier-Regel als Messgroesse, nicht als Zeilen-Schwelle. ---
+# Ersetzt MAX_LOG_ZEILEN (Herleitung im Kopf, Fehler 2a).
+# 28 Tage = die "~4 Wochen" aus Ablage-Regel §4.
+# ⚠ WIDERSPRUCH AUFGELOEST 07.08.: Die Kopfzeile von "05 Log.md" sagte
+# "~3 Wochen", Ablage-Regel §4 sagte "~4 Wochen", und commit_tage()
+# vergleicht gegen 21 Tage. Drei Zahlen fuer dieselbe Sache. Gewaehlt: 28.
+# Begruendung — 28 ist die SICHERE Richtung: der Luecken-Check (R3) braucht
+# die '## Datum'-Anker der letzten 21 Tage. Wer erst nach 28 Tagen
+# komprimiert, laesst sie stehen. Wer nach 21 komprimiert, kann genau den
+# Anker abraeumen, den R3 im selben Lauf noch sucht -- exakt der Fehlalarm
+# vom 03.08.
+KOMPRIMIER_TAGE = 28
+
+# Ab wann gilt ein alter Eintrag als "noch Volltext"? Beobachtet im Bestand:
+# komprimierte Stummel sind 5 und 6 Zeilen lang (Datum + Typ + Verweis ins
+# Archiv), Volltext-Eintraege im Schnitt 26. Grenze knapp UEBER dem
+# beobachteten Stummel-Maximum -- nicht am Istwert eines Volltextes gewaehlt.
+VOLLTEXT_ZEILEN = 8
+
 # --- CLAUDE.md: Schwelle am 2026-08-03 UMGEWIDMET, nicht gebogen. ---
 # Vorgeschichte: 700 war aus dem belegten Schnitt-Potenzial hergeleitet, nicht aus
 # einer Wirkungs-Messung. Am 03.08. wurde recherchiert, was belegt ist:
@@ -72,6 +183,8 @@ MAX_LOG_ZEILEN = 1000
 # Zeilen sind bei uns ohnehin ein Zerrspiegel: 697 Zeilen = 98.634 Zeichen (~30k Token),
 # davon 107 Zeilen ueber 300 Zeichen. Unsere Zeilen sind 3-5x laenger als normale.
 # Das ehrliche Mass steht darunter: MAX_DAUER_REGELN.
+# ⚠ Seit 07.08. GELB statt ROT: ein Wachstums-Alarm ist Hausarbeit, kein
+# Wahrheits-Risiko. Er verfaellt trotzdem (GELB_ESKALATION_TAGE).
 MAX_CLAUDE_ZEILEN = 900
 
 # --- Das BELEGTE Mass: Anzahl der IMMER geltenden harten Regeln. ---
@@ -110,10 +223,24 @@ MAX_CLAUDE_ZEILEN = 900
 #     wird NICHT gezaehlt -- obwohl die Sonnet-Messkurve, die die Schwelle begruendet,
 #     dort haerter zutrifft. Offener Punkt, in der Roadmap vermerkt.
 MAX_DAUER_REGELN = 40
-MAX_PLANUNG_DATEIEN = 25
-MAX_AKTIV_TAGE = 60          # "aktiv", aber so lange nicht angefasst = verdaechtig
+
+MAX_AKTIV_TAGE = 60          # "aktiv", aber so lange nicht aktualisiert = verdaechtig
 MAX_STAND_TAGE = 30          # "02 Stand" gilt als einzige Wahrheit ueber den Systemzustand
 LOG_LUECKE_TAGE = 2          # Code-Commits ohne Log-Eintrag binnen 2 Tagen = rot
+
+# --- Die Gelb-Eskalation: das Gegengift gegen den Gelb-Friedhof. ---
+# Fables Auflage zum Zwei-Stufen-Modell: "GELB braucht eine Eskalation, sonst ist es
+# ein Friedhof." Ohne sie landet man in sechs Monaten wieder bei 46-von-50 -- nur
+# diesmal mit gutem Gewissen, weil ja nichts rot war.
+# 14 Tage: eine Hausarbeit, die zwei Wochen niemand anfasst, ist keine Hausarbeit mehr.
+GELB_ESKALATION_TAGE = 14
+ZUSTAND_DATEI = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             ".vault_guard_gelb.json")
+
+# Ordner, deren Dateien einen Geltungs-Anker tragen muessen (ersetzt die Datei-Zaehlung).
+ANKER_PFLICHT_ORDNER = "03 Planung"
+# Anker-Werte, die KEINEN Roadmap-Treffer brauchen, weil sie bewusst etwas anderes sagen.
+ANKER_FREI = ("dauerhaft", "verworfen")
 
 SKIP_ORDNER = {".obsidian", ".trash", ".git", ".vault-tools", "node_modules"}
 # Dateien ohne Kopfzeilen-Pflicht (Regelwerk + Briefing sind keine Notizen)
@@ -153,8 +280,31 @@ def kopf(text):
     return daten
 
 
-def tage_her(pfad):
-    return (datetime.now() - datetime.fromtimestamp(os.path.getmtime(pfad))).days
+def alter_tage(kopfdaten, pfad):
+    """Alter in Tagen — aus `letzte_aktualisierung`, NICHT aus dem Datei-Datum.
+
+    ⚠ UMGESTELLT 2026-08-07 (Fable-Fund). Vorher haing das am mtime. Beim
+    Aufraeumen am 02.08. wurden alle 26 Planungs-Dateien angefasst -> alle
+    Uhren auf null, der 60-Tage-Check konnte bis Oktober nichts mehr finden.
+    Auch ein OneDrive-Sync setzt mtime zurueck. Das Kopfzeilen-Feld ist eine
+    ABSICHTSERKLAERUNG und laesst sich nicht versehentlich zuruecksetzen.
+    Rueckfall auf mtime nur, wenn das Feld fehlt oder unlesbar ist -- dann
+    wird das im Befund mitgesagt, damit die Zahl nicht faelschlich als
+    belegt gilt.
+    """
+    roh = (kopfdaten.get("letzte_aktualisierung") or "").strip()
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", roh)
+    if m:
+        try:
+            d = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            return (datetime.now() - d).days, True
+        except ValueError:
+            pass
+    try:
+        return (datetime.now()
+                - datetime.fromtimestamp(os.path.getmtime(pfad))).days, False
+    except OSError:
+        return 0, False
 
 
 def zeilen(pfad):
@@ -173,8 +323,8 @@ def commit_tage(n=21):
         return []
 
 
-def log_tage(text):
-    """Datumsangaben der Eintraege in 05 Log.md.
+def log_eintraege(text):
+    """Alle '## JJJJ-MM-TT'-Eintraege als (Datum, Zeilenzahl, Titel).
 
     Erkennt AUCH Bereichs-Ueberschriften wie '## 2026-07-23/24 — ...'.
     Ohne das meldete der Waechter am 02.08. einen Eintrag als fehlend, der
@@ -183,28 +333,67 @@ def log_tage(text):
     seinem Katalog steht' auch in die andere Richtung belegt: ein ROTER
     Waechter kann ebenso luegen, wenn sein Muster zu eng ist.
     """
-    tage = set(re.findall(r"^##\s+(\d{4}-\d{2}-\d{2})", text, re.M))
-    # Bereiche: '2026-07-23/24' -> zusaetzlich 2026-07-24 eintragen
-    for jahr, monat, _tag1, tag2 in re.findall(
-            r"^##\s+(\d{4})-(\d{2})-(\d{2})/(\d{1,2})", text, re.M):
-        tage.add(f"{jahr}-{monat}-{int(tag2):02d}")
-    return tage
+    zeilen_liste = text.split("\n")
+    treffer = []
+    for i, z in enumerate(zeilen_liste):
+        m = re.match(r"^##\s+(\d{4})-(\d{2})-(\d{2})(?:/(\d{1,2}))?\s*(.*)$", z)
+        if m:
+            treffer.append((i, m, z))
+    ergebnis = []
+    for idx, (i, m, roh) in enumerate(treffer):
+        ende = treffer[idx + 1][0] if idx + 1 < len(treffer) else len(zeilen_liste)
+        datum = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+        zweittag = (f"{m.group(1)}-{m.group(2)}-{int(m.group(4)):02d}"
+                    if m.group(4) else None)
+        titel = roh.lstrip("#").strip()
+        ergebnis.append({
+            "datum": datum, "zweittag": zweittag,
+            "zeilen": ende - i, "titel": titel,
+        })
+    return ergebnis
+
+
+def gelb_zustand_lesen():
+    """Erst-Melde-Daten der Gelb-Befunde. Speichert DATEN, keinen Bestand."""
+    try:
+        with io.open(ZUSTAND_DATEI, encoding="utf-8") as f:
+            d = json.load(f)
+            return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def gelb_zustand_schreiben(daten):
+    """Schreibt ueber Nebendatei + Umbenennen (CLAUDE.md: nie direkt schreiben)."""
+    tmp = ZUSTAND_DATEI + ".tmp"
+    try:
+        with io.open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(daten, ensure_ascii=False, indent=1, sort_keys=True))
+        os.replace(tmp, ZUSTAND_DATEI)
+    except OSError:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
 
 
 def main():
     kurz = "--kurz" in sys.argv
     rot, gelb = [], []
+    heute = datetime.now().strftime("%Y-%m-%d")
     dateien = md_dateien()
 
-    # ---------- 1+2: Kopfzeilen + verdaechtig alte "aktiv"-Dateien ----------
-    uebersicht, ohne_kopf, alt_aktiv = [], [], []
+    # ---------- R1 + G2 + G3: Kopfzeilen, Geltungs-Anker, alte "aktiv"-Dateien -------
+    roadmap_text = lies(os.path.join(VAULT, "01 Roadmap.md"))
+    uebersicht, ohne_kopf, alt_aktiv, ohne_anker = [], [], [], []
     for p in dateien:
         rel = os.path.relpath(p, VAULT).replace("\\", "/")
-        k = kopf(lies(p))
+        text = lies(p)
+        k = kopf(text)
         status = k.get("status", "")
         beschr = k.get("beschreibung", "")
-        alter = tage_her(p)
-        uebersicht.append((rel, status or "-", alter, beschr))
+        a, belegt = alter_tage(k, p)
+        uebersicht.append((rel, status or "-", a, belegt, beschr))
 
         if os.path.basename(p) not in KEIN_KOPF_NOETIG:
             if not status or not beschr:
@@ -212,71 +401,51 @@ def main():
                     x for x, y in (("status", status), ("beschreibung", beschr)) if not y
                 )
                 ohne_kopf.append(f"{rel}  (fehlt: {fehlt})")
-        if status == "aktiv" and alter > MAX_AKTIV_TAGE:
-            alt_aktiv.append(f"{rel}  ({alter} Tage nicht angefasst)")
+
+        if status == "aktiv" and a > MAX_AKTIV_TAGE:
+            quelle = "" if belegt else "  [aus Datei-Datum geschaetzt, Kopfzeilen-Feld fehlt]"
+            alt_aktiv.append(f"{rel}  ({a} Tage nicht aktualisiert){quelle}")
+
+        # --- Geltungs-Anker (ersetzt die Datei-Zaehlung) ---
+        if rel.startswith(ANKER_PFLICHT_ORDNER + "/"):
+            anker = (k.get("anker") or "").strip()
+            if not anker:
+                ohne_anker.append(f"{rel}  — kein `anker:` in der Kopfzeile")
+            elif anker.lower().startswith(ANKER_FREI):
+                pass                                  # bewusst erklaert, kein Treffer noetig
+            elif anker.upper() == "UNKLAR":
+                ohne_anker.append(f"{rel}  — anker: UNKLAR (gilt das noch? wann kommt es dran?)")
+            elif anker not in roadmap_text:
+                ohne_anker.append(
+                    f"{rel}  — anker '{anker}' kommt in 01 Roadmap.md NICHT vor")
 
     if ohne_kopf:
         rot.append((f"{len(ohne_kopf)} Datei(en) ohne vollstaendige Kopfzeile "
                     f"— unauffindbar, weil sie in keiner Uebersicht auftauchen", ohne_kopf))
-    if alt_aktiv:
-        rot.append((f"{len(alt_aktiv)} Datei(en) stehen auf 'aktiv', wurden aber seit "
-                    f">{MAX_AKTIV_TAGE} Tagen nicht angefasst — erledigt? dann Status setzen "
-                    f"+ archivieren", alt_aktiv))
 
-    # ---------- 3: Groessen-Schwellen ----------
-    schwellen = []
-    for datei, grenze in (("05 Log.md", MAX_LOG_ZEILEN), ("CLAUDE.md", MAX_CLAUDE_ZEILEN)):
-        p = os.path.join(VAULT, datei)
-        if os.path.exists(p):
-            z = zeilen(p)
-            if z > grenze:
-                if datei == "CLAUDE.md":
-                    schwellen.append(
-                        f"{datei}: {z} Zeilen (Wachstums-Alarm ab {grenze}) — hier wurde "
-                        f"ergaenzt, ohne gegenzubuchen. Regel: ein Rein, eins Raus.")
-                else:
-                    schwellen.append(
-                        f"{datei}: {z} Zeilen (Grenze {grenze}) — komprimieren, NICHT splitten")
-
-    # Das belegte Mass: Anzahl der IMMER geltenden harten Regeln (siehe Herleitung oben).
-    p_cl = os.path.join(VAULT, "CLAUDE.md")
-    if os.path.exists(p_cl):
-        with io.open(p_cl, encoding="utf-8") as f:
-            kopfzeilen = [z for z in f if z.startswith("#")]
-        dauer = [z.strip() for z in kopfzeilen
-                 if ("hart" in z.lower() or "pflicht" in z.lower()
-                     or "⛔" in z or "⚡" in z or "★" in z)]
-        if len(dauer) > MAX_DAUER_REGELN:
-            schwellen.append(
-                f"CLAUDE.md: {len(dauer)} immer geltende harte Regeln (Grenze "
-                f"{MAX_DAUER_REGELN}) — ab ~40 haelt Sonnet 5 belegt nur noch 9-31 % "
-                f"aller Regeln gleichzeitig ein. Zusammenfuehren oder in einen "
-                f"Waechter ueberfuehren, NICHT nur kuerzen.")
-
-    pl = os.path.join(VAULT, "03 Planung")
-    if os.path.isdir(pl):
-        anz = len([f for f in os.listdir(pl) if f.endswith(".md")])
-        if anz > MAX_PLANUNG_DATEIEN:
-            schwellen.append(f"03 Planung/: {anz} Dateien (Grenze {MAX_PLANUNG_DATEIEN}) "
-                             f"— Erledigtes ins Archiv")
-    if schwellen:
-        rot.append(("Groessen-Schwellen gerissen", schwellen))
-
-    # ---------- 4: "02 Stand" — die gefaehrlichste Datei ----------
+    # ---------- R2: "02 Stand" — die gefaehrlichste Datei ----------
     stand = os.path.join(VAULT, "02 Stand.md")
     if os.path.exists(stand):
-        a = tage_her(stand)
+        a, belegt = alter_tage(kopf(lies(stand)), stand)
         if a > MAX_STAND_TAGE:
             rot.append((f"'02 Stand' ist {a} Tage alt (Grenze {MAX_STAND_TAGE})", [
                 "Diese Datei gilt als EINZIGE WAHRHEIT ueber den Systemzustand.",
                 "Veraltet erzeugt sie falsche Entscheidungen — schlimmer als eine zu grosse Datei.",
                 "Gegen den echten Code verifizieren, nicht aus dem Kopf fortschreiben.",
+                "" if belegt else "[aus Datei-Datum geschaetzt — `letzte_aktualisierung` fehlt]",
             ]))
 
-    # ---------- 5: Log-Luecken (haette den 31.07. gefangen) ----------
+    # ---------- R3: Log-Luecken (haette den 31.07. gefangen) ----------
     logp = os.path.join(VAULT, "05 Log.md")
+    eintraege = []
     if os.path.exists(logp):
-        vorhanden = log_tage(lies(logp))
+        logtext = lies(logp)
+        eintraege = log_eintraege(logtext)
+        vorhanden = set()
+        for e in eintraege:
+            vorhanden.add(e["datum"])
+            if e["zweittag"]:
+                vorhanden.add(e["zweittag"])
         grenze = (datetime.now() - timedelta(days=LOG_LUECKE_TAGE)).strftime("%Y-%m-%d")
         fehlend = [t for t in commit_tage() if t not in vorhanden and t < grenze]
         if fehlend:
@@ -285,7 +454,59 @@ def main():
                 "→ Genau dieser Ausfall (31.07.) hat den Vault-Aufraeum-Auftrag ausgeloest.",
             ]))
 
-    # ---------- 6: Kaputte Wikilinks ----------
+    # ---------- G1: Volltext aelter als 4 Wochen (ersetzt MAX_LOG_ZEILEN) ----------
+    stichtag = (datetime.now() - timedelta(days=KOMPRIMIER_TAGE)).strftime("%Y-%m-%d")
+    zu_alt = [e for e in eintraege
+              if e["datum"] < stichtag and e["zeilen"] > VOLLTEXT_ZEILEN]
+    if zu_alt:
+        gelb.append(("log_volltext_alt",
+                     f"{len(zu_alt)} Log-Eintrag/-Eintraege aelter als {KOMPRIMIER_TAGE} Tage "
+                     f"stehen noch im Volltext",
+                     [f"{e['datum']}  ({e['zeilen']} Zeilen)  {e['titel'][:58]}"
+                      for e in zu_alt[:12]]
+                     + ["→ Einzeiler MIT Datum, Volltext ins Archiv. NICHT splitten.",
+                        "→ Datums-Anker muessen erhalten bleiben (Regeln verweisen darauf)."]))
+
+    # ---------- G2: Geltungs-Anker ----------
+    if ohne_anker:
+        gelb.append(("anker_fehlt",
+                     f"{len(ohne_anker)} Planungs-Datei(en) ohne gueltigen Geltungs-Anker",
+                     ohne_anker[:14]
+                     + ["→ `anker: <Roadmap-Punkt>` in die Kopfzeile, oder "
+                        "`anker: verworfen (Grund)` / `anker: dauerhaft (Grund)`.",
+                        "→ Das ist die Frage 'gilt das noch, und wann kommt es dran?' "
+                        "als Pruefung statt als Appell."]))
+
+    # ---------- G3: alte "aktiv"-Dateien ----------
+    if alt_aktiv:
+        gelb.append(("aktiv_alt",
+                     f"{len(alt_aktiv)} Datei(en) stehen auf 'aktiv', wurden aber seit "
+                     f">{MAX_AKTIV_TAGE} Tagen nicht aktualisiert", alt_aktiv[:14]))
+
+    # ---------- G4: CLAUDE.md — Wachstums-Alarm + das belegte Mass ----------
+    schwellen = []
+    p_cl = os.path.join(VAULT, "CLAUDE.md")
+    if os.path.exists(p_cl):
+        z = zeilen(p_cl)
+        if z > MAX_CLAUDE_ZEILEN:
+            schwellen.append(
+                f"CLAUDE.md: {z} Zeilen (Wachstums-Alarm ab {MAX_CLAUDE_ZEILEN}) — hier wurde "
+                f"ergaenzt, ohne gegenzubuchen. Regel: ein Rein, eins Raus.")
+        with io.open(p_cl, encoding="utf-8") as f:
+            kopfzeilen = [z2 for z2 in f if z2.startswith("#")]
+        dauer = [z2.strip() for z2 in kopfzeilen
+                 if ("hart" in z2.lower() or "pflicht" in z2.lower()
+                     or "⛔" in z2 or "⚡" in z2 or "★" in z2)]
+        if len(dauer) > MAX_DAUER_REGELN:
+            schwellen.append(
+                f"CLAUDE.md: {len(dauer)} immer geltende harte Regeln (Grenze "
+                f"{MAX_DAUER_REGELN}) — ab ~40 haelt Sonnet 5 belegt nur noch 9-31 % "
+                f"aller Regeln gleichzeitig ein. Zusammenfuehren oder in einen "
+                f"Waechter ueberfuehren, NICHT nur kuerzen.")
+    if schwellen:
+        gelb.append(("claude_wachstum", "Regeldatei-Alarm", schwellen))
+
+    # ---------- G5: Kaputte Wikilinks ----------
     namen = {os.path.splitext(os.path.basename(p))[0] for p in dateien}
     pfade = {os.path.relpath(p, VAULT).replace("\\", "/")[:-3] for p in dateien}
     # ⚠ KORRIGIERT 2026-08-03 (Fable-Fund): Bis hierher kannte der Check NUR .md-Dateien als
@@ -303,12 +524,12 @@ def main():
             _rel = os.path.relpath(os.path.join(_wurzel, _f), VAULT).replace("\\", "/")
             pfade.add(_rel)
     # Ordner sind gueltige Verweis-Ziele (Obsidian oeffnet sie)
-    ordner = set()
+    ordner_ziele = set()
     for p in dateien:
         rel = os.path.relpath(p, VAULT).replace("\\", "/")
         teile = rel.split("/")[:-1]
         for i in range(len(teile)):
-            ordner.add("/".join(teile[:i + 1]))
+            ordner_ziele.add("/".join(teile[:i + 1]))
     kaputt = {}
     for p in dateien:
         for ziel in re.findall(r"\[\[([^\]|#]+)", lies(p)):
@@ -316,13 +537,42 @@ def main():
             # Obsidian erlaubt die .md-Endung im Verweis -- unser Muster muss das auch
             if z.endswith(".md"):
                 z = z[:-3]
-            if not z or z in namen or z in pfade or z in ordner or z.split("/")[-1] in namen:
+            if (not z or z in namen or z in pfade or z in ordner_ziele
+                    or z.split("/")[-1] in namen):
                 continue
             kaputt.setdefault(z, []).append(os.path.relpath(p, VAULT).replace("\\", "/"))
     if kaputt:
-        gelb.append((f"{len(kaputt)} Verweis-Ziel(e) existieren nicht", [
+        gelb.append(("wikilinks", f"{len(kaputt)} Verweis-Ziel(e) existieren nicht", [
             f"[[{z}]]  ← verlinkt in: {', '.join(q[:2])}" for z, q in sorted(kaputt.items())[:15]
         ]))
+
+    # ---------- R4: Gelb-Eskalation — das Gegengift gegen den Gelb-Friedhof ----------
+    zustand = gelb_zustand_lesen()
+    offen = {g[0] for g in gelb}
+    for k in list(zustand):
+        if k not in offen:
+            del zustand[k]                    # Befund erledigt -> Uhr zurueck auf null
+    for kennung, _t, _p in gelb:
+        zustand.setdefault(kennung, heute)
+    gelb_zustand_schreiben(zustand)
+
+    eskaliert, gelb_alter = [], {}
+    for kennung, titel, _p in gelb:
+        seit = zustand.get(kennung, heute)
+        try:
+            tage = (datetime.now() - datetime.strptime(seit, "%Y-%m-%d")).days
+        except ValueError:
+            tage = 0
+        gelb_alter[kennung] = (seit, tage)
+        if tage >= GELB_ESKALATION_TAGE:
+            eskaliert.append(f"{titel}  (offen seit {seit}, {tage} Tage)")
+    if eskaliert:
+        rot.append((f"{len(eskaliert)} Gelb-Befund(e) liegen laenger als "
+                    f"{GELB_ESKALATION_TAGE} Tage", eskaliert + [
+                        "→ Gelb ohne Verfallsdatum wird ein Friedhof. Jetzt abarbeiten,",
+                        "  ODER die Schwelle mit HERLEITUNG kalibrieren, ODER als bewusste",
+                        "  Ausnahme dokumentieren. Verboten: auf den Istwert heben.",
+                    ]))
 
     # ================= AUSGABE =================
     out = []
@@ -333,39 +583,49 @@ def main():
     if not kurz:
         out.append("\n### BESTAND (live aus den Dateien erzeugt, keine gespeicherte Liste)\n")
         aktuell = None
-        for rel, status, alter, beschr in uebersicht:
+        for rel, status, a, belegt, beschr in uebersicht:
             ordner = rel.rsplit("/", 1)[0] if "/" in rel else "(Wurzel)"
             if ordner != aktuell:
                 out.append(f"\n  {ordner}/")
                 aktuell = ordner
             name = rel.rsplit("/", 1)[-1][:-3]
-            out.append(f"    {name[:44]:<44} {status[:11]:<11} {alter:>4}d  {beschr[:46]}")
+            marke = "d " if belegt else "d?"
+            out.append(f"    {name[:44]:<44} {status[:11]:<11} {a:>4}{marke} {beschr[:45]}")
 
     out.append("\n" + "=" * 72)
     if rot:
-        out.append(f"  ROT — {len(rot)} Befund(e), VOR der Arbeit ansehen")
+        out.append(f"  ROT — {len(rot)} Befund(e). Wahrheits-Risiko, VOR der Arbeit ansehen")
         out.append("=" * 72)
         for titel, punkte in rot:
             out.append(f"\n  [ROT] {titel}")
             for pt in punkte[:12]:
-                out.append(f"        - {pt}")
+                if pt:
+                    out.append(f"        - {pt}")
             if len(punkte) > 12:
                 out.append(f"        ... und {len(punkte) - 12} weitere")
     else:
-        out.append("  ROT — keine Befunde.")
+        out.append("  ROT — keine Befunde. Arbeit kann beginnen.")
         out.append("=" * 72)
 
-    for titel, punkte in gelb:
-        out.append(f"\n  [GELB] {titel}")
-        for pt in punkte[:12]:
-            out.append(f"         - {pt}")
+    if gelb:
+        out.append(f"\n  GELB — {len(gelb)} Hausarbeit(en). Blockiert nicht, verfaellt aber "
+                   f"nach {GELB_ESKALATION_TAGE} Tagen zu ROT")
+        for kennung, titel, punkte in gelb:
+            seit, tage = gelb_alter.get(kennung, (heute, 0))
+            rest = GELB_ESKALATION_TAGE - tage
+            out.append(f"\n  [GELB] {titel}   (seit {seit} — noch {max(rest, 0)} Tage)")
+            for pt in punkte[:12]:
+                out.append(f"         - {pt}")
+            if len(punkte) > 12:
+                out.append(f"         ... und {len(punkte) - 12} weitere")
 
     out.append("\n" + "-" * 72)
-    out.append(f"  {len(dateien)} Dateien | Log {zeilen(logp) if os.path.exists(logp) else 0} Z. "
+    out.append(f"  {len(dateien)} Dateien | Log {len(eintraege)} Volltext-Eintraege "
                f"| Regeln {zeilen(os.path.join(VAULT, 'CLAUDE.md'))} Z.")
     out.append("  Dieser Waechter prueft NICHT: ob Inhalte stimmen, ob ein Log-Eintrag")
     out.append("  vollstaendig ist, ob beide Roadmaps synchron sind, ob Entscheidungen")
-    out.append("  noch zur Marktrichtung (US-first) passen. Bekannte Luecke, bewusst benannt.")
+    out.append("  noch zur Marktrichtung (US-first) passen, und ob ein gesetzter Anker")
+    out.append("  der RICHTIGE ist. Bekannte Luecken, bewusst benannt.")
     out.append("-" * 72)
 
     text = "\n".join(out)

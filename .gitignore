@@ -27,3 +27,6 @@ logs/*.json
 salesnerve_log_*.txt
 nerve_log_*.txt
 !logs/.gitkeep
+
+# Zustands-Datei des Vault-Waechters (nur Melde-Daten, aendert sich bei jedem Lauf)
+scripts/.vault_guard_gelb.json
