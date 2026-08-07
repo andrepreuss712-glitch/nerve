@@ -591,7 +591,11 @@ _RIEGEL_SOLL_JE_DATEI = {
     'routes/training.py': 9,
     'services/anonymization.py': 5,
     'services/claude_service.py': 47,
-    'services/coaching_service.py': 1,
+    'services/coaching_service.py': 3,   # 1x _analysis_lock_for + 2x _conv_locks_guard
+                                         # (Phase MEHRNUTZER-REST-1: Soll HOCHgezogen, nicht
+                                         #  gesenkt — bei 1 wuerden die beiden Ablage-Riegel
+                                         #  allein den Eintrag erfuellen und er koennte den
+                                         #  Ausfall von Variante A nicht mehr melden.)
     'services/cost_tracker.py': 2,
     'services/deepgram_service.py': 27,
     'services/einwand_keyword_matcher.py': 2,

@@ -2,10 +2,12 @@
 import json
 import threading
 from datetime import datetime, timezone
+from contextlib import contextmanager
 import config
 from services.claude_service import claude_client, http_llm_client
 
-_analysis_lock = threading.Lock()
+_conv_locks = {}                       # conv_id(str) -> [threading.Lock, Nehmer-Zaehler]
+_conv_locks_guard = threading.Lock()   # schuetzt NUR die Ablage; NIE ueber einem Netz-Aufruf
 
 POSTCALL_PROMPT = """Du bist ein erfahrener Sales-Coach. Analysiere dieses Verkaufsgespraech und schlage exakt 3 Lernkarten vor.
 
@@ -56,7 +58,7 @@ def generate_postcall_analysis(conv_id, user_id, einwaende, painpoints,
     T-04.11-05: Guard against duplicate analysis — check if suggestions
     already exist for this conv_id before calling Sonnet.
     """
-    with _analysis_lock:
+    with _analysis_lock_for(conv_id):
         # T-04.11-05: Duplicate guard — one analysis per conversation
         from database.db import get_session
         from database.models import LearningCard
@@ -464,3 +466,54 @@ def get_longterm_data(user_id, weeks=12):
         }
     finally:
         db.close()
+
+
+# ── Riegel PRO conv_id (Phase 08.23.2.MEHRNUTZER-REST-1) ─────────────────────
+# Ersetzt den frueher prozessweiten _analysis_lock. Der hielt waehrend des ganzen
+# Sonnet-Aufrufs (config.HTTP_LLM_TIMEOUT_LONG_S = 45 s, config.py:134) ALLE Nutzer
+# auf; ein zweiter wartete bis 45 s, ein dritter bis 90 s, und jeder Wartende belegte
+# einen der 64 gthread-Threads (deploy/nerve.service:35-36).
+#
+# WARUM NEHMER-ZAEHLER statt Deckel-/LRU-Ablage (Roadmap verlangt die Begruendung):
+# Eine Verdraengung, WAEHREND ein Riegel gehalten wird, ist exakt das
+# Duplikatschutz-Loch, das diese Phase verhindern soll. Der Zaehler ist die einzige
+# Variante, bei der der Schutz nicht von einer Groessen-Annahme abhaengt. Die Ablage
+# bleibt so gross wie die Zahl der GERADE LAUFENDEN Analysen (<= 64) und ist danach
+# leer — auf allen regulaeren und allen Ausnahme-Pfaden (E1-E7) sowie bei einem
+# Fehlschlag des acquire() selbst kein Wachstum ueber die Zeit.
+#
+# _conv_locks_guard wird AUSSCHLIESSLICH fuer Dict-Operationen gehalten: kein
+# get_session, kein messages.create, kein sleep, kein emit. (Dieselbe Bau-Vorschrift,
+# die tests/test_session_lock_blocking_calls_guard.py:158-166 fuer _session_state_lock
+# durchsetzt.)
+@contextmanager
+def _analysis_lock_for(conv_id):
+    """Riegel pro conv_id. Duplikatschutz identisch stark, verschiedene Anrufe
+    blockieren sich nicht mehr.
+
+    key = str(conv_id): routes/learning.py:23, :211 und :383 lesen conv_id OHNE Cast aus
+    dem JSON — 5 und "5" bekaemen sonst VERSCHIEDENE Riegel, obwohl
+    filter_by(call_id=...) in Postgres denselben Datensatz meint. Kein Sonderfall fuer
+    None/falsy: None wird zu 'None' und teilt sich einen Riegel. Fail-safe Richtung —
+    mehr Serialisierung, nie weniger Schutz.
+    """
+    key = str(conv_id)
+    with _conv_locks_guard:                   # (1) holen/anlegen + Zaehler HOCH
+        eintrag = _conv_locks.get(key)        #     HOCH vor acquire(): sonst koennte
+        if eintrag is None:                   #     ein Wartender wegge-raeumt werden
+            eintrag = [threading.Lock(), 0]   #     und ein Dritter legte einen ZWEITEN
+            _conv_locks[key] = eintrag        #     Riegel unter demselben Key an
+        eintrag[1] += 1
+    riegel = eintrag[0]
+    erworben = False
+    try:
+        riegel.acquire()                      # (2) warten AUSSERHALB des Ablage-Riegels
+        erworben = True                       #     acquire() liegt IM try: wirft es
+        yield                                 #     (Signal/Abbruch), raeumt das finally
+    finally:                                  #     den Zaehler trotzdem wieder ab
+        if erworben:
+            riegel.release()                  # (3) erst freigeben ...
+        with _conv_locks_guard:               # (4) ... dann Zaehler RUNTER, unter der
+            eintrag[1] -= 1                   #     Ablage: '-= 1' und '== 0' sind sonst
+            if eintrag[1] == 0 and _conv_locks.get(key) is eintrag:
+                del _conv_locks[key]          #     nicht atomar zueinander
