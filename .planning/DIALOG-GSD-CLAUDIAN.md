@@ -3529,3 +3529,32 @@ neue Konsum-Stelle; nur der Riegel darum herum ist ein anderer).
 Vormittag zu, dass der richtige Fix **„keine Zeilennummern in Schilder"** ist statt „diese
 Nummern nachziehen"? Falls ja, gehoert das als eigener kleiner Roadmap-Eintrag angelegt, nicht
 als Beifang hier.
+
+---
+
+## ROADMAP-SYNC — 08.23.2.ZEITSTEMPEL-1 — 2026-08-10
+
+**Was geaendert wurde in `.planning/ROADMAP.md`:**
+
+1. **Neue Phase eingeschoben:** `### Phase 08.23.2.ZEITSTEMPEL-1: Sprech-Zeiten sichern — Abschnitts-Ende + Wortanzahl in transcript_segments (INSERTED 2026-08-10)` 🟡 mittel — steht direkt hinter MEHRNUTZER-REST-1, **VOR METRIK-1**.
+2. **Reihenfolge-Zeile nachgezogen** ("Reihenfolge ab hier", Andre-Entscheidung 03.08.): jetzt **MESSGERAETE-1 ✅ → ZEITSTEMPEL-1 → METRIK-1 → Coaching-Frage → SCHWAERZ-1 → …**
+3. **STATE.md:** Eintrag unter „Roadmap Evolution" + „Last activity" auf 10.08. gesetzt.
+4. **Verzeichnis angelegt:** `.planning/phases/08.23.2.ZEITSTEMPEL-1-sprech-zeiten-sichern/` (leer, noch nicht geplant).
+
+**Warum (Andre-Auftrag 10.08.):** `transcript_segments` speichert nur `ts_ms` (Beginn). Kein Ende, keine Wortanzahl → **Redeanteil · Sprechtempo · Redeblock-Laenge · Pausenlaenge** sind nicht berechenbar, das sind vier der neun Fokus-Katalog-Punkte plus das einzige Live-Symbol. Fuer jeden bereits gelaufenen Anruf sind diese Zeiten **fuer immer verloren** — deshalb VOR der Bewertungs-Abloese, nicht danach.
+
+**⚠ Ein Befund beim Nachpruefen, der ueber den Auftrag hinausgeht — bitte in die Vault-Roadmap mitnehmen:**
+Andres Beleg-Kette stimmt (models.py:966-982 hat nur ts_ms/speaker/text; deepgram_service.py:57-64 liest `alternatives[0].words` bereits). **Aber `ts_ms` stammt gar nicht von Deepgram** — es kommt aus einer **Wall-Clock-Zeichenkette mit Sekunden-Aufloesung**: `deepgram_service.py` schreibt `'ts': datetime.now().strftime('%H:%M:%S')` in den RAM-Log, `routes/app_routes.py:36-42` (`_ts_to_ms_of_day`) parst das, `:45-73` rechnet relativ zum ersten Eintrag. Der eigene Docstring sagt es woertlich (`app_routes.py:23-28`, „WARN-4"): *„KEIN ts_ms / Offset-Feld vorhanden."*
+**Folge:** Zwei Spalten anhaengen reicht **nicht**. Ein `end_ms` neben dem heutigen `ts_ms` waere auf 1 Sekunde gerundet — eine Pause von 0,4 s und eine von 1,4 s waeren ununterscheidbar. Die Phase muss die **Deepgram-Wortzeiten durch die RAM-Naht bis zum Schreiber** (`app_routes.py:548-554`) tragen. Das ist der eigentliche Aufwand, nicht die Migration.
+
+**⚖️ Frage, die Andre ausdruecklich offen gelassen hat — Zeitstempel PRO WORT?**
+Seine Rechnung traegt: alle vier Groessen kommen mit Anfang/Ende/Wortanzahl aus. Speicher-Gegenrechnung (Groessenordnung, im Plan an Prod-Zahlen nachzurechnen):
+
+| Variante | je Anruf | 10.000 Anrufe |
+|---|---|---|
+| A — Ende + Wortanzahl (2× Integer) | ~2-3 KB | ~25 MB |
+| B — zusaetzlich Wort-Tabelle (~100-110 B/Wort) | ~250-330 KB | ~2,5-3 GB (**~100×**) |
+
+Drei Argumente gegen B: **Tueroeffner-Regel** (kein Punkt des Fokus-Katalogs braucht Pro-Wort — nur Fuellwort-/Stocken-Erkennung, wortgenaue Unterbrechung, Tempo-Kurve, und keiner davon steht drin) · **DSGVO** (eine Wort-Tabelle ist faktisch eine zweite Transkript-Kopie und braucht einen eigenen Schwaerzungs-Pfad, gegen Beschluss 2; Variante A traegt keinen Text) · **Punkt 27**. **Empfehlung: A. Entscheidung faellt im Plan, nicht hier.**
+
+**Naechster Schritt:** `/gsd-discuss-phase 08.23.2.ZEITSTEMPEL-1` → `/gsd-plan-phase` → `/gsd-review --gemini` (PFLICHT bei 🟡) → `--reviews` → `/gsd-execute-phase`.

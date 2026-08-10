@@ -158,7 +158,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 > ⚠ **Prozess-Lehre (Andre-Direktive, in `Nerve-Vault/CLAUDE.md` verankert):** „Fertig" ohne Beleg ist verboten. TEMPO-1 und H1 standen **zwei Wochen** als „live" in der Roadmap, ohne je an echten Daten geprueft worden zu sein. Ab sofort gilt in beiden Roadmaps: ✅ nur mit Beleg, sonst ⚠️ NICHT BELEGT.
 > ⚠ **Zweite Lehre aus genau diesem Eintrag (03.08.):** Der Block oben war selbst ein Verstoss — drei „am Datensatz belegte" Befunde, von denen zwei erschlossen waren. **Diagnose am echten Fehler-Beleg, nicht aus der Struktur** (Vault-Regel, verankert 24.07.).
 >
-> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.):** **MESSGERAETE-1** ✅ → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → ~~Schwaerzung-Mittelweg~~ **(aufgegangen in den Engine-Neubau, s.u.)** → Schott-Restpaket → Stresstest.
+> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.; ZEITSTEMPEL-1 eingeschoben 10.08.):** **MESSGERAETE-1** ✅ → **★ ZEITSTEMPEL-1** (Sprech-Zeiten sichern — **VOR** METRIK-1, weil vier der neun Fokus-Punkte ohne Abschnitts-Ende + Wortanzahl nicht berechenbar sind und die Zeiten fuer jeden gelaufenen Anruf **fuer immer verloren** waeren; Eintrag unten) → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → ~~Schwaerzung-Mittelweg~~ **(aufgegangen in den Engine-Neubau, s.u.)** → Schott-Restpaket → Stresstest.
 >
 > 🔴 **NEUER BEFUND zur "Coaching-Frage: zusammenlegen oder streichen" — er verschiebt die Entscheidung Richtung STREICHEN oder SCHWELLE KORRIGIEREN** (gefunden 2026-08-06 bei der D-06-Abnahme von Phase 08.23.2.SOFORT-2, Fund **E-13**):
 > **Der sichtbare Teil der Coaching-Frage erreicht den Nutzer faktisch nie.** `services/claude_service.py:2278` sperrt sie: `if kategorie == 'frage' and bof_snapshot < 2: tipp = None`. Der Zaehler `_bof_count` (`:2238-2242`) zaehlt Berater-Beitraege **ohne** Fragezeichen und springt bei **jedem** Fragezeichen zurueck auf 0. Ein Cold-Caller fragt staendig → die Schwelle 2 wird praktisch nie erreicht. **Andre bestaetigt: in der gesamten Projektlaufzeit noch NIE einen Coaching-Hinweis im PiP gesehen.**
@@ -3334,6 +3334,71 @@ Plans:
 - [x] 08.23.2.MEHRNUTZER-REST-1-03-PLAN.md — Welle 2: ROT-Lauf ausrollen, rote Tor-Ausgabe verbatim belegen ✅ 2026-08-06 (`2 failed, 1140 passed, 7 skipped, 5 deselected in 86.04s`; genau eine deduplizierte Waechter-Stelle `services/coaching_service.py:84  [http_llm_client, messages.create]`; Deploy vom Tor geblockt, Production unveraendert)
 - [x] 08.23.2.MEHRNUTZER-REST-1-04-PLAN.md — Welle 3: der Fix (`coaching_service.py:8/:59`) + GRUEN-Beleg + Pruning-Notiz/Folgefunde ✅ **COMPLETE + LIVE 2026-08-07** (`e213a2a`): `_analysis_lock` geloescht, `_analysis_lock_for(conv_id)` mit Nehmer-Zaehler, `count()` weiterhin INNERHALB des Riegels, Waechter-Soll `coaching_service.py` 1 → 3 im selben Commit HOCHgezogen. **GRUEN-Beleg gemessen: `1142 passed, 7 skipped, 5 deselected, 103 warnings in 77.92s`** (= 1140 + 2 gedrehte, 0 FAILED, 0 `[BASELINE-AUTO-FIX]`), Neustart durchgelaufen (pid 2627498, 07:46:56 UTC) — der Fix ist auf Production live. Deploy von Andre selbst gefahren (Deny-Regel `~/.claude/settings.json:34-37` sperrt `deploy.sh` fuer den Agenten). Auflage 1 in Richtung (a) geloest (`acquire()` im `try` + `erworben`-Flag; Restfenster Signal-vor-Flag benannt, nicht geschlossen). ⚠ **Auflage 2: der Fix nimmt die WARTEZEIT, nicht den THREAD-VERBRAUCH** — 50 gleichzeitige Anruf-Enden belegen weiterhin 50 von 64 Threads, nur ~45 s statt ~37 min. Der 50-Nutzer-Fall gehoert zu Fund (2) + Lasttest, nicht hierher. SUMMARY: `08.23.2.MEHRNUTZER-REST-1-04-SUMMARY.md`. **Abnahme-Belege (Claudian, am Live-Server gegengeprueft):** neuer Riegel vorhanden, alter globaler Riegel 0 Treffer, Existenz-Anker greift; Dienst aktiv seit 07.08. 07:46:56 UTC; echter Test-Anruf (conv 267) — `outcome=meeting_booked`, `coaching_score=43.23`, `transcript_resolved`+`audio_health_resolved` true, **3 LearningCards erzeugt** → der neue Riegel hat am echten Anruf funktioniert. **ZWEI FOLGEFUNDE (adversariale Nachkontrolle, Gemini auf dem starken Modell, 07.08.):** **F-1 (wichtig, KEIN Rueckbau)** — der alte globale Riegel war faktisch auch eine **Drossel**; ohne ihn laufen bei N gleichzeitigen Anruf-Enden N Sonnet-Requests PARALLEL statt seriell → Anthropic-Rate-Limit (429), Verbindungsabbrueche, Kosten-Spitzen. Gehoert zu Fund (2) + Lasttest, der Lasttest muss diese Grenze ausdruecklich mitmessen. **F-2 (klein)** — `key = str(conv_id)` haertet gegen den TYP, nicht gegen Whitespace/fuehrende Nullen (`" 123"` vs `123` = zwei Riegel fuer denselben Datensatz); Schaden auf den eigenen Call begrenzt, bei der naechsten Beruehrung der Datei mitnehmen, kein eigener Deploy. **F-3 (Lehre wichtiger als der Fix, Zweitlauf MIT vollstaendiger Riegel-Fabrik im Briefing)** — `with riegel:` wurde verworfen, WEIL drei Abnahme-Kriterien auf den `release()`-Anker zeigten. Falsche Richtung: **ein Abnahme-Kriterium darf nie eine schlechtere Code-Form erzwingen, der Anker folgt dem Code.** Bei der naechsten Beruehrung von `coaching_service.py` auf `with riegel:` umbauen und die drei Kriterien mitziehen — kein eigener Deploy. (Geminis konkrete Begruendung — `MemoryError` zwischen `acquire()` und `erworben = True` — traegt NICHT: `STORE_FAST` auf ein Singleton fordert keinen Speicher an. Die Schlussfolgerung stimmt trotzdem, aus dem strukturellen Grund.) **Im selben Lauf erstmals unabhaengig BESTAETIGT:** 4 von 7 Angriffsfragen gehen ins Leere — Last mit 40 Faeden, Zaehler-Integritaet, Reihenfolge inkl. `is`-Identitaetspruefung, Verklemmung.
 
+
+---
+
+### Phase 08.23.2.ZEITSTEMPEL-1: Sprech-Zeiten sichern — Abschnitts-Ende + Wortanzahl in `transcript_segments` (INSERTED 2026-08-10) 🟡 ★ VOR METRIK-1, NICHT NACHHOLBAR
+
+**Einordnung:** direkt hinter **08.23.2.MEHRNUTZER-REST-1** (abgeschlossen 07.08.), **VOR METRIK-1**. Die Reihenfolge-Zeile oben ("Reihenfolge ab hier", Andre-Entscheidung 03.08.) ist entsprechend nachgezogen: **MESSGERAETE-1 ✅ → ZEITSTEMPEL-1 → METRIK-1 → Coaching-Frage → …**
+
+**Warum VOR METRIK-1 und nicht danach (Andre-Begruendung 10.08.):** `transcript_segments` speichert heute nur `ts_ms` (Beginn eines Abschnitts). Es gibt **kein Ende und keine Wortanzahl**. Damit sind **vier der neun Punkte des Fokus-Katalogs** plus das **einzige Live-Symbol** nicht berechenbar: **Redeanteil · Sprechtempo · Redeblock-Laenge · Pausenlaenge**. Fuer jeden bereits gelaufenen Anruf sind diese Zeiten **fuer immer verloren** — es gibt kein Nachtragen (Bau-Regel „Tueroeffner", nur-einfuegende Erfassung). METRIK-1 baut die Bewertung neu; sie ohne diese Groessen zu bauen heisst, sie ein zweites Mal zu bauen.
+
+#### Befund am Code — nachgeprueft 2026-08-10, nicht uebernommen
+
+- ✅ **bestaetigt:** `database/models.py:966-982`, `class TranscriptSegment` — Spalten sind `id`, `conversation_log_id`, `ts_ms`, `speaker`, `text`, `created_at`. **Kein Ende, keine Wortanzahl.**
+- ✅ **bestaetigt:** `services/deepgram_service.py:57-64` (`_get_speaker`) liest `result.channel.alternatives[0].words` bereits — heute nur, um per Mehrheit das Sprecher-Label zu bestimmen. Die Wort-Objekte tragen `start`/`end`; **die Zeiten sind da und werden verworfen.**
+- 🔴 **NEU GEFUNDEN, aendert den Scope — der Andre-Text hat es nicht gewusst:** `ts_ms` stammt **nicht** von Deepgram, sondern aus einer **Wall-Clock-Zeichenkette mit Sekunden-Aufloesung**. Beleg-Kette: `services/deepgram_service.py` schreibt in den RAM-Log `'ts': datetime.now().strftime('%H:%M:%S')` → `routes/app_routes.py:36-42` `_ts_to_ms_of_day()` parst `'HH:MM:SS'` → `routes/app_routes.py:45-73` `_transcript_entries_to_segments()` rechnet relativ zum ersten Eintrag und klemmt monoton. Der eigene Docstring sagt es woertlich (`app_routes.py:23-28`, „WARN-4"): *„KEIN ts_ms / Offset-Feld vorhanden."*
+  **Folge fuer den Plan:** Ein blosses `end_ms` **neben** dem heutigen `ts_ms` waere auf **1 Sekunde** gerundet. Sprechtempo und Pausenlaenge sind damit **nicht** brauchbar (eine Pause von 0,4 s und eine von 1,4 s waeren ununterscheidbar). **Die Phase muss die Deepgram-Zeiten durch die RAM-Naht bis zum Schreiber tragen** — Schreibstelle `routes/app_routes.py:548-554` — nicht nur zwei Spalten anhaengen. Das ist der eigentliche Kern der Arbeit.
+- ℹ️ **Nebenbefund, kein Scope:** `services/live_session.py:1439-1460` `get_speech_stats()` rechnet Redeanteil/Tempo/Monolog **heute schon** — aber aus RAM-Zaehlern (`berater_words`, `kunde_words`, `session_start_time`), **pro Session fluechtig**, und `tempo` = Woerter je **verstrichener** Minute, nicht je **gesprochener** Minute. Nach dem Anruf ist alles weg. Diese Phase schafft die **haltbare, nachtraeglich korrekte** Grundlage; `get_speech_stats` wird **nicht** umgebaut.
+
+#### Scope — bewusst klein (Punkt 27, Leitsatz 2)
+
+1. **Abschnitts-ENDE** speichern (ms ab Call-Start, aus den Deepgram-Wortzeiten — nicht aus der Wall-Clock).
+2. **Wortanzahl** pro Abschnitt speichern.
+3. **Alembic-Revision auf den aktuellen Kopf** (heute `0038_sofort2_meetings_schild`). ⛔ **KEIN `_migrate()`-Muster** — das ist auf dem Live-Server wirkungslos (`app.py` verlaesst es bei Postgres sofort).
+4. **Regressions-Test zuerst ROT** gegen den heutigen Stand, dann fixen. Der rote Lauf gehoert **verbatim** in Commit + SUMMARY (Bau-Regel 1 „erst rot, dann fixen"; Punkt 31).
+5. **Schild nachziehen** (Punkt 23): neue Spalten sind nicht-trivial → `comment=` in `models.py` **und** `COMMENT ON COLUMN` in derselben Migration; das Tabellen-Schild von `transcript_segments` auf den geaenderten Schreib-Pfad aktualisieren.
+
+⛔ **Ausdruecklich NICHT in dieser Phase:** die Bewertung anfassen (= METRIK-1) · `get_speech_stats` umbauen · die Anonymisierungs-Pipeline umbauen (nur **ergaenzen** — Zeiten und Wortanzahl sind keine personenbezogenen Daten, aber der Weg bleibt derselbe) · Backfill alter Anruf-Zeilen (unmoeglich, die Rohzeiten existieren nicht mehr → neue Spalten **nullable**, und die Leser muessen `NULL` als „vor ZEITSTEMPEL-1" vertragen).
+
+#### ⚖️ Offene Entscheidung — NICHT vorentschieden: Zeitstempel PRO WORT?
+
+**Andres Rechnung (nachgerechnet, sie traegt):** Alle vier Messgroessen kommen mit **Anfang / Ende / Wortanzahl** aus —
+Redeanteil = Σ(Ende−Anfang) je Sprecher ÷ Gesamt · Sprechtempo = Wortanzahl ÷ (Ende−Anfang) · Redeblock-Laenge = zusammenhaengende Abschnitte desselben Sprechers · Pausenlaenge = `naechster.Anfang − voriger.Ende`. **Fuer die neun Fokus-Punkte wird Pro-Wort NICHT gebraucht.**
+
+**Speicherbedarf — Groessenordnungs-Schaetzung, im Plan an echten Prod-Zahlen nachzurechnen** (`inspect.sh count transcript_segments` + Segmente/Anruf + Woerter/Anruf):
+
+| Variante | je Anruf | 10.000 Anrufe | Verhaeltnis |
+|---|---|---|---|
+| **A — Ende + Wortanzahl** (2× `Integer` = 8 B je Zeile, ~200-400 Zeilen/Anruf) | **~2-3 KB** | **~25 MB** | Grundlast |
+| **B — zusaetzlich Wort-Tabelle** (~100-110 B/Wort inkl. Tupel-Kopf + PK/FK-Index, ~2.000-3.000 Woerter je 15-Min-Anruf) | **~250-330 KB** | **~2,5-3 GB** | **~100×** |
+
+**Drei Argumente gegen B, die im Plan zu widerlegen waeren, bevor B gewaehlt wird:**
+1. **Tueroeffner-Regel:** B ist nur zulaessig mit einem **konkret benannten spaeteren Feature**, das es braucht. Kandidaten waeren allein: Fuellwort-/Stocken-Erkennung **innerhalb** eines Abschnitts, wortgenaue Unterbrechungs-/Ueberlappungs-Erkennung („ins Wort fallen"), Sprechtempo-**Kurve** statt Mittelwert. **Keiner davon steht im Fokus-Katalog.**
+2. **DSGVO:** eine Wort-Tabelle ist faktisch **eine zweite Kopie des Transkripts** und braucht damit ihren **eigenen** Schwaerzungs-Pfad — das laeuft dem Beschluss 2 („waehrend des Anrufs geht kein Gespraechstext in die DB") direkt entgegen. Variante A traegt **keinen** Text.
+3. **Punkt 27:** B verwaltet ein Problem, das A aufloest.
+
+➡️ **Entscheidung faellt im Plan (`/gsd-discuss-phase` → `/gsd-plan-phase`), nicht hier.** Empfehlung des Befunds: **A**, mit der Begruendung oben — **aber ausdruecklich zur Gegenrechnung freigegeben.**
+
+#### Fallen, die in diesem Projekt schon zugeschlagen haben — Auflagen fuer den Plan
+
+- **Existenz-Anker neben JEDE Abwesenheits-Pruefung** (Bau-Regel 20): grep-Zaehlung `== 0` **UND** ein bekanntes Muster `== 1`. Sonst ist „sauber" nicht von „nichts gelesen" zu unterscheiden.
+- **Abnahme-Anker duerfen NICHT auf Zeichenketten zeigen, die dieser Plan selbst als Kommentar/Docstring vorschreibt** — sonst zaehlt der Anker sich selbst (zweimal unerfuellbar geworden in MEHRNUTZER-REST-1).
+- **Abnahme-Anker pruefen WIRKUNG, nicht Schreibweise:** echte Zahlen aus der DB nach einem echten Test-Anruf (`inspect.sh sample transcript_segments N` → `end_ms > ts_ms`, `word_count > 0`, Pausen plausibel), **nicht** `grep` auf Code-Text.
+- **Der Anker folgt dem Artefakt, nicht umgekehrt** (F-3 aus MEHRNUTZER-REST-1): erzwingt ein Abnahme-Kriterium eine schlechtere Code-Form, ist das **Kriterium** falsch.
+- **Punkt 26 (Bereitschafts-Naht):** die Segmente werden **gebuendelt am Call-Ende** geschrieben (`app_routes.py:537-565`, alle `created_at` identisch). Jeder neue Leser der Zeiten muss das wissen — Zeit-Anker ist `ts_ms`/`end_ms` (**Sprech-Zeit**), **nie** `created_at` (Batch-Schreibzeit).
+- **Punkt 21/22 Pflicht:** Persistenz-Schicht-Verifikation + Verbindungs-Karte fuer `transcript_segments` (`inspect.sh schema` verbatim), inkl. **wer liest heute schon** — mindestens `services/adoption_runner.py:263-271` und `services/judge_runner.py` haengen an der Tabelle.
+
+#### Abnahme
+
+Kein Local-Dev. Commit → push → `bash deploy.sh production` (**Andre faehrt den Deploy selbst** — Deny-Regel `~/.claude/settings.json:34-37`); **das Tor auf dem Server entscheidet.** Danach **ein echter Test-Anruf** und die Zahlen per `inspect.sh` gegenlesen. Schema-Aenderung ausschliesslich als Alembic-Revision auf dem aktuellen Kopf.
+**Bestaetigungs-Satz fuer den Plan (Bau-Regel 3):** *„Geprueft: Diese Phase persistiert kein Audio und loescht keine Call-Logs."*
+
+**Komplexitaet:** 🟡 mittel (Schema-Aenderung + Live-Pfad-Naht) → **Cross-AI-Review ist PFLICHT:** `/gsd-discuss-phase` → `/gsd-plan-phase` → `/gsd-review --gemini` → `/gsd-plan-phase --reviews` → `/gsd-execute-phase`.
+
+**Fragen-Kanal:** Jede Frage/Entscheidung ans Ende von `.planning/DIALOG-GSD-CLAUDIAN.md`, sofort committen und **zusaetzlich als normaler Fliesstext im Terminal** — kein interaktives Menue (Andre liest vom Handy).
+
+**Plans:** noch nicht geplant.
 
 ---
 
