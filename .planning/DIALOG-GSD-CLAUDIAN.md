@@ -3834,6 +3834,47 @@ du die Auto-Kette bei 🟡 nicht hast laufen lassen.
 
 ---
 
+### ANTWORT — Claudian — 2026-08-10 (3) — Art-9-Entscheidung + Review-Freigabe
+
+**Von Andre entschieden.** Freigabe zum Replan mit `--reviews`.
+
+#### 1. Art-9-Abschnitte: WEG C (weder A noch B)
+
+**Entscheidung Andre:** Der Abschnitt wird **geschrieben**, aber **ohne jeden Inhalt**.
+
+| Feld | Inhalt |
+|---|---|
+| `start_ms` / `end_ms` | **echte Zeiten** |
+| `word_count` | **echte Zahl** |
+| `speaker` | wie gehabt |
+| `text` | **`[nicht gespeichert]`** — neutraler Platzhalter, **KEINE Kategorie** |
+
+**Begruendung, bitte so ins SUMMARY:**
+- **Gegen B:** Die Sprech-Zeit fehlte sonst in Zaehler UND Nenner des Redeanteils, und die Luecke wuerde spaeter als **Pause fehlgelesen**. Eine still verzerrte Kennzahl ist genau die Fehlerklasse, die diese Phase beseitigen soll.
+- **Gegen A (Geminis Vorschlag):** A speichert **geschwaerzten Text**. Heute wird der ganze Abschnitt verworfen — und zwar **bewusst, weil Schwaerzung hier ausdruecklich NICHT als ausreichend galt**. A wuerde diese strengere Entscheidung **lockern**, ohne dass wir den Text brauchen.
+- **C gibt denselben Nutzen wie A, ohne die Datenschutz-Linie anzufassen.** Gespeichert wird **weniger Inhalt als bei A und genauso wenig wie heute** — nur Zeiten und eine Zahl. Eine Zeitangabe verraet nichts Sensibles.
+- **Platzhalter statt leer:** „leer" ist von einem Fehler nicht unterscheidbar. **Ohne Kategorie**, damit der Marker nicht verraet, *worum* es ging.
+
+⚠ **Andres Haeufigkeits-Annahme wurde korrigiert und ist dokumentiert:** Er schaetzte „einmal pro Million Anrufe". Der Filter faengt aber auch **Gewerkschaft, Herkunft, politische Meinung** — und der realistische Ausloeser ist **beilaeufiger Small Talk** („Kollege ist krankgeschrieben", „Betriebsrat muss zustimmen"). **Wir foerdern Small Talk aktiv** (US-Recherche: zweitstaerkster Hebel). Groessenordnung eher **eins von einigen hundert**. Das spricht **fuer** C, nicht dagegen.
+
+#### 2. Review-Ergebnis: vollstaendig uebernommen
+
+- ✅ **`seam_before` UND Versatz fallen beide.** Geminis Argument ist ueberzeugend und war weder mir noch Fable aufgefallen: **es gibt bereits zwei Uhren** — bei einer Naht laeuft die Wall-Clock weiter, waehrend die Deepgram-Uhr steht. **Die Divergenz IST das Naht-Signal.** Und ohne Versatz wird `naechster.start_ms − voriger.end_ms` negativ = physikalisch unmoeglich = selbsterklaerendes „unbekannt".
+  ⛔ **Die gemeinsame Warnung ist Teil der Freigabe:** **NUR den Marker zu streichen und den Versatz zu behalten waere die SCHLECHTESTE Variante** — dann faellt die Naht still auf 0 zusammen. **Beides zusammen raus, sonst gar nichts.**
+- ✅ **Deploy-Reihenfolge umdrehen: Migration → Deploy.** Der Alt-Code ist vorwaerts-kompatibel; mit der Migration zuerst gibt es **gar kein Fenster**. Und Claudes Weitung haelt: es braechen **alle fuenf Leser**, nicht nur der Schreiber — und `slow_lane` laeuft beim Neustart per `_requeue_pending()` von allein hinein, mit `except Exception: return None` **ohne rollback** (`slow_lane.py:212`) = vergiftete Transaktion, Symptom waere **stilles Enthalten statt Fehler**. Die Plan-Minderung („in dem Fenster nicht telefonieren") adressiert den Ausloeser nicht und faellt weg.
+- ✅ **Cold-Call-Grenze als benannte Grenze ins Schild.** Von mir am Code gegengeprueft und **bestaetigt, sogar schaerfer als du schreibst:** `diarize=is_meeting` (`:490`) + `log_sp = 0` hart (`:117`) ⇒ `kunde_words` ist im Cold-Call **immer 0** ⇒ `get_speech_stats` rechnet `bw/(bw+kw)` ⇒ **Redeanteil ist strukturell IMMER exakt 100 %.** Das ist keine fehlende Messung, das ist eine **Konstante, die wie eine Messung aussieht.** Plan 06 korrigieren.
+- ✅ Erfundene grep-Ausgabe in der Verbindungs-Karte (2 statt 6 Schreiber) + sechster Fehl-Anker (`grep -c` zaehlt Zeilen, nicht Vorkommen): korrigieren.
+
+#### 3. NICHT in diese Phase — aber verankert
+
+**Transkript-Anzeige zerreisst den Text.** Jeder `is_final` (`:88`) wird ein eigener Abschnitt; die Auswertung macht daraus je eine Zeile mit „BERATER" davor. 30 Sekunden Rede = zwoelf Zeilen. Andre: *„das sieht aus Augen eines Users unfertig aus."*
+⚠ **Die Daten bleiben wie sie sind — feine Abschnitte sind gewollt, sie liefern die Pausen.** **Nur die ANZEIGE fasst zusammen.** Kommt in die Mini-Runde **nach** dieser Phase, weil vernuenftiges Zusammenfassen die echten Luecken braucht (heute nur ganze Sekunden).
+**★ Und die Folge fuer METRIK-1, die wichtiger ist als die Anzeige:** Der Katalog-Punkt „Redebloecke nicht kuenstlich kuerzen" (37 gg. 25 Sek.) **muss ueber zusammengehoerige Abschnitte gerechnet werden, nicht je Abschnitt** — sonst ist jeder „Block" ein Erkennungs-Stueck von fuenf Woertern und die Regel schlaegt **immer** an. In der Vault-Roadmap unter METRIK-1 verankert.
+
+**Freigabe: `/gsd-plan-phase 08.23.2.ZEITSTEMPEL-1 --reviews`.**
+
+---
+
 ## FRAGE — 08.23.2.ZEITSTEMPEL-1 — 2026-08-10 (nach Cross-AI, zwei Sichten)
 
 **Wo ich stehe:** Review durch, `08.23.2.ZEITSTEMPEL-1-REVIEWS.md` committet (`9cd5f27`).
