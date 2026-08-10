@@ -70,6 +70,42 @@ def _get_speaker(result):
         return None
 
 
+def _extract_word_times(result):
+    """Phase 08.23.2.ZEITSTEMPEL-1 (D-07/D-08) — Deepgram-Wortzeiten -> (start_ms, end_ms, word_count).
+
+    word.start/word.end sind Float-SEKUNDEN ab Oeffnung der Deepgram-Verbindung
+    (developers.deepgram.com/docs/diarization) — eine ANDERE Achse als ts_ms (Wall-Clock,
+    Sekunden-Aufloesung). Nie gegeneinander rechnen.
+
+    KEIN Versatz-Parameter: der frueher geplante Reconnect-Versatz (D-05) ist nach dem
+    Cross-AI-Review vom 2026-08-10 gestrichen, zusammen mit dem Naht-Marker (D-06a) — sie
+    waren ein Paar. Ohne Versatz wird naechster.start_ms minus voriger.end_ms nach einer
+    neuen Verbindung NEGATIV; eine negative Pause ist physikalisch unmoeglich und damit ein
+    selbsterklaerendes "unbekannt", das keine Spalte kostet und keine Dauer vernichtet.
+
+    Die Wortanzahl kommt aus den ROHEN Wortobjekten, also VOR der Anonymisierung: der
+    Platzhalter [PERSON_A] ersetzt zwei gesprochene Woerter durch eines und wuerde das
+    Sprechtempo systematisch nach unten verzerren.
+
+    Gibt (None, None, None) zurueck, wenn keine Wortobjekte vorliegen oder das Ergebnis
+    unerwartet geformt ist. NIEMALS 0 als Ersatz — 0 hiesse 'hat nichts gesagt', None heisst
+    'unbekannt' (D-04). Der Live-Loop-Thread darf hier nie sterben (Muster _get_speaker).
+
+    BEKANNTE KANTE: ein Endergebnis mit Text, aber ohne Wortobjekte (nur Satzzeichen) liefert
+    dreimal None, obwohl gesprochen wurde. Bewusst nicht gefixt; steht im Schild von
+    word_count und in den SUMMARY-Restluecken.
+    """
+    try:
+        words = result.channel.alternatives[0].words
+        if not words:
+            return (None, None, None)
+        start_ms = int(round(float(words[0].start) * 1000))
+        end_ms = int(round(float(words[-1].end) * 1000))
+        return (start_ms, end_ms, len(words))
+    except Exception:
+        return (None, None, None)
+
+
 def _make_on_message(sid, mode='meeting'):
     def on_message(self, result, **kwargs):
         from extensions import socketio as sio
@@ -89,6 +125,12 @@ def _make_on_message(sid, mode='meeting'):
                 speaker = ls.stabilize_speaker(sid, _get_speaker(result))
                 line_id = ls.next_line_id(sid)
                 ts      = datetime.now().strftime('%H:%M:%S')
+
+                # ── Phase 08.23.2.ZEITSTEMPEL-1 (D-07/D-08) — Sprech-Zeiten lesen ──
+                # Bis hierher wurden die Wortzeiten gelesen (_get_speaker) und weggeworfen.
+                # Reine Rechenarbeit, bewusst OHNE Riegel: nichts unter den Riegel, was nicht
+                # dorthin muss (LOCK-1/LOCK-2-Lehre).
+                _zs_start_ms, _zs_end_ms, _zs_word_count = _extract_word_times(result)
 
                 # Zweiter Sprecher gesehen? (PERSID Plan 06 Familie E: per-SID)
                 with ls._session_state_lock:
