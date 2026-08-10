@@ -3398,7 +3398,15 @@ Kein Local-Dev. Commit → push → `bash deploy.sh production` (**Andre faehrt 
 
 **Fragen-Kanal:** Jede Frage/Entscheidung ans Ende von `.planning/DIALOG-GSD-CLAUDIAN.md`, sofort committen und **zusaetzlich als normaler Fliesstext im Terminal** — kein interaktives Menue (Andre liest vom Handy).
 
-**Plans:** noch nicht geplant.
+**Plans:** 6 Plans in 5 Wellen (geplant 2026-08-10)
+
+Plans:
+- [ ] 08.23.2.ZEITSTEMPEL-1-01-PLAN.md — Welle 1: ROT-Netz (reine Transform + `_extract_word_times`), kein Produktionscode
+- [ ] 08.23.2.ZEITSTEMPEL-1-02-PLAN.md — Welle 2: ROT-Lauf am Server ziehen, verbatim als `ROT-LAUF.md` sichern (Deploy von Andre, Tor blockt)
+- [ ] 08.23.2.ZEITSTEMPEL-1-03-PLAN.md — Welle 3: vier nullable Spalten + Schild (`models.py` + Alembic `0039` auf Kopf `0038`)
+- [ ] 08.23.2.ZEITSTEMPEL-1-04-PLAN.md — Welle 3: **die Naht** — Wortzeiten aus `on_message` in den per-SID-RAM-Log, Versatz + Naht-Marker
+- [ ] 08.23.2.ZEITSTEMPEL-1-05-PLAN.md — Welle 4: Durchreichung in der reinen Transform + vier Kwargs im INSERT
+- [ ] 08.23.2.ZEITSTEMPEL-1-06-PLAN.md — Welle 5: Deploy + Prod-Migration (Andre), echter Test-Anruf, Zahlen per `inspect.sh`, SUMMARY/Pruning-Notiz/Fragen-Kanal
 
 ---
 
