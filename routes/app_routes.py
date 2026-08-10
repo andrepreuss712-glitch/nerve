@@ -43,7 +43,7 @@ def _ts_to_ms_of_day(ts_str):
 
 
 def _transcript_entries_to_segments(log_entries):
-    """Pure transform (WARN-3): RAM-Entries -> Liste Segment-Dicts {'ts_ms','speaker','text'}.
+    """Pure transform (WARN-3): RAM-Entries -> Liste Segment-Dicts {'ts_ms','speaker','text','start_ms','end_ms','word_count'}.
     Filtert non-transcript- und leere-Text-Entries. speaker int->role (unbekannt/None -> 'system').
     ts_ms = (Wall-Clock-ms - erster-Transcript-Entry-Wall-Clock-ms), monoton non-decreasing geklemmt.
     Ordnung = Listenreihenfolge (autoritativ, auch wenn die ts-Arithmetik auf 0 degradiert).
@@ -69,6 +69,15 @@ def _transcript_entries_to_segments(log_entries):
             'ts_ms': _rel,
             'speaker': _sp_map.get(_entry.get('speaker'), 'system'),  # None/unbekannt -> 'system' (CHECK-safe)
             'text': _txt,
+            # ── Phase 08.23.2.ZEITSTEMPEL-1 (D-08) — Sprech-Zeiten durchreichen ──────────
+            # Kein Rechnen und kein Default: fehlt ein Schluessel (EWB-Knopf-Zeile,
+            # deepgram_service.py:1097-1108, oder ein Endergebnis ohne Wortobjekte), bleibt der
+            # Wert None. NICHT 0 — 0 hiesse "hat nichts gesagt", None heisst "unbekannt" (D-04).
+            # Andere Achse als ts_ms: start_ms/end_ms sind Deepgram-Audio-Zeit in ms, ts_ms ist
+            # Wall-Clock mit Sekunden-Aufloesung. Nie gegeneinander rechnen (D-02).
+            'start_ms': _entry.get('start_ms'),
+            'end_ms': _entry.get('end_ms'),
+            'word_count': _entry.get('word_count'),
         })
     return out
 
