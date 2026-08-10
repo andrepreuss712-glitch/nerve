@@ -4016,3 +4016,40 @@ ins Phasen-SUMMARY): `services/live_session.py:1304` zaehlt Woerter aus dem **ge
 (`len(merged_text.split())`) — der von **D-07 verworfene Weg** (zaehlt Platzhalter statt
 Woerter). Diese Phase aendert das nicht. Es gibt danach **zwei** Wortzaehlungen mit
 **unterschiedlicher Bedeutung**; wer Sprechtempo rechnet, nimmt die neue Spalte `word_count`.
+
+---
+
+## ROADMAP-SYNC — 08.23.2.ZEITSTEMPEL-1 (Plan 04) — 2026-08-10
+
+**Was in `.planning/ROADMAP.md` geaendert wurde:** Plan 04 abgehakt (`- [x]`) mit
+Ausfuehrungs-Notiz. Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen.
+
+**Warum / Kern:** Plan 04 ist **der Kern der Phase** — die Wortzeiten wandern aus
+`on_message` in den per-SID-RAM-Log, und **Weg C** ist gebaut: ein Abschnitt mit Art-9-Treffer
+oder Anonymisierungs-Fehler erzeugt jetzt eine Zeile mit **echten** Zeiten und dem neutralen
+Text `[nicht gespeichert]` — vorher entstand **gar keine** Zeile und seine Sprech-Zeit fehlte
+still in **Zaehler UND Nenner** des Redeanteils.
+
+- Commits `bb73bb4` / `00d34df`, **+112/−14 auf genau EINER Datei** (`services/deepgram_service.py`)
+- **0 Testdateien angefasst** (belegt), 0 geloeschte/umbenannte Dateien,
+  `services/live_session.py` = 0 Diff-Zeilen
+- alle **25** Abnahme-Anker beim ersten Lauf getroffen, **keine Abweichung**
+- **DSGVO:** keine Aufrufstelle uebergibt rohen Text, Platzhalter **ohne Kategorie**,
+  `anonymize()` unangetastet fail-closed, `_text_for_analysis` in allen vier Fehlerfaellen `None`
+- **Punkt 23:** das Schild aus Plan 03 beschreibt Weg C bereits korrekt → keine Nachziehung,
+  `database/models.py` nicht angefasst
+
+**Noch NICHT passiert (wichtig fuer die Vault-Sicht):** kein Deploy, kein Push, Migration
+`0039` weiterhin **nicht gefahren**. Nach Plan 04 sind noch **3 FAILED** offen — sie gehoeren
+zu Plan 05 (`routes/app_routes.py`, reine Transform). GRUEN wird erst in Plan 06 serverseitig
+gezogen, dort **erst Migration, dann Deploy** (D-16), beides von Andre.
+
+**Zwei Restluecken, die ins Phasen-SUMMARY und nach METRIK-1 gehoeren** (stehen ausfuehrlich
+in `08.23.2.ZEITSTEMPEL-1-04-SUMMARY.md`):
+1. **Ueberlappende Deepgram-Endergebnisse (UNVERIFIED):** bewusst **nicht geklemmt** — ein
+   Klemmen wuerde die Rohdaten verfaelschen, bevor jemand das Ausmass kennt. Einmalige Messung
+   an echten Daten in Plan 06 Task 2; die Klemm-Regel gehoert nach METRIK-1.
+2. **Reconnect loescht das bisherige Transkript** (`pop_session_state` + `init_session_state`,
+   `services/deepgram_service.py:764-766`) — **eigener Befund**, nicht von dieser Phase
+   verursacht, hier nicht gefixt (Reparatur-Modus). Kandidat fuer die Mini-Runde
+   „TRANSKRIPT-SCHUTZ" direkt nach ZEITSTEMPEL-1.
