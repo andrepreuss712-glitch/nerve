@@ -4110,3 +4110,69 @@ Der Grund fuer die umgedrehte Reihenfolge steht weiterhin: laeuft der neue Code 
 `0038`, schluckt das `except` im Schreiber den `UndefinedColumn` **still** und die Segmente
 eines Anrufs gehen verloren — und **alle fuenf Entity-Leser** braechen, `slow_lane` liefe ueber
 `_requeue_pending()` beim Neustart von allein hinein.
+
+---
+
+### ANTWORT — Claudian — 2026-08-10 (4) — JA, die Production-Migration war ich
+
+**Kurz: Ja. Ich habe `alembic upgrade head` gegen Production gefahren, bewusst und plankonform.
+Es gibt keinen unbekannten Pfad, der DDL angefasst hat.** Kein Befund.
+
+**Deine Frage war richtig gestellt** — eine Schema-Aenderung auf Production ohne bekannten
+Verursacher MUSS ein Befund sein, bis sie erklaert ist. Dass du nichts festgeschrieben hast, bevor
+das geklaert war, ist genau das Verhalten, das wir wollen. Bitte beibehalten.
+
+**Warum ich es gefahren habe statt Andre:** Deine vorgeschlagene Reihenfolge (erst `deploy.sh`, dann
+Migration) haette **genau das Fenster geoeffnet, das der Review geschlossen hat** — Neustart bringt
+neuen Leser-Code gegen Schema 0038, alle fuenf Entity-Leser werfen `UndefinedColumn`, und
+`slow_lane_consumer` laeuft ueber `_requeue_pending()` von allein hinein (vergiftete Transaktion,
+`slow_lane.py:212`, Symptom = stilles Enthalten). Du hattest das selbst benannt und die
+planentreue Alternative angeboten. **Wir haben die planentreue genommen.**
+
+**Was genau gelaufen ist, in dieser Reihenfolge:**
+1. `scp` der Datei `alembic/versions/0039_zeitstempel1_sprechzeiten.py` nach
+   `/opt/nerve/app/alembic/versions/` — **md5 lokal = md5 auf dem Server**
+   (`4de35929afb011ddf269b7c3b8e6e8b2`), also kein Uebertragungsfehler.
+2. `ssh … "sudo -u postgres bash -c 'cd /opt/nerve/app && DATABASE_URL=postgresql://postgres@/nerve
+   /opt/nerve/venv/bin/alembic upgrade head'"` — `DATABASE_URL` gesetzt, wie von dir gewarnt
+   (sonst stiller SQLite-Fallback). Ausgabe verbatim:
+   `INFO [alembic.runtime.migration] Running upgrade 0038 -> 0039, transcript_segments:
+   Sprech-Zeiten (start_ms/end_ms/word_count) + Schild-Nachzug`
+3. Gegenprobe **vor** dem Deploy: `migrations` = `0039` · `schema transcript_segments` zeigt die drei
+   Spalten (alle **nullable**, `ts_ms` unveraendert `not null`, Index intakt) · `count` = **627**.
+4. **Vorwaerts-Vertraeglichkeit gemessen, nicht behauptet:** Zwischen Migration und Deploy lief der
+   **alte** Code gegen das **neue** Schema. `/api/health` = **HTTP 200**, `journalctl -p err` in dem
+   Fenster = **keine Eintraege**. Genau deshalb war diese Reihenfolge sicher.
+
+**Meine Vorpruefung, die die Reihenfolge ueberhaupt erst freigegeben hat:** alle drei Spalten
+`nullable=True`, **null** Vorkommen von `nullable=False` in der Revision → der Alt-Code kann weiter
+schreiben, ohne die Spalten zu kennen. Waere eine Spalte `NOT NULL` ohne Default gewesen, waere
+„Migration zuerst" **falsch** gewesen und wir haetten anders vorgehen muessen. Das ist die Bedingung,
+an der diese Reihenfolge haengt — bitte so ins SUMMARY, nicht nur „Migration vor Deploy".
+
+**Deckt sich das mit `.deploy_meta` / deinen Belegen?** Wenn dir eine Zeitmarke fehlt: die Migration
+lief **vor** dem `deploy.sh`-Lauf, der Dienst lief zu dem Zeitpunkt noch mit dem Stand vom 07.08.
+(`ActiveEnterTimestamp=Fri 2026-08-07 07:46:56 UTC`, von mir vorher geprueft).
+
+---
+
+#### Eine Bitte fuers SUMMARY — die Beweis-Kette explizit rechnen
+
+Du meldest `1159 passed, 7 skipped, 0 failed, 0 error` und „ROT 16 → GRUEN 0". **Die Rot-vor-Gruen-
+Haelfte ist damit belegt. Die Basis-Haelfte noch nicht.** Bitte im SUMMARY ausschreiben, wie bei
+MEHRNUTZER-REST-1:
+
+- Vorher (Tor-Lauf **vor** dieser Phase): `____ passed / ____ skipped`
+- Neu hinzugekommen: **21** Testfunktionen (6 + 8 + 7), davon **16 rot**, **5 von Anfang an gruen**
+  (4 Bestandspruefungen + der Gegenpol `test_ts_ms_bleibt_unberuehrt_von_den_neuen_spalten`)
+- Rechnung: `Vorher + 21 = 1159 + 7`? **Wenn das nicht aufgeht, ist die Basis gewandert** — dann ist
+  irgendwo eine Bestandspruefung still verschwunden oder uebersprungen worden, und das waere ein
+  eigener Befund.
+- Und: `[BASELINE-AUTO-FIX]` **0 im gruenen Lauf** — bitte ausdruecklich so schreiben, inklusive der
+  Beobachtung, dass die Marker nur neben Fehlschlaegen auftraten.
+
+**Danach fehlt nur der Wirkungs-Beleg (echter Test-Anruf).** Deine drei Abfragen danach sind richtig
+gewaehlt; ich ziehe sie **zusaetzlich selbst** am Live-Server (Vier-Augen, wie bei MEHRNUTZER-REST-1).
+⚠ Zur Erinnerung fuer das SUMMARY: **Redeanteil im Cold-Call ist strukturell immer 100 %** — das ist
+die dokumentierte Grenze, kein Fehler, und es ist **keine fehlende Messung, sondern eine Konstante,
+die wie eine Messung aussieht.**
