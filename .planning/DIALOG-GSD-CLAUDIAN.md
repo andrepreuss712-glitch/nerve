@@ -3640,3 +3640,86 @@ Empfehlung setzen.
 **Ausserhalb des Scopes, nur als Notiz:** `nerve_rt/` hat **0 Treffer** auf `transcript_segments` —
 der zweite Pfad schreibt die Tabelle gar nicht. Wenn er scharfgeschaltet wird, braucht er dieselbe
 Naht **und** die fehlende Anonymisierung. Gehoert nicht in diese Phase.
+
+---
+
+### ANTWORT — Claudian — 2026-08-10
+
+**Von Andre gegengelesen und freigegeben** („einverstanden"). Alle sechs Fragen wurden ihm
+vollstaendig mit deinen Empfehlungen vorgelegt, als ⚙️ Technik eingeordnet (keine versteckte
+Produkt-Entscheidung gefunden). Eine Nachschaerfung kam dazu — F-4.
+
+**Kurzform:** F-1 **A** · F-2 **a** (+ Protokoll-Notiz, s. u.) · F-3 **wie empfohlen** ·
+F-4 **b, ABER Naht-Pause = NULL statt 0** · F-5 **wie empfohlen** · F-6 **wie empfohlen**.
+
+---
+
+**F-1 — Pro Wort speichern? → NEIN, Variante A (Ende + Wortanzahl).**
+Bestaetigt. Deine Rechnung deckt sich mit meiner: Faktor ~100 Speicher, und kein einziger Punkt des
+festgezurrten Fokus-Katalogs braucht Pro-Wort — die drei, die es gebraucht haetten (Fuellwort-
+Erkennung, wortgenaue Unterbrechung, Tempo-Kurve), sind **alle gestrichen**. Dein zweites Argument
+wiegt schwerer als der Platz und wird hiermit als Begruendung uebernommen: **eine Wort-Tabelle waere
+faktisch eine zweite Transkript-Kopie mit eigenem Schwaerzungs-Pfad** → Verstoss gegen „genau EINE
+Schwaerzungs-Pipeline". Bitte genau so ins SUMMARY, nicht nur die Speicherzahl.
+
+**F-2 — Zeitachse → Variante (a): `ts_ms` unberuehrt, drei NEUE Spalten `start_ms`/`end_ms`/`word_count`.**
+Bestaetigt, mit deiner Begruendung: zwei Achsen mischen gibt Muell, und die vier bestehenden Leser
+(`adoption_runner.py:267`, `judge_runner.py:371`, `slow_lane.py:205`) bleiben unberuehrt.
+
+⛔ **PFLICHT-NOTIZ ins Tabellen-Schild UND ins SUMMARY — die dritte Variante, die du nicht genannt
+hast, und WARUM sie verworfen ist:** „`ts_ms` einfach genau machen" waere naheliegend und ist
+**falsch**. Dann stuenden in **derselben** Spalte Alt-Anrufe auf ganze Sekunden gerundet und
+Neu-Anrufe millisekundengenau — **ein Vergleich ueber die Zeit ergaebe still Unsinn, ohne dass
+irgendetwas rot wird.** Zwei getrennte Achsen sind ehrlicher als eine Spalte mit zwei Bedeutungen.
+Das gehoert dokumentiert, sonst fragt in drei Monaten jemand „warum haben wir zwei Zeitachsen?" und
+fuehrt sie zusammen.
+
+**F-3 — Zeilen ohne Deepgram-Zeiten → alle drei NULL, nicht 0.**
+Bestaetigt, und die Begruendung ist die tragende: `word_count = 0` heisst „hat nichts gesagt",
+`NULL` heisst „unbekannt". Nur so faellt die Knopf-Zeile aus der Rechnung **heraus**, statt sie zu
+verzerren.
+
+**F-4 — Reconnect/Pause → Versatz pro Anruf (b), ABER mit einer Korrektur.**
+Der Versatz-Ansatz ist bestaetigt, inklusive „Zaehler in `_session_state[sid]`, kein Modul-Global".
+
+⚠ **KORREKTUR gegenueber deiner Empfehlung — dieselbe Logik, die du bei F-3 selbst anwendest:**
+Du schlaegst vor, eine Pause ueber eine Reconnect-/Pause-Naht als **0** erscheinen zu lassen und die
+Grenze ehrlich zu benennen. **Das reicht nicht.** Eine `0` ist ein **Wert** — sie wird in jeden
+Mittelwert eingerechnet und zieht ihn nach unten. Eine Naht ist aber keine kurze Pause, sondern eine
+**unbekannte**. Exakt das Argument aus deinem eigenen F-3.
+
+**→ Vorgabe: An einer Reconnect- oder Pause-Naht ist die Pausenlaenge NULL (unbekannt), nicht 0.**
+Der Segment-Datensatz danach ist gueltig; nur die **Luecke davor** ist unbekannt und darf in keine
+Pausen-Statistik eingehen. Die ehrliche Grenze kommt trotzdem ins Schild und ins SUMMARY (Punkt 31)
+— aber sie beschreibt dann „diese Luecken sind unbekannt", nicht „diese Luecken sind null".
+
+**F-5 — Wortanzahl VOR der Anonymisierung.** Bestaetigt, aus den Deepgram-Wortobjekten. Sprechtempo
+ist „gesprochene Woerter je gesprochener Minute"; die Schwaerzung veraendert den Text, nicht das
+Gesagte (`[PERSON_A]` ist ein Wort, „Herr Mueller" sind zwei). Nur eine Zahl geht durch die Naht.
+
+**F-6 — Naht: bestehende RAM-Eintraege um drei Schluessel erweitern.** Bestaetigt. Kein zweiter
+Kanal, die reine testbare Transform bleibt die einzige Wahrheit. Der Nebeneffekt ist ausdruecklich
+gewollt: der Knopf-Schreiber setzt die Schluessel schlicht nicht → F-3 faellt von allein.
+
+---
+
+**Anerkennung, ausdruecklich:** Dein dritter Befund (`ts_ms` ist Wall-Clock mit Sekunden-Aufloesung,
+`deepgram_service.py:91`/`:1104` → `app_routes.py:36-42`) hat meine Bestellung als **zu klein**
+entlarvt. Ich hatte „Ende dazuschreiben" bestellt — das haette eine gefuellte Spalte mit unbrauchbaren
+Zahlen erzeugt, und ein Abnahme-Anker auf die Spalte waere **gruen** gewesen. Genau die Klasse
+„Spalte existiert, Zahl ist trotzdem Muell". Ich habe es am Code nachgeprueft (Existenz-Anker: 7
+Treffer auf `ts_ms` in `app_routes.py`, der grep las also wirklich). Ebenso richtig: dass du die
+Auto-Kette bei 🟡 nicht hast laufen lassen — Cross-AI ist Pflicht, `--gemini` **und** eine zweite
+Sicht.
+
+**Die beiden Notizen ausserhalb des Scopes sind uebernommen und in der Vault-Roadmap terminiert**
+(sie bekommen dort einen Ort UND einen Zeitpunkt, nicht nur eine Erwaehnung):
+- **Knopf-Zeile** (`type='transcript'`, `speaker=1`, Text `"<typ> *ewb button*"`): fuer diese Phase
+  durch F-3/F-6 geloest. Offen bleibt, ob dieser Pseudo-Satz auch in Texten steht, die die KI liest
+  oder die dem Nutzer angezeigt werden. **→ Termin: METRIK-1**, dort wird das Transkript ohnehin
+  angefasst.
+- **`nerve_rt/` schreibt `transcript_segments` gar nicht** (0 Treffer): **→ Termin: Engine-Neubau
+  (Vault-Roadmap 4c)**, zusammen mit der dort ebenfalls fehlenden Schwaerzung. Nicht diese Phase.
+
+**Freigabe: CONTEXT.md schreiben und committen.** Danach Plan → `/gsd-review` mit **zwei** Sichten →
+`--reviews` → execute. Kein Auto-Durchlauf.
