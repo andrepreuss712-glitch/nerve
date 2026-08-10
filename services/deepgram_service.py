@@ -106,6 +106,39 @@ def _extract_word_times(result):
         return (None, None, None)
 
 
+# Phase 08.23.2.ZEITSTEMPEL-1 (D-07, Weg C) — neutraler Platzhalter OHNE Kategorie.
+# Bewusst nicht '[ART9_REDACTED]': der Marker soll nicht verraten, WORUM es ging.
+# Bewusst nicht leer: eine leere Zeichenkette ist von einem Fehler nicht unterscheidbar
+# (und text ist in transcript_segments NOT NULL).
+_PLATZHALTER_NICHT_GESPEICHERT = '[nicht gespeichert]'
+
+
+def _append_transcript_entry(sid, ts, speaker, text, start_ms, end_ms, word_count):
+    """Der EINZIGE Anhaenger fuer type='transcript' im on_message-Weg (Phase ZEITSTEMPEL-1).
+
+    Vorher stand dieses Dict-Literal nur im else-Zweig der Anonymisierung. Weg C braucht es
+    an fuenf Stellen — als fuenf Kopien waeren es fuenf Gelegenheiten, einen Schluessel zu
+    vergessen, und ein vergessener Schluessel waere hier STILL (die Spalte bliebe NULL, ohne
+    dass irgendetwas rot wird). Eine Funktion ist die kleinere Form (Punkt 27).
+
+    Ghost-SID-sicher: ist die sid nicht mehr im Zustand, passiert schlicht nichts — der
+    Anruf ist dann ohnehin vorbei. Nimmt denselben Riegel wie der Bestandscode; das ist der
+    Endergebnis-Pfad, NICHT der 10-Hz-Audio-Pfad (dort kommt in dieser Phase gar nichts hinzu).
+
+    start_ms/end_ms/word_count duerfen None sein. None heisst 'unbekannt' (D-04) — NIE 0.
+    """
+    with ls._session_state_lock:
+        if sid in ls._session_state:
+            ls._session_state[sid]['conversation_log'].append({
+                'ts': ts, 'type': 'transcript',
+                'speaker': speaker,
+                'text': text, 'data': None,
+                'start_ms': start_ms,
+                'end_ms': end_ms,
+                'word_count': word_count,
+            })
+
+
 def _make_on_message(sid, mode='meeting'):
     def on_message(self, result, **kwargs):
         from extensions import socketio as sio
@@ -188,37 +221,60 @@ def _make_on_message(sid, mode='meeting'):
                 # WR-05 fix: _text_for_analysis tracks anonymized text for merge-queue;
                 # None means Art-9/pipeline-error — snippet is excluded from analysis buffers.
                 _text_for_analysis = text  # default: raw text (fallback if anonymization unavailable)
+                # ZEITSTEMPEL-1 (Weg C): merkt, ob fuer dieses Endergebnis schon eine Zeile
+                # geschrieben wurde. Verhindert einen Doppel-Eintrag, falls die Ausnahme ERST
+                # NACH einem geglueckten Append auftritt.
+                _zs_gespeichert = False
                 try:
                     from services.anonymization import anonymize, AnonymizationPipelineUnavailable
                     _anon_cache = ls.get_anonymisierer(sid)
                     _anon_result = anonymize(text, _anon_cache)
                     _anon_text, _anon_tier = _anon_result
                     if _anon_text == '[ART9_REDACTED]':
-                        # Art-9-Treffer: Snippet nicht persistieren und aus Analyse-Puffer ausschliessen
-                        print(f'[ANON] Art-9 erkannt, Transcript-Snippet verworfen (sid={sid!r}, len={len(text)})')
+                        # ZEITSTEMPEL-1 (Weg C, D-07): Inhalt weiterhin NICHT speichern — aber die
+                        # Zeile entsteht jetzt, mit echten Zeiten und neutralem Platzhalter.
+                        # Vorher fiel der ganze Abschnitt weg; seine Sprech-Zeit fehlte damit in
+                        # Zaehler UND Nenner des Redeanteils, und die Luecke las sich spaeter wie
+                        # eine Pause. Eine still verzerrte Kennzahl ist genau die Fehlerklasse,
+                        # die diese Phase beseitigt.
+                        print(f'[ANON] Art-9 erkannt, Inhalt nicht gespeichert - Zeile mit Zeiten bleibt (sid={sid!r}, len={len(text)})')
                         _text_for_analysis = None
+                        _append_transcript_entry(sid, ts, log_sp if roles_confirmed else None,
+                                                 _PLATZHALTER_NICHT_GESPEICHERT,
+                                                 _zs_start_ms, _zs_end_ms, _zs_word_count)
+                        _zs_gespeichert = True
                     elif _anon_text == '[ANON_FEHLER]':
-                        # Pipeline-Fehler: Snippet nicht persistieren (Finding 4 — kein DB-Spam)
-                        print(f'[ANON] Pipeline-Fehler, Transcript-Snippet verworfen (sid={sid!r}, len={len(text)})')
+                        print(f'[ANON] Pipeline-Fehler, Inhalt nicht gespeichert - Zeile mit Zeiten bleibt (sid={sid!r}, len={len(text)})')
                         _text_for_analysis = None
+                        _append_transcript_entry(sid, ts, log_sp if roles_confirmed else None,
+                                                 _PLATZHALTER_NICHT_GESPEICHERT,
+                                                 _zs_start_ms, _zs_end_ms, _zs_word_count)
+                        _zs_gespeichert = True
                     else:
                         _text_for_analysis = _anon_text
                         # conversation_log per-SID (PERSID Plan 05, deepgram on_message Writer)
-                        with ls._session_state_lock:
-                            if sid in ls._session_state:
-                                ls._session_state[sid]['conversation_log'].append({
-                                    'ts': ts, 'type': 'transcript',
-                                    'speaker': log_sp if roles_confirmed else None,
-                                    'text': _anon_text, 'data': None,
-                                })
+                        _append_transcript_entry(sid, ts, log_sp if roles_confirmed else None,
+                                                 _anon_text,
+                                                 _zs_start_ms, _zs_end_ms, _zs_word_count)
+                        _zs_gespeichert = True
                 except AnonymizationPipelineUnavailable:
-                    # D-08 Kat. A: Pipeline unavailable — kein Insert, Live-Call laeuft weiter
-                    print(f'[ANON] Pipeline unavailable, Transcript-Snippet verworfen (sid={sid!r})')
+                    # D-08 Kat. A: Pipeline unavailable — Inhalt nicht speichern, Live-Call laeuft weiter
+                    print(f'[ANON] Pipeline unavailable, Inhalt nicht gespeichert - Zeile mit Zeiten bleibt (sid={sid!r})')
                     _text_for_analysis = None
+                    if not _zs_gespeichert:
+                        _append_transcript_entry(sid, ts, log_sp if roles_confirmed else None,
+                                                 _PLATZHALTER_NICHT_GESPEICHERT,
+                                                 _zs_start_ms, _zs_end_ms, _zs_word_count)
+                        _zs_gespeichert = True
                 except Exception as _anon_err:
-                    # Unerwarteter Fehler — Safety: lieber nicht persistieren
+                    # Unerwarteter Fehler — Safety: den INHALT lieber nicht speichern.
+                    # Die ZEIT ist davon unabhaengig und wird gerettet (Weg C).
                     print(f'[ANON] Unerwarteter Fehler im INPUT-PFAD (sid={sid!r}): {type(_anon_err).__name__}')
                     _text_for_analysis = None
+                    if not _zs_gespeichert:
+                        _append_transcript_entry(sid, ts, log_sp if roles_confirmed else None,
+                                                 _PLATZHALTER_NICHT_GESPEICHERT,
+                                                 _zs_start_ms, _zs_end_ms, _zs_word_count)
 
                 # ── H-9: akkumuliere echte STT-Sekunden ──────────────────────
                 _dur = getattr(getattr(result, 'metadata', None), 'duration', 0.0) or 0.0
