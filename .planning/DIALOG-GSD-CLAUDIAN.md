@@ -3558,3 +3558,85 @@ Seine Rechnung traegt: alle vier Groessen kommen mit Anfang/Ende/Wortanzahl aus.
 Drei Argumente gegen B: **Tueroeffner-Regel** (kein Punkt des Fokus-Katalogs braucht Pro-Wort — nur Fuellwort-/Stocken-Erkennung, wortgenaue Unterbrechung, Tempo-Kurve, und keiner davon steht drin) · **DSGVO** (eine Wort-Tabelle ist faktisch eine zweite Transkript-Kopie und braucht einen eigenen Schwaerzungs-Pfad, gegen Beschluss 2; Variante A traegt keinen Text) · **Punkt 27**. **Empfehlung: A. Entscheidung faellt im Plan, nicht hier.**
 
 **Naechster Schritt:** `/gsd-discuss-phase 08.23.2.ZEITSTEMPEL-1` → `/gsd-plan-phase` → `/gsd-review --gemini` (PFLICHT bei 🟡) → `--reviews` → `/gsd-execute-phase`.
+
+---
+
+## FRAGE — 08.23.2.ZEITSTEMPEL-1 — 2026-08-10 (discuss-phase)
+
+**Wo ich stehe:** `/gsd-discuss-phase 08.23.2.ZEITSTEMPEL-1`. Phasen-Verzeichnis angelegt, noch
+keine CONTEXT.md. Code gegengelesen: `database/models.py:966-982` · `services/deepgram_service.py:58-70`
+(`_get_speaker`) · `:91` (`ts = datetime.now().strftime('%H:%M:%S')`) · `:167-171` (RAM-Eintrag) ·
+`:1097-1105` (zweiter Schreiber, EWB-Knopf) · `:888-901` (Pause-Pfad) · `:870` (Verbindungs-Oeffnung) ·
+`routes/app_routes.py:36-73` (Transform) · `:542-566` (Schreiber).
+
+**Was ich UEBER die Roadmap hinaus gefunden habe (aendert die Fragen):**
+
+1. **Deepgram-Wortzeiten sind AUDIO-Zeit, nicht Wall-Clock.** `word.start`/`word.end` zaehlen ab
+   Oeffnen der WebSocket-Verbindung und **zaehlen bei Pause nicht weiter** — `handle_audio_chunk`
+   (`deepgram_service.py:896-897`) sendet waehrend Pause gar kein Audio. Das ist fachlich sogar
+   richtiger (Sprech-Zeit statt Sitz-Zeit), heisst aber: die neue Achse ist eine **andere Achse**
+   als das heutige `ts_ms`. Beide in eine Rechnung zu mischen gaebe Muell.
+2. **Ein Reconnect setzt die Deepgram-Uhr auf 0 zurueck.** Bei Reconnect (`:833-846`, es gibt
+   ausdruecklich einen Reconnect-Pfad auf dieselbe `call_id`) wird eine NEUE Verbindung geoeffnet →
+   `word.start` faengt wieder bei 0 an. Ohne Gegenmassnahme springen die Zeiten mitten im Anruf zurueck.
+3. **Es gibt einen ZWEITEN Schreiber in `conversation_log`, der wie ein Transkript-Abschnitt aussieht
+   und keiner ist:** `deepgram_service.py:1097-1105` schreibt beim EWB-Knopfdruck einen Eintrag mit
+   `type='transcript'`, `speaker=1` (= Kunde!), Text `"<typ> *ewb button*"`. Der landet heute als
+   echte Zeile in `transcript_segments`. Er hat **keine** Deepgram-Zeiten. Bekaeme er eine gerechnete
+   Dauer, wuerde er **Redeanteil und Sprechtempo des Kunden verfaelschen**.
+
+**Die sechs Entscheidungen — mit meiner Empfehlung:**
+
+**F-1 — Pro Wort speichern (Variante B) oder nur Ende + Wortanzahl (Variante A)?**
+Empfehlung **A**, wie im Roadmap-Eintrag begruendet (Tueroeffner-Regel: kein Punkt des
+Fokus-Katalogs braucht Pro-Wort · DSGVO: eine Wort-Tabelle ist eine zweite Transkript-Kopie mit
+eigenem Schwaerzungs-Pfad · Punkt 27). Ich habe keinen Gegenbefund gefunden.
+
+**F-2 — Welche Zeitachse, und was passiert mit dem heutigen `ts_ms`?** (die eigentliche Kernfrage)
+- (a) `ts_ms` bleibt unberuehrt (Wall-Clock, Sekunden-Aufloesung, nur Reihenfolge), NEU kommen
+  **`start_ms` + `end_ms` + `word_count`** aus den Deepgram-Wortzeiten. Drei neue Spalten statt zwei.
+  Jede Achse bleibt in sich sauber; **alle vier Messgroessen** werden ausschliesslich aus
+  `start_ms`/`end_ms` gerechnet, nie gemischt. Nichts Bestehendes aendert sein Verhalten.
+- (b) Nur `end_ms` + `word_count` anhaengen und gegen das heutige `ts_ms` rechnen. **Rate ich ab:**
+  gemischte Achsen, und die Sekunden-Rundung von `ts_ms` macht Sprechtempo und Pausenlaenge unbrauchbar
+  (0,4 s und 1,4 s Pause waeren ununterscheidbar) — genau der Grund, warum die Phase existiert.
+- (c) `ts_ms` selbst auf die Deepgram-Achse umstellen. **Rate ich ab:** aendert die Bedeutung einer
+  Spalte, an der heute vier Leser haengen (`adoption_runner.py:267-271`, `judge_runner.py:371-373`,
+  `slow_lane.py:205-209`) — Aenderung an lebendem Code ohne Not.
+Empfehlung **(a)**.
+
+**F-3 — Abschnitte OHNE Deepgram-Zeiten (EWB-Knopf-Zeile, Ausfaelle): was steht in den neuen Spalten?**
+Empfehlung: **alle drei NULL** — nicht 0. `word_count = 0` hiesse „hat nichts gesagt", `NULL` heisst
+„unbekannt". Nur so faellt die Knopf-Zeile aus Redeanteil und Sprechtempo heraus, statt sie zu
+verfaelschen. Deckt sich mit der Roadmap-Vorgabe „nullable, Leser muessen NULL vertragen".
+
+**F-4 — Reconnect und Pause: wie wird der Nullpunkt gehalten?**
+- (a) Nichts tun, monoton klemmen wie heute. Dauer je Abschnitt bleibt richtig, aber Pausen ueber
+  die Naht werden zu 0 — **stillschweigend**.
+- (b) Pro Anruf einen Versatz mitfuehren: beim Oeffnen einer neuen Verbindung
+  `versatz = zuletzt_gesehenes_end_ms`, auf jede Deepgram-Zeit addiert. Kosten: **ein Zaehler
+  pro SID** (Punkt 28: gehoert in `_session_state[sid]`, kein Modul-Global).
+Empfehlung **(b)** — plus ein ehrlicher Satz im Tabellen-Schild und im SUMMARY, dass Pausen ueber
+eine Reconnect- oder Pause-Naht als **0** erscheinen und keine echte Sprech-Pause sind. (Punkt 31:
+die Grenze wird benannt, nicht weggeschrieben.)
+
+**F-5 — Wortanzahl: gezaehlt VOR oder NACH der Anonymisierung?**
+Empfehlung: **vorher, aus den Deepgram-Wortobjekten** (`len(words)`). Sprechtempo ist
+„gesprochene Woerter je gesprochener Minute" — die Anonymisierung veraendert den Text, nicht das
+Gesagte. DSGVO-unbedenklich, weil nur eine **Zahl** durch die Naht geht, kein Text. (Art-9- und
+Fehler-Abschnitte werden ohnehin komplett verworfen, `:154-179` — dafuer entsteht gar keine Zeile.)
+
+**F-6 — Wo verlaeuft die Naht durch den RAM?**
+Empfehlung: die **bestehenden RAM-Eintraege um drei Schluessel erweitern**
+(`start_ms`/`end_ms`/`word_count` in `deepgram_service.py:167-171`) und
+`_transcript_entries_to_segments` (`app_routes.py:45-73`) sie durchreichen. Kein zweiter Kanal,
+keine neue Struktur, die reine testbare Transform bleibt die einzige Wahrheit — und der zweite
+Schreiber (Knopf) setzt sie schlicht nicht, womit F-3 automatisch faellt.
+
+**Was blockiert ist:** Ohne F-1/F-2/F-4 kann ich die CONTEXT.md nicht schreiben — das sind genau
+die Entscheidungen, die Researcher und Planner brauchen. F-3/F-5/F-6 wuerde ich notfalls nach
+Empfehlung setzen.
+
+**Ausserhalb des Scopes, nur als Notiz:** `nerve_rt/` hat **0 Treffer** auf `transcript_segments` —
+der zweite Pfad schreibt die Tabelle gar nicht. Wenn er scharfgeschaltet wird, braucht er dieselbe
+Naht **und** die fehlende Anonymisierung. Gehoert nicht in diese Phase.
