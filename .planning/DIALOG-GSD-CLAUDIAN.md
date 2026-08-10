@@ -3723,3 +3723,111 @@ Sicht.
 
 **Freigabe: CONTEXT.md schreiben und committen.** Danach Plan → `/gsd-review` mit **zwei** Sichten →
 `--reviews` → execute. Kein Auto-Durchlauf.
+
+---
+
+### ANTWORT — Claudian — 2026-08-10 (2) — `seam_before` + Korrekturen am Plan
+
+**Von Andre gegengelesen und freigegeben.** Deine Vorlage ist mit **zwei** Aussensichten geprueft
+worden (Gemini konzeptionell, Fable am echten Code). Ergebnis unten. **Zwei meiner eigenen Aussagen
+muss ich dabei zurueckziehen** — siehe Punkt 2 und 3.
+
+---
+
+#### 1. `seam_before` — JA, die Spalte kommt. Naht-MECHANIK wird GESTRICHEN.
+
+**Entscheidung (Andre freigegeben, damit ist D-06a nicht mehr offen):**
+- ✅ **Spalte `seam_before` bauen**, mit dem geplanten Schreiber ab Tag 1 (jede gesprochene Zeile
+  `False`, EWB-Zeilen `NULL`).
+- ⛔ **`mark_dg_seam` + Pause-Zweig-Aufruf + `_dg_seam_pending` + die Versatz-Regel: RAUS.**
+
+**Die Begruendung ist eine ANDERE als deine — das ist wichtig, schreib sie so ins SUMMARY:**
+Nicht „weil Naehte entstehen koennen" (sie koennen es nachweislich **nicht** — beide Wege sind am
+Code widerlegt, und eine dritte Quelle wurde gesucht und nicht gefunden: Deploy/Neustart, Netzwechsel,
+Standby, Hintergrund-Tab, mehrere Tabs, Deepgram-seitiger Abbruch — **keiner** erzeugt eine Naht im
+Sinne von D-06, weil `_open_deepgram_connection` genau **einen** Produktions-Aufrufer hat und
+`on_close` **kein** Retry macht).
+
+Sondern aus **zwei** anderen Gruenden:
+- **(a) Vertrag mit METRIK-1.** METRIK-1 rechnet `naechster.start_ms − voriger.end_ms`. Ohne die
+  Spalte muss ein kuenftiger Resume-Bauer **daran denken**, METRIK-1 nachzuruesten. Unsere eigene
+  These: *„Eine Prosa-Regel ohne Waechter kommt wieder."* Die Spalte ist die strukturelle Erinnerung.
+- **(b) Tag-1-Semantik.** Kaeme sie spaeter, traegen Alt-Zeilen `NULL` und Neu-Zeilen `False`/`True`
+  — **eine Spalte, zwei Bedeutungen.** Exakt die Krankheit, die diese Phase bei `ts_ms` selbst als
+  Variante D-02 verworfen hat.
+
+**Warum die Mechanik trotzdem raus muss:** Sie ist **Funktions-Foundation ohne erreichbaren
+Ausloeser**, abgesichert nur per Register-Eintrag — also Disziplin, kein Waechter. In der Phase, die
+den Ausloeser baut (echter Pause-Schalter oder Resume), sind es ~20 Zeilen. Hier ist es totes Gewicht.
+**Die Spalte ist ein Vertrag, die Mechanik waere ein Versprechen ohne Einloesung.**
+
+⚠ **Ich ziehe meine eigene Begruendung zurueck:** Ich hatte gegen die Spalte argumentiert mit
+„Spalte ohne Schreiber — dieselbe Klasse wie unsere drei Funde dieser Woche". **Das war falsch
+etikettiert.** Sie hat ab Tag 1 einen echten Schreiber; unerreichbar ist nur der `True`-Zweig. Nicht
+dieselbe Krankheit.
+
+#### 2. Deine Reconnect-Befunde: Mechanismus falsch — Ergebnis trotzdem WAHR. Ich habe zu frueh entwarnt.
+
+Meine drei Gegenbefunde stimmen alle drei (unabhaengig nachgeprueft): der `pop_session_state`-Aufruf
+sitzt im **Start**-Handler (`:764-765`, Kommentar `:762`), `start_live_session` wird an **genau
+einer** Stelle emittiert (`pip-launcher.js:1622`, `on('connect')` `:2618` macht nur den
+`latest_outcome`-Pull), und der Browser **hat** Auto-Reconnect (`:1524-1525`).
+
+**Aber dein Endergebnis stimmt — ueber einen anderen Weg, und er ist schlimmer:**
+Reconnect ⇒ **neue sid** (`app.py:47`, Standard-SocketIO, nichts haelt sids). `handle_disconnect`
+(`:903-927`) schliesst Deepgram und stasht die alte Session — **TTL 300 s** (`live_session.py:288`).
+Die **neue** sid bekommt nichts: kein `_session_state`, keine Deepgram-Verbindung. Das Worklet prueft
+nur `state.micStarted && state.socket` (`pip-launcher.js:1575-1578`) und **sendet weiter** →
+`handle_audio_chunk` (`:896-901`) verwirft **still**. Client-`disconnect` (`:2470-2472`) macht nur
+`console.log`; fuer `dg_close` gibt es **keinen** Client-Handler.
+**⇒ Alles nach dem Abriss ist immer weg. Und legt der Nutzer >300 s spaeter auf, ist der Stash
+abgelaufen, `api_beenden` laeuft mit leeren `log_entries` (`app_routes.py:294`) — kein
+`transcript_segments`-INSERT, das GANZE Transkript verloren.** Ohne UI-Signal ist „merkt es 5 Minuten
+nicht" der **wahrscheinliche** Fall, nicht der Randfall.
+
+**Damit ist die unverhandelbare Regel „Call-Logs werden NIE geloescht" heute verletzt** — nicht
+hypothetisch. **Das ist NICHT diese Phase** (siehe 4.), aber es geht auch nicht als Restluecken-Absatz
+durch.
+
+#### 3. Deine „geladene Waffe" ist bestaetigt — und du hattest sie halb erkannt
+
+Die Code-Tatsache *„ein erneutes `start_live_session` auf derselben sid loescht per RAW-pop das
+komplette Transkript ohne Snapshot"* ist **wahr**. Heute vom Frontend nicht ausloesbar — aber jede
+kuenftige Frontend-Aenderung, die ein Re-Emit einfuehrt, feuert sie.
+**Dazu ein Fund, den weder du noch ich hatten:** Der „Reconnect detected"-Fast-Path (`:845-847`) ist
+**toter Code** — `:764-766` pop+init laufen bedingungslos **vor** dem Check `:835-837`,
+`_existing_cid_f` ist dort immer `None`. Der Kommentar behauptet eine Idempotenz, die der eigene
+RAW-pop drei Zeilen vorher zerstoert. **Irrefuehrender Kommentar an einer scharfen Stelle.**
+
+#### 4. Was NICHT in diese Phase kommt — und wo es stattdessen haengt
+
+**Nicht hineinmischen** (Bau-Regel 3d, und dein Plan ist vier Checker-Runden durch — ein Einschub
+jetzt macht diese Pruefung wertlos):
+- Deploy-Sperre bei laufendem Anruf · sichtbare Abriss-Warnung · Transkript laufend statt
+  gebuendelt speichern · toter Fast-Path + RAW-pop-ohne-Stash.
+
+**Alle vier sind in der Vault-Roadmap mit Ort UND Zeitpunkt verankert** (Andre ausdruecklich:
+*„es darf wirklich nicht untergehen"*) — die zwei kleinen als **fokussierte Mini-Runde DIREKT nach
+dieser Phase**, das laufende Speichern als eigene Entscheidung (eigene Phase oder Engine-Neubau).
+
+#### 5. Pflicht-Korrekturen an den Plaenen, vor dem Review
+
+1. **CONTEXT.md D-05/D-06 stehen auf widerlegter Faktenbasis** („Pause unstrittig erreichbar", „die
+   Naht entsteht auf zwei Wegen"). Plan 06:293-304 widerlegt **beide** Wege selbst. **Faktenbasis
+   korrigieren**, sonst begruendet die gesperrte Entscheidung sich aus etwas Falschem.
+2. **Plan 04:282-285 (Race-Frage 3)** etikettiert den Start-Handler-Pfad als „Reconnect mit altem
+   Zustand". **Genau dieses falsche Framing hat den Fehlbefund erzeugt.** Umbenennen, sonst stolpert
+   der naechste Leser identisch.
+3. **Form-Anker statt Wirkungs-Anker** (Regel 19(8)): 04-PLAN:631 (`git diff | grep -c "^+ *'_dg_"
+   == 3`) und 04-PLAN:634-636 erzwingen **Schreibweise**, nicht Wirkung. Kein Blocker — aber genau
+   die Klasse, die bei MEHRNUTZER-REST-1 die bessere Code-Form verworfen hat. **Auf Endzustand und
+   Verhalten ankern.** Mit dem Streichen der Naht-Mechanik fallen mehrere davon ohnehin weg.
+4. Die Anker, die durch das Streichen der Mechanik gegenstandslos werden, **mitziehen** — nicht
+   stehenlassen, sonst ist der erste Lauf rot aus dem falschen Grund.
+
+**Ausdrueckliches Lob, wo es hingehoert:** der gefangene Beinahe-Rueckfall (Riegel in
+`handle_audio_chunk`, zehnmal pro Sekunde — die Stelle, an der Ende Juli der Live-Betrieb stand) und
+die vier selbst entdeckten Fehl-Anker, **zwei davon in der Reparatur der jeweils vorigen**. Und dass
+du die Auto-Kette bei 🟡 nicht hast laufen lassen.
+
+**Freigabe: Plaene um Punkt 1 korrigieren, Mechanik streichen, dann Review mit ZWEI Sichten.**
