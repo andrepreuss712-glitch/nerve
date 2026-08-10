@@ -3413,7 +3413,7 @@ Kein Local-Dev. **Reihenfolge verbindlich (D-16, nach Cross-AI umgedreht):** com
 **Plans:** 6 Plans in 5 Wellen (geplant 2026-08-10)
 
 Plans:
-- [ ] 08.23.2.ZEITSTEMPEL-1-01-PLAN.md — Welle 1: ROT-Netz (reine Transform + `_extract_word_times`), kein Produktionscode
+- [x] 08.23.2.ZEITSTEMPEL-1-01-PLAN.md — Welle 1: ROT-Netz (reine Transform + `_extract_word_times`), kein Produktionscode — ✅ **AUSGEFUEHRT 2026-08-10** (Commits `8584bdf` / `2a9a05a` / `02d3569`; 3 Test-Dateien, +279/−0, kein Produktionscode, kein Schema; alle 24 Abnahme-Anker beim ersten Lauf getroffen). ⚠ **Der ROT-Beleg ist hergeleitet, nicht gemessen** (Kein Local-Dev) — gemessen wird er in Plan 02. Praezisierung: `test_ts_ms_bleibt_unberuehrt_von_den_neuen_spalten` ist ein **Gegenpol** und heute schon gruen, also **10 FAILED + 1 Collection-Error** erwartet, nicht 11 FAILED. SUMMARY: `08.23.2.ZEITSTEMPEL-1-01-SUMMARY.md`
 - [ ] 08.23.2.ZEITSTEMPEL-1-02-PLAN.md — Welle 2: ROT-Lauf am Server ziehen, verbatim als `ROT-LAUF.md` sichern (Deploy von Andre, Tor blockt)
 - [ ] 08.23.2.ZEITSTEMPEL-1-03-PLAN.md — Welle 3: **drei** nullable Spalten (`start_ms`/`end_ms`/`word_count`) + Schild (`models.py` + Alembic `0039` auf Kopf `0038`) — die vierte Spalte `seam_before` ist nach dem Cross-AI-Review **gestrichen** (D-06a)
 - [ ] 08.23.2.ZEITSTEMPEL-1-04-PLAN.md — Welle 3: **die Naht** — Wortzeiten aus `on_message` in den per-SID-RAM-Log; **ohne** Reconnect-Versatz und **ohne** Naht-Marker (D-05/D-06a gestrichen — die Divergenz der zwei Uhren IST das Naht-Signal)
