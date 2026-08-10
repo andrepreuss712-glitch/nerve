@@ -3831,3 +3831,74 @@ die vier selbst entdeckten Fehl-Anker, **zwei davon in der Reparatur der jeweils
 du die Auto-Kette bei 🟡 nicht hast laufen lassen.
 
 **Freigabe: Plaene um Punkt 1 korrigieren, Mechanik streichen, dann Review mit ZWEI Sichten.**
+
+---
+
+## FRAGE — 08.23.2.ZEITSTEMPEL-1 — 2026-08-10 (nach Cross-AI, zwei Sichten)
+
+**Wo ich stehe:** Review durch, `08.23.2.ZEITSTEMPEL-1-REVIEWS.md` committet (`9cd5f27`).
+Zwei Sichten: Gemini (`gemini-3.1-pro-preview`, Voreinstellung vorher geprueft — steht korrekt)
+und die Claude-CLI in eigener Sitzung. **Unabhaengigkeits-Vorbehalt:** Sicht 2 teilt meine
+Modellfamilie, ist also die schwaechere der beiden. Codex/Qwen/Cursor sind hier nicht installiert.
+
+**Drei Dinge gehen ohne Rueckfrage in den Replan** (`/gsd-plan-phase --reviews`), weil sie
+eindeutig sind und beide Sichten oder der Code selbst sie tragen:
+
+1. **`seam_before` faellt — UND der Versatz gleich mit.** Beide Sichten unabhaengig: DEFER.
+   Geminis Argument, das ich uebersehen hatte: es gibt **schon zwei Uhren**. Bei einer Naht laeuft
+   `ts_ms` (Wall-Clock) weiter, waehrend die Deepgram-Uhr steht — die Divergenz IST das
+   Naht-Signal, ohne jede neue Spalte. Claudes Zusatz: ohne Versatz wird die Pause nach einem
+   Reconnect **negativ**, und eine negative Pause ist ein selbsterklaerendes „unbekannt".
+   ⛔ Wichtigster Satz des Reviews: **nur den Marker zu streichen und den Versatz zu behalten waere
+   die schlechteste Variante** — dann faellt die Naht still auf 0 zusammen und nichts zeigt es an.
+   Damit ist die einzige nicht von dir freigegebene Entscheidung vom Tisch, und die Phase wird
+   kleiner statt groesser.
+2. **Deploy-Reihenfolge umdrehen: erst Migration, dann Deploy.** Beide HIGH. Der Alt-Code schreibt
+   nur die vier Bestandsspalten (`app_routes.py:550-555`), ist also vorwaerts-kompatibel — mit der
+   Migration zuerst gibt es **gar kein Fenster** statt eines kurzen. Das ist genau die
+   Expand/Contract-Lehre aus AUTH-2, die im Plan verletzt war. Claude hat den Befund geweitet:
+   nicht nur der Schreiber bricht, sondern **alle fuenf Leser** (Entity-Queries selektieren jede
+   gemappte Spalte), und `slow_lane` laeuft ueber `_requeue_pending()` beim Neustart **von allein**
+   hinein — mit `except Exception: return None` **ohne rollback** (`slow_lane.py:212`), also der
+   vergifteten Transaktion aus unserer eigenen DB-Regel. Symptom waere stilles Enthalten, kein
+   Fehler.
+3. **Der sechste falsche Anker** (`grep -c` zaehlt Zeilen, der Plan zaehlte Vorkommen) plus die
+   Verbindungs-Karte in Plan 04, die eine **erfundene** grep-Ausgabe zeigt (2 Schreiber statt real
+   6). Die Schlussfolgerung dort ueberlebt, der Beleg nicht.
+
+**⚖️ EINE Frage, die ich dir nicht abnehmen will — Art-9- und Fehler-Abschnitte:**
+
+Heute wird ein Abschnitt mit Art-9-Treffer oder Anonymisierungs-Fehler **komplett verworfen**
+(`deepgram_service.py:154-179`) — es entsteht gar keine Zeile. Beide Sichten sehen dieselbe Folge:
+die Sprech-Zeit fehlt dann in **Zaehler und Nenner** des Redeanteils, und die Luecke wird spaeter
+als **Pause** fehlgelesen. Spricht der Kunde 30 s und es greift Art 9, verschiebt sich der
+Redeanteil zugunsten des anderen — unsichtbar.
+
+Sie schlagen Gegensaetzliches vor:
+
+- **(A) Gemini:** Verhalten aendern — die Zeile **doch** schreiben, mit `text='[ART9_REDACTED]'`,
+  aber **mit** gueltigen Zeiten und Wortanzahl. Der Text bleibt geschwaerzt, die Zeit bleibt
+  erhalten, die Statistik stimmt.
+- **(B) Claude:** **kein** Code-Fix in dieser Phase — die Verzerrung nur im Schild und in den
+  Restluecken benennen, den Rest METRIK-1 ueberlassen.
+
+**Meine Empfehlung: (B)**, aber ohne grosse Ueberzeugung. Begruendung: (A) veraendert, was bei
+einem Art-9-Treffer in der Datenbank landet. Das beruehrt die DSGVO-Linie und die Regel
+„Anonymisierungs-Pipeline nur **ergaenzen**, nicht umbauen" — und diese Phase hat ausdruecklich
+einen kleinen Scope. Gegen mich spricht: eine still verzerrte Kennzahl ist genau die Fehlerklasse,
+die diese Phase eigentlich beseitigen soll, und ein zweiter Anlauf in METRIK-1 kostet wieder einen
+Deploy.
+
+**Was blockiert ist:** nichts Grosses — ich kann den Replan mit (B) fahren und (A) bliebe
+nachruestbar, weil sie keine Daten vernichtet, sondern nur nicht erfasst. Aber es ist deine Linie,
+nicht meine.
+
+**Und ein Befund, den du kennen solltest, weil er den Nutzen der Phase begrenzt:**
+Im **Cold-Call-Modus sind Redeanteil und Redeblock-Laenge strukturell nicht berechenbar.**
+`deepgram_service.py:113-118` setzt `log_sp = 0` hart, `diarize=is_meeting` (`:490`) schaltet die
+Sprechertrennung im Cold-Call ganz ab — **jedes** Segment landet als `berater`. Redeanteil waere
+dort immer 100 %. Sprechtempo und Pausenlaenge bleiben gueltig, im Meeting-Modus stimmen alle vier.
+Das ist kein Fehler dieser Phase, aber Plan 06 behauptet bisher das Gegenteil („alle vier kommen
+aus") — das wird korrigiert und kommt als benannte Grenze ins Schild und ins SUMMARY. Falls du
+Redeanteil auch im Cold-Call willst, ist das eine eigene Entscheidung (Diarisierung kostet dort
+Geld: +$0.0020/min).
