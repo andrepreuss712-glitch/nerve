@@ -3943,3 +3943,28 @@ Das ist kein Fehler dieser Phase, aber Plan 06 behauptet bisher das Gegenteil (�
 aus") — das wird korrigiert und kommt als benannte Grenze ins Schild und ins SUMMARY. Falls du
 Redeanteil auch im Cold-Call willst, ist das eine eigene Entscheidung (Diarisierung kostet dort
 Geld: +$0.0020/min).
+
+---
+
+## ROADMAP-SYNC — 08.23.2.ZEITSTEMPEL-1 — 2026-08-10
+
+`.planning/ROADMAP.md` (Zeilen 3412-3415, Plan-Liste der Phase) wurde nachgezogen — sie
+beschrieb noch den **Vor-Replan-Stand** und widersprach damit der CONTEXT.md. Claudian: bitte
+`Nerve-Vault/01 Roadmap.md` im selben Zug angleichen (Roadmap-Sync ist HART, Regel B).
+
+**Was geaendert wurde und warum:**
+
+| Zeile | vorher | jetzt | Grund |
+|---|---|---|---|
+| Plan 03 | „**vier** nullable Spalten + Schild" | „**drei** nullable Spalten (`start_ms`/`end_ms`/`word_count`)" + Hinweis, dass `seam_before` gestrichen ist | **D-06a** — beide Cross-AI-Sichten DEFER auf die vierte Spalte |
+| Plan 04 | „die Naht … **Versatz + Naht-Marker**" | „die Naht … **ohne** Reconnect-Versatz und **ohne** Naht-Marker; die Divergenz der zwei Uhren IST das Naht-Signal" | **D-05 + D-06a** — Marker und Versatz sind ein Paar; nur eins zu streichen waere die schlechteste Variante gewesen (die Naht faellt still auf 0 zusammen) |
+| Plan 05 | „**vier** Kwargs im INSERT" | „**drei** Kwargs im INSERT" | Folge von D-06a |
+| Plan 06 | „**Deploy + Prod-Migration**" | „**erst Prod-Migration, dann Deploy**" | **D-16** — Reihenfolge nach Cross-AI umgedreht: der Alt-Code ist vorwaerts-kompatibel, der neue ORM-Code gegen Schema `0038` braeche dagegen **alle fuenf** Entity-Leser mit `UndefinedColumn` |
+
+**Warum jetzt und nicht am Phasen-Ende:** Plan 06 setzt die Roadmap erst beim Abschluss auf
+COMPLETE. Die falschen Scope-Zeilen haetten die ganze Ausfuehrung ueberlebt — ein spaeterer
+`/gsd-spec-phase`-Aufruf haette den **falschen** Scope gelesen (vier Spalten, Naht-Marker,
+falsche Deploy-Reihenfolge).
+
+**Sonst nichts veraendert:** Phasen-Nummer, Ziel, Komplexitaets-Marker 🟡, Abnahme-Absatz und die
+Plan-Anzahl (6 Plans in 5 Wellen) bleiben unveraendert.

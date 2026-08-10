@@ -3409,10 +3409,10 @@ Kein Local-Dev. Commit → push → `bash deploy.sh production` (**Andre faehrt 
 Plans:
 - [ ] 08.23.2.ZEITSTEMPEL-1-01-PLAN.md — Welle 1: ROT-Netz (reine Transform + `_extract_word_times`), kein Produktionscode
 - [ ] 08.23.2.ZEITSTEMPEL-1-02-PLAN.md — Welle 2: ROT-Lauf am Server ziehen, verbatim als `ROT-LAUF.md` sichern (Deploy von Andre, Tor blockt)
-- [ ] 08.23.2.ZEITSTEMPEL-1-03-PLAN.md — Welle 3: vier nullable Spalten + Schild (`models.py` + Alembic `0039` auf Kopf `0038`)
-- [ ] 08.23.2.ZEITSTEMPEL-1-04-PLAN.md — Welle 3: **die Naht** — Wortzeiten aus `on_message` in den per-SID-RAM-Log, Versatz + Naht-Marker
-- [ ] 08.23.2.ZEITSTEMPEL-1-05-PLAN.md — Welle 4: Durchreichung in der reinen Transform + vier Kwargs im INSERT
-- [ ] 08.23.2.ZEITSTEMPEL-1-06-PLAN.md — Welle 5: Deploy + Prod-Migration (Andre), echter Test-Anruf, Zahlen per `inspect.sh`, SUMMARY/Pruning-Notiz/Fragen-Kanal
+- [ ] 08.23.2.ZEITSTEMPEL-1-03-PLAN.md — Welle 3: **drei** nullable Spalten (`start_ms`/`end_ms`/`word_count`) + Schild (`models.py` + Alembic `0039` auf Kopf `0038`) — die vierte Spalte `seam_before` ist nach dem Cross-AI-Review **gestrichen** (D-06a)
+- [ ] 08.23.2.ZEITSTEMPEL-1-04-PLAN.md — Welle 3: **die Naht** — Wortzeiten aus `on_message` in den per-SID-RAM-Log; **ohne** Reconnect-Versatz und **ohne** Naht-Marker (D-05/D-06a gestrichen — die Divergenz der zwei Uhren IST das Naht-Signal)
+- [ ] 08.23.2.ZEITSTEMPEL-1-05-PLAN.md — Welle 4: Durchreichung in der reinen Transform + **drei** Kwargs im INSERT
+- [ ] 08.23.2.ZEITSTEMPEL-1-06-PLAN.md — Welle 5: **erst Prod-Migration, dann Deploy** (D-16, Reihenfolge nach Cross-AI umgedreht — Andre faehrt beides), echter Test-Anruf, Zahlen per `inspect.sh`, SUMMARY/Pruning-Notiz/Fragen-Kanal
 
 ---
 
