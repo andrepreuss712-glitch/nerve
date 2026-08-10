@@ -50,3 +50,63 @@ def test_monotonic_clamp_on_clock_wrap():
     ts = [s['ts_ms'] for s in segs]
     assert ts == sorted(ts)                                # kein Ruecksprung trotz Wrap
     assert ts[0] == 0
+
+
+# ── Phase 08.23.2.ZEITSTEMPEL-1 — Sprech-Zeiten durch die reine Transform ──────────────
+# ROT gegen den Stand vor dieser Phase: die Transform gibt heute nur ts_ms/speaker/text
+# zurueck, der Zugriff auf 'start_ms' wirft KeyError. Function-Call-Return-Test, kein
+# Source-Presence-Check (CLAUDE.md Test-Qualitaets-Regel).
+
+def test_transform_reicht_sprechzeiten_durch():
+    segs = _transcript_entries_to_segments([
+        {'type': 'transcript', 'ts': '00:00:01', 'speaker': 0, 'text': 'Guten Tag',
+         'start_ms': 1200, 'end_ms': 4300, 'word_count': 7},
+    ])
+    assert len(segs) == 1
+    assert segs[0]['start_ms'] == 1200
+    assert segs[0]['end_ms'] == 4300
+    assert segs[0]['word_count'] == 7
+
+
+def test_knopfzeile_ohne_wortzeiten_wird_null():
+    # Die EWB-Knopf-Zeile (services/deepgram_service.py:1094-1105) setzt die drei
+    # Schluessel schlicht nicht. D-04: dann NULL, ausdruecklich nicht 0 —
+    # word_count=0 hiesse "hat nichts gesagt", None heisst "unbekannt".
+    segs = _transcript_entries_to_segments([
+        {'type': 'transcript', 'ts': '00:00:01', 'speaker': 1,
+         'text': 'preis *ewb button*', 'data': {'ewb_button': True}},
+    ])
+    assert len(segs) == 1
+    assert segs[0]['start_ms'] is None
+    assert segs[0]['end_ms'] is None
+    assert segs[0]['word_count'] is None
+
+
+def test_platzhalterzeile_behaelt_ihre_sprechzeiten():
+    # Weg C (Andre 2026-08-10): ein Abschnitt mit Art-9-Treffer oder Anonymisierungs-
+    # Fehler wird NICHT mehr verworfen, sondern mit neutralem Platzhalter-Text und
+    # ECHTEN Zeiten geschrieben. Sonst fehlte seine Sprech-Zeit in Zaehler UND Nenner
+    # des Redeanteils und die Luecke wuerde als Pause fehlgelesen.
+    segs = _transcript_entries_to_segments([
+        {'type': 'transcript', 'ts': '00:00:01', 'speaker': 1,
+         'text': '[nicht gespeichert]', 'start_ms': 2000, 'end_ms': 32000,
+         'word_count': 61},
+    ])
+    assert len(segs) == 1
+    assert segs[0]['text'] == '[nicht gespeichert]'
+    assert segs[0]['end_ms'] - segs[0]['start_ms'] == 30000
+    assert segs[0]['word_count'] == 61
+
+
+def test_ts_ms_bleibt_unberuehrt_von_den_neuen_spalten():
+    # D-02: zwei getrennte Achsen. Die Deepgram-Zeiten duerfen die ts_ms-Arithmetik
+    # (Wall-Clock, relativ zum ersten Entry, monoton geklemmt) NICHT veraendern.
+    segs = _transcript_entries_to_segments([
+        {'type': 'transcript', 'ts': '00:00:01', 'speaker': 0, 'text': 'a',
+         'start_ms': 500,  'end_ms': 900,  'word_count': 1},
+        {'type': 'transcript', 'ts': '00:00:05', 'speaker': 1, 'text': 'b',
+         'start_ms': 4100, 'end_ms': 4800, 'word_count': 2},
+        {'type': 'transcript', 'ts': '00:00:09', 'speaker': 9, 'text': 'c',
+         'start_ms': 8200, 'end_ms': 9000, 'word_count': 2},
+    ])
+    assert [s['ts_ms'] for s in segs] == [0, 4000, 8000]
