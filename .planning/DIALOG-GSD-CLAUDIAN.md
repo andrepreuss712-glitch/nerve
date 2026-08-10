@@ -3966,5 +3966,53 @@ COMPLETE. Die falschen Scope-Zeilen haetten die ganze Ausfuehrung ueberlebt — 
 `/gsd-spec-phase`-Aufruf haette den **falschen** Scope gelesen (vier Spalten, Naht-Marker,
 falsche Deploy-Reihenfolge).
 
-**Sonst nichts veraendert:** Phasen-Nummer, Ziel, Komplexitaets-Marker 🟡, Abnahme-Absatz und die
+**Sonst nichts veraendert:** Phasen-Nummer, Ziel, Komplexitaets-Marker 🟡 und die
 Plan-Anzahl (6 Plans in 5 Wellen) bleiben unveraendert.
+
+⚠ **KORRIGIERT im Nachtrag unten:** in der Zeile darueber stand zusaetzlich
+„Abnahme-Absatz … bleibt unveraendert" — **das war der Fehler.** Genau dieser Absatz trug den
+Vor-Replan-Stand weiter.
+
+
+---
+
+## ROADMAP-SYNC NACHTRAG — 08.23.2.ZEITSTEMPEL-1 — 2026-08-10 (2)
+
+**Der Sync oben war nur zu einem Drittel gemacht.** Er zog die **Plan-Liste** nach und schrieb
+ausdruecklich „Abnahme-Absatz … bleibt unveraendert". Falsch: **der Abnahme-Absatz und der
+Auflagen-Block trugen den Vor-Replan-Stand** und widersprachen den Entscheidungen, um die es im
+Replan ging. Weil `CONTEXT.md` → `<canonical_refs>` den ROADMAP-Phasen-Abschnitt **an erster
+Stelle** als Pflicht-Lektuere fuehrt, haette ein Executor von Plan 06 dort pflichtgemaess eine
+Abnahme-Reihenfolge **ohne Produktions-Migration** gelesen.
+
+Claudian: bitte `Nerve-Vault/01 Roadmap.md` an **denselben** Stellen nachziehen — sonst lebt der
+Drift auf der strategischen Seite weiter.
+
+**Sechs Stellen, jetzt nachgezogen** (Zeilennummern nach der Aenderung):
+
+| ROADMAP-Zeile | vorher | jetzt | verletzte Entscheidung |
+|---|---|---|---|
+| `:3402-3404` (`#### Abnahme`) | „commit → push → `deploy.sh production` … das Tor entscheidet. Danach ein echter Test-Anruf" — **keine** Produktions-Migration | commit → push → **Alembic auf Production** (als `postgres`, `DATABASE_URL` gesetzt) → **Gegenprobe** `inspect.sh schema transcript_segments` → **erst dann** `deploy.sh production` → Test-Anruf; Andre faehrt **beides** | **D-16** |
+| `:3397` | Wirkungs-Anker `end_ms > ts_ms` | **`end_ms > start_ms`**, Pause als `naechster.start_ms − voriger.end_ms` | **D-02** — `end_ms > ts_ms` rechnet ueber **beide** Achsen und ist die verworfene Variante (a); Plan 06:290 hatte es korrekt |
+| `:3399` (Punkt 26) | „Zeit-Anker ist `ts_ms`/`end_ms` (**Sprech-Zeit**)" | „Zeit-Anker ist **`start_ms`/`end_ms` (Deepgram-Sprech-Zeit)**, **nie** `ts_ms` (Wall-Clock, Sekunden-Aufloesung) und **nie** `created_at` (Batch-Schreibzeit)" | **D-02** — `ts_ms` ist ausdruecklich **keine** Sprech-Zeit |
+| `:3362-3363` (Scope) | Scope nennt nur **ENDE + Wortanzahl** | **START + ENDE + Wortanzahl** (`start_ms`/`end_ms`/`word_count`), Wortanzahl **vor** der Anonymisierung | **D-02**, **D-07** |
+| `:3381` (Speicher-Tabelle) | „**2×** `Integer` = 8 B je Zeile", ~2-3 KB/Anruf, ~25 MB | „**3×** `Integer` = **12 B** je Zeile", ~2,4-4,8 KB/Anruf, ~25-50 MB | stale (INFO) — Verhaeltnis A:B ~100× und die Schlussfolgerung bleiben unveraendert |
+| `:3370`, `:3387` | „⚖️ Offene Entscheidung — NICHT vorentschieden … Entscheidung faellt im Plan" | „✅ ENTSCHIEDEN 2026-08-10 (D-01) — Variante A"; Begruendung **bleibt stehen** | stale (INFO) — D-01 ist entschieden. **Markieren, nicht loeschen** (gleiche Konvention wie bei den gestrichenen D-05/D-06a in CONTEXT.md) |
+
+Zusaetzlich praezisiert: `:3357` sagte „nicht nur **zwei** Spalten anhaengen" — jetzt „nicht nur
+Spalten anhaengen (es sind **drei**)".
+
+**Die Zeilennummern des Sync oben (3412-3415) sind durch diese Aenderung verschoben** — die
+Plan-Liste steht jetzt bei `:3415-3420`. Wer nachschaut: ueber die Ueberschriften suchen, nicht
+ueber die Nummern.
+
+**Was in der Roadmap bewusst NICHT angefasst wurde:** Phasen-Nummer, Einordnung (vor METRIK-1),
+Ziel, Komplexitaets-Marker 🟡, Cross-AI-Pflicht-Kette, Bestaetigungs-Satz (Bau-Regel 3),
+Fragen-Kanal-Absatz, Plan-Anzahl (6 Plans in 5 Wellen) und die Befund-Kette `:3352-3358`
+(sie ist weiter korrekt).
+
+**Nebenbefund fuer METRIK-1** (steht jetzt auch in `08.23.2.ZEITSTEMPEL-1-03-PLAN.md`, gehoert
+ins Phasen-SUMMARY): `services/live_session.py:1304` zaehlt Woerter aus dem **gemergten Text**
+(`len(merged_text.split())`) — der von **D-07 verworfene Weg** (zaehlt Platzhalter statt
+Woerter). Diese Phase aendert das nicht. Es gibt danach **zwei** Wortzaehlungen mit
+**unterschiedlicher Bedeutung**; wer Sprechtempo rechnet, nimmt die neue Spalte `word_count`.

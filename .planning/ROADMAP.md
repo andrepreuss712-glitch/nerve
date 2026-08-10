@@ -3354,20 +3354,22 @@ Plans:
 - ✅ **bestaetigt:** `database/models.py:966-982`, `class TranscriptSegment` — Spalten sind `id`, `conversation_log_id`, `ts_ms`, `speaker`, `text`, `created_at`. **Kein Ende, keine Wortanzahl.**
 - ✅ **bestaetigt:** `services/deepgram_service.py:57-64` (`_get_speaker`) liest `result.channel.alternatives[0].words` bereits — heute nur, um per Mehrheit das Sprecher-Label zu bestimmen. Die Wort-Objekte tragen `start`/`end`; **die Zeiten sind da und werden verworfen.**
 - 🔴 **NEU GEFUNDEN, aendert den Scope — der Andre-Text hat es nicht gewusst:** `ts_ms` stammt **nicht** von Deepgram, sondern aus einer **Wall-Clock-Zeichenkette mit Sekunden-Aufloesung**. Beleg-Kette: `services/deepgram_service.py` schreibt in den RAM-Log `'ts': datetime.now().strftime('%H:%M:%S')` → `routes/app_routes.py:36-42` `_ts_to_ms_of_day()` parst `'HH:MM:SS'` → `routes/app_routes.py:45-73` `_transcript_entries_to_segments()` rechnet relativ zum ersten Eintrag und klemmt monoton. Der eigene Docstring sagt es woertlich (`app_routes.py:23-28`, „WARN-4"): *„KEIN ts_ms / Offset-Feld vorhanden."*
-  **Folge fuer den Plan:** Ein blosses `end_ms` **neben** dem heutigen `ts_ms` waere auf **1 Sekunde** gerundet. Sprechtempo und Pausenlaenge sind damit **nicht** brauchbar (eine Pause von 0,4 s und eine von 1,4 s waeren ununterscheidbar). **Die Phase muss die Deepgram-Zeiten durch die RAM-Naht bis zum Schreiber tragen** — Schreibstelle `routes/app_routes.py:548-554` — nicht nur zwei Spalten anhaengen. Das ist der eigentliche Kern der Arbeit.
+  **Folge fuer den Plan:** Ein blosses `end_ms` **neben** dem heutigen `ts_ms` waere auf **1 Sekunde** gerundet. Sprechtempo und Pausenlaenge sind damit **nicht** brauchbar (eine Pause von 0,4 s und eine von 1,4 s waeren ununterscheidbar). **Die Phase muss die Deepgram-Zeiten durch die RAM-Naht bis zum Schreiber tragen** — Schreibstelle `routes/app_routes.py:548-554` — nicht nur Spalten anhaengen (es sind **drei**: `start_ms`, `end_ms`, `word_count` — D-02; „nur `end_ms` neben `ts_ms`" ist die verworfene Variante (a)). Das ist der eigentliche Kern der Arbeit.
 - ℹ️ **Nebenbefund, kein Scope:** `services/live_session.py:1439-1460` `get_speech_stats()` rechnet Redeanteil/Tempo/Monolog **heute schon** — aber aus RAM-Zaehlern (`berater_words`, `kunde_words`, `session_start_time`), **pro Session fluechtig**, und `tempo` = Woerter je **verstrichener** Minute, nicht je **gesprochener** Minute. Nach dem Anruf ist alles weg. Diese Phase schafft die **haltbare, nachtraeglich korrekte** Grundlage; `get_speech_stats` wird **nicht** umgebaut.
 
 #### Scope — bewusst klein (Punkt 27, Leitsatz 2)
 
-1. **Abschnitts-ENDE** speichern (ms ab Call-Start, aus den Deepgram-Wortzeiten — nicht aus der Wall-Clock).
-2. **Wortanzahl** pro Abschnitt speichern.
+1. **Abschnitts-START und Abschnitts-ENDE** speichern (`start_ms` / `end_ms`, ms ab Verbindungs-Oeffnung, aus den Deepgram-Wortzeiten — nicht aus der Wall-Clock). ⚠ **Nachgezogen 2026-08-10 (D-02):** hier stand nur „ENDE". Es sind **DREI** neue Spalten — `start_ms`, `end_ms`, `word_count`. „Nur `end_ms` anhaengen und gegen `ts_ms` rechnen" ist die in D-02 **verworfene Variante (a)**.
+2. **Wortanzahl** pro Abschnitt speichern (`word_count`, gezaehlt **vor** der Anonymisierung aus den Deepgram-Wortobjekten — D-07).
 3. **Alembic-Revision auf den aktuellen Kopf** (heute `0038_sofort2_meetings_schild`). ⛔ **KEIN `_migrate()`-Muster** — das ist auf dem Live-Server wirkungslos (`app.py` verlaesst es bei Postgres sofort).
 4. **Regressions-Test zuerst ROT** gegen den heutigen Stand, dann fixen. Der rote Lauf gehoert **verbatim** in Commit + SUMMARY (Bau-Regel 1 „erst rot, dann fixen"; Punkt 31).
 5. **Schild nachziehen** (Punkt 23): neue Spalten sind nicht-trivial → `comment=` in `models.py` **und** `COMMENT ON COLUMN` in derselben Migration; das Tabellen-Schild von `transcript_segments` auf den geaenderten Schreib-Pfad aktualisieren.
 
 ⛔ **Ausdruecklich NICHT in dieser Phase:** die Bewertung anfassen (= METRIK-1) · `get_speech_stats` umbauen · die Anonymisierungs-Pipeline umbauen (nur **ergaenzen** — Zeiten und Wortanzahl sind keine personenbezogenen Daten, aber der Weg bleibt derselbe) · Backfill alter Anruf-Zeilen (unmoeglich, die Rohzeiten existieren nicht mehr → neue Spalten **nullable**, und die Leser muessen `NULL` als „vor ZEITSTEMPEL-1" vertragen).
 
-#### ⚖️ Offene Entscheidung — NICHT vorentschieden: Zeitstempel PRO WORT?
+#### ✅ ENTSCHIEDEN 2026-08-10 (D-01) — Zeitstempel PRO WORT? **Nein — Variante A**
+
+⚠ **Nachgezogen 2026-08-10:** dieser Abschnitt hiess „⚖️ Offene Entscheidung — NICHT vorentschieden" und endete mit „Entscheidung faellt im Plan". Beides ist **ueberholt** — `/gsd-discuss-phase` hat **Variante A** entschieden (Anfang / Ende / Wortanzahl **pro Abschnitt**, keine Wort-Tabelle), siehe **D-01**. Die Rechnung und die drei Argumente unten **bleiben stehen**, weil sie die Entscheidung tragen — gleiche Konvention wie bei den gestrichenen D-05/D-06a in CONTEXT.md: **markieren, nicht loeschen.**
 
 **Andres Rechnung (nachgerechnet, sie traegt):** Alle vier Messgroessen kommen mit **Anfang / Ende / Wortanzahl** aus —
 Redeanteil = Σ(Ende−Anfang) je Sprecher ÷ Gesamt · Sprechtempo = Wortanzahl ÷ (Ende−Anfang) · Redeblock-Laenge = zusammenhaengende Abschnitte desselben Sprechers · Pausenlaenge = `naechster.Anfang − voriger.Ende`. **Fuer die neun Fokus-Punkte wird Pro-Wort NICHT gebraucht.**
@@ -3376,28 +3378,31 @@ Redeanteil = Σ(Ende−Anfang) je Sprecher ÷ Gesamt · Sprechtempo = Wortanzahl
 
 | Variante | je Anruf | 10.000 Anrufe | Verhaeltnis |
 |---|---|---|---|
-| **A — Ende + Wortanzahl** (2× `Integer` = 8 B je Zeile, ~200-400 Zeilen/Anruf) | **~2-3 KB** | **~25 MB** | Grundlast |
+| **A — Start + Ende + Wortanzahl** (**3× `Integer` = 12 B je Zeile**, ~200-400 Zeilen/Anruf) | **~2,4-4,8 KB** | **~25-50 MB** | Grundlast |
 | **B — zusaetzlich Wort-Tabelle** (~100-110 B/Wort inkl. Tupel-Kopf + PK/FK-Index, ~2.000-3.000 Woerter je 15-Min-Anruf) | **~250-330 KB** | **~2,5-3 GB** | **~100×** |
+
+⚠ **Nachgezogen 2026-08-10 (D-02):** in Zeile A stand „2× `Integer` = 8 B je Zeile" — es sind **drei** Spalten (`start_ms`, `end_ms`, `word_count`) und damit **12 B je Zeile**. Das Verhaeltnis A:B (~100×) und die Schlussfolgerung bleiben unveraendert; nur die Absolutzahlen waren stale.
 
 **Drei Argumente gegen B, die im Plan zu widerlegen waeren, bevor B gewaehlt wird:**
 1. **Tueroeffner-Regel:** B ist nur zulaessig mit einem **konkret benannten spaeteren Feature**, das es braucht. Kandidaten waeren allein: Fuellwort-/Stocken-Erkennung **innerhalb** eines Abschnitts, wortgenaue Unterbrechungs-/Ueberlappungs-Erkennung („ins Wort fallen"), Sprechtempo-**Kurve** statt Mittelwert. **Keiner davon steht im Fokus-Katalog.**
 2. **DSGVO:** eine Wort-Tabelle ist faktisch **eine zweite Kopie des Transkripts** und braucht damit ihren **eigenen** Schwaerzungs-Pfad — das laeuft dem Beschluss 2 („waehrend des Anrufs geht kein Gespraechstext in die DB") direkt entgegen. Variante A traegt **keinen** Text.
 3. **Punkt 27:** B verwaltet ein Problem, das A aufloest.
 
-➡️ **Entscheidung faellt im Plan (`/gsd-discuss-phase` → `/gsd-plan-phase`), nicht hier.** Empfehlung des Befunds: **A**, mit der Begruendung oben — **aber ausdruecklich zur Gegenrechnung freigegeben.**
+➡️ **ENTSCHIEDEN: Variante A** — `08.23.2.ZEITSTEMPEL-1-CONTEXT.md`, **D-01**. Die drei Argumente gegen B wurden in `/gsd-discuss-phase` gegengerechnet und tragen; **B ist verworfen.** Ins SUMMARY gehoert ausdruecklich Begruendung **(b)** — die zweite Transkript-Kopie mit eigenem Schwaerzungs-Pfad — nicht nur die Speicherzahl. **Prod-Gegenrechnung (live gezogen):** 627 Zeilen ueber 77 `conversation_logs` ≈ **8 Segmente je Anruf**, weit unter den hier geschaetzten 200-400 (der Prod-Bestand ist heute von kurzen Test-Anrufen dominiert) — das Verhaeltnis A:B bleibt ~100×, die absoluten MB-Zahlen tragen diesen Vorbehalt.
 
 #### Fallen, die in diesem Projekt schon zugeschlagen haben — Auflagen fuer den Plan
 
 - **Existenz-Anker neben JEDE Abwesenheits-Pruefung** (Bau-Regel 20): grep-Zaehlung `== 0` **UND** ein bekanntes Muster `== 1`. Sonst ist „sauber" nicht von „nichts gelesen" zu unterscheiden.
 - **Abnahme-Anker duerfen NICHT auf Zeichenketten zeigen, die dieser Plan selbst als Kommentar/Docstring vorschreibt** — sonst zaehlt der Anker sich selbst (zweimal unerfuellbar geworden in MEHRNUTZER-REST-1).
-- **Abnahme-Anker pruefen WIRKUNG, nicht Schreibweise:** echte Zahlen aus der DB nach einem echten Test-Anruf (`inspect.sh sample transcript_segments N` → `end_ms > ts_ms`, `word_count > 0`, Pausen plausibel), **nicht** `grep` auf Code-Text.
+- **Abnahme-Anker pruefen WIRKUNG, nicht Schreibweise:** echte Zahlen aus der DB nach einem echten Test-Anruf (`inspect.sh sample transcript_segments N` → **`end_ms > start_ms`**, `word_count > 0`, Pause als `naechster.start_ms − voriger.end_ms` plausibel), **nicht** `grep` auf Code-Text. ⚠ **Nachgezogen 2026-08-10 (D-02):** hier stand `end_ms > ts_ms` — das rechnet ueber **beide** Zeitachsen und ist genau die von D-02 **verworfene Variante (a)**. Gerechnet wird **ausschliesslich innerhalb** der Deepgram-Achse (so auch Plan 06, Wirkungs-Anker).
 - **Der Anker folgt dem Artefakt, nicht umgekehrt** (F-3 aus MEHRNUTZER-REST-1): erzwingt ein Abnahme-Kriterium eine schlechtere Code-Form, ist das **Kriterium** falsch.
-- **Punkt 26 (Bereitschafts-Naht):** die Segmente werden **gebuendelt am Call-Ende** geschrieben (`app_routes.py:537-565`, alle `created_at` identisch). Jeder neue Leser der Zeiten muss das wissen — Zeit-Anker ist `ts_ms`/`end_ms` (**Sprech-Zeit**), **nie** `created_at` (Batch-Schreibzeit).
+- **Punkt 26 (Bereitschafts-Naht):** die Segmente werden **gebuendelt am Call-Ende** geschrieben (`app_routes.py:537-565`, alle `created_at` identisch). Jeder neue Leser der Zeiten muss das wissen — Zeit-Anker ist **`start_ms`/`end_ms` (Deepgram-Sprech-Zeit)**, **nie** `ts_ms` (Wall-Clock, auf ganze Sekunden gerundet) und **nie** `created_at` (Batch-Schreibzeit). ⚠ **Nachgezogen 2026-08-10 (D-02):** hier stand „`ts_ms`/`end_ms` (**Sprech-Zeit**)" — `ts_ms` ist ausdruecklich **keine** Sprech-Zeit, sondern die Wall-Clock-Achse.
 - **Punkt 21/22 Pflicht:** Persistenz-Schicht-Verifikation + Verbindungs-Karte fuer `transcript_segments` (`inspect.sh schema` verbatim), inkl. **wer liest heute schon** — mindestens `services/adoption_runner.py:263-271` und `services/judge_runner.py` haengen an der Tabelle.
 
 #### Abnahme
 
-Kein Local-Dev. Commit → push → `bash deploy.sh production` (**Andre faehrt den Deploy selbst** — Deny-Regel `~/.claude/settings.json:34-37`); **das Tor auf dem Server entscheidet.** Danach **ein echter Test-Anruf** und die Zahlen per `inspect.sh` gegenlesen. Schema-Aenderung ausschliesslich als Alembic-Revision auf dem aktuellen Kopf.
+Kein Local-Dev. **Reihenfolge verbindlich (D-16, nach Cross-AI umgedreht):** commit → push → **Alembic-Migration auf Production** (als OS-User `postgres` mit gesetztem `DATABASE_URL`) → **Gegenprobe** `inspect.sh schema transcript_segments` → **erst dann** `bash deploy.sh production` → **ein echter Test-Anruf**, Zahlen per `inspect.sh` gegenlesen. **Andre faehrt Migration UND Deploy selbst** (Deny-Regel `~/.claude/settings.json:34-37`); **das Test-Tor auf dem Server entscheidet** ueber den Neustart. Schema-Aenderung ausschliesslich als Alembic-Revision auf dem aktuellen Kopf.
+⚠ **Nachgezogen 2026-08-10 (D-16):** hier stand „commit → push → `deploy.sh production` … danach ein echter Test-Anruf" — **ohne** Produktions-Migration und ohne Gegenprobe. Migration-zuerst laesst **gar kein** Fenster: der Alt-Code ist vorwaerts-kompatibel, aber gegen Schema `0038` mit neuem ORM wirft **jeder** der fuenf Entity-Leser `UndefinedColumn` — und `slow_lane_consumer` (`app.py:2434` → `services/slow_lane.py:785-788`) laeuft nach dem Neustart **von allein** hinein, unabhaengig davon ob Andre telefoniert.
 **Bestaetigungs-Satz fuer den Plan (Bau-Regel 3):** *„Geprueft: Diese Phase persistiert kein Audio und loescht keine Call-Logs."*
 
 **Komplexitaet:** 🟡 mittel (Schema-Aenderung + Live-Pfad-Naht) → **Cross-AI-Review ist PFLICHT:** `/gsd-discuss-phase` → `/gsd-plan-phase` → `/gsd-review --gemini` → `/gsd-plan-phase --reviews` → `/gsd-execute-phase`.
