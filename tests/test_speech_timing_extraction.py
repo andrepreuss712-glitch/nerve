@@ -5,13 +5,31 @@ Function-Call-Return-Tests gegen die reine Extraktions-Funktion. KEIN Source-Pre
 Rueckgabewert. Kein DB-Zugriff, kein commit -> kein Zeilen-Aufraeumen noetig (tests/conftest.py-Konvention).
 
 ROT gegen den Stand vor dieser Phase: services/deepgram_service._extract_word_times
-existiert nicht -> ImportError beim Sammeln.
+existiert nicht -> ImportError IM TESTKOERPER (FAILED), nicht beim Sammeln.
+
+WARUM DER IMPORT NICHT AUF MODUL-EBENE STEHT (Lauf vom 2026-08-10):
+Ein Import-Fehler beim Sammeln ist fuer pytest ein Collection-Error, und der bricht den
+GESAMTEN Lauf ab ("Interrupted: 1 error during collection"). Der erste ROT-Lauf lieferte
+deshalb genau EINEN Fehler und liess die beiden anderen ROT-Netze (Durchreichung, Weg C)
+sowie die ~1140 Bestandstests UNGELAUFEN — der Beleg war wahr, aber blind. Der Import steht
+darum im Testkoerper: der fehlende Name erzeugt ein FAILED in genau diesem Modul, und alle
+uebrigen Tests laufen weiter. (Punkt 31: ein Waechter beweist nur, was in seinem
+Pruefkatalog steht — ein Abbruch VOR dem Katalog beweist gar nichts.)
 
 KEIN Versatz-Parameter: der Reconnect-Versatz (D-05) ist nach dem Cross-AI-Review vom
 2026-08-10 gestrichen. Ohne ihn wird die Pause ueber eine Naht negativ — physikalisch
 unmoeglich und damit ein selbsterklaerendes "unbekannt".
 """
-from services.deepgram_service import _extract_word_times
+
+
+def _extract_word_times(*args, **kwargs):
+    """Spaeter Zugriff auf die echte Funktion — haelt den ImportError im Test.
+
+    Absichtlich gleichnamig zur Ziel-Funktion, damit die Tests darunter unveraendert
+    lesbar bleiben. Nach Plan 04 loest der Import auf und die Tests werden gruen.
+    """
+    from services.deepgram_service import _extract_word_times as _impl
+    return _impl(*args, **kwargs)
 
 
 class _FakeWord:
