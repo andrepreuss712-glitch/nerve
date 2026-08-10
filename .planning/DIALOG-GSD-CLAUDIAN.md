@@ -4053,3 +4053,60 @@ in `08.23.2.ZEITSTEMPEL-1-04-SUMMARY.md`):
    `services/deepgram_service.py:764-766`) — **eigener Befund**, nicht von dieser Phase
    verursacht, hier nicht gefixt (Reparatur-Modus). Kandidat fuer die Mini-Runde
    „TRANSKRIPT-SCHUTZ" direkt nach ZEITSTEMPEL-1.
+
+## ROADMAP-SYNC — 08.23.2.ZEITSTEMPEL-1 (Plan 05) — 2026-08-10
+
+**Was in `.planning/ROADMAP.md` geaendert wurde:** Plan 05 abgehakt (`- [x]`) mit
+Ausfuehrungs-Notiz; die Plans-Kopfzeile traegt jetzt den Stand **5 von 6 ausgefuehrt
+(Wellen 1-4 fertig)**. Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen.
+
+**Warum / Kern:** Plan 05 **schliesst die Naht**. Plan 04 fuellt den RAM-Log, Plan 03 legt die
+Spalten an — ohne diesen Plan haetten sich beide nie getroffen. Die reine Transform
+`_transcript_entries_to_segments` gibt jetzt **sechs** statt drei Schluessel zurueck, der
+INSERT setzt drei Kwargs mehr.
+
+- Commits `891b291` / `403be5a`, **+19/−2 auf genau EINER Datei** (`routes/app_routes.py`)
+- **0 Testdateien angefasst** (belegt: `git diff --name-only HEAD~2..HEAD -- tests/` leer),
+  0 geloeschte/umbenannte Dateien
+- **Reines Durchreichen, kein Rechnen, kein Default:** `_entry.get(k)` **ohne** zweites
+  Argument → fehlender Schluessel wird `None`, **nie** `0` (D-04). Abwesenheits-Anker
+  `_entry.get('start_ms', 0)` = **0**, gepaarter Existenz-Anker `_entry.get(` = **7**
+- **Alle drei verbliebenen ROT-Assertions adressiert**
+  (`tests/test_transcript_segments_write.py:66/80/97`, `KeyError: 'start_ms'/'end_ms'`)
+- **Weg C braucht keinen Sonderfall-Zweig:** `[nicht gespeichert]` ist nicht leer und faellt
+  darum nicht durch die unveraenderte Leer-Text-Weiche `:58` — genau der Grund, warum Andre
+  „Platzhalter statt leer" entschieden hat
+- **`ts_ms` unangetastet:** `running = _rel` = 1, `'ts_ms': _rel,` = 1, gepaarter
+  Abwesenheits-Anker `'ts_ms': _entry` = **0** (die zwei Achsen wurden nicht vermischt)
+- **Schutz-Mechanik unveraendert:** Reentrance-Guard, `if _segs: commit` und
+  `except`+`rollback` Zeile fuer Zeile stehen geblieben (Anker fuer geloeschte Schutz-Zeilen
+  = **0**) — die Invariante „ein Fehler im Schreiber bricht die Call-Finalisierung NIE ab"
+  ueberlebt, weil beide neuen Bloecke **innerhalb** des bestehenden `try` liegen
+- Neue **Zaehl**-Logzeile `[ZEITSTEMPEL-1] transcript_segments INSERT conv=… added=N
+  mit_sprechzeiten=M` als Wirkungs-Anker fuer Plan 06 (kein Zeichenketten-Anker)
+- `seam_before` = **0 Treffer** in der Datei (D-05/D-06a sind ein gestrichenes Paar)
+
+**Eine Randnotiz, benannt statt weggelassen (Punkt 31):** im Arbeitsverzeichnis lag eine
+**fremde, unkommittierte** Aenderung an `.claude/settings.local.json` (Agenten-Werkzeug-
+Konfiguration; stand schon vor dem ersten Edit in `git status`). Sie wurde **nicht** gestaged
+und ist in keinem der beiden Commits. Der Plan-Anker „`git diff --stat` nennt genau eine
+Datei" ist damit auf **Commit**-Ebene erfuellt; auf Arbeitsverzeichnis-Ebene waere er ohne
+diese Erklaerung falsch-rot gewesen.
+
+**Noch NICHT passiert (wichtig fuer die Vault-Sicht):** kein Deploy, kein Push, Migration
+`0039` weiterhin **nicht gefahren**, **kein lokaler pytest** (HART-Regel). Das GRUEN ist
+hergeleitet, nicht gemessen — gemessen wird es serverseitig in Plan 06.
+
+**Plan 06 ist ein HALT-PUNKT fuer Andre**, Reihenfolge verbindlich (D-16):
+1. `alembic upgrade head` auf Production (als OS-User `postgres`, `DATABASE_URL` gesetzt —
+   sonst faellt alembic auf SQLite)
+2. Gegenprobe `inspect.sh schema transcript_segments` / `inspect.sh schilder transcript_segments`
+3. **erst dann** `bash deploy.sh production` (agenten-gesperrt) — Soll im Tor: **3 FAILED → 0
+   FAILED**; die `[BASELINE-AUTO-FIX]`-Warnungen duerfen sich nicht vermehren
+4. echter Test-Anruf, dann `inspect.sh sample transcript_segments 40` (`end_ms > start_ms`,
+   `word_count > 0`) und `inspect.sh logs 300` (`mit_sprechzeiten=N` mit **N > 0**)
+
+Der Grund fuer die umgedrehte Reihenfolge steht weiterhin: laeuft der neue Code gegen Schema
+`0038`, schluckt das `except` im Schreiber den `UndefinedColumn` **still** und die Segmente
+eines Anrufs gehen verloren — und **alle fuenf Entity-Leser** braechen, `slow_lane` liefe ueber
+`_requeue_pending()` beim Neustart von allein hinein.
