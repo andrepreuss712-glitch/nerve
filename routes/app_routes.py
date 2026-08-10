@@ -561,10 +561,18 @@ def api_beenden():
                         ts_ms=_s['ts_ms'],
                         speaker=_s['speaker'],
                         text=_s['text'],
+                        # ── Phase 08.23.2.ZEITSTEMPEL-1 — Sprech-Zeiten (D-02/D-04) ──────
+                        # Alle drei nullable: None bedeutet "unbekannt" (Zeile ohne
+                        # Deepgram-Wortzeiten). Kein or-0-Fallback, kein Default.
+                        start_ms=_s['start_ms'],
+                        end_ms=_s['end_ms'],
+                        word_count=_s['word_count'],
                     ))
                 if _segs:
                     db_conv.commit()
-                print(f"[D.UX.1] transcript_segments INSERT conv={conv.id} added={len(_segs)}")
+                _mit_zeiten = sum(1 for _s in _segs if _s['start_ms'] is not None)
+                print(f"[ZEITSTEMPEL-1] transcript_segments INSERT conv={conv.id} "
+                      f"added={len(_segs)} mit_sprechzeiten={_mit_zeiten}")
             else:
                 print(f"[D.UX.1] transcript_segments INSERT skipped (idempotent) conv={conv.id}")
         except Exception as _seg_err:
