@@ -170,7 +170,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 > ⚠ **Prozess-Lehre (Andre-Direktive, in `Nerve-Vault/CLAUDE.md` verankert):** „Fertig" ohne Beleg ist verboten. TEMPO-1 und H1 standen **zwei Wochen** als „live" in der Roadmap, ohne je an echten Daten geprueft worden zu sein. Ab sofort gilt in beiden Roadmaps: ✅ nur mit Beleg, sonst ⚠️ NICHT BELEGT.
 > ⚠ **Zweite Lehre aus genau diesem Eintrag (03.08.):** Der Block oben war selbst ein Verstoss — drei „am Datensatz belegte" Befunde, von denen zwei erschlossen waren. **Diagnose am echten Fehler-Beleg, nicht aus der Struktur** (Vault-Regel, verankert 24.07.).
 >
-> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.; ZEITSTEMPEL-1 eingeschoben 10.08.):** **MESSGERAETE-1** ✅ → **★ ZEITSTEMPEL-1** (Sprech-Zeiten sichern — **VOR** METRIK-1, weil vier der neun Fokus-Punkte ohne Abschnitts-Ende + Wortanzahl nicht berechenbar sind und die Zeiten fuer jeden gelaufenen Anruf **fuer immer verloren** waeren; Eintrag unten) → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → ~~Schwaerzung-Mittelweg~~ **(aufgegangen in den Engine-Neubau, s.u.)** → Schott-Restpaket → Stresstest.
+> **Reihenfolge ab hier (Vault-Roadmap "📍 ALLES AUF EINEN BLICK" ist fuehrend, Andre-Entscheidung 03.08.; ZEITSTEMPEL-1 eingeschoben 10.08.):** **MESSGERAETE-1** ✅ → **★ ZEITSTEMPEL-1** ✅ (Sprech-Zeiten sichern — **VOR** METRIK-1, weil vier der neun Fokus-Punkte ohne Abschnitts-Ende + Wortanzahl nicht berechenbar sind und die Zeiten fuer jeden gelaufenen Anruf **fuer immer verloren** waeren; Eintrag unten) → **4.0.1/4.0.2/4.0.3 Mini-Runde** → **METRIK-1** (Abloese, Form 2 → Form 3/4) → **KLEINKRAM-1** → **★ GEDAECHTNIS-A** (NEU 11.08., Eintrag unten) → **Coaching-Frage: zusammenlegen oder streichen** → SCHWAERZ-1 → "Verstehe"-Fix → ~~Schwaerzung-Mittelweg~~ **(aufgegangen in den Engine-Neubau, s.u.)** → Schott-Restpaket → Stresstest.
 >
 > 🔴 **NEUER BEFUND zur "Coaching-Frage: zusammenlegen oder streichen" — er verschiebt die Entscheidung Richtung STREICHEN oder SCHWELLE KORRIGIEREN** (gefunden 2026-08-06 bei der D-06-Abnahme von Phase 08.23.2.SOFORT-2, Fund **E-13**):
 > **Der sichtbare Teil der Coaching-Frage erreicht den Nutzer faktisch nie.** `services/claude_service.py:2278` sperrt sie: `if kategorie == 'frage' and bof_snapshot < 2: tipp = None`. Der Zaehler `_bof_count` (`:2238-2242`) zaehlt Berater-Beitraege **ohne** Fragezeichen und springt bei **jedem** Fragezeichen zurueck auf 0. Ein Cold-Caller fragt staendig → die Schwelle 2 wird praktisch nie erreicht. **Andre bestaetigt: in der gesamten Projektlaufzeit noch NIE einen Coaching-Hinweis im PiP gesehen.**
@@ -246,6 +246,33 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 > - **Zusammen bauen mit** der schriftlichen BIPA-Einwilligung des Verkaeufers (Cold-Call-Modus, Illinois-Schriftform) — dieselbe Stelle, dieselbe Mechanik, ein Bau-Schritt statt zwei.
 >
 > **Werbeaussagen:** "NERVE zeichnet NICHTS auf" ist als **ueberpruefbare Tatsachenbehauptung** angreifbar, solange Text gespeichert wird; "bei uns landen keine Kundendaten" ist gegenueber **Deepgram** nicht haltbar. Vier Slogan-Vorschlaege von Andre verworfen (*"da muessen wir nochmal ans reissbrett"*). Anforderungen an die Neufassung im Vault §7f — **Pflicht: muss in BEIDEN Modi wahr sein** (der erste Anlauf hatte den Meeting-Modus vergessen).
+
+---
+
+> ### ⬜ NEU 2026-08-11 — ★ GEDAECHTNIS-A: NERVE sieht seine EIGENEN Vorantworten nicht (Andre-Freigabe 11.08., pre-launch)
+>
+> **Position: nach KLEINKRAM-1, VOR dem Engine-Neubau.** 🟡 mittel → **Cross-AI Pflicht** (Bau-Regel 7).
+>
+> **Andre-Freigabe im Wortlaut:** *"super wichtig damit nerve hinterher ueberhaupt vernuenftig funktionieren kann. definitv pre launch."*
+>
+> **BEFUND:** Jede Antwort entsteht isoliert — die KI sieht ihre eigenen Vorantworten im selben Anruf nicht. Belegt: **"Verstehe" in 11 von 14** Antworten eines Testanrufs. **Die fertige Bau-Vorgabe liegt seit 02.07. im Vault und stand in KEINER Roadmap** (gefunden am 11.08. durch den Geltungs-Anker-Check des Vault-Waechters).
+>
+> **PFLICHT-PRE-READ, beide:** `Nerve-Vault/03 Planung/NERVE Gedaechtnis + Continuation — Entscheidung + Bau-Vorgabe.md` (das WAS) · `Nerve-Vault/03 Planung/Gedaechtnis (b) Pre-Resume-Audit gegen PERSID (Fable 2026-07-04).md` (die Nahtstellen). Vorhandene, **nie ausgefuehrte** Plaene: `.planning/phases/08.23.2.TAXO3-antworten-eine-wissensversorgung/` (b-02 / b-03).
+>
+> **⛔ ZUSCHNITT — NUR Teil (A). Andre-Entscheidung 11.08. nach zwei Zweitmeinungen:**
+> - **(A) HIER:** Kurzzeit-Gedaechtnis der letzten 3-5 Zuege inkl. der eigenen Vorantworten + Liste benutzter Oeffner in den **VOLATIL-Block** von `build_answer_context` (`services/prompt_pipeline.py:576-626`), plus Prompt-Anweisung "Einstieg variieren, benutzte Oeffner meiden".
+> - **(B) Freie-Antwort-Knopf (Continuation) + (C) Spiegel-Marker: NICHT HIER — gehoeren an den Engine-Neubau.** Begruendung: (B) klont die Knopf-Mechanik des alten Motors (`deepgram_service.py:1076ff`) und traegt damit das echte Wegwerf-Gewicht. **Gemini-Auflage dazu: (B) soll ein starkes = langsameres Modell nutzen — Latenz-Budget vor dem Bau festlegen, nicht danach.**
+>
+> **WARUM (A) VORGEZOGEN WIRD — Fable am echten Code, 11.08.:**
+> - **Alle vier Blocker des 04.07.-Audits sind durch PERSID erledigt:** `record_suggestion_offer` ist sid-first und schreibt per Session (`services/live_session.py:1401-1436`, Key-Init `:684`); Payload-Merge stabil in `services/intent_payload.py:62-64`; Whitelist `_ALLOWED` in `tests/test_intent_payload_guard.py:46`; `tests/test_no_live_global_state.py` `_WHITELIST` `:99-184` liefert das Muster fuer einen tenant-neutralen Latenz-Cache.
+> - **Der Speicher existiert bereits:** jede ausgegebene Antwort landet heute schon in `state['suggestion_offers']` (Slot A `einwand_keyword_matcher.py:338`, Slot B `deepgram_service.py:1259`, Auto `claude_service.py:1045`). **Neu sind nur Lese-Helfer (~15 Z.) + Injektion (~10 Z.) + Prompt-Anweisung.** Kein Eingriff in Riegel, Deepgram oder Sitzungs-Lebenszyklus. `get_recent_own_answers` existiert nirgends (0 Treffer).
+> - **Latenz-Sorge des Audits ist ueberholt:** Prompt-Caching laeuft seit TEMPO-1 (`services/prompt_pipeline.py:705-733`, Schalter `config.py:274`). Das Gedaechtnis liegt **hinter** dem einen Breakpoint → invalidiert den Cache **nicht**; Zusatzkosten nur ~250-500 ungecachte Token bei `streame_manual_ewb_variante` (`claude_service.py:1063`) und `generate_qa_response` (`qa_pipeline.py:428`).
+>
+> **🔴 PFLICHT IM PLAN LOESEN — neuer Fund (Fable 11.08.), steht weder in der Bau-Vorgabe noch im 04.07.-Audit:** Der Gedaechtnis-Ring enthaelt **nicht den Text, den der Berater gesehen hat.** Anzeige und Speicher sind seit FOLD A-2 bewusst getrennt: `claude_service.py:983-1002` (`cleaned_display` roh vs. `cleaned_storage` anonymisiert), Vertrag "NIE roh" `live_session.py:1412-1414`, im Fehlerfall `'[ANON_FEHLER]'` `:999`. **Re-injiziert (A) die Storage-Fassung, sieht das Modell seine Vorantworten mit Platzhaltern (`[PERSON_A]`) neben rohem Live-Kontext (`analysiert_bisher`, `deepgram_service.py:1227`) → Risiko, dass ein Platzhalter oder eine falsche Anrede in die LIVE VORGELESENE Antwort kopiert wird.** Der b-02-Plan verbucht die Anon-Re-Injektion nur als Datenschutz-Plus (T-TAXO3b-05) und benennt die Qualitaetsseite nirgends. **Entscheidung im Plan noetig: welche Fassung wird re-injiziert, und wie wird verhindert, dass Platzhalter in die Ausgabe wandern?**
+>
+> **⚠ VOR DEM PLANEN PFLICHT:** Frisch-Greppen **aller** b-Plan-Anker — sie sind belegt gedriftet (b-02 zitiert `:998`, real `:1401`). Bau-Regel 20 gilt: Abwesenheits-Pruefung immer mit Existenz-Anker daneben.
+>
+> **⚠ Verhaeltnis zum "Verstehe"-Fix:** zwei Ursachen, ein Symptom. Der "Verstehe"-Fix (Profil-Einwaende samt Beispielantworten gehen woertlich an die KI) bleibt eine **eigene** Phase — nicht zusammenlegen.
 
 ---
 
