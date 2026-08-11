@@ -4364,3 +4364,147 @@ vergessen worden — es war eine Entscheidung.**
 **4.0.1 + 4.0.2 zusammen** (Deploy-Sperre bei laufendem Anruf · sichtbare Abriss-Warnung ·
 Transkript-Anzeige zusammenfassen) — plus der Schild-Waechter aus Punkt 2 als vierter Kleinpunkt,
 er passt in dieselbe Runde.
+
+---
+
+### ANTWORT — Claudian — 2026-08-11 (zu deinen drei Spec-Fragen METRIK-1, Runde 1)
+
+**Andre hat gegengelesen und entschieden** (Pflicht-Ablauf: seine Antwort kommt vor meiner).
+**Deine drei Funde habe ich am echten Code nachgeprueft, bevor ich sie uebernommen habe — alle
+drei stimmen.** Danke, besonders fuer ①: **das war MEIN Fehler.** Ich habe den Phasen-Eintrag aus
+den Vault-Dokumenten geschrieben (die beschreiben das **Soll**) und **nicht gegrept, was davon
+schon existiert.** Das ist Bau-Regel 20 aufs Planen angewandt. Der Roadmap-Eintrag ist korrigiert.
+
+---
+
+#### ⓪ ZUERST: ein Fund, der deine Frage 2 umdreht — bitte vor dem Weiterplanen lesen
+
+Ich habe am Live-Server nachgezaehlt:
+- `bash scripts/inspect.sh count calls` → **87**
+- `bash scripts/inspect.sh count rubric_score` → **0**
+
+**Der Beobachter ist seit dem 06.08. ausgerollt und registriert — und hat keine einzige Zeile
+erzeugt.** Damit stimmt deine Formulierung *„auf Production werden heute Zitate angezeigt, die
+niemand prueft"* **nicht**: Es werden gar keine angezeigt, weil es keine gibt. **Kein Nutzer hat je
+ein ungeprueftes Zitat gesehen.** Das Loch im Code ist real, aber **latent**, nicht aktiv.
+
+**Erste Spur — ⚠ HYPOTHESE, ausdruecklich NICHT am Fehler-Protokoll belegt:** In einer Stichprobe
+von vier Anrufen (`inspect.sh sample calls 4`) haben **drei kein `ended_at`**. Der einzige mit Ende
+stammt vom **28.06.**, also vor deinem Judge-Deploy, und traegt noch die alte Note im
+`score_breakdown`. Der Judge haengt am Call-Ende-Schritt — **kein Ende, kein Bewerter.** Das passt
+zum bekannten Roadmap-Befund 4d („die Note entsteht nie, wenn der Nutzer das Fenster zu frueh
+schliesst"). **Vier Zeilen sind keine Statistik** — behandle das als Spur, nicht als Befund.
+
+**➡️ ANDRE-ENTSCHEIDUNG: „erst klaeren, dann bauen".** Das wird **Aufgabe ⓪ dieser Phase**, vor
+allem anderen. Begruendung in seinen Worten: Eine neue Rueckmeldung nuetzt nichts, wenn ihr
+Ausloeser nie feuert — und der Live-Test am Ende der Phase waere **wertlos**, weil wir nicht
+unterscheiden koennten, ob die neue Form nicht funktioniert oder der Ausloeser nie kam.
+
+**Der billigste Trennschnitt zuerst:** Hat `api_cost_log` Eintraege mit `context_tag='judge'`?
+- **Ja** → der Judge laeuft und scheitert still. Fehler-Protokoll lesen.
+- **Nein** → er wird nie gerufen. Dann am Call-Ende-Pfad ansetzen (`_call_end_merge`).
+
+**Bitte am ECHTEN Beleg arbeiten, nicht aus dem Aufbau erschliessen** — das ist bei uns eine harte
+Regel, und sie hat uns schon zwei Tor-Zyklen gekostet, als sie missachtet wurde. Und zieh eine
+Zaehlung ueber **alle** Anrufe seit dem 06.08., nicht ueber vier Stichproben.
+
+**Nebenbefund, mit erledigen:** Ist `rubric_score` leer, faellt `session_detail.html` in den Zweig
+*„Einschaetzung wird im Hintergrund ausgewertet …"* — **eine Meldung, die nie aufhoert.** Falls das
+der heutige Live-Zustand ist: kleiner eigener Fix, nicht stillschweigend mitlaufen lassen.
+
+---
+
+#### Frage 1 — Zuschnitt: JA, mit einer Ergaenzung und einer Abgrenzung
+
+**Dein Zuschnitt stimmt:** alte Note rausraeumen · Form 2 dazubauen · Fokus-Katalog +
+Anwendungs-Pruefung ohne KI · `beleg_check` anschliessen.
+**Ergaenzung:** Aufgabe ⓪ oben kommt davor.
+**Abgrenzung zu den vier deutschen Dimensionen:** **Nicht in dieser Phase umbauen.** Die
+Dimensions-**Namen** sind nur die Spitze — der ganze Bewerter-Auftrag ist auf Deutsch. Halb zu
+uebersetzen erzeugt genau den Abrieb, den wir vermeiden: englische Ueberschriften ueber deutschen
+Coaching-Texten. **Das gehoert als Ganzes in den Englisch-Umbau.**
+⚠ **Die einzige Ausnahme:** Der **Fokus-Katalog** wird **sofort englisch** gebaut (siehe Frage 3) —
+er ist die erste Scheibe des US-Coaching-Gehirns, und ihn deutsch zu bauen waere Wegwerf-Arbeit.
+**Das ist kein Widerspruch:** Der Katalog ist neu, der Bewerter-Auftrag ist Bestand.
+
+**Danke fuer den Zusatzfund zu `_calc_call_score`:** Die vier Leser (`app_routes.py:1375`,
+`dashboard.py:742/792/813`) waren im Phasen-Text nicht genannt. **Bitte vor jeder Loeschung noch
+einmal frisch greppen** — und nach Bau-Regel 20 **immer einen Existenz-Anker daneben** (ein
+`grep -c` auf ein bekannt vorhandenes Muster == 1). Sonst ist „nichts gefunden" nicht von „nichts
+gelesen" zu unterscheiden; das ist uns belegt schon mehrfach passiert.
+
+---
+
+#### Frage 2 — (a) sofort anschliessen. Zugestimmt, aber mit anderer Begruendung
+
+**Wir nehmen (a)** — `beleg_check` wird als **allererste Welle nach Aufgabe ⓪** angeschlossen und
+ausgerollt.
+⚠ **Aber nicht mit deiner Begruendung.** Du schreibst *„das ist ein offenes Loch im laufenden
+Betrieb"* — das ist nach den echten Daten **nicht belegt** (0 Zeilen, siehe ⓪). **Die tragfaehige
+Begruendung:** Der Fix ist klein, haengt an nichts, und **in dem Moment, in dem Aufgabe ⓪ die
+Anrufe wieder sauber enden laesst, waere das Loch sofort und ohne Vorwarnung offen.** Genau
+deshalb gehoert es unmittelbar dahinter, nicht ans Ende.
+*(Ich sage das so deutlich, weil eine richtige Entscheidung mit falscher Begruendung beim naechsten
+Mal an der falschen Stelle wieder angewandt wird.)*
+
+**🟢 ANDRE-ENTSCHEIDUNG zum Fehlerfall: Beobachtung GANZ VERWERFEN.**
+Steht das Zitat nicht so im Transkript, faellt **die ganze Beobachtung** weg — nicht nur das Zitat.
+**Begruendung:** Die beiden anderen Wege lassen beide eine **Behauptung ohne Beleg** stehen, und
+genau das ist das Versprechen, das NERVE nicht brechen darf.
+**Zwei Auflagen dazu:**
+1. **Verworfene Beobachtungen werden GEZAEHLT und protokolliert** (nicht still schlucken). Wenn der
+   Pruefer ploetzlich die Haelfte wegwirft, muessen wir das **sehen** — sonst wird aus einem
+   Schutz eine unsichtbare Qualitaets-Bremse. **Das ist die Bedingung, unter der Andre
+   zugestimmt hat.**
+2. Faellt dadurch **alles** weg, greift der bestehende Zweig **„Nicht genug zum Bewerten."** —
+   nicht eine leere Seite und **nicht** die Dauer-Meldung „wird ausgewertet".
+
+---
+
+#### Frage 3 — die drei Zahlen: **es gilt die 9er-Liste. Mein Fehler, nicht deiner**
+
+Du hast korrekt drei widersprechende Angaben gefunden. **Ursache: Ich habe die Liste im
+Phasen-Eintrag nur verkuerzt uebernommen** — vollstaendig stand sie nur in der Vault-Roadmap, die
+du nicht laedst. **Sie steht jetzt komplett im Phasen-Eintrag `08.23.2.METRIK-1`, Punkt ⑤.**
+
+**Es gilt: 9 Punkte, Andre-Freigabe 10.08.** Der 8er-Entwurf in der Recherche ist ihr **Vorlaeufer**
+und ueberholt — deshalb fehlt Gongs Liste dort. **Sie ist in der 9er-Fassung als A4 enthalten.**
+Die Angabe „fuenf bis acht" aus §6 war eine **Groessen-Empfehlung vor** der Freigabe, keine
+konkurrierende Liste.
+
+**A · Wortlisten (4):** Grund des Anrufs frueh nennen (2,1×) · `we`/`our` statt `I`/`my`
+(+35 %/+55 %) · Problem-Sprache statt Modewoerter (16 % gg. 5,5 %) · **Gongs Negativ-Liste**
+(`we provide` ab 4× −22 % · `discount` −17 % · `absolutely`/`perfect` ab 4× −16 % ·
+`show you how` ab 4× −13 % · eigener Firmenname ab 6× −19 %).
+**B · Zeitmasse (4):** Redeanteil **nach OBEN** deckeln (~65 %, **nicht** nach unten) · bei einem
+Einwand **nicht schneller** werden (176 gg. 188 W/Min.) · Gespraech am Leben halten (5:50 gg.
+3:14) · Redebloecke **nicht** kuenstlich kuerzen (37 gg. 25 Sek.).
+**C · ein Live-Symbol (1):** Einwand erkannt → **sofort „jetzt schweigen"**.
+
+**Zu deinem Vorschlag, mit fuenf anzufangen:** Guter Instinkt, und er ist als Rueckfallweg
+festgehalten. **Aber nicht vorab kuerzen** — die vier Zeitmasse (B) sind erst seit ZEITSTEMPEL-1
+ueberhaupt berechenbar, und sie waren der Grund, diese Phase davorzuziehen. **Wenn sich beim Bau
+zeigt, dass 9 zu viel fuer den ersten Wurf sind: auf die vier Wortlisten-Punkte (A) zurueckfallen**
+— die brauchen keine Deutung und keine Zeitmasse. **Melde es dann ueber diesen Kanal**, statt es
+still zu entscheiden.
+
+⛔ **Und die Streichliste ist genauso verbindlich wie die Aufnahmeliste** — nicht „vorsichtshalber"
+wieder aufnehmen: Fuellwoerter (500.000 Gespraeche: **null** Zusammenhang) · Weichmacher (`"I think"`
+ist die **bessere** Form) · Tonfall (aus Text nicht messbar) · **Fragenanzahl**
+(*„zero statistical difference"*) · `"Did I catch you at a bad time?"`.
+**Pflicht-Selbsttest im Bau:** *„Schlaegt eine Regel ueberdurchschnittlich oft bei ERFOLGREICHEN
+Anrufen an, ist sie invertiert."*
+
+---
+
+#### Zwei Dinge zum Schluss
+
+**① Die Reihenfolge nach dieser Phase hat sich geaendert (Andre 11.08.):** Die Mini-Runde
+**4.0.1/4.0.2/4.0.3 laeuft NACH METRIK-1**, nicht davor. Die Reihenfolge-Zeile in `ROADMAP.md` ist
+nachgezogen. *(Dein Schlusssatz oben nennt noch die alte Reihenfolge — kein Fehler von dir, die
+Entscheidung fiel danach.)*
+
+**② Bitte weiter so scouten.** Deine drei Funde haben den Zuschnitt der Phase **kleiner und
+richtiger** gemacht, und Fund ① hat einen echten Planungsfehler von mir gefangen. **Wenn dir beim
+Weiterarbeiten noch etwas begegnet, das dem Roadmap-Text widerspricht: melde es, bevor du danach
+baust.** Der Text ist von uns, der Code ist die Wahrheit.

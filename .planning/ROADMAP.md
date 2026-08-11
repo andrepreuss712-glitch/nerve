@@ -3426,11 +3426,21 @@ Plans:
 
 #### Was die Phase liefert (Soll, aus §6)
 
+**⓪ 🔴 ERSTE AUFGABE — WARUM ENDET KEIN ANRUF SAUBER? (NEU 11.08., Andre-Entscheidung: „erst klaeren, dann bauen")**
+**Am Live-Server nachgezaehlt (11.08.):** `count calls` = **87**, `count rubric_score` = **0**. Der Beobachter ist seit dem 06.08. ausgerollt und registriert — und hat **keine einzige Zeile** erzeugt.
+**Erste Spur (⚠ HYPOTHESE, nicht am Fehler-Protokoll belegt):** In einer Stichprobe von vier Anrufen haben **drei kein `ended_at`**. Der einzige mit Ende stammt vom 28.06., also **vor** dem Judge-Deploy, und traegt noch die alte Note. Der Judge haengt am Call-Ende-Schritt — **kein Ende, kein Bewerter.** Passt zum bekannten Befund 4d („die Note entsteht nie, wenn der Nutzer das Fenster zu frueh schliesst").
+⛔ **Bevor irgendetwas an der Rueckmeldung gebaut wird, ist das zu belegen — am ECHTEN Beleg, nicht aus der Struktur erschlossen:** Server-Protokoll des Call-Endes lesen · pruefen, ob `_call_end_merge` ueberhaupt gerufen wird · ob der Judge laeuft und still scheitert (dann muesste `api_cost_log` Eintraege mit `context_tag='judge'` haben — **das ist der billigste Trennschnitt zwischen „laeuft nie" und „laeuft und scheitert"**). **Vier Stichproben sind keine Statistik** — Zaehlung ueber alle Anrufe seit dem 06.08. ziehen.
+**Warum das VOR dem Bau kommt (Andre-Entscheidung 11.08.):** Eine neue Rueckmeldung nuetzt nichts, wenn ihr Ausloeser nie feuert. Und der Live-Test am Ende dieser Phase waere **wertlos** — er wuerde nichts anzeigen, und wir wuessten nicht, ob es an der neuen Form oder am Ausloeser liegt.
+⚠ **Nebenbefund, mitzuklaeren:** Ist `rubric_score` leer, faellt die Anzeige in den Zweig *„Einschaetzung wird im Hintergrund ausgewertet …"*. **Das ist eine Meldung, die nie aufhoert.** Falls das der heutige Live-Zustand ist: eigener kleiner Fix, nicht stillschweigend mitlaufen lassen.
+
 **① Der Zitat-Pruefer wird ANGESCHLOSSEN — Vorbedingung, nicht Teilziel.**
 `services/beleg_check.py` existiert, hat aber **ausser in Tests keinen Aufrufer im Produktivcode**. Er wird angeschlossen, **BEVOR irgendeine Bewertung angezeigt wird**. Bei einem Werkzeug, dessen ganzes Versprechen „jede Aussage mit Beleg" lautet, ist ein halluziniertes Zitat der Totalschaden. **Reihenfolge intern: `beleg_check` zuerst.**
 
-**② Ein blinder Beobachter statt einer Noten-Engine.**
-EIN LLM (Sonnet) liest nach dem Anruf (async, Slow Lane — Latenz egal) das **ganze Transkript der Reihe nach** plus Markierungen, Profil und Vorgespraech-Briefing. Es liefert **Beobachtungen mit woertlichem Beleg-Zitat** entlang einer **festen Dimensions-Liste — Start ~4, NICHT 7** (erst die erklaerbaren). Pflicht-Technik: **Beleg VOR Einstufung** (erst Zitat → Begruendung → Einstufung; Note-zuerst halluziniert), BARS-Anker als Klartext im Prompt, erzwungenes JSON-Schema.
+**② Der blinde Beobachter — ⚠ EXISTIERT BEREITS, NICHT NEU BAUEN (korrigiert 2026-08-11 nach GSDs Scout-Lauf).**
+⛔ **Mein Fehler beim Anlegen dieser Phase:** Ich habe diesen Punkt als Bau-Auftrag formuliert. **Er ist seit dem 06.08. gebaut, ausgerollt und verdrahtet** — `run_behavior_judge` (`services/judge_runner.py:331`), gerufen aus der Slow Lane (`services/slow_lane.py:532`, registriert via `register_call_end_step(_judge_step)`), schreibt nach `rubric_score`; die Anzeige steht in `templates/session_detail.html` inkl. Zitat-Block. Die feste Liste hat **vier** Dimensionen (`services/judge_dimensions.py`, `DIMENSIONS_VERSION = 2`): `bedarfs_ermittlung`, `gespraechs_eroeffnung`, `einwand_behandlung`, `gespraechsfuehrung` — **genau das „Start ~4, nicht 7" aus §6.**
+**Ursache meines Fehlers, damit sie sich nicht wiederholt:** Ich habe aus den Vault-Dokumenten geplant (die beschreiben das **Soll**) und **nicht am Code nachgesehen, was davon schon existiert.** Das ist Bau-Regel 20, angewandt aufs Planen: **vor jedem „bauen wir X" greppen, ob X schon da ist.** Zwei Minuten.
+**Was hier trotzdem zu tun ist:** Der Beobachter bleibt, wie er ist. Die vier Dimensionen sind **auf Deutsch** — das gehört **als Ganzes in den Englisch-Umbau**, nicht halb hier (ein US-Verkäufer bekäme sonst weiter deutsche Coaching-Texte, nur mit englischen Überschriften).
+*(Zur Einordnung, was der Beobachter tut:)* EIN LLM (Sonnet) liest nach dem Anruf (async, Slow Lane — Latenz egal) das **ganze Transkript der Reihe nach** plus Markierungen, Profil und Vorgespraech-Briefing. Es liefert **Beobachtungen mit woertlichem Beleg-Zitat** entlang einer **festen Dimensions-Liste — Start ~4, NICHT 7** (erst die erklaerbaren). Pflicht-Technik: **Beleg VOR Einstufung** (erst Zitat → Begruendung → Einstufung; Note-zuerst halluziniert), BARS-Anker als Klartext im Prompt, erzwungenes JSON-Schema.
 ⛔ **Der Beobachter kennt die NERVE-Vorschlaege NICHT** (sonst Bias) und **kennt den Fokus NICHT** (siehe ④). **Urteil von Rechnung trennen:** Das Modell beobachtet und belegt, es verrechnet nicht.
 **Intern, unsichtbar:** je Dimension eine grobe Auspraegung schwach/ok/stark (kein Score). Das **Ergebnis des Anrufs (Ja/Nein) wird getrennt gespeichert und kommt NIE in den Bewertungs-Prompt** (Outcome-Leakage). Die Note misst **nur Verhalten** — ein „Nein" zieht sie nie runter; der einzige Schutz gegen Ueberbewertung duenner Anrufe ist **Daten-Substanz**, ergebnis-blind → bei zu wenig Material: „nicht genug zum Bewerten", **wegen Daten-Mangel, nicht wegen des Neins**.
 
@@ -3442,7 +3452,27 @@ Sonst erkennt niemand, dass „mehr offene Fragen" und „stelle offene Fragen" 
 **Die Anwendungs-Pruefung laeuft OHNE KI:** Der blinde Beobachter zaehlt entlang seiner festen Liste; danach vergleicht eine reine **Code-Schicht** das Fokus-Kriterium gegen die blinde Beobachtung. **Damit steht der erwartete Fokus in keinem einzigen KI-Auftrag — eine gefaellige Pruefung ist strukturell unmoeglich, nicht bloss unwahrscheinlich.**
 
 **⑤ Der Fokus-Katalog (9 Punkte, festgezurrt 10.08. mit Andre-Freigabe) — auf ENGLISCH.**
-Er ist **Coaching-Inhalt, kein Code**, und damit die erste Scheibe des US-Coaching-Gehirns. Klein bauen (fuenf bis acht Eintraege): Trifft die Auswahl nicht, merken wir es an fuenf Eintraegen statt an fuenfzig. Drei Sorten: **Wortlisten** (Grund des Anrufs frueh nennen · `we`/`our` statt `I`/`my` · Problem-Sprache statt Modewoerter · Gongs Negativ-Liste) · **Zeitmasse** (Redeanteil nach OBEN deckeln ~65 %, **nicht** nach unten — im Kaltanruf gegenlaeufig zum Bedarfsgespraech · nicht beschleunigen bei Einwaenden) · **Einwand-Verhalten**. **Die Zeitmasse sind erst seit ZEITSTEMPEL-1 ueberhaupt berechenbar.**
+Er ist **Coaching-Inhalt, kein Code**, und damit die erste Scheibe des US-Coaching-Gehirns. **Auf ENGLISCH bauen.**
+⚠ **KORRIGIERT 11.08. — hier stand nur eine Kurzfassung, deshalb fand GSD drei widersprechende Zahlen (9 / 8 / „fuenf bis acht").** Es gilt **die 9er-Liste mit Andre-Freigabe vom 10.08.**; der 8er-Entwurf in der Recherche ist ihr **Vorlaeufer** und ausdruecklich ueberholt. Vollstaendig, damit niemand mehr suchen muss:
+> **A · Wortlisten — kein Deuten noetig, am saubersten pruefbar (4):**
+> 1. Grund des Anrufs frueh nennen (`"The reason for my call is…"` = **2,1×**)
+> 2. `we`/`our` statt `I`/`my` (**+35 % / +55 %**)
+> 3. Problem-Sprache statt Modewoerter (**16 % gg. 5,5 %**)
+> 4. **Gongs Negativ-Liste** (`we provide` ab 4× **−22 %** · `discount` **−17 %** · `absolutely`/`perfect` ab 4× **−16 %** · `show you how` ab 4× **−13 %** · eigener Firmenname ab 6× **−19 %**; Basis 519.000 Gespraeche)
+>
+> **B · Zeitmasse — erst seit ZEITSTEMPEL-1 ueberhaupt berechenbar (4):**
+> 5. Redeanteil **nach OBEN** deckeln (~65 %) — ⚠ **NICHT nach unten**, im Kaltanruf gegenlaeufig zum Bedarfsgespraech
+> 6. bei einem Einwand **nicht schneller** werden (176 gg. 188 W/Min.)
+> 7. das Gespraech am Leben halten (5:50 gg. 3:14)
+> 8. Redebloecke **nicht** kuenstlich kuerzen (37 gg. 25 Sek.)
+>
+> **C · genau EIN Live-Symbol (1):**
+> 9. Einwand erkannt → **sofort „jetzt schweigen"** — vorwaerts gerichtet, nicht hinterher tadelnd
+>
+> ⛔ **GESTRICHEN und nicht wieder aufnehmen — das ist der eigentliche Gewinn der Recherche:** Fuellwoerter (500.000 Gespraeche: **null** Zusammenhang) · Weichmacher (`"I think"` ist die **bessere** Form) · Tonfall (aus Text nicht messbar) · **Fragenanzahl** (*„zero statistical difference"*) · `"Did I catch you at a bad time?"`.
+> **Pflicht-Selbsttest im Bau:** *„Schlaegt eine Regel ueberdurchschnittlich oft bei ERFOLGREICHEN Anrufen an, ist sie invertiert."*
+
+**Wenn der Bau zeigt, dass 9 zu viel fuer den ersten Wurf sind:** mit den **vier Wortlisten-Punkten (A)** anfangen — sie brauchen keine Deutung und keine Zeitmasse.
 
 **⑥ Was RAUSGERAEUMT wird (das ist die Abloese-Haelfte).**
 `_calc_call_score` (`routes/app_routes.py`) und die angezeigte Gesamtnote. **Von ~30 Werten ueberleben ~9.** ⚠ **Vor jeder Loeschung greppen, wer wirklich liest** (Bau-Regel 20, mit Existenz-Anker daneben) — „feuert ins Leere" hiess bei uns schon zweimal „feuert an eine Stelle, die keiner auf dem Schirm hatte".
