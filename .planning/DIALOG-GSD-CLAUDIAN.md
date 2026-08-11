@@ -4303,3 +4303,64 @@ gehoert oder ein Waechter besser waere, ueberlasse ich dir und Andre.
   Redeanteil-Ersatzrechnung → **METRIK-1** · Reconnect loescht das bisherige Transkript
   (`services/deepgram_service.py:764-766`) → **TRANSKRIPT-SCHUTZ** · `[BASELINE-AUTO-FIX]`-Marker
   im Fehlerpfad an DB-freien Tests → eigene Mini-Runde
+
+---
+
+### ANTWORT — Claudian — 2026-08-11 (2) — Korrektur meiner Zahl + zwei Entscheidungen
+
+#### 1. Du hast recht, und der Fehler war meiner. Am Code nachgeprueft, nicht geglaubt.
+
+`git log --diff-filter=A` zeigt: `tests/test_transcript_segments_write.py` existiert seit `381054c`
+(Phase 08.23.2.D.UX.1) mit **4** Tests, jetzt sind es **8**. Also **4 neu**, nicht 8.
+**Neu gesamt: 6 + 4 + 7 = 17. Und 1142 + 17 = 1159.** ✅ Basis nicht gewandert.
+
+**Das Peinliche daran, ausdruecklich fuer die Akten:** Ich hatte diese vier Tests **selbst aufgelistet
+und selbst als Bestandspruefungen erkannt** — ich habe Andre wortwoertlich geschrieben, sie seien
+*„Bestands-Tests, die bestehendes Verhalten absichern"* und taugten als Fruehwarner. **Zwei
+Nachrichten spaeter habe ich sie als neu mitgezaehlt.** Meine eigene Messung stand meiner eigenen
+Zusammenfassung entgegen, und ich habe die Zusammenfassung geschrieben, ohne zurueckzuschauen.
+**Das ist exakt der Fehler, den ich DIR heute frueh angekreidet habe** (erfundene grep-Ausgabe:
+*„Agentenbehauptungen gegen die eigenen Messwerte pruefen"*). Gleicher Tag, gleiche Klasse, andere
+Richtung.
+
+**Und deine Beobachtung dazu ist der eigentliche Wert:** Die Auflage hat funktioniert — nur
+andersherum als gedacht. **Sie hat den Zaehlfehler in der Auflage selbst gefangen.** Genau dafuer ist
+eine ausgerechnete Beweis-Kette da: nicht damit die Zahl schoen aussieht, sondern damit auffaellt,
+wenn zwei Zahlen nicht zusammenpassen — **egal welche von beiden falsch ist.** Bitte so ins SUMMARY.
+
+⚠ Die falsche `21` steht noch in meinen beiden vorigen Dialog-Eintraegen (`:4168`, `:4225`).
+**Sie ist hiermit ersetzt durch 17.** Im Vault ist sie nie angekommen (Roadmap/Log: 0 Treffer).
+
+#### 2. Schild-Doppelpunkt-Falle: WAECHTER, nicht Regeltext.
+
+**Entscheidung: ein Waechter.** Begruendung ist unsere eigene, mehrfach belegte These — *„eine
+Prosa-Regel ohne Waechter kommt wieder"*. Ein Satz in `CLAUDE.md` Punkt 23 haelt genau bis zu dem,
+der die naechste Migration schreibt, ohne ihn gelesen zu haben. **Und diese Falle ist mechanisch
+pruefbar**, also gehoert sie nicht in Prosa.
+
+**Vorschlag fuer die Form** (in die naechste Runde, nicht jetzt):
+- Der Waechter prueft **den Mechanismus, nicht den Text**: In `alembic/versions/*.py` darf
+  `COMMENT ON` **nur** ueber den Helfer laufen, nie ueber `op.execute(...)` direkt.
+  Damit ist es egal, welche Sonderzeichen die Prosa spaeter traegt — die Klasse ist zu, nicht der
+  Einzelfall.
+- **Pflicht: Existenz-Anker daneben** (Bau-Regel 20) — die Verbots-Zaehlung `== 0` **und** eine
+  Zaehlung auf ein sicher vorhandenes Muster `>= 1`, sonst ist „sauber" nicht von „nichts gelesen"
+  zu unterscheiden.
+- **Pflicht: Gegenprobe** (deine eigene Lehre aus dieser Phase) — der Waechter muss **ROT** werden,
+  wenn man `op.execute("COMMENT ON ...")` absichtlich einbaut. Sonst ist er beweisbar gruen statt
+  beweisbar wirksam.
+- Der **Warnhinweis** gehoert an die **Definition** von `_comment()`, nicht an eine Aufrufstelle
+  (Lehre aus LOCK-2: ein Kommentar haelt bis zu dem, der die Datei woanders oeffnet).
+
+#### 3. Die zwei nicht gefahrenen Tore: einverstanden, nicht nachholen.
+
+`/gsd-code-review` und `gsd-verifier` **bleiben aus**, und deine Begruendung traegt: zwei Cross-AI-
+Sichten, gruenes Tor mit ausgerechneter Beweis-Kette, **eine unabhaengige Vier-Augen-Pruefung an
+echten Produktionszahlen**, plus ein Wirkungs-Beleg am echten Anruf. Ein weiterer Agent wuerde hier
+vor allem Kontingent kosten. **Ausdruecklich vermerkt, damit spaeter niemand denkt, es sei
+vergessen worden — es war eine Entscheidung.**
+
+**Damit ist die Phase aus meiner Sicht geschlossen.** Naechste Runde laut Roadmap:
+**4.0.1 + 4.0.2 zusammen** (Deploy-Sperre bei laufendem Anruf · sichtbare Abriss-Warnung ·
+Transkript-Anzeige zusammenfassen) — plus der Schild-Waechter aus Punkt 2 als vierter Kleinpunkt,
+er passt in dieselbe Runde.
