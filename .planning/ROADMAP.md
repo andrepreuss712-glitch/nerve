@@ -3426,8 +3426,18 @@ Plans:
 
 #### Was die Phase liefert (Soll, aus §6)
 
-**⓪ 🔴 ERSTE AUFGABE — WARUM ENDET KEIN ANRUF SAUBER? (NEU 11.08., Andre-Entscheidung: „erst klaeren, dann bauen")**
-**Am Live-Server nachgezaehlt (11.08.):** `count calls` = **87**, `count rubric_score` = **0**. Der Beobachter ist seit dem 06.08. ausgerollt und registriert — und hat **keine einzige Zeile** erzeugt.
+**⓪ 🔴 ERSTE AUFGABE — WARUM FINDET DER BEWERTER NICHTS ZU BEWERTEN? (NEU 11.08., Andre-Entscheidung: „erst klaeren, dann bauen")**
+
+> ⛔ **ZWEIMAL KORRIGIERT AM SELBEN TAG. Nimm NUR diese Fassung.**
+> **Irrweg 1 (meine Vermutung):** „die Anrufe enden nicht sauber" → von Andre widerlegt, er hat die Testanrufe selbst gemacht. Vollzaehlung: **76 von 87 sauber beendet.**
+> **Irrweg 2 (mein MESSWERT):** „`rubric_score` = 0" → **falsch gemessen.** `rubric_score` steht unter **FORCE Row Level Security pro Kunde**; `inspect.sh` setzt die Tenant-GUC nicht und bekommt deshalb **0 Zeilen statt eines Fehlers**. Mein Existenz-Anker (`count calls` = 87) hat es nicht gefangen, weil `calls` **nicht** FORCE-RLS ist.
+> ⚠ **Das ist woertlich Bau-Regel 20, dritte Form** („eine Sichtbarkeits-Grenze fuer eine Tatsache gehalten"). **Schaerfung, ab sofort gueltig: Ein Existenz-Anker muss dieselbe SCHUTZ-KLASSE haben wie die Pruefung.** Bei RLS-Tabellen ist `count == 0` ueber `inspect.sh` **kein Abwesenheitsbeweis**, sondern bedeutungslos.
+> **Aufgedeckt hat es ein Screenshot von Andre** — die Auswertungsseite zeigt in der Karte „KI-Einschaetzung [Beta]" den Satz **„Zu wenig auswertbare Momente fuer eine Einschaetzung."** Den kann das Template **nur** rendern, wenn eine Zeile existiert.
+
+**DER ECHTE BEFUND: Der Bewerter laeuft, schreibt seine Zeile — und lehnt ab.** Status `not_gradable`, Grund `too_few_high_confidence_events`.
+**Das Tor (`services/slow_lane.py:626-630`):** Audio-Guete unter `AUDIO_HEALTH_GATE_THRESHOLD` (0.5) → `poor_audio_health`; sonst **weniger als `MIN_HIGH_CONFIDENCE_EVENTS` (3)** hoch-konfidente `intent_event`-Zeilen → `too_few_high_confidence_events`. `_count_high_confidence` (`:398`) zaehlt nur Ereignisse ueber der modus-abhaengigen Tor-1-Schwelle; `confidence = None` zaehlt **nicht**.
+**🔴 Und das ist eine PRODUKT-Frage, keine Technik-Frage:** Im Kaltakquise-Modus hoert NERVE nur den Berater, und die automatische Einwand-Erkennung ist dort **kanonisch abgeschaltet** (Soll-Verhalten §2). Momente entstehen also fast nur ueber **Knopfdruecke**. **Wer weniger als drei hoch-konfidente Momente erzeugt, bekommt NIE eine Einschaetzung** — egal wie gut das Gespraech war. **Ist das der Normalfall, ist die ganze Nach-dem-Anruf-Auswertung strukturell ausgehungert — und METRIK-1 wuerde auf demselben leeren Tor aufsetzen.**
+**Zu klaeren, in dieser Reihenfolge:** (1) **mit gesetzter Tenant-GUC** zaehlen (nicht ueber `inspect.sh`): wie viele Zeilen, wie verteilen sich die `status`-Werte? (2) bei `not_gradable`: welcher Grund, wie oft? (3) **wie viele hoch-konfidente Momente haben echte Anrufe im Schnitt?** (4) erst danach entscheiden, ob die Schwelle, die Momente-Erzeugung oder beides angefasst wird. ⚠ **Nicht die Schwelle senken, damit es gruen wird** — Lackmustest: *kaeme dieselbe Zahl heraus, wenn der Istwert ein anderer waere?*
 ⛔ **KORREKTUR am selben Tag — meine erste Spur („die Anrufe enden nicht") ist WIDERLEGT, und der Befund wird dadurch HAERTER.** Andre hat widersprochen (*„ja wurden sie, ich habe die Testanrufe ja durchgefuehrt"*) und **er hatte recht** — ich hatte vier zufaellige Zeilen erwischt, drei davon aus der LOCK-Krisenwoche Ende Juli.
 **Vollzaehlung (`inspect.sh sample calls 90`), belegt:** 87 Anrufe · **76 sauber beendet** · 13 im August, davon 12 beendet · **mindestens 4 Anrufe NACH dem Judge-Deploy sind beendet UND haben ein gesetztes `outcome`** (06.08. 12:50 `send_info` · 06.08. 12:52 `no_interest` · 07.08. 08:22 `meeting_booked` · 11.08. 08:15 `meeting_booked`) · **`rubric_score` = 0.**
 **➡️ Die Anrufe enden sauber, das Ergebnis wird bestaetigt, die Anzeige ist per Vorgabe an (`_preview_on=True`) — und der Bewerter erzeugt trotzdem nichts.**

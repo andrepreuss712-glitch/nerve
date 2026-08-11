@@ -4377,7 +4377,77 @@ schon existiert.** Das ist Bau-Regel 20 aufs Planen angewandt. Der Roadmap-Eintr
 
 ---
 
-#### ⓪ ZUERST: ein Fund, der deine Frage 2 umdreht — bitte vor dem Weiterplanen lesen
+#### ⛔⛔ ZWEITE KORREKTUR, UND DIE ZAEHLT — LIES SIE VOR ALLEM ANDEREN IN DIESEM ABSCHNITT
+
+**Meine Zahl „`rubric_score` = 0" war FALSCH GEMESSEN. Alles, was ich unten daraus gefolgert habe,
+ist damit hinfaellig.** Der ganze Abschnitt ⓪ bleibt nur als Nachweis des Irrwegs stehen.
+
+**Was ihn aufgedeckt hat:** Andre hat einen **Screenshot der Auswertungsseite** geschickt. Dort
+steht in der Karte „KI-Einschaetzung [Beta]": **„Zu wenig auswertbare Momente fuer eine
+Einschaetzung."** Diesen Satz kann `session_detail.html` **nur** rendern, wenn
+`rubric_preview is not None` **und** `status == 'not_gradable'` **und**
+`reason == 'too_few_high_confidence_events'` (Zweig (b)). **Also existiert eine Zeile.**
+
+**Warum meine Messung log:** `rubric_score` steht unter **FORCE Row Level Security pro Kunde**
+(`slow_lane.py`: *„M-4 GUC-Klammer (KRITISCH gegen FORCE-RLS-fail-closed)"*, *„M-4: tenant_id
+ZUERST lesen (calls **nicht** FORCE-RLS)"*). `inspect.sh` setzt die Tenant-GUC **nicht** → die
+Datenbank liefert **0 Zeilen statt eines Fehlers**. Und mein Existenz-Anker (`count calls` = 87)
+hat das **nicht** gefangen, weil `calls` eben **nicht** FORCE-RLS ist.
+
+**⚠ Das ist woertlich die Falle aus unserer eigenen Bau-Regel 20, dritte Form:** *„Auch eine
+Leere/Fehlermeldung kann wie ein Abwesenheitsbeweis aussehen — wer das als Beleg nimmt, hat eine
+Sichtbarkeits-Grenze fuer eine Tatsache gehalten."* Ich habe sie dir in dieser Antwort noch selbst
+zitiert und bin eine Stunde spaeter hineingelaufen.
+
+**➡️ SCHAERFUNG DER REGEL, bitte ab sofort mitfuehren (ich trage sie im Vault nach):**
+**Ein Existenz-Anker muss dieselbe Schutz-Klasse haben wie die Pruefung.** Ein Anker auf eine
+Tabelle ohne Zeilenschutz beweist nur, dass das Werkzeug laeuft — **nicht, dass die geprueffte
+Tabelle ueberhaupt lesbar ist.** Bei RLS-Tabellen ist `count == 0` ueber `inspect.sh` **kein
+Abwesenheitsbeweis**, sondern bedeutungslos.
+
+---
+
+#### ⓪-NEU: DER ECHTE BEFUND — der Bewerter LAEUFT und lehnt ab
+
+**Nicht „er wird nie erreicht", sondern: er wird erreicht, er schreibt seine Zeile, und er stuft den
+Anruf als nicht bewertbar ein.** Grund laut Anzeige: **„zu wenig auswertbare Momente"**.
+
+**Das Tor, am Code (`services/slow_lane.py:626-630`):**
+```
+if audio_health_score is None or < AUDIO_HEALTH_GATE_THRESHOLD (0.5)  -> 'poor_audio_health'
+elif n_high_conf < MIN_HIGH_CONFIDENCE_EVENTS (3)                     -> 'too_few_high_confidence_events'
+```
+`_count_high_confidence` (`:398`) zaehlt `intent_event`-Zeilen, deren `confidence` **ueber der
+modus-abhaengigen Tor-1-Schwelle** liegt; `confidence = None` zaehlt **nicht** mit.
+
+**🔴 Und hier wird es zur Produkt-Frage, nicht zur Technik-Frage:** Im Kaltakquise-Modus hoert NERVE
+**nur den Berater**, und die **automatische Einwand-Erkennung ist dort kanonisch ABGESCHALTET**
+(Soll-Verhalten §2, Andre 29.06. — „sie kann strukturell nichts Neues zeigen"). Die Momente
+entstehen dort also fast nur ueber **Knopfdruecke**. **Wer weniger als drei hoch-konfidente Momente
+erzeugt, bekommt NIE eine Einschaetzung** — egal wie gut oder lang das Gespraech war.
+**Wenn das der Normalfall ist, ist die gesamte Nach-dem-Anruf-Auswertung strukturell ausgehungert,
+und METRIK-1 wuerde auf demselben leeren Tor aufsetzen.**
+
+**AUFGABE ⓪ IST DAMIT NEU ZUGESCHNITTEN — bitte diese Fassung nehmen, nicht die unten:**
+1. **Mit gesetzter Tenant-GUC** zaehlen (NICHT ueber `inspect.sh` — das misst wegen RLS Muell):
+   Wie viele `rubric_score`-Zeilen gibt es wirklich, und **wie verteilen sich die `status`-Werte**
+   (`not_gradable` / `judge_failed` / normal)? **Das ist die Kernzahl.**
+2. Bei `not_gradable`: **welcher Grund**, wie oft `poor_audio_health` gegen
+   `too_few_high_confidence_events`?
+3. **Wie viele hoch-konfidente Momente haben unsere echten Anrufe im Schnitt?** Wenn der Schnitt
+   unter 3 liegt, ist **die Schwelle das Problem — oder die Momente-Erzeugung im Kaltanruf.**
+4. **Erst danach entscheiden**, ob METRIK-1 die Schwelle anfasst, die Momente-Erzeugung, oder
+   beides. ⚠ **Nicht einfach die Schwelle senken, damit es gruen wird** — das waere eine gebogene
+   Schwelle. Der Lackmustest: *Kaeme dieselbe Zahl heraus, wenn der heutige Istwert ein anderer
+   waere?*
+
+**Was NICHT mehr gilt:** „der Schritt wird gar nicht erreicht", „`register_call_end_step` wird
+vielleicht nie importiert", „`api_cost_log` als Trennschnitt". **Alles hinfaellig** — der Judge
+laeuft. Die Frage ist nur, warum er nichts zu bewerten findet.
+
+---
+
+#### ⓪-ALT (IRRWEG, nur als Nachweis stehen gelassen — NICHT danach handeln)
 
 Ich habe am Live-Server nachgezaehlt:
 - `bash scripts/inspect.sh count calls` → **87**
