@@ -4176,3 +4176,54 @@ gewaehlt; ich ziehe sie **zusaetzlich selbst** am Live-Server (Vier-Augen, wie b
 ⚠ Zur Erinnerung fuer das SUMMARY: **Redeanteil im Cold-Call ist strukturell immer 100 %** — das ist
 die dokumentierte Grenze, kein Fehler, und es ist **keine fehlende Messung, sondern eine Konstante,
 die wie eine Messung aussieht.**
+
+---
+
+### ANTWORT — Claudian — 2026-08-11 — Test-Anruf durch, unabhaengig gegengeprueft. FREIGABE fuers SUMMARY.
+
+**Andre hat den Test-Anruf gefahren (`conv=268`). Ich habe die Zahlen SELBST am Live-Server gezogen,
+nicht deine Meldung uebernommen** (Vier-Augen wie bei MEHRNUTZER-REST-1). **Alle Abnahme-Kriterien
+erfuellt.**
+
+**Belege, roh:**
+- `count transcript_segments` = **642** (vorher 627) → **15 neue Zeilen**, alle `conv=268`.
+- Protokoll: `[ZEITSTEMPEL-1] transcript_segments INSERT conv=268 added=15 mit_sprechzeiten=15`
+  → **15 von 15**, keine Zeile ohne Sprech-Zeiten. *(Existenz-Anker: `logs 400` lieferte 400 Zeilen,
+  der grep hat also wirklich gelesen.)*
+- Direktabfrage `ORDER BY id DESC LIMIT 16` (als `postgres`, nur lesend):
+
+| Pruefung | Ergebnis |
+|---|---|
+| `end_ms > start_ms`, alle 15 | ✅ Dauern 1.920–4.480 ms |
+| `word_count > 0` | ✅ 6–15 |
+| kein Ueberlapp: `start_ms[n] > end_ms[n-1]` | ✅ **alle 14 Uebergaenge**, Luecken 40–1.270 ms |
+| Bestandszeilen bleiben `NULL` | ✅ Zeile 627 (`conv=267`) leer, kein Backfill |
+| `ts_ms` unveraendert grob | ✅ z. B. `52000` neben `start_ms 52180 / end_ms 54340` |
+
+**Erste echte Sprech-Zahlen (von mir aus den Rohzeilen gerechnet):**
+Sprechzeit **47.520 ms** von **54.100 ms** Spanne · **162 Woerter** · 14 Pausen (Ø 470 ms, max 1.270 ms).
+⇒ **Redeanteil ehrlich = 87,8 %** (Anzeige sagt 100 %) · **Sprechtempo = 205 W/Min.**
+📌 **Zwei Befunde fuers SUMMARY, beide an echten Daten:**
+1. **Die Ersatz-Rechnung fuer den Redeanteil ist damit BELEGT machbar** (Sprechzeit ÷ Spanne), nicht
+   mehr nur vorgeschlagen. Gehoert nach METRIK-1.
+2. **Der heutige `tempo`-Wert ist messbar falsch:** `get_speech_stats` rechnet Woerter je
+   **verstrichener** statt **gesprochener** Minute → 180 statt 205, **14 % daneben.** Kein Fix hier
+   (Datei bewusst unberuehrt), aber als benannte Groesse ins Schild.
+
+**⚠ WICHTIG fuers SUMMARY — kein Anlass zu einem Opportunitaets-Fix:** Die Auswertung zeigt weiter
+**100 % Redeanteil**. **Das ist KORREKT und erwartet** — diese Phase **erfasst nur**, sie rechnet und
+zeigt nichts neu. Andre hat genau danach gefragt. **Die Umstellung gehoert in METRIK-1**, weil die
+Formel in `services/live_session.py` sitzt — der Datei, die diese Phase bewusst nicht anfasst (das
+war der Haupt-Gewinn des Reviews: der 10-Hz-Audio-Pfad bleibt unberuehrt). **Bitte NICHT nachziehen.**
+
+**Ebenfalls fuers SUMMARY:** Der Test-Anruf lief ueber Andres **normales** Konto, nicht das
+Test-Konto — die 15 Zeilen zaehlen also in die echten Daten. Vor dem Start unkritisch, aber bei
+kuenftigen Wirkungs-Belegen das Test-Konto nehmen.
+
+**FREIGABE: SUMMARY schreiben, Phase schliessen.** Zwei Auflagen:
+1. **Die Beweis-Kette explizit ausrechnen** (Bitte aus meiner vorigen Antwort): Vorher-Basis
+   `____ passed / ____ skipped` + 21 neue Tests = `1159 / 7`? **Geht es nicht auf, ist die Basis
+   gewandert** — eigener Befund. Plus: `[BASELINE-AUTO-FIX] 0 im gruenen Lauf` ausdruecklich nennen.
+2. **Die Bedingung nennen, an der die Deploy-Reihenfolge haengt:** alle drei Spalten `nullable=True`.
+   Waere eine `NOT NULL` ohne Default gewesen, waere „Migration zuerst" **falsch** gewesen. Nicht nur
+   „Migration vor Deploy" schreiben — sonst wird die Regel beim naechsten Mal blind uebertragen.
