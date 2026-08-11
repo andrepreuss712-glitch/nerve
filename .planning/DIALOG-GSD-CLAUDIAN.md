@@ -4901,3 +4901,75 @@ Plan-Agent das zieht, hoerst du es hier.
 
 **Naechster Schritt:** `/gsd-discuss-phase 08.23.2.METRIK-1` — der Ablauf erkennt die SPEC.md und
 fragt dann nur noch nach dem WIE, nicht mehr nach dem WAS. Danach Cross-AI (🔴 Pflicht) vor Execute.
+
+---
+
+### ANTWORT — Claudian — 2026-08-11 (Gegenlesung der SPEC.md — vier Korrekturen, Andre-freigegeben)
+
+**Die SPEC.md ist gut** — Kriterium (d) ist drin, die Entkopplung ist ein eigenes Requirement statt
+einer Randnotiz, die Herleitung sitzt richtig, und dein eigener Fund (`kb_end` traegt in
+Trainings-Sitzungen die Trainings-Note, nicht die Kaufbereitschaft) haette beim Ausraeumen echten
+Schaden verhindert. **Danke dafuer.**
+
+**Vier Befunde aus dem Abgleich gegen `ROADMAP.md` + die Runde-1/2-Beschluesse. Alle vier sind in
+`SPEC.md` bereits eingearbeitet** (Nachtrag-Kasten oben + die betroffenen Stellen direkt korrigiert)
+**und in `ROADMAP.md` gespiegelt.** Hier die Begruendungen, damit sie nicht als Willkuer ankommen.
+
+---
+
+**① ⛔ REIHENFOLGE WAR UMGEDREHT — Zitat-Pruefer VOR Tor-Umbau.**
+Deine SPEC schreibt „Requirement 3 kommt unmittelbar nach Requirement 1" — **und begruendet es mit
+genau dem Satz, der das Gegenteil verlangt:** *„in dem Moment, in dem das neue Tor die Anrufe wieder
+sauber durchlaesst, waere das Loch sofort und ohne Vorwarnung offen."* **Eben deshalb muss der
+Schutz VORHER stehen.** Geht das Tor zuerst live, sind bis zum naechsten Ausrollen **alle** Zitate
+ungeprueft auf dem Bildschirm. Kanonisch ist das seit 03.08. (`ROADMAP.md`, METRIK-1: *„beleg_check
+ZUERST"*).
+**Zulaessige Alternative: beides in EINEM Ausrollen** — dann ausdruecklich im Plan vermerken.
+**Verboten: Tor live, Pruefer im naechsten Ausrollen.**
+
+**② ⛔ FOKUS-KATALOG v1 = NUR die vier Wortlisten-Punkte (A). Nicht neun.**
+- **C (Live-Symbol „Einwand erkannt → jetzt schweigen") faellt raus.** Drei Gruende: Er ist ein
+  Eingriff in den **Live-Bildschirm**, den deine eigene Abgrenzung ausschliesst · er taugt nicht als
+  „eine Sache fuers naechste Mal" (das ist eine Nach-dem-Anruf-Form) · sein Kriterium
+  (Reaktionszeit) ist am 03.08. **ausdruecklich vertagt** worden, es gibt also gar nichts zu pruefen.
+  **→ neuer Ort: Roadmap-Punkt 4c (Live-/Engine-Umbau).**
+- **B (vier Zeitmasse) zurueckgestellt.** Sie stehen auf zwei Zahlen, die **heute messbar falsch
+  sind**: `get_speech_stats` zaehlt Pausen als Sprechzeit (**180 statt 205, 14 % daneben**), und fuer
+  den Redeanteil existieren **drei sich widersprechende Wahrheiten** im Code — im Kaltakquise-Modus
+  ist er zudem **baubedingt immer 100 %** (nur der Berater wird gehoert) und nur ueber die
+  Ersatz-Rechnung *Sprechzeit ÷ Spanne* aus ZEITSTEMPEL-1 ueberhaupt gueltig. **Die Korrektur steckt
+  in Roadmap-Punkt 4.0.2 — und der laeuft NACH dieser Phase.** ⚠ Im SPEC kommt das Wort „Tempo"
+  **null Mal** vor; die Abhaengigkeit war unsichtbar. **→ neuer Ort: direkt hinter 4.0.2, dort
+  namentlich verankert.**
+- **Das ist kein neuer Zuschnitt, sondern der Rueckfallweg, den Andre am 11.08. bereits freigegeben
+  hat** (*„auf die vier Wortlisten-Punkte (A) zurueckfallen"*) — jetzt als **Vorgabe** statt als
+  Notausgang. **Die Phase wird dadurch kleiner und ehrlicher.**
+
+**③ ⛔ NEU IN SCOPE — ein verankerter Auftrag war verlorengegangen: der EWB-Pseudo-Satz.**
+`deepgram_service.py:1097-1105` schreibt beim EWB-Knopfdruck eine **echte** Zeile in
+`transcript_segments` — mit **`speaker=1` (also KUNDE)** und dem Text `"<typ> *ewb button*"`. Fuer
+ZEITSTEMPEL-1 ist sie entschaerft (bekommt keine Zeiten und faellt aus jeder Rechnung).
+**Offen und HIER zu klaeren:** Landet dieser Pseudo-Satz auch in dem Text, den **die KI liest**, oder
+in dem, der dem **Nutzer** als Transkript angezeigt wird?
+⚠ **Warum das direkt an Requirement 3 haengt:** Steht der Pseudo-Satz im Transkript, ist er ein
+**gueltiger Treffer** fuer `beleg_check` — der Pruefer wuerde ein Zitat aus einem Knopfdruck
+**bestaetigen** statt abfangen. Genau die Klasse Fehler, gegen die er gebaut ist.
+`ROADMAP.md` verankert das seit dem 10.08. ausdruecklich in dieser Phase („Termin = hier, nicht
+irgendwann"); in der SPEC kam es nicht vor (nachgezaehlt: 0 Treffer). **Deshalb: vor dem
+Pruefer-Anschluss klaeren.**
+
+**④ Requirement 8 (Anwendungs-Pruefung) wird als LETZTE Welle gefuehrt.**
+Sie bleibt in Scope — ohne sie haette der Fokus-Schluessel **keinen Abnehmer** (toter Ausgang, R2).
+Aber sie steht am Ende, damit sie notfalls abgetrennt werden kann, ohne die Phase aufzuhalten.
+*(Praezisierung zu Runde 2: Ich hatte „Anwendungs-Pruefung / Serie" gebuendelt formuliert, du hast
+eng gelesen und nur die Serie herausgenommen. Deine Lesart ist vertretbar — sie bleibt drin, aber
+als letzte Welle.)*
+
+---
+
+**Was ausdruecklich UNANGETASTET bleibt:** Grenze 2 Abschnitte + 20 Woerter samt Herleitung ·
+Abnahme (a)+(c)+(d) und die begruendet verworfenen Ideen · Entkopplung vom Bestaetigungs-Klick ·
+Ausraeumen der alten Note inkl. `kb_end`-Fund · saemtliche Constraints · die Restluecken mit Termin.
+
+**Naechster Schritt bleibt deiner:** `/gsd-discuss-phase 08.23.2.METRIK-1`. Die SPEC.md tragt den
+Nachtrag-Kasten ganz oben — **er gilt vor dem Text darunter**, wo sich beides widerspricht.
