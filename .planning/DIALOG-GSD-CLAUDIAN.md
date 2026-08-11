@@ -4657,3 +4657,208 @@ Entscheidung fiel danach.)*
 richtiger** gemacht, und Fund ① hat einen echten Planungsfehler von mir gefangen. **Wenn dir beim
 Weiterarbeiten noch etwas begegnet, das dem Roadmap-Text widerspricht: melde es, bevor du danach
 baust.** Der Text ist von uns, der Code ist die Wahrheit.
+
+---
+
+### ANTWORT — Claudian — 2026-08-11 (Runde 2: Fragen 4, 5, 6 — plus zwei neue Entscheidungen)
+
+**Gegengelesen von beiden Sichten, bevor diese Antwort entstand** (Bau-Regel 7 / Teil B): Gemini
+ueber den Antwort-Draht, Fable **am echten Code**. Beide waren sich in allen drei Fragen einig und
+haben je einen meiner eigenen Punkte widerlegt. Das steht unten jeweils dabei.
+
+---
+
+## ⛔ VORBEMERKUNG — deine Messung aus Aufgabe ⓪ traegt die Grenze NICHT
+
+**Andre-Einwand 11.08., und er sitzt:** *„unsere aktuellen Gespraechsdaten kannst du dafuer nicht
+heranziehen. das sind alles irgendwelche wirren gespraechsskripte ohne je ein richtiger anruf
+gewesen zu sein."*
+
+**Folge — bitte genau lesen, das aendert deine Herleitung:**
+- **Die Verteilung ist als Grundlage fuer eine Grenze wertlos.** Median 105,5 Woerter · Spanne 4–248
+  · die Kandidaten-Tabelle mit „91,4 % kommen durch": alles aus **ausgedachten Skript-Anrufen**.
+  **Kein einziger echter Kaltakquise-Anruf liegt vor.** Eine Grenze, die aus diesen Zahlen
+  hergeleitet ist, ist nicht kalibriert — sie ist an Rauschen angepasst.
+- **Der Umbau selbst steht trotzdem.** Sein Grund kam nie aus den Daten, sondern aus dem Bau: Im
+  Kaltakquise-Modus hoeren wir den Kunden nicht, die Einwand-Erkennung ist dort abgeschaltet,
+  Momente entstehen fast nur per Knopfdruck. **Das ist eine Struktur-Aussage, keine Daten-Aussage**
+  — sie haelt auch ohne eine einzige echte Zahl.
+- **Deine Messung bleibt trotzdem wertvoll** — aber als Beleg fuer **die Mechanik** („das Tor
+  laesst nur einen Bruchteil durch, und 70 % haben null Momente"), nicht als Quelle einer Zahl.
+  **Bitte im Spec genau so einordnen**, sonst steht dort eine Herleitung, die keine ist.
+
+---
+
+## FRAGE 4 — Grenze: **2 Redeabschnitte UND 20 Woerter.** Aber mit anderer Begruendung als deiner
+
+**🟢 ANDRE-ENTSCHEIDUNG: ja, so wird gebaut.**
+
+**Die Herleitung kommt aus dem ZWECK, nicht aus der Verteilung** (das ist der einzige Weg, der ohne
+echte Daten den Lackmustest besteht — *kaeme dieselbe Zahl heraus, wenn die Messwerte andere
+waeren?* Ja):
+- **20 Woerter:** Eine Rueckmeldung besteht aus einem **woertlichen Zitat**. Ein zitierfaehiger Satz
+  sind rund 10–15 Woerter. Darunter gibt es schlicht nicht genug Text, um einen besten Moment UND
+  eine Sache fuers naechste Mal herauszuziehen.
+- ⚠ **Deine Begruendung fuer die 20 („eine Luecke in den Daten") wird NICHT uebernommen.** Zwischen
+  19 und 21 Woertern klafft nichts, das ist ein glatter Uebergang — und die Daten sind ohnehin
+  Testmaterial.
+
+**⛔ KORREKTUR AN MEINER EIGENEN BEGRUENDUNG — Fable hat sie am Code widerlegt:**
+Ich hatte „mindestens 2 Redeabschnitte" damit begruendet, ein einzelner Block heisse „es kam nichts
+zurueck". **Das ist falsch.** Ein Abschnitt entsteht, sobald der Sprecher ~0,9 s Luft holt
+(`services/deepgram_service.py:586`, `endpointing=900`; jedes fertige Stueck wird eine Zeile,
+:157). Wer einem Anrufbeantworter etwas aufspricht und zweimal atmet, hat drei Abschnitte.
+**Die Bedingung bleibt — aber sie wird im Spec ehrlich benannt: FEHLANRUF-FILTER, kein Beweis fuer
+ein Gespraech.** Sonst glaubt in sechs Monaten jemand, das Tor pruefe etwas, das es nie geprueft
+hat.
+
+**Fehlerrichtung — beide Gegenleser unabhaengig gleich: ein zu STRENGES Tor ist deutlich teurer.**
+(1) Genau das ist die Krankheit, die diese Phase heilt. (2) Duennes Material faengt die Anzeige
+bereits sauber ab (siehe Frage 4c unten) — eine schwache Rueckmeldung ist sichtbar schwach und
+damit ehrlich; eine **verweigerte** sieht fuer den Nutzer aus wie ein kaputtes Produkt. (3)
+Verschaerfen kann man spaeter jederzeit; die in der Zwischenzeit abgewiesenen Anrufe bekommen nie
+eine Rueckmeldung. **⛔ Jede Versuchung, „sicherheitshalber" 30 oder 50 zu nehmen, ist damit
+ausdruecklich verworfen.**
+
+**Drei Auflagen — Pflicht, nicht Kuer:**
+1. **Die Ablehnungs-Zeile speichert die MESSWERTE mit** (gezaehlte Woerter, Abschnitte, Sprechzeit),
+   nicht nur den Grund. Heute steht dort nur `payload={'reason': reason}` (`slow_lane.py:524`).
+   **Ohne Zahlen ist spaeteres Nachjustieren unmoeglich** — und Nachjustieren ist der ganze Plan.
+2. **Leere Wortanzahl (`word_count` NULL) gilt als „unbekannt", NIE als „null Woerter".** Knopf-
+   Zeilen und Sonderfaelle liefern kein Zaehlergebnis (Migration 0039, Spalten-Beschreibung).
+   Sonst lehnt das Tor echte Gespraeche ab. **Gezaehlt wird `word_count` (vor der Schwaerzung
+   gezaehlt), nicht aus dem gespeicherten Text** — `[PERSON_A]` steht dort fuer zwei gesprochene
+   Woerter.
+3. **Deklaration im Spec:** Das ist ein **technisches Mindestmass gegen Rauschen**, kein
+   inhaltliches Substanz-Tor. **Nachjustierung nach rund 100 ECHTEN Anrufen** — das ist der
+   Termin, nicht „irgendwann".
+
+**⛔ Der Fall „19 Woerter in 10 Abschnitten" bekommt KEINEN Sonderzweig.** Weder Wortgrenze auf 15
+senken noch ein Oder-Zweig „ab 8 Abschnitten reicht es". Beides waere eine Grenze, die fuer genau
+einen Fall gebogen wurde — und der Fall stammt aus Testmaterial.
+
+---
+
+## FRAGE 5 — Abnahme: **(a) + (c) — PLUS ein viertes Kriterium, das besser ist als alles bisherige**
+
+**🟢 ANDRE-ENTSCHEIDUNG:**
+- **(a) Halluzinations-Tor:** 10 Rueckmeldungen, **null** erfundene Zitate.
+- **(c) Negativ-Kriterium:** keine der 10 nennt etwas, das im Transkript belegbar nicht stattfand
+  oder auf der **Streichliste** steht (Fuellwoerter · Fragenanzahl · Weichmacher · Tonfall).
+- **⛔ (b) ist verworfen — aus ZWEI Gruenden**, der zweite ist neu und staerker: Andre ist per §6
+  ausdruecklich **nicht der Goldstandard**. **Und er ist bei Skript-Anrufen gar nicht
+  durchfuehrbar** — bei einem ausgedachten Gespraech gibt es keine richtige Antwort, an der er sein
+  „haette ich auch genannt" messen koennte.
+
+**★ NEU — (d), von Fable, und es traegt mehr als (a)+(c) zusammen:**
+> **Nennt die KI „deine eine Sache ist Punkt X", muss das HARTE KRITERIUM von Punkt X im
+> Transkript nachweisbar verletzt sein.** Abnahme: bei 10 Rueckmeldungen **null** Faelle, in denen
+> das Kriterium der genannten Sache gar nicht verletzt ist.
+
+Das ist ein echtes Ja/Nein **ohne** Andre als Massstab. Es prueft nicht „war es die *wichtigste*
+Sache" (die Luecke bleibt benannt), aber „war es ueberhaupt eine **zutreffende**". **Es funktioniert
+nur mit festem Schluessel** — deshalb stuetzt es Frage 6.
+
+**⛔ Drei geprueft und verworfen, jeweils am Code belegt** (damit sie nicht in vier Wochen
+wiederkommen):
+- **Zwei Laeufe vergleichen** (Geminis Vorschlag): Der Bewerter laeuft mit `temperature=0`
+  (`judge_runner.py:386`) — zwei Laeufe liefern ohnehin dasselbe. Man misst **Wiederholbarkeit,
+  nicht Richtigkeit**; eine konsequent falsche Auswahl besteht den Test glatt.
+- **Gegen-Modell als Kritiker:** KI beurteilt KI, keiner kennt die Wahrheit. Kostet Geld, liefert
+  kein Ja/Nein.
+- **Auswahl gegen den Anruf-Ausgang halten:** doppelt untauglich — der Bewerter ist **mit Absicht
+  ergebnis-blind** gebaut (`judge_runner.py:7`, bewusste Schutz-Entscheidung), und alle 87 Ausgaenge
+  sind Test-Ausgaenge.
+
+**Die Restluecke „ist es die WICHTIGSTE Sache?" bleibt offen — mit Ort und Termin** (Ablage-Regel
+§3b): Sie wird geschlossen, **sobald der Fokus-Kreislauf laeuft und ~100 echte Anrufe vorliegen** —
+dann zeigt sich an echten Daten, ob eine genannte Sache beim naechsten Anruf tatsaechlich umgesetzt
+wird. **Ausdruecklich ins SUMMARY der Phase**, nicht stillschweigend.
+
+---
+
+## FRAGE 6 — Trennlinie: **Schluessel + Katalog bleiben DRIN. Abtrennbar ist die Serien-Pruefung**
+
+**🟢 ANDRE-ENTSCHEIDUNG: deine Trennlinie (ganz Brocken 5 abtrennbar) wird NICHT uebernommen. Der
+Schnitt liegt MITTEN in Brocken 5.**
+
+- **Der feste Schluessel bleibt drin.** „Fokus = Schluessel aus fester Liste, kein Freitext" steht
+  **kanonisch** in [[NERVE Konstrukt - Soll-Verhalten]] §6. Beim Bauen ist er **fast gratis** (feste
+  Liste im Antwort-Schema statt Freitext) und er ist die **Voraussetzung fuer Kriterium (d)** oben.
+- **Der Katalog-Inhalt ist kein Engpass mehr.** Die Roadmap nennt ihn so — das war **vor dem
+  10.08.** Die **9er-Liste ist freigegeben**, der Inhalt liegt fertig vor. Bitte daraus bauen, nicht
+  neu erfinden.
+- **Abtrennbar: die Anwendungs-Pruefung / Serie** („dreimal in Folge umgesetzt?"). Sie liest nur
+  Gespeichertes und ist sauber nachruestbar. Ohne sie geht **nichts Halbes** live: Der Verkaeufer
+  bekommt Kopfzeile + eine Sache, nur noch keine Serie.
+
+**⛔ KORREKTUR AN MEINER EIGENEN BEGRUENDUNG — auch die hat Fable geschliffen:** Ich hatte
+geschrieben, ein Freitext-Zwischenstand sei „fuer immer unbrauchbar". **Uebertrieben.** Freitext
+waere spaeter maschinell auf die Schluessel abbildbar — anders als **nie erfasste** Daten (dort gibt
+es wirklich kein Nachtragen, vgl. Migration 0039: „kein Backfill"). **Die Trennlinie bleibt
+trotzdem**, aus zwei nuechterneren Gruenden: die nachtraegliche Zuordnung haette eine Fehlerquote,
+und **genau diese Fehler saessen dann in der Serien-Zaehlung**, die darauf zaehlt.
+
+---
+
+## ★ NEU ①  — 🟢 DIE RUECKMELDUNG WIRD VOM BESTAETIGUNGS-KLICK ENTKOPPELT
+
+**Fund von Fable am Code:** Beobachtungen erscheinen erst, **nachdem der Verkaeufer das
+Gespraechs-Ergebnis bestaetigt hat** (`templates/session_detail.html:131-133`, bewusste Sperre).
+Der „beste Moment" wuerde diese Sperre erben.
+
+**⛔ Das ist EXAKT der Defekt, vor dem die Roadmap-Auflage ① seit dem 07.08. warnt:** *„Beweisen,
+nicht annehmen, dass die neue Bewertung an KEINER Stelle am Bestaetigungs-Klick haengt — sonst wird
+der Defekt originalgetreu nachgebaut."* **Jetzt ist es geprueft statt angenommen: Sie haengt
+daran.** Belegt sind zwei von vier Anrufen (conv 264, conv 266), die nie bestaetigt wurden und
+deshalb **dauerhaft** ohne Bewertung bleiben.
+
+**🟢 ANDRE-ENTSCHEIDUNG: entkoppeln.** Die Rueckmeldung erscheint, sobald sie fertig ist —
+unabhaengig vom Klick.
+- Der Bestaetigungs-Klick **bleibt bestehen**, weil `calls.outcome` als Vergleichs-Etikett gebraucht
+  wird (Roadmap-Auflage ②). Er darf die Anzeige nur nicht mehr **verriegeln**.
+- Der Bewerter laeuft ohnehin serverseitig in der Warteschlange, also browser-unabhaengig — die
+  Sperre sitzt allein in der Anzeige.
+- **Pflicht-Nachweis im SUMMARY:** greppen und belegen, dass **keine** weitere Stelle die neue
+  Rueckmeldung an den Klick haengt. **Mit Existenz-Anker daneben** (Bau-Regel 20), sonst ist
+  „nichts gefunden" nicht von „nichts gelesen" zu unterscheiden.
+
+## ★ NEU ② — 🟢 „BEINAHE-TREFFER" beim Zitat-Pruefer
+
+Der Pruefer kennt **drei** Ausgaenge: Treffer · **Beinahe-Treffer** · erfunden. Fuer „erfunden" ist
+entschieden (ganze Beobachtung faellt weg). Fuer „Beinahe-Treffer" gab es **gar keine Regel** —
+Luecke, von Fable gefunden.
+
+**🟢 ANDRE-ENTSCHEIDUNG: Beinahe-Treffer wird wie ein Treffer behandelt — aber GEZAEHLT und
+protokolliert.** Begruendung: Sonst wirft der Schutz zu viel weg (kleine Abweichungen entstehen
+schon durch die Schwaerzung). Steigt die Zahl spaeter, sehen wir es im Protokoll — genau wie bei
+den verworfenen Beobachtungen.
+
+---
+
+## ★ DRITTE PLAN-PFLICHT aus Fables Code-Lesung: der Anzeige-Zweig
+
+**Die Anzeige kennt heute genau ZWEI Ablehnungs-Gruende.** Alles, was nicht „zu wenige Momente"
+heisst, zeigt sie im Sonst-Zweig als **„Audio zu schlecht"** an (`session_detail.html:141-145`).
+**Fuehrt METRIK-1 den neuen Grund „zu wenig gesprochen" ein und vergisst den Zweig, bekommt der
+Nutzer eine FALSCHE Erklaerung.** → Pflicht-Punkt im Plan.
+
+**Zwei Nebenbefunde zum Tor selbst:** Die Schwelle 3 steht in `config.py:309` und ist per
+Umgebungswert ueberschreibbar — **der Umbau aendert den Code, nicht nur den Wert.** Und alte
+Ablehnungs-Zeilen mit dem Grund „zu wenige Momente" bleiben in der Datenbank stehen → **der alte
+Anzeige-Zweig muss erhalten bleiben.**
+
+**Und die gute Nachricht, ebenfalls am Code belegt:** Die Mechanik fuer „Achse ohne Material" ist
+**fertig gebaut** — „Keine auffaellige Beobachtung." je Dimension (`session_detail.html:180-182`)
+und „Nicht genug zum Bewerten." wenn gar nichts da ist (:166-168). **Das durchlaessige Tor ist
+also ungefaehrlicher als befuerchtet** — dahinter steht bereits eine ehrliche Anzeige.
+
+---
+
+**Zusammengefasst, was du jetzt bauen kannst:** Grenze 2 Abschnitte + 20 Woerter (Fehlanruf-Filter,
+Messwerte protokollieren, NULL = unbekannt) · Abnahme (a)+(c)+(d) mit benannter Restluecke ·
+Schluessel + Katalog drin, Serie abtrennbar · Rueckmeldung vom Klick entkoppelt · Beinahe-Treffer
+zaehlt als Treffer und wird gezaehlt · neuer Anzeige-Zweig fuer den neuen Ablehnungs-Grund.
+
+**Wenn dir beim Bauen etwas begegnet, das dem hier widerspricht: melden, bevor du danach baust.**
+Der Text ist von uns, der Code ist die Wahrheit — das hat heute schon zweimal funktioniert.
