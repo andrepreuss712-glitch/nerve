@@ -4227,3 +4227,79 @@ kuenftigen Wirkungs-Belegen das Test-Konto nehmen.
 2. **Die Bedingung nennen, an der die Deploy-Reihenfolge haengt:** alle drei Spalten `nullable=True`.
    Waere eine `NOT NULL` ohne Default gewesen, waere „Migration zuerst" **falsch** gewesen. Nicht nur
    „Migration vor Deploy" schreiben — sonst wird die Regel beim naechsten Mal blind uebertragen.
+
+---
+
+### GSD — 2026-08-11 — SUMMARY geschrieben, Phase geschlossen. Eine Korrektur an Auflage 1.
+
+**Beide Auflagen erfuellt. Bei der ersten musste ich deine Zahl korrigieren — und genau deshalb
+war die Auflage richtig.**
+
+**Auflage 1 — Beweis-Kette.** Du hast **21** neue Tests vorgegeben (6 + 8 + 7), davon 5 von Anfang
+an gruen. Die **8** sind aber der **Endstand** von `tests/test_transcript_segments_write.py`, nicht
+der Zuwachs. Die Datei existiert seit `381054c` (Phase 08.23.2.D.UX.1) und hatte vor dieser Phase
+bereits **4** Tests:
+
+```
+$ git show 132d675:tests/test_transcript_segments_write.py | grep -c '^def test_'
+4
+```
+
+Diese 4 stecken schon in der Basis. Von deinen „5 von Anfang an gruenen" ist genau **einer** neu —
+der Gegenpol `test_ts_ms_bleibt_unberuehrt_von_den_neuen_spalten`; die anderen vier sind Bestand.
+
+| | |
+|---|---|
+| Basis (Tor-Lauf MEHRNUTZER-REST-1, 2026-08-06) | `1142 passed, 7 skipped, 5 deselected` |
+| Neu angelegt | **17** (6 + **4** + 7), davon 16 rot + 1 Gegenpol |
+| Rechnung | **1142 + 17 = 1159** ✅ · `skipped` 7 → 7 · `deselected` 5 → 5 |
+
+**Mit 21 waere die Rechnung auf `1138 + 21` hinausgelaufen — die Basis waere scheinbar um 4
+gesunken, also genau der Befund, den du sehen wolltest, wenn es ihn gaebe. Es gibt ihn nicht.**
+Die Basis ist nicht gewandert. Deine Auflage hat funktioniert, nur andersherum als gedacht: sie hat
+einen Zaehlfehler in der Vorgabe selbst sichtbar gemacht statt einen im Testbestand.
+
+`[BASELINE-AUTO-FIX]` = **0** im gruenen Lauf, ebenso 0 `Mutual-FK-Hard-Stall`. Ausdruecklich im
+SUMMARY, samt der Beobachtung, dass die Marker nur neben Fehlschlaegen auftraten — damit ist die
+TEST-AUFRAEUM-Baseline gehalten und der Folgefund kleiner als im `ROT-LAUF.md` befuerchtet.
+
+**Auflage 2 — die Bedingung.** Steht als eigener Abschnitt, nicht als Nebensatz: *„Migration vor
+Deploy" gilt hier NUR, weil alle drei Spalten `nullable=True` sind. Waere eine `NOT NULL` ohne
+Default gewesen, waere „Migration zuerst" FALSCH gewesen — jeder INSERT des Alt-Codes waere sofort
+gebrochen.* Mit dem ausgeschriebenen Grund, warum der halbe Satz gefaehrlich ist: wer ihn
+mitnimmt, uebertraegt ihn beim naechsten Mal blind auf eine `NOT NULL`-Spalte.
+
+**Nicht nachgezogen, wie angewiesen:** Redeanteil bleibt bei 100 %, `services/live_session.py` hat
+0 Diff-Zeilen. Deine beiden Befunde (Ersatz-Rechnung 87,8 % belegt machbar · `get_speech_stats`
+~14 % zu niedrig) stehen als **METRIK-1**-Material im SUMMARY, nicht als Aufgabe dieser Phase.
+
+**Ebenfalls im SUMMARY:** der Test-Anruf lief ueber Andres normales Konto, nicht das Test-Konto.
+
+**Ein Befund aus meiner eigenen Arbeit, der ins Bild gehoert.** Migration `0039` starb beim ersten
+Versuch im Wegwerf-`nerve_test` mit `A value is required for bind parameter '113'`: `op.execute(str)`
+dreht den String durch `sa.text()`, und das liest jeden Doppelpunkt **ohne vorangehendes
+Wortzeichen** als Bind-Parameter. Im Tabellen-Schild stand die Zeilenangabe frei (`in :113-118`) →
+`%(113)s`. Die Nachbar-Referenz `deepgram_service.py:490` ueberlebte, weil dort ein Buchstabe davor
+steht. Gefixt auf **zwei** Ebenen (`229edac`), weil die Text-Haelfte allein die Falle nur
+verschiebt: volle Datei-Referenz **und** `exec_driver_sql` in `_comment()`, mit dem Warum als
+Warnung im Docstring. Production war zu keinem Zeitpunkt halb migriert.
+
+**Das ist eine Falle fuer jedes kuenftige Schild:** unsere Schild-Texte sind Prosa und sollen
+`Datei:Zeile`-Referenzen tragen. Solange `COMMENT ON` ueber `op.execute(str)` laeuft, ist jede
+freistehende Zahl nach einem Doppelpunkt ein Blindgaenger. Ob das als Regel in CLAUDE.md Punkt 23
+gehoert oder ein Waechter besser waere, ueberlasse ich dir und Andre.
+
+---
+
+## ROADMAP-SYNC — 08.23.2.ZEITSTEMPEL-1 — 2026-08-11
+
+`.planning/ROADMAP.md` geaendert, bitte `Nerve-Vault/01 Roadmap.md` nachziehen:
+
+- Phasen-Ueberschrift auf **✅ ABGESCHLOSSEN 2026-08-11**
+- Plan 06 abgehakt, mit GRUEN-Zahl, Beweis-Kette, Wirkungs-Beleg und dem Migrations-Bug
+- Reihenfolge-Zeile: **MESSGERAETE-1 ✅ → ZEITSTEMPEL-1 ✅ → TRANSKRIPT-SCHUTZ → METRIK-1 → …**
+  (TRANSKRIPT-SCHUTZ steht laut Roadmap-Zeile 95 als Mini-Runde **direkt** nach ZEITSTEMPEL-1)
+- Drei neue Backlog-Kandidaten: `get_speech_stats`-Sprechtempo (~14 % zu niedrig) und die
+  Redeanteil-Ersatzrechnung → **METRIK-1** · Reconnect loescht das bisherige Transkript
+  (`services/deepgram_service.py:764-766`) → **TRANSKRIPT-SCHUTZ** · `[BASELINE-AUTO-FIX]`-Marker
+  im Fehlerpfad an DB-freien Tests → eigene Mini-Runde
