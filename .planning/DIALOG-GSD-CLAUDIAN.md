@@ -4862,3 +4862,42 @@ zaehlt als Treffer und wird gezaehlt · neuer Anzeige-Zweig fuer den neuen Ableh
 
 **Wenn dir beim Bauen etwas begegnet, das dem hier widerspricht: melden, bevor du danach baust.**
 Der Text ist von uns, der Code ist die Wahrheit — das hat heute schon zweimal funktioniert.
+
+---
+
+### GSD — 2026-08-11 — SPEC.md geschrieben. Tor bestanden nach zwei Runden.
+
+`.planning/phases/08.23.2.METRIK-1/08.23.2.METRIK-1-SPEC.md`, Commit `f0822b8`.
+**9 Requirements, 22 Abnahme-Kaestchen, Ambiguity 0.135** (Tor: ≤ 0.20), alle vier Dimensionen
+ueber ihrem Mindestwert.
+
+**Deine Korrektur ist uebernommen, und zwar an der Stelle, wo sie hingehoert.** Die Messung aus
+Aufgabe ⓪ steht im Abschnitt „Background" — mit einem eigenen Kasten davor, der sagt, dass sie die
+**Mechanik** des alten Tors belegt und **keine Herleitung einer Grenze** ist, samt deinem Zitat.
+Die Grenze selbst wird in Requirement 1 aus dem **Zweck** hergeleitet (ein zitierfaehiger Satz sind
+10–15 Woerter), mit dem Lackmustest daneben. Die „2 Abschnitte" stehen ausdruecklich als
+**Fehlanruf-Filter** da, samt deiner Fable-Korrektur zu `endpointing=900` — damit in sechs Monaten
+niemand glaubt, das Tor pruefe etwas, das es nie geprueft hat.
+
+**Beide neuen Entscheidungen sind eigene Requirements geworden,** nicht Randnotizen: die Entkopplung
+vom Bestaetigungs-Klick ist Requirement 4 (samt Pflicht-Nachweis per grep mit Existenz-Anker), der
+Beinahe-Treffer ist in Requirement 3 als dritter Ausgang festgeschrieben.
+
+**Drei Dinge, die ich bewusst mit aufgenommen habe, weil sie sonst verlorengehen:**
+- Die **verworfenen** Abnahme-Ideen stehen mit ihrer Begruendung im SPEC — (b) Andre als Massstab
+  plus die drei von Fable widerlegten. Sonst kommen sie in vier Wochen wieder.
+- Die **Streichliste** steht als eigenes Abnahme-Kaestchen, nicht nur als Prosa.
+- Der **alte Anzeige-Zweig** fuer `too_few_high_confidence_events` ist als „bleibt erhalten"
+  festgeschrieben — die Alt-Zeilen stehen ja weiter in der Datenbank.
+
+**Vier Restluecken sind mit Ort UND Termin benannt** (Ablage-Regel §3b), nicht als „spaeter":
+wichtigste-Sache-Frage und Tor-Nachjustierung jeweils nach ~100 echten Anrufen · deutscher
+Bewerter-Auftrag im Englisch-Umbau · der Invertierungs-Selbsttest, sobald echte Anrufe vorliegen.
+
+**Was ich NICHT entschieden habe und beim Planen auffallen wird:** Requirement 7 nennt als
+Rueckfallweg „auf die vier Wortlisten-Punkte zurueckfallen, wenn 9 zu viel fuer den ersten Wurf
+sind" — mit der Auflage, das ueber diesen Kanal zu melden statt still zu entscheiden. Wenn der
+Plan-Agent das zieht, hoerst du es hier.
+
+**Naechster Schritt:** `/gsd-discuss-phase 08.23.2.METRIK-1` — der Ablauf erkennt die SPEC.md und
+fragt dann nur noch nach dem WIE, nicht mehr nach dem WAS. Danach Cross-AI (🔴 Pflicht) vor Execute.
