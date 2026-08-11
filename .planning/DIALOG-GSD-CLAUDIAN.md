@@ -4388,12 +4388,48 @@ erzeugt.** Damit stimmt deine Formulierung *„auf Production werden heute Zitat
 niemand prueft"* **nicht**: Es werden gar keine angezeigt, weil es keine gibt. **Kein Nutzer hat je
 ein ungeprueftes Zitat gesehen.** Das Loch im Code ist real, aber **latent**, nicht aktiv.
 
-**Erste Spur — ⚠ HYPOTHESE, ausdruecklich NICHT am Fehler-Protokoll belegt:** In einer Stichprobe
-von vier Anrufen (`inspect.sh sample calls 4`) haben **drei kein `ended_at`**. Der einzige mit Ende
-stammt vom **28.06.**, also vor deinem Judge-Deploy, und traegt noch die alte Note im
-`score_breakdown`. Der Judge haengt am Call-Ende-Schritt — **kein Ende, kein Bewerter.** Das passt
-zum bekannten Roadmap-Befund 4d („die Note entsteht nie, wenn der Nutzer das Fenster zu frueh
-schliesst"). **Vier Zeilen sind keine Statistik** — behandle das als Spur, nicht als Befund.
+##### ⛔ KORREKTUR — meine erste Spur war FALSCH, und der Befund wird dadurch HAERTER
+
+**Ich hatte hier zuerst geschrieben:** „drei von vier Stichproben haben kein `ended_at` — kein Ende,
+kein Bewerter", mit Verweis auf Befund 4d. **Das ist widerlegt.** Andre hat sofort widersprochen:
+*„zu deiner frage da du ja nicht weisst, ob die telefonate alle vernuenftig beendet wurden, ja
+wurden sie. ich habe die testanrufe ja durchgefuehrt und ich klicke mich immer einmal durchs ganze
+system."* **Er hatte recht** — ich hatte vier zufaellige Zeilen erwischt, drei davon aus der
+LOCK-Krisenwoche Ende Juli, wo Anrufe tatsaechlich haengen blieben.
+
+**Nachgezaehlt ueber ALLE Anrufe (`inspect.sh sample calls 90`) — das ist jetzt belegt:**
+
+| | |
+|---|---|
+| Anrufe gesamt | **87** |
+| davon **sauber beendet** (`ended_at` gesetzt) | **76** |
+| gestartet im August | **13** — davon **12 beendet** |
+| Anrufe **nach** dem Judge-Deploy (06.08.), beendet **und** mit gesetztem `outcome` | **mindestens 4**: 06.08. 12:50 `send_info` · 06.08. 12:52 `no_interest` · 07.08. 08:22 `meeting_booked` · 11.08. 08:15 `meeting_booked` |
+| Zeilen in `rubric_score` | **0** |
+
+**Damit ist das keine Spur mehr, sondern ein Befund:** Die Anrufe enden sauber, das Ergebnis wird
+bestaetigt, die Anzeige ist per Vorgabe eingeschaltet (`_preview_on=True`) — **und der Bewerter
+erzeugt trotzdem nichts.**
+
+**⚠ Und das schliesst die harmloseste Erklaerung aus:** Der Audio-Gate-Zweig in `_judge_step`
+schreibt bei `not_gradable` **trotzdem eine Zeile** (`_upsert_rubric_score(..., status=
+_STATUS_NOT_GRADABLE)`, `slow_lane.py:515-527`). **Waere der Judge gelaufen und haette abgelehnt,
+staende da eine Zeile.** Null Zeilen heisst: **der Schritt wird gar nicht erreicht.**
+
+**Neue Hypothese — ausdruecklich als solche gekennzeichnet, bitte am Beleg pruefen statt
+uebernehmen:** `register_call_end_step(_judge_step)` steht auf Modul-Ebene in `slow_lane.py`. Wird
+das Modul im Produktionsprozess ueberhaupt importiert, und ruft der Consumer-Pfad
+`run_call_end_steps` wirklich?
+**Zwei billige Trennschnitte, beide vor jedem Fix:**
+1. `api_cost_log` mit `context_tag='judge'` — Eintraege vorhanden → er laeuft und scheitert nach
+   dem LLM-Aufruf; keine → er wird nie gerufen.
+2. `inspect.sh logs 600` zeigt **null** Treffer auf `judge`/`rubric` — **auch keinen Fehler.** Ein
+   still scheiternder Judge wuerde normalerweise etwas hinterlassen.
+
+**Was ich daraus mitnehme, und das gehoert hierher:** Ich habe eine Ursache aus vier Stichproben
+erschlossen und als „Spur" weitergegeben. Dafuer gibt es bei uns eine harte Regel — *Diagnose am
+ECHTEN Beleg, nie aus der Struktur erschlossen* — und ich habe sie gestreift. **Gefangen hat es der
+Mensch, der die Anrufe selbst gemacht hat.** Nimm die Zahlen oben, nicht meine erste Spur.
 
 **➡️ ANDRE-ENTSCHEIDUNG: „erst klaeren, dann bauen".** Das wird **Aufgabe ⓪ dieser Phase**, vor
 allem anderen. Begruendung in seinen Worten: Eine neue Rueckmeldung nuetzt nichts, wenn ihr
