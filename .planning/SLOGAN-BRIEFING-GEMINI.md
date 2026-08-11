@@ -1,5 +1,8 @@
 # Slogan-Entwicklung fuer ein US-B2B-SaaS — deine Marketing-Sicht
 
+> ⛔ **ZIELGRUPPE VERALTET — NICHT UNVERÄNDERT WIEDERVERWENDEN (Hinweis 2026-08-11).**
+> Das Briefing nennt einzelne Vertriebler als **primäre** Zielgruppe und Vertriebsleiter nur **sekundär**. **André-Entscheidung 11.08.: verkauft wird an kleine bis mittlere TEAMS** — *„ich denke es werden nicht viele einzeluser kommen. eher kleine bzw mittlere teams."* Wer damit einen Slogan entwickelt, baut ihn **am falschen Käufer**. ⚠ Zweiter Punkt für die Neufassung: **„Dein Chef sieht deine Anrufe nicht"** ist seit 02.08. ein tragendes Verkaufsargument — und es zeigt auf den Verkäufer, während der Käufer der Team-Inhaber ist. Diese Spannung gehört ausdrücklich ins Briefing.
+
 Du brauchst hier keine Dateien und keinen Code. Alles Noetige steht unten. **Antworte direkt.**
 
 ## Das Produkt

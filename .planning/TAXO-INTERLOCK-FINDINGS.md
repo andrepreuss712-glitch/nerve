@@ -1,6 +1,15 @@
 # TAXO 3-Wege-Interlock + Probe-Bau — Funde (2026-06-13)
 
-> **Zweck:** Konsolidierte Funde aus dem vollen 3-Wege-Interlock VOR dem TAXO-Bau. Pflicht-Pre-Read für die TAXO1-03/04- + TAXO2-Überarbeitung. Quellen: Claudian-Erstdurchgang + Gemini 3.1 (unabhängig, interlock) + Opus-Probe-Bau (Trockenbau am echten Code, Prod-HEAD 0015). Fable-Probe-Bau war geplant, aber Fable 5 wurde 13.06. per US-Exportkontroll-Anordnung suspendiert (kein ETA) → Opus stattdessen.
+> ## ⚠ ALTERS-WARNUNG — DER BEWERTUNGS-TEIL DIESER DATEI IST ÜBERHOLT (eingefügt 2026-08-11)
+>
+> Diese Datei ist vom **13.06.** und beschreibt durchgehend eine **Noten-Engine, die `calls.coaching_score` schreibt** — inklusive Funden wie *„TAXO2-04 löscht `_calc_process_score` → halb-gelöschter Pfad"* und *„`coaching_score` bleibt ewig NULL, still"*.
+> **Fünfzehn Tage später, am 28.06., wurde diese Engine abgeschafft:** NERVE zeigt **keine Zahl mehr, die Qualität bewertet**. Statt einer Note gibt es Beobachtungen mit wörtlichem Beleg-Zitat plus **genau EINE Sache fürs nächste Mal**. Verbindlich: `Nerve-Vault/04 Entscheidungen/NERVE Konstrukt - Soll-Verhalten.md` §6.
+> **Weil die Datei sich selbst als „Pflicht-Pre-Read" deklariert, wurde sie beim Planen zwangsweise mitgelesen** — mit einem Bewertungs-Modell, das es nicht mehr gibt. Gefunden bei einer Drift-Suche über alle GSD-Kontextdateien am 11.08.
+>
+> **Was weiter gilt und wertvoll bleibt:** alle Funde zu **Nebenläufigkeit, Sperren, per-Sitzung-Zustand, Moment-Klammer (`interaction_id`) und Schema/Persistenz**. Die wurden unabhängig von der Bewertungs-Frage gefunden und sind mehrfach am Code bestätigt.
+> **Was NICHT mehr gilt:** alles, was `coaching_score`, `rubric_score`, Gewichtungen, Gesamtnoten oder den Noten-Cutover als Ziel beschreibt.
+>
+> **Zweck (ursprünglich):** Konsolidierte Funde aus dem vollen 3-Wege-Interlock VOR dem TAXO-Bau. Pflicht-Pre-Read für die TAXO1-03/04-Überarbeitung — **für den Bewertungs-Teil ausdrücklich NICHT mehr.** Quellen: Claudian-Erstdurchgang + Gemini 3.1 (unabhängig, interlock) + Opus-Probe-Bau (Trockenbau am echten Code, Prod-HEAD 0015). Fable-Probe-Bau war geplant, aber Fable 5 wurde 13.06. per US-Exportkontroll-Anordnung suspendiert (kein ETA) → Opus stattdessen.
 > **Verifikations-Stand:** Claudian hat IL-2 + B-A + B-B am echten Code bestätigt. Rest code-gegründet (Opus zitierte Zeilen-Nr.), markierte Live-Server-Checks unten.
 
 ## BLOCKER (vor Bau auflösen)

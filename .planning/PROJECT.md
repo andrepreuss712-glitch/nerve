@@ -19,7 +19,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 
 - ✓ Live-Einwandbehandlung mit 2 Gegenargumenten pro Einwand — existing
 - ✓ Vorwand vs. echter Einwand Erkennung — existing
-- ✓ Kaufbereitschafts-Tracking in Echtzeit (0-100%) — existing
+- ⛔ ~~Kaufbereitschafts-Tracking in Echtzeit (0-100%)~~ — **WIRD ABGESCHAFFT (André 07.08., hier markiert 11.08.).** Nicht nur aus der Note genommen: der Wert verschwindet ganz. André: *„ich sehe da keinerlei Mehrwert drin, kostet unnötig Geld und belastet unsere Aufruf-Anzahl."* **Stand bis 11.08. unter „Validated" und wurde damit als bestätigtes Dauer-Feature gelesen.** ⚠ **Entflechten, nicht blind löschen** — der Wert wird vom Coaching-Aufruf gespeist, den ein eigener Punkt ohnehin streicht; und **der Name lügt:** in **Trainings**-Sitzungen enthält `conversation_logs.kb_end` gar keine Kaufbereitschaft, sondern die Trainings-Gesamtnote. Reihenfolge ist hart: erst METRIK-1 (entfernt die Verbraucher), dann der Coaching-Aufruf (entfernt den Erzeuger).
 - ✓ Sprachanalyse: Redeanteil, WPM, Monolog-Warnung — existing
 - ✓ Quick-Action Buttons (Frage, Einwand, Übergang, Abschluss) — existing
 - ✓ Phasen-Tracking (Einstieg → Bedarfsanalyse → Demo → Einwand → Closing) — existing
@@ -35,7 +35,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 - ✓ Footer und Header-Email/Logout entfernt — validated Phase 04.3
 - ✓ Sidebar User Menu (Avatar + Dropdown) — validated Phase 03.2
 - ✓ Globale Sprachpräferenz (DB-persistent, Training pre-selected) — validated Phase 03.2
-- ✓ Trainingsmodus: KI-Kunde mit ElevenLabs-Stimme, 4 Schwierigkeitsstufen, 9 Sprachen, Scoring — existing
+- ✓ Trainingsmodus: KI-Kunde mit ElevenLabs-Stimme, 4 Schwierigkeitsstufen, 9 Sprachen, ~~Scoring~~ — existing ⚠ **„Scoring" ist überholt (markiert 11.08.):** Auch im Training fällt die sichtbare Note. ⚠ **Und Vorsicht beim Umbau — der Name lügt:** die Trainings-Gesamtnote liegt in `conversation_logs.kb_end`, also im Feld, das nach „Kaufbereitschaft" klingt. Wer nur nach `coaching_score` sucht, übersieht sie.
 - ✓ Profil-System (12 Sektionen, 3 Demo-Profile) — existing
 - ✓ Dashboard mit Gamification (Level, Achievements, Heatmap) — existing
 - ✓ Coach-Plattform (Multi-Org, Methodik-Transfer) — existing
@@ -51,7 +51,7 @@ Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen
 
 **Produktfixes (Prio 1)**
 - [ ] Neues Pricing-System: 69/59/49 Flat-Rate + Fair-Use-Limits (1.000 Min Live, 50 Trainings/Monat) + ROI-Tracker im Dashboard
-- [ ] Trainings-Modi: Frei (max Punkte, keine Hilfe) + Geführt (Hilfe mit Punktabzug)
+- [ ] Trainings-Modi: Frei (keine Hilfe) + Geführt (mit Hilfe) — ⛔ **„max Punkte" / „Punktabzug" GESTRICHEN (11.08.).** Eine Punktzahl als Qualitätsurteil ist seit 28.06. verboten; „Hilfe kostet Punkte" bestraft außerdem genau das Nutzen des Werkzeugs. **Erlaubt bleibt Zählen** („mit Hilfe" / „ohne Hilfe" als Merkmal des Durchgangs, Fortschritt gegen die **eigene** Vergangenheit). **Der Unterschied der beiden Modi muss neu definiert werden, bevor das gebaut wird** — 🟢 deine Wahl, kein Technik-Detail.
 - [ ] Post-Training Preview: "Was NERVE im echten Call gezeigt hätte" (Cross-Sell Live-Modus)
 - [ ] 11 Standard-Trainingsszenarien (für alle Schwierigkeitsstufen)
 - [ ] Live-Modus Fixes: Skript-Button, DSGVO-Banner, Kompakt-Modus Kreise, Toggle-Position

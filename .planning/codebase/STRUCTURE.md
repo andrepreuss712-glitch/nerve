@@ -252,14 +252,19 @@ salesnerve/
 - Use `{{ text | markdown | safe }}` for AI-generated Markdown content
 - Use `static_mtime('file.js')` for cache-busted static includes
 
+> ⛔ **KORRIGIERT 2026-08-11 — die vorherige Fassung dieses Abschnitts war auf dem Live-Server WIRKUNGSLOS.**
+> Sie schrieb vor, neue Spalten und Tabellen als idempotente Blöcke in `_migrate()` (`app.py`) anzulegen. **`app.py` verlässt `_migrate()` bei PostgreSQL sofort wieder** — der Datenbank-Nutzer auf dem Live-Server hat bewusst keine Änderungsrechte, und der Live-Server läuft auf PostgreSQL. **Wer nach der alten Fassung baute, schrieb eine Migration, die NIE läuft — und merkte es nicht, weil nichts fehlschlägt.**
+> Die `_migrate()`-Einträge im Code sind **Alt-Bestand** aus der lokalen Zeit; lokal wird seit dem 27.05. ohnehin nicht mehr entwickelt. **Nicht als Vorlage kopieren.**
+
 **New database column:**
 - Add `Column(...)` to appropriate model in `database/models.py`
-- Add idempotent `ALTER TABLE ... ADD COLUMN` block in `_migrate()` function in `app.py` (pattern: `try: conn.execute(text('ALTER TABLE ...')); conn.commit(); except Exception: pass`)
+- **Write an Alembic revision** that cleanly builds on the current head. This is the ONLY path that takes effect in production. Do **not** add an `ALTER TABLE` block to `_migrate()`.
+- ⚠ Special characters in `COMMENT ON` statements: a colon without a preceding word character is parsed as a bind parameter and kills the migration. Use `exec_driver_sql` (real incident, migration `0039`).
 
 **New ORM model (new table):**
 - Add class to `database/models.py` extending `Base`
 - `init_db(engine)` in `database/models.py` calls `Base.metadata.create_all(engine)` — new tables auto-created on startup
-- Add fallback `CREATE TABLE IF NOT EXISTS` DDL block in `_migrate()` for deploy safety
+- **Write an Alembic revision for the table as well.** Do **not** add a `CREATE TABLE IF NOT EXISTS` fallback to `_migrate()` "for deploy safety" — it provides none in production.
 
 **New background thread:**
 - Import `services/live_session.py` as `ls` for shared state access

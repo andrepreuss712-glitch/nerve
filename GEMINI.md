@@ -4,34 +4,42 @@
 
 ## Was du gerade reviewst
 
-NERVE — ein KI-gestützter SaaS-Vertriebsassistent für Cold-Calls (Deutsch, DACH-Markt, Pre-Launch). Solo-Founder-Projekt. Aktuell **Stabilisierungs-Phase** vor EA-Launch (50 Plätze, 50% Gründerrabatt).
+NERVE — ein KI-gestützter SaaS-Vertriebsassistent für Kaltakquise-Telefonate. Solo-Founder-Projekt, vor dem Start (Early Access, ~50 Plätze).
+
+**★ MARKT: US-FIRST (beschlossen 04.07.2026).** Jede Entscheidung zielt auf den US-Markt — Server-Region, Sprache, Preise, Recht, Coaching-Inhalte. ⚠ **Bis 11.08. stand hier „Deutsch, DACH-Markt"** — wer daraus Sprache, Recht oder Inhalte ableitete, lag falsch. **Ein späterer DACH-Start ist offen, aber kein Plan-Bestandteil.**
 
 ## Stack (du musst die Codebase nicht raten)
 
 - **Backend:** Python Flask (mit SocketIO für Live-Streaming)
-- **STT:** Deepgram (EU-Endpoint, Streaming-Mode)
-- **LLM:** Claude API — aktuell Haiku 4.5 live, Sonnet 4.5 für Post-Call. Sonnet-Upgrade + Prompt-Caching geplant in Block E.
-- **TTS:** ElevenLabs (EU-Region) — nur im Training, nicht in Live-Calls
-- **DB:** SQLite (dev) → PostgreSQL (geplant)
-- **Hosting:** Hetzner CX22 (Nürnberg), nginx, Domain getnerve.app
-- **Deployment:** systemd-Service `nerve`, Push-to-Deploy via `deploy.sh`
+- **STT:** Deepgram (Streaming-Mode)
+- **LLM:** Claude API — **direkt, nicht über AWS Bedrock**
+- **TTS:** ElevenLabs — nur im Training, nicht in Live-Calls
+- **DB:** **PostgreSQL** (live seit 12.05.2026; die frühere Angabe „SQLite (dev) → PostgreSQL (geplant)" war seit drei Monaten falsch)
+- **Hosting:** Hetzner, nginx, Domain getnerve.app
+- **Deployment:** systemd-Service `nerve`, Push-to-Deploy via `deploy.sh` mit Test-Tor auf dem Server
+
+⚠ **Modell-Namen und Regionen stehen hier bewusst NICHT** — sie ändern sich, und eine Kopie hier veraltet still. Wenn ein Plan von einem bestimmten Modell abhängt: **im Code nachsehen** (`config.py`), nicht hier ablesen.
 
 ## Reset-Story (kritisch zum Verstehen)
 
-Im April 2026 wurde nach einem Phase-08.5-"Nudelcode"-Fund (Tabu-System wirkungslos im QA-Pfad, Feature-Fakes, Test-False-Greens) eine **vollständige Stabilisierungs-Phase** gestartet:
+Im April 2026 wurde nach einem Phase-08.5-„Nudelcode"-Fund (Tabu-System wirkungslos im QA-Pfad, Feature-Fakes, Test-False-Greens) eine vollständige Stabilisierungs-Phase gestartet. Daraus stammen die harten Bau-Regeln in `CLAUDE.md`, gegen die du Pläne prüfen sollst.
 
-- **MASTER-AUDIT-v2** (`.planning/audits/MASTER-AUDIT-v2.md`) ist die Wahrheits-Quelle
-- 13 Launch-Blocker, 31 HIGH, 45+ MEDIUM Findings dokumentiert
-- 14 Reparatur-Blöcke (A-N), in der Roadmap nach Komplexität sortiert (🟢 trivial / 🟡 mittel / 🔴 komplex)
-- **6/14 abgeschlossen** (A, H, I, C, F, B) — Stand 2026-04-25 spätabends nach Block-B-Live-Deploy
+⚠ **Der frühere Fortschritts-Stand („6/14 Blöcke, Stand 2026-04-25", MASTER-AUDIT-v2 als Wahrheits-Quelle) stand hier bis 11.08. und war dreieinhalb Monate alt.** Die A–N-Block-Sequenz ist nicht mehr die führende Ordnung. **Der geltende Stand steht in `.planning/ROADMAP.md`** — und die verbindliche Reihenfolge in der Sektion „📍 ALLES AUF EINEN BLICK" der Vault-Roadmap (`Nerve-Vault/01 Roadmap.md`). **Hier steht bewusst keine Momentaufnahme mehr** — jede veraltet still, genau wie die eben ersetzte.
 
 ## Architektur-Pflöcke (NICHT in Frage stellen)
 
 - **NERVE speichert KEIN Audio.** Ephemeral Processing — Audio rein, Analyse, sofort gelöscht. DSGVO-USP.
 - **Cold Call:** KI hört NUR Berater-Stimme (Headset-Pflicht). EWB-Buttons statt Kunden-Stimme-Erkennung. Anonymisiertes Transkript.
 - **Meeting:** Pop-up mit Consent-Vorlesetext. Mit Consent → volle Analyse. Ohne → Fallback Cold Call.
-- **Alle Dienste auf EU-Servern:** Deepgram EU, Claude AWS Bedrock Frankfurt, ElevenLabs EU, Hetzner Nürnberg.
+- **★ Server-Region folgt dem MARKT — US (korrigiert 2026-08-01).** ⛔ **Hier stand bis 11.08. „Alle Dienste auf EU-Servern: Deepgram EU, Claude AWS Bedrock Frankfurt, ElevenLabs EU, Hetzner Nürnberg" — als unantastbarer Pflock.** Das war der schwerste Fund einer Drift-Suche am 11.08.: Ein Reviewer mit diesem Kontext hätte **jeden korrekten US-Region-Plan als Verstoß angemahnt.** **Geltend ist:** Claude bleibt **US-direkt**, der Umzug nach AWS Bedrock Frankfurt ist **gestrichen** (für US-Kunden die schlechteste Variante — jede Antwort zusätzlich über den Atlantik, ~0,2–0,35 s bei rund 1 s Budget). Deepgram, ElevenLabs und der Server gehen beim US-Umzug in die **US-Region**. ⚠ **Ein EU-Server war nie eine DSGVO-Anforderung** — Verarbeitung in den USA ist mit den vorhandenen Verträgen zulässig; die DSGVO-Pflichten (Löschung, Auskunft, Datenschutzerklärung) bleiben trotzdem. **Führt ein Plan EU-Residenz oder Bedrock-Frankfurt als Ziel oder Blocker: das ist Drift — bitte melden.**
 - **Call-Logs sind heilig** — Transkripte, EWB-Events, Objection-Events bleiben für Post-Call-Analyse + zukünftiges Fine-Tuning.
+- **★ KEINE sichtbare Note (28.06., verschärft 02.08.).** NERVE zeigt dem Verkäufer **keine Zahl, die Qualität bewertet** — keine Gesamtnote, keine Note je Dimension, kein `coaching_score` als Anzeige, keine 7-Dimensionen-Aufschlüsselung, kein Ranking. Stattdessen: ein KI-Leser liest nach dem Anruf das Protokoll und liefert **Beobachtungen mit wörtlichem Beleg-Zitat** entlang von ~4 Dimensionen, dazu **genau EINE Sache fürs nächste Mal**, die vor dem nächsten Anruf wieder erscheint. **Zählen ist erlaubt** („4 offene Fragen"), **Benoten nicht.** Vorbedingung: der Zitat-Prüfer (`services/beleg_check.py`) wird angeschlossen, **bevor** irgendeine Bewertung angezeigt wird. **Schlägt ein Plan eine Punktzahl, ein Leaderboard oder einen Team-Vergleich vor: Drift — melden.**
+- **★ Die Kaufbereitschaft (`kb_delta`/`kb_end`/`kb_verlauf`) wird ABGESCHAFFT (André 07.08.)** — nicht nur aus der Note genommen. ⚠ Achtung, der Name lügt: In **Trainings**-Sitzungen enthält `conversation_logs.kb_end` gar keine Kaufbereitschaft, sondern die Trainings-Gesamtnote. Entflechten, nicht blind löschen.
+- **★ Der Chef bekommt die Bewertung NICHT (02.08.)** — auch nicht optional, auch nicht mit Häkchen. Begründung: Eine Einwilligung unter Kündigungsdruck ist keine, deshalb wird die Möglichkeit gar nicht erst gebaut. Rollen regeln **Verwaltung** (Sitze, Abrechnung), **nie** Einblick in Coaching-Inhalte.
+- **★ Verkauft wird an kleine bis mittlere Teams, nicht an Einzel-Berater (André 11.08.).** Mehrere Berater einer Firma telefonieren gleichzeitig — Parallelbetrieb ist damit Verkaufs-Voraussetzung.
+- **★ Kein lokales Entwickeln (27.05.).** Abnahme läuft **auf dem Live-Server**: commit → push → `bash deploy.sh production` → Test-Tor auf dem Server → Live-Test. **Ein Plan, der lokales `pytest`, `python app.py` oder `flask shell` als Verifikation vorsieht, ist abzulehnen.**
+- **★ Schema-Änderungen NUR als Alembic-Revision.** Das `_migrate()`-Muster ist auf dem Live-Server **wirkungslos** — `app.py` verlässt die Funktion bei Postgres sofort. Wer danach baut, schreibt eine Migration, die **nie läuft**, und merkt es nicht.
+- **★ Aufwand nie in Stunden**, nur 🟢 trivial / 🟡 mittel / 🔴 komplex.
 
 ## Was wir von dir als Reviewer wollen
 

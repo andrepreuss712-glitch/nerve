@@ -3,6 +3,11 @@
 **Defined:** 2026-03-30
 **Core Value:** Ein Vertriebler soll im echten Kundengespräch nie wieder ohne Antwort auf einen Einwand dastehen.
 
+> ## ⚠ ALTERS-WARNUNG — diese Datei ist auf Stand 2026-04-04 (Hinweis eingefügt 2026-08-11)
+> Sie beschreibt die Anforderungen aus der **DACH-first**-Zeit und hat seither **keine** systematische Korrektur bekommen. Bei einer Drift-Suche am 11.08. fielen mehrere Zeilen auf, die dem geltenden Stand widersprachen (US-Markt als „out of scope", sichtbare Punktzahlen, EU-Endpunkt als Pflicht) — die auffälligsten sind jetzt einzeln markiert, **eine vollständige Durchsicht steht aus.**
+> **Bei jedem Widerspruch gewinnen — in dieser Reihenfolge:** ① `Nerve-Vault/04 Entscheidungen/NERVE Konstrukt - Soll-Verhalten.md` (kanonisches Soll-Verhalten) ② `.planning/ROADMAP.md` + die Vault-Roadmap (geltende Reihenfolge) ③ diese Datei.
+> **Drei Dinge, die hier flächig veraltet sind:** **(a) Markt** — US-first seit 04.07., nicht DACH. **(b) Bewertung** — keine sichtbare Note/Punktzahl mehr seit 28.06.; wo hier „Score" steht, ist es überholt. **(c) Server-Region** — folgt dem Markt (US); EU-Endpunkte sind keine Pflicht mehr.
+
 ## v1 Requirements
 
 Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
@@ -120,7 +125,7 @@ Milestone 1: Launch — von v0.9.4 zu erstem zahlenden Kunden.
 
 ## v2 Requirements
 
-Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
+~~Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).~~ ⛔ **ÜBERHOLT (markiert 11.08.): „nach DACH-Validierung" ist seit dem US-first-Beschluss vom 04.07. kein gültiger Zeitpunkt mehr** — diese Validierung findet nicht statt. Was hier verschoben wurde, braucht einen **neuen** Termin gegen die geltende Reihenfolge.
 
 ### Internationalization
 
@@ -143,7 +148,7 @@ Deferred nach Milestone 1 (nach DACH-Validierung und erstem MRR).
 
 | Feature | Reason |
 |---------|--------|
-| Englische UI / US-Markt | Erst Milestone 2 nach DACH-Validierung |
+| ~~Englische UI / US-Markt~~ | ⛔ **UMGEKEHRT seit 04.07.2026 — US-FIRST.** Englische Oberfläche und US-Markt sind **nicht** out-of-scope, sondern **Start-Voraussetzung**. Es gibt keine „DACH-Validierung" mehr, gegen die etwas verschoben werden könnte. Diese Zeile stand bis 11.08. unmarkiert hier, während `PROJECT.md` denselben Satz ausdrücklich als überholt führte — **zwei geladene Dateien sagten das Gegenteil.** |
 | Eigenes TTS (Piper/Coqui) | Erst Milestone 3 ab ~500 Kunden — größter Margenhebel |
 | Eigene Sales-KI (fine-tuned) | Erst Milestone 4 |
 | Enterprise-Features (SSO, Admin-Rechte) | Zu früh, falsche Zielgruppe für Milestone 1 |

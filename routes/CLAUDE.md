@@ -17,16 +17,17 @@ grep -rn "_bp = Blueprint(" routes/
 Der erste Argument-String ist der Blueprint-Name fuer url_for().
 Beispiel: `auth_bp = Blueprint('auth', __name__)` → url_for('auth.login')
 
-### Schritt 3: Route im Flask-Shell-Kontext testen
-```bash
-flask shell
-```
-```python
-from flask import url_for
-with app.test_request_context():
-    print(url_for('auth.login'))
-```
-Wenn kein BuildError: Route ist aufloesbar.
+### Schritt 3: Aufloesbarkeit pruefen — ⛔ NICHT LOKAL (korrigiert 2026-08-11)
+
+**Hier stand bis 11.08. ein `flask shell`-Aufruf.** Das ist lokales Ausfuehren von Anwendungs-Code und verstoesst gegen die harte Regel „Kein Local-Dev" (`salesnerve/CLAUDE.md`) — die kennt **keine Ausnahmen**, auch nicht fuer eine schnelle Probe. Lokal gelten andere Voreinstellungen, andere Pfade, andere Paket-Versionen: eine lokal aufloesbare Route sagt **nichts** ueber den Live-Server.
+
+**Stattdessen, in dieser Reihenfolge:**
+1. **Statisch pruefen** (kostet nichts, faengt den haeufigsten Fall): Blueprint-Name und Funktionsname am Code greppen — beides, nicht nur eines. Bau-Regel 9: **Endpoint-Namen nie raten.**
+2. **Bau-Regel 20 beachten:** Neben die Abwesenheits-Pruefung immer einen **Existenz-Anker** setzen (`grep -c` auf ein bekannt vorhandenes Muster == 1). Sonst ist „nichts gefunden" nicht von „nichts gelesen" zu unterscheiden.
+3. **Echte Abnahme laeuft auf dem Live-Server:** commit → push → `bash deploy.sh production` → Test-Tor auf dem Server → im Browser mit dem Test-Konto aufrufen. Erst das beweist, dass die Route aufloest.
+4. Den Bestand der Routen auf dem Server abfragen: `scripts/inspect.sh routes` (nur lesen).
+
+⚠ *Anlass: Ein `BuildError` durch einen geratenen Namen ging schon einmal live, obwohl alle Pruefungen gruen waren — gefangen erst im Browser. Genau dagegen ist Schritt 3 gedacht; er muss deshalb dort laufen, wo es zaehlt.*
 
 ## Haeufiger Fehler
 `url_for('auth.login')` schlaegt fehl wenn Blueprint-Name nicht 'auth' ist.

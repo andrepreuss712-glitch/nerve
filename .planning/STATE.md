@@ -577,7 +577,7 @@ Recent decisions affecting current work:
 - [Phase 04-payments-legal]: Live-Assistent Cold-Call-Modus = nur Berater-Audio, kein Kundentranksript, berechtigtes Interesse Art. 6 lit. f
 - [Phase 04-payments-legal]: Live-Assistent Meeting-Modus = Consent-Pop-up vor Call, Ablehnung → Auto-Wechsel in Cold-Call
 - [Phase 04-payments-legal]: KI-Trainingsdaten-Checkbox muss ENTKOPPELT von Training-Nutzung sein (Art. 7 Abs. 4 DSGVO Koppelungsverbot)
-- [Phase 04-payments-legal]: Alle Dienste EU-Server: Deepgram api.eu.deepgram.com, Claude Bedrock Frankfurt, ElevenLabs EU Residency, Stripe Frankfurt
+- [Phase 04-payments-legal]: ~~Alle Dienste EU-Server: Deepgram api.eu.deepgram.com, Claude Bedrock Frankfurt, ElevenLabs EU Residency, Stripe Frankfurt~~ ⛔ **WIDERRUFEN 2026-08-01, hier markiert 11.08.** Server-Region folgt dem **Markt (US-first)**; Claude bleibt **US-direkt**, der Bedrock-Frankfurt-Umzug ist **gestrichen**. ⚠ **Dieses Register liest GSD als geltende Projekt-Entscheidungen** — ein Eintrag ohne Widerrufs-Marker wirkt wie eine Vorgabe. Ein EU-Server war nie eine DSGVO-Anforderung.
 - [Phase 04-payments-legal]: Webhook uses raw request.data for Stripe signature verification — idempotent by stripe_event_id UNIQUE index
 - [Phase 04-payments-legal]: checkout_success only flashes and redirects — subscription activation handled exclusively in webhook (D-12)
 - [Phase 04-payments-legal]: stripe_customer_id stored on Organisation at checkout for reuse on subsequent Checkout Sessions (D-06)
@@ -794,7 +794,7 @@ Recent decisions affecting current work:
 - Phase 6 added: PiP Komplett-Rebuild — Neues Layout (EWB+KI oben, Skript-Teleprompter unten), Claude Streaming, semantische Skript-Position-Erkennung, Transparenz-Regler. Ersetzt bestehenden PiP-Code.
 - Phase 06.1 inserted after Phase 06: PiP UAT-Fixes — Bugs (EWB `[object Object]`, Scrollbar, Opener belegt Slot), Design (Farben umkehren, Mic-Indikator, Opacity-Slider), Proportionen (Teleprompter größer, EWB kompakter) (URGENT)
 - Phase 7 added after Phase 06.5: MAIN DESIGN — App-weite Design-Konsolidierung (RETRO-DOC, completed 2026-04-18) — Bulk-Migration Gelb/Gold -> Grau/Teal, data-theme Dead-Code entfernt, PiP light-Modus, nerve.css Farb-Tokens als Single Source of Truth, Umlaut-Regel kodifiziert in CLAUDE.md
-- Phase 07.1 inserted after Phase 7: POLISH-24 Session-Detail-Redesign — /session/<id> komplett auf MAIN DESIGN umbauen (8 Sektionen: Header, Score-Hero mit Breakdown, Kaufbereitschafts-Verlauf-Chart, Einwand-Timeline, Phasen-Visualisierung, Skript-Abdeckung, Painpoints, PreCall-Briefing), inkl. DB-Migration kb_verlauf TEXT (URGENT)
+- Phase 07.1 inserted after Phase 7: POLISH-24 Session-Detail-Redesign — /session/<id> komplett auf MAIN DESIGN umbauen (8 Sektionen: Header, ~~Score-Hero mit Breakdown~~, ~~Kaufbereitschafts-Verlauf-Chart~~, Einwand-Timeline, Phasen-Visualisierung, Skript-Abdeckung, Painpoints, PreCall-Briefing), inkl. DB-Migration kb_verlauf TEXT — ⛔ **HISTORISCHER EINTRAG, markiert 11.08.: „Score-Hero mit Breakdown" und „Kaufbereitschafts-Verlauf" sind beide abgeschafft** (keine sichtbare Note seit 28.06. · Kaufbereitschaft ganz raus seit 07.08.). **Diese Seite baut METRIK-1 neu** — nicht nach diesem Eintrag planen.
 
 ### Pending Todos
 

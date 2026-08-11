@@ -1,5 +1,8 @@
 # BRIEFING — Wissen von Anruf zu Anruf mitnehmen: richtig, und was muss JETZT dafür gebaut werden?
 
+> ⛔ **ARCHIV-BRIEFING — NICHT UNVERÄNDERT WIEDERVERWENDEN (Hinweis 2026-08-11).**
+> Der Zuschnitt darin ist überholt: Es führt **(A) Kurzzeit-Gedächtnis, (B) Freie-Antwort-Knopf und (C) Spiegel-Marker als EINEN Jetzt-Bau**. **Seit 11.08. gilt: nur (A) jetzt** (eigene Phase vor dem Engine-Neubau, ~30–50 Zeilen, alle Nahtstellen-Blocker durch PERSID erledigt), **(B) und (C) am Engine-Neubau.** Wer dieses Briefing erneut verschickt, bekommt eine Gegenlese **gegen den geltenden Zuschnitt**.
+
 Du bist Gegenleser. **Nichts lesen, nichts schreiben, nichts ausführen.** Antworte auf Deutsch, direkt, ohne Floskeln. Stimme nicht aus Höflichkeit zu.
 
 ## Die Idee des Gründers (wörtlich)
