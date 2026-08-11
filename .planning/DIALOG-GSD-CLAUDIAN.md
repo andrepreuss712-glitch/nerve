@@ -4447,6 +4447,49 @@ laeuft. Die Frage ist nur, warum er nichts zu bewerten findet.
 
 ---
 
+#### ⓪-FINAL: ANDRE HAT ENTSCHIEDEN — das Substanz-Tor wird UMGEBAUT, nicht nachjustiert
+
+**Seine Frage, die es ausgeloest hat:** *„wenn ich jetzt einen einfachen kunden hatte, der vllt nur
+ein oder zwei einwaende bringt. was dann?"* **Antwort am Code: dann gibt es GAR KEINE Rueckmeldung.**
+
+**Drei Gruende, warum das Tor konstruktiv falsch ist — bitte im Spec so uebernehmen:**
+1. **Es stammt aus der alten Marker-Notenmaschine**, die Einwand-Ereignisse zum Rechnen brauchte.
+   **Der Judge liest das ganze Transkript und braucht sie nicht.** Eroeffnung, Fragen-Qualitaet und
+   Gespraechsfuehrung sind ohne einen einzigen Einwand beurteilbar. **Beim Cutover auf den Judge
+   wurde das Tor nicht mitgedacht.**
+2. **Es widerspricht dem kanonischen Soll (§6):** *„zeigen, was NICHT gewertet wurde"* und *„nicht
+   erreichte Dimensionen fair rausnehmen, nie als Strafe"* heisst **eine Achse rausnehmen — nicht
+   die ganze Rueckmeldung.** ⚠ **Die Faehigkeit dazu ist BEREITS GEBAUT:**
+   `templates/session_detail.html` hat je Dimension den Zweig
+   `{% else %}<p class="n-observation-empty">Keine auffaellige Beobachtung.</p>`. **Das Vor-Tor
+   wirft alles weg, bevor diese fertige Mechanik ueberhaupt drankommt.**
+3. **Es bestraft strukturell den Erfolg.** Ein Gespraech mit wenigen Einwaenden ist oft das beste.
+   **Derselbe Denkfehler wie „die Note haengt an der Kaufbereitschaft" — den raeumt diese Phase
+   gerade weg, und hier sitzt er ein zweites Mal.**
+
+**➡️ ANDRE-ENTSCHEIDUNG (Weg 3 von drei vorgelegten): DER SUBSTANZ-TEST WIRD UMGESTELLT.**
+- **Neue Frage des Tors: „wurde ueberhaupt genug GESPROCHEN?"** — auf Basis von **Sprechzeit und
+  Wortanzahl**. Die stehen seit **ZEITSTEMPEL-1 (11.08.)** erstmals zur Verfuegung
+  (`transcript_segments`: Anfang, Ende, Wortanzahl). Anker aus dem heutigen Testanruf: 47,5 s
+  Sprechzeit, 162 Woerter.
+- **Einwand-Momente sind nur EINES von mehreren Signalen, nie das alleinige Tor.**
+- **Das Audio-Gueten-Tor bleibt** — schlechter Ton ist ein echter Ablehnungsgrund.
+- **„Nicht genug zum Bewerten" bleibt** — aber fuer echte Nicht-Gespraeche (Fehlanruf,
+  Anrufbeantworter, acht Sekunden), nicht fuer ein gutes kurzes Gespraech.
+- **Achsen ohne Material werden EINZELN ausgewiesen** („Keine auffaellige Beobachtung."), der Rest
+  wird normal bewertet.
+
+⛔ **AUSDRUECKLICH VERWORFEN: die 3 einfach auf 1 senken, damit es gruen wird.** Das waere eine
+gebogene Schwelle. **Die neue Grenze wird aus ECHTEN Anrufen hergeleitet** — Lackmustest: *Kaeme
+dieselbe Zahl heraus, wenn der heutige Istwert ein anderer waere?* **Ja → hergeleitet. Nein →
+gebogen.** Leg die Herleitung im Spec offen, nicht nur die Zahl.
+
+**Kanonisch nachgetragen** in `Nerve-Vault/04 Entscheidungen/NERVE Konstrukt - Soll-Verhalten.md`
+§6 („Daten-Substanz = Gesprochenes, nicht Einwand-Momente"). **Bei Widerspruch gewinnt dieses
+Dokument.**
+
+---
+
 #### ⓪-ALT (IRRWEG, nur als Nachweis stehen gelassen — NICHT danach handeln)
 
 Ich habe am Live-Server nachgezaehlt:
