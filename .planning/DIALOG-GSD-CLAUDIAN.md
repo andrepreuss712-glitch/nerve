@@ -5097,3 +5097,151 @@ filtern, Schreib-Seite unangetastet** · „wer waehlt": **der Code**.
 Trainings-Anzeige (Gap C). **Den bitte mit uns durchgehen.**
 
 **Kleinkorrektur an dir:** `beleg_check` hat **eine** Testdatei, nicht drei.
+
+---
+
+## FRAGE — 08.23.2.METRIK-1 — 2026-08-13 (Bereich 4: „Was ersetzt die Note" — vier Lesestellen + Gap C)
+
+**Wo ich stehe:** SPEC.md mit NACHTRAG 2 komplett gelesen, ROADMAP-Eintrag und deine Antwort vom
+13.08. ebenfalls. Bereiche 1-3 sind erledigt (EIN Ausrollen · EWB nur Lese-Seite · Code waehlt).
+Ich habe die Note-Pfade am Code nachgegangen, bevor ich frage. **Blockiert ist nur Requirement 9**
+— ohne diese fuenf Antworten kann der Plan die Anzeige-Seite nicht schreiben.
+
+---
+
+### ⚠ ZUERST EIN FUND: die „vier Leser" sind nicht alle Note-BILDSCHIRME
+
+Die vier Lesestellen im SPEC sind die Leser von `_calc_call_score`. **Belegt am Code lesen aber
+zwei weitere Bildschirme eine Gesamtnote — direkt aus `kb_end`, ohne je `_calc_call_score`
+anzufassen.** In der Vierer-Liste sind sie deshalb unsichtbar; unter „die `kb_*`-VERBRAUCHER
+ausraeumen" (Requirement 9) stehen sie klar in Scope:
+
+| Bildschirm | Quelle | was der Nutzer sieht |
+|---|---|---|
+| **Wochen-Dashboard, KPI-Kachel** | `routes/performance.py:101-102` → `templates/dashboard.html:121-123` | **„Ø Score 68"** + Wochen-Trend in % |
+| **Wochen-Dashboard, Begruessung** | `routes/performance.py:259-268` | **„Dein Score ist diese Woche um 12% gestiegen"** |
+| **LIVE-Auswertungsseite (!)** | `routes/app_routes.py:1112-1135` → `templates/session_detail.html:382` | **„Zuletzt im Training: Ø 78/100 aus 3 Sessions"** — eine Trainings-Note auf der Live-Seite |
+| *(Admin-Sicht, nicht Nutzer)* | `routes/admin_ewb.py:72` | Varianz-Range ueber `kb_end` — Qualitaets-Tor, kein Coaching |
+
+**Folge:** Bleiben die drei Nutzer-Stellen stehen, ist das Abnahme-Kriterium „**kein** Bildschirm
+zeigt eine Gesamtnote" nach der Phase **nicht erfuellt** — und zwar ohne dass irgendein Anker
+anschlaegt, weil alle Anker auf `_calc_call_score` zeigen. Ich schlage vor, sie ausdruecklich in
+Requirement 9 aufzunehmen (die Vierer-Liste wird zur **Siebener**-Liste). Die Admin-Sicht wuerde
+ich **stehen lassen** — sie benotet keinen Verkaeufer, sie misst unsere eigene Datenqualitaet.
+
+---
+
+### FRAGE 1 — Das Anruf-Fenster (PiP): was steht dort, wo heute „Coaching-Score 72%" steht?
+
+**Ist-Zustand, belegt:** Nach dem Bestaetigungs-Klick zeigt das PiP `final_score` gross in Farbe
+(gruen/gelb/rot) mit dem Etikett **„Coaching-Score"** (`static/pip-launcher.js:4287-4302`),
+darunter den Trend-Streifen und die Zaehl-Kacheln (Einwaende · Redeanteil · Dauer ·
+Skript-Abdeckung, `:3460-3486`). Der Klick selbst bleibt ja — **die Note daneben nicht.**
+
+⚠ **Der Haken:** Die neue Form 2 (Kopfzeile + eine Sache) entsteht im Bewerter der Slow Lane,
+**Sekunden bis Minuten nach dem Auflegen**. Zum PiP-Zeitpunkt ist sie in aller Regel **noch nicht
+da**. Ein einfaches „Note raus, Kopfzeile rein" gibt es hier also nicht.
+
+- **(a)** Note ersatzlos raus, die vorhandenen **Zaehl-Kacheln bleiben** (sie zaehlen, sie benoten
+  nicht) + ein Knopf „Auswertung ansehen". Das PiP wird zur Quittung, das Coaching zieht auf die
+  Auswertungsseite um. **← meine Empfehlung:** kein Warte-Zustand, kein zweiter Ladebalken, und es
+  ist ehrlich — direkt nach dem Auflegen liegt schlicht noch kein belegtes Urteil vor.
+- **(b)** Note raus, PiP **wartet** und laedt Kopfzeile + eine Sache nach, sobald der Bewerter
+  fertig ist. Naeher am Versprechen „Rueckmeldung nach dem Anruf", kostet aber einen Nachlade-Pfad
+  samt Abbruch-/Zeitlimit-Zweig und haelt das Fenster laenger offen.
+- **(c)** Note raus, PiP zeigt **nur** noch die Bestaetigungs-Wahl und schliesst danach.
+
+---
+
+### FRAGE 2 — Der Trend-Streifen („+5% vs Schnitt letzte 5"): worauf zaehlt er kuenftig?
+
+Er sitzt an **zwei** Stellen: im PiP (`pip-launcher.js:3489-3511`) und als Abzeichen auf der
+Auswertungsseite (`session_detail.html:75-83`). Beide werden aus `/api/postcall/trend`
+(`app_routes.py:1347-1379`) bzw. `trend_avg` (`dashboard.py:806-818`) gespeist — **beide rechnen
+`_calc_call_score`**. Faellt die Formel, fallen beide.
+Die Constraint erlaubt Fortschritt **gegen die eigene Vergangenheit** ausdruecklich — die Frage ist
+nur, **was** verglichen wird, wenn es keine Note mehr gibt.
+
+- **(a)** Trend **ersatzlos raus**, `/api/postcall/trend` geloescht. Klar, ehrlich, null Restrisiko.
+  Kostet die einzige Fortschritts-Anzeige, die es heute gibt.
+- **(b)** Trend zaehlt kuenftig die **Anwendung der einen Sache** („3 von 5 Anrufen"). Inhaltlich
+  genau das, was diese Phase aufbaut — **aber:** die Anwendungs-Pruefung ist Requirement 8 und
+  ausdruecklich die **letzte, notfalls abtrennbare Welle**. Wird sie abgetrennt, steht der Trend
+  leer da. **Nur waehlen, wenn Requirement 8 damit zum Pflicht-Teil wird.**
+- **(c)** Trend zaehlt eine **neutrale Groesse ohne Urteil** — z.B. Anrufe diese Woche, oder
+  gesprochene Woerter. Zaehlt statt benotet, haengt an nichts. **← meine Empfehlung, falls du den
+  Streifen behalten willst**; sonst (a).
+
+---
+
+### FRAGE 3 — Der Hero-Platz auf der Auswertungsseite
+
+Heute steht dort ganz oben „**Gesamt-Score 72**" in Ampelfarbe (`session_detail.html:68-83`).
+Die KI-Einschaetzung sitzt **darunter** (`:125+`). Nach dem Umbau ist die Einschaetzung das
+Wertvollste auf der Seite — sie steht aber an dritter Stelle.
+
+- **(a)** Hero-Sektion **ersatzlos raus**, die KI-Einschaetzung rueckt nach oben und die Kopfzeile
+  (bester Moment + Zitat) ist das Erste, was man sieht. **← meine Empfehlung** — sie ersetzt die
+  Note an genau der Stelle, an der die Note stand.
+- **(b)** Hero bleibt als **Fakten-Zeile ohne Urteil**: Dauer · Woerter · Einwaende · Datum. Ruhiger
+  Seitenkopf, aber es ist noch eine Kachel zwischen Nutzer und Coaching.
+- **(c)** Hero wird zur **Kopfzeile selbst** (Zitat gross im Seitenkopf) — dann muss der Fall
+  „Nicht genug zum Bewerten" den Seitenkopf mittragen, ohne dass die Seite kopflos aussieht.
+
+---
+
+### FRAGE 4 — Der Vierer-Aufriss unter dem Hero
+
+Darunter stehen heute vier Zeilen **mit den Gewichtungen als Tooltip**: „Kaufbereitschaft Ende
+(Gewichtung 40%) 65/100", behandelte Einwaende 30%, Redeanteil 20%, Skript-Abdeckung 10%
+(`session_detail.html:84-100`). Das ist der **Aufriss genau der Formel, die verschwindet** — die
+Prozente sind Notenbestandteile, die Zahlen selbst sind Zaehlungen.
+⚠ Zusatz-Umstand: `kb_end` erzeugt die Folgephase weiter (METRIK-1 entfernt nur die Verbraucher),
+und der Redeanteil ist im Kaltakquise-Modus **baubedingt 100 %** — er coacht dort heute falsch
+(dein Fund ⑨, Termin 4.0.2).
+
+- **(a)** Ganzer Aufriss raus. Die Zaehl-Kacheln im PiP decken das Zaehlbare bereits ab. **← meine
+  Empfehlung:** ohne Formel ist ein Formel-Aufriss sinnlos, und zwei der vier Zahlen sind ohnehin
+  fragwuerdig.
+- **(b)** Gewichtungen raus, die **vier Zahlen bleiben** als reine Zaehlung. Erhaelt Information —
+  laesst aber die falsche 100-%-Redeanteil-Zeile bis 4.0.2 stehen.
+- **(c)** Nur die **unstrittigen** Zahlen bleiben (Einwaende, Skript-Abdeckung), Kaufbereitschaft
+  und Redeanteil raus.
+
+---
+
+### FRAGE 5 — Gap C: behaelt das **Training** seine Note?
+
+**Belegt:** Training schreibt seine eigene Gesamtnote in `kb_end`
+(`routes/training.py:721` <- `scoring.gesamt_score`) — das ist genau der Fund „**der Name luegt**".
+Auf der Auswertungsseite laeuft sie durch **denselben** Hero (`dashboard.py:794`: `score_total =
+kb_end`) und durch **dasselbe** Trend-Abzeichen. **Reisse ich den Hero raus, stirbt die
+Trainings-Note stillschweigend mit** — exakt der Fall, vor dem Gap C warnt.
+Was Training **zusaetzlich** hat und was der Hero nicht beruehrt: sechs Kategorien-Noten `x/10` mit
+Feedback (`session_detail.html:459-476`), Wendepunkte, Verbesserungspotenzial. **Auch die sechs
+Kategorien sind Noten** — nur kleinere.
+Und: die KI-Einschaetzung ist heute hart auf `conv.typ == 'live'` gestellt (`:125`) — **Training
+bekommt Form 2 also gar nicht**, der Bewerter laeuft dort nicht.
+
+- **(a)** **Training behaelt seine Note**, der Hero wird `typ`-abhaengig: Live ohne, Training mit.
+  Begruendung: Training ist eine **Uebung mit richtiger Antwort** — dort ist eine Note zulaessig,
+  im echten Anruf nicht. Kleinster Eingriff, nichts stirbt. **← meine Empfehlung fuer diese
+  Phase**, weil Form 2 fuer Training gar nicht existiert und ein notenloses Training-Ergebnis
+  schlicht **leer** waere.
+- **(b)** Training verliert den Hero **auch**, die sechs Kategorien-Noten bleiben. Dann zeigt kein
+  Bildschirm mehr eine Gesamtnote — die Einzelnoten bleiben aber, das ist nur halb konsequent.
+- **(c)** Training bekommt Form 2 **ebenfalls** (gemeinsames Raster, wie Gap C es woertlich sagt).
+  **Das ist eine eigene Phase**, nicht ein Nebensatz hier: der Bewerter muesste fuer Trainings
+  ueberhaupt erst laufen.
+
+**Wenn (a):** dann ist „kein Bildschirm zeigt eine Gesamtnote" praeziser als „**kein Live**-Anruf
+zeigt eine Gesamtnote" zu formulieren — sonst widerspricht die Abnahme der Entscheidung.
+
+---
+
+**Was ich ohne diese Antworten nicht schreiben kann:** die Anzeige-Seite von Requirement 9 und die
+Abnahme-Anker dazu. Alles andere (Tor, Zitat-Pruefer, Fokus-Rechenweg, Katalog) ist entschieden und
+planbar. **Meine Empfehlungs-Kette in einem Satz:** Vierer-Liste auf Sieben erweitern · PiP wird
+Quittung (1a) · Trend neutral zaehlen oder raus (2c/2a) · Hero raus, Einschaetzung nach oben (3a) ·
+Formel-Aufriss raus (4a) · Training behaelt seine Note, Abnahme praezisieren (5a).
+
