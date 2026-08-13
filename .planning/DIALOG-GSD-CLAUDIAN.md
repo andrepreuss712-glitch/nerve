@@ -5496,3 +5496,94 @@ Wahrscheinlichkeit eines Doppelpunkts ist hoch.
 Plan 10 als eigenen Abschnitt festgehalten, **`CLAUDE.md` aber nicht angefasst** — das ist nicht
 meine Zustaendigkeit. Bitte Punkt 23 bei Gelegenheit nachziehen, sonst kopiert der naechste
 Agent wieder `op.execute(` und faellt in dieselbe Falle.
+
+---
+
+### Frage 4 — Bleibt der KB-Trend-Chart auf dem Wochen-Dashboard? (nachgetragen 13.08., zweite Gegenlesung)
+
+**Wo ich stehe:** Zweite Gegenlesung der zehn Plaene. Die vier Blocker aus dem ersten Durchgang
+sind nachgemessen behoben; die Befunde sind von 16 auf 5 gesunken. Diese Frage ist der einzige
+Punkt, den ich nicht selbst entscheiden darf — sie beruehrt den Wortlaut von SPEC Requirement 9.
+Sie steht als `checkpoint:decision` in **Plan 09, Task 3**, direkt vor dem Ausroll-Punkt dieses
+Plans.
+
+**Worum es geht:** Auf dem Wochen-Dashboard steht unter „Langzeit-Fortschritt" ein Liniendiagramm
+mit dem Titel **„Kaufbereitschafts-Score"** (`templates/dashboard.html:367`, Chart.js-Block
+`:1166`). Es zeigt den Wochenverlauf der Kunden-Kaufbereitschaft — gespeist aus
+`services/coaching_service.py:418-465` (`get_longterm_data`, Wochenmittel von `kb_end` ueber
+`typ == 'live'`), mit **fest eingestellter y-Achse von 0 bis 100**.
+
+Damit ist es ein **ueberlebender `kb_end`-Verbraucher** — der letzte sichtbare auf dem
+meistbesuchten Bildschirm, nachdem METRIK-1 dort Kachel, Trend-Satz, Coach-Report-Zahl und die
+Note je Live-Sitzung entfernt hat.
+
+**Warum ich es beim letzten Mal nicht gefragt habe** — und warum das zu wenig war: Ich hatte die
+Stelle in die Fundstellen-Liste geschrieben und begruendet („bleibt: ehrlich beschriftet, sie
+nennt die Kaufbereitschaft des Kunden und nicht die Leistung des Verkaeufers"). Bau-Regel 20 ist
+damit formal erfuellt. **Aber SPEC Requirement 9 sagt woertlich: „METRIK-1 entfernt die
+VERBRAUCHER."** Eine Fussnote ist keine Entscheidung, wenn der SPEC-Wortlaut in die andere
+Richtung zeigt. Deshalb kommt sie jetzt hier hin statt in eine Anmerkung.
+
+**Was fuer „bleibt" spricht:** Der Kartentitel ist ehrlich — er benennt die Kaufbereitschaft und
+schreibt sie niemandem als Leistung zu. Genau dieselbe Begruendung traegt in Plan 06 die Zeile
+`Kaufbereitschaft Ende: {kb_end}/100` auf der Auswertungsseite, die wir bewusst stehenlassen.
+D-19 verlangt „kein LIVE-Anruf zeigt eine **Gesamtnote**" — eine korrekt benannte Kunden-Kennzahl
+ist keine Note.
+
+**Was dagegen spricht:** Eine steigende oder fallende Linie mit fester 0-bis-100-Achse ist
+optisch genau die Sorte Zahl, um die es in dieser Phase geht, und im Kartentitel steht das Wort
+„Score". Wer sie ueber Wochen ansieht, liest sie als seine eigene Entwicklung, unabhaengig davon,
+was darueber geschrieben steht.
+
+**Optionen:** (a) Der Chart bleibt, ehrlich beschriftet, und faellt gemeinsam mit dem **Erzeuger**
+in der Folgephase — dann kommt er mit Termin ins Foundation-Code-Register. (b) Er faellt jetzt
+mit; Karte und Chart.js-Block raus, die Nachbar-Karte „Redeanteil-Verhaeltnis" wird im Raster
+nachgezogen. In **beiden** Faellen bleiben `get_longterm_data` und der Datenschluessel
+`kaufbereitschaft` unangetastet — das ist der Erzeuger.
+
+**Meine Empfehlung: (a).** Sie ist konsequent mit der Linie der ganzen Phase (wir entfernen die
+Verbraucher, die eine **Note** zeigen — nicht jede Zahl) und mit der Entscheidung, die wir bei
+`Kaufbereitschaft Ende: /100` schon getroffen haben. Wenn du (b) willst, ist es ein sauberer
+Schnitt, kostet aber eine ehrlich beschriftete Kennzahl ohne Ersatz.
+
+**Unabhaengig von deiner Antwort baue ich in jedem Fall einen Test**
+(`test_kb_trend_serie_ist_live_only`): eine Live-Sitzung und eine Trainings-Sitzung in derselben
+Woche, und die Chart-Serie enthaelt nur den Live-Wert. Dass diese Serie live-only ist, haengt
+heute allein an einer einzigen Filterzeile und ist nirgends festgenagelt — der Test gilt in
+beiden Zweigen, weil der Erzeuger in beiden bleibt.
+
+**Was blockiert ist:** Der Ausroll- und Abnahme-Punkt von Plan 09 (Task 4). Schritt 5 dort zaehlt
+die verbleibenden `Score`-Fundstellen in `templates/dashboard.html` — bei (a) sind es zwei, bei
+(b) null. Ein offener Punkt darf nicht in diesen Deploy laufen. Die Plaene 01 bis 08 sind davon
+nicht betroffen.
+
+---
+
+### NACHTRAG 2 (keine Frage, sachlich) — der zweite Chart derselben Kartenzeile ist nirgends vertagt
+
+Direkt neben dem KB-Trend-Chart steht `templates/dashboard.html:370` „Redeanteil-Verhaeltnis"
+(Datenquelle `services/coaching_service.py:455`, `redeanteil_avg`). Er plottet **genau den Wert,
+den D-16 aus dem Vierer-Aufriss der Auswertungsseite entfernt** — mit der Begruendung, er zeige
+im Kaltakquise-Modus baubedingt immer 100 %.
+
+**SPEC Nachtrag 2 ⑨ vertagt namentlich nur `dashboard.py:283-300`.** Dieser Ort — die Chart-Karte
+auf dem Wochen-Dashboard — **ist nirgends benannt**, weder in der SPEC noch in einem der zehn
+Plaene. Das ist keine Frage an dich und keine Note, die faellt; es ist eine Stelle, die
+**unbenannt** bleibt, und unbenannt heisst: sie kommt beim naechsten Durchgang als Ueberbleibsel
+wieder hoch. Bitte um **Ort und Termin** nach §3b — entweder als Nachtrag in die SPEC dieser
+Phase oder als Eintrag in der Folgephase.
+
+---
+
+### NACHTRAG 3 (Buchhaltung zu R1) — drei Warnungen sind nicht als adressiert markiert
+
+Die Commit-Nachricht zu `fbe0022` traegt im Betreff „4 Blocker + 6 Warnungen", nennt im Rumpf
+aber **neun** (W-1 bis W-5, W-9 bis W-12) plus I-2. Der Checker hatte **zwoelf** gemeldet.
+Damit sind **W-6, W-7 und W-8** weder benannt noch als erledigt oder als bewusst offen markiert.
+
+**Ich fuehre sie nicht stillschweigend als erledigt.** Ihr Befundtext liegt mir in diesem
+Durchgang nicht mehr vor — ich kann also weder „erledigt" noch „bewusst offen" behaupten, ohne zu
+raten. **Status: UNKLAR.** Wenn der R1-Checkerbericht noch greifbar ist, reiche ich die drei
+nach; sonst sollten sie im naechsten Pruefdurchgang ausdruecklich erneut gemessen werden.
+Bei einer 🔴-Phase ist Stillschweigen kein zulaessiger Zustand — deshalb steht es hier und nicht
+nur in meinem Kopf.
