@@ -5575,15 +5575,11 @@ Phase oder als Eintrag in der Folgephase.
 
 ---
 
-### NACHTRAG 3 (Buchhaltung zu R1) — drei Warnungen sind nicht als adressiert markiert
+### NACHTRAG 3 (Buchhaltung zu R1) — ERLEDIGT, W-6/W-7/W-8 sind geschlossen
 
-Die Commit-Nachricht zu `fbe0022` traegt im Betreff „4 Blocker + 6 Warnungen", nennt im Rumpf
-aber **neun** (W-1 bis W-5, W-9 bis W-12) plus I-2. Der Checker hatte **zwoelf** gemeldet.
-Damit sind **W-6, W-7 und W-8** weder benannt noch als erledigt oder als bewusst offen markiert.
+⚠ **Hier stand bis 2026-08-13 die Bitte um eine erneute Messung. Die ist gegenstandslos** — der
+Checker hat die drei im R2-Durchgang verifiziert und geschlossen. **Kein „UNKLAR" mehr.**
 
-**Ich fuehre sie nicht stillschweigend als erledigt.** Ihr Befundtext liegt mir in diesem
-Durchgang nicht mehr vor — ich kann also weder „erledigt" noch „bewusst offen" behaupten, ohne zu
-raten. **Status: UNKLAR.** Wenn der R1-Checkerbericht noch greifbar ist, reiche ich die drei
-nach; sonst sollten sie im naechsten Pruefdurchgang ausdruecklich erneut gemessen werden.
-Bei einer 🔴-Phase ist Stillschweigen kein zulaessiger Zustand — deshalb steht es hier und nicht
-nur in meinem Kopf.
+**W-6, W-7 und W-8 sind die drei `checkpoint:decision`-Tasks 4, 5 und 6 in Plan 01** — D-23
+(Verworfen-Zaehler) · D-05 (Pruef-Korpus) · SPEC Requirement 3 (`_compliance`). Sie stehen in
+diesem Kanal als **Fragen 1-3** und liegen **offen bei Andre**; keine davon ist ein Plan-Mangel.
