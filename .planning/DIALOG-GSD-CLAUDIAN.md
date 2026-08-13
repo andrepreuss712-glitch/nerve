@@ -5358,3 +5358,141 @@ Zahl zeigen und die **kein** Anker auf `_calc_call_score` gefunden haette:
 
 **Offene Frage an Andre steht separat** als `## FRAGE — 08.23.2.METRIK-1 Plan 04` (Sprach-Riegel
 fuer Katalog-Punkt A1) — sie wird beim Ausfuehren von Plan 04 geschrieben, nicht jetzt.
+
+
+---
+
+## FRAGE — 08.23.2.METRIK-1 — 2026-08-13
+
+**Wo ich stehe:** Die zehn Plaene der Phase sind geschrieben und einmal gegengelesen. Die
+Struktur (10 Plaene, 8 Wellen, 6 Ausroll-Punkte) hat die Pruefung bestanden und bleibt. Vier
+Blocker und sechs Warnungen habe ich in diesem Durchgang selbst korrigiert. **Drei Punkte
+korrigiere ich NICHT selbst** — sie beruehren gelockte Entscheidungen (SPEC Requirement 3, D-05,
+D-23), und ich darf eine gelockte Entscheidung nicht eigenstaendig umdeuten.
+
+**Was blockiert ist:** Nichts sofort. Die Plaene 01-03 koennen nach den jeweiligen Empfehlungen
+gebaut werden. **Aber alle drei Antworten muessen vorliegen, bevor Plan 02 Task 3 ausrollt** —
+das ist der eine gemeinsame Ausroll-Punkt von Plan 01 und Plan 02 (D-01). Ein offener Punkt darf
+nicht in diesen Deploy laufen. Die drei Fragen sind als Checkpoints in Plan 01 hinterlegt
+(Task 4, Task 5, Task 6).
+
+---
+
+### Frage 1 — Behaelt der Compliance-Befund sein Flag, wenn das Zitat erfunden war?
+
+Der Zitat-Pruefer (Plan 01, Task 2) verwirft ab jetzt jede Beobachtung, deren Beleg-Zitat nicht
+im Transkript steht. SPEC Requirement 3 sagt dazu woertlich: *„erfunden -> die GANZE Beobachtung
+faellt weg, nicht nur das Zitat."* **Ohne Ausnahme.**
+
+Ich habe fuer `_compliance` trotzdem eine Ausnahme gebaut: Bei einem erfundenen Zitat wird nur
+das Zitat geleert, das `verletzt`-Flag bleibt stehen. Meine Begruendung war, dass `_compliance`
+ein Sicherheits-Hard-Gate ist (Belaestigungs-Befund nach mehrfacher klarer Ablehnung) und ein
+Zitat-Fehler einen echten Sicherheits-Befund nicht verschwinden lassen darf.
+
+Der Gegenleser hat einen Punkt, den ich nicht wegdiskutieren kann: **Das ist die Spiegelform des
+Fehlers, den derselbe Plan an anderer Stelle ausdruecklich verbietet.** Bei der Kopfzeile lautet
+die Regel „kein Lob ohne Beleg". Hier entstuende ein **Vorwurf** ohne Beleg — und zwar prominent
+oben auf der Seite.
+
+**Ich habe nachgesehen, was das Template heute in diesem Zustand tut** (`session_detail.html`,
+Zeilen 154-161): Bei gesetztem Flag und leerem Beleg erscheint der volle Alarm-Kasten mit dem
+Titel „Achtung: Compliance-Hinweis" und dem festen Text *„Hier wurde nach mehrfacher klarer
+Ablehnung weiter gedrueckt — das ist kein Verkauf, sondern Belaestigung. Compliance geht vor
+Coaching."* Nur das Zitat fehlt (das Blockquote haengt an einer eigenen Bedingung). Der Nutzer
+sieht also den harten Vorwurf und **keinen Hinweis darauf, dass der Beleg dafuer nicht
+verifizierbar war**.
+
+**Optionen:**
+
+**(a) Das Flag bleibt, aber die Anzeige wird ehrlich.** Bei fehlendem Beleg erscheint
+zusaetzlich ein Satz wie *„Verstoss gemeldet, Beleg nicht verifizierbar — bitte selbst
+pruefen."* Damit ueberlebt das Sicherheits-Hard-Gate den Zitat-Fehler, und der Nutzer wird nicht
+mit einem unbelegten Vorwurf allein gelassen.
+
+**(b) Dem SPEC-Wortlaut folgen.** Die ganze Compliance-Beobachtung faellt weg und wird als
+verworfen gezaehlt. Eine Regel fuer alle, keine Ausnahme zu merken. Preis: ein halluziniertes
+Zitat kann einen echten Belaestigungs-Befund unsichtbar machen.
+
+**Meine Empfehlung: (a).** Sie erfuellt beide Anliegen — der Sicherheits-Befund ueberlebt, und
+niemand bekommt einen Vorwurf ohne erkennbare Unsicherheit vorgesetzt.
+
+**Unabhaengig von deiner Antwort baue ich in jedem Fall einen Render-Test fuer den Zustand
+„verletzt, kein Beleg".** Der fehlte bisher in beiden Auslegungen — dieser Zustand war nirgends
+gerendert geprueft.
+
+---
+
+### Frage 2 — Darf der Pruef-Korpus ohne den Tag-Praefix gerendert werden? (D-05)
+
+D-05 verlangt, dass Bewerter und Zitat-Pruefer gegen **exakt denselben** gerenderten Text
+arbeiten. Ich habe den gemeinsamen Renderer (Plan 01, Task 1) so gebaut, dass der Pruef-Korpus
+den Tag-Praefix `[#1 berater 500ms]` **weglaesst**, waehrend der Bewerter-Auftrag ihn traegt.
+
+**Sachlich spricht dafuer:** Der Praefix ist Prompt-Rahmen, kein gesprochener Text. Im
+Pruef-Korpus wuerde er den Token-Overlap-Nenner des Zitat-Pruefers mit Rahmen-Woertern fuellen —
+Halluzinate wuerden dadurch **angehoben**, der Pruefer also *schwaecher* statt staerker. Und
+D-05 begruendet sich selbst mit *„zwei getrennte Renderings erzeugen hausgemachte
+Beinahe-Treffer"*: geschuetzt sind demnach **Segment-Menge, Filter und Reihenfolge** — und genau
+die drei garantiert der gemeinsame Renderer. Die Verpackung ist nicht das Schutzgut.
+
+**Warum ich trotzdem frage:** D-05 ist gelockt, und ich lege ihn hier eigenstaendig aus. Eine
+gelockte Entscheidung mit guten Gruenden umzudeuten ist genau das, was nicht still in einem
+Modul-Docstring passieren darf.
+
+**Optionen:** (a) bleibt wie gebaut, ohne Praefix. (b) wortlaut-treu, mit Praefix.
+
+**Meine Empfehlung: (a)** — mit der Begruendung oben. **Zusaetzlich verschaerfe ich den Test:**
+Die Praefix-Freiheit wird ein Anker (`assert '[#' not in korpus`) statt einer blossen Absicht im
+Docstring. Sonst koennte ein spaeterer Umbau den Praefix einfuehren, ohne dass ein Test rot wird.
+
+---
+
+### Frage 3 — Der gespeicherte Verworfen-Zaehler hat keinen echten Leser (D-23)
+
+D-23 verlangt fuer den Zaehler der verworfenen Beobachtungen einen **Ort** und einen **Leser**.
+Den Ort habe ich (`rubric_score.payload_jsonb`). Als Leser habe ich eine Founder-Kachel gebaut —
+**aber die liest den gespeicherten Wert gar nicht.** Sie liest einen RAM-Prozess-Zaehler mit
+**anderer Semantik**: summiert, pro Worker, seit Deploy. Der gespeicherte Wert ist dagegen ein
+Absolutwert **je Anruf**.
+
+Das heisst: D-23 ist formal geliefert, sachlich nicht. Der gespeicherte Wert bleibt
+**write-only** — genau der tote Ausgang, gegen den wir die Regel „kein Zaehler ohne Leser"
+ueberhaupt aufgestellt haben.
+
+**Meine urspruengliche Begruendung war die FORCE-RLS-Falle** — und die traegt hier nicht. Sie
+gilt fuer eine **mandantenuebergreifende Aggregation** (die als `nerve_app` still 0 Zeilen
+liefert), **nicht fuer den Einzelwert**. Geschrieben wird er mit gesetzter Tenant-GUC, und der
+Auswertungsseiten-Request liest `rubric_score` heute schon mit gesetzter GUC. Ein Leser je Anruf
+waere technisch ohne weiteres moeglich.
+
+**Optionen:**
+
+**(a) Der gespeicherte Wert bekommt einen echten Leser je Anruf** — in der Admin-/Founder-Sicht,
+**nicht** in der Nutzer-Coaching-Ansicht (das ist Diagnose, kein Coaching-Inhalt).
+
+**(b) Ausdruecklich als „write-only bis TERMIN" benennen** — im Plan-01-SUMMARY **und** im
+`Foundation-Code-Register.md`, mit konkretem Termin. Dann ist der Zustand wenigstens benannt
+statt still.
+
+**Meine Empfehlung: (a).** Ein Prozess-Zaehler allein reicht als Erfuellung von D-23 nicht, und
+die Ausrede, die ich dafuer hatte, haelt der Pruefung nicht stand. Falls du (b) willst, brauche
+ich den Termin.
+
+---
+
+### NACHTRAG (keine Frage, nur zum Nachziehen) — CLAUDE.md Punkt 23 widerspricht unserer Praxis
+
+`CLAUDE.md` Punkt 23 nennt unter „Migrations-Stil" woertlich
+`op.execute("COMMENT ON TABLE/COLUMN ... IS '...'")` als „hauseigenes Muster aller Migrationen".
+
+Die Migrationen dieser Phase (`0040`, `0041`, `0042`) machen bewusst das **Gegenteil**: sie
+benutzen den `_comment()`-Helfer mit `exec_driver_sql` und **verbieten** `op.execute(` per
+Abnahme-Anker. Grund ist die **Doppelpunkt-Falle**, an der `0039` (ZEITSTEMPEL-1)
+haengengeblieben ist: Ein `COMMENT ON`-Text mit Doppelpunkt wird von der Parameter-Ersetzung als
+benannter Bindeparameter gelesen. Unsere Schild-Texte sind lange Prosa-Saetze — die
+Wahrscheinlichkeit eines Doppelpunkts ist hoch.
+
+**Die Abweichung ist richtig, die Regel sagt weiter das Gegenteil.** Ich habe die Begruendung in
+Plan 10 als eigenen Abschnitt festgehalten, **`CLAUDE.md` aber nicht angefasst** — das ist nicht
+meine Zustaendigkeit. Bitte Punkt 23 bei Gelegenheit nachziehen, sonst kopiert der naechste
+Agent wieder `op.execute(` und faellt in dieselbe Falle.
