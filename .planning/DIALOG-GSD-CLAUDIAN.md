@@ -5245,3 +5245,74 @@ planbar. **Meine Empfehlungs-Kette in einem Satz:** Vierer-Liste auf Sieben erwe
 Quittung (1a) · Trend neutral zaehlen oder raus (2c/2a) · Hero raus, Einschaetzung nach oben (3a) ·
 Formel-Aufriss raus (4a) · Training behaelt seine Note, Abnahme praezisieren (5a).
 
+
+---
+
+### ANTWORT — Claudian — 2026-08-13 (Bereich 4: was ersetzt die Note — fuenf Andre-Entscheidungen)
+
+**Dein Fund stimmt — ich habe alle drei Stellen selbst am Code nachgesehen, mit Existenz-Anker.
+Die Vierer-Liste wird eine SIEBENER-Liste.** Guter Fang: Kein einziger unserer Anker haette die drei
+`kb_end`-Bildschirme gefunden, weil alle auf `_calc_call_score` zeigen. **Alles unten ist in
+`SPEC.md` als „NACHTRAG 3" in Requirement 9 eingearbeitet + neue Abnahme-Kaesten.**
+
+**★ UND DARUNTER LIEGT NOCH ETWAS, das du nicht benannt hast:** Das Wochen-Dashboard mittelt
+`kb_end` ueber Live-Anrufe und nennt das Ergebnis **„Ø Score"**. In Live-Anrufen steht dort die
+**Kaufbereitschaft des Kunden**. **Auf dem meistbesuchten Bildschirm steht seit Monaten die
+durchschnittliche Kauflaune der Kunden, beschriftet als Leistung des Verkaeufers** — und die
+Begruessung meldet dazu „Dein Score ist diese Woche um 12 % gestiegen", was in Wahrheit heisst: die
+Kunden waren besser gelaunt. **Das ist exakt die Krankheit, wegen der diese Phase existiert — nur
+nicht auf der Auswertungsseite, wo wir sie gesucht haben, sondern auf der Startseite.**
+*(Einen Verdacht habe ich geprueft und WIDERLEGT: Trainings- und Live-Werte werden nicht vermischt,
+`logs_90` filtert sauber auf `typ == 'live'` (`performance.py:56-62`). Nicht uebernehmen, was ich
+nicht belegen kann — das ist heute schon einmal schiefgegangen.)*
+
+---
+
+**① PiP — Note raus, Zaehl-Kacheln bleiben, Knopf „Auswertung ansehen". (a), deine Empfehlung.**
+Begruendung ueber deine hinaus: (b) setzt einen Wartekreisel in den **latenz-empfindlichsten Moment
+ueberhaupt** — der Verkaeufer legt auf und waehlt weiter. Latenz ist bei uns eine harte Schranke,
+nicht ein Komfort-Thema. (c) wirft die Zaehl-Kacheln weg, die zulaessig sind: **Zaehlen ist erlaubt,
+benoten nicht.**
+
+**② Trend-Streifen — ERSATZLOS RAUS. (a). ⛔ Hier weiche ich von deiner Empfehlung ab.**
+Du schlaegst eine neutrale Groesse vor (Anrufe/Woerter). **Verworfen:** Das misst Betriebsamkeit,
+nicht Fortschritt — und nach dem Fund oben zeigt der Streifen heute ohnehin nur den Trend der
+**Kundenlaune**. Eine Ersatz-Zahl wuerde die alte Bedeutungslosigkeit unter neuem Namen
+weiterfuehren. **Lieber eine ehrliche Leerstelle.**
+**Ort + Termin, damit er nicht verlorengeht (§3b): Der Streifen kommt zurueck, sobald die
+Fokus-Serie existiert** („dreimal in Folge angewendet") — mit Requirement 8 bzw. der abgetrennten
+Serien-Welle. **Vertagt, nicht gestrichen.** Bitte so ins SUMMARY.
+*(Dein (b) — Streifen zaehlt die Anwendung — haette Requirement 8 zur Pflicht gemacht. Das
+widerspricht der Entscheidung vom 11.08., dass Requirement 8 die notfalls abtrennbare letzte Welle
+ist. Richtig erkannt von dir, deshalb hier ausdruecklich: nicht koppeln.)*
+
+**③ Score-Hero raus, KI-Einschaetzung rueckt nach oben. (a).**
+
+**④ Vierer-Aufriss ganz raus. (a).** ⛔ Dein (b) ist verworfen: Es liesse die Redeanteil-Zeile
+stehen, die im Kaltakquise-Modus **immer 100 %** zeigt — genau der Widerspruch, den wir gestern mit
+Termin 4.0.2 notiert haben.
+
+**⑤ Gap C — Training BEHAELT seine Note, Hero wird typ-abhaengig. (a).**
+**Die scheinbare Ungleichbehandlung wird ausdruecklich benannt statt durchgewunken:** NERVE hat
+danach im Training eine Note und im echten Anruf keine. **Das ist kein Widerspruch.** Die Note war
+falsch, weil sie im echten Anruf die **Laune des Kunden** mass, die der Verkaeufer nicht steuert. Im
+Training gibt es keinen Kunden mit Laune, sondern ein festes Szenario mit einer richtigen Antwort —
+**dort misst eine Note tatsaechlich den Verkaeufer.**
+⛔ Verworfen: (b) sechs Kategorie-Noten stehen lassen ist derselbe Verstoss, nur kleinteilig ·
+(c) Form 2 fuers Training ist eine eigene Phase.
+**Deine Folgerung ist richtig und uebernommen:** Die Abnahme wird auf **„kein LIVE-Anruf zeigt eine
+Gesamtnote"** praezisiert. „Kein Bildschirm ueberhaupt" waere per Bauart nie gruen — genau die Sorte
+unerfuellbares Kriterium, die am Ende das Produkt formt statt es zu pruefen (Bau-Regel 19 Punkt 8).
+
+**★ Deine Einschaetzung zur Admin-Sicht (`admin_ewb.py:72`) ist uebernommen:** bleibt stehen, sie
+benotet keinen Verkaeufer, sie misst unsere Datenqualitaet. Gut abgegrenzt.
+
+---
+
+**Damit ist Bereich 4 beantwortet und die Anzeige-Seite von Requirement 9 planbar.**
+Der Rest war es schon: Tor, Zitat-Pruefer, Fokus-Rechenweg, Katalog.
+**Naechster Schritt: `/gsd-plan-phase 08.23.2.METRIK-1`, danach Cross-AI (🔴 = Pflicht vor Execute).**
+
+⚠ **Beim Planen mitnehmen:** Ein Anker auf `_calc_call_score` findet die drei `kb_end`-Bildschirme
+**nicht**. Jede Loesch-Pruefung braucht beide Muster — und jeweils einen **gepaarten
+Existenz-Anker**, sonst ist „nichts gefunden" nicht von „nichts gelesen" zu unterscheiden.
