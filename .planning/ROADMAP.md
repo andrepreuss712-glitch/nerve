@@ -3545,6 +3545,35 @@ Form 3 (die eine Sache wandert ins naechste Vorgespraech) — **Form 2 ist die V
 **Die ehrliche Huerde vor dem Start (klein, aber Pflicht):** ~10 erzeugte Rueckmeldungen lesen und **pruefen, ob das Beleg-Zitat wirklich so im Transkript steht.** Halluzinierte Belege sind der eine Fehler, den auch ein Laie sicher faengt — und der gefaehrlichste.
 **Multi-Segment-Gotcha:** Pfade auf `.planning/phases/08.23.2.METRIK-1/` hartkodieren.
 
+#### Plaene (geplant 2026-08-13) — 10 Plaene in 8 Wellen
+
+**Ziel:** Die Rueckmeldung nach dem Anruf wechselt von einer errechneten Gesamtnote, die 83 % aller Anrufe gar nicht erst erreichen, zu einer belegten Beobachtung plus genau EINER Sache fuers naechste Mal — sichtbar ohne Bestaetigungs-Klick, mit gegen das Transkript geprueften Zitaten.
+
+**Requirements:** SPEC-R1 … SPEC-R9 (neun nummerierte Requirements aus der SPEC, keine REQ-IDs aus REQUIREMENTS.md).
+
+| Welle | Plan | Inhalt | Requirements | Ausrollen |
+|---|---|---|---|---|
+| 1 | `08.23.2.METRIK-1-01-PLAN.md` | Gemeinsamer Transkript-Renderer + EWB-Filter + Zitat-Pruefer angeschlossen + Zaehler | SPEC-R3 | — (mit Plan 02) |
+| 2 | `08.23.2.METRIK-1-02-PLAN.md` | Substanz-Tor auf Sprech-Substanz + Messwerte in der Ablehnungs-Zeile + Schilder (Migration 0040) | SPEC-R1, SPEC-R2 | **Ausrollen 1** (D-01: Plan 01 + 02 zusammen) |
+| 3 | `08.23.2.METRIK-1-03-PLAN.md` | Anzeige vom Bestaetigungs-Klick entkoppelt + dritter Ablehnungs-Zweig | SPEC-R4 | **Ausrollen 2** |
+| 3 | `08.23.2.METRIK-1-04-PLAN.md` | Fokus-Katalog v1 (4 Wortlisten-Punkte, englisch, vom Code gezaehlt) | SPEC-R6, SPEC-R7 | — (mit Plan 07) |
+| 4 | `08.23.2.METRIK-1-05-PLAN.md` | Form 2 Backend: Kopfzeile im bestehenden Tool-Schema + Fokus speichern | SPEC-R5, SPEC-R6 | — (mit Plan 07) |
+| 5 | `08.23.2.METRIK-1-06-PLAN.md` | Auswertungsseite: alte Note raus, Gap C (Training behaelt seine Note) | SPEC-R9 | — (mit Plan 07) |
+| 6 | `08.23.2.METRIK-1-07-PLAN.md` | Form 2 sichtbar: Kopfzeile, eine Sache, Aufklapper, „diesmal nichts" (Migration 0041) | SPEC-R5 | **Ausrollen 3** (Plan 05 + 06 + 07) |
+| 7 | `08.23.2.METRIK-1-08-PLAN.md` | Anruf-Fenster ohne Note + Trend-Streifen weg + beide Formel-Kopien geloescht | SPEC-R9 | **Ausrollen 4** |
+| 7 | `08.23.2.METRIK-1-09-PLAN.md` | Wochen-Dashboard + Sitzungs-Liste ohne Note; Phasen-Abnahme D-19 | SPEC-R9 | **Ausrollen 5** |
+| 8 | `08.23.2.METRIK-1-10-PLAN.md` | Anwendungs-Pruefung ohne KI + Waechter (Migration 0042) — **LETZTE WELLE, notfalls abtrennbar** | SPEC-R8 | **Ausrollen 6** |
+
+**Drei Schnitt-Regeln, die den Wellen-Plan tragen:**
+- **D-01/D-02 — EIN Ausrollen:** Zitat-Pruefer (Plan 01) und Tor-Umbau (Plan 02) gehen **zusammen** live. Plan 01 hat bewusst **keinen** Deploy-Task; der einzige `deploy.sh production` beider Plaene liegt in Plan 02 Task 3. Der verbotene Zwischenzustand „neues Tor live, Pruefer im naechsten Ausrollen" ist damit **per Bauart** ausgeschlossen.
+- **EWB-Klaerung liegt VOR dem Pruefer-Anschluss:** Plan 01 Task 1 (Filter) steht vor Plan 01 Task 2 (Anschluss) — sonst bestaetigt `beleg_check` einen Knopfdruck als gueltiges Kundenzitat.
+- **Requirement 8 ist die letzte Welle und abtrennbar** (D-24). Wird Plan 10 abgetrennt, wandert er als eigene Mini-Phase direkt hinter METRIK-1; der Fokus-Schluessel bleibt bis dahin ohne Abnehmer — benannt, nicht still.
+
+**⚠ Zwei Lesestellen beim Planen gefunden, die in D-12 nicht standen** (beide versorgt, beide zeigten bei LIVE-Anrufen `kb_end` als Note-artige Zahl):
+1. `templates/session_detail.html` Kopfbereich — „Result: X/100" (versorgt in Plan 06).
+2. Wochen-Dashboard-Sitzungs-Liste — `routes/performance.py` `'score': l.kb_end or 0` → `.db2-session-score`, plus **zwei** JavaScript-Bloecke, die dieselbe Zelle nach einer Outcome-Korrektur mit `final_score` ueberschreiben (versorgt in Plan 09).
+**Aus SIEBEN Lesestellen sind damit NEUN geworden.** Kein Anker auf `_calc_call_score` haette die beiden gefunden.
+
 ---
 
 ### ✅ Phase 08.23.2.ZEITSTEMPEL-1 (ABGESCHLOSSEN 2026-08-11): Sprech-Zeiten sichern — Abschnitts-Ende + Wortanzahl in `transcript_segments` (INSERTED 2026-08-10) 🟡 ★ VOR METRIK-1, NICHT NACHHOLBAR

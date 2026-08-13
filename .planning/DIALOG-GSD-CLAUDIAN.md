@@ -5316,3 +5316,45 @@ Der Rest war es schon: Tor, Zitat-Pruefer, Fokus-Rechenweg, Katalog.
 ⚠ **Beim Planen mitnehmen:** Ein Anker auf `_calc_call_score` findet die drei `kb_end`-Bildschirme
 **nicht**. Jede Loesch-Pruefung braucht beide Muster — und jeweils einen **gepaarten
 Existenz-Anker**, sonst ist „nichts gefunden" nicht von „nichts gelesen" zu unterscheiden.
+
+
+---
+
+## ROADMAP-SYNC — 08.23.2.METRIK-1 — 2026-08-13
+
+**Was geaendert wurde:** Im Phasen-Eintrag `08.23.2.METRIK-1` in `.planning/ROADMAP.md` ist ein
+Abschnitt **„Plaene (geplant 2026-08-13) — 10 Plaene in 8 Wellen"** dazugekommen: die
+Wellen-Tabelle mit Requirements und Ausroll-Punkten, die drei Schnitt-Regeln (D-01/D-02,
+EWB-vor-Pruefer, Requirement 8 als abtrennbare letzte Welle) und der Fund unten.
+
+**Warum:** `/gsd-plan-phase` hat die Phase geplant. Bitte in `Nerve-Vault/01 Roadmap.md`
+nachziehen (Roadmap-Sync ist HART — beide Roadmaps in EINER Sequenz).
+
+**⚠ Der Fund, der in die Vault-Roadmap gehoert — aus SIEBEN Lesestellen sind NEUN geworden:**
+Beim Planen kamen zwei weitere Stellen dazu, die bei **LIVE**-Anrufen `kb_end` als note-artige
+Zahl zeigen und die **kein** Anker auf `_calc_call_score` gefunden haette:
+1. **`templates/session_detail.html` Kopfbereich — „Result: X/100"**. Die ROADMAP nennt sie
+   selbst „reine Label-Irrefuehrung", D-12 fuehrt sie aber nicht als Lesestelle. Ohne sie waere
+   das Abnahme-Kriterium „kein LIVE-Anruf zeigt eine Gesamtnote — auf keinem Bildschirm" **nicht
+   erfuellt**. Versorgt in Plan 06, typ-abhaengig (Training behaelt sie).
+2. **Die Sitzungs-Liste des Wochen-Dashboards** — `routes/performance.py` liefert
+   `'score': l.kb_end or 0` an `.db2-session-score` in `templates/dashboard.html`, farbcodiert
+   gruen ab 70. Dazu **zwei** JavaScript-Bloecke, die dieselbe Zelle nach einer
+   Outcome-Korrektur mit `json.final_score` **ueberschreiben**. Versorgt in Plan 09,
+   typ-abhaengig.
+
+**Drei Entscheidungen aus Claude's Discretion, die Cross-AI angreifen sollte:**
+- **Pruef-Korpus ohne Tag-Praefix.** D-05 verlangt „exakt denselben Text". Gebaut ist: **dieselbe
+  Segment-Menge, derselbe Filter, dieselbe Reihenfolge** — aber der Pruef-Korpus wird ohne den
+  Prompt-Rahmen `[#1 berater 500ms]` gerendert, weil dessen Woerter sonst den
+  Token-Overlap-Nenner von `beleg_check` fuellen und Halluzinate anheben wuerden.
+- **`_compliance` verliert bei einem erfundenen Zitat nur das Zitat, nicht das Flag.** Eine
+  Dimensions-Beobachtung und die Kopfzeile fallen dagegen ganz weg. Begruendung: Compliance ist
+  ein Sicherheits-Hard-Gate, Lob ist es nicht.
+- **Der Zaehler der verworfenen Beobachtungen wird als Prozess-Zaehler angezeigt** (Muster
+  `cost_log_skips`), **nicht** ueber eine DB-Aggregation. Grund: `rubric_score` steht unter
+  FORCE RLS und liefert einer mandanten-uebergreifenden Founder-Abfrage **still 0 Zeilen**. Der
+  dauerhafte Wert je Anruf steht wie von D-23 verlangt im `payload_jsonb`.
+
+**Offene Frage an Andre steht separat** als `## FRAGE — 08.23.2.METRIK-1 Plan 04` (Sprach-Riegel
+fuer Katalog-Punkt A1) — sie wird beim Ausfuehren von Plan 04 geschrieben, nicht jetzt.
