@@ -898,6 +898,11 @@ class SuggestionReaction(Base):
     )
 
 
+# ── Phase 08.23.2.METRIK-1 — Schild-Texte, zeichengleich zu alembic 0040 (Punkt 23) ──
+_SCHILD_RUBRIC_STATUS = 'Bewertungs-Status. Werte judged, scored, pending, judge_failed, transcript_not_resolved, not_gradable. NULL bedeutet noch nicht gelaufen. Bei not_gradable steht der Grund in payload_jsonb unter dem Schluessel reason. Ab METRIK-1 gibt es zwei lebende Gruende - poor_audio_health (Audio-Tor, unveraendert) und too_little_speech (Sprech-Substanz-Tor, weniger als zwanzig gesprochene Berater-Woerter; die Zahl der Redeabschnitte ist reiner Messwert und KEINE Bedingung). Welcher Weg genommen wurde, steht daneben im Schluessel tor_zweig. Der Alt-Grund too_few_high_confidence_events wird seit METRIK-1 NICHT mehr geschrieben, steht aber weiter auf Alt-Zeilen in der Datenbank - der Anzeige-Zweig dafuer bleibt deshalb erhalten. Schreibt services/slow_lane.py; liest routes/dashboard.py und templates/session_detail.html.'
+_SCHILD_RUBRIC_PAYLOAD = 'Reserve, Training-only-Felder (was_correct, scenario_id, ground_truth_score) und ab METRIK-1 zwei feste Bereiche. Bei not_gradable die Begruendung samt Messwerten - reason, schema, berater_woerter, redeabschnitte, sprechzeit_ms, high_conf_events, tor_zweig. redeabschnitte ist dort ein reiner Diagnose-Wert und keine Bedingung. tor_zweig nennt den genommenen Weg - genug_woerter, zu_wenig_woerter, keine_berater_zeile oder wortzahl_unbekannt_durchgelassen; der letzte laesst bewusst DURCH und erscheint deshalb nur an judged-Zeilen. Eine Zahl NULL heisst dort UNBEKANNT, nie null Woerter; sie ist die Grundlage der Tor-Nachjustierung nach rund hundert echten Anrufen. Bei judged der Zaehler der Zitat-Pruefung unter dem Schluessel beleg_check mit geprueft, treffer, near_miss, verworfen und compliance_beleg_verworfen. Dieser Zaehler ist ein ABSOLUTWERT des Laufs - der Upsert ersetzt payload_jsonb vollstaendig (ON CONFLICT DO UPDATE), ein Wiederholungslauf desselben Anrufs zaehlt daher per Bauart nicht doppelt. Schreibt services/slow_lane.py; liest routes/dashboard.py, templates/session_detail.html und services/beleg_check_counter.py (Prozess-Zaehler der Founder-Sicht).'
+
+
 class RubricScore(Base):
     # TAXO2-Plan 01 — DIE Single Source der Benotung (BARS + Proration), Live + Training
     # (SPEC Req 1). Hybrid: indizierte Kern-Spalten + payload_jsonb-Reserve. KEIN Schreiber
@@ -918,9 +923,9 @@ class RubricScore(Base):
     measured_weight_pct   = Column(Float, nullable=True, comment="Anteil messbaren Gewichts am modus-konfigurierten Maximum (D-02/D-08). <0.5 -> coaching_score NULL. [ALT-Marker-Engine, write-stop ab LLM-Bewerter TAXO2 — nicht mehr befuellt; Cutover services/slow_lane.py Plan 03; nicht geloescht (Foundation-Register/Punkt 20)].")
     unmeasured_dimensions = Column(JSON_TYPE, nullable=True, comment="Liste der nicht gewerteten Dimensionen + Grund (n/a vs vergeigt, D-08). Goldstaub fuer 999.2-Erklaerung + ML. [ALT-Marker-Engine, write-stop ab LLM-Bewerter TAXO2 — nicht mehr befuellt; Cutover services/slow_lane.py Plan 03; nicht geloescht (Foundation-Register/Punkt 20)].")
     dimensions            = Column(JSON_TYPE, nullable=True, comment="Volle Aufschluesselung pro Dimension (D-05/Req 5): je Dim {score, weight, available, sample_size, beleg_ref, marker[]}. Beleg-Referenz = Transkript-/intent_event-Verweis, KEIN freier LLM-Text. [ALT-Marker-Engine, write-stop ab LLM-Bewerter TAXO2 — nicht mehr befuellt; Cutover services/slow_lane.py Plan 03; nicht geloescht (Foundation-Register/Punkt 20)].")
-    status                = Column(String(24), nullable=True, comment="Bewertungs-Status: scored|pending|not_gradable (D-09 poor_audio_health). NULL = noch nicht gelaufen.")
+    status                = Column(String(24), nullable=True, comment=_SCHILD_RUBRIC_STATUS)
     tenant_id             = Column(UUID_TYPE, index=True, nullable=False, comment="Mandanten-Abschottung (D-11 FORCE RLS, NOT NULL). Abgeleitet aus calls.tenant_id via Daemon-GUC (Plan 04 erbt Plan-03-A1-Klammer).")
-    payload_jsonb         = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment="Reserve + Training-only-Felder (was_correct, scenario_id, ground_truth_score) ohne spaetere Migration. SPEC Req 1.")
+    payload_jsonb         = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}', comment=_SCHILD_RUBRIC_PAYLOAD)
     score_schema_version  = Column(SmallInteger, nullable=False, default=1, comment="Format-Version der Aufschluesselung fuer spaetere Bumps.")
     # ── TAXO2 LLM-Bewerter — Beobachtung statt Note (Plan 02, Migration 0029) ─────────────────
     observations_jsonb    = Column(JSON_TYPE, nullable=False, default=dict, server_default='{}',

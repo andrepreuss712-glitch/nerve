@@ -18,6 +18,7 @@ unter anderem Namen (Auflage aus dem Cross-AI-Durchgang, Gemini B-3 = GSD-Plan-C
 
 import uuid
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -321,3 +322,63 @@ def test_audio_tor_hat_vorrang(merge_doubles):
     # Gepaarter Existenz-Anker: der Tor-Block lief ueberhaupt, und die Messwerte stehen daneben
     # — sonst waere "richtiger Grund" nicht von "Merge gar nicht gefeuert" zu unterscheiden.
     assert seen.get('mess_substanz', {}).get('berater_woerter') == 2
+
+
+# ════════════════════════════════════════════════════════════════════════════════════
+# 13 + 14 — Requirement 2: die Ablehnungs-Zeile haelt fest, WOMIT sie begruendet wurde
+# ════════════════════════════════════════════════════════════════════════════════════
+
+def _judge_step_payload(monkeypatch, mess, reason='too_little_speech'):
+    """Ruft _judge_step mit einem ctx, wie ihn _call_end_merge baut, und faengt den an
+    _upsert_rubric_score uebergebenen payload ab. Runtime-Assertion auf den uebergebenen Wert."""
+    gefangen = {}
+    monkeypatch.setattr(sl, '_upsert_rubric_score', lambda db, **kw: gefangen.update(kw))
+    ctx = {
+        'call': _make_call(),
+        'events': [],
+        'db': MagicMock(),
+        'high_conf': mess.get('high_conf_events'),
+        'mess_substanz': mess,
+        'not_gradable_reason': reason,
+        'results': {},
+    }
+    sl._judge_step(ctx)
+    return gefangen['payload']
+
+
+def test_ablehnungs_payload_traegt_alle_messwerte(monkeypatch):
+    """Jede Ablehnungs-Zeile traegt die gezaehlten Messwerte UND den genommenen Tor-Zweig.
+
+    Ohne Zahlen ist spaeteres Nachjustieren unmoeglich — und Nachjustieren nach rund hundert
+    echten Anrufen ist der ganze Plan. Ohne den Zweig ist in der Datenbank nicht
+    unterscheidbar, ob eine Ablehnung aus zu wenig bekannten Woertern kam oder daraus, dass
+    gar keine Berater-Zeile da war.
+    """
+    mess = {'redeabschnitte': 3, 'berater_woerter': 12, 'sprechzeit_ms': 4500,
+            'berater_wortzahl_unbekannt': False, 'high_conf_events': 1,
+            'tor_zweig': 'zu_wenig_woerter'}
+    payload = _judge_step_payload(monkeypatch, mess)
+
+    assert payload['reason'] == 'too_little_speech'
+    assert payload['berater_woerter'] == 12
+    assert payload['redeabschnitte'] == 3
+    assert payload['sprechzeit_ms'] == 4500
+    assert payload['high_conf_events'] == 1
+    assert payload['tor_zweig'] == 'zu_wenig_woerter'
+
+
+def test_unbekannte_messwerte_bleiben_none_nicht_null(monkeypatch):
+    """Unbekannte Messwerte stehen als None im payload (jsonb null), NICHT als 0.
+
+    Eine 0 hiesse "hat nichts gesagt" und wuerde jeden spaeteren Mittelwert verfaelschen —
+    dieselbe Semantik-Falle, die das Schild _SCHILD_WORD_COUNT fuer die Spalte benennt.
+    """
+    mess = {'redeabschnitte': 0, 'berater_woerter': None, 'sprechzeit_ms': None,
+            'berater_wortzahl_unbekannt': False, 'high_conf_events': 0,
+            'tor_zweig': 'keine_berater_zeile'}
+    payload = _judge_step_payload(monkeypatch, mess)
+
+    assert payload['berater_woerter'] is None
+    assert payload['sprechzeit_ms'] is None
+    assert payload['redeabschnitte'] == 0
+    assert payload['tor_zweig'] == 'keine_berater_zeile'

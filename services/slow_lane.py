@@ -774,6 +774,25 @@ def _judge_step(ctx) -> None:
     #    Auch dieser Write geht unter Tenant-GUC (M-4 gilt fuer JEDEN rubric_score-Write). ──────
     reason = ctx.get('not_gradable_reason')
     if reason is not None:
+        # METRIK-1 Requirement 2: die Ablehnungs-Zeile haelt fest, WOMIT sie begruendet wurde.
+        # Ohne Zahlen ist spaeteres Nachjustieren unmoeglich — und Nachjustieren ist der ganze
+        # Plan (Termin: rund 100 echte Anrufe). NULL heisst UNBEKANNT, nie "null Woerter".
+        # Das gilt auch fuer 'poor_audio_health': JEDE Ablehnung traegt die Messwerte, nicht
+        # nur die wegen Sprech-Substanz. Mehr Daten, kein Zusatzaufwand.
+        _mess = ctx.get('mess_substanz') or {}
+        _payload = {
+            'reason': reason,
+            'schema': 1,
+            'berater_woerter': _mess.get('berater_woerter'),
+            'redeabschnitte': _mess.get('redeabschnitte'),
+            'sprechzeit_ms': _mess.get('sprechzeit_ms'),
+            'high_conf_events': _mess.get('high_conf_events'),
+            # Requirement 1 (Cross-AI-Auflage 14.08.): WELCHER Tor-Zweig genommen wurde.
+            # Ohne ihn ist in der Datenbank nicht unterscheidbar, ob eine Ablehnung aus zu
+            # wenig bekannten Woertern kam oder daraus, dass gar keine Berater-Zeile da war —
+            # und genau diese Unterscheidung traegt die Nachjustierung.
+            'tor_zweig': _mess.get('tor_zweig'),
+        }
         _upsert_rubric_score(
             db,
             call_id=call.id,
@@ -781,7 +800,7 @@ def _judge_step(ctx) -> None:
             session_mode=mode_key,
             tenant_id=tenant_id,
             status=_STATUS_NOT_GRADABLE,
-            payload={'reason': reason},
+            payload=_payload,
         )
         db.commit()
         return
