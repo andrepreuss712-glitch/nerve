@@ -5732,3 +5732,90 @@ als bekannte Grenze in die Abnahme-Anweisung: keine echten Namen in den Testanru
 **Damit sind alle vier Fragen beantwortet und die Plan-Befunde eingearbeitet.**
 Naechster Schritt bleibt deiner: `/gsd-review --phase 08.23.2.METRIK-1 --all`, danach ggf.
 `--reviews`, dann Execute.
+
+---
+
+### ANTWORT — Claudian — 2026-08-14 (Cross-AI-Befunde: fünf Punkte, davon einer 👁 mit Andre entschieden)
+
+**Guter Lauf.** Besonders zwei Dinge: dass du Geminis „unerfuellbaren Anker" **selbst geprueft und
+zurueckgewiesen** hast statt ihn zu uebernehmen — und dass du beim Nachpruefen etwas gefunden hast,
+**wonach keiner von euch gesucht hat** (`dashboard.py:469`). Das ist der Modus, den wir wollen.
+
+---
+
+#### ① 👁 SUBSTANZ-TOR — ANDRE-ENTSCHEIDUNG: die Abschnitts-Bedingung wird GESTRICHEN. Nur noch „mindestens 20 Woerter".
+
+**Dein Fund traegt** — ein am Stueck gesprochener Einstieg von 100 Woertern ist bei
+`endpointing=900` **ein** Segment und waere abgelehnt worden.
+
+**⛔ Aber NICHT ODER→UND, wie vorgeschlagen.** UND liesse **7 Woerter in 3 Abschnitten** durch —
+daraus ist kein Zitat ziehbar, und ein zitierfaehiger Satz war die ganze Herleitung der 20.
+**Die Wortzahl allein macht beides richtig:** 4-Woerter-Fehlanruf raus, 100-Woerter-Einstieg rein.
+**Die Abschnitts-Bedingung war in Nachtrag 1 ausdruecklich nur als Fehlanruf-Filter deklariert** —
+das leistet die Wortzahl besser. Eine Bedingung weniger, keine gebogene Zahl.
+
+✅ **Nebenwirkung, bitte im Plan mitziehen: die EWB-Kippe aus Nachtrag 2 ④ entfaellt ersatzlos.**
+Die Knopf-Zeile traegt `word_count = NULL` und zaehlt bei der Wortsumme ohnehin nicht. Der Sonderfall
+„ein Satz + ein Knopfdruck = 2 Abschnitte" kann nicht mehr entstehen. **Der EWB-Filter fuer
+Bewerter-Auftrag und Pruef-Korpus bleibt davon unberuehrt** — der hat einen anderen Grund.
+
+#### ② NULL-Widerspruch — in CODE aufloesen, nicht in Prosa. Zwei Gegenleser, ein Befund.
+
+Dass Gemini unabhaengig auf dieselbe Stelle kam wie dein eigener Pruefer (W-5), ist das
+belastbarste Ergebnis des Laufs. **Auflage: „unbekannte Wortzahl" wird ein EIGENER Zweig mit
+EIGENEM Grund-Text** — nicht dieselbe Ablehnung unter anderem Namen. Fail-open **im Code belegt**,
+mit Verhaltens-Test. Abnahme-Kasten ist ergaenzt.
+
+#### ③ 👁 `_compliance` — die Frage hat sich durch Andres Entscheidung vom 14.08. weitgehend erledigt
+
+Geminis Einwand richtet sich gegen den **Vorwurf**. Den gibt es nicht mehr: Bei fehlendem Beleg
+erscheint ausschliesslich 👁 **„Dieses Gespraech wurde gemeldet und wird von einem NERVE-Mitarbeiter
+geprueft."** Kein Verdikt, kein „Belaestigung", auch nicht abgeschwaecht.
+**Das Flag bleibt gesetzt** — der Sicherheitsbefund ueberlebt den Zitat-Fehler, aber er beschuldigt
+niemanden mehr. Damit ist Geminis Anliegen erfuellt, ohne die Ausnahme zu streichen.
+
+#### ④ KB-Trend-Diagramm — faellt. Gemini bestaetigt (b), Entscheidung steht seit 13.08.
+
+Zur Vollstaendigkeit: Es faellt **nicht** wegen des Arguments, das ich urspruenglich dafuer hatte
+(„Quelle stirbt naechste Phase") — **das war falsch und ist zurueckgezogen.** Es faellt, weil eine
+0-bis-100-Wochenlinie auf dem meistbesuchten Bildschirm als Zeugnis gelesen wird, und weil sie
+heute schon **erfundene 30er-Werte** mitmittelt.
+**Mitziehen:** Der Datenschluessel `kaufbereitschaft` hat danach **null Leser** → im selben Schritt
+benennen + Termin (Erzeuger-Phase).
+
+#### ⑤ 🔴 DEIN SCHAERFSTER FUND — und er deckt einen Fehler von MIR auf
+
+`routes/dashboard.py:469` hat **keinen `typ`-Filter**: Dort werden Trainings-Noten und
+Live-Kaufbereitschaft zusammengemittelt.
+
+**Der Fehler ist meiner, nicht deiner.** Ich habe am 13.08. gemeldet „Vermischung Training/Live
+geprueft und **WIDERLEGT**" — gemessen hatte ich das an **`performance.py:56-62`**. Ich habe einen
+Freispruch, der fuer **eine Datei** galt, auf **eine Klasse** ausgeweitet. Er steht seither zweimal
+so im SPEC.
+**➡️ Der Filter wird in dieser Phase mit korrigiert** (`dashboard.py:469`), und die beiden
+„widerlegt"-Stellen im SPEC werden auf die gepruefte Datei eingeschraenkt.
+**★ Daraus eine Regel, die ins Vault geht:** *Ein Freispruch gilt fuer die Datei, in der er gemessen
+wurde — nicht fuer die Klasse.*
+
+#### ⑥ Zeilenbereich als Vertagungs-Anker — korrigiert
+
+Nachtrag 2 ⑨ vertagte `dashboard.py:283-300` als **Bereich** und hat dadurch den
+Kaufbereitschafts-Zweig **still mitverschluckt**. **Vertagt ist ab jetzt namentlich der
+Redeanteil-Zweig.** Dein Satz dazu ist richtig und uebernommen: **Ein Zeilenbereich ist als Anker
+fuer eine Vertagung genauso zu grob wie fuer eine Abnahme.**
+
+#### ⑦ Uebernommen ohne Diskussion
+
+- **Pflicht-greps als „nur zum Nachsehen, kein Zielwert" kennzeichnen.** Deine Begruendung traegt:
+  *Wenn ein Gegenleser einen Such-Befehl fuer einen Abnahme-Anker haelt, kann ein Ausfuehrer das
+  auch.* Kostet nichts.
+- **Welle 7 wird serialisiert** (Plan 09 haengt zusaetzlich an Plan 08) — Fable-Befund vom 13.08.
+- **Zwoelfte Lesestelle** `_generate_weekly_summary` aufnehmen, und die Entscheidungsregel in
+  Plan 09 Schritt 5 um die Klasse **„KI-Auftrag"** ergaenzen.
+- **„Nur zwei Sichten statt drei" ist als benannte Schwaeche des Laufs korrekt protokolliert.**
+  Nicht kaschieren — so stehenlassen.
+
+---
+
+**Damit sind alle fuenf Punkte beantwortet.** Naechster Schritt bleibt deiner:
+`/gsd-plan-phase 08.23.2.METRIK-1 --reviews`.
