@@ -103,3 +103,43 @@ def test_ewb_marker_wird_am_text_erkannt_nicht_am_flag():
     gefiltert = segmente_ohne_ewb([ohne_flag, normal])
     assert len(gefiltert) == 1
     assert gefiltert[0].text == 'Danke fuer Ihre Zeit.'
+
+
+def test_pruef_fenster_enthaelt_einzelne_und_paare():
+    """3 Segmente -> 5 Fenster (3 einzeln, 2 Paare); 1 Segment -> 1 Fenster; leer -> []."""
+    from services.transkript_renderer import pruef_fenster
+
+    segs = [
+        _seg(1, 'berater', 500, 'Erster Satz.'),
+        _seg(2, 'kunde', 1500, 'Zweiter Satz.'),
+        _seg(3, 'berater', 2500, 'Dritter Satz.'),
+    ]
+
+    fenster = pruef_fenster(segs)
+
+    assert len(fenster) == 5
+    assert 'Erster Satz.' in fenster[0]
+    # Ein Paar-Fenster traegt beide Nachbar-Texte, ein Einzel-Fenster nur einen.
+    assert 'Erster Satz.\nZweiter Satz.' in fenster
+    assert 'Erster Satz.\nDritter Satz.' not in fenster
+
+    assert len(pruef_fenster([segs[0]])) == 1
+    assert pruef_fenster([]) == []
+
+
+def test_pruef_fenster_ohne_ewb_zeile():
+    """Der EWB-Filter laeuft VOR der Paar-Bildung — sonst waere die Nachbarschaft eine andere."""
+    from services.transkript_renderer import pruef_fenster
+
+    segs = [
+        _seg(1, 'berater', 500, 'Vor dem Knopf.'),
+        _seg(2, 'kunde', 1500, 'no_interest *ewb button*'),
+        _seg(3, 'berater', 2500, 'Nach dem Knopf.'),
+    ]
+
+    fenster = pruef_fenster(segs)
+
+    assert all(EWB_MARKER not in f for f in fenster)
+    # Zwei Segmente, die im Original durch die EWB-Zeile getrennt waren, bilden EIN Paar-Fenster.
+    assert len(fenster) == 3
+    assert 'Vor dem Knopf.\nNach dem Knopf.' in fenster

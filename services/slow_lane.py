@@ -485,8 +485,20 @@ def _upsert_rubric_score(db, *, call_id, conversation_log_id, session_mode, tena
     db.execute(stmt)
 
 
-def _pruefe_belege(observations: dict, pruef_korpus: str) -> tuple:
-    """METRIK-1 Req 3: prueft JEDES Beleg-Zitat gegen den Pruef-Korpus, BEVOR es gespeichert wird.
+def _bester_befund(zitat, fenster_liste):
+    """Bester Befund ueber alle Pruef-Fenster. Rangfolge treffer > near_miss > no_match."""
+    from services.beleg_check import beleg_im_transkript
+
+    bester_score, bester_befund = 0.0, 'no_match'
+    for fenster in (fenster_liste or []):
+        _ok, _score, _befund = beleg_im_transkript(zitat, fenster)
+        if _score > bester_score:
+            bester_score, bester_befund = _score, _befund
+    return bester_befund, bester_score
+
+
+def _pruefe_belege(observations: dict, pruef_fenster: list) -> tuple:
+    """METRIK-1 Req 3: prueft JEDES Beleg-Zitat gegen die Pruef-Fenster, BEVOR es gespeichert wird.
 
     Drei Wege (SPEC Req 3, services/beleg_check.py liefert genau diese drei Befunde):
       'treffer'   -> Beobachtung uebernehmen.
@@ -504,16 +516,21 @@ def _pruefe_belege(observations: dict, pruef_korpus: str) -> tuple:
     LLM-Dict herumzuflicken. Iteriert ueber DIMENSIONS statt ueber observations.keys(), damit
     Unterstrich-Schluessel und unbekannte Keys nicht versehentlich als Dimension durchlaufen.
 
+    Geprueft wird gegen Segment- und Nachbarpaar-Fenster, NICHT gegen den Gesamt-Korpus: ein
+    Trennzeichen ueberlebt die Normalisierung in beleg_check nicht (:18-19), und Score B ist
+    reihenfolge-blind (:80-86). Gegen den Gesamt-Korpus wuerde deshalb ein Zitat, das Minute 2
+    und Minute 10 mischt, als Treffer durchgehen. Die Fenster baut
+    transkript_renderer.pruef_fenster (Begruendung und benannte Grenze stehen dort).
+
     Args:
         observations: observations_jsonb aus run_behavior_judge.
-        pruef_korpus: transkript_renderer.render_transkript(segments, mit_tags=False).
+        pruef_fenster: transkript_renderer.pruef_fenster(segments) — Liste von Fenster-Texten.
 
     Returns:
         (observations_geprueft: dict, zaehler: dict)
         zaehler = {'schema': 1, 'geprueft': int, 'treffer': int, 'near_miss': int,
                    'verworfen': int, 'compliance_beleg_verworfen': int}
     """
-    from services.beleg_check import beleg_im_transkript
     from services.judge_dimensions import DIMENSIONS
 
     zaehler = {'schema': 1, 'geprueft': 0, 'treffer': 0, 'near_miss': 0,
@@ -544,7 +561,7 @@ def _pruefe_belege(observations: dict, pruef_korpus: str) -> tuple:
                 # Leeres Zitat: beleg_check.py:52-53 liefert dafuer ohnehin 'no_match'.
                 zaehler['verworfen'] += 1
                 continue
-            _ok, _score, befund = beleg_im_transkript(zitat, pruef_korpus)
+            befund, _score = _bester_befund(zitat, pruef_fenster)
             if befund == 'no_match':
                 zaehler['verworfen'] += 1
                 continue
@@ -566,7 +583,7 @@ def _pruefe_belege(observations: dict, pruef_korpus: str) -> tuple:
         neues_zitat = comp_zitat
         if verletzt and comp_zitat:
             zaehler['geprueft'] += 1
-            _ok, _score, befund = beleg_im_transkript(comp_zitat, pruef_korpus)
+            befund, _score = _bester_befund(comp_zitat, pruef_fenster)
             if befund == 'no_match':
                 neues_zitat = ''
                 zaehler['compliance_beleg_verworfen'] += 1
@@ -638,15 +655,17 @@ def _judge_step(ctx) -> None:
     # Bewerter-Auftrag (transkript_renderer). Zwei getrennte Renderings wuerden hausgemachte
     # Beinahe-Treffer erzeugen (SPEC NACHTRAG 2 Punkt 8). Die Sortierung ist zeichengleich zu
     # judge_runner.py:370-375 — bewusst, damit derselbe Korpus entsteht.
-    from services.transkript_renderer import render_transkript
+    from services.transkript_renderer import pruef_fenster
     from services.beleg_check_counter import record_beleg_check
 
     _segments = (db.query(TranscriptSegment)
                    .filter(TranscriptSegment.conversation_log_id == call.conversation_log_id)
                    .order_by(TranscriptSegment.ts_ms.asc(), TranscriptSegment.id.asc())
                    .all())
-    _korpus = render_transkript(_segments, mit_tags=False)
-    _observations, _beleg_zaehler = _pruefe_belege(result.get('observations_jsonb') or {}, _korpus)
+    # Geprueft wird gegen Segment- und Nachbarpaar-Fenster, nicht gegen den Gesamt-Korpus
+    # (Task 5): ein zusammengesetztes Zitat aus Minute 2 und Minute 10 wuerde sonst durchgehen.
+    _fenster = pruef_fenster(_segments)
+    _observations, _beleg_zaehler = _pruefe_belege(result.get('observations_jsonb') or {}, _fenster)
     record_beleg_check(_beleg_zaehler)
 
     # ── UPSERT: Beobachtungen + interne Auspraegung (KEINE Zahl) unter M-4-GUC ──────────────

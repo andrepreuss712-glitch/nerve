@@ -76,3 +76,35 @@ def render_transkript(segments, *, mit_tags: bool = True) -> str:
     else:
         lines.append('(Keine Transkript-Segmente verfuegbar)')
     return '\n'.join(lines)
+
+
+def pruef_fenster(segments) -> list:
+    """Die Fenster, gegen die ein Beleg-Zitat geprueft wird — NICHT der Gesamt-Korpus.
+
+    Jedes gefilterte Segment einzeln UND jedes Paar BENACHBARTER Segmente.
+
+    WARUM NICHT der Gesamt-Korpus: beleg_check normalisiert Trennzeichen weg
+    (services/beleg_check.py:18-19 — Satzzeichen werden zu Leerzeichen, Leerraum wird
+    kollabiert) und bildet als Score B eine reine Wort-MENGE ohne Reihenfolge (:80-86, Endwert
+    :89 ist max(score_a, score_b)). Gegen einen Gesamt-Korpus erreicht deshalb JEDES Zitat 1.0,
+    dessen Woerter irgendwo vorkommen — auch eines, das Minute 2 und Minute 10 mischt. Ein
+    blosses Trennzeichen loest das nicht: weder ein '|' noch ein Zeilenumbruch ueberlebt die
+    Normalisierung.
+
+    WARUM AUCH PAARE: die Spracherkennung trennt Aussagen mitten im Satz. Ein Zitat ueber genau
+    eine solche Naht ist echt und muss stehenbleiben. Zwei weit auseinanderliegende Segmente
+    sind nie benachbart.
+
+    BENANNTE GRENZE: ein Zitat, dessen Woerter alle in EINEM Segment vorkommen, aber umgestellt
+    sind, bleibt fuer Score B ein Treffer. Die Fenster loesen die Grenz-Ueberschreitung, nicht
+    die Reihenfolge-Blindheit. Wer das schliessen will, muss an beleg_check.py — ausdruecklich
+    nicht in dieser Phase.
+
+    Returns:
+        list[str]. Bei 0 Segmenten [], bei 1 Segment genau ein Fenster (kein Paar).
+    """
+    gefiltert = segmente_ohne_ewb(segments)
+    fenster = [render_transkript([s], mit_tags=False) for s in gefiltert]
+    fenster += [render_transkript(gefiltert[i:i + 2], mit_tags=False)
+                for i in range(len(gefiltert) - 1)]
+    return fenster

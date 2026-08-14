@@ -10,16 +10,46 @@ Wiederholungslauf desselben Anrufs doppelt, D-23).
 Reine Funktions-Tests: _pruefe_belege ist eine reine Funktion, kein DB-Zugriff noetig.
 """
 
+from types import SimpleNamespace
+
 from services.beleg_check import beleg_im_transkript
 from services.judge_dimensions import DIMENSIONS
 from services.slow_lane import _pruefe_belege
+from services.transkript_renderer import pruef_fenster, render_transkript
 
 DIM = DIMENSIONS[0]['key']
 
+# Drei weit auseinanderliegende Aussagen (SEG_A/SEG_C/SEG_E) und zwei Fueller dazwischen.
+# Die Fueller tragen KEIN Wort des Zitats — sonst verschoebe sich der Wort-Mengen-Score.
+SEG_FUELLER_1 = 'Verstehe.'
+SEG_FUELLER_2 = 'Okay.'
+SEG_A = 'Ich sage Ihnen ganz offen: unsere Maschinen stehen still.'
+SEG_C = 'Der Einkauf hat uns das Budget komplett zusammengestrichen.'
+SEG_E = 'Und mein Chef will vor September gar nichts entscheiden.'
+
+TEIL_A = 'unsere Maschinen stehen still'
+TEIL_C = 'Der Einkauf hat uns das Budget'
+TEIL_E = 'mein Chef will vor September'
+
+# Aus DREI Bruchstuecken dreier NICHT benachbarter Segmente zusammengesetzt — jedes einzelne
+# Fenster traegt hoechstens ein Bruchstueck.
+ZITAT_UEBER_GRENZE = TEIL_A + ' ' + TEIL_C + ' ' + TEIL_E
+# Ueber genau EINE Naht zusammengesetzt — die typische Trennung der Spracherkennung.
+ZITAT_UEBER_NAHT = TEIL_A + ' ' + TEIL_C
+
+
+def _seg(idx=1, speaker='kunde', ts_ms=1000, text=''):
+    """transcript_segments-Row-Attrappe (kein ORM, kein DB)."""
+    return SimpleNamespace(id=idx, ts_ms=ts_ms, speaker=speaker, text=text)
+
 
 def _pruef_arg(text):
-    """Das zweite Argument von _pruefe_belege — Task 2: der Gesamt-Korpus als String."""
-    return text
+    """Das zweite Argument von _pruefe_belege: die Pruef-Fenster.
+
+    Ein einzelner Text ist ein einzelnes Fenster. Task 2 uebergab hier noch den Gesamt-Korpus
+    als String; seit Task 5 prueft _pruefe_belege gegen eine Fenster-LISTE.
+    """
+    return [text]
 
 
 def _obs(dim_key=DIM, beobachtung='Der Berater fragte offen nach.', beleg_zitat=''):
@@ -155,3 +185,60 @@ def test_prozess_zaehler_summiert():
         assert 'schema' not in summen
     finally:
         reset_beleg_check_counts()
+
+
+# ── Task 5: die Segment-Grenze wird beim Pruefen wirklich respektiert ─────────────────────
+
+def _fenster_fuer(segmente):
+    """Das zweite Argument von _pruefe_belege, aus Segmenten gebaut.
+
+    Task 2 baute hier den GESAMT-Korpus (ein Text ueber alle Segmente); seit Task 5 sind es
+    Segment- und Nachbarpaar-Fenster. Genau dieser Wechsel macht den Unterschied, den die
+    beiden Tests unten festnageln.
+    """
+    return pruef_fenster(segmente)
+
+
+def test_zitat_ueber_segmentgrenze_wird_verworfen():
+    """Ein Zitat aus zwei NICHT benachbarten Segmenten wird verworfen (Minute 2 + Minute 10)."""
+    segs = [
+        _seg(1, 'kunde', 1000, SEG_A),
+        _seg(2, 'berater', 2000, SEG_FUELLER_1),
+        _seg(3, 'kunde', 3000, SEG_C),
+        _seg(4, 'berater', 4000, SEG_FUELLER_2),
+        _seg(5, 'kunde', 5000, SEG_E),
+    ]
+
+    # Gegenprobe: gegen den GESAMT-Korpus ist genau dieses Zitat ein 'treffer' (Score B ist eine
+    # reine Wort-MENGE ohne Reihenfolge). Das belegt, dass die FENSTER den Unterschied machen —
+    # nicht der Testaufbau.
+    korpus = render_transkript(segs, mit_tags=False)
+    _ok, _score, befund_korpus = beleg_im_transkript(ZITAT_UEBER_GRENZE, korpus)
+    assert befund_korpus == 'treffer', (
+        f"Gegenprobe traegt nicht: gegen den Gesamt-Korpus liefert das zusammengesetzte Zitat "
+        f"'{befund_korpus}' (score={_score}) statt 'treffer'."
+    )
+
+    geprueft, zaehler = _pruefe_belege(_obs(beleg_zitat=ZITAT_UEBER_GRENZE), _fenster_fuer(segs))
+
+    assert geprueft[DIM] == []
+    assert zaehler['verworfen'] == 1
+    assert zaehler['treffer'] == 0
+
+
+def test_zitat_ueber_benachbarte_segmente_bleibt():
+    """Die Regel gegen ein Zuviel: ueber eine BENACHBARTE Naht bleibt das Zitat stehen.
+
+    Die Spracherkennung trennt Aussagen mitten im Satz — ein Zitat ueber genau eine solche
+    Naht ist echt."""
+    segs = [
+        _seg(1, 'berater', 500, SEG_FUELLER_1),
+        _seg(2, 'kunde', 1000, SEG_A),
+        _seg(3, 'kunde', 2000, SEG_C),
+    ]
+
+    geprueft, zaehler = _pruefe_belege(_obs(beleg_zitat=ZITAT_UEBER_NAHT), _fenster_fuer(segs))
+
+    assert len(geprueft[DIM]) == 1
+    assert zaehler['verworfen'] == 0
+    assert zaehler['treffer'] == 1
