@@ -3554,7 +3554,7 @@ Form 3 (die eine Sache wandert ins naechste Vorgespraech) — **Form 2 ist die V
 
 | Welle | Plan | Inhalt | Requirements | Ausrollen |
 |---|---|---|---|---|
-| 1 | `08.23.2.METRIK-1-01-PLAN.md` | Gemeinsamer Transkript-Renderer + EWB-Filter + Zitat-Pruefer angeschlossen + Zaehler | SPEC-R3 | — (mit Plan 02) |
+| 1 | ✅ `08.23.2.METRIK-1-01-PLAN.md` **AUSGEFUEHRT 2026-08-14** (6/6 Tasks, 7 Commits `9f18c0f`…`70d4e6e`, 48 passed, **kein Deploy** — D-01) | Gemeinsamer Transkript-Renderer + EWB-Filter + Zitat-Pruefer angeschlossen + Zaehler | SPEC-R3 | — (mit Plan 02) |
 | 2 | `08.23.2.METRIK-1-02-PLAN.md` | Substanz-Tor auf Sprech-Substanz + Messwerte in der Ablehnungs-Zeile + Schilder (Migration 0040) | SPEC-R1, SPEC-R2 | **Ausrollen 1** (D-01: Plan 01 + 02 zusammen) |
 | 3 | `08.23.2.METRIK-1-03-PLAN.md` | Anzeige vom Bestaetigungs-Klick entkoppelt + dritter Ablehnungs-Zweig | SPEC-R4 | **Ausrollen 2** |
 | 3 | `08.23.2.METRIK-1-04-PLAN.md` | Fokus-Katalog v1 (4 Wortlisten-Punkte, englisch, vom Code gezaehlt) | SPEC-R6, SPEC-R7 | — (mit Plan 07) |
