@@ -113,10 +113,10 @@ class _MergeFakeSession:
         pass
 
 
-def _make_segment(speaker='berater', word_count=15, idx=1, ts_ms=1000):
+def _make_segment(speaker='berater', word_count=15, idx=1, ts_ms=1000, text='Guten Tag.'):
     """transcript_segments-Zeilen-Attrappe (Muster tests/test_judge_runner.py::_make_segment,
     erweitert um die ZEITSTEMPEL-1-Spalten). speaker traegt die DB-Form (String)."""
-    return SimpleNamespace(id=idx, ts_ms=ts_ms, speaker=speaker, text='Guten Tag.',
+    return SimpleNamespace(id=idx, ts_ms=ts_ms, speaker=speaker, text=text,
                            word_count=word_count, start_ms=None, end_ms=None)
 
 
@@ -470,6 +470,13 @@ def test_compute_step_scored_upserts_engine_result(monkeypatch):
     }
     captured = {}
     monkeypatch.setattr(sl, '_upsert_rubric_score', lambda db, **kw: captured.update(kw))
+    # METRIK-1 Plan 01 (Req 3): seit dem Zitat-Pruefer laeuft das Bewerter-Ergebnis NICHT mehr
+    # unveraendert in den UPSERT — jedes Beleg-Zitat wird vorher gegen die Pruef-Fenster des
+    # Transkripts gehalten. Ohne echte Segmente sind die Fenster leer, jedes Zitat waere
+    # 'no_match' und die Beobachtung faele weg. Der Test stellt deshalb ein Segment bereit, das
+    # das Zitat WIRKLICH enthaelt — sonst pruefte er den Verwurf statt den Normalpfad.
+    monkeypatch.setattr(sl, '_segments_for_call',
+                        lambda clid, db: [_make_segment(text='Wie geht das?')])
     db = MagicMock()
     events = [_make_event(session_id='sid-9', handling_status='scored')]
     ctx = {'call': call, 'events': events, 'db': db, 'not_gradable_reason': None}
@@ -479,7 +486,11 @@ def test_compute_step_scored_upserts_engine_result(monkeypatch):
         sl._judge_step(ctx)
 
     assert captured['status'] == 'judged'
-    assert captured['observations'] == fake_judge_result['observations_jsonb']
+    # Die belegte Beobachtung ueberlebt die Pruefung unveraendert ...
+    assert captured['observations']['bedarfs_ermittlung'] == \
+        fake_judge_result['observations_jsonb']['bedarfs_ermittlung']
+    # ... und das Compliance-Hard-Gate wird durchgereicht (Finding 2).
+    assert captured['observations']['_compliance'] == {'verletzt': False, 'beleg_zitat': ''}
     assert captured['ratings'] == fake_judge_result['ratings_jsonb']
     assert captured['dimensions_version'] == 2
     assert captured['session_mode'] == 'cold_call'
