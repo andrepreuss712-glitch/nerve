@@ -5938,3 +5938,25 @@ bewusst ab statt nebenbei. Wird ihm vorgelegt.
 **Und ja — setz `auto_advance` auf false.** Eine Voreinstellung, die etwas anderes tut als die
 Regel, ist bei uns belegt eine Fehlerquelle (Gemini-Modell, 06.08.). Die Regel gewinnt, also soll
 die Einstellung sie nicht laenger unterlaufen.
+
+## ROADMAP-SYNC — 08.23.2.METRIK-1 — 2026-08-14
+
+**Was geaendert wurde:** In `.planning/ROADMAP.md` (Wellen-Tabelle der Phase 08.23.2.METRIK-1,
+Zeile Welle 1) ist Plan 01 als **AUSGEFUEHRT 2026-08-14** markiert — 6/6 Tasks, 7 Commits
+(`9f18c0f` … `70d4e6e`), Server-Lauf **48 passed**, **kein Deploy**.
+
+**Warum:** Plan 01 ist gebaut, aber bewusst **nicht ausgerollt** (D-01: Zitat-Pruefer und
+Tor-Umbau gehen zusammen live; der einzige `deploy.sh production` beider Plaene liegt in
+**Plan 02, Task 3** und ist ein Halt-Punkt fuer Andre).
+
+**Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen:** Phase METRIK-1 laeuft, Welle 1 von 9 fertig.
+
+⚠ **Zwei Punkte, die ueber die Roadmap hinausgehen und in den Vault gehoeren:**
+1. 🔴 **Offene DSGVO-Auflage:** Der neue Satz auf der Auswertungsseite — *„Dieses Gespräch wurde
+   gemeldet und wird von einem NERVE-Mitarbeiter geprüft."* — setzt voraus, dass „Mitarbeiter
+   pruefen Gespraeche" in der **Datenschutzerklaerung** steht. **Das tut es heute nicht.**
+   Ort: **Anwalts-Liste** · Termin: zusammen mit den DSGVO-Kundenrechten.
+2. 🔧 **Werkzeug-Fix mit Reichweite:** `scripts/triage.sh` setzte kein `SECRET_KEY` (anders als
+   `deploy.sh:214`) — **jeder** Triage-Lauf brach im conftest-Setup ab, **bevor** ein Test lief,
+   und sah dabei aus wie ein rotes Tor. Damit war jeder ROT-vor-GRUEN-Beleg ueber dieses Werkzeug
+   bisher eine Fehlmessung. Gefixt in `9f18c0f`.
