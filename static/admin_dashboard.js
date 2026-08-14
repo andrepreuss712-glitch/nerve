@@ -87,6 +87,43 @@
           : 'seit Deploy, pro Prozess';
       }
     }
+    // METRIK-1 D-23: der DAUERHAFTE Wert je Anruf (rubric_score.payload_jsonb), Tages-Summe mit
+    // Schwelle. Andere Groesse als data.beleg_check darueber (dort RAM, pro Prozess). Der
+    // Detailtext nennt ALLE FUENF Werte — an "verworfen" allein sieht man die Drift nicht.
+    // Farbe kommt aus .fcd-alarm (admin_dashboard.css) — kein Hex hier.
+    const belegF = data.beleg_check_faelle;
+    if (belegF) {
+      const h = belegF.heute || {};
+      const kachelF = document.getElementById('fcd-kpi-beleg-heute');
+      const wertF   = document.querySelector('[data-kpi="beleg_verworfen_heute"]');
+      const detailF = document.getElementById('fcd-beleg-heute-detail');
+      if (wertF) wertF.textContent = String(h.verworfen || 0);
+      if (kachelF) kachelF.classList.toggle('fcd-alarm', !!belegF.alarm);
+      if (detailF) {
+        detailF.textContent = (h.geprueft || 0) + ' geprüft · ' + (h.treffer || 0) + ' Treffer · '
+          + (h.near_miss || 0) + ' Beinahe · ' + (h.verworfen || 0) + ' verworfen · '
+          + (h.compliance_beleg_verworfen || 0) + ' Compliance ohne Beleg'
+          + (belegF.alarm ? ' — Schwelle ' + belegF.schwelle + ' gerissen' : '');
+      }
+      const karte = document.getElementById('fcd-beleg-faelle-karte');
+      const body  = document.getElementById('fcd-beleg-faelle-body');
+      if (body) {
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+          c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const vorlage = karte ? (karte.dataset.fallUrl || '') : '';
+        const faelle = belegF.faelle || [];
+        // Leer heisst leer — die Karte wird NICHT ausgeblendet, sonst waere "keine Faelle"
+        // von "Anzeige kaputt" nicht zu unterscheiden.
+        body.innerHTML = faelle.length
+          ? faelle.map(f => '<tr><td>' + esc(f.zeit) + '</td><td>' + esc(f.call_id.slice(0, 8))
+              + '</td><td>' + (f.geprueft || 0) + '</td><td>' + (f.treffer || 0)
+              + '</td><td>' + (f.near_miss || 0) + '</td><td>' + (f.verworfen || 0)
+              + '</td><td>' + (f.compliance_beleg_verworfen || 0) + '</td><td><a href="'
+              + esc(vorlage.replace('CALLID', encodeURIComponent(f.call_id)))
+              + '">ansehen</a></td></tr>').join('')
+          : '<tr><td colspan="8">Heute noch keine geprüften Anrufe.</td></tr>';
+      }
+    }
     if (data.mrr_costs_12m) FCD.renderMrrCosts(data.mrr_costs_12m);
     if (data.margin_12m) FCD.renderMarginChart(data.margin_12m);
   };

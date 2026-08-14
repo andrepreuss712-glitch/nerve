@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}NERVE Admin — Zitat-Prüfung Einzelfall{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='admin_dashboard.css') }}?v=2">
+{% endblock %}
+{% block content %}
+{# METRIK-1 D-23 Auflage 3 — die Einloesung des Versprechens aus Plan 01 Task 4:
+   "Dieses Gespräch wurde gemeldet und wird von einem NERVE-Mitarbeiter geprüft."
+   Ohne diese Seite waere der Satz eine Zusage ohne Deckung.
+   Kein neues CSS, keine Farbe, kein Inline-Style — nur Bestands-.fcd-*-Klassen
+   (templates/admin/ewb_quality.html ist hier KEIN Vorbild: die Datei traegt einen eigenen
+   style-Block mit Hex-Farben und waere ein Verstoss gegen die HART-Regel Farben).
+   DSGVO: sichtbar ist ausschliesslich der bereits geschwaerzte Transkript-Text. #}
+<div class="fcd-wrap">
+  <header class="fcd-header">
+    <div>
+      <h1>ZITAT-PRÜFUNG — EINZELFALL</h1>
+      <p class="fcd-sub">Anruf {{ call_id }}{% if zeitpunkt %} · geprüft {{ zeitpunkt.strftime('%d.%m.%Y %H:%M') }}{% endif %}</p>
+    </div>
+  </header>
+
+  <div class="fcd-kpi-row">
+    <div class="fcd-kpi">
+      <h3>geprüft</h3>
+      <div class="value">{{ werte.geprueft }}</div>
+      <div class="delta">Beleg-Zitate insgesamt</div>
+    </div>
+    <div class="fcd-kpi">
+      <h3>Treffer</h3>
+      <div class="value">{{ werte.treffer }}</div>
+      <div class="delta">im Transkript belegt</div>
+    </div>
+    <div class="fcd-kpi">
+      <h3>Beinahe-Treffer</h3>
+      <div class="value">{{ werte.near_miss }}</div>
+      <div class="delta">frühestes Drift-Zeichen</div>
+    </div>
+    <div class="fcd-kpi">
+      <h3>verworfen</h3>
+      <div class="value">{{ werte.verworfen }}</div>
+      <div class="delta">Beobachtung entfernt</div>
+    </div>
+    <div class="fcd-kpi">
+      <h3>Compliance ohne Beleg</h3>
+      <div class="value">{{ werte.compliance_beleg_verworfen }}</div>
+      <div class="delta">Flag blieb, Zitat fiel</div>
+    </div>
+  </div>
+
+  <div class="fcd-chart-card">
+    <h3>Compliance-Befund</h3>
+    {% if compliance.get('verletzt') %}
+      <p>Gemeldet — {% if compliance.get('beleg_zitat') %}mit prüfbarem Beleg:{% else %}
+         <strong>ohne prüfbaren Beleg</strong> (das Zitat war erfunden, das Flag bleibt gesetzt).
+         Genau dieser Fall verlangt eine menschliche Prüfung.{% endif %}</p>
+      {% if compliance.get('beleg_zitat') %}
+        <blockquote>{{ compliance.get('beleg_zitat') }}</blockquote>
+      {% endif %}
+    {% else %}
+      <p>Kein Compliance-Befund für diesen Anruf.</p>
+    {% endif %}
+  </div>
+
+  <div class="fcd-chart-card">
+    <h3>Beobachtungen (nach der Prüfung)</h3>
+    <table class="fcd-table">
+      <thead><tr><th>Dimension</th><th>Beobachtung</th><th>Beleg-Zitat</th></tr></thead>
+      <tbody>
+        {% for key, eintraege in observations.items() %}
+          {% if key != '_compliance' and eintraege %}
+            {% for obs in eintraege %}
+              {% if obs is mapping %}
+              <tr>
+                <td>{{ key }}</td>
+                <td>{{ obs.get('beobachtung') or '' }}</td>
+                <td>{{ obs.get('beleg_zitat') or '' }}</td>
+              </tr>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="fcd-chart-card">
+    <h3>Transkript (geschwärzt) — zum Gegenlesen</h3>
+    <table class="fcd-table">
+      <thead><tr><th>Zeit</th><th>Sprecher</th><th>Text</th></tr></thead>
+      <tbody>
+        {% for seg in segmente %}
+          <tr>
+            <td>{{ seg.ts_ms }}ms</td>
+            <td>{{ seg.speaker }}</td>
+            <td>{{ seg.text }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

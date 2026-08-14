@@ -36,6 +36,16 @@
     <div class="value" data-kpi="beleg_verworfen">—</div>
     <div class="delta" id="fcd-beleg-check-detail">seit Deploy, pro Prozess</div>
   </div>
+  {# METRIK-1 D-23: der DAUERHAFTE Wert (rubric_score.payload_jsonb), Tages-Summe mit Schwelle.
+     Kein Soll-0-Wert — Verwuerfe sind der gewollte Schutz. .fcd-alarm schaltet erst, wenn die
+     Menge oder der Anteil die Schwelle reisst. Der Beinahe-Treffer steht bewusst mit im Text:
+     ein steigender Anteil ist das FRUEHESTE Zeichen, dass Bewerter-Text und Pruef-Text
+     auseinanderdriften. Kein neues CSS: dieselben .fcd-kpi/.fcd-alarm-Klassen wie die Nachbarn. #}
+  <div class="fcd-kpi" id="fcd-kpi-beleg-heute">
+    <h3>Verworfene Beobachtungen (heute)</h3>
+    <div class="value" data-kpi="beleg_verworfen_heute">—</div>
+    <div class="delta" id="fcd-beleg-heute-detail">aus der Datenbank, je Anruf</div>
+  </div>
   <div class="fcd-kpi">
     <h3>Marge</h3>
     <div class="value" data-kpi="marge">—</div>
@@ -62,6 +72,23 @@
     <h3>Marge-Entwicklung (12 Monate)</h3>
     <canvas id="fcd-chart-margin"></canvas>
   </div>
+</div>
+
+{# METRIK-1 D-23 Auflage 3 + Einloesung des Versprechens aus Plan 01 Task 4: der Einzelfall
+   ist AUFRUFBAR. Ohne diese Liste ist der Satz "wird von einem NERVE-Mitarbeiter geprueft"
+   unwahr. Zeilen werden aus data.beleg_check_faelle.faelle gefuellt. Die URL steht als
+   data-Attribut hier (url_for gehoert dorthin, wo Flask es aufloest) — das JS ersetzt nur
+   den Platzhalter CALLID. #}
+<div class="fcd-chart-card" id="fcd-beleg-faelle-karte"
+     data-fall-url="{{ url_for('admin_dashboard.beleg_check_fall', call_id='CALLID') }}">
+  <h3>Zitat-Prüfung — Einzelfälle (heute)</h3>
+  <table class="fcd-table">
+    <thead>
+      <tr><th>Zeit</th><th>Anruf</th><th>geprüft</th><th>Treffer</th>
+          <th>Beinahe</th><th>verworfen</th><th>Compliance ohne Beleg</th><th></th></tr>
+    </thead>
+    <tbody id="fcd-beleg-faelle-body"></tbody>
+  </table>
 </div>
 
 <div class="fcd-breakeven">

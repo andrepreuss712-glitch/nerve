@@ -21,6 +21,15 @@ admin_dashboard_bp = Blueprint(
 VALID_TABS = {'uebersicht', 'einnahmen', 'ausgaben', 'kunden', 'eur', 'export'}
 PERIOD_RE = re.compile(r'^\d{4}-\d{2}$')
 
+# METRIK-1 D-23 — Schwellen der Zitat-Pruefung (Vier-Saeulen-Punkt 3: Eingreifen in einer Zeile).
+# KEIN Soll-0-Wert: Verwuerfe sind der GEWOLLTE Schutz. Auffaellig ist die MENGE und der ANTEIL.
+BELEG_ALARM_VERWORFEN_HEUTE = 10   # ab so vielen verworfenen Beobachtungen am Tag: Alarm
+# Der Beinahe-Treffer geht bewusst MIT in die Anteils-Schwelle ein: ein steigender
+# Beinahe-Treffer-Anteil ist das FRUEHESTE Zeichen, dass Bewerter-Text und Pruef-Text
+# auseinanderdriften — genau das, wogegen D-05 schuetzt. An "verworfen" allein sieht man das nicht.
+BELEG_ALARM_ANTEIL = 0.30          # oder: (verworfen + near_miss) / geprueft ueber diesem Anteil
+BELEG_ALARM_MIN_GEPRUEFT = 20      # ... aber erst ab dieser Stichprobe, sonst alarmieren 2 von 3
+
 
 def _parse_period(period_str):
     """Parst 'YYYY-MM' in (start_date, end_date_exclusive).
@@ -211,6 +220,112 @@ def _beleg_check_payload():
     return ergebnis
 
 
+_BELEG_FELDER = ('geprueft', 'treffer', 'near_miss', 'verworfen', 'compliance_beleg_verworfen')
+
+
+def _beleg_check_faelle(db, seit, grenze=20):
+    """METRIK-1 D-23 — die JE ANRUF persistierten Werte aus rubric_score.payload_jsonb.
+
+    Dies ist der echte Leser des dauerhaften Werts. Die Kachel aus Task 3
+    (services/beleg_check_counter) misst eine ANDERE Groesse: summiert, pro Prozess, seit
+    Deploy. Beide stehen bewusst nebeneinander.
+
+    WARUM EINE MANDANTEN-SCHLEIFE UND KEINE EINZELNE ABFRAGE: rubric_score steht unter FORCE ROW
+    LEVEL SECURITY. Ohne gesetzte Mandanten-GUC liefert die Tabelle als nerve_app STILL 0 Zeilen
+    statt eines Fehlers — eine leere Liste waere von "keine Verwuerfe" nicht zu unterscheiden.
+    Genau dieser Fehler hat im Projekt schon einmal zu einem falschen "kein Row"-Befund gefuehrt.
+
+    WARUM DAS ROLLBACK VOR JEDEM MANDANTEN: die GUC ist TRANSAKTIONS-lokal und wird vom
+    after_begin-Hook beim BEGINN einer Transaktion gesetzt (database/db.py:88-105). Wer sie
+    mitten in einer laufenden Transaktion umsetzt, liest weiter mit der alten.
+
+    ZEIT-ANKER (Punkt 26): gefiltert wird auf rubric_score.created_at, also auf den Zeitpunkt der
+    PRUEFUNG — bewusst NICHT auf calls.started_at. Die Frage lautet "wie viel hat der Pruefer
+    heute verworfen", nicht "wie viele Anrufe von heute". Hier IST die Schreib-Zeit der fachlich
+    richtige Anker; der Unterschied ist benannt, nicht uebersehen.
+
+    Returns:
+        list[dict], je Fall: call_id, tenant_id, created_at, geprueft, treffer, near_miss,
+        verworfen, compliance_beleg_verworfen. Sortiert nach created_at absteigend, auf
+        `grenze` gekuerzt.
+    """
+    from database.db import set_current_tenant, clear_current_tenant
+    from database.models import RubricScore, TenantOrg
+
+    faelle = []
+    try:
+        tenant_ids = [row[0] for row in db.query(TenantOrg.id).all()]
+        for tid in tenant_ids:
+            # Die GUC greift erst beim NAECHSTEN Transaktions-Beginn — deshalb erst beenden.
+            db.rollback()
+            set_current_tenant(str(tid))
+            rows = (db.query(RubricScore)
+                      .filter(RubricScore.created_at >= seit,
+                              RubricScore.origin == 'live')
+                      .all())
+            for r in rows:
+                payload = getattr(r, 'payload_jsonb', None) or {}
+                bc = payload.get('beleg_check') if isinstance(payload, dict) else None
+                if not isinstance(bc, dict):
+                    continue
+                fall = {
+                    'call_id': str(getattr(r, 'call_id', '') or ''),
+                    'tenant_id': str(tid),
+                    'created_at': getattr(r, 'created_at', None),
+                }
+                for feld in _BELEG_FELDER:
+                    wert = bc.get(feld, 0)
+                    fall[feld] = int(wert) if isinstance(wert, int) and not isinstance(wert, bool) else 0
+                faelle.append(fall)
+    except Exception as e:
+        # DB-Regel: kein stiller except auf einer PG-Session OHNE rollback (sonst vergiftet der
+        # verschluckte Fehler die Transaktion -> InFailedSqlTransaction in jeder Folge-Abfrage).
+        db.rollback()
+        print(f"[BelegCheckFaelle] uebersprungen: {type(e).__name__}: {e}")
+        return []
+    finally:
+        db.rollback()
+        clear_current_tenant()
+
+    faelle.sort(key=lambda f: (f['created_at'] is not None, f['created_at']), reverse=True)
+    return faelle[:grenze]
+
+
+def _beleg_check_faelle_payload(db):
+    """Tages-Summe + Schwellen-Alarm + die aufrufbaren Einzelfaelle (Bauform: _cost_skip_payload).
+
+    Fehlertolerant, raist NIE: eine Diagnose-Sicht darf das Founder-Dashboard nicht kippen.
+    """
+    leer = {k: 0 for k in _BELEG_FELDER}
+    try:
+        faelle = _beleg_check_faelle(db, datetime.combine(date.today(), datetime.min.time()))
+    except Exception:
+        return {'heute': leer, 'alarm': False,
+                'schwelle': BELEG_ALARM_VERWORFEN_HEUTE, 'faelle': []}
+
+    heute = dict(leer)
+    for fall in faelle:
+        for feld in _BELEG_FELDER:
+            heute[feld] += fall.get(feld, 0)
+
+    # Zwei Wege in den Alarm: die schiere MENGE, oder der ANTEIL ab einer tragfaehigen Stichprobe.
+    alarm = heute['verworfen'] >= BELEG_ALARM_VERWORFEN_HEUTE
+    if not alarm and heute['geprueft'] >= BELEG_ALARM_MIN_GEPRUEFT:
+        anteil = (heute['verworfen'] + heute['near_miss']) / float(heute['geprueft'])
+        alarm = anteil > BELEG_ALARM_ANTEIL
+
+    return {
+        'heute': heute,
+        'alarm': bool(alarm),
+        'schwelle': BELEG_ALARM_VERWORFEN_HEUTE,
+        'faelle': [{
+            'call_id': f['call_id'],
+            'zeit': f['created_at'].strftime('%H:%M') if f.get('created_at') else '—',
+            **{k: f.get(k, 0) for k in _BELEG_FELDER},
+        } for f in faelle],
+    }
+
+
 def _mrr_from_active_orgs(db):
     """MRR-Sum: Summe plan_preis aller active Organisationen.
     Fallback auf PLANS[plan]['preis'] wenn plan_preis nicht gesetzt."""
@@ -358,6 +473,10 @@ def api_overview():
             # Bewusste Grenze (wie bei cost_log_skips): RAM DIESES Prozesses, seit Deploy.
             # Der dauerhafte Wert je Anruf steht in rubric_score.payload_jsonb['beleg_check'].
             'beleg_check': _beleg_check_payload(),
+            # METRIK-1 D-23: der DAUERHAFTE Wert je Anruf (rubric_score.payload_jsonb), gelesen
+            # ueber die Mandanten-Schleife. Andere Groesse als 'beleg_check' darueber: dort RAM,
+            # summiert, pro Prozess — hier je Anruf, aus der Datenbank, mit aufrufbarem Einzelfall.
+            'beleg_check_faelle': _beleg_check_faelle_payload(db),
             'mrr_costs_12m': {
                 'labels': labels_12m,
                 'mrr': mrr_12m,
@@ -584,6 +703,80 @@ def ausgaben_page():
             'uebrige_kosten': uebrige_kosten,
         })
     finally:
+        db.close()
+
+
+@admin_dashboard_bp.route('/beleg-check/<call_id>')
+@login_required
+@superadmin_required
+def beleg_check_fall(call_id):
+    """METRIK-1 D-23 Auflage 3 — ein einzelner Fall der Zitat-Pruefung, wirklich nachpruefbar.
+
+    Ohne diese Seite ist der Satz aus Plan 01 Task 4 ("wird von einem NERVE-Mitarbeiter
+    geprueft") ein Versprechen ohne Deckung.
+
+    RLS-Weg: calls traegt KEINE RLS und liefert tenant_id + conversation_log_id zum Anruf.
+    Damit wird die Mandanten-GUC fuer GENAU diesen Fall gesetzt und rubric_score gelesen.
+    Danach rollback + clear_current_tenant im finally.
+
+    DSGVO: sichtbar ist ausschliesslich der BEREITS GESCHWAERZTE Transkript-Text (die
+    Anonymisierung laeuft vor dem Persistieren). Zugriff nur superadmin. Die noch offene Folge
+    — "Mitarbeiter pruefen Gespraeche" steht nicht in der Datenschutzerklaerung — ist in
+    Plan 01 Task 4, Abschnitt C2 benannt (Ort: Anwalts-Liste).
+    """
+    from database.db import set_current_tenant, clear_current_tenant
+    from database.models import Call, RubricScore, TranscriptSegment
+
+    db = get_session()
+    try:
+        call = db.query(Call).filter(Call.id == call_id).first()
+        if call is None:
+            abort(404)
+        tenant_id = getattr(call, 'tenant_id', None)
+        conv_id = getattr(call, 'conversation_log_id', None)
+
+        # transcript_segments traegt KEINE RLS -> vor dem GUC-Wechsel lesbar.
+        segmente = []
+        if conv_id is not None:
+            segmente = (db.query(TranscriptSegment)
+                          .filter(TranscriptSegment.conversation_log_id == conv_id)
+                          .order_by(TranscriptSegment.ts_ms.asc(), TranscriptSegment.id.asc())
+                          .all())
+
+        zeile = None
+        if tenant_id is not None:
+            db.rollback()  # die GUC greift erst beim naechsten Transaktions-Beginn
+            set_current_tenant(str(tenant_id))
+            zeile = (db.query(RubricScore)
+                       .filter(RubricScore.call_id == call.id,
+                               RubricScore.origin == 'live')
+                       .first())
+
+        payload = (getattr(zeile, 'payload_jsonb', None) or {}) if zeile is not None else {}
+        rohwerte = payload.get('beleg_check') if isinstance(payload, dict) else None
+        werte = {k: 0 for k in _BELEG_FELDER}
+        if isinstance(rohwerte, dict):
+            for feld in _BELEG_FELDER:
+                wert = rohwerte.get(feld, 0)
+                werte[feld] = int(wert) if isinstance(wert, int) and not isinstance(wert, bool) else 0
+
+        observations = (getattr(zeile, 'observations_jsonb', None) or {}) if zeile is not None else {}
+        compliance = observations.get('_compliance') if isinstance(observations, dict) else None
+        if not isinstance(compliance, dict):
+            compliance = {'verletzt': False, 'beleg_zitat': ''}
+
+        return render_template(
+            'admin/beleg_check_fall.html',
+            call_id=str(call.id),
+            zeitpunkt=getattr(zeile, 'created_at', None) if zeile is not None else None,
+            werte=werte,
+            compliance=compliance,
+            observations=observations if isinstance(observations, dict) else {},
+            segmente=segmente,
+        )
+    finally:
+        db.rollback()
+        clear_current_tenant()
         db.close()
 
 
