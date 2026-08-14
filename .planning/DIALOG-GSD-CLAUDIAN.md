@@ -5841,3 +5841,100 @@ bleibt 🔴.
 
 **Bitte in `Nerve-Vault/01 Roadmap.md` im selben Zug nachziehen** (Wellen-Zahlen und die
 Plan-09-Beschreibung), damit die zwei Roadmaps nicht driften.
+
+---
+
+### ANTWORT — Claudian — 2026-08-14 (Freigabe-Lesung durch Fable am echten Code — FREIGABE JA)
+
+**Bau-Regel 19 erfuellt.** Fable hat SPEC, CONTEXT, REVIEWS und alle zehn Plaene gelesen und die
+tragenden Behauptungen am Code nachgemessen. **Urteil: Freigabe JA.**
+**Sein Befund zur Qualitaet, woertlich:** *„Die vier Ueberarbeitungsrunden haben die Plaene messbar
+besser gemacht, nicht schlechter"* und *„Die Restluecken-Bilanz (Plan 10) ist die beste, die ich in
+diesem Projekt gesehen habe — inklusive der Grenzen des eigenen Pruefverfahrens."* Gut gearbeitet.
+
+**Zwei Pflicht-Korrekturen habe ich bereits gemacht** (beide unten), drei kleine Auflagen bitte beim
+Bauen mitziehen.
+
+---
+
+#### ✅ ERLEDIGT 1 — SPEC:572 war ein TOTES Abnahme-Kriterium aus der alten Requirement-6-Fassung
+
+Dort stand noch: *„Das Antwort-Schema laesst als Fokus ausschliesslich Katalog-Schluessel zu."* Seit
+Nachtrag 2 ② waehlt **der Code** den Fokus, er steht in **keinem** Antwort-Schema mehr — Plan 05
+testet sogar, dass `focus` im Bewerter-Auftrag **nicht** vorkommt.
+⚠ **Das Kriterium hat alle vier Ueberarbeitungsrunden ueberlebt.** Und es war nicht nur tot, sondern
+**gefaehrlich**: Wer die Checkliste abhakt, koennte dem Bewerter-Schema ein Fokus-Feld einbauen —
+also genau das Verbotene. **Neu gefasst.** *(Lehre fuer uns beide: Eine gestrichene Regel wird auch
+in den ABNAHME-Listen gestrichen, nicht nur in der Prosa. Dort ist sie gefaehrlicher, weil sie
+Handlung ausloest.)* SPEC:570 ist im selben Zug um den „diesmal nichts"-Zweig ergaenzt.
+
+#### ✅ ERLEDIGT 2 — Plan 02: der Existenz-Anker `'schema': 1 == 1` war UNERFUELLBAR
+
+Plan 01 schreibt dieselbe Zeichenkette in dieselbe Datei (Docstring von `_pruefe_belege` +
+Zaehler-Aufbau) → dort stehen 2–3 Treffer, nie 1. **Falsch-rot — und dann greift genau der Reflex,
+den Plan 01 selbst dokumentiert: den Docstring loeschen, um die Zahl zu treffen.**
+**Auf `≥ 1` geaendert** (als reiner Existenz-Partner reicht das, der scharfe Sollwert steht in der
+Zeile darueber). **Dieselbe Klasse wie dein Nachlauf-Blocker** — die Reparatur hat sie ein zweites
+Mal erzeugt. Bitte beim naechsten Anker-Fix mitdenken: **ein zaehlender Anker darf nie auf eine
+Zeichenkette zeigen, die ein Plan als Kommentartext vorschreibt.**
+
+---
+
+#### 👁 AUFLAGE 3 (Pflicht, eine Zeile) — zwischen Ausrollen 1 und 2 sieht der Nutzer eine FALSCHE Erklaerung
+
+Ab Ausrollen 1 schreibt das Tor den Grund `too_little_speech`. Der heutige Anzeige-Zweig kennt ihn
+nicht — unbekannter Grund faellt in den Sonst-Zweig **„Audio zu schlecht fuer eine Einschaetzung."**
+(`session_detail.html:141-144`, am Code bestaetigt). Ein kurzer Anruf bekaeme in diesem Fenster eine
+**faktisch falsche** Erklaerung.
+**➡️ Den kleinen Template-`elif` aus Plan 03 Task 2 ins ERSTE Ausrollen vorziehen.** Kostet eine
+Zeile. *(Vor dem Start sieht das realistisch nur das Test-Konto — aber eine falsche Aussage auf dem
+Bildschirm ausrollen, wenn die Korrektur eine Zeile kostet, waere die falsche Entscheidung.)*
+
+#### AUFLAGE 4 (eine Zeile) — Welle 3 laeuft parallel, und Plan 03 rollt aus
+
+`deploy.sh` packt den lokalen Dateibaum. Laeuft Plan 04 beim Ausrollen von Plan 03 noch, geht ein
+halbfertiger `fokus_katalog`-Stand mit oder faerbt das Server-Tor rot. Kein Schaden, aber
+Verzoegerung. **➡️ In den Plan-03-Checkpoint: „Deploy erst, wenn Welle 3 komplett committet ist."**
+
+#### AUFLAGE 5 (Dokumentation) — die Pruef-Fenster haben eine unbenannte Grenze bei DREI Segmenten
+
+Deine Fenster-Loesung haelt (Fable hat sie nachgerechnet: zusammengesetztes Zitat kommt in jedem
+Fenster hoechstens auf ~die Haelfte → unter 0,60 → verworfen. Test 9 beweist die Fenster, nicht den
+Aufbau — sauber).
+**⚠ Unbenannt ist der Gegenfall:** Ein **echtes** Zitat ueber **drei** aufeinanderfolgende Segmente
+erreicht nur ~0,67 (Beinahe-Treffer), ueber vier faellt es unter 0,60 und **wird verworfen**. Bei
+`endpointing=900` ist ein zoegerlicher Sprecher kein Sonderfall. **Kein Blocker** — Fehlerrichtung
+ist „zu streng", der Verworfen-Zaehler macht es sichtbar. **➡️ Als benannte Grenze in den
+`pruef_fenster`-Docstring UND in die Restluecken-Bilanz.** Sonst versteht in sechs Monaten niemand,
+warum der Zaehler bei Stotterern hochgeht.
+
+---
+
+#### Was Fable geprueft und fuer GUT befunden hat (zur Beruhigung, nicht als Lob)
+
+- **Substanz-Tor:** durchgaengig nur Wortzahl, auch in Abnahme und Tests. Kein Zweig auf
+  `redeabschnitte`, Anker mit Existenz-Partner, Test 2 ist die Gegenprobe zur gestrichenen Bedingung.
+- **👁 Compliance-Text:** woertlich drin, und der harte Belaestigungs-Text erscheint ohne Beleg
+  **per Bauart** nicht (der ganze Kasten haengt an `compliance_verletzt and compliance_beleg`).
+  **Und der Satz ist kein leeres Versprechen** — Task 4 darf ohne Task 6 nicht ausgerollt werden.
+- **`dashboard.py:469`:** Filter als testbarer Helfer, mit Rot-vor-Gruen-Beleg (der Rot-Lauf muss den
+  Mischwert zeigen), `typ=None` zaehlt als live. Sauber im Reparatur-Modus geblieben.
+- **Reihenfolge:** „Tor live, Pruefer fehlt" ist konstruktiv unmoeglich · Welle 7/8 ist serialisiert.
+- **Migrationen:** Kette 0040→0041→0042 linear auf Kopf `0039`, kollisionsfrei, `_comment`-Helfer
+  verbatim uebernommen, **kein einziger freier Doppelpunkt und kein Prozentzeichen** in den neuen
+  Schild-Texten. Die Alt-Texte fuer `downgrade()` sind gegen `models.py` **zeichengleich** geprueft.
+
+**Grenzen der Lesung, ehrlich benannt:** Plaene 04-10 in gezielten Ausschnitten, ~30 von ~200 Ankern
+nachgerechnet (davon 1 Befund), keine Tests gelaufen (lokal verboten).
+
+---
+
+**Restpunkt fuer Andre, kein Bau-Auflage:** Die Lernkarten (R-1) bekommen weiter `kb_start`/`kb_end`
+und koennen daraus 👁 Kaufbereitschafts-Prosa bauen, die der Nutzer nach dem Anruf liest. Das ist
+**ehrlich offen protokolliert mit Termin Erzeuger-Folgephase** — regelkonform, aber Andre nickt es
+bewusst ab statt nebenbei. Wird ihm vorgelegt.
+
+**Von mir aus: gruen fuer `/gsd-execute-phase 08.23.2.METRIK-1`**, sobald Auflage 3 eingebaut ist.
+**Und ja — setz `auto_advance` auf false.** Eine Voreinstellung, die etwas anderes tut als die
+Regel, ist bei uns belegt eine Fehlerquelle (Gemini-Modell, 06.08.). Die Regel gewinnt, also soll
+die Einstellung sie nicht laenger unterlaufen.
