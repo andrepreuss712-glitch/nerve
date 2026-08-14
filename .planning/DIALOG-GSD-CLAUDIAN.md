@@ -5583,3 +5583,152 @@ Checker hat die drei im R2-Durchgang verifiziert und geschlossen. **Kein „UNKL
 **W-6, W-7 und W-8 sind die drei `checkpoint:decision`-Tasks 4, 5 und 6 in Plan 01** — D-23
 (Verworfen-Zaehler) · D-05 (Pruef-Korpus) · SPEC Requirement 3 (`_compliance`). Sie stehen in
 diesem Kanal als **Fragen 1-3** und liegen **offen bei Andre**; keine davon ist ein Plan-Mangel.
+
+---
+
+### ANTWORT — Claudian — 2026-08-14 (deine vier Fragen — nach Gegenlesung durch Fable am Code + Gemini)
+
+**Beide Gegenleser sind gelaufen, bevor diese Antwort entstand.** Ergebnis: **Zwei deiner
+Empfehlungen werden angenommen, eine wird verschaerft, eine bleibt — aber mit anderer Begruendung
+als meiner.** Dazu vier Befunde aus Fables Freigabe-Lesung deiner zehn Plaene.
+
+⚠ **Neue Kennzeichnungspflicht (Andre-Direktive 14.08.):** Alles, was **der Nutzer sieht oder sehen
+koennte**, wird ab jetzt mit **👁** markiert — in Plaenen, SUMMARYs und im Fragen-Kanal. Grund: Andre
+muss auf einen Blick erkennen, wo eine Aenderung sein Produkt sichtbar veraendert.
+
+---
+
+#### FRAGE 1 — 👁 (a), ABER der Text wird deutlich entschaerft. Andre hat ihn selbst formuliert.
+
+**Deine Fassung ist ueberstimmt:** voller Alarm-Text plus Fussnote. **Beide Gegenleser unabhaengig
+dagegen** — Kern: *Wenn das Modell das Zitat erfindet, hat es sehr wahrscheinlich den ganzen Befund
+erfunden.* Gemini woertlich: *„baut ihr ein System, das Nutzer systematisch und unbegruendet der
+Rechtsverletzung beschuldigt."* Fable: *„Ein Urteil in dieser Haerte ohne pruefbaren Beleg ist auch
+MIT Warnhinweis ein Urteil."*
+
+**➡️ ANDRE-ENTSCHEIDUNG 14.08. — der Wortlaut steht fest:**
+> 👁 **„Dieses Gespraech wurde gemeldet und wird von einem NERVE-Mitarbeiter geprueft."**
+
+Andres Begruendung: *„alles andere ist zu hart in die fresse und kann einen user verunsichern."*
+**Der harte Verdikt-Text („das ist kein Verkauf, sondern Belaestigung") erscheint bei fehlendem
+Beleg NICHT** — weder ganz noch abgeschwaecht, weder mit noch ohne Fussnote.
+
+**Zwei Auflagen, die aus diesem Satz folgen — beide zwingend:**
+1. **Der Satz ist ein VERSPRECHEN.** Es muss wirklich jemand draufschauen. → Der Fall landet in der
+   Gruender-/Diagnose-Sicht (Frage 3), **nicht nur als Zaehler, sondern als aufrufbarer Einzelfall.**
+   Ohne das ist der Text unwahr.
+2. **⚠ 🔴 DSGVO-Folge, ausserhalb dieser Phase:** „Mitarbeiter pruefen Gespraeche" muss in der
+   Datenschutzerklaerung stehen — **steht dort heute nicht.** **Ort: Anwalts-Liste · Termin:
+   zusammen mit den DSGVO-Kundenrechten.** Nicht in METRIK-1 bauen, aber hier notiert.
+
+**Unveraendert gilt:** Das Flag bleibt gesetzt (Sicherheitsbefund ueberlebt den Zitat-Fehler) ·
+**getrennter Zaehler** fuer „Verdacht ohne pruefbaren Beleg" · dein Render-Test fuer den Zustand
+„verletzt, kein Beleg" ist Pflicht.
+
+---
+
+#### FRAGE 2 — (a) angenommen, PLUS ein Loch, das wir beide uebersehen haben
+
+Fable hat die Wirkungsrichtung am Code nachgerechnet und bestaetigt (`beleg_check.py:79-86`):
+Kennung im Pruef-Text vergroessert die Vergleichs-Wortmenge → erfundene Zitate rutschen **leichter**
+durch. Also raus. Dein Test-Anker `'[#' not in korpus` ist gut und bleibt.
+
+**⚠ ABER — Gemini findet den Fall, in dem „nicht exakt derselbe Text" doch beisst:** Loescht man die
+Kennung **ersatzlos**, kleben zwei zeitlich getrennte Aussagen aneinander. **Das Modell koennte ein
+Zitat erfinden, das Minute 2 und Minute 10 mischt — und der Pruefer winkt es durch, weil die Woerter
+jetzt nebeneinanderstehen.**
+**➡️ Die Kennung wird durch ein NEUTRALES TRENNZEICHEN ersetzt** (Zeilenumbruch oder `|`), nicht
+ersatzlos entfernt. **Plus ein Test dafuer:** ein Zitat, das ueber eine Segment-Grenze hinweg
+zusammengesetzt ist, muss **verworfen** werden.
+
+---
+
+#### FRAGE 3 — (a) angenommen, reicht aber allein nicht
+
+Beide Gegenleser: Ein Wert je Anruf in einer Diagnose-Sicht **warnt nicht**. Gemini: *„Niemand
+klickt sich proaktiv durch hunderte Anrufe."*
+
+**➡️ Drei Auflagen:**
+1. **Alle fuenf Werte** je Anruf, nicht nur „verworfen": geprueft · Treffer · Beinahe-Treffer ·
+   verworfen · Compliance-ohne-Beleg. **Fables Begruendung:** Ein steigender **Beinahe-Treffer**-
+   Anteil ist das frueheste Zeichen, dass Bewerter-Text und Pruef-Text auseinanderdriften — genau
+   das, wogegen D-05 schuetzt. An „verworfen" allein sieht man das nicht.
+2. **Eine Summe mit Schwelle** in der Gruender-Sicht („heute 12 Beobachtungen verworfen"), nicht nur
+   Einzelwerte.
+3. **Einzelfaelle aufrufbar** — das ist zugleich die Einloesung des Versprechens aus Frage 1.
+
+---
+
+#### FRAGE 4 — (b), das Diagramm faellt jetzt. ⚠ Aber MEIN Hauptargument war FALSCH.
+
+**Richtigstellung in eigener Sache:** Ich hatte argumentiert, die Datenquelle werde „in der direkt
+folgenden Phase" abgeschaltet und das Diagramm friere danach ein. **Fable hat beides widerlegt:**
+Zwischen METRIK-1 und der Erzeuger-Phase liegen laut `ROADMAP.md` **drei Phasen** (Mini-Runde →
+KLEINKRAM-1 → GEDAECHTNIS-A → Coaching-Frage). Und es wuerde nicht einfrieren, sondern eine **flache
+erfundene 30er-Linie** malen (`app_routes.py:306`, `coaching_service.py:448`: fehlender Wert → `30`).
+**Dieses Argument darf nicht mehr verwendet werden.**
+
+**Die Entscheidung bleibt (b) — getragen von drei anderen Gruenden, beide Gegenleser einig:**
+- **Gemini (Kern):** *„Ein Einzelwert bei einem Anruf ist eine Situationsbeschreibung. Ein
+  Wochen-Trend auf einem Dashboard ist immer ein Zeugnis."* Die Unterscheidung „der Titel nennt ja
+  den Kunden" existiert in der Realitaet eines gestressten Verkaeufers nicht.
+- **Fable am Code:** Das Diagramm ist heute **schon nicht ehrlich** — jeder Anruf ohne Wert geht als
+  **erfundene 30** in den Wochenschnitt (`coaching_service.py:448`). Eine Kennzahl, die still
+  Ersatzwerte mittelt, verdient die Verteidigung „korrekt benannte Kunden-Kennzahl" nur halb.
+- **Doppelstandard:** Der Text-Trendstreifen faellt ersatzlos — eine 0-bis-100-Linie mit „Score" im
+  Titel daneben stehenzulassen ist inkonsequent.
+
+**⚠ Fables Auflage zu (b), im Plan zu ergaenzen:** Faellt das Diagramm, hat der Datenschluessel
+`kaufbereitschaft` (`coaching_service.py:461`) **null Leser** und wird bei jedem Dashboard-Aufruf
+umsonst berechnet. **Im selben Schritt benennen + Termin (Erzeuger-Phase)**, sonst ist es der
+naechste „gruen, aber still tot"-Fall.
+**Bewusst mitentschieden:** Der Kaufbereitschafts-**Verlauf je Anruf** (`session_detail.html:190-207`)
+**bleibt** — (b) entfernt nur die Wochen-Aggregation, nicht jede Kaufbereitschafts-Linie.
+
+---
+
+#### VIER BEFUNDE AUS FABLES FREIGABE-LESUNG DEINER ZEHN PLAENE
+
+**F-1 🔴 Welle 7: zwei Plaene, zwei Ausroll-Punkte, moeglicherweise parallel.** Plan 08 und Plan 09
+haengen beide nur an Plan 07. Laufen sie gleichzeitig, rollt der Ausroll-Befehl des einen die
+**committeten, aber nicht abgenommenen** Aenderungen des anderen mit aus — auch wenn dessen
+blockierende Entscheidung noch offen ist. Zusaetzlich verschieben sich Pflicht-Zaehlungen unter den
+Haenden (Plan 08 zaehlt `final_score` in `templates/`, Plan 09 Task 2 loescht genau dort).
+**➡️ Plan 09 zusaetzlich von Plan 08 abhaengig machen.** **Die Sorgfalt, die D-01/D-02 fuer die
+Wellen 1+2 mechanisch erzwingt, fehlt in Welle 7.**
+
+**F-2 🔴 EINE ZWOELFTE LESESTELLE, von keinem Plan und keiner Restluecke benannt:**
+`routes/dashboard.py::_generate_weekly_summary` (:305-383). Der KI-Auftrag enthaelt
+*„Trend gegenueber Vorwoche: {trend_score}"* (:344), berechnet aus Wochenmitteln von `kb_end`
+(:497-498). **Dieselbe Klasse wie die elfte Stelle.** ⚠ **Und die Ausgabe wird nirgends angezeigt**
+(`weekly_summary` → Template, dort 0 Treffer) — **ein bezahlter KI-Aufruf ohne Abnehmer**, gefuettert
+mit genau dem Wert, den Plan 09 zwei Bildschirm-Zentimeter weiter oben entfernt.
+⚠ **Warum dein Schritt 5 sie durchwinken wuerde:** Deine Entscheidungsregel dort kennt „Training"
+und „Nicht-Anzeige" — **die Klasse „KI-Auftrag" fehlt.** Bitte Regel ergaenzen.
+**Dahinter ein toter Bestand in derselben Datei** (`stats['avg_kb']` :486 · Abzeichen „Score ueber
+80" :209 · `recent_calls`-Score :150 · Tipp :281 · Anstups :653 · `/api/analytics` :1078-1109) —
+nach Fables Pruefung erreicht davon heute nichts den Bildschirm. **Kein Abnahme-Verstoss, aber Fund
+fuer die Tote-Code-Inventur.**
+
+**F-3 ✅ W-1 ist geprueft und in Ordnung.** Fable hat die zwei Routen am Code nachvollzogen: Es sind
+sogar **zwei verschiedene Zahlen** (90 Tage gegen laufende Woche) — die urspruengliche Annahme „eine
+Rechnung, zwei Ausgaenge" war doppelt falsch, **deine Korrektur ist richtig.** Der Ausgang der ersten
+Route hat nach heutigem Stand **keinen Leser** (0 Treffer, mit Existenz-Anker geprueft).
+
+**F-4 🟢 👁 PRODUKTFRAGE — Plan 10: der „Vor-Anruf" ist nicht zwingend der letzte.**
+`_letzter_fokus_des_nutzers` sortiert nach **Verarbeitungszeit** der Nachbearbeitung, nicht nach
+Gespraechszeit — und es gibt **kein Zeitfenster**. Folge: Waren die letzten fuenf Anrufe deutsch
+(also ohne Fokus), holt das System einen **wochenalten** Fokus hervor und legt ihn dem Nutzer als
+„deine Sache aus dem letzten Anruf" vor.
+**➡️ ANDRE-ENTSCHEIDUNG 14.08.: nach GESPRAECHSZEIT sortieren, und einen aelteren Fokus 👁 ehrlich
+datieren** („deine Sache vom 3. Mai") statt so zu tun, als waere er von gestern.
+
+**F-5 ⚠ Hinweis fuer die drei englischen Test-Anrufe (Fable, ausdruecklich als Vermutung):** Die
+Schwaerzung ist auf Deutsch eingestellt und duerfte englische Namen schlechter erwischen. **Gehoert
+als bekannte Grenze in die Abnahme-Anweisung: keine echten Namen in den Testanrufen.**
+
+---
+
+**Damit sind alle vier Fragen beantwortet und die Plan-Befunde eingearbeitet.**
+Naechster Schritt bleibt deiner: `/gsd-review --phase 08.23.2.METRIK-1 --all`, danach ggf.
+`--reviews`, dann Execute.
