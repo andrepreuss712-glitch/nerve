@@ -412,6 +412,147 @@ def _count_high_confidence(events, db) -> int:
     return n
 
 
+def _segments_for_call(conversation_log_id, db) -> list:
+    """Laedt alle transcript_segments einer Session (Eingang des Substanz-Tors, METRIK-1 Req 1).
+    Read-only; transcript_segments hat KEINE RLS -> GUC-frei (models.py TranscriptSegment).
+
+    ⚠ ANDERER SCHLUESSEL als _events_for_call: transcript_segments haengt an
+    conversation_log_id, NICHT an call_id (vgl. services/judge_runner.py Segment-Query).
+    """
+    if conversation_log_id is None:
+        return []
+    return (db.query(TranscriptSegment)
+              .filter(TranscriptSegment.conversation_log_id == conversation_log_id)
+              .order_by(TranscriptSegment.ts_ms.asc(), TranscriptSegment.id.asc())
+              .all())
+
+
+def _mess_sprech_substanz(segments) -> dict:
+    """METRIK-1 Requirement 1 + 2 (D-22): misst die Sprech-Substanz eines Anrufs.
+
+    Returns:
+        {'redeabschnitte': int,           # reine DIAGNOSE-Zahl, KEINE Tor-Bedingung
+         'berater_woerter': int|None,     # None = unbekannt (NIE 0 als Ersatz)
+         'sprechzeit_ms': int|None,       # None = unbekannt
+         'berater_wortzahl_unbekannt': bool}
+
+    DREI REGELN, jede loest eine belegte Falle:
+
+    (a) NULL heisst UNBEKANNT, nie "null Woerter". ⚠ Das ist die UMGEKEHRTE NULL-Semantik zur
+        Schwester-Funktion _count_high_confidence, die confidence=None als "zaehlt nicht"
+        behandelt. Hier waere das die teure Fehlerrichtung: ein Endergebnis MIT Text, aber
+        OHNE Wortobjekte liefert word_count NULL, obwohl gesprochen wurde (Schild
+        database/models.py _SCHILD_WORD_COUNT, "Bekannte Kante"). Ein echter 30-Woerter-Anruf
+        mit zwei NULL-Zeilen laege sonst unter 20 und wuerde faelschlich abgelehnt.
+
+    (b) redeabschnitte ist eine DIAGNOSE-Zahl, KEINE Bedingung. Gezaehlt werden Zeilen mit
+        word_count IS NOT NULL (alle Sprecher) - die Definition bleibt, damit die Zahl in der
+        Ablehnungs-Zeile eine feste Bedeutung hat. Sie geht in KEINE Tor-Entscheidung ein:
+        die Abschnitts-Bedingung ist am 14.08. ersatzlos gestrichen worden, weil ein am
+        Stueck gesprochener 100-Woerter-Einstieg bei endpointing=900 EIN Segment ist.
+        Damit entfaellt auch der frueher hier beschriebene Sonderfall "ein Satz plus ein
+        Knopfdruck" - er kann per Bauart nicht mehr entstehen.
+
+    (c) Gezaehlt werden nur BERATER-Woerter (speaker == 'berater'). Im Meeting-Modus tragen
+        auch Kunden-Zeilen word_count; wer stumpf summiert, laesst ein Meeting durch, in dem
+        fast nur der Kunde sprach.
+
+    (c2) ABLEITUNG AUS (c), ausdruecklich festgehalten: die Unbekannt-Erkennung aus (a)
+        schaut NUR auf BERATER-Zeilen. Sonst kippt die EWB-Zeile (speaker='kunde',
+        word_count NULL) jeden Anruf in den "unbekannt -> durchlassen"-Zweig, und das Tor
+        waere per Knopfdruck aushebelbar. Seit die Abschnitts-Bedingung gestrichen ist, ist
+        das die EINZIGE verbliebene EWB-Kante des Tors — sie traegt hier allein.
+
+    Reine Funktion: kein DB-Zugriff, kein Seiteneffekt.
+    """
+    redeabschnitte = 0
+    berater_summe = 0
+    berater_bekannt = 0
+    berater_wortzahl_unbekannt = False
+    sprechzeit_summe = 0
+    sprechzeit_bekannt = 0
+
+    for seg in (segments or []):
+        wc = getattr(seg, 'word_count', None)
+        if wc is not None:
+            redeabschnitte += 1                      # (b) alle Sprecher, reine Diagnose-Zahl
+        if getattr(seg, 'speaker', None) != 'berater':
+            continue                                 # (c) + (c2): ab hier NUR Berater-Zeilen
+        if wc is None:
+            berater_wortzahl_unbekannt = True        # (a) unbekannt, NICHT null Woerter
+        else:
+            berater_summe += wc
+            berater_bekannt += 1
+        start_ms = getattr(seg, 'start_ms', None)
+        end_ms = getattr(seg, 'end_ms', None)
+        if start_ms is not None and end_ms is not None:
+            # max(0, ...) ist kein Schoenheitsfehler: das Schild _SCHILD_START_MS nennt
+            # ueberlappende Deepgram-Endergebnisse ausdruecklich als UNVERIFIED und verlangt
+            # vom Leser, negative Differenzen abzufangen.
+            sprechzeit_summe += max(0, end_ms - start_ms)
+            sprechzeit_bekannt += 1
+
+    return {
+        'redeabschnitte': redeabschnitte,
+        'berater_woerter': berater_summe if berater_bekannt else None,
+        'sprechzeit_ms': sprechzeit_summe if sprechzeit_bekannt else None,
+        'berater_wortzahl_unbekannt': berater_wortzahl_unbekannt,
+    }
+
+
+# ── METRIK-1 Requirement 1: die vier Tor-Zweige. Jeder Weg hat seinen EIGENEN String. ──────
+#    'wortzahl_unbekannt_durchgelassen' ist ausdruecklich KEINE Ablehnung unter anderem Namen:
+#    er laesst DURCH (fail-open) und ist vom Genug-Zweig unterscheidbar. Zwei unabhaengige
+#    Gegenleser haben beanstandet, dass diese Zusage vorher nur in der Prosa stand.
+_TOR_ZWEIG_GENUG = 'genug_woerter'
+_TOR_ZWEIG_WORTZAHL_UNBEKANNT = 'wortzahl_unbekannt_durchgelassen'
+_TOR_ZWEIG_ZU_WENIG = 'zu_wenig_woerter'
+_TOR_ZWEIG_KEINE_BERATER_ZEILE = 'keine_berater_zeile'
+
+
+def _tor_sprech_substanz(mess: dict) -> tuple:
+    """Entscheidet ueber die Sprech-Substanz. Liefert (grund, zweig).
+
+    grund: 'too_little_speech' oder None (durchlassen).
+    zweig: einer der vier _TOR_ZWEIG_*-Strings. Er sagt, WELCHER Weg genommen wurde, und
+           wird in der Ablehnungs-Zeile mitgeschrieben (Requirement 2).
+
+    EINZIGE ABLEHNUNGS-BEDINGUNG IST DIE WORTZAHL (Andre-Entscheidung 14.08.). Die Zahl der
+    Redeabschnitte wird gemessen und mitgeschrieben, entscheidet aber nichts: ein am Stueck
+    gesprochener 100-Woerter-Einstieg ist bei endpointing=900 EIN Segment und waere sonst
+    abgewiesen worden.
+
+    FAIL-OPEN ALS EIGENER ZWEIG: Ist die BEKANNTE Berater-Wortsumme kleiner als die Schwelle
+    und ist mindestens eine Berater-Wortzahl unbekannt, ist die Wortbedingung nicht
+    entschieden -> der Anruf geht durch, und zwar ueber _TOR_ZWEIG_WORTZAHL_UNBEKANNT, NICHT
+    ueber den Genug-Zweig. Der eigene Zweig ist der Unterschied zwischen "wir wissen, dass
+    genug gesprochen wurde" und "wir wissen es nicht und lassen im Zweifel durch".
+
+    Reine Funktion: kein DB-Zugriff, kein Seiteneffekt.
+    """
+    from config import MIN_BERATER_WOERTER
+
+    woerter = (mess or {}).get('berater_woerter')
+    unbekannt = bool((mess or {}).get('berater_wortzahl_unbekannt'))
+
+    # 1. Es wurde gesprochen, aber keine einzige Zahl ist bekannt -> durchlassen.
+    #    Das ist SPEC :517 woertlich erfuellt, im Code und nicht in der Prosa.
+    if woerter is None and unbekannt:
+        return (None, _TOR_ZWEIG_WORTZAHL_UNBEKANNT)
+    # 2. Gar keine Berater-Zeile, auch keine unbekannte -> "gar nichts gesagt" ist NICHT
+    #    dasselbe wie "unbekannt" und bekommt deshalb einen eigenen Zweig.
+    if woerter is None:
+        return ('too_little_speech', _TOR_ZWEIG_KEINE_BERATER_ZEILE)
+    # 3. Genug bekannte Woerter -> durchlassen.
+    if woerter >= MIN_BERATER_WOERTER:
+        return (None, _TOR_ZWEIG_GENUG)
+    # 4. Bekannte Summe zu klein, aber es gibt Unbekanntes -> nicht entschieden -> durchlassen.
+    if unbekannt:
+        return (None, _TOR_ZWEIG_WORTZAHL_UNBEKANNT)
+    # 5. Bekannt und zu wenig.
+    return ('too_little_speech', _TOR_ZWEIG_ZU_WENIG)
+
+
 def _mode_config_for(mode_key, db) -> dict:
     """Laedt den modus-spezifischen Gewichtssatz aus mode_weight_config als
     {dimension: {weight, enabled, partial_marker, indirekt_erkannt, confidence_gate}} — die
@@ -658,10 +799,11 @@ def _judge_step(ctx) -> None:
     from services.transkript_renderer import pruef_fenster
     from services.beleg_check_counter import record_beleg_check
 
-    _segments = (db.query(TranscriptSegment)
-                   .filter(TranscriptSegment.conversation_log_id == call.conversation_log_id)
-                   .order_by(TranscriptSegment.ts_ms.asc(), TranscriptSegment.id.asc())
-                   .all())
+    # METRIK-1 Req 1: die zeichengleiche Inline-Abfrage aus Plan 01 ist durch _segments_for_call
+    # abgeloest — EINE Lade-Form fuer beide Leser (Tor und Pruef-Korpus), sonst driften Filter
+    # und Sortierung irgendwann auseinander und der Pruef-Korpus waere ein anderer als der,
+    # ueber den das Tor entschieden hat.
+    _segments = _segments_for_call(call.conversation_log_id, db)
     # Geprueft wird gegen Segment- und Nachbarpaar-Fenster, nicht gegen den Gesamt-Korpus
     # (Task 5): ein zusammengesetztes Zitat aus Minute 2 und Minute 10 wuerde sonst durchgehen.
     _fenster = pruef_fenster(_segments)
@@ -726,8 +868,9 @@ def _call_end_merge(item) -> None:
 
     Datenfluss: api_beenden -> slow_lane.put({'call_id': ...}) -> Consumer -> _call_end_merge.
     """
-    from config import (AUDIO_HEALTH_GATE_THRESHOLD, MIN_HIGH_CONFIDENCE_EVENTS,
-                        SCORE_MAX_RETRIES)
+    # MIN_BERATER_WOERTER wird hier NICHT importiert: die Schwelle liest _tor_sprech_substanz
+    # selbst (reine Funktion, eine Lese-Stelle). Ein Import ohne Leser waere toter Ballast.
+    from config import AUDIO_HEALTH_GATE_THRESHOLD, SCORE_MAX_RETRIES
 
     call_id = item.get('call_id') if isinstance(item, dict) else None
     if call_id is None:
@@ -767,11 +910,27 @@ def _call_end_merge(item) -> None:
         # ── Audio-Gate D-09 (VOR dem Scoring): events laden + high-conf SELBST zaehlen ──────
         events = _events_for_call(call_id, read_db)
         n_high_conf = _count_high_confidence(events, read_db)
+        # ── METRIK-1 Requirement 1: Sprech-Substanz statt Einwand-Momente ───────────────────
+        # Hier stand bis 2026-08-13 das alte Einwand-Momente-Tor: eine Mindest-Schwelle auf der
+        # Zahl der hoch-konfidenten Momente, die den Anruf allein durchliess oder abwies. Es
+        # sperrte 83 % aller Anrufe aus — im Kaltakquise-Modus hoert NERVE nur den Berater und
+        # die automatische Einwand-Erkennung ist kanonisch abgeschaltet, Momente entstehen fast
+        # nur per Knopfdruck. n_high_conf bleibt ein Signal unter mehreren (es wandert als
+        # Messwert in die Ablehnungs-Zeile), ist aber NIE mehr das alleinige Tor.
+        # ⛔ Den alten Ausdruck NICHT zitieren (weder Konstanten-Name noch Vergleich): die
+        #    Loesch-Anker dieser Phase verlangen die Zeichenkette 0-mal in dieser Datei.
+        #    Beschreiben statt zitieren — sonst ueberlebt sie ihre eigene Loeschung.
+        # Das neue Tor hat GENAU EINE Bedingung: die Zahl der gesprochenen Berater-Woerter.
+        # Die Zahl der Redeabschnitte wird gemessen und mitgeschrieben, entscheidet aber nichts.
+        segments = _segments_for_call(call.conversation_log_id, read_db)
+        mess_substanz = _mess_sprech_substanz(segments)
+        mess_substanz['high_conf_events'] = n_high_conf
+        mess_substanz['tor_zweig'] = None
         not_gradable_reason = None
         if call.audio_health_score is None or call.audio_health_score < AUDIO_HEALTH_GATE_THRESHOLD:
             not_gradable_reason = 'poor_audio_health'
-        elif n_high_conf < MIN_HIGH_CONFIDENCE_EVENTS:
-            not_gradable_reason = 'too_few_high_confidence_events'
+        else:
+            not_gradable_reason, mess_substanz['tor_zweig'] = _tor_sprech_substanz(mess_substanz)
     finally:
         read_db.close()
 

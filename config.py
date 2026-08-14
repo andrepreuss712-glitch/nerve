@@ -302,13 +302,30 @@ PERSONALIZED_SCRIPTS_CAP = int(os.environ.get('PERSONALIZED_SCRIPTS_CAP', 20))
 #   (NICHT 0-100!). Unter dieser Schwelle ODER NULL -> Call not_gradable (D-09): die Note
 #   wuerde auf halluziniertem STT-Muell aufsetzen (False-Confidence-Schutz, T-TAXO2-04-01).
 AUDIO_HEALTH_GATE_THRESHOLD = float(os.getenv('AUDIO_HEALTH_GATE_THRESHOLD', '0.5'))
-# MIN_HIGH_CONFIDENCE_EVENTS: D-09 "zu wenig hoch-konfidente Events" — weniger als N Events
-#   ueber der Tor-1-Konfidenzschwelle -> not_gradable. Die Zaehlung passiert SELBST aus der
-#   geladenen intent_event-Liste (confidence >= Tor-1-Gate), NICHT aus einem compute_rubric-
-#   Rueckgabefeld (FOLD 26.06.: n_high_confidence_events existiert im Engine-Dict NICHT).
-MIN_HIGH_CONFIDENCE_EVENTS = int(os.getenv('MIN_HIGH_CONFIDENCE_EVENTS', '3'))
 # SCORE_MAX_RETRIES: Merge-Job-Retry-Cap. Scheitert der rubric_score-Write
 #   (RLS/permission-denied/IntegrityError/compute_rubric-Fehler) -> gedeckelter Re-Queue
 #   (attempts+1) bis zu diesem Cap, danach Dead-Letter (laut loggen, Job aus der Queue).
 #   KEIN Silent-Drop, KEIN Endlos-Block (T-TAXO2-04-13). KEIN SCORE_SWEEP_AFTER_S (H-2 gestrichen).
 SCORE_MAX_RETRIES = int(os.getenv('SCORE_MAX_RETRIES', '3'))
+
+# ── Phase 08.23.2.METRIK-1: Substanz-Tor auf Sprech-Substanz (Requirement 1) ──
+# Post-launch tunbar ohne Code-Deploy (Punkt 12, <30s reversibel per ENV).
+# HERLEITUNG AUS DEM ZWECK, NICHT AUS DER VERTEILUNG: Eine Rueckmeldung besteht aus einem
+#   WOERTLICHEN Zitat; ein zitierfaehiger Satz sind rund 10-15 Woerter. Unter 20 Woertern gibt
+#   es schlicht nicht genug Text, um einen besten Moment UND eine Sache fuers naechste Mal
+#   herauszuziehen. Dieselbe Zahl kaeme heraus, wenn die heutigen Messwerte andere waeren.
+#   Die 87 gespeicherten Anrufe sind ausgedachte Testskripte und tragen KEINE Grenze.
+# EINE BEDINGUNG, NICHT ZWEI (Andre-Entscheidung 14.08. nach dem Cross-AI-Durchgang): Bis
+#   dahin war zusaetzlich eine Mindestzahl gesprochener Abschnitte vorgesehen. Sie ist
+#   ERSATZLOS gestrichen. Ein am Stueck gesprochener Einstieg von 100 Woertern ist bei
+#   endpointing=900 (services/deepgram_service.py) EIN Segment und waere abgewiesen worden —
+#   genau der Anruf, fuer den diese Phase gebaut wird. Eine UND-Verknuepfung beider
+#   Bedingungen liesse umgekehrt 7 Woerter in 3 Abschnitten durch, und daraus ist kein Zitat
+#   ziehbar. Die Wortzahl allein macht beides richtig. Die Zahl der Abschnitte wird weiterhin
+#   GEMESSEN und in die Ablehnungs-Zeile geschrieben - als Diagnose-Wert, nie als Bedingung.
+# FEHLERRICHTUNG BEWUSST GEWAEHLT: Ein zu STRENGES Tor ist teurer als ein zu durchlaessiges —
+#   duennes Material faengt die Anzeige bereits ehrlich ab, und verschaerfen kann man spaeter
+#   jederzeit, waehrend abgewiesene Anrufe nie eine Rueckmeldung bekommen.
+# NACHJUSTIERUNG NACH RUND 100 ECHTEN ANRUFEN, auf Basis der in der Ablehnungs-Zeile
+#   mitgeschriebenen Messwerte (Requirement 2). Das ist der Termin, nicht "irgendwann".
+MIN_BERATER_WOERTER = int(os.getenv('MIN_BERATER_WOERTER', '20'))
