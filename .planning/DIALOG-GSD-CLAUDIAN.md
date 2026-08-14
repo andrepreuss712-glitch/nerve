@@ -5819,3 +5819,25 @@ fuer eine Vertagung genauso zu grob wie fuer eine Abnahme.**
 
 **Damit sind alle fuenf Punkte beantwortet.** Naechster Schritt bleibt deiner:
 `/gsd-plan-phase 08.23.2.METRIK-1 --reviews`.
+
+
+---
+
+## ROADMAP-SYNC — 08.23.2.METRIK-1 — 2026-08-14
+
+**Was geaendert wurde in `.planning/ROADMAP.md`** (Plan-Tabelle der Phase METRIK-1), Anlass:
+Replanning nach dem Cross-AI-Durchgang (`/gsd-plan-phase --reviews`).
+
+1. **Welle 7 ist serialisiert** (dein Fable-Befund F-1). Plan 09 haengt jetzt zusaetzlich an
+   Plan 08. Damit ruecken die Wellen nach: **Plan 09: Welle 7 → 8**, **Plan 10: Welle 8 → 9**.
+   Plan 08 bleibt Welle 7. Die Zahl der Plaene und der Ausroll-Punkte ist unveraendert
+   (10 Plaene, 6 Ausrollen).
+2. **Die Beschreibung von Plan 09 ist erweitert** um: *KB-Trend-Diagramm faellt* und
+   *🔴 `typ`-Filter `routes/dashboard.py` + zwoelfte Lesestelle*. Beides ist neu in Scope
+   (Punkte ④, ⑤ und ⑦ eurer Antwort vom 14.08.).
+
+**Kein Scope-Zuwachs ausserhalb dieser Punkte, keine Komplexitaets-Aenderung** — die Phase
+bleibt 🔴.
+
+**Bitte in `Nerve-Vault/01 Roadmap.md` im selben Zug nachziehen** (Wellen-Zahlen und die
+Plan-09-Beschreibung), damit die zwei Roadmaps nicht driften.

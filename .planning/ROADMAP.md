@@ -3561,8 +3561,8 @@ Form 3 (die eine Sache wandert ins naechste Vorgespraech) — **Form 2 ist die V
 | 5 | `08.23.2.METRIK-1-06-PLAN.md` | Auswertungsseite: alte Note raus, Gap C (Training behaelt seine Note) | SPEC-R9 | — (mit Plan 07) |
 | 6 | `08.23.2.METRIK-1-07-PLAN.md` | Form 2 sichtbar: Kopfzeile, eine Sache, Aufklapper, „diesmal nichts" (Migration 0041) | SPEC-R5 | **Ausrollen 3** (Plan 05 + 06 + 07) |
 | 7 | `08.23.2.METRIK-1-08-PLAN.md` | Anruf-Fenster ohne Note + Trend-Streifen weg + beide Formel-Kopien geloescht | SPEC-R9 | **Ausrollen 4** |
-| 7 | `08.23.2.METRIK-1-09-PLAN.md` | Wochen-Dashboard + Sitzungs-Liste ohne Note; Phasen-Abnahme D-19 | SPEC-R9 | **Ausrollen 5** |
-| 8 | `08.23.2.METRIK-1-10-PLAN.md` | Anwendungs-Pruefung ohne KI + Waechter (Migration 0042) — **LETZTE WELLE, notfalls abtrennbar** | SPEC-R8 | **Ausrollen 6** |
+| 8 | `08.23.2.METRIK-1-09-PLAN.md` | Wochen-Dashboard + Sitzungs-Liste ohne Note, KB-Trend-Diagramm faellt, 🔴 `typ`-Filter `routes/dashboard.py` + zwoelfte Lesestelle; Phasen-Abnahme D-19 | SPEC-R9 | **Ausrollen 5** |
+| 9 | `08.23.2.METRIK-1-10-PLAN.md` | Anwendungs-Pruefung ohne KI + Waechter (Migration 0042) — **LETZTE WELLE, notfalls abtrennbar** | SPEC-R8 | **Ausrollen 6** |
 
 **Drei Schnitt-Regeln, die den Wellen-Plan tragen:**
 - **D-01/D-02 — EIN Ausrollen:** Zitat-Pruefer (Plan 01) und Tor-Umbau (Plan 02) gehen **zusammen** live. Plan 01 hat bewusst **keinen** Deploy-Task; der einzige `deploy.sh production` beider Plaene liegt in Plan 02 Task 3. Der verbotene Zwischenzustand „neues Tor live, Pruefer im naechsten Ausrollen" ist damit **per Bauart** ausgeschlossen.
