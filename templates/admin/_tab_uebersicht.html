@@ -28,6 +28,14 @@
     <div class="value" data-kpi="live_llm_timeouts">—</div>
     <div class="delta" id="fcd-llm-timeouts-detail">pro Prozess, Soll: 0</div>
   </div>
+  {# METRIK-1 D-23: Zitat-Pruefung des Bewerters. KEIN Soll-0-Wert — Verwuerfe sind der
+     gewollte Schutz. Der Untertitel nennt deshalb den ANTEIL, nicht nur die Zahl. Kein neues
+     CSS: dieselben .fcd-kpi-Klassen wie die Nachbar-Kacheln (Punkt 27). #}
+  <div class="fcd-kpi" id="fcd-kpi-beleg-check">
+    <h3>Verworfene Beleg-Zitate</h3>
+    <div class="value" data-kpi="beleg_verworfen">—</div>
+    <div class="delta" id="fcd-beleg-check-detail">seit Deploy, pro Prozess</div>
+  </div>
   <div class="fcd-kpi">
     <h3>Marge</h3>
     <div class="value" data-kpi="marge">—</div>

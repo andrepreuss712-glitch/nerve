@@ -73,6 +73,20 @@
           : 'pro Prozess, Soll: 0';
       }
     }
+    // METRIK-1 D-23: Zitat-Pruefung. Bewusst KEIN fcd-alarm-Toggle — Verwuerfe sind gewollt.
+    // Der Detailtext nennt geprueft/near_miss, sonst waere die nackte Zahl nicht deutbar.
+    const beleg = data.beleg_check;
+    if (beleg) {
+      const wertB   = document.querySelector('[data-kpi="beleg_verworfen"]');
+      const detailB = document.getElementById('fcd-beleg-check-detail');
+      if (wertB) wertB.textContent = String(beleg.verworfen || 0);
+      if (detailB) {
+        detailB.textContent = (beleg.geprueft || 0) > 0
+          ? (beleg.verworfen || 0) + ' von ' + beleg.geprueft + ' geprueft · '
+            + (beleg.near_miss || 0) + ' Beinahe-Treffer'
+          : 'seit Deploy, pro Prozess';
+      }
+    }
     if (data.mrr_costs_12m) FCD.renderMrrCosts(data.mrr_costs_12m);
     if (data.margin_12m) FCD.renderMarginChart(data.margin_12m);
   };

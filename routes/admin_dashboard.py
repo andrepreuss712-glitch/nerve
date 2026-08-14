@@ -192,6 +192,25 @@ def _live_timeout_payload():
     }
 
 
+def _beleg_check_payload():
+    """METRIK-1 D-23 — Zaehler der Zitat-Pruefung fuers Founder-Dashboard aufbereiten.
+
+    Aufbau wortgleich zu _cost_skip_payload. KEIN Soll-0-Wert: Verwuerfe sind der GEWOLLTE
+    Schutz vor erfundenen Zitaten. Bewusste Grenze (wie dort): RAM DIESES Prozesses, seit
+    Deploy. Der dauerhafte Wert je Anruf steht in rubric_score.payload_jsonb['beleg_check'].
+    """
+    leer = {'geprueft': 0, 'treffer': 0, 'near_miss': 0, 'verworfen': 0,
+            'compliance_beleg_verworfen': 0}
+    try:
+        from services.beleg_check_counter import get_beleg_check_counts
+        counts = get_beleg_check_counts()
+    except Exception:
+        return leer
+    ergebnis = dict(leer)
+    ergebnis.update({k: int(counts.get(k, 0) or 0) for k in leer})
+    return ergebnis
+
+
 def _mrr_from_active_orgs(db):
     """MRR-Sum: Summe plan_preis aller active Organisationen.
     Fallback auf PLANS[plan]['preis'] wenn plan_preis nicht gesetzt."""
@@ -332,6 +351,13 @@ def api_overview():
             # Prozesses (Gunicorn-Worker) — weitere Worker zaehlen eigene Staende. Deshalb das
             # Label "pro Prozess". Ein Neustart setzt ihn auf 0.
             'live_llm_timeouts': _live_timeout_payload(),
+            # METRIK-1 D-23: verworfene Beleg-Zitate der Bewerter-Beobachtungen. KEIN Soll-0-Alarm
+            # — Verwuerfe sind der GEWOLLTE Schutz vor erfundenen Zitaten. Auffaellig ist erst ein
+            # hoher ANTEIL (verworfen / geprueft): dann halluziniert das Modell oder der
+            # Pruef-Korpus stimmt nicht mehr mit dem Bewerter-Auftrag ueberein.
+            # Bewusste Grenze (wie bei cost_log_skips): RAM DIESES Prozesses, seit Deploy.
+            # Der dauerhafte Wert je Anruf steht in rubric_score.payload_jsonb['beleg_check'].
+            'beleg_check': _beleg_check_payload(),
             'mrr_costs_12m': {
                 'labels': labels_12m,
                 'mrr': mrr_12m,

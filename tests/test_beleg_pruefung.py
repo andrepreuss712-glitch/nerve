@@ -124,3 +124,34 @@ def test_zaehler_ist_absolutwert():
 
     assert zaehler1 == zaehler2
     assert zaehler1['verworfen'] == 1
+
+
+def test_prozess_zaehler_summiert():
+    """Die Anzeige-Schicht ADDIERT, waehrend der DB-Wert je Anruf ein Absolutwert ist.
+
+    Beide Semantiken stehen bewusst nebeneinander (D-23) — dieser Test nagelt die
+    Summen-Seite fest, test_zaehler_ist_absolutwert die Absolutwert-Seite.
+    """
+    from services.beleg_check_counter import (
+        get_beleg_check_counts,
+        record_beleg_check,
+        reset_beleg_check_counts,
+    )
+
+    reset_beleg_check_counts()
+    try:
+        record_beleg_check({'schema': 1, 'geprueft': 4, 'treffer': 2, 'near_miss': 1,
+                            'verworfen': 1, 'compliance_beleg_verworfen': 0})
+        record_beleg_check({'schema': 1, 'geprueft': 3, 'treffer': 1, 'near_miss': 0,
+                            'verworfen': 2, 'compliance_beleg_verworfen': 1})
+
+        summen = get_beleg_check_counts()
+
+        assert summen['geprueft'] == 7
+        assert summen['treffer'] == 3
+        assert summen['near_miss'] == 1
+        assert summen['verworfen'] == 3
+        assert summen['compliance_beleg_verworfen'] == 1
+        assert 'schema' not in summen
+    finally:
+        reset_beleg_check_counts()
