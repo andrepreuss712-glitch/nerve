@@ -160,11 +160,15 @@ def test_rubric_at_start_and_end():
 
 
 # ════════════════════════════════════════════════════════════════════════════════════
-# Test 4: Transkript-Tagging (ts_ms ASC, ewb button erhalten)
+# Test 4: Transkript-Tagging (ts_ms ASC, EWB-Knopf-Zeile GEFILTERT)
 # ════════════════════════════════════════════════════════════════════════════════════
 
 def test_transcript_tagged_in_order():
-    """Jede Transkript-Zeile traegt einen Tag [#i speaker ts_ms ms], in ts_ms ASC Reihenfolge."""
+    """Jede Transkript-Zeile traegt einen Tag [#i speaker ts_ms ms], in ts_ms ASC Reihenfolge.
+
+    METRIK-1 D-04: die EWB-Knopf-Zeile faellt aus dem Bewerter-Auftrag; die Nummerierung
+    laeuft ueber die GEFILTERTE Liste und hinterlaesst deshalb keine Luecke.
+    """
     call = _make_call()
     segments = [
         _make_segment(1, 'berater', 500,  'Guten Tag.'),
@@ -175,19 +179,22 @@ def test_transcript_tagged_in_order():
 
     _sys, user_str = jr._build_judge_prompt(call, events, _fake_profile_briefing(), segments)
 
-    # Tag-Format: [#1 berater 500ms]
+    # Tag-Format: [#1 berater 500ms]; die gefilterte Kunde-Zeile ruecken die folgenden auf.
     assert '[#1 berater 500ms]' in user_str
-    assert '[#2 kunde 1500ms]' in user_str
-    assert '[#3 berater 2500ms]' in user_str
+    assert '[#2 berater 2500ms]' in user_str
+    assert '[#3' not in user_str
 
-    # ewb-button-Marker bleibt im Text
-    assert '*ewb button*' in user_str
+    # METRIK-1 D-04: der EWB-Marker ist aus dem Bewerter-Auftrag GEFILTERT (Vertragswechsel 2026-08-13).
+    assert '*ewb button*' not in user_str, "D-04: die EWB-Knopf-Zeile darf nicht im Bewerter-Auftrag stehen"
 
-    # Reihenfolge: Tag 1 vor Tag 2 vor Tag 3
+    # Gepaarter Existenz-Anker: "nicht gefunden" darf nicht von "nichts gelesen" kommen.
+    assert '[#1 berater' in user_str
+    assert user_str.count('[#') >= 2
+
+    # Reihenfolge: Tag 1 vor Tag 2
     pos1 = user_str.index('[#1 berater 500ms]')
-    pos2 = user_str.index('[#2 kunde 1500ms]')
-    pos3 = user_str.index('[#3 berater 2500ms]')
-    assert pos1 < pos2 < pos3
+    pos2 = user_str.index('[#2 berater 2500ms]')
+    assert pos1 < pos2
 
 
 # ════════════════════════════════════════════════════════════════════════════════════

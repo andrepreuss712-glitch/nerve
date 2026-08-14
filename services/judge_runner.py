@@ -33,6 +33,7 @@ from database.models import TranscriptSegment
 from services.claude_service import claude_client
 from services.judge_dimensions import DIMENSIONS, DIMENSIONS_VERSION, dimensions_for_prompt
 from services.prompt_pipeline import build_profile_context
+from services.transkript_renderer import render_transkript
 
 # ── Modell-Konstante (ENV-Override, Punkt 12) ────────────────────────────────────
 # MODEL_JUDGE: ENV-Override fuer den Verhaltens-Judge. Default: MODEL_POSTCALL_ANALYSIS (Sonnet).
@@ -241,16 +242,14 @@ def _build_judge_prompt(call, events, profile_briefing: str, segments) -> tuple:
         '',
     ]
 
-    # (2) Getaggtes Transkript in Sprech-Reihenfolge (ts_ms ASC)
-    user_lines.append('== TRANSKRIPT (chronologisch, ts_ms ASC) ==')
-    if segments:
-        for i, seg in enumerate(segments, start=1):
-            speaker = getattr(seg, 'speaker', 'unbekannt')
-            ts_ms = getattr(seg, 'ts_ms', 0)
-            text = getattr(seg, 'text', '')
-            user_lines.append(f'[#{i} {speaker} {ts_ms}ms] {text}')
-    else:
-        user_lines.append('(Keine Transkript-Segmente verfuegbar)')
+    # (2) Getaggtes Transkript in Sprech-Reihenfolge (ts_ms ASC), OHNE die EWB-Knopf-Zeilen.
+    # METRIK-1 D-04: Die Pseudo-Zeile "<typ> *ewb button*" traegt speaker=1 (Kunde) und ist
+    # damit im Cold-Call die einzige "Kunden-Aeusserung" — der Bewerter haelt einen Knopfdruck
+    # sonst fuer eine echte Aussage und zitiert ihn. Gefiltert wird an genau ZWEI Lese-Stellen
+    # (hier + Pruef-Korpus); die Nutzer-Anzeige routes/learning.py:628-637 bleibt bewusst
+    # ungefiltert (D-03/D-04: die Zeile soll beim Lesen/Exportieren sichtbar bleiben).
+    # Die Kopfzeile kommt AUS dem Renderer — hier darf sie nicht noch einmal stehen.
+    user_lines.append(render_transkript(segments, mit_tags=True))
     user_lines.append('')
 
     # (3) NERVE-Erkennungen / Aussetzer als kompakte Marker-Liste
