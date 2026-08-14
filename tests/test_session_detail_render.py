@@ -178,6 +178,62 @@ def test_session_detail_leere_beobachtungen_zeigt_hinweis(client, db_from_client
     )
 
 
+# ── METRIK-1 Plan 01 Task 4: Compliance-Vorwurf nur MIT pruefbarem Beleg ──────────────────
+# Andre-Entscheidung 14.08.: Ohne pruefbaren Beleg erscheint AUSSCHLIESSLICH der neutrale Satz —
+# kein Verdikt, auch nicht abgeschwaecht. Das `verletzt`-Flag bleibt gesetzt (Sicherheits-Hard-Gate),
+# es wird nur nicht mehr als Anschuldigung angezeigt.
+
+NEUTRALER_SATZ = 'Dieses Gespräch wurde gemeldet und wird von einem NERVE-Mitarbeiter geprüft.'
+VERDIKT_WORT = 'Belästigung'
+
+
+def test_compliance_ohne_beleg_rendert_nur_den_neutralen_satz(client, db_from_client, tracker):
+    """`verletzt=True` ohne Beleg-Zitat: nur der neutrale Satz, KEIN Vorwurf.
+
+    Gegen den Stand vor Task 4 rot: dort haengt nur das Blockquote am Beleg, der Verdikt-Text
+    erscheint auch ohne Zitat."""
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+        '_compliance': {'verletzt': True, 'beleg_zitat': ''},
+    })
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    html = r.get_data(as_text=True)
+
+    # Gepaarter Existenz-Anker: "Vorwurf nicht gefunden" darf nicht von "Seite nicht gerendert" kommen.
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    assert 'KI-Einschätzung' in html, 'Die Seite wurde gar nicht bis zum Panel gerendert.'
+
+    assert NEUTRALER_SATZ in html, 'Der neutrale Satz fehlt — das Versprechen wird nicht angezeigt.'
+    assert VERDIKT_WORT not in html, (
+        'Der harte Verdikt-Text erscheint ohne pruefbaren Beleg — genau das ist der Vorwurf, '
+        'den die Entscheidung vom 14.08. entfernt.'
+    )
+
+
+def test_compliance_mit_beleg_zeigt_den_alarm_unveraendert(client, db_from_client, tracker):
+    """Mit pruefbarem Beleg bleibt der Alarm-Kasten unveraendert — die Regel gegen ein Zuviel."""
+    dim_key = DIMENSIONS[0]['key']
+    comp_zitat = 'Nein danke, bitte rufen Sie hier nicht mehr an.'
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+        '_compliance': {'verletzt': True, 'beleg_zitat': comp_zitat},
+    })
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    html = r.get_data(as_text=True)
+
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    assert VERDIKT_WORT in html, 'Der Verdikt-Text fehlt, obwohl ein pruefbarer Beleg vorliegt.'
+    assert comp_zitat in html, 'Das geprüfte Compliance-Zitat wird nicht angezeigt.'
+    assert NEUTRALER_SATZ not in html, (
+        'Der neutrale Ersatz-Satz erscheint, obwohl ein Beleg vorliegt — der Zweig greift zu breit.'
+    )
+
+
 # ── Option 3, Haelfte 1: Form-Garantie an der Quelle ──────────────────────────────────────
 def test_session_detail_haelt_kaputte_jsonb_form_aus(client, db_from_client, tracker):
     """`observations_jsonb` ist JSONB — die Form ist in der DB NIRGENDS erzwungen.

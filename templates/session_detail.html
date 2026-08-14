@@ -151,14 +151,22 @@
       {# (e) Beobachtungen + Beleg-Zitate je Dimension. #}
 
       {# Compliance VOR Coaching (Cross-AI-Finding 2): PROMINENT oben bei Verstoss. #}
-      {% if compliance_verletzt %}
+      {% if compliance_verletzt and compliance_beleg %}
         <div class="n-compliance-alert" role="alert">
           <div class="n-compliance-alert-title">Achtung: Compliance-Hinweis</div>
           <div class="n-compliance-alert-body">Hier wurde nach mehrfacher klarer Ablehnung weiter gedrückt — das ist kein Verkauf, sondern Belästigung. Compliance geht vor Coaching.</div>
-          {% if compliance_beleg %}
-            <blockquote class="n-observation-quote">{{ compliance_beleg }}</blockquote>
-          {% endif %}
+          <blockquote class="n-observation-quote">{{ compliance_beleg }}</blockquote>
         </div>
+      {% elif compliance_verletzt %}
+        {# METRIK-1 / Andre-Entscheidung 14.08.: Ohne pruefbaren Beleg erscheint AUSSCHLIESSLICH
+           dieser Satz. Kein Verdikt, kein Vorwurf, auch nicht abgeschwaecht — das Modell hat
+           hier nachweislich ein Zitat erfunden, und dann ist auch der Befund selbst nicht
+           belegt. Das Flag bleibt trotzdem gesetzt (Sicherheits-Hard-Gate), es wird nur nicht
+           mehr als Anschuldigung angezeigt.
+           ⚠ Dieser Satz ist ein VERSPRECHEN: es muss wirklich jemand draufschauen. Die
+           Einloesung ist der aufrufbare Einzelfall in der Gruender-Sicht — gebaut in Task 6
+           dieses Plans. #}
+        <p class="n-observation-empty">Dieses Gespräch wurde gemeldet und wird von einem NERVE-Mitarbeiter geprüft.</p>
       {% endif %}
 
       {# Dimensionen (feste Reihenfolge aus DIMENSIONS — '_compliance' wird nicht mitgegeben). #}
