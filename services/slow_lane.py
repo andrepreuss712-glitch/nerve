@@ -955,6 +955,11 @@ def _call_end_merge(item) -> None:
             'events': events_w,
             'db': write_db,
             'high_conf': n_high_conf,
+            # METRIK-1 Requirement 2: die Messwerte, MIT DENEN das Tor entschieden hat, werden
+            # durchgereicht statt in _judge_step neu gezaehlt. Zweimal zaehlen hiesse: der
+            # gespeicherte Wert koennte vom Wert abweichen, der die Ablehnung ausgeloest hat —
+            # und genau dieser Wert ist die Grundlage der Nachjustierung nach ~100 echten Anrufen.
+            'mess_substanz': mess_substanz,
             'not_gradable_reason': not_gradable_reason,
             'results': {},
         }

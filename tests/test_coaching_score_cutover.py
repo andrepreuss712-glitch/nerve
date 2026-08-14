@@ -15,7 +15,11 @@ Beweist Runtime-Verhalten (CLAUDE.md Test-Qualitaets-Regel — KEIN Source-Prese
   F-07/D-09  Audio-Gate VOR dem Judge-Call; high-conf-Events SELBST aus der events-Liste gezaehlt
              (confidence >= Tor-1), NICHT aus dem Engine-Dict.
         - audio_health_score < Schwelle ODER NULL  -> status='not_gradable', KEIN Judge-Call
-        - < MIN_HIGH_CONFIDENCE_EVENTS hoch-konf.  -> status='not_gradable', KEIN Judge-Call
+        - zu wenig Sprech-Substanz (METRIK-1 D-22)  -> status='not_gradable', KEIN Judge-Call
+          (die fruehere Drei-Momente-Schwelle auf den hoch-konfidenten Einwand-Momenten ist
+           entfallen; die Zahl bleibt als Messwert in der Ablehnungs-Zeile)
+        ⛔ Der alte Konstanten-Name wird hier bewusst nicht genannt — er ist in dieser Phase
+           restlos geloescht und darf als Zeichenkette nirgends mehr auftauchen.
 
   M-4  set_current_tenant(call.tenant_id) VOR dem Write; clear_current_tenant() im finally
        (auch bei Exception — Cross-Tenant-Leak-Schutz). tenant_id NULL -> skip + lautes Log.
@@ -109,8 +113,20 @@ class _MergeFakeSession:
         pass
 
 
+def _make_segment(speaker='berater', word_count=15, idx=1, ts_ms=1000):
+    """transcript_segments-Zeilen-Attrappe (Muster tests/test_judge_runner.py::_make_segment,
+    erweitert um die ZEITSTEMPEL-1-Spalten). speaker traegt die DB-Form (String)."""
+    return SimpleNamespace(id=idx, ts_ms=ts_ms, speaker=speaker, text='Guten Tag.',
+                           word_count=word_count, start_ms=None, end_ms=None)
+
+
+def _durchlass_segmente():
+    """Zwei Berater-Zeilen mit je 15 Woertern => 30 >= Schwelle => das Tor laesst durch."""
+    return [_make_segment(idx=1), _make_segment(idx=2, ts_ms=2000)]
+
+
 def _install_merge_doubles(monkeypatch, call, *, pending=0, events=None,
-                           high_conf=5, sessions=None):
+                           high_conf=5, sessions=None, segments=None):
     """Verkabelt die DB-Helfer von _call_end_merge mit Fakes. `sessions` ist eine Liste,
     in die jede get_session()-Instanz gepusht wird (Reihenfolge: read_db, write_db)."""
     events = events if events is not None else [_make_event(call_id=call.id)]
@@ -125,6 +141,14 @@ def _install_merge_doubles(monkeypatch, call, *, pending=0, events=None,
     monkeypatch.setattr(sl, '_pending_events', lambda cid, db: pending)
     monkeypatch.setattr(sl, '_events_for_call', lambda cid, db: events)
     monkeypatch.setattr(sl, '_count_high_confidence', lambda evs, db: high_conf)
+    # METRIK-1 Req 1 (D-22): der Merge laedt jetzt zusaetzlich die Transkript-Segmente fuer das
+    # Sprech-Substanz-Tor. Ohne dieses Doppel liefe die Abfrage gegen _MergeFakeSession und
+    # JEDER Merge-Test, der den Tor-Block erreicht, wuerde daran haengen — nicht nur der eine
+    # umgestellte Test.
+    # Voreinstellung: zwei Berater-Zeilen mit je 15 Woertern => das Tor laesst durch. So bleiben
+    # alle Bestands-Tests, die das Tor gar nicht meinen, unveraendert gruen.
+    monkeypatch.setattr(sl, '_segments_for_call',
+                        lambda clid, db: segments if segments is not None else _durchlass_segmente())
     return sess_list
 
 
@@ -226,16 +250,42 @@ def test_audio_gate_low_health_marks_not_gradable(monkeypatch):
     assert seen.get('not_gradable_reason') == 'poor_audio_health'
 
 
-def test_too_few_high_confidence_events_marks_not_gradable(monkeypatch):
-    # Gutes Audio, aber nur 1 hoch-konfidentes Event (< MIN_HIGH_CONFIDENCE_EVENTS=3).
+def test_too_little_speech_marks_not_gradable(monkeypatch):
+    # METRIK-1 Req 1 / D-22 (Vertragswechsel 2026-08-13): Das alte Einwand-Momente-Tor — die
+    # Mindest-Schwelle auf der Zahl hoch-konfidenter Momente — ist ENTFALLEN. Es sperrte 83 %
+    # aller Anrufe aus, weil im Kaltakquise-Modus die automatische Einwand-Erkennung kanonisch
+    # abgeschaltet ist. An seiner Stelle steht das Sprech-Substanz-Tor. n_high_conf bleibt ein
+    # MESSWERT in der Ablehnungs-Zeile, ist aber nie mehr das Tor: high_conf=1 allein lehnt
+    # NICHT mehr ab.
+    # ⛔ Konstanten-Name und Vergleich werden hier bewusst NICHT zitiert — der Loesch-Anker
+    #    dieser Phase verlangt sie 0-mal, auch in tests/.
     call = _make_call(audio_health_score=0.9)
-    _install_merge_doubles(monkeypatch, call, pending=0, high_conf=1)
+    _install_merge_doubles(monkeypatch, call, pending=0, high_conf=1,
+                           segments=[_make_segment(speaker='berater', word_count=3)])
     seen = {}
     monkeypatch.setattr(sl, '_CALL_END_MERGE_STEPS', [lambda ctx: seen.update(ctx)])
 
     sl._call_end_merge({'call_id': call.id})
 
-    assert seen.get('not_gradable_reason') == 'too_few_high_confidence_events'
+    assert seen.get('not_gradable_reason') == 'too_little_speech'
+    # Gepaarter Existenz-Anker: der Tor-Block lief ueberhaupt und der Messwert steht daneben —
+    # sonst waere "richtiger Grund" nicht von "Merge gar nicht gefeuert" zu unterscheiden.
+    assert seen.get('mess_substanz', {}).get('high_conf_events') == 1
+
+
+def test_wenig_hoch_konfidente_events_lehnen_NICHT_mehr_ab(monkeypatch):
+    # Das eigentliche Abnahme-Kriterium von Requirement 1: 0 Momente, aber Sprech-Substanz da
+    # -> der Anruf wird BEWERTET. Ohne diesen Test belegt der Test darueber nur, dass irgendein
+    # Grund gesetzt wird, nicht dass das alte Tor wirklich tot ist.
+    call = _make_call(audio_health_score=0.9)
+    _install_merge_doubles(monkeypatch, call, pending=0, high_conf=0)   # Voreinstellung laesst durch
+    seen = {}
+    monkeypatch.setattr(sl, '_CALL_END_MERGE_STEPS', [lambda ctx: seen.update(ctx)])
+
+    sl._call_end_merge({'call_id': call.id})
+
+    assert seen.get('not_gradable_reason') is None
+    assert seen.get('mess_substanz', {}).get('tor_zweig') == 'genug_woerter'
 
 
 def test_count_high_confidence_uses_events_list(monkeypatch):
