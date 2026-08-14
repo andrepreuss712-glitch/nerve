@@ -96,7 +96,13 @@ echo "[triage] Dump-Treue-Katalog-Gate OK: crm-Policies=$POLICIES, FORCE=$FORCED
 ANON_PW=$(sudo grep ^NERVE_ANON_WORKER_DB_PASSWORD= /etc/nerve/ionos-s3.env | cut -d= -f2-)
 echo "[triage] pytest (targeted) gegen DATABASE_URL=postgresql://nerve_app@/$TEST_DB (+ 4 Test-DSNs)"
 echo "[triage] Argumente: $*"
-sudo -u nerve_app env ANON_PW="$ANON_PW" TEST_DB="$TEST_DB" bash -c '
+# SECRET_KEY: Wegwerf-Wert pro Lauf — 1:1 aus deploy.sh:214 uebernommen (METRIK-1 Plan 01,
+# Deviation Rule 3). Ohne ihn bricht JEDER Triage-Lauf schon im conftest-Setup mit
+# "RuntimeError: [NERVE] SECRET_KEY is insecure" ab (app.py:45) — ein Werkzeug-Ausfall, der wie
+# ein rotes Tor aussieht und damit jeden ROT-vor-GRUEN-Beleg zur Fehlmessung macht.
+# app.py:44 prueft NUR Gleichheit gegen den Default 'dev-secret-change-me' -> jeder andere
+# String besteht. Der ECHTE Schluessel bleibt bewusst draussen aus dem Testpfad.
+sudo -u nerve_app env ANON_PW="$ANON_PW" TEST_DB="$TEST_DB" SECRET_KEY="triage-throwaway-${RANDOM}${RANDOM}${RANDOM}" bash -c '
   cd /opt/nerve/app && \
   DATABASE_URL="postgresql://nerve_app@/${TEST_DB}" \
   TEST_DATABASE_URL="postgresql://nerve_app@/${TEST_DB}" \
