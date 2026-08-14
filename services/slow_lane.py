@@ -485,6 +485,108 @@ def _upsert_rubric_score(db, *, call_id, conversation_log_id, session_mode, tena
     db.execute(stmt)
 
 
+def _pruefe_belege(observations: dict, pruef_korpus: str) -> tuple:
+    """METRIK-1 Req 3: prueft JEDES Beleg-Zitat gegen den Pruef-Korpus, BEVOR es gespeichert wird.
+
+    Drei Wege (SPEC Req 3, services/beleg_check.py liefert genau diese drei Befunde):
+      'treffer'   -> Beobachtung uebernehmen.
+      'near_miss' -> Beobachtung uebernehmen UND zaehlen (kleine Abweichungen entstehen schon
+                     durch die Schwaerzung — [PERSON_A] steht fuer zwei gesprochene Woerter).
+      'no_match'  -> die GANZE Beobachtung faellt weg, nicht nur das Zitat.
+
+    Sonderfall '_compliance' (reservierter Schluessel, judge_runner.py:317-323): Bei 'no_match'
+    wird NUR das Zitat geleert, das Flag `verletzt` BLEIBT stehen und wird getrennt gezaehlt.
+    Begruendung: `_compliance` ist ein Sicherheits-Hard-Gate (L3-Safety). Ein Zitat-Fehler darf
+    einen Belaestigungs-Befund nicht verschwinden lassen — das waere die teure Fehlerrichtung.
+    Das Sicherheits-Hard-Gate ueberlebt einen Zitat-Fehler.
+
+    Baut das Ergebnis NEU auf (Muster judge_runner._parse_judge_output:293-326), statt am
+    LLM-Dict herumzuflicken. Iteriert ueber DIMENSIONS statt ueber observations.keys(), damit
+    Unterstrich-Schluessel und unbekannte Keys nicht versehentlich als Dimension durchlaufen.
+
+    Args:
+        observations: observations_jsonb aus run_behavior_judge.
+        pruef_korpus: transkript_renderer.render_transkript(segments, mit_tags=False).
+
+    Returns:
+        (observations_geprueft: dict, zaehler: dict)
+        zaehler = {'schema': 1, 'geprueft': int, 'treffer': int, 'near_miss': int,
+                   'verworfen': int, 'compliance_beleg_verworfen': int}
+    """
+    from services.beleg_check import beleg_im_transkript
+    from services.judge_dimensions import DIMENSIONS
+
+    zaehler = {'schema': 1, 'geprueft': 0, 'treffer': 0, 'near_miss': 0,
+               'verworfen': 0, 'compliance_beleg_verworfen': 0}
+    quelle = observations if isinstance(observations, dict) else {}
+    geprueft = {}
+
+    dim_keys = set()
+    for dim in DIMENSIONS:
+        key = dim['key']
+        dim_keys.add(key)
+        roh = quelle.get(key)
+        neue_liste = []
+        if not isinstance(roh, list):
+            # Form-Garantie an der Entstehungsstelle (Haltung wie routes/dashboard.py:961-992):
+            # eine Nicht-Liste ist kein Container fuer Beobachtungen -> verworfen.
+            if roh is not None:
+                zaehler['verworfen'] += 1
+            geprueft[key] = neue_liste
+            continue
+        for eintrag in roh:
+            if not isinstance(eintrag, dict):
+                zaehler['verworfen'] += 1
+                continue
+            zitat = eintrag.get('beleg_zitat') or ''
+            zaehler['geprueft'] += 1
+            if not zitat:
+                # Leeres Zitat: beleg_check.py:52-53 liefert dafuer ohnehin 'no_match'.
+                zaehler['verworfen'] += 1
+                continue
+            _ok, _score, befund = beleg_im_transkript(zitat, pruef_korpus)
+            if befund == 'no_match':
+                zaehler['verworfen'] += 1
+                continue
+            if befund == 'near_miss':
+                zaehler['near_miss'] += 1
+            else:
+                zaehler['treffer'] += 1
+            neue_liste.append({
+                'beobachtung': eintrag.get('beobachtung', ''),
+                'beleg_zitat': zitat,
+            })
+        geprueft[key] = neue_liste
+
+    # ── '_compliance': Flag bleibt, nur das Zitat faellt (Sicherheits-Hard-Gate) ─────────────
+    comp = quelle.get('_compliance')
+    if isinstance(comp, dict):
+        verletzt = bool(comp.get('verletzt', False))
+        comp_zitat = comp.get('beleg_zitat') or ''
+        neues_zitat = comp_zitat
+        if verletzt and comp_zitat:
+            zaehler['geprueft'] += 1
+            _ok, _score, befund = beleg_im_transkript(comp_zitat, pruef_korpus)
+            if befund == 'no_match':
+                neues_zitat = ''
+                zaehler['compliance_beleg_verworfen'] += 1
+            elif befund == 'near_miss':
+                zaehler['near_miss'] += 1
+            else:
+                zaehler['treffer'] += 1
+        geprueft['_compliance'] = {'verletzt': verletzt, 'beleg_zitat': neues_zitat}
+    elif comp is not None:
+        geprueft['_compliance'] = comp
+
+    # ── Vorwaerts-Vertraeglichkeit: unbekannte (Unterstrich-)Schluessel unveraendert durch ───
+    for key, wert in quelle.items():
+        if key in dim_keys or key == '_compliance':
+            continue
+        geprueft[key] = wert
+
+    return geprueft, zaehler
+
+
 def _judge_step(ctx) -> None:
     """Registrierter Call-Ende-Schritt (run_call_end_steps): stoesst den LLM-Verhaltens-Judge an
     + UPSERTet observations_jsonb / ratings_jsonb in rubric_score. Laeuft INNERHALB der
@@ -531,19 +633,42 @@ def _judge_step(ctx) -> None:
     # rubric_engine.py + compute_rubric bleiben im Baum als Foundation — kein lebender Aufruf.
     result = run_behavior_judge(call, events, db)
 
+    # ── METRIK-1 Req 3 (D-05): Zitat-Pruefung VOR dem Speichern ──────────────────────────────
+    # Der Pruef-Korpus entsteht aus DERSELBEN Segment-Liste und DEMSELBEN EWB-Filter wie der
+    # Bewerter-Auftrag (transkript_renderer). Zwei getrennte Renderings wuerden hausgemachte
+    # Beinahe-Treffer erzeugen (SPEC NACHTRAG 2 Punkt 8). Die Sortierung ist zeichengleich zu
+    # judge_runner.py:370-375 — bewusst, damit derselbe Korpus entsteht.
+    from services.transkript_renderer import render_transkript
+    from services.beleg_check_counter import record_beleg_check
+
+    _segments = (db.query(TranscriptSegment)
+                   .filter(TranscriptSegment.conversation_log_id == call.conversation_log_id)
+                   .order_by(TranscriptSegment.ts_ms.asc(), TranscriptSegment.id.asc())
+                   .all())
+    _korpus = render_transkript(_segments, mit_tags=False)
+    _observations, _beleg_zaehler = _pruefe_belege(result.get('observations_jsonb') or {}, _korpus)
+    record_beleg_check(_beleg_zaehler)
+
     # ── UPSERT: Beobachtungen + interne Auspraegung (KEINE Zahl) unter M-4-GUC ──────────────
     # observations_jsonb enthaelt auch den '_compliance'-Hard-Gate-Schluessel (Finding 2).
     # Laeuft unter der bestehenden GUC-Klammer des Merge-Gates (M-4, gesetzt von _call_end_merge).
+    #
+    # D-23 UPSERT-Semantik: _upsert_rubric_score fuehrt 'payload_jsonb' in update_cols
+    # (:473-477) -> der excluded-Wert der Spalte ERSETZT die Zeile vollstaendig. Der Zaehler
+    # wird deshalb als ABSOLUTWERT DES LAUFS geschrieben. Ein jsonb-Inkrement waere hier falsch:
+    # damit zaehlte ein Wiederholungslauf desselben Anrufs doppelt. "Nicht doppelt zaehlen" ist
+    # so per Bauart erfuellt, nicht per Sorgfalt.
     _upsert_rubric_score(
         db,
         call_id=call.id,
         conversation_log_id=call.conversation_log_id,
         session_mode=mode_key,
         tenant_id=tenant_id,
-        observations=result.get('observations_jsonb') or {},
+        observations=_observations,
         ratings=result.get('ratings_jsonb') or {},
         dimensions_version=result.get('dimensions_version'),
         status=result.get('status') or _STATUS_JUDGED,
+        payload={'beleg_check': _beleg_zaehler},
     )
     db.commit()
 
