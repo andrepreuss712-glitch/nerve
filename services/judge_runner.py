@@ -12,6 +12,8 @@ EIN Sonnet-Tool-Use-Call am Call-Ende (async, Slow Lane — Latenz egal, Punkt 2
     compliance_beleg_zitat im Schema (NICHT in einer Dimension, nicht aufmittelbar).
   - Parse -> observations_jsonb {dim:[{beobachtung,beleg_zitat}]} + ratings_jsonb {dim: auspraegung}
     + observations_jsonb['_compliance'] = {verletzt:bool, beleg_zitat:str}.
+  - METRIK-1 Req 5: zusaetzlich observations_jsonb['_kopfzeile'] = {schema, beobachtung, beleg_zitat}
+    — der "beste Moment", zwei zusaetzliche Felder im SELBEN Tool-Schema, KEIN zweiter Aufruf.
   - KEIN DB-Write in dieser Funktion — UPSERT im GUC-geklammerten Slow-Lane-Schritt (Task 2).
 
 Bau-Regel 1 (NERVE TAXO-Geruest §5): KEIN LLM in der Live/Fast-Lane. Dieser Judge laeuft
@@ -107,6 +109,36 @@ def _build_dim_observation_schema() -> dict:
         ),
     }
 
+    # ── METRIK-1 Requirement 5: die belegte KOPFZEILE ("bester Moment"). ─────────────────────
+    # Zwei ZUSAETZLICHE FELDER im BESTEHENDEN Schema — KEIN zweiter LLM-Aufruf, gleiche
+    # Wartezeit (SPEC Requirement 5, Constraint Latenz/Punkt 25).
+    # Das Modell liefert NUR die Kopfzeile. Die "eine Sache fuers naechste Mal" berechnet der
+    # CODE (D-07/D-08, services/fokus_katalog.py) — Modelle zaehlen notorisch schlecht, und ein
+    # erzwungenes Schema wuerde bei einem guten Anruf einen Verstoss ERFINDEN.
+    #
+    # WARUM `required` hier vertretbar ist — und wo der Unterschied zur "einen Sache" liegt:
+    # Bei der "einen Sache" waere ein Pflichtfeld toedlich, weil ein guter Anruf KEINEN Verstoss
+    # hat und das Modell einen erfinden muesste. Ein BESTER MOMENT existiert dagegen in jedem
+    # Gespraech, das ueberhaupt das Substanz-Tor passiert hat. Und der Schutz greift hinten: das
+    # Beleg-Zitat laeuft durch slow_lane._pruefe_belege — ein erfundenes Zitat loescht die ganze
+    # Kopfzeile, und die Anzeige hat dafuer einen ehrlichen Zweig (Plan 07).
+    props['headline_observation'] = {
+        'type': 'string',
+        'description': (
+            'Der beste Moment des Gespraechs in EINEM Satz — was der Berater konkret gut gemacht '
+            'hat. KEINE Note, KEINE Zahl, KEIN Lob ohne Beleg. Wenn nichts hervorsticht: der '
+            'sachlich staerkste beobachtbare Moment, nicht erfundenes Lob.'
+        ),
+    }
+    props['headline_beleg_zitat'] = {
+        'type': 'string',
+        'description': (
+            'WOERTLICHES Zitat aus dem Transkript, das den besten Moment belegt (exakter '
+            'Wortlaut). MUSS im Transkript vorkommen — kein Paraphrasieren, kein Erfinden. '
+            'Ein Zitat, das nicht im Transkript steht, wird serverseitig verworfen.'
+        ),
+    }
+
     return props
 
 
@@ -119,7 +151,9 @@ JUDGE_TOOL = {
     'input_schema': {
         'type': 'object',
         'properties': _build_dim_observation_schema(),
-        'required': [d['key'] for d in DIMENSIONS] + ['compliance_violation', 'compliance_beleg_zitat'],
+        'required': ([d['key'] for d in DIMENSIONS]
+                     + ['compliance_violation', 'compliance_beleg_zitat',
+                        'headline_observation', 'headline_beleg_zitat']),
     },
 }
 
@@ -264,6 +298,10 @@ def _build_judge_prompt(call, events, profile_briefing: str, segments) -> tuple:
         'Befuelle das Werkzeug record_observations mit deinen Beobachtungen. '
         'Pro Dimension: woertliches Beleg-Zitat (EXAKT aus dem Transkript) -> Beobachtung -> Auspraegung. '
         'Pruefe SEPARAT das Compliance-Hard-Gate (compliance_violation). '
+        # METRIK-1 Requirement 5: die Kopfzeile im SELBEN Auftrag — kein zweiter Aufruf.
+        # Kein Wort ueber einen Katalog und kein Anruf-Ausgang: der Beobachter bleibt blind.
+        'Nenne zusaetzlich in headline_observation den BESTEN Moment des Gespraechs in einem Satz, '
+        'mit dem woertlichen Beleg in headline_beleg_zitat. '
         'KEINE Gesamtnote. KEINE Zahl. NUR Beobachtungen mit Belegen.'
     )
 
@@ -321,6 +359,16 @@ def _parse_judge_output(tool_input: dict) -> tuple:
         'beleg_zitat': compliance_beleg,
     }
     # '_compliance' wird NICHT in ratings geschrieben (kein Mittelwert-Beitrag — Hard-Gate-Semantik)
+
+    # METRIK-1 Requirement 5: Kopfzeile als eigener Unterstrich-Schluessel — NICHT in ratings
+    # (keine Auspraegung, keine Note) und NICHT in einer Dimension (sie steht ueber allen).
+    # 'schema' versioniert NUR diesen Teilblock; DIMENSIONS_VERSION bleibt unveraendert, weil
+    # die vier Dimensionen selbst sich nicht geaendert haben.
+    observations['_kopfzeile'] = {
+        'schema': 1,
+        'beobachtung': tool_input.get('headline_observation', '') or '',
+        'beleg_zitat': tool_input.get('headline_beleg_zitat', '') or '',
+    }
 
     return observations, ratings
 
