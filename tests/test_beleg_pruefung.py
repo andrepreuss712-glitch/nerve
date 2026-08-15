@@ -226,6 +226,56 @@ def test_zitat_ueber_segmentgrenze_wird_verworfen():
     assert zaehler['treffer'] == 0
 
 
+# ── Plan 05 Task 2: die Kopfzeile ist ein Zitat wie jedes andere ──────────────────────────
+
+def test_kopfzeile_mit_erfundenem_zitat_faellt_weg():
+    """no_match -> die GANZE Kopfzeile faellt weg, nicht nur ihr Zitat.
+
+    Eine Kopfzeile ohne Beleg waere genau das Lob ohne Beleg, das das Produkt nicht geben darf.
+    Bewusst ANDERS als bei '_compliance': dort bleibt das Flag stehen (Sicherheits-Hard-Gate),
+    eine Kopfzeile ist Lob — die darf verschwinden."""
+    korpus = 'Guten Tag, hier ist Anna. Ich rufe wegen Ihrer Anfrage an.'
+    observations = _obs(beleg_zitat='Ich rufe wegen Ihrer Anfrage an.')   # dieser Beleg traegt
+    observations['_kopfzeile'] = {
+        'schema': 1,
+        'beobachtung': 'Der Berater hat den Einwand ruhig gespiegelt.',
+        'beleg_zitat': 'Wir liefern morgen nach Sizilien',                # erfunden
+    }
+
+    geprueft, zaehler = _pruefe_belege(observations, _pruef_arg(korpus))
+
+    assert geprueft['_kopfzeile']['beobachtung'] == ''
+    assert geprueft['_kopfzeile']['beleg_zitat'] == ''
+    # Der Schluessel bleibt IMMER vorhanden (leer statt fehlend) — der Anzeige-Pfad prueft auf
+    # den leeren String, nicht auf einen fehlenden Schluessel.
+    assert geprueft['_kopfzeile']['schema'] == 1
+    # Gepaarter Existenz-Anker: die Dimension mit echtem Beleg steht unveraendert daneben.
+    assert len(geprueft[DIM]) == 1
+    assert zaehler['treffer'] == 1
+    assert zaehler['verworfen'] == 1      # +1 gegenueber demselben Lauf ohne Kopfzeile
+    assert zaehler['geprueft'] == 2       # Dimension + Kopfzeile
+
+
+def test_kopfzeile_mit_echtem_zitat_bleibt():
+    """Ein woertliches Zitat aus dem Korpus laesst die Kopfzeile stehen und zaehlt als Treffer."""
+    korpus = 'Guten Tag, hier ist Anna. Ich rufe wegen Ihrer Anfrage an.'
+    kopf_zitat = 'Guten Tag, hier ist Anna.'
+    observations = _obs(beleg_zitat='Ich rufe wegen Ihrer Anfrage an.')
+    observations['_kopfzeile'] = {
+        'schema': 1,
+        'beobachtung': 'Klarer Einstieg mit Namen.',
+        'beleg_zitat': kopf_zitat,
+    }
+
+    geprueft, zaehler = _pruefe_belege(observations, _pruef_arg(korpus))
+
+    assert geprueft['_kopfzeile']['beobachtung'] == 'Klarer Einstieg mit Namen.'
+    assert geprueft['_kopfzeile']['beleg_zitat'] == kopf_zitat
+    assert zaehler['treffer'] == 2        # +1 gegenueber demselben Lauf ohne Kopfzeile
+    assert zaehler['verworfen'] == 0
+    assert zaehler['geprueft'] == 2
+
+
 def test_zitat_ueber_benachbarte_segmente_bleibt():
     """Die Regel gegen ein Zuviel: ueber eine BENACHBARTE Naht bleibt das Zitat stehen.
 
