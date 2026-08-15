@@ -65,7 +65,8 @@ def tracker(db_from_client):
         cleanup_rows(db_from_client, rest)
 
 
-def _seed_session(db, tracker, observations, outcome='meeting_booked'):
+def _seed_session(db, tracker, observations, outcome='meeting_booked',
+                  status='scored', payload=None):
     """Legt Nutzer + ConversationLog + Call + live-rubric_score an und gibt (user, sid) zurueck.
 
     `outcome` ist seit METRIK-1 D-20 ein **Test-Parameter**: `None` bildet einen Anruf ohne
@@ -119,9 +120,12 @@ def _seed_session(db, tracker, observations, outcome='meeting_booked'):
         conversation_log_id=conv.id,
         session_mode='cold_call',
         origin='live',          # das Preview liest NUR origin='live'
-        status='scored',        # weder judge_failed noch not_gradable -> Zweig (e)
+        # Vorgabe 'scored': weder judge_failed noch not_gradable -> Zweig (e).
+        # METRIK-1 Plan 03 Task 2: 'not_gradable' + payload erreichen die _reason-Weiche (b).
+        status=status,
         tenant_id=tenant_id,
         observations_jsonb=observations,
+        payload_jsonb=(payload if payload is not None else {}),
     ))
     db.commit()
     return u, conv.id, tenant_id
@@ -301,6 +305,83 @@ def test_compliance_mit_beleg_zeigt_den_alarm_unveraendert(client, db_from_clien
     assert NEUTRALER_SATZ not in html, (
         'Der neutrale Ersatz-Satz erscheint, obwohl ein Beleg vorliegt — der Zweig greift zu breit.'
     )
+
+
+# ── METRIK-1 Plan 03 Task 2: dritter Ablehnungs-Zweig, der alte Zweig bleibt ──────────────
+SATZ_ZU_WENIG_GESPROCHEN = 'In diesem Gespräch wurde zu wenig gesprochen'
+SATZ_ALT_GRUND = 'Zu wenig auswertbare Momente'
+SATZ_AUDIO = 'Audio zu schlecht'
+
+
+def test_ablehnungsgrund_zu_wenig_gesprochen_zeigt_eigenen_text(client, db_from_client, tracker):
+    """Der neue Grund des Sprech-Substanz-Tors bekommt seine eigene, wahre Erklaerung.
+
+    ROT-vor-GRUEN: ohne den dritten Zweig faellt `too_little_speech` in den Sonst-Zweig und
+    der Anruf bekommt „Audio zu schlecht" — eine Aussage ueber die Tonqualitaet, die hier
+    nachweislich falsch ist.
+
+    Die DREI Redeabschnitte im Seed sind Absicht: die Abschnitts-Bedingung ist seit dem 14.08.
+    gestrichen, abgewiesen wurde allein wegen der 12 Woerter. Der Anzeige-Zweig liest
+    ausschliesslich `reason` und ist von den Messwerten unabhaengig."""
+    u, sid, tenant_id = _seed_session(
+        db_from_client, tracker, {},
+        status='not_gradable',
+        payload={'reason': 'too_little_speech', 'berater_woerter': 12, 'redeabschnitte': 3,
+                 'sprechzeit_ms': 4100, 'high_conf_events': 0, 'tor_zweig': 'zu_wenig_woerter'},
+    )
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert SATZ_ZU_WENIG_GESPROCHEN in html, (
+        'Der neue Ablehnungs-Grund hat keinen eigenen Text — der Anruf bekommt eine fremde '
+        'Erklaerung.'
+    )
+    assert SATZ_AUDIO not in html, (
+        'Der Anruf bekommt „Audio zu schlecht" — eine Aussage ueber die Tonqualitaet, die hier '
+        'falsch ist.'
+    )
+
+
+def test_alter_ablehnungsgrund_bleibt_erhalten(client, db_from_client, tracker):
+    """REGRESSIONS-Test gegen das versehentliche Aufraeumen des Alt-Zweigs.
+
+    `too_few_high_confidence_events` wird seit METRIK-1 nicht mehr geschrieben — Alt-Zeilen mit
+    diesem Grund stehen aber in der Datenbank. Wer den Zweig entfernt, gibt genau diesen Anrufen
+    die falsche Erklaerung."""
+    u, sid, tenant_id = _seed_session(
+        db_from_client, tracker, {},
+        status='not_gradable',
+        payload={'reason': 'too_few_high_confidence_events'},
+    )
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert SATZ_ALT_GRUND in html, (
+        'Der Alt-Zweig ist weg — Anrufe mit dem alten Grund bekommen jetzt eine falsche '
+        'Erklaerung.'
+    )
+
+
+def test_unbekannter_ablehnungsgrund_faellt_auf_audio_zurueck(client, db_from_client, tracker):
+    """Der Sonst-Zweig bleibt unveraendert der Auffang fuer alles Uebrige."""
+    u, sid, tenant_id = _seed_session(
+        db_from_client, tracker, {},
+        status='not_gradable',
+        payload={'reason': 'poor_audio_health'},
+    )
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert SATZ_AUDIO in html, 'Der Sonst-Zweig faengt den Audio-Grund nicht mehr.'
 
 
 # ── Option 3, Haelfte 1: Form-Garantie an der Quelle ──────────────────────────────────────
