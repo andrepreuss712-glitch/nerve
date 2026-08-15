@@ -6058,3 +6058,31 @@ live, Plan 04 ist gebaut, Plan 03 wartet auf Andres Ausrollen.
    auf eine Zeichenkette zeigen, die ein **Planungs-Dokument** als Prosa vorschreibt; erfuellbar
    waere er nur durch Loeschen einer fremden Zeile gewesen. Belastbar ist der
    Ueberschriften-Anker `grep -c "^## FRAGE — …"` → **1**.
+
+## ROADMAP-SYNC — 08.23.2.METRIK-1 — 2026-08-15
+
+**Was geaendert wurde in `.planning/ROADMAP.md`:** Die Plan-Zeile 3 der METRIK-1-Tabelle ist auf
+✅ **AUSGEFUEHRT + AUSGEROLLT 2026-08-15** gesetzt (3/3 Tasks, 6 Commits `b29c57c` · `a72da8b` ·
+`61a7029` · `a580461` · `9b4e322` · Abschluss). Spalte „Ausrollen 2" ist auf ✅ **GRUEN** —
+Deploy-Tor **1220 passed / 0 failed**, Exit-Code 0, Neustart erfolgt, **keine Migration** (reine
+Anzeige-Logik).
+
+**Warum:** Damit ist **Welle 3 komplett** (Plan 03 + Plan 04). Naechster Schritt ist **Welle 4 —
+Plan 05**, wo `waehle_fokus` seinen einzigen Aufrufer bekommt und `services/fokus_katalog.py`
+wirklich live geht.
+
+**Was Claudian in der Vault-Roadmap nachziehen sollte:**
+1. METRIK-1: Plan 03 abgeschlossen, Ausrollen 2 gruen, Welle 3 komplett, naechstes Welle 4.
+2. **Inhaltlich wichtig fuer die Strategie-Sicht:** die Anzeige-Sperre auf der Auswertungsseite
+   ist **ersatzlos gefallen** — sie hat belegbar **nie einen Klick erzeugt** (`conv 264`/`conv 266`
+   blieben trotz Sperre unbestaetigt) und nur fertige Bewertungen versteckt. Die Mai-Direktive
+   („erst Ergebnis, dann Bewertung") bleibt dort in Kraft, wo sie wirkt: bei der **Pflicht-Wahl im
+   Anruf-Fenster**, die unangetastet ist.
+3. **Fuer die spaetere Uebernahme-/Korrelations-Messung (post-Launch) vormerken:** es existiert
+   heute **keine** Korrelations-Rechnung (Code-Form-Sweep 0, gepaarter Existenz-Anker 25). Die neue
+   Markierung „Ergebnis noch nicht bestaetigt" ist der **Haken**, an dem diese Rechnung
+   unbestaetigte Anrufe spaeter ausschliesst.
+
+**Offen (UAT, Andre, blockiert nichts):** die drei Browser-Pruefungen zu Plan 03 — kein Mensch hat
+die neue Anzeige bisher gesehen. Steht als eigener Block oben in
+`08.23.2.METRIK-1-03-SUMMARY.md`.
