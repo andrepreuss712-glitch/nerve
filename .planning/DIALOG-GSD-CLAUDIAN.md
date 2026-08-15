@@ -5991,3 +5991,26 @@ vorgehalten, die auf Deutsch gar nicht gilt.
 laeuft weiter; die Antwort entscheidet nur, ob A1 in v1 bleibt.
 
 **Antwort bitte hier als `### ANTWORT` ans Datei-Ende** — Auswaehlen: `riegel` oder `raus`.
+
+### ANTWORT — Andre direkt (2026-08-15)
+
+⚠ **Herkunfts-Vermerk, damit der Kanal nicht das Falsche protokolliert:** Diese Antwort kam
+**direkt von Andre im Terminal**, nicht ueber Claudian und nicht ueber diese Datei. Sie wurde
+vom Executor nachgetragen, damit der Kanal keine Luecke hat. **Nicht als Claudian-Antwort
+lesen.**
+
+**Entscheidung: `riegel`.**
+
+Katalog-Punkt A1 (`reason_for_call`) **bleibt wie gebaut**, mit Sprach-Riegel. Kein Rueckbau,
+keine Aenderung an `services/fokus_katalog.py`. Der Katalog behaelt seine **vier** Punkte.
+
+**Die benannte Grenze gehoert ausdruecklich mit zur Entscheidung** (Punkt 31 — der Pruefkatalog
+UND seine bekannte Kante): Der Riegel ist eine **Heuristik ueber Funktionswoerter, kein
+Spracherkenner**. Ein deutscher Anruf mit vielen englischen Fachwoertern kann ihn passieren.
+**Die Fehlerrichtung ist bewusst gewaehlt:** in diesem Fall nennt der Katalog eine
+**zutreffende** englische Regel — er unterdrueckt keine unzutreffende. Der teure Fehler waere
+die Gegenrichtung gewesen (auf jedem deutschen Anruf feuern und den ehrlichen
+„diesmal nichts"-Zweig aus dem Normalfall verdraengen, D-10).
+
+Damit ist Plan 04 Task 3 geschlossen. Kein Deploy in diesem Plan — das Modul bekommt seinen
+Aufrufer in Plan 05 und geht dort live.
