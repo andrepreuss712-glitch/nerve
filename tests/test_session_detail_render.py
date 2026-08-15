@@ -471,7 +471,13 @@ HERO_KLASSE = 'n-session-detail-hero'
 KOPF_ZEILE = 'Result:'
 TREND_ABZEICHEN = 'vs Schnitt letzte 5'
 VIERER_AUFRISS = 'n-session-detail-breakdown'
-REDEANTEIL_ZEILE = 'Redeanteil'
+# ⚠ FEHLMESSUNG VERMIEDEN: Der Plan nennt als Anker das nackte Wort „Redeanteil" — und ein
+# Lauf am 2026-08-15 hat belegt, dass es AUCH ausserhalb des Aufrisses auf derselben Seite
+# steht: `_derive_practice_recommendations` (Regel 3) erzeugt bei Sessions MIT
+# Speaker-Trennung eine Uebungs-Empfehlung zum Redeanteil. Die ist kein Ueberbleibsel des
+# Aufrisses, sondern ein eigener, gewollter Coaching-Hinweis. Der Anker zeigt deshalb auf die
+# CODE-FORM der Aufriss-Zeile (ihr title-Tooltip), nicht auf ein Wort der Prosa.
+REDEANTEIL_ZEILE = 'Gewichtung 20% im Gesamt-Score'
 
 
 def _seed_weitere_logs(db, tracker, user_id, org_id, typ, kb_end, anzahl):
@@ -569,9 +575,13 @@ def test_kein_vierer_aufriss_mehr(client, db_from_client, tracker):
     assert 'Dauer:' in html, 'Der Kopfbereich fehlt — die Seite wurde gar nicht gerendert.'
     assert VIERER_AUFRISS not in html, 'Der Vierer-Aufriss steht noch auf der Seite.'
     assert REDEANTEIL_ZEILE not in html, (
-        'Die Redeanteil-Zeile lebt weiter — im Kaltakquise-Modus zeigt sie baubedingt immer '
-        '100 %, ihr Beitrag zur alten Note war dort immer 0.'
+        'Die Redeanteil-Zeile des Aufrisses lebt weiter — im Kaltakquise-Modus zeigt sie '
+        'baubedingt immer 100 %, ihr Beitrag zur alten Note war dort immer 0.'
     )
+    # Gegenprobe zur Praezisierung oben: die Gewichtungs-Tooltips der vier Aufriss-Zeilen sind
+    # ALLE weg — nicht nur der eine, auf den der Anker zeigt.
+    for _gewicht in ('Gewichtung 40%', 'Gewichtung 30%', 'Gewichtung 10%'):
+        assert _gewicht not in html, f'Aufriss-Zeile mit {_gewicht} steht noch auf der Seite.'
 
 
 def test_kein_trend_abzeichen_bei_training(client, db_from_client, tracker):
