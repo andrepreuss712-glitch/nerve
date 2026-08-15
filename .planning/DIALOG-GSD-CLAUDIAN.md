@@ -6014,3 +6014,47 @@ die Gegenrichtung gewesen (auf jedem deutschen Anruf feuern und den ehrlichen
 
 Damit ist Plan 04 Task 3 geschlossen. Kein Deploy in diesem Plan — das Modul bekommt seinen
 Aufrufer in Plan 05 und geht dort live.
+
+## ROADMAP-SYNC — 08.23.2.METRIK-1 — 2026-08-15
+
+**Was geaendert wurde:** In `.planning/ROADMAP.md` (Wellen-Tabelle der Phase 08.23.2.METRIK-1,
+Zeile Welle 3 / Plan 04) ist Plan 04 als **AUSGEFUEHRT 2026-08-15** markiert — 3/3 Tasks,
+5 Commits (`d343589` · `2340595` · `43f6e66` · `90af06c`), Server-Lauf **15 passed**,
+**kein Deploy**.
+
+**Warum kein Deploy:** `services/fokus_katalog.py` hat heute **null Aufrufer** — der kommt in
+Plan 05, derselben Phase. Bau-Regel 20 („0 Aufrufer = STOPP") ist damit **terminiert, nicht
+verletzt**, und der Termin steht im Plan.
+
+**Bitte in `Nerve-Vault/01 Roadmap.md` nachziehen:** Phase METRIK-1 laeuft; Plans 01+02 sind
+live, Plan 04 ist gebaut, Plan 03 wartet auf Andres Ausrollen.
+
+⚠ **Drei Punkte, die ueber die Roadmap hinausgehen und in den Vault gehoeren:**
+
+1. 👁 **Andres Entscheidung 15.08. zu Katalog-Punkt A1: `riegel`.** A1 (`reason_for_call`)
+   bleibt in v1 mit Sprach-Riegel, der Katalog behaelt **vier** Punkte. **Die benannte Grenze
+   gehoert mit in den Vault, nicht nur in die SUMMARY:** der Riegel ist eine **Heuristik ueber
+   Funktionswoerter, kein Spracherkenner** — ein deutscher Anruf mit vielen englischen
+   Fachwoertern kann ihn passieren; die Fehlerrichtung ist bewusst gewaehlt (er nennt dann eine
+   **zutreffende** englische Regel, statt eine unzutreffende zu unterdruecken).
+   ⚠ **Die Antwort kam direkt von Andre im Terminal, nicht ueber diesen Kanal** — der
+   `### ANTWORT`-Block oben wurde vom Executor mit Herkunfts-Vermerk nachgetragen.
+
+2. 🔧 **Eine Werkzeug-Lehre mit Reichweite ueber diese Phase hinaus:** Ein Abnahme-Anker auf ein
+   **Regex-Muster mit Backslashes** ist in einer Shell **doppelt** unzuverlaessig — die Shell
+   halbiert die Backslashes, und `\w` ist in GNU-greps Grund-Regex eine **Zeichenklasse**, kein
+   Text. Der Plan-Anker `grep -c "(?<!\\w)"` lieferte deshalb **0**, obwohl die Code-Form da
+   ist; belastbar ist `grep -c "(?<!.w)"` → **1**.
+   ⛔ **Warum das mehr ist als eine Randnotiz:** Ein Ausfuehrer, der diesen Anker fuer bare
+   Muenze naehme, wuerde die **Wortgrenzen-Zeile umschreiben** — also **genau die Regel
+   zerstoeren (D-09), die der Anker schuetzen soll.** Das reiht sich in die
+   Fehl-Anker-Serie dieser Phase ein (Plan 01: 1, Plan 02: 3+1, Plan 04: 2).
+   **Vorschlag fuer die Anker-Regel:** ein zaehlender Anker auf ein Muster mit Backslashes wird
+   beim Schreiben **einmal ausgefuehrt** — sonst misst er ein Phantom.
+
+3. 📌 **Zweite Fehl-Anker-Klasse, ebenfalls wiederkehrend:** Der Anker
+   `grep -c "## FRAGE — …Plan 04"` verlangte **1**, liefert aber **2** — weil die
+   **Plan-Pruefung selbst** diese Frage im Fliesstext woertlich ankuendigt. Ein Anker darf nie
+   auf eine Zeichenkette zeigen, die ein **Planungs-Dokument** als Prosa vorschreibt; erfuellbar
+   waere er nur durch Loeschen einer fremden Zeile gewesen. Belastbar ist der
+   Ueberschriften-Anker `grep -c "^## FRAGE — …"` → **1**.
