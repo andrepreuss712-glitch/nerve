@@ -91,6 +91,24 @@ RESTLUECKEN
      die allgemeine Klasse "Vergleich gegen das FALSCHE Objekt" fuer die Mengen 1-3 und 5: dort
      prueft der Waechter Anwesenheit eines Helfers bzw. einer Identitaet, nicht die Richtigkeit
      des verglichenen Objekts. Wer sich auf sein Gruen verlaesst, verlaesst sich auf zu wenig.
+   - ⚠ FOUNDER-ONLY-KLASSE (neu 2026-08-15, METRIK-1): Fuer eine Route, die AUSSCHLIESSLICH
+     der Founder-Sicht dient, stellt Menge 5 die FALSCHE Frage. Ihre Regel fragt "gehoert
+     dieses Objekt dem Anfragenden?" — beim mandanten-UEBERGREIFENDEN Nachpruefen gibt es dazu
+     nichts zu pruefen, das Uebergreifen IST der Zweck. Belegter Fall:
+     routes/admin_dashboard.py::beleg_check_fall (METRIK-1 Plan 01). Ein g.user.id-Vergleich
+     waere dort kein Fix, sondern ein Feature-Bruch. Getragen wird die Route von
+     @superadmin_required (services/auth_decorators.py:5-11, abort(403) VOR dem Rumpf) — fuer
+     DIESE Route strenger als eine org_id-Bindung, nicht schwaecher.
+     ⛔ BEWUSST NICHT als allgemeine Regel gebaut: haette der Waechter jeden
+     @superadmin_required-Endpunkt pauschal anerkannt, waere der Dekorator zum Freibrief
+     geworden — jede kuenftige Route, die Founder-Sicht mit NUTZER-EIGENEN Daten mischt, waere
+     stillschweigend mit ausgenommen. Stattdessen: ein begruendeter Allowlist-Eintrag PRO
+     ROUTE, und die Weiche selbst wird am AST nachgeprueft
+     (test_founder_ausnahmen_tragen_ihre_founder_weiche_noch) — faellt der Dekorator weg,
+     faellt der Eintrag auf.
+     OFFENE REST-KANTE, ausdruecklich: fuer diese eine Route sagt der Sweep jetzt NICHTS mehr.
+     Tragende Schicht ist der Verhaltens-Test
+     tests/test_beleg_check_founder.py::test_einzelfall_seite_ist_nicht_fuer_jeden.
    - ⚠ DURCHRUTSCHER der org_id-BINDUNGS-Regel selbst: Zweig (b) kann einen FILTER nicht
      zuverlaessig von einem SCHREIBVORGANG unterscheiden. Deshalb ist (b) bewusst ENG gefasst
      (nur filter_by/filter/get/query-Ketten). Belegt: routes/training.py::training_end (:714)
@@ -124,6 +142,12 @@ RESTLUECKEN
      Helfer-Bewusstheit aller drei Regeln plus Gegenprobe 2 im Selbsttest.
    - Dass ein wertloser Helfer zum Freibrief wird: geschlossen durch Teil (b) der Anerkennung
      (test_helfer_existieren_und_pruefen_user_id) plus Gegenprobe 3 im Selbsttest.
+   - Dass ein Allowlist-Eintrag seine Begruendung ueberlebt, waehrend der Code sie verliert:
+     geschlossen fuer die Founder-Klasse durch die AST-Nachpruefung der Weiche
+     (test_founder_ausnahmen_tragen_ihre_founder_weiche_noch, mit eigener Gegenprobe).
+     ⚠ NICHT geschlossen fuer die UEBRIGEN Allowlist-Eintraege: deren Begruendungen
+     (verschachtelter Helfer, korrekter user_id-Filter, Server-Zustand statt Anfrage) haengen
+     an Code-Formen, die dieser Waechter nicht nachprueft. Sie bleiben Prosa.
    - NICHT geschlossen: der DB-Fall (Punkt 3), die Namens-Kante und die Socket.IO-Flaeche
      (Punkt 4), sowie die allgemeine Klasse "Vergleich gegen das falsche Objekt" fuer die
      Mengen 1-3 und 5 (Punkt 5).
@@ -176,6 +200,11 @@ LIVE_HELFER_IDENTITAET = 'user_id'
 # Kennungs-Namen, die dieser Waechter kennt. Die Katalog-Grenze steht im Modul-Docstring
 # Punkt 4 (Namens-Kante) ausdruecklich benannt.
 URL_KENNUNGEN = frozenset({'sid', 'call_id', 'profile_id'})
+
+# Die Founder-Weiche. Sie ist KEIN allgemeiner Freibrief (siehe Modul-Docstring Punkt 5,
+# Bullet FOUNDER-ONLY-KLASSE) — sie wird nur dort anerkannt, wo ein Allowlist-Eintrag sie
+# ausdruecklich benennt, und dieser Eintrag wird gegen den echten Dekorator nachgeprueft.
+FOUNDER_WEICHE = 'superadmin_required'
 
 # Lese-/Filter-Aufrufe fuer Zweig (b) der org_id-Bindung. BEWUSST ENG: ein Konstruktor ist
 # ein SCHREIBVORGANG und beweist keine Pruefung (Checker-B-3).
@@ -246,6 +275,25 @@ ALLOWLIST: dict[str, str] = {
         '"q = db_lo.query(Call).filter(Call.user_id == g.user.id)", die call_id verengt nur '
         'zusaetzlich (:2128). Eine fremde call_id liefert 0 Zeilen. Ein Helfer-Aufruf waere '
         'eine zweite Pruefung derselben Sache.',
+    'routes/admin_dashboard.py::beleg_check_fall':
+        'FALSCH-TREFFER: FOUNDER-ONLY-KLASSE. Die Regel von Menge 5 fragt "gehoert dieses '
+        'Objekt dem Anfragenden?" — bei dieser Route gibt es dazu NICHTS zu pruefen, weil das '
+        'mandanten-UEBERGREIFENDE Lesen der ZWECK ist (METRIK-1 Plan 01, D-23 Auflage 3: der '
+        'Founder muss JEDEN Anruf nachpruefen koennen, sonst ist der Satz "wird von einem '
+        'NERVE-Mitarbeiter geprueft" ein Versprechen ohne Deckung). Ein g.user.id-Vergleich '
+        'waere hier kein Fix, sondern ein Feature-Bruch — der Founder besitzt die Anrufe nicht. '
+        'GETRAGEN WIRD DIE ROUTE VON @superadmin_required (services/auth_decorators.py:5-11): '
+        'ohne g.user.is_superadmin bricht der Dekorator mit 403 ab, BEVOR der Rumpf laeuft — '
+        'ein fremder Nutzer erreicht die call_id-Aufloesung also gar nicht. Das ist fuer DIESE '
+        'Route strenger als eine org_id-Bindung, nicht schwaecher. BELEGT ZUR LAUFZEIT, NICHT '
+        'IN PROSA: tests/test_beleg_check_founder.py::test_einzelfall_seite_ist_nicht_fuer_jeden '
+        '(nicht-superadmin bekommt 302/401/403, nie 200). '
+        '⛔ KEIN FREIBRIEF FUER DEN DEKORATOR: die Ausnahme gilt, weil hier NUR '
+        'Founder-Sicht-Daten aufgeloest werden. Eine Route, die eine Founder-Weiche mit '
+        'nutzer-eigenen Daten MISCHT, braucht die Besitzpruefung weiterhin — deshalb ist dies '
+        'ein Eintrag pro Route und keine Regel-Aufweichung. Die Weiche selbst wird von '
+        'test_founder_ausnahmen_tragen_ihre_founder_weiche_noch am AST nachgeprueft: faellt '
+        '@superadmin_required weg, faellt dieser Eintrag auf.',
     'routes/training.py::training_end':
         'FALSCH-TREFFER: profile_id stammt aus session.get("profile_id") '
         '(Server-Zustand, training.py:715), NICHT aus der Anfrage — die Funktion hat '
@@ -545,6 +593,31 @@ def _funktion_existiert(rel: str, name: str) -> bool:
                for n in ast.walk(baum))
 
 
+def _dekoratoren_aus_quelltext(quelltext: str, name: str) -> frozenset:
+    """Die Dekorator-NAMEN einer Funktion — ABGELEITET aus dem AST, nicht behauptet.
+
+    Deckt `@superadmin_required` (Name) und `@bp.route(...)` (Attribut/Aufruf). Der Sinn ist
+    derselbe wie bei der Helfer-Anerkennung: ein Allowlist-Eintrag, der sich auf eine Weiche
+    beruft, darf nicht gruen bleiben, wenn die Weiche entfernt wird.
+    """
+    try:
+        baum = ast.parse(quelltext)
+    except SyntaxError:  # pragma: no cover - defensiv
+        return frozenset()
+    for n in ast.walk(baum):
+        if not isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) or n.name != name:
+            continue
+        namen = set()
+        for dek in n.decorator_list:
+            ziel = dek.func if isinstance(dek, ast.Call) else dek
+            if isinstance(ziel, ast.Name):
+                namen.add(ziel.id)
+            elif isinstance(ziel, ast.Attribute):
+                namen.add(ziel.attr)
+        return frozenset(namen)
+    return frozenset()
+
+
 # ── Die Pruefungen ──────────────────────────────────────────────────────────────────────────
 
 def test_mindestens_erwartete_pruefpunkte_gefunden():
@@ -828,4 +901,54 @@ def test_allowlist_ist_begruendet_und_lebt():
     assert not ohne_fundstelle, (
         'Ein gemeldetes, nicht gefixtes Loch braucht seine R-Nummer UND den Verweis auf '
         'FUNDE.md — sonst ist es nirgends nachlesbar:\n  ' + '\n  '.join(ohne_fundstelle)
+    )
+
+
+def test_founder_ausnahmen_tragen_ihre_founder_weiche_noch():
+    """Markierung: keine — Allowlist-Hygiene, unabhaengig von Fix und Nicht-Fix.
+
+    METRIK-1 (2026-08-15). Ein Allowlist-Eintrag, der sich auf die Founder-Weiche beruft, ist
+    nur so viel wert wie die Weiche selbst. Faellt @superadmin_required irgendwann weg — beim
+    Umbau, beim Kopieren der Route, aus Versehen — bliebe der Eintrag stehen und wuerde eine
+    dann WIRKLICH ungeschuetzte URL-Kennung still durchwinken. Genau die Hintertuer, vor der
+    der Modul-Docstring warnt.
+
+    Er prueft ZWEI Dinge, und die Reihenfolge ist Absicht:
+      Teil 1 (Gegenprobe): die Ableitung beisst ueberhaupt. Ohne sie waere ein Ausfall von
+        _dekoratoren_aus_quelltext blind statt rot — und saehe dabei gruen aus (Punkt 31).
+      Teil 2: jeder Founder-Eintrag der ALLOWLIST traegt die Weiche im echten Quelltext.
+    """
+    # ── Teil 1: Gegenprobe an einer kuenstlichen Route (dieselbe Funktion wie in Teil 2) ────
+    OHNE_WEICHE = '''
+@admin_dashboard_bp.route('/x/<call_id>')
+@login_required
+def kuenstliche_route(call_id):
+    return call_id
+'''
+    MIT_WEICHE = OHNE_WEICHE.replace('@login_required',
+                                     '@login_required\n@superadmin_required')
+    assert FOUNDER_WEICHE not in _dekoratoren_aus_quelltext(OHNE_WEICHE, 'kuenstliche_route'), (
+        'Die Dekorator-Ableitung meldet eine Founder-Weiche, wo keine steht — sie beisst nicht '
+        'und jedes gruene Ergebnis von Teil 2 waere wertlos.'
+    )
+    assert FOUNDER_WEICHE in _dekoratoren_aus_quelltext(MIT_WEICHE, 'kuenstliche_route'), (
+        'Die Dekorator-Ableitung sieht eine vorhandene Founder-Weiche NICHT — sie ist blind, '
+        'und Teil 2 wuerde jede Route faelschlich als ungeschuetzt melden.'
+    )
+
+    # ── Teil 2: der Produktivcode ───────────────────────────────────────────────────────────
+    fehlend = []
+    for schluessel, grund in ALLOWLIST.items():
+        if FOUNDER_WEICHE not in grund:
+            continue
+        datei, _, funktion = schluessel.partition('::')
+        pfad = REPO_ROOT / datei
+        quelle = pfad.read_text(encoding='utf-8') if pfad.exists() else ''
+        if FOUNDER_WEICHE not in _dekoratoren_aus_quelltext(quelle, funktion):
+            fehlend.append(schluessel)
+    assert not fehlend, (
+        'Diese Allowlist-Eintraege berufen sich auf die Founder-Weiche, die Funktion traegt sie '
+        'aber nicht mehr. Der Eintrag deckt damit eine URL-Kennung, die jetzt WIRKLICH '
+        'ungeschuetzt ist. Weiche wiederherstellen ODER den Eintrag streichen und die '
+        'Besitzpruefung bauen:\n  ' + '\n  '.join(fehlend)
     )
