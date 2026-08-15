@@ -71,38 +71,13 @@
     </div>
     <div class="n-tab-panel" id="uebersicht" role="tabpanel">
 
-  {# ── Section 2: Score-Hero — NUR NOCH TRAINING (METRIK-1 D-15/D-17) ───────────────────────
-     LIVE zeigt keine Gesamtnote mehr: sie mass zu 40 % die Kaufbereitschaft des KUNDEN (die der
-     Verkaeufer nicht steuert) und zu 20 % einen Redeanteil, der im Kaltakquise-Modus baubedingt
-     100 % ist — der Term war dort IMMER 0. An ihre Stelle tritt die KI-Einschaetzung (Form 2).
-     TRAINING BEHAELT SEINE NOTE: dort gibt es keinen Kunden mit Laune, sondern ein festes
-     Szenario mit einer richtigen Antwort — die Note misst dort tatsaechlich den Verkaeufer.
-     ⚠ Diese typ-Weiche ist NEU. Vorher hatte der Hero KEINE — wer ihn blind entfernt, laesst
-     die Trainings-Note still sterben (D-17, Gap C).
-     D-14: Das Trend-Abzeichen — der Vergleich gegen den Schnitt der letzten fuenf Sitzungen —
-     ist ERSATZLOS entfallen, auch fuer Training.
-     ⛔ Sein Anzeige-Text wird hier bewusst NICHT zitiert: er ist in diesem Task ein
-     Abwesenheits-Anker mit Sollwert 0 in dieser Datei. Beschreiben statt zitieren.
-     Eine neutrale Ersatz-Zahl (Anrufe/Woerter) ist ausdruecklich VERWORFEN — sie
-     misst Betriebsamkeit, nicht Fortschritt. Lieber eine ehrliche Leerstelle als eine huebsche
-     Zahl ohne Bedeutung. Der Streifen kommt zurueck, sobald die Fokus-Serie existiert
-     ("dreimal in Folge angewendet") — vertagt, nicht gestrichen.
-     Der frueher hier stehende Vierer-Aufriss ist mit gefallen — GANZ, einschliesslich des
-     Live-Zweigs (D-16: "Gewichtungen raus, Zahlen bleiben" ist verworfen, weil das die
-     Redeanteil-Zeile stehengelassen haette). #}
-  {% if conv.typ == 'training' %}
-    {% set score = score_total %}
-    {% set score_class = 'n-session-detail-score--high' if score >= 70 else ('n-session-detail-score--mid' if score >= 60 else 'n-session-detail-score--low') %}
-    <section class="n-session-detail-hero" aria-label="Gesamt-Score">
-      <div>
-        <div class="n-label">Gesamt-Score</div>
-        <div class="n-session-detail-score {{ score_class }}">{{ score }}</div>
-      </div>
-    </section>
-  {% endif %}
-
   {# ── Section 2b: KI-Einschätzung / Coaching-Hinweis (TAXO2-05, METRIK-1) ───────────────────
      Beobachtungen statt Zahl (Soll-Verhalten §6 / Entscheidung.md).
+     ⚠ METRIK-1 D-15 (Plan 07): Diese Karte steht seit dem 15.08. GANZ OBEN — vor dem
+     Trainings-Hero und vor dem Diagramm. Sie ist ab METRIK-1 die Antwort auf „wie lief das
+     Gespräch", nicht mehr eine Beigabe unter der Note. Verschoben, NICHT umgeschrieben: die
+     if/elif-Kette aus Plan 03 ist inhaltlich unverändert; hinzugekommen sind im Zweig (e) nur
+     die Kopfzeile, die eine Sache und der Aufklapper.
      Edge-Reihenfolge: (a) judge_failed -> (b) not_gradable (drei Gründe) -> (d) row-absent ->
      (e) Beobachtungen + Beleg-Zitate (+ prominente Compliance-Notiz oben, Cross-AI-Finding 2).
      (c) kein-Material-Zweig ist in (e) integriert (leere observations).
@@ -177,30 +152,99 @@
         <p class="n-observation-empty">Dieses Gespräch wurde gemeldet und wird von einem NERVE-Mitarbeiter geprüft.</p>
       {% endif %}
 
-      {# Dimensionen (feste Reihenfolge aus DIMENSIONS — '_compliance' wird nicht mitgegeben). #}
-      {% set _has_any_obs = observations_display | selectattr('eintraege') | list | length > 0 %}
-      {% if not _has_any_obs and not compliance_verletzt %}
-        {# (c) Kein Material — Daten-Substanz-Schutz (NICHT "wegen des Neins"). #}
-        <p class="n-observation-empty">Nicht genug zum Bewerten.</p>
-      {% else %}
-        {% for dim in observations_display %}
-          <div class="n-observation-dim">
-            <div class="n-observation-dim-title">{{ dim.name }}</div>
-            {% if dim.eintraege %}
-              {% for obs in dim.eintraege %}
-                <p class="n-observation-text">{{ obs.get('beobachtung') or '' }}</p>
-                {% if obs.get('beleg_zitat') %}
-                  <blockquote class="n-observation-quote">{{ obs.beleg_zitat }}</blockquote>
-                {% endif %}
-              {% endfor %}
-            {% else %}
-              <p class="n-observation-empty">Keine auffällige Beobachtung.</p>
-            {% endif %}
-          </div>
-        {% endfor %}
+      {# ── METRIK-1 Requirement 5: Form 2 — belegte Kopfzeile + GENAU EINE Sache ────────────
+         Die Kopfzeile kommt vom Modell (bester Moment, judge_runner headline_observation), die
+         eine Sache vom CODE (services/fokus_katalog.py, D-07/D-08). Beide Beleg-Zitate sind
+         serverseitig gegen das Transkript geprueft (services/slow_lane.py _pruefe_belege) —
+         was hier steht, steht so im Transkript.
+         KEINE Note, KEINE Zahl (Soll-Verhalten §6). Kein hardcoded Hex, keine Inline-Styles.
+         Reihenfolge mit Absicht: die Compliance-Notiz oben bleibt das ERSTE im Zweig (e) —
+         Compliance geht vor Coaching (Cross-AI-Finding 2). #}
+      {% if kopfzeile_display and kopfzeile_display.beobachtung %}
+        <p class="n-observation-text">{{ kopfzeile_display.beobachtung }}</p>
+        {% if kopfzeile_display.beleg_zitat %}
+          <blockquote class="n-observation-quote">{{ kopfzeile_display.beleg_zitat }}</blockquote>
+        {% endif %}
       {% endif %}
+
+      {# D-10: Der "diesmal nichts"-Zweig ist der NORMALFALL, nicht die Ausnahme — der
+         Fokus-Katalog ist englisch, der bisherige Bestand deutsch. Auf einem deutschen Anruf
+         kann kein Kriterium ausloesen. NIEMALS eine erfundene Sache, NIEMALS eine leere Stelle.
+         Der Text ist englisch, weil der Katalog englisch ist (D-11) — er gehoert zur Sache,
+         nicht zur Oberflaeche. #}
+      <div class="n-observation-dim">
+        <div class="n-observation-dim-title">One thing for next time</div>
+        {% if fokus_display and fokus_display.satz %}
+          <p class="n-observation-text">{{ fokus_display.satz }}</p>
+          {% if fokus_display.beleg %}
+            <blockquote class="n-observation-quote">{{ fokus_display.beleg }}</blockquote>
+          {% endif %}
+        {% else %}
+          <p class="n-observation-empty">Nothing flagged this time.</p>
+        {% endif %}
+      </div>
+
+      {# METRIK-1 Requirement 5: die VOLLSTAENDIGEN Beobachtungen liegen hinter einem
+         Aufklapper — Kopfzeile und die eine Sache stehen davor. <details>/<summary> ist
+         Bordmittel: kein neues JS, keine neue Klasse, kein neuer Token (Punkt 27). #}
+      <details class="n-observation-dim">
+        <summary class="n-observation-dim-title">Alle Beobachtungen</summary>
+        {# Dimensionen (feste Reihenfolge aus DIMENSIONS — '_compliance' wird nicht mitgegeben). #}
+        {% set _has_any_obs = observations_display | selectattr('eintraege') | list | length > 0 %}
+        {% if not _has_any_obs and not compliance_verletzt %}
+          {# (c) Kein Material — Daten-Substanz-Schutz (NICHT "wegen des Neins"). Greift auch
+             dann, wenn ALLE Beobachtungen von der Zitat-Pruefung verworfen wurden. #}
+          <p class="n-observation-empty">Nicht genug zum Bewerten.</p>
+        {% else %}
+          {% for dim in observations_display %}
+            <div class="n-observation-dim">
+              <div class="n-observation-dim-title">{{ dim.name }}</div>
+              {% if dim.eintraege %}
+                {% for obs in dim.eintraege %}
+                  <p class="n-observation-text">{{ obs.get('beobachtung') or '' }}</p>
+                  {% if obs.get('beleg_zitat') %}
+                    <blockquote class="n-observation-quote">{{ obs.beleg_zitat }}</blockquote>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <p class="n-observation-empty">Keine auffällige Beobachtung.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
+      </details>
     {% endif %}
   </section>
+  {% endif %}
+
+  {# ── Section 2: Score-Hero — NUR NOCH TRAINING (METRIK-1 D-15/D-17) ───────────────────────
+     LIVE zeigt keine Gesamtnote mehr: sie mass zu 40 % die Kaufbereitschaft des KUNDEN (die der
+     Verkaeufer nicht steuert) und zu 20 % einen Redeanteil, der im Kaltakquise-Modus baubedingt
+     100 % ist — der Term war dort IMMER 0. An ihre Stelle tritt die KI-Einschaetzung (Form 2).
+     TRAINING BEHAELT SEINE NOTE: dort gibt es keinen Kunden mit Laune, sondern ein festes
+     Szenario mit einer richtigen Antwort — die Note misst dort tatsaechlich den Verkaeufer.
+     ⚠ Diese typ-Weiche ist NEU. Vorher hatte der Hero KEINE — wer ihn blind entfernt, laesst
+     die Trainings-Note still sterben (D-17, Gap C).
+     D-14: Das Trend-Abzeichen — der Vergleich gegen den Schnitt der letzten fuenf Sitzungen —
+     ist ERSATZLOS entfallen, auch fuer Training.
+     ⛔ Sein Anzeige-Text wird hier bewusst NICHT zitiert: er ist in diesem Task ein
+     Abwesenheits-Anker mit Sollwert 0 in dieser Datei. Beschreiben statt zitieren.
+     Eine neutrale Ersatz-Zahl (Anrufe/Woerter) ist ausdruecklich VERWORFEN — sie
+     misst Betriebsamkeit, nicht Fortschritt. Lieber eine ehrliche Leerstelle als eine huebsche
+     Zahl ohne Bedeutung. Der Streifen kommt zurueck, sobald die Fokus-Serie existiert
+     ("dreimal in Folge angewendet") — vertagt, nicht gestrichen.
+     Der frueher hier stehende Vierer-Aufriss ist mit gefallen — GANZ, einschliesslich des
+     Live-Zweigs (D-16: "Gewichtungen raus, Zahlen bleiben" ist verworfen, weil das die
+     Redeanteil-Zeile stehengelassen haette). #}
+  {% if conv.typ == 'training' %}
+    {% set score = score_total %}
+    {% set score_class = 'n-session-detail-score--high' if score >= 70 else ('n-session-detail-score--mid' if score >= 60 else 'n-session-detail-score--low') %}
+    <section class="n-session-detail-hero" aria-label="Gesamt-Score">
+      <div>
+        <div class="n-label">Gesamt-Score</div>
+        <div class="n-session-detail-score {{ score_class }}">{{ score }}</div>
+      </div>
+    </section>
   {% endif %}
 
   {# ── Section 3: Chart (kb_verlauf oder stimmung_history) ──────── #}
