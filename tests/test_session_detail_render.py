@@ -66,12 +66,18 @@ def tracker(db_from_client):
 
 
 def _seed_session(db, tracker, observations, outcome='meeting_booked',
-                  status='scored', payload=None):
+                  status='scored', payload=None, typ='live', kb_end=None,
+                  redeanteil_avg=None, skript_abdeckung=None):
     """Legt Nutzer + ConversationLog + Call + live-rubric_score an und gibt (user, sid) zurueck.
 
     `outcome` ist seit METRIK-1 D-20 ein **Test-Parameter**: `None` bildet einen Anruf ohne
     bestaetigtes Gespraechsergebnis ab. Frueher war der Wert fest verdrahtet, weil eine
     Anzeige-Sperre sonst jeden Zweig verstellt haette — die Sperre ist ersatzlos entfallen.
+
+    `typ` ist seit METRIK-1 D-17 ein **Test-Parameter**: die Auswertungsseite entscheidet ab
+    Plan 06 anhand von `conversation_logs.typ`, ob eine Gesamtnote ueberhaupt angebracht ist.
+    Ohne einen echten `typ='training'`-Seed waere „die Trainings-Note lebt noch" eine
+    Behauptung statt eines Belegs (Gap C).
 
     Der Nutzer wird in die **Seed-Org der client-Fixture** gelegt: `rubric_score` hat FORCE RLS,
     und der Request-Pfad setzt die Tenant-GUC aus der Org des eingeloggten Nutzers. Eine eigene Org
@@ -92,7 +98,9 @@ def _seed_session(db, tracker, observations, outcome='meeting_booked',
     db.flush()
     tracker['users'].append(u.id)
 
-    conv = ConversationLog(user_id=u.id, org_id=org_id, typ='live', started_at=_now())
+    conv = ConversationLog(user_id=u.id, org_id=org_id, typ=typ, started_at=_now(),
+                           kb_end=kb_end, redeanteil_avg=redeanteil_avg,
+                           skript_abdeckung=skript_abdeckung)
     db.add(conv)
     db.flush()
     tracker['logs'].append(conv.id)
@@ -449,3 +457,142 @@ def test_session_detail_netz_faengt_render_fehler(client, db_from_client, tracke
     # Die Seite kommt — ohne das Vorschau-Panel, aber vollstaendig im Rest.
     assert BEOBACHTUNG not in html, 'Der Fallback zeigt die Vorschau-Daten, die gerade gerissen sind.'
     assert 'session-detail' in html or '</html>' in html, 'Der Fallback lieferte keine vollstaendige Seite.'
+
+
+# ── METRIK-1 Plan 06 (D-14/D-15/D-16/D-17/D-19): die alte Note verlaesst die Live-Seite ───
+#
+# WARUM: Die Gesamtnote mass im echten Anruf zu 40 % die Kaufbereitschaft des KUNDEN — etwas,
+# das der Verkaeufer nicht steuert — und zu 20 % einen Redeanteil, der im Kaltakquise-Modus
+# baubedingt 100 % ist (der Term war dort IMMER 0). Im Training gibt es keinen Kunden mit Laune,
+# sondern ein festes Szenario mit einer richtigen Antwort: dort misst eine Note tatsaechlich
+# den Verkaeufer — und bleibt deshalb.
+HERO_LABEL = 'Gesamt-Score'
+HERO_KLASSE = 'n-session-detail-hero'
+KOPF_ZEILE = 'Result:'
+TREND_ABZEICHEN = 'vs Schnitt letzte 5'
+VIERER_AUFRISS = 'n-session-detail-breakdown'
+REDEANTEIL_ZEILE = 'Redeanteil'
+
+
+def _seed_weitere_logs(db, tracker, user_id, org_id, typ, kb_end, anzahl):
+    """Legt `anzahl` weitere ConversationLogs desselben Nutzers an (fuer den Trend-Schnitt).
+
+    Der Trend-Block in routes/dashboard.py zog den Schnitt ueber die letzten fuenf Sitzungen
+    desselben `typ`. Ohne echte Nachbar-Zeilen bliebe `trend_avg` None und der Test waere
+    gruen, ohne das Abzeichen je gesehen zu haben — ein stiller Fehlbeleg."""
+    for _ in range(anzahl):
+        c = ConversationLog(user_id=user_id, org_id=org_id, typ=typ,
+                            started_at=_now(), kb_end=kb_end)
+        db.add(c)
+        db.flush()
+        tracker['logs'].append(c.id)
+    db.commit()
+
+
+def test_live_zeigt_keine_gesamtnote(client, db_from_client, tracker):
+    """D-15/D-19: Ein LIVE-Anruf zeigt auf der Auswertungsseite keine Zahl mehr, die wie eine
+    Note aussieht — nicht im Hero, nicht als Trend-Abzeichen, nicht im Kopfbereich.
+
+    ROT-vor-GRUEN: gegen den Stand vor Plan 06 rendert der Hero fuer BEIDE Typen und der
+    Kopfbereich traegt `Result: <kb_end>/100`.
+
+    Gepaarte Existenz-Anker in derselben Funktion (HTTP 200 + die KI-Karte): sonst waere
+    „nichts gefunden" nicht von „Seite gar nicht gerendert" zu unterscheiden."""
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+    }, typ='live', kb_end=64)
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    # Existenz-Anker zuerst — er beweist, dass ueberhaupt gelesen wurde.
+    assert 'KI-Einschätzung' in html, 'Die Seite wurde gar nicht bis zur Einschaetzung gerendert.'
+
+    assert HERO_LABEL not in html, (
+        'Der Live-Anruf zeigt weiterhin einen Gesamt-Score — genau die Zahl, die zu 40 % die '
+        'Kaufbereitschaft des Kunden mass.'
+    )
+    assert HERO_KLASSE not in html, 'Der Score-Hero wird fuer einen Live-Anruf noch gerendert.'
+    assert KOPF_ZEILE not in html, (
+        'Der Kopfbereich zeigt weiterhin "Result: X/100" — bei LIVE ist das die Kaufbereitschaft '
+        'des Kunden, beschriftet wie eine Note des Verkaeufers.'
+    )
+    assert TREND_ABZEICHEN not in html, 'Das Trend-Abzeichen ist nicht ersatzlos entfallen.'
+
+
+def test_training_behaelt_seine_note(client, db_from_client, tracker):
+    """⚠ DER GAP-C-TEST (D-17). Eine TRAINING-Sitzung zeigt ihre Note unveraendert.
+
+    Der Score-Hero hatte bis Plan 06 KEINE typ-Weiche — wer ihn blind entfernt, laesst die
+    Trainings-Note still sterben. Dieser Test ist absichtlich schon VOR dem Umbau gruen: sein
+    Zweck ist nicht der Neubau, sondern die Regel gegen ein Zuviel. Er muss rot werden, sobald
+    jemand die Note auch dem Training wegnimmt."""
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {},
+                                      typ='training', kb_end=78)
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert HERO_LABEL in html, (
+        'Die Trainings-Note ist still gestorben — im Training gibt es keinen Kunden mit Laune, '
+        'sondern ein festes Szenario mit einer richtigen Antwort. Dort misst die Note wirklich '
+        'den Verkaeufer.'
+    )
+    assert HERO_KLASSE in html, 'Der Score-Hero fehlt der Trainings-Sitzung komplett.'
+    assert '>78</div>' in html, (
+        'Der Zahlenwert der Trainings-Note steht nicht im HTML — der Hero rendert leer.'
+    )
+
+
+def test_kein_vierer_aufriss_mehr(client, db_from_client, tracker):
+    """D-16: Der Vierer-Aufriss faellt GANZ — auch der Live-Zweig.
+
+    „Gewichtungen raus, Zahlen bleiben" ist ausdruecklich verworfen: das haette die
+    Redeanteil-Zeile stehengelassen, die im Kaltakquise-Modus baubedingt immer 100 % zeigt.
+
+    Gepaarter Existenz-Anker: die Kopfbereichs-Zeile `Dauer:` steht weiter im HTML."""
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+    }, typ='live', kb_end=64, redeanteil_avg=100, skript_abdeckung=42)
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert 'Dauer:' in html, 'Der Kopfbereich fehlt — die Seite wurde gar nicht gerendert.'
+    assert VIERER_AUFRISS not in html, 'Der Vierer-Aufriss steht noch auf der Seite.'
+    assert REDEANTEIL_ZEILE not in html, (
+        'Die Redeanteil-Zeile lebt weiter — im Kaltakquise-Modus zeigt sie baubedingt immer '
+        '100 %, ihr Beitrag zur alten Note war dort immer 0.'
+    )
+
+
+def test_kein_trend_abzeichen_bei_training(client, db_from_client, tracker):
+    """D-14 gilt AUCH fuer Training: der Trend-Streifen ist ersatzlos entfallen.
+
+    ROT-vor-GRUEN: mit fuenf aelteren Trainings-Sitzungen (kb_end=50) und einer aktuellen mit
+    78 rechnete der Trend-Block einen Schnitt und rendert „+28 vs Schnitt letzte 5".
+
+    Gepaarter Existenz-Anker: `Gesamt-Score` steht weiterhin da — sonst waere „Abzeichen weg"
+    von „Hero mitsamt Note weg" nicht zu unterscheiden."""
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {},
+                                      typ='training', kb_end=78)
+    _seed_weitere_logs(db_from_client, tracker, u.id, u.org_id, 'training', 50, 5)
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert HERO_LABEL in html, 'Die Trainings-Note fehlt — der Existenz-Anker greift nicht.'
+    assert TREND_ABZEICHEN not in html, (
+        'Das Trend-Abzeichen erscheint im Training weiter. Eine neutrale Ersatz-Zahl ist '
+        'verworfen; der Streifen kommt erst mit der Fokus-Serie zurueck.'
+    )
