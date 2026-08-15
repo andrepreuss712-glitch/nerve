@@ -671,3 +671,247 @@ def test_kein_trainings_durchschnitt_auf_der_live_seite(client, db_from_client, 
         'Der Empfehlungs-Block mit Trainings-Bezug wurde gar nicht gerendert — der Test kann '
         'ueber die Abwesenheit des Durchschnitts nichts aussagen.'
     )
+
+
+# ── METRIK-1 Plan 07 (Requirement 5): Form 2 wird sichtbar ────────────────────────────────
+#
+# EINE belegte Kopfzeile ganz oben, GENAU EINE Sache fuers naechste Mal — und wenn kein
+# Katalog-Kriterium verletzt ist, ein ehrliches „nichts". Die vollstaendigen Beobachtungen
+# wandern hinter einen Aufklapper.
+#
+# D-10: Der „diesmal nichts"-Zweig ist der NORMALFALL, nicht die Ausnahme. Der Fokus-Katalog
+# ist englisch, der gesamte gespeicherte Bestand deutsch — auf einem deutschen Anruf kann kein
+# Kriterium ausloesen. Deshalb wird hier BEIDES festgenagelt: der Zweig mit einer Sache UND der
+# ehrliche Leer-Zweig. Eine erfundene Sache oder eine leere Stelle waere der Fehler.
+#
+# ⚠ Die Konstanten unten tragen bewusst KEINE Anfuehrungszeichen, Apostrophe, `&`, `<` oder `>`:
+# Jinja escapt per Voreinstellung (T-METRIK1-07-03 — genau so soll es sein), ein `"` im
+# Erwartungswert wuerde im HTML als `&#34;` stehen und `html.count(...)` waere 0. Der Test
+# haette dann eine Fehlmessung statt eines Befundes gemeldet.
+KOPFZEILE_BEOBACHTUNG = 'Der beste Moment war die ruhige Rueckfrage nach dem ersten Nein.'
+KOPFZEILE_ZITAT = 'Darf ich trotzdem eine einzige Frage stellen?'
+FOKUS_SATZ = 'You said we provide four times - name the customer benefit instead.'
+FOKUS_BELEG = 'we provide a full onboarding package'
+NICHTS_SATZ = 'Nothing flagged this time.'
+EINE_SACHE_TITEL = 'One thing for next time'
+AUFKLAPPER_TITEL = 'Alle Beobachtungen'
+AUFKLAPPER_FORM = '<details class="n-observation-dim">'
+DAUER_MELDUNG = 'Einschätzung wird im Hintergrund ausgewertet'
+
+
+def _kopfzeile(beobachtung=KOPFZEILE_BEOBACHTUNG, zitat=KOPFZEILE_ZITAT):
+    """Der `_kopfzeile`-Unterstrich-Schluessel, wie ihn services/judge_runner.py schreibt."""
+    return {'schema': 1, 'beobachtung': beobachtung, 'beleg_zitat': zitat}
+
+
+def _fokus(focus_key='we_not_i', satz=FOKUS_SATZ, beleg=FOKUS_BELEG, count=4):
+    """Der `_fokus`-Unterstrich-Schluessel, wie ihn services/slow_lane.py schreibt.
+
+    `focus_key=None` + leerer Satz ist der EHRLICHE Leer-Fall (D-10) — er wird IMMER
+    geschrieben, damit „kein Kriterium verletzt" von „nie befuellt" unterscheidbar bleibt."""
+    return {'schema': 1, 'katalog_version': 1, 'focus_key': focus_key,
+            'count': count, 'satz': satz, 'beleg': beleg}
+
+
+def test_kopfzeile_wird_gezeigt(client, db_from_client, tracker):
+    """Die belegte Kopfzeile steht mit ihrem woertlichen Zitat auf der Seite.
+
+    ROT-vor-GRUEN: das Template liest `kopfzeile_display` vor Plan 07 nicht — der Kontext-Wert
+    kommt seit Plan 05 an und wird schlicht verworfen.
+
+    Gepaarter Existenz-Anker: die KI-Karte selbst steht im HTML, sonst waere „Kopfzeile fehlt"
+    von „Seite gar nicht gerendert" nicht zu unterscheiden."""
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+        '_kopfzeile': _kopfzeile(),
+        '_fokus': _fokus(),
+    }, typ='live')
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert 'KI-Einschätzung' in html, 'Die Seite wurde gar nicht bis zur Einschaetzung gerendert.'
+    assert KOPFZEILE_BEOBACHTUNG in html, (
+        'Die Kopfzeile des Bewerters steht nicht auf der Seite — der Satz, der haengen bleiben '
+        'soll, wird verworfen.'
+    )
+    assert KOPFZEILE_ZITAT in html, (
+        'Das Beleg-Zitat der Kopfzeile fehlt — Lob ohne Beleg ist genau das, was das Produkt '
+        'nicht geben darf.'
+    )
+
+
+def test_genau_eine_sache(client, db_from_client, tracker):
+    """⚠ DER „GENAU EINE"-ANKER (T-METRIK1-07-04).
+
+    Gezaehlt statt nur auf Vorhandensein geprueft: der Satz steht GENAU EINMAL im HTML. Ein
+    Test auf `in html` waere auch dann gruen, wenn die eine Sache versehentlich zweimal
+    gerendert wird — „genau EINE Sache" wuerde dann zu zweien, ohne dass es auffaellt.
+
+    Und der Leer-Zweig darf NICHT zusaetzlich erscheinen: eine Sache UND „nichts diesmal"
+    nebeneinander waere ein Widerspruch auf dem Bildschirm."""
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+        '_kopfzeile': _kopfzeile(),
+        '_fokus': _fokus(),
+    }, typ='live')
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert EINE_SACHE_TITEL in html, (
+        'Die Ueberschrift der einen Sache fehlt — die Stelle existiert gar nicht.'
+    )
+    assert html.count(FOKUS_SATZ) == 1, (
+        f'Die eine Sache steht {html.count(FOKUS_SATZ)}x im HTML statt genau einmal — aus '
+        f'"genau EINE Sache" sind mehrere geworden.'
+    )
+    assert FOKUS_BELEG in html, 'Das woertliche Beleg-Zitat der einen Sache fehlt.'
+    assert NICHTS_SATZ not in html, (
+        'Der Leer-Zweig erscheint, obwohl eine Sache berechnet wurde — beides nebeneinander '
+        'ist ein Widerspruch auf dem Bildschirm.'
+    )
+
+
+def test_diesmal_nichts_zweig(client, db_from_client, tracker):
+    """D-10: kein Kriterium verletzt -> ein ehrliches „nichts", und die Kopfzeile bleibt.
+
+    ⚠ BEIDE Assertions gehoeren in DIESELBE Funktion: der Nichts-Zweig darf die Kopfzeile nicht
+    mitreissen. Die Kopfzeile kommt vom Modell, die eine Sache vom Code — sie haengen nicht
+    aneinander, und genau das muss belegt sein.
+
+    Auf deutschem Bestand ist das der NORMALFALL, nicht die Ausnahme: der Katalog ist englisch.
+    Eine erfundene Sache oder eine leere Stelle waere hier der Fehler."""
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+        '_kopfzeile': _kopfzeile(),
+        '_fokus': _fokus(focus_key=None, satz='', beleg='', count=0),
+    }, typ='live')
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert NICHTS_SATZ in html, (
+        'Der ehrliche Leer-Zweig fehlt — ohne ihn steht bei jedem deutschen Anruf eine leere '
+        'Stelle, wo eine Aussage stehen muesste.'
+    )
+    assert KOPFZEILE_BEOBACHTUNG in html, (
+        'Der Nichts-Zweig hat die Kopfzeile mitgerissen — sie haengt nicht am Katalog (D-10).'
+    )
+    assert EINE_SACHE_TITEL in html, (
+        'Die Ueberschrift der einen Sache ist im Leer-Fall verschwunden — dann ist "nichts '
+        'gefunden" von "gar nicht ausgewertet" nicht zu unterscheiden.'
+    )
+
+
+def test_beobachtungen_liegen_hinter_dem_aufklapper(client, db_from_client, tracker):
+    """Die VOLLSTAENDIGEN Beobachtungen liegen hinter `<details>`, Kopfzeile und eine Sache davor.
+
+    Der Positions-Vergleich ist bewusst auf die CODE-FORM des NEUEN Elements gerichtet
+    (`<details class="n-observation-dim">`) und nicht auf den nackten Tag-Namen: die Datei
+    traegt seit dem Vorgespraechs-Block bereits ein zweites `<details`. Ein Anker auf `<details`
+    allein wuerde nicht sagen, WELCHES Element gemeint ist.
+
+    Gepaarter Existenz-Anker: der Dimensions-Titel steht ueberhaupt im HTML — sonst wuerde
+    `html.index` mit ValueError scheitern statt eine falsche Reihenfolge zu melden."""
+    dim_name = DIMENSIONS[0]['name']
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+        '_kopfzeile': _kopfzeile(),
+        '_fokus': _fokus(),
+    }, typ='live')
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert AUFKLAPPER_FORM in html, 'Der Aufklapper um die vollstaendigen Beobachtungen fehlt.'
+    assert AUFKLAPPER_TITEL in html, 'Der Aufklapper hat keine Beschriftung.'
+    assert dim_name in html, 'Der Dimensions-Titel steht gar nicht im HTML.'
+    assert html.index(AUFKLAPPER_FORM) < html.index(dim_name), (
+        'Die Dimensionen stehen VOR dem Aufklapper — die vollstaendigen Beobachtungen liegen '
+        'nicht einen Klick tiefer.'
+    )
+    assert html.index(KOPFZEILE_BEOBACHTUNG) < html.index(AUFKLAPPER_FORM), (
+        'Die Kopfzeile steht hinter dem Aufklapper statt davor.'
+    )
+    assert html.index(FOKUS_SATZ) < html.index(AUFKLAPPER_FORM), (
+        'Die eine Sache steht hinter dem Aufklapper statt davor.'
+    )
+
+
+def test_alle_beobachtungen_verworfen_zeigt_nicht_genug(client, db_from_client, tracker):
+    """SPEC Req 3: sind ALLE Beobachtungen von der Zitat-Pruefung verworfen worden, steht dort
+    „Nicht genug zum Bewerten." — NICHT eine leere Seite und NICHT die Dauer-Meldung.
+
+    ⚠ Ehrlich benannt: dieser Test ist schon VOR dem Bau gruen. Sein Zweck ist nicht der
+    Neubau, sondern die Regel gegen ein Zuviel — der Faenger sitzt ab Plan 07 INNERHALB des
+    Aufklappers und muss diesen Umzug ueberleben. Er muss rot werden, sobald jemand ihn beim
+    Einhuellen verliert."""
+    leer = {d['key']: [] for d in DIMENSIONS}
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        **leer,
+        '_kopfzeile': _kopfzeile(),
+        '_fokus': _fokus(focus_key=None, satz='', beleg='', count=0),
+    }, typ='live')
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert LEER_SATZ in html, (
+        'Der Faenger „Nicht genug zum Bewerten." ist beim Einhuellen in den Aufklapper '
+        'verlorengegangen — der Anruf zeigt eine leere Stelle.'
+    )
+    assert DAUER_MELDUNG not in html, (
+        'Die Seite zeigt die Dauer-Meldung „wird im Hintergrund ausgewertet" — die Zeile ist '
+        'da, sie hat nur nichts Verwertbares. Das ist die falsche Erklaerung.'
+    )
+
+
+def test_ki_karte_steht_vor_dem_kb_verlauf(client, db_from_client, tracker):
+    """D-15: Die KI-Einschaetzung ist das Erste auf der Seite.
+
+    ⚠ ANKER-WAHL, begruendet statt geraten: Der urspruengliche Plan-Anker („KI-Karte vor dem
+    Training-Hero", Zeichenkette `Gesamt-Score`) ist per Bauart unerfuellbar — bei
+    `typ='training'` ist die KI-Karte gar nicht sichtbar (sie steht hart in einer
+    `conv.typ == 'live'`-Weiche), und bei `typ='live'` gibt es nach Plan 06 keinen
+    `Gesamt-Score` mehr. Es gibt also keinen Seitenzustand, in dem beide Zeichenketten
+    gleichzeitig vorkaemen.
+
+    `Kaufbereitschafts-Verlauf` ist der `else`-Zweig der Diagramm-Ueberschrift — also genau der
+    LIVE-Zweig — und liegt deutlich unterhalb der KI-Karte.
+
+    Gepaarter Existenz-Anker: beide Zeichenketten stehen ueberhaupt im HTML. Ohne ihn wuerde
+    `html.index` bei einem leeren Rendering mit ValueError scheitern und wie ein Testfehler
+    aussehen statt wie ein Fund."""
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+        '_kopfzeile': _kopfzeile(),
+        '_fokus': _fokus(),
+    }, typ='live', kb_end=64)
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert 'KI-Einschätzung' in html, 'Die KI-Karte steht gar nicht im HTML.'
+    assert 'Kaufbereitschafts-Verlauf' in html, 'Die Diagramm-Ueberschrift steht gar nicht im HTML.'
+    assert html.index('KI-Einschätzung') < html.index('Kaufbereitschafts-Verlauf'), (
+        'Die KI-Einschaetzung steht nicht als Erstes auf der Seite — sie ist ab METRIK-1 die '
+        'Antwort auf „wie lief das Gespraech", nicht eine Beigabe unter dem Diagramm.'
+    )
