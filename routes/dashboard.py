@@ -739,7 +739,10 @@ def analytics_page():
 @login_required
 def session_detail(sid):
     from database.models import ConversationLog as CL, ObjectionEvent, PersonalityType
-    from routes.app_routes import _calc_call_score, _derive_practice_recommendations
+    # METRIK-1 D-15: Die alte Vierer-Formel wird hier nicht mehr importiert — sie hat in dieser
+    # Datei keinen Leser mehr. Geloescht wird sie NICHT hier: sie hat noch einen zweiten Leser
+    # im Anruf-Fenster (routes/app_routes.py, Trend-Route). Beide fallen gemeinsam in Plan 08.
+    from routes.app_routes import _derive_practice_recommendations
     import json as _json
 
     db = get_session()
@@ -760,9 +763,12 @@ def session_detail(sid):
         if conv.personality_type_id:
             pt = db.query(PersonalityType).filter_by(id=conv.personality_type_id).first()
 
-        # Phase 07.1 (W-06): score_total typ-aware
-        #  - Live: _calc_call_score (Gesamt-Score, 4 Komponenten)
-        #  - Training: kb_end Fallback (kein _calc_call_score fuer Training)
+        # Phase 07.1 / METRIK-1 D-15/D-17: score_total ist typ-abhaengig.
+        #  - Live: die alte Vierer-Formel — entfaellt mit METRIK-1, es gibt keinen Wert mehr.
+        #  - Training: eigener Wert, bleibt (D-17).
+        # ⛔ Der Name der alten Formel wird hier bewusst NICHT genannt: Plan 08 fuehrt ihn als
+        #    Abwesenheits-Anker mit Sollwert 0 ueber routes/ und services/ — Kommentare und
+        #    Docstrings zaehlen dort ausdruecklich mit. Beschreiben statt zitieren.
         conv_typ = (conv.typ or 'live')
 
         # Fix B (07.1 UAT-R1): kb_end konsistent aus kb_verlauf-Endpunkt ableiten,
@@ -782,40 +788,24 @@ def session_detail(sid):
         if kb_end_effective is None:
             kb_end_effective = 0
 
-        if conv_typ == 'live':
-            # Score mit dem effektiven kb_end berechnen (mini-Shim um _calc_call_score
-            # ohne zweite Helper-Variante): temporaer conv.kb_end setzen, Score holen,
-            # urspruenglichen Wert zurueckschreiben — Session-Lifecycle bleibt read-only.
-            _orig_kb = conv.kb_end
-            try:
-                conv.kb_end = kb_end_effective
-                score_total = _calc_call_score(conv)
-            finally:
-                conv.kb_end = _orig_kb
-        else:
-            score_total = kb_end_effective
+        # ── METRIK-1 D-15/D-17: score_total gibt es nur noch fuer TRAINING. ──────────────────
+        # LIVE bekam bis 2026-08-13 die alte Vierer-Formel (kb_end 40 %, behandelt_rate 30 %,
+        # rede_score 20 %, skript 10 %). Drei der vier Bausteine trugen im Kaltakquise-Modus
+        # nichts Echtes bei; die 40-%-Komponente war die Kaufbereitschaft des KUNDEN. Die Formel
+        # ist damit ohne Leser in dieser Datei — der Import faellt mit.
+        # ⛔ Ihr Funktionsname wird hier bewusst NICHT genannt: Plan 08 fuehrt ihn als
+        #    Abwesenheits-Anker mit Sollwert 0 ueber routes/ und services/. Ein Kommentar, der
+        #    ihn zitiert, macht den Anker der Folge-Welle unerfuellbar.
+        # TRAINING behaelt seine Note: kb_end traegt dort die Trainings-Gesamtnote
+        # (routes/training.py), nicht die Kaufbereitschaft. Wer diesen Zweig mitloescht, toetet
+        # sie still (D-17, Gap C).
+        score_total = kb_end_effective if conv_typ == 'training' else None
 
-        # Phase 07.1 (W-06): Trend-Avg typ-diskriminierend.
-        # Live    -> _calc_call_score ueber letzte 5 typ='live'.
-        # Training-> kb_end ueber letzte 5 typ='training' (kein _calc_call_score
-        #            fuer Training definiert; Score-Hero nutzt ebenfalls kb_end).
-        # Wave 4 / POLISH-33: Training-Trend-Badge wieder aktiv — Template-Gate
-        # 'conv.typ != training' entfaellt parallel.
-        trend_avg = None
-        recent = (db.query(CL)
-                    .filter(CL.user_id == g.user.id)
-                    .filter(CL.typ == conv_typ)
-                    .filter(CL.id != conv.id)
-                    .order_by(CL.created_at.desc())
-                    .limit(5).all())
-        if recent:
-            if conv_typ == 'live':
-                trend_avg = round(sum(_calc_call_score(c) for c in recent) / len(recent))
-            else:
-                # Training-Schnitt ueber kb_end (None-tolerant, None->0 behandeln
-                # damit eine einzelne leere kb_end keine Division-Error-Kette ausloest)
-                _vals = [(c.kb_end if c.kb_end is not None else 0) for c in recent]
-                trend_avg = round(sum(_vals) / len(_vals)) if _vals else None
+        # ── METRIK-1 D-14: Trend-Streifen ERSATZLOS entfallen. ──────────────────────────────
+        # Eine neutrale Ersatz-Groesse (Anrufe/Woerter) ist ausdruecklich VERWORFEN: sie misst
+        # Betriebsamkeit, nicht Fortschritt. Lieber eine ehrliche Leerstelle als eine huebsche
+        # Zahl ohne Bedeutung. NICHT gestrichen, VERTAGT: der Streifen kommt zurueck, sobald die
+        # Fokus-Serie existiert ("dreimal in Folge angewendet").
 
         # Phase 07.1: chart_data_json typ-diskriminierend
         if conv_typ == 'training':
@@ -1054,7 +1044,6 @@ def session_detail(sid):
                 kopfzeile_display=(kopfzeile_display if _preview_on else {'beobachtung': '', 'beleg_zitat': ''}),  # METRIK-1 Req 5
                 fokus_display=(fokus_display if _preview_on else {'focus_key': None, 'satz': '', 'beleg': ''}),    # METRIK-1 Req 6
                 pt=pt,
-                trend_avg=trend_avg,
                 chart_data_json=chart_data_json,
                 schwierigkeit_label=schwierigkeit_label,
                 recommendations=recommendations,
