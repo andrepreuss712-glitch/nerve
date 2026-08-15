@@ -661,10 +661,13 @@ def test_kein_trainings_durchschnitt_auf_der_live_seite(client, db_from_client, 
     assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
     html = r.get_data(as_text=True)
 
+    # Reihenfolge mit Absicht: die ABWESENHEIT zuerst. Im ROT-Lauf ist dann die Fehlermeldung
+    # eindeutig ("der Durchschnitt steht da") statt mehrdeutig ("der Sonst-Zweig fehlt" — was
+    # vor dem Umbau auch heissen kann, dass korrekterweise der Durchschnitts-Zweig griff).
+    assert TRAININGS_DURCHSCHNITT not in html, (
+        'Die Live-Auswertungsseite zeigt weiterhin einen Trainings-Notendurchschnitt.'
+    )
     assert TRAININGS_ZAEHLUNG in html, (
         'Der Empfehlungs-Block mit Trainings-Bezug wurde gar nicht gerendert — der Test kann '
         'ueber die Abwesenheit des Durchschnitts nichts aussagen.'
-    )
-    assert TRAININGS_DURCHSCHNITT not in html, (
-        'Die Live-Auswertungsseite zeigt weiterhin einen Trainings-Notendurchschnitt.'
     )
