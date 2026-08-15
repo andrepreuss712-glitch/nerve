@@ -155,7 +155,13 @@
       {# (b) Audio-Gate / zu wenig Material #}
       <p>
         {% set _reason = (rubric_preview.payload_jsonb or {}).get('reason') %}
-        {% if _reason == 'too_few_high_confidence_events' %}
+        {% if _reason == 'too_little_speech' %}
+          {# METRIK-1 Requirement 1: neuer Ablehnungs-Grund des Sprech-Substanz-Tors. #}
+          In diesem Gespräch wurde zu wenig gesprochen für eine Einschätzung.
+        {% elif _reason == 'too_few_high_confidence_events' %}
+          {# ALT-Grund, wird seit METRIK-1 NICHT mehr geschrieben — der Zweig bleibt trotzdem,
+             weil Alt-Zeilen mit diesem Grund in der Datenbank stehen. Wer ihn entfernt, gibt
+             diesen Anrufen die FALSCHE Erklärung. #}
           Zu wenig auswertbare Momente für eine Einschätzung.
         {% else %}
           Audio zu schlecht für eine Einschätzung.
