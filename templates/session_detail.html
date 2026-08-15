@@ -116,11 +116,13 @@
     </div>
   </section>
 
-  {# ── Section 2b: KI-Einschätzung / Coaching-Hinweis (TAXO2-05) ─────────────────────────────
+  {# ── Section 2b: KI-Einschätzung / Coaching-Hinweis (TAXO2-05, METRIK-1) ───────────────────
      Beobachtungen statt Zahl (Soll-Verhalten §6 / Entscheidung.md).
-     Edge-Reihenfolge: (0) ANZEIGE-Sperre outcome -> (a) judge_failed -> (b) not_gradable ->
-     (d) row-absent -> (e) Beobachtungen + Beleg-Zitate (+ prominente Compliance-Notiz oben,
-     Cross-AI-Finding 2). (c) kein-Material-Zweig ist in (e) integriert (leere observations).
+     Edge-Reihenfolge: (a) judge_failed -> (b) not_gradable (drei Gründe) -> (d) row-absent ->
+     (e) Beobachtungen + Beleg-Zitate (+ prominente Compliance-Notiz oben, Cross-AI-Finding 2).
+     (c) kein-Material-Zweig ist in (e) integriert (leere observations).
+     METRIK-1 D-20: Der frühere Zweig (0) — Anzeige-Sperre bis zur Outcome-Bestätigung — ist
+     ERSATZLOS entfallen. An seiner Stelle steht oberhalb der Kette eine ehrliche Markierung.
      Kein hardcoded Hex, keine Inline-Styles — nur .n-*-Klassen + CSS-Variablen (CLAUDE.md). #}
   {% if conv.typ == 'live' %}
   <section class="n-session-detail-card" aria-label="KI-Einschätzung / Coaching-Hinweis">
@@ -129,9 +131,24 @@
     </h2>
     <p class="n-label">KI-Einschätzung / Coaching-Hinweis — keine Note, kein Urteil.</p>
     {% if not outcome_confirmed %}
-      {# (0) ANZEIGE-Sperre: Beobachtungen erst NACH Outcome-Bestätigung (Leakage-Schutz). #}
-      <p>Gesprächsergebnis bestätigen, dann erscheint die Einschätzung.</p>
-    {% elif rubric_preview and rubric_preview.status == 'judge_failed' %}
+      {# METRIK-1 D-20: MARKIEREN statt SPERREN. Bis 2026-08-13 stand hier eine Sperre, die die
+         Einschätzung bis zur Ergebnis-Bestätigung versteckte. Sie hat belegbar NIE einen Klick
+         erzeugt (conv 264 und conv 266 blieben TROTZ Sperre unbestätigt) — sie hat nur
+         Bewertungen unsichtbar gemacht.
+         D-21: Die frühere Etikettierung dieses Zweigs als Schutz vor einem Durchsickern des
+         Ergebnisses war ein Irrtum. Schutz des Bewerters ist es belegt NICHT: der läuft
+         ergebnis-blind (services/judge_runner.py) und ist fertig, BEVOR die Sperre überhaupt
+         greifen konnte (services/slow_lane.py).
+         ⛔ Der alte Ausdruck wird bewusst NICHT zitiert — er ist in diesem Task ein
+         Abwesenheits-Anker mit Sollwert 0 über templates/, routes/, services/ und static/.
+         Beschreiben statt zitieren, sonst überlebt er seine eigene Löschung.
+         Der echte Ursprung ist Andrés Mai-Direktive "erst Outcome-Wahl, dann Score" — Zweck
+         Daten-Qualität. Diese Direktive bleibt dort in Kraft, wo sie wirkt: bei der
+         Pflicht-Wahl im Anruf-Fenster direkt nach dem Auflegen. Unbestätigte Anrufe werden
+         hier ehrlich markiert und aus jeder Korrelations-Rechnung herausgenommen. #}
+      <p class="n-label">Gesprächsergebnis noch nicht bestätigt — diese Einschätzung zählt nicht in die Auswertung.</p>
+    {% endif %}
+    {% if rubric_preview and rubric_preview.status == 'judge_failed' %}
       {# (a) Judge-Fehler (Dead-Letter) #}
       <p>Auswertung fehlgeschlagen — wird automatisch geprüft.</p>
     {% elif rubric_preview and rubric_preview.status == 'not_gradable' %}

@@ -933,8 +933,9 @@ def session_detail(sid):
 
         # ── TAXO2-Plan 04/05 (FOLD 26.06.) — "Neu — Vorschau"-Panel (ADDITIV, read-only) ──────────
         # Die zum Call gehoerende live-rubric_score-Zeile lesen (Beobachtungen statt Zahl,
-        # TAXO2-Plan 05) + outcome_confirmed (ANZEIGE-Sperre: Beobachtungen erst zeigen, wenn
-        # calls.outcome bestaetigt — Leakage-Schutz). Reines Display-Gate via call_id-Join.
+        # TAXO2-Plan 05) + outcome_confirmed (METRIK-1 D-20/D-21: MARKIERUNG, keine Sperre mehr —
+        # die frueher hier stehende Etikettierung als Schutz vor durchsickernden Ergebnissen war
+        # ein Irrtum; der Bewerter ist ergebnis-blind und laeuft vor jeder Anzeige).
         # Plan 05: observations_jsonb + _compliance werden SEPARAT extrahiert und als
         # observations_display (geordnet nach DIMENSIONS) + compliance_verletzt/compliance_beleg
         # ans Template gegeben — Template bleibt dumm (Punkt 27: einfachster tragfaehiger Weg).
@@ -1012,7 +1013,12 @@ def session_detail(sid):
                 # Bei _preview_on=False faellt NUR das Vorschau-Panel weg; der Rest der Seite
                 # (Transkript, Chart, Empfehlungen) bleibt vollstaendig.
                 rubric_preview=(rubric_preview if _preview_on else None),        # TAXO2-05: live-rubric_score-Zeile (status + guard)
-                outcome_confirmed=(outcome_confirmed if _preview_on else False),  # TAXO2-05: ANZEIGE-Sperre (calls.outcome IS NOT NULL)
+                # METRIK-1 D-20: Markierung "Ergebnis nicht bestaetigt" (calls.outcome IS NOT NULL).
+                # Der Fallback-Wert False bleibt bewusst: im Fallback-Render wird die Karte ohnehin
+                # ohne Vorschau-Daten gezeichnet, und False erzeugt dort dieselbe Markierung wie ein
+                # unbestaetigter Anruf. Das ist die konservative Richtung — lieber einmal zu viel
+                # markiert als eine Bewertung faelschlich als "zaehlt" ausgewiesen.
+                outcome_confirmed=(outcome_confirmed if _preview_on else False),
                 observations_display=(observations_display if _preview_on else []),   # TAXO2-05: [{name, eintraege}] je Dimension
                 compliance_verletzt=(compliance_verletzt if _preview_on else False),  # TAXO2-05: _compliance.verletzt bool
                 compliance_beleg=(compliance_beleg if _preview_on else ''),           # TAXO2-05: _compliance.beleg_zitat str
