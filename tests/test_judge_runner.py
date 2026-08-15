@@ -118,6 +118,14 @@ def test_prompt_has_no_outcome():
     # Auch das Feld-Wort 'outcome' selbst darf nicht vorkommen (wuerde den Wert implizieren)
     assert 'outcome' not in full_prompt.lower(), "Das Wort 'outcome' ist im Prompt!"
 
+    # ── METRIK-1 Plan 05 Task 1: der gepaarte EXISTENZ-Anker, der diesem Bestandstest fehlte ──
+    # Ohne ihn waere der Test auch dann gruen, wenn _build_judge_prompt ein leeres Tupel
+    # zurueckgaebe — "nicht gefunden" waere dann von "nichts gelesen" nicht zu unterscheiden.
+    # (Bau-Regel-20-Luecke im BESTAND, nicht nur im Neubau.)
+    assert '[#1 berater' in user_str          # das Transkript wurde ueberhaupt gerendert
+    assert 'headline_observation' in user_str  # die Kopfzeilen-Aufgabe steht im Prompt
+    assert len(user_str) > 200
+
 
 # ════════════════════════════════════════════════════════════════════════════════════
 # Test 2: NERVE-Vorschlaege NICHT im Prompt (Bias-Schutz)
@@ -410,3 +418,157 @@ def test_judge_gated_on_transcript_resolved(monkeypatch):
 
     # Status zeigt an, warum der Judge nicht lief
     assert result.get('status') == 'transcript_not_resolved'
+
+
+# ════════════════════════════════════════════════════════════════════════════════════
+# METRIK-1 Plan 05 Task 1 — die belegte KOPFZEILE ("bester Moment")
+#
+# Zwei ZUSAETZLICHE Felder im BESTEHENDEN Tool-Schema. KEIN zweiter LLM-Aufruf, gleiche
+# Wartezeit (SPEC Requirement 5, Punkt 25). Die "eine Sache fuers naechste Mal" berechnet
+# der CODE (services/fokus_katalog.py, Plan 04) — sie taucht hier bewusst NICHT auf.
+# ════════════════════════════════════════════════════════════════════════════════════
+
+def _tool_input_mit_kopfzeile(headline='Der Berater hat den Einwand ruhig gespiegelt.',
+                              beleg='Verstehe ich richtig, dass das Budget der Knackpunkt ist?'):
+    """tool_input-Form wie sie der Bewerter liefert — mit den beiden Kopfzeilen-Feldern."""
+    return {
+        'bedarfs_ermittlung': [
+            {'beleg_zitat': 'Wie loesen Sie das heute?', 'beobachtung': 'Offene Frage.', 'auspraegung': 'stark'}
+        ],
+        'gespraechs_eroeffnung': [
+            {'beleg_zitat': 'Ich rufe wegen X an.', 'beobachtung': 'Einstieg klar.', 'auspraegung': 'ok'}
+        ],
+        'einwand_behandlung': [
+            {'beleg_zitat': 'Das ist zu teuer.', 'beobachtung': 'Gespiegelt.', 'auspraegung': 'ok'}
+        ],
+        'gespraechsfuehrung': [
+            {'beleg_zitat': 'OK, tschues.', 'beobachtung': 'Gut gefuehrt.', 'auspraegung': 'ok'}
+        ],
+        'compliance_violation': False,
+        'compliance_beleg_zitat': '',
+        'headline_observation': headline,
+        'headline_beleg_zitat': beleg,
+    }
+
+
+def test_kopfzeile_landet_in_observations():
+    """Die beiden Schema-Felder landen als observations_jsonb['_kopfzeile'] — beide Werte."""
+    headline = 'Der Berater hat den Preis-Einwand ruhig gespiegelt statt zu rechtfertigen.'
+    beleg = 'Verstehe ich richtig, dass das Budget der Knackpunkt ist?'
+
+    observations, _ratings = jr._parse_judge_output(_tool_input_mit_kopfzeile(headline, beleg))
+
+    assert '_kopfzeile' in observations, "'_kopfzeile' fehlt in observations_jsonb"
+    kopf = observations['_kopfzeile']
+    assert kopf['beobachtung'] == headline
+    assert kopf['beleg_zitat'] == beleg
+    # 'schema' versioniert NUR diesen Teilblock (DIMENSIONS_VERSION bleibt unveraendert).
+    assert kopf['schema'] == 1
+
+
+def test_kopfzeile_ist_nicht_in_ratings():
+    """Die Kopfzeile ist keine Auspraegung und keine Note — sie darf nicht in ratings landen.
+    Der bestehende Vertrag fuer '_compliance' bleibt daneben unveraendert."""
+    _observations, ratings = jr._parse_judge_output(_tool_input_mit_kopfzeile())
+
+    assert '_kopfzeile' not in ratings, "'_kopfzeile' darf NICHT in ratings_jsonb stehen"
+    assert '_compliance' not in ratings, "'_compliance' darf NICHT in ratings_jsonb stehen"
+    # Gepaarter Existenz-Anker: ratings ist nicht einfach leer.
+    valid_keys = {d['key'] for d in DIMENSIONS}
+    assert set(ratings) and set(ratings) <= valid_keys
+
+
+def test_kopfzeile_fehlend_ergibt_leere_strings():
+    """Liefert das Modell die Felder nicht, steht der Schluessel trotzdem da — leer, kein KeyError.
+
+    Ein fehlender Schluessel und ein ehrliches "nichts" waeren im Anzeige-Pfad sonst nicht
+    unterscheidbar (dieselbe Form-Garantie-Haltung wie in routes/dashboard.py)."""
+    tool_input = _tool_input_mit_kopfzeile()
+    del tool_input['headline_observation']
+    del tool_input['headline_beleg_zitat']
+
+    observations, _ratings = jr._parse_judge_output(tool_input)
+
+    assert observations['_kopfzeile']['beobachtung'] == ''
+    assert observations['_kopfzeile']['beleg_zitat'] == ''
+    assert observations['_kopfzeile']['schema'] == 1
+
+
+def test_schema_verlangt_kopfzeile():
+    """JUDGE_TOOL verlangt beide Kopfzeilen-Felder — Runtime-Assertion auf die Datenstruktur.
+
+    Ein Pflichtfeld ist hier vertretbar (anders als bei der "einen Sache"): ein BESTER MOMENT
+    existiert in jedem Gespraech, das das Substanz-Tor passiert hat. Der Schutz greift hinten —
+    das Beleg-Zitat laeuft durch _pruefe_belege (Plan 05 Task 2)."""
+    schema = jr.JUDGE_TOOL['input_schema']
+    props = schema['properties']
+
+    assert 'headline_observation' in props, 'headline_observation fehlt als Top-Level-Feld'
+    assert 'headline_beleg_zitat' in props, 'headline_beleg_zitat fehlt als Top-Level-Feld'
+    assert props['headline_observation']['type'] == 'string'
+    assert props['headline_beleg_zitat']['type'] == 'string'
+
+    required = schema['required']
+    assert 'headline_observation' in required
+    assert 'headline_beleg_zitat' in required
+    # Gepaarter Existenz-Anker: die Bestands-Pflichtfelder stehen unveraendert daneben.
+    assert 'compliance_violation' in required
+    for dim in DIMENSIONS:
+        assert dim['key'] in required
+
+
+def test_prompt_hat_keinen_fokus_schluessel():
+    """Der Bewertungs-Auftrag kennt WEDER den Fokus-Katalog NOCH einen seiner Schluessel.
+
+    Strukturell, nicht Sorgfalt: der Fokus entsteht erst NACH dem Modell-Aufruf, im Code
+    (SPEC Constraint: "Der Beobachter kennt weder die NERVE-Vorschlaege noch den Fokus")."""
+    call = _make_call()
+    segments = [
+        _make_segment(1, 'berater', 100, 'Guten Tag, darf ich kurz stoeren?'),
+        _make_segment(2, 'kunde', 2000, 'Was wollen Sie?'),
+    ]
+    events = []
+
+    system_str, user_str = jr._build_judge_prompt(call, events, _fake_profile_briefing(), segments)
+    full_prompt = system_str + ' ' + user_str
+
+    for verboten in ['focus', 'fokus', 'negative_phrases', 'we_not_i',
+                     'problem_language', 'reason_for_call', 'top reps']:
+        assert verboten not in full_prompt.lower(), (
+            f"Katalog-Begriff '{verboten}' steht im Bewertungs-Auftrag — der Beobachter ist nicht mehr blind."
+        )
+
+    # Gepaarte EXISTENZ-Anker: "nicht gefunden" darf nicht von "nichts gebaut" kommen.
+    assert '[#1 berater' in user_str
+    assert 'headline_observation' in user_str
+    assert len(user_str) > 200
+
+
+def test_genau_ein_llm_aufruf(monkeypatch):
+    """run_behavior_judge feuert GENAU EINEN messages.create-Aufruf — die mechanische Zusage
+    "kein zusaetzlicher KI-Aufruf" (Punkt 25, Latenz). Die Kosten-Gegenprobe an echten Daten
+    (api_cost_log vorher/nachher) kommt im Deploy-Checkpoint von Plan 07 dazu."""
+    call = _make_call()
+    segments = [_make_segment(1, 'berater', 100, 'Probe-Satz fuer den Zaehl-Test.')]
+    events = []
+    zaehler = {'n': 0}
+
+    def _zaehl_create(**kwargs):
+        zaehler['n'] += 1
+        return _make_tool_response()
+
+    fake_client = SimpleNamespace(messages=SimpleNamespace(create=_zaehl_create))
+    monkeypatch.setattr(jr, 'claude_client', fake_client)
+    monkeypatch.setattr(jr, 'build_profile_context', lambda *a, **k: _fake_profile_briefing())
+
+    fake_db = MagicMock()
+    fake_query = MagicMock()
+    fake_query.filter.return_value.order_by.return_value.all.return_value = segments
+    fake_db.query.return_value = fake_query
+
+    result = jr.run_behavior_judge(call, events, fake_db)
+
+    # Gepaarter Existenz-Anker: der Lauf ist wirklich durchgelaufen (nicht im Fehler-Mantel
+    # gelandet, wo 0 Aufrufe ebenfalls "1 nicht ueberschritten" ergaeben).
+    assert result.get('status') == 'judged', f"Judge-Lauf endete mit {result.get('status')}"
+    assert zaehler['n'] == 1, f"{zaehler['n']} LLM-Aufrufe statt genau 1 — die Latenz-Zusage ist gebrochen."
