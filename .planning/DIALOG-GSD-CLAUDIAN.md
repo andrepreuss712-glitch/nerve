@@ -6086,3 +6086,30 @@ wirklich live geht.
 **Offen (UAT, Andre, blockiert nichts):** die drei Browser-Pruefungen zu Plan 03 — kein Mensch hat
 die neue Anzeige bisher gesehen. Steht als eigener Block oben in
 `08.23.2.METRIK-1-03-SUMMARY.md`.
+
+## ROADMAP-SYNC — 08.23.2.METRIK-1 Plan 05 — 2026-08-15
+
+**Was geaendert wurde in `.planning/ROADMAP.md`:** Die Plan-05-Zeile der METRIK-1-Tabelle steht
+jetzt auf **AUSGEFUEHRT 2026-08-15** (3/3 Tasks, 6 Commits `203416a` · `5c9cbc4` · `a706b46` ·
+`6cfc02d` · `f261794` · `85070cd`). Welle 4 ist damit gebaut.
+
+**Warum das in die Vault-Roadmap muss:** Mit diesem Plan hat `services/fokus_katalog.py` seinen
+**einzigen Produktiv-Aufrufer** bekommen — die in Plan 04 ausdruecklich *terminierte* Bau-Regel 20
+ist eingeloest. Damit ist Form 2 im Hintergrund vollstaendig: belegte Kopfzeile aus dem **selben**
+KI-Aufruf plus genau eine vom Code gerechnete Sache, beide in `rubric_score.observations_jsonb`.
+
+**Drei Punkte, die in der Vault-Fassung nicht fehlen duerfen:**
+
+1. ⛔ **Kein Deploy in Plan 05.** Ausgerollt wird in **Plan 07**, gemeinsam mit 06 und 07. Zwischen
+   „alte Note raus" und „Form 2 rein" haette die Auswertungsseite sonst ein Loch.
+2. 📌 **Punkt 23 — Schild-Schuld ist BENANNT, nicht uebersehen.** `rubric_score.observations_jsonb`
+   traegt heute nur die Form `{dim_key:[...]}`; durch `_kopfzeile`/`_fokus` ist der Text
+   unvollstaendig, und `slow_lane.py` ist jetzt ein **zweiter Schreiber**. Nachzug in **Plan 07
+   Task 3, Migration `0041`**, im selben Ausrollen.
+3. ❌ **Was NICHT bewiesen ist:** kein echter Anruf ist durch den Code gelaufen · die
+   `api_cost_log`-Gegenprobe fuer „kein zusaetzlicher KI-Aufruf" fehlt (Plan 07) · Form 2 ist fuer
+   **keinen Nutzer sichtbar**, das Template liest die Kontext-Werte erst in Plan 07 · die drei
+   **englischen** Test-Anrufe aus Plan 04 bleiben offen.
+
+**Unveraendert offen und NICHT von diesem Plan eingeloest:** der Wirkungs-Beleg des Substanz-Tors am
+echten Anruf (Plan 02) und die drei Browser-Pruefungen (Plan 03).
