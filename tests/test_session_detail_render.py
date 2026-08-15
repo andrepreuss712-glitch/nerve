@@ -65,8 +65,12 @@ def tracker(db_from_client):
         cleanup_rows(db_from_client, rest)
 
 
-def _seed_session(db, tracker, observations):
+def _seed_session(db, tracker, observations, outcome='meeting_booked'):
     """Legt Nutzer + ConversationLog + Call + live-rubric_score an und gibt (user, sid) zurueck.
+
+    `outcome` ist seit METRIK-1 D-20 ein **Test-Parameter**: `None` bildet einen Anruf ohne
+    bestaetigtes Gespraechsergebnis ab. Frueher war der Wert fest verdrahtet, weil eine
+    Anzeige-Sperre sonst jeden Zweig verstellt haette — die Sperre ist ersatzlos entfallen.
 
     Der Nutzer wird in die **Seed-Org der client-Fixture** gelegt: `rubric_score` hat FORCE RLS,
     und der Request-Pfad setzt die Tenant-GUC aus der Org des eingeloggten Nutzers. Eine eigene Org
@@ -101,9 +105,10 @@ def _seed_session(db, tracker, observations):
         started_at=_now(),
         ended_at=_now(),
         transcript_storage='none',
-        # outcome NICHT NULL -> outcome_confirmed=True -> die ANZEIGE-Sperre (0) ist offen,
-        # sonst erreicht der Test den Beobachtungs-Zweig gar nicht.
-        outcome='meeting_booked',
+        # METRIK-1 D-20: Der Vorgabewert bildet den BESTAETIGTEN Fall ab — NICHT mehr, weil eine
+        # Anzeige-Sperre sonst den Zweig verstellen wuerde. Die Sperre ist ersatzlos entfallen;
+        # der unbestaetigte Fall (outcome=None) hat einen eigenen Test.
+        outcome=outcome,
         conversation_log_id=conv.id,
     ))
     tracker['calls'].append(call_id)
@@ -175,6 +180,70 @@ def test_session_detail_leere_beobachtungen_zeigt_hinweis(client, db_from_client
     assert LEER_SATZ in html, (
         f'Der Hinweis {LEER_SATZ!r} fehlt — der Leer-Zweig ist tot, solange selectattr auf die '
         f'immer-truthy Dict-Methode trifft.'
+    )
+
+
+# ── METRIK-1 Plan 03 Task 1 (D-20): die Einschaetzung haengt NICHT mehr am Outcome-Klick ──
+MARKIERUNG_UNBESTAETIGT = 'Gesprächsergebnis noch nicht bestätigt'
+SPERR_SATZ_ALT = 'Gesprächsergebnis bestätigen, dann erscheint die Einschätzung.'
+
+
+def test_einschaetzung_erscheint_ohne_bestaetigtes_ergebnis(client, db_from_client, tracker):
+    """METRIK-1 Requirement 4 / D-20: die KI-Einschaetzung haengt NICHT mehr am Outcome-Klick.
+
+    ROT-vor-GRUEN: Gegen den Stand VOR dieser Phase ist der Test rot — die Sperre (0) fing den
+    Request ab und die Seite zeigte 'Gespraechsergebnis bestaetigen, dann erscheint die
+    Einschaetzung.'. Ein sauberer Beleg ohne neue Mechanik: derselbe Seed, nur outcome=None.
+
+    Der unbestaetigte Anruf wird dabei ehrlich MARKIERT statt versteckt — beides wird geprueft,
+    sonst waere 'Sperre weg' von 'Markierung vergessen' nicht zu unterscheiden.
+    """
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+    }, outcome=None)
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, (
+        f'Auswertungs-Seite antwortet {r.status_code} statt 200 — der unbestaetigte Anruf '
+        f'bricht die Seite.'
+    )
+    html = r.get_data(as_text=True)
+
+    # Gepaarter Existenz-Anker: "Sperr-Satz nicht gefunden" darf nicht von "Seite gar nicht
+    # gerendert" kommen.
+    assert MARKIERUNG_UNBESTAETIGT in html, (
+        'Die ehrliche Markierung fehlt — ohne sie ist ein unbestaetigter Anruf von einem '
+        'bestaetigten nicht zu unterscheiden.'
+    )
+    assert BELEG_ZITAT in html, (
+        'Das Beleg-Zitat fehlt — die Einschaetzung haengt weiterhin am Bestaetigungs-Klick.'
+    )
+    assert SPERR_SATZ_ALT not in html, (
+        'Der Sperr-Satz steht noch auf der Seite — die Anzeige-Sperre ist nicht entfallen.'
+    )
+
+
+def test_bestaetigter_anruf_traegt_die_markierung_nicht(client, db_from_client, tracker):
+    """Gegenprobe zur Markierung: mit bestaetigtem Ergebnis erscheint sie NICHT.
+
+    Ohne diesen Partner koennte die Markierung fest verdrahtet sein und der Test darueber
+    waere trotzdem gruen — sie waere dann keine Aussage mehr, sondern Dekoration."""
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+    })
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert BELEG_ZITAT in html, 'Die Seite wurde gar nicht bis zur Einschaetzung gerendert.'
+    assert MARKIERUNG_UNBESTAETIGT not in html, (
+        'Ein bestaetigter Anruf traegt die Unbestaetigt-Markierung — sie haengt nicht am '
+        'Wahrheitswert calls.outcome.'
     )
 
 
