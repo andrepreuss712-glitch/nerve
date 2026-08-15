@@ -5960,3 +5960,34 @@ Tor-Umbau gehen zusammen live; der einzige `deploy.sh production` beider Plaene 
    `deploy.sh:214`) — **jeder** Triage-Lauf brach im conftest-Setup ab, **bevor** ein Test lief,
    und sah dabei aus wie ein rotes Tor. Damit war jeder ROT-vor-GRUEN-Beleg ueber dieses Werkzeug
    bisher eine Fehlmessung. Gefixt in `9f18c0f`.
+
+---
+
+## FRAGE — 08.23.2.METRIK-1 Plan 04 — 2026-08-15
+
+**Wo ich stehe:** `services/fokus_katalog.py`, Regel `reason_for_call` (Katalog-Punkt A1).
+
+**Die Frage:** Drei der vier Katalog-Punkte zaehlen englische Woerter und kommen auf einem
+deutschen Anruf von selbst auf null — genau wie es NACHTRAG 2 ① beschreibt. **A1 ist anders:**
+Er prueft, ob der Grund des Anrufs frueh genannt wurde, also auf **Abwesenheit**. Ohne Zusatz
+wuerde er bei **jedem** deutschen Anruf feuern und damit den „diesmal nichts"-Zweig (D-10) aus
+dem Normalfall in den Ausnahmefall verwandeln — der Berater bekaeme eine englische Regel
+vorgehalten, die auf Deutsch gar nicht gilt.
+
+**Optionen:**
+1. **(gebaut, meine Empfehlung)** A1 bekommt einen **Sprach-Riegel**: er feuert nur, wenn das
+   Transkript ueber eine Funktionswort-Liste als englisch erkannt wird. Auf Deutsch ist das
+   Kriterium dann *nicht anwendbar* statt *verletzt*. Kein neuer Spracherkenner — dieselbe
+   Wortlisten-Maschinerie wie die anderen Regeln.
+2. A1 faellt aus v1 raus; der Katalog hat drei Punkte. SPEC Requirement 7 laesst das
+   ausdruecklich zu („wird beim Bau klar, dass auch vier zu viel sind, ueber den Fragen-Kanal
+   melden, nicht still entscheiden") — deshalb dieser Eintrag.
+3. A1 bleibt ohne Riegel. ⛔ Ich rate ab: er feuert dann auf jedem deutschen Anruf und verdraengt
+   den ehrlichen Nichts-Zweig. **Der Plan stellt diese Moeglichkeit ausdruecklich NICHT zur
+   Wahl** — sie waere eine Aenderung von D-10 und braucht einen eigenen, ausdruecklichen
+   Beschluss in diesem Kanal, bevor sie gebaut wird.
+
+**Was blockiert ist:** Nichts. Option 1 ist gebaut und abschaltbar (eine Konstante). Plan 04
+laeuft weiter; die Antwort entscheidet nur, ob A1 in v1 bleibt.
+
+**Antwort bitte hier als `### ANTWORT` ans Datei-Ende** — Auswaehlen: `riegel` oder `raus`.
