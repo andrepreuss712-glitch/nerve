@@ -647,6 +647,11 @@ def _pruefe_belege(observations: dict, pruef_fenster: list) -> tuple:
                      durch die Schwaerzung — [PERSON_A] steht fuer zwei gesprochene Woerter).
       'no_match'  -> die GANZE Beobachtung faellt weg, nicht nur das Zitat.
 
+    Sonderfall '_kopfzeile' (METRIK-1 Req 5): das Kopfzeilen-Zitat laeuft durch DIESELBE
+    Pruefung wie eine Dimensions-Beobachtung. Bei 'no_match' oder leerem Zitat faellt die GANZE
+    Kopfzeile weg — eine Kopfzeile ohne Beleg waere Lob ohne Beleg. Der Schluessel bleibt dabei
+    immer stehen, nur leer.
+
     Sonderfall '_compliance' (reservierter Schluessel, judge_runner.py:317-323): Bei 'no_match'
     wird NUR das Zitat geleert, das Flag `verletzt` BLEIBT stehen und wird getrennt gezaehlt.
     Begruendung: `_compliance` ist ein Sicherheits-Hard-Gate (L3-Safety). Ein Zitat-Fehler darf
@@ -736,13 +741,84 @@ def _pruefe_belege(observations: dict, pruef_fenster: list) -> tuple:
     elif comp is not None:
         geprueft['_compliance'] = comp
 
+    # ── METRIK-1 Requirement 5: die Kopfzeile traegt ein Beleg-Zitat und wird GENAUSO geprueft
+    #    wie eine Dimensions-Beobachtung. no_match -> die GANZE Kopfzeile faellt weg (nicht nur
+    #    das Zitat): eine Kopfzeile ohne Beleg waere genau das Lob ohne Beleg, das das Produkt
+    #    nicht geben darf. Die Anzeige hat dafuer einen ehrlichen Zweig (Plan 07).
+    #    ⚠ Bewusst ANDERS als bei '_compliance': dort bleibt das Flag stehen, weil es ein
+    #    Sicherheits-Hard-Gate ist. Eine Kopfzeile ist Lob — die darf verschwinden.
+    #    Der Schluessel bleibt IMMER vorhanden (leer statt fehlend) — dieselbe Form-Garantie-
+    #    Haltung wie in routes/dashboard.py: der Anzeige-Pfad prueft auf den leeren String und
+    #    nicht auf einen fehlenden Schluessel.
+    kopf = quelle.get('_kopfzeile')
+    if isinstance(kopf, dict):
+        kopf_zitat = kopf.get('beleg_zitat') or ''
+        kopf_beobachtung = kopf.get('beobachtung') or ''
+        zaehler['geprueft'] += 1
+        if not kopf_zitat:
+            zaehler['verworfen'] += 1
+            kopf_beobachtung = ''
+        else:
+            befund, _score = _bester_befund(kopf_zitat, pruef_fenster)
+            if befund == 'no_match':
+                zaehler['verworfen'] += 1
+                kopf_beobachtung, kopf_zitat = '', ''
+            elif befund == 'near_miss':
+                zaehler['near_miss'] += 1
+            else:
+                zaehler['treffer'] += 1
+        geprueft['_kopfzeile'] = {
+            'schema': 1,
+            'beobachtung': kopf_beobachtung,
+            'beleg_zitat': kopf_zitat,
+        }
+    elif kopf is not None:
+        # Kein dict -> kein Container fuer eine Kopfzeile (Form-Garantie an der Entstehungs-
+        # stelle, Haltung wie bei den Dimensionen oben): leere Form statt Durchreichen.
+        zaehler['verworfen'] += 1
+        geprueft['_kopfzeile'] = {'schema': 1, 'beobachtung': '', 'beleg_zitat': ''}
+
     # ── Vorwaerts-Vertraeglichkeit: unbekannte (Unterstrich-)Schluessel unveraendert durch ───
     for key, wert in quelle.items():
-        if key in dim_keys or key == '_compliance':
+        if key in dim_keys or key in ('_compliance', '_kopfzeile'):
             continue
         geprueft[key] = wert
 
     return geprueft, zaehler
+
+
+def _firmenname_fuer_call(call, db) -> str | None:
+    """Der eigene Firmenname des Beraters fuer die Katalog-Teilregel "eigener Firmenname ab 6x".
+
+    Quelle (grep-belegt, Punkt 21/22): `calls.user_id` -> `users.org_id` -> `organisations.name`
+    (database/models.py:23, varchar(200) NOT NULL). Denselben Weg geht der Kosten-Hook
+    (services/cost_tracker.resolve_org_id_from_user) — es wird kein zweiter Auflege-Pfad
+    erfunden. Aufgeloest wird ausschliesslich ueber den User DIESES Calls: kein
+    Cross-Tenant-Lookup (T-METRIK1-05-04).
+
+    Faellt die Aufloesung aus (kein Profil, kein Feld, Fehler, Nicht-String), wird None
+    zurueckgegeben — die Teilregel entfaellt dann still. Das ist die richtige Fehlerrichtung:
+    lieber eine Regel weniger als eine erfundene Zaehlung. Der Aufruf ist in try/except
+    gekapselt und darf die Nachbearbeitung NIE kippen.
+
+    ⚠ BEKANNTE GRENZE: das gespeicherte Transkript ist anonymisiert; ein erkannter Firmenname
+    steht dort als [ORG_X]. Die Teilregel schlaegt deshalb selten an (siehe Plan-04-SUMMARY).
+    """
+    try:
+        from database.models import Organisation, User
+        user_id = getattr(call, 'user_id', None)
+        if not user_id:
+            return None
+        org_id = db.query(User.org_id).filter(User.id == user_id).scalar()
+        if not isinstance(org_id, int):
+            return None
+        name = db.query(Organisation.name).filter(Organisation.id == org_id).scalar()
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+        return None
+    except Exception as exc:
+        print(f'[METRIK-1] Firmenname-Aufloesung fehlgeschlagen (Teilregel entfaellt): {exc}')
+        return None
 
 
 def _judge_step(ctx) -> None:
@@ -828,6 +904,30 @@ def _judge_step(ctx) -> None:
     _fenster = pruef_fenster(_segments)
     _observations, _beleg_zaehler = _pruefe_belege(result.get('observations_jsonb') or {}, _fenster)
     record_beleg_check(_beleg_zaehler)
+
+    # ── METRIK-1 Requirement 6 (D-07/D-08): die EINE Sache berechnet der CODE. ───────────────
+    # Kein Modell in der Auswahl, keines in der Formulierung, KEIN zusaetzlicher KI-Aufruf.
+    # Gerechnet wird auf DENSELBEN Segmenten, aus denen der Bewerter-Auftrag und der
+    # Pruef-Korpus entstanden sind (EWB-Zeilen gefiltert) — nur auf den BERATER-Zeilen, denn
+    # der Katalog bewertet den Verkaeufer, nicht den Kunden.
+    from services.fokus_katalog import waehle_fokus
+    from services.transkript_renderer import segmente_ohne_ewb
+
+    _berater_texte = [(getattr(s, 'text', '') or '')
+                      for s in segmente_ohne_ewb(_segments)
+                      if getattr(s, 'speaker', None) == 'berater']
+    _fokus = waehle_fokus(_berater_texte, firmenname=_firmenname_fuer_call(call, db))
+    # D-10: None ist der NORMALFALL (der Katalog ist englisch, der Bestand deutsch). Der
+    # Schluessel wird TROTZDEM immer geschrieben — mit fokus=None. Ein fehlender Schluessel und
+    # ein ehrliches "nichts" sind im Anzeige-Pfad sonst nicht unterscheidbar.
+    _observations['_fokus'] = {
+        'schema': 1,
+        'katalog_version': (_fokus or {}).get('katalog_version'),
+        'focus_key': (_fokus or {}).get('focus_key'),
+        'count': (_fokus or {}).get('count'),
+        'satz': (_fokus or {}).get('satz'),
+        'beleg': (_fokus or {}).get('beleg'),
+    }
 
     # ── UPSERT: Beobachtungen + interne Auspraegung (KEINE Zahl) unter M-4-GUC ──────────────
     # observations_jsonb enthaelt auch den '_compliance'-Hard-Gate-Schluessel (Finding 2).

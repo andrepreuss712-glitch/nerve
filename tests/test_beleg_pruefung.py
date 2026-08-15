@@ -134,14 +134,26 @@ def test_compliance_zitat_erfunden_flag_bleibt():
 
 
 def test_unbekannte_unterstrich_schluessel_bleiben():
-    """Vorwaerts-Vertraeglichkeit (Plan 05): unbekannte Unterstrich-Schluessel gehen unveraendert durch."""
+    """Vorwaerts-Vertraeglichkeit: unbekannte Unterstrich-Schluessel gehen unveraendert durch.
+
+    ⚠ RETARGETIERT in Plan 05 Task 2 (Vertragswechsel, kein Fund): Dieser Test stand seit
+    Plan 01 auf '_kopfzeile' — dem damals noch UNBEKANNTEN Schluessel, den dieser Plan
+    ankuendigte. Seit Task 2 ist '_kopfzeile' ein BEKANNTER Schluessel mit eigener Pruefung
+    (er wird bewusst NICHT mehr durchgereicht), womit die alte Fassung per Bauart rot wurde.
+    Der geprueften REGEL fehlte dadurch nichts — sie braucht nur einen Schluessel, den der
+    Helfer wirklich nicht kennt. '_zukunft' steht stellvertretend fuer den naechsten."""
     korpus = 'Guten Tag, hier ist Anna.'
     observations = _obs(beleg_zitat='Guten Tag, hier ist Anna.')
-    observations['_kopfzeile'] = {'x': 1}
+    observations['_zukunft'] = {'x': 1}
 
     geprueft, _zaehler = _pruefe_belege(observations, _pruef_arg(korpus))
 
-    assert geprueft['_kopfzeile'] == {'x': 1}
+    assert geprueft['_zukunft'] == {'x': 1}
+    # Gegenprobe in derselben Funktion: '_kopfzeile' ist KEIN unbekannter Schluessel mehr —
+    # ohne sie waere "wird durchgereicht" von "wird geprueft" nicht zu unterscheiden.
+    observations['_kopfzeile'] = {'schema': 1, 'beobachtung': 'Lob', 'beleg_zitat': 'nie gesagt'}
+    geprueft2, _z2 = _pruefe_belege(observations, _pruef_arg(korpus))
+    assert geprueft2['_kopfzeile']['beobachtung'] == ''
 
 
 def test_zaehler_ist_absolutwert():
