@@ -33,7 +33,7 @@ from werkzeug.security import generate_password_hash
 
 from tests.conftest import cleanup_rows
 from database.models import (
-    User, ConversationLog, Call, RubricScore,
+    User, ConversationLog, Call, RubricScore, ObjectionEvent,
 )
 from services.judge_dimensions import DIMENSIONS
 
@@ -52,11 +52,13 @@ def tracker(db_from_client):
     """Reverse-FK-Teardown. ZWEI cleanup_rows-Aufrufe, weil `calls` KIND von `conversation_logs`
     ist (conversation_log_id-FK), die globale _CLEANUP_FK_ORDER aber conversation_logs VOR calls
     listet — dieselbe Reihenfolge-Falle wie in test_dashboard_outcome_reminder.py."""
-    ids = {'calls': [], 'logs': [], 'users': []}
+    ids = {'calls': [], 'logs': [], 'users': [], 'events': []}
     yield ids
     if ids['calls']:
         cleanup_rows(db_from_client, {Call: ids['calls']})
     rest = {}
+    if ids['events']:
+        rest[ObjectionEvent] = ids['events']
     if ids['logs']:
         rest[ConversationLog] = ids['logs']
     if ids['users']:
@@ -605,4 +607,64 @@ def test_kein_trend_abzeichen_bei_training(client, db_from_client, tracker):
     assert TREND_ABZEICHEN not in html, (
         'Das Trend-Abzeichen erscheint im Training weiter. Eine neutrale Ersatz-Zahl ist '
         'verworfen; der Streifen kommt erst mit der Fokus-Serie zurueck.'
+    )
+
+
+# ── METRIK-1 Plan 06 Task 3 (D-12, Lesestelle 7): kein Trainings-Notenschnitt bei LIVE ────
+TRAININGS_DURCHSCHNITT = 'Zuletzt im Training: Ø'
+TRAININGS_ZAEHLUNG = 'Im Training:'
+
+
+def test_kein_trainings_durchschnitt_auf_der_live_seite(client, db_from_client, tracker):
+    """D-12/Lesestelle 7: „Zuletzt im Training: Ø 80/100 aus 3 Sessions" faellt.
+
+    Der Wert war ein Mittelwert ueber `kb_end` von Trainings-Sitzungen — also wieder eine
+    Gesamtnote, diesmal auf der Auswertungsseite eines LIVE-Anrufs.
+
+    Der Seed ist absichtlich der Fall, der den alten Zweig AUSGELOEST haette: ein nicht
+    behandelter Einwand im Live-Anruf plus drei Trainings-Sitzungen mit demselben Einwand-Typ
+    und kb_end=80 (Bedingung war avg >= 70 UND sessions >= 3).
+
+    Gepaarter Existenz-Anker: der Sonst-Zweig „Im Training: N Sessions" steht im HTML — sonst
+    waere „Durchschnitt weg" von „Empfehlungs-Block gar nicht gerendert" nicht zu
+    unterscheiden. Er war schon vorher gebaut; es musste nichts Neues entstehen."""
+    einwand = 'zu_teuer'
+    dim_key = DIMENSIONS[0]['key']
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        dim_key: [{'beobachtung': BEOBACHTUNG, 'beleg_zitat': BELEG_ZITAT}],
+    }, typ='live', kb_end=64)
+
+    # Der nicht behandelte Einwand im Live-Anruf -> Empfehlung MIT cross_context.
+    ev = ObjectionEvent(user_id=u.id, org_id=u.org_id, conversation_log_id=sid,
+                        einwand_typ=einwand, success=False)
+    db_from_client.add(ev)
+    db_from_client.flush()
+    tracker['events'].append(ev.id)
+
+    # Drei Trainings-Sitzungen mit demselben Einwand-Typ und einer guten Note.
+    for _ in range(3):
+        t = ConversationLog(user_id=u.id, org_id=u.org_id, typ='training',
+                            started_at=_now(), kb_end=80)
+        db_from_client.add(t)
+        db_from_client.flush()
+        tracker['logs'].append(t.id)
+        tev = ObjectionEvent(user_id=u.id, org_id=u.org_id, conversation_log_id=t.id,
+                             einwand_typ=einwand, success=True)
+        db_from_client.add(tev)
+        db_from_client.flush()
+        tracker['events'].append(tev.id)
+    db_from_client.commit()
+
+    _login(client, u, tenant_id)
+
+    r = client.get(f'/session/{sid}')
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    html = r.get_data(as_text=True)
+
+    assert TRAININGS_ZAEHLUNG in html, (
+        'Der Empfehlungs-Block mit Trainings-Bezug wurde gar nicht gerendert — der Test kann '
+        'ueber die Abwesenheit des Durchschnitts nichts aussagen.'
+    )
+    assert TRAININGS_DURCHSCHNITT not in html, (
+        'Die Live-Auswertungsseite zeigt weiterhin einen Trainings-Notendurchschnitt.'
     )
