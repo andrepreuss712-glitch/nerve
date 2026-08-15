@@ -48,8 +48,14 @@
       {% endif %}
       <span>{{ conv.created_at.strftime('%d.%m.%Y %H:%M') if conv.created_at else '—' }}</span>
       <span>Dauer: {{ (conv.dauer_sekunden // 60) if conv.dauer_sekunden else 0 }}:{{ '%02d' | format((conv.dauer_sekunden % 60) if conv.dauer_sekunden else 0) }} min</span>
-      {# Fix B (07.1 UAT-R1): kb_end_effective = letzter kb_verlauf-Punkt (konsistent mit Chart-Ende). #}
-      <span>Result: {{ kb_end_effective if kb_end_effective is not none else '—' }}/100</span>
+      {# Fix B (07.1 UAT-R1): kb_end_effective = letzter kb_verlauf-Punkt (konsistent mit Chart-Ende).
+         METRIK-1 D-19: "Result: X/100" zeigte bei LIVE-Anrufen kb_end — die Kaufbereitschaft
+         des KUNDEN, beschriftet wie eine Note des Verkaeufers (ROADMAP: "reine
+         Label-Irrefuehrung"). Bei Training ist derselbe Wert die echte Trainings-Gesamtnote
+         (routes/training.py schreibt sie nach kb_end) und bleibt deshalb stehen. #}
+      {% if conv.typ == 'training' %}
+        <span>Result: {{ kb_end_effective if kb_end_effective is not none else '—' }}/100</span>
+      {% endif %}
     </div>
   </header>
 
@@ -65,56 +71,35 @@
     </div>
     <div class="n-tab-panel" id="uebersicht" role="tabpanel">
 
-  {# ── Section 2: Score-Hero (W-06: score_total aus Plan 01) ────── #}
-  {% set score = score_total %}
-  {% set score_class = 'n-session-detail-score--high' if score >= 70 else ('n-session-detail-score--mid' if score >= 60 else 'n-session-detail-score--low') %}
-  <section class="n-session-detail-hero" aria-label="Gesamt-Score">
-    <div>
-      <div class="n-label">Gesamt-Score</div>
-      <div class="n-session-detail-score {{ score_class }}">{{ score }}</div>
-      {# Wave 4 / POLISH-33: Trend-Badge typ-agnostisch — Route liefert trend_avg
-         auch fuer Training (Schnitt ueber kb_end letzte 5 typ='training'). #}
-      {% if trend_avg is not none %}
-        {% set delta = score - trend_avg %}
-        <div class="n-badge {% if delta > 0 %}n-badge-primary{% elif delta < 0 %}n-badge-danger{% else %}n-badge-neutral{% endif %} n-session-detail-trend-badge--spaced">
-          {% if delta > 0 %}+{{ delta }} vs Schnitt letzte 5{% elif delta < 0 %}{{ delta }} vs Schnitt letzte 5{% else %}Schnitt letzte 5{% endif %}
-        </div>
-      {% endif %}
-    </div>
-    <div class="n-session-detail-breakdown">
-      {# POLISH-34-Resolve (07.2 Wave 2 Schritt F): Training-Hero-Breakdown (4 Rows)
-         entfernt — Sektion 13 "Einzel-Bewertungen" (weiter unten) ersetzt die 4 Rows
-         durch ausfuehrliche 6-Kategorie-Darstellung. Training-Hero zeigt nur noch
-         Score + Trend-Badge. Live-Breakdown unten UNVERAENDERT. #}
-      {% if conv.typ == 'live' %}
-        {# Live Breakdown — kb_end 40%, behandelt 30%, rede 20%, skript 10% #}
-        {# Fix B (07.1 UAT-R1): kb_end_effective = letzter kb_verlauf-Punkt (konsistent mit Chart-Ende). #}
-        {% set kb_pct = kb_end_effective if kb_end_effective is not none else 0 %}
-        {% set einw_total = conv.einwaende_gesamt or 0 %}
-        {% set einw_ok = conv.einwaende_behandelt or 0 %}
-        {% set behandelt_pct = ((einw_ok / einw_total) * 100) | round(0, 'floor') if einw_total > 0 else 0 %}
-        {% set rede_avg = conv.redeanteil_avg if conv.redeanteil_avg is not none else 0 %}
-        {% set skript_pct = conv.skript_abdeckung if conv.skript_abdeckung is not none else 0 %}
-        {# Fix A (07.1 UAT-R1): Gewichtungs-% aus Label entfernt — als dezenter title-Tooltip am n-label. #}
-        <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label" title="Gewichtung 40% im Gesamt-Score">Kaufbereitschaft Ende</span><span>{{ kb_pct }} / 100</span></div>
-          <div class="n-session-detail-minibar"><span style="--w: {{ kb_pct }}%"></span></div>
-        </div>
-        <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label" title="Gewichtung 30% im Gesamt-Score">Einwände behandelt</span><span>{{ einw_ok }} / {{ einw_total }}</span></div>
-          <div class="n-session-detail-minibar"><span style="--w: {{ behandelt_pct }}%"></span></div>
-        </div>
-        <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label" title="Gewichtung 20% im Gesamt-Score">Redeanteil</span><span>{{ rede_avg | round(0, 'floor') }}%</span></div>
-          <div class="n-session-detail-minibar"><span style="--w: {{ rede_avg }}%"></span></div>
-        </div>
-        <div class="n-session-detail-breakdown-row">
-          <div class="n-session-detail-breakdown-row-inner"><span class="n-label" title="Gewichtung 10% im Gesamt-Score">Skript-Abdeckung</span><span>{{ skript_pct | round(0, 'floor') }}%</span></div>
-          <div class="n-session-detail-minibar"><span style="--w: {{ skript_pct }}%"></span></div>
-        </div>
-      {% endif %}
-    </div>
-  </section>
+  {# ── Section 2: Score-Hero — NUR NOCH TRAINING (METRIK-1 D-15/D-17) ───────────────────────
+     LIVE zeigt keine Gesamtnote mehr: sie mass zu 40 % die Kaufbereitschaft des KUNDEN (die der
+     Verkaeufer nicht steuert) und zu 20 % einen Redeanteil, der im Kaltakquise-Modus baubedingt
+     100 % ist — der Term war dort IMMER 0. An ihre Stelle tritt die KI-Einschaetzung (Form 2).
+     TRAINING BEHAELT SEINE NOTE: dort gibt es keinen Kunden mit Laune, sondern ein festes
+     Szenario mit einer richtigen Antwort — die Note misst dort tatsaechlich den Verkaeufer.
+     ⚠ Diese typ-Weiche ist NEU. Vorher hatte der Hero KEINE — wer ihn blind entfernt, laesst
+     die Trainings-Note still sterben (D-17, Gap C).
+     D-14: Das Trend-Abzeichen — der Vergleich gegen den Schnitt der letzten fuenf Sitzungen —
+     ist ERSATZLOS entfallen, auch fuer Training.
+     ⛔ Sein Anzeige-Text wird hier bewusst NICHT zitiert: er ist in diesem Task ein
+     Abwesenheits-Anker mit Sollwert 0 in dieser Datei. Beschreiben statt zitieren.
+     Eine neutrale Ersatz-Zahl (Anrufe/Woerter) ist ausdruecklich VERWORFEN — sie
+     misst Betriebsamkeit, nicht Fortschritt. Lieber eine ehrliche Leerstelle als eine huebsche
+     Zahl ohne Bedeutung. Der Streifen kommt zurueck, sobald die Fokus-Serie existiert
+     ("dreimal in Folge angewendet") — vertagt, nicht gestrichen.
+     Der frueher hier stehende Vierer-Aufriss ist mit gefallen — GANZ, einschliesslich des
+     Live-Zweigs (D-16: "Gewichtungen raus, Zahlen bleiben" ist verworfen, weil das die
+     Redeanteil-Zeile stehengelassen haette). #}
+  {% if conv.typ == 'training' %}
+    {% set score = score_total %}
+    {% set score_class = 'n-session-detail-score--high' if score >= 70 else ('n-session-detail-score--mid' if score >= 60 else 'n-session-detail-score--low') %}
+    <section class="n-session-detail-hero" aria-label="Gesamt-Score">
+      <div>
+        <div class="n-label">Gesamt-Score</div>
+        <div class="n-session-detail-score {{ score_class }}">{{ score }}</div>
+      </div>
+    </section>
+  {% endif %}
 
   {# ── Section 2b: KI-Einschätzung / Coaching-Hinweis (TAXO2-05, METRIK-1) ───────────────────
      Beobachtungen statt Zahl (Soll-Verhalten §6 / Entscheidung.md).
@@ -511,11 +496,18 @@
         <p>Für diese Training-Session wurden keine Kategorien-Scores gespeichert.</p>
       </div>
     {% else %}
-      {# Live — komplett Empty-State mit 4.19-Hinweis (vermeidet POLISH-34-Dopplung mit Score-Hero) #}
+      {# Live — komplett Empty-State mit 4.19-Hinweis.
+         ⚠ METRIK-1 D-15 (Fund des Ausfuehrers, im Plan nicht gelistet): der Schluss-Satz
+         verwies bis 2026-08-15 auf "den Gesamt-Score und seine 4 Komponenten in Sektion 2".
+         Beides gibt es fuer LIVE nicht mehr — der Satz war damit unwahr (Punkt 23: das Schild
+         wandert mit der Bedeutung) UND er machte den Abwesenheits-Anker dieses Tasks per
+         Bauart unerfuellbar, weil er den Namen der alten Note im LIVE-Zweig weitertrug.
+         Ersatzlos gestrichen statt umformuliert: eine Ersatz-Verheissung waere wieder eine
+         Zusage ohne Deckung. #}
       <div class="n-session-detail-empty-future">
         <i data-lucide="bar-chart-3" class="n-session-detail-icon-xl"></i>
         <h3 class="n-session-detail-card-title--spaced">Einzel-Bewertungen folgen</h3>
-        <p class="n-session-detail-future-text">Detaillierte Einzel-Bewertungen (Gesprächseröffnung, Bedarfsanalyse, Einwandbehandlung, Gesprächsführung, Abschluss, Beziehungsaufbau) werden ab Phase 4.19 (Transkript-Persistierung) verfügbar. Aktuell siehst du den Gesamt-Score und seine 4 Komponenten in Sektion 2.</p>
+        <p class="n-session-detail-future-text">Detaillierte Einzel-Bewertungen (Gesprächseröffnung, Bedarfsanalyse, Einwandbehandlung, Gesprächsführung, Abschluss, Beziehungsaufbau) werden ab Phase 4.19 (Transkript-Persistierung) verfügbar.</p>
         <div class="n-badge n-badge-neutral n-session-detail-card-title--spaced">Kommt mit Phase 4.19</div>
       </div>
     {% endif %}
