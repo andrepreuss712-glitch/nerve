@@ -945,6 +945,10 @@ def session_detail(sid):
         observations_display = []   # [{name, eintraege:[{beobachtung, beleg_zitat}]}] je Dimension
         compliance_verletzt = False
         compliance_beleg = ''
+        # METRIK-1 Req 5/6: Kopfzeile ("bester Moment") + die eine Sache. Vorbelegung wie bei
+        # compliance_verletzt/compliance_beleg darueber — die Form steht schon VOR dem try fest.
+        kopfzeile_display = {'beobachtung': '', 'beleg_zitat': ''}
+        fokus_display = {'focus_key': None, 'satz': '', 'beleg': ''}
         try:
             from database.models import Call as _Call, RubricScore as _RubricScore
             from services.judge_dimensions import DIMENSIONS as _DIMENSIONS
@@ -974,6 +978,29 @@ def session_detail(sid):
                     _compliance = {}
                 compliance_verletzt = bool(_compliance.get('verletzt'))
                 compliance_beleg = _compliance.get('beleg_zitat') or ''
+                # ── METRIK-1 Requirement 5: Kopfzeile + die eine Sache ──────────────────────
+                # FORM-GARANTIE wie beim _compliance-Block darueber: observations_jsonb ist
+                # JSONB, die Form ist in der DB NIRGENDS erzwungen. Steht dort etwas anderes als
+                # erwartet, bricht sonst erst das Template — also NACH dem try/except, dort wo
+                # kein Netz mehr haengt.
+                # Schluesselnamen bewusst OHNE Dict-Methoden-Kollision (kein items/keys/values/
+                # get/update/copy/pop) — der Punkt-Zugriff in Jinja loest sonst auf die METHODE
+                # auf; genau das war der HTTP-500 vom 2026-08-01.
+                _kopf = _obs.get('_kopfzeile')
+                if not isinstance(_kopf, dict):
+                    _kopf = {}
+                kopfzeile_display = {
+                    'beobachtung': _kopf.get('beobachtung') or '',
+                    'beleg_zitat': _kopf.get('beleg_zitat') or '',
+                }
+                _fok = _obs.get('_fokus')
+                if not isinstance(_fok, dict):
+                    _fok = {}
+                fokus_display = {
+                    'focus_key': _fok.get('focus_key'),
+                    'satz': _fok.get('satz') or '',
+                    'beleg': _fok.get('beleg') or '',
+                }
                 # observations_display: geordnet nach fester DIMENSIONS-Reihenfolge
                 for _dim in _DIMENSIONS:
                     _key = _dim['key']
@@ -998,6 +1025,8 @@ def session_detail(sid):
             observations_display = []
             compliance_verletzt = False
             compliance_beleg = ''
+            kopfzeile_display = {'beobachtung': '', 'beleg_zitat': ''}
+            fokus_display = {'focus_key': None, 'satz': '', 'beleg': ''}
 
         # ── SICHERHEITSNETZ um das Rendern (Fehler-500, 2026-08-01) ──────────────────────────
         # Der except oben endet VOR dieser Zeile. Ein Fehler im Vorschau-Panel entsteht aber erst
@@ -1022,6 +1051,8 @@ def session_detail(sid):
                 observations_display=(observations_display if _preview_on else []),   # TAXO2-05: [{name, eintraege}] je Dimension
                 compliance_verletzt=(compliance_verletzt if _preview_on else False),  # TAXO2-05: _compliance.verletzt bool
                 compliance_beleg=(compliance_beleg if _preview_on else ''),           # TAXO2-05: _compliance.beleg_zitat str
+                kopfzeile_display=(kopfzeile_display if _preview_on else {'beobachtung': '', 'beleg_zitat': ''}),  # METRIK-1 Req 5
+                fokus_display=(fokus_display if _preview_on else {'focus_key': None, 'satz': '', 'beleg': ''}),    # METRIK-1 Req 6
                 pt=pt,
                 trend_avg=trend_avg,
                 chart_data_json=chart_data_json,
