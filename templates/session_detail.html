@@ -395,10 +395,11 @@
                   <div class="n-session-detail-recommendation-cross-context n-session-detail-recommendation-cross-context--danger">
                     <i data-lucide="history" class="n-session-detail-icon-sm"></i> Noch nie im Training geübt
                   </div>
-                {% elif cc.avg_score is not none and cc.avg_score >= 70 and cc.sessions >= 3 %}
-                  <div class="n-session-detail-recommendation-cross-context n-session-detail-recommendation-cross-context--success">
-                    <i data-lucide="history" class="n-session-detail-icon-sm"></i> Zuletzt im Training: Ø {{ cc.avg_score | round(0, 'floor') }}/100 aus {{ cc.sessions }} Sessions
-                  </div>
+                {# METRIK-1 D-12/Lesestelle 7: Der mittlere Zweig zeigte einen Noten-Mittelwert
+                   ueber Trainings-Sitzungen — eine Gesamtnote auf der Auswertungsseite eines
+                   LIVE-Anrufs. Ersatzlos entfallen; der Sonst-Zweig darunter traegt den Fall
+                   bereits ("Im Training: N Sessions"), es musste nichts Neues entstehen.
+                   Der Training-Zweig weiter unten ist NICHT betroffen. #}
                 {% else %}
                   <div class="n-session-detail-recommendation-cross-context">
                     <i data-lucide="history" class="n-session-detail-icon-sm"></i> Im Training: {{ cc.sessions }} Session{% if cc.sessions != 1 %}s{% endif %}

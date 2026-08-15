@@ -1108,11 +1108,15 @@ def _calc_coaching_score(conv, outcome):
 # ========================================================================
 
 def _cross_context_objections_live(db, user_id, einwand_typ):
-    """Live-Session -> wie oft/gut im Training mit diesem Einwand?
-    Returns: {sessions: int, avg_score: float|None, focus_match: str}
+    """Live-Session -> wie oft im Training mit diesem Einwand?
+    Returns: {sessions: int, focus_match: str}
     Filter: typ='training', letzte 14 Tage, einwand_typ match.
-    Score basiert auf kb_end (Training), NICHT sterne (SC-1 — Training setzt sterne NICHT).
     Root-Entity: OE explizit via select_from() (W-01 — query mit Aggregaten + JOIN).
+
+    METRIK-1 D-12/Lesestelle 7: der frueher mitgelieferte avg_score war ein Mittelwert ueber
+    kb_end und wurde als "Zuletzt im Training: Ø 78/100" gerendert — eine Gesamtnote auf der
+    Auswertungsseite eines LIVE-Anrufs. Er ist entfallen; die Schwester-Funktion
+    _cross_context_objections_training kam ohne ihn immer schon aus.
     """
     from datetime import datetime, timedelta
     from sqlalchemy import func
@@ -1121,7 +1125,6 @@ def _cross_context_objections_live(db, user_id, einwand_typ):
         cutoff = datetime.utcnow() - timedelta(days=14)
         row = (db.query(
                     func.count(func.distinct(CL.id)).label('n'),
-                    func.avg(CL.kb_end).label('avg_score'),
                 )
                 .select_from(OE)                              # W-01: Root explizit
                 .join(CL, CL.id == OE.conversation_log_id)
@@ -1131,8 +1134,7 @@ def _cross_context_objections_live(db, user_id, einwand_typ):
                 .filter(OE.einwand_typ == einwand_typ)
                 .first())
         n = int(row.n or 0) if row else 0
-        avg_score = float(row.avg_score) if (row and row.avg_score is not None) else None
-        return {'sessions': n, 'avg_score': avg_score, 'focus_match': einwand_typ}
+        return {'sessions': n, 'focus_match': einwand_typ}
     except Exception as exc:
         print(f"[07.1] cross_context_objections_live failed: {exc}")
         return None
@@ -1283,6 +1285,12 @@ def _derive_practice_recommendations(db, conv, events):
         if kb_end_effective < 40 and len(recs) < 3:
             recs.append({
                 'icon': 'trending-down',
+                # METRIK-1 Bau-Regel 20 — GEPRUEFT UND BEGRUENDET STEHENGELASSEN, nicht uebersehen:
+                # Diese /100-Zahl bleibt, weil sie ehrlich beschriftet ist. Sie nennt die
+                # Kaufbereitschaft — genau das, was kb_end misst — und schreibt sie NICHT dem
+                # Verkaeufer als Leistung zu. D-19 verlangt "kein LIVE-Anruf zeigt eine
+                # GESAMTNOTE"; eine korrekt benannte Kunden-Kennzahl ist keine Note. Sie faellt
+                # mit dem ERZEUGER (kb_*, eigene Folgephase), nicht hier.
                 'observation': f'Kaufbereitschaft Ende: {kb_end_effective}/100',
                 'explanation': 'Der Kunde ist am Ende ungewöhnlich skeptisch. Übe Qualifizierungs-Fragen, um früh Vertrauen aufzubauen.',
                 'training_focus': 'kb:drop',
