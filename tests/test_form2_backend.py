@@ -17,12 +17,20 @@ _segments_for_call und _upsert_rubric_score werden monkeypatcht; der UPSERT wird
 """
 
 import uuid
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+from flask import template_rendered
+from sqlalchemy import text
+from werkzeug.security import generate_password_hash
+
 import services.judge_runner as jr
 import services.slow_lane as sl
+from database.models import Call, ConversationLog, RubricScore, User
 from services.judge_dimensions import DIMENSIONS
+from tests.conftest import cleanup_rows
 
 DIM = DIMENSIONS[0]['key']
 
@@ -168,3 +176,117 @@ def test_kopfzeile_und_fokus_stehen_nebeneinander(monkeypatch):
     assert obs['_kopfzeile']['beobachtung'] == 'Klarer Einstieg mit dem Nutzen.'
     assert obs['_kopfzeile']['beleg_zitat'] == ENGLISCH_NEGATIV[0]
     assert obs['_fokus']['focus_key'] == 'negative_phrases'
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════════
+# Task 3: Kopfzeile und eine Sache im ANZEIGE-Kontext
+#
+# Das Template rendert sie erst in Plan 07 — geprueft wird deshalb der Template-KONTEXT
+# (flask.template_rendered-Signal), nicht das HTML. HTTP 200 als gepaarter Existenz-Anker.
+# ══════════════════════════════════════════════════════════════════════════════════════════
+
+@pytest.fixture
+def tracker(db_from_client):
+    """Reverse-FK-Teardown. ZWEI cleanup_rows-Aufrufe, weil `calls` KIND von `conversation_logs`
+    ist, die globale _CLEANUP_FK_ORDER aber conversation_logs VOR calls listet (dieselbe
+    Reihenfolge-Falle wie in test_session_detail_render.py)."""
+    ids = {'calls': [], 'logs': [], 'users': []}
+    yield ids
+    if ids['calls']:
+        cleanup_rows(db_from_client, {Call: ids['calls']})
+    rest = {}
+    if ids['logs']:
+        rest[ConversationLog] = ids['logs']
+    if ids['users']:
+        rest[User] = ids['users']
+    if rest:
+        cleanup_rows(db_from_client, rest)
+
+
+def _seed_session(db, tracker, observations):
+    """Nutzer + ConversationLog + Call + live-rubric_score in der Seed-Org der client-Fixture.
+
+    Die eigene Org waere ein anderer tenant_id — `rubric_score` hat FORCE RLS und die Zeile
+    waere fuer den Request unsichtbar (der Test waere aus dem falschen Grund gruen/rot)."""
+    from tests import conftest as _cf
+    tenant_id = _cf.TEST_TENANT_UUID
+    org_id = db.execute(
+        text("SELECT legacy_org_id FROM tenant_orgs WHERE id = :t"), {"t": tenant_id}
+    ).scalar()
+    assert org_id is not None, 'Seed-Tenant der client-Fixture nicht aufloesbar'
+
+    u = User(email=f'form2_{uuid.uuid4().hex[:8]}@nerve.local',
+             passwort_hash=generate_password_hash('pw'),
+             rolle='owner', org_id=org_id, aktiv=True, onboarding_done=True)
+    db.add(u)
+    db.flush()
+    tracker['users'].append(u.id)
+
+    conv = ConversationLog(user_id=u.id, org_id=org_id, typ='live',
+                           started_at=datetime.now(timezone.utc))
+    db.add(conv)
+    db.flush()
+    tracker['logs'].append(conv.id)
+
+    call_id = str(uuid.uuid4())
+    db.add(Call(id=call_id, user_id=u.id, tenant_id=tenant_id, call_mode='cold_call',
+                started_at=datetime.now(timezone.utc), ended_at=datetime.now(timezone.utc),
+                transcript_storage='none', outcome='meeting_booked',
+                conversation_log_id=conv.id))
+    tracker['calls'].append(call_id)
+
+    db.add(RubricScore(id=uuid.uuid4(), call_id=call_id, conversation_log_id=conv.id,
+                       session_mode='cold_call', origin='live', status='scored',
+                       tenant_id=tenant_id, observations_jsonb=observations, payload_jsonb={}))
+    db.commit()
+    return u, conv.id, tenant_id
+
+
+def _login(client, u, tenant_id):
+    """Login MIT `tenant_id` — ohne den Eintrag ist die GUC leer und `rubric_score`
+    (FORCE RLS) liefert still 0 Zeilen (FORCE-RLS-Falle)."""
+    with client.session_transaction() as s:
+        s['user_id'] = u.id
+        s['rolle'] = 'owner'
+        s['tenant_id'] = str(tenant_id)
+
+
+def test_kontext_traegt_kopfzeile_und_fokus(client, db_from_client, tracker):
+    """`/session/<sid>` gibt kopfzeile_display und fokus_display in geformter Form weiter."""
+    from app import app as flask_app
+
+    u, sid, tenant_id = _seed_session(db_from_client, tracker, {
+        DIM: [{'beobachtung': 'Bedarf sauber ausgelesen.',
+               'beleg_zitat': 'Was bremst Sie im Moment am meisten?'}],
+        '_kopfzeile': {'schema': 1, 'beobachtung': 'Der beste Moment: ruhig gespiegelt.',
+                       'beleg_zitat': 'Verstehe ich richtig, dass das Budget klemmt?'},
+        '_fokus': {'schema': 1, 'katalog_version': 1, 'focus_key': 'negative_phrases',
+                   'count': 5, 'satz': 'You said "we provide" 5 times — top reps cap it at 3.',
+                   'beleg': 'And we provide onboarding for every new rep.'},
+    })
+    _login(client, u, tenant_id)
+
+    kontexte = []
+
+    def _mitschreiben(_sender, template, context, **_extra):
+        kontexte.append(context)
+
+    template_rendered.connect(_mitschreiben, flask_app)
+    try:
+        r = client.get(f'/session/{sid}')
+    finally:
+        template_rendered.disconnect(_mitschreiben, flask_app)
+
+    # Gepaarter Existenz-Anker: "Schluessel nicht gefunden" darf nicht von "Seite nicht
+    # gerendert" kommen.
+    assert r.status_code == 200, f'Auswertungs-Seite antwortet {r.status_code} statt 200.'
+    assert kontexte, 'Es wurde kein Template gerendert — das Signal hat nichts mitgeschrieben.'
+    ctx = kontexte[0]
+
+    assert 'kopfzeile_display' in ctx, 'kopfzeile_display fehlt im Template-Kontext'
+    assert 'fokus_display' in ctx, 'fokus_display fehlt im Template-Kontext'
+    assert ctx['kopfzeile_display']['beobachtung'] == 'Der beste Moment: ruhig gespiegelt.'
+    assert ctx['kopfzeile_display']['beleg_zitat'] == 'Verstehe ich richtig, dass das Budget klemmt?'
+    assert ctx['fokus_display']['focus_key'] == 'negative_phrases'
+    assert ctx['fokus_display']['satz'].startswith('You said')
+    assert ctx['fokus_display']['beleg'] == 'And we provide onboarding for every new rep.'
