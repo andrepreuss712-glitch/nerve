@@ -242,12 +242,30 @@ def _build_judge_prompt(call, events, profile_briefing: str, segments) -> tuple:
             '2. Laengen-Neutralitaet (Verbosity-Bias): nicht der laengere oder fluessigere Sprecher ist besser. '
             'Beobachte Inhalt und Verhalten, nicht Redefluss.'
         ),
+        # ── METRIK-1 Nachtrag (Andre-Entscheidung 16.08.): hier stand Prinzip 3, eine
+        #    Redeanteil-Norm mit zwei Prozentzielen. Sie ist ERSATZLOS gestrichen.
+        #    BELEGTER SCHADEN, kein Schoenheitsfehler: der Bewerter hat den Nutzer am 16.08.
+        #    dafuer geruegt, dass "der Kunde nicht zu Wort kommt" — im Kaltakquise-Modus
+        #    hoeren wir den Kunden BAUBEDINGT gar nicht (diarize=is_meeting, log_sp hart 0 in
+        #    services/deepgram_service.py). Der Redeanteil ist dort eine KONSTANTE, die wie
+        #    eine Messung aussieht; das Schild von transcript_segments sagt genau diesen Satz.
+        #    Eine Norm auf eine Konstante ist ein Vorwurf ohne Gegenstand.
+        #    ⛔ Der gestrichene Wortlaut wird bewusst NICHT zitiert — er ist ein
+        #    Abwesenheits-Anker mit Sollwert 0 (tests/test_judge_runner.py). Beschreiben statt
+        #    zitieren, sonst ueberlebt er seine eigene Loeschung.
+        #    KEIN ERSATZWERT, auch kein abgeschwaechter: solange keine gueltige Rechnung
+        #    angeschlossen ist, sagt der Bewerter zum Redeanteil GAR NICHTS. Lieber schweigen
+        #    als falsch ruegen — dieselbe Haltung wie beim "diesmal nichts"-Zweig.
+        #    Die Ersatz-Rechnung ist definiert und TERMINIERT (Roadmap 4.0.2), nicht vergessen:
+        #    Spanne = letztes Ende minus erster Anfang (ab dem ersten gesprochenen Wort, nicht
+        #    ab Verbindungsaufbau), Redeanteil = Sprechzeit / Spanne. Beide Werte liegen seit
+        #    ZEITSTEMPEL-1 je Abschnitt vor. Sie bleibt eine NAEHERUNG (die Stille wird als
+        #    "Kunde redet" gewertet, obwohl wir ihn nicht hoeren) — ehrlicher als die heutige
+        #    konstante 100 %, aber ehrlich zu beschriften.
+        #    Die vierte Regel ist auf 3 nachnummeriert; eine Luecke in der Zaehlung laedt das
+        #    Modell ein, sich das Fehlende auszudenken.
         (
-            '3. Kaltakquise-Redeanteil-Norm: ~55% Berater / ~45% Kunde (Gong Cold-Call-Norm). '
-            'NICHT 43:57 (das waere eine Discovery-Session).'
-        ),
-        (
-            '4. Hard-Cap Gespraechsfuehrung: wenn der Kunde MEHRFACH klar ablehnt und der Berater '
+            '3. Hard-Cap Gespraechsfuehrung: wenn der Kunde MEHRFACH klar ablehnt und der Berater '
             'trotzdem weiterdraengt, ist das KEINE schlechte Gespraechsfuehrung mehr — '
             'das ist Belaestigung (Hard-Cap). Das deckelt Gespraechsfuehrung auf hoechstens schwach.'
         ),
