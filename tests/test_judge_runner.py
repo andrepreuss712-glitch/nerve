@@ -572,3 +572,76 @@ def test_genau_ein_llm_aufruf(monkeypatch):
     # gelandet, wo 0 Aufrufe ebenfalls "1 nicht ueberschritten" ergaeben).
     assert result.get('status') == 'judged', f"Judge-Lauf endete mit {result.get('status')}"
     assert zaehler['n'] == 1, f"{zaehler['n']} LLM-Aufrufe statt genau 1 — die Latenz-Zusage ist gebrochen."
+
+
+# ════════════════════════════════════════════════════════════════════════════════════
+# METRIK-1 Plan 07 Nachtrag (Andre-Entscheidung 16.08.): die Redeanteil-Norm fliegt
+# ERSATZLOS aus dem Bewerter-Auftrag.
+#
+# WARUM — belegter Schaden am Nutzer, kein Schoenheitsfehler. Aus der Bewertung des
+# Anrufs vom 16.08. 20:50:57 woertlich:
+#   „Der Kunde kommt im gesamten Transkript nicht zu Wort (0 % Redeanteil vs. 100 %
+#    Berater), was weit unter der Kaltakquise-Norm von ~45 % Kunde liegt."
+# Im cold_call hoeren wir den Kunden BAUBEDINGT gar nicht: `diarize=is_meeting` und
+# `log_sp` hart 0 (services/deepgram_service.py). Der Redeanteil ist dort eine
+# KONSTANTE, die wie eine Messung aussieht — das Tabellen-Schild von
+# transcript_segments sagt genau diesen Satz. Die KI haelt dem Berater also einen Wert
+# vor, den er nicht beeinflussen kann und der nichts misst. Das ist dieselbe Krankheit,
+# derentwegen diese ganze Phase existiert — nur im Prompt statt im Dashboard.
+#
+# ⚠ Die fruehere Vertagung auf 4.0.2 zielte auf die DASHBOARD-Zeile und hat den
+# Bewerter-Auftrag nicht mit abgedeckt. Das ist die Luecke, die dieser Test schliesst.
+#
+# ERSATZ-RECHNUNG: NICHT hier. Sie gehoert nach 4.0.2 und ist von Andre am 16.08.
+# definiert: Spanne = letztes Ende minus erster Anfang (ab dem ersten gesprochenen
+# Wort, nicht ab Verbindungsaufbau); Redeanteil = Sprechzeit / Spanne. Beide Werte
+# liegen seit ZEITSTEMPEL-1 je Abschnitt vor. Solange sie nicht angeschlossen ist,
+# sagt der Bewerter zum Redeanteil GAR NICHTS — lieber schweigen als falsch ruegen.
+# ════════════════════════════════════════════════════════════════════════════════════
+def test_prompt_hat_keine_redeanteil_norm():
+    """Im Bewerter-Auftrag steht keine Redeanteil-Norm mehr — ersatzlos, kein Ersatzwert.
+
+    ⚠ ANKER AUF DIE CODE-FORM, nicht auf das nackte Wort „Redeanteil": Plan 06 ist genau
+    darueber gestolpert (der Anker traf eine legitime Uebungs-Empfehlung an ganz anderer
+    Stelle). Geprueft werden deshalb die drei Zeichenketten, die NUR diese Norm haben kann —
+    ihr Name und ihre beiden Zahlenwerte.
+
+    GEPAARTER EXISTENZ-ANKER in derselben Funktion: der Prinzipien-Block und seine Nachbarn
+    stehen weiterhin im Auftrag. Ohne ihn waere der Test auch dann gruen, wenn beim naechsten
+    Aufraeumen der halbe System-Prompt mitginge — „nicht gefunden" waere von „nichts gebaut"
+    nicht zu unterscheiden."""
+    call = _make_call()
+    segments = [
+        _make_segment(1, 'berater', 100, 'Guten Tag, darf ich kurz stoeren?'),
+        _make_segment(2, 'kunde', 2000, 'Was wollen Sie?'),
+    ]
+    system_str, user_str = jr._build_judge_prompt(call, [], _fake_profile_briefing(), segments)
+    full_prompt = system_str + ' ' + user_str
+
+    # ── Existenz-Anker ZUERST: der Auftrag wurde ueberhaupt gebaut ────────────────────────
+    assert '== BEWERTUNGS-PRINZIPIEN ==' in system_str, (
+        'Der Prinzipien-Block fehlt komplett — beim Streichen der Norm ist mehr mitgegangen '
+        'als die eine Regel.'
+    )
+    assert 'Laengen-Neutralitaet' in system_str, 'Das Verbosity-Bias-Prinzip ist mitgegangen.'
+    assert 'Hard-Cap Gespraechsfuehrung' in system_str, (
+        'Das Belaestigungs-Hard-Cap ist mitgegangen — das ist ein Sicherheits-Prinzip.'
+    )
+    assert len(system_str) > 500, 'Der System-Prompt ist auffaellig kurz — es fehlt zu viel.'
+
+    # ── Abwesenheits-Anker auf die CODE-FORM der Norm ────────────────────────────────────
+    assert 'Kaltakquise-Redeanteil-Norm' not in full_prompt, (
+        'Die Redeanteil-Norm steht noch im Bewerter-Auftrag. Im cold_call ist der Redeanteil '
+        'baubedingt konstant 100 % — die KI ruegt den Berater fuer etwas, das er nicht '
+        'beeinflussen kann und das nichts misst.'
+    )
+    assert '45% Kunde' not in full_prompt, 'Der Kunden-Zielwert der Norm steht noch im Auftrag.'
+    assert '55% Berater' not in full_prompt, 'Der Berater-Zielwert der Norm steht noch im Auftrag.'
+
+    # ── Und kein ERSATZWERT durch die Hintertuer ─────────────────────────────────────────
+    # Ersatzlos heisst ersatzlos: solange keine gueltige Rechnung existiert (4.0.2), darf der
+    # Bewerter zum Redeanteil GAR NICHTS sagen — auch nicht „ungefaehr" oder „ausgewogen".
+    assert '43:57' not in full_prompt, 'Die verworfene Gegen-Norm steht im Auftrag.'
+    assert 'Redeanteil-Norm' not in full_prompt, (
+        'Es steht wieder eine Redeanteil-Norm im Auftrag — nur anders benannt.'
+    )
