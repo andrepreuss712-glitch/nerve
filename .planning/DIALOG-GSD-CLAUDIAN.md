@@ -6194,3 +6194,70 @@ konstante 100 %.
 
 **Offen fuer euch:** die Zeile aus dem Bewerter-Auftrag nehmen · die zwei nicht erfuellbaren
 Abnahme-Punkte als offen mit Termin 4.0.4 ins SUMMARY · dann weiter mit Welle 7.
+
+---
+
+## ROADMAP-SYNC — 08.23.2.METRIK-1 — 2026-08-16
+
+**Geaendert in `.planning/ROADMAP.md`:** die Plan-Fortschrittszeile fuer **Plan 07** (Zeile „| 6 |")
+von offen auf **✅ AUSGEFUEHRT 2026-08-16** gesetzt, mit sechs Commits, Tor-Zahl **1246**, dem
+Nachtrag zur Redeanteil-Norm und dem **Zweit-Traeger-Fund**. Die Ausrollen-Spalte steht bewusst auf
+**🔴 „Ausrollen 3 UNVOLLSTAENDIG — Migration ja, Code nein"** statt auf ✅.
+
+**Nichts doppelt angelegt:** Punkt **4.0.4 SPRACHE-1** war bereits von Andre eingetragen (`ea2b219`)
+und wurde nur **referenziert**, nicht neu erzeugt.
+
+**Bitte im Vault (`Nerve-Vault/01 Roadmap.md`) im selben Zug nachziehen:**
+1. METRIK-1 Plan 07 als ausgefuehrt, **Ausrollen 3 aber als offen** markieren.
+2. **4.0.2** um die Notiz ergaenzen, dass die Redeanteil-**Ersatz-Rechnung** dort faellig ist —
+   der Bewerter sagt bis dahin **gar nichts** zum Redeanteil (ersatzlos gestrichen, kein Ersatzwert).
+3. **4.0.4 SPRACHE-1** um den Vermerk ergaenzen, dass **zwei METRIK-1-Abnahme-Punkte** dort haengen
+   („drei englische Test-Anrufe", „der Fokus feuert").
+
+---
+
+## BEFUND — 08.23.2.METRIK-1 — 2026-08-16 — Das Ausrollen ist zur Haelfte durch
+
+**An Claudian und Andre. Kein Vorwurf — ein Messergebnis, das eine Annahme kippt.**
+
+**Die Migration ist durch (`inspect.sh migrations` → `0041`). Der CODE ist es nicht.**
+
+```
+journalctl -u nerve   → letzter "Started": 2026-08-15T20:04:47Z, DANACH NICHTS
+ps -o lstart          → Master 2847725 + Worker 2847729: Sat Aug 15 20:04:46, seit 1-01:22 h
+deploy.sh:127         → sudo systemctl restart nerve   (voller Neustart, neue PIDs)
+ls -l slow_lane.py    → 2026-08-15T20:22:40Z  ← 18 Minuten JUENGER als der Prozess
+```
+
+Ein Python-Modul, das **nach** dem Prozessstart geaendert wurde, ist im laufenden Prozess **nicht
+geladen** (gunicorn faehrt ohne Reloader). **⇒ Seit dem 15.08. 20:04:47 hat kein
+`deploy.sh production` seinen Neustart erreicht.** Warum — rotes Tor (`deploy.sh:222` bricht dann
+**vor** dem Neustart ab) oder gar nicht gestartet — **weiss ich nicht und rate nicht.**
+
+**Die Laufzeit-Gegenprobe passt exakt, und sie korrigiert eine Deutung aus dem Kanal:**
+
+```
+ conv | status | hat_kopfzeile | hat_fokus
+  272 | judged |       t       |     f
+```
+
+Im Kanal steht: *„`_fokus` fehlt — und das ist KORREKT: Sprach-Riegel greift."*
+**Das ist nicht haltbar.** Der Sprach-Riegel sitzt **innerhalb** von `waehle_fokus` und liefert
+`focus_key=None`; `services/slow_lane.py:923` schreibt den **Schluessel** danach
+**bedingungslos** — kein Zweig davor, kein `if`. Genau das nagelt
+`test_fokus_none_wird_trotzdem_geschrieben` fest (gruen). **Ein fehlendes `_fokus` ist mit dem
+heutigen Code nicht erzeugbar** — wohl aber mit dem Code von **vor Plan 05**, und genau der laeuft.
+
+**Warum es trotzdem live aussah** (Mechanik sicher, die Zuordnung mein Schluss): Jinja liest
+Templates zur **Render-Zeit von der Platte**. Die neue `session_detail.html` lag um 21:05 dort —
+**Anzeige neu, Python alt.** Das ist die Sorte Halb-Zustand, die einen Beleg echt aussehen laesst
+und ihn halbiert.
+
+**Was das fuer die Belege bedeutet:** Alles am Anruf vom 16.08. belegt den Stand von **Plan 05
+Task 1** (Kopfzeile, Zitat-Pruefer, Substanz-Tor) — **und das ist ein starker Beleg**, Plan 02 ist
+damit wirklich eingeloest. Es belegt **nichts** von Plan 07.
+
+**➡️ Bitte: `bash deploy.sh production` (agenten-gesperrt). Vorhergesagt: `1246 passed / 7 skipped /
+5 deselected`** (1239 + 6 + 1, mit denselben Markern vorab ueber `triage.sh` gemessen). **Bricht das
+Tor ab, ist genau das die Erklaerung — dann bitte die Tor-Ausgabe zurueckspielen**, nicht den
+Neustart erzwingen.
