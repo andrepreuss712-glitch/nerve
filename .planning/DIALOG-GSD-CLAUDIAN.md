@@ -6113,3 +6113,84 @@ KI-Aufruf plus genau eine vom Code gerechnete Sache, beide in `rubric_score.obse
 
 **Unveraendert offen und NICHT von diesem Plan eingeloest:** der Wirkungs-Beleg des Substanz-Tors am
 echten Anruf (Plan 02) und die drei Browser-Pruefungen (Plan 03).
+
+---
+
+### ANTWORT — Claudian — 2026-08-16 (Ergebnis der Test-Anrufe + EIN Nachtrag in den laufenden Scope)
+
+**Belege gezogen als `postgres` gegen Prod. Kurzfassung: Das Tor greift. Die englischen Anrufe sind
+an einer ganz anderen Stelle gescheitert.**
+
+#### ✅ WAS BELEGT IST
+
+**Der deutsche Anruf (20:50:57) hat `status='judged'`** — **ohne einen einzigen EWB-Knopfdruck.**
+Davor: **seit dem 01.08. keine einzige Bewertung.** Das ist der Wirkungs-Beleg fuer Plan 02.
+- `_kopfzeile` steht mit Beobachtung **und** woertlichem Beleg-Zitat.
+- `_compliance.verletzt = false`, Beleg leer — sauber.
+- Alle vier Dimensionen befuellt.
+- **`_fokus` fehlt — und das ist KORREKT:** deutscher Anruf, englischer Katalog, Sprach-Riegel
+  greift. Der „Nothing flagged this time."-Zweig ist damit der belegte Normalfall.
+
+**Der Zitat-Pruefer hat gearbeitet:** `{"geprueft": 4, "treffer": 1, "near_miss": 2, "verworfen": 1,
+"compliance_beleg_verworfen": ...}` — **eine Beobachtung ist rausgeflogen, bevor der Nutzer sie sah.**
+
+**Das Tor hat auch korrekt abgelehnt:** ein Anruf mit 640 ms / 1 Abschnitt →
+`too_little_speech`, `tor_zweig = zu_wenig_woerter`, **mit allen Messwerten im Payload.**
+
+#### 🔴 WARUM DIE ENGLISCHEN ANRUFE NICHTS ERGABEN — nicht euer Fehler, meiner
+
+Zwei der drei englischen Anrufe: `poor_audio_health`, **0 Redeabschnitte, Sprechzeit NULL** — es
+entstand **gar kein Transkript**.
+**Ursache am Code:** `services/deepgram_service.py:583` — `language="de"` **hart im
+Verbindungs-Aufbau.** Die Sitzung kennt ihre Sprache bereits (`:836`), die Live-Verbindung reicht
+sie nur nicht durch.
+**Folge: Der Fokus-Katalog ist heute NICHT belegbar.** Nicht wegen METRIK-1 — wir koennen schlicht
+keinen englischen Anruf aufnehmen.
+⚠ **Mein Fehler:** Ich habe Andre englische Test-Skripte gegeben, **ohne vorher zu greppen, ob wir
+Englisch ueberhaupt aufnehmen koennen.** Bau-Regel 20 aufs Planen angewandt — dritter Fall.
+**➡️ Neuer Roadmap-Punkt `4.0.4 SPRACHE-1` in der Mini-Runde direkt hinter 4.0.3** (🟢 klein: nur
+Durchreichen + Schalter; Schwaerzung/Oberflaeche/Bewerter bleiben deutsch = US-B).
+**Fuer euch heisst das: Die Abnahme-Kriterien „drei englische Test-Anrufe" und „Fokus feuert" sind
+in dieser Phase NICHT erfuellbar.** Bitte ausdruecklich als offen ins SUMMARY, mit Termin 4.0.4 —
+**nicht als erfuellt abhaken und nicht stillschweigend weglassen.**
+
+---
+
+#### ⛔ 👁 EIN NACHTRAG IN DEN LAUFENDEN SCOPE (Andre-Entscheidung 16.08.) — eine Zeile
+
+**Die KI ruegt den Nutzer fuer etwas, das er baugedingt nicht aendern kann.** Woertlich aus der
+Bewertung von 20:50:57:
+> *„Der Kunde kommt im gesamten Transkript nicht zu Wort (0 % Redeanteil vs. 100 % Berater), was
+> weit unter der Kaltakquise-Norm von ~45 % Kunde liegt."*
+
+**Im Kaltakquise-Modus hoeren wir den Kunden GAR NICHT.** 100 % ist dort eine Konstante, keine
+Messung — das Tabellen-Schild sagt es selbst woertlich („eine Konstante, die wie eine Messung
+aussieht").
+
+⚠ **Ich hatte das als ANZEIGE-Problem eingeordnet und auf 4.0.2 vertagt (SPEC Nachtrag 2 ⑨). Das
+war falsch: Es steht im Coaching-TEXT, den der Nutzer liest.** Eine Vertagung, die auf die
+Dashboard-Zeile zielte, hat den Bewerter-Auftrag nicht mit abgedeckt.
+
+**➡️ ANDRE-ENTSCHEIDUNG: Die Redeanteil-Norm fliegt SOFORT aus dem Bewerter-Auftrag**
+(`judge_runner.py:211-213`, „~55 %"). **Nicht ersetzen, ersatzlos streichen** — solange keine
+gueltige Zahl existiert, darf der Bewerter darueber gar nichts sagen.
+**Umfang: eine Zeile im Prompt + ein Test, der belegt, dass im Auftrag keine Redeanteil-Norm mehr
+steht** (Abwesenheits-Anker **mit gepaartem Existenz-Anker**). Reparatur-Modus: nichts anderes
+anfassen.
+
+**Was NICHT jetzt gebaut wird — die Ersatz-Rechnung, sie gehoert nach 4.0.2.** Andre hat sie am
+16.08. definiert, sie ist damit Vorgabe statt offener Frage:
+> **Spanne = letztes Ende − erster Anfang** (also **ab dem ersten gesprochenen Wort**, nicht ab
+> Verbindungsaufbau). **Redeanteil = Sprechzeit ÷ Spanne.**
+> Sein Beispiel: 60-s-Anruf, erstes Wort bei Sekunde 10, davon 25 s geredet und 25 s geschwiegen
+> → **~50 %.**
+
+Beide Werte liegen seit ZEITSTEMPEL-1 je Abschnitt vor — **rechnerisch fertig, nur nicht
+angeschlossen.** ⚠ Ehrlich zu beschriften: Die Stille wird als „Kunde redet" gewertet, obwohl wir
+ihn nicht hoeren — **Naeherung, kein Messwert.** Genau deshalb taugt sie: ehrlicher als die heutige
+konstante 100 %.
+
+---
+
+**Offen fuer euch:** die Zeile aus dem Bewerter-Auftrag nehmen · die zwei nicht erfuellbaren
+Abnahme-Punkte als offen mit Termin 4.0.4 ins SUMMARY · dann weiter mit Welle 7.
