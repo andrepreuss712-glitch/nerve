@@ -107,14 +107,28 @@ DIMENSIONS = [
                 # Das binaere Compliance-Flag compliance_violation (Cross-AI-Finding 2) sitzt
                 # SEPARAT in observations_jsonb (Plan 03) — hier ist es nur Coaching-Text.
             ),
+            # ── METRIK-1 Nachtrag (Andre-Entscheidung 16.08.): in den beiden Stufen unten stand
+            #    je ein Redeanteil-Zielwert als Massstab. Beide sind ERSATZLOS gestrichen.
+            #    ⚠ ZWEITER TRAEGER, im Auftrag NICHT genannt: gestrichen wurde zuerst nur das
+            #    Prinzip 3 in services/judge_runner.py. Diese Rubrik wird ueber
+            #    dimensions_for_prompt() in DENSELBEN System-Prompt gerendert — die Norm waere
+            #    also im Auftrag geblieben, nur an anderer Stelle. Gefunden hat es der
+            #    Abwesenheits-Anker auf den GERENDERTEN Prompt; ein datei-gebundener Anker auf
+            #    judge_runner.py haette gruen gemeldet (Punkt 31, Bau-Regel 20).
+            #    Grund unveraendert: im Kaltakquise-Modus hoeren wir den Kunden baubedingt gar
+            #    nicht (diarize=is_meeting, log_sp hart 0 in services/deepgram_service.py) — der
+            #    Redeanteil ist dort eine Konstante, die wie eine Messung aussieht. Ein Massstab
+            #    auf eine Konstante bewertet nichts.
+            #    Die Stufen behalten ihre uebrige Beschreibung; nur der Zielwert faellt. Die
+            #    Ersatz-Rechnung ist terminiert (Roadmap 4.0.2), siehe judge_runner.py.
+            #    DIMENSIONS_VERSION bleibt bewusst 2 — die Version fuehrt den Dimensions-SATZ,
+            #    nicht die Formulierung einer BARS-Stufe.
             'ok': (
                 'Redeanteil und Steuerung teils unausgewogen, aber Berater gibt dem Kunden Raum. '
-                'Ziel Kaltakquise: Berater ca. 55%, Kunde ca. 45% Redeanteil (Gong Cold-Call-Norm). '
                 'Beispiel: Berater erklärt länger als nötig, fragt dann aber nach.'
             ),
             'stark': (
                 'Gespräch gut gesteuert, Berater hält roten Faden, gibt Kunden genug Raum. '
-                'Kaltakquise: ~55% Berater / ~45% Kunde (Gong Cold-Call-Norm). '
                 'Berater stoppt rechtzeitig wenn Kunde klar ablehnt. '
                 'Beispiel: Berater leitet gezielt von Bedarf zu konkretem Nutzen über, fragt nochmal nach.'
             ),
