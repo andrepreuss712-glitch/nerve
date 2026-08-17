@@ -2187,9 +2187,7 @@
     // FALLS ein Briefing vorliegt (state.precallBriefing.firmenname). So kommt der Tab beim
     // 2. Call MIT Briefing korrekt zurueck, bleibt aber OHNE Briefing aus (Punkt 14).
     var _bTab = pipEl('pip-briefing-tab'); if (_bTab) _bTab.style.display = 'none';
-    // Score-Display zurücksetzen falls Empty-State das :none gesetzt hat
-    var scoreEl = pipEl('nlp-postcall-score');
-    if (scoreEl) scoreEl.style.display = '';
+    // Details-Knopf zurücksetzen falls Empty-State das :none gesetzt hat
     var detailsBtn = pipEl('nlp-btn-details');
     if (detailsBtn) detailsBtn.style.display = '';
 
@@ -3085,14 +3083,12 @@
     // Container, in den Ladebalken 1 UND der Outcome-Screen (_renderOutcomeUx-Host) gerendert
     // werden. Frueher wurde die ganze Section auf display:none gesetzt -> Ladebalken + Outcome-
     // Screen unsichtbar -> User kann Bestaetigen nie klicken -> leeres PiP. Jetzt: Section
-    // SICHTBAR schalten, aber nur die Score-Karten-Kinder (Zahl/Label/Actions) bis Confirm
-    // verstecken (L-01/F9 — kein vorlaeufiger Score). Leere Kinder (trend/sparkline/quickstats/
-    // tags) blendet CSS :empty bereits aus.
+    // SICHTBAR schalten, aber die Aktions-Leiste bis Confirm verstecken. Leere Kinder
+    // (sparkline/quickstats/tags) blendet CSS :empty bereits aus.
+    // METRIK-1 D-13: Zahl und Etikett gibt es nicht mehr — nichts zu verstecken.
     var sps = pipEl('nlp-section-postcall');
     if (sps) {
       sps.style.display = 'flex';
-      var _scNum = pipEl('nlp-postcall-score'); if (_scNum) _scNum.style.display = 'none';
-      var _scLbl = sps.querySelector('.pip-postcall-label'); if (_scLbl) _scLbl.style.display = 'none';
       var _scAct = sps.querySelector('.pip-postcall-actions'); if (_scAct) _scAct.style.display = 'none';
     }
     // Live-Controls verstecken, Header verstecken — analog _showPostcallRaw, aber
@@ -3263,18 +3259,11 @@
   }
 
   // ── PostCall Display ───────────────────────────────────────────────────────
-  function _calcScore(postcall) {
-    var kb = postcall.kb_end || 30;
-    var total = (postcall.berater_words || 0) + (postcall.kunde_words || 0);
-    var redeanteil = total > 0 ? Math.round((postcall.berater_words || 0) / total * 100) : 50;
-    var gaDetails = postcall.ga_details || [];
-    var behandelt = gaDetails.filter(function (x) { return x && x.erfolgreich === true; }).length;
-    var einwTotal = (postcall.einwaende || []).length;
-    var behandeltRate = einwTotal > 0 ? behandelt / einwTotal : 0.5;
-    var skript = (postcall.skript_abdeckung || {}).gesamt_prozent || 0;
-    var redeScore = Math.max(0, 100 - Math.abs(redeanteil - 40) * 2);
-    return Math.min(100, Math.max(0, Math.round(kb * 0.4 + behandeltRate * 100 * 0.3 + redeScore * 0.2 + skript * 0.1)));
-  }
+  // METRIK-1 D-13: Die Client-Kopie der Vierer-Formel ist ENTFALLEN. Sie rechnete aus
+  // Kaufbereitschaft, Einwand-Quote, Redeanteil und Skript-Abdeckung eine Note — im
+  // Kaltakquise-Modus war der Redeanteil-Anteil davon baubedingt konstant und hat damit
+  // nichts gemessen. Sie hatte zum Zeitpunkt der Loeschung bereits keinen Aufrufer mehr.
+  // Zaehlen ist erlaubt, benoten nicht: die Zaehl-Kacheln unten bleiben.
 
   function _buildTags(postcall) {
     var tags = [];
@@ -3328,10 +3317,10 @@
     // D-W3-04: Score-Sektion initial verstecken bis Outcome-Confirm (F5/NEW-1: PiP-aware).
     var scoreSection = pipEl('nlp-section-postcall');
     if (scoreSection) scoreSection.style.display = 'none';
-    // 08.23.2.D.UX.4 (L-01): KEIN vorlaeufiger _calcScore mehr im Render-Pfad.
-    // Der angezeigte Score kommt ausschliesslich aus der correct_outcome-Response nach
-    // Confirm (S-01). Hier nur Tags/Sparkline/QuickStats; KEIN _fetchAndRenderTrend(score)
-    // mit dem _calcScore-Wert (F9 — der Trend-Feed sitzt jetzt im confirm-handler mit final_score).
+    // METRIK-1 D-13/D-14: Hier entsteht KEINE Note und KEIN Vergleichs-Streifen mehr —
+    // weder vorlaeufig noch bestaetigt. Gerendert werden ausschliesslich Tags, Verlauf und
+    // die Zaehl-Kacheln. (Frueher stand hier die Abgrenzung gegen eine vorlaeufige Note
+    // aus 08.23.2.D.UX.4 (L-01); beide Formel-Kopien sind seit METRIK-1 geloescht.)
     var tags = _buildTags(postcall);
     _showPostcallRaw('', tags);
     // POLISH-22: Trend + Sparkline + QuickStats zusätzlich rendern
@@ -3486,42 +3475,22 @@
     ].join('');
   }
 
-  function _fetchAndRenderTrend(currentScore) {
-    var el = pipEl('nlp-postcall-trend');
-    if (!el) return;
-    el.className = 'pip-postcall-trend';
-    el.textContent = '';
-    fetch('/api/postcall/trend?n=5', { credentials: 'include' })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (!data || !data.ok) return;
-        if (!data.sample_size || data.avg_score === null || data.avg_score === undefined) {
-          el.textContent = 'Erster Call-Score';
-          return;
-        }
-        var diff = currentScore - data.avg_score;
-        var sign = diff > 0 ? '▲ +' : (diff < 0 ? '▼ ' : '● ');
-        var absDiff = Math.abs(diff);
-        var label = data.sample_size === 1 ? 'vs letzter Call' : 'vs Schnitt letzte ' + data.sample_size;
-        el.textContent = sign + absDiff + '% ' + label;
-        if (diff > 0) el.className = 'pip-postcall-trend up';
-        else if (diff < 0) el.className = 'pip-postcall-trend down';
-      })
-      .catch(function () {
-        el.textContent = '';
-      });
-  }
+  // METRIK-1 D-14: Der Vergleichs-Streifen des Anruf-Fensters ("diesmal gegenueber dem
+  // Schnitt der letzten fuenf") stand hier und ist ERSATZLOS entfallen — samt dem Nachladen
+  // beim Auflegen, das ihn gefuettert hat (Punkt 25: der Moment des Auflegens ist der
+  // latenz-empfindlichste ueberhaupt).
+  // Eine neutrale Ersatz-Groesse (Anrufe/Woerter) ist ausdruecklich VERWORFEN: sie misst
+  // Betriebsamkeit, nicht Fortschritt.
+  // NICHT gestrichen, VERTAGT — der Streifen kommt zurueck, sobald die Fokus-Serie existiert
+  // ("dreimal in Folge angewendet").
 
   function _showPostcallLoading() {
     _showPostcallRaw('\u2026', []);
-    // POLISH-23: Score-Bereich zeigt rotierenden Spinner statt statisches "…"
-    var scoreEl = pipEl('nlp-postcall-score');
-    if (scoreEl) scoreEl.innerHTML = '<div class="pip-score-spinner" aria-label="Auswertung wird erstellt"></div>';
+    // METRIK-1 D-13: Der rotierende Wartekreisel im ehemaligen Noten-Bereich ist entfallen —
+    // es gibt keinen Noten-Bereich mehr, auf den man warten koennte (Punkt 25).
     var tagsEl = pipEl('nlp-postcall-tags');
     if (tagsEl) tagsEl.innerHTML = '<span class="pip-postcall-loading">Call wird ausgewertet\u2026</span>';
     // POLISH-22: Zusätzliche Elemente im Loading leer halten
-    var trendEl = pipEl('nlp-postcall-trend');
-    if (trendEl) { trendEl.textContent = ''; trendEl.className = 'pip-postcall-trend'; }
     var sparkEl = pipEl('nlp-postcall-sparkline');
     if (sparkEl) sparkEl.innerHTML = '';
     var qsEl = pipEl('nlp-postcall-quickstats');
@@ -3534,15 +3503,10 @@
 
   function _showPostcallEmpty() {
     _showPostcallRaw('', []);
-    var scoreEl = pipEl('nlp-postcall-score');
-    if (scoreEl) scoreEl.style.display = 'none';
-    var labelEls = pipEl('nlp-section-postcall');
-    // Ersetze den Score-Bereich durch einen Empty-State
+    // Ersetze den ehemaligen Noten-Bereich durch einen Empty-State
     var tagsEl = pipEl('nlp-postcall-tags');
     if (tagsEl) tagsEl.innerHTML = '<div class="pip-postcall-empty">Kein Gespräch erkannt.<br>Direkt nächsten Call starten?</div>';
     // POLISH-22: Zusätzliche Elemente im Empty leer halten
-    var trendEl = pipEl('nlp-postcall-trend');
-    if (trendEl) { trendEl.textContent = ''; trendEl.className = 'pip-postcall-trend'; }
     var sparkEl = pipEl('nlp-postcall-sparkline');
     if (sparkEl) sparkEl.innerHTML = '';
     var qsEl = pipEl('nlp-postcall-quickstats');
@@ -3563,8 +3527,8 @@
     var pipHeader = pipEl('pip-header');
     if (pipHeader) pipHeader.style.display = 'none';
 
-    var scoreEl = pipEl('nlp-postcall-score');
-    if (scoreEl) { scoreEl.style.display = ''; scoreEl.textContent = scoreText; }
+    // METRIK-1 D-13: Es gibt keinen Noten-Bereich mehr, in den scoreText geschrieben wuerde.
+    // Der Parameter bleibt — er unterscheidet weiterhin Lade- von Fuell-Zustand (unten).
     // Details-Button in Filled-State wieder einblenden (Empty-State hatte ihn versteckt)
     // POLISH-23: plus enablen sobald echter Score da ist (disabled-state aus _showPostcallLoading aufheben)
     var detailsBtn = pipEl('nlp-btn-details');
@@ -4284,25 +4248,20 @@
       var _actEl = _scoreSec.querySelector('.pip-postcall-actions'); if (_actEl) _actEl.style.display = '';
     }
 
-    // Score aus json.final_score (S-01, kein _calcScore). Haengt NICHT an pendingPostcall.
-    if (json.final_score !== undefined && json.final_score !== null) {
-      var scoreEl = pipEl('nlp-postcall-score');
-      if (scoreEl) {
-        scoreEl.style.display = '';
-        scoreEl.textContent = String(json.final_score) + '%';
-        var _fs = +json.final_score;
-        scoreEl.style.color = (_fs >= 70) ? 'var(--session-score-high)'
-          : (_fs >= 40) ? 'var(--session-score-mid)'
-          : 'var(--session-score-low)';
-        // Score-Label auf den UI-SPEC-Copy-Contract setzen (PiP-aware via Sibling).
-        var _lbl = scoreEl.parentNode ? scoreEl.parentNode.querySelector('.pip-postcall-label') : null;
-        if (_lbl) { _lbl.style.display = ''; _lbl.textContent = 'Coaching-Score'; }
-      }
-      var detailsBtn = pipEl('nlp-btn-details');
-      if (detailsBtn) { detailsBtn.style.display = ''; detailsBtn.disabled = false; }
-      // F9: Trend mit dem BESTAETIGTEN final_score fuettern (nicht _calcScore).
-      _fetchAndRenderTrend(json.final_score);
-    }
+    // ── METRIK-1 D-13: KEINE Note mehr im Anruf-Fenster. ────────────────────────────────────
+    // Die Zahl war die bestaetigte Gesamtnote (Kaufbereitschaft des KUNDEN mit 30 % Gewicht,
+    // Redeanteil mit 20 % — im Kaltakquise-Modus baubedingt konstant und damit strukturell
+    // nichtssagend) mal einem Outcome-Faktor.
+    // Zaehlen ist erlaubt, benoten nicht — die Zaehl-Kacheln unten bleiben unangetastet.
+    // Der Knopf "Auswertung" wird BEDINGUNGSLOS eingeblendet: er stand frueher INNERHALB der
+    // Noten-Klammer und waere mit der Note verschwunden — dann fuehrte vom Anruf-Fenster kein
+    // Weg mehr zur Auswertung. Der Knopf existiert bereits (templates/base.html), es ist ein
+    // Herausziehen und kein Neubau (kein neues Token, keine neue Farbe).
+    // Punkt 25: KEIN Nachladen, KEIN Wartekreisel, keine zusaetzliche Wartezeit — der Moment des
+    // Auflegens ist der latenz-empfindlichste ueberhaupt. Die neue Form entsteht danach im
+    // Hintergrund und wird erst auf der Auswertungsseite gelesen.
+    var detailsBtn = pipEl('nlp-btn-details');
+    if (detailsBtn) { detailsBtn.style.display = ''; detailsBtn.disabled = false; }
 
     // Basis-Analytics (Kaufbereitschaft / Redeanteil / Einwaende) — NULL-SAFE.
     // state.pendingPostcall kann am Confirm-Zeitpunkt undefined sein (Timeout/Race/Stale).
