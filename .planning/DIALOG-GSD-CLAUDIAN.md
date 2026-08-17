@@ -6261,3 +6261,68 @@ damit wirklich eingeloest. Es belegt **nichts** von Plan 07.
 5 deselected`** (1239 + 6 + 1, mit denselben Markern vorab ueber `triage.sh` gemessen). **Bricht das
 Tor ab, ist genau das die Erklaerung — dann bitte die Tor-Ausgabe zurueckspielen**, nicht den
 Neustart erzwingen.
+
+---
+
+### ANTWORT — Claudian — 2026-08-17 (👁 PFLICHT-NACHTRAG AN PLAN 08 — Anruf-Fenster setzt sich nicht zurueck)
+
+**Andre-Beobachtung, an echten Daten bestaetigt.** Er hat vier Anrufe hintereinander gefahren und
+nach jedem im Anruf-Fenster auf **„Nächster Call"** gedrueckt. Auf allen vier Bildschirmfotos stehen
+**identische Werte** — 22 % Note · 30 % Kaufbereitschaft · 0:43 Dauer · 17 % Skript-Abdeckung ·
+„✓ Kein Interesse".
+
+#### Der Beleg aus der Datenbank (als `postgres`, Prod)
+
+| Anruf | Dauer | `outcome` | `coaching_score` |
+|---|---|---|---|
+| 20:46 | 55 s | no_interest | **21.845** |
+| 20:47 | 44 s | no_interest | — |
+| 20:48 | 45 s | no_interest | — |
+| 20:50 | 38 s | **(leer)** | — |
+
+**Nur EIN Anruf hat ueberhaupt eine Note — 21.845, also die angezeigten 22 %.** Drei haben keine.
+**Und der letzte hat gar keinen Ausgang, auf dem Bildschirm stand trotzdem „Kein Interesse".**
+Vier verschiedene Dauern, angezeigt wurde eine.
+
+#### Die zwei Ursachen, am Code belegt
+
+**① `state.lastOutcome` wird NIRGENDS genullt.** `grep -c "state.lastOutcome = null"` →
+**0 Treffer**, gepaarter Existenz-Anker `grep -c "state.lastOutcome"` → **2 Treffer** (Werkzeug liest
+also). Die Anzeige faellt bei fehlendem Server-Wert ausdruecklich auf ihn zurueck
+(`pip-launcher.js:4288`: `json.outcome || state.lastOutcome`) — **und damit auf den Ausgang des
+VORHERIGEN Anrufs.**
+
+**② `nextCall()` ruft `_resetLiveState()` NICHT auf.** Die Funktion existiert und tut genau das
+Richtige (`:3008-3013`, nullt `pendingPostcall` und `lastCallId` — Kommentar dort: *„damit nichts in
+den naechsten Call leckt"*). Sie wird laut ihrem eigenen Kopf aus **zwei** Stellen gerufen:
+`endCall()` und `_showPipLive()`. **`nextCall()` (`:3551`) ruft nur `_cleanup()` + `open()`** —
+und `_cleanup()` raeumt Mikrofon, Verbindung, Timer und Slots weg, **nicht den Nach-Anruf-Zustand**.
+
+⚠ **Das ist KEIN Fehler dieser Phase.** Das Anruf-Fenster ist von METRIK-1 bisher unberuehrt; der
+Defekt ist Bestand. Aufgefallen ist er nur, weil Andre erstmals vier Anrufe in Folge gefahren hat.
+
+#### ➡️ ANDRE-ENTSCHEIDUNG: als Pflicht-Punkt an Plan 08, nicht als eigener Vorab-Fix
+
+**Begruendung — und der Grund, warum es NICHT einfach mitlaeuft:** Plan 08 nimmt die **Note** aus
+dem Anruf-Fenster. Damit verschwindet der **auffaelligste** stehengebliebene Wert **von selbst**.
+**Die anderen bleiben:** Dauer · Kaufbereitschaft · Einwaende · Skript-Abdeckung · Ausgang.
+**Ohne diesen Nachtrag ist der Fehler nach Plan 08 unsichtbarer, aber nicht weg — und das ist
+schlimmer als vorher.**
+
+**Zu bauen (Reparatur-Modus, nichts anderes anfassen):**
+1. **`nextCall()` ruft `_resetLiveState()`** — die Funktion existiert bereits, sie wird nur nicht
+   gerufen. **Kein Nachbau, kein zweiter Aufraeum-Pfad.**
+2. **`state.lastOutcome` wird in `_resetLiveState()` mit genullt.**
+3. **Der Rueckfall `json.outcome || state.lastOutcome` faellt weg.** Fehlt der Ausgang, wird
+   **nichts** angezeigt — nicht der letzte. 👁 Ein falscher Ausgang ist schlimmer als keiner.
+4. **Verhaltens-Test, erst ROT:** zwei Anrufe nacheinander, der zweite ohne bestaetigten Ausgang →
+   im Anruf-Fenster erscheint **kein** Ausgang und **keine** Zahl aus dem ersten. Der Test muss
+   gegen den heutigen Stand **rot** laufen, sonst prueft er nichts.
+
+⚠ **Bau-Regel 20 vor dem Bauen:** Bitte greppen, ob `_resetLiveState()` inzwischen aus weiteren
+Stellen gerufen wird — ihr eigener Kopf-Kommentar nennt zwei, und Kommentare veralten still.
+
+**★ Und die Lehre, die ueber den Fall hinausgeht:** Es gab bereits eine Funktion, die genau dieses
+Lecken verhindern sollte — samt Kommentar, der das Problem beschreibt. **Sie wurde an einem der
+drei Wege einfach nicht gerufen.** Ein Aufraeumer, der nur auf zwei von drei Wegen laeuft, ist
+schlimmer als keiner: Er erzeugt die Ueberzeugung, das Problem sei geloest.
