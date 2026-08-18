@@ -3000,9 +3000,12 @@
   }
 
   // ── Live-State Reset — single source of truth for post-call/pre-call cleanup ─────
-  // Called from TWO places (belt-and-suspenders pattern):
-  //   1. endCall()      — AFTER _stopTimer+_stopMic, BEFORE _showPostcallLoading
-  //   2. _showPipLive() — AT THE VERY TOP (guarantees fresh state even if prior cleanup missed something)
+  // DER EINZIGE Aufraeumer des Nach-Anruf-Zustands. Jeder Weg, der einen neuen Anruf
+  // beginnt, ruft IHN — niemand raeumt selbst auf (sonst laufen die Pfade auseinander).
+  // ⚠ Bewusst KEINE Aufzaehlung der Aufrufer mehr: Diese Liste nannte bis zum 17.08. zwei
+  // Aufrufer, es gab aber drei Wege — und genau der ungenannte dritte ("Naechster Call")
+  // rief den Aufraeumer nicht. Eine Liste, die still veraltet, verdeckt genau diesen Fehler.
+  // Wer wissen will, wer ruft, grept den Funktionsnamen — der Code luegt nicht.
   // MUST NOT touch: state.lastConvId (needed for Details-link), state.profileDaten,
   //                 state.skripte, state.selectedSkriptId, state.precallFormData, state.socket.
   function _resetLiveState() {
@@ -3011,6 +3014,9 @@
     // pendingPostcall (neu in dieser Phase) wurde NIRGENDS genullt.
     state.pendingPostcall = null;
     state.lastCallId = null;
+    // METRIK-1 Pflicht-Nachtrag 17.08.: der gemerkte Ausgang gehoert in DIESELBE Nullung.
+    // Er wurde bisher nirgends zurueckgesetzt und ueberlebte damit den Anruf.
+    state.lastOutcome = null;
     // 1. Timer: stop interval AND reset DOM to 00:00 immediately (fixes 1s display lag)
     _stopTimer();
     state.sessionSeconds = 0;
@@ -3556,6 +3562,12 @@
     state.pipWindow = null;
     if (oldWin && !oldWin.closed) oldWin.close();
     _cleanup();
+    // METRIK-1 Pflicht-Nachtrag 17.08.: Dieser Weg raeumte den Nach-Anruf-Zustand NICHT.
+    // _cleanup() raeumt Mikrofon, Verbindung, Timer und Slots — den Zustand NACH dem Anruf
+    // raeumt der Aufraeumer unten, und der wurde hier nie gerufen. Belegt an vier echten
+    // Anrufen: vier Dauern, eine Anzeige. Der Aufruf wird ergaenzt, NICHTS nachgebaut —
+    // ein zweiter Aufraeum-Pfad laeuft beim naechsten Mal wieder auseinander.
+    _resetLiveState();
     open();
   }
 
@@ -4283,10 +4295,16 @@
     var sec = pipEl('pip-outcome-section');
     if (sec) {
       sec.innerHTML = '';
-      var summary = _doc.createElement('div');
-      summary.className = 'pip-outcome-summary';
-      summary.textContent = '✓ ' + escHtml(_outcomeLabelDe(json.outcome || state.lastOutcome));
-      sec.appendChild(summary);
+      // METRIK-1 Pflicht-Nachtrag 17.08.: KEIN Rueckfall mehr auf den gemerkten Ausgang des
+      // VORIGEN Anrufs. Fehlt der Ausgang dieses Anrufs, wird gar keiner angezeigt.
+      // 👁 Ein falscher Ausgang ist schlimmer als keiner: am 17.08. stand "Kein Interesse"
+      // auf dem Schirm, obwohl die Datenbank fuer diesen Anruf gar keinen Ausgang hatte.
+      if (json.outcome) {
+        var summary = _doc.createElement('div');
+        summary.className = 'pip-outcome-summary';
+        summary.textContent = '✓ ' + escHtml(_outcomeLabelDe(json.outcome));
+        sec.appendChild(summary);
+      }
     }
 
     // Phase 08.23.2.D.UX.2 (DQ-03): Post-Call Transkript-Knopf an die Actions-Reihe haengen (idempotent).
