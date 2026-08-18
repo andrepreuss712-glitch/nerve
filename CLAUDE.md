@@ -14,6 +14,29 @@ NERVE ist ein KI-gestützter Echtzeit-Vertriebsassistent (SaaS) für B2B-Vertrie
 
 - **Spike findings for salesnerve** (implementation patterns, constraints, gotchas) → `Skill("spike-findings-salesnerve")`
 
+### ⚡⚡ OBERSTE BAU-VORGABE — MODULARE BAUWEISE. NUR NOCH. AUSSCHLIESSLICH. (Andre-Direktive 2026-08-17)
+
+**Woertlich:** *„zauberwort: modulare bauweise. ab jetzt. nur noch."* · *„wir bauen nur noch und ausschliesslich modular."*
+**Diese Vorgabe steht ueber allen anderen Bau-Regeln dieser Datei.** Ein Plan, der sie verletzt, wird nicht freigegeben — auch wenn er sonst fehlerfrei ist.
+
+> **⛔ DER LEITSATZ:** **Jedes Ding hat genau einen Besitzer. Wer es braucht, fragt ihn — niemand greift daran vorbei.**
+
+**Die Diagnose:** *Nichts gehoert jemandem.* Vier Fehler in vier Tagen mit derselben Wurzel — Aufraeumen lag bei jedem Weg einzeln (einer vergass es) · die Sprache stand hart im Code, obwohl die Sitzung sie kennt · dieselbe Fachregel lag in zwei Dateien · die alte Note wurde an **zwoelf** Stellen direkt gelesen, drei davon nur als Fliesstext in KI-Auftraegen.
+
+**PFLICHT-FRAGEN VOR JEDEM PLAN — jede einzelne, jedes Mal, im Plan schriftlich beantwortet:**
+1. **Wem gehoert das, was ich anfasse?** Kein Besitzer → **erst den Besitzer bauen, dann das Feature.**
+2. **Greife ich an einem Besitzer vorbei?** Dann ist der Entwurf falsch, nicht der Besitzer im Weg.
+3. **Lege ich eine Regel oder einen Wert ein ZWEITES Mal ab?** Dann gehoert er dorthin, wo er schon steht.
+4. **Kann ein zweiter Weg umgehen, was ich hier absichere?** Dann sichere ich nichts ab.
+5. **Baue ich einen Waechter, weil etwas keinen Besitzer hat?** → Waechter ist das falsche Mittel. **Besitzer bauen.**
+
+**⛔ Vertraege werden als WAECHTER-TEST im Ausroll-Tor festgehalten, NICHT als Kommentar.** Verbotene Querzugriffe melden rot (z. B. Datenbank-Modelle im Hoer-Draht, Anbieter-Aufrufe ausserhalb des KI-Zugangs, Bewertungs-Tabellen ausserhalb des Noten-Amts).
+**⛔ Jeder Baustein-Schnitt ENTFERNT Code.** In der SUMMARY steht, was ersatzlos verschwindet. Umschichten ohne Loeschen ist kein modularer Umbau.
+**⚠ LATENZ:** Die Baustein-Grenzen im Live-Pfad sind **Ordnungs-Grenzen im selben Prozess** — direkte Funktionsaufrufe wie heute, nur anders einsortiert. **Verboten: Warteschlange, Netz-Aufruf oder Zwischenstation zwischen Hoer-Draht, Einsatz-Leitung und Browser.** Einstellungen werden **einmal beim Verbindungsaufbau** uebergeben, nie pro Ton-Haeppchen erfragt.
+
+**Der kanonische Schnitt — neun Bausteine, ihre Vertraege und die Reihenfolge — steht in:**
+`Nerve-Vault/04 Entscheidungen/NERVE Modularer Umbau — Bausteine und Vertraege.md`. **Pflicht-Lektuere vor jedem Plan.** Kurz: ① Anruf-Akte · ② Hoer-Draht · ③ Einsatz-Leitung · ④ KI-Zugang · ⑤ Nach-Anruf-Werk · ⑥ Noten-Amt · ⑦ Schalter-Brett · ⑧ Anruf-Fenster · ⑨ Haus-Fundament.
+
 ### Constraints
 
 - **Stack:** Kein Framework-Wechsel — Flask + Vanilla JS bleibt. Keine React-Migration.
