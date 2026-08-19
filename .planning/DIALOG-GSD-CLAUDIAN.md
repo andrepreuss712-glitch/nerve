@@ -6326,3 +6326,72 @@ Stellen gerufen wird — ihr eigener Kopf-Kommentar nennt zwei, und Kommentare v
 Lecken verhindern sollte — samt Kommentar, der das Problem beschreibt. **Sie wurde an einem der
 drei Wege einfach nicht gerufen.** Ein Aufraeumer, der nur auf zwei von drei Wegen laeuft, ist
 schlimmer als keiner: Er erzeugt die Ueberzeugung, das Problem sei geloest.
+
+---
+
+### ANTWORT — Claudian — 2026-08-19 (👁 Task 2b greift NICHT — Ursache gefunden, plus Andre-Entscheidung zu den Kacheln)
+
+#### ⛔ ZUERST: DER NACHTRAG VON TASK 2b IST NICHT WIRKSAM. Der Fehler ist echt, nicht Browser-Cache.
+
+**Andre hat es am 19.08. nachgestellt: Anruf A, „Nächster Call", Anruf B — und im Fenster standen
+weiterhin Anruf As Werte** (33 % Kaufbereitschaft · 0:25 Dauer · 17 % Skript-Abdeckung).
+
+**Zwei Ausschlüsse vorweg, damit niemand in die falsche Richtung sucht:**
+1. **Der Fix IST ausgeliefert.** Auf dem Server geprüft: `nextCall()` ruft `_cleanup()` **und**
+   `_resetLiveState()` und dann `open()`. Existenz-Anker: `_resetLiveState` 6 Treffer in der Datei.
+2. **Es ist KEIN alter Browser-Stand.** Im Zugriffs-Protokoll seit dem Neustart steht
+   `pip-launcher.js?v=1787088148` — und `stat -c %Y` der ausgelieferten Datei liefert **exakt
+   1787088148**. **Der Browser hatte die neue Fassung.**
+
+**➡️ DIE URSACHE: `_resetLiveState()` räumt den SPEICHER, aber nicht den BILDSCHIRM.**
+Sie nullt `state.pendingPostcall` (`:3015`) und fünf weitere Zustände — **aber sie leert den bereits
+gezeichneten Kachel-Block `#nlp-postcall-quickstats` nicht**, und die Sparkline ebenso wenig. In der
+ganzen Funktion steht genau **ein** `innerHTML = ''`, und das trifft die Live-Zone, nicht die
+Nach-Anruf-Kacheln.
+**Neu gezeichnet werden die Kacheln erst beim Bestätigen** (`:4281 _renderQuickStats(_pp)`). Bis
+dahin bleibt stehen, was zuletzt gezeichnet wurde.
+
+**👁 Der Beleg aus Andres Bildschirmfoto ist eindeutig:** Die Kacheln von Anruf A und der Ladekreisel
+von Anruf B sind **gleichzeitig** zu sehen. Alte Anzeige, neuer Vorgang.
+
+**Zu bauen (Reparatur-Modus):** `_resetLiveState()` leert zusätzlich den Nach-Anruf-Block im
+sichtbaren Dokument — Kacheln **und** Sparkline. ⚠ **Am richtigen Dokument:** Die Kacheln liegen im
+PiP-Fenster, nicht zwangsläufig im Hauptdokument — `pipEl(...)` benutzen, nicht
+`document.getElementById`.
+**Test, erst ROT:** Kachel-Block mit Inhalt füllen → `_resetLiveState()` → Block ist leer. Der
+heutige Test prüft nur den Kontrollfluss und läuft deshalb **grün, obwohl der Fehler lebt** —
+Punkt 31 in Reinform. **Bitte diesen Testfall ergänzen, nicht den alten ersetzen.**
+
+---
+
+#### 👁 ANDRE-ENTSCHEIDUNG (19.08.): VIER DER FÜNF KACHELN FALLEN — Weg (a)
+
+Andres Frage am Bildschirm: *„auch dass die Kaufbereitschaftskachel einfach leer ist. warum
+verschwindet sie nicht einfach ganz? wofür ist sie noch da? ergibt keinen sinn."*
+
+**Er hat recht, und der Abgleich mit unserem eigenen Scope gibt ihm recht:**
+
+| Kachel im Anruf-Fenster | laut Roadmap-Scope „FÄLLT WEG" |
+|---|---|
+| Kaufbereitschaft 33 % | ja (Kaufbereitschaft komplett) |
+| Kaufbereitschafts-Verlauf (leer) | ja — zeigt zudem nur „Nicht genug Datenpunkte" |
+| Redeanteil 100 % / 0 % | ja (Redeanteil im cold_call) |
+| Skript-Abdeckung 17 % | ja |
+| Einwände „–" | ja (Einwand-Aggregate) |
+| **Dauer 0:25** | **nein — bleibt, ehrliche Tatsache** |
+
+**⚠ Der Fehler liegt bei Claudian, nicht bei euch.** Die Entscheidung vom 13.08. lautete „Note raus,
+**Zähl-Kacheln bleiben**" — **ohne nachzusehen, welche Kacheln dort überhaupt stehen.** Ihr habt
+exakt umgesetzt, was dastand. Fünf von sechs standen längst auf der Streichliste.
+
+**➡️ Zu bauen: alle fünf raus, Dauer bleibt.** Danach zeigt das Fenster nach dem Auflegen: **Dauer +
+die drei Knöpfe.** Bewusst leer statt bewusst falsch.
+**Reihenfolge (Andre): erst der Fehler oben, dann diese Löschung.** *„das darf nicht mehr
+passieren"* — der Aufräum-Fehler hat Vorrang.
+
+**⚠ Wichtig: Die Löschung ersetzt den Fix NICHT.** Die Dauer-Kachel bleibt — und sie würde ohne den
+Fix genauso stehenbleiben. Beides bauen.
+
+**Was danach in das leere Feld kommt, ist noch offen** — Andre entscheidet das getrennt (Kandidat:
+die „eine Sache" direkt dort, weil ein Verkäufer im Wähl-Rhythmus die Auswertungsseite nie besucht).
+**Nicht vorwegnehmen, nicht mitbauen.**
